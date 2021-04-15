@@ -197,8 +197,8 @@ function tupleTheta(SemType s0, SemType s1, AtomSet? neg) returns boolean {
         ListAtom a = <ListAtom>(neg.first);
         SemType t0 = a.members[0];
         SemType t1 = a.members[1];
-        return (isSubtype(s0, t0) || tupleTheta(diff(s0, t0), s1, neg))
-          && (isSubtype(s1, t1) || tupleTheta(s0, diff(s1, t1), neg));
+        return (isSubtype(s0, t0) || tupleTheta(diff(s0, t0), s1, neg.rest))
+          && (isSubtype(s1, t1) || tupleTheta(s0, diff(s1, t1), neg.rest));
     }
 }
 
