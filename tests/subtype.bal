@@ -25,6 +25,8 @@ function test3() {
     SemType s = tuple(INT, union(INT, STRING));
     SemType t = union(tuple(INT, INT), tuple(INT, STRING));
     test:assertTrue(isSubtype(s, t));
+    test:assertTrue(isSubtype(t, s));
+
 }
 
 @test:Config{}
@@ -35,3 +37,10 @@ function test4() {
 }
 
 
+@test:Config{}
+function test5() {
+    SemType s = tuple(INT, union(NIL, union(INT, STRING)));
+    SemType t = union(tuple(INT, INT), union(tuple(INT, NIL), tuple(INT, STRING)));
+    test:assertTrue(isSubtype(s, t));
+    test:assertTrue(isSubtype(t, s));
+}
