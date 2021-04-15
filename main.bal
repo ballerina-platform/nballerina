@@ -86,7 +86,7 @@ public function union(SemType t1, SemType t2) returns SemType {
     if some == 0 {
         return new SemType(all);
     }
-    int bits = all & (some << BT_COUNT);
+    int bits = all | (some << BT_COUNT);
     Bdd listPart = bddUnion(t1.partial.listPart, t2.partial.listPart);
     return new SemType(bits, { listPart });
 }
@@ -102,7 +102,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     if some == 0 {
         return new SemType(all);
     }
-    int bits = all & (some << BT_COUNT);
+    int bits = all | (some << BT_COUNT);
     Bdd listPart = bddIntersect(t1.partial.listPart, t2.partial.listPart);
     return new SemType(bits, { listPart });
 }
@@ -110,15 +110,17 @@ public function intersect(SemType t1, SemType t2) returns SemType {
 public function diff(SemType t1, SemType t2) returns SemType {
     int bits1 = t1.bits;
     int bits2 = t2.bits;
+
     // all(t1 \ t2) = all(t1) & not(all(t2)|some(t2))
     int all = bits1 & ~(bits2 | (bits2 >> BT_COUNT)) & BT_MASK;
     // some(t1 \ t2) = some(t1) & not(all(t2))
     int some = (((t1.bits >> BT_COUNT) | t1.bits) & ~t2.bits) & BT_MASK;
     some &= ~all;
+
     if some == 0 {
         return new SemType(all);
     }
-    int bits = all & (some << BT_COUNT); 
+    int bits = all | (some << BT_COUNT); 
     Bdd listPart = bddDiff(t1.partial.listPart, t2.partial.listPart);
     return new SemType(bits, { listPart });
 }
@@ -429,4 +431,3 @@ function tupleTheta(SemType s0, SemType s1, AtomList? neg) returns boolean {
           && (isSubtype(s1, t1) || tupleTheta(s0, diff(s1, t1), neg));
     }
 }
-
