@@ -145,13 +145,13 @@ function compare(SemType t1, SemType t2) returns CompareResult {
 
 
 
-type AtomList record {
-    Atom head;
-    AtomList? next;
+type AtomSet record {
+    Atom first;
+    AtomSet? rest;
 };
 
-function atomListCons(Atom head, AtomList? next) returns AtomList {
-    return { head, next };
+function atomListCons(Atom first, AtomSet? rest) returns AtomSet {
+    return { first, rest };
 }
 
 readonly class ListAtom {
@@ -172,7 +172,7 @@ readonly class ListAtom {
     }
 }
 
-function tupleBddIsEmpty(Bdd b, SemType s0, SemType s1, AtomList? neg) returns boolean {
+function tupleBddIsEmpty(Bdd b, SemType s0, SemType s1, AtomSet? neg) returns boolean {
     if b is boolean {
         if !b {
             return true;
@@ -189,12 +189,12 @@ function tupleBddIsEmpty(Bdd b, SemType s0, SemType s1, AtomList? neg) returns b
     }
 }
 
-function tupleTheta(SemType s0, SemType s1, AtomList? neg) returns boolean {
+function tupleTheta(SemType s0, SemType s1, AtomSet? neg) returns boolean {
     if neg is () {
         return false;
     }
     else {
-        ListAtom a = <ListAtom>(neg.head);
+        ListAtom a = <ListAtom>(neg.first);
         SemType t0 = a.members[0];
         SemType t1 = a.members[1];
         return (isSubtype(s0, t0) || tupleTheta(diff(s0, t0), s1, neg))
