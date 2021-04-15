@@ -3,4 +3,9 @@ org = "ballerina"
 name = "io"
 version = "0.6.0-alpha7"
 
+[[dependency]]
+org = "ballerina"
+name = "test"
+version = "0.0.0"
+
 

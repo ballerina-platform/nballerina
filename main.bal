@@ -2,8 +2,6 @@
 // The subset is (), boolean, int, string and tuples of length 2 (without recursion).
 // See https://pnwamk.github.io/sst-tutorial/
 
-import ballerina/io;
-
 public const BT_NIL = 0;
 public const BT_BOOLEAN = 1;
 public const BT_INT = 2;
@@ -432,9 +430,3 @@ function tupleTheta(SemType s0, SemType s1, AtomList? neg) returns boolean {
     }
 }
 
-public function main() {
-    SemType s = tuple(INT, union(INT, STRING));
-    SemType t = union(tuple(INT, INT), tuple(INT, STRING));
-    boolean b = isSubtype(s, t);
-    io:println(b);
-}
