@@ -255,6 +255,49 @@ function bddIntersect(Bdd b1, Bdd b2) returns Bdd {
     else if b2 is boolean {
         return b2 == true ? false : b1;
     }
+    else { 
+        CompareResult cmp = b1.atom.compare(b2.atom);
+        if cmp == -1 {
+            readonly & BddNode n = {
+                atom: b1.atom,
+                lo: bddIntersect(b1.lo, b2),
+                mid: bddIntersect(b1.mid, b2),
+                hi: bddIntersect(b1.hi, b2)
+            };
+            return n;
+        }
+        else if cmp == 1 {
+             readonly & BddNode n = {
+                atom: b2.atom,
+                lo: bddIntersect(b1, b2.lo),
+                mid: bddIntersect(b1, b2.mid),
+                hi: bddIntersect(b1, b2.hi)
+            };
+            return n;
+
+        }
+        else {
+            readonly & BddNode n = {
+                atom: b1.atom,
+                lo: bddIntersect(bddUnion(b1.lo, b1.mid), bddUnion(b2.lo, b2.mid)),
+                mid: false,
+                hi: bddIntersect(bddUnion(b1.hi, b1.mid), bddUnion(b2.hi, b2.mid))
+            };
+            return n;
+        }
+    }       
+}
+
+function bddDiff(Bdd b1, Bdd b2) returns Bdd {
+   if b1 === b2 {
+        return false;
+    }
+    else if b2 is boolean {
+        return b2 == true ? false : b1;
+    }
+    else if b1 is boolean {
+        return b1 == false ? b1 : false;
+    }
     else {  
         CompareResult cmp = b1.atom.compare(b2.atom);
         if cmp == -1 {
@@ -282,49 +325,6 @@ function bddIntersect(Bdd b1, Bdd b2) returns Bdd {
                 lo: bddDiff(b1.lo, b2),
                 mid: bddDiff(b1.mid, b2),
                 hi: bddDiff(b1.hi, b2)
-            };
-            return n;
-        }
-    }
-}
-
-function bddDiff(Bdd b1, Bdd b2) returns Bdd {
-   if b1 === b2 {
-        return false;
-    }
-    else if b2 is boolean {
-        return b2 == true ? false : b1;
-    }
-    else if b1 is boolean {
-        return b1 == false ? b1 : false;
-    }
-    else {  
-        CompareResult cmp = b1.atom.compare(b2.atom);
-        if cmp == -1 {
-            readonly & BddNode n = {
-                atom: b1.atom,
-                lo: bddIntersect(b1.lo, b2),
-                mid: bddIntersect(b1.mid, b2),
-                hi: bddIntersect(b1.hi, b2)
-            };
-            return n;
-        }
-        else if cmp == 1 {
-             readonly & BddNode n = {
-                atom: b2.atom,
-                lo: bddIntersect(b1, b2.lo),
-                mid: bddIntersect(b1, b2.mid),
-                hi: bddIntersect(b1, b2.hi)
-            };
-            return n;
-
-        }
-        else {
-            readonly & BddNode n = {
-                atom: b1.atom,
-                lo: bddIntersect(bddUnion(b1.lo, b1.mid), bddUnion(b2.lo, b2.mid)),
-                mid: false,
-                hi: bddIntersect(bddUnion(b1.hi, b1.mid), bddUnion(b2.hi, b2.mid))
             };
             return n;
         }
@@ -431,3 +431,4 @@ function tupleTheta(SemType s0, SemType s1, AtomList? neg) returns boolean {
           && (isSubtype(s1, t1) || tupleTheta(s0, diff(s1, t1), neg));
     }
 }
+
