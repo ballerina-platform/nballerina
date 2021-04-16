@@ -1,5 +1,6 @@
 import ballerina/io;
 
 public function main() {
-    io:println(STRING.isEmpty());
+    boolean b = isSubtype(tuple(INT, INT), INT);
+    io:println(b);
 }

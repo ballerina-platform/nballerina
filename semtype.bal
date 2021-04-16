@@ -17,26 +17,51 @@ const int BT_SOME = 33;
 
 public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST;
 
-type PartialBasicTypes record {|
-    Bdd listPart;
+type SubtypeData any & readonly;
+
+type BasicTypeSubtype readonly & [BasicTypeCode, SubtypeData];
+
+type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
+type UnaryOp function(SubtypeData t) returns SubtypeData;
+type CompareOp function(SubtypeData t1, SubtypeData t2) returns CompareResult;
+type UnaryBooleanOp function(SubtypeData t) returns boolean;
+
+
+function binOpPanic(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+    panic error("binop should not be called");
+}
+
+function unaryOpPanic(SubtypeData t) returns SubtypeData {
+    panic error("binop should not be called");
+}
+function compareOpPanic(SubtypeData t1, SubtypeData t2) returns CompareResult {
+    panic error("binop should not be called");
+}
+
+function unaryBooleanOpPanic(SubtypeData t) returns boolean {
+    panic error("unary op should not be called");
+}
+
+type BasicTypeOps record {|
+    CompareOp compare = compareOpPanic;
+    BinOp union = binOpPanic;
+    BinOp intersect = binOpPanic;
+    BinOp diff = binOpPanic;
+    UnaryOp complement = unaryOpPanic;
+    UnaryBooleanOp isEmpty = unaryBooleanOpPanic;
 |};
+
+final readonly & (BasicTypeSubtype[]) EMPTY_SUBTYPES = [];
 
 public readonly class SemType {
     // For a basic type with code b,
     // bits & (1 << b) is non-zero iff this type contains all of the basic type
     // bits & (1 << (b + BT_COUNT)) is non-zero iff this type contains some but not all of the basic type
     int bits;
-    // This has an entry for a basic type iff includesNone is false.
-    PartialBasicTypes partial;
-    function init(int bits, PartialBasicTypes? partial = ()) {
+    BasicTypeSubtype[] subtypes;
+    function init(int bits,  BasicTypeSubtype[] subtypes = EMPTY_SUBTYPES) {
         self.bits = bits;
-        if !(partial is ()) {
-            self.partial = partial.cloneReadOnly();
-        }
-        else {
-            boolean b = (bits & (1 << BT_LIST)) != 0;
-            self.partial = { listPart: b };
-        }      
+        self.subtypes = subtypes.cloneReadOnly();
     }
     public function includesAll(BasicTypeCode code) returns boolean {
         int c = code; // work around bug in slalpha4
@@ -55,7 +80,14 @@ public readonly class SemType {
             // includes all of one or more basic types
             return false;
         }
-        return tupleBddIsEmpty(self.partial.listPart, TOP, TOP, ());
+        foreach var st in self.subtypes {
+            var [code, data] = st;
+            var isEmpty = ops[code].isEmpty;
+            if !isEmpty(data) {
+                return false;
+            }
+        }
+        return true;
     }
 }
 
@@ -64,18 +96,96 @@ public final SemType NIL = new SemType(1 << BT_NIL);
 public final SemType BOOLEAN = new SemType(1 << BT_BOOLEAN);
 public final SemType INT = new SemType(1 << BT_INT);
 public final SemType STRING = new SemType(1 << BT_STRING);
-// this is any|error
+// this is SubtypeData|error
 public final SemType TOP = new SemType(BT_MASK);
 
-public function tuple(SemType t1, SemType t2) returns SemType {
-    readonly & BddNode listPart = {
-        atom: new ListAtom(t1, t2),
-        lo: true,
-        mid: false,
-        hi: false
-    };
-    return new SemType(1 << (BT_LIST + BT_COUNT), { listPart });
+
+// Need this type to workaround slalpha4 bug
+public type SubtypePairIterator object {
+    public function next() returns record {| [BasicTypeCode, SubtypeData, SubtypeData] value; |}?;
+};
+
+public class SubtypePairIteratorImpl {
+    *object:Iterable;
+    private int i1;
+    private int i2;
+    private final BasicTypeSubtype[] t1;
+    private final BasicTypeSubtype[] t2;
+    private final int bits;
+
+    function init(BasicTypeSubtype[] t1, BasicTypeSubtype[] t2, int bits) {
+        self.i1 = 0;
+        self.i2 = 0;
+        self.t1 = t1;
+        self.t2 = t2;
+        self.bits = bits;
+    }
+
+    public function iterator() returns SubtypePairIterator {
+        return self;
+    }
+
+    public function next() returns record {| [BasicTypeCode, SubtypeData, SubtypeData] value; |}? {
+        while true {
+            if self.i1 >= self.t1.length() {
+                if self.i2 >= self.t2.length() {
+                    break;
+                }
+                var [code, data2] = self.get2();
+                self.i2 += 1;
+                if self.include(code) {
+                    return { value: [code, (), data2] };
+                }
+            }
+            else if self.i2 >= self.t2.length() {
+                var [code, data1] = self.get1();
+                self.i1 += 1;
+                if self.include(code) {
+                    return { value: [code, data1, ()] };
+                }
+            }
+            else {
+                var [code1, data1] = self.get1();
+                var [code2, data2] = self.get2();
+                if code1 == code2 {
+                    self.i1 += 1;
+                    self.i2 += 1;
+                    if self.include(code1) {    
+                        return { value: [code1, data1, data2] };
+                    }
+                }
+                else if code1 < code2 {
+                    self.i1 += 1;
+                    if self.include(code1) {
+                        return { value: [code1, data1, ()] };
+                    }
+                }
+                else {
+                    self.i2 += 1;
+                    if self.include(code2) {
+                        return { value: [code2, (), data2] };
+                    }
+                }
+
+            }
+        }
+        return ();
+    } 
+
+    private function include(BasicTypeCode code) returns boolean {
+        int c = code;
+        return (self.bits & (1 << c)) != 0;
+    }
+
+    private function get1() returns BasicTypeSubtype {
+        return self.t1[self.i1];
+    }
+
+    private function get2() returns BasicTypeSubtype {
+        return self.t2[self.i2];
+    }
 }
+
 
 public function union(SemType t1, SemType t2) returns SemType {
     int bits1 = t1.bits;
@@ -87,8 +197,22 @@ public function union(SemType t1, SemType t2) returns SemType {
         return new SemType(all);
     }
     int bits = all | (some << BT_COUNT);
-    Bdd listPart = bddUnion(t1.partial.listPart, t2.partial.listPart);
-    return new SemType(bits, { listPart });
+    BasicTypeSubtype[] subtypes = [];
+    foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
+        SubtypeData data;
+        if data1 is () {
+            data = data2;
+        }
+        else if data2 is () {
+            data = data1;
+        }
+        else {
+            var union = ops[code].union;
+            data = union(data1, data2);
+        }
+        subtypes.push([code, data]);
+    }
+    return new SemType(bits, subtypes.cloneReadOnly());
 }
 
 public function intersect(SemType t1, SemType t2) returns SemType {
@@ -103,8 +227,22 @@ public function intersect(SemType t1, SemType t2) returns SemType {
         return new SemType(all);
     }
     int bits = all | (some << BT_COUNT);
-    Bdd listPart = bddIntersect(t1.partial.listPart, t2.partial.listPart);
-    return new SemType(bits, { listPart });
+    BasicTypeSubtype[] subtypes = [];
+    foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
+        SubtypeData data;
+        if data1 is () {
+            data = data2;
+        }
+        else if data2 is () {
+            data = data1;
+        }
+        else {
+            var intersect = ops[code].intersect;
+            data = intersect(data1, data2);
+        }
+        subtypes.push([code, data]);
+    }
+    return new SemType(bits, subtypes.cloneReadOnly());    
 }
 
 public function diff(SemType t1, SemType t2) returns SemType {
@@ -121,8 +259,23 @@ public function diff(SemType t1, SemType t2) returns SemType {
         return new SemType(all);
     }
     int bits = all | (some << BT_COUNT); 
-    Bdd listPart = bddDiff(t1.partial.listPart, t2.partial.listPart);
-    return new SemType(bits, { listPart });
+    BasicTypeSubtype[] subtypes = [];
+    foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
+        SubtypeData data;
+        if data1 is () {
+            var complement = ops[code].complement;
+            data = complement(data2);
+        }
+        else if data2 is () {
+            data = data1;
+        }
+        else {
+            var diff = ops[code].diff;
+            data = diff(data1, data2);
+        }
+        subtypes.push([code, data]);
+    }
+    return new SemType(bits, subtypes.cloneReadOnly());        
 }
 
 public function isSubtype(SemType t1, SemType t2) returns boolean { 
@@ -140,10 +293,42 @@ function compare(SemType t1, SemType t2) returns CompareResult {
         // no parts, so they are the same
         return 0;
     }
-    return bddCompare(t1.partial.listPart, t2.partial.listPart);
+    var sub1 = t1.subtypes;
+    int len1 = sub1.length();
+    var sub2 = t2.subtypes;
+    int len2 = sub2.length();
+    int i = 0;
+    while true {
+        if i >= len1 {
+            if i >= len2 {
+                break;
+            }
+            // sub1 shorter than sub2
+            return -1;
+        }
+        else if i >= len2 {
+            // sub1 longer than sub2
+            return 1;
+        }
+        else {
+            var [code1, data1] = sub1[i];
+            var [code2, data2] = sub2[i];
+            if code1 < code2 {
+                return -1;
+            }
+            if code1 > code2 {
+                return 1;
+            }
+            var compare = ops[code1].compare;
+            CompareResult cmp = compare(data1, data2);
+            if cmp != 0 {
+                return cmp;
+            }
+        }
+        i += 1;
+    }
+    return 0;
 }
-
-
 
 type AtomSet record {
     Atom first;
@@ -182,7 +367,8 @@ function tupleBddIsEmpty(Bdd b, SemType s0, SemType s1, AtomSet? neg) returns bo
     else {
         ListAtom a = <ListAtom>b.atom;
         var members = a.members;
-        return tupleBddIsEmpty(b.lo, intersect(s0, members[0]),
+        return tupleBddIsEmpty(b.lo,
+                               intersect(s0, members[0]),
                                intersect(s1, members[1]), neg)
           && tupleBddIsEmpty(b.mid, s0, s1, neg)
           && tupleBddIsEmpty(b.hi, s0, s1, atomListCons(b.atom, neg)); 
@@ -198,7 +384,60 @@ function tupleTheta(SemType s0, SemType s1, AtomSet? neg) returns boolean {
         SemType t0 = a.members[0];
         SemType t1 = a.members[1];
         return (isSubtype(s0, t0) || tupleTheta(diff(s0, t0), s1, neg.rest))
-          && (isSubtype(s1, t1) || tupleTheta(s0, diff(s1, t1), neg.rest));
+            && (isSubtype(s1, t1) || tupleTheta(s0, diff(s1, t1), neg.rest));
     }
 }
 
+public function tuple(SemType t1, SemType t2) returns SemType {
+    readonly & BddNode bdd = {
+        atom: new ListAtom(t1, t2),
+        lo: true,
+        mid: false,
+        hi: false
+    };
+    return new SemType(1 << (BT_LIST + BT_COUNT), [[BT_LIST, bdd]]);
+}
+
+function bddSubtypeCompare(SubtypeData t1, SubtypeData t2) returns CompareResult {
+    return bddCompare(<Bdd>t1, <Bdd>t2);
+}
+
+function bddSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+    return bddUnion(<Bdd>t1, <Bdd>t2);
+}
+
+function bddSubtypeIntersect(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+    return bddIntersect(<Bdd>t1, <Bdd>t2);
+}
+
+function bddSubtypeDiff(SubtypeData t1, SubtypeData t2) returns SubtypeData {
+    return bddDiff(<Bdd>t1, <Bdd>t2);
+}
+
+function bddSubtypeComplement(SubtypeData t) returns SubtypeData {
+    return bddComplement(<Bdd>t);
+}
+
+function listIsEmpty(SubtypeData t) returns boolean {
+    return tupleBddIsEmpty(<Bdd>t, TOP, TOP, ());
+}
+
+final (readonly & BasicTypeOps[]) ops;
+
+function init() {
+    ops = [
+        {},  // nil
+        {},  // boolean
+        {},  // int
+        {},  // string
+        { // list
+            compare: bddSubtypeCompare,
+            union: bddSubtypeUnion,
+            intersect: bddSubtypeIntersect,
+            diff: bddSubtypeDiff,
+            complement: bddSubtypeComplement,
+            isEmpty: listIsEmpty
+        }
+   ];
+}
+  
