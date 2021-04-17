@@ -1,7 +1,3 @@
-// Semantic subtyping for a (tiny) subset of Ballerina types.
-// The subset is (), boolean, int, string and tuples of length 2 (without recursion).
-// See https://pnwamk.github.io/sst-tutorial/
-
 public const BT_NIL = 0;
 public const BT_BOOLEAN = 1;
 public const BT_INT = 2;
