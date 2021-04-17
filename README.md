@@ -1,13 +1,13 @@
-This is the very beginnings of an implementation of semantic subtyping for the type system
-of the Ballerina programming language, written in Ballerina.
+This is the very beginnings of an experimental implementation of semantic subtyping for the type system
+of the [Ballerina](https://ballerina.io) programming language, implemented in Ballerina.
 
 The algorithm here is based on the work of Giuseppe Castagna and Alain Frisch, implemented in
-[CDuce](http://cduce.org). I have found the best paper to be:
+[CDuce](http://cduce.org). I have found the most accessible paper to be:
 
 [Covariance and Contravariance: a fresh look at an old issue (a primer in advanced type systems for learning functional programmers)](https://arxiv.org/abs/1809.01427),
 G. Castagna, 2020
 
-Section 4 of this paper has a description of the algorithms.
+Section 4 of the above paper has a description of the algorithms.
 
 There is also a very useful tutorial by Andrew M. Kent:
 

@@ -5,11 +5,12 @@ public const BT_STRING = 3;
 public const BT_LIST = 4;
 public const BT_COUNT = 5;
 public const int BT_MASK = 31;
+// slalpha4 gets a bad, sad on this
 // public const int BT_MASK = (1 << BT_COUNT) - 1;
 
 const int BT_SOME = 33;
-//const int BT_SOME = 1 | (1 << BT_COUNT);
-
+// slalpha4 gets a bad, sad on this
+// public const int BT_SOME = 1 | (1 << BT_COUNT);
 
 public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST;
 
