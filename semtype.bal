@@ -28,18 +28,18 @@ type UnaryBooleanOp function(SubtypeData t) returns boolean;
 
 
 function binOpPanic(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    panic error("binop should not be called");
+    panic error("binary operation should not be called");
 }
 
 function unaryOpPanic(SubtypeData t) returns SubtypeData {
-    panic error("binop should not be called");
+    panic error("unary operation should not be called");
 }
 function compareOpPanic(SubtypeData t1, SubtypeData t2) returns CompareResult {
-    panic error("binop should not be called");
+    panic error("comparison should not be called");
 }
 
 function unaryBooleanOpPanic(SubtypeData t) returns boolean {
-    panic error("unary op should not be called");
+    panic error("unary boolean operation should not be called");
 }
 
 type BasicTypeOps record {|
@@ -422,7 +422,8 @@ function listIsEmpty(SubtypeData t) returns boolean {
     return tupleBddIsEmpty(<Bdd>t, TOP, TOP, ());
 }
 
-final (readonly & BasicTypeOps[]) ops;
+// slalpha4 gets bad, sad if this is readonly
+final BasicTypeOps[] ops;
 
 function init() {
     ops = [
