@@ -1,3 +1,5 @@
+import ballerina/io;
+
 public const BT_NIL = 0;
 public const BT_BOOLEAN = 1;
 public const BT_INT = 2;
@@ -14,15 +16,33 @@ const int BT_SOME = 33;
 
 public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST;
 
-type SubtypeData any & readonly;
+// Only 2-tuples for now
+public type ListSubtype readonly & [SemType, SemType];
+
+public type Env record {|
+    ListSubtype[] listDefs = [];
+|};
+
+public type BddMemo record {|
+    readonly Bdd bdd;
+    boolean? isEmpty = ();
+|};
+
+public type BddMemoTable table<BddMemo> key(bdd);
+
+public type TypeCheckContext record {|
+    readonly ListSubtype[] listDefs;
+    BddMemoTable memo = table [];
+|};
+
+type SubtypeData int|Bdd;
 
 type BasicTypeSubtype readonly & [BasicTypeCode, SubtypeData];
 
 type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
 type UnaryOp function(SubtypeData t) returns SubtypeData;
 type CompareOp function(SubtypeData t1, SubtypeData t2) returns CompareResult;
-type UnaryBooleanOp function(SubtypeData t) returns boolean;
-
+type UnaryTypeCheckOp function(TypeCheckContext tc, SubtypeData t) returns boolean;
 
 function binOpPanic(SubtypeData t1, SubtypeData t2) returns SubtypeData {
     panic error("binary operation should not be called");
@@ -31,11 +51,12 @@ function binOpPanic(SubtypeData t1, SubtypeData t2) returns SubtypeData {
 function unaryOpPanic(SubtypeData t) returns SubtypeData {
     panic error("unary operation should not be called");
 }
+
 function compareOpPanic(SubtypeData t1, SubtypeData t2) returns CompareResult {
     panic error("comparison should not be called");
 }
 
-function unaryBooleanOpPanic(SubtypeData t) returns boolean {
+function unaryTypeCheckOpPanic(TypeCheckContext tc, SubtypeData t) returns boolean {
     panic error("unary boolean operation should not be called");
 }
 
@@ -45,7 +66,7 @@ type BasicTypeOps record {|
     BinOp intersect = binOpPanic;
     BinOp diff = binOpPanic;
     UnaryOp complement = unaryOpPanic;
-    UnaryBooleanOp isEmpty = unaryBooleanOpPanic;
+    UnaryTypeCheckOp isEmpty = unaryTypeCheckOpPanic;
 |};
 
 final readonly & (BasicTypeSubtype[]) EMPTY_SUBTYPES = [];
@@ -68,24 +89,6 @@ public readonly class SemType {
         int c = code; // work around bug in slalpha4
         return (self.bits & (BT_SOME << c)) == 0;
     }
-    public function isEmpty() returns boolean {
-        if self.bits == 0 {
-            // neither all nor part of any basic type
-            return true;
-        }
-        if (self.bits & BT_MASK) != 0 {
-            // includes all of one or more basic types
-            return false;
-        }
-        foreach var st in self.subtypes {
-            var [code, data] = st;
-            var isEmpty = ops[code].isEmpty;
-            if !isEmpty(data) {
-                return false;
-            }
-        }
-        return true;
-    }
 }
 
 public final SemType NEVER = new SemType(0);
@@ -99,11 +102,12 @@ public final SemType TOP = new SemType(BT_MASK);
 
 // Need this type to workaround slalpha4 bug
 public type SubtypePairIterator object {
-    public function next() returns record {| [BasicTypeCode, SubtypeData, SubtypeData] value; |}?;
+    public function next() returns record {| [BasicTypeCode, SubtypeData?, SubtypeData?] value; |}?;
 };
 
 public class SubtypePairIteratorImpl {
     *object:Iterable;
+    *SubtypePairIterator;
     private int i1;
     private int i2;
     private final BasicTypeSubtype[] t1;
@@ -122,7 +126,7 @@ public class SubtypePairIteratorImpl {
         return self;
     }
 
-    public function next() returns record {| [BasicTypeCode, SubtypeData, SubtypeData] value; |}? {
+    public function next() returns record {| [BasicTypeCode, SubtypeData?, SubtypeData?] value; |}? {
         while true {
             if self.i1 >= self.t1.length() {
                 if self.i2 >= self.t2.length() {
@@ -198,7 +202,7 @@ public function union(SemType t1, SemType t2) returns SemType {
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
         SubtypeData data;
         if data1 is () {
-            data = data2;
+            data = <SubtypeData>data2; // if they are both null, something's gone wrong
         }
         else if data2 is () {
             data = data1;
@@ -215,6 +219,18 @@ public function union(SemType t1, SemType t2) returns SemType {
 public function intersect(SemType t1, SemType t2) returns SemType {
     int bits1 = t1.bits;
     int bits2 = t2.bits;
+    if bits1 == BT_MASK {
+        return t2;
+    }
+    if bits1 == 0 {
+        return t1;
+    }
+    if bits2 == BT_MASK {
+        return t1;
+    }
+    if bits2 == 0 {
+        return t2;
+    }
     int all = (t1.bits & t2.bits) & BT_MASK;
 
     // some(t1 & t2) = some(t1) & some(t2)
@@ -228,7 +244,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
         SubtypeData data;
         if data1 is () {
-            data = data2;
+            data = <SubtypeData>data2;
         }
         else if data2 is () {
             data = data1;
@@ -261,7 +277,7 @@ public function diff(SemType t1, SemType t2) returns SemType {
         SubtypeData data;
         if data1 is () {
             var complement = ops[code].complement;
-            data = complement(data2);
+            data = complement(<SubtypeData>data2);
         }
         else if data2 is () {
             data = data1;
@@ -275,8 +291,28 @@ public function diff(SemType t1, SemType t2) returns SemType {
     return new SemType(bits, subtypes.cloneReadOnly());        
 }
 
-public function isSubtype(SemType t1, SemType t2) returns boolean { 
-    return diff(t1, t2).isEmpty();
+public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
+    if t.bits == 0 {
+        // neither all nor part of any basic type
+        return true;
+    }
+    if (t.bits & BT_MASK) != 0 {
+        // includes all of one or more basic types
+        return false;
+    }
+    foreach var st in t.subtypes {
+        var [code, data] = st;
+        var isEmpty = ops[code].isEmpty;
+        if !isEmpty(tc, data) {
+            return false;
+        }
+    }
+    return true;
+}
+    
+
+public function isSubtype(TypeCheckContext tc, SemType t1, SemType t2) returns boolean { 
+    return isEmpty(tc, diff(t1, t2));
 }
 
 // Need to have an ordering defined on SemType values
@@ -332,67 +368,66 @@ type AtomSet record {
     AtomSet? rest;
 };
 
-function atomListCons(Atom first, AtomSet? rest) returns AtomSet {
-    return { first, rest };
+public function tuple(Env env, SemType t1, SemType t2) returns SemType {
+    ListSubtype lt = [t1, t2];
+    int i = env.listDefs.length();
+    env.listDefs.push(lt);
+    return tupleRef(i);
 }
 
-readonly class ListAtom {
-    *Atom;
-    SemType[2] members;
-    function init(SemType t0, SemType t1) {
-        self.members = [t0, t1];
-    }
-    function getBasicType() returns BasicTypeCode => BT_LIST;
-  
-    function compare(Atom other) returns CompareResult {
-        ListAtom otherAtom = <ListAtom>other;
-        CompareResult res = compare(self.members[0], otherAtom.members[0]);
-        if res != 0 {
-            return res;
-        }
-        return compare(self.members[1], otherAtom.members[1]);
-    }
-}
-
-function tupleBddIsEmpty(Bdd b, SemType s0, SemType s1, AtomSet? neg) returns boolean {
-    if b is boolean {
-        if !b {
-            return true;
-        }
-        return s0.isEmpty() || s1.isEmpty() || tupleTheta(s0, s1, neg);
-    }
-    else {
-        ListAtom a = <ListAtom>b.atom;
-        var members = a.members;
-        return tupleBddIsEmpty(b.lo,
-                               intersect(s0, members[0]),
-                               intersect(s1, members[1]), neg)
-          && tupleBddIsEmpty(b.mid, s0, s1, neg)
-          && tupleBddIsEmpty(b.hi, s0, s1, atomListCons(b.atom, neg)); 
-    }
-}
-
-function tupleTheta(SemType s0, SemType s1, AtomSet? neg) returns boolean {
-    if neg is () {
-        return false;
-    }
-    else {
-        ListAtom a = <ListAtom>(neg.first);
-        SemType t0 = a.members[0];
-        SemType t1 = a.members[1];
-        return (isSubtype(s0, t0) || tupleTheta(diff(s0, t0), s1, neg.rest))
-            && (isSubtype(s1, t1) || tupleTheta(s0, diff(s1, t1), neg.rest));
-    }
-}
-
-public function tuple(SemType t1, SemType t2) returns SemType {
+function tupleRef(int i) returns SemType {
     readonly & BddNode bdd = {
-        atom: new ListAtom(t1, t2),
+        atom: i,
         lo: true,
         mid: false,
         hi: false
     };
     return new SemType(1 << (BT_LIST + BT_COUNT), [[BT_LIST, bdd]]);
+}
+
+public function recursiveTuple(Env env, function(Env, SemType) returns ListSubtype f) returns SemType {
+    int i = env.listDefs.length();
+    ListSubtype dummy = [NEVER,NEVER];
+    env.listDefs.push(dummy);
+    SemType r = tupleRef(i);
+    env.listDefs[i] = f(env, r);
+    return r;
+}
+
+function atomListCons(Atom first, AtomSet? rest) returns AtomSet {
+    return { first, rest };
+}
+
+function typeCheckContext(Env env) returns TypeCheckContext {
+    return { listDefs: env.listDefs.cloneReadOnly() };
+}
+
+function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, SemType s0, SemType s1, AtomSet? neg) returns boolean {
+    if b is boolean {
+        if !b {
+            return true;
+        }
+        return isEmpty(tc, s0) || isEmpty(tc, s1) || tupleTheta(tc, s0, s1, neg);
+    }
+    else {
+        SemType[2] [t0, t1] = tc.listDefs[b.atom];
+        return tupleBddIsEmpty(tc, b.lo,
+                               intersect(s0, t0),
+                               intersect(s1, t1), neg)
+          && tupleBddIsEmpty(tc, b.mid, s0, s1, neg)
+          && tupleBddIsEmpty(tc, b.hi, s0, s1, atomListCons(b.atom, neg)); 
+    }
+}
+
+function tupleTheta(TypeCheckContext tc, SemType s0, SemType s1, AtomSet? neg) returns boolean {
+    if neg is () {
+        return false;
+    }
+    else {
+        SemType[2] [t0, t1] = tc.listDefs[neg.first];
+        return (isSubtype(tc, s0, t0) || tupleTheta(tc, diff(s0, t0), s1, neg.rest))
+            && (isSubtype(tc, s1, t1) || tupleTheta(tc, s0, diff(s1, t1), neg.rest));
+    }
 }
 
 function bddSubtypeCompare(SubtypeData t1, SubtypeData t2) returns CompareResult {
@@ -415,8 +450,30 @@ function bddSubtypeComplement(SubtypeData t) returns SubtypeData {
     return bddComplement(<Bdd>t);
 }
 
-function listIsEmpty(SubtypeData t) returns boolean {
-    return tupleBddIsEmpty(<Bdd>t, TOP, TOP, ());
+function listIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
+    Bdd b = <Bdd>t;
+    BddMemo? mm = tc.memo[b];
+    BddMemo m;
+    if mm is () {
+        m = { bdd: b };
+        tc.memo.add(m);
+    }
+    else {
+        m = mm;
+        boolean? res = m.isEmpty;
+        if res is () {
+            // we've got a loop
+            io:println("got a loop");
+            // XXX is this right???
+            return true;
+        }
+        else {
+            return res;
+        }
+    }
+    boolean isEmpty = tupleBddIsEmpty(tc, <Bdd>t, TOP, TOP, ());
+    m.isEmpty = isEmpty;
+    return isEmpty;    
 }
 
 // slalpha4 gets bad, sad if this is readonly

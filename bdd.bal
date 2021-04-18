@@ -4,12 +4,21 @@
 
 type CompareResult -1 | 0 | 1;
 
-type Atom readonly & object {
-    function getBasicType() returns BasicTypeCode;
-    // Only allowed for an Atom of the same basic type
-    function compare(Atom other) returns CompareResult;
-};
-type Bdd (readonly & BddNode)|boolean;
+type Atom int;
+
+public type Bdd (readonly & BddNode)|boolean;
+
+function atomCompare(Atom a1, Atom a2) returns CompareResult {
+    if a1 < a2 {
+        return -1;
+    }
+    else if a1 > a2 {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+}
 
 // referenced nodes must have atom with same basic type
 type BddNode record {|
@@ -39,7 +48,7 @@ function bddCompare(Bdd b1, Bdd b2) returns CompareResult {
         return b2 === true ? -1 : 1;
     }
     else {
-        CompareResult tem = b1.atom.compare(b2.atom);
+        CompareResult tem = atomCompare(b1.atom, b2.atom);
         if tem != 0 {
             return tem;
         }
@@ -66,7 +75,7 @@ function bddUnion(Bdd b1, Bdd b2) returns Bdd {
         return b2 == true ? true : b1;
     }
     else {  
-        CompareResult cmp = b1.atom.compare(b2.atom);
+        CompareResult cmp = atomCompare(b1.atom, b2.atom);
         if cmp == -1 {
             // variable needed to workaround an slalpha4 bug
             readonly & BddNode n = {
@@ -110,7 +119,7 @@ function bddIntersect(Bdd b1, Bdd b2) returns Bdd {
         return b2 == true ? false : b1;
     }
     else { 
-        CompareResult cmp = b1.atom.compare(b2.atom);
+        CompareResult cmp = atomCompare(b1.atom, b2.atom);
         if cmp == -1 {
             readonly & BddNode n = {
                 atom: b1.atom,
@@ -153,7 +162,7 @@ function bddDiff(Bdd b1, Bdd b2) returns Bdd {
         return b1 == false ? b1 : false;
     }
     else {  
-        CompareResult cmp = b1.atom.compare(b2.atom);
+        CompareResult cmp = atomCompare(b1.atom, b2.atom);
         if cmp == -1 {
             readonly & BddNode n = {
                 atom: b1.atom,
