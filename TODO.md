@@ -4,7 +4,7 @@
 2. ~~Framework for handling subtypes of multiple basic types~~
 3. Tuples of arbitrary fixed length
 4. Closed records without optional fields
-5. Recursion
+5. ~~Recursion~~
 6. Functions of one argument
 7. Represent multiple function arguments using tuples
 8. Devise JSON representation of types and conversion into SemType
