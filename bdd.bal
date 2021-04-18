@@ -77,33 +77,22 @@ function bddUnion(Bdd b1, Bdd b2) returns Bdd {
     else {  
         CompareResult cmp = atomCompare(b1.atom, b2.atom);
         if cmp == -1 {
-            // variable needed to workaround an slalpha4 bug
-            readonly & BddNode n = {
-                atom: b1.atom,
-                lo: b1.lo,
-                mid: bddUnion(b1.mid, b2),
-                hi: b1.hi
-            };
-            return n;
+            return bddCreate(b1.atom,
+                             b1.lo,
+                             bddUnion(b1.mid, b2),
+                             b1.hi);
         }
         else if cmp == 1 {
-             readonly & BddNode n = {
-                atom: b2.atom,
-                lo: b2.lo,
-                mid: bddUnion(b1, b2.mid),
-                hi: b2.hi
-            };
-            return n;
-
+             return bddCreate(b2.atom,
+                              b2.lo,
+                              bddUnion(b1, b2.mid),
+                              b2.hi);
         }
         else {
-            readonly & BddNode n = {
-                atom: b1.atom,
-                lo: bddUnion(b1.lo, b2.lo),
-                mid: bddUnion(b1.mid, b2.mid),
-                hi: bddUnion(b1.hi, b2.hi)
-            };
-            return n;
+            return bddCreate(b1.atom,
+                             bddUnion(b1.lo, b2.lo),
+                             bddUnion(b1.mid, b2.mid),
+                             bddUnion(b1.hi, b2.hi));
         }
     }
 }
@@ -121,32 +110,22 @@ function bddIntersect(Bdd b1, Bdd b2) returns Bdd {
     else { 
         CompareResult cmp = atomCompare(b1.atom, b2.atom);
         if cmp == -1 {
-            readonly & BddNode n = {
-                atom: b1.atom,
-                lo: bddIntersect(b1.lo, b2),
-                mid: bddIntersect(b1.mid, b2),
-                hi: bddIntersect(b1.hi, b2)
-            };
-            return n;
+            return bddCreate(b1.atom,
+                             bddIntersect(b1.lo, b2),
+                             bddIntersect(b1.mid, b2),
+                             bddIntersect(b1.hi, b2));
         }
         else if cmp == 1 {
-             readonly & BddNode n = {
-                atom: b2.atom,
-                lo: bddIntersect(b1, b2.lo),
-                mid: bddIntersect(b1, b2.mid),
-                hi: bddIntersect(b1, b2.hi)
-            };
-            return n;
-
+            return bddCreate(b2.atom,
+                             bddIntersect(b1, b2.lo),
+                             bddIntersect(b1, b2.mid),
+                             bddIntersect(b1, b2.hi));
         }
         else {
-            readonly & BddNode n = {
-                atom: b1.atom,
-                lo: bddIntersect(bddUnion(b1.lo, b1.mid), bddUnion(b2.lo, b2.mid)),
-                mid: false,
-                hi: bddIntersect(bddUnion(b1.hi, b1.mid), bddUnion(b2.hi, b2.mid))
-            };
-            return n;
+            return bddCreate(b1.atom,
+                             bddIntersect(bddUnion(b1.lo, b1.mid), bddUnion(b2.lo, b2.mid)),
+                             false,
+                             bddIntersect(bddUnion(b1.hi, b1.mid), bddUnion(b2.hi, b2.mid)));
         }
     }       
 }
@@ -164,32 +143,23 @@ function bddDiff(Bdd b1, Bdd b2) returns Bdd {
     else {  
         CompareResult cmp = atomCompare(b1.atom, b2.atom);
         if cmp == -1 {
-            readonly & BddNode n = {
-                atom: b1.atom,
-                lo: bddDiff(bddUnion(b1.lo, b1.mid), b2),
-                mid: false,
-                hi: bddDiff(bddUnion(b1.hi, b1.mid), b2)
-            };
-            return n;
+            return bddCreate(b1.atom,
+                             bddDiff(bddUnion(b1.lo, b1.mid), b2),
+                             false,
+                             bddDiff(bddUnion(b1.hi, b1.mid), b2));
         }
         else if cmp == 1 {
-             readonly & BddNode n = {
-                atom: b2.atom,
-                lo: bddDiff(b1, bddUnion(b2.lo, b2.mid)),
-                mid: false,
-                hi: bddDiff(b1, bddUnion(b2.hi, b2.mid))
-            };
-            return n;
+            return bddCreate(b2.atom,
+                             bddDiff(b1, bddUnion(b2.lo, b2.mid)),
+                             false,
+                             bddDiff(b1, bddUnion(b2.hi, b2.mid)));
 
         }
         else {
-            readonly & BddNode n = {
-                atom: b1.atom,
-                lo: bddDiff(b1.lo, b2),
-                mid: bddDiff(b1.mid, b2),
-                hi: bddDiff(b1.hi, b2)
-            };
-            return n;
+            return bddCreate(b1.atom,
+                             bddDiff(b1.lo, b2),
+                             bddDiff(b1.mid, b2),
+                             bddDiff(b1.hi, b2));
         }
     }
 }
@@ -200,40 +170,38 @@ function bddComplement(Bdd b) returns Bdd {
     }
     else {
         if b.hi === false {
-             readonly & BddNode n = {
-                atom: b.atom,
-                lo: false,
-                mid: bddComplement(bddUnion(b.lo, b.mid)),
-                hi: bddComplement(b.mid)
-            };
-            return n;
+            return bddCreate(b.atom,
+                             false,
+                             bddComplement(bddUnion(b.lo, b.mid)),
+                             bddComplement(b.mid));
         }
         else if b.lo === false {
-             readonly & BddNode n = {
-                atom: b.atom,
-                lo: bddComplement(b.mid),
-                mid: bddComplement(bddUnion(b.hi, b.mid)),
-                hi: false
-            };
-            return n;
+            return bddCreate(b.atom,
+                             bddComplement(b.mid),
+                             bddComplement(bddUnion(b.hi, b.mid)),
+                             false);
         }
         else if b.mid === false {
-             readonly & BddNode n = {
-                atom: b.atom,
-                lo: bddComplement(b.lo),
-                mid: bddComplement(bddUnion(b.lo, b.hi)),
-                hi: bddComplement(b.hi)
-            };
-            return n;
+             return bddCreate(b.atom,
+                              bddComplement(b.lo),
+                              bddComplement(bddUnion(b.lo, b.hi)),
+                              bddComplement(b.hi));
         }
         else {
-             readonly & BddNode n = {
-                atom: b.atom,
-                lo: bddComplement(bddUnion(b.lo, b.mid)),
-                mid: false,
-                hi:bddComplement(bddUnion(b.hi, b.mid))
-            };
-            return n;
+            return bddCreate(b.atom,
+                             bddComplement(bddUnion(b.lo, b.mid)),
+                             false,
+                             bddComplement(bddUnion(b.hi, b.mid)));
         }
     }
+}
+
+function bddCreate(Atom atom, Bdd lo, Bdd mid, Bdd hi) returns Bdd {
+    if mid === true {
+        return true;
+    }
+    if lo == hi {
+        return bddUnion(lo, mid);
+    }
+    return { atom, lo, mid, hi };
 }
