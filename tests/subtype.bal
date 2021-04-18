@@ -56,6 +56,7 @@ function test5() {
     test:assertTrue(isSubtype(typeCheckContext(env), t, s));
 }
 
+
 @test:Config{}
 function recTest() {
     Env env = {};
@@ -63,4 +64,12 @@ function recTest() {
     SemType t2 = recursiveTuple(env, (e, t) => [union(INT, STRING), union(t, NIL)]);
     test:assertTrue(isSubtype(typeCheckContext(env), t1, t2));
     test:assertFalse(isSubtype(typeCheckContext(env), t2, t1));
+}
+
+@test:Config{}
+function recTest2() {
+    Env env = {};
+    SemType t1 = union(NIL, recursiveTuple(env, (e, t) => [INT, union(t, NIL)]));
+    SemType t2 = recursiveTuple(env, (e, t) => [INT, union(t, NIL)]);
+    test:assertTrue(isSubtype(typeCheckContext(env), t2, t1));
 }
