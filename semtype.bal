@@ -471,7 +471,7 @@ function listIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
             return res;
         }
     }
-    boolean isEmpty = tupleBddIsEmpty(tc, <Bdd>t, TOP, TOP, ());
+    boolean isEmpty = tupleBddIsEmpty(tc, b, TOP, TOP, ());
     m.isEmpty = isEmpty;
     return isEmpty;    
 }
