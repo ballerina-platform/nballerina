@@ -78,6 +78,9 @@ function recTest2() {
 function recTest3() {
     Env env = {};
     SemType t1 = recursiveTuple(env, (e, t) => [INT, union(t, NIL)]);
+    // This is equivalent to:
+    // type Inner [int, Outer|()];
+    // type Outer [int, Inner|()];
     SemType t2 = recursiveTuple(env, (e, t) => [INT, union(NIL, tuple(e, INT, union(NIL, t)))]);
     test:assertTrue(isSubtype(typeCheckContext(env), t2, t1));
     test:assertTrue(isSubtype(typeCheckContext(env), t1, t2));

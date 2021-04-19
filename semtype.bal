@@ -402,12 +402,16 @@ function typeCheckContext(Env env) returns TypeCheckContext {
     return { listDefs: env.listDefs.cloneReadOnly() };
 }
 
+// Each path from the root of the Bdd down to a leaf that is true corresponds
+// to a possibility whose emptiness needs to be checked.
+// We walk the tree, accumulating the combination of positive and negative definitions for a path as we go.
+// When we get to a leaf that is true, we check the emptiness of the accumulated combination.
 function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, SemType s0, SemType s1, AtomSet? neg) returns boolean {
     if b is boolean {
         if !b {
             return true;
         }
-        return isEmpty(tc, s0) || isEmpty(tc, s1) || tupleTheta(tc, s0, s1, neg);
+        return isEmpty(tc, s0) || isEmpty(tc, s1) || !tupleInhabited(tc, s0, s1, neg);
     }
     else {
         SemType[2] [t0, t1] = tc.listDefs[b.atom];
@@ -419,16 +423,54 @@ function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, SemType s0, SemType s1, Ato
     }
 }
 
-function tupleTheta(TypeCheckContext tc, SemType s0, SemType s1, AtomSet? neg) returns boolean {
+// `neg` represents a set of negated tuple types
+// This function returns true if there is a shape [v0,v1] such that
+// [v0,v1] is in type [s0,s1], and
+// for each tuple [t0,t1] in neg, [v0,v0] is not in [t0,t1]
+// Precondition is that s0 and s1 are non empty.
+// This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis.
+function tupleInhabited(TypeCheckContext tc, SemType s0, SemType s1, AtomSet? neg) returns boolean {
     if neg is () {
-        return false;
+        return true;
     }
     else {
         SemType[2] [t0, t1] = tc.listDefs[neg.first];
-        return (isSubtype(tc, s0, t0) || tupleTheta(tc, diff(s0, t0), s1, neg.rest))
-            && (isSubtype(tc, s1, t1) || tupleTheta(tc, s0, diff(s1, t1), neg.rest));
+
+        // For [v0, v1] not to be in [t0,t1], there are two possibilities
+        // (1) v0 is not in t0, or
+        // (2) v1 is not in t1
+        
+        // Case (1)
+        // For v0 to be in s0 but not t0, d0 must not be empty.
+        // We must then find a [v0,v1] satisfying the remaining negated tuples,
+        // such that v0 is in d0.
+        SemType d0 = diff(s0, t0);
+        if !isEmpty(tc, d0) && tupleInhabited(tc, d0, s1, neg.rest) {
+            return true;
+        }
+        // Case (2)
+        // For v1 to be in s1 but not t1, d1 must not be empty.
+        // We must then find a [v0,v1] satisfying the remaining negated tuples,
+        // such that v1 is in d1.
+        SemType d1 = diff(s1, t1);
+        return !isEmpty(tc, d1) &&  tupleInhabited(tc, s0, d1, neg.rest);
     }
 }
+
+// This is how it is expressed in the AMK tutorial.
+// This corresponds to !tupleInhabited.
+// I find it easier to understand not negates
+// function tupleTheta(TypeCheckContext tc, SemType s0, SemType s1, AtomSet? neg) returns boolean {
+//     if neg is () {
+//         return false;
+//     }
+//     else {
+//         SemType[2] [t0, t1] = tc.listDefs[neg.first];
+//         return (isSubtype(tc, s0, t0) || tupleTheta(tc, diff(s0, t0), s1, neg.rest))
+//             && (isSubtype(tc, s1, t1) || tupleTheta(tc, s0, diff(s1, t1), neg.rest));
+//     }
+// }
+
 
 function bddSubtypeCompare(SubtypeData t1, SubtypeData t2) returns CompareResult {
     return bddCompare(<Bdd>t1, <Bdd>t2);
