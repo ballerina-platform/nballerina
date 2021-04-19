@@ -2,7 +2,7 @@
 
 1. ~~Minimal subset with 2-tuples as only subtype~~
 2. ~~Framework for handling subtypes of multiple basic types~~
-3. Tuples of arbitrary fixed length
+3. ~~Tuples of arbitrary fixed length~~
 4. Closed records without optional fields
 5. ~~Recursion~~
 6. Functions of one argument

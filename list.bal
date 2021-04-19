@@ -2,11 +2,10 @@
 
 import ballerina/io;
 
-// Only 2-tuples for now
-public type ListSubtype readonly & [SemType, SemType];
+public type ListSubtype readonly & SemType[];
 
-public function tuple(Env env, SemType t1, SemType t2) returns SemType {
-    ListSubtype lt = [t1, t2];
+public function tuple(Env env, SemType... t) returns SemType {
+    ListSubtype lt = t.cloneReadOnly();
     int i = env.listDefs.length();
     env.listDefs.push(lt);
     return tupleRef(i);
@@ -24,7 +23,7 @@ function tupleRef(int i) returns SemType {
 
 public function recursiveTuple(Env env, function(Env, SemType) returns ListSubtype f) returns SemType {
     int i = env.listDefs.length();
-    ListSubtype dummy = [NEVER,NEVER];
+    ListSubtype dummy = [];
     env.listDefs.push(dummy);
     SemType r = tupleRef(i);
     env.listDefs[i] = f(env, r);
@@ -73,45 +72,62 @@ function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, AtomSet? pos, AtomSet? neg)
 }
 
 function tupleIsEmpty(TypeCheckContext tc, AtomSet? pos, AtomSet? neg) returns boolean {
-    SemType[2] s;
     if pos is () {
-        s = [TOP, TOP];
+        // do not have variable length tuples yet,
+        // so no way for intersection of negated tuples to include everything
+        return false;
     }
     else {
         // combine all the positive tuples using intersection
-        SemType[2] t = tc.listDefs[pos.first];
-        s = [t[0], t[1]];
+        SemType[] s = tc.listDefs[pos.first];
+        int slen = s.length();
         AtomSet? p = pos.rest;
-        while !(p is ()) {
-            t = tc.listDefs[p.first];
-            s[0] = intersect(s[0], t[0]);
-            if s[0].bits == 0 {
-                // s0 known to be empty
+        if !(p is ()) {
+            s = shallowCopy(s);
+        }
+        while true {
+            if p is () {
+                break;
+            }
+            else {
+                int d = p.first;
+                p = p.rest; 
+                SemType[] t = tc.listDefs[d];
+                if t.length() != slen {
+                    return false;
+                }
+                foreach int i in 0 ..< slen {
+                    s[i] = intersect(s[i], t[i]);
+                }
+            }
+        }
+        foreach var m in s {
+            if isEmpty(tc, m) {
                 return true;
             }
-            s[1] = intersect(s[1], t[1]);
-            if s[1].bits == 0 {
-                // s1 known to be empty
-                return true;
-            }
-            p = p.rest;
-        }      
+        }
+        return !tupleInhabited(tc, s, neg);
     }
-    return isEmpty(tc, s[0]) || isEmpty(tc, s[1]) || !tupleInhabited(tc, s, neg);
 }
 
 // `neg` represents a set of negated tuple types
-// This function returns true if there is a shape [v0,v1] such that
-// [v0,v1] is in type [s0,s1], and
-// for each tuple [t0,t1] in neg, [v0,v0] is not in [t0,t1]
-// Precondition is that s0 and s1 are non empty.
-// This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis.
-function tupleInhabited(TypeCheckContext tc, SemType[2] s, AtomSet? neg) returns boolean {
+// This function returns true if there is a tuple shape v such that
+// v is in type s, and
+// for each tuple t in neg, v is not in t.
+// Precondition is that all members of s are not empty.
+// This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
+// generalized to tuples of arbitrary length.
+function tupleInhabited(TypeCheckContext tc, SemType[] s, AtomSet? neg) returns boolean {
     if neg is () {
         return true;
     }
     else {
-        SemType[2] t = tc.listDefs[neg.first];
+        int slen = s.length();
+
+        SemType[] t = tc.listDefs[neg.first];
+        if t.length() != slen {
+            return tupleInhabited(tc, s, neg.rest);
+        }
 
         // For [v0, v1] not to be in [t0,t1], there are two possibilities
         // (1) v0 is not in t0, or
@@ -121,17 +137,36 @@ function tupleInhabited(TypeCheckContext tc, SemType[2] s, AtomSet? neg) returns
         // For v0 to be in s0 but not t0, d0 must not be empty.
         // We must then find a [v0,v1] satisfying the remaining negated tuples,
         // such that v0 is in d0.
-        SemType d0 = diff(s[0], t[0]);
-        if !isEmpty(tc, d0) && tupleInhabited(tc, [d0, s[1]], neg.rest) {
-            return true;
-        }
+        // SemType d0 = diff(s[0], t[0]);
+        // if !isEmpty(tc, d0) && tupleInhabited(tc, [d0, s[1]], neg.rest) {
+        //     return true;
+        // }
         // Case (2)
         // For v1 to be in s1 but not t1, d1 must not be empty.
         // We must then find a [v0,v1] satisfying the remaining negated tuples,
         // such that v1 is in d1.
-        SemType d1 = diff(s[1], t[1]);
-        return !isEmpty(tc, d1) &&  tupleInhabited(tc, [s[0], d1], neg.rest);
+        // SemType d1 = diff(s[1], t[1]);
+        // return !isEmpty(tc, d1) &&  tupleInhabited(tc, [s[0], d1], neg.rest);
+        // We can generalize this to tuples of arbitrary length.
+        foreach int i in 0 ..< slen {
+            SemType d = diff(s[i], t[i]);
+            if !isEmpty(tc, d) {
+                SemType[] sd = shallowCopy(s);
+                sd[i] = d;
+                if tupleInhabited(tc, sd, neg.rest) {
+                    return true;
+                }
+            }          
+        }
+        return false;
+       
+        
     }
+}
+
+// Feels like this should be a library function.
+function shallowCopy(SemType[] v) returns SemType[] {
+    return from var s in v select s;
 }
 
 // This is how it is expressed in the AMK tutorial.

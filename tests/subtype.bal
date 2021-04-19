@@ -28,7 +28,11 @@ function test3() {
     Env env = {};
     SemType s = tuple(env, INT, union(INT, STRING));
     SemType t = union(tuple(env, INT, INT), tuple(env, INT, STRING));
-    test:assertTrue(isSubtype(typeCheckContext(env), s, t));
+    equiv(env, s, t);
+}
+
+function equiv(Env env, SemType s, SemType t) {
+    test:assertTrue(isSubtype(typeCheckContext(env), s, t)); 
     test:assertTrue(isSubtype(typeCheckContext(env), t, s));
 }
 
@@ -52,8 +56,7 @@ function test5() {
     Env env = {};
     SemType s = tuple(env, INT, union(NIL, union(INT, STRING)));
     SemType t = union(tuple(env, INT, INT), union(tuple(env, INT, NIL), tuple(env, INT, STRING)));
-    test:assertTrue(isSubtype(typeCheckContext(env), s, t));
-    test:assertTrue(isSubtype(typeCheckContext(env), t, s));
+    equiv(env, s, t);
 }
 
 
@@ -82,6 +85,23 @@ function recTest3() {
     // type Inner [int, Outer|()];
     // type Outer [int, Inner|()];
     SemType t2 = recursiveTuple(env, (e, t) => [INT, union(NIL, tuple(e, INT, union(NIL, t)))]);
-    test:assertTrue(isSubtype(typeCheckContext(env), t2, t1));
-    test:assertTrue(isSubtype(typeCheckContext(env), t1, t2));
+    equiv(env, t1, t2);
 }
+
+@test:Config{}
+function tupleTest1() {
+    Env env = {};
+    SemType s = tuple(env, INT, STRING, NIL);
+    SemType t = tuple(env, TOP, TOP, TOP);
+    test:assertTrue(isSubtype(typeCheckContext(env), s, t));
+    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+}
+
+@test:Config{}
+function tupleTest2() {
+    Env env = {};
+    SemType s = tuple(env, INT, STRING, NIL);
+    SemType t = tuple(env, TOP, TOP);
+    test:assertFalse(isSubtype(typeCheckContext(env), s, t));
+    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+}  
