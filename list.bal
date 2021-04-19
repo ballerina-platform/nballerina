@@ -73,32 +73,31 @@ function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, AtomSet? pos, AtomSet? neg)
 }
 
 function tupleIsEmpty(TypeCheckContext tc, AtomSet? pos, AtomSet? neg) returns boolean {
-    SemType s0;
-    SemType s1;
+    SemType[2] s;
     if pos is () {
-        s0 = TOP;
-        s1 = TOP;
+        s = [TOP, TOP];
     }
     else {
         // combine all the positive tuples using intersection
-        [s0, s1] = tc.listDefs[pos.first];
+        SemType[2] t = tc.listDefs[pos.first];
+        s = [t[0], t[1]];
         AtomSet? p = pos.rest;
         while !(p is ()) {
-            SemType[2] [t0, t1] = tc.listDefs[p.first];
-            s0 = intersect(s0, t0);
-            if s0.bits == 0 {
+            t = tc.listDefs[p.first];
+            s[0] = intersect(s[0], t[0]);
+            if s[0].bits == 0 {
                 // s0 known to be empty
                 return true;
             }
-            s1 = intersect(s1, t1);
-            if s1.bits == 0 {
+            s[1] = intersect(s[1], t[1]);
+            if s[1].bits == 0 {
                 // s1 known to be empty
                 return true;
             }
             p = p.rest;
         }      
     }
-    return isEmpty(tc, s0) || isEmpty(tc, s1) || !tupleInhabited(tc, s0, s1, neg);
+    return isEmpty(tc, s[0]) || isEmpty(tc, s[1]) || !tupleInhabited(tc, s, neg);
 }
 
 // `neg` represents a set of negated tuple types
@@ -107,12 +106,12 @@ function tupleIsEmpty(TypeCheckContext tc, AtomSet? pos, AtomSet? neg) returns b
 // for each tuple [t0,t1] in neg, [v0,v0] is not in [t0,t1]
 // Precondition is that s0 and s1 are non empty.
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis.
-function tupleInhabited(TypeCheckContext tc, SemType s0, SemType s1, AtomSet? neg) returns boolean {
+function tupleInhabited(TypeCheckContext tc, SemType[2] s, AtomSet? neg) returns boolean {
     if neg is () {
         return true;
     }
     else {
-        SemType[2] [t0, t1] = tc.listDefs[neg.first];
+        SemType[2] t = tc.listDefs[neg.first];
 
         // For [v0, v1] not to be in [t0,t1], there are two possibilities
         // (1) v0 is not in t0, or
@@ -122,16 +121,16 @@ function tupleInhabited(TypeCheckContext tc, SemType s0, SemType s1, AtomSet? ne
         // For v0 to be in s0 but not t0, d0 must not be empty.
         // We must then find a [v0,v1] satisfying the remaining negated tuples,
         // such that v0 is in d0.
-        SemType d0 = diff(s0, t0);
-        if !isEmpty(tc, d0) && tupleInhabited(tc, d0, s1, neg.rest) {
+        SemType d0 = diff(s[0], t[0]);
+        if !isEmpty(tc, d0) && tupleInhabited(tc, [d0, s[1]], neg.rest) {
             return true;
         }
         // Case (2)
         // For v1 to be in s1 but not t1, d1 must not be empty.
         // We must then find a [v0,v1] satisfying the remaining negated tuples,
         // such that v1 is in d1.
-        SemType d1 = diff(s1, t1);
-        return !isEmpty(tc, d1) &&  tupleInhabited(tc, s0, d1, neg.rest);
+        SemType d1 = diff(s[1], t[1]);
+        return !isEmpty(tc, d1) &&  tupleInhabited(tc, [s[0], d1], neg.rest);
     }
 }
 
