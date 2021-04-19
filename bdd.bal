@@ -138,7 +138,7 @@ function bddDiff(Bdd b1, Bdd b2) returns Bdd {
         return b2 == true ? false : b1;
     }
     else if b1 is boolean {
-        return b1 == false ? b1 : false;
+        return b1 == true ?  bddComplement(b2) : false;
     }
     else {  
         CompareResult cmp = atomCompare(b1.atom, b2.atom);
