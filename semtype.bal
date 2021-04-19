@@ -402,25 +402,74 @@ function typeCheckContext(Env env) returns TypeCheckContext {
     return { listDefs: env.listDefs.cloneReadOnly() };
 }
 
+function listIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
+    Bdd b = <Bdd>t;
+    BddMemo? mm = tc.memo[b];
+    BddMemo m;
+    if mm is () {
+        m = { bdd: b };
+        tc.memo.add(m);
+    }
+    else {
+        m = mm;
+        boolean? res = m.isEmpty;
+        if res is () {
+            // we've got a loop
+            io:println("got a loop");
+            // XXX is this right???
+            return true;
+        }
+        else {
+            return res;
+        }
+    }
+    boolean isEmpty = tupleBddIsEmpty(tc, b, (), ());
+    m.isEmpty = isEmpty;
+    return isEmpty;    
+}
+
 // Each path from the root of the Bdd down to a leaf that is true corresponds
 // to a possibility whose emptiness needs to be checked.
 // We walk the tree, accumulating the combination of positive and negative definitions for a path as we go.
 // When we get to a leaf that is true, we check the emptiness of the accumulated combination.
-function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, SemType s0, SemType s1, AtomSet? neg) returns boolean {
+function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, AtomSet? pos, AtomSet? neg) returns boolean {
     if b is boolean {
-        if !b {
-            return true;
-        }
-        return isEmpty(tc, s0) || isEmpty(tc, s1) || !tupleInhabited(tc, s0, s1, neg);
+        return !b || tupleIsEmpty(tc, pos, neg);
     }
     else {
-        SemType[2] [t0, t1] = tc.listDefs[b.atom];
-        return tupleBddIsEmpty(tc, b.lo,
-                               intersect(s0, t0),
-                               intersect(s1, t1), neg)
-          && tupleBddIsEmpty(tc, b.mid, s0, s1, neg)
-          && tupleBddIsEmpty(tc, b.hi, s0, s1, atomListCons(b.atom, neg)); 
+        return tupleBddIsEmpty(tc, b.lo, atomListCons(b.atom, pos), neg)
+          && tupleBddIsEmpty(tc, b.mid, pos, neg)
+          && tupleBddIsEmpty(tc, b.hi, pos, atomListCons(b.atom, neg)); 
     }
+}
+
+function tupleIsEmpty(TypeCheckContext tc, AtomSet? pos, AtomSet? neg) returns boolean {
+    SemType s0;
+    SemType s1;
+    if pos is () {
+        s0 = TOP;
+        s1 = TOP;
+    }
+    else {
+        // combine all the positive tuples using intersection
+        [s0, s1] = tc.listDefs[pos.first];
+        AtomSet? p = pos.rest;
+        while !(p is ()) {
+            SemType[2] [t0, t1] = tc.listDefs[p.first];
+            s0 = intersect(s0, t0);
+            if s0.bits == 0 {
+                // s0 known to be empty
+                return true;
+            }
+            s1 = intersect(s1, t1);
+            if s1.bits == 0 {
+                // s1 known to be empty
+                return true;
+            }
+            p = p.rest;
+        }      
+    }
+    return isEmpty(tc, s0) || isEmpty(tc, s1) || !tupleInhabited(tc, s0, s1, neg);
 }
 
 // `neg` represents a set of negated tuple types
@@ -490,32 +539,6 @@ function bddSubtypeDiff(SubtypeData t1, SubtypeData t2) returns SubtypeData {
 
 function bddSubtypeComplement(SubtypeData t) returns SubtypeData {
     return bddComplement(<Bdd>t);
-}
-
-function listIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
-    BddMemo? mm = tc.memo[b];
-    BddMemo m;
-    if mm is () {
-        m = { bdd: b };
-        tc.memo.add(m);
-    }
-    else {
-        m = mm;
-        boolean? res = m.isEmpty;
-        if res is () {
-            // we've got a loop
-            io:println("got a loop");
-            // XXX is this right???
-            return true;
-        }
-        else {
-            return res;
-        }
-    }
-    boolean isEmpty = tupleBddIsEmpty(tc, b, TOP, TOP, ());
-    m.isEmpty = isEmpty;
-    return isEmpty;    
 }
 
 // slalpha4 gets bad, sad if this is readonly
