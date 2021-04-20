@@ -32,18 +32,18 @@ public function recursiveTuple(Env env, function(Env, SemType) returns ListSubty
 
 function listIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
-    BddMemo? mm = tc.memo[b];
+    BddMemo? mm = tc.listMemo[b];
     BddMemo m;
     if mm is () {
         m = { bdd: b };
-        tc.memo.add(m);
+        tc.listMemo.add(m);
     }
     else {
         m = mm;
         boolean? res = m.isEmpty;
         if res is () {
             // we've got a loop
-            io:println("got a loop");
+            io:println("got a list loop");
             // XXX is this right???
             return true;
         }

@@ -104,4 +104,13 @@ function tupleTest2() {
     SemType t = tuple(env, TOP, TOP);
     test:assertFalse(isSubtype(typeCheckContext(env), s, t));
     test:assertFalse(isSubtype(typeCheckContext(env), t, s));
-}  
+}
+
+@test:Config{}
+function funcTest1() {
+    Env env = {};
+    SemType s = func(env, INT, INT);
+    SemType t = func(env, INT, union(NIL, INT));
+    test:assertTrue(isSubtype(typeCheckContext(env), s, t));
+    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+}

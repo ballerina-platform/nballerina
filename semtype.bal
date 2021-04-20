@@ -3,19 +3,21 @@ public const BT_BOOLEAN = 1;
 public const BT_INT = 2;
 public const BT_STRING = 3;
 public const BT_LIST = 4;
-public const BT_COUNT = 5;
-public const int BT_MASK = 31;
+public const BT_FUNCTION = 5;
+public const BT_COUNT = 6;
+public const int BT_MASK = 63;
 // slalpha4 gets a bad, sad on this
 // public const int BT_MASK = (1 << BT_COUNT) - 1;
 
-const int BT_SOME = 33;
+const int BT_SOME = 65;
 // slalpha4 gets a bad, sad on this
 // public const int BT_SOME = 1 | (1 << BT_COUNT);
 
-public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST;
+public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST|BT_FUNCTION;
 
 public type Env record {|
     ListSubtype[] listDefs = [];
+    FunctionSubtype[] functionDefs = [];
 |};
 
 public type BddMemo record {|
@@ -27,7 +29,9 @@ public type BddMemoTable table<BddMemo> key(bdd);
 
 public type TypeCheckContext record {|
     readonly ListSubtype[] listDefs;
-    BddMemoTable memo = table [];
+    readonly FunctionSubtype[] functionDefs = [];
+    BddMemoTable listMemo = table [];
+    BddMemoTable functionMemo = table [];
 |};
 
 type SubtypeData int|Bdd;
@@ -279,6 +283,10 @@ public function diff(SemType t1, SemType t2) returns SemType {
     return new SemType(bits, subtypes.cloneReadOnly());        
 }
 
+public function complement(SemType t) returns SemType {
+    return diff(TOP, t);
+}
+
 public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
     if t.bits == 0 {
         // neither all nor part of any basic type
@@ -312,7 +320,10 @@ function defListCons(int index, DefList? rest) returns DefList {
 }
 
 function typeCheckContext(Env env) returns TypeCheckContext {
-    return { listDefs: env.listDefs.cloneReadOnly() };
+    return {
+        listDefs: env.listDefs.cloneReadOnly(),
+        functionDefs: env.functionDefs.cloneReadOnly()
+    };
 }
 
 function bddSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
@@ -336,16 +347,23 @@ final BasicTypeOps[] ops;
 
 function init() {
     ops = [
-        {},  // nil
-        {},  // boolean
-        {},  // int
-        {},  // string
-        { // list
+        {}, // nil
+        {}, // boolean
+        {}, // int
+        {}, // string
+        {   // list
             union: bddSubtypeUnion,
             intersect: bddSubtypeIntersect,
             diff: bddSubtypeDiff,
             complement: bddSubtypeComplement,
             isEmpty: listIsEmpty
+        },
+        {   // function
+            union: bddSubtypeUnion,
+            intersect: bddSubtypeIntersect,
+            diff: bddSubtypeDiff,
+            complement: bddSubtypeComplement,
+            isEmpty: functionIsEmpty
         }
    ];
 }

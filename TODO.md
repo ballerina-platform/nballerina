@@ -5,7 +5,7 @@
 3. ~~Tuples of arbitrary fixed length~~
 4. Closed records without optional fields
 5. ~~Recursion~~
-6. Functions of one argument
+6. ~~Functions of one argument~~
 7. Represent multiple function arguments using tuples
 8. Devise JSON representation of types and conversion into SemType
 9. Conversion from SemType to JSON representation
