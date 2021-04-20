@@ -36,7 +36,6 @@ type BasicTypeSubtype readonly & [BasicTypeCode, SubtypeData];
 
 type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
 type UnaryOp function(SubtypeData t) returns SubtypeData;
-type CompareOp function(SubtypeData t1, SubtypeData t2) returns CompareResult;
 type UnaryTypeCheckOp function(TypeCheckContext tc, SubtypeData t) returns boolean;
 
 function binOpPanic(SubtypeData t1, SubtypeData t2) returns SubtypeData {
@@ -47,16 +46,11 @@ function unaryOpPanic(SubtypeData t) returns SubtypeData {
     panic error("unary operation should not be called");
 }
 
-function compareOpPanic(SubtypeData t1, SubtypeData t2) returns CompareResult {
-    panic error("comparison should not be called");
-}
-
 function unaryTypeCheckOpPanic(TypeCheckContext tc, SubtypeData t) returns boolean {
     panic error("unary boolean operation should not be called");
 }
 
 type BasicTypeOps record {|
-    CompareOp compare = compareOpPanic;
     BinOp union = binOpPanic;
     BinOp intersect = binOpPanic;
     BinOp diff = binOpPanic;
@@ -93,7 +87,6 @@ public final SemType INT = new SemType(1 << BT_INT);
 public final SemType STRING = new SemType(1 << BT_STRING);
 // this is SubtypeData|error
 public final SemType TOP = new SemType(BT_MASK);
-
 
 // Need this type to workaround slalpha4 bug
 public type SubtypePairIterator object {
@@ -305,75 +298,21 @@ public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
     return true;
 }
     
-
 public function isSubtype(TypeCheckContext tc, SemType t1, SemType t2) returns boolean { 
     return isEmpty(tc, diff(t1, t2));
 }
 
-// Need to have an ordering defined on SemType values
-function compare(SemType t1, SemType t2) returns CompareResult {
-    int bits1 = t1.bits;
-    int bits2 = t2.bits;
-    if bits1 != bits2 {
-        return bits1 < bits2 ? -1 : 1;
-    }
-    if ((bits1 >> BT_COUNT) & BT_MASK) == 0 {
-        // no parts, so they are the same
-        return 0;
-    }
-    var sub1 = t1.subtypes;
-    int len1 = sub1.length();
-    var sub2 = t2.subtypes;
-    int len2 = sub2.length();
-    int i = 0;
-    while true {
-        if i >= len1 {
-            if i >= len2 {
-                break;
-            }
-            // sub1 shorter than sub2
-            return -1;
-        }
-        else if i >= len2 {
-            // sub1 longer than sub2
-            return 1;
-        }
-        else {
-            var [code1, data1] = sub1[i];
-            var [code2, data2] = sub2[i];
-            if code1 < code2 {
-                return -1;
-            }
-            if code1 > code2 {
-                return 1;
-            }
-            var compare = ops[code1].compare;
-            CompareResult cmp = compare(data1, data2);
-            if cmp != 0 {
-                return cmp;
-            }
-        }
-        i += 1;
-    }
-    return 0;
-}
-
-type AtomSet record {
-    Atom first;
-    AtomSet? rest;
+type DefList record {
+    int index;
+    DefList? rest;
 };
 
-function atomListCons(Atom first, AtomSet? rest) returns AtomSet {
-    return { first, rest };
+function defListCons(int index, DefList? rest) returns DefList {
+    return { index, rest };
 }
 
 function typeCheckContext(Env env) returns TypeCheckContext {
     return { listDefs: env.listDefs.cloneReadOnly() };
-}
-
-
-function bddSubtypeCompare(SubtypeData t1, SubtypeData t2) returns CompareResult {
-    return bddCompare(<Bdd>t1, <Bdd>t2);
 }
 
 function bddSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
@@ -402,7 +341,6 @@ function init() {
         {},  // int
         {},  // string
         { // list
-            compare: bddSubtypeCompare,
             union: bddSubtypeUnion,
             intersect: bddSubtypeIntersect,
             diff: bddSubtypeDiff,

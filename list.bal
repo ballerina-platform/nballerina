@@ -13,7 +13,7 @@ public function tuple(Env env, SemType... t) returns SemType {
 
 function tupleRef(int i) returns SemType {
     readonly & BddNode bdd = {
-        atom: i,
+        index: i,
         lo: true,
         mid: false,
         hi: false
@@ -60,18 +60,18 @@ function listIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
 // to a possibility whose emptiness needs to be checked.
 // We walk the tree, accumulating the combination of positive and negative definitions for a path as we go.
 // When we get to a leaf that is true, we check the emptiness of the accumulated combination.
-function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, AtomSet? pos, AtomSet? neg) returns boolean {
+function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, DefList? pos, DefList? neg) returns boolean {
     if b is boolean {
         return !b || tupleIsEmpty(tc, pos, neg);
     }
     else {
-        return tupleBddIsEmpty(tc, b.lo, atomListCons(b.atom, pos), neg)
+        return tupleBddIsEmpty(tc, b.lo, defListCons(b.index, pos), neg)
           && tupleBddIsEmpty(tc, b.mid, pos, neg)
-          && tupleBddIsEmpty(tc, b.hi, pos, atomListCons(b.atom, neg)); 
+          && tupleBddIsEmpty(tc, b.hi, pos, defListCons(b.index, neg)); 
     }
 }
 
-function tupleIsEmpty(TypeCheckContext tc, AtomSet? pos, AtomSet? neg) returns boolean {
+function tupleIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) returns boolean {
     if pos is () {
         // do not have variable length tuples yet,
         // so no way for intersection of negated tuples to include everything
@@ -79,9 +79,9 @@ function tupleIsEmpty(TypeCheckContext tc, AtomSet? pos, AtomSet? neg) returns b
     }
     else {
         // combine all the positive tuples using intersection
-        SemType[] s = tc.listDefs[pos.first];
+        SemType[] s = tc.listDefs[pos.index];
         int slen = s.length();
-        AtomSet? p = pos.rest;
+        DefList? p = pos.rest;
         if !(p is ()) {
             s = shallowCopy(s);
         }
@@ -90,7 +90,7 @@ function tupleIsEmpty(TypeCheckContext tc, AtomSet? pos, AtomSet? neg) returns b
                 break;
             }
             else {
-                int d = p.first;
+                int d = p.index;
                 p = p.rest; 
                 SemType[] t = tc.listDefs[d];
                 if t.length() != slen {
@@ -117,14 +117,14 @@ function tupleIsEmpty(TypeCheckContext tc, AtomSet? pos, AtomSet? neg) returns b
 // Precondition is that all members of s are not empty.
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
-function tupleInhabited(TypeCheckContext tc, SemType[] s, AtomSet? neg) returns boolean {
+function tupleInhabited(TypeCheckContext tc, SemType[] s, DefList? neg) returns boolean {
     if neg is () {
         return true;
     }
     else {
         int slen = s.length();
 
-        SemType[] t = tc.listDefs[neg.first];
+        SemType[] t = tc.listDefs[neg.index];
         if t.length() != slen {
             return tupleInhabited(tc, s, neg.rest);
         }
@@ -172,7 +172,7 @@ function shallowCopy(SemType[] v) returns SemType[] {
 // This is how it is expressed in the AMK tutorial.
 // This corresponds to !tupleInhabited.
 // I find it easier to understand not negates
-// function tupleTheta(TypeCheckContext tc, SemType s0, SemType s1, AtomSet? neg) returns boolean {
+// function tupleTheta(TypeCheckContext tc, SemType s0, SemType s1, DefList? neg) returns boolean {
 //     if neg is () {
 //         return false;
 //     }
