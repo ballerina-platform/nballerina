@@ -1,9 +1,4 @@
-// BDDs
-
-// BDD branch nodes are labelled with these
-
-type CompareResult -1 | 0 | 1;
-
+// Binary Decision Diagrams
 
 public type Bdd (readonly & BddNode)|boolean;
 
