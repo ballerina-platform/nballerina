@@ -114,3 +114,13 @@ function funcTest1() {
     test:assertTrue(isSubtype(typeCheckContext(env), s, t));
     test:assertFalse(isSubtype(typeCheckContext(env), t, s));
 }
+
+
+@test:Config{}
+function funcTest2() {
+    Env env = {};
+    SemType s = func(env, union(NIL, INT), INT);
+    SemType t = func(env, INT, INT);
+    test:assertTrue(isSubtype(typeCheckContext(env), s, t));
+    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+}
