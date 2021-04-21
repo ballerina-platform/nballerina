@@ -73,6 +73,7 @@ function functionBddIsEmpty(TypeCheckContext tc, Bdd b, SemType s, DefList? pos,
 
 function functionTheta(TypeCheckContext tc, SemType t0, SemType t1, DefList? pos) returns boolean {
     if pos is () {
+        // XXX can have function with return type of never
         return isEmpty(tc, t0) || isEmpty(tc, t1);
     }
     else {
