@@ -15,7 +15,7 @@
 13. Ranges as integer subtypes
 14. float singletons
 15. xml type
-16. Rest field for records
+16. Rest field and optional fields for records
 17. Rest field for tuples
 18. readonly type
 19. readonly record fields
