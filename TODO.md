@@ -7,7 +7,7 @@
 5. ~~Recursion~~
 6. ~~Functions of one argument~~
 7. Represent multiple function arguments using tuples
-8. Devise JSON representation of types and conversion into SemType
+8. ~~Devise JSON representation of types and conversion into SemType~~
 9. Conversion from SemType to JSON representation
 10. Conversion from JSON representation of type to string (in Ballerina syntax)
 11. String singleton type

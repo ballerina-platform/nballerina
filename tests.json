@@ -1,0 +1,4 @@
+[
+    ["strict_subtype", "int", ["|", "int", "nil"]]
+]
+
