@@ -89,6 +89,8 @@ public final SemType NIL = new SemType(1 << BT_NIL);
 public final SemType BOOLEAN = new SemType(1 << BT_BOOLEAN);
 public final SemType INT = new SemType(1 << BT_INT);
 public final SemType STRING = new SemType(1 << BT_STRING);
+// matches all functions
+public final SemType FUNCTION = new SemType(1 << BT_FUNCTION);
 // this is SubtypeData|error
 public final SemType TOP = new SemType(BT_MASK);
 
