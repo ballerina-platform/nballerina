@@ -30,6 +30,15 @@ public function recursiveTuple(Env env, function(Env, SemType) returns ListSubty
     return r;
 }
 
+public function recursiveTupleParse(Env env, function(Env, SemType) returns ListSubtype|error f) returns SemType|error {
+    int i = env.listDefs.length();
+    ListSubtype dummy = [];
+    env.listDefs.push(dummy);
+    SemType r = tupleRef(i);
+    env.listDefs[i] = check f(env, r);
+    return r;
+}
+
 function listIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = tc.listMemo[b];
