@@ -5,6 +5,14 @@
     ["equivalent", ["list", "int", ["|", "int", "nil"]],
                    ["|", ["list", "int", "int"], ["list", "int", "nil"]]],
     ["proper_subtype", ["rec", "x", ["list", "int", [ "|", "nil", ["ref", "x"]]]],
-                        ["rec", "x", ["list", ["|", "int", "nil"],  [ "|", "nil", ["ref", "x"]]]]]
+                        ["rec", "x", ["list", ["|", "int", "nil"],  [ "|", "nil", ["ref", "x"]]]]],
+    ["proper_subtype", ["function", "int", "nil"], ["function", "int", ["|", "string", "nil"]]],
+    ["proper_subtype", ["function", ["|", "int", "nil"], "nil"], ["function", "int", ["|", "string", "nil"]]],
+    ["proper_subtype", "never", "int"],
+    ["proper_subtype", "never", ["function", "int", "nil"]],
+    ["equivalent", ["rec", "x", ["list", "int", ["|", "nil", ["list", "int", ["|", "nil", ["ref", "x"]]]]]],
+                   ["rec", "x", ["list", "int", ["|", "nil", ["ref", "x"]]]]],
+    ["incomparable", "int", "string"],
+    ["incomparable", ["list", "int", "string"], ["list", "string", "int"]]
 ]
 
