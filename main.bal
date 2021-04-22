@@ -1,7 +1,7 @@
 import ballerina/io;
 
 enum Relation {
-    strict_subtype,
+    proper_subtype,
     equivalent,
     incomparable
 }
@@ -26,8 +26,8 @@ public function main() returns error? {
 }
 
 final var relationExpect = {
-   strict_subtype: [true, false],
-   equivalenent: [true, true],
+   proper_subtype: [true, false],
+   equivalent: [true, true],
    incomparable: [false, false]
 };
 

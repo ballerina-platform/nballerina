@@ -1,4 +1,10 @@
 [
-    ["strict_subtype", "int", ["|", "int", "nil"]]
+    ["proper_subtype", "int", ["|", "int", "nil"]],
+    ["proper_subtype", ["list", "int"], ["list", ["|", "int", "nil"]]],
+    ["equivalent", "int", ["|", "int", "int"]],
+    ["equivalent", ["list", "int", ["|", "int", "nil"]],
+                   ["|", ["list", "int", "int"], ["list", "int", "nil"]]],
+    ["proper_subtype", ["rec", "x", ["list", "int", [ "|", "nil", ["ref", "x"]]]],
+                        ["rec", "x", ["list", ["|", "int", "nil"],  [ "|", "nil", ["ref", "x"]]]]]
 ]
 
