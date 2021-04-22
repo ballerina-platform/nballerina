@@ -40,8 +40,8 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
         firstOk = true;
         SemType t2 = check fromJson(env, j2);
         var expect = <[boolean,boolean]>relationExpect[rel];
-        return expectSubtype(testNum, j1, j2, env, t1, t2, expect[0])
-                && expectSubtype(testNum, j2, j1, env, t2, t1, expect[1]);
+        return expectSubtype(testNum, j1, j2, env, t1, t2, expect, 0)
+                && expectSubtype(testNum, j2, j1, env, t2, t1, expect, 1);
     }
     on fail JsonParseError err {
         io:println("Could not parse ", firstOk ? "second" : "first", " type in test ", testNum);
@@ -49,10 +49,11 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
     }
 }
 
-function expectSubtype(int testNum, json j1, json j2, Env env, SemType t1, SemType t2, boolean expect) returns boolean {
+function expectSubtype(int testNum, json j1, json j2, Env env, SemType t1, SemType t2, boolean[] expect, int i) returns boolean {
+    io:println("Test ", testNum, "/", i);
     var tc = typeCheckContext(env);
     boolean b = isSubtype(tc, t1, t2);
-    if b == expect {
+    if b == expect[i] {
         return true;
     }
     io:println("Fail test ", testNum, ". This type");
