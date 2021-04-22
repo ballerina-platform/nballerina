@@ -13,6 +13,7 @@
     ["equivalent", ["rec", "x", ["list", "int", ["|", "nil", ["list", "int", ["|", "nil", ["ref", "x"]]]]]],
                    ["rec", "x", ["list", "int", ["|", "nil", ["ref", "x"]]]]],
     ["incomparable", "int", "string"],
-    ["incomparable", ["list", "int", "string"], ["list", "string", "int"]]
+    ["incomparable", ["list", "int", "string"], ["list", "string", "int"]],
+    ["proper_subtype", ["const", "xyzzy"], "string"]
 ]
 

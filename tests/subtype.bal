@@ -142,3 +142,10 @@ function funcTest4() {
     test:assertTrue(isSubtype(typeCheckContext(env), s, t));
     test:assertFalse(isSubtype(typeCheckContext(env), t, s));
 }
+
+@test:Config{}
+function stringTest() {
+    test:assertEquals(stringListUnion(["a", "b", "d"], ["c"]), ["a", "b", "c", "d"]);
+    test:assertEquals(stringListIntersect(["a", "b", "d"], ["d"]), ["d"]);
+    test:assertEquals(stringListDiff(["a", "b", "c", "d"], ["a", "c"]), ["b", "d"]);
+}

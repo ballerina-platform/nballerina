@@ -16,8 +16,10 @@ There is also a very useful tutorial by Andrew M. Kent:
 [Down and Dirty with Semantic Set-theoretic Types (a tutorial)](https://pnwamk.github.io/sst-tutorial/)
 
 The implementation currently handles a tiny subset of Ballerina type system:
-* nil, boolean, int, string types (without any subtypes)
+* nil, boolean, int, string types
+* string singletons
 * tuple types of any fixed length (including recursion)
+* function types
 * union
 * intersection
 * any and never (can be derived from the above)

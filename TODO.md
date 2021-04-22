@@ -6,11 +6,11 @@
 4. Closed records without optional fields
 5. ~~Recursion~~
 6. ~~Functions of one argument~~
-7. Represent multiple function arguments using tuples
+7. ~~Represent multiple function arguments using tuples~~
 8. ~~Devise JSON representation of types and conversion into SemType~~
 9. Conversion from SemType to JSON representation
 10. Conversion from JSON representation of type to string (in Ballerina syntax)
-11. String singleton type
+11. ~~String singleton type~~
 12. Boolean singleton type
 13. Ranges as integer subtypes
 14. float singletons

@@ -34,7 +34,8 @@ public type TypeCheckContext record {|
     BddMemoTable functionMemo = table [];
 |};
 
-type SubtypeData int|Bdd;
+// true means everything and false means nothing (as with Bdd)
+type SubtypeData StringSubtype|Bdd;
 
 type BasicTypeSubtype readonly & [BasicTypeCode, SubtypeData];
 
@@ -205,7 +206,14 @@ public function union(SemType t1, SemType t2) returns SemType {
             var union = ops[code].union;
             data = union(data1, data2);
         }
-        subtypes.push([code, data]);
+        if data == true {
+            int c = code;
+            bits &= ~(1 << (c + BT_COUNT));
+            bits |= 1 << c;
+        }
+        else {
+            subtypes.push([code, data]);
+        }
     }
     return new SemType(bits, subtypes.cloneReadOnly());
 }
@@ -247,7 +255,13 @@ public function intersect(SemType t1, SemType t2) returns SemType {
             var intersect = ops[code].intersect;
             data = intersect(data1, data2);
         }
-        subtypes.push([code, data]);
+        if data == false {
+            int c = code;
+            bits &= ~(1 << (c + BT_COUNT));
+        }
+        else {
+            subtypes.push([code, data]);
+        }
     }
     return new SemType(bits, subtypes.cloneReadOnly());    
 }
@@ -280,7 +294,13 @@ public function diff(SemType t1, SemType t2) returns SemType {
             var diff = ops[code].diff;
             data = diff(data1, data2);
         }
-        subtypes.push([code, data]);
+         if data == false {
+            int c = code;
+            bits &= ~(1 << (c + BT_COUNT));
+        }
+        else {
+            subtypes.push([code, data]);
+        }
     }
     return new SemType(bits, subtypes.cloneReadOnly());        
 }
@@ -352,7 +372,7 @@ function init() {
         {}, // nil
         {}, // boolean
         {}, // int
-        {}, // string
+        stringOps, // string
         {   // list
             union: bddSubtypeUnion,
             intersect: bddSubtypeIntersect,

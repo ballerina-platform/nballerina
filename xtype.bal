@@ -1,6 +1,6 @@
 // External representation of types
 
-type XType XNil|XBoolean|XInt|XString|XUnion|XIntersection|XNever|XAny|XList|XFunction|XRec|XRef;
+type XType XNil|XBoolean|XInt|XString|XSingle|XUnion|XIntersection|XNever|XAny|XList|XFunction|XRec|XRef;
 
 const XNil = "nil";
 const XBoolean = "boolean";
@@ -8,6 +8,8 @@ const XInt = "int";
 const XString = "string";
 const XNever = "never";
 const XAny = "any";
+
+type XSingle ["const", string];
 
 type XUnion ["|", XType...];
 type XIntersection ["&", XType...];
@@ -86,6 +88,18 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
             }
             SemType ret = v.pop();
             return func(env, tuple(env, ...v), ret);
+        }
+        "const" => {
+            if jlist.length() != 2 {
+                return parseError("'const' must be followed by a string", parent, 0);
+            }
+            final json value = jlist[1];
+            if !(value is string) {
+                return parseError("'const' must be followed by a string", parent, 1);
+            }
+            else {
+                return stringConst(value);
+            }
         }
         "rec" => {
             if jlist.length() == 1 {
