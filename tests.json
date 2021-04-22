@@ -14,6 +14,10 @@
                    ["rec", "x", ["list", "int", ["|", "nil", ["ref", "x"]]]]],
     ["incomparable", "int", "string"],
     ["incomparable", ["list", "int", "string"], ["list", "string", "int"]],
-    ["proper_subtype", ["const", "xyzzy"], "string"]
+    ["proper_subtype", ["const", "xyzzy"], "string"],
+    ["proper_subtype", ["const", "xyzzy"], ["|", ["const", "xyzzy"], ["const", "abcdef"]]],
+    ["equivalent", "string", ["|", "never", ["const", "xyzzy"], "string"]],
+    ["equivalent", ["const", "xyzzy"], ["&", ["const", "xyzzy"], "string"]],    ["incomparable", ["const", "xyz"], ["const", "def"]]
+
 ]
 
