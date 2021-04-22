@@ -60,7 +60,7 @@ function functionBddIsEmpty(TypeCheckContext tc, Bdd b, SemType s, DefList? pos,
         else {
             SemType[2] [t0, t1] = tc.functionDefs[neg.index];
             return (isSubtype(tc, t0, s) && functionTheta(tc, t0, complement(t1), pos))
-                || functionBddIsEmpty(tc, true, s, pos, neg);
+                || functionBddIsEmpty(tc, true, s, pos, neg.rest);
         }
     }
     else {
