@@ -39,7 +39,7 @@ public function recursiveTupleParse(Env env, function(Env, SemType) returns List
     return r;
 }
 
-function listIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
+function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = tc.listMemo[b];
     BddMemo m;
@@ -60,7 +60,7 @@ function listIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
             return res;
         }
     }
-    boolean isEmpty = tupleBddIsEmpty(tc, b, (), ());
+    boolean isEmpty = bddIsEmpty(tc, b, (), (), listFormulaIsEmpty);
     m.isEmpty = isEmpty;
     return isEmpty;    
 }
@@ -71,7 +71,7 @@ function listIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
 // When we get to a leaf that is true, we check the emptiness of the accumulated combination.
 function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, DefList? pos, DefList? neg) returns boolean {
     if b is boolean {
-        return !b || tupleIsEmpty(tc, pos, neg);
+        return !b || listFormulaIsEmpty(tc, pos, neg);
     }
     else {
         return tupleBddIsEmpty(tc, b.lo, defListCons(b.index, pos), neg)
@@ -80,7 +80,7 @@ function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, DefList? pos, DefList? neg)
     }
 }
 
-function tupleIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) returns boolean {
+function listFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) returns boolean {
     if pos is () {
         // do not have variable length tuples yet,
         // so no way for intersection of negated tuples to include everything

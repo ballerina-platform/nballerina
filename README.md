@@ -18,7 +18,13 @@ There is also a very useful tutorial by Andrew M. Kent:
 The implementation currently handles a small subset of Ballerina type system:
 * nil, boolean, int, string types
 * string singletons
-* tuple types of any fixed length (including recursion)
+* tuple types
+    * any fixed length
+    * with recursion
+*  record types
+    * closed
+    * with recursion
+    * no optional fields
 * function types
 * union
 * intersection

@@ -3,20 +3,22 @@ public const BT_BOOLEAN = 1;
 public const BT_INT = 2;
 public const BT_STRING = 3;
 public const BT_LIST = 4;
-public const BT_FUNCTION = 5;
-public const BT_COUNT = 6;
-public const int BT_MASK = 63;
+public const BT_MAPPING = 5;
+public const BT_FUNCTION = 6;
+public const BT_COUNT = 7;
+public const int BT_MASK = 127;
 // slalpha4 gets a bad, sad on this
 // public const int BT_MASK = (1 << BT_COUNT) - 1;
 
-const int BT_SOME = 65;
+const int BT_SOME = 129;
 // slalpha4 gets a bad, sad on this
 // public const int BT_SOME = 1 | (1 << BT_COUNT);
 
-public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST|BT_FUNCTION;
+public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST|BT_MAPPING|BT_FUNCTION;
 
 public type Env record {|
     ListSubtype[] listDefs = [];
+    MappingSubtype[] mappingDefs = [];
     FunctionSubtype[] functionDefs = [];
 |};
 
@@ -29,8 +31,10 @@ public type BddMemoTable table<BddMemo> key(bdd);
 
 public type TypeCheckContext record {|
     readonly ListSubtype[] listDefs;
-    readonly FunctionSubtype[] functionDefs = [];
+    readonly MappingSubtype[] mappingDefs;
+    readonly FunctionSubtype[] functionDefs;
     BddMemoTable listMemo = table [];
+    BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
 |};
 
@@ -344,8 +348,26 @@ function defListCons(int index, DefList? rest) returns DefList {
 function typeCheckContext(Env env) returns TypeCheckContext {
     return {
         listDefs: env.listDefs.cloneReadOnly(),
+        mappingDefs: env.mappingDefs.cloneReadOnly(),
         functionDefs: env.functionDefs.cloneReadOnly()
     };
+}
+
+type BddIsEmptyFunction function(TypeCheckContext tc, DefList? pos, DefList? neg) returns boolean;
+
+// Each path from the root of the Bdd down to a leaf that is true corresponds
+// to a possibility whose emptiness needs to be checked.
+// We walk the tree, accumulating the combination of positive and negative definitions for a path as we go.
+// When we get to a leaf that is true, we check the emptiness of the accumulated combination.
+function bddIsEmpty(TypeCheckContext tc, Bdd b, DefList? pos, DefList? neg, BddIsEmptyFunction isEmpty) returns boolean {
+    if b is boolean {
+        return !b || isEmpty(tc, pos, neg);
+    }
+    else {
+        return bddIsEmpty(tc, b.lo, defListCons(b.index, pos), neg, isEmpty)
+          && bddIsEmpty(tc, b.mid, pos, neg, isEmpty)
+          && bddIsEmpty(tc, b.hi, pos, defListCons(b.index, neg), isEmpty); 
+    }
 }
 
 function bddSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
@@ -378,14 +400,21 @@ function init() {
             intersect: bddSubtypeIntersect,
             diff: bddSubtypeDiff,
             complement: bddSubtypeComplement,
-            isEmpty: listIsEmpty
+            isEmpty: listSubtypeIsEmpty
+        },
+        {   // mapping
+            union: bddSubtypeUnion,
+            intersect: bddSubtypeIntersect,
+            diff: bddSubtypeDiff,
+            complement: bddSubtypeComplement,
+            isEmpty: mappingSubtypeIsEmpty
         },
         {   // function
             union: bddSubtypeUnion,
             intersect: bddSubtypeIntersect,
             diff: bddSubtypeDiff,
             complement: bddSubtypeComplement,
-            isEmpty: functionIsEmpty
+            isEmpty: functionSubtypeIsEmpty
         }
    ];
 }

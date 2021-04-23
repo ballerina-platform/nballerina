@@ -23,7 +23,7 @@ function functionRef(int i) returns SemType {
     return new SemType(1 << (BT_FUNCTION + BT_COUNT), [[BT_FUNCTION, bdd]]);
 }
 
-function functionIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
+function functionSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = tc.functionMemo[b];
     BddMemo m;

@@ -63,6 +63,14 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
             SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
             return tuple(env, ...v);
         }
+        "record" => {
+            Field[] fields = [];
+            foreach int i in 1 ..< jlist.length() {
+                Field f = check parseXField(env, b, jlist[i], pathAppend(parent, i));
+                fields.push(f);
+            }
+            return mapping(env, ...fields);
+        }
         "function" => {
             SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
             if v.length() == 0 {
@@ -121,6 +129,22 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
         }
     }
     return parseError("unrecognized keyword '" + k + "'", pathAppend(parent, 0));
+}
+
+function parseXField(Env env, Binding? b, json j, JsonPath path) returns Field|JsonParseError {
+    if !(j is json[]) || j.length() != 2 {
+        return parseError("field must be 2-tuple", path);
+    }
+    else {
+        json name = j[0];
+        if !(name is string) {
+            return parseError("first member of field must be a string", path, 0);
+        }
+        else {
+            SemType t = check parseXType(env, b, j[1], pathAppend(path, 1));
+            return [name, t];
+        }
+    }
 }
 
 function lookupBinding(Binding? b, string name) returns SemType? {
