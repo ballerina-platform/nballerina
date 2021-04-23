@@ -175,7 +175,7 @@ function tupleInhabited(TypeCheckContext tc, SemType[] s, DefList? neg) returns 
 
 // Feels like this should be a library function.
 function shallowCopy(SemType[] v) returns SemType[] {
-    return from var s in v select s;
+    return v.slice(0);
 }
 
 // This is how it is expressed in the AMK tutorial.
