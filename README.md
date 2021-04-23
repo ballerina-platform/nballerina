@@ -28,13 +28,12 @@ The implementation currently handles a small subset of Ballerina type system:
 Types are represented in a Lispy JSON format, documented in the file `xtype.bal`.
 
 Running the program checks the type relationships asserted in `tests.json`. This is a JSON file
-that contains an array of tests, where each test is a triple [R, T1 T2], with T specifying the
+that contains an array of tests; each test is a triple [R, T1 T2], where R is a string specifying the
 relationship that holds between T1 and T2, as follows:
 
 - equivalent: T1 is a subtype of T2 and T2 is a subtype of T1
 - proper_subtype: T1 is a subtype of T2 and T2 is not a subtype of T1
 - incomparable: T1 is not a subtype of T2 and T2 is not a subtype of T1
-
 
 The program can be built with the [Swan Lake Alpha4](https://ballerina.io/downloads/) version of Ballerina.
 
