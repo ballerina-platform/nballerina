@@ -17,7 +17,8 @@
     ["proper_subtype", ["const", "xyzzy"], "string"],
     ["proper_subtype", ["const", "xyzzy"], ["|", ["const", "xyzzy"], ["const", "abcdef"]]],
     ["equivalent", "string", ["|", "never", ["const", "xyzzy"], "string"]],
-    ["equivalent", ["const", "xyzzy"], ["&", ["const", "xyzzy"], "string"]],    ["incomparable", ["const", "xyz"], ["const", "def"]]
-
+    ["equivalent", ["const", "xyzzy"], ["&", ["const", "xyzzy"], "string"]],
+    ["incomparable", ["const", "xyz"], ["const", "def"]],
+    ["equivalent", ["const", "xyzzy"], ["|", ["const", "xyzzy"], ["const", "xyzzy"]]]
 ]
 
