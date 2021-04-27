@@ -41,6 +41,6 @@ relationship that holds between T1 and T2, as follows:
 - proper_subtype: T1 is a subtype of T2 and T2 is not a subtype of T1
 - incomparable: T1 is not a subtype of T2 and T2 is not a subtype of T1
 
-The program can be built with the [Swan Lake Alpha4](https://ballerina.io/downloads/) version of Ballerina.
+The program can be built with the [Swan Lake Alpha5](https://ballerina.io/downloads/) version of Ballerina.
 
 There is a [list](TODO.md) of everything still to be done to handle the whole type system.
