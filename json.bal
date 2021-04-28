@@ -9,10 +9,19 @@ type JsonParseDetail record {
 
 type JsonParseError error<JsonParseDetail>;
 
-type Binding record {|
+type Binding NameBinding|RecBinding;
+
+type NameBinding record {|
     string name;
-    SemType semType;
+    json desc;
+    JsonPath path;
     Binding? next;
+|};
+
+type RecBinding record {|
+   json desc;
+   SemType semType;
+   Binding? next;
 |};
 
 function fromJson(Env env, json j) returns SemType|JsonParseError {
@@ -61,8 +70,28 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
             return reduce(v, intersect, TOP);
         }
         "list" => {
-            SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
-            return tuple(env, ...v);
+            if b is () {
+                SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
+                return tuple(env, ...v);
+            }
+            else {
+                SemType? s = lookupRec(b, jlist);
+                if !(s is ()) {
+                    return s;
+                }
+                else {
+                    SemType|error result =
+                        recursiveTupleParse(env, (e, ref) => parseXTypes(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent, 1).cloneReadOnly());
+                    if result is error {
+                        return <JsonParseError>result;
+                    }
+                    else {
+                        return result;
+                    }
+                }
+
+            }
+           
         }
         "record" => {
             Field[] fields = [];
@@ -119,12 +148,16 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
                 return parseError("'ref' must be followed by a string", parent, 1);
             }
             else {
-                SemType? s = lookupBinding(b, name);
-                if s is () {
+                var res = lookupBinding(b, name);
+                if res is () {
                     return parseError("no binding for '" + name + "'", parent, 1);
                 }
+                else if res is "loop" {
+                    return parseError("invalid recursion for '" + name + "'", parent, 1);
+                }
                 else {
-                    return s;
+                    var [j, path] = res;
+                    return parseXType(env, b, j, path);
                 }
             }
         }
@@ -148,49 +181,52 @@ function parseXField(Env env, Binding? b, json j, JsonPath path) returns Field|J
     }
 }
 
-function lookupBinding(Binding? b, string name) returns SemType? {
+function lookupBinding(Binding? b, string name) returns [json, JsonPath]|"loop"? {
     Binding? tem = b;
+    boolean loop = true;
     while true {
         if tem is () {
            break;
         }
-        else if tem.name == name {
-            return tem.semType;
+        else if tem is NameBinding {
+            if tem.name == name {
+                if loop {
+                    return "loop";
+                }
+                return [tem.desc, tem.path];
+            }
+            tem = tem.next;
+        }
+        else {
+            loop = false;
+            tem = tem.next;
+        }
+    }
+    return ();
+}
+
+function lookupRec(Binding? b, json desc) returns SemType? {
+    Binding? tem = b;
+    while true {
+        if tem is () {
+            break;
+        }
+        else if tem is RecBinding {
+            if tem.desc === desc {
+                return tem.semType;
+            }
+            tem = tem.next;
         }
         else {
             tem = tem.next;
         }
-
     }
     return ();
 }
 
 function parseXRec(Env env, Binding? b, string name, json t, JsonPath path) returns SemType|JsonParseError {
-    if !(t is json[]) || t.length() == 0 {
-        return parseError("rec must be applied to list type", path, 0);
-    }
-    else {
-        json k = t[0];
-        if !(k is string) {
-            return parseError("rec must be applied to list type", path, 1);
-        }
-        else {
-            final json[] ts = t;
-            if k == "list" {
-                SemType|error result =
-                   recursiveTupleParse(env, (e, ref) => parseXTypes(env, {name, semType: ref, next: b }, ts, path, 1).cloneReadOnly());
-                if result is error {
-                    return <JsonParseError>result;
-                }
-                else {
-                    return result;
-                }
-            }
-            else {
-                return parseError("rec must be applied to list type", path, 0); 
-            }
-        }
-    }
+    NameBinding nb = { name, next: b, desc: t, path };
+    return parseXType(env, nb, t, path);
 }
 
 function parseXTypes(Env env, Binding? b, json[] js, JsonPath parent, int startIndex) returns SemType[]|JsonParseError {

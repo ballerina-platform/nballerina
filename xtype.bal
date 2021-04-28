@@ -19,6 +19,7 @@ type XList ["list", XType...];
 type XRecord ["record", XField...];
 type XField [string, XType];
 type XFunction ["function", XType...];
+// This should be XType, but slalpha4 does not allow it.
 type XRec ["rec", string, XList|XFunction];
 type XRef ["ref", string];
 
