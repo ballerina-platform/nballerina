@@ -2,21 +2,22 @@ public const BT_NIL = 0;
 public const BT_BOOLEAN = 1;
 public const BT_INT = 2;
 public const BT_STRING = 3;
-public const BT_LIST = 4;
+public const BT_LIST_RO = 4;
 public const BT_MAPPING_RO = 5;
 public const BT_FUNCTION = 6;
-public const BT_MAPPING_RW = 7;
-public const BT_COUNT = 8;
+public const BT_LIST_RW = 7;
+public const BT_MAPPING_RW = 8;
+public const BT_COUNT = 9;
 
 public const int BT_MASK = (1 << BT_COUNT) - 1;
 
 public const int BT_COUNT_RO = BT_MAPPING_RO + 1;
 public const int BT_READONLY = (1 << BT_COUNT_RO) - 1;
-public const int BT_RW_MASK = BT_MAPPING_RW;
+public const int BT_RW_MASK = BT_LIST_RW|BT_MAPPING_RW;
 
 public const int BT_SOME = 1 | (1 << BT_COUNT);
 
-public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST|BT_MAPPING_RO|BT_FUNCTION|BT_MAPPING_RW;
+public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST_RO|BT_MAPPING_RO|BT_FUNCTION|BT_LIST_RW|BT_MAPPING_RW;
 
 public type Env record {|
     ListSubtype[] listDefs = [];
@@ -353,7 +354,7 @@ function typeListIsReadOnly(SemType[] list) returns boolean {
     return true;
 }
 
-function readOnlyTypeList(SemType[] mt) returns SemType[] {
+function readOnlyTypeList(SemType[] mt) returns readonly & SemType[] {
     SemType[] types = [];
     foreach var s in mt {
         SemType t;
@@ -365,7 +366,7 @@ function readOnlyTypeList(SemType[] mt) returns SemType[] {
         }
         types.push(t);
     }
-    return types; 
+    return types.cloneReadOnly(); 
 }
 
 type DefList record {
@@ -427,13 +428,7 @@ function init() {
         {}, // boolean
         {}, // int
         stringOps, // string
-        {   // list
-            union: bddSubtypeUnion,
-            intersect: bddSubtypeIntersect,
-            diff: bddSubtypeDiff,
-            complement: bddSubtypeComplement,
-            isEmpty: listSubtypeIsEmpty
-        },
+        listOps, // RO list
         mappingOps, // RO mapping
         {   // function
             union: bddSubtypeUnion,
@@ -442,6 +437,7 @@ function init() {
             complement: bddSubtypeComplement,
             isEmpty: functionSubtypeIsEmpty
         },
+        listOps, // RW list
         mappingOps // RW mapping
    ];
 }

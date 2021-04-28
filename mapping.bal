@@ -31,7 +31,7 @@ public function mapping(Env env, Field... fields) returns SemType {
     else {
         MappingSubtype roMt = {
             names: mt.names,
-            types: readOnlyTypeList(mt.types).cloneReadOnly()
+            types: readOnlyTypeList(mt.types)
         };
         ro = env.mappingDefs.length();
         env.mappingDefs.push(roMt);

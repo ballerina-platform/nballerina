@@ -6,36 +6,65 @@ public type ListSubtype readonly & SemType[];
 
 public function tuple(Env env, SemType... t) returns SemType {
     ListSubtype lt = t.cloneReadOnly();
-    int i = env.listDefs.length();
+    int rw = env.listDefs.length();
     env.listDefs.push(lt);
-    return tupleRef(i);
+    int ro;
+    if typeListIsReadOnly(lt) {
+        ro = rw;
+    }
+    else {
+        ro = env.listDefs.length();
+        ListSubtype roLt = readOnlyTypeList(lt);
+        env.listDefs.push(roLt);
+    }
+    return tupleRef(ro, rw);
 }
 
-function tupleRef(int i) returns SemType {
-    readonly & BddNode bdd = {
-        index: i,
+function tupleRef(int ro, int rw) returns SemType {
+    readonly & BddNode roBdd = {
+        index: ro,
         lo: true,
         mid: false,
         hi: false
     };
-    return new SemType(1 << (BT_LIST + BT_COUNT), [[BT_LIST, bdd]]);
+    readonly & BddNode rwBdd;
+    if ro == rw {
+        rwBdd = roBdd;
+    }
+    else {
+        rwBdd = {
+            index: rw,
+            lo: true,
+            mid: false,
+            hi: false
+        };   
+    }
+    return new SemType((1 << (BT_LIST_RO + BT_COUNT)) | (1 << (BT_LIST_RW + BT_COUNT)),
+                       [[BT_LIST_RO, roBdd], [BT_LIST_RW, rwBdd]]);
 }
-
 public function recursiveTuple(Env env, function(Env, SemType) returns ListSubtype f) returns SemType {
-    int i = env.listDefs.length();
+    int ro = env.listDefs.length();
     ListSubtype dummy = [];
     env.listDefs.push(dummy);
-    SemType r = tupleRef(i);
-    env.listDefs[i] = f(env, r);
+    int rw = ro + 1;
+    env.listDefs.push(dummy);
+    SemType r = tupleRef(ro, rw);
+    readonly & SemType[] rwTypes = f(env, r);
+    env.listDefs[rw] = rwTypes;
+    env.listDefs[ro] = readOnlyTypeList(rwTypes);
     return r;
 }
 
 public function recursiveTupleParse(Env env, function(Env, SemType) returns ListSubtype|error f) returns SemType|error {
-    int i = env.listDefs.length();
+    int ro = env.listDefs.length();
     ListSubtype dummy = [];
     env.listDefs.push(dummy);
-    SemType r = tupleRef(i);
-    env.listDefs[i] = check f(env, r);
+    int rw = ro + 1;
+    env.listDefs.push(dummy);
+    SemType r = tupleRef(ro, rw);
+    readonly & SemType[] rwTypes = check f(env, r);
+    env.listDefs[rw] = rwTypes;
+    env.listDefs[ro] = readOnlyTypeList(rwTypes);
     return r;
 }
 
@@ -192,3 +221,10 @@ function shallowCopy(SemType[] v) returns SemType[] {
 //     }
 // }
 
+final BasicTypeOps listOps = {
+    union: bddSubtypeUnion,
+    intersect: bddSubtypeIntersect,
+    diff: bddSubtypeDiff,
+    complement: bddSubtypeComplement,
+    isEmpty: listSubtypeIsEmpty
+};
