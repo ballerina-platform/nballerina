@@ -3,18 +3,20 @@ public const BT_BOOLEAN = 1;
 public const BT_INT = 2;
 public const BT_STRING = 3;
 public const BT_LIST = 4;
-public const BT_MAPPING = 5;
+public const BT_MAPPING_RO = 5;
 public const BT_FUNCTION = 6;
-public const BT_COUNT = 7;
-public const int BT_MASK = 127;
-// slalpha4 gets a bad, sad on this
-// public const int BT_MASK = (1 << BT_COUNT) - 1;
+public const BT_MAPPING_RW = 7;
+public const BT_COUNT = 8;
 
-const int BT_SOME = 129;
-// slalpha4 gets a bad, sad on this
-// public const int BT_SOME = 1 | (1 << BT_COUNT);
+public const int BT_MASK = (1 << BT_COUNT) - 1;
 
-public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST|BT_MAPPING|BT_FUNCTION;
+public const int BT_COUNT_RO = BT_MAPPING_RO + 1;
+public const int BT_READONLY = (1 << BT_COUNT_RO) - 1;
+public const int BT_RW_MASK = BT_MAPPING_RW;
+
+public const int BT_SOME = 1 | (1 << BT_COUNT);
+
+public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST|BT_MAPPING_RO|BT_FUNCTION|BT_MAPPING_RW;
 
 public type Env record {|
     ListSubtype[] listDefs = [];
@@ -98,6 +100,7 @@ public final SemType STRING = new SemType(1 << BT_STRING);
 public final SemType FUNCTION = new SemType(1 << BT_FUNCTION);
 // this is SubtypeData|error
 public final SemType TOP = new SemType(BT_MASK);
+public final SemType READONLY = new SemType(BT_READONLY);
 
 // Need this type to workaround slalpha4 bug
 public type SubtypePairIterator object {
@@ -332,8 +335,37 @@ public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
     return true;
 }
     
+
 public function isSubtype(TypeCheckContext tc, SemType t1, SemType t2) returns boolean { 
     return isEmpty(tc, diff(t1, t2));
+}
+
+public function isReadOnly(SemType t) returns boolean {
+    return (t.bits & (BT_RW_MASK | (BT_RW_MASK << BT_COUNT))) == 0;
+}
+
+function typeListIsReadOnly(SemType[] list) returns boolean {
+    foreach var t in list {
+        if !isReadOnly(t) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function readOnlyTypeList(SemType[] mt) returns SemType[] {
+    SemType[] types = [];
+    foreach var s in mt {
+        SemType t;
+        if isReadOnly(s) {
+            t = s;
+        }
+        else {
+            t = intersect(s, READONLY);
+        }
+        types.push(t);
+    }
+    return types; 
 }
 
 type DefList record {
@@ -402,20 +434,15 @@ function init() {
             complement: bddSubtypeComplement,
             isEmpty: listSubtypeIsEmpty
         },
-        {   // mapping
-            union: bddSubtypeUnion,
-            intersect: bddSubtypeIntersect,
-            diff: bddSubtypeDiff,
-            complement: bddSubtypeComplement,
-            isEmpty: mappingSubtypeIsEmpty
-        },
+        mappingOps, // RO mapping
         {   // function
             union: bddSubtypeUnion,
             intersect: bddSubtypeIntersect,
             diff: bddSubtypeDiff,
             complement: bddSubtypeComplement,
             isEmpty: functionSubtypeIsEmpty
-        }
+        },
+        mappingOps // RW mapping
    ];
 }
   

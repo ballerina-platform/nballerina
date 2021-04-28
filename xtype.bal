@@ -1,6 +1,6 @@
 // External representation of types
 
-type XType XNil|XBoolean|XInt|XString|XSingle|XUnion|XIntersection|XNever|XAny|XList|XRecord|XFunction|XRec|XRef;
+type XType XNil|XBoolean|XInt|XString|XSingle|XUnion|XIntersection|XNever|XAny|XReadOnly|XList|XRecord|XFunction|XRec|XRef;
 
 const XNil = "nil";
 const XBoolean = "boolean";
@@ -8,6 +8,7 @@ const XInt = "int";
 const XString = "string";
 const XNever = "never";
 const XAny = "any";
+const XReadOnly = "readonly";
 
 type XSingle ["const", string];
 

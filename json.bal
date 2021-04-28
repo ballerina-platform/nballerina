@@ -26,6 +26,7 @@ function parseXType(Env env, Binding? b, json j, JsonPath path) returns SemType|
         XString => { return STRING; }
         XAny => { return TOP; }
         XNever => { return NEVER; }
+        XReadOnly => { return READONLY; }
         // Should be able to use match patterns here
         // but there's a compiler bug #29041
         var js if js is json[] => {

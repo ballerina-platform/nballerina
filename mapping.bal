@@ -22,24 +22,51 @@ public function mapping(Env env, Field... fields) returns SemType {
         names: names.cloneReadOnly(),
         types: types.cloneReadOnly()
     };
-    int i = env.mappingDefs.length();
+    int rw = env.mappingDefs.length();
     env.mappingDefs.push(mt);
-    return mappingRef(i);
+    int ro;
+    if typeListIsReadOnly(mt.types) {
+        ro = rw;
+    }
+    else {
+        MappingSubtype roMt = {
+            names: mt.names,
+            types: readOnlyTypeList(mt.types).cloneReadOnly()
+        };
+        ro = env.mappingDefs.length();
+        env.mappingDefs.push(roMt);
+    }
+    return mappingRef(ro, rw);
 }
 
 isolated function fieldName(Field f) returns string {
     return f[0];
 }
 
-function mappingRef(int i) returns SemType {
-    readonly & BddNode bdd = {
-        index: i,
+function mappingRef(int ro, int rw) returns SemType {
+    readonly & BddNode roBdd = {
+        index: ro,
         lo: true,
         mid: false,
         hi: false
     };
-    return new SemType(1 << (BT_MAPPING + BT_COUNT), [[BT_MAPPING, bdd]]);
+    readonly & BddNode rwBdd;
+    if ro == rw {
+        rwBdd = roBdd;
+    }
+    else {
+        rwBdd = {
+            index: rw,
+            lo: true,
+            mid: false,
+            hi: false
+        };   
+    }
+    return new SemType((1 << (BT_MAPPING_RO + BT_COUNT)) | (1 << (BT_MAPPING_RW + BT_COUNT)),
+                       [[BT_MAPPING_RO, roBdd], [BT_MAPPING_RW, rwBdd]]);
 }
+
+
 function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = tc.mappingMemo[b];
@@ -137,3 +164,11 @@ function mappingInhabited(TypeCheckContext tc, string[] fieldNames, SemType[] s,
         return false; 
     }
 }
+
+final BasicTypeOps mappingOps = {
+    union: bddSubtypeUnion,
+    intersect: bddSubtypeIntersect,
+    diff: bddSubtypeDiff,
+    complement: bddSubtypeComplement,
+    isEmpty: mappingSubtypeIsEmpty
+};

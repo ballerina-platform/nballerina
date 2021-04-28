@@ -22,6 +22,8 @@
     ["equivalent", ["const", "xyzzy"], ["|", ["const", "xyzzy"], ["const", "xyzzy"]]],
     ["proper_subtype", ["record", ["x", "int"], ["y", "int"]],
                        ["record", ["x", "int"], ["y", ["|", "int", "nil"]]]],
-    ["incomparable", ["record", ["xyz", "int"]], ["record", ["def", "int"]]]
+    ["incomparable", ["record", ["xyz", "int"]], ["record", ["def", "int"]]],
+    ["proper_subtype", ["&", "readonly", ["record", ["x", "int"]]], ["record", ["x", "int"]]],
+    ["equivalent", ["&", "readonly", "int"], "int"]
 ]
 
