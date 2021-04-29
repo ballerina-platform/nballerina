@@ -13,7 +13,7 @@ public const int BT_MASK = (1 << BT_COUNT) - 1;
 
 public const int BT_COUNT_RO = BT_MAPPING_RO + 1;
 public const int BT_READONLY = (1 << BT_COUNT_RO) - 1;
-public const int BT_RW_MASK = BT_LIST_RW|BT_MAPPING_RW;
+public const int BT_RW_MASK = (1 << BT_LIST_RW)|(1 << BT_MAPPING_RW);
 
 public const int BT_SOME = 1 | (1 << BT_COUNT);
 
