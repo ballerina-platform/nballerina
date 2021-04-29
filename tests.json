@@ -26,6 +26,15 @@
     ["proper_subtype", ["&", "readonly", ["record", ["x", "int"]]], ["record", ["x", "int"]]],
     ["equivalent", ["&", "readonly", "int"], "int"],
     ["proper_subtype", ["list", "int", ["record", ["x", "int"], ["y", ["list", "string", "nil"]]]],
-                       ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], ["ref", "json"]], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]]
+                       ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], ["ref", "json"]], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]],
+    ["proper_subtype", ["record", ["x", "int"], ["y", ["record", ["x", "int"], ["y", "string"]]]],
+                       ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], ["ref", "json"]], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]],
+    ["proper_subtype", ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], "int"], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]],
+                       ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], ["ref", "json"]], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]],
+    ["proper_subtype", ["&", "readonly", ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], "int"], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]],
+                       ["rec", "json", ["|", "nil", "int", "string", ["&", "readonly", ["list", ["ref", "json"], ["ref", "json"]]],
+                                                                     ["&", "readonly", ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]]],
+    ["incomparable", ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], "int"], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]],
+                     ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], ["ref", "json"]], ["record", ["x", "int"], ["y", ["ref", "json"]]]]]]                  
 ]
 
