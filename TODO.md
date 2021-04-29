@@ -17,7 +17,7 @@
 15. xml type
 16. Rest field and optional fields for records
 17. Rest field for tuples
-18. readonly type
+18. ~~readonly type~~
 19. readonly record fields
 20. objects (without member qualifiers or object qualifiers)
 21. typedesc type
