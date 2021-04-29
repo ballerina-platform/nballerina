@@ -35,6 +35,11 @@
                        ["rec", "json", ["|", "nil", "int", "string", ["&", "readonly", ["list", ["ref", "json"], ["ref", "json"]]],
                                                                      ["&", "readonly", ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]]],
     ["incomparable", ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], "int"], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]],
-                     ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], ["ref", "json"]], ["record", ["x", "int"], ["y", ["ref", "json"]]]]]]                  
+                     ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], ["ref", "json"]], ["record", ["x", "int"], ["y", ["ref", "json"]]]]]],
+    ["equivalent", ["rec", "json", ["|", "nil", "int", "string",
+                                         ["list", ["rec", "json2", ["|", "nil", "int", "string", ["list", ["ref", "json"], ["ref", "json2"]], ["record", ["x", ["ref", "json2"]], ["y", ["ref", "json"]]]]],
+                                                  ["ref", "json"]],
+                                         ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]],
+                   ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], ["ref", "json"]], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]]                  
 ]
 
