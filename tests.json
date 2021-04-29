@@ -24,6 +24,8 @@
                        ["record", ["x", "int"], ["y", ["|", "int", "nil"]]]],
     ["incomparable", ["record", ["xyz", "int"]], ["record", ["def", "int"]]],
     ["proper_subtype", ["&", "readonly", ["record", ["x", "int"]]], ["record", ["x", "int"]]],
-    ["equivalent", ["&", "readonly", "int"], "int"]
+    ["equivalent", ["&", "readonly", "int"], "int"],
+    ["proper_subtype", ["list", "int", ["record", ["x", "int"], ["y", ["list", "string", "nil"]]]],
+                       ["rec", "json", ["|", "nil", "int", "string", ["list", ["ref", "json"], ["ref", "json"]], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]]
 ]
 

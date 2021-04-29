@@ -142,6 +142,9 @@ function bddComplement(Bdd b) returns Bdd {
     }
 }
 
+// this is just for observing
+int bddCount = 0;
+
 function bddCreate(int index, Bdd lo, Bdd mid, Bdd hi) returns Bdd {
     if mid === true {
         return true;
@@ -149,5 +152,6 @@ function bddCreate(int index, Bdd lo, Bdd mid, Bdd hi) returns Bdd {
     if lo == hi {
         return bddUnion(lo, mid);
     }
+    bddCount += 1;
     return { index, lo, mid, hi };
 }

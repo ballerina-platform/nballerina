@@ -11,17 +11,7 @@ public type MappingSubtype readonly & record {|
 |};
 
 public function mapping(Env env, Field... fields) returns SemType {
-    Field[] sortedFields = fields.sort("ascending", fieldName);
-    string[] names = [];
-    SemType[] types = [];
-    foreach var [s, t] in sortedFields {
-        names.push(s);
-        types.push(t);
-    }
-    MappingSubtype mt = {
-        names: names.cloneReadOnly(),
-        types: types.cloneReadOnly()
-    };
+    MappingSubtype mt = splitFields(fields);
     int rw = env.mappingDefs.length();
     env.mappingDefs.push(mt);
     int ro;
@@ -38,10 +28,42 @@ public function mapping(Env env, Field... fields) returns SemType {
     }
     return mappingRef(ro, rw);
 }
+public function recursiveMappingParse(Env env, function(Env, SemType) returns Field[]|error f) returns SemType|error {
+    int ro = env.mappingDefs.length();
+    MappingSubtype dummy = { names: [], types: [] };
+    env.mappingDefs.push(dummy);
+    int rw = ro + 1;
+    env.mappingDefs.push(dummy);
+    SemType r = mappingRef(ro, rw);
+    Field[] rwFields = check f(env, r);
+    MappingSubtype mt = splitFields(rwFields);
+    env.mappingDefs[rw] = mt;
+    MappingSubtype roMt = {
+            names: mt.names,
+            types: readOnlyTypeList(mt.types)
+    };
+    env.mappingDefs[ro] = roMt;
+    return r;
+}
+
+function splitFields(Field[] fields) returns MappingSubtype {
+    Field[] sortedFields = fields.sort("ascending", fieldName);
+    string[] names = [];
+    SemType[] types = [];
+    foreach var [s, t] in sortedFields {
+        names.push(s);
+        types.push(t);
+    }
+    return {
+        names: names.cloneReadOnly(),
+        types: types.cloneReadOnly()
+    };
+}
 
 isolated function fieldName(Field f) returns string {
     return f[0];
 }
+
 
 function mappingRef(int ro, int rw) returns SemType {
     readonly & BddNode roBdd = {

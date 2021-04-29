@@ -94,12 +94,26 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
            
         }
         "record" => {
-            Field[] fields = [];
-            foreach int i in 1 ..< jlist.length() {
-                Field f = check parseXField(env, b, jlist[i], pathAppend(parent, i));
-                fields.push(f);
+            if b is () {
+                Field[] fields = check parseXFields(env, b, jlist, parent, 1);
+                return mapping(env, ...fields);
             }
-            return mapping(env, ...fields);
+            else {
+                SemType? s = lookupRec(b, jlist);
+                if !(s is ()) {
+                    return s;
+                }
+                else {
+                    SemType|error result =
+                        recursiveMappingParse(env, (e, ref) => parseXFields(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent, 1));
+                    if result is error {
+                        return <JsonParseError>result;
+                    }
+                    else {
+                        return result;
+                    }
+                }
+            }
         }
         "function" => {
             SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
@@ -164,6 +178,16 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
     }
     return parseError("unrecognized keyword '" + k + "'", pathAppend(parent, 0));
 }
+
+function parseXFields(Env env, Binding? b, json[] jlist, JsonPath parent, int startIndex) returns Field[]|JsonParseError {
+    Field[] fields = [];
+    foreach int i in startIndex ..< jlist.length() {
+        Field f = check parseXField(env, b, jlist[i], pathAppend(parent, i));
+        fields.push(f);
+    }
+    return fields;
+}
+
 
 function parseXField(Env env, Binding? b, json j, JsonPath path) returns Field|JsonParseError {
     if !(j is json[]) || j.length() != 2 {

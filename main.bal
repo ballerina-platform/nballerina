@@ -51,9 +51,11 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
 
 function expectSubtype(int testNum, json j1, json j2, Env env, SemType t1, SemType t2, boolean[] expect, int i) returns boolean {
     io:println("Test ", testNum, "/", i);
+    int tem = bddCount;
     var tc = typeCheckContext(env);
     boolean b = isSubtype(tc, t1, t2);
     if b == expect[i] {
+        io:println("Created ", bddCount - tem, " BDDs");
         return true;
     }
     io:println("Fail test ", testNum, ". This type");
