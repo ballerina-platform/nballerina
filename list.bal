@@ -81,7 +81,7 @@ function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean 
         boolean? res = m.isEmpty;
         if res is () {
             // we've got a loop
-            io:println("got a list loop");
+            io:println("  got a list loop");
             // XXX is this right???
             return true;
         }

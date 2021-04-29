@@ -55,7 +55,7 @@ function expectSubtype(int testNum, json j1, json j2, Env env, SemType t1, SemTy
     var tc = typeCheckContext(env);
     boolean b = isSubtype(tc, t1, t2);
     if b == expect[i] {
-        io:println("Created ", bddCount - tem, " BDDs");
+        io:println("  created ", bddCount - tem, " BDDs");
         return true;
     }
     io:println("Fail test ", testNum, ". This type");

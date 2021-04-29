@@ -102,7 +102,7 @@ function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boole
         boolean? res = m.isEmpty;
         if res is () {
             // we've got a loop
-            io:println("got a mapping loop");
+            io:println("  got a mapping loop");
             // XXX is this right???
             return true;
         }
