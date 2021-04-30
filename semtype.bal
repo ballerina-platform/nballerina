@@ -317,9 +317,13 @@ public function complement(SemType t) returns SemType {
     return diff(TOP, t);
 }
 
+public function isNever(SemType t) returns boolean {
+    // neither all nor part of any basic type
+    return t.bits == 0;
+}
+
 public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
-    if t.bits == 0 {
-        // neither all nor part of any basic type
+    if isNever(t) {    
         return true;
     }
     if (t.bits & BT_MASK) != 0 {
