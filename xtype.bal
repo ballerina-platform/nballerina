@@ -1,6 +1,6 @@
 // External representation of types
 
-type XType XNil|XBoolean|XInt|XString|XSingle|XUnion|XIntersection|XNever|XAny|XReadOnly|XList|XRecord|XFunction|XRec|XRef;
+type XType XNil|XBoolean|XInt|XString|XSingle|XUnion|XIntersection|XNever|XAny|XReadOnly|XTuple|XRecord|XFunction|XRec|XRef;
 
 const XNil = "nil";
 const XBoolean = "boolean";
@@ -15,11 +15,11 @@ type XSingle ["const", string];
 type XUnion ["|", XType...];
 type XIntersection ["&", XType...];
 
-type XList ["list", XType...];
+type XTuple ["tuple", XType...];
 type XRecord ["record", XField...];
 type XField [string, XType];
 type XFunction ["function", XType...];
-// This should be XType, but slalpha4 does not allow it.
-type XRec ["rec", string, XList|XFunction];
+// This should be `XType`, not `XType...` but slalpha5 does not allow it.
+type XRec ["rec", string, XType...];
 type XRef ["ref", string];
 

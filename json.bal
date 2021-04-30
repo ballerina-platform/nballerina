@@ -69,7 +69,7 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
             SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
             return reduce(v, intersect, TOP);
         }
-        "list" => {
+        "tuple" => {
             if b is () {
                 SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
                 return tuple(env, ...v);
