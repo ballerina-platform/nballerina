@@ -1,7 +1,5 @@
 // Implementation specific to basic type list.
 
-import ballerina/io;
-
 type Field [string, SemType];
 
 public type MappingSubtype readonly & record {|
