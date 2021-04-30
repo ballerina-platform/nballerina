@@ -25,6 +25,7 @@ The implementation currently handles a small subset of Ballerina type system:
     * closed
     * with recursion
     * no optional fields
+* readonly
 * function types
 * union
 * intersection
