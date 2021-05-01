@@ -1,4 +1,5 @@
 // Implementation specific to basic type list.
+import semtype.bdd;
 
 type Field [string, SemType];
 
@@ -62,33 +63,21 @@ isolated function fieldName(Field f) returns string {
     return f[0];
 }
 
-
 function mappingRef(int ro, int rw) returns SemType {
-    readonly & BddNode roBdd = {
-        index: ro,
-        lo: true,
-        mid: false,
-        hi: false
-    };
-    readonly & BddNode rwBdd;
+    readonly & bdd:Node roBdd = bdd:atom(ro);
+    readonly & bdd:Node rwBdd;
     if ro == rw {
         rwBdd = roBdd;
     }
     else {
-        rwBdd = {
-            index: rw,
-            lo: true,
-            mid: false,
-            hi: false
-        };   
+        rwBdd = bdd:atom(rw);   
     }
     return new SemType((1 << (BT_MAPPING_RO + BT_COUNT)) | (1 << (BT_MAPPING_RW + BT_COUNT)),
                        [[BT_MAPPING_RO, roBdd], [BT_MAPPING_RW, rwBdd]]);
 }
 
-
 function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
+    bdd:Bdd b = <bdd:Bdd>t;
     BddMemo? mm = tc.mappingMemo[b];
     BddMemo m;
     if mm is () {

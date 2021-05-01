@@ -1,3 +1,6 @@
+
+import semtype.bdd;
+
 public const BT_NIL = 0;
 public const BT_BOOLEAN = 1;
 public const BT_INT = 2;
@@ -26,7 +29,7 @@ public type Env record {|
 |};
 
 public type BddMemo record {|
-    readonly Bdd bdd;
+    readonly bdd:Bdd bdd;
     boolean? isEmpty = ();
 |};
 
@@ -42,7 +45,7 @@ public type TypeCheckContext record {|
 |};
 
 // true means everything and false means nothing (as with Bdd)
-type SubtypeData StringSubtype|Bdd;
+type SubtypeData StringSubtype|bdd:Bdd;
 
 type BasicTypeSubtype readonly & [BasicTypeCode, SubtypeData];
 
@@ -396,7 +399,7 @@ type BddIsEmptyFunction function(TypeCheckContext tc, DefList? pos, DefList? neg
 // to a possibility whose emptiness needs to be checked.
 // We walk the tree, accumulating the combination of positive and negative definitions for a path as we go.
 // When we get to a leaf that is true, we check the emptiness of the accumulated combination.
-function bddIsEmpty(TypeCheckContext tc, Bdd b, DefList? pos, DefList? neg, BddIsEmptyFunction isEmpty) returns boolean {
+function bddIsEmpty(TypeCheckContext tc, bdd:Bdd b, DefList? pos, DefList? neg, BddIsEmptyFunction isEmpty) returns boolean {
     if b is boolean {
         return !b || isEmpty(tc, pos, neg);
     }
@@ -408,19 +411,19 @@ function bddIsEmpty(TypeCheckContext tc, Bdd b, DefList? pos, DefList? neg, BddI
 }
 
 function bddSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return bddUnion(<Bdd>t1, <Bdd>t2);
+    return bdd:union(<bdd:Bdd>t1, <bdd:Bdd>t2);
 }
 
 function bddSubtypeIntersect(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return bddIntersect(<Bdd>t1, <Bdd>t2);
+    return bdd:intersect(<bdd:Bdd>t1, <bdd:Bdd>t2);
 }
 
 function bddSubtypeDiff(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return bddDiff(<Bdd>t1, <Bdd>t2);
+    return bdd:diff(<bdd:Bdd>t1, <bdd:Bdd>t2);
 }
 
 function bddSubtypeComplement(SubtypeData t) returns SubtypeData {
-    return bddComplement(<Bdd>t);
+    return bdd:complement(<bdd:Bdd>t);
 }
 
 // slalpha4 gets bad, sad if this is readonly

@@ -1,4 +1,5 @@
 // Implementation specific to basic type list.
+import semtype.bdd;
 
 public type ListSubtype readonly & record {|
     SemType[] members;
@@ -36,23 +37,13 @@ function readOnlyListSubtype(ListSubtype lt) returns ListSubtype {
 }
 
 function listRef(int ro, int rw) returns SemType {
-    readonly & BddNode roBdd = {
-        index: ro,
-        lo: true,
-        mid: false,
-        hi: false
-    };
-    readonly & BddNode rwBdd;
+    readonly & bdd:Node roBdd = bdd:atom(ro);
+    readonly & bdd:Node rwBdd;
     if ro == rw {
         rwBdd = roBdd;
     }
     else {
-        rwBdd = {
-            index: rw,
-            lo: true,
-            mid: false,
-            hi: false
-        };   
+        rwBdd = bdd:atom(rw);
     }
     return new SemType((1 << (BT_LIST_RO + BT_COUNT)) | (1 << (BT_LIST_RW + BT_COUNT)),
                        [[BT_LIST_RO, roBdd], [BT_LIST_RW, rwBdd]]);
@@ -99,7 +90,7 @@ public function recursiveListParse(Env env, function(Env, SemType) returns ListS
 }
 
 function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
+    bdd:Bdd b = <bdd:Bdd>t;
     BddMemo? mm = tc.listMemo[b];
     BddMemo m;
     if mm is () {

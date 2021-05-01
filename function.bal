@@ -1,7 +1,8 @@
-
 // Implementation specific to basic type function.
 
 import ballerina/io;
+import semtype.bdd;
+
 // Function subtype is [args, ret]
 // Represents args as tuple type
 public type FunctionSubtype readonly & SemType[2];
@@ -14,17 +15,11 @@ public function func(Env env, SemType t1, SemType t2) returns SemType {
 }
 
 function functionRef(int i) returns SemType {
-    readonly & BddNode bdd = {
-        index: i,
-        lo: true,
-        mid: false,
-        hi: false
-    };
-    return new SemType(1 << (BT_FUNCTION + BT_COUNT), [[BT_FUNCTION, bdd]]);
+    return new SemType(1 << (BT_FUNCTION + BT_COUNT), [[BT_FUNCTION, bdd:atom(i)]]);
 }
 
 function functionSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
+    bdd:Bdd b = <bdd:Bdd>t;
     BddMemo? mm = tc.functionMemo[b];
     BddMemo m;
     if mm is () {
@@ -49,7 +44,7 @@ function functionSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns bool
     return isEmpty;    
 }
 
-function functionBddIsEmpty(TypeCheckContext tc, Bdd b, SemType s, DefList? pos, DefList? neg) returns boolean {
+function functionBddIsEmpty(TypeCheckContext tc, bdd:Bdd b, SemType s, DefList? pos, DefList? neg) returns boolean {
     if b is boolean {
         if b == false {
             return true;

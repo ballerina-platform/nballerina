@@ -1,4 +1,5 @@
 import ballerina/io;
+import semtype.bdd;
 
 enum Relation {
     proper_subtype,
@@ -51,11 +52,11 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
 
 function expectSubtype(int testNum, json j1, json j2, Env env, SemType t1, SemType t2, boolean[] expect, int i) returns boolean {
     io:println("Test ", testNum, "/", i);
-    int tem = bddCount;
+    int tem = bdd:getCount();
     var tc = typeCheckContext(env);
     boolean b = isSubtype(tc, t1, t2);
     if b == expect[i] {
-        io:println("  created ", bddCount - tem, " BDDs");
+        io:println("  created ", bdd:getCount() - tem, " BDDs");
         return true;
     }
     io:println("Fail test ", testNum, ". This type");
