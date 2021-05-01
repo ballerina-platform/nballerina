@@ -81,7 +81,7 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
                 }
                 else {
                     SemType|error result =
-                        recursiveTupleParse(env, (e, ref) => parseXTypes(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent, 1).cloneReadOnly());
+                        recursiveTupleParse(env, (e, ref) => parseXTypes(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent, 1));
                     if result is error {
                         return <JsonParseError>result;
                     }
@@ -92,6 +92,29 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
 
             }
            
+        }
+        "list" => {
+            if b is () {
+                ListSubtype lt = check parseXListMemberTypes(env, b, jlist, parent);
+                return list(env, lt);
+            }
+            else {
+                SemType? s = lookupRec(b, jlist);
+                if !(s is ()) {
+                    return s;
+                }
+                else {
+                    SemType|error result =
+                        recursiveListParse(env, (e, ref) => parseXListMemberTypes(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent));
+                    if result is error {
+                        return <JsonParseError>result;
+                    }
+                    else {
+                        return result;
+                    }
+                }
+
+            }
         }
         "record" => {
             if b is () {
@@ -251,6 +274,19 @@ function lookupRec(Binding? b, json desc) returns SemType? {
 function parseXRec(Env env, Binding? b, string name, json t, JsonPath path) returns SemType|JsonParseError {
     NameBinding nb = { name, next: b, desc: t, path };
     return parseXType(env, nb, t, path);
+}
+
+function parseXListMemberTypes(Env env, Binding? b, json[] js, JsonPath parent) returns ListSubtype|JsonParseError {
+    SemType[] members = check parseXTypes(env, b, js, parent, 1);
+    SemType rest;
+    if members.length() == 0 {
+        rest = TOP;
+    }
+    else {
+        rest = members.pop();
+    }
+    ListSubtype lt = { members: members.cloneReadOnly(), rest };
+    return lt;
 }
 
 function parseXTypes(Env env, Binding? b, json[] js, JsonPath parent, int startIndex) returns SemType[]|JsonParseError {

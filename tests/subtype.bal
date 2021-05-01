@@ -107,6 +107,32 @@ function tupleTest2() {
 }
 
 @test:Config{}
+function tupleTest3() {
+    Env env = {};
+    SemType z1 = tuple(env);
+    SemType z2 = tuple(env);
+    SemType t = tuple(env, INT);
+    test:assertTrue(!isEmpty(typeCheckContext(env), z1));
+    test:assertTrue(isSubtype(typeCheckContext(env), z1, z2));
+    test:assertTrue(isEmpty(typeCheckContext(env), diff(z1, z2)));
+    test:assertFalse(isEmpty(typeCheckContext(env), diff(z1, INT)));
+    test:assertFalse(isEmpty(typeCheckContext(env), diff(INT, z1)));
+}
+
+
+@test:Config{}
+function tupleTest4() {
+    Env env = {};
+    SemType s = tuple(env, INT, INT);
+    SemType t = tuple(env, INT, INT, INT);
+    test:assertFalse(isEmpty(typeCheckContext(env), s));
+    test:assertFalse(isEmpty(typeCheckContext(env), t));
+    test:assertFalse(isSubtype(typeCheckContext(env), s, t));
+    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+    test:assertTrue(isEmpty(typeCheckContext(env), intersect(s, t)));
+}
+
+@test:Config{}
 function funcTest1() {
     Env env = {};
     SemType s = func(env, INT, INT);

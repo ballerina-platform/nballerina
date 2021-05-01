@@ -1,26 +1,41 @@
 // Implementation specific to basic type list.
 
-import ballerina/io;
+public type ListSubtype readonly & record {|
+    SemType[] members;
+    SemType rest = NEVER;
+|};
 
-public type ListSubtype readonly & SemType[];
+public function tuple(Env env, SemType... members) returns SemType {
+    return list(env,  { members: members.cloneReadOnly(), rest: NEVER });
+}
 
-public function tuple(Env env, SemType... t) returns SemType {
-    ListSubtype lt = t.cloneReadOnly();
+public function list(Env env, ListSubtype lt) returns SemType {
     int rw = env.listDefs.length();
     env.listDefs.push(lt);
     int ro;
-    if typeListIsReadOnly(lt) {
+    if listSubtypeIsReadOnly(lt) {
         ro = rw;
     }
     else {
         ro = env.listDefs.length();
-        ListSubtype roLt = readOnlyTypeList(lt);
+        ListSubtype roLt = readOnlyListSubtype(lt);
         env.listDefs.push(roLt);
     }
-    return tupleRef(ro, rw);
+    return listRef(ro, rw);
 }
 
-function tupleRef(int ro, int rw) returns SemType {
+function listSubtypeIsReadOnly(ListSubtype lt) returns boolean {
+    return typeListIsReadOnly(lt.members) && isReadOnly(lt.rest);
+}
+
+function readOnlyListSubtype(ListSubtype lt) returns ListSubtype {
+    return {
+        members: readOnlyTypeList(lt.members),
+        rest: intersect(lt.rest, READONLY)
+    };
+}
+
+function listRef(int ro, int rw) returns SemType {
     readonly & BddNode roBdd = {
         index: ro,
         lo: true,
@@ -42,29 +57,44 @@ function tupleRef(int ro, int rw) returns SemType {
     return new SemType((1 << (BT_LIST_RO + BT_COUNT)) | (1 << (BT_LIST_RW + BT_COUNT)),
                        [[BT_LIST_RO, roBdd], [BT_LIST_RW, rwBdd]]);
 }
-public function recursiveTuple(Env env, function(Env, SemType) returns ListSubtype f) returns SemType {
+public function recursiveTuple(Env env, function(Env, SemType) returns SemType[] f) returns SemType {
     int ro = env.listDefs.length();
-    ListSubtype dummy = [];
+    ListSubtype dummy = { members: [] };
     env.listDefs.push(dummy);
     int rw = ro + 1;
     env.listDefs.push(dummy);
-    SemType r = tupleRef(ro, rw);
-    readonly & SemType[] rwTypes = f(env, r);
-    env.listDefs[rw] = rwTypes;
-    env.listDefs[ro] = readOnlyTypeList(rwTypes);
+    SemType r = listRef(ro, rw);
+    SemType[] rwMembers = f(env, r);
+    ListSubtype rwType = { members: rwMembers.cloneReadOnly() };
+    env.listDefs[rw] = rwType;
+    env.listDefs[ro] = readOnlyListSubtype(rwType);
     return r;
 }
 
-public function recursiveTupleParse(Env env, function(Env, SemType) returns ListSubtype|error f) returns SemType|error {
+public function recursiveTupleParse(Env env, function(Env, SemType) returns SemType[]|error f) returns SemType|error {
     int ro = env.listDefs.length();
-    ListSubtype dummy = [];
+    ListSubtype dummy = { members: [] };
     env.listDefs.push(dummy);
     int rw = ro + 1;
     env.listDefs.push(dummy);
-    SemType r = tupleRef(ro, rw);
-    readonly & SemType[] rwTypes = check f(env, r);
-    env.listDefs[rw] = rwTypes;
-    env.listDefs[ro] = readOnlyTypeList(rwTypes);
+    SemType r = listRef(ro, rw);
+    SemType[] rwMembers = check f(env, r);
+    ListSubtype rwType = { members: rwMembers.cloneReadOnly() };
+    env.listDefs[rw] = rwType;
+    env.listDefs[ro] = readOnlyListSubtype(rwType);
+    return r;
+}
+
+public function recursiveListParse(Env env, function(Env, SemType) returns ListSubtype|error f) returns SemType|error {
+    int ro = env.listDefs.length();
+    ListSubtype dummy = { members: [] };
+    env.listDefs.push(dummy);
+    int rw = ro + 1;
+    env.listDefs.push(dummy);
+    SemType r = listRef(ro, rw);
+    ListSubtype rwType = check f(env, r);
+    env.listDefs[rw] = rwType;
+    env.listDefs[ro] = readOnlyListSubtype(rwType);
     return r;
 }
 
@@ -81,7 +111,6 @@ function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean 
         boolean? res = m.isEmpty;
         if res is () {
             // we've got a loop
-            io:println("  got a list loop");
             // XXX is this right???
             return true;
         }
@@ -94,34 +123,22 @@ function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean 
     return isEmpty;    
 }
 
-// Each path from the root of the Bdd down to a leaf that is true corresponds
-// to a possibility whose emptiness needs to be checked.
-// We walk the tree, accumulating the combination of positive and negative definitions for a path as we go.
-// When we get to a leaf that is true, we check the emptiness of the accumulated combination.
-function tupleBddIsEmpty(TypeCheckContext tc, Bdd b, DefList? pos, DefList? neg) returns boolean {
-    if b is boolean {
-        return !b || listFormulaIsEmpty(tc, pos, neg);
-    }
-    else {
-        return tupleBddIsEmpty(tc, b.lo, defListCons(b.index, pos), neg)
-          && tupleBddIsEmpty(tc, b.mid, pos, neg)
-          && tupleBddIsEmpty(tc, b.hi, pos, defListCons(b.index, neg)); 
-    }
-}
-
 function listFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) returns boolean {
+    SemType[] members;
+    SemType rest;
     if pos is () {
-        // do not have variable length tuples yet,
-        // so no way for intersection of negated tuples to include everything
-        return false;
+        members = [];
+        rest = TOP;
     }
     else {
         // combine all the positive tuples using intersection
-        SemType[] s = tc.listDefs[pos.index];
-        int slen = s.length();
+        ListSubtype lt = tc.listDefs[pos.index];
+        members = lt.members;
+        rest = lt.rest;
         DefList? p = pos.rest;
-        if !(p is ()) {
-            s = shallowCopy(s);
+        // the neg case is in case we grow the array in listInhabited
+        if p != () || neg != () {
+            members = shallowCopy(members);
         }
         while true {
             if p is () {
@@ -130,47 +147,72 @@ function listFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) ret
             else {
                 int d = p.index;
                 p = p.rest; 
-                SemType[] t = tc.listDefs[d];
-                if t.length() != slen {
-                    return false;
+                lt = tc.listDefs[d];
+                int newLen = int:max(members.length(), lt.members.length());
+                if members.length() < newLen {
+                    if isNever(rest) {
+                        return true;
+                    }
+                    foreach int i in members.length() ..< newLen {
+                        members.push(rest);
+                    }
                 }
-                foreach int i in 0 ..< slen {
-                    s[i] = intersect(s[i], t[i]);
+                foreach int i in 0 ..< lt.members.length() {
+                    members[i] = intersect(members[i], lt.members[i]);
                 }
+                if lt.members.length() < newLen {
+                    if isNever(lt.rest) {
+                        return true;
+                    }
+                    foreach int i in lt.members.length() ..< newLen {
+                        members[i] = intersect(members[i], lt.rest);
+                    }
+                }
+                rest = intersect(rest, lt.rest);
             }
         }
-        foreach var m in s {
+        foreach var m in members {
             if isEmpty(tc, m) {
                 return true;
             }
         }
-        return !tupleInhabited(tc, s, neg);
     }
+    return !listInhabited(tc, members, rest, neg);
 }
 
-// `neg` represents a set of negated tuple types
-// This function returns true if there is a tuple shape v such that
-// v is in type s, and
-// for each tuple t in neg, v is not in t.
-// Precondition is that all members of s are not empty.
+// This function returns true if there is a list shape v such that
+// is in the type described by `members` and `rest`, and
+// for each tuple t in `neg`, v is not in t.
+// `neg` represents a set of negated list types.
+// Precondition is that each of `members` is not empty.
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
-function tupleInhabited(TypeCheckContext tc, SemType[] s, DefList? neg) returns boolean {
+function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, DefList? neg) returns boolean {
     if neg is () {
         return true;
     }
     else {
-        int slen = s.length();
-
-        SemType[] t = tc.listDefs[neg.index];
-        if t.length() != slen {
-            return tupleInhabited(tc, s, neg.rest);
+        int len = members.length();
+        ListSubtype nt = tc.listDefs[neg.index];
+        int negLen = nt.members.length();
+        if len < negLen {
+            if isNever(rest) {
+                return listInhabited(tc, members, rest, neg.rest);
+            }            
+            foreach int i in len ..< negLen {
+                members.push(rest);
+            }
+            len = negLen;
         }
+        else if negLen < len && isNever(nt.rest) {
+            return listInhabited(tc, members, rest, neg.rest);
+        }
+        // now we have nt.members.length() <= len
 
+        // This is the heart of the algorithm.
         // For [v0, v1] not to be in [t0,t1], there are two possibilities
         // (1) v0 is not in t0, or
         // (2) v1 is not in t1
-        
         // Case (1)
         // For v0 to be in s0 but not t0, d0 must not be empty.
         // We must then find a [v0,v1] satisfying the remaining negated tuples,
@@ -186,19 +228,23 @@ function tupleInhabited(TypeCheckContext tc, SemType[] s, DefList? neg) returns 
         // SemType d1 = diff(s[1], t[1]);
         // return !isEmpty(tc, d1) &&  tupleInhabited(tc, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
-        foreach int i in 0 ..< slen {
-            SemType d = diff(s[i], t[i]);
+        foreach int i in 0 ..< len {
+            SemType ntm = i < negLen ? nt.members[i] : nt.rest;
+            SemType d = diff(members[i], ntm);
             if !isEmpty(tc, d) {
-                SemType[] sd = shallowCopy(s);
-                sd[i] = d;
-                if tupleInhabited(tc, sd, neg.rest) {
+                SemType[] s = shallowCopy(members);
+                s[i] = d;
+                if listInhabited(tc, s, rest, neg.rest) {
                     return true;
                 }
-            }          
+            }     
         }
+        if !isEmpty(tc, diff(rest, nt.rest)) {
+            return true;
+        }
+        // This is correct for length 0, because we know that the length of the
+        // negative is 0, and [] - [] is empty.
         return false;
-       
-        
     }
 }
 
@@ -206,20 +252,6 @@ function tupleInhabited(TypeCheckContext tc, SemType[] s, DefList? neg) returns 
 function shallowCopy(SemType[] v) returns SemType[] {
     return v.slice(0);
 }
-
-// This is how it is expressed in the AMK tutorial.
-// This corresponds to !tupleInhabited.
-// I find it easier to understand not negates
-// function tupleTheta(TypeCheckContext tc, SemType s0, SemType s1, DefList? neg) returns boolean {
-//     if neg is () {
-//         return false;
-//     }
-//     else {
-//         SemType[2] [t0, t1] = tc.listDefs[neg.first];
-//         return (isSubtype(tc, s0, t0) || tupleTheta(tc, diff(s0, t0), s1, neg.rest))
-//             && (isSubtype(tc, s1, t1) || tupleTheta(tc, s0, diff(s1, t1), neg.rest));
-//     }
-// }
 
 final BasicTypeOps listOps = {
     union: bddSubtypeUnion,

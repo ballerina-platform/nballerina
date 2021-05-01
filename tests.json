@@ -37,9 +37,18 @@
     ["incomparable", ["rec", "json", ["|", "nil", "int", "string", ["tuple", ["ref", "json"], "int"], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]],
                      ["rec", "json", ["|", "nil", "int", "string", ["tuple", ["ref", "json"], ["ref", "json"]], ["record", ["x", "int"], ["y", ["ref", "json"]]]]]],
     ["equivalent", ["rec", "json", ["|", ["tuple", ["rec", "json2", ["|", "nil", "int", "string", ["tuple", ["ref", "json"], ["ref", "json2"]], ["record", ["x", ["ref", "json2"]], ["y", ["ref", "json"]]]]],
-                                                  ["ref", "json"]],
+                                                   ["ref", "json"]],
                                          ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]],
                                          "nil", "int", "string"]],
-                   ["rec", "json", ["|", "nil", "int", "string", ["tuple", ["ref", "json"], ["ref", "json"]], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]]                  
+                   ["rec", "json", ["|", "nil", "int", "string", ["tuple", ["ref", "json"], ["ref", "json"]], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]],
+    ["equivalent", ["&", ["tuple", "int"], ["tuple", "int", "int"]], "never"],
+    ["proper_subtype", ["list", "int"], ["list", ["|", "int", "nil"]]],
+    ["equivalent", ["list", "int"], ["|", ["tuple"], ["tuple", "int"], ["list", "int", "int", "int"]]],
+    ["proper_subtype", ["rec", "t", ["|", ["const", "nil"],
+                                          ["const", "int"],
+                                          ["const", "string"],
+                                          ["list", ["const", "list"], ["ref", "t"]],
+                                          ["list", ["const", "record"], ["list", "string", ["ref", "t"]]]]],
+                       ["rec", "s", ["|", "string", [ "list", ["ref", "s"]]]]]   
 ]
 
