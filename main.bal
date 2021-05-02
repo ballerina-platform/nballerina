@@ -39,14 +39,14 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
     boolean firstOk = false;
     do {
         boolean ok = true;
-        core:SemType t1 = check j:fromJson(env, j1);
+        core:SemType t1 = check j:parse(env, j1);
         firstOk = true;
-        core:SemType t2 = check j:fromJson(env, j2);
+        core:SemType t2 = check j:parse(env, j2);
         var expect = <[boolean,boolean]>relationExpect[rel];
         return expectSubtype(testNum, j1, j2, env, t1, t2, expect, 0)
                 && expectSubtype(testNum, j2, j1, env, t2, t1, expect, 1);
     }
-    on fail j:JsonParseError err {
+    on fail j:ParseError err {
         io:println("Could not parse ", firstOk ? "second" : "first", " type in test ", testNum);
         return false;
     }

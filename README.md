@@ -32,7 +32,7 @@ The implementation currently handles a small subset of Ballerina type system:
 * any and never (can be derived from the above)
 * complement and difference (Ballerina has no syntax for this, but deciding whether S is a subtype of T is equivalent to deciding whether the difference of S and T is empty)
 
-Types are represented in a Lispy JSON format, documented in the file [`xtype.bal`](modules/json/xtype.bal).
+Types are represented in a Lispy JSON format, documented in the file [`schema.bal`](modules/json/schema.bal).
 
 Running the program checks the type relationships asserted in [`tests.json`](tests.json). This is a JSON file
 that contains an array of tests; each test is a triple [R, T1 T2], where R is a string specifying the
