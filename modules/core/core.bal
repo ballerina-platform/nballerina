@@ -377,12 +377,12 @@ function readOnlyTypeList(SemType[] mt) returns readonly & SemType[] {
 }
 
 type Conjunction record {
-    int index;
+    int atom;
     Conjunction? next;
 };
 
-function and(int index, Conjunction? next) returns Conjunction {
-    return { index, next };
+function and(int atom, Conjunction? next) returns Conjunction {
+    return { atom, next };
 }
 
 public function typeCheckContext(Env env) returns TypeCheckContext {
@@ -404,9 +404,9 @@ function bddIsEmpty(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conjunctio
         return !b || isEmpty(tc, pos, neg);
     }
     else {
-        return bddIsEmpty(tc, b.left, and(b.index, pos), neg, isEmpty)
+        return bddIsEmpty(tc, b.left, and(b.atom, pos), neg, isEmpty)
           && bddIsEmpty(tc, b.middle, pos, neg, isEmpty)
-          && bddIsEmpty(tc, b.right, pos, and(b.index, neg), isEmpty); 
+          && bddIsEmpty(tc, b.right, pos, and(b.atom, neg), isEmpty); 
     }
 }
 

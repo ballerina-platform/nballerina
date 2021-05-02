@@ -123,7 +123,7 @@ function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? 
     }
     else {
         // combine all the positive tuples using intersection
-        ListSubtype lt = tc.listDefs[pos.index];
+        ListSubtype lt = tc.listDefs[pos.atom];
         members = lt.members;
         rest = lt.rest;
         Conjunction? p = pos.next;
@@ -136,7 +136,7 @@ function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? 
                 break;
             }
             else {
-                int d = p.index;
+                int d = p.atom;
                 p = p.next; 
                 lt = tc.listDefs[d];
                 int newLen = int:max(members.length(), lt.members.length());
@@ -184,7 +184,7 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Con
     }
     else {
         int len = members.length();
-        ListSubtype nt = tc.listDefs[neg.index];
+        ListSubtype nt = tc.listDefs[neg.atom];
         int negLen = nt.members.length();
         if len < negLen {
             if isNever(rest) {

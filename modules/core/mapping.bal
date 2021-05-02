@@ -112,7 +112,7 @@ function mappingFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunctio
     }
     else {
         // combine all the positive tuples using intersection
-        MappingSubtype ms = tc.mappingDefs[pos.index];
+        MappingSubtype ms = tc.mappingDefs[pos.atom];
         SemType[] s = ms.types;
         int slen = s.length();
         Conjunction? p = pos.next;
@@ -124,7 +124,7 @@ function mappingFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunctio
                 break;
             }
             else {
-                int d = p.index;
+                int d = p.atom;
                 p = p.next; 
                 MappingSubtype mt = tc.mappingDefs[d];
                 if mt.names != ms.names {
@@ -152,7 +152,7 @@ function mappingInhabited(TypeCheckContext tc, string[] fieldNames, SemType[] s,
     else {
         int slen = s.length();
 
-        MappingSubtype mt = tc.mappingDefs[neg.index];
+        MappingSubtype mt = tc.mappingDefs[neg.atom];
 
         if mt.names != fieldNames {
             return mappingInhabited(tc, fieldNames, s, neg.next);

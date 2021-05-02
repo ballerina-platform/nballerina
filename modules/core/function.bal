@@ -53,16 +53,16 @@ function functionBddIsEmpty(TypeCheckContext tc, bdd:Bdd b, SemType s, Conjuncti
             return false;
         }
         else {
-            SemType[2] [t0, t1] = tc.functionDefs[neg.index];
+            SemType[2] [t0, t1] = tc.functionDefs[neg.atom];
             return (isSubtype(tc, t0, s) && functionTheta(tc, t0, complement(t1), pos))
                 || functionBddIsEmpty(tc, true, s, pos, neg.next);
         }
     }
     else {
-        SemType[2] [sd, sr] = tc.functionDefs[b.index];
-        return functionBddIsEmpty(tc, b.left, union(s, sd), and(b.index, pos), neg)
+        SemType[2] [sd, sr] = tc.functionDefs[b.atom];
+        return functionBddIsEmpty(tc, b.left, union(s, sd), and(b.atom, pos), neg)
             && functionBddIsEmpty(tc, b.middle, s, pos, neg)
-            && functionBddIsEmpty(tc, b.right, s, pos, and(b.index, neg));
+            && functionBddIsEmpty(tc, b.right, s, pos, and(b.atom, neg));
     }
 }
 
@@ -72,7 +72,7 @@ function functionTheta(TypeCheckContext tc, SemType t0, SemType t1, Conjunction?
         return isEmpty(tc, t0) || isEmpty(tc, t1);
     }
     else {
-        SemType[2] [s0, s1] = tc.functionDefs[pos.index];
+        SemType[2] [s0, s1] = tc.functionDefs[pos.atom];
         return (isSubtype(tc, t0, s0) || functionTheta(tc, diff(s0, t0), s1, pos.next))
             && (isSubtype(tc, t1, complement(s1)) || functionTheta(tc, s0, intersect(s1, t1), pos.next));
     }

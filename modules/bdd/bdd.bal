@@ -2,16 +2,15 @@
 
 public type Bdd (readonly & Node)|boolean;
 
-// referenced nodes refer to definitions with same basic type
 public type Node record {|
-    int index;  // index of definition
+    int atom;  // meaning is basic-type dependent
     Bdd left;
     Bdd middle;
     Bdd right;
 |};
 
-public isolated function atom(int index) returns readonly & Node {
-     return { index, left: true, middle: false, right: false };
+public isolated function atom(int atom) returns readonly & Node {
+     return { atom, left: true, middle: false, right: false };
 }
 
 public isolated function union(Bdd b1, Bdd b2) returns Bdd {
@@ -25,21 +24,21 @@ public isolated function union(Bdd b1, Bdd b2) returns Bdd {
         return b2 == true ? true : b1;
     }
     else {  
-        int cmp = b1.index - b2.index;
+        int cmp = b1.atom - b2.atom;
         if cmp < 0 {
-            return create(b1.index,
+            return create(b1.atom,
                           b1.left,
                           union(b1.middle, b2),
                           b1.right);
         }
         else if cmp > 0 {
-             return create(b2.index,
+             return create(b2.atom,
                            b2.left,
                            union(b1, b2.middle),
                            b2.right);
         }
         else {
-            return create(b1.index,
+            return create(b1.atom,
                           union(b1.left, b2.left),
                           union(b1.middle, b2.middle),
                           union(b1.right, b2.right));
@@ -58,21 +57,21 @@ public isolated function intersect(Bdd b1, Bdd b2) returns Bdd {
         return b2 == true ? false : b1;
     }
     else { 
-        int cmp = b1.index - b2.index;
+        int cmp = b1.atom - b2.atom;
         if cmp < 0 {
-            return create(b1.index,
+            return create(b1.atom,
                           intersect(b1.left, b2),
                           intersect(b1.middle, b2),
                           intersect(b1.right, b2));
         }
         else if cmp > 0 {
-            return create(b2.index,
+            return create(b2.atom,
                           intersect(b1, b2.left),
                           intersect(b1, b2.middle),
                           intersect(b1, b2.right));
         }
         else {
-            return create(b1.index,
+            return create(b1.atom,
                           intersect(union(b1.left, b1.middle), union(b2.left, b2.middle)),
                           false,
                           intersect(union(b1.right, b1.middle), union(b2.right, b2.middle)));
@@ -91,22 +90,22 @@ public isolated function diff(Bdd b1, Bdd b2) returns Bdd {
         return b1 == true ?  complement(b2) : false;
     }
     else {  
-        int cmp = b1.index - b2.index;
+        int cmp = b1.atom - b2.atom;
         if cmp < 0 {
-            return create(b1.index,
+            return create(b1.atom,
                           diff(union(b1.left, b1.middle), b2),
                           false,
                           diff(union(b1.right, b1.middle), b2));
         }
         else if cmp > 0 {
-            return create(b2.index,
+            return create(b2.atom,
                           diff(b1, union(b2.left, b2.middle)),
                           false,
                           diff(b1, union(b2.right, b2.middle)));
 
         }
         else {
-            return create(b1.index,
+            return create(b1.atom,
                           diff(b1.left, b2),
                           diff(b1.middle, b2),
                           diff(b1.right, b2));
@@ -120,25 +119,25 @@ public isolated function complement(Bdd b) returns Bdd {
     }
     else {
         if b.right === false {
-            return create(b.index,
+            return create(b.atom,
                           false,
                           complement(union(b.left, b.middle)),
                           complement(b.middle));
         }
         else if b.left === false {
-            return create(b.index,
+            return create(b.atom,
                           complement(b.middle),
                           complement(union(b.right, b.middle)),
                           false);
         }
         else if b.middle === false {
-             return create(b.index,
+             return create(b.atom,
                            complement(b.left),
                            complement(union(b.left, b.right)),
                            complement(b.right));
         }
         else {
-            return create(b.index,
+            return create(b.atom,
                           complement(union(b.left, b.middle)),
                           false,
                           complement(union(b.right, b.middle)));
@@ -149,7 +148,7 @@ public isolated function complement(Bdd b) returns Bdd {
 // this is just for observing
 isolated int count = 0;
 
-isolated function create(int index, Bdd left, Bdd middle, Bdd right) returns Bdd {
+isolated function create(int atom, Bdd left, Bdd middle, Bdd right) returns Bdd {
     if middle === true {
         return true;
     }
@@ -159,7 +158,7 @@ isolated function create(int index, Bdd left, Bdd middle, Bdd right) returns Bdd
     lock {
         count += 1;
     }
-    return { index, left, middle, right };
+    return { atom, left, middle, right };
 }
 
 public isolated function getCount() returns int {
