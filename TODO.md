@@ -12,7 +12,7 @@
 8. Recursive function types
 9. ~~String singleton type~~
 10. ~~readonly type~~
-11. Rest field for tuples
+11. ~Rest field for tuples~
 12. Rest field for records
 13. readonly record fields
 14. Optional record fields
@@ -36,6 +36,7 @@
 32. xml subtypes
 33. isolated qualifier
 32. transactional qualifier
+33. string:Char type
 
 ## Other things
 
@@ -43,6 +44,6 @@
 * JSON syntax for varargs functions
 * JSON syntax for difference and/or complement
 * Support subset of Ballerina syntax
-* Divide into modules
 * Support a type module (collection of mutually recursive named definitions)
 * One of the subtype tests creates >600 BDDs: we should understand why and try to reduce it
+* Use isolated in core and json modules
