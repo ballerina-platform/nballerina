@@ -60,9 +60,9 @@ function functionBddIsEmpty(TypeCheckContext tc, bdd:Bdd b, SemType s, DefList? 
     }
     else {
         SemType[2] [sd, sr] = tc.functionDefs[b.index];
-        return functionBddIsEmpty(tc, b.lo, union(s, sd), defListCons(b.index, pos), neg)
-            && functionBddIsEmpty(tc, b.mid, s, pos, neg)
-            && functionBddIsEmpty(tc, b.hi, s, pos, defListCons(b.index, neg));
+        return functionBddIsEmpty(tc, b.left, union(s, sd), defListCons(b.index, pos), neg)
+            && functionBddIsEmpty(tc, b.middle, s, pos, neg)
+            && functionBddIsEmpty(tc, b.right, s, pos, defListCons(b.index, neg));
     }
 }
 

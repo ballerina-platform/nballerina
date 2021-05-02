@@ -404,9 +404,9 @@ function bddIsEmpty(TypeCheckContext tc, bdd:Bdd b, DefList? pos, DefList? neg, 
         return !b || isEmpty(tc, pos, neg);
     }
     else {
-        return bddIsEmpty(tc, b.lo, defListCons(b.index, pos), neg, isEmpty)
-          && bddIsEmpty(tc, b.mid, pos, neg, isEmpty)
-          && bddIsEmpty(tc, b.hi, pos, defListCons(b.index, neg), isEmpty); 
+        return bddIsEmpty(tc, b.left, defListCons(b.index, pos), neg, isEmpty)
+          && bddIsEmpty(tc, b.middle, pos, neg, isEmpty)
+          && bddIsEmpty(tc, b.right, pos, defListCons(b.index, neg), isEmpty); 
     }
 }
 
