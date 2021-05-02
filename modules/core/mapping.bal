@@ -103,7 +103,7 @@ function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boole
 
 // This works the same as the tuple case, except that instead of
 // just comparing the lengths of the tuples we compare the sorted list of field names
-function mappingFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) returns boolean {
+function mappingFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? neg) returns boolean {
     // TODO
     if pos is () {
         // do not have variable length tuples yet,
@@ -115,7 +115,7 @@ function mappingFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) 
         MappingSubtype ms = tc.mappingDefs[pos.index];
         SemType[] s = ms.types;
         int slen = s.length();
-        DefList? p = pos.rest;
+        Conjunction? p = pos.next;
         if !(p is ()) {
             s = shallowCopy(s);
         }
@@ -125,7 +125,7 @@ function mappingFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) 
             }
             else {
                 int d = p.index;
-                p = p.rest; 
+                p = p.next; 
                 MappingSubtype mt = tc.mappingDefs[d];
                 if mt.names != ms.names {
                     return false;
@@ -145,7 +145,7 @@ function mappingFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) 
     }
 }
 
-function mappingInhabited(TypeCheckContext tc, string[] fieldNames, SemType[] s, DefList? neg) returns boolean {
+function mappingInhabited(TypeCheckContext tc, string[] fieldNames, SemType[] s, Conjunction? neg) returns boolean {
     if neg is () {
         return true;
     }
@@ -155,7 +155,7 @@ function mappingInhabited(TypeCheckContext tc, string[] fieldNames, SemType[] s,
         MappingSubtype mt = tc.mappingDefs[neg.index];
 
         if mt.names != fieldNames {
-            return mappingInhabited(tc, fieldNames, s, neg.rest);
+            return mappingInhabited(tc, fieldNames, s, neg.next);
         }
 
         SemType[] t = mt.types;
@@ -164,7 +164,7 @@ function mappingInhabited(TypeCheckContext tc, string[] fieldNames, SemType[] s,
             if !isEmpty(tc, d) {
                 SemType[] sd = shallowCopy(s);
                 sd[i] = d;
-                if mappingInhabited(tc, fieldNames, sd, neg.rest) {
+                if mappingInhabited(tc, fieldNames, sd, neg.next) {
                     return true;
                 }
             }          

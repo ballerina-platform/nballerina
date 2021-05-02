@@ -44,7 +44,7 @@ function functionSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns bool
     return isEmpty;    
 }
 
-function functionBddIsEmpty(TypeCheckContext tc, bdd:Bdd b, SemType s, DefList? pos, DefList? neg) returns boolean {
+function functionBddIsEmpty(TypeCheckContext tc, bdd:Bdd b, SemType s, Conjunction? pos, Conjunction? neg) returns boolean {
     if b is boolean {
         if b == false {
             return true;
@@ -55,25 +55,25 @@ function functionBddIsEmpty(TypeCheckContext tc, bdd:Bdd b, SemType s, DefList? 
         else {
             SemType[2] [t0, t1] = tc.functionDefs[neg.index];
             return (isSubtype(tc, t0, s) && functionTheta(tc, t0, complement(t1), pos))
-                || functionBddIsEmpty(tc, true, s, pos, neg.rest);
+                || functionBddIsEmpty(tc, true, s, pos, neg.next);
         }
     }
     else {
         SemType[2] [sd, sr] = tc.functionDefs[b.index];
-        return functionBddIsEmpty(tc, b.left, union(s, sd), defListCons(b.index, pos), neg)
+        return functionBddIsEmpty(tc, b.left, union(s, sd), and(b.index, pos), neg)
             && functionBddIsEmpty(tc, b.middle, s, pos, neg)
-            && functionBddIsEmpty(tc, b.right, s, pos, defListCons(b.index, neg));
+            && functionBddIsEmpty(tc, b.right, s, pos, and(b.index, neg));
     }
 }
 
-function functionTheta(TypeCheckContext tc, SemType t0, SemType t1, DefList? pos) returns boolean {
+function functionTheta(TypeCheckContext tc, SemType t0, SemType t1, Conjunction? pos) returns boolean {
     if pos is () {
         // XXX can have function with return type of never
         return isEmpty(tc, t0) || isEmpty(tc, t1);
     }
     else {
         SemType[2] [s0, s1] = tc.functionDefs[pos.index];
-        return (isSubtype(tc, t0, s0) || functionTheta(tc, diff(s0, t0), s1, pos.rest))
-            && (isSubtype(tc, t1, complement(s1)) || functionTheta(tc, s0, intersect(s1, t1), pos.rest));
+        return (isSubtype(tc, t0, s0) || functionTheta(tc, diff(s0, t0), s1, pos.next))
+            && (isSubtype(tc, t1, complement(s1)) || functionTheta(tc, s0, intersect(s1, t1), pos.next));
     }
 }

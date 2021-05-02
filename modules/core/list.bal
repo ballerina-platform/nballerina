@@ -114,7 +114,7 @@ function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean 
     return isEmpty;    
 }
 
-function listFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) returns boolean {
+function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? neg) returns boolean {
     SemType[] members;
     SemType rest;
     if pos is () {
@@ -126,7 +126,7 @@ function listFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) ret
         ListSubtype lt = tc.listDefs[pos.index];
         members = lt.members;
         rest = lt.rest;
-        DefList? p = pos.rest;
+        Conjunction? p = pos.next;
         // the neg case is in case we grow the array in listInhabited
         if p != () || neg != () {
             members = shallowCopy(members);
@@ -137,7 +137,7 @@ function listFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) ret
             }
             else {
                 int d = p.index;
-                p = p.rest; 
+                p = p.next; 
                 lt = tc.listDefs[d];
                 int newLen = int:max(members.length(), lt.members.length());
                 if members.length() < newLen {
@@ -178,7 +178,7 @@ function listFormulaIsEmpty(TypeCheckContext tc, DefList? pos, DefList? neg) ret
 // Precondition is that each of `members` is not empty.
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
-function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, DefList? neg) returns boolean {
+function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Conjunction? neg) returns boolean {
     if neg is () {
         return true;
     }
@@ -188,7 +188,7 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Def
         int negLen = nt.members.length();
         if len < negLen {
             if isNever(rest) {
-                return listInhabited(tc, members, rest, neg.rest);
+                return listInhabited(tc, members, rest, neg.next);
             }            
             foreach int i in len ..< negLen {
                 members.push(rest);
@@ -196,7 +196,7 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Def
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
-            return listInhabited(tc, members, rest, neg.rest);
+            return listInhabited(tc, members, rest, neg.next);
         }
         // now we have nt.members.length() <= len
 
@@ -225,7 +225,7 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Def
             if !isEmpty(tc, d) {
                 SemType[] s = shallowCopy(members);
                 s[i] = d;
-                if listInhabited(tc, s, rest, neg.rest) {
+                if listInhabited(tc, s, rest, neg.next) {
                     return true;
                 }
             }     

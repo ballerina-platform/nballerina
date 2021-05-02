@@ -376,13 +376,13 @@ function readOnlyTypeList(SemType[] mt) returns readonly & SemType[] {
     return types.cloneReadOnly(); 
 }
 
-type DefList record {
+type Conjunction record {
     int index;
-    DefList? rest;
+    Conjunction? next;
 };
 
-function defListCons(int index, DefList? rest) returns DefList {
-    return { index, rest };
+function and(int index, Conjunction? next) returns Conjunction {
+    return { index, next };
 }
 
 public function typeCheckContext(Env env) returns TypeCheckContext {
@@ -393,20 +393,20 @@ public function typeCheckContext(Env env) returns TypeCheckContext {
     };
 }
 
-type BddIsEmptyFunction function(TypeCheckContext tc, DefList? pos, DefList? neg) returns boolean;
+type BddIsEmptyFunction function(TypeCheckContext tc, Conjunction? pos, Conjunction? neg) returns boolean;
 
 // Each path from the root of the Bdd down to a leaf that is true corresponds
 // to a possibility whose emptiness needs to be checked.
 // We walk the tree, accumulating the combination of positive and negative definitions for a path as we go.
 // When we get to a leaf that is true, we check the emptiness of the accumulated combination.
-function bddIsEmpty(TypeCheckContext tc, bdd:Bdd b, DefList? pos, DefList? neg, BddIsEmptyFunction isEmpty) returns boolean {
+function bddIsEmpty(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conjunction? neg, BddIsEmptyFunction isEmpty) returns boolean {
     if b is boolean {
         return !b || isEmpty(tc, pos, neg);
     }
     else {
-        return bddIsEmpty(tc, b.left, defListCons(b.index, pos), neg, isEmpty)
+        return bddIsEmpty(tc, b.left, and(b.index, pos), neg, isEmpty)
           && bddIsEmpty(tc, b.middle, pos, neg, isEmpty)
-          && bddIsEmpty(tc, b.right, pos, defListCons(b.index, neg), isEmpty); 
+          && bddIsEmpty(tc, b.right, pos, and(b.index, neg), isEmpty); 
     }
 }
 
