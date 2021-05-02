@@ -11,7 +11,7 @@ G. Castagna, 2020
 
 Section 4 of the above paper has a description of the algorithms.
 
-There is also a very useful tutorial by Andrew M. Kent:
+There is also a tutorial by Andrew M. Kent, which is great for getting started:
 
 [Down and Dirty with Semantic Set-theoretic Types (a tutorial)](https://pnwamk.github.io/sst-tutorial/)
 
@@ -32,7 +32,13 @@ The implementation currently handles a small subset of Ballerina type system:
 * any and never (can be derived from the above)
 * complement and difference (Ballerina has no syntax for this, but deciding whether S is a subtype of T is equivalent to deciding whether the difference of S and T is empty)
 
-Types are represented in a Lispy JSON format, documented in the file [`schema.bal`](modules/json/schema.bal).
+Most of the code is in [modules](modules/):
+
+* core - this implements the subtyping algorithm
+* bdd - this implements binary decision diagrams, which is a key data-structure used by the core module
+* json - this parses a JSON representation of types, and uses the core module to build an internal representation
+
+The JSON  representation of types is Lisp-like, and documented in the file [`schema.bal`](modules/json/schema.bal).
 
 Running the program checks the type relationships asserted in [`tests.json`](tests.json). This is a JSON file
 that contains an array of tests; each test is a triple [R, T1 T2], where R is a string specifying the
@@ -44,4 +50,7 @@ relationship that holds between T1 and T2, as follows:
 
 The program can be built with the [Swan Lake Alpha5](https://ballerina.io/downloads/) version of Ballerina.
 
-There is a [list](TODO.md) of everything still to be done to handle the whole type system.
+There is a [list](TODO.md) of everything still to be done to handle the whole type system. There
+are also implementation [notes](NOTES.md).
+
+

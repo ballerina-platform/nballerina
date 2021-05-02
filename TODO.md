@@ -12,8 +12,8 @@
 8. Recursive function types
 9. ~~String singleton type~~
 10. ~~readonly type~~
-11. ~Rest field for tuples~
-12. Rest field for records
+11. ~~Rest field for tuples~~
+12. open records
 13. readonly record fields
 14. Optional record fields
 15. boolean singleton type
@@ -42,8 +42,11 @@
 
 * Conversion from SemType to JSON representation
 * JSON syntax for varargs functions
-* JSON syntax for difference and/or complement
-* Support subset of Ballerina syntax
-* Support a type module (collection of mutually recursive named definitions)
+* JSON syntax for difference and/or complement `["!" T]` or `["-" T1 T2]`
+* Support Ballerina syntax for types (start with a subset)
+* Implement the concept of a module (collection of mutually recursive named definitions)
 * One of the subtype tests creates >600 BDDs: we should understand why and try to reduce it
 * Use isolated in core and json modules
+* Make use of Ballerina's data-driven test feature
+* Add JSON `["?" T]` meaning `["|", T, "()"]`
+
