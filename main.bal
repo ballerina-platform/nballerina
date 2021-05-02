@@ -1,5 +1,6 @@
 import ballerina/io;
 import semtype.bdd;
+import semtype.core;
 
 enum Relation {
     proper_subtype,
@@ -33,13 +34,13 @@ final var relationExpect = {
 };
 
 function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
-    Env env = {};
+    core:Env env = {};
     boolean firstOk = false;
     do {
         boolean ok = true;
-        SemType t1 = check fromJson(env, j1);
+        core:SemType t1 = check fromJson(env, j1);
         firstOk = true;
-        SemType t2 = check fromJson(env, j2);
+        core:SemType t2 = check fromJson(env, j2);
         var expect = <[boolean,boolean]>relationExpect[rel];
         return expectSubtype(testNum, j1, j2, env, t1, t2, expect, 0)
                 && expectSubtype(testNum, j2, j1, env, t2, t1, expect, 1);
@@ -50,11 +51,11 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
     }
 }
 
-function expectSubtype(int testNum, json j1, json j2, Env env, SemType t1, SemType t2, boolean[] expect, int i) returns boolean {
+function expectSubtype(int testNum, json j1, json j2, core:Env env, core:SemType t1, core:SemType t2, boolean[] expect, int i) returns boolean {
     io:println("Test ", testNum, "/", i);
     int tem = bdd:getCount();
-    var tc = typeCheckContext(env);
-    boolean b = isSubtype(tc, t1, t2);
+    var tc = core:typeCheckContext(env);
+    boolean b = core:isSubtype(tc, t1, t2);
     if b == expect[i] {
         io:println("  created ", bdd:getCount() - tem, " BDDs");
         return true;

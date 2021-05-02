@@ -3,7 +3,7 @@ type StringSubtype readonly & record {|
     string[] values;
 |};
 
-function stringConst(string value) returns SemType {
+public function stringConst(string value) returns SemType {
     StringSubtype st = { allowed: true, values: [value] };
     return new SemType(1 << (BT_STRING + BT_COUNT), [[BT_STRING, st]]);
 }

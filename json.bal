@@ -1,13 +1,14 @@
 // Convert from json into a SemType
 // Json format is defined in xtype.bal
+import semtype.core;
 
-type JsonPath int[];
+public type JsonPath int[];
 
-type JsonParseDetail record {
+public type JsonParseDetail record {
     JsonPath path;
 };
 
-type JsonParseError error<JsonParseDetail>;
+public type JsonParseError error<JsonParseDetail>;
 
 type Binding NameBinding|RecBinding;
 
@@ -20,22 +21,22 @@ type NameBinding record {|
 
 type RecBinding record {|
    json desc;
-   SemType semType;
+   core:SemType semType;
    Binding? next;
 |};
 
-function fromJson(Env env, json j) returns SemType|JsonParseError {
+public function fromJson(core:Env env, json j) returns core:SemType|JsonParseError {
     return parseXType(env, (), j, []);
 } 
 
-function parseXType(Env env, Binding? b, json j, JsonPath path) returns SemType|JsonParseError {
+function parseXType(core:Env env, Binding? b, json j, JsonPath path) returns core:SemType|JsonParseError {
     match j {
-        XNil => { return NIL; }
-        XInt => { return INT; }
-        XString => { return STRING; }
-        XAny => { return TOP; }
-        XNever => { return NEVER; }
-        XReadOnly => { return READONLY; }
+        XNil => { return core:NIL; }
+        XInt => { return core:INT; }
+        XString => { return core:STRING; }
+        XAny => { return core:TOP; }
+        XNever => { return core:NEVER; }
+        XReadOnly => { return core:READONLY; }
         // Should be able to use match patterns here
         // but there's a compiler bug #29041
         var js if js is json[] => {
@@ -59,29 +60,29 @@ function parseXType(Env env, Binding? b, json j, JsonPath path) returns SemType|
 }
 
 // jlist is a list starting with k
-function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPath parent) returns SemType|JsonParseError {
+function parseCompoundXType(core:Env env, Binding? b, string k, json[] jlist, JsonPath parent) returns core:SemType|JsonParseError {
     match k {
         "|" => {
-            SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
-            return reduce(v, union, NEVER);
+            core:SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
+            return reduce(v, core:union, core:NEVER);
         }
         "&" => {
-            SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
-            return reduce(v, intersect, TOP);
+            core:SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
+            return reduce(v, core:intersect, core:TOP);
         }
         "tuple" => {
             if b is () {
-                SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
-                return tuple(env, ...v);
+                core:SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
+                return core:tuple(env, ...v);
             }
             else {
-                SemType? s = lookupRec(b, jlist);
+                core:SemType? s = lookupRec(b, jlist);
                 if !(s is ()) {
                     return s;
                 }
                 else {
-                    SemType|error result =
-                        recursiveTupleParse(env, (e, ref) => parseXTypes(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent, 1));
+                    core:SemType|error result =
+                        core:recursiveTupleParse(env, (e, ref) => parseXTypes(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent, 1));
                     if result is error {
                         return <JsonParseError>result;
                     }
@@ -95,17 +96,17 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
         }
         "list" => {
             if b is () {
-                ListSubtype lt = check parseXListMemberTypes(env, b, jlist, parent);
-                return list(env, lt);
+                core:ListSubtype lt = check parseXListMemberTypes(env, b, jlist, parent);
+                return core:list(env, lt);
             }
             else {
-                SemType? s = lookupRec(b, jlist);
+                core:SemType? s = lookupRec(b, jlist);
                 if !(s is ()) {
                     return s;
                 }
                 else {
-                    SemType|error result =
-                        recursiveListParse(env, (e, ref) => parseXListMemberTypes(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent));
+                    core:SemType|error result =
+                        core:recursiveListParse(env, (e, ref) => parseXListMemberTypes(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent));
                     if result is error {
                         return <JsonParseError>result;
                     }
@@ -118,17 +119,17 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
         }
         "record" => {
             if b is () {
-                Field[] fields = check parseXFields(env, b, jlist, parent, 1);
-                return mapping(env, ...fields);
+                core:Field[] fields = check parseXFields(env, b, jlist, parent, 1);
+                return core:mapping(env, ...fields);
             }
             else {
-                SemType? s = lookupRec(b, jlist);
+                core:SemType? s = lookupRec(b, jlist);
                 if !(s is ()) {
                     return s;
                 }
                 else {
-                    SemType|error result =
-                        recursiveMappingParse(env, (e, ref) => parseXFields(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent, 1));
+                    core:SemType|error result =
+                        core:recursiveMappingParse(env, (e, ref) => parseXFields(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent, 1));
                     if result is error {
                         return <JsonParseError>result;
                     }
@@ -139,12 +140,12 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
             }
         }
         "function" => {
-            SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
+            core:SemType[] v = check parseXTypes(env, b, jlist, parent, 1);
             if v.length() == 0 {
-                return FUNCTION;
+                return core:FUNCTION;
             }
-            SemType ret = v.pop();
-            return func(env, tuple(env, ...v), ret);
+            core:SemType ret = v.pop();
+            return core:func(env, core:tuple(env, ...v), ret);
         }
         "const" => {
             if jlist.length() != 2 {
@@ -155,7 +156,7 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
                 return parseError("'const' must be followed by a string", parent, 1);
             }
             else {
-                return stringConst(value);
+                return core:stringConst(value);
             }
         }
         "rec" => {
@@ -202,17 +203,17 @@ function parseCompoundXType(Env env, Binding? b, string k, json[] jlist, JsonPat
     return parseError("unrecognized keyword '" + k + "'", pathAppend(parent, 0));
 }
 
-function parseXFields(Env env, Binding? b, json[] jlist, JsonPath parent, int startIndex) returns Field[]|JsonParseError {
-    Field[] fields = [];
+function parseXFields(core:Env env, Binding? b, json[] jlist, JsonPath parent, int startIndex) returns core:Field[]|JsonParseError {
+    core:Field[] fields = [];
     foreach int i in startIndex ..< jlist.length() {
-        Field f = check parseXField(env, b, jlist[i], pathAppend(parent, i));
+        core:Field f = check parseXField(env, b, jlist[i], pathAppend(parent, i));
         fields.push(f);
     }
     return fields;
 }
 
 
-function parseXField(Env env, Binding? b, json j, JsonPath path) returns Field|JsonParseError {
+function parseXField(core:Env env, Binding? b, json j, JsonPath path) returns core:Field|JsonParseError {
     if !(j is json[]) || j.length() != 2 {
         return parseError("field must be 2-tuple", path);
     }
@@ -222,7 +223,7 @@ function parseXField(Env env, Binding? b, json j, JsonPath path) returns Field|J
             return parseError("first member of field must be a string", path, 0);
         }
         else {
-            SemType t = check parseXType(env, b, j[1], pathAppend(path, 1));
+            core:SemType t = check parseXType(env, b, j[1], pathAppend(path, 1));
             return [name, t];
         }
     }
@@ -252,7 +253,7 @@ function lookupBinding(Binding? b, string name) returns [json, JsonPath]|"loop"?
     return ();
 }
 
-function lookupRec(Binding? b, json desc) returns SemType? {
+function lookupRec(Binding? b, json desc) returns core:SemType? {
     Binding? tem = b;
     while true {
         if tem is () {
@@ -271,28 +272,28 @@ function lookupRec(Binding? b, json desc) returns SemType? {
     return ();
 }
 
-function parseXRec(Env env, Binding? b, string name, json t, JsonPath path) returns SemType|JsonParseError {
+function parseXRec(core:Env env, Binding? b, string name, json t, JsonPath path) returns core:SemType|JsonParseError {
     NameBinding nb = { name, next: b, desc: t, path };
     return parseXType(env, nb, t, path);
 }
 
-function parseXListMemberTypes(Env env, Binding? b, json[] js, JsonPath parent) returns ListSubtype|JsonParseError {
-    SemType[] members = check parseXTypes(env, b, js, parent, 1);
-    SemType rest;
+function parseXListMemberTypes(core:Env env, Binding? b, json[] js, JsonPath parent) returns core:ListSubtype|JsonParseError {
+    core:SemType[] members = check parseXTypes(env, b, js, parent, 1);
+    core:SemType rest;
     if members.length() == 0 {
-        rest = TOP;
+        rest = core:TOP;
     }
     else {
         rest = members.pop();
     }
-    ListSubtype lt = { members: members.cloneReadOnly(), rest };
+    core:ListSubtype lt = { members: members.cloneReadOnly(), rest };
     return lt;
 }
 
-function parseXTypes(Env env, Binding? b, json[] js, JsonPath parent, int startIndex) returns SemType[]|JsonParseError {
-    SemType[] s = [];
+function parseXTypes(core:Env env, Binding? b, json[] js, JsonPath parent, int startIndex) returns core:SemType[]|JsonParseError {
+    core:SemType[] s = [];
     foreach var i in startIndex ..< js.length() {
-        SemType t = check parseXType(env, b, js[i], pathAppend(parent, i));
+        core:SemType t = check parseXType(env, b, js[i], pathAppend(parent, i));
         s.push(t);
     }
     return s;
@@ -305,12 +306,12 @@ function parseError(string message, JsonPath path, int? step = ()) returns JsonP
     return error JsonParseError(message, path=path);
 }
 
-function reduce(SemType[] v, function (SemType, SemType) returns SemType binary, SemType initial) returns SemType {
+function reduce(core:SemType[] v, function (core:SemType, core:SemType) returns core:SemType binary, core:SemType initial) returns core:SemType {
     match v.length() {
         0 => { return initial; }
         1 => { return v[0]; }
     }
-    SemType result = binary(v[0], v[1]);
+    core:SemType result = binary(v[0], v[1]);
     foreach int i in 2 ..< v.length() {
         result = binary(result, v[i]);
     }

@@ -385,7 +385,7 @@ function defListCons(int index, DefList? rest) returns DefList {
     return { index, rest };
 }
 
-function typeCheckContext(Env env) returns TypeCheckContext {
+public function typeCheckContext(Env env) returns TypeCheckContext {
     return {
         listDefs: env.listDefs.cloneReadOnly(),
         mappingDefs: env.mappingDefs.cloneReadOnly(),

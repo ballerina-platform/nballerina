@@ -1,7 +1,7 @@
 // Implementation specific to basic type list.
 import semtype.bdd;
 
-type Field [string, SemType];
+public type Field [string, SemType];
 
 public type MappingSubtype readonly & record {|
     // sorted
