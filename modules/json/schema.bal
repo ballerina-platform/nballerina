@@ -1,11 +1,19 @@
 // External representation of types
 
-type Type Nil|Boolean|Int|String|Single|Union|Intersection|Never|Any|ReadOnly|Tuple|Record|Function|Rec|Ref;
+type Type Nil|Boolean|Int|Float|Decimal|String|Error|Typedesc|Handle|Xml|Never|Any|ReadOnly
+    |Single|Union|Intersection|Tuple|Record|Function|Rec|Ref;
 
 const Nil = "nil";
 const Boolean = "boolean";
 const Int = "int";
+const Float = "float";
+const Decimal = "decimal";
 const String = "string";
+const Error = "error";
+const Typedesc = "typedesc";
+const Handle = "handle";
+const Xml = "xml";
+
 const Never = "never";
 const Any = "any";
 const ReadOnly = "readonly";

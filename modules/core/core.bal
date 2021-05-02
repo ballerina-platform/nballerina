@@ -1,26 +1,52 @@
 
 import semtype.bdd;
 
+// Inherently immutable
 public const BT_NIL = 0;
 public const BT_BOOLEAN = 1;
 public const BT_INT = 2;
-public const BT_STRING = 3;
-public const BT_LIST_RO = 4;
-public const BT_MAPPING_RO = 5;
-public const BT_FUNCTION = 6;
-public const BT_LIST_RW = 7;
-public const BT_MAPPING_RW = 8;
-public const BT_COUNT = 9;
+public const BT_FLOAT = 3;
+public const BT_DECIMAL = 4;
+public const BT_STRING = 5;
+public const BT_ERROR = 6;
+public const BT_FUNCTION = 7;
+public const BT_TYPEDESC = 8;
+public const BT_HANDLE = 9;
+
+// Selectively immutable; immutable half
+public const BT_XML_RO = 10;
+public const BT_LIST_RO = 11;
+public const BT_MAPPING_RO = 12;
+public const BT_TABLE_RO = 13;
+public const BT_OBJECT_RO = 14;
+
+// Selectively immutable; mutable half
+public const BT_XML_RW = 15;
+public const BT_LIST_RW = 16;
+public const BT_MAPPING_RW = 17;
+public const BT_TABLE_RW = 18;
+public const BT_OBJECT_RW = 19;
+
+// Inherently mutable
+public const BT_STREAM = 20;
+public const BT_FUTURE = 21;
+
+public const BT_COUNT = 22;
 
 public const int BT_MASK = (1 << BT_COUNT) - 1;
 
-public const int BT_COUNT_RO = BT_MAPPING_RO + 1;
+public const int BT_COUNT_RO = BT_OBJECT_RO + 1;
 public const int BT_READONLY = (1 << BT_COUNT_RO) - 1;
-public const int BT_RW_MASK = (1 << BT_LIST_RW)|(1 << BT_MAPPING_RW);
+public const int BT_RW_MASK = ((1 << (BT_COUNT - BT_COUNT_RO)) - 1) << BT_COUNT_RO;
 
 public const int BT_SOME = 1 | (1 << BT_COUNT);
 
-public type BasicTypeCode BT_NIL|BT_BOOLEAN|BT_INT|BT_STRING|BT_LIST_RO|BT_MAPPING_RO|BT_FUNCTION|BT_LIST_RW|BT_MAPPING_RW;
+public type BasicTypeCode
+    BT_NIL|BT_BOOLEAN|BT_INT|BT_FLOAT|BT_DECIMAL
+    |BT_STRING|BT_ERROR|BT_FUNCTION|BT_TYPEDESC|BT_HANDLE
+    |BT_XML_RO|BT_LIST_RO|BT_MAPPING_RO|BT_TABLE_RO|BT_OBJECT_RO
+    |BT_XML_RW|BT_LIST_RW|BT_MAPPING_RW|BT_TABLE_RW|BT_OBJECT_RW
+    |BT_STREAM|BT_FUTURE;
 
 public type Env record {|
     ListSubtype[] listDefs = [];
@@ -99,11 +125,23 @@ public final SemType NEVER = new SemType(0);
 public final SemType NIL = new SemType(1 << BT_NIL);
 public final SemType BOOLEAN = new SemType(1 << BT_BOOLEAN);
 public final SemType INT = new SemType(1 << BT_INT);
+public final SemType FLOAT = new SemType(1 << BT_FLOAT);
+public final SemType DECIMAL = new SemType(1 << BT_DECIMAL);
 public final SemType STRING = new SemType(1 << BT_STRING);
+public final SemType ERROR = new SemType(1 << BT_ERROR);
+
 // matches all functions
 public final SemType FUNCTION = new SemType(1 << BT_FUNCTION);
+public final SemType TYPEDESC = new SemType(1 << BT_TYPEDESC);
+public final SemType HANDLE = new SemType(1 << BT_HANDLE);
+
+public final SemType XML = new SemType((1 << BT_XML_RO) | (1 << BT_XML_RW));
+public final SemType STREAM = new SemType(1 << BT_STREAM);
+public final SemType FUTURE = new SemType(1 << BT_FUTURE);
+
 // this is SubtypeData|error
 public final SemType TOP = new SemType(BT_MASK);
+public final SemType ANY = new SemType(BT_MASK & ~(1 << BT_ERROR));
 public final SemType READONLY = new SemType(BT_READONLY);
 
 // Need this type to workaround slalpha4 bug
@@ -434,18 +472,31 @@ function init() {
         {}, // nil
         {}, // boolean
         {}, // int
+        {}, // float
+        {}, // decimal
         stringOps, // string
-        listOps, // RO list
-        mappingOps, // RO mapping
-        {   // function
+        {}, // error
+          {   // function
             union: bddSubtypeUnion,
             intersect: bddSubtypeIntersect,
             diff: bddSubtypeDiff,
             complement: bddSubtypeComplement,
             isEmpty: functionSubtypeIsEmpty
         },
+        {}, // typedesc
+        {}, // handle
+        {}, // RO xml
+        listOps, // RO list
+        mappingOps, // RO mapping
+        {}, // RO table
+        {}, // RO object
+        {}, // RW xml
         listOps, // RW list
-        mappingOps // RW mapping
+        mappingOps, // RW mapping
+        {}, // RW table
+        {}, // RW object
+        {}, // RW stream
+        {} // RW future
    ];
 }
   

@@ -33,8 +33,14 @@ function parseType(core:Env env, Binding? b, json j, Path path) returns core:Sem
     match j {
         Nil => { return core:NIL; }
         Int => { return core:INT; }
+        Float => { return core:FLOAT; }
+        Decimal => { return core:DECIMAL; }
         String => { return core:STRING; }
-        Any => { return core:TOP; }
+        Error => { return core:ERROR; }
+        Typedesc => { return core:TYPEDESC; }
+        Handle => { return core:HANDLE; }
+        Xml => { return core:XML; }
+        Any => { return core:ANY; }
         Never => { return core:NEVER; }
         ReadOnly => { return core:READONLY; }
         // Should be able to use match patterns here

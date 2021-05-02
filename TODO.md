@@ -15,11 +15,11 @@
 11. ~~rest field for tuples~~
 12. open records
 13. readonly record fields
-14. Optional record fields
+14. optional record fields
 15. boolean singleton type
 16. integer singleton type
 17. integer width subtypes
-18. all basic types
+18. ~~all of any basic type~~
 19. float singletons
 20. decimal singletons
 21. objects (without member qualifiers or object qualifiers)

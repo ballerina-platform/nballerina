@@ -49,6 +49,14 @@
                                           ["const", "string"],
                                           ["list", ["const", "list"], ["ref", "t"]],
                                           ["list", ["const", "record"], ["list", "string", ["ref", "t"]]]]],
-                       ["rec", "s", ["|", "string", [ "list", ["ref", "s"]]]]]   
+                       ["rec", "s", ["|", "string", [ "list", ["ref", "s"]]]]],
+    ["proper_subtype", "float", "readonly"],
+    ["proper_subtype", "float", "any"],
+    ["incomparable", "float", ["|", "nil", "int", "decimal", "string"]],
+    ["proper_subtype", "decimal", "readonly"],
+    ["proper_subtype", "decimal", "any"],
+    ["incomparable", "decimal", ["|", "nil", "int", "float", "string"]],
+    ["incomparable", "any", "error"],
+    ["proper_subtype", "error", "readonly"]
 ]
 
