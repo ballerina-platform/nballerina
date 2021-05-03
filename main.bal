@@ -47,7 +47,7 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
                 && expectSubtype(testNum, j2, j1, env, t2, t1, expect, 1);
     }
     on fail j:ParseError err {
-        io:println("Could not parse ", firstOk ? "second" : "first", " type in test ", testNum);
+        io:println("Could not parse ", firstOk ? "second" : "first", " type in test ", testNum, ": ", err.message());
         return false;
     }
 }
