@@ -13,13 +13,13 @@
 9. ~~string singleton type~~
 10. ~~readonly type~~
 11. ~~rest field for tuples~~
-12. open records
-13. readonly record fields
-14. optional record fields
-15. boolean singleton type
-16. integer singleton type
-17. integer subtypes with specific width/signedness
-18. ~~all of any basic type~~
+12. ~~all of any basic type~~
+13. open records
+14. readonly record fields
+15. optional record fields
+16. boolean singleton type
+17. integer singleton type
+18. integer subtypes with specific width/signedness
 19. float singletons
 20. decimal singletons
 21. objects (without member qualifiers or object qualifiers)
@@ -49,5 +49,5 @@
 * Make use of Ballerina's data-driven test feature
 * Add JSON `["?" T]` meaning `["|", T, "()"]`
 * Extend to provide error messages for subtype failure
-
+* I suspect we have a problem with a function return type of `never`
 
