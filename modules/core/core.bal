@@ -476,13 +476,7 @@ function init() {
         {}, // decimal
         stringOps, // string
         {}, // error
-          {   // function
-            union: bddSubtypeUnion,
-            intersect: bddSubtypeIntersect,
-            diff: bddSubtypeDiff,
-            complement: bddSubtypeComplement,
-            isEmpty: functionSubtypeIsEmpty
-        },
+        functionOps,  // function
         {}, // typedesc
         {}, // handle
         {}, // RO xml
