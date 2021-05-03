@@ -18,7 +18,7 @@
 14. optional record fields
 15. boolean singleton type
 16. integer singleton type
-17. integer width subtypes
+17. integer subtypes with specific width/signedness
 18. ~~all of any basic type~~
 19. float singletons
 20. decimal singletons

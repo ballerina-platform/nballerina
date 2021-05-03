@@ -46,13 +46,26 @@ Closed records with all readonly fields count as readonly.
 
 We want to be able to share BDDs between RO and RW mappings.
 
+In order to be closed under difference, we probably need to have both mutable fields and readonly fields
+(with the default being a union of the two).
+
+Maybe representation is for each field, array of allowed mutable type plus array of allowed readonly type.
+
 ### Objects
 
 These are similar to open records including fields of function type, except that fields and methods are distinguishable.
 
 There is some material on Castagna on this, which should cover this.
 
-## XML
+### Futures
+
+They can be recursive:
+
+```
+type F future<F?>;
+```
+
+### XML
 
 We have:
 * Empty XML sequence
@@ -88,7 +101,7 @@ Note that `xml<xml:Element>|xml<xml:Text>` is not the same as `xml<xml:Element|x
 We can, I think, represent an XML subtype with the following:
 * a flag saying whether the empty sequence is allowed
 * a bit vector with one bit for each of the 7 singleton subtypes, saying whether a singleton of that type is allowed
-* a Bdd for rhw concatenation of two or more items, whether the atom is the bit vector for the singleton subtypes
+* a Bdd for the concatenation of two or more items, where the atom is the bit vector for the singleton subtypes
 
 ### string:Char
 

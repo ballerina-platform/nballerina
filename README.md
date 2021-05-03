@@ -1,6 +1,6 @@
 # Semantic Subtyping for Ballerina
 
-This is the beginnings of an experimental implementation of semantic subtyping for the type system
+This is an experimental implementation of semantic subtyping for the type system
 of the [Ballerina](https://ballerina.io) programming language, implemented in Ballerina.
 
 The algorithm here is based on the work of Giuseppe Castagna and Alain Frisch, implemented in
@@ -15,21 +15,20 @@ There is also a tutorial by Andrew M. Kent, which is great for getting started:
 
 [Down and Dirty with Semantic Set-theoretic Types (a tutorial)](https://pnwamk.github.io/sst-tutorial/)
 
-The implementation currently handles a small subset of Ballerina type system:
-* nil, boolean, int, string types
+The implementation currently handles a subset of Ballerina type system:
+* nil, boolean, int, float, decimal, string, handle types
+* error, typedesc, xml (without type parameters)
 * string singletons
-* tuple types
-    * any fixed length
-    * with recursion
-*  record types
+* array and tuple types
+* record types
     * closed
     * with recursion
     * no optional fields
-* readonly
 * function types
+* readonly (but not readonly record fields)
 * union
 * intersection
-* any and never (can be derived from the above)
+* any, never (can be derived from the above)
 * complement and difference (Ballerina has no syntax for this, but deciding whether S is a subtype of T is equivalent to deciding whether the difference of S and T is empty)
 
 Most of the code is in [modules](modules/):
