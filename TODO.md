@@ -9,7 +9,7 @@
 5. ~~recursion~~
 6. ~~functions of one argument~~
 7. ~~represent multiple function arguments using tuples~~
-8. recursive function types
+8. ~~recursive function types~~
 9. ~~string singleton type~~
 10. ~~readonly type~~
 11. ~~rest field for tuples~~
@@ -50,4 +50,5 @@
 * Add JSON `["?" T]` meaning `["|", T, "()"]`
 * Extend to provide error messages for subtype failure
 * I suspect we have a problem with a function return type of `never`
+* Move desugaring of multiple function arguments into core
 

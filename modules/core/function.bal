@@ -7,15 +7,27 @@ import semtype.bdd;
 // Represents args as tuple type
 public type FunctionSubtype readonly & SemType[2];
 
-public function func(Env env, SemType t1, SemType t2) returns SemType {
-    FunctionSubtype ft = [t1, t2];
-    int i = env.functionDefs.length();
-    env.functionDefs.push(ft);
-    return functionRef(i);
-}
+public class FunctionDefinition {
+    *Definition;
+    private int index;
+    private SemType semType;
+   
+    public function init(Env env) {
+        FunctionSubtype dummy = [NEVER, NEVER];
+        self.index = env.functionDefs.length();
+        env.functionDefs.push(dummy);
+        self.semType = new SemType(1 << (BT_FUNCTION + BT_COUNT), [[BT_FUNCTION, bdd:atom(self.index)]]);
+    }
 
-function functionRef(int i) returns SemType {
-    return new SemType(1 << (BT_FUNCTION + BT_COUNT), [[BT_FUNCTION, bdd:atom(i)]]);
+    public function getSemType(Env env) returns SemType {
+        return self.semType;
+    }
+
+    public function define(Env env, SemType args, SemType ret) returns SemType {
+        FunctionSubtype t = [args, ret];
+        env.functionDefs[self.index] = t;
+        return self.semType;
+    }    
 }
 
 function functionSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {

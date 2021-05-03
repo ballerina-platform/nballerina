@@ -111,12 +111,17 @@ function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Pat
             return def.define(env, fields);
         }
         "function" => {
-            core:SemType[] v = check parseTypes(env, b, jlist, parent, 1);
+            core:SemType? s = lookupDef(env, b, jlist);
+            if !(s is ()) {
+                return s;
+            }
+            core:FunctionDefinition def = new(env);
+            core:SemType[] v = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
             if v.length() == 0 {
                 return core:FUNCTION;
             }
             core:SemType ret = v.pop();
-            return core:func(env, core:tuple(env, ...v), ret);
+            return def.define(env, core:tuple(env, ...v), ret);
         }
         "const" => {
             if jlist.length() != 2 {

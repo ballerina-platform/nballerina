@@ -136,6 +136,11 @@ function tupleTest4() {
     test:assertTrue(isEmpty(typeCheckContext(env), intersect(s, t)));
 }
 
+function func(Env env, SemType args, SemType ret) returns SemType {
+    FunctionDefinition def = new(env);
+    return def.define(env, args, ret);  
+}
+
 @test:Config{}
 function funcTest1() {
     Env env = {};
