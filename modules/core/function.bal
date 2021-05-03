@@ -77,3 +77,11 @@ function functionTheta(TypeCheckContext tc, SemType t0, SemType t1, Conjunction?
             && (isSubtype(tc, t1, complement(s1)) || functionTheta(tc, s0, intersect(s1, t1), pos.next));
     }
 }
+
+ BasicTypeOps functionOps =  {  
+    union: bddSubtypeUnion,
+    intersect: bddSubtypeIntersect,
+    diff: bddSubtypeDiff,
+    complement: bddSubtypeComplement,
+    isEmpty: functionSubtypeIsEmpty
+};
