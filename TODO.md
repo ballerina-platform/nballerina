@@ -6,7 +6,7 @@
 2. ~~framework for handling subtypes of multiple basic types~~
 3. ~~tuples of arbitrary fixed length~~
 4. ~~closed records without optional fields~~
-5. ~~eecursion~~
+5. ~~recursion~~
 6. ~~functions of one argument~~
 7. ~~represent multiple function arguments using tuples~~
 8. recursive function types
