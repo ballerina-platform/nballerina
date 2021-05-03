@@ -2,6 +2,10 @@
 
 import semtype.bdd;
 
+public type Definition object {
+    public function getSemType(Env env) returns SemType;
+};
+
 function typeListIsReadOnly(SemType[] list) returns boolean {
     foreach var t in list {
         if !isReadOnly(t) {

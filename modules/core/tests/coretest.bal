@@ -17,7 +17,6 @@ function disjoint(TypeCheckContext tc, SemType t1, SemType t2) {
     test:assertTrue(isEmpty(tc, intersect(t1, t2)));
 }
 
-
 @test:Config{}
 function test2() {
     test:assertTrue(isSubtype(typeCheckContext({}), INT, TOP));
@@ -50,7 +49,6 @@ function test4() {
     test:assertTrue(isSubtype(tc, iiT, ttT));
 }
 
-
 @test:Config{}
 function test5() {
     Env env = {};
@@ -59,6 +57,12 @@ function test5() {
     equiv(env, s, t);
 }
 
+function recursiveTuple(Env env, function(Env, SemType) returns SemType[] f) returns SemType {
+    ListDefinition def = new; 
+    SemType t = def.getSemType(env);
+    SemType[] members = f(env, t);
+    return def.define(env, members, NEVER);
+}
 
 @test:Config{}
 function recTest() {

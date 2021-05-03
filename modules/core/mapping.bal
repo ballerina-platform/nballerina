@@ -9,40 +9,72 @@ public type MappingSubtype readonly & record {|
     SemType[] types;
 |};
 
-public function mapping(Env env, Field... fields) returns SemType {
-    MappingSubtype mt = splitFields(fields);
-    int rw = env.mappingDefs.length();
-    env.mappingDefs.push(mt);
-    int ro;
-    if typeListIsReadOnly(mt.types) {
-        ro = rw;
+public class MappingDefinition {
+    *Definition;
+    private int ro = -1;
+    private int rw = -1;
+    private SemType? semType = ();
+
+    public function getSemType(Env env) returns SemType {
+        SemType? s = self.semType;
+        if s is () {
+            self.ro = dummyMappingDef(env);
+            self.rw = dummyMappingDef(env);
+            return self.createSemType(env);
+        }
+        else {
+            return s;
+        }
     }
-    else {
-        MappingSubtype roMt = {
-            names: mt.names,
-            types: readOnlyTypeList(mt.types)
-        };
-        ro = env.mappingDefs.length();
-        env.mappingDefs.push(roMt);
+
+    public function define(Env env, Field[] fields) returns SemType {
+        MappingSubtype rwType = splitFields(fields);
+        if self.rw < 0 {
+            self.rw = dummyMappingDef(env);
+        }
+        env.mappingDefs[self.rw] = rwType;
+        if typeListIsReadOnly(rwType.types) {
+            if self.ro < 0 {
+                self.ro = self.rw;
+            }
+            else {
+                env.mappingDefs[self.ro] = rwType;
+            }
+        }
+        else {
+            MappingSubtype roType = {
+                names: rwType.names,
+                types: readOnlyTypeList(rwType.types)
+            };
+            if self.ro < 0 {
+                self.ro = dummyMappingDef(env);
+            }
+            env.mappingDefs[self.ro] = roType;
+        }
+        return self.createSemType(env);
     }
-    return mappingRef(ro, rw);
+    
+    private function createSemType(Env env) returns SemType {
+        readonly & bdd:Node roBdd = bdd:atom(self.ro);
+        readonly & bdd:Node rwBdd;
+        if self.ro == self.rw {
+            rwBdd = roBdd;
+        }
+        else {
+            rwBdd = bdd:atom(self.rw);
+        }
+        SemType s = new SemType((1 << (BT_MAPPING_RO + BT_COUNT)) | (1 << (BT_MAPPING_RW + BT_COUNT)),
+                                [[BT_MAPPING_RO, roBdd], [BT_MAPPING_RW, rwBdd]]);
+        self.semType = s; 
+        return s;
+    }       
 }
-public function recursiveMappingParse(Env env, function(Env, SemType) returns Field[]|error f) returns SemType|error {
-    int ro = env.mappingDefs.length();
+
+function dummyMappingDef(Env env) returns int {
+    int i = env.mappingDefs.length();
     MappingSubtype dummy = { names: [], types: [] };
     env.mappingDefs.push(dummy);
-    int rw = ro + 1;
-    env.mappingDefs.push(dummy);
-    SemType r = mappingRef(ro, rw);
-    Field[] rwFields = check f(env, r);
-    MappingSubtype mt = splitFields(rwFields);
-    env.mappingDefs[rw] = mt;
-    MappingSubtype roMt = {
-            names: mt.names,
-            types: readOnlyTypeList(mt.types)
-    };
-    env.mappingDefs[ro] = roMt;
-    return r;
+    return i;
 }
 
 function splitFields(Field[] fields) returns MappingSubtype {
@@ -61,19 +93,6 @@ function splitFields(Field[] fields) returns MappingSubtype {
 
 isolated function fieldName(Field f) returns string {
     return f[0];
-}
-
-function mappingRef(int ro, int rw) returns SemType {
-    readonly & bdd:Node roBdd = bdd:atom(ro);
-    readonly & bdd:Node rwBdd;
-    if ro == rw {
-        rwBdd = roBdd;
-    }
-    else {
-        rwBdd = bdd:atom(rw);   
-    }
-    return new SemType((1 << (BT_MAPPING_RO + BT_COUNT)) | (1 << (BT_MAPPING_RW + BT_COUNT)),
-                       [[BT_MAPPING_RO, roBdd], [BT_MAPPING_RW, rwBdd]]);
 }
 
 function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {

@@ -3,90 +3,85 @@ import semtype.bdd;
 
 public type ListSubtype readonly & record {|
     SemType[] members;
-    SemType rest = NEVER;
+    SemType rest;
 |};
 
+public class ListDefinition {
+    *Definition;
+    private int ro = -1;
+    private int rw = -1;
+
+    // The SemType is created lazily so that we have the possibility
+    // to share the Bdd between the RO and RW cases.
+    private SemType? semType = ();
+
+    public function getSemType(Env env) returns SemType {
+        SemType? s = self.semType;
+        if s is () {
+            self.ro = dummyListDef(env);
+            self.rw = dummyListDef(env);
+            return self.createSemType(env);
+        }
+        else {
+            return s;
+        }
+    }
+
+    public function define(Env env, SemType[] members, SemType rest) returns SemType {
+        ListSubtype rwType = { members: members.cloneReadOnly(), rest };
+        if self.rw < 0 {
+            self.rw = dummyListDef(env);
+        }
+        env.listDefs[self.rw] = rwType;
+        if typeListIsReadOnly(rwType.members) && isReadOnly(rwType.rest) {
+            if self.ro < 0 {
+                // share the definitions
+                self.ro = self.rw;
+            }
+            else {
+                env.listDefs[self.ro] = rwType;
+            }
+        }
+        else {
+            ListSubtype roType = {
+                members: readOnlyTypeList(rwType.members),
+                rest: intersect(rwType.rest, READONLY)
+            };
+            if self.ro < 0 {
+                self.ro = dummyListDef(env);
+            }
+            env.listDefs[self.ro] = roType;
+        }
+        return self.createSemType(env);
+    }
+    
+    private function createSemType(Env env) returns SemType {
+        readonly & bdd:Node roBdd = bdd:atom(self.ro);
+        readonly & bdd:Node rwBdd;
+        if self.ro == self.rw {
+            // share the BDD
+            rwBdd = roBdd;
+        }
+        else {
+            rwBdd = bdd:atom(self.rw);
+         }
+        SemType s = new SemType((1 << (BT_LIST_RO + BT_COUNT)) | (1 << (BT_LIST_RW + BT_COUNT)),
+                                [[BT_LIST_RO, roBdd], [BT_LIST_RW, rwBdd]]);
+        self.semType = s;
+        return s;
+    }       
+}
+
 public function tuple(Env env, SemType... members) returns SemType {
-    return list(env,  { members: members.cloneReadOnly(), rest: NEVER });
+    ListDefinition def = new;
+    return def.define(env, members, NEVER);
 }
 
-public function list(Env env, ListSubtype lt) returns SemType {
-    int rw = env.listDefs.length();
-    env.listDefs.push(lt);
-    int ro;
-    if listSubtypeIsReadOnly(lt) {
-        ro = rw;
-    }
-    else {
-        ro = env.listDefs.length();
-        ListSubtype roLt = readOnlyListSubtype(lt);
-        env.listDefs.push(roLt);
-    }
-    return listRef(ro, rw);
-}
-
-function listSubtypeIsReadOnly(ListSubtype lt) returns boolean {
-    return typeListIsReadOnly(lt.members) && isReadOnly(lt.rest);
-}
-
-function readOnlyListSubtype(ListSubtype lt) returns ListSubtype {
-    return {
-        members: readOnlyTypeList(lt.members),
-        rest: intersect(lt.rest, READONLY)
-    };
-}
-
-function listRef(int ro, int rw) returns SemType {
-    readonly & bdd:Node roBdd = bdd:atom(ro);
-    readonly & bdd:Node rwBdd;
-    if ro == rw {
-        rwBdd = roBdd;
-    }
-    else {
-        rwBdd = bdd:atom(rw);
-    }
-    return new SemType((1 << (BT_LIST_RO + BT_COUNT)) | (1 << (BT_LIST_RW + BT_COUNT)),
-                       [[BT_LIST_RO, roBdd], [BT_LIST_RW, rwBdd]]);
-}
-public function recursiveTuple(Env env, function(Env, SemType) returns SemType[] f) returns SemType {
-    int ro = env.listDefs.length();
-    ListSubtype dummy = { members: [] };
+function dummyListDef(Env env) returns int {
+    int i = env.listDefs.length();
+    ListSubtype dummy = { members: [], rest: NEVER };
     env.listDefs.push(dummy);
-    int rw = ro + 1;
-    env.listDefs.push(dummy);
-    SemType r = listRef(ro, rw);
-    SemType[] rwMembers = f(env, r);
-    ListSubtype rwType = { members: rwMembers.cloneReadOnly() };
-    env.listDefs[rw] = rwType;
-    env.listDefs[ro] = readOnlyListSubtype(rwType);
-    return r;
-}
-
-public function recursiveTupleParse(Env env, function(Env, SemType) returns SemType[]|error f) returns SemType|error {
-    int ro = env.listDefs.length();
-    ListSubtype dummy = { members: [] };
-    env.listDefs.push(dummy);
-    int rw = ro + 1;
-    env.listDefs.push(dummy);
-    SemType r = listRef(ro, rw);
-    SemType[] rwMembers = check f(env, r);
-    ListSubtype rwType = { members: rwMembers.cloneReadOnly() };
-    env.listDefs[rw] = rwType;
-    env.listDefs[ro] = readOnlyListSubtype(rwType);
-    return r;
-}
-
-public function recursiveListParse(Env env, function(Env, SemType) returns ListSubtype|error f) returns SemType|error {
-    int ro = env.listDefs.length();
-    ListSubtype dummy = { members: [] };
-    env.listDefs.push(dummy);
-    int rw = ro + 1;
-    env.listDefs.push(dummy);
-    SemType r = listRef(ro, rw);
-    ListSubtype rwType = check f(env, r);
-    env.listDefs[rw] = rwType;
-    env.listDefs[ro] = readOnlyListSubtype(rwType);
-    return r;
+    return i;
 }
 
 function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {

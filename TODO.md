@@ -39,7 +39,6 @@
 
 ## Other things
 
-* Need an approach to recursion that needs less basic-type specific code
 * Implement concept of a module (collection of mutually recursive named definitions)
 * Conversion from SemType to JSON representation
 * JSON syntax for varargs functions

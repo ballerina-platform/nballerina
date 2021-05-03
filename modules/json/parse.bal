@@ -10,7 +10,7 @@ public type ParseDetail record {
 
 public type ParseError error<ParseDetail>;
 
-type Binding NameBinding|RecBinding;
+type Binding NameBinding|DefBinding;
 
 type NameBinding record {|
     string name;
@@ -19,9 +19,9 @@ type NameBinding record {|
     Binding? next;
 |};
 
-type RecBinding record {|
+type DefBinding record {|
    json desc;
-   core:SemType semType;
+   core:Definition def;
    Binding? next;
 |};
 
@@ -77,73 +77,38 @@ function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Pat
             return reduce(v, core:intersect, core:TOP);
         }
         "tuple" => {
-            if b is () {
-                core:SemType[] v = check parseTypes(env, b, jlist, parent, 1);
-                return core:tuple(env, ...v);
+            core:SemType? s = lookupDef(env, b, jlist);
+            if !(s is ()) {
+                return s;
             }
-            else {
-                core:SemType? s = lookupRec(b, jlist);
-                if !(s is ()) {
-                    return s;
-                }
-                else {
-                    core:SemType|error result =
-                        core:recursiveTupleParse(env, (e, ref) => parseTypes(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent, 1));
-                    if result is error {
-                        return <ParseError>result;
-                    }
-                    else {
-                        return result;
-                    }
-                }
-
-            }
-           
+            core:ListDefinition def = new;
+            core:SemType[] members = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            return def.define(env, members, core:NEVER);
         }
         "list" => {
-            if b is () {
-                core:ListSubtype lt = check parseListMemberTypes(env, b, jlist, parent);
-                return core:list(env, lt);
+            core:SemType? s = lookupDef(env, b, jlist);
+            if !(s is ()) {
+                return s;
+            }
+            core:ListDefinition def = new;
+            core:SemType[] members = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            core:SemType rest;
+            if members.length() == 0 {
+                rest = core:TOP;
             }
             else {
-                core:SemType? s = lookupRec(b, jlist);
-                if !(s is ()) {
-                    return s;
-                }
-                else {
-                    core:SemType|error result =
-                        core:recursiveListParse(env, (e, ref) => parseListMemberTypes(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent));
-                    if result is error {
-                        return <ParseError>result;
-                    }
-                    else {
-                        return result;
-                    }
-                }
-
+                rest = members.pop();
             }
+            return def.define(env, members, rest);
         }
         "record" => {
-            if b is () {
-                core:Field[] fields = check parseFields(env, b, jlist, parent, 1);
-                return core:mapping(env, ...fields);
+            core:SemType? s = lookupDef(env, b, jlist);
+            if !(s is ()) {
+                return s;
             }
-            else {
-                core:SemType? s = lookupRec(b, jlist);
-                if !(s is ()) {
-                    return s;
-                }
-                else {
-                    core:SemType|error result =
-                        core:recursiveMappingParse(env, (e, ref) => parseFields(env, <RecBinding>{ desc: jlist, semType: ref, next: b }, jlist, parent, 1));
-                    if result is error {
-                        return <ParseError>result;
-                    }
-                    else {
-                        return result;
-                    }
-                }
-            }
+            core:MappingDefinition def = new;
+            core:Field[] fields = check parseFields(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            return def.define(env, fields);
         }
         "function" => {
             core:SemType[] v = check parseTypes(env, b, jlist, parent, 1);
@@ -209,6 +174,14 @@ function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Pat
     return parseError("unrecognized keyword '" + k + "'", pathAppend(parent, 0));
 }
 
+function consDefBinding(json desc, core:Definition def, Binding? next) returns Binding? {
+    if next is () {
+        return next;
+    }
+    DefBinding db = { desc, def, next };
+    return db;
+}
+
 function parseFields(core:Env env, Binding? b, json[] jlist, Path parent, int startIndex) returns core:Field[]|ParseError {
     core:Field[] fields = [];
     foreach int i in startIndex ..< jlist.length() {
@@ -259,15 +232,15 @@ function lookupBinding(Binding? b, string name) returns [json, Path]|"loop"? {
     return ();
 }
 
-function lookupRec(Binding? b, json desc) returns core:SemType? {
+function lookupDef(core:Env env, Binding? b, json desc) returns core:SemType? {
     Binding? tem = b;
     while true {
         if tem is () {
             break;
         }
-        else if tem is RecBinding {
+        else if tem is DefBinding {
             if tem.desc === desc {
-                return tem.semType;
+                return tem.def.getSemType(env);
             }
             tem = tem.next;
         }
@@ -281,19 +254,6 @@ function lookupRec(Binding? b, json desc) returns core:SemType? {
 function parseRec(core:Env env, Binding? b, string name, json t, Path path) returns core:SemType|ParseError {
     NameBinding nb = { name, next: b, desc: t, path };
     return parseType(env, nb, t, path);
-}
-
-function parseListMemberTypes(core:Env env, Binding? b, json[] js, Path parent) returns core:ListSubtype|ParseError {
-    core:SemType[] members = check parseTypes(env, b, js, parent, 1);
-    core:SemType rest;
-    if members.length() == 0 {
-        rest = core:TOP;
-    }
-    else {
-        rest = members.pop();
-    }
-    core:ListSubtype lt = { members: members.cloneReadOnly(), rest };
-    return lt;
 }
 
 function parseTypes(core:Env env, Binding? b, json[] js, Path parent, int startIndex) returns core:SemType[]|ParseError {
