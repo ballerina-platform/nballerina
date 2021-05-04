@@ -37,6 +37,8 @@ public const int BT_MASK = (1 << BT_COUNT) - 1;
 
 public const int BT_COUNT_RO = BT_OBJECT_RO + 1;
 public const int BT_READONLY = (1 << BT_COUNT_RO) - 1;
+
+// It would be easier to use ~ here, but slalpha5 doesn't support
 public const int BT_RW_MASK = ((1 << (BT_COUNT - BT_COUNT_RO)) - 1) << BT_COUNT_RO;
 
 public const int BT_SOME = 1 | (1 << BT_COUNT);
@@ -59,7 +61,7 @@ public type BddMemo record {|
     boolean? isEmpty = ();
 |};
 
-public type BddMemoTable table<BddMemo> key(bdd);
+type BddMemoTable table<BddMemo> key(bdd);
 
 public type TypeCheckContext record {|
     readonly ListSubtype[] listDefs;
@@ -91,7 +93,7 @@ function unaryTypeCheckOpPanic(TypeCheckContext tc, SubtypeData t) returns boole
     panic error("unary boolean operation should not be called");
 }
 
-type BasicTypeOps record {|
+type BasicTypeOps readonly & record {|
     BinOp union = binOpPanic;
     BinOp intersect = binOpPanic;
     BinOp diff = binOpPanic;
@@ -144,12 +146,13 @@ public final SemType TOP = new SemType(BT_MASK);
 public final SemType ANY = new SemType(BT_MASK & ~(1 << BT_ERROR));
 public final SemType READONLY = new SemType(BT_READONLY);
 
-// Need this type to workaround slalpha4 bug
+// Need this type to workaround slalpha4 bug.
+// It has to be public to workaround another bug.
 public type SubtypePairIterator object {
     public function next() returns record {| [BasicTypeCode, SubtypeData?, SubtypeData?] value; |}?;
 };
 
-public class SubtypePairIteratorImpl {
+class SubtypePairIteratorImpl {
     *object:Iterable;
     *SubtypePairIterator;
     private int i1;
@@ -397,8 +400,7 @@ public function typeCheckContext(Env env) returns TypeCheckContext {
     };
 }
 
-// slalpha4 gets bad, sad if this is readonly
-final BasicTypeOps[] ops;
+final readonly & BasicTypeOps[] ops;
 
 function init() {
     ops = [
