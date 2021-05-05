@@ -13,8 +13,8 @@ type TestCase [Relation, json, json];
 
 type Tests TestCase[];
 
-public function main() returns error? {
-    string filename = "tests.json";
+public function main(string? f) returns error? {
+    string filename = f is () ? "tests.json" : f;
     json j = check io:fileReadJson(filename);
     TestCase[] tests = check j.fromJsonWithType();
     int testNum = 0;
