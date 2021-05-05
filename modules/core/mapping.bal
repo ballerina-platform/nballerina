@@ -171,7 +171,7 @@ function mappingInhabited(TypeCheckContext tc, TempMappingSubtype pos, Conjuncti
     else {
         MappingSubtype neg = tc.mappingDefs[negList.atom];
 
-        MappingZipper zipper;
+        MappingPairing pairing;
 
         if pos.names != neg.names {
             // If this negative type has required fields that the positive one does not allow
@@ -182,26 +182,26 @@ function mappingInhabited(TypeCheckContext tc, TempMappingSubtype pos, Conjuncti
             if isNever(pos.rest) && isNever(neg.rest) {
                 return mappingInhabited(tc, pos, negList.next);
             }
-            zipper = new (pos, neg);
-            foreach var {type1: posType, type2: negType} in zipper {
+            pairing = new (pos, neg);
+            foreach var {type1: posType, type2: negType} in pairing {
                 if isNever(posType) || isNever(negType) {
                     return mappingInhabited(tc, pos, negList.next);
                 }
             }
-            zipper.reset();
+            pairing.reset();
         }
         else {
-            zipper = new (pos, neg);
+            pairing = new (pos, neg);
         }
 
         if !isEmpty(tc, diff(pos.rest, neg.rest)) {
             return true;
         }
-        foreach var {name, type1: posType, type2: negType} in zipper {
+        foreach var {name, type1: posType, type2: negType} in pairing {
             SemType d = diff(posType, negType);
             if !isEmpty(tc, d) {
                 TempMappingSubtype mt;
-                int? i = zipper.index1(name);
+                int? i = pairing.index1(name);
                 if i is () {
                     // the posType came from the rest type
                     mt = insertField(pos, name, d);
@@ -247,7 +247,7 @@ type TempMappingSubtype record {|
 function intersectMapping(TempMappingSubtype m1, TempMappingSubtype m2) returns TempMappingSubtype? {
     string[] names = [];
     SemType[] types = [];
-    foreach var { name, type1, type2 } in new MappingZipper(m1, m2) {
+    foreach var { name, type1, type2 } in new MappingPairing(m1, m2) {
         names.push(name);
         SemType t = intersect(type1, type2);
         if isNever(t) {
@@ -269,7 +269,7 @@ public type MappingPairIterator object {
     public function next() returns record {| FieldPair value; |}?;
 };
 
-class MappingZipper {
+class MappingPairing {
     *MappingPairIterator;
     *object:Iterable;
     private final string[] names1;
