@@ -400,6 +400,16 @@ public function typeCheckContext(Env env) returns TypeCheckContext {
     };
 }
 
+public function createJson(Env env) returns SemType {
+    ListDefinition listDef = new;
+    MappingDefinition mapDef = new;
+    SemType simple = new((1 << BT_NIL) | (1 << BT_BOOLEAN) | (1 << BT_INT)| (1 << BT_FLOAT)| (1 << BT_DECIMAL)| (1 << BT_STRING));
+    SemType j = union(simple, union(listDef.getSemType(env), mapDef.getSemType(env)));
+    _ = listDef.define(env, [], j);
+    _ = mapDef.define(env, [], j);
+    return j;
+}
+
 final readonly & BasicTypeOps[] ops;
 
 function init() {

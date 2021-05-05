@@ -32,6 +32,7 @@ public function parse(core:Env env, json j) returns core:SemType|ParseError {
 function parseType(core:Env env, Binding? b, json j, Path path) returns core:SemType|ParseError {
     match j {
         Nil => { return core:NIL; }
+        Boolean => { return core:BOOLEAN; }
         Int => { return core:INT; }
         Float => { return core:FLOAT; }
         Decimal => { return core:DECIMAL; }
@@ -40,6 +41,7 @@ function parseType(core:Env env, Binding? b, json j, Path path) returns core:Sem
         Typedesc => { return core:TYPEDESC; }
         Handle => { return core:HANDLE; }
         Xml => { return core:XML; }
+        Json => { return core:createJson(env); }
         Any => { return core:ANY; }
         Never => { return core:NEVER; }
         ReadOnly => { return core:READONLY; }
@@ -60,7 +62,10 @@ function parseType(core:Env env, Binding? b, json j, Path path) returns core:Sem
                 }
             }
            
-        } 
+        }
+        var s if s is string => {
+            return parseError("unrecognized keyword '" + s + "'", path);
+        }
     }
     return parseError("unrecognized type syntax", path);  
 }

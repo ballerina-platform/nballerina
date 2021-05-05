@@ -60,6 +60,12 @@
     ["proper_subtype", "error", "readonly"],
     ["proper_subtype", ["rec", "f", ["function", ["ref", "f"]]], ["function", "any"]],
     ["proper_subtype", ["record", ["y", "string"], ["x", "string"]], ["map", "string"]],
-    ["proper_subtype", ["record", ["y", "string"], ["x", "string"], ["z", "string"]], ["map", "string", ["y", "string"], ["x", "string"]]]
+    ["proper_subtype", ["record", ["y", "string"], ["x", "string"], ["z", "string"]], ["map", "string", ["y", "string"], ["x", "string"]]],
+    ["proper_subtype", ["map", "string"], "json"],
+    ["equivalent", "json", ["rec", "j", ["|", "nil", "boolean", "int", "float", "decimal", "string",
+                                              ["map", ["ref", "j"]],
+                                              ["list", ["ref", "j"]]]]],
+    ["proper_subtype", ["rec", "ll", ["record", ["value", "int"], ["next", ["|", "nil", ["ref", "ll"]]]]],
+                       "json"]
 ]
 

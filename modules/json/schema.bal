@@ -1,6 +1,6 @@
 // JSON representation of types
 
-public type Type Nil|Boolean|Int|Float|Decimal|String|Error|Typedesc|Handle|Xml|Never|Any|ReadOnly
+public type Type Nil|Boolean|Int|Float|Decimal|String|Error|Typedesc|Handle|Xml|Json|Never|Any|ReadOnly
     |Single|Union|Intersection|Tuple|Record|Function|Rec|Ref;
 
 public const Nil = "nil";
@@ -14,6 +14,7 @@ public const Typedesc = "typedesc";
 public const Handle = "handle";
 public const Xml = "xml";
 
+public const Json = "json";
 public const Never = "never";
 public const Any = "any";
 public const ReadOnly = "readonly";

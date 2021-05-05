@@ -26,6 +26,7 @@ The implementation currently handles a subset of Ballerina type system:
 * readonly (but not readonly record fields)
 * union
 * intersection
+* json (can be derived from the above)
 * any, never (can be derived from the above)
 * complement and difference (Ballerina has no syntax for this, but deciding whether S is a subtype of T is equivalent to deciding whether the difference of S and T is empty)
 
