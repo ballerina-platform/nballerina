@@ -58,6 +58,8 @@
     ["incomparable", "decimal", ["|", "nil", "int", "float", "string"]],
     ["incomparable", "any", "error"],
     ["proper_subtype", "error", "readonly"],
-    ["proper_subtype", ["rec", "f", ["function", ["ref", "f"]]], ["function", "any"]]
+    ["proper_subtype", ["rec", "f", ["function", ["ref", "f"]]], ["function", "any"]],
+    ["proper_subtype", ["record", ["y", "string"], ["x", "string"]], ["map", "string"]],
+    ["proper_subtype", ["record", ["y", "string"], ["x", "string"], ["z", "string"]], ["map", "string", ["y", "string"], ["x", "string"]]]
 ]
 

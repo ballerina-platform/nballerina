@@ -23,11 +23,11 @@ For a list lv to be in S but not in T, there are two possibilites
 Case 1 is the same as without rest type.
 Case 2 just requires diff(Srest,Trest) to be non-empty.
 
-## Not yet done
-
 ### Open records
 
-These are handled in the Castagna paper, so should not be too difficult.
+These work quite similarly to rest type for tuples, except that keys are strings rather than integers.
+
+## Not yet done
 
 ### Optional fields
 

@@ -20,10 +20,8 @@ The implementation currently handles a subset of Ballerina type system:
 * error, typedesc, xml (without type parameters)
 * string singletons
 * array and tuple types
-* record types
-    * closed
-    * with recursion
-    * no optional fields
+* mapping and record types
+    * no optional record fields yet
 * function types
 * readonly (but not readonly record fields)
 * union

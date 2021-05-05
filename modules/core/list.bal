@@ -124,7 +124,7 @@ function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? 
         Conjunction? p = pos.next;
         // the neg case is in case we grow the array in listInhabited
         if p != () || neg != () {
-            members = shallowCopy(members);
+            members = shallowCopyTypes(members);
         }
         while true {
             if p is () {
@@ -218,7 +218,7 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Con
             SemType ntm = i < negLen ? nt.members[i] : nt.rest;
             SemType d = diff(members[i], ntm);
             if !isEmpty(tc, d) {
-                SemType[] s = shallowCopy(members);
+                SemType[] s = shallowCopyTypes(members);
                 s[i] = d;
                 if listInhabited(tc, s, rest, neg.next) {
                     return true;
@@ -232,11 +232,6 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Con
         // negative is 0, and [] - [] is empty.
         return false;
     }
-}
-
-// Feels like this should be a library function.
-function shallowCopy(SemType[] v) returns SemType[] {
-    return v.slice(0);
 }
 
 final BasicTypeOps listOps = {

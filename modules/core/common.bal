@@ -72,3 +72,13 @@ function bddSubtypeDiff(SubtypeData t1, SubtypeData t2) returns SubtypeData {
 function bddSubtypeComplement(SubtypeData t) returns SubtypeData {
     return bdd:complement(<bdd:Bdd>t);
 }
+
+
+// Feels like this should be a lang library function.
+function shallowCopyTypes(SemType[] v) returns SemType[] {
+    return from var x in v select x;
+}
+
+function shallowCopyStrings(string[] v) returns string[] {
+    return from var x in v select x;
+}

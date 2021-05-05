@@ -108,7 +108,21 @@ function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Pat
             }
             core:MappingDefinition def = new;
             core:Field[] fields = check parseFields(env, consDefBinding(jlist, def, b), jlist, parent, 1);
-            return def.define(env, fields);
+            return def.define(env, fields, core:NEVER);
+        }
+        "map" => {
+            core:SemType? s = lookupDef(env, b, jlist);
+            if !(s is ()) {
+                return s;
+            }
+            if jlist.length() == 1 {
+                return parseError("'map' must be followed by a type", parent, 0);
+            }
+            core:MappingDefinition def = new;
+            Binding? mb = consDefBinding(jlist, def, b);
+            core:SemType rest = check parseType(env, mb, jlist[1], pathAppend(parent, 1));
+            core:Field[] fields = check parseFields(env, mb, jlist, parent, 2);
+            return def.define(env, fields, rest);
         }
         "function" => {
             core:SemType? s = lookupDef(env, b, jlist);

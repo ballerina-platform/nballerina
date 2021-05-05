@@ -14,7 +14,7 @@
 10. ~~readonly type~~
 11. ~~rest field for tuples~~
 12. ~~all of any basic type~~
-13. open records
+13. ~~open records~~
 14. readonly record fields
 15. optional record fields
 16. boolean singleton type
