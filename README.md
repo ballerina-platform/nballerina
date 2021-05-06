@@ -18,7 +18,7 @@ There is also a tutorial by Andrew M. Kent, which is great for getting started:
 The implementation currently handles a subset of Ballerina type system:
 * nil, boolean, int, float, decimal, string, handle types
 * error, typedesc, xml (without type parameters)
-* string singletons
+* int and string singletons
 * array and tuple types
 * mapping and record types
     * no optional record fields yet

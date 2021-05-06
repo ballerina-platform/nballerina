@@ -73,7 +73,7 @@ public type TypeCheckContext record {|
 |};
 
 // true means everything and false means nothing (as with Bdd)
-type SubtypeData StringSubtype|bdd:Bdd;
+type SubtypeData StringSubtype|IntSubtype|bdd:Bdd;
 
 type BasicTypeSubtype readonly & [BasicTypeCode, SubtypeData];
 
@@ -416,7 +416,7 @@ function init() {
     ops = [
         {}, // nil
         {}, // boolean
-        {}, // int
+        intOps, // int
         {}, // float
         {}, // decimal
         stringOps, // string

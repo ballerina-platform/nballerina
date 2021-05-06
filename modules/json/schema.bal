@@ -19,7 +19,7 @@ public const Never = "never";
 public const Any = "any";
 public const ReadOnly = "readonly";
 
-public type Single ["const", string];
+public type Single ["string", string];
 
 public type Union ["|", Type...];
 public type Intersection ["&", Type...];

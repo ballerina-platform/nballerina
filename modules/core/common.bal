@@ -82,3 +82,7 @@ function shallowCopyTypes(SemType[] v) returns SemType[] {
 function shallowCopyStrings(string[] v) returns string[] {
     return from var x in v select x;
 }
+
+function notIsEmpty(TypeCheckContext tc, SubtypeData d) returns boolean {
+    return false;
+}

@@ -142,17 +142,40 @@ function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Pat
             core:SemType ret = v.pop();
             return def.define(env, core:tuple(env, ...v), ret);
         }
-        "const" => {
+        "string" => {
             if jlist.length() != 2 {
-                return parseError("'const' must be followed by a string", parent, 0);
+                return parseError("'string' must be followed by a string", parent, 0);
             }
             final json value = jlist[1];
             if !(value is string) {
-                return parseError("'const' must be followed by a string", parent, 1);
+                return parseError("'string' must be followed by a string", parent, 1);
             }
             else {
                 return core:stringConst(value);
             }
+        }
+        "int" => {
+            if jlist.length() != 2 {
+                return parseError("'int' must be followed by a string", parent, 0);
+            }
+            final json value = jlist[1];
+            final int intValue;
+            if value is int {
+                intValue = value;
+            }
+            else if value is string {
+                var res = int:fromString(value);
+                if res is error {
+                    return parseError("not an integer", parent, 1);
+                }
+                else {
+                    intValue = res;
+                }
+            }
+            else {
+                return parseError("'int' must be followed by a string", parent, 1);
+            }
+            return core:intConst(intValue);
         }
         "rec" => {
             if jlist.length() == 1 {

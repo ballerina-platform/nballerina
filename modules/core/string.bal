@@ -1,3 +1,5 @@
+// Implementation specific to basic type string.
+
 type StringSubtype readonly & record {|
     boolean allowed;
     string[] values;
@@ -168,15 +170,11 @@ function createStringSubtype(boolean allowed, string[] values) returns SubtypeDa
     return res;
 }
 
-// Empty string sets don't use subtype representation.
-function stringIsEmpty(TypeCheckContext tc, SubtypeData d) returns boolean {
-    return false;
-}
-
 final BasicTypeOps stringOps = {
     union: stringSubtypeUnion,
     intersect: stringSubtypeIntersect,
     diff: stringSubtypeDiff,
     complement: stringSubtypeComplement,
-    isEmpty: stringIsEmpty
+    // Empty string sets don't use subtype representation.
+    isEmpty: notIsEmpty
 };
