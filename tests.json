@@ -77,6 +77,18 @@
     ["proper_subtype", ["map", "json", ["x", "float"], ["y", "float"]], ["map", "json", ["y", "float"]]],
     ["proper_subtype", ["map", "json", ["x", "float"], ["y", "float"]], ["map", "any", ["y", "float"]]],
     ["incomparable", ["map", "any", ["x", "float"], ["y", "float"]], ["map", "json", ["y", "float"]]],
-    ["incomparable", ["map", "json", ["x", "float"], ["y", "handle"]], ["map", "json", ["y", "float"]]]
+    ["incomparable", ["map", "json", ["x", "float"], ["y", "handle"]], ["map", "json", ["y", "float"]]],
+    ["equivalent", "uint8", "byte"],
+    ["proper_subtype", "int32", "int"],
+    ["proper_subtype", "int16", "int32"],
+    ["proper_subtype", "int8", "int16"],
+    ["proper_subtype", "uint16", "uint32"],
+    ["proper_subtype", "uint8", "uint16"],
+    ["proper_subtype", "uint16", "uint32"],
+    ["incomparable", "int16", "uint16"],
+    ["incomparable", "int32", "uint32"],
+    ["proper_subtype", ["int", 255], "uint8"],
+    ["incomparable", ["int", 256], "uint8"],
+    ["proper_subtype", ["int", 256], "uint16"]
 ]
 

@@ -9,12 +9,13 @@ type Range readonly & record {|
     int max;
 |};
 
+
 public function intConst(int value) returns SemType {
     IntSubtype t = [{ min: value, max: value }];
     return new SemType(1 << (BT_INT + BT_COUNT), [[BT_INT, t]]);
 }
 
-public function validIntSubtype(boolean signed, int bits) returns error? {
+function validIntWidth(boolean signed, int bits) returns error? {
     if bits <= 0 {
         return error((bits == 0 ? "zero" : "negative") + " width in bits");
     }
@@ -30,19 +31,20 @@ public function validIntSubtype(boolean signed, int bits) returns error? {
     }
 }
 
-public function intSubtype(boolean signed, int bits) returns SemType {
-    checkpanic validIntSubtype(signed, bits);
-    if signed && bits == 64 {
+public function validIntWidthSigned(int bits) returns error? => validIntWidth(true, bits);
+public function validIntWidthUnsigned(int bits) returns error? => validIntWidth(false, bits);
+
+public function intWidthSigned(int bits) returns SemType {
+    checkpanic validIntWidth(true, bits);
+    if bits == 64 {
         return INT;
     }
-    Range r;
-    if signed {
-        r = { min: -(1 << (bits - 1)), max: (1 << (bits - 1)) - 1 };
-    }
-    else {
-        r = { min: 0, max: (1 << bits) - 1 };
-    }
-    IntSubtype t = [r];
+    IntSubtype t = [{ min: -(1 << (bits - 1)), max: (1 << (bits - 1)) - 1 }];
+    return new SemType(1 << (BT_INT + BT_COUNT), [[BT_INT, t]]);
+}
+public function intWidthUnsigned(int bits) returns SemType {
+    checkpanic validIntWidth(false, bits);
+    IntSubtype t = [{ min: 0, max: (1 << bits) - 1 }];
     return new SemType(1 << (BT_INT + BT_COUNT), [[BT_INT, t]]);
 }
 

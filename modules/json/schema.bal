@@ -1,7 +1,7 @@
 // JSON representation of types
 
 public type Type Nil|Boolean|Int|Float|Decimal|String|Error|Typedesc|Handle|Xml|Json|Never|Any|ReadOnly
-    |Single|Union|Intersection|Tuple|Record|Function|Rec|Ref;
+    |Byte|BuiltinIntSubtype|Single|Union|Intersection|Tuple|Record|Function|Rec|Ref;
 
 public const Nil = "nil";
 public const Boolean = "boolean";
@@ -13,13 +13,18 @@ public const Error = "error";
 public const Typedesc = "typedesc";
 public const Handle = "handle";
 public const Xml = "xml";
-
 public const Json = "json";
 public const Never = "never";
 public const Any = "any";
 public const ReadOnly = "readonly";
 
-public type Single ["string", string];
+public const Byte = "byte";
+public type BuiltinIntSubtype "int32"|"int16"|"int8"|"uint32"|"uint16"|"uint8";
+
+public type Single SingleString|SingleInt;
+public type SingleString ["string", string];
+// Allow string here, so it can work with JSON parsers that represent numbers using doubles
+public type SingleInt ["int", int|string];
 
 public type Union ["|", Type...];
 public type Intersection ["&", Type...];

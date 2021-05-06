@@ -145,6 +145,7 @@ public final SemType FUTURE = new SemType(1 << BT_FUTURE);
 public final SemType TOP = new SemType(BT_MASK);
 public final SemType ANY = new SemType(BT_MASK & ~(1 << BT_ERROR));
 public final SemType READONLY = new SemType(BT_READONLY);
+public final SemType BYTE = intWidthUnsigned(8);
 
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
