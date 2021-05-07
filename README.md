@@ -25,7 +25,7 @@ The implementation currently handles a subset of Ballerina type system:
 * readonly (but not readonly record fields)
 * union
 * intersection
-* int and string singletons
+* string, int, boolean singletons
 * byte and other built-in int subtypes
 * json (can be derived from the above)
 * any, never (can be derived from the above)

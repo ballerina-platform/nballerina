@@ -17,7 +17,7 @@
 13. ~~open records~~
 14. readonly record fields
 15. optional record fields
-16. boolean singleton type
+16. ~~boolean singleton type~~
 17. ~~integer singleton type~~
 18. ~~integer subtypes with specific width/signedness~~
 19. float singletons

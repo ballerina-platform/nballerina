@@ -52,6 +52,8 @@ function parseType(core:Env env, Binding? b, json j, Path path) returns core:Sem
         Any => { return core:ANY; }
         Never => { return core:NEVER; }
         ReadOnly => { return core:READONLY; }
+        true => { return core:booleanConst(true); }
+        false => { return core:booleanConst(false); }
         // Should be able to use match patterns here
         // but there's a compiler bug #29041
         var js if js is json[] => {
