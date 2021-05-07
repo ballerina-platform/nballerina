@@ -21,10 +21,12 @@ public const ReadOnly = "readonly";
 public const Byte = "byte";
 public type BuiltinIntSubtype "int32"|"int16"|"int8"|"uint32"|"uint16"|"uint8";
 
-public type Single SingleString|SingleInt;
+public type Single SingleString|SingleInt|SingleBoolean;
 public type SingleString ["string", string];
 // Allow string here, so it can work with JSON parsers that represent numbers using doubles
 public type SingleInt ["int", int|string];
+
+public type SingleBoolean boolean;
 
 public type Union ["|", Type...];
 public type Intersection ["&", Type...];
