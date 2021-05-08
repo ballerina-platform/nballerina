@@ -53,9 +53,39 @@ Maybe representation is for each field, array of allowed mutable type plus array
 
 ### Objects
 
-These are similar to open records including fields of function type, except that fields and methods are distinguishable.
+These are similar to open records including fields of function type; fields and methods are in the same space but distinguishable
 
-There is some material on Castagna on this, which should cover this.
+There is some material in the Castagna paper on this, which should cover this.
+
+### Errors
+
+`error<T>` and `error<readonly & T>` are equivalent, since the detail record is copied with `cloneReadOnly`.
+
+We can represent the subtype of error as single Bdd, in the same way as a subtype of readonly mapping.
+
+### Distinct
+
+We can turn
+
+```
+type D1 distinct object {};
+type D2 distinct object {
+    *D1;
+}
+```
+
+into
+
+```
+type D1 distinct object {};
+type D2 D1 & distinct object { }
+```
+
+(just as is done with errors). So the JSON representation does not need to represent type inclusion (*T).
+
+During parse, we can generate an integer representing the distinct id for each occurrence of `distinct` by using `===` on the JSON representation.
+
+In the subtype representation for object and error as a Bdd, represent a `distinct` id *d* by an atom -*d* - 1. Suppose we want to check that D2 is a subtype of D1 in the above example. This means checking that the D2 & not(D1) is empty. Let the distinct id for D1 and D2 be I1 and I2. Then the type for D2 is going to have I1 & I2, and the type for D2 will have I1. So the type D2 & not(D1), will have I1 & I2 & not(I1). This is empty because it has both I1 and not(I1). The Bdd construction code recognizes when you have both an atom and its negation on a path, and eliminates this conjunction. So (I think) all we have to do is ignore atoms that are integers \< 0 when accumulating conjunctions.
 
 ### Futures
 
@@ -64,12 +94,19 @@ They can be recursive:
 ```
 type F future<F?>;
 ```
+### Streams
+
+Can be recursive:
+
+```
+type S stream<S?>;
+```
 
 ### XML
 
 We have:
 * Empty XML sequence
-* Singleton. One if
+* Singleton. One of
     1. Text item, which is always readonly
     2. Readonly element item
     3. Mutable element item
