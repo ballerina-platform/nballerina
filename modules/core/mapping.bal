@@ -121,7 +121,7 @@ function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boole
             return res;
         }
     }
-    boolean isEmpty = bddIsEmpty(tc, b, (), (), mappingFormulaIsEmpty);
+    boolean isEmpty = bddEvery(tc, b, (), (), mappingFormulaIsEmpty);
     m.isEmpty = isEmpty;
     return isEmpty;    
 }

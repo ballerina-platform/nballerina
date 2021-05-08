@@ -40,20 +40,20 @@ function and(int atom, Conjunction? next) returns Conjunction {
 }
 
 
-type BddIsEmptyFunction function(TypeCheckContext tc, Conjunction? pos, Conjunction? neg) returns boolean;
+type BddPredicate function(TypeCheckContext tc, Conjunction? pos, Conjunction? neg) returns boolean;
 
-// Each path from the root of the Bdd down to a leaf that is true corresponds
-// to a possibility whose emptiness needs to be checked.
-// We walk the tree, accumulating the combination of positive and negative definitions for a path as we go.
-// When we get to a leaf that is true, we check the emptiness of the accumulated combination.
-function bddIsEmpty(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conjunction? neg, BddIsEmptyFunction isEmpty) returns boolean {
+// A Bdd represents a disjunction of conjunctions of atoms, where each atom is either positive or
+// negative (negated). Each path from the root to a leaf that is true represents one of the conjunctions
+// We walk the tree, accumulating the positive and negative conjunctions for a path as we go.
+// When we get to a leaf that is true, we apply the predicate to the accumulated conjunctions.
+function bddEvery(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate) returns boolean {
     if b is boolean {
-        return !b || isEmpty(tc, pos, neg);
+        return !b || predicate(tc, pos, neg);
     }
     else {
-        return bddIsEmpty(tc, b.left, and(b.atom, pos), neg, isEmpty)
-          && bddIsEmpty(tc, b.middle, pos, neg, isEmpty)
-          && bddIsEmpty(tc, b.right, pos, and(b.atom, neg), isEmpty); 
+        return bddEvery(tc, b.left, and(b.atom, pos), neg, predicate)
+          && bddEvery(tc, b.middle, pos, neg, predicate)
+          && bddEvery(tc, b.right, pos, and(b.atom, neg), predicate); 
     }
 }
 

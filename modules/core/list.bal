@@ -104,7 +104,7 @@ function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean 
             return res;
         }
     }
-    boolean isEmpty = bddIsEmpty(tc, b, (), (), listFormulaIsEmpty);
+    boolean isEmpty = bddEvery(tc, b, (), (), listFormulaIsEmpty);
     m.isEmpty = isEmpty;
     return isEmpty;    
 }
