@@ -119,10 +119,12 @@ public isolated function diff(Bdd b1, Bdd b2) returns Bdd {
 
         }
         else {
+            // This is incorrect in the AMK tutorial 
+            // but correct in the Castagna paper
             return create(b1.atom,
-                          diff(b1.left, b2),
-                          diff(b1.middle, b2),
-                          diff(b1.right, b2));
+                          diff(b1.left, b2.left),
+                          diff(b1.middle, b2.middle),
+                          diff(b1.right, b2.right));
         }
     }
 }
