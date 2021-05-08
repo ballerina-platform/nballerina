@@ -28,14 +28,15 @@
 24. stream subtypes
 25. table type without keys
 26. table keys
-27. distinct types
-28. error subtypes
-29. public, private object member qualifiers
-30. client, service remote qualifiers
-31. string:Char type
-32. xml subtypes
-33. isolated qualifier
-32. transactional qualifier
+27. distinct object types
+28. public, private object member qualifiers
+29. client, service remote qualifiers
+30. error detail subtypes
+31. distinct error types
+32. string:Char type
+33. xml subtypes
+34. isolated qualifier
+35. transactional qualifier
 
 ## Other things
 
@@ -51,4 +52,5 @@
 * Extend to provide error messages for subtype failure
 * I suspect we have a problem with a function return type of `never`
 * Move desugaring of multiple function arguments into core
+* Maybe use `null` instead of `"nil"` to represent nil type in JSON (for consistency with `true`, `false`)
 
