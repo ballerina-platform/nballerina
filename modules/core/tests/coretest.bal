@@ -2,7 +2,7 @@ import ballerina/test;
 
 @test:Config{}
 function test1() {
-    Env env = {};
+    Env env = new;
     disjoint(typeCheckContext(env), STRING, INT);
     disjoint(typeCheckContext(env), INT, NIL);
     SemType t1 = tuple(env, INT, INT);
@@ -19,12 +19,12 @@ function disjoint(TypeCheckContext tc, SemType t1, SemType t2) {
 
 @test:Config{}
 function test2() {
-    test:assertTrue(isSubtype(typeCheckContext({}), INT, TOP));
+    test:assertTrue(isSubtype(typeCheckContext(new), INT, TOP));
 }
 
 @test:Config{}
 function test3() {
-    Env env = {};
+    Env env = new;
     SemType s = tuple(env, INT, union(INT, STRING));
     SemType t = union(tuple(env, INT, INT), tuple(env, INT, STRING));
     equiv(env, s, t);
@@ -37,7 +37,7 @@ function equiv(Env env, SemType s, SemType t) {
 
 @test:Config{}
 function test4() {
-    Env env = {};
+    Env env = new;
     SemType isT = tuple(env, INT, STRING);
     SemType itT = tuple(env, INT, TOP);
     SemType tsT = tuple(env, TOP, STRING);
@@ -51,7 +51,7 @@ function test4() {
 
 @test:Config{}
 function test5() {
-    Env env = {};
+    Env env = new;
     SemType s = tuple(env, INT, union(NIL, union(INT, STRING)));
     SemType t = union(tuple(env, INT, INT), union(tuple(env, INT, NIL), tuple(env, INT, STRING)));
     equiv(env, s, t);
@@ -66,7 +66,7 @@ function recursiveTuple(Env env, function(Env, SemType) returns SemType[] f) ret
 
 @test:Config{}
 function recTest() {
-    Env env = {};
+    Env env = new;
     SemType t1 = recursiveTuple(env, (e, t) => [INT, union(t, NIL)]);
     SemType t2 = recursiveTuple(env, (e, t) => [union(INT, STRING), union(t, NIL)]);
     test:assertTrue(isSubtype(typeCheckContext(env), t1, t2));
@@ -75,7 +75,7 @@ function recTest() {
 
 @test:Config{}
 function recTest2() {
-    Env env = {};
+    Env env = new;
     SemType t1 = union(NIL, recursiveTuple(env, (e, t) => [INT, union(t, NIL)]));
     SemType t2 = recursiveTuple(env, (e, t) => [INT, union(t, NIL)]);
     test:assertTrue(isSubtype(typeCheckContext(env), t2, t1));
@@ -83,7 +83,7 @@ function recTest2() {
 
 @test:Config{}
 function recTest3() {
-    Env env = {};
+    Env env = new;
     SemType t1 = recursiveTuple(env, (e, t) => [INT, union(t, NIL)]);
     // This is equivalent to:
     // type Inner [int, Outer|()];
@@ -94,7 +94,7 @@ function recTest3() {
 
 @test:Config{}
 function tupleTest1() {
-    Env env = {};
+    Env env = new;
     SemType s = tuple(env, INT, STRING, NIL);
     SemType t = tuple(env, TOP, TOP, TOP);
     test:assertTrue(isSubtype(typeCheckContext(env), s, t));
@@ -103,7 +103,7 @@ function tupleTest1() {
 
 @test:Config{}
 function tupleTest2() {
-    Env env = {};
+    Env env = new;
     SemType s = tuple(env, INT, STRING, NIL);
     SemType t = tuple(env, TOP, TOP);
     test:assertFalse(isSubtype(typeCheckContext(env), s, t));
@@ -112,7 +112,7 @@ function tupleTest2() {
 
 @test:Config{}
 function tupleTest3() {
-    Env env = {};
+    Env env = new;
     SemType z1 = tuple(env);
     SemType z2 = tuple(env);
     SemType t = tuple(env, INT);
@@ -126,7 +126,7 @@ function tupleTest3() {
 
 @test:Config{}
 function tupleTest4() {
-    Env env = {};
+    Env env = new;
     SemType s = tuple(env, INT, INT);
     SemType t = tuple(env, INT, INT, INT);
     test:assertFalse(isEmpty(typeCheckContext(env), s));
@@ -143,7 +143,7 @@ function func(Env env, SemType args, SemType ret) returns SemType {
 
 @test:Config{}
 function funcTest1() {
-    Env env = {};
+    Env env = new;
     SemType s = func(env, INT, INT);
     SemType t = func(env, INT, union(NIL, INT));
     test:assertTrue(isSubtype(typeCheckContext(env), s, t));
@@ -153,7 +153,7 @@ function funcTest1() {
 
 @test:Config{}
 function funcTest2() {
-    Env env = {};
+    Env env = new;
     SemType s = func(env, union(NIL, INT), INT);
     SemType t = func(env, INT, INT);
     test:assertTrue(isSubtype(typeCheckContext(env), s, t));
@@ -162,7 +162,7 @@ function funcTest2() {
 
 @test:Config{}
 function funcTest3() {
-    Env env = {};
+    Env env = new;
     SemType s = func(env, tuple(env, union(NIL, INT)), INT);
     SemType t = func(env, tuple(env, INT), INT);
     test:assertTrue(isSubtype(typeCheckContext(env), s, t));
@@ -171,7 +171,7 @@ function funcTest3() {
 
 @test:Config{}
 function funcTest4() {
-    Env env = {};
+    Env env = new;
     SemType s = func(env, tuple(env, union(NIL, INT)), INT);
     SemType t = func(env, tuple(env, INT), union(NIL, INT));
     test:assertTrue(isSubtype(typeCheckContext(env), s, t));

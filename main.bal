@@ -26,6 +26,7 @@ public function main(string? f) returns error? {
         }
     }
     io:println("Passed ", testsPassed, "/", testNum);
+    io:println(" created ", bdd:getCount(), " BDDs in total");
 }
 
 final var relationExpect = {
@@ -35,7 +36,7 @@ final var relationExpect = {
 };
 
 function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
-    core:Env env = {};
+    core:Env env = new;
     boolean firstOk = false;
     do {
         boolean ok = true;

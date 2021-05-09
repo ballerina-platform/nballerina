@@ -50,11 +50,14 @@ public type BasicTypeCode
     |BT_XML_RW|BT_LIST_RW|BT_MAPPING_RW|BT_TABLE_RW|BT_OBJECT_RW
     |BT_STREAM|BT_FUTURE;
 
-public type Env record {|
-    ListSubtype[] listDefs = [];
-    MappingSubtype[] mappingDefs = [];
-    FunctionSubtype[] functionDefs = [];
-|};
+public class Env {
+    final ListSubtype[] listDefs = [];
+    final MappingSubtype[] mappingDefs;
+    final FunctionSubtype[] functionDefs = [];
+    public function init() {
+        self.mappingDefs = [ MAPPING_SUBTYPE_RO ];
+    }
+}
 
 public type BddMemo record {|
     readonly bdd:Bdd bdd;
@@ -121,6 +124,19 @@ public readonly class SemType {
         int c = code; // work around bug in slalpha4
         return (self.bits & (BT_SOME << c)) == 0;
     }
+}
+
+function subtypeData(SemType s, BasicTypeCode code) returns SubtypeData {
+    int c = code;
+    if (s.bits & (1 << c)) != 0 {
+        return true;
+    }
+    foreach var cd in s.subtypes {
+        if cd[0] == code {
+            return cd[1];
+        }
+    }
+    return false;
 }
 
 public final SemType NEVER = new SemType(0);
@@ -421,7 +437,7 @@ function init() {
         {}, // float
         {}, // decimal
         stringOps, // string
-        {}, // error
+        errorOps, // error
         functionOps,  // function
         {}, // typedesc
         {}, // handle

@@ -12,6 +12,8 @@ public type MappingSubtype readonly & record {|
     SemType rest;
 |};
 
+final MappingSubtype MAPPING_SUBTYPE_RO = { names: [], types: [], rest: READONLY };
+
 public class MappingDefinition {
     *Definition;
     private int ro = -1;
@@ -133,6 +135,7 @@ function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boole
 function mappingFormulaIsEmpty(TypeCheckContext tc, Conjunction? posList, Conjunction? negList) returns boolean {
     TempMappingSubtype combined;
     if posList is () {
+        // XXX this is not right for readonly
         combined = { types: [], names: [], rest: TOP };
     }
     else {

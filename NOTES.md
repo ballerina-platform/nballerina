@@ -27,6 +27,12 @@ Case 2 just requires diff(Srest,Trest) to be non-empty.
 
 These work quite similarly to rest type for tuples, except that keys are strings rather than integers.
 
+### Errors
+
+`error<T>` and `error<readonly & T>` are equivalent, since the detail record is copied with `cloneReadOnly`.
+
+We can represent the subtype of error as single Bdd, in the same way as a subtype of readonly mapping.
+
 ## Not yet done
 
 ### Optional fields
@@ -56,12 +62,6 @@ Maybe representation is for each field, array of allowed mutable type plus array
 These are similar to open records including fields of function type; fields and methods are in the same space but distinguishable
 
 There is some material in the Castagna paper on this, which should cover this.
-
-### Errors
-
-`error<T>` and `error<readonly & T>` are equivalent, since the detail record is copied with `cloneReadOnly`.
-
-We can represent the subtype of error as single Bdd, in the same way as a subtype of readonly mapping.
 
 ### Distinct
 

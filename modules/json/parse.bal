@@ -44,7 +44,7 @@ function parseType(core:Env env, Binding? b, json j, Path path) returns core:Sem
         Float => { return core:FLOAT; }
         Decimal => { return core:DECIMAL; }
         String => { return core:STRING; }
-        Error => { return core:ERROR; }
+        "error" => { return core:ERROR; }
         Typedesc => { return core:TYPEDESC; }
         Handle => { return core:HANDLE; }
         Xml => { return core:XML; } 
@@ -150,6 +150,13 @@ function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Pat
             }
             core:SemType ret = v.pop();
             return def.define(env, core:tuple(env, ...v), ret);
+        }
+        "error" => {
+            if jlist.length() != 2 {
+                return parseError("'error' must be followed by a string", parent, 0);
+            }
+            core:SemType detail = check parseType(env, b, jlist[1], pathAppend(parent, 1));
+            return core:errorDetail(detail);
         }
         "string" => {
             if jlist.length() != 2 {

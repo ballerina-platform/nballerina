@@ -93,6 +93,22 @@ public isolated function intersect(Bdd b1, Bdd b2) returns Bdd {
     }       
 }
 
+// Returns equivalent Bdd with b.middle as false
+public isolated function expandMiddle(Bdd b) returns Bdd {
+    if b is boolean {
+        return b;
+    }
+    else if b.middle == false {
+        return b;
+    }
+    else {
+        return create(b.atom,
+                      union(b.left, b.middle),
+                      false,
+                      union(b.right, b.middle));
+    }
+}
+
 public isolated function diff(Bdd b1, Bdd b2) returns Bdd {
     if b1 === b2 {
         return false;

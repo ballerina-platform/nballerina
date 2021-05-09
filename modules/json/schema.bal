@@ -9,7 +9,6 @@ public const Int = "int";
 public const Float = "float";
 public const Decimal = "decimal";
 public const String = "string";
-public const Error = "error";
 public const Typedesc = "typedesc";
 public const Handle = "handle";
 public const Xml = "xml";
@@ -43,6 +42,10 @@ public type Tuple ["tuple", Type...];
 public type List ["list", Type...];
 public type Record ["record", Field...];
 public type Field [string, Type];
+
+// This should be `Type`, not `Type...` but slalpha5 does not allow it.
+
+public type Error "error" | ["error", Type...];
 // `["function" "string", "boolean", "int"]` means any function of two arguments, string and boolean, returning an integer
 // `["function" "int"]` means any function of zero arguments returning an integer
 // `["function"]` means any function

@@ -57,6 +57,24 @@ function bddEvery(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conjunction?
     }
 }
 
+function bddEveryPositive(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate) returns boolean {
+    if b is boolean {
+        return !b || predicate(tc, pos, neg);
+    }
+    else {
+        return bddEveryPositive(tc, b.left, andIfPositive(b.atom, pos), neg, predicate)
+          && bddEveryPositive(tc, b.middle, pos, neg, predicate)
+          && bddEveryPositive(tc, b.right, pos, andIfPositive(b.atom, neg), predicate); 
+    }
+}
+
+function andIfPositive(int atom, Conjunction? next) returns Conjunction? {
+    if atom < 0 {
+        return next;
+    }
+    return { atom, next };
+}
+
 function bddSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
     return bdd:union(<bdd:Bdd>t1, <bdd:Bdd>t2);
 }
