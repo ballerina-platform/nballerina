@@ -51,11 +51,12 @@ public type BasicTypeCode
     |BT_STREAM|BT_FUTURE;
 
 public class Env {
-    final ListSubtype[] listDefs = [];
+    final ListSubtype[] listDefs;
     final MappingSubtype[] mappingDefs;
     final FunctionSubtype[] functionDefs = [];
     public function init() {
         self.mappingDefs = [ MAPPING_SUBTYPE_RO ];
+        self.listDefs = [ LIST_SUBTYPE_RO ];
     }
 }
 
@@ -442,12 +443,12 @@ function init() {
         {}, // typedesc
         {}, // handle
         {}, // RO xml
-        listOps, // RO list
+        listRoOps, // RO list
         mappingRoOps, // RO mapping
         {}, // RO table
         {}, // RO object
         {}, // RW xml
-        listOps, // RW list
+        listRwOps, // RW list
         mappingRwOps, // RW mapping
         {}, // RW table
         {}, // RW object

@@ -43,7 +43,7 @@ public class MappingDefinition {
             self.rw = dummyMappingDef(env);
         }
         env.mappingDefs[self.rw] = rwType;
-        if typeListIsReadOnly(rwType.types) {
+        if typeListIsReadOnly(rwType.types) && isReadOnly(rest) {
             if self.ro < 0 {
                 self.ro = self.rw;
             }
@@ -55,7 +55,7 @@ public class MappingDefinition {
             MappingSubtype roType = {
                 names: rwType.names,
                 types: readOnlyTypeList(rwType.types),
-                rest
+                rest: intersect(rest, READONLY)
             };
             if self.ro < 0 {
                 self.ro = dummyMappingDef(env);
@@ -104,14 +104,7 @@ isolated function fieldName(Field f) returns string {
 }
 
 function mappingRoSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    bdd:Bdd b = <bdd:Bdd>t;
-    // The goal of this is to ensure that mappingFormulaIsEmpty does
-    // not get an empty posList, because it will interpret that
-    // as `map<any|error>` rather than `map<readonly>`.
-    // We want to share BDDs between the RW and RO case so we cannot change how the BDD is interpreted.
-    // Instead we transform the BDD to avoid cases that would give the wrong answer.
-    b = bdd:expandMiddle(bdd:intersect(b, bdd:atom(0)));
-    return mappingSubtypeIsEmpty(tc, b);
+    return mappingSubtypeIsEmpty(tc, bddFixReadOnly(<bdd:Bdd>t));
 }
 
 function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
@@ -139,15 +132,18 @@ function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boole
     return isEmpty;    
 }
 
-
-
 // This works the same as the tuple case, except that instead of
 // just comparing the lengths of the tuples we compare the sorted list of field names
 function mappingFormulaIsEmpty(TypeCheckContext tc, Conjunction? posList, Conjunction? negList) returns boolean {
     TempMappingSubtype combined;
     if posList is () {
-        // XXX this is not right for readonly
-        combined = { types: [], names: [], rest: TOP };
+        combined = {
+            types: [],
+            names: [],
+            // This isn't right for the readonly case.
+            // bddFixReadOnly avoids this
+            rest: TOP
+        };
     }
     else {
         // combine all the positive atoms using intersection

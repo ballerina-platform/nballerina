@@ -97,6 +97,10 @@
     ["proper_subtype", ["error", ["record", ["e", "error"]]], "error"],
     ["proper_subtype", ["error", ["record", ["e", ["list", "int"]]]], ["error", ["map", "readonly"]]],
     ["equivalent", "error", ["error", ["map", "readonly"]]],
-    ["equivalent", ["&", "readonly", ["map", ["|", "any", "error"]]], ["&", "readonly", ["map", "readonly"]]]
+    ["equivalent", ["&", "readonly", ["map", ["|", "any", "error"]]], ["&", "readonly", ["map", "readonly"]]],
+    ["equivalent", ["&", "readonly", ["list", ["|", "any", "error"]]], ["&", "readonly", ["list", "readonly"]]],
+    ["proper_subtype", ["&", "readonly", ["list", "readonly"]], ["list", ["|", "any", "error"]]],
+    ["proper_subtype", ["&", "readonly", ["list", "readonly"]], ["|", "any", "error"]],
+    ["proper_subtype", ["list", "readonly"], ["|", "any", "error"]]
 ]
 

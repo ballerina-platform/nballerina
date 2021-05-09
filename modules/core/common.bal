@@ -68,6 +68,25 @@ function bddEveryPositive(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conj
     }
 }
 
+// The goal of this is to ensure that mappingFormulaIsEmpty does
+// not get an empty posList, because it will interpret that
+// as `map<any|error>` rather than `map<readonly>`.
+// Similarly for listFormulaIsEmpty.
+// We want to share BDDs between the RW and RO case so we cannot change how the BDD is interpreted.
+// Instead we transform the BDD to avoid cases that would give the wrong answer.
+function bddFixReadOnly(bdd:Bdd b) returns bdd:Bdd {
+    return bddPosMaybeEmpty(b) ? bdd:intersect(b, bdd:atom(0)) : b;
+}
+
+function bddPosMaybeEmpty(bdd:Bdd b) returns boolean {
+    if b is boolean {
+        return b;
+    }
+    else {
+        return bddPosMaybeEmpty(b.middle) || bddPosMaybeEmpty(b.right);
+    }
+}
+   
 function andIfPositive(int atom, Conjunction? next) returns Conjunction? {
     if atom < 0 {
         return next;

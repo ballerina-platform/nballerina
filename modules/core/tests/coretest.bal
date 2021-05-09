@@ -184,3 +184,15 @@ function stringTest() {
     test:assertEquals(stringListIntersect(["a", "b", "d"], ["d"]), ["d"]);
     test:assertEquals(stringListDiff(["a", "b", "c", "d"], ["a", "c"]), ["b", "d"]);
 }
+
+@test:Config{}
+function roTest() {
+    SemType t1 = new SemType(1 << BT_LIST_RO);
+    Env env = new;
+    ListDefinition ld = new;
+    SemType t2 = ld.define(env, [], TOP);
+    SemType t = diff(t1, t2);
+    TypeCheckContext tc = typeCheckContext(env);
+    boolean b = isEmpty(tc, t);
+    test:assertTrue(b);
+}

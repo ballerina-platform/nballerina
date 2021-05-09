@@ -6,6 +6,8 @@ public type ListSubtype readonly & record {|
     SemType rest;
 |};
 
+final ListSubtype LIST_SUBTYPE_RO = { members: [], rest: READONLY };
+
 public class ListDefinition {
     *Definition;
     private int ro = -1;
@@ -82,6 +84,10 @@ function dummyListDef(Env env) returns int {
     ListSubtype dummy = { members: [], rest: NEVER };
     env.listDefs.push(dummy);
     return i;
+}
+
+function listRoSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
+    return listSubtypeIsEmpty(tc, bddFixReadOnly(<bdd:Bdd>t));
 }
 
 function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
@@ -234,7 +240,15 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Con
     }
 }
 
-final BasicTypeOps listOps = {
+final BasicTypeOps listRoOps = {
+    union: bddSubtypeUnion,
+    intersect: bddSubtypeIntersect,
+    diff: bddSubtypeDiff,
+    complement: bddSubtypeComplement,
+    isEmpty: listRoSubtypeIsEmpty
+};
+
+final BasicTypeOps listRwOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,

@@ -22,11 +22,7 @@ public function errorDistinct(int distinctId) returns SemType {
 // Similar to mappingSubtypeRoIsEmpty,
 // except that we use bddEveryPositive to ignore the distinct ids
 function errorSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    bdd:Bdd b = <bdd:Bdd>t;
-    // See comment in `mappingRoSubtypeIsEmpty`.
-    // This is needed to ensure we recognize something like `error - error<map<readonly>>` as empty.
-    b = bdd:expandMiddle(bdd:intersect(b, bdd:atom(0)));
-    
+    bdd:Bdd b = bddFixReadOnly(<bdd:Bdd>t);
     BddMemo? mm = tc.mappingMemo[b];
     BddMemo m;
     if mm is () {
