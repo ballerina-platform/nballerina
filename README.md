@@ -17,16 +17,18 @@ There is also a tutorial by Andrew M. Kent, which is great for getting started:
 
 The implementation currently handles a subset of Ballerina type system:
 * nil, boolean, int, float, decimal, string, handle types
-* error, typedesc, xml (without type parameters)
 * array and tuple types
-* mapping and record types
+* map and record types
     * no optional record fields yet
+    * no readonly record fields yet
 * function types
-* readonly (but not readonly record fields)
+* readonly
 * union
 * intersection
 * string, int, boolean singletons
 * byte and other built-in int subtypes
+* error with detail record subtypes (but not distinct)
+* typedesc, xml (without type parameters)
 * json (can be derived from the above)
 * any, never (can be derived from the above)
 * complement and difference (Ballerina has no syntax for this, but deciding whether S is a subtype of T is equivalent to deciding whether the difference of S and T is empty)
