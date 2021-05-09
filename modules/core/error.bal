@@ -19,17 +19,12 @@ public function errorDistinct(int distinctId) returns SemType {
     return new SemType(1 << (BT_ERROR + BT_COUNT), [[BT_ERROR, bdd]]);
 }
 
-// Similar to mappingSubtypeIsEmpty
-// Difference is that we transform the BDD first
-// Then we use bddEveryPositive to ignore the distinct ids
+// Similar to mappingSubtypeRoIsEmpty,
+// except that we use bddEveryPositive to ignore the distinct ids
 function errorSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
     bdd:Bdd b = <bdd:Bdd>t;
-    // The goal of this is to ensure that mappingFormulaIsEmpty does
-    // not get an empty posList, because it will interpret that
-    // as `map<any|error>` rather than `map<readonly>`.
+    // See comment in `mappingRoSubtypeIsEmpty`.
     // This is needed to ensure we recognize something like `error - error<map<readonly>>` as empty.
-    // We want to share BDDs between the RW and RO case so we cannot change how the BDD is interpreted.
-    // Instead we transform the BDD to avoid cases that would give the wrong answer.
     b = bdd:expandMiddle(bdd:intersect(b, bdd:atom(0)));
     
     BddMemo? mm = tc.mappingMemo[b];

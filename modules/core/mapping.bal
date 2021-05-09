@@ -103,6 +103,17 @@ isolated function fieldName(Field f) returns string {
     return f[0];
 }
 
+function mappingRoSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
+    bdd:Bdd b = <bdd:Bdd>t;
+    // The goal of this is to ensure that mappingFormulaIsEmpty does
+    // not get an empty posList, because it will interpret that
+    // as `map<any|error>` rather than `map<readonly>`.
+    // We want to share BDDs between the RW and RO case so we cannot change how the BDD is interpreted.
+    // Instead we transform the BDD to avoid cases that would give the wrong answer.
+    b = bdd:expandMiddle(bdd:intersect(b, bdd:atom(0)));
+    return mappingSubtypeIsEmpty(tc, b);
+}
+
 function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
     bdd:Bdd b = <bdd:Bdd>t;
     BddMemo? mm = tc.mappingMemo[b];
@@ -375,10 +386,19 @@ class MappingPairing {
 }
 
 
-final BasicTypeOps mappingOps = {
+final BasicTypeOps mappingRoOps = {
+    union: bddSubtypeUnion,
+    intersect: bddSubtypeIntersect,
+    diff: bddSubtypeDiff,
+    complement: bddSubtypeComplement,
+    isEmpty: mappingRoSubtypeIsEmpty
+};
+
+final BasicTypeOps mappingRwOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
     isEmpty: mappingSubtypeIsEmpty
 };
+

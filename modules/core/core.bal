@@ -443,12 +443,12 @@ function init() {
         {}, // handle
         {}, // RO xml
         listOps, // RO list
-        mappingOps, // RO mapping
+        mappingRoOps, // RO mapping
         {}, // RO table
         {}, // RO object
         {}, // RW xml
         listOps, // RW list
-        mappingOps, // RW mapping
+        mappingRwOps, // RW mapping
         {}, // RW table
         {}, // RW object
         {}, // RW stream

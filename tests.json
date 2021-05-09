@@ -96,6 +96,7 @@
     ["equivalent", ["|", true, false], "boolean"],
     ["proper_subtype", ["error", ["record", ["e", "error"]]], "error"],
     ["proper_subtype", ["error", ["record", ["e", ["list", "int"]]]], ["error", ["map", "readonly"]]],
-    ["equivalent", "error", ["error", ["map", "readonly"]]]
+    ["equivalent", "error", ["error", ["map", "readonly"]]],
+    ["equivalent", ["&", "readonly", ["map", ["|", "any", "error"]]], ["&", "readonly", ["map", "readonly"]]]
 ]
 
