@@ -68,7 +68,7 @@ public isolated function intersect(Bdd b1, Bdd b2) returns Bdd {
         return b1 == true ? b2 : false;
     }
     else if b2 is boolean {
-        return b2 == true ? false : b1;
+        return b2 == true ? b1 : false;
     }
     else { 
         int cmp = b1.atom - b2.atom;
@@ -165,7 +165,7 @@ public isolated function complement(Bdd b) returns Bdd {
 isolated int count = 0;
 
 isolated function create(int atom, Bdd left, Bdd middle, Bdd right) returns Bdd {
-    if middle === true {
+    if middle == true {
         return true;
     }
     if left == right {
@@ -173,7 +173,7 @@ isolated function create(int atom, Bdd left, Bdd middle, Bdd right) returns Bdd 
     }
     lock {
         count += 1;
-    }
+    }  
     return { atom, left, middle, right };
 }
 
