@@ -2,7 +2,7 @@
 import semtype.bdd;
 
 public function errorDetail(SemType detail) returns SemType {
-    SubtypeData sd = subtypeData(detail, BT_MAPPING_RO);
+    SubtypeData sd = subtypeData(detail, UT_MAPPING_RO);
     if sd == true {
         return ERROR;
     }
@@ -10,13 +10,13 @@ public function errorDetail(SemType detail) returns SemType {
         // XXX This should be reported as an error
         return NEVER;
     }
-    return new SemType(1 << (BT_ERROR + BT_COUNT), [[BT_ERROR, sd]]);
+    return new SemType(1 << (UT_ERROR + UT_COUNT), [[UT_ERROR, sd]]);
 }
 
 // distinctId must be >= 0
 public function errorDistinct(int distinctId) returns SemType {
     bdd:Bdd bdd = bdd:atom(-distinctId - 1);
-    return new SemType(1 << (BT_ERROR + BT_COUNT), [[BT_ERROR, bdd]]);
+    return new SemType(1 << (UT_ERROR + UT_COUNT), [[UT_ERROR, bdd]]);
 }
 
 // Similar to mappingSubtypeRoIsEmpty,
@@ -44,7 +44,7 @@ function errorSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean
     return isEmpty;    
 }
 
-final BasicTypeOps errorOps = {
+final UniformTypeOps errorOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,

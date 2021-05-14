@@ -74,8 +74,8 @@ public class MappingDefinition {
         else {
             rwBdd = bdd:atom(self.rw);
         }
-        SemType s = new SemType((1 << (BT_MAPPING_RO + BT_COUNT)) | (1 << (BT_MAPPING_RW + BT_COUNT)),
-                                [[BT_MAPPING_RO, roBdd], [BT_MAPPING_RW, rwBdd]]);
+        SemType s = new SemType((1 << (UT_MAPPING_RO + UT_COUNT)) | (1 << (UT_MAPPING_RW + UT_COUNT)),
+                                [[UT_MAPPING_RO, roBdd], [UT_MAPPING_RW, rwBdd]]);
         self.semType = s; 
         return s;
     }       
@@ -382,7 +382,7 @@ class MappingPairing {
 }
 
 
-final BasicTypeOps mappingRoOps = {
+final UniformTypeOps mappingRoOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
@@ -390,7 +390,7 @@ final BasicTypeOps mappingRoOps = {
     isEmpty: mappingRoSubtypeIsEmpty
 };
 
-final BasicTypeOps mappingRwOps = {
+final UniformTypeOps mappingRwOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,

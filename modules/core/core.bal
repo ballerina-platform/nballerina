@@ -1,54 +1,58 @@
 
 import semtype.bdd;
 
+// There is an integer for each uniform type.
+// Uniform types are like basic types except that each selectively immutable
+// basic type is split into two uniform types, one immutable and on mutable.
+
 // Inherently immutable
-public const BT_NIL = 0;
-public const BT_BOOLEAN = 1;
-public const BT_INT = 2;
-public const BT_FLOAT = 3;
-public const BT_DECIMAL = 4;
-public const BT_STRING = 5;
-public const BT_ERROR = 6;
-public const BT_FUNCTION = 7;
-public const BT_TYPEDESC = 8;
-public const BT_HANDLE = 9;
+public const UT_NIL = 0;
+public const UT_BOOLEAN = 1;
+public const UT_INT = 2;
+public const UT_FLOAT = 3;
+public const UT_DECIMAL = 4;
+public const UT_STRING = 5;
+public const UT_ERROR = 6;
+public const UT_FUNCTION = 7;
+public const UT_TYPEDESC = 8;
+public const UT_HANDLE = 9;
 
 // Selectively immutable; immutable half
-public const BT_XML_RO = 10;
-public const BT_LIST_RO = 11;
-public const BT_MAPPING_RO = 12;
-public const BT_TABLE_RO = 13;
-public const BT_OBJECT_RO = 14;
+public const UT_XML_RO = 10;
+public const UT_LIST_RO = 11;
+public const UT_MAPPING_RO = 12;
+public const UT_TABLE_RO = 13;
+public const UT_OBJECT_RO = 14;
 
 // Selectively immutable; mutable half
-public const BT_XML_RW = 15;
-public const BT_LIST_RW = 16;
-public const BT_MAPPING_RW = 17;
-public const BT_TABLE_RW = 18;
-public const BT_OBJECT_RW = 19;
+public const UT_XML_RW = 15;
+public const UT_LIST_RW = 16;
+public const UT_MAPPING_RW = 17;
+public const UT_TABLE_RW = 18;
+public const UT_OBJECT_RW = 19;
 
 // Inherently mutable
-public const BT_STREAM = 20;
-public const BT_FUTURE = 21;
+public const UT_STREAM = 20;
+public const UT_FUTURE = 21;
 
-public const BT_COUNT = 22;
+public const UT_COUNT = 22;
 
-public const int BT_MASK = (1 << BT_COUNT) - 1;
+public const int UT_MASK = (1 << UT_COUNT) - 1;
 
-public const int BT_COUNT_RO = BT_OBJECT_RO + 1;
-public const int BT_READONLY = (1 << BT_COUNT_RO) - 1;
+public const int UT_COUNT_RO = UT_OBJECT_RO + 1;
+public const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
 
 // It would be easier to use ~ here, but slalpha5 doesn't support
-public const int BT_RW_MASK = ((1 << (BT_COUNT - BT_COUNT_RO)) - 1) << BT_COUNT_RO;
+public const int UT_RW_MASK = ((1 << (UT_COUNT - UT_COUNT_RO)) - 1) << UT_COUNT_RO;
 
-public const int BT_SOME = 1 | (1 << BT_COUNT);
+public const int UT_SOME = 1 | (1 << UT_COUNT);
 
-public type BasicTypeCode
-    BT_NIL|BT_BOOLEAN|BT_INT|BT_FLOAT|BT_DECIMAL
-    |BT_STRING|BT_ERROR|BT_FUNCTION|BT_TYPEDESC|BT_HANDLE
-    |BT_XML_RO|BT_LIST_RO|BT_MAPPING_RO|BT_TABLE_RO|BT_OBJECT_RO
-    |BT_XML_RW|BT_LIST_RW|BT_MAPPING_RW|BT_TABLE_RW|BT_OBJECT_RW
-    |BT_STREAM|BT_FUTURE;
+public type UniformTypeCode
+    UT_NIL|UT_BOOLEAN|UT_INT|UT_FLOAT|UT_DECIMAL
+    |UT_STRING|UT_ERROR|UT_FUNCTION|UT_TYPEDESC|UT_HANDLE
+    |UT_XML_RO|UT_LIST_RO|UT_MAPPING_RO|UT_TABLE_RO|UT_OBJECT_RO
+    |UT_XML_RW|UT_LIST_RW|UT_MAPPING_RW|UT_TABLE_RW|UT_OBJECT_RW
+    |UT_STREAM|UT_FUTURE;
 
 public class Env {
     final ListSubtype[] listDefs;
@@ -79,7 +83,7 @@ public type TypeCheckContext record {|
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData StringSubtype|IntSubtype|BooleanSubtype|bdd:Bdd;
 
-type BasicTypeSubtype readonly & [BasicTypeCode, SubtypeData];
+type UniformSubtype readonly & [UniformTypeCode, SubtypeData];
 
 type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
 type UnaryOp function(SubtypeData t) returns SubtypeData;
@@ -97,7 +101,7 @@ function unaryTypeCheckOpPanic(TypeCheckContext tc, SubtypeData t) returns boole
     panic error("unary boolean operation should not be called");
 }
 
-type BasicTypeOps readonly & record {|
+type UniformTypeOps readonly & record {|
     BinOp union = binOpPanic;
     BinOp intersect = binOpPanic;
     BinOp diff = binOpPanic;
@@ -105,29 +109,29 @@ type BasicTypeOps readonly & record {|
     UnaryTypeCheckOp isEmpty = unaryTypeCheckOpPanic;
 |};
 
-final readonly & (BasicTypeSubtype[]) EMPTY_SUBTYPES = [];
+final readonly & (UniformSubtype[]) EMPTY_SUBTYPES = [];
 
 public readonly class SemType {
-    // For a basic type with code b,
-    // bits & (1 << b) is non-zero iff this type contains all of the basic type
-    // bits & (1 << (b + BT_COUNT)) is non-zero iff this type contains some but not all of the basic type
+    // For a uniform type with code c,
+    // bits & (1 << c) is non-zero iff this type contains all of the uniform type
+    // bits & (1 << (c + UT_COUNT)) is non-zero iff this type contains some but not all of the uniform type
     int bits;
-    BasicTypeSubtype[] subtypes;
-    function init(int bits,  BasicTypeSubtype[] subtypes = EMPTY_SUBTYPES) {
+    UniformSubtype[] subtypes;
+    function init(int bits,  UniformSubtype[] subtypes = EMPTY_SUBTYPES) {
         self.bits = bits;
         self.subtypes = subtypes.cloneReadOnly();
     }
-    public function includesAll(BasicTypeCode code) returns boolean {
+    public function includesAll(UniformTypeCode code) returns boolean {
         int c = code; // work around bug in slalpha4
         return (self.bits & (1 << c)) != 0;
     }
-    public function includesNone(BasicTypeCode code) returns boolean {
+    public function includesNone(UniformTypeCode code) returns boolean {
         int c = code; // work around bug in slalpha4
-        return (self.bits & (BT_SOME << c)) == 0;
+        return (self.bits & (UT_SOME << c)) == 0;
     }
 }
 
-function subtypeData(SemType s, BasicTypeCode code) returns SubtypeData {
+function subtypeData(SemType s, UniformTypeCode code) returns SubtypeData {
     int c = code;
     if (s.bits & (1 << c)) != 0 {
         return true;
@@ -141,33 +145,33 @@ function subtypeData(SemType s, BasicTypeCode code) returns SubtypeData {
 }
 
 public final SemType NEVER = new SemType(0);
-public final SemType NIL = new SemType(1 << BT_NIL);
-public final SemType BOOLEAN = new SemType(1 << BT_BOOLEAN);
-public final SemType INT = new SemType(1 << BT_INT);
-public final SemType FLOAT = new SemType(1 << BT_FLOAT);
-public final SemType DECIMAL = new SemType(1 << BT_DECIMAL);
-public final SemType STRING = new SemType(1 << BT_STRING);
-public final SemType ERROR = new SemType(1 << BT_ERROR);
+public final SemType NIL = new SemType(1 << UT_NIL);
+public final SemType BOOLEAN = new SemType(1 << UT_BOOLEAN);
+public final SemType INT = new SemType(1 << UT_INT);
+public final SemType FLOAT = new SemType(1 << UT_FLOAT);
+public final SemType DECIMAL = new SemType(1 << UT_DECIMAL);
+public final SemType STRING = new SemType(1 << UT_STRING);
+public final SemType ERROR = new SemType(1 << UT_ERROR);
 
 // matches all functions
-public final SemType FUNCTION = new SemType(1 << BT_FUNCTION);
-public final SemType TYPEDESC = new SemType(1 << BT_TYPEDESC);
-public final SemType HANDLE = new SemType(1 << BT_HANDLE);
+public final SemType FUNCTION = new SemType(1 << UT_FUNCTION);
+public final SemType TYPEDESC = new SemType(1 << UT_TYPEDESC);
+public final SemType HANDLE = new SemType(1 << UT_HANDLE);
 
-public final SemType XML = new SemType((1 << BT_XML_RO) | (1 << BT_XML_RW));
-public final SemType STREAM = new SemType(1 << BT_STREAM);
-public final SemType FUTURE = new SemType(1 << BT_FUTURE);
+public final SemType XML = new SemType((1 << UT_XML_RO) | (1 << UT_XML_RW));
+public final SemType STREAM = new SemType(1 << UT_STREAM);
+public final SemType FUTURE = new SemType(1 << UT_FUTURE);
 
 // this is SubtypeData|error
-public final SemType TOP = new SemType(BT_MASK);
-public final SemType ANY = new SemType(BT_MASK & ~(1 << BT_ERROR));
-public final SemType READONLY = new SemType(BT_READONLY);
+public final SemType TOP = new SemType(UT_MASK);
+public final SemType ANY = new SemType(UT_MASK & ~(1 << UT_ERROR));
+public final SemType READONLY = new SemType(UT_READONLY);
 public final SemType BYTE = intWidthUnsigned(8);
 
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
 public type SubtypePairIterator object {
-    public function next() returns record {| [BasicTypeCode, SubtypeData?, SubtypeData?] value; |}?;
+    public function next() returns record {| [UniformTypeCode, SubtypeData?, SubtypeData?] value; |}?;
 };
 
 class SubtypePairIteratorImpl {
@@ -175,11 +179,11 @@ class SubtypePairIteratorImpl {
     *SubtypePairIterator;
     private int i1;
     private int i2;
-    private final BasicTypeSubtype[] t1;
-    private final BasicTypeSubtype[] t2;
+    private final UniformSubtype[] t1;
+    private final UniformSubtype[] t2;
     private final int bits;
 
-    function init(BasicTypeSubtype[] t1, BasicTypeSubtype[] t2, int bits) {
+    function init(UniformSubtype[] t1, UniformSubtype[] t2, int bits) {
         self.i1 = 0;
         self.i2 = 0;
         self.t1 = t1;
@@ -191,7 +195,7 @@ class SubtypePairIteratorImpl {
         return self;
     }
 
-    public function next() returns record {| [BasicTypeCode, SubtypeData?, SubtypeData?] value; |}? {
+    public function next() returns record {| [UniformTypeCode, SubtypeData?, SubtypeData?] value; |}? {
         while true {
             if self.i1 >= self.t1.length() {
                 if self.i2 >= self.t2.length() {
@@ -238,16 +242,16 @@ class SubtypePairIteratorImpl {
         return ();
     } 
 
-    private function include(BasicTypeCode code) returns boolean {
+    private function include(UniformTypeCode code) returns boolean {
         int c = code;
         return (self.bits & (1 << c)) != 0;
     }
 
-    private function get1() returns BasicTypeSubtype {
+    private function get1() returns UniformSubtype {
         return self.t1[self.i1];
     }
 
-    private function get2() returns BasicTypeSubtype {
+    private function get2() returns UniformSubtype {
         return self.t2[self.i2];
     }
 }
@@ -256,14 +260,14 @@ class SubtypePairIteratorImpl {
 public function union(SemType t1, SemType t2) returns SemType {
     int bits1 = t1.bits;
     int bits2 = t2.bits;
-    int all = (t1.bits | t2.bits) & BT_MASK;
-    int some = ((t1.bits | t2.bits) >> BT_COUNT) & BT_MASK;
+    int all = (t1.bits | t2.bits) & UT_MASK;
+    int some = ((t1.bits | t2.bits) >> UT_COUNT) & UT_MASK;
     some &= ~all;
     if some == 0 {
         return new SemType(all);
     }
-    int bits = all | (some << BT_COUNT);
-    BasicTypeSubtype[] subtypes = [];
+    int bits = all | (some << UT_COUNT);
+    UniformSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
         SubtypeData data;
         if data1 is () {
@@ -278,7 +282,7 @@ public function union(SemType t1, SemType t2) returns SemType {
         }
         if data == true {
             int c = code;
-            bits &= ~(1 << (c + BT_COUNT));
+            bits &= ~(1 << (c + UT_COUNT));
             bits |= 1 << c;
         }
         else {
@@ -291,28 +295,28 @@ public function union(SemType t1, SemType t2) returns SemType {
 public function intersect(SemType t1, SemType t2) returns SemType {
     int bits1 = t1.bits;
     int bits2 = t2.bits;
-    if bits1 == BT_MASK {
+    if bits1 == UT_MASK {
         return t2;
     }
     if bits1 == 0 {
         return t1;
     }
-    if bits2 == BT_MASK {
+    if bits2 == UT_MASK {
         return t1;
     }
     if bits2 == 0 {
         return t2;
     }
-    int all = (t1.bits & t2.bits) & BT_MASK;
+    int all = (t1.bits & t2.bits) & UT_MASK;
 
     // some(t1 & t2) = some(t1) & some(t2)
-    int some = ((t1.bits >> BT_COUNT) | t1.bits) & ((t2.bits >> BT_COUNT) | t2.bits) & BT_MASK;
+    int some = ((t1.bits >> UT_COUNT) | t1.bits) & ((t2.bits >> UT_COUNT) | t2.bits) & UT_MASK;
     some &= ~all;
     if some == 0 {
         return new SemType(all);
     }
-    int bits = all | (some << BT_COUNT);
-    BasicTypeSubtype[] subtypes = [];
+    int bits = all | (some << UT_COUNT);
+    UniformSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
         SubtypeData data;
         if data1 is () {
@@ -327,7 +331,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
         }
         if data == false {
             int c = code;
-            bits &= ~(1 << (c + BT_COUNT));
+            bits &= ~(1 << (c + UT_COUNT));
         }
         else {
             subtypes.push([code, data]);
@@ -341,16 +345,16 @@ public function diff(SemType t1, SemType t2) returns SemType {
     int bits2 = t2.bits;
 
     // all(t1 \ t2) = all(t1) & not(all(t2)|some(t2))
-    int all = bits1 & ~(bits2 | (bits2 >> BT_COUNT)) & BT_MASK;
+    int all = bits1 & ~(bits2 | (bits2 >> UT_COUNT)) & UT_MASK;
     // some(t1 \ t2) = some(t1) & not(all(t2))
-    int some = (((t1.bits >> BT_COUNT) | t1.bits) & ~t2.bits) & BT_MASK;
+    int some = (((t1.bits >> UT_COUNT) | t1.bits) & ~t2.bits) & UT_MASK;
     some &= ~all;
 
     if some == 0 {
         return new SemType(all);
     }
-    int bits = all | (some << BT_COUNT); 
-    BasicTypeSubtype[] subtypes = [];
+    int bits = all | (some << UT_COUNT); 
+    UniformSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
         SubtypeData data;
         if data1 is () {
@@ -366,7 +370,7 @@ public function diff(SemType t1, SemType t2) returns SemType {
         }
          if data == false {
             int c = code;
-            bits &= ~(1 << (c + BT_COUNT));
+            bits &= ~(1 << (c + UT_COUNT));
         }
         else {
             subtypes.push([code, data]);
@@ -380,7 +384,7 @@ public function complement(SemType t) returns SemType {
 }
 
 public function isNever(SemType t) returns boolean {
-    // neither all nor part of any basic type
+    // neither all nor part of any uniform type
     return t.bits == 0;
 }
 
@@ -388,8 +392,8 @@ public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
     if isNever(t) {    
         return true;
     }
-    if (t.bits & BT_MASK) != 0 {
-        // includes all of one or more basic types
+    if (t.bits & UT_MASK) != 0 {
+        // includes all of one or more uniform types
         return false;
     }
     foreach var st in t.subtypes {
@@ -407,7 +411,7 @@ public function isSubtype(TypeCheckContext tc, SemType t1, SemType t2) returns b
 }
 
 public function isReadOnly(SemType t) returns boolean {
-    return (t.bits & (BT_RW_MASK | (BT_RW_MASK << BT_COUNT))) == 0;
+    return (t.bits & (UT_RW_MASK | (UT_RW_MASK << UT_COUNT))) == 0;
 }
 
 public function typeCheckContext(Env env) returns TypeCheckContext {
@@ -421,14 +425,14 @@ public function typeCheckContext(Env env) returns TypeCheckContext {
 public function createJson(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType simple = new((1 << BT_NIL) | (1 << BT_BOOLEAN) | (1 << BT_INT)| (1 << BT_FLOAT)| (1 << BT_DECIMAL)| (1 << BT_STRING));
+    SemType simple = new((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
     SemType j = union(simple, union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, [], j);
     _ = mapDef.define(env, [], j);
     return j;
 }
 
-final readonly & BasicTypeOps[] ops;
+final readonly & UniformTypeOps[] ops;
 
 function init() {
     ops = [

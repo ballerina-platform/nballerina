@@ -16,7 +16,7 @@ public class FunctionDefinition {
         FunctionSubtype dummy = [NEVER, NEVER];
         self.index = env.functionDefs.length();
         env.functionDefs.push(dummy);
-        self.semType = new SemType(1 << (BT_FUNCTION + BT_COUNT), [[BT_FUNCTION, bdd:atom(self.index)]]);
+        self.semType = new SemType(1 << (UT_FUNCTION + UT_COUNT), [[UT_FUNCTION, bdd:atom(self.index)]]);
     }
 
     public function getSemType(Env env) returns SemType {
@@ -90,7 +90,7 @@ function functionTheta(TypeCheckContext tc, SemType t0, SemType t1, Conjunction?
     }
 }
 
- BasicTypeOps functionOps =  {  
+ UniformTypeOps functionOps =  {  
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,

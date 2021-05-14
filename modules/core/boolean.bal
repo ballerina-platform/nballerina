@@ -6,7 +6,7 @@ type BooleanSubtype readonly & record {|
 
 public function booleanConst(boolean value) returns SemType {
     BooleanSubtype t = { value };
-    return new SemType(1 << (BT_BOOLEAN + BT_COUNT), [[BT_BOOLEAN, t]]);
+    return new SemType(1 << (UT_BOOLEAN + UT_COUNT), [[UT_BOOLEAN, t]]);
 }
 
 function booleanSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
@@ -33,7 +33,7 @@ function booleanSubtypeComplement(SubtypeData d) returns SubtypeData {
     return t;
 }
 
-final BasicTypeOps booleanOps = {
+final UniformTypeOps booleanOps = {
     union: booleanSubtypeUnion,
     intersect: booleanSubtypeIntersect,
     diff: booleanSubtypeDiff,

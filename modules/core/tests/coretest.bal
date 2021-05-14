@@ -187,7 +187,7 @@ function stringTest() {
 
 @test:Config{}
 function roTest() {
-    SemType t1 = new SemType(1 << BT_LIST_RO);
+    SemType t1 = new SemType(1 << UT_LIST_RO);
     Env env = new;
     ListDefinition ld = new;
     SemType t2 = ld.define(env, [], TOP);

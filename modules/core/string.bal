@@ -7,7 +7,7 @@ type StringSubtype readonly & record {|
 
 public function stringConst(string value) returns SemType {
     StringSubtype st = { allowed: true, values: [value] };
-    return new SemType(1 << (BT_STRING + BT_COUNT), [[BT_STRING, st]]);
+    return new SemType(1 << (UT_STRING + UT_COUNT), [[UT_STRING, st]]);
 }
 
 function stringSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
@@ -170,7 +170,7 @@ function createStringSubtype(boolean allowed, string[] values) returns SubtypeDa
     return res;
 }
 
-final BasicTypeOps stringOps = {
+final UniformTypeOps stringOps = {
     union: stringSubtypeUnion,
     intersect: stringSubtypeIntersect,
     diff: stringSubtypeDiff,

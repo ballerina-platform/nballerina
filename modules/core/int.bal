@@ -12,7 +12,7 @@ type Range readonly & record {|
 
 public function intConst(int value) returns SemType {
     IntSubtype t = [{ min: value, max: value }];
-    return new SemType(1 << (BT_INT + BT_COUNT), [[BT_INT, t]]);
+    return new SemType(1 << (UT_INT + UT_COUNT), [[UT_INT, t]]);
 }
 
 function validIntWidth(boolean signed, int bits) returns error? {
@@ -40,12 +40,12 @@ public function intWidthSigned(int bits) returns SemType {
         return INT;
     }
     IntSubtype t = [{ min: -(1 << (bits - 1)), max: (1 << (bits - 1)) - 1 }];
-    return new SemType(1 << (BT_INT + BT_COUNT), [[BT_INT, t]]);
+    return new SemType(1 << (UT_INT + UT_COUNT), [[UT_INT, t]]);
 }
 public function intWidthUnsigned(int bits) returns SemType {
     checkpanic validIntWidth(false, bits);
     IntSubtype t = [{ min: 0, max: (1 << bits) - 1 }];
-    return new SemType(1 << (BT_INT + BT_COUNT), [[BT_INT, t]]);
+    return new SemType(1 << (UT_INT + UT_COUNT), [[UT_INT, t]]);
 }
 
 function intSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
@@ -223,7 +223,7 @@ function rangeListComplement(Range[] v) returns Range[] {
     return result;
 }
 
-final BasicTypeOps intOps = {
+final UniformTypeOps intOps = {
     union: intSubtypeUnion,
     intersect: intSubtypeIntersect,
     diff: intSubtypeDiff,

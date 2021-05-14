@@ -8,7 +8,7 @@ We model functions as a having a single argument of tuple type and returning a s
 
 ### Readonly
 
-We handle readonly by treating each selectively immutable basic type as if it were two basic types: one containing values that are readonly, and one containing values that are mutable.
+We handle readonly by splitting each selectively immutable basic type into two *uniform types*: one containing values that are readonly, and one containing values that are mutable. For other basic types there is a single uniform type.
 
 ### Rest type for tuples
 

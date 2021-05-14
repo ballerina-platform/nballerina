@@ -67,8 +67,8 @@ public class ListDefinition {
         else {
             rwBdd = bdd:atom(self.rw);
          }
-        SemType s = new SemType((1 << (BT_LIST_RO + BT_COUNT)) | (1 << (BT_LIST_RW + BT_COUNT)),
-                                [[BT_LIST_RO, roBdd], [BT_LIST_RW, rwBdd]]);
+        SemType s = new SemType((1 << (UT_LIST_RO + UT_COUNT)) | (1 << (UT_LIST_RW + UT_COUNT)),
+                                [[UT_LIST_RO, roBdd], [UT_LIST_RW, rwBdd]]);
         self.semType = s;
         return s;
     }       
@@ -240,7 +240,7 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Con
     }
 }
 
-final BasicTypeOps listRoOps = {
+final UniformTypeOps listRoOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
@@ -248,7 +248,7 @@ final BasicTypeOps listRoOps = {
     isEmpty: listRoSubtypeIsEmpty
 };
 
-final BasicTypeOps listRwOps = {
+final UniformTypeOps listRwOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
