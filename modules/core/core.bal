@@ -83,7 +83,7 @@ public type TypeCheckContext record {|
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData StringSubtype|IntSubtype|BooleanSubtype|bdd:Bdd;
 
-type UniformSubtype readonly & [UniformTypeCode, SubtypeData];
+type UniformSubtype [UniformTypeCode, SubtypeData];
 
 type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
 type UnaryOp function(SubtypeData t) returns SubtypeData;
@@ -111,35 +111,96 @@ type UniformTypeOps readonly & record {|
 
 final readonly & (UniformSubtype[]) EMPTY_SUBTYPES = [];
 
+public type UniformTypeBitSet int:Unsigned32;
+
 public readonly class SemType {
     // For a uniform type with code c,
-    // bits & (1 << c) is non-zero iff this type contains all of the uniform type
-    // bits & (1 << (c + UT_COUNT)) is non-zero iff this type contains some but not all of the uniform type
-    int bits;
-    UniformSubtype[] subtypes;
-    function init(int bits,  UniformSubtype[] subtypes = EMPTY_SUBTYPES) {
-        self.bits = bits;
-        self.subtypes = subtypes.cloneReadOnly();
+    // all & (1 << c) is non-zero iff this type contains all of the uniform type
+    // some & (1 << c) is non-zero iff this type contains some but not all of the uniform type
+    UniformTypeBitSet all;
+    UniformTypeBitSet some;
+    // There is one member of subtypes for each bit set in some.
+    // Ordered in increasing order of UniformTypeCode
+    private SubtypeData[] subtypeDataList;
+    // subtypeList must be ordered
+    function init(UniformTypeBitSet all, UniformSubtype[] subtypeList = []) {
+        self.all = all;
+        int some = 0;
+        SubtypeData[] dataList = [];
+        foreach var [code, data] in subtypeList {
+            dataList.push(data);
+            int c = code;
+            some |= 1 << c;
+        }
+        self.subtypeDataList = dataList.cloneReadOnly();
+        self.some = <UniformTypeBitSet>some;
     }
-    public function includesAll(UniformTypeCode code) returns boolean {
-        int c = code; // work around bug in slalpha4
-        return (self.bits & (1 << c)) != 0;
+    
+    function unpack() returns UniformSubtype[] {
+        int some = self.some;
+        UniformSubtype[] subtypeList = [];
+        foreach var data in self.subtypeDataList {
+            var code = <UniformTypeCode>numberOfTrailingZeros(some);
+            subtypeList.push([code, data]);
+            int c = code;
+            some ^= (1 << c);
+        }
+        return subtypeList;
     }
-    public function includesNone(UniformTypeCode code) returns boolean {
-        int c = code; // work around bug in slalpha4
-        return (self.bits & (UT_SOME << c)) == 0;
+
+    function getSubtypeData(UniformTypeCode code) returns SubtypeData {
+        int c = code;
+        c = 1 << c;
+        if (self.all & c) != 0 {
+            return true;
+        }
+        if (self.some & c) == 0 {
+            return false;
+        }
+        int loBits = self.some & (c - 1);
+        return self.subtypeDataList[loBits == 0 ? 0 : bitCount(loBits)];
     }
+}
+
+// Count number of bits set in bits.
+// This is the Brian Kernighan algorithm.
+// There's usually a hardware instruction for this
+// typically called PopCpount
+// This is __builtin_popcount in GCC and clang
+function bitCount(int bits) returns int {
+    int n = 0;
+    int v = bits;
+    while v != 0 {
+        v &= v - 1;
+        n += 1;
+    }
+    return n;
+}
+
+
+// This should be a function in lang.int
+// Modern CPUs have a hardware instruction for this
+// This is __builtin_ctz in GCC and clang
+function numberOfTrailingZeros(int bits) returns int {
+    if bits == 0 {
+        return 64;
+    }
+    int flag = 1;
+    int n = 0;
+    while (bits & flag) == 0 {
+        n += 1;
+        flag <<= 1;
+    }
+    return n;
+}
+
+function uniformTypeSingleton(UniformTypeCode code) returns UniformTypeBitSet {
+    int c = code;
+    return <UniformTypeBitSet>(1 << c);
 }
 
 function uniformType(UniformTypeCode code) returns SemType {
-    int c = code;
-    return new SemType(1 << c);
-}
-
-
-function uniformSubtype(UniformTypeCode code, SubtypeData data) returns SemType {
-    int c = code;
-    return new SemType(1 << (c + UT_COUNT), [[code, data]]);
+    return new SemType(uniformTypeSingleton(code));
 }
 
 // Union of complete uniform types
@@ -147,22 +208,16 @@ function uniformSubtype(UniformTypeCode code, SubtypeData data) returns SemType 
 // I would like to make the arg int:Unsigned32
 // but are language/impl bugs that make this not work well
 function uniformTypeUnion(int bits) returns SemType {
-    return new SemType(<int:Unsigned32>bits);
+    return new SemType(<UniformTypeBitSet>bits);
+}
+
+function uniformSubtype(UniformTypeCode code, SubtypeData data) returns SemType {
+    return new SemType(0, [[code,data]]);
 }
 
 function subtypeData(SemType s, UniformTypeCode code) returns SubtypeData {
-    int c = code;
-    if (s.bits & (1 << c)) != 0 {
-        return true;
-    }
-    foreach var cd in s.subtypes {
-        if cd[0] == code {
-            return cd[1];
-        }
-    }
-    return false;
+    return s.getSubtypeData(code);
 }
-
 
 public final SemType NEVER = uniformTypeUnion(0);
 public final SemType NIL = uniformType(UT_NIL);
@@ -201,13 +256,13 @@ class SubtypePairIteratorImpl {
     private int i2;
     private final UniformSubtype[] t1;
     private final UniformSubtype[] t2;
-    private final int bits;
+    private final UniformTypeBitSet bits;
 
-    function init(UniformSubtype[] t1, UniformSubtype[] t2, int bits) {
+    function init(SemType t1, SemType t2, UniformTypeBitSet bits) {
         self.i1 = 0;
         self.i2 = 0;
-        self.t1 = t1;
-        self.t2 = t2;
+        self.t1 = t1.unpack();
+        self.t2 = t2.unpack();
         self.bits = bits;
     }
 
@@ -278,17 +333,15 @@ class SubtypePairIteratorImpl {
 
 
 public function union(SemType t1, SemType t2) returns SemType {
-    int bits1 = t1.bits;
-    int bits2 = t2.bits;
-    int all = (t1.bits | t2.bits) & UT_MASK;
-    int some = ((t1.bits | t2.bits) >> UT_COUNT) & UT_MASK;
-    some &= ~all;
+    UniformTypeBitSet all1 = t1.all;
+    UniformTypeBitSet all2 = t2.all;
+    UniformTypeBitSet all = all1 | all2;
+    UniformTypeBitSet some = (t1.some | t2.some) & ~<int>all;
     if some == 0 {
         return uniformTypeUnion(all);
     }
-    int bits = all | (some << UT_COUNT);
     UniformSubtype[] subtypes = [];
-    foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
+    foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
         if data1 is () {
             data = <SubtypeData>data2; // if they are both null, something's gone wrong
@@ -302,42 +355,43 @@ public function union(SemType t1, SemType t2) returns SemType {
         }
         if data == true {
             int c = code;
-            bits &= ~(1 << (c + UT_COUNT));
-            bits |= 1 << c;
+            all |= <UniformTypeBitSet>(1 << c);
         }
         else {
             subtypes.push([code, data]);
         }
     }
-    return new SemType(bits, subtypes.cloneReadOnly());
+    return new SemType(all, subtypes);
 }
 
 public function intersect(SemType t1, SemType t2) returns SemType {
-    int bits1 = t1.bits;
-    int bits2 = t2.bits;
-    if bits1 == UT_MASK {
+    UniformTypeBitSet all1 = t1.all;
+    if all1 == UT_MASK {
         return t2;
     }
-    if bits1 == 0 {
+    UniformTypeBitSet all2 = t2.all;
+    if all2 == UT_MASK {
         return t1;
     }
-    if bits2 == UT_MASK {
+    UniformTypeBitSet all = all1 & all2;
+    
+    if isNever(t1) {
         return t1;
     }
-    if bits2 == 0 {
+   
+    if isNever(t2) {
         return t2;
     }
-    int all = (t1.bits & t2.bits) & UT_MASK;
 
     // some(t1 & t2) = some(t1) & some(t2)
-    int some = ((t1.bits >> UT_COUNT) | t1.bits) & ((t2.bits >> UT_COUNT) | t2.bits) & UT_MASK;
-    some &= ~all;
+    UniformTypeBitSet some = (t1.some | all1) & (t2.some | all2);
+
+    some &= ~<int>all;
     if some == 0 {
         return uniformTypeUnion(all);
     }
-    int bits = all | (some << UT_COUNT);
     UniformSubtype[] subtypes = [];
-    foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
+    foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
         if data1 is () {
             data = <SubtypeData>data2;
@@ -349,33 +403,28 @@ public function intersect(SemType t1, SemType t2) returns SemType {
             var intersect = ops[code].intersect;
             data = intersect(data1, data2);
         }
-        if data == false {
-            int c = code;
-            bits &= ~(1 << (c + UT_COUNT));
-        }
-        else {
+        if data != false {
             subtypes.push([code, data]);
         }
     }
-    return new SemType(bits, subtypes.cloneReadOnly());    
+    return new SemType(all, subtypes);    
 }
 
 public function diff(SemType t1, SemType t2) returns SemType {
-    int bits1 = t1.bits;
-    int bits2 = t2.bits;
+    UniformTypeBitSet all1 = t1.all;
+    UniformTypeBitSet all2 = t2.all;
 
     // all(t1 \ t2) = all(t1) & not(all(t2)|some(t2))
-    int all = bits1 & ~(bits2 | (bits2 >> UT_COUNT)) & UT_MASK;
+    UniformTypeBitSet all = all1 & ~<int>(all2 | t2.some);
     // some(t1 \ t2) = some(t1) & not(all(t2))
-    int some = (((t1.bits >> UT_COUNT) | t1.bits) & ~t2.bits) & UT_MASK;
-    some &= ~all;
+    UniformTypeBitSet some = (all1 | t1.some) & ~<int>all2;
+    some &= ~<int>all;
 
     if some == 0 {
         return uniformTypeUnion(all);
     }
-    int bits = all | (some << UT_COUNT); 
     UniformSubtype[] subtypes = [];
-    foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1.subtypes, t2.subtypes, some) {
+    foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
         if data1 is () {
             var complement = ops[code].complement;
@@ -388,15 +437,11 @@ public function diff(SemType t1, SemType t2) returns SemType {
             var diff = ops[code].diff;
             data = diff(data1, data2);
         }
-         if data == false {
-            int c = code;
-            bits &= ~(1 << (c + UT_COUNT));
-        }
-        else {
+         if data != false {
             subtypes.push([code, data]);
         }
     }
-    return new SemType(bits, subtypes.cloneReadOnly());        
+    return new SemType(all, subtypes);        
 }
 
 public function complement(SemType t) returns SemType {
@@ -405,18 +450,18 @@ public function complement(SemType t) returns SemType {
 
 public function isNever(SemType t) returns boolean {
     // neither all nor part of any uniform type
-    return t.bits == 0;
+    return t.all == 0 && t.some == 0;
 }
 
 public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
     if isNever(t) {    
         return true;
     }
-    if (t.bits & UT_MASK) != 0 {
+    if t.all != 0 {
         // includes all of one or more uniform types
         return false;
     }
-    foreach var st in t.subtypes {
+    foreach var st in t.unpack() {
         var [code, data] = st;
         var isEmpty = ops[code].isEmpty;
         if !isEmpty(tc, data) {
@@ -431,7 +476,7 @@ public function isSubtype(TypeCheckContext tc, SemType t1, SemType t2) returns b
 }
 
 public function isReadOnly(SemType t) returns boolean {
-    return (t.bits & (UT_RW_MASK | (UT_RW_MASK << UT_COUNT))) == 0;
+    return ((t.all | t.some) & UT_RW_MASK) == 0;
 }
 
 public function typeCheckContext(Env env) returns TypeCheckContext {
@@ -445,7 +490,7 @@ public function typeCheckContext(Env env) returns TypeCheckContext {
 public function createJson(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType simple = new((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
+    SemType simple = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
     SemType j = union(simple, union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, [], j);
     _ = mapDef.define(env, [], j);

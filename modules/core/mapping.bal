@@ -74,8 +74,7 @@ public class MappingDefinition {
         else {
             rwBdd = bdd:atom(self.rw);
         }
-        SemType s = new SemType((1 << (UT_MAPPING_RO + UT_COUNT)) | (1 << (UT_MAPPING_RW + UT_COUNT)),
-                                [[UT_MAPPING_RO, roBdd], [UT_MAPPING_RW, rwBdd]]);
+        SemType s = new SemType(0, [[UT_MAPPING_RO, roBdd], [UT_MAPPING_RW, rwBdd]]);
         self.semType = s; 
         return s;
     }       

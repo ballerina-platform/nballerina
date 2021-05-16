@@ -66,9 +66,8 @@ public class ListDefinition {
         }
         else {
             rwBdd = bdd:atom(self.rw);
-         }
-        SemType s = new SemType((1 << (UT_LIST_RO + UT_COUNT)) | (1 << (UT_LIST_RW + UT_COUNT)),
-                                [[UT_LIST_RO, roBdd], [UT_LIST_RW, rwBdd]]);
+        }
+        SemType s = new SemType(0, [[UT_LIST_RO, roBdd], [UT_LIST_RW, rwBdd]]);
         self.semType = s;
         return s;
     }       
