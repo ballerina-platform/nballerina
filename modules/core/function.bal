@@ -16,7 +16,7 @@ public class FunctionDefinition {
         FunctionSubtype dummy = [NEVER, NEVER];
         self.index = env.functionDefs.length();
         env.functionDefs.push(dummy);
-        self.semType = new SemType(1 << (UT_FUNCTION + UT_COUNT), [[UT_FUNCTION, bdd:atom(self.index)]]);
+        self.semType = uniformSubtype(UT_FUNCTION, bdd:atom(self.index));
     }
 
     public function getSemType(Env env) returns SemType {

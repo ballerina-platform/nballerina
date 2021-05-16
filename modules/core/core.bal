@@ -131,6 +131,25 @@ public readonly class SemType {
     }
 }
 
+function uniformType(UniformTypeCode code) returns SemType {
+    int c = code;
+    return new SemType(1 << c);
+}
+
+
+function uniformSubtype(UniformTypeCode code, SubtypeData data) returns SemType {
+    int c = code;
+    return new SemType(1 << (c + UT_COUNT), [[code, data]]);
+}
+
+// Union of complete uniform types
+// bits is bit vecor indexed by UniformTypeCode
+// I would like to make the arg int:Unsigned32
+// but are language/impl bugs that make this not work well
+function uniformTypeUnion(int bits) returns SemType {
+    return new SemType(<int:Unsigned32>bits);
+}
+
 function subtypeData(SemType s, UniformTypeCode code) returns SubtypeData {
     int c = code;
     if (s.bits & (1 << c)) != 0 {
@@ -144,28 +163,29 @@ function subtypeData(SemType s, UniformTypeCode code) returns SubtypeData {
     return false;
 }
 
-public final SemType NEVER = new SemType(0);
-public final SemType NIL = new SemType(1 << UT_NIL);
-public final SemType BOOLEAN = new SemType(1 << UT_BOOLEAN);
-public final SemType INT = new SemType(1 << UT_INT);
-public final SemType FLOAT = new SemType(1 << UT_FLOAT);
-public final SemType DECIMAL = new SemType(1 << UT_DECIMAL);
-public final SemType STRING = new SemType(1 << UT_STRING);
-public final SemType ERROR = new SemType(1 << UT_ERROR);
+
+public final SemType NEVER = uniformTypeUnion(0);
+public final SemType NIL = uniformType(UT_NIL);
+public final SemType BOOLEAN = uniformType(UT_BOOLEAN);
+public final SemType INT = uniformType(UT_INT);
+public final SemType FLOAT = uniformType(UT_FLOAT);
+public final SemType DECIMAL = uniformType(UT_DECIMAL);
+public final SemType STRING = uniformType(UT_STRING);
+public final SemType ERROR = uniformType(UT_ERROR);
 
 // matches all functions
-public final SemType FUNCTION = new SemType(1 << UT_FUNCTION);
-public final SemType TYPEDESC = new SemType(1 << UT_TYPEDESC);
-public final SemType HANDLE = new SemType(1 << UT_HANDLE);
+public final SemType FUNCTION = uniformType(UT_FUNCTION);
+public final SemType TYPEDESC = uniformType(UT_TYPEDESC);
+public final SemType HANDLE = uniformType(UT_HANDLE);
 
-public final SemType XML = new SemType((1 << UT_XML_RO) | (1 << UT_XML_RW));
-public final SemType STREAM = new SemType(1 << UT_STREAM);
-public final SemType FUTURE = new SemType(1 << UT_FUTURE);
+public final SemType XML = uniformTypeUnion((1 << UT_XML_RO) | (1 << UT_XML_RW));
+public final SemType STREAM = uniformType(UT_STREAM);
+public final SemType FUTURE = uniformType(UT_FUTURE);
 
 // this is SubtypeData|error
-public final SemType TOP = new SemType(UT_MASK);
-public final SemType ANY = new SemType(UT_MASK & ~(1 << UT_ERROR));
-public final SemType READONLY = new SemType(UT_READONLY);
+public final SemType TOP = uniformTypeUnion(UT_MASK);
+public final SemType ANY = uniformTypeUnion(UT_MASK & ~(1 << UT_ERROR));
+public final SemType READONLY = uniformTypeUnion(UT_READONLY);
 public final SemType BYTE = intWidthUnsigned(8);
 
 // Need this type to workaround slalpha4 bug.
@@ -264,7 +284,7 @@ public function union(SemType t1, SemType t2) returns SemType {
     int some = ((t1.bits | t2.bits) >> UT_COUNT) & UT_MASK;
     some &= ~all;
     if some == 0 {
-        return new SemType(all);
+        return uniformTypeUnion(all);
     }
     int bits = all | (some << UT_COUNT);
     UniformSubtype[] subtypes = [];
@@ -313,7 +333,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     int some = ((t1.bits >> UT_COUNT) | t1.bits) & ((t2.bits >> UT_COUNT) | t2.bits) & UT_MASK;
     some &= ~all;
     if some == 0 {
-        return new SemType(all);
+        return uniformTypeUnion(all);
     }
     int bits = all | (some << UT_COUNT);
     UniformSubtype[] subtypes = [];
@@ -351,7 +371,7 @@ public function diff(SemType t1, SemType t2) returns SemType {
     some &= ~all;
 
     if some == 0 {
-        return new SemType(all);
+        return uniformTypeUnion(all);
     }
     int bits = all | (some << UT_COUNT); 
     UniformSubtype[] subtypes = [];

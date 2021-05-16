@@ -6,7 +6,7 @@ type BooleanSubtype readonly & record {|
 
 public function booleanConst(boolean value) returns SemType {
     BooleanSubtype t = { value };
-    return new SemType(1 << (UT_BOOLEAN + UT_COUNT), [[UT_BOOLEAN, t]]);
+    return uniformSubtype(UT_BOOLEAN, t);
 }
 
 function booleanSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {

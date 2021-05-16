@@ -10,13 +10,13 @@ public function errorDetail(SemType detail) returns SemType {
         // XXX This should be reported as an error
         return NEVER;
     }
-    return new SemType(1 << (UT_ERROR + UT_COUNT), [[UT_ERROR, sd]]);
+    return uniformSubtype(UT_ERROR, sd);
 }
 
 // distinctId must be >= 0
 public function errorDistinct(int distinctId) returns SemType {
     bdd:Bdd bdd = bdd:atom(-distinctId - 1);
-    return new SemType(1 << (UT_ERROR + UT_COUNT), [[UT_ERROR, bdd]]);
+    return uniformSubtype(UT_ERROR, bdd);
 }
 
 // Similar to mappingSubtypeRoIsEmpty,
