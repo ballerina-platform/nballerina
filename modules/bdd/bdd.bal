@@ -14,16 +14,16 @@
 // every path are in strictle decreasing order (ignoring nodes where
 // the path went throught the middle.
 
-public type Bdd (readonly & Node)|boolean;
+public type Bdd Node|boolean;
 
-public type Node record {|
+public type Node readonly & record {|
     int atom;  // meaning is basic-type dependent
     Bdd left;
     Bdd middle;
     Bdd right;
 |};
 
-public isolated function atom(int atom) returns readonly & Node {
+public isolated function atom(int atom) returns Node {
      return { atom, left: true, middle: false, right: false };
 }
 
