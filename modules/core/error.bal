@@ -3,19 +3,23 @@ import semtype.bdd;
 
 public function errorDetail(SemType detail) returns SemType {
     SubtypeData sd = subtypeData(detail, UT_MAPPING_RO);
-    if sd == true {
-        return ERROR;
+    if sd is boolean {
+        if sd {
+            return ERROR;
+         }
+        else {
+            // XXX This should be reported as an error
+            return NEVER;
+        }
     }
-    if sd == false {
-        // XXX This should be reported as an error
-        return NEVER;
+    else {
+        return uniformSubtype(UT_ERROR, sd);
     }
-    return uniformSubtype(UT_ERROR, sd);
 }
 
 // distinctId must be >= 0
 public function errorDistinct(int distinctId) returns SemType {
-    bdd:Bdd bdd = bdd:atom(-distinctId - 1);
+    bdd:Node bdd = bdd:atom(-distinctId - 1);
     return uniformSubtype(UT_ERROR, bdd);
 }
 
