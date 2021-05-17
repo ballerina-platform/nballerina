@@ -5,7 +5,7 @@ import semtype.bdd;
 
 // Function subtype is [args, ret]
 // Represents args as tuple type
-public type FunctionSubtype readonly & SemType[2];
+public type FunctionAtomicType readonly & SemType[2];
 
 public class FunctionDefinition {
     *Definition;
@@ -13,7 +13,7 @@ public class FunctionDefinition {
     private SemType semType;
    
     public function init(Env env) {
-        FunctionSubtype dummy = [NEVER, NEVER];
+        FunctionAtomicType dummy = [NEVER, NEVER];
         self.index = env.functionDefs.length();
         env.functionDefs.push(dummy);
         self.semType = uniformSubtype(UT_FUNCTION, bdd:atom(self.index));
@@ -24,7 +24,7 @@ public class FunctionDefinition {
     }
 
     public function define(Env env, SemType args, SemType ret) returns SemType {
-        FunctionSubtype t = [args, ret];
+        FunctionAtomicType t = [args, ret];
         env.functionDefs[self.index] = t;
         return self.semType;
     }    

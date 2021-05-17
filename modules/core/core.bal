@@ -55,9 +55,9 @@ public type UniformTypeCode
     |UT_STREAM|UT_FUTURE;
 
 public class Env {
-    final ListSubtype[] listDefs;
-    final MappingSubtype[] mappingDefs;
-    final FunctionSubtype[] functionDefs = [];
+    final ListAtomicType[] listDefs;
+    final MappingAtomicType[] mappingDefs;
+    final FunctionAtomicType[] functionDefs = [];
     public function init() {
         self.mappingDefs = [ MAPPING_SUBTYPE_RO ];
         self.listDefs = [ LIST_SUBTYPE_RO ];
@@ -72,9 +72,9 @@ public type BddMemo record {|
 type BddMemoTable table<BddMemo> key(bdd);
 
 public type TypeCheckContext record {|
-    readonly ListSubtype[] listDefs;
-    readonly MappingSubtype[] mappingDefs;
-    readonly FunctionSubtype[] functionDefs;
+    readonly ListAtomicType[] listDefs;
+    readonly MappingAtomicType[] mappingDefs;
+    readonly FunctionAtomicType[] functionDefs;
     BddMemoTable listMemo = table [];
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];

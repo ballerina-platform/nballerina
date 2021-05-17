@@ -1,12 +1,12 @@
 // Implementation specific to basic type list.
 import semtype.bdd;
 
-public type ListSubtype readonly & record {|
+public type ListAtomicType readonly & record {|
     SemType[] members;
     SemType rest;
 |};
 
-final ListSubtype LIST_SUBTYPE_RO = { members: [], rest: READONLY };
+final ListAtomicType LIST_SUBTYPE_RO = { members: [], rest: READONLY };
 
 public class ListDefinition {
     *Definition;
@@ -30,7 +30,7 @@ public class ListDefinition {
     }
 
     public function define(Env env, SemType[] members, SemType rest) returns SemType {
-        ListSubtype rwType = { members: members.cloneReadOnly(), rest };
+        ListAtomicType rwType = { members: members.cloneReadOnly(), rest };
         if self.rw < 0 {
             self.rw = dummyListDef(env);
         }
@@ -45,7 +45,7 @@ public class ListDefinition {
             }
         }
         else {
-            ListSubtype roType = {
+            ListAtomicType roType = {
                 members: readOnlyTypeList(rwType.members),
                 rest: intersect(rwType.rest, READONLY)
             };
@@ -80,7 +80,7 @@ public function tuple(Env env, SemType... members) returns SemType {
 
 function dummyListDef(Env env) returns int {
     int i = env.listDefs.length();
-    ListSubtype dummy = { members: [], rest: NEVER };
+    ListAtomicType dummy = { members: [], rest: NEVER };
     env.listDefs.push(dummy);
     return i;
 }
@@ -123,7 +123,7 @@ function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? 
     }
     else {
         // combine all the positive tuples using intersection
-        ListSubtype lt = tc.listDefs[pos.atom];
+        ListAtomicType lt = tc.listDefs[pos.atom];
         members = lt.members;
         rest = lt.rest;
         Conjunction? p = pos.next;
@@ -184,7 +184,7 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Con
     }
     else {
         int len = members.length();
-        ListSubtype nt = tc.listDefs[neg.atom];
+        ListAtomicType nt = tc.listDefs[neg.atom];
         int negLen = nt.members.length();
         if len < negLen {
             if isNever(rest) {

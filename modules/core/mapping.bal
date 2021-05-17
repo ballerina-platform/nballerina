@@ -4,15 +4,14 @@ import semtype.bdd;
 
 public type Field [string, SemType];
 
-
-public type MappingSubtype readonly & record {|
+public type MappingAtomicType readonly & record {|
     // sorted
     string[] names;
     SemType[] types;
     SemType rest;
 |};
 
-final MappingSubtype MAPPING_SUBTYPE_RO = { names: [], types: [], rest: READONLY };
+final MappingAtomicType MAPPING_SUBTYPE_RO = { names: [], types: [], rest: READONLY };
 
 public class MappingDefinition {
     *Definition;
@@ -34,7 +33,7 @@ public class MappingDefinition {
 
     public function define(Env env, Field[] fields, SemType rest) returns SemType {
         var [names, types] = splitFields(fields);
-        MappingSubtype rwType = {
+        MappingAtomicType rwType = {
             names: names.cloneReadOnly(),
             types: types.cloneReadOnly(),
             rest
@@ -52,7 +51,7 @@ public class MappingDefinition {
             }
         }
         else {
-            MappingSubtype roType = {
+            MappingAtomicType roType = {
                 names: rwType.names,
                 types: readOnlyTypeList(rwType.types),
                 rest: intersect(rest, READONLY)
@@ -82,7 +81,7 @@ public class MappingDefinition {
 
 function dummyMappingDef(Env env) returns int {
     int i = env.mappingDefs.length();
-    MappingSubtype dummy = { names: [], types: [], rest: NEVER };
+    MappingAtomicType dummy = { names: [], types: [], rest: NEVER };
     env.mappingDefs.push(dummy);
     return i;
 }
@@ -178,7 +177,7 @@ function mappingInhabited(TypeCheckContext tc, TempMappingSubtype pos, Conjuncti
         return true;
     }
     else {
-        MappingSubtype neg = tc.mappingDefs[negList.atom];
+        MappingAtomicType neg = tc.mappingDefs[negList.atom];
 
         MappingPairing pairing;
 
