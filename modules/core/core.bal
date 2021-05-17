@@ -80,8 +80,9 @@ public type TypeCheckContext record {|
     BddMemoTable functionMemo = table [];
 |};
 
+type ProperSubtypeData StringSubtype|IntSubtype|BooleanSubtype|bdd:Node;
 // true means everything and false means nothing (as with Bdd)
-type SubtypeData StringSubtype|IntSubtype|BooleanSubtype|bdd:Bdd;
+type SubtypeData ProperSubtypeData|boolean;
 
 type UniformSubtype [UniformTypeCode, SubtypeData];
 
@@ -113,7 +114,8 @@ final readonly & (UniformSubtype[]) EMPTY_SUBTYPES = [];
 
 public type UniformTypeBitSet int:Unsigned32;
 
-public readonly class SemType {
+public type SemType UniformTypeBitSet|ComplexSemType;
+public readonly class ComplexSemType {
     // For a uniform type with code c,
     // all & (1 << c) is non-zero iff this type contains all of the uniform type
     // some & (1 << c) is non-zero iff this type contains some but not all of the uniform type
@@ -200,7 +202,7 @@ function uniformTypeSingleton(UniformTypeCode code) returns UniformTypeBitSet {
 }
 
 function uniformType(UniformTypeCode code) returns SemType {
-    return new SemType(uniformTypeSingleton(code));
+    return uniformTypeSingleton(code);
 }
 
 // Union of complete uniform types
@@ -208,15 +210,20 @@ function uniformType(UniformTypeCode code) returns SemType {
 // I would like to make the arg int:Unsigned32
 // but are language/impl bugs that make this not work well
 function uniformTypeUnion(int bits) returns SemType {
-    return new SemType(<UniformTypeBitSet>bits);
+    return <UniformTypeBitSet>bits;
 }
 
-function uniformSubtype(UniformTypeCode code, SubtypeData data) returns SemType {
+function uniformSubtype(UniformTypeCode code, ProperSubtypeData data) returns SemType {
     return new SemType(0, [[code,data]]);
 }
 
 function subtypeData(SemType s, UniformTypeCode code) returns SubtypeData {
-    return s.getSubtypeData(code);
+    if s is UniformTypeBitSet {
+        return (s & (1 << <int>code)) != 0;
+    }
+    else {
+        return s.getSubtypeData(code);
+    }
 }
 
 public final SemType NEVER = uniformTypeUnion(0);
@@ -261,8 +268,8 @@ class SubtypePairIteratorImpl {
     function init(SemType t1, SemType t2, UniformTypeBitSet bits) {
         self.i1 = 0;
         self.i2 = 0;
-        self.t1 = t1.unpack();
-        self.t2 = t2.unpack();
+        self.t1 = (t1 is UniformTypeBitSet) ? [] : t1.unpack();
+        self.t2 = (t2 is UniformTypeBitSet) ? [] : t2.unpack();
         self.bits = bits;
     }
 
@@ -333,10 +340,37 @@ class SubtypePairIteratorImpl {
 
 
 public function union(SemType t1, SemType t2) returns SemType {
-    UniformTypeBitSet all1 = t1.all;
-    UniformTypeBitSet all2 = t2.all;
+    UniformTypeBitSet all1;
+    UniformTypeBitSet all2;
+    UniformTypeBitSet some1;
+    UniformTypeBitSet some2;
+
+    if t1 is UniformTypeBitSet {
+        if t2 is UniformTypeBitSet {
+            return t1|t2;
+        }
+        else {
+            all2 = t2.all;
+            some2 = t2.some;
+        }
+        all1 = t1;
+        some1 = 0;
+    }
+    else {
+        all1 = t1.all;
+        some1 = t1.some;
+        if t2 is UniformTypeBitSet {
+            all2 = t2;
+            some2 = 0;
+        }
+        else {
+            all2 = t2.all;
+            some2 = t2.some;
+        }
+    }
+    
     UniformTypeBitSet all = all1 | all2;
-    UniformTypeBitSet some = (t1.some | t2.some) & ~<int>all;
+    UniformTypeBitSet some = (some1 | some2) & ~<int>all;
     if some == 0 {
         return uniformTypeUnion(all);
     }
@@ -361,30 +395,58 @@ public function union(SemType t1, SemType t2) returns SemType {
             subtypes.push([code, data]);
         }
     }
+    if subtypes.length() == 0 {
+        return all;
+    }
     return new SemType(all, subtypes);
 }
 
 public function intersect(SemType t1, SemType t2) returns SemType {
-    UniformTypeBitSet all1 = t1.all;
-    if all1 == UT_MASK {
-        return t2;
+    UniformTypeBitSet all1;
+    UniformTypeBitSet all2;
+    UniformTypeBitSet some1;
+    UniformTypeBitSet some2;
+
+    if t1 is UniformTypeBitSet {
+        if t2 is UniformTypeBitSet {
+            return t1&t2;
+        }
+        else {
+            if t1 == 0 {
+                return t1;
+            }
+            if t1 == UT_MASK {
+                return t2;
+            }
+            all2 = t2.all;
+            some2 = t2.some;
+        }
+        all1 = t1;
+        some1 = 0;
     }
-    UniformTypeBitSet all2 = t2.all;
-    if all2 == UT_MASK {
-        return t1;
-    }
-    UniformTypeBitSet all = all1 & all2;
-    
-    if isNever(t1) {
-        return t1;
+    else {
+        all1 = t1.all;
+        some1 = t1.some;
+        if t2 is UniformTypeBitSet {
+            if t2 == 0 {
+                return t2;
+            }
+            if t2 == UT_MASK {
+                return t1;
+            }
+            all2 = t2;
+            some2 = 0;
+        }
+        else {
+            all2 = t2.all;
+            some2 = t2.some;
+        }
     }
    
-    if isNever(t2) {
-        return t2;
-    }
+    UniformTypeBitSet all = all1 & all2;
 
     // some(t1 & t2) = some(t1) & some(t2)
-    UniformTypeBitSet some = (t1.some | all1) & (t2.some | all2);
+    UniformTypeBitSet some = (some1 | all1) & (some2 | all2);
 
     some &= ~<int>all;
     if some == 0 {
@@ -407,17 +469,52 @@ public function intersect(SemType t1, SemType t2) returns SemType {
             subtypes.push([code, data]);
         }
     }
+    if subtypes.length() == 0 {
+        return all;
+    }
     return new SemType(all, subtypes);    
 }
 
 public function diff(SemType t1, SemType t2) returns SemType {
-    UniformTypeBitSet all1 = t1.all;
-    UniformTypeBitSet all2 = t2.all;
+    UniformTypeBitSet all1;
+    UniformTypeBitSet all2;
+    UniformTypeBitSet some1;
+    UniformTypeBitSet some2;
+
+    if t1 is UniformTypeBitSet {
+        if t2 is UniformTypeBitSet {
+            return t1 & ~<int>t2;
+        }
+        else {
+            if t1 == 0 {
+                return t1;
+            }
+            all2 = t2.all;
+            some2 = t2.some;
+        }
+        all1 = t1;
+        some1 = 0;
+    }
+    else {
+        all1 = t1.all;
+        some1 = t1.some;
+        if t2 is UniformTypeBitSet {
+            if t2 == UT_MASK {
+                return <UniformTypeBitSet>0;
+            }
+            all2 = t2;
+            some2 = 0;
+        }
+        else {
+            all2 = t2.all;
+            some2 = t2.some;
+        }
+    }
 
     // all(t1 \ t2) = all(t1) & not(all(t2)|some(t2))
-    UniformTypeBitSet all = all1 & ~<int>(all2 | t2.some);
+    UniformTypeBitSet all = all1 & ~<int>(all2 | some2);
     // some(t1 \ t2) = some(t1) & not(all(t2))
-    UniformTypeBitSet some = (all1 | t1.some) & ~<int>all2;
+    UniformTypeBitSet some = (all1 | some1) & ~<int>all2;
     some &= ~<int>all;
 
     if some == 0 {
@@ -441,6 +538,9 @@ public function diff(SemType t1, SemType t2) returns SemType {
             subtypes.push([code, data]);
         }
     }
+    if subtypes.length() == 0 {
+        return all;
+    }
     return new SemType(all, subtypes);        
 }
 
@@ -449,26 +549,27 @@ public function complement(SemType t) returns SemType {
 }
 
 public function isNever(SemType t) returns boolean {
-    // neither all nor part of any uniform type
-    return t.all == 0 && t.some == 0;
+    return t is UniformTypeBitSet && t == 0;
 }
 
 public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
-    if isNever(t) {    
-        return true;
+    if t is UniformTypeBitSet {
+        return t == 0;
     }
-    if t.all != 0 {
-        // includes all of one or more uniform types
-        return false;
-    }
-    foreach var st in t.unpack() {
-        var [code, data] = st;
-        var isEmpty = ops[code].isEmpty;
-        if !isEmpty(tc, data) {
+    else {
+        if t.all != 0 {
+            // includes all of one or more uniform types
             return false;
         }
+        foreach var st in t.unpack() {
+            var [code, data] = st;
+            var isEmpty = ops[code].isEmpty;
+            if !isEmpty(tc, data) {
+                return false;
+            }
+        }
+        return true;
     }
-    return true;
 }
     
 public function isSubtype(TypeCheckContext tc, SemType t1, SemType t2) returns boolean { 
@@ -476,7 +577,14 @@ public function isSubtype(TypeCheckContext tc, SemType t1, SemType t2) returns b
 }
 
 public function isReadOnly(SemType t) returns boolean {
-    return ((t.all | t.some) & UT_RW_MASK) == 0;
+    UniformTypeBitSet bits;
+    if t is UniformTypeBitSet {
+        bits = t;
+    }
+    else {
+        bits = t.all | t.some;
+    }
+    return (bits & UT_RW_MASK) == 0;
 }
 
 public function typeCheckContext(Env env) returns TypeCheckContext {
