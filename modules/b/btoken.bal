@@ -223,7 +223,13 @@ class Tokenizer {
     function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns error? {
         if self.current != tok {
             // JBUG should not need to cast here
-            return self.err("expected '" + <string>tok + "'; " + "got " + self.current.toString());
+            string message = ("expected '" + <string>tok + "'");
+            Token? t = self.current;
+            if t is string {
+                // JBUG cast
+                message += "; got '" + <string>t + "'";
+            }
+            return self.err(message);
         }
         check self.advance();
     }
