@@ -13,7 +13,14 @@ type TestCase [Relation, json, json];
 
 type Tests TestCase[];
 
-public function main(string? f) returns error? {
+public type Options record {|
+    boolean bal = false;
+|};
+
+public function main(string? f, *Options opts) returns error? {
+    if opts.bal {
+        return bmain(f);
+    }
     string filename = f is () ? "tests.json" : f;
     json j = check io:fileReadJson(filename);
     TestCase[] tests = check j.fromJsonWithType();
