@@ -6,12 +6,12 @@ type TypeDef record {|
     readonly string name;
     TypeDesc td;
     core:SemType? semType = ();
-    boolean cycle = false;
+    int cycleDepth = -1;
 |};
 
 type TypeDesc LeafTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc;
 
-type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc;
+type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc;
 
 type ListTypeDesc record {|
     TypeDesc[] members;
@@ -31,8 +31,14 @@ type MappingTypeDesc record {|
 |};
 
 type FunctionTypeDesc record {|
+    // XXX need to handle rest type
     TypeDesc[] args;
     TypeDesc ret;
+    core:FunctionDefinition? def = ();
+|};
+
+type ErrorTypeDesc record {|
+    TypeDesc detail;
 |};
 
 type BinaryOp "|" | "&";
@@ -51,7 +57,7 @@ type SingletonTypeDesc  record {|
     (string|int|boolean) value;
 |};
 
-type LeafTypeDesc "any"|"byte"|"boolean"|"decimal"|"float"|"handle"|"int"|"json"
+type LeafTypeDesc "any"|"byte"|"boolean"|"decimal"|"error"|"float"|"handle"|"int"|"json"
                   |"never"|"readonly"|"string"|"typedesc"|"xml"|"()";
 
 function preparse(string str) returns Module|error {
@@ -88,13 +94,16 @@ function parseModule(Tokenizer tok) returns Module|error {
 }
 
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|error {
-    // XXX parse "function"
+    if tok.current == "function" {
+        return parseFunction(tok);
+    }
     return parseUnion(tok);
 }
 
 function parseUnion(Tokenizer tok) returns TypeDesc|error {
     TypeDesc td = check parseIntersection(tok);
     while tok.current == "|" {
+        check tok.advance();
         TypeDesc right = check parseIntersection(tok);
         BinaryTypeDesc bin = { op: "|", left: td, right };
         td = bin;
@@ -105,6 +114,7 @@ function parseUnion(Tokenizer tok) returns TypeDesc|error {
 function parseIntersection(Tokenizer tok) returns TypeDesc|error {
     TypeDesc td = check parsePostfix(tok);
     while tok.current == "&" {
+        check tok.advance();
         TypeDesc right = check parsePostfix(tok);
         BinaryTypeDesc bin = { op: "&", left: td, right };
         td = bin;
@@ -169,11 +179,15 @@ function parsePrimary(Tokenizer tok) returns TypeDesc|error {
         }
         "map" => {
             check tok.advance();
-            check tok.expect("<");
-            TypeDesc td = check parseTypeDesc(tok);
-            check tok.expect(">");
-            return td;
-        }     
+            return <MappingTypeDesc>{ rest: check parseTypeParam(tok), fields: [] };
+        }
+        "error" => {
+            check tok.advance();
+            if tok.current != "<" {
+                return "error";
+            }
+            return <ErrorTypeDesc>{ detail: check parseTypeParam(tok) };
+        }        
         "record" => {
             return parseRecord(tok);         
         }
@@ -201,11 +215,46 @@ function parsePrimary(Tokenizer tok) returns TypeDesc|error {
             check tok.advance();
             return <SingletonTypeDesc>{ value: false };
         }
-        // XXX error
     }
     return parseError(tok);
 }
 
+function parseTypeParam(Tokenizer tok) returns TypeDesc|error {
+    check tok.expect("<");
+    TypeDesc td = check parseTypeDesc(tok);
+    check tok.expect(">");
+    return td;
+}
+
+// current token is "function"
+function parseFunction(Tokenizer tok) returns TypeDesc|error {
+    // skip "function"
+    check tok.advance();
+    check tok.expect("(");
+    TypeDesc[] args = [];
+    while true {
+        if tok.current == ")" {
+            break;
+        }
+        args.push(check parseTypeDesc(tok));
+        if tok.current == "," {
+            check tok.advance();
+        }
+    }
+    // on ")"
+    check tok.advance();
+    TypeDesc ret;
+    if tok.current == "returns" {
+        check tok.advance();
+        ret = check parseTypeDesc(tok);
+    }
+    else {
+        ret = "()";
+    }
+    return <FunctionTypeDesc>{ args, ret };
+}
+
+// current token is []
 function parseTuple(Tokenizer tok) returns ListTypeDesc|error {
     TypeDesc[] members = [];
     TypeDesc rest = "never";
@@ -247,6 +296,7 @@ function parseRecord(Tokenizer tok) returns MappingTypeDesc|error {
                 check tok.advance();
             }
             [IDENTIFIER, var name] => {
+                check tok.advance();
                 fields.push({name, typeDesc: td});
             }
             _ => {
@@ -260,5 +310,11 @@ function parseRecord(Tokenizer tok) returns MappingTypeDesc|error {
 }
 
 function parseError(Tokenizer tok) returns error {
-    return tok.err("parse error");
+    string message = "parse error";
+    Token? t = tok.current;
+    if t is string {
+        // JBUG cast needed
+        message += " at '" + <string>t + "'";
+    }
+    return tok.err(message);
 }

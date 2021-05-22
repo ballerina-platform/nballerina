@@ -3,7 +3,7 @@ import semtype.core;
 public function parse(core:Env env, string str) returns map<core:SemType>|error {
     Module mod = check preparse(str);
     foreach var def in mod {
-        _ = check normalizeDef(env, mod, def);
+        _ = check normalizeDef(env, mod, 0, def);
     }
     map<core:SemType> defs = {};
     foreach var def in mod {
@@ -18,30 +18,40 @@ public function parse(core:Env env, string str) returns map<core:SemType>|error 
     return defs;
 }
 
-function normalizeDef(core:Env env, Module mod, TypeDef def) returns core:SemType|error {
+function normalizeDef(core:Env env, Module mod, int depth, TypeDef def) returns core:SemType|error {
     core:SemType? t = def.semType;
     if t is () {
-        if def.cycle {
-            return error("invalid cycle detected");
+        if depth == def.cycleDepth {
+            return error("invalid cycle detected for " + def.name);
         }
-        def.cycle = true;
-        core:SemType s = check normalizeType(env, mod, def.td);
-        def.semType = s;
-        def.cycle = false;
-        return s;
+        def.cycleDepth = depth;
+        core:SemType s = check normalizeType(env, mod, depth, def.td);
+        t = def.semType;
+        if t is () {
+            def.semType = s;
+            def.cycleDepth = -1;
+            return s;
+        }
+        else {
+            // This can happen with recursion
+            // We use the first definition we produced
+            // and throw away the others
+            return t;
+        }
     }
     else {
         return t;
     }
 }
 
-function normalizeType(core:Env env, Module mod, TypeDesc td) returns core:SemType|error {
+function normalizeType(core:Env env, Module mod, int depth, TypeDesc td) returns core:SemType|error {
     match td {
         // These are easy
         "any" => { return core:ANY; }
         "byte" => { return core:BYTE; }
         "boolean" => { return core:BOOLEAN; }
         "decimal" => { return core:DECIMAL; }
+        "error" => { return core:ERROR; }
         "float" => { return core:FLOAT; }
         "handle" => { return core:HANDLE; }
         "int" => { return core:INT; }
@@ -61,8 +71,8 @@ function normalizeType(core:Env env, Module mod, TypeDesc td) returns core:SemTy
             td.def = d;
             // JBUG temp variable `m` is to avoid compiler bug
             TypeDesc[] m = td.members;
-            core:SemType[] members = from var x in m select check normalizeType(env, mod, x);
-            return d.define(env, members, check normalizeType(env, mod, td.rest));
+            core:SemType[] members = from var x in m select check normalizeType(env, mod, depth + 1, x);
+            return d.define(env, members, check normalizeType(env, mod, depth + 1, td.rest));
         }
         else {
             return def.getSemType(env);
@@ -75,13 +85,25 @@ function normalizeType(core:Env env, Module mod, TypeDesc td) returns core:SemTy
             td.def = d;
             // JBUG temp variable `f` is to avoid compiler bug
             FieldDesc[] f = td.fields;
-            core:Field[] fields = from var { name, typeDesc } in f select [name, check normalizeType(env, mod, typeDesc)];
-            return d.define(env, fields, check normalizeType(env, mod, td.rest));
+            core:Field[] fields = from var { name, typeDesc } in f select [name, check normalizeType(env, mod, depth + 1, typeDesc)];
+            return d.define(env, fields, check normalizeType(env, mod, depth + 1, td.rest));
         }
         else {
             return def.getSemType(env);
         }
-
+    }
+     if td is FunctionTypeDesc {
+        core:FunctionDefinition? def = td.def;
+        if def is () {
+            core:FunctionDefinition d = new(env);
+            td.def = d;
+            TypeDesc[] a = td.args;
+            core:SemType[] args = from var x in a select check normalizeType(env, mod, depth + 1, x);
+            return d.define(env, core:tuple(env, ...args), check normalizeType(env, mod, depth + 1, td.ret));
+        }
+        else {
+            return def.getSemType(env);
+        }
     }
     if td is TypeDescRef {
         TypeDef? def = mod[td.ref];
@@ -89,7 +111,7 @@ function normalizeType(core:Env env, Module mod, TypeDesc td) returns core:SemTy
             return error("reference to undefined type '" + td.ref + "'");
         }
         else {
-            return check normalizeDef(env, mod, def);
+            return check normalizeDef(env, mod, depth, def);
         }
     }
     if td is SingletonTypeDesc {
@@ -104,10 +126,13 @@ function normalizeType(core:Env env, Module mod, TypeDesc td) returns core:SemTy
             return core:intConst(value);
         }
     }
-     
+    if td is ErrorTypeDesc {
+        return core:errorDetail(check normalizeType(env, mod, depth, td.detail));
+    }
     if td is BinaryTypeDesc {
-        core:SemType l = check normalizeType(env, mod, td.left);
-        core:SemType r = check normalizeType(env, mod, td.right);
+        // NB depth does not increase here
+        core:SemType l = check normalizeType(env, mod, depth, td.left);
+        core:SemType r = check normalizeType(env, mod, depth, td.right);
         if td.op == "|" {
             return core:union(l, r);
         }
