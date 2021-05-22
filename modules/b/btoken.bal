@@ -7,7 +7,8 @@ const STRING_LITERAL = 2;
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
 type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string];
 
-type SingleCharDelim ";" | "-" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | ":" | ",";
+// Some of these are not yet used by the grammar
+type SingleCharDelim ";" | "-" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | ":" | "," | "/";
 type MultiCharDelim "{|" | "|}" | "...";
 type Keyword
     "any"
@@ -83,6 +84,22 @@ class Tokenizer {
             }
             else if WS.includes(ch)  {
                 continue;
+            }
+            else if ch == "/" {
+                ch = self.getc();
+                if ch == "/" {
+                    while true {
+                        ch = self.getc();
+                        if ch is () || ch == "\n" {
+                            break;
+                        }
+                    }
+                    continue;
+                }
+                else if !(ch is ()) {
+                    self.ungetc(ch);
+                }
+                return "/";
             }
             // Need to do mult-char delims before single-char delims.        
             else if ch == "{" {
