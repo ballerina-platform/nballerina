@@ -69,28 +69,48 @@ function preparse(string str) returns Module|error {
 function parseModule(Tokenizer tok) returns Module|error {
     Module mod = table [];
     while tok.current != () {
+        string kw;
         if tok.current == "type" {
-            check tok.advance();
-            Token? t = tok.current;
-            if t is [IDENTIFIER, string] {
-                // JBUG cannot do t[0]
-                var [_, name] = t;
-                check tok.advance();
-                TypeDesc td = check parseTypeDesc(tok);
-                mod.add({name, td});
-                check tok.expect(";");
-                continue;
-            }
-            else {
-                return parseError(tok); 
-            }
+            kw = "type";
         }
-        // XXX handle "const"
+        else if tok.current == "const" {
+            kw = "const";
+        }
+        else {
+            return parseError(tok);
+        } 
+        check tok.advance();
+        Token? t = tok.current;
+        if t is [IDENTIFIER, string] {
+            // JBUG cannot do t[0]
+            var [_, name] = t;
+            check tok.advance();
+            TypeDesc td = check (kw == "type" ? parseTypeDesc(tok) : parseConstExpr(tok));
+            mod.add({name, td});
+            check tok.expect(";");
+        }
         else {
             return parseError(tok);
         }
     }
     return mod;
+}
+
+function parseConstExpr(Tokenizer tok) returns TypeDesc|error {
+    check tok.expect("=");
+    string sign = "";
+    if tok.current == "-" {
+        check tok.advance();
+        sign = "-";
+    }
+    match tok.current {
+        [DECIMAL_NUMBER, var digits] => {
+            check tok.advance();
+            int n = check int:fromString(sign + digits);
+            return <SingletonTypeDesc>{ value: n };
+        }
+    }
+    return parseError(tok);
 }
 
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|error {

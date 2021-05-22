@@ -8,7 +8,7 @@ const STRING_LITERAL = 2;
 type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string];
 
 // Some of these are not yet used by the grammar
-type SingleCharDelim ";" | "-" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | ":" | "," | "/";
+type SingleCharDelim ";" | "-" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | ":" | "," | "/" | "=";
 type MultiCharDelim "{|" | "|}" | "...";
 type Keyword
     "any"
@@ -40,7 +40,7 @@ const LOWER = "abcdefghijklmnopqrstuvwxyz";
 const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const DIGIT = "0123456789";
 const string ALPHA = LOWER + UPPER;
-const string ALNUM = ALPHA + DIGIT;
+const string IDENT = ALPHA + DIGIT + "_";
 
 // JBUG cannot use string:Char (this is backwards incompatible)
 type Char string;
@@ -138,7 +138,7 @@ class Tokenizer {
                     if ch is () {
                         break;
                     }
-                    else if !ALNUM.includes(ch) {
+                    else if !IDENT.includes(ch) {
                         self.ungetc(ch);
                         break;
                     }
@@ -203,7 +203,7 @@ class Tokenizer {
                break;
             }
         }
-        return self.err("invalid tokens");
+        return self.err("invalid token");
     }
     
     private function getc() returns Char? {
