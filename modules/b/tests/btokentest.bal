@@ -18,7 +18,7 @@ function tokenization(string str) returns Token[]|error {
     Token[] tokens = [];
     while true {
         check tok.advance();
-        Token? t = tok.current;
+        Token? t = tok.current();
         if t is () {
             break;
         }

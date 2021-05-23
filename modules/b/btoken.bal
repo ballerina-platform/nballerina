@@ -59,11 +59,34 @@ final readonly & map<Char> ESCAPES = {
     "t": "\t"
 };
 
+public type Position readonly & record {|
+    // 1-based
+    int lineNumber;
+    // 0-based index (in code points) in the line
+    int indexInLine;
+|};
+
+public type ParseErrorDetail record {
+    Position pos;
+};
+
+public type ParseError distinct error<ParseErrorDetail>;
+
 class Tokenizer {
-    Token? current = ();
-    private final StringIterator iter;
+    Token? cur = ();
+    // The index in `str` of the first character of `cur`
+    private int startIndex = 0;
+    // Index of character starting line on which startPos occurs
+    private int lineStartIndex = 0;
+    // Line number of line starting at lineStartIndex
+    private int lineNumber = 1;
     private final string str;
+
+    private final StringIterator iter;
     private Char? ungot = ();
+    // Number of characters returned by `iter`
+    private int nextCount = 0;
+   
 
     function init(string str) {
         self.iter = str.iterator();
@@ -72,25 +95,40 @@ class Tokenizer {
    
     // Moves to next token.record
     // Current token is () if there is no next token
-    function advance() returns error? {
-        self.current = check self.next();
+    function advance() returns ParseError? {
+        self.cur = check self.next();
     }
 
-    private function next() returns Token?|error {
+    function current() returns Token? {
+        return self.cur;
+    }
+
+    function currentPos() returns Position {
+        return {
+            lineNumber: self.lineNumber,
+            indexInLine: self.startIndex - self.lineStartIndex
+        };
+    }
+
+    private function next() returns Token?|ParseError {
+        // This loops in order to skip over comments
         while true {
-            Char? ch = self.getc();
+            Char? ch = self.startToken();
             if ch is () {
                 return ();
-            }
-            else if WS.includes(ch)  {
-                continue;
             }
             else if ch == "/" {
                 ch = self.getc();
                 if ch == "/" {
+                    // Skip the comment and loop
                     while true {
                         ch = self.getc();
-                        if ch is () || ch == "\n" {
+                        if ch is () {
+                            break;
+                        }
+                        else if self.isLineTerminator(ch) {
+                            // handle line counting in startToken
+                            self.ungetc(ch);
                             break;
                         }
                     }
@@ -175,7 +213,7 @@ class Tokenizer {
                     if ch == "\"" {
                         break;
                     }
-                    if ch is () || ch == "\n" || ch == "\r" {
+                    if ch is () || self.isLineTerminator(ch) {
                         return self.err("missing close quote");
                     }
                     else if ch == "\\" {
@@ -206,6 +244,53 @@ class Tokenizer {
         return self.err("invalid token");
     }
     
+    private function isLineTerminator(Char ch) returns boolean {
+        return ch == "\n" || ch == "\r";
+    }
+
+    // Returns first non white-space character, if any
+    // Updates startIndex, lineStartIndex and lineNumber
+    private function startToken() returns Char? {
+        // the previous character if it ended a line, otherwise ()
+        Char? prevCharLineEnd = ();
+        while true {
+            Char? ch = self.getc();
+            if ch is () {
+                break;
+            }
+            else {
+                if prevCharLineEnd !== () {
+                    // Line terminators are part of the line they terminate
+                    // Line numbers increase on the first character of a line
+                    self.lineStartIndex = self.getCount() - 1;
+                    // For \r\n, the line number will be bumped on the
+                    // character after the \n
+                    if prevCharLineEnd != "\r" || ch != "\n" {
+                        self.lineNumber += 1;
+                    }
+                }
+                if ch == "\n" || ch == "\r" {
+                    prevCharLineEnd = ch;
+                }
+                else if ch == " " || ch == "\t" {
+                    prevCharLineEnd = ();
+                }
+                else {
+                    self.startIndex = self.getCount() - 1;
+                    return ch;
+                }
+            }
+        }
+        self.startIndex = self.getCount();
+        return ();
+    }
+
+
+    // number of characters returned by getc and not ungot
+    private function getCount() returns int {
+        return self.ungot is Char ? self.nextCount - 1 : self.nextCount;
+    }
+
     private function getc() returns Char? {
         Char? ch = self.ungot;
         if ch is () {
@@ -233,15 +318,16 @@ class Tokenizer {
             return ();
         }
         else {
+            self.nextCount += 1;
             return ret.value;
         }
     }
 
-    function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns error? {
-        if self.current != tok {
+    function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns ParseError? {
+        if self.cur != tok {
             // JBUG should not need to cast here
             string message = ("expected '" + <string>tok + "'");
-            Token? t = self.current;
+            Token? t = self.cur;
             if t is string {
                 // JBUG cast
                 message += "; got '" + <string>t + "'";
@@ -251,7 +337,7 @@ class Tokenizer {
         check self.advance();
     }
 
-    function err(string msg) returns error {
-        return error(msg);
+    function err(string msg) returns ParseError {
+        return error ParseError(msg, pos=self.currentPos());
     }
 }

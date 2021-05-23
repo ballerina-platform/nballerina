@@ -1,6 +1,6 @@
 import semtype.core;
 
-public function parse(core:Env env, string str) returns map<core:SemType>|error {
+public function parse(core:Env env, string str) returns map<core:SemType>|ParseError {
     Module mod = check preparse(str);
     foreach var def in mod {
         _ = check normalizeDef(env, mod, 0, def);
@@ -18,11 +18,11 @@ public function parse(core:Env env, string str) returns map<core:SemType>|error 
     return defs;
 }
 
-function normalizeDef(core:Env env, Module mod, int depth, TypeDef def) returns core:SemType|error {
+function normalizeDef(core:Env env, Module mod, int depth, TypeDef def) returns core:SemType|ParseError {
     core:SemType? t = def.semType;
     if t is () {
         if depth == def.cycleDepth {
-            return error("invalid cycle detected for " + def.name);
+            return error ParseError("invalid cycle detected for " + def.name, pos=def.pos);
         }
         def.cycleDepth = depth;
         core:SemType s = check normalizeType(env, mod, depth, def.td);
@@ -44,7 +44,7 @@ function normalizeDef(core:Env env, Module mod, int depth, TypeDef def) returns 
     }
 }
 
-function normalizeType(core:Env env, Module mod, int depth, TypeDesc td) returns core:SemType|error {
+function normalizeType(core:Env env, Module mod, int depth, TypeDesc td) returns core:SemType|ParseError {
     match td {
         // These are easy
         "any" => { return core:ANY; }
@@ -108,7 +108,7 @@ function normalizeType(core:Env env, Module mod, int depth, TypeDesc td) returns
     if td is TypeDescRef {
         TypeDef? def = mod[td.ref];
         if def is () {
-            return error("reference to undefined type '" + td.ref + "'");
+            return error ParseError("reference to undefined type '" + td.ref + "'", pos=td.pos);
         }
         else {
             return check normalizeDef(env, mod, depth, def);
@@ -141,5 +141,5 @@ function normalizeType(core:Env env, Module mod, int depth, TypeDesc td) returns
         }
     }
 
-    return error("unimplemented type-descriptor");
+    panic error("unimplemented type-descriptor");
 }
