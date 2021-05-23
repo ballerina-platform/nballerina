@@ -69,7 +69,7 @@ function normalizeType(core:Env env, Module mod, int depth, TypeDesc td) returns
         if def is () {
             core:ListDefinition d = new;
             td.def = d;
-            // JBUG temp variable `m` is to avoid compiler bug
+            // JBUG temp variable `m` is to avoid compiler bug #30736
             TypeDesc[] m = td.members;
             core:SemType[] members = from var x in m select check normalizeType(env, mod, depth + 1, x);
             return d.define(env, members, check normalizeType(env, mod, depth + 1, td.rest));
@@ -83,7 +83,7 @@ function normalizeType(core:Env env, Module mod, int depth, TypeDesc td) returns
         if def is () {
             core:MappingDefinition d = new;
             td.def = d;
-            // JBUG temp variable `f` is to avoid compiler bug
+            // JBUG temp variable `f` is to avoid compiler bug #30736
             FieldDesc[] f = td.fields;
             core:Field[] fields = from var { name, typeDesc } in f select [name, check normalizeType(env, mod, depth + 1, typeDesc)];
             return d.define(env, fields, check normalizeType(env, mod, depth + 1, td.rest));

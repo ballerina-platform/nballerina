@@ -84,11 +84,10 @@ function parseModule(Tokenizer tok) returns Module|ParseError {
         check tok.advance();
         Token? t = tok.current();
         if t is [IDENTIFIER, string] {
-            // JBUG cannot do t[0]
-            var [_, name] = t;
+            string name = t[1];
             Position pos = tok.currentPos();
             check tok.advance();
-            // JBUG putting check before conditional gets an error
+            // JBUG putting check before conditional gets an error #30737
             TypeDesc td = kw == "type" ? check parseTypeDesc(tok) : check parseConstExpr(tok);
             mod.add({name, td, pos});
             check tok.expect(";");
@@ -117,7 +116,7 @@ function parseConstExpr(Tokenizer tok) returns TypeDesc|ParseError {
                 check tok.advance();
                 return <SingletonTypeDesc>{ value: res };
             }
-            // JBUG this gets a bad sad
+            // JBUG this gets a bad sad #30738
             // NullPointerException in BIROptimizer$RHSTempVarOptimizer.visit
             // int n;
             // do {
@@ -210,7 +209,7 @@ function parsePrimary(Tokenizer tok) returns TypeDesc|ParseError {
         | "byte"
         |  "readonly" => {
             check tok.advance();
-            // JBUG should not need cast
+            // JBUG should not need cast #30191
             return <LeafTypeDesc>cur;
         }
         "[" => {
@@ -276,7 +275,7 @@ function parseFunction(Tokenizer tok) returns TypeDesc|ParseError {
         if tok.current() == ")" {
             break;
         }
-        // JBUG inlining td gets an error
+        // JBUG inlining td in args.push gets an error #30737
         // invalid usage of the 'check' expression operator: no matching error return type(s) in the enclosing invokable
         TypeDesc td = check parseTypeDesc(tok);
         args.push(td);
@@ -356,7 +355,7 @@ function parseError(Tokenizer tok) returns ParseError {
     string message = "parse error";
     Token? t = tok.current();
     if t is string {
-        // JBUG cast needed
+        // JBUG cast needed #30734
         message += " at '" + <string>t + "'";
     }
     return tok.err(message);

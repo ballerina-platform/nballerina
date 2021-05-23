@@ -42,7 +42,7 @@ const DIGIT = "0123456789";
 const string ALPHA = LOWER + UPPER;
 const string IDENT = ALPHA + DIGIT + "_";
 
-// JBUG cannot use string:Char (this is backwards incompatible)
+// JBUG cannot use string:Char #30735
 type Char string;
 
 type StringIterator object {
@@ -325,11 +325,11 @@ class Tokenizer {
 
     function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns ParseError? {
         if self.cur != tok {
-            // JBUG should not need to cast here
+            // JBUG should not need to cast here #30734
             string message = ("expected '" + <string>tok + "'");
             Token? t = self.cur;
             if t is string {
-                // JBUG cast
+                // JBUG cast #30734
                 message += "; got '" + <string>t + "'";
             }
             return self.err(message);
