@@ -13,7 +13,9 @@ function testModule(string balString, string expected) returns error? {
 
 function testModuleDataProvider() returns string[][]|error {
     return from var entry in check file:readDir("tests/data")
-           let string[]|error res = readTestCase(entry.absPath)
+           let string path = entry.absPath
+           where path.endsWith(".bal")
+           let string[]|error res = readTestCase(path)
            where res is string[]
            select res;
 }
