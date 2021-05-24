@@ -334,12 +334,15 @@ function parseTuple(Tokenizer tok) returns ListTypeDesc|ParseError {
                 rest = td;
                 check tok.advance();
             }
-            else if tok.current() == "," {
-                check tok.advance();
-                continue;
-            }
-            if tok.current() == "]" {
-                break;
+            else {
+                members.push(td);
+                if tok.current() == "," {
+                    check tok.advance();
+                    continue;
+                }
+                if tok.current() == "]" {
+                    break;
+                }
             }
             return parseError(tok);
         }
