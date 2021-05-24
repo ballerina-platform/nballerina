@@ -1,4 +1,10 @@
-// Expect: Boolean<Any,Decimal<Any,Float<Any,Handle<Any,Int<Any,Nil<Any,String<Any
+// Boolean<:Any
+// Decimal<:Any
+// Float<:Any
+// Handle<:Any
+// Int<:Any
+// Nil<:Any
+// String<:Any
 type Nil ();
 type String string;
 type Boolean boolean;

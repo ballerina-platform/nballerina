@@ -1,4 +1,5 @@
-// Expect: F<A,S<T
+// F<:A
+// S<:T
 
 type F function() returns F;
 type A function() returns any|error;

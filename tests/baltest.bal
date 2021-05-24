@@ -7,7 +7,7 @@ import ballerina/file;
 }
 function testModule(string balString, string expected) returns error? {
     string[] lines = check subtypeRels(balString);
-    string result = ",".'join(...lines);
+    string result = "\n".'join(...lines);
     test:assertEquals(result, expected);
 }
 
@@ -16,20 +16,21 @@ function testModuleDataProvider() returns string[][]|error {
            let string path = entry.absPath
            where path.endsWith(".bal")
            let string[]|error res = readTestCase(path)
-           where res is string[]
+           // skip files with no subtype lines on them
+           where res is string[] && res[1].length() > 0
            select res;
 }
 
-const HEADER = "// Expect: ";
-
 function readTestCase(string filename) returns string[]|error {
     string str = check io:fileReadString(filename);
-    if !str.startsWith(HEADER) {
-        return error(filename + " does not start with: " + HEADER);
-    }
-    int? endIndex = str.indexOf("\n");
-    string expected = str.substring(HEADER.length(), endIndex ?: str.length());
-    expected = expected.trim();
+    string[] lines = check io:fileReadLines(filename);
+    string[] results =
+        from var line in lines
+        where line.startsWith("// ") && line.includes("<:")
+        let string result = line.substring(3).trim()
+        order by result
+        select result;
+    string expected = "\n".'join(...results);
     return [str, expected];
 }
 
