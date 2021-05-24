@@ -48,7 +48,6 @@ function normalizeType(core:Env env, Module mod, int depth, TypeDesc td) returns
     match td {
         // These are easy
         "any" => { return core:ANY; }
-        "byte" => { return core:BYTE; }
         "boolean" => { return core:BOOLEAN; }
         "decimal" => { return core:DECIMAL; }
         "error" => { return core:ERROR; }
@@ -60,6 +59,12 @@ function normalizeType(core:Env env, Module mod, int depth, TypeDesc td) returns
         "string" => { return core:STRING; }
         "typedesc" => { return core:TYPEDESC; }
         "xml" => { return core:XML; }
+        "sint8" => { return core:intWidthSigned(8); }
+        "sint16" => { return core:intWidthSigned(16); }
+        "sint32" => { return core:intWidthSigned(32); }
+        "uint8" => { return core:BYTE; }
+        "uint16" => { return core:intWidthUnsigned(16); }
+        "uint32" => { return core:intWidthUnsigned(32); }
         "json" => { return core:createJson(env); }
         "()" => { return core:NIL; }
     }

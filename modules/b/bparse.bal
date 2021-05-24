@@ -59,8 +59,9 @@ type SingletonTypeDesc  record {|
     (string|int|boolean) value;
 |};
 
-type LeafTypeDesc "any"|"byte"|"boolean"|"decimal"|"error"|"float"|"handle"|"int"|"json"
-                  |"never"|"readonly"|"string"|"typedesc"|"xml"|"()";
+type BuiltinIntSubtypeDesc "sint8"|"uint8"|"sint16"|"uint16"|"sint32"|"uint32";
+type LeafTypeDesc "any"|"boolean"|"decimal"|"error"|"float"|"handle"|"int"|"json"
+                  |"never"|"readonly"|"string"|"typedesc"|"xml"|"()"|BuiltinIntSubtypeDesc;
 
 function preparse(string str) returns Module|ParseError {
     Tokenizer tok = new(str);
@@ -181,6 +182,15 @@ function parsePostfix(Tokenizer tok) returns TypeDesc|ParseError {
     return td;
 }
 
+final map<BuiltinIntSubtypeDesc> BUILTIN_INT_SUBTYPES = {
+    Signed8: "sint8",
+    Signed16: "sint16",
+    Signed32: "sint32",
+    Unsigned8: "uint8",
+    Unsigned16: "uint16",
+    Unsigned32: "uint32"
+};
+
 // Tokenizer is on first token of the type descriptor
 // Afterwards it is on the token immediately following the type descriptor
 function parsePrimary(Tokenizer tok) returns TypeDesc|ParseError {
@@ -206,11 +216,14 @@ function parsePrimary(Tokenizer tok) returns TypeDesc|ParseError {
         | "any"
         | "never"
         | "json"
-        | "byte"
         |  "readonly" => {
             check tok.advance();
             // JBUG should not need cast #30191
             return <LeafTypeDesc>cur;
+        }
+        "byte" => {
+            check tok.advance();
+            return "uint8";
         }
         "[" => {
             return parseTuple(tok);
@@ -230,9 +243,22 @@ function parsePrimary(Tokenizer tok) returns TypeDesc|ParseError {
             return parseRecord(tok);         
         }
         "int" => {
-            // XXX handle int:Signed32 etc
             check tok.advance();
-            return "int";
+            if tok.current() != ":" {
+                return "int";
+            }
+            check tok.advance();
+            Token? t = tok.current();
+            if t is [IDENTIFIER, string] {
+                var name = t[1];
+                BuiltinIntSubtypeDesc? desc = BUILTIN_INT_SUBTYPES[name];
+                if !(desc is ()) {
+                    check tok.advance();
+                    return desc;
+                }
+                return tok.err("unrecognized integer subtype '" + name + "'");
+            }
+            // match falls through to parseError
         }
         // JBUG language server sometimes flags `var ref`
         // here as something like
