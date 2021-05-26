@@ -88,7 +88,7 @@ public type UncheckedIntAddInsn readonly & record {|
 
 # This is used for calls everywhere except within a trap expression.
 # If the called function returns abnormally, then the caller
-# should return abnormally with the same error value.
+# also returns abnormally with the same error value.
 public type CallInsn readonly & record {|
     INSN_CALL name = INSN_CALL;
     Register result;
@@ -100,7 +100,7 @@ public type CallInsn readonly & record {|
 # This is used for a call within a trap.
 # If the called function returns abnormally
 # then we branch to onPanic.
-# The label must refer to a CatchInsn
+# The label must refer to a CatchInsn.
 public type InvokeInsn readonly & record {|
     INSN_INVOKE name = INSN_INVOKE;
     Register result;
@@ -108,30 +108,30 @@ public type InvokeInsn readonly & record {|
     Label onPanic;
 |};
 
-# A CatchInsn is allowed only in conjunction with
-# a InvokeInsn.
-# Executing the catch instruction
-# causes the error value associated with the abnormal
-# return to be stored in the result register.
+# A CatchInsn is allowed only in conjunction with an InvokeInsn.
+# Executing the catch instruction causes the error value associated
+# with the abnormal return to be stored in the result register.
 # This is a very simplified form of a LLVM landingpad.
 public type CatchInsn readonly & record {|
     INSN_CATCH name = INSN_CATCH;
     Register result;
 |};
 
-# Load an integer into a register
+# Load an integer into a register.
 public type ConstIntInsn readonly & record {|
     INSN_CONST_INT name = INSN_CONST_INT;
     Register result;
     int value;
 |};
 
+# Load a module level function into a register.
 public type ConstFunctionInsn readonly & record {|
     INSN_CONST_FUNCTION name = INSN_CONST_FUNCTION;
     FunctionDecl decl;
     Register result;
 |};
 
+# Move a value from one register to another.
 # The type of the operand register must
 # be equal to the type of the result register.
 public type MoveInsn readonly & record {|
@@ -232,6 +232,8 @@ public type ConstructTypeCastPanicInsn readonly & record {|
     SemType resultType;
 |};
 
+# Branch if a value is true.
+# This branches to `Label` if the `operand` is true.
 public type BranchIfTrueInsn readonly & record {|
     INSN_BRANCH_IF_TRUE name = INSN_BRANCH_IF_TRUE;
     # Operand must have exactly type boolean
@@ -239,6 +241,7 @@ public type BranchIfTrueInsn readonly & record {|
     Label dest;
 |};
 
+# Branch if a value is false.
 public type BranchIfFalseInsn readonly & record {|
     INSN_BRANCH_IF_FALSE name = INSN_BRANCH_IF_FALSE;
     # Operand must have exactly type boolean
