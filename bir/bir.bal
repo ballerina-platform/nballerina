@@ -1,6 +1,13 @@
 public type Module record {|
     readonly ModuleId id;
-    table<ModuleDefn> key(name) defns;
+    table<ModuleDefn> key(name) defns = table[];
+|};
+
+public type ModuleId readonly & record {|
+    string? organization = ();
+    [string, string...] names;
+    // Do we need structure here?
+    string versionString;
 |};
 
 public type ModuleDefn record {
@@ -17,7 +24,7 @@ public type SemType int;
 # indexing into the function's `labelMap`.
 type Label int;
 
-// XXX Should we make this an object to encapsulate labelMpa and registerCount?
+// XXX Should we make this an object to encapsulate labelMap and registerCount?
 public type FunctionDefn record {
     *ModuleDefn;
     # Name within the module
@@ -131,6 +138,17 @@ public type ConstFunctionInsn readonly & record {|
     Register result;
 |};
 
+public type GlobalSymbol readonly & record {|
+    ModuleId module;
+    string name;
+|};
+
+public type FunctionDecl readonly & record {|
+    readonly GlobalSymbol name;
+    SemType semType;
+|};
+
+
 # Move a value from one register to another.
 # The type of the operand register must
 # be equal to the type of the result register.
@@ -185,22 +203,6 @@ public type NarrowInsn readonly & record {|
     Register operand;
 |};
 
-public type ModuleId readonly & record {|
-    string organization;
-    [string, string...] names;
-    // Do we need structure here?
-    string versionString;
-|};
-
-public type GlobalSymbol readonly & record {|
-    ModuleId module;
-    string name;
-|};
-
-public type FunctionDecl readonly & record {|
-    readonly GlobalSymbol name;
-    SemType semType;
-|};
 
 # Return abnormally from the function
 # The type of the operand
