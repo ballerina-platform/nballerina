@@ -1,4 +1,4 @@
-import jclark/nballerina.types as core;
+import wso2/nballerina.types as core;
 
 type Module table<TypeDef> key(name); 
 

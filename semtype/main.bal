@@ -1,6 +1,6 @@
 import ballerina/io;
-import jclark/nballerina.types as core;
-import jclark/nballerina.types.bdd;
+import wso2/nballerina.types as core;
+import wso2/nballerina.types.bdd;
 
 import semtype.'json as j;
 

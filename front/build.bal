@@ -1,4 +1,4 @@
-import jclark/nballerina.types as core;
+import wso2/nballerina.types as core;
 
 public function parse(core:Env env, string str) returns map<core:SemType>|ParseError {
     Module mod = check preparse(str);

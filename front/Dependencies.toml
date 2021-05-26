@@ -1,5 +1,5 @@
 [[dependency]]
-org = "jclark"
+org = "wso2"
 name = "nballerina.types"
 version = "0.1.0"
 repository = "local"

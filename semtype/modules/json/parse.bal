@@ -1,6 +1,6 @@
 // Convert from json into a SemType
 // Format is defined in schema.bal
-import jclark/nballerina.types as core;
+import wso2/nballerina.types as core;
 
 
 public type Path int[];
