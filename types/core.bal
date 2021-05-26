@@ -1,5 +1,5 @@
 
-import semtype.bdd;
+import nballerina.types.bdd;
 
 // There is an integer for each uniform type.
 // Uniform types are like basic types except that each selectively immutable

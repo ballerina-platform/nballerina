@@ -1,6 +1,7 @@
 import ballerina/io;
-import semtype.bdd;
-import semtype.core;
+import jclark/nballerina.types as core;
+import jclark/nballerina.types.bdd;
+
 import semtype.'json as j;
 
 enum Relation {

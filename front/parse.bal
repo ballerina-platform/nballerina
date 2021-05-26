@@ -1,4 +1,4 @@
-import semtype.core;
+import jclark/nballerina.types as core;
 
 type Module table<TypeDef> key(name); 
 

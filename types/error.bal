@@ -1,5 +1,5 @@
 // Implementation specific to basic type error.
-import semtype.bdd;
+import nballerina.types.bdd;
 
 public function errorDetail(SemType detail) returns SemType {
     SubtypeData sd = subtypeData(detail, UT_MAPPING_RO);

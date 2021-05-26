@@ -1,6 +1,7 @@
 // Convert from json into a SemType
 // Format is defined in schema.bal
-import semtype.core;
+import jclark/nballerina.types as core;
+
 
 public type Path int[];
 

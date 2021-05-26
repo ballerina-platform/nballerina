@@ -1,5 +1,5 @@
 // Implementation specific to basic type list.
-import semtype.bdd;
+import nballerina.types.bdd;
 //import ballerina/io;
 
 public type Field [string, SemType];

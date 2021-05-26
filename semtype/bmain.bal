@@ -1,7 +1,7 @@
 import ballerina/io;
 
-import semtype.b;
-import semtype.core;
+import jclark/nballerina.front as b;
+import jclark/nballerina.types as core;
 // import semtype.bdd;
 
 public function bmain(string? f) returns error? {

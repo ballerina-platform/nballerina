@@ -1,7 +1,7 @@
 // Implementation specific to basic type function.
 
 import ballerina/io;
-import semtype.bdd;
+import nballerina.types.bdd;
 
 // Function subtype is [args, ret]
 // Represents args as tuple type

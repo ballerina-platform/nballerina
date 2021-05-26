@@ -1,6 +1,6 @@
 // Code common to implementation of multiple basic types
 
-import semtype.bdd;
+import nballerina.types.bdd;
 
 public type Definition object {
     public function getSemType(Env env) returns SemType;
