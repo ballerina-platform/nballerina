@@ -1,0 +1,8 @@
+[package]
+org = "jclark"
+name = "nballerina.types"
+version = "0.1.0"
+export = ["nballerina.types", "nballerina.types.bdd"]
+
+[build-options]
+observabilityIncluded = true
