@@ -20,6 +20,12 @@ public type ModuleDefn record {
 // XXX need to at least do function types
 public type SemType int;
 
+public type AtomicFunctionType readonly & record {|
+    SemType retType;
+    SemType[] paramTypes;
+|};
+
+
 # A label within a function is represented as an int
 # indexing into the function's `labelMap`.
 type Label int;
@@ -29,7 +35,7 @@ public type FunctionDefn record {
     *ModuleDefn;
     # Name within the module
     readonly string name;
-    SemType funcType;
+    AtomicFunctionType functionType;
     // Function execution starts off with value of param i
     // in register i
     // (Not thinking about varargs yet.)
@@ -57,8 +63,8 @@ public enum InsnName {
     INSN_UNCHECKED_INT_ADD,
     INSN_RET,
     INSN_ABNORMAL_RET,
-    INSN_CALL,
-    INSN_INVOKE,
+    INSN_STATIC_CALL,
+    INSN_STATIC_INVOKE,
     INSN_CONSTRUCT_BUILTIN_PANIC,
     INSN_CONSTRUCT_TYPE_CAST_PANIC,
     INSN_CONST_FUNCTION,
@@ -78,6 +84,13 @@ public type Insn readonly & record {
     InsnName name;
 };
 
+# Load an integer into a register.
+public type ConstIntInsn readonly & record {|
+    INSN_CONST_INT name = INSN_CONST_INT;
+    Register result;
+    int value;
+|};
+
 public type CheckedIntAddInsn readonly & record {|
     INSN_CHECKED_INT_ADD name = INSN_CHECKED_INT_ADD;
     Register result;
@@ -93,26 +106,41 @@ public type UncheckedIntAddInsn readonly & record {|
     Register[2] operands;
 |};
 
-# This is used for calls everywhere except within a trap expression.
+type FunctionRef record {|
+    Identifier functionIdentifier;
+    AtomicFunctionType functionType;
+|};
+
+# This is used for static calls everywhere except within a trap expression.
+# A static call is one where the function to be called is known
+# at compile-time.
 # If the called function returns abnormally, then the caller
 # also returns abnormally with the same error value.
-public type CallInsn readonly & record {|
-    INSN_CALL name = INSN_CALL;
+public type StaticCallInsn readonly & record {|
+    INSN_STATIC_CALL name = INSN_STATIC_CALL;
     Register result;
-    Register func;
+    *FunctionRef;
     Register[] args;
 |};
 
-
-# This is used for a call within a trap.
+# This is used for a static call within a trap.
 # If the called function returns abnormally
 # then we branch to onPanic.
 # The label must refer to a CatchInsn.
-public type InvokeInsn readonly & record {|
-    INSN_INVOKE name = INSN_INVOKE;
+public type StaticInvokeInsn readonly & record {|
+    INSN_STATIC_INVOKE name = INSN_STATIC_INVOKE;
     Register result;
-    Register func;
+    *FunctionRef;
     Label onPanic;
+|};
+
+# Load a module level function into a register.
+# The type of the register should be precisely
+# The function type.
+public type ConstFunctionInsn readonly & record {|
+    INSN_CONST_FUNCTION name = INSN_CONST_FUNCTION;
+    *FunctionRef;
+    Register result;
 |};
 
 # A CatchInsn is allowed only in conjunction with an InvokeInsn.
@@ -124,30 +152,13 @@ public type CatchInsn readonly & record {|
     Register result;
 |};
 
-# Load an integer into a register.
-public type ConstIntInsn readonly & record {|
-    INSN_CONST_INT name = INSN_CONST_INT;
-    Register result;
-    int value;
-|};
+// The string case represents a symbol in the same module
+public type Identifier string|GlobalIdentifier;
 
-# Load a module level function into a register.
-public type ConstFunctionInsn readonly & record {|
-    INSN_CONST_FUNCTION name = INSN_CONST_FUNCTION;
-    FunctionDecl decl;
-    Register result;
-|};
-
-public type GlobalSymbol readonly & record {|
+public type GlobalIdentifier readonly & record {|
     ModuleId module;
     string name;
 |};
-
-public type FunctionDecl readonly & record {|
-    readonly GlobalSymbol name;
-    SemType semType;
-|};
-
 
 # Move a value from one register to another.
 # The type of the operand register must
