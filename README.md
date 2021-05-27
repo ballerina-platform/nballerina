@@ -1,6 +1,7 @@
 # nballerina
 
-Ballerina compiler, written in Ballerina, which uses LLVM to generate native executables.
+This will eventually be a Ballerina compiler, written in Ballerina,
+which uses LLVM to generate native executables.
 
 The compiler is divided into the following Ballerina packages:
 
@@ -17,3 +18,18 @@ The dependencies are as follows:
 * `llvm` depends on `bir` and `types` (but not `front`)
 * `front` depends on `bir` and `types` (but not `llvm)
 * `driver` depends on everything
+
+So far, the only implemented functionality relates to types:
+
+* the `front` module can parse a module containing Ballerina type
+  definitions in this [subset](../front/grammar.md) of Ballerina syntax;
+
+* the `front` module can use the `types` module to build a normalized
+  representation;
+
+* the `types` module can determine whether one type is a semantic subtype of another
+  ([more information](../types/README.md) on this);
+
+* the `driver` module allows you to play with this: it will print out the subtype
+  relationships between all named types in a Ballerina module; the directory
+  [driver/tests/data](driver/tests/data) has some examples you can try out.
