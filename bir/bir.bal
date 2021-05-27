@@ -1,3 +1,5 @@
+import wso2/nballerina.types as t;
+
 public type Module record {|
     readonly ModuleId id;
     table<ModuleDefn> key(name) defns = table[];
@@ -14,17 +16,7 @@ public type ModuleDefn record {
     readonly string name;
 };
 
-
-// This will eventually refer to something like core:Semtype.
-// For now just a bit vector of uniform types
-// XXX need to at least do function types
-public type SemType int;
-
-public type AtomicFunctionType readonly & record {|
-    SemType retType;
-    SemType[] paramTypes;
-|};
-
+public type SemType t:SemType;
 
 # A label within a function is represented as an int
 # indexing into the function's `labelMap`.
@@ -35,7 +27,7 @@ public type FunctionDefn record {
     *ModuleDefn;
     # Name within the module
     readonly string name;
-    AtomicFunctionType functionType;
+    t:FunctionAtomicType functionType;
     // Function execution starts off with value of param i
     // in register i
     // (Not thinking about varargs yet.)
@@ -108,7 +100,7 @@ public type UncheckedIntAddInsn readonly & record {|
 
 type FunctionRef record {|
     Identifier functionIdentifier;
-    AtomicFunctionType functionType;
+    t:FunctionAtomicType functionType;
 |};
 
 # This is used for static calls everywhere except within a trap expression.
