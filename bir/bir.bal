@@ -23,7 +23,6 @@ public type ModuleDefn record {
     readonly string name;
 };
 
-
 # A label within a function is represented as an int
 # indexing into the function's `labelMap`.
 type Label int;
@@ -48,7 +47,6 @@ public type FunctionDefn record {
     int registerCount;
 };
 
-
 public type Register readonly & record {|
     # Unique identifier within a function
     # Always >= 0
@@ -56,32 +54,18 @@ public type Register readonly & record {|
     SemType semType;
 |};
 
-// These are binary operations that can panic
-public enum CheckedBinaryIntInsnName {
-    INSN_CHECKED_INT_ADD,
-    INSN_CHECKED_INT_SUB,
-    INSN_CHECKED_INT_MUL,
-    # This panics on both division by zero and overflow (int:MIN_VALUE/-1)
-    INSN_CHECKED_INT_DIV,
-    # This panics if second operand is zero.
-    # Result of int:MIN_VALUE/-1 is 0 (as in Java)
-    INSN_CHECKED_INT_REM
-}
+public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
+public type OrderOp "<=" | ">=" | "<" | ">";
 
-# Binary operations that can panic
-public enum UncheckedBinaryIntInsnName {
-    # This must only be used when the compiler can prove that the
-    # addition will not overflow
-    INSN_UNCHECKED_INT_ADD,
-    INSN_UNCHECKED_INT_SUB,
-    INSN_UNCHECKED_INT_MUL,
-    INSN_UNCHECKED_INT_DIV,
-    # This must not be used if second operand is 0,
-    # or if first operand is int:MIN_VALUE and second operand is -1.
-    INSN_UNCHECKED_INT_REM
-}
-
-public enum OtherInsnName {
+public enum InsnName {
+    INSN_INT_ARITHMETIC_BINARY,
+    INSN_INT_UNCHECKED_ARITHMETIC_BINARY,
+    INSN_INT_NEGATE,
+    INSN_INT_UNCHECKED_NEGATE,
+    INSN_INT_COMPARE,
+    INSN_EQUAL,
+    INSN_IDENTICAL,
+    INSN_BOOLEAN_NOT,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -91,23 +75,24 @@ public enum OtherInsnName {
     INSN_TYPE_CAST,
     INSN_TYPE_TEST,
     INSN_JUMP,
-    INSN_BRANCH_IF_TRUE,
-    INSN_BRANCH_IF_FALSE,
+    INSN_CONDITIONAL_BRANCH,
     INSN_CATCH,
     INSN_CONSTRUCT_BUILTIN_PANIC,
     INSN_CONSTRUCT_TYPE_CAST_PANIC
 }
 
-public type InsnName CheckedBinaryIntInsnName|UncheckedBinaryIntInsnName|OtherInsnName;
 
 public type InsnBase record {
     InsnName name;
 };
 
-public type Insn CheckedBinaryIntInsn|UncheckedBinaryIntInsn|OtherInsn;
-public type OtherInsn RetInsn|AbnormalRetInsn|CallInsn|InvokeInsn
-    |LoadInsn|TypeCastInsn|TypeTestInsn
-    |BranchIfTrueInsn|BranchIfFalseInsn
+public type Insn 
+    IntArithmeticBinaryInsn|IntUncheckedArithmeticBinaryInsn
+    |IntCompareInsn|IntNegateInsn|IntUncheckedNegateInsn
+    |IntCompareInsn|EqualInsn|IdenticalInsn|BooleanNotInsn
+    |RetInsn|AbnormalRetInsn|CallInsn|InvokeInsn
+    |LoadInsn|NarrowInsn|TypeCastInsn|TypeTestInsn
+    |JumpInsn|ConditionalBranchInsn
     |CatchInsn|ConstructBuiltinPanicInsn|ConstructTypeCastPanicInsn;
 
 type Operand ConstOperand|Register;
@@ -115,21 +100,84 @@ type ConstOperand ()|int|boolean|FunctionRef;
 type IntOperand int|Register;
 type FunctionOperand FunctionRef|Register;
 
-public type CheckedBinaryIntInsn readonly & record {|
+public type IntArithmeticBinaryInsn readonly & record {|
     *InsnBase;
-    CheckedBinaryIntInsnName name;
+    INSN_INT_ARITHMETIC_BINARY name = INSN_INT_ARITHMETIC_BINARY;
+    ArithmeticBinaryOp op;
     Register result;
     IntOperand[2] operands;
+    // XXX There's a problem here because / can panic in two ways:
+    // division by zero (if 2nd operand is 0)
+    // overflow (if first operand is int:MIN_VALUE and second operand is -1)
+    // This approach does not convey which panic happened.
     Label onPanic;
 |};
 
-public type UncheckedBinaryIntInsn readonly & record {|
+# These instruction is an optimization of IntArithmeticBinaryInsn
+# to be used only when the compiler can prove that a panic is impossible.
+# Furthermore, % must not be used if first operand is int:MIN_VALUE and second operand is -1.
+public type IntUncheckedArithmeticBinaryInsn readonly & record {|
     *InsnBase;
-    UncheckedBinaryIntInsnName name;
+    INSN_INT_UNCHECKED_ARITHMETIC_BINARY name = INSN_INT_UNCHECKED_ARITHMETIC_BINARY;
+    ArithmeticBinaryOp op;
     Register result;
     IntOperand[2] operands;
 |};
 
+public type IntNegateInsn readonly & record {|
+    *InsnBase;
+    INSN_INT_NEGATE name = INSN_INT_NEGATE;
+    Register result;
+    Register operand;
+    Label onPanic;
+|};
+
+public type BooleanNotInsn readonly & record {|
+    *InsnBase;
+    INSN_BOOLEAN_NOT name = INSN_BOOLEAN_NOT;
+    Register result;
+    Register operand;
+    Label onPanic;
+|};
+
+public type IntUncheckedNegateInsn readonly & record {|
+    *InsnBase;
+    INSN_INT_UNCHECKED_NEGATE name = INSN_INT_UNCHECKED_NEGATE;
+    Register result;
+    Register operand;
+|};
+
+# This does ordered comparision
+# Equal and inequality are done by equal
+public type IntCompareInsn readonly & record {|
+    *InsnBase;
+    INSN_INT_COMPARE name = INSN_INT_COMPARE;
+    OrderOp op;
+    Register result;
+    IntOperand[2] operands;
+|};
+
+# This does == and !=
+# If `negate` is true, the operation is !=
+# Otherwise it is ==.
+public type EqualInsn readonly & record {|
+    *InsnBase;
+    INSN_EQUAL name = INSN_EQUAL;
+    boolean negate;
+    Register result;
+    Operand[2] operands;
+|};
+
+# This does == and !=
+# If `negate` is true, the operation is !=
+# Otherwise it is ==.
+public type IdenticalInsn readonly & record {|
+    *InsnBase;
+    INSN_IDENTICAL name = INSN_IDENTICAL;
+    boolean negate;
+    Register result;
+    Operand[2] operands;
+|};
 
 type FunctionRef record {|
     Identifier functionIdentifier;
@@ -263,22 +311,14 @@ public type ConstructTypeCastPanicInsn readonly & record {|
     SemType resultType;
 |};
 
-# Branch if a value is true.
-# This branches to `Label` if the `operand` is true.
+# Branch when the value of an operand has a specified boolean value
+# This branches to `Label` if the `operand` has the value `branchWhen`.
 # If the operand is const, then use a Jump instead
-public type BranchIfTrueInsn readonly & record {|
-    INSN_BRANCH_IF_TRUE name = INSN_BRANCH_IF_TRUE;
+public type ConditionalBranchInsn readonly & record {|
+    INSN_CONDITIONAL_BRANCH name = INSN_CONDITIONAL_BRANCH;
     # Operand must have exactly type boolean
     Register operand;
-    Label dest;
-|};
-
-# Branch if a value is false.
-# If the operand is const, then use a Jump instead
-public type BranchIfFalseInsn readonly & record {|
-    INSN_BRANCH_IF_FALSE name = INSN_BRANCH_IF_FALSE;
-    # Operand must have exactly type boolean
-    Register operand;
+    boolean branchIf;
     Label dest;
 |};
 
