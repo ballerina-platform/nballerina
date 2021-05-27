@@ -7,6 +7,6 @@ call bal push --repository=local
 cd ..\front
 call bal build -c  --skip-tests
 call bal push --repository=local
-cd ..\semtype
+cd ..\driver
 call bal build
 cd ..
