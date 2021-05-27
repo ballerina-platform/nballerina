@@ -38,20 +38,23 @@
 34. isolated qualifier
 35. transactional qualifier
 
+## JSON syntax features
+
+* Syntax for difference and/or complement `["!" T]` or `["-" T1 T2]`
+* Syntax for varargs functions
+* Add `["?" T]` meaning `["|", T, "()"]`
+* Conversion from SemType to JSON representation
+* Syntax for module (collection of mutually recursive named definitions)
+  as in Ballerina
+* Use Ballerina's data-driven test feature to run tests in JSON syntax
+* Maybe use `null` instead of `"nil"` to represent nil type (for consistency with `true`, `false`)
+
 ## Other things
 
-* Implement concept of a module (collection of mutually recursive named definitions)
-* Conversion from SemType to JSON representation
-* JSON syntax for varargs functions
-* JSON syntax for difference and/or complement `["!" T]` or `["-" T1 T2]`
-* Support Ballerina syntax for types (start with a subset)
+* Consider better names than SemType
 * One of the subtype tests creates >600 BDDs: we should understand why and try to reduce it
 * Use isolated in core and json modules
-* Make use of Ballerina's data-driven test feature
-* Add JSON `["?" T]` meaning `["|", T, "()"]`
 * Extend to provide error messages for subtype failure
 * I suspect we have a problem with a function return type of `never`
 * Move desugaring of multiple function arguments into core
-* Maybe use `null` instead of `"nil"` to represent nil type in JSON (for consistency with `true`, `false`)
 * Better to make TypeCheckerContext be an object
-
