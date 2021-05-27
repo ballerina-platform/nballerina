@@ -10,7 +10,4 @@ name = "nballerina.bir"
 version = "0.1.0"
 repository = "local"
 
-[[dependency]]
-org = "ballerina"
-name = "test"
-version = "0.0.0"
+
