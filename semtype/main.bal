@@ -2,7 +2,7 @@ import ballerina/io;
 import wso2/nballerina.types as core;
 import wso2/nballerina.types.bdd;
 
-import semtype.'json as j;
+import wso2/nballerina.types.'json as j;
 
 enum Relation {
     proper_subtype,
