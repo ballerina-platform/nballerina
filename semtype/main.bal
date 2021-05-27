@@ -20,7 +20,7 @@ public type Options record {|
 
 public function main(string? f, *Options opts) returns error? {
     if opts.bal {
-        return bmain(f);
+        return showTypes(f);
     }
     string filename = f is () ? "tests.json" : f;
     json j = check io:fileReadJson(filename);

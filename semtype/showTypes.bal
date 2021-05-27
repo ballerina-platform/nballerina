@@ -2,9 +2,9 @@ import ballerina/io;
 
 import wso2/nballerina.front as b;
 import wso2/nballerina.types as core;
-// import semtype.bdd;
+// import wso2/nballerina.types.bdd;
 
-public function bmain(string? f) returns error? {
+public function showTypes(string? f) returns error? {
     string filename = f ?: "tests/data/test.bal";
     string balString = check io:fileReadString(filename);
     string[] results = check subtypeRels(balString);
