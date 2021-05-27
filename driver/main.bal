@@ -1,10 +1,10 @@
 public type Options record {|
-    boolean bal = false;
+    boolean testJsonTypes = false;
 |};
 
 public function main(string? f, *Options opts) returns error? {
-    if opts.bal {
-        return showTypes(f);
+    if opts.testJsonTypes {
+        return testJsonTypes(f);
     }
-    return testJsonTypes(f);
+    return showTypes(f);
 }
