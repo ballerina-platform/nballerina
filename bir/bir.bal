@@ -1,4 +1,11 @@
-import wso2/nballerina.types as t;
+//import wso2/nballerina.types as t;
+
+//public type SemType t:SemType;
+public type SemType int;
+
+//public type FunctionAtomicType t:FunctionAtomicType;
+public type FunctionAtomicType readonly & record {};
+
 
 public type Module record {|
     readonly ModuleId id;
@@ -16,7 +23,6 @@ public type ModuleDefn record {
     readonly string name;
 };
 
-public type SemType t:SemType;
 
 # A label within a function is represented as an int
 # indexing into the function's `labelMap`.
@@ -27,7 +33,7 @@ public type FunctionDefn record {
     *ModuleDefn;
     # Name within the module
     readonly string name;
-    t:FunctionAtomicType functionType;
+    FunctionAtomicType functionType;
     // Function execution starts off with value of param i
     // in register i
     // (Not thinking about varargs yet.)
@@ -50,96 +56,116 @@ public type Register readonly & record {|
     SemType semType;
 |};
 
-public enum InsnName {
+// These are binary operations that can panic
+public enum CheckedBinaryIntInsnName {
     INSN_CHECKED_INT_ADD,
+    INSN_CHECKED_INT_SUB,
+    INSN_CHECKED_INT_MUL,
+    # This panics on both division by zero and overflow (int:MIN_VALUE/-1)
+    INSN_CHECKED_INT_DIV,
+    # This panics if second operand is zero.
+    # Result of int:MIN_VALUE/-1 is 0 (as in Java)
+    INSN_CHECKED_INT_REM
+}
+
+# Binary operations that can panic
+public enum UncheckedBinaryIntInsnName {
+    # This must only be used when the compiler can prove that the
+    # addition will not overflow
     INSN_UNCHECKED_INT_ADD,
+    INSN_UNCHECKED_INT_SUB,
+    INSN_UNCHECKED_INT_MUL,
+    INSN_UNCHECKED_INT_DIV,
+    # This must not be used if second operand is 0,
+    # or if first operand is int:MIN_VALUE and second operand is -1.
+    INSN_UNCHECKED_INT_REM
+}
+
+public enum OtherInsnName {
     INSN_RET,
     INSN_ABNORMAL_RET,
-    INSN_STATIC_CALL,
-    INSN_STATIC_INVOKE,
-    INSN_CONSTRUCT_BUILTIN_PANIC,
-    INSN_CONSTRUCT_TYPE_CAST_PANIC,
-    INSN_CONST_FUNCTION,
-    INSN_CONST_INT,
-    INSN_MOVE,
+    INSN_CALL,
+    INSN_INVOKE,
+    INSN_LOAD,
     INSN_NARROW,
-    INSN_WIDEN,
     INSN_TYPE_CAST,
     INSN_TYPE_TEST,
     INSN_JUMP,
     INSN_BRANCH_IF_TRUE,
     INSN_BRANCH_IF_FALSE,
-    INSN_CATCH
+    INSN_CATCH,
+    INSN_CONSTRUCT_BUILTIN_PANIC,
+    INSN_CONSTRUCT_TYPE_CAST_PANIC
 }
 
-public type Insn readonly & record {
+public type InsnName CheckedBinaryIntInsnName|UncheckedBinaryIntInsnName|OtherInsnName;
+
+public type InsnBase record {
     InsnName name;
 };
 
-# Load an integer into a register.
-public type ConstIntInsn readonly & record {|
-    INSN_CONST_INT name = INSN_CONST_INT;
-    Register result;
-    int value;
-|};
+public type Insn CheckedBinaryIntInsn|UncheckedBinaryIntInsn|OtherInsn;
+public type OtherInsn RetInsn|AbnormalRetInsn|CallInsn|InvokeInsn
+    |LoadInsn|TypeCastInsn|TypeTestInsn
+    |BranchIfTrueInsn|BranchIfFalseInsn
+    |CatchInsn|ConstructBuiltinPanicInsn|ConstructTypeCastPanicInsn;
 
-public type CheckedIntAddInsn readonly & record {|
-    INSN_CHECKED_INT_ADD name = INSN_CHECKED_INT_ADD;
+type Operand ConstOperand|Register;
+type ConstOperand ()|int|boolean|FunctionRef;
+type IntOperand int|Register;
+type FunctionOperand FunctionRef|Register;
+
+public type CheckedBinaryIntInsn readonly & record {|
+    *InsnBase;
+    CheckedBinaryIntInsnName name;
     Register result;
-    Register[2] operands;
+    IntOperand[2] operands;
     Label onPanic;
 |};
 
-# Used when the compiler can prove that the addition
-# will not overflow.
-public type UncheckedIntAddInsn readonly & record {|
-    INSN_UNCHECKED_INT_ADD name = INSN_UNCHECKED_INT_ADD;
+public type UncheckedBinaryIntInsn readonly & record {|
+    *InsnBase;
+    UncheckedBinaryIntInsnName name;
     Register result;
-    Register[2] operands;
+    IntOperand[2] operands;
 |};
+
 
 type FunctionRef record {|
     Identifier functionIdentifier;
-    t:FunctionAtomicType functionType;
+    FunctionAtomicType functionType;
 |};
 
-# This is used for static calls everywhere except within a trap expression.
-# A static call is one where the function to be called is known
-# at compile-time.
+# This is used for calls everywhere except within a trap expression.
 # If the called function returns abnormally, then the caller
 # also returns abnormally with the same error value.
-public type StaticCallInsn readonly & record {|
-    INSN_STATIC_CALL name = INSN_STATIC_CALL;
+public type CallInsn readonly & record {|
+    *InsnBase;
+    INSN_CALL name = INSN_CALL;
     Register result;
-    *FunctionRef;
-    Register[] args;
+    FunctionOperand func;
+    Operand[] args;
 |};
 
-# This is used for a static call within a trap.
+# This is used for a call within a trap.
 # If the called function returns abnormally
 # then we branch to onPanic.
 # The label must refer to a CatchInsn.
-public type StaticInvokeInsn readonly & record {|
-    INSN_STATIC_INVOKE name = INSN_STATIC_INVOKE;
+public type InvokeInsn readonly & record {|
+    *InsnBase;
+    INSN_INVOKE name = INSN_INVOKE;
     Register result;
-    *FunctionRef;
+    FunctionOperand func;
     Label onPanic;
 |};
 
-# Load a module level function into a register.
-# The type of the register should be precisely
-# The function type.
-public type ConstFunctionInsn readonly & record {|
-    INSN_CONST_FUNCTION name = INSN_CONST_FUNCTION;
-    *FunctionRef;
-    Register result;
-|};
 
 # A CatchInsn is allowed only in conjunction with an InvokeInsn.
 # Executing the catch instruction causes the error value associated
 # with the abnormal return to be stored in the result register.
 # This is a very simplified form of a LLVM landingpad.
 public type CatchInsn readonly & record {|
+    *InsnBase;
     INSN_CATCH name = INSN_CATCH;
     Register result;
 |};
@@ -152,26 +178,21 @@ public type GlobalIdentifier readonly & record {|
     string name;
 |};
 
-# Move a value from one register to another.
-# The type of the operand register must
-# be equal to the type of the result register.
-public type MoveInsn readonly & record {|
-    INSN_MOVE name = INSN_MOVE;
+# Load a value into a register.
+# The type of the operand must be a subtype
+# of the type of the result register.
+public type LoadInsn readonly & record {|
+    *InsnBase;
+    INSN_LOAD name = INSN_LOAD;
     Register result;
-    Register operand;
-|};
-
-# The type of the operand register must
-# be a subtype of the type of the result register.
-# If they are exactly equal then move should be used instead.
-public type WidenInsn readonly & record {|
-    INSN_WIDEN name = INSN_WIDEN;
-    Register result;
-    Register operand;
+    Operand operand;
 |};
 
 # A type cast that may fail.
+# Don't need to allow for operand to be a const
+# Since we can do that at compile-time
 public type TypeCastInsn readonly & record {|
+    *InsnBase;
     INSN_TYPE_CAST name = INSN_TYPE_CAST;
     Register result;
     Register operand;
@@ -184,6 +205,7 @@ public type TypeCastInsn readonly & record {|
 # Tests whether a value belongs to a type
 # Used for `is` expressions
 public type TypeTestInsn readonly & record {|
+    *InsnBase;
     INSN_TYPE_TEST name = INSN_TYPE_TEST;
     # Gets result of test.
     # Must be exactly type boolean
@@ -201,18 +223,22 @@ public type TypeTestInsn readonly & record {|
 # This must be verifiable purely from the BIR.
 # XXX Is there a better way to do this? e.g. combine test and cast somehow
 public type NarrowInsn readonly & record {|
+    *InsnBase;
     INSN_NARROW name = INSN_NARROW;
     Register result;
     Register operand;
 |};
 
+public type RetInsn readonly & record {|
+    INSN_RET name = INSN_RET;
+    Operand operand;
+|};
 
 # Return abnormally from the function
-# The type of the operand
-# and need not belong to the functions return type.
+# The type of the operand need not belong to the functions return type.
 # The associated error value is in the operand register.
 public type AbnormalRetInsn readonly & record {|
-    readonly INSN_ABNORMAL_RET name = INSN_ABNORMAL_RET;
+    INSN_ABNORMAL_RET name = INSN_ABNORMAL_RET;
     # Operand is error value
     Register operand;
 |};
@@ -239,6 +265,7 @@ public type ConstructTypeCastPanicInsn readonly & record {|
 
 # Branch if a value is true.
 # This branches to `Label` if the `operand` is true.
+# If the operand is const, then use a Jump instead
 public type BranchIfTrueInsn readonly & record {|
     INSN_BRANCH_IF_TRUE name = INSN_BRANCH_IF_TRUE;
     # Operand must have exactly type boolean
@@ -247,9 +274,16 @@ public type BranchIfTrueInsn readonly & record {|
 |};
 
 # Branch if a value is false.
+# If the operand is const, then use a Jump instead
 public type BranchIfFalseInsn readonly & record {|
     INSN_BRANCH_IF_FALSE name = INSN_BRANCH_IF_FALSE;
     # Operand must have exactly type boolean
     Register operand;
+    Label dest;
+|};
+
+# Unconditional jump to a label
+public type JumpInsn readonly & record {|
+    INSN_JUMP name = INSN_JUMP;
     Label dest;
 |};
