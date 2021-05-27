@@ -1,6 +1,6 @@
 // Convert from json into a SemType
 // Format is defined in schema.bal
-import wso2/nballerina.types as core;
+import wso2/nballerina.types as t;
 
 
 public type Path int[];
@@ -22,39 +22,39 @@ type NameBinding record {|
 
 type DefBinding record {|
    json desc;
-   core:Definition def;
+   t:Definition def;
    Binding? next;
 |};
 
-public function parse(core:Env env, json j) returns core:SemType|ParseError {
+public function parse(t:Env env, json j) returns t:SemType|ParseError {
     return parseType(env, (), j, []);
 } 
 
-function parseType(core:Env env, Binding? b, json j, Path path) returns core:SemType|ParseError {
+function parseType(t:Env env, Binding? b, json j, Path path) returns t:SemType|ParseError {
     match j {
-        Nil => { return core:NIL; }
-        Boolean => { return core:BOOLEAN; }
-        Int => { return core:INT; }
-        Byte => { return core:BYTE; }
-        "int8" => { return core:intWidthSigned(8); }
-        "int16" => { return core:intWidthSigned(16); }
-        "int32" => { return core:intWidthSigned(32); }
-        "uint8" => { return core:intWidthUnsigned(8); }
-        "uint16" => { return core:intWidthUnsigned(16); }
-        "uint32" => { return core:intWidthUnsigned(32); }
-        Float => { return core:FLOAT; }
-        Decimal => { return core:DECIMAL; }
-        String => { return core:STRING; }
-        "error" => { return core:ERROR; }
-        Typedesc => { return core:TYPEDESC; }
-        Handle => { return core:HANDLE; }
-        Xml => { return core:XML; } 
-        Json => { return core:createJson(env); }
-        Any => { return core:ANY; }
-        Never => { return core:NEVER; }
-        ReadOnly => { return core:READONLY; }
-        true => { return core:booleanConst(true); }
-        false => { return core:booleanConst(false); }
+        Nil => { return t:NIL; }
+        Boolean => { return t:BOOLEAN; }
+        Int => { return t:INT; }
+        Byte => { return t:BYTE; }
+        "int8" => { return t:intWidthSigned(8); }
+        "int16" => { return t:intWidthSigned(16); }
+        "int32" => { return t:intWidthSigned(32); }
+        "uint8" => { return t:intWidthUnsigned(8); }
+        "uint16" => { return t:intWidthUnsigned(16); }
+        "uint32" => { return t:intWidthUnsigned(32); }
+        Float => { return t:FLOAT; }
+        Decimal => { return t:DECIMAL; }
+        String => { return t:STRING; }
+        "error" => { return t:ERROR; }
+        Typedesc => { return t:TYPEDESC; }
+        Handle => { return t:HANDLE; }
+        Xml => { return t:XML; } 
+        Json => { return t:createJson(env); }
+        Any => { return t:ANY; }
+        Never => { return t:NEVER; }
+        ReadOnly => { return t:READONLY; }
+        true => { return t:booleanConst(true); }
+        false => { return t:booleanConst(false); }
         // Should be able to use match patterns here
         // but there's a compiler bug #29041
         var js if js is json[] => {
@@ -81,35 +81,35 @@ function parseType(core:Env env, Binding? b, json j, Path path) returns core:Sem
 }
 
 // jlist is a list starting with k
-function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Path parent) returns core:SemType|ParseError {
+function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path parent) returns t:SemType|ParseError {
     match k {
         "|" => {
-            core:SemType[] v = check parseTypes(env, b, jlist, parent, 1);
-            return reduce(v, core:union, core:NEVER);
+            t:SemType[] v = check parseTypes(env, b, jlist, parent, 1);
+            return reduce(v, t:union, t:NEVER);
         }
         "&" => {
-            core:SemType[] v = check parseTypes(env, b, jlist, parent, 1);
-            return reduce(v, core:intersect, core:TOP);
+            t:SemType[] v = check parseTypes(env, b, jlist, parent, 1);
+            return reduce(v, t:intersect, t:TOP);
         }
         "tuple" => {
-            core:SemType? s = lookupDef(env, b, jlist);
+            t:SemType? s = lookupDef(env, b, jlist);
             if !(s is ()) {
                 return s;
             }
-            core:ListDefinition def = new;
-            core:SemType[] members = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
-            return def.define(env, members, core:NEVER);
+            t:ListDefinition def = new;
+            t:SemType[] members = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            return def.define(env, members, t:NEVER);
         }
         "list" => {
-            core:SemType? s = lookupDef(env, b, jlist);
+            t:SemType? s = lookupDef(env, b, jlist);
             if !(s is ()) {
                 return s;
             }
-            core:ListDefinition def = new;
-            core:SemType[] members = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
-            core:SemType rest;
+            t:ListDefinition def = new;
+            t:SemType[] members = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            t:SemType rest;
             if members.length() == 0 {
-                rest = core:TOP;
+                rest = t:TOP;
             }
             else {
                 rest = members.pop();
@@ -117,47 +117,47 @@ function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Pat
             return def.define(env, members, rest);
         }
         "record" => {
-            core:SemType? s = lookupDef(env, b, jlist);
+            t:SemType? s = lookupDef(env, b, jlist);
             if !(s is ()) {
                 return s;
             }
-            core:MappingDefinition def = new;
-            core:Field[] fields = check parseFields(env, consDefBinding(jlist, def, b), jlist, parent, 1);
-            return def.define(env, fields, core:NEVER);
+            t:MappingDefinition def = new;
+            t:Field[] fields = check parseFields(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            return def.define(env, fields, t:NEVER);
         }
         "map" => {
-            core:SemType? s = lookupDef(env, b, jlist);
+            t:SemType? s = lookupDef(env, b, jlist);
             if !(s is ()) {
                 return s;
             }
             if jlist.length() == 1 {
                 return parseError("'map' must be followed by a type", parent, 0);
             }
-            core:MappingDefinition def = new;
+            t:MappingDefinition def = new;
             Binding? mb = consDefBinding(jlist, def, b);
-            core:SemType rest = check parseType(env, mb, jlist[1], pathAppend(parent, 1));
-            core:Field[] fields = check parseFields(env, mb, jlist, parent, 2);
+            t:SemType rest = check parseType(env, mb, jlist[1], pathAppend(parent, 1));
+            t:Field[] fields = check parseFields(env, mb, jlist, parent, 2);
             return def.define(env, fields, rest);
         }
         "function" => {
-            core:SemType? s = lookupDef(env, b, jlist);
+            t:SemType? s = lookupDef(env, b, jlist);
             if !(s is ()) {
                 return s;
             }
-            core:FunctionDefinition def = new(env);
-            core:SemType[] v = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            t:FunctionDefinition def = new(env);
+            t:SemType[] v = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
             if v.length() == 0 {
-                return core:FUNCTION;
+                return t:FUNCTION;
             }
-            core:SemType ret = v.pop();
-            return def.define(env, core:tuple(env, ...v), ret);
+            t:SemType ret = v.pop();
+            return def.define(env, t:tuple(env, ...v), ret);
         }
         "error" => {
             if jlist.length() != 2 {
                 return parseError("'error' must be followed by a string", parent, 0);
             }
-            core:SemType detail = check parseType(env, b, jlist[1], pathAppend(parent, 1));
-            return core:errorDetail(detail);
+            t:SemType detail = check parseType(env, b, jlist[1], pathAppend(parent, 1));
+            return t:errorDetail(detail);
         }
         "string" => {
             if jlist.length() != 2 {
@@ -168,7 +168,7 @@ function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Pat
                 return parseError("'string' must be followed by a string", parent, 1);
             }
             else {
-                return core:stringConst(value);
+                return t:stringConst(value);
             }
         }
         "int" => {
@@ -192,7 +192,7 @@ function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Pat
             else {
                 return parseError("'int' must be followed by a string", parent, 1);
             }
-            return core:intConst(intValue);
+            return t:intConst(intValue);
         }
         "rec" => {
             if jlist.length() == 1 {
@@ -238,7 +238,7 @@ function parseCompoundType(core:Env env, Binding? b, string k, json[] jlist, Pat
     return parseError("unrecognized keyword '" + k + "'", pathAppend(parent, 0));
 }
 
-function consDefBinding(json desc, core:Definition def, Binding? next) returns Binding? {
+function consDefBinding(json desc, t:Definition def, Binding? next) returns Binding? {
     if next is () {
         return next;
     }
@@ -246,17 +246,17 @@ function consDefBinding(json desc, core:Definition def, Binding? next) returns B
     return db;
 }
 
-function parseFields(core:Env env, Binding? b, json[] jlist, Path parent, int startIndex) returns core:Field[]|ParseError {
-    core:Field[] fields = [];
+function parseFields(t:Env env, Binding? b, json[] jlist, Path parent, int startIndex) returns t:Field[]|ParseError {
+    t:Field[] fields = [];
     foreach int i in startIndex ..< jlist.length() {
-        core:Field f = check parseField(env, b, jlist[i], pathAppend(parent, i));
+        t:Field f = check parseField(env, b, jlist[i], pathAppend(parent, i));
         fields.push(f);
     }
     return fields;
 }
 
 
-function parseField(core:Env env, Binding? b, json j, Path path) returns core:Field|ParseError {
+function parseField(t:Env env, Binding? b, json j, Path path) returns t:Field|ParseError {
     if !(j is json[]) || j.length() != 2 {
         return parseError("field must be 2-tuple", path);
     }
@@ -266,7 +266,7 @@ function parseField(core:Env env, Binding? b, json j, Path path) returns core:Fi
             return parseError("first member of field must be a string", path, 0);
         }
         else {
-            core:SemType t = check parseType(env, b, j[1], pathAppend(path, 1));
+            t:SemType t = check parseType(env, b, j[1], pathAppend(path, 1));
             return [name, t];
         }
     }
@@ -296,7 +296,7 @@ function lookupBinding(Binding? b, string name) returns [json, Path]|"loop"? {
     return ();
 }
 
-function lookupDef(core:Env env, Binding? b, json desc) returns core:SemType? {
+function lookupDef(t:Env env, Binding? b, json desc) returns t:SemType? {
     Binding? tem = b;
     while true {
         if tem is () {
@@ -315,15 +315,15 @@ function lookupDef(core:Env env, Binding? b, json desc) returns core:SemType? {
     return ();
 }
 
-function parseRec(core:Env env, Binding? b, string name, json t, Path path) returns core:SemType|ParseError {
+function parseRec(t:Env env, Binding? b, string name, json t, Path path) returns t:SemType|ParseError {
     NameBinding nb = { name, next: b, desc: t, path };
     return parseType(env, nb, t, path);
 }
 
-function parseTypes(core:Env env, Binding? b, json[] js, Path parent, int startIndex) returns core:SemType[]|ParseError {
-    core:SemType[] s = [];
+function parseTypes(t:Env env, Binding? b, json[] js, Path parent, int startIndex) returns t:SemType[]|ParseError {
+    t:SemType[] s = [];
     foreach var i in startIndex ..< js.length() {
-        core:SemType t = check parseType(env, b, js[i], pathAppend(parent, i));
+        t:SemType t = check parseType(env, b, js[i], pathAppend(parent, i));
         s.push(t);
     }
     return s;
@@ -336,12 +336,12 @@ function parseError(string message, Path path, int? step = ()) returns ParseErro
     return error ParseError(message, path=path);
 }
 
-function reduce(core:SemType[] v, function (core:SemType, core:SemType) returns core:SemType binary, core:SemType initial) returns core:SemType {
+function reduce(t:SemType[] v, function (t:SemType, t:SemType) returns t:SemType binary, t:SemType initial) returns t:SemType {
     match v.length() {
         0 => { return initial; }
         1 => { return v[0]; }
     }
-    core:SemType result = binary(v[0], v[1]);
+    t:SemType result = binary(v[0], v[1]);
     foreach int i in 2 ..< v.length() {
         result = binary(result, v[i]);
     }

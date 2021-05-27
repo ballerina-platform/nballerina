@@ -1,7 +1,7 @@
 import ballerina/io;
 
-import wso2/nballerina.front as b;
-import wso2/nballerina.types as core;
+import wso2/nballerina.front;
+import wso2/nballerina.types as t;
 // import wso2/nballerina.types.bdd;
 
 public function showTypes(string? f) returns error? {
@@ -15,9 +15,9 @@ public function showTypes(string? f) returns error? {
 }
 
 function subtypeRels(string balString) returns string[]|error {
-    core:Env env = new;
-    map<core:SemType> m = check b:parse(env, balString);
-    var tc = core:typeCheckContext(env);
+    t:Env env = new;
+    map<t:SemType> m = check front:parse(env, balString);
+    var tc = t:typeCheckContext(env);
 
     var entries = from var [name, t] in m.entries() order by name select [name, t];
     [string, string][] results = [];
@@ -25,10 +25,10 @@ function subtypeRels(string balString) returns string[]|error {
         foreach int j in i + 1 ..< entries.length() {
             var [name1, t1] = entries[i];
             var [name2, t2] = entries[j];
-            if core:isSubtype(tc, t1, t2) {
+            if t:isSubtype(tc, t1, t2) {
                 results.push([name1, name2]);
             }
-            if core:isSubtype(tc, t2, t1) {
+            if t:isSubtype(tc, t2, t1) {
                 results.push([name2, name1]);
             }
         }

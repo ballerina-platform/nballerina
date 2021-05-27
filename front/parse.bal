@@ -1,4 +1,4 @@
-import wso2/nballerina.types as core;
+import wso2/nballerina.types as t;
 
 type Module table<TypeDef> key(name); 
 
@@ -6,7 +6,7 @@ type TypeDef record {|
     readonly string name;
     TypeDesc td;
     Position pos;
-    core:SemType? semType = ();
+    t:SemType? semType = ();
     int cycleDepth = -1;
 |};
 
@@ -17,7 +17,7 @@ type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorType
 type ListTypeDesc record {|
     TypeDesc[] members;
     TypeDesc rest;
-    core:ListDefinition? def = ();
+    t:ListDefinition? def = ();
 |};
 
 type FieldDesc record {|
@@ -28,14 +28,14 @@ type FieldDesc record {|
 type MappingTypeDesc record {|
     FieldDesc[] fields;
     TypeDesc rest;
-    core:MappingDefinition? def = ();
+    t:MappingDefinition? def = ();
 |};
 
 type FunctionTypeDesc record {|
     // XXX need to handle rest type
     TypeDesc[] args;
     TypeDesc ret;
-    core:FunctionDefinition? def = ();
+    t:FunctionDefinition? def = ();
 |};
 
 type ErrorTypeDesc record {|

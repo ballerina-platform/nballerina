@@ -1,7 +1,7 @@
 import ballerina/io;
-import wso2/nballerina.types as core;
-import wso2/nballerina.types.bdd;
 
+import wso2/nballerina.types as t;
+import wso2/nballerina.types.bdd;
 import wso2/nballerina.types.'json as j;
 
 enum Relation {
@@ -37,13 +37,13 @@ final var relationExpect = {
 };
 
 function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
-    core:Env env = new;
+    t:Env env = new;
     boolean firstOk = false;
     do {
         boolean ok = true;
-        core:SemType t1 = check j:parse(env, j1);
+        t:SemType t1 = check j:parse(env, j1);
         firstOk = true;
-        core:SemType t2 = check j:parse(env, j2);
+        t:SemType t2 = check j:parse(env, j2);
         var expect = <[boolean,boolean]>relationExpect[rel];
         return expectSubtype(testNum, j1, j2, env, t1, t2, expect, 0)
                 && expectSubtype(testNum, j2, j1, env, t2, t1, expect, 1);
@@ -54,11 +54,11 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
     }
 }
 
-function expectSubtype(int testNum, json j1, json j2, core:Env env, core:SemType t1, core:SemType t2, boolean[] expect, int i) returns boolean {
+function expectSubtype(int testNum, json j1, json j2, t:Env env, t:SemType t1, t:SemType t2, boolean[] expect, int i) returns boolean {
     io:println("Test ", testNum, "/", i);
     int tem = bdd:getCount();
-    var tc = core:typeCheckContext(env);
-    boolean b = core:isSubtype(tc, t1, t2);
+    var tc = t:typeCheckContext(env);
+    boolean b = t:isSubtype(tc, t1, t2);
     if b == expect[i] {
         io:println("  created ", bdd:getCount() - tem, " BDDs");
         return true;
