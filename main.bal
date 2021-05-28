@@ -11,10 +11,14 @@ public function main(string filename, *Options opts) returns error? {
     if opts.testJsonTypes {
         return testJsonTypes(filename);
     }
-    if opts.showTypes }
+    if opts.showTypes {
         return showTypes(filename);
     }
-    bir:ModuleId id = { version: "0.1.0", names: [filename], org: "dummy" };
+    bir:ModuleId id = {
+       versionString: "0.1.0",
+       names: [filename],
+       organization: "dummy"
+    };
     bir:Module module = check front:compileModule(filename, id);
     check llvm:compileModule(module, filename + llvm:OUTPUT_EXTENSION);
 }
