@@ -77,8 +77,7 @@ public enum InsnName {
     INSN_JUMP,
     INSN_CONDITIONAL_BRANCH,
     INSN_CATCH,
-    INSN_CONSTRUCT_BUILTIN_PANIC,
-    INSN_CONSTRUCT_TYPE_CAST_PANIC
+    INSN_CONSTRUCT_PANIC
 }
 
 
@@ -93,7 +92,7 @@ public type Insn
     |RetInsn|AbnormalRetInsn|CallInsn|InvokeInsn
     |LoadInsn|NarrowInsn|TypeCastInsn|TypeTestInsn
     |JumpInsn|ConditionalBranchInsn
-    |CatchInsn|ConstructBuiltinPanicInsn|ConstructTypeCastPanicInsn;
+    |CatchInsn|ConstructPanicInsn;
 
 type Operand ConstOperand|Register;
 type ConstOperand ()|int|boolean|FunctionRef;
@@ -106,10 +105,7 @@ public type IntArithmeticBinaryInsn readonly & record {|
     ArithmeticBinaryOp op;
     Register result;
     IntOperand[2] operands;
-    // XXX There's a problem here because / can panic in two ways:
-    // division by zero (if 2nd operand is 0)
-    // overflow (if first operand is int:MIN_VALUE and second operand is -1)
-    // This approach does not convey which panic happened.
+    # The label must refer to a ConstructPanicInsn
     Label onPanic;
 |};
 
@@ -129,6 +125,7 @@ public type IntNegateInsn readonly & record {|
     INSN_INT_NEGATE name = INSN_INT_NEGATE;
     Register result;
     Register operand;
+    # The label must refer to a ConstructPanicInsn
     Label onPanic;
 |};
 
@@ -137,7 +134,6 @@ public type BooleanNotInsn readonly & record {|
     INSN_BOOLEAN_NOT name = INSN_BOOLEAN_NOT;
     Register result;
     Register operand;
-    Label onPanic;
 |};
 
 public type IntUncheckedNegateInsn readonly & record {|
@@ -244,8 +240,9 @@ public type TypeCastInsn readonly & record {|
     INSN_TYPE_CAST name = INSN_TYPE_CAST;
     Register result;
     Register operand;
-    // If the operand is not a subtype of the result at runtime,
-    // then branch to this label
+    # If the operand is not a subtype of the result at runtime,
+    # then branch to this label
+    # The label must refer to a ConstructPanicInsn
     Label onPanic;
 |};
 
@@ -291,25 +288,21 @@ public type AbnormalRetInsn readonly & record {|
     Register operand;
 |};
 
-
-# Creates an error object representing a simple language-defined panic
-# and loads it into a register
-public type ConstructBuiltinPanicInsn readonly & record {|
-    INSN_CONSTRUCT_BUILTIN_PANIC name = INSN_CONSTRUCT_BUILTIN_PANIC; 
+# When an instruction other than an function call panics,
+# (e.g. integer overflow) it branches to the onPanic label,
+# at which there must be a ConstructPanicInsn. This
+# instruction is not allowed elsewhere.
+# This instruction is responsible for creating an error object
+# representing the panic that just happened.
+# Typically this is followed by an AbnormalRet instruction.
+# But if it happens within a trap expression, it can be followed
+# by arbitrary other code.
+public type ConstructPanicInsn readonly & record {|
+    INSN_CONSTRUCT_PANIC name = INSN_CONSTRUCT_PANIC; 
     # The register that gets the error value
     Register result;
-    // Distinct error type for the panic to be constructed
-    SemType panicType;
 |};
 
-public type ConstructTypeCastPanicInsn readonly & record {|
-    INSN_CONSTRUCT_TYPE_CAST_PANIC name = INSN_CONSTRUCT_TYPE_CAST_PANIC;
-    # The register that gets the error value
-    Register result;
-    # The value that could not be converted
-    Register operand;
-    SemType resultType;
-|};
 
 # Branch when the value of an operand has a specified boolean value
 # This branches to `Label` if the `operand` has the value `branchWhen`.
