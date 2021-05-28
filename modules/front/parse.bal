@@ -1,40 +1,40 @@
 
-
-function preparse(string str) returns Module|ParseError {
+function parseModule(string str) returns Module|ParseError {
     Tokenizer tok = new(str);
     check tok.advance();
-    return parseModule(tok);
-}
-
-function parseModule(Tokenizer tok) returns Module|ParseError {
     Module mod = table [];
     while tok.current() != () {
-        string kw;
-        if tok.current() == "type" {
-            kw = "type";
-        }
-        else if tok.current() == "const" {
-            kw = "const";
-        }
-        else {
-            return parseError(tok);
-        } 
-        check tok.advance();
-        Token? t = tok.current();
-        if t is [IDENTIFIER, string] {
-            string name = t[1];
-            Position pos = tok.currentPos();
-            check tok.advance();
-            // JBUG putting check before conditional gets an error #30737
-            TypeDesc td = kw == "type" ? check parseTypeDesc(tok) : check parseConstExpr(tok);
-            mod.add({name, td, pos});
-            check tok.expect(";");
-        }
-        else {
-            return parseError(tok);
-        }
+        check parseModuleLevel(tok, mod);
     }
     return mod;
+}
+
+function parseModuleLevel(Tokenizer tok, Module mod) returns ParseError? {
+    string kw;
+    if tok.current() == "type" {
+        kw = "type";
+    }
+    else if tok.current() == "const" {
+        kw = "const";
+    }
+    else {
+        return parseError(tok);
+    } 
+    check tok.advance();
+    Token? t = tok.current();
+    if t is [IDENTIFIER, string] {
+        string name = t[1];
+        Position pos = tok.currentPos();
+        check tok.advance();
+        // JBUG putting check before conditional gets an error #30737
+        TypeDesc td = kw == "type" ? check parseTypeDesc(tok) : check parseConstExpr(tok);
+        mod.add({name, td, pos});
+        check tok.expect(";");
+    }
+    else {
+        return parseError(tok);
+    }
+
 }
 
 function parseConstExpr(Tokenizer tok) returns TypeDesc|ParseError {

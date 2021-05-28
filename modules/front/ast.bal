@@ -1,6 +1,76 @@
 import wso2/nballerina.types as t;
 
-type Module table<TypeDef> key(name); 
+type Module table<ModuleLevelDef> key(name);
+
+type ModuleLevelDef TypeDef|FunctionDef;
+
+type FunctionDef record {|
+    readonly string name;
+    FunctionTypeDesc signature;
+    string[] paramNames;
+    Stmt body;
+|};
+
+type Stmt BlockStmt|VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|WhileStmt;
+type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr;
+
+type BlockStmt record {|
+    Stmt[] stmts;
+|};
+
+type AssignStmt record {|
+    string varName;
+    Expr expr;
+|};
+
+type ReturnStmt record {|
+    Expr returnExpr;
+|};
+
+type IfElseStmt record {|
+    Expr condition;
+    Stmt ifTrue;
+    Stmt ifFalse;
+|};
+
+type WhileStmt record {|
+    Expr condition;
+    Stmt body;
+|};
+
+type VarDeclStmt record {|
+    TypeDesc td;
+    string varName;
+    Expr initExpr;
+|};
+
+type BinaryExprOp "+" | "-" | "*" | "/" | "%";
+type UnaryExprOp "-";
+
+type BinaryExpr record {|
+    BinaryExprOp op;
+    Expr left;
+    Expr right;
+|};
+
+type UnaryExpr record {|
+    UnaryExprOp op;
+    Expr operand;
+|};
+
+type FunctionCallExpr record {|
+    string funcName;
+    Expr[] args;
+    // We can get type/def mismatch errors here
+    Position pos;
+|};
+
+type VarRefExpr record {|
+    string varName;
+|};
+
+type SimpleConstExpr ()|boolean|int|string;
+
 
 type TypeDef record {|
     readonly string name;

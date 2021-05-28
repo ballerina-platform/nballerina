@@ -1,21 +1,27 @@
 import wso2/nballerina.types as t;
 
-public function parse(t:Env env, string str) returns map<t:SemType>|ParseError {
-    Module mod = check preparse(str);
-    foreach var def in mod {
-        _ = check normalizeDef(env, mod, 0, def);
-    }
+function createTypeMap(Module mod) returns map<t:SemType> {
     map<t:SemType> defs = {};
     foreach var def in mod {
-        t:SemType? s = def.semType;
-        if s is () {
-            panic error("nil semtype");
-        }
-        else {
-            defs[def.name] = s;
-        }
+        if def is TypeDef {
+            t:SemType? s = def.semType;
+            if s is () {
+                panic error("nil semtype");
+            }
+            else {
+                defs[def.name] = s;
+            }
+        }       
     }
     return defs;
+}
+
+function normalizeDefs(t:Env env, Module mod) returns ParseError? {
+    foreach var def in mod {
+        if def is TypeDef {
+            _ = check normalizeDef(env, mod, 0, def);
+        }
+    }
 }
 
 function normalizeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|ParseError {
@@ -111,12 +117,15 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
         }
     }
     if td is TypeDescRef {
-        TypeDef? def = mod[td.ref];
+        ModuleLevelDef? def = mod[td.ref];
         if def is () {
             return error ParseError("reference to undefined type '" + td.ref + "'", pos=td.pos);
         }
-        else {
+        else if def is TypeDef {
             return check normalizeDef(env, mod, depth, def);
+        }
+        else {
+            return error ParseError("reference to non-type '" + td.ref + "' in type-descriptor", pos=td.pos);
         }
     }
     if td is SingletonTypeDesc {

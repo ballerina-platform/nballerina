@@ -5,17 +5,17 @@ import wso2/nballerina.types as t;
 // import wso2/nballerina.types.bdd;
 
 public function showTypes(string filename) returns error? {
-    string balString = check io:fileReadString(filename);
-    string[] results = check subtypeRels(balString);
+    string[] results = check subtypeRels(filename);
     foreach var line in results {
         io:println(line);
     }
     // io:println("Total BDDs ", bdd:getCount());
 }
 
-function subtypeRels(string balString) returns string[]|error {
-    t:Env env = new;
-    map<t:SemType> m = check front:parse(env, balString);
+function subtypeRels(string filename) returns string[]|error {
+    
+    var [env, m] = check front:loadTypes(filename);
+
     var tc = t:typeCheckContext(env);
 
     var entries = from var [name, t] in m.entries() order by name select [name, t];
