@@ -25,7 +25,7 @@ public type ModuleDefn record {
 
 # A label within a function is represented as an int
 # indexing into the function's `labelMap`.
-type Label int;
+public type Label int;
 
 // XXX Should we make this an object to encapsulate labelMap and registerCount?
 public type FunctionDefn record {
@@ -94,10 +94,10 @@ public type Insn
     |JumpInsn|ConditionalBranchInsn
     |CatchInsn|ConstructPanicInsn;
 
-type Operand ConstOperand|Register;
-type ConstOperand ()|int|boolean|FunctionRef;
-type IntOperand int|Register;
-type FunctionOperand FunctionRef|Register;
+public type Operand ConstOperand|Register;
+public type ConstOperand ()|int|boolean|FunctionRef;
+public type IntOperand int|Register;
+public type FunctionOperand FunctionRef|Register;
 
 public type IntArithmeticBinaryInsn readonly & record {|
     *InsnBase;
@@ -175,7 +175,7 @@ public type IdenticalInsn readonly & record {|
     Operand[2] operands;
 |};
 
-type FunctionRef record {|
+public type FunctionRef record {|
     Identifier functionIdentifier;
     FunctionAtomicType functionType;
 |};
