@@ -4,8 +4,7 @@ import wso2/nballerina.front;
 import wso2/nballerina.types as t;
 // import wso2/nballerina.types.bdd;
 
-public function showTypes(string? f) returns error? {
-    string filename = f ?: "tests/data/test.bal";
+public function showTypes(string filename) returns error? {
     string balString = check io:fileReadString(filename);
     string[] results = check subtypeRels(balString);
     foreach var line in results {
