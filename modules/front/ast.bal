@@ -9,6 +9,8 @@ type FunctionDef record {|
     FunctionTypeDesc signature;
     string[] paramNames;
     Stmt body;
+    // This is filled in during analysis
+    t:SemType? semType = ();
 |};
 
 type Stmt BlockStmt|VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|WhileStmt;
@@ -42,6 +44,8 @@ type VarDeclStmt record {|
     TypeDesc td;
     string varName;
     Expr initExpr;
+    // This is filled in during analysis
+    t:SemType? semType = ();
 |};
 
 type BinaryExprOp "+" | "-" | "*" | "/" | "%";
