@@ -73,8 +73,9 @@ type VarRefExpr record {|
     string varName;
 |};
 
-type SimpleConstExpr ()|boolean|int|string;
-
+type SimpleConstExpr record {|
+    ()|boolean|int|string value;
+|};
 
 type TypeDef record {|
     readonly string name;
