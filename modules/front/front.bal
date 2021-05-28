@@ -12,7 +12,7 @@ public function compileModule(string filename, bir:ModuleId id) returns bir:Modu
 }
 
 function analyzeModule(t:Env env, Module mod) returns error? {
-    check normalizeDefs(env, mod);
+    check normalizeTypeDefs(env, mod);
 }
 
 function generateCode(t:Env env, Module mod, bir:ModuleId id) returns bir:Module|error {
@@ -26,7 +26,7 @@ public function loadTypes(string filename) returns [t:Env, map<t:SemType>]|Parse
     string contents = check io:fileReadString(filename);
     Module mod = check parseModule(contents);
     t:Env env = new;
-    check normalizeDefs(env, mod);
+    check normalizeTypeDefs(env, mod);
     return [env, createTypeMap(mod)];
 }
 

@@ -16,15 +16,15 @@ function createTypeMap(Module mod) returns map<t:SemType> {
     return defs;
 }
 
-function normalizeDefs(t:Env env, Module mod) returns ParseError? {
+function normalizeTypeDefs(t:Env env, Module mod) returns ParseError? {
     foreach var def in mod {
         if def is TypeDef {
-            _ = check normalizeDef(env, mod, 0, def);
+            _ = check normalizeTypeDef(env, mod, 0, def);
         }
     }
 }
 
-function normalizeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|ParseError {
+function normalizeTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|ParseError {
     t:SemType? t = def.semType;
     if t is () {
         if depth == def.cycleDepth {
@@ -122,7 +122,7 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
             return error ParseError("reference to undefined type '" + td.ref + "'", pos=td.pos);
         }
         else if def is TypeDef {
-            return check normalizeDef(env, mod, depth, def);
+            return check normalizeTypeDef(env, mod, depth, def);
         }
         else {
             return error ParseError("reference to non-type '" + td.ref + "' in type-descriptor", pos=td.pos);
