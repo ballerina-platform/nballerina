@@ -1,14 +1,12 @@
 import wso2/nballerina.types as t;
 
 public type SemType t:SemType;
-//public type SemType int;
-
-public type FunctionAtomicType t:FunctionAtomicType;
-//public type FunctionAtomicType readonly & record {};
-
 
 public type Module record {|
     readonly ModuleId id;
+    // A SemType of a potentially recursive type uses integers to refer to definitions
+    // which are in arrays in this.
+    t:TypeCheckContext tc;
     table<ModuleDefn> key(name) defns = table[];
 |};
 
@@ -26,6 +24,9 @@ public type ModuleDefn record {
 # A label is an index of a basic block in the basicBlock.
 public type Label int;
 
+# This refers to an index in functionDefs in TypeCheckContext.
+public type FunctionAtomicTypeIndex int;
+
 # The definition of a function.
 # A function's code is represented as a factored control flow graph.
 # (as described in Choi et al 1999 https://dl.acm.org/doi/abs/10.1145/381788.316171)
@@ -42,7 +43,7 @@ public type FunctionDefn record {|
     # Name within the module
     readonly string name;
     # The type of the function
-    FunctionAtomicType functionType;
+    FunctionAtomicTypeIndex functionType;
     # Basic blocks indexed by label
     BasicBlock[] blocks;
     # Registers indexed by number
@@ -199,7 +200,7 @@ public type IdenticalInsn readonly & record {|
 
 public type FunctionRef readonly & record {|
     Identifier functionIdentifier;
-    FunctionAtomicType functionType;
+    FunctionAtomicTypeIndex functionType;
 |};
 
 # Call a function.
