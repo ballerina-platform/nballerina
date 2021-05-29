@@ -8,17 +8,13 @@ type FunctionDef record {|
     readonly string name;
     FunctionTypeDesc signature;
     string[] paramNames;
-    Stmt body;
+    Stmt[] body;
     // This is filled in during analysis
     t:SemType? semType = ();
 |};
 
-type Stmt BlockStmt|VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|WhileStmt;
+type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|WhileStmt;
 type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr;
-
-type BlockStmt record {|
-    Stmt[] stmts;
-|};
 
 type AssignStmt record {|
     string varName;
@@ -31,13 +27,13 @@ type ReturnStmt record {|
 
 type IfElseStmt record {|
     Expr condition;
-    Stmt ifTrue;
-    Stmt? ifFalse;
+    Stmt[] ifTrue;
+    Stmt[] ifFalse;
 |};
 
 type WhileStmt record {|
     Expr condition;
-    Stmt body;
+    Stmt[] body;
 |};
 
 type VarDeclStmt record {|
