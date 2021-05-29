@@ -32,7 +32,7 @@ type ReturnStmt record {|
 type IfElseStmt record {|
     Expr condition;
     Stmt ifTrue;
-    Stmt ifFalse;
+    Stmt? ifFalse;
 |};
 
 type WhileStmt record {|
