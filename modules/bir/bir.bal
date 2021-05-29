@@ -1,10 +1,10 @@
-//import wso2/nballerina.types as t;
+import wso2/nballerina.types as t;
 
-//public type SemType t:SemType;
-public type SemType int;
+public type SemType t:SemType;
+//public type SemType int;
 
-//public type FunctionAtomicType t:FunctionAtomicType;
-public type FunctionAtomicType readonly & record {};
+public type FunctionAtomicType t:FunctionAtomicType;
+//public type FunctionAtomicType readonly & record {};
 
 
 public type Module record {|
