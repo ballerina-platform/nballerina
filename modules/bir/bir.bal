@@ -41,8 +41,8 @@ public type FunctionDefn record {
     Insn[] insns;
     # Map a label to an index in the insns array
     # If insns is mutated other than by appending,
-    # then the labelMap needs updating.
-    int[] labelMap;
+    # then the labels needs updating.
+    int[] labels;
     // uid of all registers is less than this
     int registerCount;
 };
