@@ -176,7 +176,7 @@ public type IdenticalInsn readonly & record {|
     Operand[2] operands;
 |};
 
-public type FunctionRef record {|
+public type FunctionRef readonly & record {|
     Identifier functionIdentifier;
     FunctionAtomicType functionType;
 |};
