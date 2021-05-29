@@ -97,6 +97,7 @@ public type Insn
 public type Operand ConstOperand|Register;
 public type ConstOperand ()|int|boolean|string|FunctionRef;
 public type IntOperand int|Register;
+public type BooleanOperand boolean|Register;
 public type FunctionOperand FunctionRef|Register;
 
 public type IntArithmeticBinaryInsn readonly & record {|
