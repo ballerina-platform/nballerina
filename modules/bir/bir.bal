@@ -1,3 +1,4 @@
+import ballerina/lang.value as v;
 import wso2/nballerina.types as t;
 
 public type SemType t:SemType;
@@ -17,9 +18,10 @@ public type ModuleId readonly & record {|
     string versionString;
 |};
 
-public type ModuleDefn record {
+public type ModuleDefn record {|
     readonly string name;
-};
+    v:Cloneable...;
+|};
 
 # A label is an index of a basic block in the basicBlock.
 public type Label int;
