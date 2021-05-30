@@ -8,22 +8,23 @@ public function compileModule(string filename, bir:ModuleId id) returns bir:Modu
     Module mod = check parseModule(contents);
     t:Env env = new;
     check analyzeModule(env, mod);
-    return generateCode(env, mod, id);
+    t:TypeCheckContext tc = t:typeCheckContext(env);
+    return generateCode(tc, mod, id);
 }
 
 function analyzeModule(t:Env env, Module mod) returns error? {
+    // XXX also need to normalize all the types in local variable declarations
     check normalizeTypeDefs(env, mod);
 }
 
-function generateCode(t:Env env, Module mod, bir:ModuleId id) returns bir:Module|error {
-    bir:Module bir = { id };
+function generateCode(t:TypeCheckContext tc, Module mod, bir:ModuleId id) returns bir:Module|error {
+    bir:Module bir = { id, tc };
     // XXX
     return bir;
 }
 
 // This is old interface for showTypes
-public function loadTypes(string filename) returns [t:Env, map<t:SemType>]|ParseError|io:Error {
-    string contents = check io:fileReadString(filename);
+public function typesFromString(string contents) returns [t:Env, map<t:SemType>]|ParseError {
     Module mod = check parseModule(contents);
     t:Env env = new;
     check normalizeTypeDefs(env, mod);
