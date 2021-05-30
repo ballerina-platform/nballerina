@@ -16,22 +16,22 @@ function createTypeMap(Module mod) returns map<t:SemType> {
     return defs;
 }
 
-function normalizeTypeDefs(t:Env env, Module mod) returns ParseError? {
+function convertTypeDefs(t:Env env, Module mod) returns ParseError? {
     foreach var def in mod {
         if def is TypeDef {
-            _ = check normalizeTypeDef(env, mod, 0, def);
+            _ = check convertTypeDef(env, mod, 0, def);
         }
     }
 }
 
-function normalizeTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|ParseError {
+function convertTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|ParseError {
     t:SemType? t = def.semType;
     if t is () {
         if depth == def.cycleDepth {
             return error ParseError("invalid cycle detected for " + def.name, pos=def.pos);
         }
         def.cycleDepth = depth;
-        t:SemType s = check normalizeType(env, mod, depth, def.td);
+        t:SemType s = check convertType(env, mod, depth, def.td);
         t = def.semType;
         if t is () {
             def.semType = s;
@@ -50,7 +50,7 @@ function normalizeTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns
     }
 }
 
-function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:SemType|ParseError {
+function convertType(t:Env env, Module mod, int depth, TypeDesc td) returns t:SemType|ParseError {
     match td {
         // These are easy
         "any" => { return t:ANY; }
@@ -82,8 +82,8 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
             td.def = d;
             // JBUG temp variable `m` is to avoid compiler bug #30736
             TypeDesc[] m = td.members;
-            t:SemType[] members = from var x in m select check normalizeType(env, mod, depth + 1, x);
-            return d.define(env, members, check normalizeType(env, mod, depth + 1, td.rest));
+            t:SemType[] members = from var x in m select check convertType(env, mod, depth + 1, x);
+            return d.define(env, members, check convertType(env, mod, depth + 1, td.rest));
         }
         else {
             return def.getSemType(env);
@@ -96,8 +96,8 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
             td.def = d;
             // JBUG temp variable `f` is to avoid compiler bug #30736
             FieldDesc[] f = td.fields;
-            t:Field[] fields = from var { name, typeDesc } in f select [name, check normalizeType(env, mod, depth + 1, typeDesc)];
-            return d.define(env, fields, check normalizeType(env, mod, depth + 1, td.rest));
+            t:Field[] fields = from var { name, typeDesc } in f select [name, check convertType(env, mod, depth + 1, typeDesc)];
+            return d.define(env, fields, check convertType(env, mod, depth + 1, td.rest));
         }
         else {
             return def.getSemType(env);
@@ -109,8 +109,8 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
             t:FunctionDefinition d = new(env);
             td.def = d;
             TypeDesc[] a = td.args;
-            t:SemType[] args = from var x in a select check normalizeType(env, mod, depth + 1, x);
-            return d.define(env, t:tuple(env, ...args), check normalizeType(env, mod, depth + 1, td.ret));
+            t:SemType[] args = from var x in a select check convertType(env, mod, depth + 1, x);
+            return d.define(env, t:tuple(env, ...args), check convertType(env, mod, depth + 1, td.ret));
         }
         else {
             return def.getSemType(env);
@@ -122,7 +122,7 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
             return error ParseError("reference to undefined type '" + td.ref + "'", pos=td.pos);
         }
         else if def is TypeDef {
-            return check normalizeTypeDef(env, mod, depth, def);
+            return check convertTypeDef(env, mod, depth, def);
         }
         else {
             return error ParseError("reference to non-type '" + td.ref + "' in type-descriptor", pos=td.pos);
@@ -141,12 +141,12 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
         }
     }
     if td is ErrorTypeDesc {
-        return t:errorDetail(check normalizeType(env, mod, depth, td.detail));
+        return t:errorDetail(check convertType(env, mod, depth, td.detail));
     }
     if td is BinaryTypeDesc {
         // NB depth does not increase here
-        t:SemType l = check normalizeType(env, mod, depth, td.left);
-        t:SemType r = check normalizeType(env, mod, depth, td.right);
+        t:SemType l = check convertType(env, mod, depth, td.left);
+        t:SemType r = check convertType(env, mod, depth, td.right);
         if td.op == "|" {
             return t:union(l, r);
         }

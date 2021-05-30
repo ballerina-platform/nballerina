@@ -13,8 +13,8 @@ public function compileModule(string filename, bir:ModuleId id) returns bir:Modu
 }
 
 function analyzeModule(t:Env env, Module mod) returns error? {
-    // XXX also need to normalize all the types in local variable declarations
-    check normalizeTypeDefs(env, mod);
+    // XXX also need to convert all the types in local variable declarations
+    check convertTypeDefs(env, mod);
 }
 
 function generateCode(t:TypeCheckContext tc, Module mod, bir:ModuleId id) returns bir:Module|error {
@@ -27,7 +27,7 @@ function generateCode(t:TypeCheckContext tc, Module mod, bir:ModuleId id) return
 public function typesFromString(string contents) returns [t:Env, map<t:SemType>]|ParseError {
     Module mod = check parseModule(contents);
     t:Env env = new;
-    check normalizeTypeDefs(env, mod);
+    check convertTypeDefs(env, mod);
     return [env, createTypeMap(mod)];
 }
 
