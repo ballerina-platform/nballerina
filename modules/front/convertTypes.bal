@@ -16,10 +16,14 @@ function createTypeMap(Module mod) returns map<t:SemType> {
     return defs;
 }
 
-function convertTypeDefs(t:Env env, Module mod) returns ParseError? {
+function convertTypes(t:Env env, Module mod) returns ParseError? {
     foreach var def in mod {
         if def is TypeDef {
             _ = check convertTypeDef(env, mod, 0, def);
+        }
+        else {
+            // def is FunctionDef
+            // XXX convert function signature here
         }
     }
 }
