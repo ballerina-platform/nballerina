@@ -18,6 +18,7 @@ public type ModuleId readonly & record {|
     string versionString;
 |};
 
+ 
 public type ModuleDefn record {|
     readonly string name;
     v:Cloneable...;
@@ -25,9 +26,6 @@ public type ModuleDefn record {|
 
 # A label is an index of a basic block in the basicBlock.
 public type Label int;
-
-# This refers to an index in functionDefs in TypeCheckContext.
-public type FunctionAtomicTypeIndex int;
 
 # The definition of a function.
 # A function's code is represented as a factored control flow graph.
@@ -44,12 +42,36 @@ public type FunctionDefn record {|
     *ModuleDefn;
     # Name within the module
     readonly string name;
-    # The type of the function
-    FunctionAtomicTypeIndex functionType;
+    # The signature of the function
+    FunctionSignature functionSignature;
     # Basic blocks indexed by label
     BasicBlock[] blocks;
     # Registers indexed by number
     Register[] registers;
+|};
+
+public type FunctionRef readonly & record {|
+    Identifier functionIdentifier;
+    FunctionSignature functionSignature;
+|};
+
+// The string case represents a symbol in the same module
+public type Identifier string|GlobalIdentifier;
+
+public type GlobalIdentifier readonly & record {|
+    ModuleId module;
+    string name;
+|};
+
+# This represents the signature of a function definition.
+# We don't need to convert this to a `SemType` unless
+# the definition is converted to a function value,
+# by referencing the name of the function as a variable
+# reference.
+public type FunctionSignature readonly & record {|
+    SemType returnType;
+    SemType[] paramTypes;
+    SemType? restParamType = ();
 |};
 
 # A basic block.
@@ -200,11 +222,6 @@ public type IdenticalInsn readonly & record {|
     Operand[2] operands;
 |};
 
-public type FunctionRef readonly & record {|
-    Identifier functionIdentifier;
-    FunctionAtomicTypeIndex functionType;
-|};
-
 # Call a function.
 # This is a terminator.
 # This is a PPI. A panic in the called function
@@ -223,13 +240,6 @@ public type CallInsn readonly & record {|
     Label onReturn;
 |};
 
-// The string case represents a symbol in the same module
-public type Identifier string|GlobalIdentifier;
-
-public type GlobalIdentifier readonly & record {|
-    ModuleId module;
-    string name;
-|};
 
 # Load a value into a register.
 # Typing rule:

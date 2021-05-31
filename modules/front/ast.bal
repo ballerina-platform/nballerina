@@ -1,4 +1,5 @@
 import wso2/nballerina.types as t;
+import wso2/nballerina.bir;
 
 type Module table<ModuleLevelDef> key(name);
 
@@ -6,11 +7,11 @@ type ModuleLevelDef TypeDef|FunctionDef;
 
 type FunctionDef record {|
     readonly string name;
-    FunctionTypeDesc signature;
+    FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
     // This is filled in during analysis
-    t:SemType? semType = ();
+    bir:FunctionSignature? signature = ();
 |};
 
 type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|WhileStmt;
@@ -40,7 +41,10 @@ type VarDeclStmt record {|
     TypeDesc td;
     string varName;
     Expr initExpr;
-    // This is filled in during analysis
+    // For now this should be filled in during parse
+    // using a prebuilt Semtype such as `t:INT`.
+    // Later on will support references to type definitions,
+    // and it will be filled in later.
     t:SemType? semType = ();
 |};
 
@@ -72,6 +76,8 @@ type VarRefExpr record {|
 type SimpleConstExpr record {|
     ()|boolean|int|string value;
 |};
+
+// Types
 
 type TypeDef record {|
     readonly string name;
