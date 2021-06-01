@@ -27,3 +27,6 @@ target
 
 # Emacs backup files
 *~
+
+# LLVM IR files
+*.ll
