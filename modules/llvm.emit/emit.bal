@@ -153,8 +153,6 @@ public class Function {
     }
 
     public function output(Output out) {
-        string preEmptionSpecifierTag = (self.preEmptionSpecifier == "dso_preemptable") ? "" : (<string>self.
-        preEmptionSpecifier);
         string[] headerContent = [];
         if self.isExternal {
             headerContent.push("declare");
@@ -164,7 +162,7 @@ public class Function {
         if self.linkageType != "external" {
             headerContent.push(self.linkageType);
         }
-        if self.preEmptionSpecifier == "dso_preemptable" {
+        if self.preEmptionSpecifier == "dso_local" {
             headerContent.push(self.preEmptionSpecifier);
         }
         headerContent.push(self.serializeReturnType());
