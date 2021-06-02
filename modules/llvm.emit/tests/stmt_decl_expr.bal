@@ -15,7 +15,7 @@ function stmtDeclExpr() returns Module {
     Function abort = 
     m.appendFunction("@abort", "void", isExternal = true, functionAttributes = ["noreturn", "nounwind"]);
 
-    Function foo = m.appendFunction("@foo", "i64", "dso_local");
+    Function foo = m.appendFunction("@foo", "void", "dso_local");
     BasicBlock bb0 = foo.appendBasicBlock();
     builder.positionAtEnd(bb0);
     Value R1 = builder.alloca("i64");

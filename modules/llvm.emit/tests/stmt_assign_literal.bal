@@ -4,7 +4,7 @@ import ballerina/test;
 function stmtAssignLiteral() returns Module {
     Builder builder = new ();
     Module m = new ("x86_64-pc-linux-gnu");
-    Function foo = m.appendFunction("@foo", "i64", "dso_local");
+    Function foo = m.appendFunction("@foo", "void", "dso_local");
     BasicBlock bb = foo.appendBasicBlock();
     builder.positionAtEnd(bb);
     Value R1 = builder.alloca("i64");

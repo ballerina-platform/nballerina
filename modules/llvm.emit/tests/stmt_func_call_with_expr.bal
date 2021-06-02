@@ -36,7 +36,7 @@ function stmtFuncCallWithExpr() returns Module {
     builder.returnValue(constInt("i64", 44));
 
 
-    Function test = m.appendFunction("@test", "i64", "dso_local");
+    Function test = m.appendFunction("@test", "void", "dso_local");
     BasicBlock bb0 = test.appendBasicBlock();
     builder.positionAtEnd(bb0);
     R1 = builder.alloca("i64");

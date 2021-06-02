@@ -91,17 +91,18 @@ public distinct class BasicBlock {
         self.label = label;
         self.func = func;
         // skip the label for init block
-        if label != "%L0" {
+        if label != "L0" {
             self.lines = [label + ":"];
         } else {
             self.lines = [];
         }
     }
-    function ref() returns string {
+    public function ref() returns string {
         return "%" + self.label;
     }
 
     public function getLabel() returns string {
+        //skip the % sign
         return self.label;
     }
 
@@ -209,7 +210,7 @@ public class Function {
     }
 
     function genLabel() returns string {
-        string label = "%" + "L" + self.labelCount.toString();
+        string label = "L" + self.labelCount.toString();
         self.labelCount += 1;
         return label;
     }
@@ -284,7 +285,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         PointerType ptrTy = {pointsTo: ty, align};
-        bb.addInsn(reg, "=", "alloca", string`${<string>ty},`, "align", align.toString());
+        bb.addInsn(reg, "=", "alloca", string `${<string>ty},`, "align", align.toString());
         return new Value(ptrTy, reg);
     }
 
@@ -293,8 +294,8 @@ public class Builder {
         PointerType ptrTy = requirePointerType(ptr);
         IntType ty = ptrTy.pointsTo;
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "load", string `${ptr.serializeType()},`, pointerTo(ty), string `${ptr.operand},`, "align", 
-        ptrTy.align.toString());
+        bb.addInsn(reg, "=", "load", string `${<string>ty},`, pointerTo(ty), string `${ptr.operand},`, "align", ptrTy.
+        align.toString());
         return new Value(ty, reg);
     }
 
@@ -398,12 +399,12 @@ public class Builder {
         if !(val.ty is "i1") {
             panic error("Conditional branch support only i1 values");
         }
-        self.bb().addInsn("br", "i1", string `${val.getOperand()},`, "label", string `${ifTrue.getLabel()},`, "label", 
-        ifFalse.getLabel());
+        self.bb().addInsn("br", "i1", string `${val.getOperand()},`, "label", string `${ifTrue.ref()},`, "label", 
+        ifFalse.ref());
     }
 
     public function branch(BasicBlock destination) {
-        self.bb().addInsn("br", "label", destination.getLabel());
+        self.bb().addInsn("br", "label", destination.ref());
     }
 
     public function unreachable() {
