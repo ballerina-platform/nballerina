@@ -17,7 +17,7 @@ public type StructureType "{i64,i1}";
 
 public type PreEmptionSpecifier "dso_preemptable"|"dso_local";
 
-public type LinkageType "internal"|"";
+public type LinkageType "internal"|"external";
 
 public type FunctionAttribute "noinline"|"nounwind"|"optnone"|"uwtable"|"readnone"|"speculatable"|"willreturn"|"noreturn";
 
@@ -38,6 +38,9 @@ public readonly distinct class Value {
     }
 
     public function serializeType() returns string {
+        if self.ty is PointerType {
+            return serializePointerType(<PointerType>self.ty);
+        }
         return <string>self.ty;
     }
 
@@ -127,7 +130,7 @@ public class Function {
     private Value[] functionArgs = [];
     public function init(string name, Type returnType, PreEmptionSpecifier preEmptionSpecifier = "dso_preemptable", 
                          FunctionAttribute[] functionAttributes = [], boolean isExternal = false, 
-                         LinkageType linkageType = "", Type[] functionArgTypes = []) {
+                         LinkageType linkageType = "external", Type[] functionArgTypes = []) {
         self.name = name;
         self.preEmptionSpecifier = preEmptionSpecifier;
         self.isExternal = isExternal;
@@ -150,19 +153,29 @@ public class Function {
     }
 
     public function output(Output out) {
-        string returnTypeTag = self.serializeReturnType();
         string preEmptionSpecifierTag = (self.preEmptionSpecifier == "dso_preemptable") ? "" : (<string>self.
         preEmptionSpecifier);
+        string[] headerContent = [];
         if self.isExternal {
-            string header = string `declare ${<string>self.linkageType} ${preEmptionSpecifierTag} ${returnTypeTag} ${
-            self.name} (${self.serializeFunctionArguments()}) ${self.serializeFunctionAttributes()}`;
-            out.push(header);
+            headerContent.push("declare");
         } else {
-            string header = string `define ${<string>self.linkageType} ${preEmptionSpecifierTag} ${returnTypeTag} ${self.
-            name} (${self.serializeFunctionArguments()}) ${self.serializeFunctionAttributes()}{`;
-            // Regex reg = {pattern: "/\s\s+/g"}; 
-            // header = stringutils:replaceAll(header, reg, " ");
-            out.push(header);
+            headerContent.push("define");
+        }
+        if self.linkageType != "external" {
+            headerContent.push(self.linkageType);
+        }
+        if self.preEmptionSpecifier == "dso_preemptable" {
+            headerContent.push(self.preEmptionSpecifier);
+        }
+        headerContent.push(self.serializeReturnType());
+        headerContent.push(string `${self.name}(${self.serializeFunctionArguments()})`);
+        headerContent.push(self.serializeFunctionAttributes());
+        string header = " ".'join(...headerContent);
+        if !self.isExternal {
+            header += "{";
+        }
+        out.push(header);
+        if !self.isExternal {
             self.outputBody(out);
             out.push("}");
         }
@@ -218,21 +231,22 @@ public class Function {
     }
 
     function serializeFunctionArguments() returns string {
-        string code = "";
+        string[] code = [];
         foreach var arg in self.functionArgs {
             string typeTag = (arg.ty is IntType || arg.ty == "void") ? (<string>arg.ty) : serializePointerType(<
             PointerType>arg.ty);
             if self.isExternal {
-                code += string `${typeTag}, `;
+                code.push(string `${typeTag},`);
             } else {
-                code += string `${typeTag} ${arg.operand}, `;
+                code.push(string `${typeTag} ${arg.operand},`);
             }
         }
-        code = code.trim();
-        if code.length() > 0 {
-            code = code.substring(0, code.length() - 1);
+        string code_string = " ".'join(...code);
+        code_string = code_string.trim();
+        if code_string.length() > 0 && code_string[code_string.length() - 1] == "," {
+            code_string = code_string.substring(0, code_string.length() - 1);
         }
-        return code;
+        return code_string;
     }
 }
 
@@ -245,7 +259,7 @@ public class Module {
 
     function appendFunction(string name, Type returnType, PreEmptionSpecifier preEmptionSpecifier = "dso_preemptable", 
                             FunctionAttribute[] functionAttributes = [], boolean isExternal = false, 
-                            LinkageType linkageType = "", Type[] functionArgTypes = []) returns Function {
+                            LinkageType linkageType = "external", Type[] functionArgTypes = []) returns Function {
         Function f = new (name, returnType, preEmptionSpecifier, functionAttributes, isExternal, linkageType, 
         functionArgTypes);
         self.functions.push(f);
@@ -272,7 +286,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         PointerType ptrTy = {pointsTo: ty, align};
-        bb.addInsn(reg, "=", "alloca", ty, ", align ", align.toString());
+        bb.addInsn(reg, "=", "alloca", string`${<string>ty},`, "align", align.toString());
         return new Value(ptrTy, reg);
     }
 
@@ -281,7 +295,8 @@ public class Builder {
         PointerType ptrTy = requirePointerType(ptr);
         IntType ty = ptrTy.pointsTo;
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "load", ty, ",", pointerTo(ty), " ", ptr.operand, " ,", "align", ptrTy.align.toString());
+        bb.addInsn(reg, "=", "load", string `${ptr.serializeType()},`, pointerTo(ty), string `${ptr.operand},`, "align", 
+        ptrTy.align.toString());
         return new Value(ty, reg);
     }
 
@@ -291,8 +306,8 @@ public class Builder {
         if ty != val.ty {
             panic error("store type mismatch");
         }
-        self.bb().addInsn("store", ty, val.operand, ",", pointerTo(ty), ptr.operand, ",", "align", 
-        ptrTy.align.toString());
+        self.bb().addInsn("store", ty, string `${val.operand},`, pointerTo(ty), string `${ptr.operand},`, "align", ptrTy.
+        align.toString());
     }
 
     // binary operation with int operands and (same) int result
@@ -300,7 +315,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
-        bb.addInsn(reg, "=", insn, ty, lhs.operand, ",", rhs.operand);
+        bb.addInsn(reg, "=", insn, ty, string `${lhs.operand},`, rhs.operand);
         return new Value(ty, reg);
     }
 
@@ -337,8 +352,7 @@ public class Builder {
         if (argString.length() > 0) {
             argString = argString.substring(0, argString.length() - 1);
         }
-        string callString = string `${reg} = call ${f.serializeReturnType()} ${f.getName()}(${argString})`;
-        bb.addInsn(callString);
+        bb.addInsn(reg, "=", "call", f.serializeReturnType(), string `${f.getName()}(${argString})`);
         return new Value(f.getReturnType(), reg);
     }
 
@@ -360,8 +374,7 @@ public class Builder {
         if (argString.length() > 0) {
             argString = argString.substring(0, argString.length() - 1);
         }
-        string callString = string `call ${f.serializeReturnType()} ${f.getName()}(${argString})`;
-        bb.addInsn(callString);
+        bb.addInsn("call", f.serializeReturnType(), string `${f.getName()}(${argString})`);
     }
 
     public function extractValue(Value value, Value index) returns Value {
@@ -373,8 +386,7 @@ public class Builder {
         }
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        string ins = string `${reg} = extractvalue ${value.serializeType()} ${value.getOperand()}, ${index.getOperand()}`;
-        bb.addInsn(ins);
+        bb.addInsn(reg, "=", "extractvalue", value.serializeType(), string `${value.getOperand()},`, index.getOperand());
         int|error i = int:fromString(index.getOperand());
         if i is int {
             Type resultType = getTypeByIndex(<StructureType>value.getType(), i);
@@ -388,18 +400,16 @@ public class Builder {
         if !(val.ty is "i1") {
             panic error("Conditional branch support only i1 values");
         }
-        string ins = string `br i1 ${val.getOperand()}, label ${ifTrue.getLabel()}, label ${ifFalse.getLabel()}`;
-        self.bb().addInsn(ins);
+        self.bb().addInsn("br", "i1", string `${val.getOperand()},`, "label", string `${ifTrue.getLabel()},`, "label", 
+        ifFalse.getLabel());
     }
 
     public function branch(BasicBlock destination) {
-        string ins = string `br label ${destination.getLabel()}`;
-        self.bb().addInsn(ins);
+        self.bb().addInsn("br", "label", destination.getLabel());
     }
 
     public function unreachable() {
-        string ins = "unreachable";
-        self.bb().addInsn(ins);
+        self.bb().addInsn("unreachable");
     }
 
     public function iCmp(IntPredicate op, Value lhs, Value rhs) returns Value {
@@ -411,8 +421,7 @@ public class Builder {
         }
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        string ins = string `${reg} = icmp ${<string>op} ${lhs.serializeType()} ${lhs.getOperand()}, ${rhs.getOperand()}`;
-        bb.addInsn(ins);
+        bb.addInsn(reg, "=", "icmp", op, lhs.serializeType(), string `${lhs.getOperand()},`, rhs.getOperand());
         return new Value("i1", reg);
 
     }
