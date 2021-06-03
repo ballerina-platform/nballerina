@@ -1,4 +1,9 @@
-// Intermediate form used internally within llvm module.
+// This file defines the Ballerina Low-Level (BLL) intermediate representation.
+// Compare to BIR, BIL has
+// - types that correspond to LLVM types
+// - basic blocks that correspond to LLVM basic blocks (i.e. explicit represent panic control flow)
+// - uses instructions much closer to LLVM instructions
+// Compared to LLVM's IR, this is not SSA and has an assignment instruction.
 
 type FunctionDefn record {|
     string identifier;
