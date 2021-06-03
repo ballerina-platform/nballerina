@@ -223,7 +223,7 @@ public type IdenticalInsn readonly & record {|
 |};
 
 # Call a function.
-# This is a terminator.
+# This is a not a terminator.
 # This is a PPI. A panic in the called function
 # goes to the onPanic label in the basic block.
 # Regardless of where the function itself panics,
@@ -236,10 +236,7 @@ public type CallInsn readonly & record {|
     Register result;
     FunctionOperand func;
     Operand[] args;
-    // where to go when function returns
-    Label onReturn;
 |};
-
 
 # Load a value into a register.
 # Typing rule:

@@ -299,15 +299,13 @@ function convertFunctionCall(FunctionConvertContext cx, bir:BasicBlock bb, Scope
         functionIdentifier: expr.funcName,
         functionSignature: signature
     };
-    bir:BasicBlock onReturnBlock = cx.createBasicBlock();
     bir:CallInsn call = {
         func,
         result,
-        args: args.cloneReadOnly(),
-        onReturn: onReturnBlock.label
+        args: args.cloneReadOnly()
     };
     curBlock.insns.push(call);
-    return [result, onReturnBlock];
+    return [result, curBlock];
 }
 
 function mustLookup(string name, Scope? scope) returns bir:Register|ConvertError {
