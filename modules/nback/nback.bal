@@ -2,13 +2,13 @@ import ballerina/io;
 
 import wso2/nballerina.err;
 import wso2/nballerina.bir;
-import wso2/nballerina.llvm.emit;
+import wso2/nballerina.nback.llvm;
 
 # The preferred output extension for the output filename.
 public const OUTPUT_EXTENSION = ".ll";
 
 public function compileModule(bir:Module mod, string outputPath) returns err:Any|io:Error? {
-    emit:Output out = check new(outputPath);
+    llvm:Output out = check new(outputPath);
     foreach bir:ModuleDefn def in mod.defns {
         if def is bir:FunctionDefn {
             check compileFunction(mod, def, out);          
@@ -17,7 +17,7 @@ public function compileModule(bir:Module mod, string outputPath) returns err:Any
     check out.finish();
 }
 
-function compileFunction(bir:Module mod, bir:FunctionDefn def, emit:Output out) returns err:Any? {
+function compileFunction(bir:Module mod, bir:FunctionDefn def, llvm:Output out) returns err:Any? {
     bir:FunctionCode code = check def.generateCode(mod);
     FunctionDefn ldef = check lower(mod, def, code);
     return emit(ldef, out);
@@ -27,6 +27,6 @@ function lower(bir:Module mod, bir:FunctionDefn def, bir:FunctionCode code) retu
     return err:unimplemented("lowering to BLL");
 }
 
-function emit(FunctionDefn def, emit:Output out) returns err:Any? {
+function emit(FunctionDefn def, llvm:Output out) returns err:Any? {
     return err:unimplemented("emitting from BLL to LLVM");
 }

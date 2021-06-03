@@ -1,6 +1,6 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.front;
-import wso2/nballerina.llvm;
+import wso2/nballerina.nback;
 
 public type Options record {|
     boolean testJsonTypes = false;
@@ -20,5 +20,5 @@ public function main(string filename, *Options opts) returns error? {
        organization: "dummy"
     };
     bir:Module module = check front:loadModule(filename, id);
-    check llvm:compileModule(module, filename + llvm:OUTPUT_EXTENSION);
+    check nback:compileModule(module, filename + nback:OUTPUT_EXTENSION);
 }
