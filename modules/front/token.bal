@@ -70,6 +70,7 @@ class Tokenizer {
     // Line number of line starting at lineStartIndex
     private int lineNumber = 1;
     private final string str;
+    private final string? filename;
 
     private final StringIterator iter;
     private Char? ungot = ();
@@ -77,9 +78,10 @@ class Tokenizer {
     private int nextCount = 0;
    
 
-    function init(string str) {
+    function init(string str, string? filename = ()) {
         self.iter = str.iterator();
         self.str = str;
+        self.filename = filename;
     }
    
     // Moves to next token.record
@@ -95,7 +97,8 @@ class Tokenizer {
     function currentPos() returns err:Position {
         return {
             lineNumber: self.lineNumber,
-            indexInLine: self.startIndex - self.lineStartIndex
+            indexInLine: self.startIndex - self.lineStartIndex,
+            filename: self.filename
         };
     }
 
