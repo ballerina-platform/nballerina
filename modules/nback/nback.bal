@@ -22,7 +22,3 @@ function compileFunction(bir:Module mod, bir:FunctionDefn def, llvm:Output out) 
     FunctionDefn ldef = check lower(mod, def, code);
     return emit(ldef, out);
 }
-
-function lower(bir:Module mod, bir:FunctionDefn def, bir:FunctionCode code) returns FunctionDefn|err:Any {
-    return err:unimplemented("lowering to BLL");
-}
