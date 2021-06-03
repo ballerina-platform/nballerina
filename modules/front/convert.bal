@@ -63,10 +63,33 @@ function convertFunctionDef(Module mod, t:TypeCheckContext tc, FunctionDef funcD
         bir:RetInsn ret = { operand: () };
         endBlock.insns.push(ret);
     }
-    // XXX fixup the onPanic links
+    addOnPanic(cx, bfd.blocks);
     return bfd;
 }
 
+function addOnPanic(FunctionConvertContext cx, bir:BasicBlock[] blocks) {
+    bir:BasicBlock? onPanicBlock = ();
+    foreach var b in blocks {
+        if bir:isBasicBlockPotentiallyPanicking(b) {
+            bir:BasicBlock pb;
+            if onPanicBlock is () {
+                pb = cx.createBasicBlock();
+                onPanicBlock = pb;
+            }
+            else {
+                pb = onPanicBlock;
+            }
+            b.onPanic = pb.label;
+        }
+    }
+    if !(onPanicBlock  is ()) {
+        bir:Register reg = cx.createRegister(t:ERROR);
+        bir:CatchInsn catch = { result: reg };
+        onPanicBlock.insns.push(catch);
+        onPanicBlock.insns.push(<bir:PanicInsn>{operand: reg});
+        blocks.push(onPanicBlock);
+    }
+}
 
 function convertStmts(FunctionConvertContext cx, bir:BasicBlock bb, Scope? scope, Stmt[] stmts) returns ConvertError|bir:BasicBlock? {
     bir:BasicBlock? curBlock = bb;

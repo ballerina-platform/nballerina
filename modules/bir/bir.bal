@@ -358,3 +358,25 @@ public type JumpInsn readonly & record {|
     INSN_JUMP name = INSN_JUMP;
     Label dest;
 |};
+
+
+public function isBasicBlockPotentiallyPanicking(BasicBlock block) returns boolean {
+    foreach Insn insn in block.insns {
+        if isInsnPotentiallyPanicking(insn) {
+            return true;
+        }
+    }
+    return false;
+}
+
+final readonly & map<true> PPI_INSNS = {
+    [INSN_PANIC]: true,
+    [INSN_INT_ARITHMETIC_BINARY]: true,
+    [INSN_TYPE_CAST]: true,
+    [INSN_INT_NEGATE]: true,
+    [INSN_CALL]: true
+};
+
+public function isInsnPotentiallyPanicking(Insn insn) returns boolean {
+    return PPI_INSNS[insn.name] == true;
+}
