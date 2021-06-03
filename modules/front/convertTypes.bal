@@ -1,5 +1,6 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
+import wso2/nballerina.err;
 
 function createTypeMap(Module mod) returns map<t:SemType> {
     map<t:SemType> defs = {};
@@ -17,7 +18,7 @@ function createTypeMap(Module mod) returns map<t:SemType> {
     return defs;
 }
 
-function convertTypes(t:Env env, Module mod) returns ParseError? {
+function convertTypes(t:Env env, Module mod) returns err:Semantic? {
     foreach var def in mod {
         if def is TypeDef {
             _ = check convertTypeDef(env, mod, 0, def);
@@ -29,17 +30,17 @@ function convertTypes(t:Env env, Module mod) returns ParseError? {
     }
 }
 
-function convertFunctionSignature(t:Env env, Module mod, FunctionTypeDesc td) returns bir:FunctionSignature|ParseError {
+function convertFunctionSignature(t:Env env, Module mod, FunctionTypeDesc td) returns bir:FunctionSignature|err:Semantic {
     t:SemType[] params = from var x in td.args select check convertTypeDesc(env, mod, 0, x);
     t:SemType ret = check convertTypeDesc(env, mod, 0, td.ret);
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
 
-function convertTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|ParseError {
+function convertTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|err:Semantic {
     t:SemType? t = def.semType;
     if t is () {
         if depth == def.cycleDepth {
-            return error ParseError("invalid cycle detected for " + def.name, pos=def.pos);
+            return err:semantic(`invalid cycle detected for ${def.name}`, def.pos);
         }
         def.cycleDepth = depth;
         t:SemType s = check convertTypeDesc(env, mod, depth, def.td);
@@ -61,7 +62,7 @@ function convertTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t
     }
 }
 
-function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns t:SemType|ParseError {
+function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns t:SemType|err:Semantic {
     match td {
         // These are easy
         "any" => { return t:ANY; }
@@ -130,13 +131,13 @@ function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns 
     if td is TypeDescRef {
         ModuleLevelDef? def = mod[td.ref];
         if def is () {
-            return error ParseError("reference to undefined type '" + td.ref + "'", pos=td.pos);
+            return err:semantic(`reference to undefined type ${td.ref}`, pos=td.pos);
         }
         else if def is TypeDef {
             return check convertTypeDef(env, mod, depth, def);
         }
         else {
-            return error ParseError("reference to non-type '" + td.ref + "' in type-descriptor", pos=td.pos);
+            return err:semantic(`reference to non-type ${td.ref} in type-descriptor`, pos=td.pos);
         }
     }
     if td is SingletonTypeDesc {

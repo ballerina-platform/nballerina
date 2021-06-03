@@ -1,5 +1,6 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
+import wso2/nballerina.err;
 
 type Module table<ModuleLevelDef> key(name);
 
@@ -66,7 +67,7 @@ type FunctionCallExpr record {|
     string funcName;
     Expr[] args;
     // We can get type/def mismatch errors here
-    Position pos;
+    err:Position pos;
 |};
 
 type VarRefExpr record {|
@@ -82,7 +83,7 @@ type SimpleConstExpr record {|
 type TypeDef record {|
     readonly string name;
     TypeDesc td;
-    Position pos;
+    err:Position pos;
     t:SemType? semType = ();
     int cycleDepth = -1;
 |};
@@ -129,7 +130,7 @@ type BinaryTypeDesc record {|
 
 type TypeDescRef record {|
     string ref;
-    Position pos;
+    err:Position pos;
 |};
 
 type SingletonTypeDesc  record {|

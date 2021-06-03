@@ -1,6 +1,8 @@
 // Parse a module
+import wso2/nballerina.err;
 
-function parseModule(string str) returns Module|ParseError {
+
+function parseModule(string str) returns Module|err:Syntax {
     Tokenizer tok = new(str);
     check tok.advance();
     Module mod = table [];
@@ -10,7 +12,7 @@ function parseModule(string str) returns Module|ParseError {
     return mod;
 }
 
-function parseModuleLevel(Tokenizer tok, Module mod) returns ParseError? {
+function parseModuleLevel(Tokenizer tok, Module mod) returns err:Syntax? {
     string kw;
     if tok.current() == "type" {
         kw = "type";
@@ -25,7 +27,7 @@ function parseModuleLevel(Tokenizer tok, Module mod) returns ParseError? {
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
         string name = t[1];
-        Position pos = tok.currentPos();
+        err:Position pos = tok.currentPos();
         check tok.advance();
         // JBUG putting check before conditional gets an error #30737
         TypeDesc td = kw == "type" ? check parseTypeDesc(tok) : check parseConstExpr(tok);
@@ -37,7 +39,7 @@ function parseModuleLevel(Tokenizer tok, Module mod) returns ParseError? {
     }
 }
 
-function parseConstExpr(Tokenizer tok) returns TypeDesc|ParseError {
+function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
     check tok.expect("=");
     string sign = "";
     if tok.current() == "-" {
@@ -48,7 +50,7 @@ function parseConstExpr(Tokenizer tok) returns TypeDesc|ParseError {
         [DECIMAL_NUMBER, var digits] => {
             error|int res = int:fromString(sign + digits);
             if res is error {
-                return error ParseError("invalid number", res, pos=tok.currentPos());
+                return err:syntax("invalid number", tok.currentPos(), res);
             }
             else {
                 check tok.advance();
@@ -60,7 +62,7 @@ function parseConstExpr(Tokenizer tok) returns TypeDesc|ParseError {
             // do {
             //     n = check int:fromString(sign + digits);
             // } on fail var cause {
-            //     return error ParseError("invalid number", cause, pos=tok.currentPos());
+            //     return err:syntax("invalid number", cause, pos=tok.currentPos());
             // }
             // check tok.advance();
             // return <SingletonTypeDesc>{ value: n };         
@@ -69,7 +71,7 @@ function parseConstExpr(Tokenizer tok) returns TypeDesc|ParseError {
     return parseError(tok);
 }
 
-function parseError(Tokenizer tok) returns ParseError {
+function parseError(Tokenizer tok) returns err:Syntax {
     string message = "parse error";
     Token? t = tok.current();
     if t is string {

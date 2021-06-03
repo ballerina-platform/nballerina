@@ -1,13 +1,14 @@
 // Parsing of type descriptors
+import wso2/nballerina.err;
 
-function parseTypeDesc(Tokenizer tok) returns TypeDesc|ParseError {
+function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     if tok.current() == "function" {
         return parseFunctionTypeDesc(tok);
     }
     return parseUnion(tok);
 }
 
-function parseUnion(Tokenizer tok) returns TypeDesc|ParseError {
+function parseUnion(Tokenizer tok) returns TypeDesc|err:Syntax {
     TypeDesc td = check parseIntersection(tok);
     while tok.current() == "|" {
         check tok.advance();
@@ -18,7 +19,7 @@ function parseUnion(Tokenizer tok) returns TypeDesc|ParseError {
     return td;
 }
 
-function parseIntersection(Tokenizer tok) returns TypeDesc|ParseError {
+function parseIntersection(Tokenizer tok) returns TypeDesc|err:Syntax {
     TypeDesc td = check parsePostfixTypeDesc(tok);
     while tok.current() == "&" {
         check tok.advance();
@@ -29,7 +30,7 @@ function parseIntersection(Tokenizer tok) returns TypeDesc|ParseError {
     return td;
 }
 
-function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|ParseError {
+function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     TypeDesc td = check parsePrimaryTypeDesc(tok);
     while true {
         if tok.current() == "?" {
@@ -61,7 +62,7 @@ final map<BuiltinIntSubtypeDesc> BUILTIN_INT_SUBTYPES = {
 
 // Tokenizer is on first token of the type descriptor
 // Afterwards it is on the token immediately following the type descriptor
-function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|ParseError {
+function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? cur = tok.current();
     match cur {
         "(" => {
@@ -152,7 +153,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|ParseError {
     return parseError(tok);
 }
 
-function parseTypeParam(Tokenizer tok) returns TypeDesc|ParseError {
+function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
     check tok.expect("<");
     TypeDesc td = check parseTypeDesc(tok);
     check tok.expect(">");
@@ -160,7 +161,7 @@ function parseTypeParam(Tokenizer tok) returns TypeDesc|ParseError {
 }
 
 // current token is "function"
-function parseFunctionTypeDesc(Tokenizer tok) returns TypeDesc|ParseError {
+function parseFunctionTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     // skip "function"
     check tok.advance();
     check tok.expect("(");
@@ -191,7 +192,7 @@ function parseFunctionTypeDesc(Tokenizer tok) returns TypeDesc|ParseError {
 }
 
 // current token is []
-function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|ParseError {
+function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
     TypeDesc[] members = [];
     TypeDesc rest = "never";
     check tok.advance();
@@ -219,7 +220,7 @@ function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|ParseError {
     return {members, rest};
 }
 
-function parseRecordTypeDesc(Tokenizer tok) returns MappingTypeDesc|ParseError {
+function parseRecordTypeDesc(Tokenizer tok) returns MappingTypeDesc|err:Syntax {
     check tok.advance();
     check tok.expect("{|");
     FieldDesc[] fields = [];
