@@ -1,5 +1,5 @@
-import ballerina/lang.value as v;
 import wso2/nballerina.types as t;
+import wso2/nballerina.err;
 
 public type SemType t:SemType;
 
@@ -8,26 +8,34 @@ public type Module record {|
     // A SemType of a potentially recursive type uses integers to refer to definitions
     // which are in arrays in this.
     t:TypeCheckContext tc;
-    table<ModuleDefn> key(name) defns = table[];
+    map<ModuleDefn> defns = {};
 |};
 
 public type ModuleId readonly & record {|
     string? organization = ();
     [string, string...] names;
-    // Do we need structure here?
+    // Do we need structure in the version?
     string versionString;
 |};
 
- 
-public type ModuleDefn record {|
-    readonly string name;
-    v:Cloneable...;
-|};
+public type ModuleDefn object {
+    public string name;
+};
 
 # A label is an index of a basic block in the basicBlock.
 public type Label int;
 
 # The definition of a function.
+public type FunctionDefn object {
+    *ModuleDefn;
+    # Name within the module
+    public string name;
+    # The signature of the function
+    public FunctionSignature signature;
+    public function generateCode(Module mod) returns FunctionCode|err:Semantic|err:Unimplemented;
+};
+
+
 # A function's code is represented as a factored control flow graph.
 # (as described in Choi et al 1999 https://dl.acm.org/doi/abs/10.1145/381788.316171)
 # This is like a control flow graph, except that basic blocks
@@ -36,18 +44,11 @@ public type Label int;
 # in register i (0-based). (Not thinking about varargs yet.)
 # Control flow between basic blocks is explicit: it does not
 # flow implicitly between the members of `blocks`.
-// XXX Should we make this an object to encapsulate registerCount?
-// XXX do we need a list of registers?
-public type FunctionDefn record {|
-    *ModuleDefn;
-    # Name within the module
-    readonly string name;
-    # The signature of the function
-    FunctionSignature functionSignature;
+public type FunctionCode record {|
     # Basic blocks indexed by label
-    BasicBlock[] blocks;
+    BasicBlock[] blocks = [];
     # Registers indexed by number
-    Register[] registers;
+    Register[] registers = [];
 |};
 
 public type FunctionRef readonly & record {|
@@ -90,10 +91,10 @@ public type BasicBlock record {|
     Label? onPanic = ();
 |};
 
-public function createBasicBlock(FunctionDefn defn) returns BasicBlock {
-    int label = defn.blocks.length();
+public function createBasicBlock(FunctionCode code) returns BasicBlock {
+    int label = code.blocks.length();
     BasicBlock bb = { label };
-    defn.blocks.push(bb);
+    code.blocks.push(bb);
     return bb;
 }
 
@@ -104,10 +105,10 @@ public type Register readonly & record {|
     SemType semType;
 |};
 
-public function createRegister(FunctionDefn defn, SemType semType) returns Register {
-    int number = defn.registers.length();
+public function createRegister(FunctionCode code, SemType semType) returns Register {
+    int number = code.registers.length();
     Register r = { number, semType };
-    defn.registers.push(r);
+    code.registers.push(r);
     return r;
 }
 

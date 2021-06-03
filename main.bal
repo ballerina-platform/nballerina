@@ -19,6 +19,6 @@ public function main(string filename, *Options opts) returns error? {
        names: [filename],
        organization: "dummy"
     };
-    bir:Module module = check front:compileModule(filename, id);
+    bir:Module module = check front:loadModule(filename, id);
     check llvm:compileModule(module, filename + llvm:OUTPUT_EXTENSION);
 }

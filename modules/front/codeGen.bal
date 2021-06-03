@@ -1,10 +1,6 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
-
-// TODOs (before this will work)
-// add onPanic links to a Catch followed by AbnormalReturn
-
-type ConvertError error;
+import wso2/nballerina.err;
 
 type Scope record {|
     string name;
@@ -12,62 +8,46 @@ type Scope record {|
     Scope? prev;
 |};
 
-class FunctionConvertContext  {
-    final Module mod;
-    final t:TypeCheckContext tc;
-    final bir:FunctionDefn defn;
+type CodeGenError err:Semantic|err:Unimplemented;
 
-    function init(Module mod, t:TypeCheckContext tc, bir:FunctionDefn defn) {
+class CodeGenContext {
+    final bir:Module mod;
+    final bir:FunctionCode code;
+
+    function init(bir:Module mod) {
         self.mod = mod;
-        self.tc = tc;
-        self.defn = defn;
+        self.code = {};
     }
 
     function createRegister(bir:SemType t) returns bir:Register {
-        return bir:createRegister(self.defn, t);
+        return bir:createRegister(self.code, t);
     }
     
     function createBasicBlock() returns bir:BasicBlock {
-        return bir:createBasicBlock(self.defn);
+        return bir:createBasicBlock(self.code);
     }
     
 }
 
-function convertModule(Module srcMod, bir:Module birMod) returns ConvertError? {
-    foreach var def in srcMod {
-        if def is FunctionDef {
-            var birFunc = check convertFunctionDef(srcMod, birMod.tc, def);
-            birMod.defns.add(birFunc);
-        }
-    }
-}
-
-function convertFunctionDef(Module mod, t:TypeCheckContext tc, FunctionDef funcDef) returns ConvertError|bir:FunctionDefn {
-    bir:FunctionSignature sig = <bir:FunctionSignature>funcDef.signature;
-    bir:FunctionDefn bfd = {
-        blocks: [],
-        registers: [],
-        name: funcDef.name,
-        functionSignature: sig
-    };
-    FunctionConvertContext cx = new(mod, tc, bfd);
+function codeGenFunction(bir:Module mod, bir:FunctionSignature signature, string[] paramNames, Stmt[] body) returns bir:FunctionCode|CodeGenError {
+    CodeGenContext cx = new(mod);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Scope? scope = ();
-    string[] paramNames = funcDef.paramNames;
     foreach int i in 0 ..< paramNames.length() {
-        bir:Register reg = cx.createRegister(sig.paramTypes[i]);
+        bir:Register reg = cx.createRegister(signature.paramTypes[i]);
         scope = { name: paramNames[i], reg, prev: scope };
     }
-    bir:BasicBlock? endBlock = check convertStmts(cx, startBlock, scope, funcDef.body);
+    bir:BasicBlock? endBlock = check codeGenStmts(cx, startBlock, scope, body);
     if !(endBlock is ()) {
         bir:RetInsn ret = { operand: () };
         endBlock.insns.push(ret);
     }
-    addOnPanic(cx, bfd.blocks);
-    return bfd;
+    codeGenOnPanic(cx);
+    return cx.code;
 }
 
-function addOnPanic(FunctionConvertContext cx, bir:BasicBlock[] blocks) {
+function codeGenOnPanic(CodeGenContext cx) {
+    bir:BasicBlock[] blocks = cx.code.blocks;
     bir:BasicBlock? onPanicBlock = ();
     foreach var b in blocks {
         if bir:isBasicBlockPotentiallyPanicking(b) {
@@ -91,48 +71,48 @@ function addOnPanic(FunctionConvertContext cx, bir:BasicBlock[] blocks) {
     }
 }
 
-function convertStmts(FunctionConvertContext cx, bir:BasicBlock bb, Scope? scope, Stmt[] stmts) returns ConvertError|bir:BasicBlock? {
+function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Stmt[] stmts) returns CodeGenError|bir:BasicBlock? {
     bir:BasicBlock? curBlock = bb;
     Scope? curScope = scope;
     foreach var stmt in stmts {
         if curBlock is () {
-            return error("unreachable code");
+            return err:semantic("unreachable code");
         }
         else if stmt is IfElseStmt {
-            curBlock = check convertIfElseStmt(cx, curBlock, scope, stmt);
+            curBlock = check codeGenIfElseStmt(cx, curBlock, scope, stmt);
         }
         else if stmt is WhileStmt {
             // JBUG cast
-            curBlock = check convertWhileStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            curBlock = check codeGenWhileStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
         else if stmt is ReturnStmt {
             // JBUG cast
-            curBlock = check convertReturnStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            curBlock = check codeGenReturnStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
         else if stmt is VarDeclStmt {
-            [curBlock, curScope] = check convertVarDeclStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            [curBlock, curScope] = check codeGenVarDeclStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
         else if stmt is AssignStmt {
-            curBlock = check convertAssignStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            curBlock = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
         else {
-            return unreached();
+            return err:unreached();
         }
     }
     return curBlock;
 }
 
-function convertWhileStmt(FunctionConvertContext cx, bir:BasicBlock startBlock, Scope? scope, WhileStmt stmt) returns ConvertError|bir:BasicBlock? {
+function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, WhileStmt stmt) returns CodeGenError|bir:BasicBlock? {
     bir:BasicBlock loopHead = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
     bir:JumpInsn jumpToLoopHead = { dest: loopHead.label };
     startBlock.insns.push(jumpToLoopHead);
-    var [condition, nextBlock] = check convertExprForBoolean(cx, loopHead, scope, stmt.condition);
+    var [condition, nextBlock] = check codeGenExprForBoolean(cx, loopHead, scope, stmt.condition);
     if condition is bir:Register {
         bir:BasicBlock afterCondition = cx.createBasicBlock();
         bir:BranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
         nextBlock.insns.push(branch);
-        bir:BasicBlock? loopEnd = check convertStmts(cx, afterCondition, scope, stmt.body);
+        bir:BasicBlock? loopEnd = check codeGenStmts(cx, afterCondition, scope, stmt.body);
         if !(loopEnd is ()) {
             loopEnd.insns.push(jumpToLoopHead);
         }
@@ -143,27 +123,27 @@ function convertWhileStmt(FunctionConvertContext cx, bir:BasicBlock startBlock, 
     }
     else {
         // not much point without break
-        return error("'while true' not implemented yet");
+        return err:unimplemented("'while true' not implemented yet");
     }
 }
 
-function convertIfElseStmt(FunctionConvertContext cx, bir:BasicBlock startBlock, Scope? scope, IfElseStmt stmt) returns ConvertError|bir:BasicBlock? {
+function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, IfElseStmt stmt) returns CodeGenError|bir:BasicBlock? {
     var { condition, ifTrue, ifFalse } = stmt;
-    var [operand, branchBlock] = check convertExprForBoolean(cx, startBlock, scope, condition);
+    var [operand, branchBlock] = check codeGenExprForBoolean(cx, startBlock, scope, condition);
     if operand is boolean {
         if operand {
-            return convertStmts(cx, branchBlock, scope, ifTrue);
+            return codeGenStmts(cx, branchBlock, scope, ifTrue);
         }
         else if ifFalse.length() == 0 {
             return branchBlock;
         }
         else {
-            return convertStmts(cx, branchBlock, scope, ifFalse);
+            return codeGenStmts(cx, branchBlock, scope, ifFalse);
         }
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
-        var ifContBlock = check convertStmts(cx, ifBlock, scope, ifTrue);
+        var ifContBlock = check codeGenStmts(cx, ifBlock, scope, ifTrue);
         bir:BasicBlock contBlock;
         if ifFalse.length() == 0 {
             // just an if branch
@@ -179,7 +159,7 @@ function convertIfElseStmt(FunctionConvertContext cx, bir:BasicBlock startBlock,
         else {
             // an if and an else
             bir:BasicBlock elseBlock = cx.createBasicBlock();
-            var elseContBlock = check convertStmts(cx, elseBlock, scope, ifFalse);
+            var elseContBlock = check codeGenStmts(cx, elseBlock, scope, ifFalse);
             bir:BranchInsn branch = { operand, ifTrue: ifBlock.label, ifFalse: elseBlock.label };
             branchBlock.insns.push(branch);
             if ifContBlock is () && elseContBlock is () {
@@ -199,21 +179,21 @@ function convertIfElseStmt(FunctionConvertContext cx, bir:BasicBlock startBlock,
     }
 }
 
-function convertReturnStmt(FunctionConvertContext cx, bir:BasicBlock startBlock, Scope? scope, ReturnStmt stmt) returns ConvertError? {
+function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, ReturnStmt stmt) returns CodeGenError? {
     var { returnExpr } = stmt;
-    var [operand, nextBlock] = check convertExpr(cx, startBlock, scope, returnExpr);
+    var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, returnExpr);
     bir:RetInsn insn = { operand };
     nextBlock.insns.push(insn);
     return ();
 }
 
-function convertVarDeclStmt(FunctionConvertContext cx, bir:BasicBlock startBlock, Scope? scope, VarDeclStmt stmt) returns ConvertError|[bir:BasicBlock?, Scope?] {
+function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, VarDeclStmt stmt) returns CodeGenError|[bir:BasicBlock?, Scope?] {
     var { varName, initExpr, semType } = stmt;
     if semType is () {
         panic error("type was not normalized");
     }
     else {
-        var [operand, nextBlock] = check convertExpr(cx, startBlock, scope, initExpr);
+        var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, initExpr);
         bir:Register result = cx.createRegister(semType);
         bir:LoadInsn insn = { result, operand };
         nextBlock.insns.push(insn);
@@ -221,33 +201,33 @@ function convertVarDeclStmt(FunctionConvertContext cx, bir:BasicBlock startBlock
     }   
 }
 
-function convertAssignStmt(FunctionConvertContext cx, bir:BasicBlock startBlock, Scope? scope, AssignStmt stmt) returns ConvertError|bir:BasicBlock? {
+function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, AssignStmt stmt) returns CodeGenError|bir:BasicBlock? {
     var { varName, expr } = stmt;
     bir:Register reg = check mustLookup(varName, scope);
-    var [operand, nextBlock] = check convertExpr(cx, startBlock, scope, expr);
+    var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, expr);
     bir:LoadInsn load = { result: reg, operand };
     nextBlock.insns.push(load);
     return nextBlock;
 }
 
-function convertExprForInt(FunctionConvertContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns ConvertError|[bir:IntOperand, bir:BasicBlock] {
-    var [op, nextBlock] = check convertExpr(cx, bb, scope, expr);
+function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:IntOperand, bir:BasicBlock] {
+    var [op, nextBlock] = check codeGenExpr(cx, bb, scope, expr);
     // XXX return an error if it's not an int
     return [<bir:IntOperand>op, nextBlock];
 }
 
-function convertExprForBoolean(FunctionConvertContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns ConvertError|[bir:BooleanOperand, bir:BasicBlock] {
-    var [op, nextBlock] = check convertExpr(cx, bb, scope, expr);
+function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:BooleanOperand, bir:BasicBlock] {
+    var [op, nextBlock] = check codeGenExpr(cx, bb, scope, expr);
     // XXX return an error if it's not a boolean
     return [<bir:BooleanOperand>op, nextBlock];
 }
 
-function convertExpr(FunctionConvertContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns ConvertError|[bir:Operand, bir:BasicBlock] {
+function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:Operand, bir:BasicBlock] {
     match expr {
         // Binary arithmetic operations
         var { op, left, right } => {
-            var [l, block1] = check convertExprForInt(cx, bb, scope, left);
-            var [r, nextBlock] = check convertExprForInt(cx, block1, scope, right);
+            var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
+            var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
             bir:Register reg = cx.createRegister(t:INT);
             bir:IntArithmeticBinaryInsn insn = {
                 op,
@@ -259,7 +239,7 @@ function convertExpr(FunctionConvertContext cx, bir:BasicBlock bb, Scope? scope,
         }
         // Negation
         { op: "-",  operand: var o } => {
-            var [operand, nextBlock] = check convertExprForInt(cx, bb, scope, o);
+            var [operand, nextBlock] = check codeGenExprForInt(cx, bb, scope, o);
             bir:Register reg = cx.createRegister(t:INT);
             if operand is int {
                 // XXX catch overflow
@@ -282,38 +262,29 @@ function convertExpr(FunctionConvertContext cx, bir:BasicBlock bb, Scope? scope,
         }
         // Function call
         var callExpr if callExpr is FunctionCallExpr => {
-            return convertFunctionCall(cx, bb, scope, callExpr);
+            return codeGenFunctionCall(cx, bb, scope, callExpr);
         }
     }
-    return unreached();
+    return err:unreached();
 }
 
-function convertFunctionCall(FunctionConvertContext cx, bir:BasicBlock bb, Scope? scope, FunctionCallExpr expr) returns ConvertError|[bir:Operand, bir:BasicBlock] {
+function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, FunctionCallExpr expr) returns CodeGenError|[bir:Operand, bir:BasicBlock] {
     string name = expr.funcName;
     if !(lookup(name, scope) is ()) {
-        return error("local variables cannot yet have function type");
+        return err:unimplemented("local variables cannot yet have function type");
     }
     bir:FunctionSignature signature;
-    ModuleLevelDef? def = cx.mod[name];
-    if def is FunctionDef {
-        // Gets normalized earlier on
-        signature = <bir:FunctionSignature>def.signature;
+    bir:ModuleDefn? def = cx.mod.defns[name];
+    if def is bir:FunctionDefn {
+        signature = def.signature;
     }
     else {
-        // JBUG err variable and return is workaround for #30872
-        error err;
-        if def is () {
-            err = error("'" + name + "' is not defined");
-        }
-        else {
-            err = error("'" + name + "' is not a function");
-        }
-        return err;
+        return err:semantic(`no function definition ${name}`);
     }
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
     foreach var argExpr in expr.args {
-        var [arg, nextBlock] = check convertExpr(cx, curBlock, scope, argExpr);
+        var [arg, nextBlock] = check codeGenExpr(cx, curBlock, scope, argExpr);
         curBlock = nextBlock;
         args.push(arg);
     }
@@ -331,8 +302,8 @@ function convertFunctionCall(FunctionConvertContext cx, bir:BasicBlock bb, Scope
     return [result, curBlock];
 }
 
-function mustLookup(string name, Scope? scope) returns bir:Register|ConvertError {
-    return lookup(name, scope) ?: error("variable '" + "' not found");
+function mustLookup(string name, Scope? scope) returns bir:Register|CodeGenError {
+    return lookup(name, scope) ?: err:semantic(`variable ${name} not found`);
 }
 
 function lookup(string name, Scope? scope) returns bir:Register? {
@@ -349,9 +320,4 @@ function lookup(string name, Scope? scope) returns bir:Register? {
         }
     }
     return ();
-}
-
-// This should be a utility somewhere.
-function unreached() returns never {
-    panic error("Reached something that was supposed to be unreachable");
 }
