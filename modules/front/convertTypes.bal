@@ -1,4 +1,5 @@
 import wso2/nballerina.types as t;
+import wso2/nballerina.bir;
 
 function createTypeMap(Module mod) returns map<t:SemType> {
     map<t:SemType> defs = {};
@@ -22,10 +23,16 @@ function convertTypes(t:Env env, Module mod) returns ParseError? {
             _ = check convertTypeDef(env, mod, 0, def);
         }
         else {
-            // def is FunctionDef
-            // XXX convert function signature here
+            // it's a FunctionDef
+            def.signature = check convertFunctionSignature(env, mod, def.typeDesc);
         }
     }
+}
+
+function convertFunctionSignature(t:Env env, Module mod, FunctionTypeDesc td) returns bir:FunctionSignature|ParseError {
+    t:SemType[] params = from var x in td.args select check convertTypeDesc(env, mod, 0, x);
+    t:SemType ret = check convertTypeDesc(env, mod, 0, td.ret);
+    return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
 
 function convertTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|ParseError {

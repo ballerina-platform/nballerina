@@ -3,7 +3,6 @@ import wso2/nballerina.types as t;
 
 // TODOs (before this will work)
 // add onPanic links to a Catch followed by AbnormalReturn
-// build the function signature for function definitions in convertTypes
 
 type ConvertError error;
 
