@@ -17,9 +17,9 @@ type Local readonly & record {|
     boolean addressable;
 |};
 
-// i64.overflow is an tuple of an i64 and an i1; the i1 is 1 if the operation overflowed
 type ValueType IntType|AggregateType;
 
+// i64.overflow is an tuple of an i64 and an i1; the i1 is 1 if the operation overflowed
 const I64_WITH_OVERFLOW = "i64.with.overflow";
 
 type AggregateType I64_WITH_OVERFLOW;
@@ -73,6 +73,8 @@ type CallInsn readonly & record {|
     Value[] args;
 |};
 
+
+// Used for i64.with.overflow type
 type ExtractElementInsn readonly & record {|
     "extractelement" name = "extractelement";
     Local result;
