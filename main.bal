@@ -7,6 +7,7 @@ public type Options record {|
     boolean showTypes = false;
 |};
 
+const SOURCE_EXTENSION = ".bal";
 public function main(string filename, *Options opts) returns error? {
     if opts.testJsonTypes {
         return testJsonTypes(filename);
@@ -20,5 +21,16 @@ public function main(string filename, *Options opts) returns error? {
        organization: "dummy"
     };
     bir:Module module = check front:loadModule(filename, id);
-    check nback:compileModule(module, filename + nback:OUTPUT_EXTENSION);
+    check nback:compileModule(module, check stripExtension(filename, SOURCE_EXTENSION));
+}
+
+function stripExtension(string filename, string extension) returns string|error {
+    int? extIndex = filename.lastIndexOf(".");
+    if extIndex is int {
+        string ext = filename.substring(extIndex).toLowerAscii();
+        if ext == extension {
+            return filename.substring(0, extIndex);
+        }
+    }
+    return error("filename must end with " + extension);
 }
