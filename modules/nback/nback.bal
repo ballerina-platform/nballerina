@@ -26,7 +26,3 @@ function compileFunction(bir:Module mod, bir:FunctionDefn def, llvm:Output out) 
 function lower(bir:Module mod, bir:FunctionDefn def, bir:FunctionCode code) returns FunctionDefn|err:Any {
     return err:unimplemented("lowering to BLL");
 }
-
-function emit(FunctionDefn def, llvm:Output out) returns err:Any? {
-    return err:unimplemented("emitting from BLL to LLVM");
-}
