@@ -252,7 +252,7 @@ public class Builder {
         BasicBlock? tem = self.currentBlock;
         if tem is () {
             panic error("no current basic block");
-        } 
+        }
         else {
             return tem;
         }
