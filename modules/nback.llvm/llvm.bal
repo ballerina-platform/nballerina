@@ -7,14 +7,14 @@
 
 import ballerina/io;
 
-public type IntType "i8"|"i1";
+public type IntType "i64"|"i1";
 
 public type PointerType readonly & record {|
     IntType pointsTo;
     int align;
 |};
 
-public type Type IntType|PointerType;
+public type Type IntType|"void"|PointerType;
 
 # Corresponds to LLVMValueRef 
 public readonly distinct class Value {
@@ -33,7 +33,7 @@ public function constInt(IntType ty, int val) returns Value {
 public type BinaryInsn "add"|"mul"|"sub"|"sdiv"|"srem";
 
 public distinct class Output {
-    private final  string path;
+    private final string path;
 
     final string[] lines = [];
 
@@ -56,13 +56,21 @@ public distinct class BasicBlock {
     private final string label;
     private final string[] lines;
 
-    function init(string label, Function func) {
+    function init(string label, Function func, boolean isEntry = false) {
         self.label = label;
         self.func = func;
-        self.lines = [label + ":"];
+        if isEntry {
+            self.lines = [];
+        } else {
+            self.lines = [label + ":"];
+        }
     }
-    function ref() returns string {
+    public function ref() returns string {
         return "%" + self.label;
+    }
+
+    public function name() returns string {
+        return self.label;
     }
 
     function addInsn(string... words) {
@@ -77,31 +85,84 @@ public distinct class BasicBlock {
     }
 }
 
+public type LinkageType "internal"|"external";
+
+# Corresponds to llvm::FunctionType class
+public type FunctionType record {|
+    Type returnType;
+    Type[] paramTypes = [];
+|};
+
+# Corresponds to llvm::Function class
 public class Function {
     private BasicBlock[] basicBlocks = [];
     private int varCount = 0;
     private int labelCount = 0;
+    private string functionName;
+    private Type returnType;
+    private Value[] paramValues;
+    private LinkageType linkageType = "external";
 
     // XXX need stuff for the definition
-    public function init() {
-
+    function init(string functionName, FunctionType functionType) {
+        self.functionName = "@" + functionName;
+        self.returnType = functionType.returnType;
+        self.paramValues = [];
+        foreach var paramType in functionType.paramTypes {
+            string register = self.genReg();
+            Value arg = new (paramType, register);
+            self.paramValues.push(arg);
+        }
     }
 
-    public function outputBody(Output out) {
-        string[] lines = [];
+    public function paramByIndex(int index) returns Value {
+        return self.paramValues[index];
+    }
+
+    public function setLinkageType(LinkageType linkageType) {
+        self.linkageType = linkageType;
+    }
+
+    public function output(Output out) {
+        out.push(self.header());
+        self.outputBody(out);
+        out.push("}");
+    }
+
+    function header() returns string {
+        string[] words = [];
+        words.push("define");
+        if self.linkageType != "external" {
+            words.push(self.linkageType);
+        }
+        words.push(typeToString(self.returnType));
+        words.push(self.functionName);
+        words.push("(");
+        string[] paramStringContent = [];
+        foreach Value param in self.paramValues {
+            paramStringContent.push(" ".'join(typeToString(param.ty), param.operand));
+        }
+        words.push(",".'join(...paramStringContent));
+        words.push(")");
+        words.push("{");
+        return " ".'join(...words);
+    }
+
+    function outputBody(Output out) {
         foreach var bb in self.basicBlocks {
             bb.output(out);
         }
     }
 
     public function appendBasicBlock() returns BasicBlock {
-        BasicBlock tem = new BasicBlock(self.genLabel(), self);
+        boolean isEntry = self.basicBlocks.length() == 0;
+        BasicBlock tem = new BasicBlock(self.genLabel(), self, isEntry);
         self.basicBlocks.push(tem);
         return tem;
     }
 
     function genLabel() returns string {
-        string label = "%" + "L" + self.labelCount.toString();
+        string label = "L" + self.labelCount.toString();
         self.labelCount += 1;
         return label;
     }
@@ -114,10 +175,30 @@ public class Function {
 
 }
 
+# Corresponds to llvm::Module class
+public class Module {
+    private Function[] functions = [];
+    public function init() {
+    }
+
+    public function addFunction(string name, FunctionType fnType) returns Function {
+        Function fn = new Function(name, fnType);
+        self.functions.push(fn);
+        return fn;
+    }
+
+    public function output(Output out) {
+        foreach var f in self.functions {
+            f.output(out);
+        }
+    }
+
+}
+
 # Corresponds to LLVMBuilderRef  
 public class Builder {
     private BasicBlock? currentBlock = ();
-    
+
     public function positionAtEnd(BasicBlock block) {
         self.currentBlock = block;
     }
@@ -126,7 +207,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         PointerType ptrTy = { pointsTo: ty, align };
-        bb.addInsn(reg, "=", "alloca", ty, ",", align.toString());
+        bb.addInsn(reg, "=", "alloca", ty, ",", "align", align.toString());
         return new Value(ptrTy, reg);
     }
 
@@ -135,7 +216,7 @@ public class Builder {
         PointerType ptrTy = requirePointerType(ptr);
         IntType ty = ptrTy.pointsTo;
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "load", ty, ",", pointerTo(ty), "align", ptrTy.align.toString());
+        bb.addInsn(reg, "=", "load", ty, ",", pointerTo(ty), ptr.operand, ",", "align", ptrTy.align.toString());
         return new Value(ty, reg);
     }
 
@@ -156,7 +237,17 @@ public class Builder {
         bb.addInsn(reg, "=", insn, ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
-  
+
+    public function returnValue(Value value) {
+        BasicBlock bb = self.bb();
+        bb.addInsn("ret", typeToString(value.ty), value.operand);
+    }
+
+    public function returnVoid() {
+        BasicBlock bb = self.bb();
+        bb.addInsn("ret void");
+    }
+
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
         if tem is () {
@@ -190,4 +281,14 @@ function requirePointerType(Value val) returns PointerType {
 
 function pointerTo(IntType ty) returns string {
     return ty + "*";
+}
+
+function typeToString(Type ty) returns string {
+    string typeTag;
+    if ty is PointerType {
+        typeTag = ty.pointsTo + "*";
+    } else {
+        typeTag = ty;
+    }
+    return typeTag;
 }
