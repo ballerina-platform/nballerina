@@ -5,7 +5,7 @@ function funcWithArgList() returns Module {
     Builder builder = new ();
     Module m = new ();
 
-    Function foo1 = m.insertFunction("@foo1", {returnType: "i64", paramTypes: ["i64"]});
+    Function foo1 = m.insertFunction("foo1", {returnType: "i64", paramTypes: ["i64"]});
     BasicBlock foo1BB = foo1.appendBasicBlock();
     builder.positionAtEnd(foo1BB);
     Value R2 = builder.alloca("i64");
@@ -14,7 +14,7 @@ function funcWithArgList() returns Module {
     Value R3 = builder.load(R2);
     builder.returnValue(R3);
 
-    Function foo2 = m.insertFunction("@foo2", {returnType: "i64", paramTypes: ["i64", "i64"]});
+    Function foo2 = m.insertFunction("foo2", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock bb2 = foo2.appendBasicBlock();
     builder.positionAtEnd(bb2);
     R3 = builder.alloca("i64");
@@ -26,7 +26,7 @@ function funcWithArgList() returns Module {
     Value R5 = builder.load(R4);
     builder.returnValue(R5);
 
-    Function foo3 = m.insertFunction("@foo3", {returnType: "i64", paramTypes: ["i64", "i64", "i64"]});
+    Function foo3 = m.insertFunction("foo3", {returnType: "i64", paramTypes: ["i64", "i64", "i64"]});
     BasicBlock bb3 = foo3.appendBasicBlock();
     builder.positionAtEnd(bb3);
     R4 = builder.alloca("i64");

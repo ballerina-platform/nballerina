@@ -105,7 +105,7 @@ public class Function {
 
     // XXX need stuff for the definition
     function init(string functionName, FunctionType functionType) {
-        self.functionName = functionName;
+        self.functionName = "@" + functionName;
         self.returnType = functionType.returnType;
         self.paramValues = [];
         foreach var paramType in functionType.paramTypes {
