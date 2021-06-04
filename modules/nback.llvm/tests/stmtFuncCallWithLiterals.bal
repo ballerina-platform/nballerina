@@ -43,11 +43,21 @@ function stmtFuncCallWithLiterals() returns Module {
     builder.positionAtEnd(bb5);
     R1 = builder.alloca("i64", 8);
     Value R2 = builder.alloca("i64", 8);
-    builder.callVoid(foo1, []);
-    builder.callVoid(foo2, [constInt("i64", 42), constInt("i64", 43)]);
-    R3 = builder.call(foo3, []);
+    _ = builder.call(foo1, []);
+    _ = builder.call(foo2, [constInt("i64", 42), constInt("i64", 43)]);
+    Value|() R_3 = builder.call(foo3, []);
+    if R_3 is Value{
+        R3 = R_3;
+    } else {
+        panic error("Return void from non-void function");
+    }
     builder.store(R3, R1);
-    R4 = builder.call(foo4, [constInt("i64", 12), constInt("i64", 13)]);
+    Value|() R_4 = builder.call(foo4, [constInt("i64", 12), constInt("i64", 13)]);
+    if R_4 is Value{
+        R4 = R_4;
+    } else {
+        panic error("Return void from non-void function");
+    }
     builder.store(R4, R2);
     builder.returnVoid();
 

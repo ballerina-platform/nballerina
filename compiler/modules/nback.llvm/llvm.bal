@@ -198,7 +198,7 @@ public distinct class Function {
         return self.paramValues.length();
     }
 
-    function getReturnType() returns Type {
+    function getReturnType() returns RetType {
         return self.returnType;
     }
 }
@@ -269,46 +269,30 @@ public class Builder {
         }
     }
     
-    public function call(Function f, Value[] args) returns Value {
-        if !(f.returnsValue()) {
-            panic error(string `Function ${f.ref()} does not return a value try callVoid instead`);
-        }
-        if f.paramCount() != args.length() {
-            panic error(string `Number of arguments is invalid for function ${f.ref()}`);
-        }
-        BasicBlock bb = self.bb();
-        string reg = bb.func.genReg();
-        string[] argStringContent = [];
-        foreach Value arg in args {
-            argStringContent.push(" ".'join(typeToString(arg.ty), arg.operand));
-        }
-        string argString = ",".'join(...argStringContent);
-        bb.addInsn(reg, "=", "call", typeToString(f.getReturnType()), f.ref(), "(", argString, ")");
-        return new Value(f.getReturnType(), reg);
-    }
-
-    public function callVoid(Function f, Value[] args) {
-        if (f.returnsValue()) {
-            panic error("This function returns a value try call instead");
-        }
-        if f.paramCount() != args.length() {
-            panic error("Number of arguments is invalid");
-        }
-        BasicBlock bb = self.bb();
-        string[] argStringContent = [];
-        foreach Value arg in args {
-            argStringContent.push(" ".'join(typeToString(arg.ty), arg.operand));
-        }
-        string argString = ",".'join(...argStringContent);
-        bb.addInsn("call", typeToString(f.getReturnType()), f.ref(), "(", argString, ")");
-    }
-
-
     // Corresponds to LLVMBuildCall
     // Returns () if there is no result i.e. function return type is void
     public function call(Function fn, Value[] args) returns Value? {
-        // XXX todo
-        return ();
+        if fn.paramCount() != args.length() {
+            panic error(string `Number of arguments is invalid for function ${fn.ref()}`);
+        }
+        BasicBlock bb = self.bb();
+        string[] argStringContent = [];
+        foreach Value arg in args {
+            argStringContent.push(" ".'join(typeToString(arg.ty), arg.operand));
+        }
+        string argString = ",".'join(...argStringContent);
+        if fn.returnsValue() {
+            string reg = bb.func.genReg();
+            bb.addInsn(reg, "=", "call", typeToString(fn.getReturnType()), fn.ref(), "(", argString, ")");
+            RetType returnType = fn.getReturnType();
+            if returnType is Type{
+                return new Value(returnType, reg);
+            } else {
+                panic error("Function return type is not a Type");
+            }
+        } else {
+            bb.addInsn("call", typeToString(fn.getReturnType()), fn.ref(), "(", argString, ")");
+        }
     }
 
     private function bb() returns BasicBlock {
