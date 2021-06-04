@@ -56,10 +56,10 @@ public distinct class BasicBlock {
     private final string label;
     private final string[] lines;
 
-    function init(string label, Function func, boolean ignoreLabel = false) {
+    function init(string label, Function func, boolean isEntry = false) {
         self.label = label;
         self.func = func;
-        if ignoreLabel {
+        if isEntry {
             self.lines = [];
         } else {
             self.lines = [label + ":"];
@@ -155,8 +155,8 @@ public class Function {
     }
 
     public function appendBasicBlock() returns BasicBlock {
-        boolean skipLabel = self.basicBlocks.length() == 0; // skip the label of the first basic block
-        BasicBlock tem = new BasicBlock(self.genLabel(), self, skipLabel);
+        boolean isEntry = self.basicBlocks.length() == 0; // skip the label of the first basic block
+        BasicBlock tem = new BasicBlock(self.genLabel(), self, isEntry);
         self.basicBlocks.push(tem);
         return tem;
     }
