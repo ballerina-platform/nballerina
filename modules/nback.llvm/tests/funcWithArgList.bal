@@ -9,7 +9,7 @@ function funcWithArgList() returns Module {
     BasicBlock foo1BB = foo1.appendBasicBlock();
     builder.positionAtEnd(foo1BB);
     Value R2 = builder.alloca("i64",8);
-    Value R0 = foo1.paramByIndex(0);
+    Value R0 = foo1.getParam(0);
     builder.store(R0, R2);
     Value R3 = builder.load(R2);
     builder.returnValue(R3);
@@ -19,8 +19,8 @@ function funcWithArgList() returns Module {
     builder.positionAtEnd(bb2);
     R3 = builder.alloca("i64",8);
     Value R4 = builder.alloca("i64",8);
-    R0 = foo2.paramByIndex(0);
-    Value R1 = foo2.paramByIndex(1);
+    R0 = foo2.getParam(0);
+    Value R1 = foo2.getParam(1);
     builder.store(R0, R3);
     builder.store(R1, R4);
     Value R5 = builder.load(R4);
@@ -32,9 +32,9 @@ function funcWithArgList() returns Module {
     R4 = builder.alloca("i64",8);
     R5 = builder.alloca("i64",8);
     Value R6 = builder.alloca("i64",8);
-    R0 = foo3.paramByIndex(0);
-    R1 = foo3.paramByIndex(1);
-    R2 = foo3.paramByIndex(2);
+    R0 = foo3.getParam(0);
+    R1 = foo3.getParam(1);
+    R2 = foo3.getParam(2);
     builder.store(R0, R4);
     builder.store(R1, R5);
     builder.store(R2, R6);

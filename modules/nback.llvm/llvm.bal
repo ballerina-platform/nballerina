@@ -117,7 +117,8 @@ public distinct class Function {
         }
     }
 
-    public function paramByIndex(int index) returns Value {
+    // Correspond to LLVMGetParam
+    public function getParam(int index) returns Value {
         return self.paramValues[index];
     }
 
