@@ -40,57 +40,25 @@ public function constInt(IntType ty, int val) returns Value {
 
 public type BinaryInsn "add"|"mul"|"sub"|"sdiv"|"srem";
 
-public distinct class Output {
-    private final string path;
+# Corresponds to llvm::Module class
+public class Module {
+    private final Function[] functions = [];
 
-    final string[] lines = [];
-
-    public function init(string path) returns io:Error? {
-        self.path = path;
+    public function init() {
     }
 
-    function push(string line) {
-        self.lines.push(line);
+    public function addFunction(string name, FunctionType fnType) returns Function {
+        Function fn = new Function(name, fnType);
+        self.functions.push(fn);
+        return fn;
     }
 
-    public function finish() returns io:Error? {
-        return io:fileWriteLines(self.path, self.lines);
-    }
-}
-
-# Corresponds to LLVMBasicBlockRef
-public distinct class BasicBlock {
-    final Function func;
-    private final string label;
-    private final string[] lines;
-
-    function init(string label, Function func, boolean isEntry = false) {
-        self.label = label;
-        self.func = func;
-        if isEntry {
-            self.lines = [];
-        } else {
-            self.lines = [label + ":"];
+    public function output(Output out) {
+        foreach var f in self.functions {
+            f.output(out);
         }
     }
-    public function ref() returns string {
-        return "%" + self.label;
-    }
 
-    public function name() returns string {
-        return self.label;
-    }
-
-    function addInsn(string... words) {
-        // the space argument is for indentation
-        self.lines.push(" ".'join(" ", ...words));
-    }
-
-    function output(Output out) {
-        foreach var line in self.lines {
-            out.push(line);
-        }
-    }
 }
 
 public type LinkageType "internal"|"external";
@@ -178,26 +146,7 @@ public distinct class Function {
 
 }
 
-# Corresponds to llvm::Module class
-public class Module {
-    private final Function[] functions = [];
 
-    public function init() {
-    }
-
-    public function addFunction(string name, FunctionType fnType) returns Function {
-        Function fn = new Function(name, fnType);
-        self.functions.push(fn);
-        return fn;
-    }
-
-    public function output(Output out) {
-        foreach var f in self.functions {
-            f.output(out);
-        }
-    }
-
-}
 
 # Corresponds to LLVMBuilderRef  
 public class Builder {
@@ -263,6 +212,41 @@ public class Builder {
     }
 }
 
+# Corresponds to LLVMBasicBlockRef
+public distinct class BasicBlock {
+    final Function func;
+    private final string label;
+    private final string[] lines;
+
+    function init(string label, Function func, boolean isEntry = false) {
+        self.label = label;
+        self.func = func;
+        if isEntry {
+            self.lines = [];
+        } else {
+            self.lines = [label + ":"];
+        }
+    }
+    public function ref() returns string {
+        return "%" + self.label;
+    }
+
+    public function name() returns string {
+        return self.label;
+    }
+
+    function addInsn(string... words) {
+        // the space argument is for indentation
+        self.lines.push(" ".'join(" ", ...words));
+    }
+
+    function output(Output out) {
+        foreach var line in self.lines {
+            out.push(line);
+        }
+    }
+}
+
 function sameIntType(Value v1, Value v2) returns IntType {
     Type ty1 = v1.ty;
     Type ty2 = v2.ty;
@@ -296,3 +280,22 @@ function typeToString(Type ty) returns string {
     }
     return typeTag;
 }
+
+public distinct class Output {
+    private final string path;
+
+    final string[] lines = [];
+
+    public function init(string path) returns io:Error? {
+        self.path = path;
+    }
+
+    function push(string line) {
+        self.lines.push(line);
+    }
+
+    public function finish() returns io:Error? {
+        return io:fileWriteLines(self.path, self.lines);
+    }
+}
+
