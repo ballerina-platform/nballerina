@@ -5,6 +5,8 @@
 // - uses instructions much closer to LLVM instructions
 // Compared to LLVM's IR, this is not SSA and has an assignment instruction.
 
+import wso2/nballerina.err;
+
 type FunctionDefn record {|
     string identifier;
     FunctionType functionType;
@@ -76,8 +78,8 @@ type CallInsn readonly & record {|
     // `result` must be nil if the return type is void
     Local? result;
     Value[] args;
+    err:Position position;
 |};
-
 
 // Used for i64.with.overflow type
 type ExtractElementInsn readonly & record {|

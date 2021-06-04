@@ -296,7 +296,8 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope,
     bir:CallInsn call = {
         func,
         result,
-        args: args.cloneReadOnly()
+        args: args.cloneReadOnly(),
+        position: expr.pos
     };
     curBlock.insns.push(call);
     return [result, curBlock];

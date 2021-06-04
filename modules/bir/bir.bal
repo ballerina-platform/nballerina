@@ -233,6 +233,8 @@ public type IdenticalInsn readonly & record {|
 # (i.e. with return type of never)
 public type CallInsn readonly & record {|
     *InsnBase;
+    # Position in the source that resulted in the instruction
+    err:Position? position;
     INSN_CALL name = INSN_CALL;
     Register result;
     FunctionOperand func;
