@@ -2,6 +2,7 @@ import ballerina/io;
 
 import wso2/nballerina.err;
 import wso2/nballerina.bir;
+import wso2/nballerina.nback.bll;
 import wso2/nballerina.nback.llvm;
 
 # The preferred output extension for the output filename.
@@ -20,6 +21,6 @@ public function compileModule(bir:Module mod, string basename) returns err:Any|i
 
 function compileFunction(bir:Module mod, bir:FunctionDefn def, llvm:Output out) returns err:Any? {
     bir:FunctionCode code = check def.generateCode(mod);
-    FunctionDefn ldef = check lower(mod, def, code);
+    bll:FunctionDefn ldef = check lower(mod, def, code);
     return emit(ldef, out);
 }

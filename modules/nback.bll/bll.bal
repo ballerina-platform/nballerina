@@ -7,7 +7,7 @@
 
 import wso2/nballerina.err;
 
-type FunctionDefn record {|
+public type FunctionDefn record {|
     string identifier;
     FunctionType functionType;
     Local[] locals;
@@ -15,7 +15,7 @@ type FunctionDefn record {|
 |};
 
 # A local variable.
-type Local readonly & record {|
+public type Local readonly & record {|
     ValueType valueType;
     int number;
     // A local that is assigned to must be addressable.
@@ -24,35 +24,35 @@ type Local readonly & record {|
     boolean addressable;
 |};
 
-type ValueType IntType|AggregateType;
+public type ValueType IntType|AggregateType;
 
 // i64.overflow is an tuple of an i64 and an i1; the i1 is 1 if the operation overflowed
-const I64_WITH_OVERFLOW = "i64.with.overflow";
+public const I64_WITH_OVERFLOW = "i64.with.overflow";
 
-type AggregateType I64_WITH_OVERFLOW;
-type IntType "i64"|"i1";
+public type AggregateType I64_WITH_OVERFLOW;
+public type IntType "i64"|"i1";
 
-type FunctionType readonly & record {|
+public type FunctionType readonly & record {|
     ValueType retType;
     ValueType[] paramType;
 |};
 
-type BasicBlock record {|
+public type BasicBlock record {|
     # Label for the BB, unique within the function
     readonly Label label;
     # List of the instructions in this basic block
     Insn[] insns = [];
 |};
 
-type Label int;
+public type Label int;
 
-type Insn BinaryInsn|CallInsn|ExtractElementInsn|AssignInsn|TerminatorInsn;
-type TerminatorInsn BrInsn|RetInsn|RaiseInsn;
+public type Insn BinaryInsn|CallInsn|ExtractElementInsn|AssignInsn|TerminatorInsn;
+public type TerminatorInsn BrInsn|RetInsn|RaiseInsn;
 
-type Value Local|IntConst;
-type IntConst readonly & [IntType, int];
+public type Value Local|IntConst;
+public type IntConst readonly & [IntType, int];
 
-type BinaryInsnName
+public type BinaryInsnName
     // i64.with.overflow = i64, i64
     "sadd.with.overflow"|
     "ssub.with.overflow"|
@@ -64,25 +64,25 @@ type BinaryInsnName
     "div"|
     "srem";
 
-type BinaryInsn readonly & record {|
+public type BinaryInsn readonly & record {|
     BinaryInsnName name;
     Local result;
     Value lhs;
     Value rhs;
 |};
 
-type CallInsn readonly & record {|
+public type CallInsn readonly & record {|
     "call" name = "call";
     string identifier;
     FunctionType functionType;
-    // `result` must be nil if the return type is void
+    // `result` must be nil if the return public type is void
     Local? result;
     Value[] args;
     err:Position position;
 |};
 
-// Used for i64.with.overflow type
-type ExtractElementInsn readonly & record {|
+// Used for i64.with.overflow public type
+public type ExtractElementInsn readonly & record {|
     "extractelement" name = "extractelement";
     Local result;
     Local value;
@@ -90,10 +90,10 @@ type ExtractElementInsn readonly & record {|
 |};
 
 // This is not an LLVM instruction
-const ASSIGN = "=";
+public const ASSIGN = "=";
 
 // This will get turned into a store
-type AssignInsn readonly & record {|
+public type AssignInsn readonly & record {|
     ASSIGN name = ASSIGN;
     Local result; // must be addressable
     Value value;
@@ -101,37 +101,37 @@ type AssignInsn readonly & record {|
 
 // Terminators
 
-type BrInsn CondBrInsn | JmpInsn;
+public type BrInsn CondBrInsn | JmpInsn;
 
-type CondBrInsn readonly & record {|
+public type CondBrInsn readonly & record {|
     "br" name = "br";
-    // Value must have type i1
+    // Value must have public type i1
     Local value;
     Label ifTrue;
     Label ifFalse;
 |};
 
-type JmpInsn readonly & record {|
+public type JmpInsn readonly & record {|
     "br" name = "br";
     Label dest;
 |};
 
-type RetInsn readonly & record {|
+public type RetInsn readonly & record {|
     "ret" name = "ret";
     Value|"void" value;
 |};
 
-const ARITHMETIC_PANIC = 1;
-type PanicCode ARITHMETIC_PANIC;
+public const ARITHMETIC_PANIC = 1;
+public type PanicCode ARITHMETIC_PANIC;
 
-const RAISE = "raise";
+public const RAISE = "raise";
 
 // Raises an exception.
 // This starts unwinding: `value` represents the error value
 // For now, we represent errors
-// with an i64 identifying a distinct type of language-generated panic.
+// with an i64 identifying a distinct public type of language-generated panic.
 // This will turn into a call to a function that doesn't return
-type RaiseInsn readonly & record {|
+public type RaiseInsn readonly & record {|
     RAISE name = RAISE;
     Local value;
 |};
