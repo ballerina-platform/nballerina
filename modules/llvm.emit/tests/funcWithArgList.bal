@@ -3,41 +3,38 @@ import ballerina/test;
 
 function funcWithArgList() returns Module {
     Builder builder = new ();
-    Module m = new ("x86_64-pc-linux-gnu");
+    Module m = new ();
 
-    Function foo1 = m.getOrInsertFunction("@foo1", {returnType: "i64", paramTypes: ["i64"]});
-    foo1.setPreEmptionSpecifier("dso_local");
+    Function foo1 = m.insertFunction("@foo1", {returnType: "i64", paramTypes: ["i64"]});
     BasicBlock foo1BB = foo1.appendBasicBlock();
     builder.positionAtEnd(foo1BB);
     Value R2 = builder.alloca("i64");
-    Value R0 = foo1.getParamById(0);
+    Value R0 = foo1.paramByIndex(0);
     builder.store(R0, R2);
     Value R3 = builder.load(R2);
     builder.returnValue(R3);
 
-    Function foo2 = m.getOrInsertFunction("@foo2", {returnType: "i64", paramTypes: ["i64", "i64"]});
-    foo2.setPreEmptionSpecifier("dso_local");
+    Function foo2 = m.insertFunction("@foo2", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock bb2 = foo2.appendBasicBlock();
     builder.positionAtEnd(bb2);
     R3 = builder.alloca("i64");
     Value R4 = builder.alloca("i64");
-    R0 = foo2.getParamById(0);
-    Value R1 = foo2.getParamById(1);
+    R0 = foo2.paramByIndex(0);
+    Value R1 = foo2.paramByIndex(1);
     builder.store(R0, R3);
     builder.store(R1, R4);
     Value R5 = builder.load(R4);
     builder.returnValue(R5);
 
-    Function foo3 = m.getOrInsertFunction("@foo3", {returnType: "i64", paramTypes: ["i64", "i64", "i64"]});
-    foo2.setPreEmptionSpecifier("dso_local");
+    Function foo3 = m.insertFunction("@foo3", {returnType: "i64", paramTypes: ["i64", "i64", "i64"]});
     BasicBlock bb3 = foo3.appendBasicBlock();
     builder.positionAtEnd(bb3);
     R4 = builder.alloca("i64");
     R5 = builder.alloca("i64");
     Value R6 = builder.alloca("i64");
-    R0 = foo3.getParamById(0);
-    R1 = foo3.getParamById(1);
-    R2 = foo3.getParamById(2);
+    R0 = foo3.paramByIndex(0);
+    R1 = foo3.paramByIndex(1);
+    R2 = foo3.paramByIndex(2);
     builder.store(R0, R4);
     builder.store(R1, R5);
     builder.store(R2, R6);

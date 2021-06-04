@@ -3,9 +3,8 @@ import ballerina/test;
 
 function basicMain() returns Module {
 
-    Module m = new ("x86_64-pc-linux-gnu");
-    Function mainFunction = m.getOrInsertFunction("@main", {returnType: "i64"});
-    mainFunction.setPreEmptionSpecifier("dso_local");
+    Module m = new ();
+    Function mainFunction = m.insertFunction("@main", {returnType: "i64"});
     BasicBlock initBlock = mainFunction.appendBasicBlock();
     Builder builder = new ();
     builder.positionAtEnd(initBlock);

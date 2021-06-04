@@ -3,15 +3,15 @@ import ballerina/test;
 
 function funcBasicPrivate() returns Module {
     Builder builder = new ();
-    Module m = new ("x86_64-pc-linux-gnu");
+    Module m = new ();
 
-    Function foo = m.getOrInsertFunction("@foo", {returnType: "void"});
+    Function foo = m.insertFunction("@foo", {returnType: "void"});
     foo.setLinkageType("internal");
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
     builder.returnVoid();
 
-    Function bar = m.getOrInsertFunction("@bar", {returnType: "i64"});
+    Function bar = m.insertFunction("@bar", {returnType: "i64"});
     bar.setLinkageType("internal");
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);

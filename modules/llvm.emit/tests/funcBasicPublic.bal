@@ -3,16 +3,14 @@ import ballerina/test;
 
 function funcBasicPublic() returns Module {
     Builder builder = new ();
-    Module m = new ("x86_64-pc-linux-gnu");
+    Module m = new ();
 
-    Function foo = m.getOrInsertFunction("@foo", {returnType: "void"});
-    foo.setPreEmptionSpecifier("dso_local");
+    Function foo = m.insertFunction("@foo", {returnType: "void"});
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
     builder.returnVoid();
 
-    Function bar = m.getOrInsertFunction("@bar", {returnType: "i64"});
-    bar.setPreEmptionSpecifier("dso_local");
+    Function bar = m.insertFunction("@bar", {returnType: "i64"});
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
     builder.returnValue(constInt(42));

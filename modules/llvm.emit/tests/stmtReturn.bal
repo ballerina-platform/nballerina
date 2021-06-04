@@ -3,15 +3,13 @@ import ballerina/test;
 
 function stmtReturn() returns Module {
     Builder builder = new ();
-    Module m = new ("x86_64-pc-linux-gnu");
-    Function foo1 = m.getOrInsertFunction("@foo1", {returnType:"i64"});
-    foo1.setPreEmptionSpecifier("dso_local");
+    Module m = new ();
+    Function foo1 = m.insertFunction("@foo1", {returnType:"i64"});
     BasicBlock bb1 = foo1.appendBasicBlock();
     builder.positionAtEnd(bb1);
     builder.returnValue(constInt(42));
 
-    Function foo2 = m.getOrInsertFunction("@foo2",{returnType:"i64"});
-    foo2.setPreEmptionSpecifier("dso_local");
+    Function foo2 = m.insertFunction("@foo2",{returnType:"i64"});
     BasicBlock bb2 = foo2.appendBasicBlock();
     builder.positionAtEnd(bb2);
     Value R1 = builder.alloca("i64");

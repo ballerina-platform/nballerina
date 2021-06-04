@@ -56,20 +56,20 @@ public distinct class BasicBlock {
     private final string label;
     private final string[] lines;
 
-    function init(string label, Function func) {
+    function init(string label, Function func, boolean ignoreLabel = false) {
         self.label = label;
         self.func = func;
-        if label == "L0" {
+        if ignoreLabel {
             self.lines = [];
         } else {
             self.lines = [label + ":"];
         }
     }
-    public function getRef() returns string {
+    public function ref() returns string {
         return "%" + self.label;
     }
 
-    public function getLabel() returns string {
+    public function name() returns string {
         return self.label;
     }
 
@@ -85,8 +85,6 @@ public distinct class BasicBlock {
     }
 }
 
-public type PreEmptionSpecifier "dso_preemptable"|"dso_local";
-
 public type LinkageType "internal"|"external";
 
 public type FunctionType record {|
@@ -101,7 +99,6 @@ public class Function {
     private string functionName;
     private Type returnType;
     private Value[] paramValues;
-    private PreEmptionSpecifier preEmptionSpecifier = "dso_preemptable";
     private LinkageType linkageType = "external";
 
     // XXX need stuff for the definition
@@ -116,12 +113,8 @@ public class Function {
         }
     }
 
-    public function getParamById(int id) returns Value {
-        return self.paramValues[id];
-    }
-
-    public function setPreEmptionSpecifier(PreEmptionSpecifier preEmptionSpecifier) {
-        self.preEmptionSpecifier = preEmptionSpecifier;
+    public function paramByIndex(int index) returns Value {
+        return self.paramValues[index];
     }
 
     public function setLinkageType(LinkageType linkageType) {
@@ -129,32 +122,25 @@ public class Function {
     }
 
     public function output(Output out) {
-        out.push(self.getHeader());
+        out.push(self.header());
         self.outputBody(out);
         out.push("}");
     }
 
-    function getHeader() returns string {
+    function header() returns string {
         string[] words = [];
         words.push("define");
-        if self.preEmptionSpecifier != "dso_preemptable" {
-            words.push(self.preEmptionSpecifier);
-        }
         if self.linkageType != "external" {
             words.push(self.linkageType);
         }
         words.push(serializeType(self.returnType));
         words.push(self.functionName);
         words.push("(");
+        string[] paramStringContent = [];
         foreach Value param in self.paramValues {
-            words.push(serializeType(param.ty));
-            words.push(param.operand);
-            words.push(",");
+            paramStringContent.push(" ".'join(serializeType(param.ty), param.operand));
         }
-        // remove the , from the last param
-        if words[words.length() - 1] == "," {
-            any|error t = words.pop();
-        }
+        words.push(",".'join(...paramStringContent));
         words.push(")");
         words.push("{");
         return " ".'join(...words);
@@ -167,7 +153,8 @@ public class Function {
     }
 
     public function appendBasicBlock() returns BasicBlock {
-        BasicBlock tem = new BasicBlock(self.genLabel(), self);
+        boolean skipLabel = self.basicBlocks.length() == 0; // skip the label of the first basic block
+        BasicBlock tem = new BasicBlock(self.genLabel(), self, skipLabel);
         self.basicBlocks.push(tem);
         return tem;
     }
@@ -187,21 +174,17 @@ public class Function {
 }
 
 public class Module {
-    private string targetTriple;
     private Function[] functions = [];
-    public function init(string targetTriple = "x86_64-pc-linux-gnu") {
-        self.targetTriple = targetTriple;
+    public function init() {
     }
 
-    public function getOrInsertFunction(string name, FunctionType fnType) returns Function {
-        //TODO: check if the function already exists 
+    public function insertFunction(string name, FunctionType fnType) returns Function {
         Function fn = new Function(name, fnType);
         self.functions.push(fn);
         return fn;
     }
 
     public function output(Output out) {
-        out.push(string `target triple = "${self.targetTriple}"`);
         foreach var f in self.functions {
             f.output(out);
         }
@@ -299,14 +282,14 @@ function pointerTo(IntType ty) returns string {
 
 function serializeType(Type ty) returns string {
     string typeTag;
-    if ty is IntType || ty is "void" {
-        typeTag = ty;
-    } else {
+    if ty is PointerType {
         typeTag = serializePointerType(ty);
+    } else {
+        typeTag = ty;
     }
     return typeTag;
 }
 
 function serializePointerType(PointerType ty) returns string {
-    return <string>ty.pointsTo + "*";
+    return ty.pointsTo + "*";
 }
