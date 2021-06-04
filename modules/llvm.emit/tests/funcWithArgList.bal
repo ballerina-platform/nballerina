@@ -45,9 +45,9 @@ function funcWithArgList() returns Module {
 
 @test:Config {}
 function testFuncWithArgList() returns error? {
-    Module m = funcWithArgList();
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "func_with_arg_list.ll");
-    Output out = check new (outputPath);
-    m.output(out);
-    check out.finish();
+    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "func_with_arg_list.ll");
+    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "tmp_func_with_arg_list.ll");
+    check buildOutput(funcWithArgList(), outputPath);
+    test:assertEquals(compareFiles(expectedOutput, outputPath), true);
+    check file:remove(outputPath);
 }

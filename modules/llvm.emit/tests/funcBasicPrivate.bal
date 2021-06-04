@@ -21,9 +21,9 @@ function funcBasicPrivate() returns Module {
 
 @test:Config {}
 function testBasicPrivate() returns error? {
-    Module m = funcBasicPrivate();
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "func_basic_private.ll");
-    Output out = check new (outputPath);
-    m.output(out);
-    check out.finish();
+    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "func_basic_private.ll");
+    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "tmp_func_basic_private.ll");
+    check buildOutput(funcBasicPrivate(), outputPath);
+    test:assertEquals(compareFiles(expectedOutput, outputPath), true);
+    check file:remove(outputPath);
 }

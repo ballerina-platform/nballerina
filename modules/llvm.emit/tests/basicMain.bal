@@ -12,11 +12,12 @@ function basicMain() returns Module {
     return m;
 }
 
+
 @test:Config {}
 function testBasicMain() returns error? {
-    Module m = basicMain();
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "basic_main.ll");
-    Output out = check new (outputPath);
-    m.output(out);
-    check out.finish();
+    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "basic_main.ll");
+    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "tmp_basic_main.ll");
+    check buildOutput(basicMain(), outputPath);
+    test:assertEquals(compareFiles(expectedOutput, outputPath), true);
+    check file:remove(outputPath);
 }
