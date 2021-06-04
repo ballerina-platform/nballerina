@@ -31,10 +31,11 @@ public const I64_WITH_OVERFLOW = "i64.with.overflow";
 
 public type AggregateType I64_WITH_OVERFLOW;
 public type IntType "i64"|"i1";
+public type RetType ValueType|"void";
 
 public type FunctionType readonly & record {|
-    ValueType retType;
-    ValueType[] paramType;
+    RetType retType;
+    ValueType[] paramTypes;
 |};
 
 public type BasicBlock record {|
