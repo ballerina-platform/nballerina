@@ -5,13 +5,13 @@ function funcBasicPrivate() returns Module {
     Builder builder = new ();
     Module m = new ();
 
-    Function foo = m.addFunction("foo", {returnType: "void"});
+    Function foo = m.addFunction("foo", {returnType: "void", paramTypes: []});
     foo.setLinkageType("internal");
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
     builder.returnVoid();
 
-    Function bar = m.addFunction("bar", {returnType: "i64"});
+    Function bar = m.addFunction("bar", {returnType: "i64", paramTypes: []});
     bar.setLinkageType("internal");
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);

@@ -5,12 +5,12 @@ function funcBasicPublic() returns Module {
     Builder builder = new ();
     Module m = new ();
 
-    Function foo = m.addFunction("foo", {returnType: "void"});
+    Function foo = m.addFunction("foo", {returnType: "void", paramTypes: []});
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
     builder.returnVoid();
 
-    Function bar = m.addFunction("bar", {returnType: "i64"});
+    Function bar = m.addFunction("bar", {returnType: "i64", paramTypes: []});
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
     builder.returnValue(constInt("i64",42));

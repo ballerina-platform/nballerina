@@ -16,6 +16,14 @@ public type PointerType readonly & record {|
 
 public type Type IntType|"void"|PointerType;
 
+
+# Corresponds to llvm::FunctionType class
+public type FunctionType readonly & record {|
+    Type returnType;
+    Type[] paramTypes;
+|};
+
+
 # Corresponds to LLVMValueRef 
 public readonly distinct class Value {
     string operand;
@@ -87,14 +95,8 @@ public distinct class BasicBlock {
 
 public type LinkageType "internal"|"external";
 
-# Corresponds to llvm::FunctionType class
-public type FunctionType record {|
-    Type returnType;
-    Type[] paramTypes = [];
-|};
-
 # Corresponds to llvm::Function class
-public class Function {
+public distinct class Function {
     private BasicBlock[] basicBlocks = [];
     private int varCount = 0;
     private int labelCount = 0;
@@ -105,7 +107,7 @@ public class Function {
 
     // XXX need stuff for the definition
     function init(string functionName, FunctionType functionType) {
-        self.functionName = "@" + functionName;
+        self.functionName = functionName;
         self.returnType = functionType.returnType;
         self.paramValues = [];
         foreach var paramType in functionType.paramTypes {
@@ -136,7 +138,7 @@ public class Function {
             words.push(self.linkageType);
         }
         words.push(typeToString(self.returnType));
-        words.push(self.functionName);
+        words.push("@" + self.functionName);
         words.push("(");
         string[] paramStringContent = [];
         foreach Value param in self.paramValues {
@@ -177,7 +179,8 @@ public class Function {
 
 # Corresponds to llvm::Module class
 public class Module {
-    private Function[] functions = [];
+    private final Function[] functions = [];
+
     public function init() {
     }
 
