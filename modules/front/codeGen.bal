@@ -195,7 +195,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
     else {
         var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, initExpr);
         bir:Register result = cx.createRegister(semType);
-        bir:LoadInsn insn = { result, operand };
+        bir:AssignInsn insn = { result, operand };
         nextBlock.insns.push(insn);
         return [nextBlock, { name: varName, reg: result, prev: scope }];
     }   
@@ -205,7 +205,7 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
     var { varName, expr } = stmt;
     bir:Register reg = check mustLookup(varName, scope);
     var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, expr);
-    bir:LoadInsn load = { result: reg, operand };
+    bir:AssignInsn load = { result: reg, operand };
     nextBlock.insns.push(load);
     return nextBlock;
 }

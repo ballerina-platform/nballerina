@@ -75,7 +75,7 @@ type VarRefExpr record {|
 |};
 
 type SimpleConstExpr record {|
-    ()|boolean|int|string value;
+    ()|boolean|int value;
 |};
 
 // Types

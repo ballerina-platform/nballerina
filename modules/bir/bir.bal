@@ -128,7 +128,7 @@ public enum InsnName {
     INSN_ABNORMAL_RET,
     INSN_CALL,
     INSN_INVOKE,
-    INSN_LOAD,
+    INSN_ASSIGN,
     INSN_NARROW,
     INSN_TYPE_CAST,
     INSN_TYPE_TEST,
@@ -151,11 +151,11 @@ public type Insn
     IntArithmeticBinaryInsn|IntCompareInsn|IntNegateInsn
     |IntCompareInsn|EqualInsn|IdenticalInsn|BooleanNotInsn
     |RetInsn|AbnormalRetInsn|CallInsn
-    |LoadInsn|NarrowInsn|TypeCastInsn|TypeTestInsn
+    |AssignInsn|NarrowInsn|TypeCastInsn|TypeTestInsn
     |JumpInsn|BranchInsn|CatchInsn|PanicInsn;
 
 public type Operand ConstOperand|Register;
-public type ConstOperand ()|int|boolean|string|FunctionRef;
+public type ConstOperand ()|int|boolean|FunctionRef;
 public type IntOperand int|Register;
 public type BooleanOperand boolean|Register;
 public type FunctionOperand FunctionRef|Register;
@@ -241,12 +241,12 @@ public type CallInsn readonly & record {|
     Operand[] args;
 |};
 
-# Load a value into a register.
+# Assign a value to a register.
 # Typing rule:
 # typeof(operand) <: typeof(result)
-public type LoadInsn readonly & record {|
+public type AssignInsn readonly & record {|
     *InsnBase;
-    INSN_LOAD name = INSN_LOAD;
+    INSN_ASSIGN name = INSN_ASSIGN;
     Register result;
     Operand operand;
 |};
