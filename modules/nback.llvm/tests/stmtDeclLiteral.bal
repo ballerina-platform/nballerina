@@ -4,7 +4,7 @@ import ballerina/test;
 function stmtDeclLiteral() returns Module {
     Builder builder = new ();
     Module m = new ();
-    Function test = m.addFunction("test", {returnType: "i64"});
+    Function test = m.addFunction("test", {returnType: "i64", paramTypes:[]});
     BasicBlock initBlock = test.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     Value R1 = builder.alloca("i64",8);

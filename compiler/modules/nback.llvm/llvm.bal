@@ -186,6 +186,21 @@ public distinct class Function {
         return reg;
     }
 
+    function returnsValue() returns boolean {
+        return self.returnType != "void";
+    }
+
+    function ref() returns string {
+        return "@" + self.functionName;
+    }
+
+    function paramCount() returns int {
+        return self.paramValues.length();
+    }
+
+    function getReturnType() returns Type {
+        return self.returnType;
+    }
 }
 
 // Used with Builder.binaryInt
@@ -253,6 +268,41 @@ public class Builder {
             bb.addInsn("ret", typeToString(value.ty), value.operand);
         }
     }
+    
+    public function call(Function f, Value[] args) returns Value {
+        if !(f.returnsValue()) {
+            panic error(string `Function ${f.ref()} does not return a value try callVoid instead`);
+        }
+        if f.paramCount() != args.length() {
+            panic error(string `Number of arguments is invalid for function ${f.ref()}`);
+        }
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        string[] argStringContent = [];
+        foreach Value arg in args {
+            argStringContent.push(" ".'join(typeToString(arg.ty), arg.operand));
+        }
+        string argString = ",".'join(...argStringContent);
+        bb.addInsn(reg, "=", "call", typeToString(f.getReturnType()), f.ref(), "(", argString, ")");
+        return new Value(f.getReturnType(), reg);
+    }
+
+    public function callVoid(Function f, Value[] args) {
+        if (f.returnsValue()) {
+            panic error("This function returns a value try call instead");
+        }
+        if f.paramCount() != args.length() {
+            panic error("Number of arguments is invalid");
+        }
+        BasicBlock bb = self.bb();
+        string[] argStringContent = [];
+        foreach Value arg in args {
+            argStringContent.push(" ".'join(typeToString(arg.ty), arg.operand));
+        }
+        string argString = ",".'join(...argStringContent);
+        bb.addInsn("call", typeToString(f.getReturnType()), f.ref(), "(", argString, ")");
+    }
+
 
     // Corresponds to LLVMBuildCall
     // Returns () if there is no result i.e. function return type is void

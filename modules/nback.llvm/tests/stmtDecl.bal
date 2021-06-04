@@ -7,7 +7,7 @@ function stmtDecl() returns Module {
     Function foo = m.addFunction("main", {returnType: "i64", paramTypes:["i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
-    Value R0 = foo.paramByIndex(0);
+    Value R0 = foo.getParam(0);
     Value R2 = builder.alloca("i64", 8);
     Value R3 = builder.alloca("i64", 8);
     builder.store(R0, R2);
