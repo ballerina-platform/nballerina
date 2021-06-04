@@ -7,7 +7,7 @@
 
 import ballerina/io;
 
-public type IntType "i8"|"i1"|"i64";
+public type IntType "i64"|"i1";
 
 public type PointerType readonly & record {|
     IntType pointsTo;
@@ -26,7 +26,7 @@ public readonly distinct class Value {
     }
 }
 
-public function constInt(int val, IntType ty = "i64") returns Value {
+public function constInt(IntType ty, int val) returns Value {
     return new Value(ty, val.toString());
 }
 
@@ -135,12 +135,12 @@ public class Function {
         if self.linkageType != "external" {
             words.push(self.linkageType);
         }
-        words.push(serializeType(self.returnType));
+        words.push(typeToString(self.returnType));
         words.push(self.functionName);
         words.push("(");
         string[] paramStringContent = [];
         foreach Value param in self.paramValues {
-            paramStringContent.push(" ".'join(serializeType(param.ty), param.operand));
+            paramStringContent.push(" ".'join(typeToString(param.ty), param.operand));
         }
         words.push(",".'join(...paramStringContent));
         words.push(")");
@@ -155,7 +155,7 @@ public class Function {
     }
 
     public function appendBasicBlock() returns BasicBlock {
-        boolean isEntry = self.basicBlocks.length() == 0; // skip the label of the first basic block
+        boolean isEntry = self.basicBlocks.length() == 0;
         BasicBlock tem = new BasicBlock(self.genLabel(), self, isEntry);
         self.basicBlocks.push(tem);
         return tem;
@@ -181,7 +181,7 @@ public class Module {
     public function init() {
     }
 
-    public function insertFunction(string name, FunctionType fnType) returns Function {
+    public function addFunction(string name, FunctionType fnType) returns Function {
         Function fn = new Function(name, fnType);
         self.functions.push(fn);
         return fn;
@@ -203,7 +203,7 @@ public class Builder {
         self.currentBlock = block;
     }
 
-    public function alloca(IntType ty, int align = 8) returns Value {
+    public function alloca(IntType ty, int align) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         PointerType ptrTy = { pointsTo: ty, align };
@@ -240,7 +240,7 @@ public class Builder {
 
     public function returnValue(Value value) {
         BasicBlock bb = self.bb();
-        bb.addInsn("ret", serializeType(value.ty), value.operand);
+        bb.addInsn("ret", typeToString(value.ty), value.operand);
     }
 
     public function returnVoid() {
@@ -264,7 +264,7 @@ function sameIntType(Value v1, Value v2) returns IntType {
     Type ty2 = v2.ty;
     if ty1 != ty2 {
         panic error("expected same types");
-    } 
+    }
     else if ty1 is IntType {
         return ty1;
     }
@@ -283,7 +283,7 @@ function pointerTo(IntType ty) returns string {
     return ty + "*";
 }
 
-function serializeType(Type ty) returns string {
+function typeToString(Type ty) returns string {
     string typeTag;
     if ty is PointerType {
         typeTag = ty.pointsTo + "*";
