@@ -22,8 +22,8 @@ function stmtReturn() returns Module {
 
 @test:Config {}
 function testStmtReturn() returns error? {
-    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "stmt_return.ll");
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "tmp_stmt_return.ll");
+    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "stmt_return.ll");
+    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "tmp_stmt_return.ll");
     check buildOutput(stmtReturn(), outputPath);
     test:assertEquals(compareFiles(expectedOutput, outputPath), true);
     check file:remove(outputPath);

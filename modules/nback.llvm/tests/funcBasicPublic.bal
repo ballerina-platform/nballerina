@@ -19,8 +19,8 @@ function funcBasicPublic() returns Module {
 
 @test:Config {}
 function testBasicPublic() returns error? {
-    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "func_basic_public.ll");
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "llvm.emit", "tests", "testOutputs", "tmp_func_basic_public.ll");
+    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "func_basic_public.ll");
+    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "tmp_func_basic_public.ll");
     check buildOutput(funcBasicPublic(), outputPath);
     test:assertEquals(compareFiles(expectedOutput, outputPath), true);
     check file:remove(outputPath);
