@@ -87,11 +87,13 @@ public distinct class BasicBlock {
 
 public type LinkageType "internal"|"external";
 
+# Corresponds to llvm::FunctionType class
 public type FunctionType record {|
     Type returnType;
     Type[] paramTypes = [];
 |};
 
+# Corresponds to llvm::Function class
 public class Function {
     private BasicBlock[] basicBlocks = [];
     private int varCount = 0;
@@ -173,6 +175,7 @@ public class Function {
 
 }
 
+# Corresponds to llvm::Module class
 public class Module {
     private Function[] functions = [];
     public function init() {
@@ -203,7 +206,7 @@ public class Builder {
     public function alloca(IntType ty, int align = 8) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        PointerType ptrTy = {pointsTo: ty, align};
+        PointerType ptrTy = { pointsTo: ty, align };
         bb.addInsn(reg, "=", "alloca", ty, ",", "align", align.toString());
         return new Value(ptrTy, reg);
     }
@@ -283,13 +286,9 @@ function pointerTo(IntType ty) returns string {
 function serializeType(Type ty) returns string {
     string typeTag;
     if ty is PointerType {
-        typeTag = serializePointerType(ty);
+        typeTag = ty.pointsTo + "*";
     } else {
         typeTag = ty;
     }
     return typeTag;
-}
-
-function serializePointerType(PointerType ty) returns string {
-    return ty.pointsTo + "*";
 }
