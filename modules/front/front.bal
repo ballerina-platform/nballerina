@@ -6,7 +6,7 @@ import wso2/nballerina.err;
 
 public function loadModule(string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
     string contents = check io:fileReadString(filename);
-    Module mod = check parseModule(contents, filename);
+    Module mod = check parseModule(contents);
     t:Env env = new;
     check convertTypes(env, mod);
     return wrapFunctions(env, id, mod);

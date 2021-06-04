@@ -2,8 +2,8 @@
 import wso2/nballerina.err;
 
 
-function parseModule(string str, string? filename = ()) returns Module|err:Syntax {
-    Tokenizer tok = new(str, filename);
+function parseModule(string str) returns Module|err:Syntax {
+    Tokenizer tok = new(str);
     check tok.advance();
     Module mod = table [];
     while tok.current() != () {

@@ -15,7 +15,6 @@ public type Position readonly & record {|
     int lineNumber;
     // 0-based index (in code points) in the line
     int indexInLine;
-    string? filename;
 |};
 
 public type Detail record {
