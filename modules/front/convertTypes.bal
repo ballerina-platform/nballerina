@@ -31,7 +31,10 @@ function convertTypes(t:Env env, Module mod) returns err:Semantic? {
 }
 
 function convertFunctionSignature(t:Env env, Module mod, FunctionTypeDesc td) returns bir:FunctionSignature|err:Semantic {
-    t:SemType[] params = from var x in td.args select check convertTypeDesc(env, mod, 0, x);
+    t:SemType[] params = [];
+    foreach var x in td.args {
+        params.push(check convertTypeDesc(env, mod, 0, x));
+    }
     t:SemType ret = check convertTypeDesc(env, mod, 0, td.ret);
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
@@ -94,7 +97,10 @@ function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns 
             td.def = d;
             // JBUG temp variable `m` is to avoid compiler bug #30736
             TypeDesc[] m = td.members;
-            t:SemType[] members = from var x in m select check convertTypeDesc(env, mod, depth + 1, x);
+            t:SemType[] members = [];
+            foreach var x in m {
+                members.push(check convertTypeDesc(env, mod, depth + 1, x));
+            }
             t:SemType rest = check convertTypeDesc(env, mod, depth + 1, td.rest);
             return d.define(env, members, rest);
         }
@@ -109,7 +115,10 @@ function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns 
             td.def = d;
             // JBUG temp variable `f` is to avoid compiler bug #30736
             FieldDesc[] f = td.fields;
-            t:Field[] fields = from var { name, typeDesc } in f select [name, check convertTypeDesc(env, mod, depth + 1, typeDesc)];
+            t:Field[] fields = [];
+            foreach var { name, typeDesc } in f {
+                fields.push([name, check convertTypeDesc(env, mod, depth + 1, typeDesc)]);
+            }
             t:SemType rest = check convertTypeDesc(env, mod, depth + 1, td.rest);
             return d.define(env, fields, rest);
         }
@@ -123,7 +132,10 @@ function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns 
             t:FunctionDefinition d = new(env);
             td.def = d;
             TypeDesc[] a = td.args;
-            t:SemType[] args = from var x in a select check convertTypeDesc(env, mod, depth + 1, x);
+            t:SemType[] args = [];
+            foreach var x in a {
+                args.push(check convertTypeDesc(env, mod, depth + 1, x));
+            }
             t:SemType ret = check convertTypeDesc(env, mod, depth + 1, td.ret);
             return d.define(env, t:tuple(env, ...args), ret);
         }

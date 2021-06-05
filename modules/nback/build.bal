@@ -23,11 +23,10 @@ class Scaffold {
     private final llvm:BasicBlock[] blocks;
 
     function init(llvm:Function llFunc, llvm:Builder builder, bir:FunctionCode code) returns err:Any? {
-        final llvm:IntType[] types = from var reg in code.registers select check buildValueType(reg.semType);
-        self.types = types;
-        self.blocks = from var b in code.blocks select llFunc.appendBasicBlock();
+        self.types = check registerTypes(code.registers);
+        self.blocks = initBlocks(llFunc, code.blocks);
         builder.positionAtEnd(self.blocks[0]);
-        self.addresses = from var ty in types select builder.alloca(ty, typeAlignment(ty));
+        self.addresses = allocateRegisters(builder, self.types);
     }
 
     function address(bir:Register r) returns llvm:PointerValue => self.addresses[r.number];
@@ -37,6 +36,30 @@ class Scaffold {
     function basicBlock(bir:BasicBlock b) returns llvm:BasicBlock  => self.blocks[b.label];
 
     function valueType(bir:Register r) returns llvm:IntType => self.types[r.number];
+}
+
+function registerTypes(bir:Register[] registers) returns llvm:IntType[]|err:Any {
+    final llvm:IntType[] types = [];
+    foreach var reg in registers {
+        types.push(check buildValueType(reg.semType));
+    }
+    return types;
+}
+
+function initBlocks(llvm:Function llFunc, bir:BasicBlock[] blocks) returns llvm:BasicBlock[]  {
+    llvm:BasicBlock[] llBlocks = [];
+    foreach var b in llBlocks {
+        llBlocks.push(llFunc.appendBasicBlock());
+    }
+    return llBlocks;
+}
+
+function allocateRegisters(llvm:Builder builder, llvm:IntType[] types) returns llvm:PointerValue[] {
+    llvm:PointerValue[] addresses = [];
+    foreach var ty in types {
+        addresses.push(builder.alloca(ty, typeAlignment(ty)));
+    } 
+    return addresses;
 }
 
 function buildFunction(bir:Module mod, bir:FunctionDefn defn, llvm:Module llMod) returns err:Any? {
@@ -125,7 +148,10 @@ function buildArithmeticBinaryInsnName(bir:ArithmeticBinaryOp op) returns llvm:B
 }
 
 function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:FunctionType|BuildError {
-    llvm:Type[] paramTypes = from var ty in signature.paramTypes select check buildValueType(ty);
+    llvm:Type[] paramTypes = [];
+    foreach var ty in signature.paramTypes {
+        paramTypes.push(check buildValueType(ty));
+    }
     llvm:FunctionType ty = {
         returnType: check buildRetType(signature.returnType),
         paramTypes: paramTypes.cloneReadOnly()
