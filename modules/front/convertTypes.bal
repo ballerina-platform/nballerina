@@ -95,7 +95,8 @@ function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns 
             // JBUG temp variable `m` is to avoid compiler bug #30736
             TypeDesc[] m = td.members;
             t:SemType[] members = from var x in m select check convertTypeDesc(env, mod, depth + 1, x);
-            return d.define(env, members, check convertTypeDesc(env, mod, depth + 1, td.rest));
+            t:SemType rest = check convertTypeDesc(env, mod, depth + 1, td.rest);
+            return d.define(env, members, rest);
         }
         else {
             return def.getSemType(env);
@@ -109,7 +110,8 @@ function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns 
             // JBUG temp variable `f` is to avoid compiler bug #30736
             FieldDesc[] f = td.fields;
             t:Field[] fields = from var { name, typeDesc } in f select [name, check convertTypeDesc(env, mod, depth + 1, typeDesc)];
-            return d.define(env, fields, check convertTypeDesc(env, mod, depth + 1, td.rest));
+            t:SemType rest = check convertTypeDesc(env, mod, depth + 1, td.rest);
+            return d.define(env, fields, rest);
         }
         else {
             return def.getSemType(env);
@@ -122,7 +124,8 @@ function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns 
             td.def = d;
             TypeDesc[] a = td.args;
             t:SemType[] args = from var x in a select check convertTypeDesc(env, mod, depth + 1, x);
-            return d.define(env, t:tuple(env, ...args), check convertTypeDesc(env, mod, depth + 1, td.ret));
+            t:SemType ret = check convertTypeDesc(env, mod, depth + 1, td.ret);
+            return d.define(env, t:tuple(env, ...args), ret);
         }
         else {
             return def.getSemType(env);
