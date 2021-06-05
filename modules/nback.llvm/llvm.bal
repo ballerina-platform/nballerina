@@ -185,20 +185,18 @@ public class Builder {
 
     public function load(PointerValue ptr) returns Value {
         BasicBlock bb = self.bb();
-        PointerType ptrTy = requirePointerType(ptr);
-        IntType ty = ptrTy.pointsTo;
+        IntType ty = ptr.ty.pointsTo;
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "load", ty, ",", pointerTo(ty), ptr.operand, ",", "align", ptrTy.align.toString());
+        bb.addInsn(reg, "=", "load", ty, ",", pointerTo(ty), ptr.operand, ",", "align", ptr.ty.align.toString());
         return new Value(ty, reg);
     }
 
     public function store(Value val, PointerValue ptr) {
-        PointerType ptrTy = requirePointerType(ptr);
-        IntType ty = ptrTy.pointsTo;
+        IntType ty = ptr.ty.pointsTo;
         if ty != val.ty {
             panic error("store type mismatch");
         }
-        self.bb().addInsn("store", ty, val.operand, ",", pointerTo(ty), ptr.operand, ",", "align", ptrTy.align.toString());
+        self.bb().addInsn("store", ty, val.operand, ",", pointerTo(ty), ptr.operand, ",", "align", ptr.ty.align.toString());
     }
 
     // binary operation with int operands and (same) int result
@@ -277,14 +275,6 @@ function sameIntType(Value v1, Value v2) returns IntType {
         return ty1;
     }
     panic error("expected an int type");
-}
-
-function requirePointerType(Value val) returns PointerType {
-    Type ty = val.ty;
-    if ty is PointerType {
-        return ty;
-    }
-    panic error("expected pointer type");
 }
 
 function pointerTo(IntType ty) returns string {
