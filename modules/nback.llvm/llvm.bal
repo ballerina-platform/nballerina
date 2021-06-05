@@ -9,9 +9,11 @@ import ballerina/io;
 
 public type IntType "i64"|"i1";
 
+public type Alignment 1|2|4|8|16;
+
 public type PointerType readonly & record {|
     IntType pointsTo;
-    int align;
+    Alignment align;
 |};
 
 public type Type IntType|"void"|PointerType;
@@ -146,8 +148,6 @@ public distinct class Function {
 
 }
 
-
-
 # Corresponds to LLVMBuilderRef  
 public class Builder {
     private BasicBlock? currentBlock = ();
@@ -156,7 +156,7 @@ public class Builder {
         self.currentBlock = block;
     }
 
-    public function alloca(IntType ty, int align) returns Value {
+    public function alloca(IntType ty, Alignment align) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         PointerType ptrTy = { pointsTo: ty, align };
