@@ -37,6 +37,18 @@ public readonly distinct class Value {
     }
 }
 
+# Subtype of Value that refers to a pointer
+# Compile-time check that stores and loads use pointers
+public readonly class PointerValue {
+    *Value;
+    string operand;
+    PointerType ty;
+    function init(PointerType ty, string operand) {
+        self.ty = ty;
+        self.operand = operand;
+    }
+}
+
 public function constInt(IntType ty, int val) returns Value {
     return new Value(ty, val.toString());
 }
@@ -163,15 +175,15 @@ public class Builder {
         self.currentBlock = block;
     }
 
-    public function alloca(IntType ty, Alignment align) returns Value {
+    public function alloca(IntType ty, Alignment align) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         PointerType ptrTy = { pointsTo: ty, align };
         bb.addInsn(reg, "=", "alloca", ty, ",", "align", align.toString());
-        return new Value(ptrTy, reg);
+        return new PointerValue(ptrTy, reg);
     }
 
-    public function load(Value ptr) returns Value {
+    public function load(PointerValue ptr) returns Value {
         BasicBlock bb = self.bb();
         PointerType ptrTy = requirePointerType(ptr);
         IntType ty = ptrTy.pointsTo;
@@ -180,7 +192,7 @@ public class Builder {
         return new Value(ty, reg);
     }
 
-    public function store(Value val, Value ptr) {
+    public function store(Value val, PointerValue ptr) {
         PointerType ptrTy = requirePointerType(ptr);
         IntType ty = ptrTy.pointsTo;
         if ty != val.ty {

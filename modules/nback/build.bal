@@ -18,7 +18,7 @@ class Scaffold {
     private final llvm:IntType[] types;
     // LLVM ValueRef referring to address (allocated with alloca)
     // of each BIR register
-    private final llvm:Value[] addresses;
+    private final llvm:PointerValue[] addresses;
     // LLVM basic blocks indexed by BIR label
     private final llvm:BasicBlock[] blocks;
 
@@ -30,9 +30,9 @@ class Scaffold {
         self.addresses = from var ty in types select builder.alloca(ty, typeAlignment(ty));
     }
 
-    function address(bir:Register r) returns llvm:Value => self.addresses[r.number];
+    function address(bir:Register r) returns llvm:PointerValue => self.addresses[r.number];
 
-    function paramAddress(int i) returns llvm:Value => self.addresses[i];
+    function paramAddress(int i) returns llvm:PointerValue => self.addresses[i];
        
     function basicBlock(bir:BasicBlock b) returns llvm:BasicBlock  => self.blocks[b.label];
 

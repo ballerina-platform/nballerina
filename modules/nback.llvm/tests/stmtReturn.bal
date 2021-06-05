@@ -12,7 +12,7 @@ function stmtReturn() returns Module {
     Function foo2 = m.addFunction("foo2", {returnType: "i64", paramTypes: []});
     BasicBlock bb2 = foo2.appendBasicBlock();
     builder.positionAtEnd(bb2);
-    Value R1 = builder.alloca("i64",8);
+    PointerValue R1 = builder.alloca("i64",8);
     Value c = constInt("i64",42);
     builder.store(c, R1);
     Value R2 = builder.load(R1);
