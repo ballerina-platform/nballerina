@@ -1,13 +1,15 @@
 // Parsing of type descriptors
+import wso2/nballerina.err;
 
-function parseTypeDesc(Tokenizer tok) returns TypeDesc|ParseError {
+function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     if tok.current() == "function" {
-        return parseFunction(tok);
+        check tok.advance();
+        return parseFunctionTypeDesc(tok);
     }
     return parseUnion(tok);
 }
 
-function parseUnion(Tokenizer tok) returns TypeDesc|ParseError {
+function parseUnion(Tokenizer tok) returns TypeDesc|err:Syntax {
     TypeDesc td = check parseIntersection(tok);
     while tok.current() == "|" {
         check tok.advance();
@@ -18,19 +20,19 @@ function parseUnion(Tokenizer tok) returns TypeDesc|ParseError {
     return td;
 }
 
-function parseIntersection(Tokenizer tok) returns TypeDesc|ParseError {
-    TypeDesc td = check parsePostfix(tok);
+function parseIntersection(Tokenizer tok) returns TypeDesc|err:Syntax {
+    TypeDesc td = check parsePostfixTypeDesc(tok);
     while tok.current() == "&" {
         check tok.advance();
-        TypeDesc right = check parsePostfix(tok);
+        TypeDesc right = check parsePostfixTypeDesc(tok);
         BinaryTypeDesc bin = { op: "&", left: td, right };
         td = bin;
     }
     return td;
 }
 
-function parsePostfix(Tokenizer tok) returns TypeDesc|ParseError {
-    TypeDesc td = check parsePrimary(tok);
+function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
+    TypeDesc td = check parsePrimaryTypeDesc(tok);
     while true {
         if tok.current() == "?" {
             check tok.advance();
@@ -61,7 +63,7 @@ final map<BuiltinIntSubtypeDesc> BUILTIN_INT_SUBTYPES = {
 
 // Tokenizer is on first token of the type descriptor
 // Afterwards it is on the token immediately following the type descriptor
-function parsePrimary(Tokenizer tok) returns TypeDesc|ParseError {
+function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? cur = tok.current();
     match cur {
         "(" => {
@@ -94,7 +96,7 @@ function parsePrimary(Tokenizer tok) returns TypeDesc|ParseError {
             return "uint8";
         }
         "[" => {
-            return parseTuple(tok);
+            return parseTupleTypeDesc(tok);
         }
         "map" => {
             check tok.advance();
@@ -108,7 +110,7 @@ function parsePrimary(Tokenizer tok) returns TypeDesc|ParseError {
             return <ErrorTypeDesc>{ detail: check parseTypeParam(tok) };
         }        
         "record" => {
-            return parseRecord(tok);         
+            return parseRecordTypeDesc(tok);         
         }
         "int" => {
             check tok.advance();
@@ -152,17 +154,16 @@ function parsePrimary(Tokenizer tok) returns TypeDesc|ParseError {
     return parseError(tok);
 }
 
-function parseTypeParam(Tokenizer tok) returns TypeDesc|ParseError {
+function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
     check tok.expect("<");
     TypeDesc td = check parseTypeDesc(tok);
     check tok.expect(">");
     return td;
 }
 
-// current token is "function"
-function parseFunction(Tokenizer tok) returns TypeDesc|ParseError {
+// current token should be "("
+function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns FunctionTypeDesc|err:Syntax {
     // skip "function"
-    check tok.advance();
     check tok.expect("(");
     TypeDesc[] args = [];
     while true {
@@ -173,6 +174,19 @@ function parseFunction(Tokenizer tok) returns TypeDesc|ParseError {
         // invalid usage of the 'check' expression operator: no matching error return type(s) in the enclosing invokable
         TypeDesc td = check parseTypeDesc(tok);
         args.push(td);
+        match tok.current() {
+            [IDENTIFIER, var paramName] => {
+                if !(paramNames is ()) {
+                    paramNames.push(paramName);
+                }
+                check tok.advance();
+            }
+            _ => {
+                if !(paramNames is ()) {
+                    return parseError(tok);
+                }
+            }
+        }
         if tok.current() == "," {
             check tok.advance();
         }
@@ -191,7 +205,7 @@ function parseFunction(Tokenizer tok) returns TypeDesc|ParseError {
 }
 
 // current token is []
-function parseTuple(Tokenizer tok) returns ListTypeDesc|ParseError {
+function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
     TypeDesc[] members = [];
     TypeDesc rest = "never";
     check tok.advance();
@@ -219,7 +233,7 @@ function parseTuple(Tokenizer tok) returns ListTypeDesc|ParseError {
     return {members, rest};
 }
 
-function parseRecord(Tokenizer tok) returns MappingTypeDesc|ParseError {
+function parseRecordTypeDesc(Tokenizer tok) returns MappingTypeDesc|err:Syntax {
     check tok.advance();
     check tok.expect("{|");
     FieldDesc[] fields = [];

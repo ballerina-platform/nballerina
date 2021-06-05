@@ -1,4 +1,6 @@
 import wso2/nballerina.types as t;
+import wso2/nballerina.bir;
+import wso2/nballerina.err;
 
 function createTypeMap(Module mod) returns map<t:SemType> {
     map<t:SemType> defs = {};
@@ -16,22 +18,32 @@ function createTypeMap(Module mod) returns map<t:SemType> {
     return defs;
 }
 
-function normalizeTypeDefs(t:Env env, Module mod) returns ParseError? {
+function convertTypes(t:Env env, Module mod) returns err:Semantic? {
     foreach var def in mod {
         if def is TypeDef {
-            _ = check normalizeTypeDef(env, mod, 0, def);
+            _ = check convertTypeDef(env, mod, 0, def);
+        }
+        else {
+            // it's a FunctionDef
+            def.signature = check convertFunctionSignature(env, mod, def.typeDesc);
         }
     }
 }
 
-function normalizeTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|ParseError {
+function convertFunctionSignature(t:Env env, Module mod, FunctionTypeDesc td) returns bir:FunctionSignature|err:Semantic {
+    t:SemType[] params = from var x in td.args select check convertTypeDesc(env, mod, 0, x);
+    t:SemType ret = check convertTypeDesc(env, mod, 0, td.ret);
+    return { paramTypes: params.cloneReadOnly(), returnType: ret };
+}
+
+function convertTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|err:Semantic {
     t:SemType? t = def.semType;
     if t is () {
         if depth == def.cycleDepth {
-            return error ParseError("invalid cycle detected for " + def.name, pos=def.pos);
+            return err:semantic(`invalid cycle detected for ${def.name}`, def.pos);
         }
         def.cycleDepth = depth;
-        t:SemType s = check normalizeType(env, mod, depth, def.td);
+        t:SemType s = check convertTypeDesc(env, mod, depth, def.td);
         t = def.semType;
         if t is () {
             def.semType = s;
@@ -50,7 +62,7 @@ function normalizeTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns
     }
 }
 
-function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:SemType|ParseError {
+function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns t:SemType|err:Semantic {
     match td {
         // These are easy
         "any" => { return t:ANY; }
@@ -82,8 +94,9 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
             td.def = d;
             // JBUG temp variable `m` is to avoid compiler bug #30736
             TypeDesc[] m = td.members;
-            t:SemType[] members = from var x in m select check normalizeType(env, mod, depth + 1, x);
-            return d.define(env, members, check normalizeType(env, mod, depth + 1, td.rest));
+            t:SemType[] members = from var x in m select check convertTypeDesc(env, mod, depth + 1, x);
+            t:SemType rest = check convertTypeDesc(env, mod, depth + 1, td.rest);
+            return d.define(env, members, rest);
         }
         else {
             return def.getSemType(env);
@@ -96,8 +109,9 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
             td.def = d;
             // JBUG temp variable `f` is to avoid compiler bug #30736
             FieldDesc[] f = td.fields;
-            t:Field[] fields = from var { name, typeDesc } in f select [name, check normalizeType(env, mod, depth + 1, typeDesc)];
-            return d.define(env, fields, check normalizeType(env, mod, depth + 1, td.rest));
+            t:Field[] fields = from var { name, typeDesc } in f select [name, check convertTypeDesc(env, mod, depth + 1, typeDesc)];
+            t:SemType rest = check convertTypeDesc(env, mod, depth + 1, td.rest);
+            return d.define(env, fields, rest);
         }
         else {
             return def.getSemType(env);
@@ -109,8 +123,9 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
             t:FunctionDefinition d = new(env);
             td.def = d;
             TypeDesc[] a = td.args;
-            t:SemType[] args = from var x in a select check normalizeType(env, mod, depth + 1, x);
-            return d.define(env, t:tuple(env, ...args), check normalizeType(env, mod, depth + 1, td.ret));
+            t:SemType[] args = from var x in a select check convertTypeDesc(env, mod, depth + 1, x);
+            t:SemType ret = check convertTypeDesc(env, mod, depth + 1, td.ret);
+            return d.define(env, t:tuple(env, ...args), ret);
         }
         else {
             return def.getSemType(env);
@@ -119,13 +134,13 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
     if td is TypeDescRef {
         ModuleLevelDef? def = mod[td.ref];
         if def is () {
-            return error ParseError("reference to undefined type '" + td.ref + "'", pos=td.pos);
+            return err:semantic(`reference to undefined type ${td.ref}`, pos=td.pos);
         }
         else if def is TypeDef {
-            return check normalizeTypeDef(env, mod, depth, def);
+            return check convertTypeDef(env, mod, depth, def);
         }
         else {
-            return error ParseError("reference to non-type '" + td.ref + "' in type-descriptor", pos=td.pos);
+            return err:semantic(`reference to non-type ${td.ref} in type-descriptor`, pos=td.pos);
         }
     }
     if td is SingletonTypeDesc {
@@ -141,12 +156,12 @@ function normalizeType(t:Env env, Module mod, int depth, TypeDesc td) returns t:
         }
     }
     if td is ErrorTypeDesc {
-        return t:errorDetail(check normalizeType(env, mod, depth, td.detail));
+        return t:errorDetail(check convertTypeDesc(env, mod, depth, td.detail));
     }
     if td is BinaryTypeDesc {
         // NB depth does not increase here
-        t:SemType l = check normalizeType(env, mod, depth, td.left);
-        t:SemType r = check normalizeType(env, mod, depth, td.right);
+        t:SemType l = check convertTypeDesc(env, mod, depth, td.left);
+        t:SemType r = check convertTypeDesc(env, mod, depth, td.right);
         if td.op == "|" {
             return t:union(l, r);
         }

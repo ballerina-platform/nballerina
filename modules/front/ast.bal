@@ -1,4 +1,6 @@
 import wso2/nballerina.types as t;
+import wso2/nballerina.bir;
+import wso2/nballerina.err;
 
 type Module table<ModuleLevelDef> key(name);
 
@@ -6,11 +8,12 @@ type ModuleLevelDef TypeDef|FunctionDef;
 
 type FunctionDef record {|
     readonly string name;
-    FunctionTypeDesc signature;
+    FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
+    err:Position pos;
     // This is filled in during analysis
-    t:SemType? semType = ();
+    bir:FunctionSignature? signature = ();
 |};
 
 type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|WhileStmt;
@@ -40,7 +43,10 @@ type VarDeclStmt record {|
     TypeDesc td;
     string varName;
     Expr initExpr;
-    // This is filled in during analysis
+    // For now this should be filled in during parse
+    // using a prebuilt Semtype such as `t:INT`.
+    // Later on will support references to type definitions,
+    // and it will be filled in later.
     t:SemType? semType = ();
 |};
 
@@ -62,7 +68,7 @@ type FunctionCallExpr record {|
     string funcName;
     Expr[] args;
     // We can get type/def mismatch errors here
-    Position pos;
+    err:Position pos;
 |};
 
 type VarRefExpr record {|
@@ -70,13 +76,15 @@ type VarRefExpr record {|
 |};
 
 type SimpleConstExpr record {|
-    ()|boolean|int|string value;
+    ()|boolean|int value;
 |};
+
+// Types
 
 type TypeDef record {|
     readonly string name;
     TypeDesc td;
-    Position pos;
+    err:Position pos;
     t:SemType? semType = ();
     int cycleDepth = -1;
 |};
@@ -123,7 +131,7 @@ type BinaryTypeDesc record {|
 
 type TypeDescRef record {|
     string ref;
-    Position pos;
+    err:Position pos;
 |};
 
 type SingletonTypeDesc  record {|

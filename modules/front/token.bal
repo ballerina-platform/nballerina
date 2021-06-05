@@ -1,3 +1,5 @@
+import wso2/nballerina.err;
+
 type Token SingleCharDelim|MultiCharDelim|Keyword|VariableLengthToken;
 
 const IDENTIFIER = 0;
@@ -60,19 +62,6 @@ final readonly & map<Char> ESCAPES = {
     "t": "\t"
 };
 
-public type Position readonly & record {|
-    // 1-based
-    int lineNumber;
-    // 0-based index (in code points) in the line
-    int indexInLine;
-|};
-
-public type ParseErrorDetail record {
-    Position pos;
-};
-
-public type ParseError distinct error<ParseErrorDetail>;
-
 class Tokenizer {
     Token? cur = ();
     // The index in `str` of the first character of `cur`
@@ -96,7 +85,7 @@ class Tokenizer {
    
     // Moves to next token.record
     // Current token is () if there is no next token
-    function advance() returns ParseError? {
+    function advance() returns err:Syntax? {
         self.cur = check self.next();
     }
 
@@ -104,14 +93,14 @@ class Tokenizer {
         return self.cur;
     }
 
-    function currentPos() returns Position {
+    function currentPos() returns err:Position {
         return {
             lineNumber: self.lineNumber,
             indexInLine: self.startIndex - self.lineStartIndex
         };
     }
 
-    private function next() returns Token?|ParseError {
+    private function next() returns Token?|err:Syntax {
         // This loops in order to skip over comments
         while true {
             Char? ch = self.startToken();
@@ -324,21 +313,23 @@ class Tokenizer {
         }
     }
 
-    function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns ParseError? {
+    function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns err:Syntax? {
         if self.cur != tok {
-            // JBUG should not need to cast here #30734
-            string message = ("expected '" + <string>tok + "'");
+            err:Template msg;
             Token? t = self.cur;
             if t is string {
                 // JBUG cast #30734
-                message += "; got '" + <string>t + "'";
+                msg = `expected ${<string>tok}; got ${<string>t}`;
             }
-            return self.err(message);
+            else {
+                msg = `expected ${<string>tok}`;
+            }
+            return self.err(msg);
         }
         check self.advance();
     }
 
-    function err(string msg) returns ParseError {
-        return error ParseError(msg, pos=self.currentPos());
+    function err(err:Message msg) returns err:Syntax {
+        return err:syntax(msg, self.currentPos());
     }
 }
