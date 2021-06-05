@@ -4,7 +4,7 @@ import ballerina/test;
 function testSimpleConstExpr() {
     assertExpr("()", {value: ()});
     assertExpr("123", {value: 123});
-    assertExpr("\"hello world\"", {value: "hello world"});
+    //assertExpr("\"hello world\"", {value: "hello world"});
     assertExpr("true", {value: true});
     assertExpr("false", {value: false});
 }
@@ -34,14 +34,14 @@ function testVarRefExpr() {
 function testFunctionCallExpr() {
     assertExpr("x()", {funcName: "x", args : [], pos : { lineNumber : 1 , indexInLine : 0}});
     assertExpr("xx(1,2)", {funcName: "xx", args : [{value: 1}, {value: 2}], pos : { lineNumber : 1 , indexInLine : 0}});
-    assertExpr("xxx(\"abc\", 12 + 23)", {funcName: "xxx", args : [{value: "abc"}, {op: "+", left: {value: 12}, right: {value: 23}}], pos : { lineNumber : 1 , indexInLine : 0}});
+    assertExpr("xxx(123, 12 + 23)", {funcName: "xxx", args : [{value: 123}, {op: "+", left: {value: 12}, right: {value: 23}}], pos : { lineNumber : 1 , indexInLine : 0}});
 }
 
 @test:Config
 function testGroupExpr() {
     assertExpr("(())", {value: ()});
     assertExpr("(123)", {value: 123});
-    assertExpr("(\"hello world\")", {value: "hello world"});
+    //assertExpr("(\"hello world\")", {value: "hello world"});
     assertExpr("(true)", {value: true});
     assertExpr("(false)", {value: false});
 

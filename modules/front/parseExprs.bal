@@ -1,17 +1,19 @@
+import wso2/nballerina.err;
+
 type Identifier record {|
     string identifier;
-    Position pos;
+    err:Position pos;
 |};
 
 type ExprNode Expr|Identifier;
 
-function parseExpr(Tokenizer tok) returns Expr|ParseError {
+function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? cur = tok.current();
     ExprNode styntaxNode = check parseTerminalExpr(tok);
     return parseComplexExpr(tok, styntaxNode);
 }
 
-function parseTerminalExpr(Tokenizer tok) returns ExprNode|ParseError {
+function parseTerminalExpr(Tokenizer tok) returns ExprNode|err:Syntax {
     Token? cur = tok.current();
     match cur {
         [DECIMAL_NUMBER, var str] => {
@@ -21,16 +23,16 @@ function parseTerminalExpr(Tokenizer tok) returns ExprNode|ParseError {
                 return {value}; // SimpleConstExpr
             } // overflow on int: Handle as a parser Error.
         }
-        [STRING_LITERAL, var value] => {
-            check tok.advance();
-            return {value}; // SimpleConstExpr
-        }
+        //[STRING_LITERAL, var value] => {
+        //    check tok.advance();
+        //    return {value}; // SimpleConstExpr
+        //}
         "true"|"false" => {
             check tok.advance();
             return {value: cur == "true"}; // SimpleConstExpr
         }
         [IDENTIFIER, var identifier] => {
-            Position pos = tok.currentPos();
+            err:Position pos = tok.currentPos();
             check tok.advance();
             return {identifier, pos};
         }
@@ -46,7 +48,7 @@ function parseTerminalExpr(Tokenizer tok) returns ExprNode|ParseError {
     return parseError(tok, "Unhandled exoression"); 
 }
 
-function parseComplexExpr(Tokenizer tok, ExprNode previousExpr) returns Expr|ParseError {
+function parseComplexExpr(Tokenizer tok, ExprNode previousExpr) returns Expr|err:Syntax {
     Token? cur = tok.current();
     match cur {
         "(" => {
@@ -79,13 +81,12 @@ function parseComplexExpr(Tokenizer tok, ExprNode previousExpr) returns Expr|Par
     }
     if previousExpr is Identifier {
         return {varName: previousExpr.identifier};
-    } else if previousExpr is Expr {
+    } else {
         return previousExpr;
     }
-    return parseError(tok);
 }
 
-function parseBracedExpression(Tokenizer tok) returns ExprNode|ParseError {
+function parseBracedExpression(Tokenizer tok) returns ExprNode|err:Syntax {
     if tok.current() == ")" {
         // For now only nill literal, handle param-list of an implicit-anon-func-expr later
         check tok.advance();
@@ -100,12 +101,12 @@ function parseBracedExpression(Tokenizer tok) returns ExprNode|ParseError {
     return parseError(tok);
 }
 
-function parseUnaryExpr(Tokenizer tok, UnaryExprOp op) returns UnaryExpr|ParseError {
+function parseUnaryExpr(Tokenizer tok, UnaryExprOp op) returns UnaryExpr|err:Syntax {
     Expr operand = check parseExpr(tok);
     return {op, operand};
 }
 
-function parseBinaryExpr(Tokenizer tok, Expr left, BinaryExprOp op) returns BinaryExpr|ParseError {
+function parseBinaryExpr(Tokenizer tok, Expr left, BinaryExprOp op) returns BinaryExpr|err:Syntax {
     Expr right = check parseExpr(tok);
     return {left, op, right};
 }
