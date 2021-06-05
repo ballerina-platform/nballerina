@@ -183,7 +183,7 @@ public class Builder {
     }
 
     // binary operation with int operands and (same) int result
-    public function binaryInt(BinaryInsn insn, Value lhs, Value rhs, string name) returns Value {
+    public function binaryInt(BinaryInsn insn, Value lhs, Value rhs) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
