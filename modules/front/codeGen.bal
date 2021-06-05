@@ -71,9 +71,9 @@ function codeGenOnPanic(CodeGenContext cx) {
     }
 }
 
-function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Stmt[] stmts) returns CodeGenError|bir:BasicBlock? {
+function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope, Stmt[] stmts) returns CodeGenError|bir:BasicBlock? {
     bir:BasicBlock? curBlock = bb;
-    Scope? curScope = scope;
+    Scope? scope = initialScope;
     foreach var stmt in stmts {
         if curBlock is () {
             return err:semantic("unreachable code");
@@ -90,7 +90,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Stmt[]
             curBlock = check codeGenReturnStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
         else if stmt is VarDeclStmt {
-            [curBlock, curScope] = check codeGenVarDeclStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            [curBlock, scope] = check codeGenVarDeclStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
         else if stmt is AssignStmt {
             curBlock = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
