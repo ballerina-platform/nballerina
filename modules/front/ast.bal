@@ -11,6 +11,7 @@ type FunctionDef record {|
     FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
+    err:Position pos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
 |};

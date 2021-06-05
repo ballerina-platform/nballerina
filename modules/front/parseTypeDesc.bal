@@ -3,6 +3,7 @@ import wso2/nballerina.err;
 
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     if tok.current() == "function" {
+        check tok.advance();
         return parseFunctionTypeDesc(tok);
     }
     return parseUnion(tok);
@@ -160,10 +161,9 @@ function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
     return td;
 }
 
-// current token is "function"
-function parseFunctionTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
+// current token should be "("
+function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns FunctionTypeDesc|err:Syntax {
     // skip "function"
-    check tok.advance();
     check tok.expect("(");
     TypeDesc[] args = [];
     while true {
@@ -174,6 +174,19 @@ function parseFunctionTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         // invalid usage of the 'check' expression operator: no matching error return type(s) in the enclosing invokable
         TypeDesc td = check parseTypeDesc(tok);
         args.push(td);
+        match tok.current() {
+            [IDENTIFIER, var paramName] => {
+                if !(paramNames is ()) {
+                    paramNames.push(paramName);
+                }
+                check tok.advance();
+            }
+            _ => {
+                if !(paramNames is ()) {
+                    return parseError(tok);
+                }
+            }
+        }
         if tok.current() == "," {
             check tok.advance();
         }

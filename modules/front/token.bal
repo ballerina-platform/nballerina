@@ -10,7 +10,7 @@ const STRING_LITERAL = 2;
 type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string];
 
 // Some of these are not yet used by the grammar
-type SingleCharDelim ";" | "-" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | ":" | "," | "/" | "=";
+type SingleCharDelim ";" | "-" | "+" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | ":" | "," | "/" | "=";
 type MultiCharDelim "{|" | "|}" | "...";
 type Keyword
     "any"
@@ -29,6 +29,7 @@ type Keyword
     | "never"
     | "readonly"
     | "record"
+    | "return"
     | "returns"
     | "string"
     | "true"
