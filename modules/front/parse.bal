@@ -69,8 +69,8 @@ function parseConstExpr(Tokenizer tok) returns TypeDesc|ParseError {
     return parseError(tok);
 }
 
-function parseError(Tokenizer tok) returns ParseError {
-    string message = "parse error";
+function parseError(Tokenizer tok, string? detail = ()) returns ParseError {
+    string message = "parse error" + (detail != () ?  " \""+ detail + "\" ": "");
     Token? t = tok.current();
     if t is string {
         // JBUG cast needed #30734
