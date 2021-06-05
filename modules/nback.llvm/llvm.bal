@@ -16,15 +16,16 @@ public type PointerType readonly & record {|
     Alignment align;
 |};
 
-public type Type IntType|"void"|PointerType;
+public type Type IntType|PointerType;
 
+// A RetType is value only as the return type of a function
+public type RetType Type|"void";
 
 # Corresponds to llvm::FunctionType class
 public type FunctionType readonly & record {|
-    Type returnType;
+    RetType returnType;
     Type[] paramTypes;
 |};
-
 
 # Corresponds to LLVMValueRef 
 public readonly distinct class Value {
@@ -77,7 +78,7 @@ public distinct class Function {
     private int varCount = 0;
     private int labelCount = 0;
     private string functionName;
-    private Type returnType;
+    private RetType returnType;
     private Value[] paramValues;
     private LinkageType linkageType = "external";
 
@@ -197,14 +198,15 @@ public class Builder {
         return new Value(ty, reg);
     }
 
-    public function returnValue(Value value) {
+    // value of () represents void return value
+    public function ret(Value? value = ()) {
         BasicBlock bb = self.bb();
-        bb.addInsn("ret", typeToString(value.ty), value.operand);
-    }
-
-    public function returnVoid() {
-        BasicBlock bb = self.bb();
-        bb.addInsn("ret void");
+        if value is () {
+            bb.addInsn("ret", "void");
+        }
+        else {
+            bb.addInsn("ret", typeToString(value.ty), value.operand);
+        }
     }
 
     private function bb() returns BasicBlock {
@@ -277,7 +279,7 @@ function pointerTo(IntType ty) returns string {
     return ty + "*";
 }
 
-function typeToString(Type ty) returns string {
+function typeToString(RetType ty) returns string {
     string typeTag;
     if ty is PointerType {
         typeTag = ty.pointsTo + "*";

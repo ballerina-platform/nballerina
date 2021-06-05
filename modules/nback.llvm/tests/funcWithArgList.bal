@@ -12,7 +12,7 @@ function funcWithArgList() returns Module {
     Value R0 = foo1.getParam(0);
     builder.store(R0, R2);
     Value R3 = builder.load(R2);
-    builder.returnValue(R3);
+    builder.ret(R3);
 
     Function foo2 = m.addFunction("foo2", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock bb2 = foo2.appendBasicBlock();
@@ -24,7 +24,7 @@ function funcWithArgList() returns Module {
     builder.store(R0, R3);
     builder.store(R1, R4);
     Value R5 = builder.load(R4);
-    builder.returnValue(R5);
+    builder.ret(R5);
 
     Function foo3 = m.addFunction("foo3", {returnType: "i64", paramTypes: ["i64", "i64", "i64"]});
     BasicBlock bb3 = foo3.appendBasicBlock();
@@ -39,7 +39,7 @@ function funcWithArgList() returns Module {
     builder.store(R1, R5);
     builder.store(R2, R6);
     Value R7 = builder.load(R6);
-    builder.returnValue(R7);
+    builder.ret(R7);
     return m;
 }
 

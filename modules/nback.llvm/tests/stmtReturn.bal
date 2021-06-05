@@ -7,7 +7,7 @@ function stmtReturn() returns Module {
     Function foo1 = m.addFunction("foo1", {returnType: "i64", paramTypes: []});
     BasicBlock bb1 = foo1.appendBasicBlock();
     builder.positionAtEnd(bb1);
-    builder.returnValue(constInt("i64",42));
+    builder.ret(constInt("i64",42));
 
     Function foo2 = m.addFunction("foo2", {returnType: "i64", paramTypes: []});
     BasicBlock bb2 = foo2.appendBasicBlock();
@@ -16,7 +16,7 @@ function stmtReturn() returns Module {
     Value c = constInt("i64",42);
     builder.store(c, R1);
     Value R2 = builder.load(R1);
-    builder.returnValue(R2);
+    builder.ret(R2);
     return m;
 }
 

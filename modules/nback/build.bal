@@ -76,16 +76,7 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
 }
 
 function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) returns BuildError? {
-    bir:Operand operand = insn.operand;
-    if operand is bir:IntOperand {
-        return builder.returnValue(buildInt(builder, scaffold, operand));
-    }
-    else if operand is () {
-        return builder.returnVoid();
-    }
-    else {
-        return err:unreached();
-    }
+    builder.ret(check buildRetValueAsInt(builder, scaffold, insn.operand));
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
@@ -97,6 +88,10 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
                                     buildInt(builder, scaffold, insn.operands[0]),
                                     buildInt(builder, scaffold, insn.operands[1])),
                   scaffold.address(insn.result));                          
+}
+
+function buildRetValueAsInt(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value?|err:Any {
+    return operand is () ? () : buildValueAsInt(builder, scaffold, operand);
 }
 
 function buildValueAsInt(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value|err:Any {

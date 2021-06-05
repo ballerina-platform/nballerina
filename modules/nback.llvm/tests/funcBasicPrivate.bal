@@ -9,13 +9,13 @@ function funcBasicPrivate() returns Module {
     foo.setLinkageType("internal");
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
-    builder.returnVoid();
+    builder.ret();
 
     Function bar = m.addFunction("bar", {returnType: "i64", paramTypes: []});
     bar.setLinkageType("internal");
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
-    builder.returnValue(constInt("i64",42));
+    builder.ret(constInt("i64",42));
     return m;
 }
 
