@@ -1,9 +1,7 @@
 import ballerina/io;
 
 function buildOutput(Module module, string outputPath) returns error? {
-    Output out = check new (outputPath);
-    module.output(out);
-    check out.finish();
+    return module.writeFile(outputPath);
 }
 
 function compareFiles(string expectedFilePath, string resultFilePath) returns boolean|error {

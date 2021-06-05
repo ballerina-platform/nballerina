@@ -55,7 +55,13 @@ public class Module {
         return fn;
     }
 
-    public function output(Output out) {
+    public function writeFile(string path) returns io:Error? {
+        Output out = new;
+        self.output(out);
+        return out.writeFile(path);
+    }
+
+    function output(Output out) {
         foreach var f in self.functions {
             f.output(out);
         }
@@ -96,7 +102,7 @@ public distinct class Function {
         self.linkageType = linkageType;
     }
 
-    public function output(Output out) {
+    function output(Output out) {
         out.push(self.header());
         self.outputBody(out);
         out.push("}");
@@ -281,21 +287,15 @@ function typeToString(Type ty) returns string {
     return typeTag;
 }
 
-public distinct class Output {
-    private final string path;
-
+class Output {
     final string[] lines = [];
-
-    public function init(string path) returns io:Error? {
-        self.path = path;
-    }
 
     function push(string line) {
         self.lines.push(line);
     }
 
-    public function finish() returns io:Error? {
-        return io:fileWriteLines(self.path, self.lines);
+    function writeFile(string path) returns io:Error? {
+        return io:fileWriteLines(path, self.lines);
     }
 }
 

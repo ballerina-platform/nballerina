@@ -15,9 +15,6 @@ public function compileModule(bir:Module mod, string basename) returns err:Any|i
             check buildFunction(mod, def, llMod);          
         }
     }
-    string path = basename + OUTPUT_EXTENSION;
-    llvm:Output out = check new(path);
-    llMod.output(out);
-    check out.finish();
+    check llMod.writeFile(basename + OUTPUT_EXTENSION);
 }
 
