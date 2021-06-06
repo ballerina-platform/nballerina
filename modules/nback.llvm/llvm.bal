@@ -7,10 +7,15 @@
 
 import ballerina/io;
 
+// "i64" corresponds to  LLVMInt64Type
+// "i1" corresponds to LLVMInt1Type
 public type IntType "i64"|"i1";
 
+// Used to constrain parameters that represent an alignment
 public type Alignment 1|2|4|8|16;
 
+// Corresponds to LLVMPointerType
+// XXX how is alignment dealt with in the C API?
 public type PointerType readonly & record {|
     IntType pointsTo;
     Alignment align;
@@ -18,7 +23,7 @@ public type PointerType readonly & record {|
 
 public type Type IntType|PointerType;
 
-// A RetType is value only as the return type of a function
+// A RetType is valid only as the return type of a function
 public type RetType Type|"void";
 
 # Corresponds to llvm::FunctionType class
@@ -38,7 +43,7 @@ public readonly distinct class Value {
 }
 
 # Subtype of Value that refers to a pointer
-# Compile-time check that stores and loads use pointers
+# Ensures compile-time checking that stores and loads use the right kinds of Value
 public readonly class PointerValue {
     *Value;
     string operand;
@@ -49,11 +54,11 @@ public readonly class PointerValue {
     }
 }
 
+// Corresponds to LLVMConstInst
+// XXX Need to think about SignExtend argument
 public function constInt(IntType ty, int val) returns Value {
     return new Value(ty, val.toString());
 }
-
-public type BinaryInsn "add"|"mul"|"sub"|"sdiv"|"srem";
 
 # Corresponds to llvm::Module class
 public class Module {
@@ -62,12 +67,15 @@ public class Module {
     public function init() {
     }
 
+    // Corresponds to LLVMAddFunction
     public function addFunction(string name, FunctionType fnType) returns Function {
         Function fn = new Function(name, fnType);
         self.functions.push(fn);
         return fn;
     }
 
+    // Does not correspond directly any LLVM function
+    // XXX can perhaps be turned into a command to compile the module
     public function writeFile(string path) returns io:Error? {
         Output out = new;
         self.output(out);
@@ -82,9 +90,11 @@ public class Module {
 
 }
 
+// Corresponds to LLVMLinkage enum
+// XXX should not have Type suffix
 public type LinkageType "internal"|"external";
 
-# Corresponds to llvm::Function class
+# Corresponds to an LLVMValueRef that corresponds to an llvm::Function
 public distinct class Function {
     private BasicBlock[] basicBlocks = [];
     private int varCount = 0;
@@ -94,7 +104,6 @@ public distinct class Function {
     private Value[] paramValues;
     private LinkageType linkageType = "external";
 
-    // XXX need stuff for the definition
     function init(string functionName, FunctionType functionType) {
         self.functionName = functionName;
         self.returnType = functionType.returnType;
@@ -111,6 +120,9 @@ public distinct class Function {
         return self.paramValues[index];
     }
 
+    // Corresponds to LLVMSetLinkage
+    // XXX should not have "Type" suffix
+    // XXX Maybe better done with included record parameter
     public function setLinkageType(LinkageType linkageType) {
         self.linkageType = linkageType;
     }
@@ -141,14 +153,14 @@ public distinct class Function {
     }
 
     function outputBody(Output out) {
-        foreach var bb in self.basicBlocks {
-            bb.output(out);
+        foreach var b in self.basicBlocks {
+            b.output(out);
         }
     }
 
+    // Corresponds to LLVMAppendBasicBlock
     public function appendBasicBlock() returns BasicBlock {
-        boolean isEntry = self.basicBlocks.length() == 0;
-        BasicBlock tem = new BasicBlock(self.genLabel(), self, isEntry);
+        BasicBlock tem = new BasicBlock(self.genLabel(), self);
         self.basicBlocks.push(tem);
         return tem;
     }
@@ -167,14 +179,24 @@ public distinct class Function {
 
 }
 
+// Used with Builder.binaryInt
+// XXX not a good name: maybe BinaryIntOp
+// Subtype of LLVMOpcode
+public type BinaryInsn "add"|"mul"|"sub"|"sdiv"|"srem";
+
 # Corresponds to LLVMBuilderRef  
 public class Builder {
     private BasicBlock? currentBlock = ();
 
+    // Corresponds to LLVMCreateBuilder
+    public function init() { }
+
+    // Corresponds to LLVMPositionBuilderAtEnd
     public function positionAtEnd(BasicBlock block) {
         self.currentBlock = block;
     }
 
+    // Corresponds to LLVMBuildAlloca
     public function alloca(IntType ty, Alignment align) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
@@ -183,6 +205,7 @@ public class Builder {
         return new PointerValue(ptrTy, reg);
     }
 
+    // Corresponds to LLVMBuildLoad
     public function load(PointerValue ptr) returns Value {
         BasicBlock bb = self.bb();
         IntType ty = ptr.ty.pointsTo;
@@ -191,6 +214,7 @@ public class Builder {
         return new Value(ty, reg);
     }
 
+    // Corresponds to LLVMBuildStore
     public function store(Value val, PointerValue ptr) {
         IntType ty = ptr.ty.pointsTo;
         if ty != val.ty {
@@ -200,6 +224,7 @@ public class Builder {
     }
 
     // binary operation with int operands and (same) int result
+    // Corresponds to LLVMBuild{Add,Mul,Sub,SDiv,SRem}
     public function binaryInt(BinaryInsn insn, Value lhs, Value rhs) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
@@ -208,6 +233,7 @@ public class Builder {
         return new Value(ty, reg);
     }
 
+    // Corresponds to LLVMBuildRet/LLVMBuildRetVoid
     // value of () represents void return value
     public function ret(Value? value = ()) {
         BasicBlock bb = self.bb();
@@ -234,23 +260,17 @@ public class Builder {
 public distinct class BasicBlock {
     final Function func;
     private final string label;
-    private final string[] lines;
+    private final string[] lines = [];
+    private boolean isReferenced = false;
 
-    function init(string label, Function func, boolean isEntry = false) {
+    function init(string label, Function func) {
         self.label = label;
         self.func = func;
-        if isEntry {
-            self.lines = [];
-        } else {
-            self.lines = [label + ":"];
-        }
-    }
-    public function ref() returns string {
-        return "%" + self.label;
     }
 
-    public function name() returns string {
-        return self.label;
+    function ref() returns string {
+        self.isReferenced = true;
+        return "%" + self.label;
     }
 
     function addInsn(string... words) {
@@ -259,6 +279,13 @@ public distinct class BasicBlock {
     }
 
     function output(Output out) {
+        // This ensures we leave out the label in two cases
+        // 1. the first block (provided it is not referenced)
+        // 2. basic blocks that were in BIR but are unreferenced (and empty) in LL
+        //    (happens at the moment for blocks starting with `catch`)
+        if self.isReferenced {
+            out.push(self.label + ":");
+        }
         foreach var line in self.lines {
             out.push(line);
         }
