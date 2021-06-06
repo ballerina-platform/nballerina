@@ -2,7 +2,7 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.err;
 
-function createTypeMap(Module mod) returns map<t:SemType> {
+function createTypeMap(ModuleTable mod) returns map<t:SemType> {
     map<t:SemType> defs = {};
     foreach var def in mod {
         if def is TypeDef {
@@ -18,7 +18,7 @@ function createTypeMap(Module mod) returns map<t:SemType> {
     return defs;
 }
 
-function convertTypes(t:Env env, Module mod) returns err:Semantic? {
+function convertTypes(t:Env env, ModuleTable mod) returns err:Semantic? {
     foreach var def in mod {
         if def is TypeDef {
             _ = check convertTypeDef(env, mod, 0, def);
@@ -30,13 +30,13 @@ function convertTypes(t:Env env, Module mod) returns err:Semantic? {
     }
 }
 
-function convertFunctionSignature(t:Env env, Module mod, FunctionTypeDesc td) returns bir:FunctionSignature|err:Semantic {
+function convertFunctionSignature(t:Env env, ModuleTable mod, FunctionTypeDesc td) returns bir:FunctionSignature|err:Semantic {
     t:SemType[] params = from var x in td.args select check convertTypeDesc(env, mod, 0, x);
     t:SemType ret = check convertTypeDesc(env, mod, 0, td.ret);
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
 
-function convertTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t:SemType|err:Semantic {
+function convertTypeDef(t:Env env, ModuleTable mod, int depth, TypeDef def) returns t:SemType|err:Semantic {
     t:SemType? t = def.semType;
     if t is () {
         if depth == def.cycleDepth {
@@ -62,7 +62,7 @@ function convertTypeDef(t:Env env, Module mod, int depth, TypeDef def) returns t
     }
 }
 
-function convertTypeDesc(t:Env env, Module mod, int depth, TypeDesc td) returns t:SemType|err:Semantic {
+function convertTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) returns t:SemType|err:Semantic {
     match td {
         // These are easy
         "any" => { return t:ANY; }

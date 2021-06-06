@@ -2,18 +2,18 @@
 import wso2/nballerina.err;
 import wso2/nballerina.types as t;
 
-function parseModule(string str) returns Module|err:Syntax {
+function parseSourcePart(string str) returns ModuleLevelDef[]|err:Syntax {
+    ModuleLevelDef[] defs = [];
     Tokenizer tok = new(str);
     check tok.advance();
-    Module mod = table [];
     while tok.current() != () {
-        check parseModuleLevel(tok, mod);
+        defs.push(check parseModuleLevel(tok));
     }
-    return mod;
+    return defs;
 }
 
 // This is a mess
-function parseModuleLevel(Tokenizer tok, Module mod) returns err:Syntax? {
+function parseModuleLevel(Tokenizer tok) returns ModuleLevelDef|err:Syntax {
     string kw;
     if tok.current() == "type" {
         kw = "type";
@@ -37,15 +37,16 @@ function parseModuleLevel(Tokenizer tok, Module mod) returns err:Syntax? {
         if kw != "function" {
             // JBUG putting check before conditional gets an error #30737
             TypeDesc td = kw == "type" ? check parseTypeDesc(tok) : check parseConstExpr(tok);
-            mod.add({name, td, pos});
+            TypeDef def = {name, td, pos};
             check tok.expect(";");
+            return def;
         }
         else {
             string[] paramNames = [];
             FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
             Stmt[] body = check parseBlock(tok);
             FunctionDef def = { name, paramNames, typeDesc, pos, body };
-            mod.add(def);
+            return def;
         }
     }
     else {

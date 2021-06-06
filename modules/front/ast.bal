@@ -2,8 +2,6 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.err;
 
-type Module table<ModuleLevelDef> key(name);
-
 type ModuleLevelDef TypeDef|FunctionDef;
 
 type FunctionDef record {|

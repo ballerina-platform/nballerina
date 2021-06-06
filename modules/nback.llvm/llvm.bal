@@ -254,6 +254,13 @@ public class Builder {
         }
     }
 
+    // Corresponds to LLVMBuildCall
+    // Returns () if there is no result i.e. function return type is void
+    public function call(Function fn, Value[] args) returns Value? {
+        // XXX todo
+        return ();
+    }
+
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
         if tem is () {
@@ -264,6 +271,7 @@ public class Builder {
         }
     }
 }
+
 const INDENT = "  ";
 
 # Corresponds to LLVMBasicBlockRef

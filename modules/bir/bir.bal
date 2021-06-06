@@ -3,13 +3,14 @@ import wso2/nballerina.err;
 
 public type SemType t:SemType;
 
-public type Module record {|
-    readonly ModuleId id;
+public type Module object {
+    public function getId() returns ModuleId;
     // A SemType of a potentially recursive type uses integers to refer to definitions
     // which are in arrays in this.
-    t:TypeCheckContext tc;
-    map<ModuleDefn> defns = {};
-|};
+    public function getTypeCheckContext() returns t:TypeCheckContext;
+    public function getFunctionDefns() returns readonly & FunctionDefn[];
+    public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
+};
 
 public type ModuleId readonly & record {|
     string? organization = ();
@@ -18,22 +19,22 @@ public type ModuleId readonly & record {|
     string versionString;
 |};
 
-public type ModuleDefn object {
-    public string name;
-};
+public type ModuleDefn record {|
+    string name;
+    readonly...;
+|};
 
 # A label is an index of a basic block in the basicBlock.
 public type Label int;
 
 # The definition of a function.
-public type FunctionDefn object {
+public type FunctionDefn readonly & record {|
     *ModuleDefn;
     # Name within the module
-    public string name;
+    string name;
     # The signature of the function
-    public FunctionSignature signature;
-    public function generateCode(Module mod) returns FunctionCode|err:Semantic|err:Unimplemented;
-};
+    FunctionSignature signature;
+|};
 
 
 # A function's code is represented as a factored control flow graph.

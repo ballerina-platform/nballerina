@@ -11,10 +11,10 @@ type Scope record {|
 type CodeGenError err:Semantic|err:Unimplemented;
 
 class CodeGenContext {
-    final bir:Module mod;
+    final Module mod;
     final bir:FunctionCode code;
 
-    function init(bir:Module mod) {
+    function init(Module mod) {
         self.mod = mod;
         self.code = {};
     }
@@ -29,7 +29,7 @@ class CodeGenContext {
     
 }
 
-function codeGenFunction(bir:Module mod, bir:FunctionSignature signature, string[] paramNames, Stmt[] body) returns bir:FunctionCode|CodeGenError {
+function codeGenFunction(Module mod, bir:FunctionSignature signature, string[] paramNames, Stmt[] body) returns bir:FunctionCode|CodeGenError {
     CodeGenContext cx = new(mod);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Scope? scope = ();
@@ -95,6 +95,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
         else if stmt is AssignStmt {
             curBlock = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
+        // XXX need to do function call returning nil
         else {
             return err:unreached();
         }
@@ -274,12 +275,19 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope,
         return err:unimplemented("local variables cannot yet have function type");
     }
     bir:FunctionSignature signature;
-    bir:ModuleDefn? def = cx.mod.defns[name];
-    if def is bir:FunctionDefn {
-        signature = def.signature;
+    ModuleLevelDef? def = cx.mod.defs[name];
+    if def is FunctionDef {
+        signature = <bir:FunctionSignature>def.signature;
     }
     else {
-        return err:semantic(`no function definition ${name}`);
+        err:Message msg;
+        if def is () {
+            msg = `${name} is not defined`;
+        }
+        else {
+            msg = `${name} is not a function`;
+        }
+        return err:semantic(msg);
     }
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];

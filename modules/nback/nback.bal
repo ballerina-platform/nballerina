@@ -8,13 +8,6 @@ import wso2/nballerina.nback.llvm;
 const OUTPUT_EXTENSION = ".ll";
 
 public function compileModule(bir:Module mod, string basename) returns err:Any|io:Error? {
-    llvm:Module llMod = new;
-  
-    foreach bir:ModuleDefn def in mod.defns {
-        if def is bir:FunctionDefn {
-            check buildFunction(mod, def, llMod);          
-        }
-    }
-    check llMod.writeFile(basename + OUTPUT_EXTENSION);
+    llvm:Module llMod = check buildModule(mod);
+    return llMod.writeFile(basename + OUTPUT_EXTENSION);
 }
-
