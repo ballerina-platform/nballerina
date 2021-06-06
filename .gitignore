@@ -27,3 +27,9 @@ target
 
 # Emacs backup files
 *~
+
+# LLVM bitcode files
+*.bc
+
+# Assembler files
+*.s
