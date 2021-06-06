@@ -23,7 +23,11 @@ class Scaffold {
     private final llvm:BasicBlock[] blocks;
 
     function init(llvm:Function llFunc, llvm:Builder builder, bir:FunctionCode code) returns err:Any? {
-        final llvm:IntType[] types = from var reg in code.registers select check buildValueType(reg.semType);
+        // JBUG 31008 if this is a query expression
+        final llvm:IntType[] types = [];
+        foreach var reg in code.registers {
+            types.push(check buildValueType(reg.semType));
+        }
         self.types = types;
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock();
         builder.positionAtEnd(self.blocks[0]);
