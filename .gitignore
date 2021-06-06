@@ -33,3 +33,6 @@ target
 
 # Assembler files
 *.s
+
+# Default output from C compiler
+a.out
