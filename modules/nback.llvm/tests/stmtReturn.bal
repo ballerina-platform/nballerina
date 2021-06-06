@@ -1,4 +1,3 @@
-import ballerina/file;
 import ballerina/test;
 
 function stmtReturn() returns Module {
@@ -22,9 +21,5 @@ function stmtReturn() returns Module {
 
 @test:Config {}
 function testStmtReturn() returns error? {
-    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "stmt_return.ll");
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "tmp_stmt_return.ll");
-    check buildOutput(stmtReturn(), outputPath);
-    test:assertEquals(compareFiles(expectedOutput, outputPath), true);
-    check file:remove(outputPath);
+    return runTest(stmtReturn, "stmt_return.ll");
 }

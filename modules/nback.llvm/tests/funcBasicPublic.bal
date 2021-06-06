@@ -1,4 +1,3 @@
-import ballerina/file;
 import ballerina/test;
 
 function funcBasicPublic() returns Module {
@@ -19,9 +18,5 @@ function funcBasicPublic() returns Module {
 
 @test:Config {}
 function testBasicPublic() returns error? {
-    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "func_basic_public.ll");
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "tmp_func_basic_public.ll");
-    check buildOutput(funcBasicPublic(), outputPath);
-    test:assertEquals(compareFiles(expectedOutput, outputPath), true);
-    check file:remove(outputPath);
+    return runTest(funcBasicPublic, "func_basic_public.ll");
 }

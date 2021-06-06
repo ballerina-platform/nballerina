@@ -1,4 +1,3 @@
-import ballerina/file;
 import ballerina/test;
 
 function funcBasicPrivate() returns Module {
@@ -21,9 +20,5 @@ function funcBasicPrivate() returns Module {
 
 @test:Config {}
 function testBasicPrivate() returns error? {
-    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "func_basic_private.ll");
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "tmp_func_basic_private.ll");
-    check buildOutput(funcBasicPrivate(), outputPath);
-    test:assertEquals(compareFiles(expectedOutput, outputPath), true);
-    check file:remove(outputPath);
+    return runTest(funcBasicPrivate, "func_basic_private.ll");
 }

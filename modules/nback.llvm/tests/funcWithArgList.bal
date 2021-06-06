@@ -1,4 +1,3 @@
-import ballerina/file;
 import ballerina/test;
 
 function funcWithArgList() returns Module {
@@ -54,9 +53,5 @@ function funcWithArgList3(Builder builder, Module m) {
 
 @test:Config {}
 function testFuncWithArgList() returns error? {
-    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "func_with_arg_list.ll");
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "tmp_func_with_arg_list.ll");
-    check buildOutput(funcWithArgList(), outputPath);
-    test:assertEquals(compareFiles(expectedOutput, outputPath), true);
-    check file:remove(outputPath);
+    return runTest(funcWithArgList, "func_with_arg_list.ll");
 }

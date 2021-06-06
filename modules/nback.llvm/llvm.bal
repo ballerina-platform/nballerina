@@ -82,6 +82,12 @@ public class Module {
         return out.writeFile(path);
     }
 
+    public function toString() returns string {
+        Output out = new;
+        self.output(out);
+        return out.toString();
+    }
+
     function output(Output out) {
         foreach var f in self.functions {
             f.output(out);
@@ -142,14 +148,17 @@ public distinct class Function {
         words.push(typeToString(self.returnType));
         words.push("@" + self.functionName);
         words.push("(");
-        string[] paramStringContent = [];
-        foreach Value param in self.paramValues {
-            paramStringContent.push(" ".'join(typeToString(param.ty), param.operand));
+        foreach int i in 0 ..< self.paramValues.length() {
+            final Value param = self.paramValues[i];
+            if i > 0 {
+                words.push(",");
+            }
+            words.push(typeToString(param.ty));
+            words.push(param.operand);
         }
-        words.push(",".'join(...paramStringContent));
         words.push(")");
         words.push("{");
-        return " ".'join(...words);
+        return createLine(words);
     }
 
     function outputBody(Output out) {
@@ -255,6 +264,7 @@ public class Builder {
         }
     }
 }
+const INDENT = "  ";
 
 # Corresponds to LLVMBasicBlockRef
 public distinct class BasicBlock {
@@ -274,8 +284,7 @@ public distinct class BasicBlock {
     }
 
     function addInsn(string... words) {
-        // the space argument is for indentation
-        self.lines.push(" ".'join(" ", ...words));
+        self.lines.push(createLine(words, INDENT));
     }
 
     function output(Output out) {
@@ -328,5 +337,27 @@ class Output {
     function writeFile(string path) returns io:Error? {
         return io:fileWriteLines(path, self.lines);
     }
+
+    function toString() returns string {
+        return "\n".'join(...self.lines);
+    }
 }
 
+function createLine(string[] words, string indent = "") returns string {
+    string[] parts = [];
+    foreach string word in words {
+        if !omitSpaceBefore(word) && parts.length() > 0 && !omitSpaceAfter(parts[parts.length() - 1]) {
+            parts.push(" ");
+        }
+        parts.push(word);
+    }
+    return string:concat(indent, ...parts);
+}
+
+function omitSpaceBefore(string word) returns boolean {
+    return word == "," || word == ")" || word == "}";
+}
+
+function omitSpaceAfter(string word) returns boolean {
+    return word == "(" || word == "{";
+}

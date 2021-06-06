@@ -1,11 +1,14 @@
 import ballerina/io;
+import ballerina/file;
+import ballerina/test;
 
-function buildOutput(Module module, string outputPath) returns error? {
-    return module.writeFile(outputPath);
-}
+type TestFunction function() returns Module;
 
-function compareFiles(string expectedFilePath, string resultFilePath) returns boolean|error {
-    string[] expectedLines = check io:fileReadLines(expectedFilePath);
-    string[] resultLines = check io:fileReadLines(resultFilePath);
-    return expectedLines == resultLines;
+function runTest(TestFunction func, string expectedFilename) returns io:Error|file:Error? {
+    string expectedPath = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", expectedFilename);
+    string[] expectedLines = check io:fileReadLines(expectedPath);
+    string expectedOutput = "\n".'join(...expectedLines);
+    Module mod = func();
+    string actualOutput = mod.toString();
+    test:assertEquals(actualOutput, expectedOutput);
 }
