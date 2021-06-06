@@ -73,6 +73,10 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:AssignInsn {
             check buildAssign(builder, scaffold, insn);
         }
+        else if insn is bir:CatchInsn {
+            // XXX ignore catch basic block for now
+            break;
+        }
         else {
             return err:unimplemented(`BIR insn ${insn.name} not implemeted`);
         }
@@ -150,6 +154,11 @@ function buildValueType(t:SemType ty) returns llvm:IntType|BuildError {
     }
     else if ty === t:BOOLEAN {
         return "i1";
+    }
+    // this happens with the code generated for potential panics
+    // for now we will represent panics with an i64
+    else if ty === t:ERROR {
+        return "i64";
     }
     return err:unimplemented("unimplemented type");
 }
