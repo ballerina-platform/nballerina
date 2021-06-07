@@ -16,7 +16,15 @@ function exprBinaryAdd() returns Module {
     builder.store(R1, R4);
     Value R5 = builder.load(R3);
     Value R6 = builder.load(R4);
-    Value? R7 = builder.call(add, [R5, R6]);
+    Value? R_7 = builder.call(add, [R5, R6]);
+    Value R7;
+    if R_7 is Value {
+        R7 = R_7;
+    } else {
+        panic error("Return void from non-void function");
+    }
+    Value R8 = builder.extractValue(R7, 0);
+    builder.ret(R8);
     return m;
 }
 

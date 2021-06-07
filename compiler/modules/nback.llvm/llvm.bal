@@ -22,9 +22,9 @@ public type PointerType readonly & record {|
 |};
 
 // Corresponds to llvm::StructType
-public type StructType readonly & record {|
+public type StructType readonly & record {
     Type[] elementTypes;
-|};
+};
 
 public type Type IntType|PointerType|StructType;
 
@@ -321,6 +321,19 @@ public class Builder {
             } else {
                 panic error("Function return type is not a Type");
             }
+        }
+    }
+
+    // Corresponds to LLVMBuildExtractValue
+    public function extractValue(Value value, int index) returns Value {
+        if value.ty is StructType {
+            BasicBlock bb = self.bb();
+            string reg = bb.func.genReg();
+            bb.addInsn(reg, "=", "extractvalue", typeToString(value.ty), value.operand, ",", index.toString());
+            Type elementType = (<StructType>(value.ty)).elementTypes[index];
+            return new Value(elementType, reg);
+        } else {
+            panic error("Extract value from non aggregate data type");
         }
     }
 
