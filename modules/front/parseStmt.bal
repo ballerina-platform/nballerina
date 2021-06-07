@@ -1,10 +1,8 @@
 import wso2/nballerina.err;
-
-// function parseVarDeclStmt(Tokenizer tok) returns VarDeclStmt|err:Syntax {
-//     return parseError(tok);
-// }
+import wso2/nballerina.types as t;
 
 function parseStmtBlock(Tokenizer tok) returns Stmt[]|err:Syntax {
+
     Token? cur = tok.current();
     if cur == "{" {
         Stmt[] stmts = [];
@@ -44,16 +42,24 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         }
         "if" => {
             check tok.advance();
-            return completeIfElseStmt(tok);
+            return createIfElseStmt(tok);
+        }
+        "while" => {
+            check tok.advance();
+            return createWhileStmt(tok);
+        }
+        var x if x is BuiltInTypeDesc => {
+            check tok.advance();
+            return completeVarDeclStmt(tok, x);
         }
     }
     return parseError(tok, "Unhandled Statement");
 }
 
 function createStmtwithIdentifier(Tokenizer tok, Identifier identifier) 
-            returns AssignStmt|FunctionCallExpr|err:Syntax {
+            returns AssignStmt|FunctionCallExpr|VarDeclStmt|err:Syntax {
 
-    AssignStmt|FunctionCallExpr? stmt = ();
+    AssignStmt|FunctionCallExpr|VarDeclStmt? stmt = ();
     Token? cur = tok.current();
     match cur {
         "=" => {
@@ -66,12 +72,40 @@ function createStmtwithIdentifier(Tokenizer tok, Identifier identifier)
             check tok.advance();
             stmt = check createFunctionCallExpr(tok, identifier);
         }
+        [IDENTIFIER, _] => {
+            // TODO: Handle other types
+            string td = identifier.identifier;
+            if (td is TypeDesc) {
+                stmt = check completeVarDeclStmt(tok, td);
+            } else {
+                return parseError(tok, "Unhandled VarDeclStmt type");
+            }
+        }
     }
     check tok.expect(";");
-    if stmt != () {
+    if stmt is () {
+        return parseError(tok, "Unhandled Statement");
+    } else {
         return stmt;
     }
-    return parseError(tok, "Unhandled Statement");
+}
+
+function completeVarDeclStmt(Tokenizer tok, TypeDesc td) returns VarDeclStmt|err:Syntax {
+    Token? cur = tok.current();
+    if cur is [IDENTIFIER, string] {
+        check tok.advance();
+        // Right now we initExpr is required.
+        check tok.expect("=");
+        Expr expr = check parseExpr(tok);
+        return check createVarDefStmt(tok, td, cur[1], expr);
+    }
+    return parseError(tok, "Invalid VarDeclStmt");
+}
+
+function createVarDefStmt(Tokenizer tok, TypeDesc td, string varName, Expr initExpr) 
+            returns VarDeclStmt|err:Syntax {
+    t:SemType semType = check getSemType(td);
+    return {varName, initExpr, td, semType};
 }
 
 function createReturnStmt(Tokenizer tok) returns ReturnStmt|err:Syntax {
@@ -88,7 +122,7 @@ function createReturnStmt(Tokenizer tok) returns ReturnStmt|err:Syntax {
     }
 }
 
-function completeIfElseStmt(Tokenizer tok) returns IfElseStmt|err:Syntax {
+function createIfElseStmt(Tokenizer tok) returns IfElseStmt|err:Syntax {
 
     Stmt[] ifFalse = [];
     Expr condition = check parseExpr(tok);
@@ -98,7 +132,7 @@ function completeIfElseStmt(Tokenizer tok) returns IfElseStmt|err:Syntax {
         check tok.advance();
         if tok.current() == "if" { // if exp1 { } else if exp2 { }
             check tok.advance();
-            IfElseStmt stmt = check completeIfElseStmt(tok);
+            IfElseStmt stmt = check createIfElseStmt(tok);
             ifFalse.push(stmt);
         } else if tok.current() == "{" { // if exp1 { } else { }
             ifFalse = check parseStmtBlock(tok);
@@ -107,6 +141,9 @@ function completeIfElseStmt(Tokenizer tok) returns IfElseStmt|err:Syntax {
     return {condition, ifTrue, ifFalse};
 }
 
-// function parseWhileStmt(Tokenizer tok) returns WhileStmt|err:Syntax {
-//     return parseError(tok);
-// }
+function createWhileStmt(Tokenizer tok) returns WhileStmt|err:Syntax {
+
+    Expr condition = check parseExpr(tok);
+    Stmt[] body = check parseStmtBlock(tok);
+    return {condition, body};
+}

@@ -1,7 +1,15 @@
 import ballerina/test;
 import wso2/nballerina.err;
+import wso2/nballerina.types as t;
 
 type AnydataStmt AssignStmt|ReturnStmt|FunctionCallExpr|BreakStmt|ContinueStmt;
+
+@test:Config
+function testVarDeclStmt() {
+    assertStmt( "int i = 10", { td : "int", varName : "i", initExpr : { value : 10}, semType : t:INT});
+    assertStmt( "boolean bb = false", { td : "boolean", varName : "bb", initExpr : { value : false}, semType : t:BOOLEAN});
+}
+
 
 @test:Config
 function testAssignStmt() {
@@ -61,6 +69,24 @@ function testStmtBlock() {
         {varName: "x1", expr: {value: 10}}, 
         {funcName: "func1", pos: pos, args: []}
         ]);
+}
+
+@test:Config
+function testWhileStmt() {
+    WhileStmt expt = {
+        condition: {value: true},
+        body: [
+        {varName: "x1", expr: {value: 10}}, 
+        {breakStmt: true}
+    ]
+    };
+
+    string actual = string `
+    while true {
+        x1 = 10;
+        break;
+    }`;
+    assertStmt(actual, expt);
 }
 
 @test:Config
@@ -146,31 +172,31 @@ function testNestedIfElseStmt() {
         condition: {varName: "b1"},
         ifTrue: [
             {
-                condition: {value: true},
-                ifTrue: [
+            condition: {value: true},
+            ifTrue: [
                     {varName: "x1", expr: {value: 10}}, 
                     {varName: "x1", expr: {value: 20}}
                 ],
-                ifFalse: [
+            ifFalse: [
                     {varName: "x1", expr: {value: 30}}, 
                     {varName: "x1", expr: {value: 40}}, 
                     {varName: "x1", expr: {value: 50}}
                 ]
-            }
+        }
         ],
         ifFalse: [
             {
-                condition: {value: true},
-                ifTrue: [
+            condition: {value: true},
+            ifTrue: [
                     {varName: "x1", expr: {value: 10}}, 
                     {varName: "x1", expr: {value: 20}}
                 ],
-                ifFalse: [
+            ifFalse: [
                     {varName: "x1", expr: {value: 30}}, 
                     {varName: "x1", expr: {value: 40}}, 
                     {varName: "x1", expr: {value: 50}}
                 ]
-            }
+        }
         ]
     };
 
@@ -213,8 +239,8 @@ function testIfElseIfElseStmt() {
                     {varName: "x2", expr: {value: 30}}
                 ],
             ifFalse: [
-                {varName: "x3", expr: {value: 30}},
-                {varName: "x3", expr: {value: 40}},
+                {varName: "x3", expr: {value: 30}}, 
+                {varName: "x3", expr: {value: 40}}, 
                 {varName: "x3", expr: {value: 50}}
             ]
         }
@@ -268,8 +294,23 @@ function assertStmtEqual(Stmt actual, Stmt expect) {
         return;
     }
 
+    if actual is VarDeclStmt && expect is VarDeclStmt {
+        assertExprEqual(actual.initExpr, expect.initExpr);
+        test:assertEquals(actual.varName, expect.varName);
+        // TODO : Fix this, only works for Simple Types
+        test:assertTrue(actual.semType === expect.semType);
+        TypeDesc tdActual = actual.td;
+        TypeDesc tdExpect = expect.td;
+        if tdActual is LeafTypeDesc &&  tdExpect is LeafTypeDesc {
+            test:assertEquals(tdActual, tdExpect);
+        } else {
+            test:assertFail("Can't test VarDecl stmts for complex TypeDesc");
+        }
+        return;
+    }
+
     if actual is IfElseStmt && expect is IfElseStmt {
-        test:assertEquals(actual.condition, expect.condition);
+        assertExprEqual(actual.condition, expect.condition);
         test:assertEquals(actual.ifTrue.length(), expect.ifTrue.length(), "ifTrue size mismatch");
         test:assertEquals(actual.ifFalse.length(), expect.ifFalse.length(), "ifFalse size mismatch");
         foreach var i in 0 ..< actual.ifTrue.length() {
@@ -277,6 +318,15 @@ function assertStmtEqual(Stmt actual, Stmt expect) {
         }
         foreach var i in 0 ..< actual.ifFalse.length() {
             assertStmtEqual(actual.ifFalse[i], expect.ifFalse[i]);
+        }
+        return;
+    }
+
+    if actual is WhileStmt && expect is WhileStmt {
+        assertExprEqual(actual.condition, expect.condition);
+        test:assertEquals(actual.body.length(), expect.body.length(), "body size mismatch");
+        foreach var i in 0 ..< actual.body.length() {
+            assertStmtEqual(actual.body[i], expect.body[i]);
         }
         return;
     }

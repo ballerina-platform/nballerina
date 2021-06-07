@@ -5,10 +5,6 @@ type Identifier readonly & record {|
     err:Position pos;
 |};
 
-function createIdentifierNode(string identifier, err:Position pos) returns Identifier {
-    return {identifier, pos};
-}
-
 type LiteralType DECIMAL_NUMBER|STRING_LITERAL|BOOLEAN_LITERAL;
 
 type LHSExprNode Expr|Identifier;
@@ -157,4 +153,8 @@ function createBinaryExpr(Tokenizer tok, Expr left, BinaryExprOp op) returns Bin
 
     Expr right = check parseExpr(tok);
     return {left, op, right};
+}
+
+function createIdentifierNode(string identifier, err:Position pos) returns Identifier {
+    return {identifier, pos};
 }

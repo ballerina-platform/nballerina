@@ -61,9 +61,13 @@ function assertExpr(string str, Expr expt) {
     do {
         Tokenizer tok = new (str);
         check tok.advance();
-        Expr expr = check parseExpr(tok);
-        test:assertEquals(expr, expt);
+        Expr actual = check parseExpr(tok);
+        assertExprEqual(actual, expt);
     } on fail error e {
         test:assertFail("error parsing Expr \"" + str + "\", " + e.toString());
     }
+}
+
+function assertExprEqual(Expr actual, Expr expt) {
+    test:assertEquals(actual, expt);
 }

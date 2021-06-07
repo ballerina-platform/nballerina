@@ -186,23 +186,23 @@ function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
     return parseError(tok);
 }
 
-function parseDigits(Tokenizer tok, string signDigits) returns int|err:Syntax {
-    error|int res = int:fromString(signDigits);
-    if res is error {
-        return err:syntax("invalid number", tok.currentPos(), res);
+function getSemType(TypeDesc td) returns t:SemType|err:Syntax {
+    if td is BuiltinIntSubtypeDesc || td is "int" {
+        return t:INT;
+    } else if td is "boolean" {
+        return t:BOOLEAN;
+    } else if td is "()" {
+        return t:NIL;
     }
-    else {
-        check tok.advance();
-        return res;
-    }
+    return err:syntax("Unhandle Typedec \"" + td.toString() + "\"");
 }
 
 function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
-    string message = "parse error" + (detail != () ?  " \""+ detail + "\" ": "");
+    string message = "parse error" + (detail != () ? " \"" + detail + "\" " : "");
     Token? t = tok.current();
     if t is string {
         // JBUG cast needed #30734
-        message += " at '" + <string>t + "'";
+        message += " at '" + t + "'";
     }
     return tok.err(message);
 }
