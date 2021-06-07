@@ -21,7 +21,12 @@ public type PointerType readonly & record {|
     Alignment align;
 |};
 
-public type Type IntType|PointerType;
+// Corresponds to llvm::StructType
+public type StructType readonly & record {|
+    Type[] elementTypes;
+|};
+
+public type Type IntType|PointerType|StructType;
 
 // A RetType is valid only as the return type of a function
 public type RetType Type|"void";
@@ -375,6 +380,18 @@ function typeToString(RetType ty) returns string {
     string typeTag;
     if ty is PointerType {
         typeTag = ty.pointsTo + "*";
+    } else if ty is StructType {
+        string[] typeStringBody = [];
+        typeStringBody.push("{");
+        foreach int i in 0 ..< ty.elementTypes.length() {
+            final Type elementType = ty.elementTypes[i];
+            if i > 0 {
+                typeStringBody.push(",");
+            }
+            typeStringBody.push(typeToString(elementType));
+        }
+        typeStringBody.push("}");
+        typeTag = createLine(typeStringBody, "");
     } else {
         typeTag = ty;
     }
