@@ -277,21 +277,41 @@ public class Builder {
         }
         BasicBlock bb = self.bb();
         string[] argStringContent = [];
-        foreach Value arg in args {
-            argStringContent.push(" ".'join(typeToString(arg.ty), arg.operand));
+        foreach int i in 0 ..< args.length() {
+            final Value arg = args[i];
+            if i > 0 {
+                argStringContent.push(",");
+            }
+            argStringContent.push(typeToString(arg.ty));
+            argStringContent.push(arg.operand);
         }
-        string argString = ", ".'join(...argStringContent);
         if fn.returnsValue() {
             string reg = bb.func.genReg();
-            bb.addInsn(reg, "=", "call", typeToString(fn.getReturnType()), fn.ref(), "(", argString, ")");
+            string[] instruction = [];
+            instruction.push(reg);
+            instruction.push("=");
+            instruction.push("call");
+            instruction.push(typeToString(fn.getReturnType()));
+            instruction.push(fn.ref());
+            instruction.push("(");
+            instruction.push(...argStringContent);
+            instruction.push(")");
+            bb.addInsn(...instruction);
             RetType returnType = fn.getReturnType();
-            if returnType is Type{
+            if returnType is Type {
                 return new Value(returnType, reg);
             } else {
                 panic error("Function return type is not a Type");
             }
         } else {
-            bb.addInsn("call", typeToString(fn.getReturnType()), fn.ref(), "(", argString, ")");
+            string[] instruction = [];
+            instruction.push("call");
+            instruction.push(typeToString(fn.getReturnType()));
+            instruction.push(fn.ref());
+            instruction.push("(");
+            instruction.push(...argStringContent);
+            instruction.push(")");
+            bb.addInsn(...instruction);
         }
     }
 
