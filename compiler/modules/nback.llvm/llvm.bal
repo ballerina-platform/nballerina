@@ -140,13 +140,19 @@ public distinct class Function {
 
     function output(Output out) {
         out.push(self.header());
-        self.outputBody(out);
-        out.push("}");
+        if !self.isEmptyFunction() {
+            self.outputBody(out);
+            out.push("}");
+        }
     }
 
     function header() returns string {
         string[] words = [];
-        words.push("define");
+        if self.isEmptyFunction() {
+            words.push("declare");
+        } else {
+            words.push("define");
+        }
         if self.linkageType != "external" {
             words.push(self.linkageType);
         }
@@ -162,7 +168,9 @@ public distinct class Function {
             words.push(param.operand);
         }
         words.push(")");
-        words.push("{");
+        if !self.isEmptyFunction() {
+            words.push("{");
+        }
         return createLine(words);
     }
 
@@ -205,6 +213,10 @@ public distinct class Function {
 
     function getReturnType() returns RetType {
         return self.returnType;
+    }
+
+    function isEmptyFunction() returns boolean {
+        return self.basicBlocks.length() == 0;
     }
 }
 
