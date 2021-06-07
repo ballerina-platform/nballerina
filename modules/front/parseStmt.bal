@@ -13,6 +13,7 @@ function parseStmtBlock(Tokenizer tok) returns Stmt[]|err:Syntax {
             stmts.push(check parseStmt(tok));
             cur = tok.current();
         }
+        check tok.advance();
         return stmts;
     }
     return parseError(tok, "Unhandled condition in statement block");
@@ -30,6 +31,20 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         "return" => {
             check tok.advance();
             return createReturnStmt(tok);
+        }
+        "break" => {
+            check tok.advance();
+            check tok.expect(";");
+            return {breakStmt: true};
+        }
+        "continue" => {
+            check tok.advance();
+            check tok.expect(";");
+            return {continueStmt: true};
+        }
+        "if" => {
+            check tok.advance();
+            return completeIfElseStmt(tok);
         }
     }
     return parseError(tok, "Unhandled Statement");
@@ -73,9 +88,24 @@ function createReturnStmt(Tokenizer tok) returns ReturnStmt|err:Syntax {
     }
 }
 
-// function parseIfElseStmt(Tokenizer tok) returns IfElseStmt|err:Syntax {
-//     return parseError(tok);
-// }
+function completeIfElseStmt(Tokenizer tok) returns IfElseStmt|err:Syntax {
+
+    Stmt[] ifFalse = [];
+    Expr condition = check parseExpr(tok);
+    Stmt[] ifTrue = check parseStmtBlock(tok);
+    Token? cur = tok.current();
+    if cur == "else" {
+        check tok.advance();
+        if tok.current() == "if" { // if exp1 { } else if exp2 { }
+            check tok.advance();
+            IfElseStmt stmt = check completeIfElseStmt(tok);
+            ifFalse.push(stmt);
+        } else if tok.current() == "{" { // if exp1 { } else { }
+            ifFalse = check parseStmtBlock(tok);
+        }
+    } // if { }
+    return {condition, ifTrue, ifFalse};
+}
 
 // function parseWhileStmt(Tokenizer tok) returns WhileStmt|err:Syntax {
 //     return parseError(tok);

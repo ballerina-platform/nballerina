@@ -37,6 +37,11 @@ type Keyword
     | "type"
     | "typedesc"
     | "xml"
+    | "if"
+    | "else"
+    | "while"
+    | "continue"
+    | "break"
     ;
 
 const WS = "\n\r\t ";
