@@ -268,7 +268,7 @@ public class Builder {
             bb.addInsn("ret", typeToString(value.ty), value.operand);
         }
     }
-    
+
     // Corresponds to LLVMBuildCall
     // Returns () if there is no result i.e. function return type is void
     public function call(Function fn, Value[] args) returns Value? {
@@ -280,7 +280,7 @@ public class Builder {
         foreach Value arg in args {
             argStringContent.push(" ".'join(typeToString(arg.ty), arg.operand));
         }
-        string argString = ",".'join(...argStringContent);
+        string argString = ", ".'join(...argStringContent);
         if fn.returnsValue() {
             string reg = bb.func.genReg();
             bb.addInsn(reg, "=", "call", typeToString(fn.getReturnType()), fn.ref(), "(", argString, ")");

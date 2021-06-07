@@ -1,4 +1,3 @@
-import ballerina/file;
 import ballerina/test;
 
 function stmtAssign() returns Module {
@@ -8,21 +7,17 @@ function stmtAssign() returns Module {
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     Value R0 = foo.getParam(0);
-    Value R2 = builder.alloca("i64", 8);
-    Value R3 = builder.alloca("i64", 8);
+    PointerValue R2 = builder.alloca("i64", 8);
+    PointerValue R3 = builder.alloca("i64", 8);
     builder.store(R0, R2);
     Value R4 = builder.load(R2);
     builder.store(R4, R3);
-    builder.returnVoid();
+    builder.ret();
     return m;
 }
 
 
 @test:Config {}
 function testStmtAssign() returns error? {
-    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "stmt_assign.ll");
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "tmp_stmt_assign.ll");
-    check buildOutput(stmtAssign(), outputPath);
-    test:assertEquals(compareFiles(expectedOutput, outputPath), true);
-    check file:remove(outputPath);
+    return runTest(stmtAssign, "stmt_assign.ll");
 }

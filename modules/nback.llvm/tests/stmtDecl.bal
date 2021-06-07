@@ -8,12 +8,12 @@ function stmtDecl() returns Module {
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     Value R0 = foo.getParam(0);
-    Value R2 = builder.alloca("i64", 8);
-    Value R3 = builder.alloca("i64", 8);
+    PointerValue R2 = builder.alloca("i64", 8);
+    PointerValue R3 = builder.alloca("i64", 8);
     builder.store(R0, R2);
     Value R4 = builder.load(R2);
     builder.store(R4,R3);
-    builder.returnVoid();
+    builder.ret();
     return m;
 }
 
@@ -21,8 +21,5 @@ function stmtDecl() returns Module {
 @test:Config {}
 function testStmtDecl() returns error? {
     string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "stmt_decl.ll");
-    string outputPath = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "tmp_stmt_decl.ll");
-    check buildOutput(stmtDecl(), outputPath);
-    test:assertEquals(compareFiles(expectedOutput, outputPath), true);
-    check file:remove(outputPath);
+    return runTest(stmtDecl, "stmt_decl.ll");
 }
