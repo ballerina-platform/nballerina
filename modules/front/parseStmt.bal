@@ -59,51 +59,52 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 function createStmtwithIdentifier(Tokenizer tok, Identifier identifier) 
             returns AssignStmt|FunctionCallExpr|VarDeclStmt|err:Syntax {
 
-    AssignStmt|FunctionCallExpr|VarDeclStmt? stmt = ();
     Token? cur = tok.current();
     match cur {
         "=" => {
             check tok.advance();
             string varName = identifier.identifier;
             Expr expr = check parseExpr(tok);
-            stmt = {varName, expr};
+            AssignStmt stmt = {varName, expr};
+            check tok.expect(";");
+            return stmt;
         }
         "(" => {
             check tok.advance();
-            stmt = check createFunctionCallExpr(tok, identifier);
+            FunctionCallExpr stmt = check createFunctionCallExpr(tok, identifier);
+            check tok.expect(";");
+            return stmt;
         }
         [IDENTIFIER, _] => {
             // TODO: Handle other types
             string td = identifier.identifier;
             if (td is TypeDesc) {
-                stmt = check completeVarDeclStmt(tok, td);
+                return completeVarDeclStmt(tok, td);
             } else {
                 return parseError(tok, "Unhandled VarDeclStmt type");
             }
         }
     }
-    check tok.expect(";");
-    if stmt is () {
-        return parseError(tok, "Unhandled Statement");
-    } else {
-        return stmt;
-    }
+    return parseError(tok, "Unhandled Statement");
 }
 
 function completeVarDeclStmt(Tokenizer tok, TypeDesc td) returns VarDeclStmt|err:Syntax {
+
     Token? cur = tok.current();
     if cur is [IDENTIFIER, string] {
         check tok.advance();
         // Right now we initExpr is required.
         check tok.expect("=");
         Expr expr = check parseExpr(tok);
-        return check createVarDefStmt(tok, td, cur[1], expr);
+        check tok.expect(";");
+        return check createVarDefStmt(td, cur[1], expr);
     }
     return parseError(tok, "Invalid VarDeclStmt");
 }
 
-function createVarDefStmt(Tokenizer tok, TypeDesc td, string varName, Expr initExpr) 
+function createVarDefStmt(TypeDesc td, string varName, Expr initExpr) 
             returns VarDeclStmt|err:Syntax {
+
     t:SemType semType = check getSemType(td);
     return {varName, initExpr, td, semType};
 }

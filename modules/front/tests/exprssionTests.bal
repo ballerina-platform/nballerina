@@ -1,7 +1,8 @@
 import ballerina/test;
 
 @test:Config
-function testSimpleConstExpr() {
+function testExprSimpleConst() {
+
     assertExpr("()", {value: ()});
     assertExpr("123", {value: 123});
     //assertExpr("\"hello world\"", {value: "hello world"});
@@ -10,13 +11,15 @@ function testSimpleConstExpr() {
 }
 
 @test:Config
-function testUnaryExpr() {
+function testExprUnary() {
+
     assertExpr("-()", {op: "-", operand: {value: ()}}); // Invalid Sematics
     assertExpr("-2", {value: -2});
 }
 
 @test:Config
-function testBinaryExpr() {
+function testExprBinary() {
+
     assertExpr("12 + 23", {op: "+", left: {value: 12}, right: {value: 23}});
     assertExpr("12 - 23", {op: "-", left: {value: 12}, right: {value: 23}});
     assertExpr("12 * 23", {op: "*", left: {value: 12}, right: {value: 23}});
@@ -25,21 +28,24 @@ function testBinaryExpr() {
 }
 
 @test:Config
-function testVarRefExpr() {
+function testExprVarRef() {
+
     assertExpr("x", {varName: "x"});
     assertExpr("x1", {varName: "x1"});
     assertExpr("x1a", {varName: "x1a"});
 }
 
 @test:Config
-function testFunctionCallExpr() {
+function testExprFunctionCall() {
+
     assertExpr("x()", {funcName: "x", args: [], pos: {lineNumber: 1, indexInLine: 0}});
     assertExpr("xx(1,2)", {funcName: "xx", args: [{value: 1}, {value: 2}], pos: {lineNumber: 1, indexInLine: 0}});
     assertExpr("xxx(123, 12 + 23)", {funcName: "xxx", args: [{value: 123}, {op: "+", left: {value: 12}, right: {value: 23}}], pos: {lineNumber: 1, indexInLine: 0}});
 }
 
 @test:Config
-function testGroupExpr() {
+function testExprGroup() {
+
     assertExpr("(())", {value: ()});
     assertExpr("(123)", {value: 123});
     //assertExpr("(\"hello world\")", {value: "hello world"});
@@ -58,11 +64,13 @@ function testGroupExpr() {
 }
 
 function assertExpr(string str, Expr expt) {
+
     do {
         Tokenizer tok = new (str);
         check tok.advance();
         Expr actual = check parseExpr(tok);
         assertExprEqual(actual, expt);
+        test:assertEquals(tok.current(), (), "Unexpected token" + tok.current().toString());
     } on fail error e {
         test:assertFail("error parsing Expr \"" + str + "\", " + e.toString());
     }

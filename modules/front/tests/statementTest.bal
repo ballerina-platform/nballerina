@@ -5,14 +5,15 @@ import wso2/nballerina.types as t;
 type AnydataStmt AssignStmt|ReturnStmt|FunctionCallExpr|BreakStmt|ContinueStmt;
 
 @test:Config
-function testVarDeclStmt() {
-    assertStmt( "int i = 10", { td : "int", varName : "i", initExpr : { value : 10}, semType : t:INT});
-    assertStmt( "boolean bb = false", { td : "boolean", varName : "bb", initExpr : { value : false}, semType : t:BOOLEAN});
+function testStmtVarDecl() {
+
+    assertStmt("int i = 10;", {td: "int", varName: "i", initExpr: {value: 10}, semType: t:INT});
+    assertStmt("boolean bb = false;", {td: "boolean", varName: "bb", initExpr: {value: false}, semType: t:BOOLEAN});
 }
 
-
 @test:Config
-function testAssignStmt() {
+function testStmtAssign() {
+
     assertStmt("x1 = 10;", {varName: "x1", expr: {value: 10}});
     assertStmt("x2 = -10;", {varName: "x2", expr: {value: -10}});
     assertStmt("x3 = true;", {varName: "x3", expr: {value: true}});
@@ -24,7 +25,8 @@ function testAssignStmt() {
 }
 
 @test:Config
-function testFunctionCallStmt() {
+function testStmtFunctionCall() {
+
     err:Position pos = {lineNumber: 1, indexInLine: 0};
     assertStmt("func1();", {funcName: "func1", pos: pos, args: []});
     assertStmt("func1(1);", {funcName: "func1", pos: pos, args: [{value: 1}]});
@@ -44,7 +46,8 @@ function testFunctionCallStmt() {
 }
 
 @test:Config
-function testReturnStmt() {
+function testStmtReturn() {
+
     assertStmt("return;", {returnExpr: {value: ()}});
     assertStmt("return ();", {returnExpr: {value: ()}});
     assertStmt("return 10;", {returnExpr: {value: 10}});
@@ -54,7 +57,8 @@ function testReturnStmt() {
 }
 
 @test:Config
-function testSingleWordStmt() {
+function testStmtBranching() {
+
     assertStmt("break;", {breakStmt: true});
     assertStmt("continue;", {continueStmt: true});
 }
@@ -72,7 +76,8 @@ function testStmtBlock() {
 }
 
 @test:Config
-function testWhileStmt() {
+function testStmtWhile() {
+
     WhileStmt expt = {
         condition: {value: true},
         body: [
@@ -90,7 +95,8 @@ function testWhileStmt() {
 }
 
 @test:Config
-function testIfStmt() {
+function testStmtIf() {
+
     IfElseStmt expt = {
         condition: {value: true},
         ifTrue: [
@@ -109,7 +115,8 @@ function testIfStmt() {
 }
 
 @test:Config
-function testIfElseStmt() {
+function testStmtIfElse() {
+
     IfElseStmt expt = {
         condition: {value: true},
         ifTrue: [
@@ -136,7 +143,8 @@ function testIfElseStmt() {
 }
 
 @test:Config
-function testIfElseIfStmt() {
+function testStmtIfElseIf() {
+
     IfElseStmt expt = {
         condition: {value: true},
         ifTrue: [
@@ -167,7 +175,8 @@ function testIfElseIfStmt() {
 }
 
 @test:Config
-function testNestedIfElseStmt() {
+function testStmtNestedIfElse() {
+
     IfElseStmt expt = {
         condition: {varName: "b1"},
         ifTrue: [
@@ -224,7 +233,8 @@ function testNestedIfElseStmt() {
 }
 
 @test:Config
-function testIfElseIfElseStmt() {
+function testStmtIfElseIfElse() {
+
     IfElseStmt expt = {
         condition: {varName: "b1"},
         ifTrue: [
@@ -263,32 +273,32 @@ function testIfElseIfElseStmt() {
 }
 
 function assertStmtBlock(string str, Stmt[] expt) {
+
     do {
         Tokenizer tok = new (str);
         check tok.advance();
-        Stmt[] stmts = check parseStmtBlock(tok);
-        test:assertEquals(stmts.length(), expt.length());
-        foreach var i in 0 ..< stmts.length() {
-            assertStmtEqual(stmts[i], expt[i]);
-        }
+        Stmt[] actual = check parseStmtBlock(tok);
+        assertStmtListEqual(actual, expt);
     } on fail error e {
         test:assertFail("error parsing block \"" + str + "\", " + e.toString());
     }
 }
 
 function assertStmt(string str, Stmt expect) {
+
     do {
         Tokenizer tok = new (str);
         check tok.advance();
         Stmt stmt = check parseStmt(tok);
         assertStmtEqual(stmt, expect);
-
+        test:assertEquals(tok.current(), (), "Unexpected token" + tok.current().toString());
     } on fail error e {
         test:assertFail("error parsing statement \"" + str + "\", " + e.toString());
     }
 }
 
 function assertStmtEqual(Stmt actual, Stmt expect) {
+
     if actual is AnydataStmt && expect is AnydataStmt {
         test:assertEquals(actual, expect);
         return;
@@ -299,36 +309,29 @@ function assertStmtEqual(Stmt actual, Stmt expect) {
         test:assertEquals(actual.varName, expect.varName);
         // TODO : Fix this, only works for Simple Types
         test:assertTrue(actual.semType === expect.semType);
-        TypeDesc tdActual = actual.td;
-        TypeDesc tdExpect = expect.td;
-        if tdActual is LeafTypeDesc &&  tdExpect is LeafTypeDesc {
-            test:assertEquals(tdActual, tdExpect);
-        } else {
-            test:assertFail("Can't test VarDecl stmts for complex TypeDesc");
-        }
+        assertTypeDescEqual(actual.td, expect.td);
         return;
     }
 
     if actual is IfElseStmt && expect is IfElseStmt {
         assertExprEqual(actual.condition, expect.condition);
-        test:assertEquals(actual.ifTrue.length(), expect.ifTrue.length(), "ifTrue size mismatch");
-        test:assertEquals(actual.ifFalse.length(), expect.ifFalse.length(), "ifFalse size mismatch");
-        foreach var i in 0 ..< actual.ifTrue.length() {
-            assertStmtEqual(actual.ifTrue[i], expect.ifTrue[i]);
-        }
-        foreach var i in 0 ..< actual.ifFalse.length() {
-            assertStmtEqual(actual.ifFalse[i], expect.ifFalse[i]);
-        }
+        assertStmtListEqual(actual.ifTrue, expect.ifTrue);
+        assertStmtListEqual(actual.ifFalse, expect.ifFalse);
         return;
     }
 
     if actual is WhileStmt && expect is WhileStmt {
         assertExprEqual(actual.condition, expect.condition);
-        test:assertEquals(actual.body.length(), expect.body.length(), "body size mismatch");
-        foreach var i in 0 ..< actual.body.length() {
-            assertStmtEqual(actual.body[i], expect.body[i]);
-        }
+        assertStmtListEqual(actual.body, expect.body);
         return;
     }
-    test:assertFail("Incompatible stmts");
+    test:assertFail("Incompatible stmts " + actual.toString());
+}
+
+function assertStmtListEqual(Stmt[] actual, Stmt[] expect) {
+
+    test:assertEquals(actual.length(), expect.length(), "Stmt[] size mismatch");
+    foreach var i in 0 ..< actual.length() {
+        assertStmtEqual(actual[i], expect[i]);
+    }
 }

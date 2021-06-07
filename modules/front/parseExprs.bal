@@ -16,6 +16,16 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     return parseRHSExprNode(tok, styntaxNode);
 }
 
+function parseConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
+
+    err:Position pos = tok.currentPos();
+    Expr expr = check parseExpr(tok);
+    if expr is SimpleConstExpr {
+        return expr;
+    }
+    return err:syntax("Unsupported constant expression", pos);
+} 
+
 function parseLHSExprNode(Tokenizer tok) returns LHSExprNode|err:Syntax {
 
     Token? cur = tok.current();
