@@ -186,6 +186,21 @@ public distinct class Function {
         return reg;
     }
 
+    function returnsValue() returns boolean {
+        return self.returnType != "void";
+    }
+
+    function ref() returns string {
+        return "@" + self.functionName;
+    }
+
+    function paramCount() returns int {
+        return self.paramValues.length();
+    }
+
+    function getReturnType() returns RetType {
+        return self.returnType;
+    }
 }
 
 // Used with Builder.binaryInt
@@ -257,8 +272,39 @@ public class Builder {
     // Corresponds to LLVMBuildCall
     // Returns () if there is no result i.e. function return type is void
     public function call(Function fn, Value[] args) returns Value? {
-        // XXX todo
-        return ();
+        if fn.paramCount() != args.length() {
+            panic error(string `Number of arguments is invalid for function ${fn.ref()}`);
+        }
+        BasicBlock bb = self.bb();
+        string reg = "";
+        string[] insnWords = [];
+        if fn.returnsValue() {
+            reg = bb.func.genReg();
+            insnWords.push(reg);
+            insnWords.push("=");
+        }
+        insnWords.push("call");
+        insnWords.push(typeToString(fn.getReturnType()));
+        insnWords.push(fn.ref());
+        insnWords.push("(");
+        foreach int i in 0 ..< args.length() {
+            final Value arg = args[i];
+            if i > 0 {
+                insnWords.push(",");
+            }
+            insnWords.push(typeToString(arg.ty));
+            insnWords.push(arg.operand);
+        }
+        insnWords.push(")");
+        bb.addInsn(...insnWords);
+        if fn.returnsValue() {
+            RetType returnType = fn.getReturnType();
+            if returnType is Type {
+                return new Value(returnType, reg);
+            } else {
+                panic error("Function return type is not a Type");
+            }
+        }
     }
 
     private function bb() returns BasicBlock {
