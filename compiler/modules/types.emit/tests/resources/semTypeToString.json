@@ -1,0 +1,18 @@
+[
+    ["int", "int"],
+    ["float", "float"],
+    ["error", "error"],
+    ["string", "string"],
+    ["boolean", "boolean"],
+    ["decimal", "decimal"],
+    [["|", "int", "int"], "int"],
+    [["|", true, false], "boolean"],
+    [["|", "int", "nil"], "()|int"],
+    [["&", "readonly", "int"], "int"],
+    [["|", "never", ["string", "xyzzy"], "string"], "string"],
+    [["|", "nil", "int", "float", "string"], "()|int|float|string"],
+    [["|", "nil", "int", "decimal", "string"], "()|int|decimal|string"],
+    ["readonly", "()|boolean|int|float|decimal|string|error|function|typedesc|handle|xml_ro|list_ro|mapping_ro|table_ro|object_ro"],
+    ["any", "()|boolean|int|float|decimal|string|function|typedesc|handle|xml_ro|list_ro|mapping_ro|table_ro|object_ro|xml_rw|list_rw|mapping_rw|table_rw|object_rw|stream|future"],
+    [["|", "any", "error"], "()|boolean|int|float|decimal|string|error|function|typedesc|handle|xml_ro|list_ro|mapping_ro|table_ro|object_ro|xml_rw|list_rw|mapping_rw|table_rw|object_rw|stream|future"]
+]
