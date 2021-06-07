@@ -276,42 +276,34 @@ public class Builder {
             panic error(string `Number of arguments is invalid for function ${fn.ref()}`);
         }
         BasicBlock bb = self.bb();
-        string[] argStringContent = [];
+        string reg = "";
+        string[] insnWords = [];
+        if fn.returnsValue() {
+            reg = bb.func.genReg();
+            insnWords.push(reg);
+            insnWords.push("=");
+        }
+        insnWords.push("call");
+        insnWords.push(typeToString(fn.getReturnType()));
+        insnWords.push(fn.ref());
+        insnWords.push("(");
         foreach int i in 0 ..< args.length() {
             final Value arg = args[i];
             if i > 0 {
-                argStringContent.push(",");
+                insnWords.push(",");
             }
-            argStringContent.push(typeToString(arg.ty));
-            argStringContent.push(arg.operand);
+            insnWords.push(typeToString(arg.ty));
+            insnWords.push(arg.operand);
         }
+        insnWords.push(")");
+        bb.addInsn(...insnWords);
         if fn.returnsValue() {
-            string reg = bb.func.genReg();
-            string[] instruction = [];
-            instruction.push(reg);
-            instruction.push("=");
-            instruction.push("call");
-            instruction.push(typeToString(fn.getReturnType()));
-            instruction.push(fn.ref());
-            instruction.push("(");
-            instruction.push(...argStringContent);
-            instruction.push(")");
-            bb.addInsn(...instruction);
             RetType returnType = fn.getReturnType();
             if returnType is Type {
                 return new Value(returnType, reg);
             } else {
                 panic error("Function return type is not a Type");
             }
-        } else {
-            string[] instruction = [];
-            instruction.push("call");
-            instruction.push(typeToString(fn.getReturnType()));
-            instruction.push(fn.ref());
-            instruction.push("(");
-            instruction.push(...argStringContent);
-            instruction.push(")");
-            bb.addInsn(...instruction);
         }
     }
 
