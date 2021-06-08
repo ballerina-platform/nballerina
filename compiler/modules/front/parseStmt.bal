@@ -2,7 +2,6 @@ import wso2/nballerina.err;
 import wso2/nballerina.types as t;
 
 function parseStmtBlock(Tokenizer tok) returns Stmt[]|err:Syntax {
-
     Token? cur = tok.current();
     if cur == "{" {
         Stmt[] stmts = [];
@@ -14,21 +13,28 @@ function parseStmtBlock(Tokenizer tok) returns Stmt[]|err:Syntax {
         check tok.advance();
         return stmts;
     }
-    return parseError(tok, "Unhandled condition in statement block");
+    return parseError(tok, "unhandled condition in statement block");
 }
 
 function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
-
     Token? cur = tok.current();
     match cur {
         [IDENTIFIER, var identifier] => {
             err:Position pos = tok.currentPos();
             check tok.advance();
-            return finishStmtWithIdentifier(tok, {identifier, pos});
+            cur = tok.current();
+            if cur == "=" {
+                return finishAssignStmt(tok, identifier, pos);
+            }
+            else if cur == "(" {
+                FunctionCallExpr stmt = check finishFunctionCallExpr(tok, identifier, pos);
+                check tok.expect(";");
+                return stmt;
+            }
         }
         "return" => {
             check tok.advance();
-            return finishReturnStmt(tok);
+            return parseReturnStmt(tok);
         }
         "break" => {
             check tok.advance();
@@ -42,112 +48,86 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         }
         "if" => {
             check tok.advance();
-            return finishIfElseStmt(tok);
+            return parseIfElseStmt(tok);
         }
         "while" => {
             check tok.advance();
-            return finishWhileStmt(tok);
+            return parseWhileStmt(tok);
         }
-        var x if x is BuiltInTypeDesc => {
-            check tok.advance();
-            return finishVarDeclStmt(tok, x);
+        // only int and boolean types for now
+        "int" => {
+            return parseVarDeclStmt(tok, "int", t:INT);
         }
-    }
-    return parseError(tok, "Unhandled Statement");
-}
-
-function finishStmtWithIdentifier(Tokenizer tok, Identifier identifier) 
-            returns AssignStmt|FunctionCallExpr|VarDeclStmt|err:Syntax {
-
-    Token? cur = tok.current();
-    match cur {
-        "=" => {
-            check tok.advance();
-            string varName = identifier.identifier;
-            Expr expr = check parseExpr(tok);
-            AssignStmt stmt = {varName, expr};
-            check tok.expect(";");
-            return stmt;
-        }
-        // "(" => {
-        //     check tok.advance();
-        //     FunctionCallExpr stmt = check finishFunctionCallExpr(tok, identifier);
-        //     check tok.expect(";");
-        //     return stmt;
-        // }
-        [IDENTIFIER, _] => {
-            // TODO: Handle other types
-            string td = identifier.identifier;
-            if (td is TypeDesc) {
-                return finishVarDeclStmt(tok, td);
-            } else {
-                return parseError(tok, "Unhandled VarDeclStmt type");
-            }
+        "boolean" => {
+            return parseVarDeclStmt(tok, "boolean", t:BOOLEAN);
         }
     }
-    return parseError(tok, "Unhandled Statement");
+    return parseError(tok, "unhandled statement");
 }
 
-function finishVarDeclStmt(Tokenizer tok, TypeDesc td) returns VarDeclStmt|err:Syntax {
+function finishAssignStmt(Tokenizer tok, string identifier, err:Position pos) returns AssignStmt|err:Syntax {
+    check tok.advance();
+    string varName = identifier;
+    Expr expr = check parseExpr(tok);
+    AssignStmt stmt = { varName, expr };
+    check tok.expect(";");
+    return stmt;    
+}
 
+function parseVarDeclStmt(Tokenizer tok, TypeDesc td, t:SemType semType) returns VarDeclStmt|err:Syntax {
+    check tok.advance();
     Token? cur = tok.current();
     if cur is [IDENTIFIER, string] {
         check tok.advance();
-        // Right now we initExpr is required.
+        // initExpr is required in the subset
         check tok.expect("=");
-        Expr expr = check parseExpr(tok);
+        Expr initExpr = check parseExpr(tok);
         check tok.expect(";");
-        return check createVarDefStmt(td, cur[1], expr);
+        return { td, varName: cur[1], initExpr, semType };
     }
-    return parseError(tok, "Invalid VarDeclStmt");
+    return parseError(tok, "invalid VarDeclStmt");
 }
 
-function createVarDefStmt(TypeDesc td, string varName, Expr initExpr) 
-            returns VarDeclStmt|err:Syntax {
-
-    t:SemType semType = check getSemType(td);
-    return {varName, initExpr, td, semType};
-}
-
-function finishReturnStmt(Tokenizer tok) returns ReturnStmt|err:Syntax {
-
+function parseReturnStmt(Tokenizer tok) returns ReturnStmt|err:Syntax {
     Expr returnExpr;
     if tok.current() == ";" {
-        returnExpr = {value: ()}; // SimpleConstExpr
+        returnExpr = { value: () }; // SimpleConstExpr
         check tok.advance();
-        return {returnExpr};
-    } else {
+    }
+    else {
         returnExpr = check parseExpr(tok);
         check tok.expect(";");
-        return {returnExpr};
     }
+    return { returnExpr };
 }
 
-function finishIfElseStmt(Tokenizer tok) returns IfElseStmt|err:Syntax {
-
+function parseIfElseStmt(Tokenizer tok) returns IfElseStmt|err:Syntax {
     Stmt[] ifFalse;
     Expr condition = check parseExpr(tok);
     Stmt[] ifTrue = check parseStmtBlock(tok);
     Token? cur = tok.current();
     if cur == "else" {
         check tok.advance();
-        if tok.current() == "if" { // if exp1 { } else if exp2 { }
+        // if exp1 { } else if exp2 { }
+        if tok.current() == "if" { 
             check tok.advance();
-            ifFalse = [check finishIfElseStmt(tok)];
-        } else if tok.current() == "{" { // if exp1 { } else { }
+            ifFalse = [check parseIfElseStmt(tok)];
+        }
+        // if exp1 { } else { }
+        else if tok.current() == "{" {
             ifFalse = check parseStmtBlock(tok);
-        } else {
+        }
+        else {
             return parseError(tok);
         }
     } else {
         ifFalse = [];
     }
-    return {condition, ifTrue, ifFalse};
+    return { condition, ifTrue, ifFalse };
 }
 
-function finishWhileStmt(Tokenizer tok) returns WhileStmt|err:Syntax {
-
+function parseWhileStmt(Tokenizer tok) returns WhileStmt|err:Syntax {
     Expr condition = check parseExpr(tok);
     Stmt[] body = check parseStmtBlock(tok);
-    return {condition, body};
+    return { condition, body };
 }
