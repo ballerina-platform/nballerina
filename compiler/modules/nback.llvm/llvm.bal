@@ -23,8 +23,16 @@ public type PointerType readonly & record {|
 
 // Corresponds to llvm::StructType
 public type StructType readonly & record {
-    Type[] elementTypes;
+    IntType[] memberTypes;
 };
+
+public function structType(IntType[] memberTypes) returns StructType {
+    return {memberTypes: memberTypes.cloneReadOnly()};
+}
+
+function getTypeAtIndex(StructType ty, int index) returns IntType {
+    return ty.memberTypes[index];
+}
 
 public type Type IntType|PointerType|StructType;
 
@@ -319,7 +327,7 @@ public class Builder {
             BasicBlock bb = self.bb();
             string reg = bb.func.genReg();
             bb.addInsn(reg, "=", "extractvalue", typeToString(value.ty), value.operand, ",", index.toString());
-            Type elementType = (<StructType>(value.ty)).elementTypes[index];
+            Type elementType = getTypeAtIndex(<StructType>value.ty, index);
             return new Value(elementType, reg);
         } else {
             panic error("Extract value from non aggregate data type");
@@ -397,8 +405,8 @@ function typeToString(RetType ty) returns string {
     } else if ty is StructType {
         string[] typeStringBody = [];
         typeStringBody.push("{");
-        foreach int i in 0 ..< ty.elementTypes.length() {
-            final Type elementType = ty.elementTypes[i];
+        foreach int i in 0 ..< ty.memberTypes.length() {
+            final Type elementType = ty.memberTypes[i];
             if i > 0 {
                 typeStringBody.push(",");
             }
