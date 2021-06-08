@@ -62,20 +62,3 @@ function testExprGroup() {
     assertExpr("(x())", {funcName: "x", args: [], pos: {lineNumber: 1, indexInLine: 1}});
 
 }
-
-function assertExpr(string str, Expr expt) {
-
-    do {
-        Tokenizer tok = new (str);
-        check tok.advance();
-        Expr actual = check parseExpr(tok);
-        assertExprEqual(actual, expt);
-        test:assertEquals(tok.current(), (), "Unexpected token" + tok.current().toString());
-    } on fail error e {
-        test:assertFail("error parsing Expr \"" + str + "\", " + e.toString());
-    }
-}
-
-function assertExprEqual(Expr actual, Expr expt) {
-    test:assertEquals(actual, expt);
-}
