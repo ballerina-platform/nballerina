@@ -14,7 +14,8 @@ type FunctionDef record {|
     bir:FunctionSignature? signature = ();
 |};
 
-type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|WhileStmt;
+type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|
+            WhileStmt|BreakStmt|ContinueStmt;
 type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr;
 
 type AssignStmt record {|
@@ -36,6 +37,10 @@ type WhileStmt record {|
     Expr condition;
     Stmt[] body;
 |};
+
+type BreakStmt "break";
+
+type ContinueStmt "continue";
 
 type VarDeclStmt record {|
     TypeDesc td;
@@ -137,5 +142,6 @@ type SingletonTypeDesc  record {|
 |};
 
 type BuiltinIntSubtypeDesc "sint8"|"uint8"|"sint16"|"uint16"|"sint32"|"uint32";
-type LeafTypeDesc "any"|"boolean"|"decimal"|"error"|"float"|"handle"|"int"|"json"
-                  |"never"|"readonly"|"string"|"typedesc"|"xml"|"()"|BuiltinIntSubtypeDesc;
+type BuiltInTypeDesc "any"|"boolean"|"decimal"|"error"|"float"|"handle"|"int"|"json"
+                  |"never"|"readonly"|"string"|"typedesc"|"xml"|"()";
+type LeafTypeDesc BuiltInTypeDesc|BuiltinIntSubtypeDesc;

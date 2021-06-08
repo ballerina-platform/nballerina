@@ -5,12 +5,13 @@ type Token SingleCharDelim|MultiCharDelim|Keyword|VariableLengthToken;
 const IDENTIFIER = 0;
 const DECIMAL_NUMBER = 1;
 const STRING_LITERAL = 2;
+const BOOLEAN_LITERAL = 3;
 
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
 type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string];
 
 // Some of these are not yet used by the grammar
-type SingleCharDelim ";" | "-" | "+" | "(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | ":" | "," | "/" | "=";
+type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | ":" | "," | "/" | "%" | "=";
 type MultiCharDelim "{|" | "|}" | "...";
 type Keyword
     "any"
@@ -36,6 +37,11 @@ type Keyword
     | "type"
     | "typedesc"
     | "xml"
+    | "if"
+    | "else"
+    | "while"
+    | "continue"
+    | "break"
     ;
 
 const WS = "\n\r\t ";
