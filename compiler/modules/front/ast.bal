@@ -38,13 +38,9 @@ type WhileStmt record {|
     Stmt[] body;
 |};
 
-type BreakStmt record {|
-    true breakStmt;
-|};
+type BreakStmt "break";
 
-type ContinueStmt record {|
-    true continueStmt;
-|};
+type ContinueStmt "continue";
 
 type VarDeclStmt record {|
     TypeDesc td;

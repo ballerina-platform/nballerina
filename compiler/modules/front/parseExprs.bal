@@ -31,17 +31,17 @@ function parseLHSExprNode(Tokenizer tok) returns LHSExprNode|err:Syntax {
     Token? cur = tok.current();
     match cur {
         [DECIMAL_NUMBER, var value] => {
-            return createSimpleConstExpr(tok, value, DECIMAL_NUMBER);
+            return finishSimpleConstExpr(tok, value, DECIMAL_NUMBER);
         }
         [STRING_LITERAL, var value] => {
-            return createSimpleConstExpr(tok, value, STRING_LITERAL);
+            return finishSimpleConstExpr(tok, value, STRING_LITERAL);
         }
         "true"|"false" => {
-            return createSimpleConstExpr(tok, cur.toString(), BOOLEAN_LITERAL);
+            return finishSimpleConstExpr(tok, cur.toString(), BOOLEAN_LITERAL);
         }
         "(" => {
             check tok.advance();
-            return createBracedOrNilExpression(tok);
+            return finishGroupOrNilExpression(tok);
         }
         [IDENTIFIER, var identifier] => {
             err:Position pos = tok.currentPos();
@@ -50,13 +50,13 @@ function parseLHSExprNode(Tokenizer tok) returns LHSExprNode|err:Syntax {
         }
         var op if op is UnaryExprOp => {
             check tok.advance();
-            return createUnaryExpr(tok, op);
+            return finishUnaryExpr(tok, op);
         }
     }
     return parseError(tok, "Unhandled expression");
 }
 
-function createSimpleConstExpr(Tokenizer tok, string str, LiteralType lType) 
+function finishSimpleConstExpr(Tokenizer tok, string str, LiteralType lType) 
             returns SimpleConstExpr|err:Syntax {
 
     match lType {
@@ -88,12 +88,12 @@ function parseRHSExprNode(Tokenizer tok, LHSExprNode lhsNode) returns Expr|err:S
     match cur {
         "(" => {
             check tok.advance();
-            return createFunctionCallExpr(tok, lhsNode);
+            return finishFunctionCallExpr(tok, lhsNode);
         }
         var op if op is BinaryExprOp => {
             check tok.advance();
             if lhsNode is Expr {
-                return createBinaryExpr(tok, lhsNode, op);
+                return finishBinaryExpr(tok, lhsNode, op);
             }
             return parseError(tok);
         }
@@ -105,7 +105,7 @@ function parseRHSExprNode(Tokenizer tok, LHSExprNode lhsNode) returns Expr|err:S
     }
 }
 
-function createFunctionCallExpr(Tokenizer tok, LHSExprNode lhsNode) 
+function finishFunctionCallExpr(Tokenizer tok, LHSExprNode lhsNode) 
             returns FunctionCallExpr|err:Syntax {
 
     Token? tk1 = tok.current();
@@ -128,7 +128,7 @@ function createFunctionCallExpr(Tokenizer tok, LHSExprNode lhsNode)
     return parseError(tok, "Not supported function call expr syntax");
 }
 
-function createBracedOrNilExpression(Tokenizer tok) returns LHSExprNode|err:Syntax {
+function finishGroupOrNilExpression(Tokenizer tok) returns LHSExprNode|err:Syntax {
 
     if tok.current() == ")" {
         // For now only nill literal, handle param-list of an implicit-anon-func-expr later
@@ -144,7 +144,7 @@ function createBracedOrNilExpression(Tokenizer tok) returns LHSExprNode|err:Synt
     return parseError(tok);
 }
 
-function createUnaryExpr(Tokenizer tok, UnaryExprOp op) 
+function finishUnaryExpr(Tokenizer tok, UnaryExprOp op) 
             returns UnaryExpr|SimpleConstExpr|err:Syntax {
 
     Expr operand = check parseExpr(tok);
@@ -159,7 +159,7 @@ function createUnaryExpr(Tokenizer tok, UnaryExprOp op)
     return {op, operand};
 }
 
-function createBinaryExpr(Tokenizer tok, Expr left, BinaryExprOp op) returns BinaryExpr|err:Syntax {
+function finishBinaryExpr(Tokenizer tok, Expr left, BinaryExprOp op) returns BinaryExpr|err:Syntax {
 
     Expr right = check parseExpr(tok);
     return {left, op, right};

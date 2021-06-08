@@ -7,13 +7,13 @@ function parseSourcePart(string str) returns ModuleLevelDef[]|err:Syntax {
     Tokenizer tok = new(str);
     check tok.advance();
     while tok.current() != () {
-        defs.push(check parseModuleLevelConstructs(tok));
+        defs.push(check parseModuleDecl(tok));
     }
     return defs;
 }
 
 
-function parseModuleLevelConstructs(Tokenizer tok) returns ModuleLevelDef|err:Syntax {
+function parseModuleDecl(Tokenizer tok) returns ModuleLevelDef|err:Syntax {
 
     Token? cur = tok.current();
     match cur {

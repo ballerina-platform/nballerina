@@ -59,8 +59,8 @@ function testStmtReturn() {
 @test:Config
 function testStmtBranching() {
 
-    assertStmt("break;", {breakStmt: true});
-    assertStmt("continue;", {continueStmt: true});
+    assertStmt("break;", "break");
+    assertStmt("continue;", "continue");
 }
 
 @test:Config
@@ -82,7 +82,7 @@ function testStmtWhile() {
         condition: {value: true},
         body: [
         {varName: "x1", expr: {value: 10}}, 
-        {breakStmt: true}
+        "break"
     ]
     };
 

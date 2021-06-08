@@ -15,7 +15,7 @@ function assertModuleLevelDef(string str, ModuleLevelDef expect, string? message
     do {
         Tokenizer tok = new (str);
         check tok.advance();
-        ModuleLevelDef actual = check parseModuleLevelConstructs(tok);
+        ModuleLevelDef actual = check parseModuleDecl(tok);
         assertModuleLevelDefEqual(actual, expect, message);
         test:assertEquals(tok.current(), (), "Unexpected token at the end");
     } on fail error e {
