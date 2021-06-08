@@ -20,9 +20,9 @@ class Scaffold {
     // LLVM basic blocks indexed by BIR label
     private final llvm:BasicBlock[] blocks;
     // LLVM functions in the module indexed by name
-    private final map<llvm:Function> functions;
+    private final map<llvm:FunctionDefn> functions;
 
-    function init(llvm:Function llFunc, map<llvm:Function> functions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
+    function init(llvm:FunctionDefn llFunc, map<llvm:FunctionDefn> functions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.functions = functions;
         // JBUG 31008 if this is a query expression
         final llvm:IntType[] types = [];
@@ -52,13 +52,13 @@ class Scaffold {
 function buildModule(bir:Module mod) returns llvm:Module|BuildError {
     llvm:Module llMod = new;
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
-    llvm:Function[] llFuncs = [];
+    llvm:FunctionDefn[] llFuncs = [];
     llvm:FunctionType[] llFuncTypes = [];
-    map<llvm:Function> llFuncMap = {};
+    map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
         llvm:FunctionType ty = check buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
-        llvm:Function llFunc = llMod.addFunction(defn.name, ty);
+        llvm:FunctionDefn llFunc = llMod.addFunction(defn.name, ty);
         llFuncs.push(llFunc);
         llFuncMap[defn.name] = llFunc;
     }  

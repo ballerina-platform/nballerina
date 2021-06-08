@@ -3,7 +3,7 @@ import ballerina/test;
 function stmtAssign() returns Module {
     Builder builder = new ();
     Module m = new ();
-    Function foo = m.addFunction("main", {returnType: "i64",paramTypes:["i64"]});
+    FunctionDefn foo = m.addFunction("main", {returnType: "i64",paramTypes:["i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     Value R0 = foo.getParam(0);

@@ -75,14 +75,14 @@ public function constInt(IntType ty, int val) returns Value {
 
 # Corresponds to llvm::Module class
 public class Module {
-    private final Function[] functions = [];
+    private final FunctionDefn[] functions = [];
 
     public function init() {
     }
 
     // Corresponds to LLVMAddFunction
-    public function addFunction(string name, FunctionType fnType) returns Function {
-        Function fn = new Function(name, fnType);
+    public function addFunction(string name, FunctionType fnType) returns FunctionDefn {
+        FunctionDefn fn = new FunctionDefn(name, fnType);
         self.functions.push(fn);
         return fn;
     }
@@ -114,18 +114,33 @@ public class Module {
 public type LinkageType "internal"|"external";
 
 # Corresponds to an LLVMValueRef that corresponds to an llvm::Function
-public distinct class Function {
+public type Function FunctionDecl|FunctionDefn;
+
+public class FunctionDecl {
+    final false isDefn = false;
+    final FunctionType functionType;
+    final string functionName;
+
+    function init(string functionName, FunctionType functionType) {
+        self.functionName = functionName;
+        self.functionType = functionType;
+    }
+}
+
+public class FunctionDefn {
+    final true isDefn = true;
+    final FunctionType functionType;
+    final string functionName;
+
     private BasicBlock[] basicBlocks = [];
     private int varCount = 0;
     private int labelCount = 0;
-    private string functionName;
-    private RetType returnType;
     private Value[] paramValues;
     private LinkageType linkageType = "external";
 
     function init(string functionName, FunctionType functionType) {
         self.functionName = functionName;
-        self.returnType = functionType.returnType;
+        self.functionType = functionType;
         self.paramValues = [];
         foreach var paramType in functionType.paramTypes {
             string register = self.genReg();
@@ -158,7 +173,7 @@ public distinct class Function {
         if self.linkageType != "external" {
             words.push(self.linkageType);
         }
-        words.push(typeToString(self.returnType));
+        words.push(typeToString(self.functionType.returnType));
         words.push("@" + self.functionName);
         words.push("(");
         foreach int i in 0 ..< self.paramValues.length() {
@@ -197,24 +212,7 @@ public distinct class Function {
         string reg = "%" + "R" + self.varCount.toString();
         self.varCount += 1;
         return reg;
-    }
-
-    function returnsValue() returns boolean {
-        return self.returnType != "void";
-    }
-
-    function ref() returns string {
-        return "@" + self.functionName;
-    }
-
-    function paramCount() returns int {
-        return self.paramValues.length();
-    }
-
-    function getReturnType() returns RetType {
-        return self.returnType;
-    }
-
+    } 
 }
 
 // Used with Builder.binaryInt
@@ -286,20 +284,21 @@ public class Builder {
     // Corresponds to LLVMBuildCall
     // Returns () if there is no result i.e. function return type is void
     public function call(Function fn, Value[] args) returns Value? {
-        if fn.paramCount() != args.length() {
-            panic error(string `Number of arguments is invalid for function ${fn.ref()}`);
+        if fn.functionType.paramTypes.length() != args.length() {
+            panic error(string `Number of arguments is invalid for function ${fn.functionName}`);
         }
         BasicBlock bb = self.bb();
         string reg = "";
         string[] insnWords = [];
-        if fn.returnsValue() {
+        RetType retType = fn.functionType.returnType;
+        if retType != "void" {
             reg = bb.func.genReg();
             insnWords.push(reg);
             insnWords.push("=");
         }
         insnWords.push("call");
-        insnWords.push(typeToString(fn.getReturnType()));
-        insnWords.push(fn.ref());
+        insnWords.push(typeToString(retType));
+        insnWords.push("@" + fn.functionName);
         insnWords.push("(");
         foreach int i in 0 ..< args.length() {
             final Value arg = args[i];
@@ -311,13 +310,8 @@ public class Builder {
         }
         insnWords.push(")");
         bb.addInsn(...insnWords);
-        if fn.returnsValue() {
-            RetType returnType = fn.getReturnType();
-            if returnType is Type {
-                return new Value(returnType, reg);
-            } else {
-                panic error("Function return type is not a Type");
-            }
+        if retType != "void" {
+            return new Value(retType, reg);
         }
     }
 
@@ -349,12 +343,12 @@ const INDENT = "  ";
 
 # Corresponds to LLVMBasicBlockRef
 public distinct class BasicBlock {
-    final Function func;
+    final FunctionDefn func;
     private final string label;
     private final string[] lines = [];
     private boolean isReferenced = false;
 
-    function init(string label, Function func) {
+    function init(string label, FunctionDefn func) {
         self.label = label;
         self.func = func;
     }
