@@ -239,7 +239,9 @@ public class FunctionDefn {
 // Used with Builder.binaryInt
 // XXX not a good name: maybe BinaryIntOp
 // Subtype of LLVMOpcode
-public type BinaryInsn "add"|"mul"|"sub"|"sdiv"|"srem";
+public type BinaryInsn BinaryArithmeticOp|BinaryBooleanOp;
+public type BinaryArithmeticOp "add"|"mul"|"sub"|"sdiv"|"srem";
+public type BinaryBooleanOp "xor"|"or"|"and";
 // Corresponds to LLVMIntPredicate
 public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sle";
 

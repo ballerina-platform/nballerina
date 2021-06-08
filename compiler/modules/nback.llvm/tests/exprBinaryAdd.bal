@@ -25,7 +25,19 @@ function exprBinaryAdd() returns Module {
         panic error("Return void from non-void function");
     }
     Value R8 = builder.extractValue(R7, 0);
+    Value R9 = builder.extractValue(R7, 1);
+    Value R10 = builder.binaryInt("xor", R9, constInt("i1", 1));
+
+    BasicBlock ifTrue = foo.appendBasicBlock();
+    BasicBlock ifFalse = foo.appendBasicBlock();
+
+    builder.condBr(R10,ifTrue, ifFalse);
+
+    builder.positionAtEnd(ifTrue);
     builder.ret(R8);
+
+    builder.positionAtEnd(ifFalse);
+    _ = builder.call(abort,[]);
     return m;
 }
 
