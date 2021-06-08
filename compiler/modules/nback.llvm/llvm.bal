@@ -21,7 +21,20 @@ public type PointerType readonly & record {|
     Alignment align;
 |};
 
-public type Type IntType|PointerType;
+// Corresponds to llvm::StructType
+public type StructType readonly & record {
+    IntType[] memberTypes;
+};
+
+public function structType(IntType[] memberTypes) returns StructType {
+    return {memberTypes: memberTypes.cloneReadOnly()};
+}
+
+function getTypeAtIndex(StructType ty, int index) returns IntType {
+    return ty.memberTypes[index];
+}
+
+public type Type IntType|PointerType|StructType;
 
 // A RetType is valid only as the return type of a function
 public type RetType Type|"void";
@@ -201,6 +214,7 @@ public distinct class Function {
     function getReturnType() returns RetType {
         return self.returnType;
     }
+
 }
 
 // Used with Builder.binaryInt
@@ -307,6 +321,19 @@ public class Builder {
         }
     }
 
+    // Corresponds to LLVMBuildExtractValue
+    public function extractValue(Value value, int index) returns Value {
+        if value.ty is StructType {
+            BasicBlock bb = self.bb();
+            string reg = bb.func.genReg();
+            bb.addInsn(reg, "=", "extractvalue", typeToString(value.ty), value.operand, ",", index.toString());
+            Type elementType = getTypeAtIndex(<StructType>value.ty, index);
+            return new Value(elementType, reg);
+        } else {
+            panic error("Extract value from non aggregate data type");
+        }
+    }
+
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
         if tem is () {
@@ -375,6 +402,18 @@ function typeToString(RetType ty) returns string {
     string typeTag;
     if ty is PointerType {
         typeTag = ty.pointsTo + "*";
+    } else if ty is StructType {
+        string[] typeStringBody = [];
+        typeStringBody.push("{");
+        foreach int i in 0 ..< ty.memberTypes.length() {
+            final Type elementType = ty.memberTypes[i];
+            if i > 0 {
+                typeStringBody.push(",");
+            }
+            typeStringBody.push(typeToString(elementType));
+        }
+        typeStringBody.push("}");
+        typeTag = createLine(typeStringBody, "");
     } else {
         typeTag = ty;
     }
