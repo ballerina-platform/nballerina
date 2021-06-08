@@ -140,19 +140,13 @@ public distinct class Function {
 
     function output(Output out) {
         out.push(self.header());
-        if !self.isEmptyFunction() {
-            self.outputBody(out);
-            out.push("}");
-        }
+        self.outputBody(out);
+        out.push("}");
     }
 
     function header() returns string {
         string[] words = [];
-        if self.isEmptyFunction() {
-            words.push("declare");
-        } else {
-            words.push("define");
-        }
+        words.push("define");
         if self.linkageType != "external" {
             words.push(self.linkageType);
         }
@@ -168,9 +162,7 @@ public distinct class Function {
             words.push(param.operand);
         }
         words.push(")");
-        if !self.isEmptyFunction() {
-            words.push("{");
-        }
+        words.push("{");
         return createLine(words);
     }
 
@@ -215,9 +207,6 @@ public distinct class Function {
         return self.returnType;
     }
 
-    function isEmptyFunction() returns boolean {
-        return self.basicBlocks.length() == 0;
-    }
 }
 
 // Used with Builder.binaryInt

@@ -1,4 +1,5 @@
-declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %R0, i64 %R1)
+define {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %R0, i64 %R1) {
+}
 define i64 @foo (i64 %R0, i64 %R1) {
   %R2 = alloca i64, align 8
   %R3 = alloca i64, align 8
