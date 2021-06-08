@@ -377,7 +377,7 @@ public class Builder {
             }
             BasicBlock bb = self.bb();
             string reg = bb.func.genReg();
-            bb.addInsn(reg, "=", "icmp", typeToString(lhs.ty), lhs.operand, rhs.operand);
+            bb.addInsn(reg, "=", "icmp", typeToString(lhs.ty), lhs.operand,",", rhs.operand);
             return new Value("i1", reg);
         } else {
             panic error("Integer comparison between incompatible types");
