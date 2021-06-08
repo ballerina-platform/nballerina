@@ -1,6 +1,6 @@
 import ballerina/test;
 
-@test:Config
+@test:Config {enable: false}
 function testExprSimpleConst() {
 
     assertExpr("()", {value: ()});
@@ -10,14 +10,14 @@ function testExprSimpleConst() {
     assertExpr("false", {value: false});
 }
 
-@test:Config
+@test:Config {enable: false}
 function testExprUnary() {
 
     assertExpr("-()", {op: "-", operand: {value: ()}}); // Invalid Sematics
     assertExpr("-2", {value: -2});
 }
 
-@test:Config
+@test:Config {enable: false}
 function testExprBinary() {
 
     assertExpr("12 + 23", {op: "+", left: {value: 12}, right: {value: 23}});
@@ -27,7 +27,7 @@ function testExprBinary() {
     assertExpr("12 % 23", {op: "%", left: {value: 12}, right: {value: 23}});
 }
 
-@test:Config
+@test:Config {enable: false}
 function testExprVarRef() {
 
     assertExpr("x", {varName: "x"});
@@ -35,7 +35,7 @@ function testExprVarRef() {
     assertExpr("x1a", {varName: "x1a"});
 }
 
-@test:Config
+@test:Config {enable: false}
 function testExprFunctionCall() {
 
     assertExpr("x()", {funcName: "x", args: [], pos: {lineNumber: 1, indexInLine: 0}});
@@ -43,7 +43,7 @@ function testExprFunctionCall() {
     assertExpr("xxx(123, 12 + 23)", {funcName: "xxx", args: [{value: 123}, {op: "+", left: {value: 12}, right: {value: 23}}], pos: {lineNumber: 1, indexInLine: 0}});
 }
 
-@test:Config
+@test:Config {enable: false}
 function testExprGroup() {
 
     assertExpr("(())", {value: ()});

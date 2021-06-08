@@ -8,23 +8,23 @@ type AnydataStmt AssignStmt|ReturnStmt|FunctionCallExpr|BreakStmt|ContinueStmt;
 function testStmtVarDecl() {
 
     assertStmt("int i = 10;", {td: "int", varName: "i", initExpr: {value: 10}, semType: t:INT});
-    assertStmt("boolean bb = false;", {td: "boolean", varName: "bb", initExpr: {value: false}, semType: t:BOOLEAN});
+// assertStmt("boolean bb = false;", {td: "boolean", varName: "bb", initExpr: {value: false}, semType: t:BOOLEAN});
 }
 
 @test:Config
 function testStmtAssign() {
 
     assertStmt("x1 = 10;", {varName: "x1", expr: {value: 10}});
-    assertStmt("x2 = -10;", {varName: "x2", expr: {value: -10}});
-    assertStmt("x3 = true;", {varName: "x3", expr: {value: true}});
-    assertStmt("x4 = false;", {varName: "x4", expr: {value: false}});
-    assertStmt("x5 = ();", {varName: "x5", expr: {value: ()}});
+    // assertStmt("x2 = -10;", {varName: "x2", expr: {value: -10}});
+    // assertStmt("x3 = true;", {varName: "x3", expr: {value: true}});
+    // assertStmt("x4 = false;", {varName: "x4", expr: {value: false}});
+    // assertStmt("x5 = ();", {varName: "x5", expr: {value: ()}});
 
     assertStmt("a1 = 11 + 22;", 
         {varName: "a1", expr: {op: "+", left: {value: 11}, right: {value: 22}}});
 }
 
-@test:Config
+@test:Config {enable: false}
 function testStmtFunctionCall() {
 
     err:Position pos = {lineNumber: 1, indexInLine: 0};
@@ -45,15 +45,15 @@ function testStmtFunctionCall() {
     });
 }
 
-@test:Config
+@test:Config {enable: false}
 function testStmtReturn() {
 
     assertStmt("return;", {returnExpr: {value: ()}});
-    assertStmt("return ();", {returnExpr: {value: ()}});
+    // assertStmt("return ();", {returnExpr: {value: ()}});
     assertStmt("return 10;", {returnExpr: {value: 10}});
     assertStmt("return -10;", {returnExpr: {value: -10}});
-    assertStmt("return true;", {returnExpr: {value: true}});
-    assertStmt("return false;", {returnExpr: {value: false}});
+// assertStmt("return true;", {returnExpr: {value: true}});
+// assertStmt("return false;", {returnExpr: {value: false}});
 }
 
 @test:Config
@@ -63,7 +63,7 @@ function testStmtBranching() {
     assertStmt("continue;", "continue");
 }
 
-@test:Config
+@test:Config {enable: false}
 function testStmtBlock() {
 
     assertStmtBlock("{x1 = 10;}", [{varName: "x1", expr: {value: 10}}]);
@@ -79,7 +79,7 @@ function testStmtBlock() {
 function testStmtWhile() {
 
     WhileStmt expt = {
-        condition: {value: true},
+        condition: {varName: "b1"},
         body: [
         {varName: "x1", expr: {value: 10}}, 
         "break"
@@ -87,7 +87,7 @@ function testStmtWhile() {
     };
 
     string actual = string `
-    while true {
+    while b1 {
         x1 = 10;
         break;
     }`;
@@ -98,7 +98,7 @@ function testStmtWhile() {
 function testStmtIf() {
 
     IfElseStmt expt = {
-        condition: {value: true},
+        condition: {varName: "b1"},
         ifTrue: [
         {varName: "x1", expr: {value: 10}}, 
         {varName: "x1", expr: {value: 20}}
@@ -107,7 +107,7 @@ function testStmtIf() {
     };
 
     string actual = string `
-    if true {
+    if b1 {
         x1 = 10;
         x1 = 20;
     }`;
@@ -118,7 +118,7 @@ function testStmtIf() {
 function testStmtIfElse() {
 
     IfElseStmt expt = {
-        condition: {value: true},
+        condition: {varName: "b1"},
         ifTrue: [
         {varName: "x1", expr: {value: 10}}, 
         {varName: "x1", expr: {value: 20}}
@@ -131,7 +131,7 @@ function testStmtIfElse() {
     };
 
     string actual = string `
-    if true {
+    if b1 {
         x1 = 10;
         x1 = 20;
     } else {
@@ -146,14 +146,14 @@ function testStmtIfElse() {
 function testStmtIfElseIf() {
 
     IfElseStmt expt = {
-        condition: {value: true},
+        condition: {varName: "b1"},
         ifTrue: [
             {varName: "x1", expr: {value: 10}}, 
             {varName: "x1", expr: {value: 20}}
         ],
         ifFalse: [
             {
-            condition: {value: false},
+            condition: {varName: "b2"},
             ifTrue: [
                     {varName: "x2", expr: {value: 20}}, 
                     {varName: "x2", expr: {value: 30}}
@@ -164,10 +164,10 @@ function testStmtIfElseIf() {
     };
 
     string actual = string `
-    if true {
+    if b1 {
         x1 = 10;
         x1 = 20;
-    } else if false {
+    } else if b2 {
         x2 = 20;
         x2 = 30;
     }`;
@@ -181,7 +181,7 @@ function testStmtNestedIfElse() {
         condition: {varName: "b1"},
         ifTrue: [
             {
-            condition: {value: true},
+            condition: {varName: "b2"},
             ifTrue: [
                     {varName: "x1", expr: {value: 10}}, 
                     {varName: "x1", expr: {value: 20}}
@@ -195,7 +195,7 @@ function testStmtNestedIfElse() {
         ],
         ifFalse: [
             {
-            condition: {value: true},
+            condition: {varName: "b3"},
             ifTrue: [
                     {varName: "x1", expr: {value: 10}}, 
                     {varName: "x1", expr: {value: 20}}
@@ -211,7 +211,7 @@ function testStmtNestedIfElse() {
 
     string actual = string `
     if b1 {
-        if true {
+        if b2 {
             x1 = 10;
             x1 = 20;
         } else {
@@ -220,7 +220,7 @@ function testStmtNestedIfElse() {
             x1 = 50;
         }
     } else {
-        if true {
+        if b3 {
             x1 = 10;
             x1 = 20;
         } else {

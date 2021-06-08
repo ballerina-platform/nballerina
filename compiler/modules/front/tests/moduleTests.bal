@@ -47,7 +47,7 @@ function foo(int i, boolean b) returns int{
     assertModuleLevelDef(actual, expt);
 }
 
-@test:Config
+@test:Config {enable: false}
 function testModule1() {
 
     string source1 = string `

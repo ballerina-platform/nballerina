@@ -69,12 +69,12 @@ function finishStmtWithIdentifier(Tokenizer tok, Identifier identifier)
             check tok.expect(";");
             return stmt;
         }
-        "(" => {
-            check tok.advance();
-            FunctionCallExpr stmt = check finishFunctionCallExpr(tok, identifier);
-            check tok.expect(";");
-            return stmt;
-        }
+        // "(" => {
+        //     check tok.advance();
+        //     FunctionCallExpr stmt = check finishFunctionCallExpr(tok, identifier);
+        //     check tok.expect(";");
+        //     return stmt;
+        // }
         [IDENTIFIER, _] => {
             // TODO: Handle other types
             string td = identifier.identifier;
