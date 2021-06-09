@@ -99,6 +99,13 @@ public class Module {
         return fn;
     }
 
+    public function addExternalFunction(FunctionDefn fn) returns FunctionDecl {
+        if self.functionDecls.hasKey(fn.functionName){
+            panic error ("This module already has a function by the same name");
+        }
+       return self.addFunctionDecl(fn.functionName, fn.functionType); 
+    }
+
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
         if self.functionDecls.hasKey(name) {
