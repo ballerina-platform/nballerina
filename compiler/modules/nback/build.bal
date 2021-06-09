@@ -153,12 +153,12 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
     }
 }
 
-final readonly & map<string> arithmeticInsnNames = {
+final readonly & map<llvm:BinaryInsn> arithmeticInsnNames = {
     "+": "add",
     "-": "sub",
     "*": "mul",
-    "/": "div",
-    "%": "rem"
+    "/": "sdiv",
+    "%": "srem"
 };
 
 function buildArithmeticBinaryInsnName(bir:ArithmeticBinaryOp op) returns llvm:BinaryInsn {
