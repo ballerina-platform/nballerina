@@ -1,12 +1,9 @@
 import ballerina/test;
 
-@test:Config {enable: false}
-function testExprSimpleConst() {
-
+@test:Config {}
+function testIntLiteral() {
     assertExpr("123", {value: 123});
-    //assertExpr("\"hello world\"", {value: "hello world"});
-    assertExpr("true", {value: true});
-    assertExpr("false", {value: false});
+    assertExpr("0", {value: 0});
 }
 
 @test:Config {enable: false}
@@ -17,7 +14,6 @@ function testUnaryExpr() {
 
 @test:Config {}
 function testMultiplicativeExpr() {
-
     assertExpr("12 * 23", {op: "*", left: {value: 12}, right: {value: 23}});
     assertExpr("12 / 23", {op: "/", left: {value: 12}, right: {value: 23}});
     assertExpr("12 % 23", {op: "%", left: {value: 12}, right: {value: 23}});
@@ -29,9 +25,8 @@ function testAdditiveExpr() {
     assertExpr("12 - 23", {op: "-", left: {value: 12}, right: {value: 23}});
 }
 
-@test:Config {enable: false}
+@test:Config {}
 function testVarRefExpr() {
-
     assertExpr("x", {varName: "x"});
     assertExpr("x1", {varName: "x1"});
     assertExpr("x1a", {varName: "x1a"});
@@ -71,6 +66,12 @@ function testNilConst() {
 function testBooleanConst() {
     assertExpr("(true)", {value: true});
     assertExpr("(false)", {value: false});
+    assertExpr("true", {value: true});
+    assertExpr("false", {value: false});
 }
 
+@test:Config {enable: false}
+function testStringLiteral() {
+    //assertExpr("\"hello world\"", {value: "hello world"});
 
+}
