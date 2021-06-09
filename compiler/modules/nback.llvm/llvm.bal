@@ -90,6 +90,15 @@ public class Module {
         return fn;
     }
 
+    public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl{
+        if self.functionDecls.hasKey(name){
+            return self.functionDecls.get(name);
+        }
+        FunctionDecl fn = new(name, fnType);
+        self.functionDecls[name] = fn;
+        return fn;
+    }
+
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
         if self.functionDecls.hasKey(name) {
