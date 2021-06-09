@@ -1,5 +1,5 @@
 public function test(int x, int y) returns int {
-  int diff = x - y;
-  return diff;
+  int div = x / y;
+  return div;
 }
 

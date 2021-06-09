@@ -4,8 +4,11 @@ import wso2/nballerina.err;
 
 type ModuleLevelDef TypeDef|FunctionDef;
 
+type Visibility "public"?;
+
 type FunctionDef record {|
     readonly string name;
+    Visibility vis;
     FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
@@ -86,6 +89,7 @@ type SimpleConstExpr record {|
 
 type TypeDef record {|
     readonly string name;
+    Visibility vis;
     TypeDesc td;
     err:Position pos;
     t:SemType? semType = ();

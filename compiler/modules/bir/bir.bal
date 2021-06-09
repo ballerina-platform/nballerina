@@ -34,6 +34,8 @@ public type FunctionDefn readonly & record {|
     string name;
     # The signature of the function
     FunctionSignature signature;
+    # Is it public?
+    boolean isPublic;
 |};
 
 

@@ -110,8 +110,7 @@ public class Module {
 }
 
 // Corresponds to LLVMLinkage enum
-// XXX should not have Type suffix
-public type LinkageType "internal"|"external";
+public type Linkage "internal"|"external";
 
 # Corresponds to an LLVMValueRef that corresponds to an llvm::Function
 public type Function FunctionDecl|FunctionDefn;
@@ -136,7 +135,7 @@ public class FunctionDefn {
     private int varCount = 0;
     private int labelCount = 0;
     private Value[] paramValues;
-    private LinkageType linkageType = "external";
+    private Linkage linkage = "external";
 
     function init(string functionName, FunctionType functionType) {
         self.functionName = functionName;
@@ -155,10 +154,9 @@ public class FunctionDefn {
     }
 
     // Corresponds to LLVMSetLinkage
-    // XXX should not have "Type" suffix
     // XXX Maybe better done with included record parameter
-    public function setLinkageType(LinkageType linkageType) {
-        self.linkageType = linkageType;
+    public function setLinkage(Linkage linkage) {
+        self.linkage = linkage;
     }
 
     function output(Output out) {
@@ -170,8 +168,8 @@ public class FunctionDefn {
     function header() returns string {
         string[] words = [];
         words.push("define");
-        if self.linkageType != "external" {
-            words.push(self.linkageType);
+        if self.linkage != "external" {
+            words.push(self.linkage);
         }
         words.push(typeToString(self.functionType.returnType));
         words.push("@" + self.functionName);

@@ -59,6 +59,9 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
         llvm:FunctionType ty = check buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
         llvm:FunctionDefn llFunc = llMod.addFunction(defn.name, ty);
+        if !defn.isPublic {
+            llFunc.setLinkage("internal");
+        }
         llFuncs.push(llFunc);
         llFuncMap[defn.name] = llFunc;
     }  

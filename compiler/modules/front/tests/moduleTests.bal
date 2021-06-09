@@ -18,7 +18,8 @@ function foo( ) {
         pos: pos,
         body: [
             {varName: "i", expr: {value: 10}}
-        ]
+        ],
+        vis: ()
     };
     assertModuleLevelDef(actual, expt);
 }
@@ -42,7 +43,8 @@ function foo(int i, boolean b) returns int{
         body: [
             {varName: "i", expr: {value: 10}}, 
             {returnExpr: {varName: "i"}}
-        ]
+        ],
+        vis: ()
     };
     assertModuleLevelDef(actual, expt);
 }
@@ -68,7 +70,8 @@ function bar(int i, boolean b) returns boolean{
         pos: fooPos,
         body: [
             {returnExpr: {value: 10}}
-        ]
+        ],
+        vis: ()
     };
 
     err:Position barPos = {lineNumber: 6, indexInLine: 9};
@@ -79,7 +82,8 @@ function bar(int i, boolean b) returns boolean{
         pos: barPos,
         body: [
             {returnExpr: {value: true}}
-        ]
+        ],
+        vis: ()
     };
     assertSource(source1, [foo, bar]);
 

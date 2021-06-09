@@ -25,7 +25,8 @@ class Module {
                 functionDefns.push({
                     name: def.name,
                     // casting away nil here, because it was filled in by `convertTypes`
-                    signature: <bir:FunctionSignature>def.signature 
+                    signature: <bir:FunctionSignature>def.signature,
+                    isPublic: def.vis == "public"
                 });
             }
         }

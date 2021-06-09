@@ -42,6 +42,7 @@ type Keyword
     | "while"
     | "continue"
     | "break"
+    | "public"
     ;
 
 const WS = "\n\r\t ";

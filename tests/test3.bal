@@ -1,4 +1,4 @@
-function test(int a, int b) returns int {
+public function test(int a, int b) returns int {
   return foo(a, b);
 }
 
