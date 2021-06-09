@@ -12,7 +12,7 @@ define i64 @test (i64 %R0, i64 %R1) {
   %R9 = load i64, i64* %R4, align 8
   ret i64 %R9
 }
-define i64 @foo (i64 %R0, i64 %R1) {
+define internal i64 @foo (i64 %R0, i64 %R1) {
   %R2 = alloca i64, align 8
   %R3 = alloca i64, align 8
   %R4 = alloca i64, align 8
