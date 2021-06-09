@@ -23,13 +23,13 @@ function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
-    Expr expr = check parsePrimaryExpr(tok);
+    Expr expr = check parseUnaryExpr(tok);
     while true {
         Token? t = tok.current();
         if t is ("*"|"/"|"%") {
             BinaryExprOp op = t;
             check tok.advance();
-            Expr right = check parsePrimaryExpr(tok);
+            Expr right = check parseUnaryExpr(tok);
             BinaryExpr bin = { op, left: expr, right };
             expr = bin;
         } 
@@ -38,6 +38,17 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
         }
     }
     return expr;
+}
+
+function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Token? t = tok.current();
+    if t is "-" {
+        check tok.advance();
+        Expr operand = check parseUnaryExpr(tok);
+        UnaryExpr expr = { op: t, operand };
+        return expr;
+    }
+    return parsePrimaryExpr(tok);
 }
 
 function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {

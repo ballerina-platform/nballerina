@@ -6,10 +6,10 @@ function testIntLiteral() {
     assertExpr("0", {value: 0});
 }
 
-@test:Config {enable: false}
+@test:Config {}
 function testUnaryExpr() {
-    assertExpr("-2", {value: -2});
-    assertExpr("(-2)", {value: -2});
+    assertExpr("-2", {op: "-", operand: {value: 2}});
+    assertExpr("(-2)", {op: "-", operand: {value: 2}});
 }
 
 @test:Config {}
