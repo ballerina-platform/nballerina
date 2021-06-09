@@ -79,6 +79,7 @@ public type IntrinsicFunctionName "sadd.with.overflow.i64"|"ssub.with.overflow.i
 public class Module {
     private final FunctionDefn[] functions = [];
     private final map<FunctionDecl> functionDecls = {};
+    private final FunctionDecl[] externalFunctions = [];
 
     public function init() {
     }
@@ -91,18 +92,12 @@ public class Module {
     }
 
     public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl{
-        if self.functionDecls.hasKey(name){
-            return self.functionDecls.get(name);
-        }
         FunctionDecl fn = new(name, fnType);
-        self.functionDecls[name] = fn;
+        self.externalFunctions.push(fn);
         return fn;
     }
 
     public function addExternalFunction(FunctionDefn fn) returns FunctionDecl {
-        if self.functionDecls.hasKey(fn.functionName){
-            panic error ("This module already has a function by the same name");
-        }
        return self.addFunctionDecl(fn.functionName, fn.functionType); 
     }
 
@@ -150,6 +145,9 @@ public class Module {
     function output(Output out) {
         foreach var decl in self.functionDecls {
             decl.output(out);
+        }
+        foreach var externFn in self.externalFunctions {
+            externFn.output(out);
         }
         foreach var f in self.functions {
             f.output(out);
