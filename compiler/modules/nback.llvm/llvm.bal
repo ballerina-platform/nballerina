@@ -98,6 +98,16 @@ public class Module {
                 self.functionDeclns.push(fn);
                 return fn;
             }
+            "ssub.with.overflow.i64" => {
+                FunctionDecl fn = new ("llvm.ssub.with.overflow.i64", {returnType: overflowArithmeticReturnType, paramTypes: ["i64", "i64"]});
+                self.functionDeclns.push(fn);
+                return fn;
+            }
+            "smul.with.overflow.i64" => {
+                FunctionDecl fn = new ("llvm.smul.with.overflow.i64", {returnType: overflowArithmeticReturnType, paramTypes: ["i64", "i64"]});
+                self.functionDeclns.push(fn);
+                return fn;
+            }
         }
         panic error ("Unknown intrinsic function");
     }
