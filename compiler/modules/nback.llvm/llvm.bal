@@ -5,6 +5,7 @@
 // private members that are handles referring to the
 // C void* values.
 
+import nballerina.err;
 import ballerina/io;
 
 // "i64" corresponds to  LLVMInt64Type
@@ -77,7 +78,7 @@ public type IntrinsicFunctionName "sadd.with.overflow.i64"|"ssub.with.overflow.i
 # Corresponds to llvm::Module class
 public class Module {
     private final FunctionDefn[] functions = [];
-    private final FunctionDecl[] functionDeclns = [];
+    private final map<FunctionDecl> functionDecls = {};
 
     public function init() {
     }
@@ -91,25 +92,29 @@ public class Module {
 
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
+        if self.functionDecls.hasKey(name) {
+            return self.functionDecls.get(name);
+        }
         StructType overflowArithmeticReturnType = structType(["i64", "i1"]);
+        FunctionType overflowArithmeticFunctionType = {returnType: overflowArithmeticReturnType, paramTypes: ["i64", "i64"]};
+        FunctionDecl? fn = ();
         match name {
             "sadd.with.overflow.i64" => {
-                FunctionDecl fn = new ("llvm.sadd.with.overflow.i64", {returnType:overflowArithmeticReturnType, paramTypes:["i64","i64"]});
-                self.functionDeclns.push(fn);
-                return fn;
+                fn = new ("llvm.sadd.with.overflow.i64", overflowArithmeticFunctionType);
             }
             "ssub.with.overflow.i64" => {
-                FunctionDecl fn = new ("llvm.ssub.with.overflow.i64", {returnType: overflowArithmeticReturnType, paramTypes: ["i64", "i64"]});
-                self.functionDeclns.push(fn);
-                return fn;
+                fn = new ("llvm.ssub.with.overflow.i64", overflowArithmeticFunctionType);
             }
             "smul.with.overflow.i64" => {
-                FunctionDecl fn = new ("llvm.smul.with.overflow.i64", {returnType: overflowArithmeticReturnType, paramTypes: ["i64", "i64"]});
-                self.functionDeclns.push(fn);
-                return fn;
+                fn = new ("llvm.smul.with.overflow.i64", overflowArithmeticFunctionType);
             }
         }
-        panic error ("Unknown intrinsic function");
+        if fn is FunctionDecl {
+            self.functionDecls[name] = fn;
+            return fn;
+        } else {
+            return err:unreached();
+        }
     }
 
     // Does not correspond directly any LLVM function
@@ -127,8 +132,8 @@ public class Module {
     }
 
     function output(Output out) {
-        foreach var functionDcln in self.functionDeclns {
-            functionDcln.output(out);
+        foreach var decl in self.functionDecls {
+            decl.output(out);
         }
         foreach var f in self.functions {
             f.output(out);
