@@ -10,14 +10,14 @@ type TestCase [json, string];
 function testSemTypeToString() returns TestCase[]|error? {
     json j = check io:fileReadJson("modules/types.emit/tests/resources/semTypeToString.json");
     TestCase[] tests = check j.fromJsonWithType();
-    string[] resutls = [];
-    string[] expecteds = [];
+    string[] results = [];
+    string[] expectedResults = [];
     foreach var [typeJson, expected] in tests {
         t:Env env = new;
         t:SemType t = check j:parse(env, typeJson);
-        resutls.push(semTypeToString(env, t));
-        expecteds.push(expected);
+        results.push(semTypeToString(env, t));
+        expectedResults.push(expected);
     }
     // JBUG assertEquals should print a useful diff for anydata
-    test:assertEquals("\n".'join(...resutls), "\n".'join(...expecteds));
+    test:assertEquals("\n".'join(...results), "\n".'join(...expectedResults));
 }
