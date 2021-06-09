@@ -72,10 +72,12 @@ public readonly class PointerValue {
 public function constInt(IntType ty, int val) returns Value {
     return new Value(ty, val.toString());
 }
+public type IntrinsicFunctionName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
 
 # Corresponds to llvm::Module class
 public class Module {
     private final FunctionDefn[] functions = [];
+    private final FunctionDecl[] functionDeclns = [];
 
     public function init() {
     }
@@ -85,6 +87,19 @@ public class Module {
         FunctionDefn fn = new FunctionDefn(name, fnType);
         self.functions.push(fn);
         return fn;
+    }
+
+    // Corresponds to LLVMGetIntrinsicDeclaration
+    public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
+        StructType overflowArithmeticReturnType = structType(["i64", "i1"]);
+        match name {
+            "sadd.with.overflow.i64" => {
+                FunctionDecl fn = new ("llvm.sadd.with.overflow.i64", {returnType:overflowArithmeticReturnType, paramTypes:["i64","i64"]});
+                self.functionDeclns.push(fn);
+                return fn;
+            }
+        }
+        panic error ("Unknown intrinsic function");
     }
 
     // Does not correspond directly any LLVM function
@@ -102,6 +117,9 @@ public class Module {
     }
 
     function output(Output out) {
+        foreach var functionDcln in self.functionDeclns {
+            functionDcln.output(out);
+        }
         foreach var f in self.functions {
             f.output(out);
         }
@@ -123,6 +141,23 @@ public class FunctionDecl {
     function init(string functionName, FunctionType functionType) {
         self.functionName = functionName;
         self.functionType = functionType;
+    }
+
+    function output(Output out) {
+        string[] words = [];
+        words.push("declare");
+        words.push(typeToString(self.functionType.returnType));
+        words.push("@" + self.functionName);
+        words.push("(");
+        foreach int i in 0 ..< self.functionType.paramTypes.length() {
+            final Type ty = self.functionType.paramTypes[i];
+            if i > 0 {
+                words.push(",");
+            }
+            words.push(typeToString(ty));
+        }
+        words.push(")");
+        out.push(createLine(words));
     }
 }
 

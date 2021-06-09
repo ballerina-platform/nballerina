@@ -3,7 +3,7 @@ import ballerina/test;
 function exprBinaryAdd() returns Module {
     Module m = new ();
     StructType addReturnType = structType(["i64", "i1"]);
-    FunctionDefn add = m.addFunction("llvm.sadd.with.overflow.i64", {returnType: addReturnType, paramTypes: ["i64", "i64"]});
+    Function add = m.getIntrinsicDeclaration("sadd.with.overflow.i64");
 
     FunctionDefn foo = m.addFunction("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
