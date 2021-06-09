@@ -34,5 +34,8 @@ target
 # Assembler files
 *.s
 
+# Object files
+*.o
+
 # Default output from C compiler
 a.out
