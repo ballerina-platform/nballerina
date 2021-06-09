@@ -11,32 +11,36 @@ function testExprSimpleConst() {
 }
 
 @test:Config {enable: false}
-function testExprUnary() {
+function testUnaryExpr() {
 
     assertExpr("-()", {op: "-", operand: {value: ()}}); // Invalid Sematics
     assertExpr("-2", {value: -2});
 }
 
 @test:Config {enable: false}
-function testExprBinary() {
+function testMultiplicativeExpr() {
 
-    assertExpr("12 + 23", {op: "+", left: {value: 12}, right: {value: 23}});
-    assertExpr("12 - 23", {op: "-", left: {value: 12}, right: {value: 23}});
     assertExpr("12 * 23", {op: "*", left: {value: 12}, right: {value: 23}});
     assertExpr("12 / 23", {op: "/", left: {value: 12}, right: {value: 23}});
     assertExpr("12 % 23", {op: "%", left: {value: 12}, right: {value: 23}});
 }
 
+@test:Config {}
+function testAdditiveExpr() {
+    assertExpr("12 + 23", {op: "+", left: {value: 12}, right: {value: 23}});
+    assertExpr("12 - 23", {op: "-", left: {value: 12}, right: {value: 23}});
+}
+
 @test:Config {enable: false}
-function testExprVarRef() {
+function testVarRefExpr() {
 
     assertExpr("x", {varName: "x"});
     assertExpr("x1", {varName: "x1"});
     assertExpr("x1a", {varName: "x1a"});
 }
 
-@test:Config {enable: false}
-function testExprFunctionCall() {
+@test:Config {}
+function testFunctionCallExpr() {
 
     assertExpr("x()", {funcName: "x", args: [], pos: {lineNumber: 1, indexInLine: 0}});
     assertExpr("xx(1,2)", {funcName: "xx", args: [{value: 1}, {value: 2}], pos: {lineNumber: 1, indexInLine: 0}});
@@ -44,7 +48,7 @@ function testExprFunctionCall() {
 }
 
 @test:Config {enable: false}
-function testExprGroup() {
+function testGroupExpr() {
 
     assertExpr("(())", {value: ()});
     assertExpr("(123)", {value: 123});

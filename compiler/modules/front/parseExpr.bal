@@ -22,11 +22,17 @@ function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
     return expr;
 }
 
-function parsePrimaryExpr(Tokenizer tok) returns VarRefExpr|SimpleConstExpr|err:Syntax {
+function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
-        VarRefExpr expr = {varName: t[1]};
+        err:Position pos = tok.currentPos();
+        string identifier = t[1];
+        VarRefExpr expr = { varName: identifier };
         check tok.advance();
+        t = tok.current();
+        if t == "(" {
+            return finishFunctionCallExpr(tok, identifier, pos);
+        }
         return expr;
     } 
     else if t is [DECIMAL_NUMBER, string] {
@@ -39,9 +45,27 @@ function parsePrimaryExpr(Tokenizer tok) returns VarRefExpr|SimpleConstExpr|err:
 }
 
 // current token is the "("
-function finishFunctionCallExpr(Tokenizer tok, string identifier, err:Position pos) returns FunctionCallExpr|err:Syntax {
+function finishFunctionCallExpr(Tokenizer tok, string funcName, err:Position pos) returns FunctionCallExpr|err:Syntax {
     check tok.advance();
-    return err:syntax("cannot parse function calls");
+    Expr[] args = [];
+    if tok.current() != ")" {
+        while true {
+            Expr arg = check parseExpr(tok);
+            args.push(arg);
+            Token? t = tok.current();
+            if t == "," {
+                check tok.advance();
+            }
+            else if t == ")" {
+                break;
+            }
+            else {
+                return parseError(tok, "invalid function argument");
+            }
+        }
+    }
+    check tok.advance();
+    return { funcName, pos, args };
 }
 
 function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
