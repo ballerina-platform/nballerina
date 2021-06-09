@@ -74,6 +74,11 @@ function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.expect(")");
         return expr;
     }
+    else if t is "true"|"false" {
+        check tok.advance();
+        SimpleConstExpr expr = { value: t == "true" };
+        return expr;
+    }
     else {
         return parseError(tok);
     }

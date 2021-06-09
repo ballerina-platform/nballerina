@@ -55,19 +55,21 @@ function testGroupExpr() {
 
 }
 
-@test:Config {enable: false}
-function testNilConst() {
-    assertExpr("()", {value: ()});
-    assertExpr("-()", {op: "-", operand: {value: ()}}); // Invalid Semnatics
-    assertExpr("(())", {value: ()});
-}
 
-@test:Config {enable: false}
+@test:Config {}
 function testBooleanConst() {
     assertExpr("(true)", {value: true});
     assertExpr("(false)", {value: false});
     assertExpr("true", {value: true});
     assertExpr("false", {value: false});
+}
+
+
+@test:Config {enable: false}
+function testNilConst() {
+    assertExpr("()", {value: ()});
+    assertExpr("-()", {op: "-", operand: {value: ()}}); // Invalid Semnatics
+    assertExpr("(())", {value: ()});
 }
 
 @test:Config {enable: false}
