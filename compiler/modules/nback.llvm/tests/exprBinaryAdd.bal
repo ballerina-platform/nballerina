@@ -5,6 +5,7 @@ function exprBinaryAdd() returns Module {
     StructType addReturnType = structType(["i64", "i1"]);
     Function add = m.getIntrinsicDeclaration("sadd.with.overflow.i64");
 
+    FunctionDefn abort = m.addFunction("abort", {returnType: "void", paramTypes: []});
     FunctionDefn foo = m.addFunction("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
     Builder builder = new ();
