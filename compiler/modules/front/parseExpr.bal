@@ -5,10 +5,28 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
-    Expr expr = check parsePrimaryExpr(tok);
+    Expr expr = check parseMultiplicativeExpr(tok);
     while true {
         Token? t = tok.current();
         if t is ("+"|"-") {
+            BinaryExprOp op = t;
+            check tok.advance();
+            Expr right = check parseMultiplicativeExpr(tok);
+            BinaryExpr bin = { op, left: expr, right };
+            expr = bin;
+        } 
+        else {
+            break;
+        }
+    }
+    return expr;
+}
+
+function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Expr expr = check parsePrimaryExpr(tok);
+    while true {
+        Token? t = tok.current();
+        if t is ("*"|"/"|"%") {
             BinaryExprOp op = t;
             check tok.advance();
             Expr right = check parsePrimaryExpr(tok);
@@ -38,7 +56,13 @@ function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     else if t is [DECIMAL_NUMBER, string] {
         SimpleConstExpr expr = { value: check parseDigits(tok, t[1]) };
         return expr;
-    } 
+    }
+    else if t == "(" {
+        check tok.advance();
+        Expr expr = check parseExpr(tok);
+        check tok.expect(")");
+        return expr;
+    }
     else {
         return parseError(tok);
     }
