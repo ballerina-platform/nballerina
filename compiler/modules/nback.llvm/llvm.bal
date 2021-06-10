@@ -233,11 +233,10 @@ public class FunctionDefn {
 }
 
 // Used with Builder.binaryInt
-// XXX not a good name: maybe BinaryIntOp
 // Subtype of LLVMOpcode
-public type BinaryInsn BinaryArithmeticOp|BinaryBooleanOp;
+public type BinaryIntOp BinaryArithmeticOp|BinaryBitwiseOp;
 public type BinaryArithmeticOp "add"|"mul"|"sub"|"sdiv"|"srem";
-public type BinaryBooleanOp "xor"|"or"|"and";
+public type BinaryBitwiseOp "xor"|"or"|"and";
 // Corresponds to LLVMIntPredicate
 public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sle";
 
@@ -282,11 +281,11 @@ public class Builder {
 
     // binary operation with int operands and (same) int result
     // Corresponds to LLVMBuild{Add,Mul,Sub,SDiv,SRem}
-    public function binaryInt(BinaryInsn insn, Value lhs, Value rhs) returns Value {
+    public function binaryInt(BinaryIntOp op, Value lhs, Value rhs) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
-        bb.addInsn(reg, "=", insn, ty, lhs.operand, ",", rhs.operand);
+        bb.addInsn(reg, "=", op, ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
 

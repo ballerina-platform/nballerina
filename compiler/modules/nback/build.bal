@@ -131,7 +131,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
 }
 
 function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntArithmeticBinaryInsn insn) {
-    builder.store(builder.binaryInt(buildArithmeticBinaryInsnName(insn.op),
+    builder.store(builder.binaryInt(buildBinaryIntOp(insn.op),
                                     buildInt(builder, scaffold, insn.operands[0]),
                                     buildInt(builder, scaffold, insn.operands[1])),
                   scaffold.address(insn.result));                          
@@ -159,7 +159,7 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
     }
 }
 
-final readonly & map<llvm:BinaryInsn> arithmeticInsnNames = {
+final readonly & map<llvm:BinaryIntOp> arithmeticInsnNames = {
     "+": "add",
     "-": "sub",
     "*": "mul",
@@ -167,8 +167,8 @@ final readonly & map<llvm:BinaryInsn> arithmeticInsnNames = {
     "%": "srem"
 };
 
-function buildArithmeticBinaryInsnName(bir:ArithmeticBinaryOp op) returns llvm:BinaryInsn {
-    return <llvm:BinaryInsn>arithmeticInsnNames[op];
+function buildBinaryIntOp(bir:ArithmeticBinaryOp op) returns llvm:BinaryIntOp {
+    return <llvm:BinaryIntOp>arithmeticInsnNames[op];
 }
 
 function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:FunctionType|BuildError {
