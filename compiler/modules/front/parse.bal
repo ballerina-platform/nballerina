@@ -22,6 +22,7 @@ function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
         return;
     }
     check tok.advance();
+    t = tok.current();
     if t is [IDENTIFIER, string] { 
         string org = t[1];
         check tok.advance();
