@@ -112,12 +112,12 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
 function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, WhileStmt stmt) returns CodeGenError|bir:BasicBlock? {
     bir:BasicBlock loopHead = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
-    bir:JumpInsn jumpToLoopHead = { dest: loopHead.label };
+    bir:BranchInsn jumpToLoopHead = { dest: loopHead.label };
     startBlock.insns.push(jumpToLoopHead);
     var [condition, nextBlock] = check codeGenExprForBoolean(cx, loopHead, scope, stmt.condition);
     if condition is bir:Register {
         bir:BasicBlock afterCondition = cx.createBasicBlock();
-        bir:BranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
+        bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
         nextBlock.insns.push(branch);
         bir:BasicBlock? loopEnd = check codeGenStmts(cx, afterCondition, scope, stmt.body);
         if !(loopEnd is ()) {
@@ -155,11 +155,11 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
         if ifFalse.length() == 0 {
             // just an if branch
             contBlock = cx.createBasicBlock();
-            bir:BranchInsn branch = { operand, ifTrue: ifBlock.label, ifFalse: contBlock.label };
-            branchBlock.insns.push(branch);
+            bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: contBlock.label };
+            branchBlock.insns.push(condBranch);
             if !(ifContBlock is ()) {
-                bir:JumpInsn jump = { dest: contBlock.label };
-                ifContBlock.insns.push(jump);
+                bir:BranchInsn branch = { dest: contBlock.label };
+                ifContBlock.insns.push(branch);
             }
             return contBlock;    
         }
@@ -167,19 +167,19 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
             // an if and an else
             bir:BasicBlock elseBlock = cx.createBasicBlock();
             var elseContBlock = check codeGenStmts(cx, elseBlock, scope, ifFalse);
-            bir:BranchInsn branch = { operand, ifTrue: ifBlock.label, ifFalse: elseBlock.label };
-            branchBlock.insns.push(branch);
+            bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: elseBlock.label };
+            branchBlock.insns.push(condBranch);
             if ifContBlock is () && elseContBlock is () {
                 // e.g. both arms have a return
                 return ();
             }
             contBlock = cx.createBasicBlock();
-            bir:JumpInsn jump = { dest: contBlock.label };
+            bir:BranchInsn branch = { dest: contBlock.label };
             if !(ifContBlock is ()) {
-                ifContBlock.insns.push(jump);
+                ifContBlock.insns.push(branch);
             }
             if !(elseContBlock is ()) {
-                elseContBlock.insns.push(jump);
+                elseContBlock.insns.push(branch);
             }
             return contBlock;
         }

@@ -135,8 +135,8 @@ public enum InsnName {
     INSN_NARROW,
     INSN_TYPE_CAST,
     INSN_TYPE_TEST,
-    INSN_JUMP,
     INSN_BRANCH,
+    INSN_COND_BRANCH,
     INSN_CATCH,
     INSN_PANIC
 }
@@ -155,7 +155,7 @@ public type Insn
     |IntCompareInsn|EqualInsn|IdenticalInsn|BooleanNotInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|NarrowInsn|TypeCastInsn|TypeTestInsn
-    |JumpInsn|BranchInsn|CatchInsn|PanicInsn;
+    |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
 
 public type Operand ConstOperand|Register;
 public type ConstOperand ()|int|boolean|FunctionRef;
@@ -346,22 +346,22 @@ public type CatchInsn readonly & record {|
     Register result;
 |};
 
-# Branch to one of two labels based on a boolean operand.
+# Conditionally branch to one of two labels based on a boolean operand.
 # If the operand is const, then use a Jump instead.
 # This is a terminator.
-public type BranchInsn readonly & record {|
+public type CondBranchInsn readonly & record {|
     *InsnBase;
-    INSN_BRANCH name = INSN_BRANCH;
+    INSN_COND_BRANCH name = INSN_COND_BRANCH;
     Register operand;
     Label ifTrue;
     Label ifFalse;
 |};
 
-# Unconditional jump to a label
+# Unconditional branch to a label
 # This is a terminator.
-public type JumpInsn readonly & record {|
+public type BranchInsn readonly & record {|
     *InsnBase;
-    INSN_JUMP name = INSN_JUMP;
+    INSN_BRANCH name = INSN_BRANCH;
     Label dest;
 |};
 
