@@ -2,15 +2,40 @@
 
 import wso2/nballerina.err;
 
-function parseSourcePart(string str) returns ModuleLevelDef[]|err:Syntax {
-    ModuleLevelDef[] defs = [];
+function parseModulePart(string str) returns ModulePart|err:Syntax {
     Tokenizer tok = new (str);
     check tok.advance();
+    ModulePart part = {
+        defs: [],
+        importDecl: check parseImportDecl(tok)
+    };
     while tok.current() != () {
-        defs.push(check parseModuleDecl(tok));
+        part.defs.push(check parseModuleDecl(tok));
     }
-    return defs;
+    return part;
 }
+
+
+function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
+    Token? t = tok.current();
+    if t != "import" {
+        return;
+    }
+    check tok.advance();
+    if t is [IDENTIFIER, string] { 
+        string org = t[1];
+        check tok.advance();
+        check tok.expect("/");
+        t = tok.current();
+        if t is [IDENTIFIER, string] {
+            check tok.advance();
+            check tok.expect(";");
+            return { org, module: t[1] };
+        }
+    }
+    return parseError(tok, "import declaration");
+}
+
 
 function parseModuleDecl(Tokenizer tok) returns ModuleLevelDef|err:Syntax {
     Token? t = tok.current();
@@ -23,7 +48,6 @@ function parseModuleDecl(Tokenizer tok) returns ModuleLevelDef|err:Syntax {
     else {
         vis = ();
     }
-
     match t {
         "type" => {
             return parseTypeDefinition(tok, vis);

@@ -22,15 +22,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         [IDENTIFIER, var identifier] => {
             err:Position pos = tok.currentPos();
             check tok.advance();
-            cur = tok.current();
-            if cur == "=" {
-                return finishAssignStmt(tok, identifier, pos);
-            }
-            else if cur == "(" {
-                FunctionCallExpr stmt = check finishFunctionCallExpr(tok, identifier, pos);
-                check tok.expect(";");
-                return stmt;
-            }
+            return finishIdentifierStmt(tok, identifier, pos);
         }
         "return" => {
             check tok.advance();
@@ -64,6 +56,33 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
     }
     return parseError(tok, "unhandled statement");
 }
+
+function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos) returns Stmt|err:Syntax {
+    Token? cur = tok.current();
+    if cur == "=" {
+        return finishAssignStmt(tok, identifier, pos);
+    }
+    else if cur == "(" {
+        check tok.advance();
+        FunctionCallExpr stmt = check finishFunctionCallExpr(tok, (), identifier, pos);
+        check tok.expect(";");
+        return stmt;
+    }
+    else if cur == ":" {
+        check tok.advance();
+        cur = tok.current();
+        if cur is [IDENTIFIER, string] {
+            string name = cur[1];
+            check tok.advance();
+            check tok.expect("(");
+            FunctionCallExpr stmt = check finishFunctionCallExpr(tok, identifier, name, pos);
+            check tok.expect(";");
+            return stmt;
+        }
+    }
+    return parseError(tok, "invalid statement");
+}
+
 
 function finishAssignStmt(Tokenizer tok, string identifier, err:Position pos) returns AssignStmt|err:Syntax {
     check tok.advance();

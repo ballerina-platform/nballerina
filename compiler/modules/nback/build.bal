@@ -9,6 +9,7 @@ type Alignment 1|8;
 
 const LLVM_INT = "i64";
 const LLVM_BOOLEAN = "i1";
+const LLVM_NIL = "i1";
 const LLVM_VOID = "void";
 
 class Scaffold {
@@ -124,7 +125,9 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     if !(ret is ()) {
         builder.store(ret, scaffold.address(insn.result));
     }
-    // XXX in some cases need to store nil in the register
+    else if insn.result.semType === t:NIL {
+        builder.store(llvm:constInt(LLVM_NIL, 0), scaffold.address(insn.result));
+    }
 }
 
 function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntArithmeticBinaryInsn insn) {
@@ -195,6 +198,10 @@ function buildValueType(t:SemType ty) returns llvm:IntType|BuildError {
     // For now we will represent panics with an i64
     else if ty === t:ERROR {
         return LLVM_INT;
+    }
+    // This happens with function call statement
+    else if ty === t:NIL {
+        return LLVM_NIL;
     }
     return err:unimplemented("unimplemented type");
 }

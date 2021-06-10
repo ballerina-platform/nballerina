@@ -15,8 +15,7 @@ public type Module object {
 public type ModuleId readonly & record {|
     string? organization = ();
     [string, string...] names;
-    // Do we need structure in the version?
-    string versionString;
+    // this omits the version, because programs cannot have two versions of the same module
 |};
 
 public type ModuleDefn record {|

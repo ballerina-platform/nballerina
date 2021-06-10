@@ -9,13 +9,15 @@ type ModuleTable table<ModuleLevelDef> key(name);
 class Module {
     *bir:Module;
     final bir:ModuleId id;
+    final map<bir:ModuleId> imports;
     final ModuleTable defs;
     final t:TypeCheckContext tc;
     final FunctionDef[] functionDefSource = [];
     final readonly & bir:FunctionDefn[] functionDefns;
 
-    function init(bir:ModuleId id, ModuleTable defs, t:TypeCheckContext tc) {
+    function init(bir:ModuleId id, map<bir:ModuleId> imports, ModuleTable defs, t:TypeCheckContext tc) {
         self.id = id;
+        self.imports = imports;
         self.defs = defs;
         self.tc = tc;
         final bir:FunctionDefn[] functionDefns = [];
@@ -50,16 +52,26 @@ class Module {
 
 public function loadModule(string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
     string contents = check io:fileReadString(filename);
-    ModuleLevelDef[] defs = check parseSourcePart(contents);
+    ModulePart part = check parseModulePart(contents);
     ModuleTable mod = table [];
-    check addSourcePart(mod, defs);
+    check addModulePart(mod, part);
     t:Env env = new;
     check convertTypes(env, mod);
-    return new Module(id, mod, t:typeCheckContext(env));
+    return new Module(id, imports(part), mod, t:typeCheckContext(env));
 }
 
-function addSourcePart(ModuleTable mod, ModuleLevelDef[] defs) returns err:Semantic? {
-    foreach ModuleLevelDef def in defs {
+function imports(ModulePart part) returns map<bir:ModuleId> {
+    ImportDecl? decl = part.importDecl;
+    if decl == () {
+        return {};
+    }
+    else {
+        return { [decl.module]: { organization: decl.org, names: [decl.module]} };
+    }
+}
+
+function addModulePart(ModuleTable mod, ModulePart part) returns err:Semantic? {
+    foreach ModuleLevelDef def in part.defs {
         if mod.hasKey(def.name) {
             return err:semantic(`duplicate definition if ${def.name}`);
         }
@@ -69,9 +81,9 @@ function addSourcePart(ModuleTable mod, ModuleLevelDef[] defs) returns err:Seman
 
 // This is old interface for showTypes
 public function typesFromString(string contents) returns [t:Env, map<t:SemType>]|err:Syntax {
-    ModuleLevelDef[] defs = check parseSourcePart(contents);
+    ModulePart part = check parseModulePart(contents);
     ModuleTable mod = table [];
-    check addSourcePart(mod, defs);
+    check addModulePart(mod, part);
     t:Env env = new;
     check convertTypes(env, mod);
     return [env, createTypeMap(mod)];

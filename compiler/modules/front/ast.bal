@@ -2,9 +2,21 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.err;
 
+
+type ModulePart record {|
+    ImportDecl? importDecl;
+    ModuleLevelDef[] defs;
+|};
+
 type ModuleLevelDef TypeDef|FunctionDef;
 
 type Visibility "public"?;
+
+
+type ImportDecl record {|
+    string org;
+    string module;
+|};
 
 type FunctionDef record {|
     readonly string name;
@@ -71,6 +83,7 @@ type UnaryExpr record {|
 |};
 
 type FunctionCallExpr record {|
+    string? prefix = ();
     string funcName;
     Expr[] args;
     // We can get type/def mismatch errors here

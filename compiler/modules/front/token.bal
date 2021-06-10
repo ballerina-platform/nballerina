@@ -43,6 +43,7 @@ type Keyword
     | "continue"
     | "break"
     | "public"
+    | "import"
     ;
 
 const WS = "\n\r\t ";

@@ -85,6 +85,6 @@ function bar(int i, boolean b) returns boolean{
         ],
         vis: ()
     };
-    assertSource(source1, [foo, bar]);
+    assertSource(source1, { importDecl: (), defs: [foo, bar] });
 
 }

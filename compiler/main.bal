@@ -16,7 +16,6 @@ public function main(string filename, *Options opts) returns error? {
         return showTypes(filename);
     }
     bir:ModuleId id = {
-       versionString: "0.1.0",
        names: [filename],
        organization: "dummy"
     };

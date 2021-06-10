@@ -14,6 +14,12 @@ function assertModuleLevelDefEqual(ModuleLevelDef actual, ModuleLevelDef expect,
     test:assertFail("Not supported ModuleLevelDef, " + msg);
 }
 
+function assertModulePartEqual(ModulePart actual, ModulePart expect, string? message = ()) {
+    string msg = message ?: "ModulePart equal assertion failed!"; // This is for test:assert*
+    test:assertEquals(actual.importDecl, expect.importDecl, msg);
+    assertModuleLevelDefListEqual(actual.defs, expect.defs, message);
+}
+
 function assertModuleLevelDefListEqual(ModuleLevelDef[] actual, ModuleLevelDef[] expect, string? message = ()) {
 
     string msg = message ?: "ModuleLevelDef[] equal assertion failed!"; // This is for test:assert*

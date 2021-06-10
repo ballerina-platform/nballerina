@@ -95,7 +95,13 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
         else if stmt is AssignStmt {
             curBlock = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
-        // XXX need to do function call returning nil
+        else if stmt is FunctionCallExpr {
+            bir:Register reg;
+            [reg, curBlock] = check codeGenFunctionCall(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            if reg.semType !== t:NIL {
+                return err:semantic("return type of function call statemnt not nil");
+            }
+        }
         else {
             return err:unreached();
         }
@@ -269,8 +275,34 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
     return err:unreached();
 }
 
-function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, FunctionCallExpr expr) returns CodeGenError|[bir:Operand, bir:BasicBlock] {
-    string name = expr.funcName;
+function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, FunctionCallExpr expr) returns CodeGenError|[bir:Register, bir:BasicBlock] {
+    string? prefix = expr.prefix;
+    bir:FunctionRef func;
+    if prefix is () {
+        func =  check genLocalFunctionRef(cx, scope, expr.funcName);
+    }
+    else {
+        func = check genImportedFunctionRef(cx, scope, prefix, expr.funcName);
+    }
+    bir:BasicBlock curBlock = bb;
+    bir:Operand[] args = [];
+    foreach var argExpr in expr.args {
+        var [arg, nextBlock] = check codeGenExpr(cx, curBlock, scope, argExpr);
+        curBlock = nextBlock;
+        args.push(arg);
+    }
+    bir:Register result = cx.createRegister(func.functionSignature.returnType);
+    bir:CallInsn call = {
+        func,
+        result,
+        args: args.cloneReadOnly(),
+        position: expr.pos
+    };
+    curBlock.insns.push(call);
+    return [result, curBlock];
+}
+
+function genLocalFunctionRef(CodeGenContext cx, Scope? scope, string name) returns bir:FunctionRef|CodeGenError {
     if !(lookup(name, scope) is ()) {
         return err:unimplemented("local variables cannot yet have function type");
     }
@@ -278,6 +310,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope,
     ModuleLevelDef? def = cx.mod.defs[name];
     if def is FunctionDef {
         signature = <bir:FunctionSignature>def.signature;
+        return { functionIdentifier: name, functionSignature: signature };
     }
     else {
         err:Message msg;
@@ -288,27 +321,24 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope,
             msg = `${name} is not a function`;
         }
         return err:semantic(msg);
+    }  
+}
+
+function genImportedFunctionRef(CodeGenContext cx, Scope? scope, string prefix, string name) returns bir:FunctionRef|CodeGenError {
+    bir:ModuleId? moduleId = cx.mod.imports[prefix];
+    if moduleId is () {
+        return err:semantic(`no import declaration for prefix ${prefix}`);
     }
-    bir:BasicBlock curBlock = bb;
-    bir:Operand[] args = [];
-    foreach var argExpr in expr.args {
-        var [arg, nextBlock] = check codeGenExpr(cx, curBlock, scope, argExpr);
-        curBlock = nextBlock;
-        args.push(arg);
+    else {
+        bir:FunctionSignature? sig = getLibFunction(moduleId, name);
+        if sig is () {
+            return err:unimplemented(`unsupported library function ${prefix}:${name}`);
+        }
+        else {
+            bir:GlobalIdentifier gid = { module: moduleId, name };
+            return { functionIdentifier: gid, functionSignature: sig };
+        }
     }
-    bir:Register result = cx.createRegister(signature.returnType);
-    bir:FunctionRef func = {
-        functionIdentifier: expr.funcName,
-        functionSignature: signature
-    };
-    bir:CallInsn call = {
-        func,
-        result,
-        args: args.cloneReadOnly(),
-        position: expr.pos
-    };
-    curBlock.insns.push(call);
-    return [result, curBlock];
 }
 
 function mustLookup(string name, Scope? scope) returns bir:Register|CodeGenError {

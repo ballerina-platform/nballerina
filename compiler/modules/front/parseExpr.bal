@@ -60,7 +60,8 @@ function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         t = tok.current();
         if t == "(" {
-            return finishFunctionCallExpr(tok, identifier, pos);
+            check tok.advance();
+            return finishFunctionCallExpr(tok, (), identifier, pos);
         }
         return expr;
     } 
@@ -85,8 +86,7 @@ function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 // current token is the "("
-function finishFunctionCallExpr(Tokenizer tok, string funcName, err:Position pos) returns FunctionCallExpr|err:Syntax {
-    check tok.advance();
+function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, err:Position pos) returns FunctionCallExpr|err:Syntax {
     Expr[] args = [];
     if tok.current() != ")" {
         while true {
@@ -105,7 +105,7 @@ function finishFunctionCallExpr(Tokenizer tok, string funcName, err:Position pos
         }
     }
     check tok.advance();
-    return { funcName, pos, args };
+    return { funcName, pos, args, prefix };
 }
 
 function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {

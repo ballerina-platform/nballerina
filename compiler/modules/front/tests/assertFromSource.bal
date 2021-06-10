@@ -1,10 +1,10 @@
 import ballerina/test;
 
-function assertSource(string src, ModuleLevelDef[] expt, string? message = ()) {
+function assertSource(string src, ModulePart expt, string? message = ()) {
 
     do {
-        ModuleLevelDef[] actual = check parseSourcePart(src);
-        assertModuleLevelDefListEqual(actual, expt, message);
+        ModulePart actual = check parseModulePart(src);
+        assertModulePartEqual(actual, expt, message);
     } on fail error e {
         test:assertFail("error parsing source \"" + src + "\", " + e.toString());
     }
