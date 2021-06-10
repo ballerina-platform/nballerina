@@ -200,10 +200,6 @@ public class FunctionDefn {
         return self.linkage;
     }
 
-    public function getLinkage() returns LinkageType {
-        return self.linkageType;
-    }
-
     function output(Output out) {
         out.push(functionHeader(self));
         self.outputBody(out);
