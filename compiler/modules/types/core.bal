@@ -196,20 +196,15 @@ function numberOfTrailingZeros(int bits) returns int {
     return n;
 }
 
-function uniformTypeSingleton(UniformTypeCode code) returns UniformTypeBitSet {
-    int c = code;
-    return <UniformTypeBitSet>(1 << c);
-}
-
-function uniformType(UniformTypeCode code) returns SemType {
-    return uniformTypeSingleton(code);
+function uniformType(UniformTypeCode code) returns UniformTypeBitSet {
+    return <UniformTypeBitSet>(1 << code);
 }
 
 // Union of complete uniform types
 // bits is bit vecor indexed by UniformTypeCode
 // I would like to make the arg int:Unsigned32
 // but are language/impl bugs that make this not work well
-function uniformTypeUnion(int bits) returns SemType {
+function uniformTypeUnion(int bits) returns UniformTypeBitSet {
     return <UniformTypeBitSet>bits;
 }
 
@@ -226,28 +221,28 @@ function subtypeData(SemType s, UniformTypeCode code) returns SubtypeData {
     }
 }
 
-public final SemType NEVER = uniformTypeUnion(0);
-public final SemType NIL = uniformType(UT_NIL);
-public final SemType BOOLEAN = uniformType(UT_BOOLEAN);
-public final SemType INT = uniformType(UT_INT);
-public final SemType FLOAT = uniformType(UT_FLOAT);
-public final SemType DECIMAL = uniformType(UT_DECIMAL);
-public final SemType STRING = uniformType(UT_STRING);
-public final SemType ERROR = uniformType(UT_ERROR);
+public final UniformTypeBitSet NEVER = uniformTypeUnion(0);
+public final UniformTypeBitSet NIL = uniformType(UT_NIL);
+public final UniformTypeBitSet BOOLEAN = uniformType(UT_BOOLEAN);
+public final UniformTypeBitSet INT = uniformType(UT_INT);
+public final UniformTypeBitSet FLOAT = uniformType(UT_FLOAT);
+public final UniformTypeBitSet DECIMAL = uniformType(UT_DECIMAL);
+public final UniformTypeBitSet STRING = uniformType(UT_STRING);
+public final UniformTypeBitSet ERROR = uniformType(UT_ERROR);
 
 // matches all functions
-public final SemType FUNCTION = uniformType(UT_FUNCTION);
-public final SemType TYPEDESC = uniformType(UT_TYPEDESC);
-public final SemType HANDLE = uniformType(UT_HANDLE);
+public final UniformTypeBitSet FUNCTION = uniformType(UT_FUNCTION);
+public final UniformTypeBitSet TYPEDESC = uniformType(UT_TYPEDESC);
+public final UniformTypeBitSet HANDLE = uniformType(UT_HANDLE);
 
-public final SemType XML = uniformTypeUnion((1 << UT_XML_RO) | (1 << UT_XML_RW));
-public final SemType STREAM = uniformType(UT_STREAM);
-public final SemType FUTURE = uniformType(UT_FUTURE);
+public final UniformTypeBitSet XML = uniformTypeUnion((1 << UT_XML_RO) | (1 << UT_XML_RW));
+public final UniformTypeBitSet STREAM = uniformType(UT_STREAM);
+public final UniformTypeBitSet FUTURE = uniformType(UT_FUTURE);
 
 // this is SubtypeData|error
-public final SemType TOP = uniformTypeUnion(UT_MASK);
-public final SemType ANY = uniformTypeUnion(UT_MASK & ~(1 << UT_ERROR));
-public final SemType READONLY = uniformTypeUnion(UT_READONLY);
+public final UniformTypeBitSet TOP = uniformTypeUnion(UT_MASK);
+public final UniformTypeBitSet ANY = uniformTypeUnion(UT_MASK & ~(1 << UT_ERROR));
+public final UniformTypeBitSet READONLY = uniformTypeUnion(UT_READONLY);
 public final SemType BYTE = intWidthUnsigned(8);
 
 // Need this type to workaround slalpha4 bug.
