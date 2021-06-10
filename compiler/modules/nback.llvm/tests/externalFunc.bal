@@ -2,11 +2,9 @@ import ballerina/test;
 
 function externalFunc() returns Module {
     Builder builder = new ();
-    Module externalModule = new ();
-    FunctionDefn barDef = externalModule.addFunction("bar", {returnType:"i64", paramTypes:["i64"]});
     Module m = new ();
     FunctionDefn foo = m.addFunction("foo", {returnType: "i64", paramTypes: []});
-    FunctionDecl bar = m.addExternalFunction(barDef);
+    FunctionDecl bar = m.addFunctionDecl("bar",{returnType:"i64", paramTypes:["i64"]});
     FunctionDecl barVoid = m.addFunctionDecl("barVoid", {returnType:"void", paramTypes: []});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);

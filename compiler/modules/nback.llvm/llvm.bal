@@ -97,10 +97,6 @@ public class Module {
         return fn;
     }
 
-    public function addExternalFunction(FunctionDefn fn) returns FunctionDecl {
-       return self.addFunctionDecl(fn.functionName, fn.functionType); 
-    }
-
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
         if self.intrinsicFunctions.hasKey(name) {
