@@ -4,7 +4,7 @@ import ballerina/test;
 function stmtDecl() returns Module {
     Builder builder = new ();
     Module m = new ();
-    FunctionDefn foo = m.addFunction("main", {returnType: "i64", paramTypes:["i64"]});
+    FunctionDefn foo = m.addFunctionDefn("main", {returnType: "i64", paramTypes:["i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     Value R0 = foo.getParam(0);

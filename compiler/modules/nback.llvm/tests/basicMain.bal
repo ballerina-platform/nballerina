@@ -3,7 +3,7 @@ import ballerina/test;
 function basicMain() returns Module {
 
     Module m = new ();
-    FunctionDefn mainFunction = m.addFunction("main", {returnType: "i64", paramTypes: []});
+    FunctionDefn mainFunction = m.addFunctionDefn("main", {returnType: "i64", paramTypes: []});
     BasicBlock initBlock = mainFunction.appendBasicBlock();
     Builder builder = new ();
     builder.positionAtEnd(initBlock);

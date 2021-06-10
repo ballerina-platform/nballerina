@@ -2,8 +2,8 @@ import ballerina/test;
 
 function exprBinaryRemainder() returns Module {
     Module m = new ();
-    FunctionDefn abort = m.addFunction("abort", {returnType:"void", paramTypes:[]});
-    FunctionDefn foo = m.addFunction("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
+    FunctionDefn abort = m.addFunctionDefn("abort", {returnType:"void", paramTypes:[]});
+    FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
     Builder builder = new ();
     builder.positionAtEnd(initBlock);

@@ -85,13 +85,13 @@ public class Module {
     }
 
     // Corresponds to LLVMAddFunction
-    public function addFunction(string name, FunctionType fnType) returns FunctionDefn {
+    public function addFunctionDefn(string name, FunctionType fnType) returns FunctionDefn {
         FunctionDefn fn = new FunctionDefn(name, fnType);
         self.functions.push(fn);
         return fn;
     }
 
-    public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl{
+    public function addFunctionDefnDecl(string name, FunctionType fnType) returns FunctionDecl{
         FunctionDecl fn = new(name, fnType);
         self.functionDecls.push(fn);
         return fn;

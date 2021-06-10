@@ -3,7 +3,7 @@ import ballerina/test;
 function stmtDeclUninitialized() returns Module {
     Builder builder = new ();
     Module m = new ();
-    FunctionDefn foo = m.addFunction("foo", {returnType: "i64", paramTypes:[]});
+    FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes:[]});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     Value R1 = builder.alloca("i64",8);

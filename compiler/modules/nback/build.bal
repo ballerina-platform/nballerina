@@ -59,7 +59,7 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
     foreach var defn in functionDefns {
         llvm:FunctionType ty = check buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
-        llvm:FunctionDefn llFunc = llMod.addFunction(defn.name, ty);
+        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(defn.name, ty);
         if !defn.isPublic {
             llFunc.setLinkage("internal");
         }
