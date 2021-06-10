@@ -235,7 +235,11 @@ public class FunctionDefn {
 // Used with Builder.binaryInt
 // XXX not a good name: maybe BinaryIntOp
 // Subtype of LLVMOpcode
-public type BinaryInsn "add"|"mul"|"sub"|"sdiv"|"srem";
+public type BinaryInsn BinaryArithmeticOp|BinaryBooleanOp;
+public type BinaryArithmeticOp "add"|"mul"|"sub"|"sdiv"|"srem";
+public type BinaryBooleanOp "xor"|"or"|"and";
+// Corresponds to LLVMIntPredicate
+public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sle";
 
 # Corresponds to LLVMBuilderRef  
 public class Builder {
@@ -344,6 +348,38 @@ public class Builder {
             panic error("Extract value from non aggregate data type");
         }
     }
+
+    // Corresponds to LLVMBuildBr
+    public function br(BasicBlock destination) {
+        BasicBlock bb = self.bb();
+        bb.addInsn("br", "label", destination.ref());
+    }
+
+    // Corresponds to LLVMBuildCondBr
+    public function condBr(Value condition, BasicBlock ifTrue, BasicBlock ifFalse) {
+        if condition.ty is "i1" {
+            BasicBlock bb = self.bb();
+            bb.addInsn("br", "i1", condition.operand, ",", "label", ifTrue.ref(), ",", "label", ifFalse.ref());
+        } else {
+            panic error("Condition must be a u1");
+        }
+    }
+
+    // Corresponds to LLVMBuildICmp
+    public function iCmp(IntPredicate op, Value lhs, Value rhs) returns Value {
+        if (lhs.ty is IntType && rhs.ty is IntType) || (lhs.ty is PointerType && rhs.ty is PointerType) {
+            if lhs.ty != rhs.ty {
+                panic error("LHS and RHS must be same type for icmp");
+            }
+            BasicBlock bb = self.bb();
+            string reg = bb.func.genReg();
+            bb.addInsn(reg, "=", "icmp", typeToString(lhs.ty), lhs.operand,",", rhs.operand);
+            return new Value("i1", reg);
+        } else {
+            panic error("Integer comparison between incompatible types");
+        }
+    }
+    
 
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
