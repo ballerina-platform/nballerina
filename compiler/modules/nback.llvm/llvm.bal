@@ -5,6 +5,7 @@
 // private members that are handles referring to the
 // C void* values.
 
+import nballerina.err;
 import ballerina/io;
 
 // "i64" corresponds to  LLVMInt64Type
@@ -72,10 +73,12 @@ public readonly class PointerValue {
 public function constInt(IntType ty, int val) returns Value {
     return new Value(ty, val.toString());
 }
+public type IntrinsicFunctionName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
 
 # Corresponds to llvm::Module class
 public class Module {
     private final FunctionDefn[] functions = [];
+    private final map<FunctionDecl> functionDecls = {};
 
     public function init() {
     }
@@ -85,6 +88,33 @@ public class Module {
         FunctionDefn fn = new FunctionDefn(name, fnType);
         self.functions.push(fn);
         return fn;
+    }
+
+    // Corresponds to LLVMGetIntrinsicDeclaration
+    public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
+        if self.functionDecls.hasKey(name) {
+            return self.functionDecls.get(name);
+        }
+        StructType overflowArithmeticReturnType = structType(["i64", "i1"]);
+        FunctionType overflowArithmeticFunctionType = {returnType: overflowArithmeticReturnType, paramTypes: ["i64", "i64"]};
+        FunctionDecl? fn = ();
+        match name {
+            "sadd.with.overflow.i64" => {
+                fn = new ("llvm.sadd.with.overflow.i64", overflowArithmeticFunctionType);
+            }
+            "ssub.with.overflow.i64" => {
+                fn = new ("llvm.ssub.with.overflow.i64", overflowArithmeticFunctionType);
+            }
+            "smul.with.overflow.i64" => {
+                fn = new ("llvm.smul.with.overflow.i64", overflowArithmeticFunctionType);
+            }
+        }
+        if fn is FunctionDecl {
+            self.functionDecls[name] = fn;
+            return fn;
+        } else {
+            return err:unreached();
+        }
     }
 
     // Does not correspond directly any LLVM function
@@ -102,6 +132,9 @@ public class Module {
     }
 
     function output(Output out) {
+        foreach var decl in self.functionDecls {
+            decl.output(out);
+        }
         foreach var f in self.functions {
             f.output(out);
         }
@@ -123,6 +156,10 @@ public class FunctionDecl {
     function init(string functionName, FunctionType functionType) {
         self.functionName = functionName;
         self.functionType = functionType;
+    }
+
+    function output(Output out) {
+        out.push(functionHeader(self));
     }
 }
 
@@ -159,32 +196,14 @@ public class FunctionDefn {
         self.linkage = linkage;
     }
 
-    function output(Output out) {
-        out.push(self.header());
-        self.outputBody(out);
-        out.push("}");
+    public function getLinkage() returns Linkage {
+        return self.linkage;
     }
 
-    function header() returns string {
-        string[] words = [];
-        words.push("define");
-        if self.linkage != "external" {
-            words.push(self.linkage);
-        }
-        words.push(typeToString(self.functionType.returnType));
-        words.push("@" + self.functionName);
-        words.push("(");
-        foreach int i in 0 ..< self.paramValues.length() {
-            final Value param = self.paramValues[i];
-            if i > 0 {
-                words.push(",");
-            }
-            words.push(typeToString(param.ty));
-            words.push(param.operand);
-        }
-        words.push(")");
-        words.push("{");
-        return createLine(words);
+    function output(Output out) {
+        out.push(functionHeader(self));
+        self.outputBody(out);
+        out.push("}");
     }
 
     function outputBody(Output out) {
@@ -426,6 +445,36 @@ class Output {
     function toString() returns string {
         return "\n".'join(...self.lines);
     }
+}
+
+function functionHeader(Function fn) returns string {
+    string[] words = [];
+    if fn is FunctionDefn {
+        words.push("define");
+        if fn.getLinkage() != "external" {
+            words.push(fn.getLinkage());
+        }
+    } else {
+        words.push("declare");
+    }
+    words.push(typeToString(fn.functionType.returnType));
+    words.push("@" + fn.functionName);
+    words.push("(");
+    foreach int i in 0 ..< fn.functionType.paramTypes.length() {
+        final Type ty = fn.functionType.paramTypes[i];
+        if i > 0 {
+            words.push(",");
+        }
+        words.push(typeToString(ty));
+        if fn is FunctionDefn {
+            words.push(fn.getParam(i).operand);
+        }
+    }
+    words.push(")");
+    if fn is FunctionDefn {
+        words.push("{");
+    }
+    return createLine(words);
 }
 
 function createLine(string[] words, string indent = "") returns string {
