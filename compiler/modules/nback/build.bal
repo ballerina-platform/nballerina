@@ -13,7 +13,7 @@ const LLVM_NIL = "i1";
 const LLVM_VOID = "void";
 
 type ImportedFunction record {|
-    readonly bir:GlobalIdentifier ident;
+    readonly bir:ExternalSymbol symbol;
     llvm:FunctionDecl decl;
 |};
 
@@ -27,15 +27,15 @@ class Scaffold {
     private final llvm:PointerValue[] addresses;
     // LLVM basic blocks indexed by BIR label
     private final llvm:BasicBlock[] blocks;
-    // LLVM functions in the module indexed by name
-    private final map<llvm:FunctionDefn> functions;
+    // LLVM functions in the module indexed by (unmangled) identifier within the module
+    private final map<llvm:FunctionDefn> functionDefns;
     // List of all imported functions that have been added to the LLVM module
-    private final table<ImportedFunction> key(ident) importedFunctions = table [];
+    private final table<ImportedFunction> key(symbol) importedFunctions = table [];
 
     function init(bir:ModuleId modId, llvm:Module llMod, llvm:FunctionDefn llFunc, map<llvm:FunctionDefn> functions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.modId = modId;
         self.llMod = llMod;
-        self.functions = functions;
+        self.functionDefns = functions;
         // JBUG 31008 if this is a query expression
         final llvm:IntType[] types = [];
         foreach var reg in code.registers {
@@ -58,25 +58,25 @@ class Scaffold {
 
     function valueType(bir:Register r) returns llvm:IntType => self.types[r.number];
 
-    function getFunction(string name) returns llvm:Function => self.functions.get(name);
+    function getFunctionDefn(string name) returns llvm:FunctionDefn => self.functionDefns.get(name);
 
     function getModule() returns llvm:Module => self.llMod;
 
     function getModuleId() returns bir:ModuleId => self.modId;
 
-    function getImportedFunction(bir:GlobalIdentifier ident) returns llvm:FunctionDecl? {
-        ImportedFunction? fn = self.importedFunctions[ident];
+    function getImportedFunction(bir:ExternalSymbol symbol) returns llvm:FunctionDecl? {
+        ImportedFunction? fn = self.importedFunctions[symbol];
         return fn is () ? () : fn.decl;
     }
     
-    function addImportedFunction(bir:GlobalIdentifier ident, llvm:FunctionDecl decl) {
-        self.importedFunctions.add({ident, decl});
+    function addImportedFunction(bir:ExternalSymbol symbol, llvm:FunctionDecl decl) {
+        self.importedFunctions.add({symbol, decl});
     }
 }
 
 
-
 function buildModule(bir:Module mod) returns llvm:Module|BuildError {
+    bir:ModuleId modId = mod.getId();
     llvm:Module llMod = new;
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     llvm:FunctionDefn[] llFuncs = [];
@@ -85,12 +85,13 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
     foreach var defn in functionDefns {
         llvm:FunctionType ty = check buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
-        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(defn.name, ty);
-        if !defn.isPublic {
+        bir:InternalSymbol symbol = defn.symbol;
+        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangleInternalSymbol(modId, symbol), ty);
+        if !symbol.isPublic {
             llFunc.setLinkage("internal");
         }
         llFuncs.push(llFunc);
-        llFuncMap[defn.name] = llFunc;
+        llFuncMap[defn.symbol.identifier] = llFunc;
     }  
     llvm:Builder builder = new;
     foreach int i in 0 ..< functionDefns.length() {
@@ -100,7 +101,6 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
     }
     return llMod;
 }
-
 
 function buildFunctionBody(llvm:Builder builder, Scaffold scaffold, bir:FunctionCode code) returns BuildError? {
     foreach var b in code.blocks {
@@ -144,16 +144,14 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
     llvm:Value[] args = from var arg in insn.args select check buildValueAsInt(builder, scaffold, arg);
     // Handler indirect calls later
-    bir:FunctionRef fn = <bir:FunctionRef>insn.func;
-    bir:Identifier funcIdent = fn.functionIdentifier;
+    bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
+    bir:Symbol funcSymbol = funcRef.symbol;
     llvm:Function func;
-    if funcIdent is string {
-        // XXX have to mangle this differently depending on which it's public or not
-        // XXX where should that info be?
-        func = scaffold.getFunction(funcIdent);
+    if funcSymbol is bir:InternalSymbol {
+        func = scaffold.getFunctionDefn(funcSymbol.identifier);
     }
     else {
-        func = check buildFunctionDecl(scaffold, funcIdent, fn.functionSignature);
+        func = check buildFunctionDecl(scaffold, funcSymbol, funcRef.signature);
     }  
     llvm:Value? ret = builder.call(func, args);
     if !(ret is ()) {
@@ -164,16 +162,16 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     }
 }
 
-function buildFunctionDecl(Scaffold scaffold, bir:GlobalIdentifier ident, bir:FunctionSignature sig) returns llvm:FunctionDecl|BuildError {
-    llvm:FunctionDecl? decl = scaffold.getImportedFunction(ident);
+function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:FunctionSignature sig) returns llvm:FunctionDecl|BuildError {
+    llvm:FunctionDecl? decl = scaffold.getImportedFunction(symbol);
     if !(decl is ()) {
         return decl;
     }
     else {
         llvm:FunctionType ty = check buildFunctionSignature(sig);
-        string linkageName = mangle(ident.module, ident.name);
-        llvm:FunctionDecl d = scaffold.getModule().addFunctionDecl(linkageName, ty);
-        scaffold.addImportedFunction(ident, d);
+        llvm:Module mod = scaffold.getModule();
+        llvm:FunctionDecl d = mod.addFunctionDecl(mangleExternalSymbol(symbol), ty);
+        scaffold.addImportedFunction(symbol, d);
         return d;
     }
 }
@@ -257,6 +255,19 @@ function buildValueType(t:SemType ty) returns llvm:IntType|BuildError {
 // XXX what's the right alignment for i1
 function typeAlignment(llvm:IntType ty) returns Alignment {
     return 8;
+}
+
+function mangleExternalSymbol(bir:ExternalSymbol symbol) returns string {
+    return mangle(symbol.module, symbol.identifier);
+}
+
+function mangleInternalSymbol(bir:ModuleId modId, bir:InternalSymbol symbol) returns string {
+    if symbol.isPublic {
+        return mangle(modId, symbol.identifier);
+    }
+    else {
+        return symbol.identifier;
+    }
 }
 
 function mangle(bir:ModuleId mod, string name) returns string {

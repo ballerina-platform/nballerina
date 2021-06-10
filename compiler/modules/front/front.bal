@@ -25,10 +25,9 @@ class Module {
             if def is FunctionDef {
                 self.functionDefSource.push(def);
                 functionDefns.push({
-                    name: def.name,
+                    symbol: <bir:InternalSymbol>{ identifier: def.name, isPublic: def.vis == "public" },
                     // casting away nil here, because it was filled in by `convertTypes`
-                    signature: <bir:FunctionSignature>def.signature,
-                    isPublic: def.vis == "public"
+                    signature: <bir:FunctionSignature>def.signature
                 });
             }
         }

@@ -291,7 +291,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope,
         curBlock = nextBlock;
         args.push(arg);
     }
-    bir:Register result = cx.createRegister(func.functionSignature.returnType);
+    bir:Register result = cx.createRegister(func.signature.returnType);
     bir:CallInsn call = {
         func,
         result,
@@ -302,41 +302,43 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope,
     return [result, curBlock];
 }
 
-function genLocalFunctionRef(CodeGenContext cx, Scope? scope, string name) returns bir:FunctionRef|CodeGenError {
-    if !(lookup(name, scope) is ()) {
+function genLocalFunctionRef(CodeGenContext cx, Scope? scope, string identifier) returns bir:FunctionRef|CodeGenError {
+    if !(lookup(identifier, scope) is ()) {
         return err:unimplemented("local variables cannot yet have function type");
     }
     bir:FunctionSignature signature;
-    ModuleLevelDef? def = cx.mod.defs[name];
+    ModuleLevelDef? def = cx.mod.defs[identifier];
     if def is FunctionDef {
         signature = <bir:FunctionSignature>def.signature;
-        return { functionIdentifier: name, functionSignature: signature };
+        boolean isPublic = def.vis == "public";
+        bir:InternalSymbol symbol = { identifier, isPublic };
+        return { symbol, signature };
     }
     else {
         err:Message msg;
         if def is () {
-            msg = `${name} is not defined`;
+            msg = `${identifier} is not defined`;
         }
         else {
-            msg = `${name} is not a function`;
+            msg = `${identifier} is not a function`;
         }
         return err:semantic(msg);
     }  
 }
 
-function genImportedFunctionRef(CodeGenContext cx, Scope? scope, string prefix, string name) returns bir:FunctionRef|CodeGenError {
+function genImportedFunctionRef(CodeGenContext cx, Scope? scope, string prefix, string identifier) returns bir:FunctionRef|CodeGenError {
     bir:ModuleId? moduleId = cx.mod.imports[prefix];
     if moduleId is () {
         return err:semantic(`no import declaration for prefix ${prefix}`);
     }
     else {
-        bir:FunctionSignature? sig = getLibFunction(moduleId, name);
-        if sig is () {
-            return err:unimplemented(`unsupported library function ${prefix}:${name}`);
+        bir:FunctionSignature? signature = getLibFunction(moduleId, identifier);
+        if signature is () {
+            return err:unimplemented(`unsupported library function ${prefix}:${identifier}`);
         }
         else {
-            bir:GlobalIdentifier gid = { module: moduleId, name };
-            return { functionIdentifier: gid, functionSignature: sig };
+            bir:ExternalSymbol symbol = { module: moduleId, identifier };
+            return { symbol, signature };
         }
     }
 }

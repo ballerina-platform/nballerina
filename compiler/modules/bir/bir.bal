@@ -18,8 +18,13 @@ public type ModuleId readonly & record {|
     // this omits the version, because programs cannot have two versions of the same module
 |};
 
+public type ExternalSymbol readonly & record {|
+    ModuleId module;
+    string identifier;
+|};
+
 public type ModuleDefn record {|
-    string name;
+    InternalSymbol symbol;
     readonly...;
 |};
 
@@ -30,13 +35,22 @@ public type Label int;
 public type FunctionDefn readonly & record {|
     *ModuleDefn;
     # Name within the module
-    string name;
+    InternalSymbol symbol;
     # The signature of the function
     FunctionSignature signature;
-    # Is it public?
-    boolean isPublic;
 |};
 
+public type InternalSymbol readonly & record {|
+    boolean isPublic;
+    string identifier;
+|};
+
+public type Symbol InternalSymbol|ExternalSymbol;
+
+public type FunctionRef readonly & record {|
+    Symbol symbol;
+    FunctionSignature signature;
+|};
 
 # A function's code is represented as a factored control flow graph.
 # (as described in Choi et al 1999 https://dl.acm.org/doi/abs/10.1145/381788.316171)
@@ -51,19 +65,6 @@ public type FunctionCode record {|
     BasicBlock[] blocks = [];
     # Registers indexed by number
     Register[] registers = [];
-|};
-
-public type FunctionRef readonly & record {|
-    Identifier functionIdentifier;
-    FunctionSignature functionSignature;
-|};
-
-// The string case represents a symbol in the same module
-public type Identifier string|GlobalIdentifier;
-
-public type GlobalIdentifier readonly & record {|
-    ModuleId module;
-    string name;
 |};
 
 # This represents the signature of a function definition.
