@@ -99,7 +99,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
             bir:Register reg;
             [reg, curBlock] = check codeGenFunctionCall(cx, <bir:BasicBlock>curBlock, scope, stmt);
             if reg.semType !== t:NIL {
-                return err:semantic("return type of function call statemnt not nil");
+                return err:semantic("return type of function call statement not nil");
             }
         }
         else {
