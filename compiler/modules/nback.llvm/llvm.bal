@@ -78,7 +78,8 @@ public type IntrinsicFunctionName "sadd.with.overflow.i64"|"ssub.with.overflow.i
 # Corresponds to llvm::Module class
 public class Module {
     private final FunctionDefn[] functions = [];
-    private final map<FunctionDecl> functionDecls = {};
+    private final map<FunctionDecl> intrinsicFunctions = {};
+    private final FunctionDecl[] functionDecls = [];
 
     public function init() {
     }
@@ -90,10 +91,16 @@ public class Module {
         return fn;
     }
 
+    public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl{
+        FunctionDecl fn = new(name, fnType);
+        self.functionDecls.push(fn);
+        return fn;
+    }
+
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
-        if self.functionDecls.hasKey(name) {
-            return self.functionDecls.get(name);
+        if self.intrinsicFunctions.hasKey(name) {
+            return self.intrinsicFunctions.get(name);
         }
         StructType overflowArithmeticReturnType = structType(["i64", "i1"]);
         FunctionType overflowArithmeticFunctionType = {returnType: overflowArithmeticReturnType, paramTypes: ["i64", "i64"]};
@@ -110,7 +117,7 @@ public class Module {
             }
         }
         if fn is FunctionDecl {
-            self.functionDecls[name] = fn;
+            self.intrinsicFunctions[name] = fn;
             return fn;
         } else {
             return err:unreached();
@@ -132,8 +139,11 @@ public class Module {
     }
 
     function output(Output out) {
-        foreach var decl in self.functionDecls {
+        foreach var decl in self.intrinsicFunctions {
             decl.output(out);
+        }
+        foreach var externFn in self.functionDecls {
+            externFn.output(out);
         }
         foreach var f in self.functions {
             f.output(out);
