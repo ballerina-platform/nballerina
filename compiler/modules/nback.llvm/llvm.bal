@@ -367,20 +367,13 @@ public class Builder {
 
     // Corresponds to LLVMBuildICmp
     public function iCmp(IntPredicate op, Value lhs, Value rhs) returns Value {
-        if (lhs.ty is IntType && rhs.ty is IntType) || (lhs.ty is PointerType && rhs.ty is PointerType) {
-            if lhs.ty != rhs.ty {
-                panic error("LHS and RHS must be same type for icmp");
-            }
-            BasicBlock bb = self.bb();
-            string reg = bb.func.genReg();
-            bb.addInsn(reg, "=", "icmp", typeToString(lhs.ty), lhs.operand,",", rhs.operand);
-            return new Value("i1", reg);
-        } else {
-            panic error("Integer comparison between incompatible types");
-        }
+        IntType ty = sameIntType(lhs, rhs);
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        bb.addInsn(reg, "=", "icmp", typeToString(lhs.ty), lhs.operand,",", rhs.operand);
+        return new Value("i1", reg);
     }
     
-
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
         if tem is () {
