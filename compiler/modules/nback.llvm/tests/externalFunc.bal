@@ -4,8 +4,8 @@ function externalFunc() returns Module {
     Builder builder = new ();
     Module m = new ();
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: []});
-    FunctionDecl bar = m.addFunctionDefnDecl("bar",{returnType:"i64", paramTypes:["i64"]});
-    FunctionDecl barVoid = m.addFunctionDefnDecl("barVoid", {returnType:"void", paramTypes: []});
+    FunctionDecl bar = m.addFunctionDecl("bar",{returnType:"i64", paramTypes:["i64"]});
+    FunctionDecl barVoid = m.addFunctionDecl("barVoid", {returnType:"void", paramTypes: []});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     _ = builder.call(barVoid, []);

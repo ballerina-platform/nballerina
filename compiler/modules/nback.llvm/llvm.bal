@@ -91,7 +91,7 @@ public class Module {
         return fn;
     }
 
-    public function addFunctionDefnDecl(string name, FunctionType fnType) returns FunctionDecl{
+    public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl{
         FunctionDecl fn = new(name, fnType);
         self.functionDecls.push(fn);
         return fn;
