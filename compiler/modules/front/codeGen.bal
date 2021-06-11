@@ -231,18 +231,54 @@ function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Scope? scop
 
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:Operand, bir:BasicBlock] {
     match expr {
-        // Binary arithmetic operations
-        var { op, left, right } => {
-            var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
-            var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
-            bir:Register reg = cx.createRegister(t:INT);
-            bir:IntArithmeticBinaryInsn insn = {
-                op,
-                operands: [l, r],
-                result: reg
-            };
-            bb.insns.push(insn);
-            return [reg, nextBlock];
+        // Binary int operations
+        var { op, left, right }   => {
+            // JBUG #31123 using guard gets unreachable pattern error
+            if op is bir:ArithmeticBinaryOp {
+                var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
+                var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
+                bir:Register reg = cx.createRegister(t:INT);
+                bir:IntArithmeticBinaryInsn insn = {
+                    op,
+                    operands: [l, r],
+                    result: reg
+                };
+                bb.insns.push(insn);
+                return [reg, nextBlock];
+            }
+            // Ordered compare
+            else {
+                // XXX Need to factor out some functions
+                bir:Register reg = cx.createRegister(t:BOOLEAN);
+                var [l, block1] = check codeGenExpr(cx, bb, scope, left);
+                var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
+                bir:IntOperand? lInt = operandAsInt(l);
+                bir:IntOperand? rInt = operandAsInt(r);
+                if !(lInt is ()) && !(rInt is ()) {
+                    bir:IntCompareInsn insn = {
+                        op,
+                        operands: [lInt, rInt],
+                        result: reg
+                    };
+                    bb.insns.push(insn);
+                    return [reg, nextBlock];
+
+                }
+                else {
+                    bir:BooleanOperand? lBoolean = operandAsBoolean(l);
+                    bir:BooleanOperand? rBoolean = operandAsBoolean(r);
+                    if !(lBoolean is ()) && !(rBoolean is ()) {
+                        bir:BooleanCompareInsn insn = {
+                            op,
+                            operands: [lBoolean, rBoolean],
+                            result: reg
+                        };
+                        bb.insns.push(insn);
+                        return [reg, nextBlock];
+                    }
+                }
+                return err:semantic("different basic types for relational operator");
+            }
         }
         // Negation
         { op: "-",  operand: var o } => {
@@ -372,4 +408,28 @@ function lookup(string name, Scope? scope) returns bir:Register? {
         }
     }
     return ();
+}
+
+function operandAsInt(bir:Operand operand) returns bir:IntOperand? {
+    if operand is bir:Register {
+        return operand.semType === t:INT ? operand : ();
+    }
+    else if operand is int {
+        return operand;
+    }
+    else {
+        return ();
+    }
+}
+
+function operandAsBoolean(bir:Operand operand) returns bir:BooleanOperand? {
+    if operand is bir:Register {
+        return operand.semType === t:BOOLEAN ? operand : ();
+    }
+    else if operand is boolean {
+        return operand;
+    }
+    else {
+        return ();
+    }
 }

@@ -12,7 +12,7 @@ type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_L
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | "!" | ":" | "," | "/" | "%" | "=";
-type MultiCharDelim "{|" | "|}" | "...";
+type MultiCharDelim "{|" | "|}" | "..." | "==" | "!=" | ">=" | "<=";
 type Keyword
     "any"
     | "boolean"
@@ -68,6 +68,13 @@ final readonly & map<Char> ESCAPES = {
     "n": "\n",
     "r": "\r",
     "t": "\t"
+};
+
+final readonly & map<MultiCharDelim> WITH_EQUALS = {
+    "=": "==",
+    "!": "!=",
+    "<": "<=",
+    ">": ">="
 };
 
 class Tokenizer {
@@ -165,6 +172,16 @@ class Tokenizer {
                 return "...";
             }
             else if ch is SingleCharDelim {
+                MultiCharDelim? multi = WITH_EQUALS[ch];
+                if !(multi is ()) {
+                    Char? peekCh = self.getc();
+                    if peekCh == "=" {
+                        return multi;
+                    }
+                    else if !(peekCh is ()) {
+                        self.ungetc(peekCh);
+                    }
+                }
                 return ch;
             }
             else if ALPHA.includes(ch) {

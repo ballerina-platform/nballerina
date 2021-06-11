@@ -124,6 +124,7 @@ public enum InsnName {
     INSN_INT_NEGATE,
     INSN_INT_NO_PANIC_NEGATE,
     INSN_INT_COMPARE,
+    INSN_BOOLEAN_COMPARE,
     INSN_EQUAL,
     INSN_IDENTICAL,
     INSN_BOOLEAN_NOT,
@@ -152,7 +153,7 @@ public type InsnBase record {
 
 public type Insn 
     IntArithmeticBinaryInsn|IntCompareInsn|IntNegateInsn
-    |IntCompareInsn|EqualInsn|IdenticalInsn|BooleanNotInsn
+    |IntCompareInsn|BooleanCompareInsn|EqualInsn|IdenticalInsn|BooleanNotInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|NarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
@@ -201,6 +202,16 @@ public type IntCompareInsn readonly & record {|
     OrderOp op;
     Register result;
     IntOperand[2] operands;
+|};
+
+# This does ordered comparision
+# Equality and inequality are done by equal
+public type BooleanCompareInsn readonly & record {|
+    *InsnBase;
+    INSN_BOOLEAN_COMPARE name = INSN_BOOLEAN_COMPARE;
+    OrderOp op;
+    Register result;
+    BooleanOperand[2] operands;
 |};
 
 # This does == and !=

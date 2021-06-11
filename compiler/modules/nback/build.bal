@@ -114,6 +114,12 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
         }
+        else if insn is bir:IntCompareInsn {
+            buildIntCompare(builder, scaffold, insn);
+        }
+        else if insn is bir:BooleanCompareInsn {
+            buildBooleanCompare(builder, scaffold, insn);
+        }
         else if insn is bir:IntNegateInsn {
             buildIntNegateInsn(builder, scaffold, insn);
         }
@@ -209,6 +215,20 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
                   scaffold.address(insn.result));                          
 }
 
+function buildIntCompare(llvm:Builder builder, Scaffold scaffold, bir:IntCompareInsn insn) {
+    builder.store(builder.iCmp(buildIntCompareOp(insn.op),
+                               buildInt(builder, scaffold, insn.operands[0]),
+                               buildInt(builder, scaffold, insn.operands[1])),
+                  scaffold.address(insn.result));                          
+}
+
+function buildBooleanCompare(llvm:Builder builder, Scaffold scaffold, bir:BooleanCompareInsn insn) {
+    builder.store(builder.iCmp(buildBooleanCompareOp(insn.op),
+                               buildBoolean(builder, scaffold, insn.operands[0]),
+                               buildBoolean(builder, scaffold, insn.operands[1])),
+                  scaffold.address(insn.result));                          
+}
+
 function buildIntNegateInsn(llvm:Builder builder, Scaffold scaffold, bir:IntNegateInsn insn) {
     builder.store(builder.binaryInt("sub", llvm:constInt(LLVM_INT, 0), buildInt(builder, scaffold, insn.operand)),
                   scaffold.address(insn.result));
@@ -256,7 +276,16 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
     }
 }
 
-final readonly & map<llvm:BinaryIntOp> arithmeticInsnNames = {
+function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperand operand) returns llvm:Value {
+    if operand is boolean {
+        return llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0);
+    }
+    else {
+        return builder.load(scaffold.address(operand));
+    }
+}
+
+final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
     "+": "add",
     "-": "sub",
     "*": "mul",
@@ -265,7 +294,29 @@ final readonly & map<llvm:BinaryIntOp> arithmeticInsnNames = {
 };
 
 function buildBinaryIntOp(bir:ArithmeticBinaryOp op) returns llvm:BinaryIntOp {
-    return <llvm:BinaryIntOp>arithmeticInsnNames[op];
+    return <llvm:BinaryIntOp>binaryIntOps[op];
+}
+
+final readonly & map<llvm:IntPredicate> signedIntPredicateOps = {
+    "<": "slt",
+    "<=": "sle",
+    ">": "sgt",
+    ">=": "sge"
+};
+
+final readonly & map<llvm:IntPredicate> unsignedIntPredicateOps = {
+    "<": "ult",
+    "<=": "ule",
+    ">": "ugt",
+    ">=": "uge"
+};
+
+function buildIntCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
+    return <llvm:IntPredicate>signedIntPredicateOps[op];
+}
+
+function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
+    return <llvm:IntPredicate>unsignedIntPredicateOps[op];
 }
 
 function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:FunctionType|BuildError {

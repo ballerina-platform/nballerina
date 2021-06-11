@@ -299,6 +299,15 @@ public class Builder {
         return new Value(ty, reg);
     }
 
+    // Corresponds to LLVMBuildICmp
+    public function iCmp(IntPredicate op, Value lhs, Value rhs) returns Value {
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        IntType ty = sameIntType(lhs, rhs);
+        bb.addInsn(reg, "=", "icmp", op, ty, lhs.operand, ",", rhs.operand);
+        return new Value("i1", reg);
+    }
+    
     // Corresponds to LLVMBuildRet/LLVMBuildRetVoid
     // value of () represents void return value
     public function ret(Value? value = ()) {
@@ -374,15 +383,6 @@ public class Builder {
         }
     }
 
-    // Corresponds to LLVMBuildICmp
-    public function iCmp(IntPredicate op, Value lhs, Value rhs) returns Value {
-        IntType ty = sameIntType(lhs, rhs);
-        BasicBlock bb = self.bb();
-        string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "icmp", typeToString(lhs.ty), lhs.operand,",", rhs.operand);
-        return new Value("i1", reg);
-    }
-    
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
         if tem is () {
