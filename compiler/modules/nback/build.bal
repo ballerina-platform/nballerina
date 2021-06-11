@@ -54,7 +54,7 @@ class Scaffold {
 
     function address(bir:Register r) returns llvm:PointerValue => self.addresses[r.number];
        
-    function basicBlock(bir:BasicBlock b) returns llvm:BasicBlock  => self.blocks[b.label];
+    function basicBlock(int label) returns llvm:BasicBlock  => self.blocks[label];
 
     function valueType(bir:Register r) returns llvm:IntType => self.types[r.number];
 
@@ -109,7 +109,7 @@ function buildFunctionBody(llvm:Builder builder, Scaffold scaffold, bir:Function
 }
 
 function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock block) returns BuildError? {
-    builder.positionAtEnd(scaffold.basicBlock(block));
+    builder.positionAtEnd(scaffold.basicBlock(block.label));
     foreach var insn in block.insns {
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
@@ -126,6 +126,12 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:CallInsn {
             check buildCall(builder, scaffold, insn);
         }
+        else if insn is bir:BranchInsn {
+            check buildBranch(builder, scaffold, insn);
+        }
+        else if insn is bir:CondBranchInsn {
+            check buildCondBranch(builder, scaffold, insn);
+        }
         else if insn is bir:CatchInsn {
             // XXX ignore catch basic block for now
             break;
@@ -136,8 +142,18 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
     }
 }
 
+function buildBranch(llvm:Builder builder, Scaffold scaffold, bir:BranchInsn insn) returns BuildError? {
+    builder.br(scaffold.basicBlock(insn.dest));
+}
+
+function buildCondBranch(llvm:Builder builder, Scaffold scaffold, bir:CondBranchInsn insn) returns BuildError? {
+    builder.condBr(builder.load(scaffold.address(insn.operand)),
+                   scaffold.basicBlock(insn.ifTrue),
+                   scaffold.basicBlock(insn.ifFalse));
+}
+
 function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) returns BuildError? {
-    builder.ret(check buildRetValueAsInt(builder, scaffold, insn.operand));
+    builder.ret(check buildRetValue(builder, scaffold, insn.operand));
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
@@ -145,7 +161,11 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
-    llvm:Value[] args = from var arg in insn.args select check buildValueAsInt(builder, scaffold, arg);
+    // JBUG #31008 cannot write this with select
+    llvm:Value[] args = [];
+    foreach var arg in insn.args {
+        args.push(check buildValue(builder, scaffold, arg));
+    }
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
     bir:Symbol funcSymbol = funcRef.symbol;
@@ -191,8 +211,23 @@ function buildIntNegateInsn(llvm:Builder builder, Scaffold scaffold, bir:IntNega
                   scaffold.address(insn.result));
 }
 
-function buildRetValueAsInt(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value?|err:Any {
-    return operand is () ? () : buildValueAsInt(builder, scaffold, operand);
+function buildRetValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value?|err:Any {
+    return operand is () ? () : buildValue(builder, scaffold, operand);
+}
+
+function buildValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value|err:Any {
+    if operand is bir:Register {
+        return builder.load(scaffold.address(operand));
+    }
+    else if operand is int {
+        return llvm:constInt(LLVM_INT, operand);
+    }
+    else if operand is boolean {
+        return llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0);
+    }
+    else {
+        return err:unimplemented("only support expressions of type int and boolean");
+    }
 }
 
 function buildValueAsInt(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value|err:Any {
