@@ -1,6 +1,6 @@
 #!/bin/sh
 # This expects to be run on Linux
-for f in v*.ll
+for f in V*.ll
 do
     b=`basename $f .ll`
     sed -ne 's;^.* // *@output  *;;p' $b.bal | tr -d '\r' > $b-expect.txt

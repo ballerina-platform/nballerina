@@ -1,2 +1,2 @@
 #!/bin/sh
-rm -f v*-actual.txt v*-expect.txt v*.ll
+rm -f V*-actual.txt V*-expect.txt V*-diff.txt V*.ll
