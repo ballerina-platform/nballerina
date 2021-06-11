@@ -28,6 +28,8 @@
 
 ## Grammar
 
+This deals explicitly with operator precedence and associativity.
+
 ```
 module-part = import-decl? module-decl*
 import-decl = "import" identifier "/" identifier ";"
