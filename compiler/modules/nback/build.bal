@@ -257,20 +257,13 @@ function typeAlignment(llvm:IntType ty) returns Alignment {
     return 8;
 }
 
+// This is jsut enough to get us started.
+// C++ starts mangled names with `_Z` (why `Z`?),
+// so I'm starting Ballerina names with `_B`.
 function mangleExternalSymbol(bir:ExternalSymbol symbol) returns string {
-    return mangle(symbol.module, symbol.identifier);
+    return "_B" + symbol.module.names[0] + "__" + symbol.identifier;
 }
 
 function mangleInternalSymbol(bir:ModuleId modId, bir:InternalSymbol symbol) returns string {
-    if symbol.isPublic {
-        return mangle(modId, symbol.identifier);
-    }
-    else {
-        return symbol.identifier;
-    }
-}
-
-function mangle(bir:ModuleId mod, string name) returns string {
-    // XXX
-    return name;
+    return "_B_" + symbol.identifier;
 }

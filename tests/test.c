@@ -1,10 +1,13 @@
 #include <stdint.h>
 #include <stdio.h>
 
-extern int64_t test(int64_t, int64_t);
+extern void _B_main();
+
+void _Bio__println(int64_t n) {
+  printf("%ld\n", (long)n);
+}
 
 int main() {
-  int64_t ret = test(17, 42);
-  printf("test(17,42) = %ld\n", (long)ret);
+  _B_main();
   return 0;
 }
