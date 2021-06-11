@@ -117,6 +117,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:IntNegateInsn {
             buildIntNegateInsn(builder, scaffold, insn);
         }
+        else if insn is bir:BooleanNotInsn {
+            buildBooleanNotInsn(builder, scaffold, insn);
+        }
         else if insn is bir:RetInsn {
             check buildRet(builder, scaffold, insn);
         }
@@ -208,6 +211,11 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
 
 function buildIntNegateInsn(llvm:Builder builder, Scaffold scaffold, bir:IntNegateInsn insn) {
     builder.store(builder.binaryInt("sub", llvm:constInt(LLVM_INT, 0), buildInt(builder, scaffold, insn.operand)),
+                  scaffold.address(insn.result));
+}
+
+function buildBooleanNotInsn(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {
+    builder.store(builder.binaryInt("xor", llvm:constInt(LLVM_BOOLEAN, 1), builder.load(scaffold.address(insn.operand))),
                   scaffold.address(insn.result));
 }
 

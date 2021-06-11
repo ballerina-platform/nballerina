@@ -7,4 +7,3 @@ do
     clang-11 -Wno-override-module $f ../runtime/balrt.c && ./a.out > $b-actual.txt
     diff $b-expect.txt $b-actual.txt >$b-diff.txt || echo $b failed
 done
-

@@ -257,7 +257,18 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
                 bb.insns.push(insn);
                 return [reg, nextBlock];
             }
-
+        }
+        { op: "!",  operand: var o } => {
+            var [operand, nextBlock] = check codeGenExprForBoolean(cx, bb, scope, o);
+            bir:Register reg = cx.createRegister(t:BOOLEAN);
+            if operand is boolean {
+                return [!operand, nextBlock];
+            }
+            else {
+                bir:BooleanNotInsn insn = { operand, result: reg };
+                bb.insns.push(insn);
+                return [reg, nextBlock];
+            }
         }
         // Variable reference
         var { varName } => {

@@ -11,7 +11,7 @@ const BOOLEAN_LITERAL = 3;
 type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string];
 
 // Some of these are not yet used by the grammar
-type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | ":" | "," | "/" | "%" | "=";
+type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | "!" | ":" | "," | "/" | "%" | "=";
 type MultiCharDelim "{|" | "|}" | "...";
 type Keyword
     "any"

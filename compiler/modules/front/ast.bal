@@ -69,7 +69,7 @@ type VarDeclStmt record {|
 |};
 
 type BinaryExprOp "+" | "-" | "*" | "/" | "%";
-type UnaryExprOp "-";
+type UnaryExprOp "-" | "!";
 
 type BinaryExpr record {|
     BinaryExprOp op;
