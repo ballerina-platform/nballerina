@@ -114,6 +114,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
         }
+        else if insn is bir:IntNegateInsn {
+            buildIntNegateInsn(builder, scaffold, insn);
+        }
         else if insn is bir:RetInsn {
             check buildRet(builder, scaffold, insn);
         }
@@ -181,6 +184,11 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
                                     buildInt(builder, scaffold, insn.operands[0]),
                                     buildInt(builder, scaffold, insn.operands[1])),
                   scaffold.address(insn.result));                          
+}
+
+function buildIntNegateInsn(llvm:Builder builder, Scaffold scaffold, bir:IntNegateInsn insn) {
+    builder.store(builder.binaryInt("sub", llvm:constInt(LLVM_INT, 0), buildInt(builder, scaffold, insn.operand)),
+                  scaffold.address(insn.result));
 }
 
 function buildRetValueAsInt(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value?|err:Any {
