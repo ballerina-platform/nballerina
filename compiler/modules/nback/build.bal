@@ -120,6 +120,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:BooleanCompareInsn {
             buildBooleanCompare(builder, scaffold, insn);
         }
+        else if insn is bir:EqualInsn {
+            check buildEqual(builder, scaffold, insn);
+        }
         else if insn is bir:IntNegateInsn {
             buildIntNegateInsn(builder, scaffold, insn);
         }
@@ -226,6 +229,13 @@ function buildBooleanCompare(llvm:Builder builder, Scaffold scaffold, bir:Boolea
     builder.store(builder.iCmp(buildBooleanCompareOp(insn.op),
                                buildBoolean(builder, scaffold, insn.operands[0]),
                                buildBoolean(builder, scaffold, insn.operands[1])),
+                  scaffold.address(insn.result));                          
+}
+
+function buildEqual(llvm:Builder builder, Scaffold scaffold, bir:EqualInsn insn) returns err:Any? {
+    builder.store(builder.iCmp(insn.negate ? "ne" : "eq",
+                               check buildValue(builder, scaffold, insn.operands[0]),
+                               check buildValue(builder, scaffold, insn.operands[1])),
                   scaffold.address(insn.result));                          
 }
 

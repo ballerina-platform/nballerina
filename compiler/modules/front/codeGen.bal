@@ -232,53 +232,39 @@ function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Scope? scop
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:Operand, bir:BasicBlock] {
     match expr {
         // Binary int operations
-        var { op, left, right }   => {
+        var { op, left, right } => {
             // JBUG #31123 using guard gets unreachable pattern error
             if op is bir:ArithmeticBinaryOp {
                 var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
                 var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
-                bir:Register reg = cx.createRegister(t:INT);
-                bir:IntArithmeticBinaryInsn insn = {
-                    op,
-                    operands: [l, r],
-                    result: reg
-                };
+                bir:Register result = cx.createRegister(t:INT);
+                bir:IntArithmeticBinaryInsn insn = { op, operands: [l, r], result };
                 bb.insns.push(insn);
-                return [reg, nextBlock];
+                return [result, nextBlock];
             }
-            // Ordered compare
+            // Compare
             else {
-                // XXX Need to factor out some functions
-                bir:Register reg = cx.createRegister(t:BOOLEAN);
+                bir:Insn insn;
+                bir:Register result = cx.createRegister(t:BOOLEAN);
                 var [l, block1] = check codeGenExpr(cx, bb, scope, left);
                 var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
-                bir:IntOperand? lInt = operandAsInt(l);
-                bir:IntOperand? rInt = operandAsInt(r);
-                if !(lInt is ()) && !(rInt is ()) {
-                    bir:IntCompareInsn insn = {
-                        op,
-                        operands: [lInt, rInt],
-                        result: reg
-                    };
-                    bb.insns.push(insn);
-                    return [reg, nextBlock];
-
+                TypedOperandPair? pair = typedOperandPair(l, r);
+                if pair is () {
+                    return err:semantic("different basic types for relational operator");
+                }
+                else if op is "!="|"==" {
+                    insn = <bir:EqualInsn> { negate: op == "!=", operands: pair[1], result };
+                }
+                else if pair is IntOperandPair {
+                    insn = <bir:IntCompareInsn> { op, operands: pair[1], result };
                 }
                 else {
-                    bir:BooleanOperand? lBoolean = operandAsBoolean(l);
-                    bir:BooleanOperand? rBoolean = operandAsBoolean(r);
-                    if !(lBoolean is ()) && !(rBoolean is ()) {
-                        bir:BooleanCompareInsn insn = {
-                            op,
-                            operands: [lBoolean, rBoolean],
-                            result: reg
-                        };
-                        bb.insns.push(insn);
-                        return [reg, nextBlock];
-                    }
+                    // pair is BooleanOperandPair 
+                    insn = <bir:BooleanCompareInsn> { op, operands: pair[1], result };
                 }
-                return err:semantic("different basic types for relational operator");
-            }
+                bb.insns.push(insn);
+                return [result, nextBlock];
+            }              
         }
         // Negation
         { op: "-",  operand: var o } => {
@@ -410,26 +396,40 @@ function lookup(string name, Scope? scope) returns bir:Register? {
     return ();
 }
 
-function operandAsInt(bir:Operand operand) returns bir:IntOperand? {
-    if operand is bir:Register {
-        return operand.semType === t:INT ? operand : ();
+type BooleanOperandPair readonly & ["boolean", [bir:BooleanOperand, bir:BooleanOperand]];
+type IntOperandPair readonly & ["int", [bir:IntOperand, bir:IntOperand]];
+type TypedOperandPair BooleanOperandPair|IntOperandPair;
+
+type TypedOperand readonly & (["int", bir:IntOperand] | ["boolean", bir:BooleanOperand]);
+
+function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperandPair? {
+    TypedOperand? l = typedOperand(lhs);
+    TypedOperand? r = typedOperand(rhs);
+    if l is ["int", bir:IntOperand] && r is ["int", bir:IntOperand] {
+        return ["int", [l[1], r[1]]];
     }
-    else if operand is int {
-        return operand;
+    if l is ["boolean", bir:BooleanOperand] && r is ["boolean", bir:BooleanOperand] {
+        return ["boolean", [l[1], r[1]]];
     }
-    else {
-        return ();
-    }
+    return ();
 }
 
-function operandAsBoolean(bir:Operand operand) returns bir:BooleanOperand? {
+function typedOperand(bir:Operand operand) returns TypedOperand? {
     if operand is bir:Register {
-        return operand.semType === t:BOOLEAN ? operand : ();
+        if operand.semType === t:BOOLEAN {
+            return ["boolean", operand];
+        }
+        else if operand.semType === t:INT {
+            return ["int", operand];
+        }
+    }
+    else if operand is int {
+        return ["int", operand];
     }
     else if operand is boolean {
-        return operand;
+        return ["boolean", operand];
     }
-    else {
-        return ();
-    }
+    return ();
 }
+
+

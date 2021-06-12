@@ -68,7 +68,7 @@ type VarDeclStmt record {|
     t:SemType? semType = ();
 |};
 
-type BinaryExprOp "+" | "-" | "*" | "/" | "%" | "<" | ">" | "<=" | ">=";
+type BinaryExprOp "+" | "-" | "*" | "/" | "%" | "<" | ">" | "<=" | ">=" | "==" | "!=";
 type UnaryExprOp "-" | "!";
 
 type BinaryExpr record {|
