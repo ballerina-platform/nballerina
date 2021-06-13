@@ -152,10 +152,9 @@ Depends on subset: string
 * New type descriptors:
   * `error`
   * `TD|error` where TD is any type descriptor
-
 * New syntax
- * `error(msg)`
- * `check E`
+  * `error(msg)`
+  * `check E`
 
 
 Notes:
