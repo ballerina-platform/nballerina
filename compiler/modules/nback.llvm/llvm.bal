@@ -320,6 +320,11 @@ public class Builder {
         }
     }
 
+    public function unreachable() {
+        BasicBlock bb = self.bb();
+        bb.addInsn("unreachable");
+    }
+      
     // Corresponds to LLVMBuildCall
     // Returns () if there is no result i.e. function return type is void
     public function call(Function fn, Value[] args) returns Value? {
