@@ -12,14 +12,29 @@ const LLVM_BOOLEAN = "i1";
 const LLVM_NIL = "i1";
 const LLVM_VOID = "void";
 
+const PANIC_OVERFLOW = 1;
+const PANIC_DIVIDE_BY_ZERO = 2;
+
+final llvm:FunctionType panicFunctionType = { returnType: "void", paramTypes: ["i64"] };
+
+type RuntimeFunctionName "panic";
+
+final bir:ModuleId runtimeModule = {
+    organization: "ballerinai",
+    names: ["runtime"]
+};
+
 type ImportedFunction record {|
     readonly bir:ExternalSymbol symbol;
     llvm:FunctionDecl decl;
 |};
 
+type ImportedFunctionTable table<ImportedFunction> key(symbol);
+
 class Scaffold {
     private final bir:ModuleId modId;
     private final llvm:Module llMod;
+    private final llvm:FunctionDefn llFunc;
     // LLVM type for each BIR register
     private final llvm:IntType[] types;
     // LLVM ValueRef referring to address (allocated with alloca)
@@ -30,12 +45,17 @@ class Scaffold {
     // LLVM functions in the module indexed by (unmangled) identifier within the module
     private final map<llvm:FunctionDefn> functionDefns;
     // List of all imported functions that have been added to the LLVM module
-    private final table<ImportedFunction> key(symbol) importedFunctions = table [];
+    private final ImportedFunctionTable importedFunctions;
+    private bir:Label? onPanicLabel = ();
+    private final bir:BasicBlock[] birBlocks;
 
-    function init(bir:ModuleId modId, llvm:Module llMod, llvm:FunctionDefn llFunc, map<llvm:FunctionDefn> functions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
+    function init(bir:ModuleId modId, llvm:Module llMod, llvm:FunctionDefn llFunc, map<llvm:FunctionDefn> functions, ImportedFunctionTable importedFunctions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.modId = modId;
         self.llMod = llMod;
+        self.llFunc = llFunc;
         self.functionDefns = functions;
+        self.importedFunctions = importedFunctions;
+        self.birBlocks = code.blocks;
         // JBUG 31008 if this is a query expression
         final llvm:IntType[] types = [];
         foreach var reg in code.registers {
@@ -53,6 +73,7 @@ class Scaffold {
     }
 
     function address(bir:Register r) returns llvm:PointerValue => self.addresses[r.number];
+
        
     function basicBlock(int label) returns llvm:BasicBlock  => self.blocks[label];
 
@@ -72,8 +93,28 @@ class Scaffold {
     function addImportedFunction(bir:ExternalSymbol symbol, llvm:FunctionDecl decl) {
         self.importedFunctions.add({symbol, decl});
     }
-}
 
+    function getIntrinsicFunction(llvm:IntrinsicFunctionName name) returns llvm:FunctionDecl {
+        return self.llMod.getIntrinsicDeclaration(name);
+    }
+    
+    function addBasicBlock() returns llvm:BasicBlock {
+        return self.llFunc.appendBasicBlock();
+    }
+
+    function setBasicBlock(bir:BasicBlock block) {
+        self.onPanicLabel = block.onPanic;
+    }
+
+    function getOnPanic() returns llvm:BasicBlock {
+        return self.blocks[<bir:Label>self.onPanicLabel];
+    }
+
+    function panicAddress() returns llvm:PointerValue {
+        bir:Insn catchInsn = self.birBlocks[<bir:Label>self.onPanicLabel].insns[0];
+        return self.address((<bir:CatchInsn>catchInsn).result);
+    }
+}
 
 function buildModule(bir:Module mod) returns llvm:Module|BuildError {
     bir:ModuleId modId = mod.getId();
@@ -94,9 +135,10 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
         llFuncMap[defn.symbol.identifier] = llFunc;
     }  
     llvm:Builder builder = new;
+    ImportedFunctionTable importedFunctions = table [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
-        Scaffold scaffold = check new(mod.getId(), llMod, llFuncs[i], llFuncMap,  builder, functionDefns[i], code);
+        Scaffold scaffold = check new(mod.getId(), llMod, llFuncs[i], llFuncMap, importedFunctions, builder, functionDefns[i], code);
         check buildFunctionBody(builder, scaffold, code);
     }
     return llMod;
@@ -109,6 +151,7 @@ function buildFunctionBody(llvm:Builder builder, Scaffold scaffold, bir:Function
 }
 
 function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock block) returns BuildError? {
+    scaffold.setBasicBlock(block);
     builder.positionAtEnd(scaffold.basicBlock(block.label));
     foreach var insn in block.insns {
         if insn is bir:IntArithmeticBinaryInsn {
@@ -145,11 +188,14 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             check buildCondBranch(builder, scaffold, insn);
         }
         else if insn is bir:CatchInsn {
-            // XXX ignore catch basic block for now
-            break;
+            // nothing to do
+            // scaffold.panicAddress uses this to figure out where to store the panic info
+        }
+        else if insn is bir:AbnormalRetInsn {
+            check buildAbnormalRet(builder, scaffold, insn);
         }
         else {
-            return err:unimplemented(`BIR insn ${insn.name} not implemeted`);
+            return err:unimplemented(`BIR insn ${insn.name} not implemented`);
         }
     }
 }
@@ -166,6 +212,11 @@ function buildCondBranch(llvm:Builder builder, Scaffold scaffold, bir:CondBranch
 
 function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) returns BuildError? {
     builder.ret(check buildRetValue(builder, scaffold, insn.operand));
+}
+
+function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) returns BuildError? {
+    _ = builder.call(buildRuntimeFunctionDecl(scaffold, "panic", panicFunctionType), [check buildValueAsInt(builder, scaffold, insn.operand)]);
+    builder.unreachable();   
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
@@ -211,11 +262,42 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
     }
 }
 
+function buildRuntimeFunctionDecl(Scaffold scaffold, RuntimeFunctionName name, llvm:FunctionType ty) returns llvm:FunctionDecl {
+    bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: name };
+    llvm:FunctionDecl? decl = scaffold.getImportedFunction(symbol);
+    if !(decl is ()) {
+        return decl;
+    }
+    else {
+        llvm:Module mod = scaffold.getModule();
+        llvm:FunctionDecl d = mod.addFunctionDecl(mangleRuntimeSymbol(name), ty);
+        scaffold.addImportedFunction(symbol, d);
+        return d;
+    } 
+}
+
 function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntArithmeticBinaryInsn insn) {
-    builder.store(builder.binaryInt(buildBinaryIntOp(insn.op),
-                                    buildInt(builder, scaffold, insn.operands[0]),
-                                    buildInt(builder, scaffold, insn.operands[1])),
-                  scaffold.address(insn.result));                          
+    llvm:IntrinsicFunctionName? intrinsicName = buildBinaryIntIntrinsic(insn.op);
+    llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
+    llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
+    llvm:Value result;
+    if intrinsicName != () {
+        llvm:FunctionDecl intrinsicFunction = scaffold.getIntrinsicFunction(intrinsicName);
+        // XXX better to distinguish builder.call and builder.callVoid
+        llvm:Value resultWithOverflow = <llvm:Value>builder.call(intrinsicFunction, [lhs, rhs]);
+        llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+        llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
+        builder.condBr(builder.extractValue(resultWithOverflow, 1), overflowBlock, continueBlock);
+        builder.positionAtEnd(overflowBlock);
+        builder.store(llvm:constInt("i64", PANIC_OVERFLOW), scaffold.panicAddress());
+        builder.br(scaffold.getOnPanic());
+        builder.positionAtEnd(continueBlock);
+        result = builder.extractValue(resultWithOverflow, 0);
+    }
+    else {
+        result = builder.binaryInt(buildBinaryIntOp(insn.op), lhs, rhs);
+    }                                    
+    builder.store(result, scaffold.address(insn.result));                          
 }
 
 function buildIntCompare(llvm:Builder builder, Scaffold scaffold, bir:IntCompareInsn insn) {
@@ -295,6 +377,12 @@ function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperan
     }
 }
 
+final readonly & map<llvm:IntrinsicFunctionName> binaryIntIntrinsics = {
+    "+": "sadd.with.overflow.i64",
+    "-": "ssub.with.overflow.i64",
+    "*": "smul.with.overflow.i64"
+};
+
 final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
     "+": "add",
     "-": "sub",
@@ -305,6 +393,10 @@ final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
 
 function buildBinaryIntOp(bir:ArithmeticBinaryOp op) returns llvm:BinaryIntOp {
     return <llvm:BinaryIntOp>binaryIntOps[op];
+}
+
+function buildBinaryIntIntrinsic(bir:ArithmeticBinaryOp op) returns llvm:IntrinsicFunctionName? {
+    return binaryIntIntrinsics[op];
 }
 
 final readonly & map<llvm:IntPredicate> signedIntPredicateOps = {
@@ -367,6 +459,11 @@ function buildValueType(t:SemType ty) returns llvm:IntType|BuildError {
 // XXX what's the right alignment for i1
 function typeAlignment(llvm:IntType ty) returns Alignment {
     return 8;
+}
+
+
+function mangleRuntimeSymbol(string name) returns string {
+    return "_bal_" + name;
 }
 
 // This is jsut enough to get us started.
