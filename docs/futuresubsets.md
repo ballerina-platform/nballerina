@@ -130,32 +130,33 @@ Also useful to have optional types done.
 * Add type definitions with syntax `type T record {| ... |};` (only)
 * Allow type descriptor in function definitions to refer to type definition
 * Expression syntax
-  * mapping constructor `{ xyz: E }` syntactically allowed only where list constructors are allowed
+  * mapping constructor `{ xyz: E }` syntactically allowed only where there is an explicit contextually expected type e.g. as function argument, initializer or following a type cast
   * field access E.x
 
 
 Existing syntax applies:
-* `==`, `!=` allowed when subtype of `anydata` i.e. no references to arrays; this means `==` and `!=` don't need to deal with cycles (which is a bit tricky)
+* `===`, `!==`
+* `==`, `!=`
 * type cast 
 
 Not yet allowed:
-* field access not allowed as lvalue, so maps cannot be mutated once created; this prevents cycles; we can
-allow mutation once we support cycles in `==` and `!=`. 
+* field access as lvalue `S.x = E;`
+
+Notes:
+* `==` and `!=` become a bit more difficult when cycles are possible. A subset can avoid the possibility of cycles by not allowing mutation of things
+  that are subtypes of anydata. For example, allowing only mutable arrays of type any[] isn't a problem, because if a record has a member of type
+  `any[]`, then it's not a subtype of `anydata` and `==` isn't allowed.
+
 
 ### Implementation notes
 
-Each type definition has a unique integer associated with it; let's call this the
-atomic record type id: we can use a uint32_t for this.
+Each type definition has a unique integer associated with it; let's call this the atomic record type id: we can use a uint32_t for this.
 
 The most challenging thing is how to deal with type cast to a record type: I think the easiest solution is to compute subtype relationships at compile time. If we see a cast <T>E, we store in the .ll  a sorted array of atomic record type ids that are a subtype of T (since we have only a single file this is easy); the runtime then simply does a lookup in that list. Because we are dealing with closed records, we have only to consider records with exactly the same set of field names.
 
-The runtime representation of a record with N fields has a pointer to a type descriptor
-followed by value of each field stored sorted by field name, where each field uses a tagged pointer (boxed) representation.
-The type descriptor for now can just have an atomic type id, number of fields and the list of subtypes. This keeps the runtime
-trivial for now. The number of fields is needed to implement `==` and `!=`.
+The runtime representation of a record with N fields has a pointer to a type descriptor followed by value of each field stored sorted by field name, where each field uses a tagged pointer (boxed) representation. The type descriptor for now can just have an atomic type id, number of fields and the list of subtypes. This keeps the runtime trivial for now. The number of fields is needed to implement `==` and `!=`.
 
-This won't be scaleable to multi-module programs without modification, but it might be applicable to, for example, checking a value
-created in a module M against a record type that occurs in M (which is probably the common case).
+This won't work for a multi-module program, but we might be able to extend to handle some common cases in a multi-module program.
 
 ## Subset typed arrays
 
