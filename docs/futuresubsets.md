@@ -29,7 +29,7 @@ Implementation notes:
 * Operations on `any` are `===`, `!==` and type cast
 * We now have the subtype relationships: `int <: any` and `boolean <: any`
 
-# Subset optional type
+## Subset optional type
 
 Summary: allow `T?`
 
