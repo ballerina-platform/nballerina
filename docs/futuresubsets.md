@@ -23,9 +23,9 @@ Depends on subset: (none)
    * `io:println` takes a single argument of type `any`
 
 Implementation notes:
-* When a variable has type any, its representation is a tagged pointer: at this stage, a tagged pointer puts all `int`s on the heap; nil and booleans are represented by tagged bits
-* Type cast converts from tagged pointer representation to
-* Upcast is implicit in BIR, but results in conversion the other way
+* When a variable has type any, its representation is a tagged representation: at this stage, the tagged representation of an `int` puts it on the heap; the tagged representation of nil and booleans are represented using low-bits of a tagged pointer
+* Type cast converts from tagged representation to untagged representation
+* There is no explicit widening instruction BIR, but widening can result in converting from untagged representation to tagged representation
 * Operations on `any` are `===`, `!==` and type cast
 * We now have the subtype relationships: `int <: any` and `boolean <: any`
 
@@ -36,7 +36,7 @@ Summary: allow `T?`
 * New type descriptor `T?`
 
 Notes:
-* Representation of T? will be same as any? i.e. conversion between these two types does not involve a representation change
+* T? will always use the same tagged representation as any, so conversion between T? and any? will not involve a representation change
 
 ## Subset langlib
 
@@ -154,7 +154,7 @@ Each type definition has a unique integer associated with it; let's call this th
 
 The most challenging thing is how to deal with type cast to a record type: I think the easiest solution is to compute subtype relationships at compile time. If we see a cast <T>E, we store in the .ll  a sorted array of atomic record type ids that are a subtype of T (since we have only a single file this is easy); the runtime then simply does a lookup in that list. Because we are dealing with closed records, we have only to consider records with exactly the same set of field names.
 
-The runtime representation of a record with N fields has a pointer to a type descriptor followed by value of each field stored sorted by field name, where each field uses a tagged pointer (boxed) representation. The type descriptor for now can just have an atomic type id, number of fields and the list of subtypes. This keeps the runtime trivial for now. The number of fields is needed to implement `==` and `!=`.
+The runtime representation of a record with N fields has a pointer to a type descriptor followed by value of each field stored sorted by field name, where each field uses a tagged pointer (boxed) representation. The type descriptor for now can just have an atomic type id, number of fields and the list of subtypes. This keeps the runtime trivial for now. The number of fields is needed to implement `==` and `!=`. The type descriptor will also need the names of the fields, so `io:println` can print it out (and for `toString` to work later).
 
 This won't work for a multi-module program, but we might be able to extend to handle some common cases in a multi-module program.
 
@@ -164,7 +164,7 @@ Summary: support type descriptor `T[]`
 
 Underlying implementation the same as `any[]`, but the array also has an inherent type.
 
-Also need to handle cycles for `==`, `!=`.
+Also need to handle cycles for `==`, `!=` when array is subtype of anydata.
 
 ## Subset map
 
