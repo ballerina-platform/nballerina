@@ -6,12 +6,12 @@ We will give them symbolic names until implemented. We may group some together. 
 
 Subsets towards the end are less well worked out.
 
-Key idea here (compared to previous schemes) is to start by doing `any` rather than general unions. This
-keeps runtime type-checking simple.
+Key idea here (compared to previous schemes) is to start by doing `any` rather than general unions. This keeps runtime type-checking simple.
 
 ## Subset any
 
 Summary: type `any` and `()` and some minimal operations on them
+
 Depends on subset: (none)
 
 * New type descriptors: `any` and `()`
@@ -41,6 +41,7 @@ Notes:
 ## Subset langlib
 
 Summary: call langlib function using method call syntax
+
 Depends on subsets: (none)
 
 * New syntax: method calls `v.foo(arg)` for calling langlib functions
@@ -52,6 +53,7 @@ as what corresponding Java oeprators do and what LLVM add/sub/mul instructions d
 ## Subset string
 
 Summary: type descriptor `string` and some minimal operations on it
+
 Depends on subsets: any, langlib
 
 * New type descriptor: `string`
@@ -80,6 +82,7 @@ TBD:
 ## Subset array
 
 Summary: type descriptor `any[]` and some minimal operations on it
+
 Depends on subsets: any, langlib
 
 If this is does before
@@ -104,6 +107,7 @@ This does `any[]` without mutation.
 ## Subset array mutation
 
 Summary: allow mutation of arrays
+
 Depends on subsets: array
 
 * Syntax
@@ -118,6 +122,7 @@ Existing syntax applies:
 ## Subset record
 
 Summary: record types
+
 Depends on subsets: any
 
 Also useful to have optional types done.
@@ -163,6 +168,7 @@ Also need to handle cycles for `==`, `!=`.
 ## Subset map
 
 Summary: add type `map<any>` and minimal operations on it
+
 Depends on subsets: string, any
 
 * New type descriptor: `map<any>`
