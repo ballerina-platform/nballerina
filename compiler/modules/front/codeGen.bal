@@ -66,8 +66,7 @@ function codeGenOnPanic(CodeGenContext cx) {
         bir:Register reg = cx.createRegister(t:ERROR);
         bir:CatchInsn catch = { result: reg };
         onPanicBlock.insns.push(catch);
-        onPanicBlock.insns.push(<bir:PanicInsn>{operand: reg});
-        blocks.push(onPanicBlock);
+        onPanicBlock.insns.push(<bir:AbnormalRetInsn>{operand: reg});
     }
 }
 
