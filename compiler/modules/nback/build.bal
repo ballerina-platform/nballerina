@@ -281,6 +281,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
     llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
     llvm:Value result;
+    llvm:BasicBlock? joinBlock = ();
     if intrinsicName != () {
         llvm:FunctionDecl intrinsicFunction = scaffold.getIntrinsicFunction(intrinsicName);
         // XXX better to distinguish builder.call and builder.callVoid
@@ -289,15 +290,48 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
         builder.condBr(builder.extractValue(resultWithOverflow, 1), overflowBlock, continueBlock);
         builder.positionAtEnd(overflowBlock);
-        builder.store(llvm:constInt("i64", PANIC_OVERFLOW), scaffold.panicAddress());
+        builder.store(llvm:constInt(LLVM_INT, PANIC_OVERFLOW), scaffold.panicAddress());
         builder.br(scaffold.getOnPanic());
         builder.positionAtEnd(continueBlock);
         result = builder.extractValue(resultWithOverflow, 0);
     }
     else {
-        result = builder.binaryInt(buildBinaryIntOp(insn.op), lhs, rhs);
+        llvm:BasicBlock zeroDivisorBlock = scaffold.addBasicBlock();
+        llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+        builder.condBr(builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, 0)), zeroDivisorBlock, continueBlock);
+        builder.positionAtEnd(zeroDivisorBlock);
+        builder.store(llvm:constInt(LLVM_INT, PANIC_DIVIDE_BY_ZERO), scaffold.panicAddress());
+        builder.br(scaffold.getOnPanic());
+        builder.positionAtEnd(continueBlock);
+        continueBlock = scaffold.addBasicBlock();
+        llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
+        builder.condBr(builder.binaryInt("and",
+                                         builder.iCmp("eq", lhs, llvm:constInt(LLVM_INT, int:MIN_VALUE)),
+                                         builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, -1))),
+                       overflowBlock,
+                       continueBlock);
+        builder.positionAtEnd(overflowBlock);
+        llvm:BinaryIntOp op;
+        if insn.op == "/" {
+            op = "sdiv";
+            builder.store(llvm:constInt(LLVM_INT, PANIC_OVERFLOW), scaffold.panicAddress());
+            builder.br(scaffold.getOnPanic());
+        }
+        else {
+            builder.store(llvm:constInt(LLVM_INT, 0), scaffold.address(insn.result));
+            llvm:BasicBlock b = scaffold.addBasicBlock();
+            builder.br(b);
+            joinBlock = b;
+            op = "srem";
+        }
+        builder.positionAtEnd(continueBlock);
+        result = builder.binaryInt(op, lhs, rhs);
     }                                    
-    builder.store(result, scaffold.address(insn.result));                          
+    builder.store(result, scaffold.address(insn.result));
+    if !(joinBlock is ()) {
+        builder.br(joinBlock);
+        builder.positionAtEnd(joinBlock);
+    }                         
 }
 
 function buildIntCompare(llvm:Builder builder, Scaffold scaffold, bir:IntCompareInsn insn) {

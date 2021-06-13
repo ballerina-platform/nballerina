@@ -6,23 +6,16 @@ define void @_B_main () {
   %R1 = alloca i64, align 8
   %R2 = alloca i1, align 8
   %R3 = alloca i64, align 8
-  %R4 = alloca i1, align 8
-  %R5 = alloca i64, align 8
-  %R6 = call i64 @_B_add (i64 2, i64 3)
-  store i64 %R6, i64* %R0, align 8
-  %R7 = load i64, i64* %R0, align 8
-  store i64 %R7, i64* %R1, align 8
-  %R8 = load i64, i64* %R1, align 8
-  call void @_Bio__println (i64 %R8)
+  store i64 9223372036854775807, i64* %R0, align 8
+  %R4 = load i64, i64* %R0, align 8
+  %R5 = call i64 @_B_add (i64 %R4, i64 1)
+  store i64 %R5, i64* %R1, align 8
+  %R6 = load i64, i64* %R1, align 8
+  call void @_Bio__println (i64 %R6)
   store i1 0, i1* %R2, align 8
-  %R9 = call i64 @_B_add (i64 20, i64 30)
-  store i64 %R9, i64* %R3, align 8
-  %R10 = load i64, i64* %R3, align 8
-  call void @_Bio__println (i64 %R10)
-  store i1 0, i1* %R4, align 8
   ret void
-  %R11 = load i64, i64* %R5, align 8
-  call void @_bal_panic (i64 %R11)
+  %R7 = load i64, i64* %R3, align 8
+  call void @_bal_panic (i64 %R7)
   unreachable
 }
 define internal i64 @_B_add (i64 %R0, i64 %R1) {
