@@ -1,7 +1,8 @@
+declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64)
 declare void @_Bio__println (i64)
+declare void @_bal_panic (i64)
 define void @_B_main () {
   %R0 = alloca i1, align 8
-  %R1 = alloca i64, align 8
   call void @_B_printInts (i64 5)
   store i1 0, i1* %R0, align 8
   ret void
@@ -30,9 +31,20 @@ L3:
   call void @_Bio__println (i64 %R11)
   store i1 0, i1* %R4, align 8
   %R12 = load i64, i64* %R2, align 8
-  %R13 = add i64 %R12, 1
-  store i64 %R13, i64* %R5, align 8
-  %R14 = load i64, i64* %R5, align 8
-  store i64 %R14, i64* %R2, align 8
+  %R13 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %R12, i64 1)
+  %R14 = extractvalue {i64, i1} %R13, 1
+  br i1 %R14, label %L6, label %L5
+L4:
+  %R17 = load i64, i64* %R6, align 8
+  call void @_bal_panic (i64 %R17)
+  unreachable
+L5:
+  %R15 = extractvalue {i64, i1} %R13, 0
+  store i64 %R15, i64* %R5, align 8
+  %R16 = load i64, i64* %R5, align 8
+  store i64 %R16, i64* %R2, align 8
   br label %L1
+L6:
+  store i64 1, i64* %R6, align 8
+  br label %L4
 }
