@@ -188,7 +188,7 @@ public class FunctionDefn {
     final EnumAttribute[] attributes = [];
 
     private BasicBlock[] basicBlocks = [];
-    private int varCount = 0;
+    private map<int> variableNames = {};
     private int labelCount = 0;
     private Value[] paramValues;
     private Linkage linkage = "external";
@@ -244,9 +244,29 @@ public class FunctionDefn {
         return label;
     }
 
-    function genReg() returns string {
-        string reg = "%" + "R" + self.varCount.toString();
-        self.varCount += 1;
+    function genReg(string? name = ()) returns string {
+        string regName = "_" + self.variableNames.length().toString();
+        if name is string {
+            regName = name;
+        }
+        if self.variableNames.hasKey(regName) {
+            int? count = self.variableNames.get(regName);
+            if count is int {
+                self.variableNames[regName] = count + 1; // increment the count of the base name
+                string newName = regName + "." + count.toString();
+                while (self.variableNames.hasKey(newName)) {
+                    count += 1;
+                    newName = regName + "." + count.toString();
+                }
+                regName = newName;
+                self.variableNames[regName] = 1; // save the augmented name in case user use the same
+            } else {
+                err:unreached();
+            }
+        } else {
+            self.variableNames[regName] = 1;
+        }
+        string reg = "%" + regName;
         return reg;
     } 
 
@@ -280,7 +300,7 @@ public class Builder {
     // Corresponds to LLVMBuildAlloca
     public function alloca(IntType ty, Alignment align, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
-        string reg = bb.func.genReg();
+        string reg = bb.func.genReg(name);
         PointerType ptrTy = { pointsTo: ty, align };
         bb.addInsn(reg, "=", "alloca", ty, ",", "align", align.toString());
         return new PointerValue(ptrTy, reg);
