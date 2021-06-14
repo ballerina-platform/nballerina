@@ -179,7 +179,7 @@ public class FunctionDefn {
     final string functionName;
 
     private BasicBlock[] basicBlocks = [];
-    private int varCount = 0;
+    private string[] variableNames = [];
     private int labelCount = 0;
     private Value[] paramValues;
     private Linkage linkage = "external";
@@ -235,9 +235,18 @@ public class FunctionDefn {
         return label;
     }
 
-    function genReg() returns string {
-        string reg = "%" + "R" + self.varCount.toString();
-        self.varCount += 1;
+    function genReg(string? name = ()) returns string {
+        string regName = "R" + self.variableNames.length().toString();
+        if name is string {
+            regName = name;
+        }
+        int count = 0;
+        while self.variableNames.indexOf(regName) != (){
+           regName = incrementName(regName, count);
+           count += 1; 
+        }
+        string reg = "%" + regName;
+        self.variableNames.push(reg);
         return reg;
     } 
 }
@@ -265,7 +274,7 @@ public class Builder {
     // Corresponds to LLVMBuildAlloca
     public function alloca(IntType ty, Alignment align, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
-        string reg = bb.func.genReg();
+        string reg = bb.func.genReg(name);
         PointerType ptrTy = { pointsTo: ty, align };
         bb.addInsn(reg, "=", "alloca", ty, ",", "align", align.toString());
         return new PointerValue(ptrTy, reg);
@@ -529,6 +538,19 @@ function createLine(string[] words, string indent = "") returns string {
         parts.push(word);
     }
     return string:concat(indent, ...parts);
+}
+
+function incrementName(string name, int count) returns string{
+    if count == 0 {
+       return name + "." + count.toString(); 
+    } else {
+        int? splitPoint = name.lastIndexOf(".");
+        if splitPoint is int {
+           return name.substring(0, splitPoint) + "." + count.toString(); 
+        } else {
+            return err:unreached();
+        }
+    }
 }
 
 function omitSpaceBefore(string word) returns boolean {
