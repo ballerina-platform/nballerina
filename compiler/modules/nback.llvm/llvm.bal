@@ -154,7 +154,7 @@ public class Module {
 
 // Corresponds to LLVMLinkage enum
 public type Linkage "internal"|"external";
-public type EnumAttribute "noreturn"|"cold"; //FIXME: add others
+public type EnumAttribute "noreturn"|"cold"|"nounwind"|"readnone"|"speculatable"|"willreturn"; //FIXME: add others
 
 # Corresponds to an LLVMValueRef that corresponds to an llvm::Function
 public type Function FunctionDecl|FunctionDefn;

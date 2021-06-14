@@ -1,4 +1,4 @@
-declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64)
+declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 define void @abort () {
 }
 define i64 @foo (i64 %R0, i64 %R1) {
