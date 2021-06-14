@@ -241,12 +241,12 @@ public class FunctionDefn {
             regName = name;
         }
         int count = 0;
-        while self.variableNames.indexOf(regName) != (){
+        while self.variableNames.indexOf(regName) != () {
            regName = incrementName(regName, count);
            count += 1; 
         }
         string reg = "%" + regName;
-        self.variableNames.push(reg);
+        self.variableNames.push(regName);
         return reg;
     } 
 }
