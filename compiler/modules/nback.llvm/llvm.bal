@@ -223,7 +223,7 @@ public class FunctionDefn {
     }
 
     // Corresponds to LLVMAppendBasicBlock
-    public function appendBasicBlock() returns BasicBlock {
+    public function appendBasicBlock(string? name=()) returns BasicBlock {
         BasicBlock tem = new BasicBlock(self.genLabel(), self);
         self.basicBlocks.push(tem);
         return tem;
@@ -263,7 +263,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildAlloca
-    public function alloca(IntType ty, Alignment align) returns PointerValue {
+    public function alloca(IntType ty, Alignment align, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         PointerType ptrTy = { pointsTo: ty, align };
@@ -272,7 +272,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildLoad
-    public function load(PointerValue ptr) returns Value {
+    public function load(PointerValue ptr, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         IntType ty = ptr.ty.pointsTo;
         string reg = bb.func.genReg();
@@ -291,7 +291,7 @@ public class Builder {
 
     // binary operation with int operands and (same) int result
     // Corresponds to LLVMBuild{Add,Mul,Sub,SDiv,SRem}
-    public function binaryInt(BinaryIntOp op, Value lhs, Value rhs) returns Value {
+    public function binaryInt(BinaryIntOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
@@ -300,7 +300,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildICmp
-    public function iCmp(IntPredicate op, Value lhs, Value rhs) returns Value {
+    public function iCmp(IntPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
@@ -327,7 +327,7 @@ public class Builder {
       
     // Corresponds to LLVMBuildCall
     // Returns () if there is no result i.e. function return type is void
-    public function call(Function fn, Value[] args) returns Value? {
+    public function call(Function fn, Value[] args, string? name=()) returns Value? {
         if fn.functionType.paramTypes.length() != args.length() {
             panic error(string `Number of arguments is invalid for function ${fn.functionName}`);
         }
@@ -360,7 +360,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildExtractValue
-    public function extractValue(Value value, int index) returns Value {
+    public function extractValue(Value value, int index, string? name=()) returns Value {
         if value.ty is StructType {
             BasicBlock bb = self.bb();
             string reg = bb.func.genReg();
