@@ -236,7 +236,7 @@ public class FunctionDefn {
     }
 
     function genReg(string? name = ()) returns string {
-        string regName = "R" + self.variableNames.length().toString();
+        string regName = "_" + self.variableNames.length().toString();
         if name is string {
             regName = name;
         }
