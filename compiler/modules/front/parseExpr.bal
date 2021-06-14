@@ -169,7 +169,7 @@ function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
 function parseDigits(Tokenizer tok, string signDigits) returns int|err:Syntax {
     error|int res = int:fromString(signDigits);
     if res is error {
-        return err:syntax("invalid number", tok.currentPos(), res);
+        return err:syntax("invalid number", tok.currentPos(), cause=res);
     } 
     else {
         check tok.advance();

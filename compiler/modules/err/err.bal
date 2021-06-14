@@ -19,8 +19,8 @@ public type Position readonly & record {|
 
 public type Detail record {
     Position? position;
+    string? functionName;
 };
-
 
 public type Any Syntax|Semantic|Unimplemented;
 
@@ -29,17 +29,16 @@ public type Syntax error<Detail> & distinct error;
 public type Semantic error<Detail> & distinct error;
 public type Unimplemented error<Detail> & distinct error;
 
-
-public function syntax(Message m, Position? pos = (), error? cause = ()) returns Syntax {
-    return error Syntax(messageToString(m), cause, position=pos);
+public function syntax(Message m, Position? pos = (), string? functionName = (), error? cause = ()) returns Syntax {
+    return error Syntax(messageToString(m), cause, position=pos, functionName=functionName);
 }
 
-public function semantic(Message m, Position? pos = (), error? cause = ()) returns Semantic {
-    return error Semantic(messageToString(m), cause, position=pos);
+public function semantic(Message m, Position? pos = (), string? functionName = (), error? cause = ()) returns Semantic {
+    return error Semantic(messageToString(m), cause, position=pos, functionName=functionName);
 }
 
-public function unimplemented(Message m, Position? pos = (), error? cause = ()) returns Unimplemented {
-    return error Semantic(messageToString(m), cause, position=pos);
+public function unimplemented(Message m, Position? pos = (), string? functionName = (), error? cause = ()) returns Unimplemented {
+    return error Semantic(messageToString(m), cause, position=pos, functionName=functionName);
 }
 
 public function messageToString(Message m) returns string {
