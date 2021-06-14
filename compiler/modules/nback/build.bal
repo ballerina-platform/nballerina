@@ -64,7 +64,11 @@ class Scaffold {
         self.types = types;
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock();
         builder.positionAtEnd(self.blocks[0]);
-        self.addresses = from var ty in types select builder.alloca(ty, typeAlignment(ty));
+        self.addresses = [];
+        foreach int i in 0 ..< types.length() {
+            var ty = types[i];
+            self.addresses.push(builder.alloca(ty, typeAlignment(ty), code.registers[i].varName));
+        } 
         bir:FunctionSignature ty = defn.signature;
 
         foreach int i in 0 ..< ty.paramTypes.length() {

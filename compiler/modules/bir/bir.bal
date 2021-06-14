@@ -106,11 +106,12 @@ public type Register readonly & record {|
     # Always >= 0
     int number;
     SemType semType;
+    string? varName;
 |};
 
-public function createRegister(FunctionCode code, SemType semType) returns Register {
+public function createRegister(FunctionCode code, SemType semType, string? varName = ()) returns Register {
     int number = code.registers.length();
-    Register r = { number, semType };
+    Register r = { number, semType, varName };
     code.registers.push(r);
     return r;
 }

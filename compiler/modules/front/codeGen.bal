@@ -19,8 +19,8 @@ class CodeGenContext {
         self.code = {};
     }
 
-    function createRegister(bir:SemType t) returns bir:Register {
-        return bir:createRegister(self.code, t);
+    function createRegister(bir:SemType t, string? varName = ()) returns bir:Register {
+        return bir:createRegister(self.code, t, varName);
     }
     
     function createBasicBlock() returns bir:BasicBlock {
@@ -34,7 +34,7 @@ function codeGenFunction(Module mod, bir:FunctionSignature signature, string[] p
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Scope? scope = ();
     foreach int i in 0 ..< paramNames.length() {
-        bir:Register reg = cx.createRegister(signature.paramTypes[i]);
+        bir:Register reg = cx.createRegister(signature.paramTypes[i], paramNames[i]);
         scope = { name: paramNames[i], reg, prev: scope };
     }
     bir:BasicBlock? endBlock = check codeGenStmts(cx, startBlock, scope, body);
@@ -200,7 +200,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
     }
     else {
         var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, initExpr);
-        bir:Register result = cx.createRegister(semType);
+        bir:Register result = cx.createRegister(semType, varName);
         bir:AssignInsn insn = { result, operand };
         nextBlock.insns.push(insn);
         return [nextBlock, { name: varName, reg: result, prev: scope }];
