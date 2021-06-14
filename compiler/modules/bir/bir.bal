@@ -153,7 +153,7 @@ public type InsnBase record {
 };
 
 public type Insn 
-    IntArithmeticBinaryInsn|IntCompareInsn|IntNegateInsn
+    IntArithmeticBinaryInsn|IntNegateInsn
     |IntCompareInsn|BooleanCompareInsn|EqualInsn|IdenticalInsn|BooleanNotInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|NarrowInsn|TypeCastInsn|TypeTestInsn
@@ -388,11 +388,15 @@ public function isBasicBlockPotentiallyPanicking(BasicBlock block) returns boole
 }
 
 final readonly & map<true> PPI_INSNS = {
+    // When we implement trap, we will need to treat call as potentially
+    // panicking but for now we don't
+    // If we allow this, we need to be careful about not generating
+    // code from the catch block if the only PPIs in the basic block are calls.
+    // [INSN_CALL]: true,
     [INSN_PANIC]: true,
     [INSN_INT_ARITHMETIC_BINARY]: true,
     [INSN_TYPE_CAST]: true,
-    [INSN_INT_NEGATE]: true,
-    [INSN_CALL]: true
+    [INSN_INT_NEGATE]: true
 };
 
 public function isInsnPotentiallyPanicking(Insn insn) returns boolean {
