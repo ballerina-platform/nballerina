@@ -250,20 +250,17 @@ public class FunctionDefn {
             regName = name;
         }
         if self.variableNames.hasKey(regName) {
-            int? count = self.variableNames.get(regName);
-            if count is int {
-                self.variableNames[regName] = count + 1; // increment the count of the base name
-                string newName = regName + "." + count.toString();
-                while (self.variableNames.hasKey(newName)) {
-                    count += 1;
-                    newName = regName + "." + count.toString();
-                }
-                regName = newName;
-                self.variableNames[regName] = 1; // save the augmented name in case user use the same
-            } else {
-                err:unreached();
+            int count = self.variableNames.get(regName);
+            self.variableNames[regName] = count + 1; // increment the count of the base name
+            string newName = regName + "." + count.toString();
+            while self.variableNames.hasKey(newName) {
+                count += 1;
+                newName = regName + "." + count.toString();
             }
-        } else {
+            regName = newName;
+            self.variableNames[regName] = 1; // save the augmented name in case user use the same  
+        }
+        else {
             self.variableNames[regName] = 1;
         }
         string reg = "%" + regName;
