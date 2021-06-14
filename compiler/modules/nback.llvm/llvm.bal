@@ -154,6 +154,7 @@ public class Module {
 
 // Corresponds to LLVMLinkage enum
 public type Linkage "internal"|"external";
+public type EnumAttribute "noreturn"|"cold"|"nounwind"|"readnone"|"speculatable"|"willreturn"; //FIXME: add others
 
 # Corresponds to an LLVMValueRef that corresponds to an llvm::Function
 public type Function FunctionDecl|FunctionDefn;
@@ -162,6 +163,7 @@ public class FunctionDecl {
     final false isDefn = false;
     final FunctionType functionType;
     final string functionName;
+    final EnumAttribute[] attributes = [];
 
     function init(string functionName, FunctionType functionType) {
         self.functionName = functionName;
@@ -171,12 +173,19 @@ public class FunctionDecl {
     function output(Output out) {
         out.push(functionHeader(self));
     }
+
+    public function addEnumAttribute(EnumAttribute attribute){
+        if self.attributes.indexOf(attribute) == () {
+           self.attributes.push(attribute); 
+        }
+    }
 }
 
 public class FunctionDefn {
     final true isDefn = true;
     final FunctionType functionType;
     final string functionName;
+    final EnumAttribute[] attributes = [];
 
     private BasicBlock[] basicBlocks = [];
     private int varCount = 0;
@@ -240,6 +249,12 @@ public class FunctionDefn {
         self.varCount += 1;
         return reg;
     } 
+
+    public function addEnumAttribute(EnumAttribute attribute){
+        if self.attributes.indexOf(attribute) == () {
+           self.attributes.push(attribute); 
+        }
+    }
 }
 
 // Used with Builder.binaryInt
@@ -514,6 +529,9 @@ function functionHeader(Function fn) returns string {
         }
     }
     words.push(")");
+    foreach int i in 0 ..< fn.attributes.length() {
+        words.push(fn.attributes[i]);
+    }
     if fn is FunctionDefn {
         words.push("{");
     }

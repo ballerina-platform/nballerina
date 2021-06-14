@@ -3,7 +3,11 @@ import ballerina/test;
 function exprBinaryMul() returns Module {
     Module m = new ();
     StructType addReturnType = structType(["i64", "i1"]);
-    Function mul = m.getIntrinsicDeclaration("smul.with.overflow.i64");
+    FunctionDecl mul = m.getIntrinsicDeclaration("smul.with.overflow.i64");
+    mul.addEnumAttribute("nounwind");
+    mul.addEnumAttribute("readnone");
+    mul.addEnumAttribute("speculatable");
+    mul.addEnumAttribute("willreturn");
     Function abort = m.addFunctionDefn("abort", {returnType:"void", paramTypes:[]});
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
