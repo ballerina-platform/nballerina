@@ -8,7 +8,9 @@ function nameAlloca() returns Module {
     Builder builder = new ();
     builder.positionAtEnd(initBlock);
     _ = builder.alloca("i64", 8);
+    _ = builder.alloca("i64", 8,"V");
     _ = builder.alloca("i64", 8,"V.1");
+    _ = builder.alloca("i64", 8,"V");
     _ = builder.alloca("i64", 8, "var");
     _ = builder.alloca("i64", 8,"V.1");
     _ = builder.alloca("i64", 8,"V.1");
