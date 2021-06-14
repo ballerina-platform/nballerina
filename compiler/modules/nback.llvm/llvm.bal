@@ -179,7 +179,7 @@ public class FunctionDefn {
     final string functionName;
 
     private BasicBlock[] basicBlocks = [];
-    private string[] variableNames = [];
+    private map<int> variableNames = {};
     private int labelCount = 0;
     private Value[] paramValues;
     private Linkage linkage = "external";
@@ -240,13 +240,18 @@ public class FunctionDefn {
         if name is string {
             regName = name;
         }
-        int count = 0;
-        while self.variableNames.indexOf(regName) != () {
-           regName = incrementName(regName, count);
-           count += 1; 
+        if self.variableNames.hasKey(regName) {
+            int? count = self.variableNames.get(regName);
+            if count is int {
+                self.variableNames[regName] = count + 1;
+                regName = regName + "." + count.toString();
+            } else {
+                err:unreached();
+            }
+        } else {
+            self.variableNames[regName] = 1;
         }
         string reg = "%" + regName;
-        self.variableNames.push(regName);
         return reg;
     } 
 }
@@ -538,19 +543,6 @@ function createLine(string[] words, string indent = "") returns string {
         parts.push(word);
     }
     return string:concat(indent, ...parts);
-}
-
-function incrementName(string name, int count) returns string{
-    if count == 0 {
-       return name + "." + count.toString(); 
-    } else {
-        int? splitPoint = name.lastIndexOf(".");
-        if splitPoint is int {
-           return name.substring(0, splitPoint) + "." + count.toString(); 
-        } else {
-            return err:unreached();
-        }
-    }
 }
 
 function omitSpaceBefore(string word) returns boolean {
