@@ -1,6 +1,6 @@
 // Implementation specific to basic type string.
 
-type StringSubtype readonly & record {|
+public type StringSubtype readonly & record {|
     boolean allowed;
     string[] values;
 |};

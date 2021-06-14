@@ -40,6 +40,7 @@ public const UT_COUNT = 22;
 public const int UT_MASK = (1 << UT_COUNT) - 1;
 
 public const int UT_COUNT_RO = UT_OBJECT_RO + 1;
+public const int UT_COUNT_RW = UT_OBJECT_RW - UT_OBJECT_RO;
 public const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
 
 // It would be easier to use ~ here, but slalpha5 doesn't support
@@ -82,7 +83,7 @@ public type TypeCheckContext record {|
 
 type ProperSubtypeData StringSubtype|IntSubtype|BooleanSubtype|bdd:Node;
 // true means everything and false means nothing (as with Bdd)
-type SubtypeData ProperSubtypeData|boolean;
+public type SubtypeData ProperSubtypeData|boolean;
 
 type UniformSubtype [UniformTypeCode, SubtypeData];
 
@@ -119,11 +120,11 @@ public readonly class ComplexSemType {
     // For a uniform type with code c,
     // all & (1 << c) is non-zero iff this type contains all of the uniform type
     // some & (1 << c) is non-zero iff this type contains some but not all of the uniform type
-    UniformTypeBitSet all;
-    UniformTypeBitSet some;
+    public UniformTypeBitSet all;
+    public UniformTypeBitSet some;
     // There is one member of subtypes for each bit set in some.
     // Ordered in increasing order of UniformTypeCode
-    private SubtypeData[] subtypeDataList;
+    public SubtypeData[] subtypeDataList;
     // subtypeList must be ordered
     function init(UniformTypeBitSet all, UniformSubtype[] subtypeList = []) {
         self.all = all;
@@ -169,7 +170,7 @@ public readonly class ComplexSemType {
 // There's usually a hardware instruction for this
 // typically called PopCpount
 // This is __builtin_popcount in GCC and clang
-function bitCount(int bits) returns int {
+public function bitCount(int bits) returns int {
     int n = 0;
     int v = bits;
     while v != 0 {

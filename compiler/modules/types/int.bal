@@ -1,10 +1,10 @@
 // Implementation specific to basic type int.
 
-type IntSubtype readonly & Range[];
+public type IntSubtype readonly & Range[];
 
 // Ranges are inclusive
 // Require min <= max
-type Range readonly & record {|
+public type Range readonly & record {|
     int min;
     int max;
 |};
