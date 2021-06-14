@@ -15,6 +15,10 @@ public function main(string filename, *Options opts) returns error? {
     if opts.showTypes {
         return showTypes(filename);
     }
+    check compileFile(filename);
+}
+
+function compileFile(string filename) returns error? {
     bir:ModuleId id = {
        names: [filename],
        organization: "dummy"

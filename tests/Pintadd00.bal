@@ -6,5 +6,5 @@ public function main() {
 }
 
 function add(int x, int y) returns int {
-    return x + y; // @panic
+    return x + y; // @panic arithmetic overflow
 }

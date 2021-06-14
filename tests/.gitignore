@@ -2,3 +2,6 @@
 v*-expect.txt
 v*-actual.txt
 v*-diff.txt
+P*-expect.txt
+P*-actual.txt
+P*-diff.txt

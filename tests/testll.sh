@@ -7,3 +7,11 @@ do
     clang-11 -Wno-override-module $f ../runtime/balrt.c && ./a.out > $b-actual.txt
     diff $b-expect.txt $b-actual.txt >$b-diff.txt || echo $b failed
 done
+
+for f in P*.ll
+do
+    b=`basename $f .ll`
+    sed -ne 's;^.* // *@panic  *;panic: ;p' $b.bal | tr -d '\r' > $b-expect.txt
+    clang-11 -Wno-override-module $f ../runtime/balrt.c && $(./a.out >/dev/null 2> $b-actual.txt)
+    diff $b-expect.txt $b-actual.txt >$b-diff.txt || echo $b failed
+done
