@@ -7,47 +7,63 @@ import wso2/nballerina.err;
 final string SOURCE_DIR = check file:joinPath("..", "tests");
 
 @test:Config {
-    dataProvider: listValid
+    dataProvider: listSourcesVP
 }
-function testCompileValid(string path) returns error? {
-    error? err = compileFile(path);
-    // JBUG #31146 let's assert instead check to see the file name
-    test:assertEquals(err, (), "compilation error " + path);
-}
-
-@test:Config {
-    dataProvider: listPanic
-}
-function testCompilePanic(string path) returns error? {
-    error? err = compileFile(path);
-    test:assertEquals(err, (), "compilation error " + path);
+function testCompileVP(string path) returns io:Error? {
+    CompileError? err = compileFile(path, ());
+    if err is io:Error {
+        return err;
+    }
+    else {
+        // JBUG #31146 let's assert instead check to see the file name
+        test:assertEquals(err, (), "compilation error " + path);
+    }  
 }
 
 @test:Config {
-    dataProvider: listError
+    dataProvider: listSourcesE
 }
-function testCompileError(string path) returns error? {
-    error? err = compileFile(path);
-    test:assertTrue(err is err:Semantic, "expected a semantic error " + path);
-    var l = (<err:Semantic> err).detail().position?.lineNumber;
-    test:assertEquals(l, check errorLine(path), "wrong error position " + path);
+function testCompileE(string path) returns io:Error? {
+    CompileError? err = compileFile(path, ());
+    // JBUG parentheses needed
+    if (err is err:Any?) {
+        if err is () {
+            test:assertNotExactEquals(err, (), "expected an error " + path);
+        }
+        else {
+            // XXX distinguish E and U tests
+            // JBUG cast needed
+            err:Position? pos = (<err:Detail>err.detail())?.position;
+            if pos != () {
+                test:assertEquals(pos.lineNumber, check errorLine(path), "wrong line number in error " + path);
+            }
+        }
+    }
+    else {
+        return err;
+    }
 }
 
-function listValid() returns string[][]|error => listSources("V");
+function listSourcesVP() returns string[][]|error => listSources("VP");
 
-function listPanic() returns string[][]|error => listSources("P");
+function listSourcesE() returns string[][]|error => listSources("E");
 
-function listError() returns string[][]|error => listSources("E");
-
-function listSources(string prefix) returns string[][]|error {
+function listSources(string initialChars) returns string[][]|io:Error|file:Error {
     return from var entry in check file:readDir(SOURCE_DIR)
            let string path = entry.absPath
-           let string base = check file:basename(path)
-           where base.startsWith(prefix) && base.endsWith(SOURCE_EXTENSION)
+           // JBUG gets a bad, sad if includePath is inlined in the obvious way
+           where check includePath(path, initialChars)
            select [path];
 }
 
-function errorLine(string path) returns int|error {
+function includePath(string path, string initialChars) returns boolean|file:Error {
+    string base = check file:basename(path);
+    // this deals with comparing extension case-insensitively
+    var [_, extension] = basenameExtension(base);
+    return extension == SOURCE_EXTENSION && initialChars.includes(base[0].toUpperAscii());
+}
+
+function errorLine(string path) returns int|io:Error {
     string[] lines = check io:fileReadLines(path);
     foreach var i in 0 ..< lines.length() {
         if lines[i].indexOf("// @error") != () {
