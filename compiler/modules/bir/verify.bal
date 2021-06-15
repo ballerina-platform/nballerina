@@ -3,11 +3,11 @@ import wso2/nballerina.err;
 
 class VerifyContext {
     private final t:TypeCheckContext tc;
-    private final string functionName;
+    private final FunctionDefn defn;
 
     function init(t:TypeCheckContext tc, FunctionDefn defn) {
         self.tc = tc;
-        self.functionName = defn.symbol.identifier;
+        self.defn = defn;
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
@@ -15,8 +15,10 @@ class VerifyContext {
     }
 
     function err(err:Message msg) returns err:Semantic {
-        return err:semantic(msg, functionName=self.functionName);
+        return err:semantic(msg, functionName=self.defn.symbol.identifier);
     }
+
+    function returnType() returns t:SemType => self.defn.signature.returnType;
 }
 
 public function verifyFunctionCode(t:TypeCheckContext tc, FunctionDefn defn, FunctionCode code) returns err:Semantic? {
@@ -46,39 +48,35 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
         check verifyOperandBoolean(vc, name, insn.operands[1]);
     }
     else if insn is AssignInsn {
-        check verifyAssignInsn(vc, insn);
+        check verifyOperandType(vc, insn.operand, insn.result.semType, "value is not a subtype of the LHS");
     }
     else if insn is CondBranchInsn {
         check verifyOperandBoolean(vc, name, insn.operand);
-    } 
+    }
+    else if insn is RetInsn {
+        check verifyOperandType(vc, insn.operand, vc.returnType(), "value is not a subtype of the return type");
+    }
     // XXX function call
 }
 
-function verifyAssignInsn(VerifyContext vc, AssignInsn insn) returns err:Semantic? {
-    Operand operand = insn.operand;
+function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, string msg) returns err:Semantic? {
     if operand is Register {
-        if !vc.isSubtype(operand.semType, insn.result.semType) {
-            return vc.err("assignment with LHS that is not a subtype of RHS");
+        if !vc.isSubtype(operand.semType, semType) {
+            return vc.err(msg);
         }
     }
     // XXX handle constant case
 }
 
-function verifyOperandInt(VerifyContext vc, string insnName, Operand operand) returns err:Semantic? {
+function verifyOperandInt(VerifyContext vc, string insnName, IntOperand operand) returns err:Semantic? {
     if operand is Register {
         return verifyRegisterSemType(vc, insnName, operand, t:INT, "int");
     }
-    else if !(operand is int) {
-        return operandTypeErr(vc, insnName, "int");
-    }
 }
 
-function verifyOperandBoolean(VerifyContext vc, string insnName, Operand operand) returns err:Semantic? {
+function verifyOperandBoolean(VerifyContext vc, string insnName, BooleanOperand operand) returns err:Semantic? {
     if operand is Register {
         return verifyRegisterSemType(vc,insnName, operand, t:BOOLEAN, "boolean");
-    }
-    else if !(operand is boolean) {
-        return operandTypeErr(vc, insnName, "boolean");
     }
 }
 

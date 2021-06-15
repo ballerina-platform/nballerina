@@ -5,9 +5,12 @@ import wso2/nballerina.bir;
 import wso2/nballerina.nback.llvm;
 
 # The preferred output extension for the output filename.
-const OUTPUT_EXTENSION = ".ll";
+public const OUTPUT_EXTENSION = ".ll";
 
-public function compileModule(bir:Module mod, string basename) returns err:Any|io:Error? {
+// If outputFilename is non-nil write the output to this file.
+public function compileModule(bir:Module mod, string? outputFilename) returns err:Any|io:Error? {
     llvm:Module llMod = check buildModule(mod);
-    return llMod.writeFile(basename + OUTPUT_EXTENSION);
+    if outputFilename != () {
+        return llMod.writeFile(outputFilename);
+    }
 }
