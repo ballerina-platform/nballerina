@@ -200,30 +200,30 @@ define void @_B_main () {
 define internal i1 @_B_lt (i64 %_0, i64 %_1) {
   %a = alloca i64, align 8
   %b = alloca i64, align 8
-  %_4 = alloca i1, align 8
+  %_2 = alloca i1, align 8
   store i64 %_0, i64* %a, align 8
   store i64 %_1, i64* %b, align 8
-  %_5 = load i64, i64* %a, align 8
-  %_6 = load i64, i64* %b, align 8
-  %_7 = icmp slt i64 %_5, %_6
-  store i1 %_7, i1* %_4, align 8
-  %_8 = load i1, i1* %_4, align 8
-  ret i1 %_8
+  %_3 = load i64, i64* %a, align 8
+  %_4 = load i64, i64* %b, align 8
+  %_5 = icmp slt i64 %_3, %_4
+  store i1 %_5, i1* %_2, align 8
+  %_6 = load i1, i1* %_2, align 8
+  ret i1 %_6
 }
 define internal void @_B_printBoolean (i1 %_0) {
   %b = alloca i1, align 8
+  %_1 = alloca i1, align 8
   %_2 = alloca i1, align 8
-  %_3 = alloca i1, align 8
   store i1 %_0, i1* %b, align 8
-  %_4 = load i1, i1* %b, align 8
-  br i1 %_4, label %L1, label %L2
+  %_3 = load i1, i1* %b, align 8
+  br i1 %_3, label %L1, label %L2
 L1:
   call void @_Bio__println (i64 1)
-  store i1 0, i1* %_2, align 8
+  store i1 0, i1* %_1, align 8
   br label %L3
 L2:
   call void @_Bio__println (i64 0)
-  store i1 0, i1* %_3, align 8
+  store i1 0, i1* %_2, align 8
   br label %L3
 L3:
   ret void
