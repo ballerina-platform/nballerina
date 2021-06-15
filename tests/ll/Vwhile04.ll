@@ -1,52 +1,71 @@
-declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64)
+declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64)
 declare {i64, i1} @llvm.smul.with.overflow.i64 (i64, i64)
+declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64)
 declare void @_Bio__println (i64)
 declare void @_bal_panic (i64)
 define void @_B_main () {
-  %i = alloca i64, align 8
+  %_0 = alloca i1, align 8
   %_1 = alloca i1, align 8
   %_2 = alloca i1, align 8
   %_3 = alloca i1, align 8
-  %_4 = alloca i64, align 8
-  %_5 = alloca i64, align 8
-  store i64 0, i64* %i, align 8
+  call void @_B_printClosestSquareNum (i64 1)
+  store i1 0, i1* %_0, align 8
+  call void @_B_printClosestSquareNum (i64 0)
+  store i1 0, i1* %_1, align 8
+  call void @_B_printClosestSquareNum (i64 5)
+  store i1 0, i1* %_2, align 8
+  call void @_B_printClosestSquareNum (i64 17)
+  store i1 0, i1* %_3, align 8
+  ret void
+}
+define internal void @_B_printClosestSquareNum (i64 %_0) {
+  %x = alloca i64, align 8
+  %i = alloca i64, align 8
+  %_3 = alloca i1, align 8
+  %_4 = alloca i1, align 8
+  %_5 = alloca i1, align 8
+  %_6 = alloca i64, align 8
+  %_7 = alloca i64, align 8
+  store i64 %_0, i64* %x, align 8
+  %_8 = load i64, i64* %x, align 8
+  store i64 %_8, i64* %i, align 8
   br label %L1
 L1:
-  %_6 = load i64, i64* %i, align 8
-  %_7 = icmp slt i64 %_6, 5
-  store i1 %_7, i1* %_1, align 8
-  %_8 = load i1, i1* %_1, align 8
-  br i1 %_8, label %L3, label %L2
+  %_9 = load i64, i64* %i, align 8
+  %_10 = icmp sge i64 %_9, 0
+  store i1 %_10, i1* %_3, align 8
+  %_11 = load i1, i1* %_3, align 8
+  br i1 %_11, label %L3, label %L2
 L2:
   ret void
 L3:
-  %_9 = load i64, i64* %i, align 8
-  %_10 = call i1 @_B_isSquareNumber (i64 %_9)
-  store i1 %_10, i1* %_2, align 8
-  %_11 = load i1, i1* %_2, align 8
-  br i1 %_11, label %L4, label %L5
-L4:
   %_12 = load i64, i64* %i, align 8
-  call void @_Bio__println (i64 %_12)
-  store i1 0, i1* %_3, align 8
-  br label %L5
+  %_13 = call i1 @_B_isSquareNumber (i64 %_12)
+  store i1 %_13, i1* %_4, align 8
+  %_14 = load i1, i1* %_4, align 8
+  br i1 %_14, label %L4, label %L5
+L4:
+  %_15 = load i64, i64* %i, align 8
+  call void @_Bio__println (i64 %_15)
+  store i1 0, i1* %_5, align 8
+  ret void
 L5:
-  %_13 = load i64, i64* %i, align 8
-  %_14 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_13, i64 1)
-  %_15 = extractvalue {i64, i1} %_14, 1
-  br i1 %_15, label %L8, label %L7
+  %_16 = load i64, i64* %i, align 8
+  %_17 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_16, i64 1)
+  %_18 = extractvalue {i64, i1} %_17, 1
+  br i1 %_18, label %L8, label %L7
 L6:
-  %_18 = load i64, i64* %_5, align 8
-  call void @_bal_panic (i64 %_18)
+  %_21 = load i64, i64* %_7, align 8
+  call void @_bal_panic (i64 %_21)
   unreachable
 L7:
-  %_16 = extractvalue {i64, i1} %_14, 0
-  store i64 %_16, i64* %_4, align 8
-  %_17 = load i64, i64* %_4, align 8
-  store i64 %_17, i64* %i, align 8
+  %_19 = extractvalue {i64, i1} %_17, 0
+  store i64 %_19, i64* %_6, align 8
+  %_20 = load i64, i64* %_6, align 8
+  store i64 %_20, i64* %i, align 8
   br label %L1
 L8:
-  store i64 1, i64* %_5, align 8
+  store i64 1, i64* %_7, align 8
   br label %L6
 }
 define internal i1 @_B_isSquareNumber (i64 %_0) {
@@ -60,7 +79,7 @@ define internal i1 @_B_isSquareNumber (i64 %_0) {
   %_8 = alloca i64, align 8
   %_9 = alloca i64, align 8
   store i64 %_0, i64* %x, align 8
-  store i64 2, i64* %i, align 8
+  store i64 0, i64* %i, align 8
   br label %L1
 L1:
   %_10 = load i64, i64* %i, align 8

@@ -1,18 +1,25 @@
 import ballerina/io;
 
 public function main() {
-    int i = 0;
-    while i < 5 {
+    printClosestSquareNum(1); // @output 1
+    printClosestSquareNum(0); // @output 0
+    printClosestSquareNum(5); // @output 4
+    printClosestSquareNum(17); // @output 16
+}
+
+function printClosestSquareNum(int x) {
+    int i = x;
+    while i >= 0 {
         if (isSquareNumber(i)) {
             io:println(i);
+            return;
         }
-        i = i + 1;
+        i = i - 1;
     }
-    // @output 4
 }
 
 function isSquareNumber(int x) returns boolean {
-    int i = 2;
+    int i = 0;
     while i <= x {
         if (i*i == x) {
             return true;
