@@ -11,7 +11,7 @@ public function main() {
 
 function printInts(int maxExclusive) {
     int i = 0;
-    while i < 5 {
+    while i < maxExclusive {
         io:println(i);
         i = increase(i);
     }
