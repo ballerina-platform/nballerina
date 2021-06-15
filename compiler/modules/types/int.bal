@@ -42,10 +42,24 @@ public function intWidthSigned(int bits) returns SemType {
     IntSubtype t = [{ min: -(1 << (bits - 1)), max: (1 << (bits - 1)) - 1 }];
     return uniformSubtype(UT_INT, t);
 }
+
 public function intWidthUnsigned(int bits) returns SemType {
     checkpanic validIntWidth(false, bits);
     IntSubtype t = [{ min: 0, max: (1 << bits) - 1 }];
     return uniformSubtype(UT_INT, t);
+}
+
+function intSubtypeContains(SubtypeData d, int n) returns boolean {
+    if d is boolean {
+        return d;
+    }
+    IntSubtype v = <IntSubtype>d;
+    foreach Range r in v {
+        if r.min <= n && n <= r.max {
+            return true;
+        }
+    }
+    return false;
 }
 
 function intSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {

@@ -57,6 +57,8 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
         check verifyOperandType(vc, insn.operand, vc.returnType(), "value is not a subtype of the return type");
     }
     // XXX function call
+    // XXX unary - operator
+    // XXX unary ! operator
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, string msg) returns err:Semantic? {
@@ -65,7 +67,9 @@ function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType,
             return vc.err(msg);
         }
     }
-    // XXX handle constant case
+    else if !t:containsConst(semType, operand) {
+        return vc.err(msg);
+    }
 }
 
 function verifyOperandInt(VerifyContext vc, string insnName, IntOperand operand) returns err:Semantic? {

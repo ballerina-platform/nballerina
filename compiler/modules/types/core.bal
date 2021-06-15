@@ -582,6 +582,45 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
+public function containsConst(SemType t, int|boolean|() v) returns boolean {
+    if v is () {
+        return containsNil(t);
+    }
+    else if v is int {
+        return containsConstInt(t, v);
+    }
+    else {
+        return containsConstBoolean(t, v);
+    }
+}
+
+public function containsNil(SemType t) returns boolean {
+    if t is UniformTypeBitSet {
+        return (t & (1 << UT_NIL)) != 0;
+    }
+    else {
+        return <boolean>t.getSubtypeData(UT_NIL);
+    }
+}
+
+public function containsConstInt(SemType t, int n) returns boolean {
+    if t is UniformTypeBitSet {
+        return (t & (1 << UT_INT)) != 0;
+    }
+    else {
+        return intSubtypeContains(t.getSubtypeData(UT_INT), n);
+    }
+}
+
+public function containsConstBoolean(SemType t, boolean b) returns boolean {
+    if t is UniformTypeBitSet {
+        return (t & (1 << UT_BOOLEAN)) != 0;
+    }
+    else {
+        return booleanSubtypeContains(t.getSubtypeData(UT_BOOLEAN), b);
+    }
+}
+
 public function typeCheckContext(Env env) returns TypeCheckContext {
     return {
         listDefs: env.listDefs.cloneReadOnly(),
