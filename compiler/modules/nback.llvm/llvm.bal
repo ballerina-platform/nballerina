@@ -189,6 +189,7 @@ public class FunctionDefn {
 
     private BasicBlock[] basicBlocks = [];
     private map<int> variableNames = {};
+    private int unnamedRegisterCount = 0;
     private int labelCount = 0;
     private Value[] paramValues;
     private Linkage linkage = "external";
@@ -245,9 +246,11 @@ public class FunctionDefn {
     }
 
     function genReg(string? name = ()) returns string {
-        string regName = "_" + self.variableNames.length().toString();
+        string regName = "_" + self.unnamedRegisterCount.toString();
         if name is string {
             regName = name;
+        } else {
+            self.unnamedRegisterCount += 1;
         }
         if self.variableNames.hasKey(regName) {
             int count = self.variableNames.get(regName);
