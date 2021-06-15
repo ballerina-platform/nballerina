@@ -5,5 +5,5 @@ public function main() {
 }
 
 function div(int x, int y) returns int {
-    return x / y; // @panic
+    return x / y; // @panic divide by zero
 }
