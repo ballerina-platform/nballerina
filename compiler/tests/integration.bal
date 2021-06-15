@@ -4,7 +4,7 @@ import ballerina/io;
 
 import wso2/nballerina.err;
 
-final string SOURCE_DIR = check file:joinPath("..", "tests");
+const SOURCE_DIR = "testSuite";
 
 @test:Config {
     dataProvider: listSourcesVP
