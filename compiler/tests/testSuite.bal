@@ -16,7 +16,15 @@ function testCompileVP(string path) returns io:Error? {
     }
     else {
         // JBUG #31146 let's assert instead check to see the file name
-        test:assertEquals(err, (), "compilation error " + path);
+        string msg = "compilation error: ";
+        if err is err:Any {
+            // JBUG cast
+            string? functionName = (<err:Detail>err.detail()).functionName;
+            if functionName is string {
+                msg += "function " + functionName + ": ";
+            }
+        }
+        test:assertEquals(err, (), msg + path);
     }  
 }
 
