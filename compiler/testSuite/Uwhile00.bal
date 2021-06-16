@@ -1,5 +1,12 @@
+import ballerina/io;
+
 public function main() {
-    while true { // @error
-        return;
-    } 
+    printWhile(); //@output 0
+}
+
+function printWhile() {
+    while true {
+        io:println(0); 
+        break;
+    }
 }
