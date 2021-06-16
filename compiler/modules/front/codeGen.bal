@@ -224,18 +224,18 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
 
 function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:IntOperand, bir:BasicBlock] {
     var [op, nextBlock] = check codeGenExpr(cx, bb, scope, expr);
-    TypedOperand? tOp = typedOperand(op);
-    if tOp is ["int", bir:IntOperand] {
-        return [tOp[1], nextBlock];
+    if op is bir:IntOperand {
+        // rest of the type checking is in the verifier
+        return [op, nextBlock];
     }
     return cx.semanticErr("expected integer operand");
 }
 
 function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:BooleanOperand, bir:BasicBlock] {
     var [op, nextBlock] = check codeGenExpr(cx, bb, scope, expr);
-    TypedOperand? tOp = typedOperand(op);
-    if tOp is ["boolean", bir:BooleanOperand] {
-        return [tOp[1], nextBlock];
+    if op is bir:BooleanOperand {
+        // rest of the type checking is in the verifier
+        return [op, nextBlock];
     }
     return cx.semanticErr("expected boolean operand");
 }
@@ -424,6 +424,7 @@ function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperand
     }
     return ();
 }
+
 
 function typedOperand(bir:Operand operand) returns TypedOperand? {
     if operand is bir:Register {
