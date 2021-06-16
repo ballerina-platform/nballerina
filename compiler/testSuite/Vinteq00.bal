@@ -1,35 +1,40 @@
 import ballerina/io;
 
 public function main() {
-    printBoolean(9223372036854775806 == 9223372036854775806); // @output 1
-    printBoolean(9223372036854775806 == 1); //@output 0
-    printBoolean(9223372036854775806 == 0); //@output 0
-    printBoolean(9223372036854775806 == -1); //@output 0
-    printBoolean(9223372036854775806 == -9223372036854775806); //@output 0
+    // Note that spec does not allow == between two operand where the intersection of the operand types is empty 
+    // So 1 == 0 is illegal
+    int big = 9223372036854775806;
+    printBoolean(big == 9223372036854775806); // @output 1
+    printBoolean(big == 1); //@output 0
+    printBoolean(big == 0); //@output 0
+    printBoolean(big == -1); //@output 0
+    printBoolean(big == -9223372036854775806); //@output 0
 
-    printBoolean(1 == 9223372036854775806); // @output 0
-    printBoolean(1 == 1); // @output 1
-    printBoolean(1 == 0); //@output 0
-    printBoolean(1 == -1); //@output 0
-    printBoolean(1 == -9223372036854775806); //@output 0
+    int one = 1;
+    printBoolean(one == 9223372036854775806); // @output 0
+    printBoolean(one == 1); // @output 1
+    printBoolean(one == 0); //@output 0
+    printBoolean(one == -1); //@output 0
+    printBoolean(one == -9223372036854775806); //@output 0
 
-    printBoolean(0 == 9223372036854775806); // @output 0
-    printBoolean(0 == 1); // @output 0
-    printBoolean(0 == 0); // @output 1
-    printBoolean(0 == -1); //@output 0
-    printBoolean(0 == -9223372036854775806); //@output 0
+    int zero = 0;
+    printBoolean(zero == 9223372036854775806); // @output 0
+    printBoolean(zero == 1); // @output 0
+    printBoolean(zero == 0); // @output 1
+    printBoolean(zero == -1); //@output 0
+    printBoolean(zero == -9223372036854775806); //@output 0
 
-    printBoolean(-1 == 9223372036854775806); // @output 0
-    printBoolean(-1 == 1); // @output 0
-    printBoolean(-1 == 0); // @output 0
-    printBoolean(-1 == -1); // @output 1
-    printBoolean(-1 == -9223372036854775806); //@output 0
+    printBoolean(-one == 9223372036854775806); // @output 0
+    printBoolean(-one == 1); // @output 0
+    printBoolean(-one == 0); // @output 0
+    printBoolean(-one == -1); // @output 1
+    printBoolean(-one == -9223372036854775806); //@output 0
 
-    printBoolean(-9223372036854775806 == 9223372036854775806); // @output 0
-    printBoolean(-9223372036854775806 == 1); // @output 0
-    printBoolean(-9223372036854775806 == 0); // @output 0
-    printBoolean(-9223372036854775806 == -1); // @output 0
-    printBoolean(-9223372036854775806 == -9223372036854775806); // @output 1
+    printBoolean(-big == 9223372036854775806); // @output 0
+    printBoolean(-big == 1); // @output 0
+    printBoolean(-big == 0); // @output 0
+    printBoolean(-big == -1); // @output 0
+    printBoolean(-big == -9223372036854775806); // @output 1
 }
 
 function printBoolean(boolean b) {

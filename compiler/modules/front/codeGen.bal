@@ -269,9 +269,12 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
                 else if pair is IntOperandPair {
                     insn = <bir:IntCompareInsn> { op, operands: pair[1], result };
                 }
-                else {
+                else if pair is BooleanOperandPair {
                     // pair is BooleanOperandPair 
                     insn = <bir:BooleanCompareInsn> { op, operands: pair[1], result };
+                }
+                else {
+                    return cx.semanticErr("cannot apply relational operator to nil operands");
                 }
                 bb.insns.push(insn);
                 return [result, nextBlock];
@@ -407,11 +410,14 @@ function lookup(string name, Scope? scope) returns bir:Register? {
     return ();
 }
 
+type NilOperand ()|bir:Register;
 type BooleanOperandPair readonly & ["boolean", [bir:BooleanOperand, bir:BooleanOperand]];
 type IntOperandPair readonly & ["int", [bir:IntOperand, bir:IntOperand]];
-type TypedOperandPair BooleanOperandPair|IntOperandPair;
+type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 
-type TypedOperand readonly & (["int", bir:IntOperand] | ["boolean", bir:BooleanOperand]);
+type TypedOperandPair BooleanOperandPair|IntOperandPair|NilOperandPair;
+
+type TypedOperand readonly & (["int", bir:IntOperand] | ["boolean", bir:BooleanOperand] | ["nil", NilOperand]);
 
 function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperandPair? {
     TypedOperand? l = typedOperand(lhs);
@@ -422,9 +428,11 @@ function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperand
     if l is ["boolean", bir:BooleanOperand] && r is ["boolean", bir:BooleanOperand] {
         return ["boolean", [l[1], r[1]]];
     }
+    if l is ["nil", NilOperand] && r is ["int", NilOperand] {
+        return ["nil", [l[1], r[1]]];
+    }
     return ();
 }
-
 
 function typedOperand(bir:Operand operand) returns TypedOperand? {
     if operand is bir:Register {
@@ -434,12 +442,18 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         else if operand.semType === t:INT {
             return ["int", operand];
         }
+        else if operand.semType === t:NIL {
+            return ["nil", operand];
+        }
     }
     else if operand is int {
         return ["int", operand];
     }
     else if operand is boolean {
         return ["boolean", operand];
+    }
+    else {
+        return ["nil", operand];
     }
     return ();
 }

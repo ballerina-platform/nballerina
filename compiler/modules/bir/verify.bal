@@ -1,3 +1,5 @@
+// Use the types module to type-check the BIR
+
 import wso2/nballerina.types as t;
 import wso2/nballerina.err;
 
@@ -14,6 +16,10 @@ class VerifyContext {
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
         return t:isSubtype(self.tc, s, t);
+    }
+
+    function isEmpty(t:SemType t) returns boolean {
+        return t:isEmpty(self.tc, t);
     }
 
     function err(err:Message msg) returns err:Semantic {
@@ -55,9 +61,12 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is BooleanNotInsn {
         check verifyOperandBoolean(vc, name, insn.operand);
     }
-    if insn is BooleanBinaryInsn {
+    else if insn is BooleanBinaryInsn {
         check verifyOperandBoolean(vc, name, insn.operands[0]);
         check verifyOperandBoolean(vc, name, insn.operands[1]);
+    }
+    else if insn is EqualInsn {
+        check verifyEqualInsn(vc, insn);
     }
     else if insn is AssignInsn {
         check verifyOperandType(vc, insn.operand, insn.result.semType, "value is not a subtype of the LHS");
@@ -90,6 +99,31 @@ function verifyCallInsn(VerifyContext vc, CallInsn insn) returns err:Semantic? {
     foreach int i in 0 ..< nSuppliedArgs {
         check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`);
     }
+}
+
+function verifyEqualInsn(VerifyContext vc, EqualInsn insn) returns err:Semantic? {
+    Operand lhs = insn.operands[0];
+    Operand rhs = insn.operands[1];
+    if lhs is Register {
+        if rhs is Register {
+            t:SemType intersectType = t:intersect(lhs.semType, rhs.semType);
+            if !vc.isEmpty(intersectType) {
+                return;
+            }
+        }
+        else if t:containsConst(lhs.semType, rhs) {
+            return;
+        }
+    }
+    else if rhs is Register {
+        if t:containsConst(rhs.semType, lhs) {
+            return;
+        }
+    }
+    else if lhs == rhs {
+        return;
+    }
+    return vc.err(`intersection of operands of operator ${insn.negate ? "!=" : "=="} is empty`);
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, err:Message msg) returns err:Semantic? {
