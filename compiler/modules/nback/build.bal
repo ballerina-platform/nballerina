@@ -142,7 +142,7 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
     ImportedFunctionTable importedFunctions = table [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
-        check bir:verifyFunctionCode(mod.getTypeCheckContext(), functionDefns[i], code);
+        check bir:verifyFunctionCode(mod, functionDefns[i], code);
         Scaffold scaffold = check new(mod.getId(), llMod, llFuncs[i], llFuncMap, importedFunctions, builder, functionDefns[i], code);
         check buildFunctionBody(builder, scaffold, code);
     }

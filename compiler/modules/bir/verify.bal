@@ -2,11 +2,13 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.err;
 
 class VerifyContext {
+    private final Module mod;
     private final t:TypeCheckContext tc;
     private final FunctionDefn defn;
 
-    function init(t:TypeCheckContext tc, FunctionDefn defn) {
-        self.tc = tc;
+    function init(Module mod, FunctionDefn defn) {
+        self.mod = mod;
+        self.tc = mod.getTypeCheckContext();
         self.defn = defn;
     }
 
@@ -19,10 +21,14 @@ class VerifyContext {
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
+
+    function symbolToString(Symbol sym) returns string {
+        return symbolToString(self.mod, sym);
+    }
 }
 
-public function verifyFunctionCode(t:TypeCheckContext tc, FunctionDefn defn, FunctionCode code) returns err:Semantic? {
-    VerifyContext cx = new(tc, defn);
+public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns err:Semantic? {
+    VerifyContext cx = new(mod, defn);
     foreach BasicBlock b in code.blocks {
         check verifyBasicBlock(cx, b);
     }
@@ -56,9 +62,27 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is RetInsn {
         check verifyOperandType(vc, insn.operand, vc.returnType(), "value is not a subtype of the return type");
     }
-    // XXX function call
+    else if insn is CallInsn {
+        check verifyCallInsn(vc, insn);
+    }
     // XXX unary - operator
     // XXX unary ! operator
+}
+
+function verifyCallInsn(VerifyContext vc, CallInsn insn) returns err:Semantic? {
+    FunctionRef func = <FunctionRef>insn.func;
+    FunctionSignature sig = func.signature;
+    int nSuppliedArgs = insn.args.length();
+    int nExpectedArgs = sig.paramTypes.length();
+    if nSuppliedArgs != nExpectedArgs {
+        string name = vc.symbolToString(func.symbol);
+        if nSuppliedArgs < nExpectedArgs {
+            return vc.err(`too few arguments for call to function ${name}`);
+        }
+        else {
+            return vc.err(`too many arguments for call to function ${name}`);
+        }
+    }
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, string msg) returns err:Semantic? {

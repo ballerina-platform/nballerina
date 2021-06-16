@@ -47,6 +47,15 @@ class Module {
         return self.functionDefns;
     }
 
+    public function getPrefixForModuleId(bir:ModuleId id) returns string? {
+        foreach var [prefix, moduleId] in self.imports.entries() {
+            if moduleId == id {
+                return  prefix;
+            }
+        }
+        return ();
+    }
+
 }
 
 public function loadModule(string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {

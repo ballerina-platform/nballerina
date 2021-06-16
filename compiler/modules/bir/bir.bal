@@ -10,6 +10,7 @@ public type Module object {
     public function getTypeCheckContext() returns t:TypeCheckContext;
     public function getFunctionDefns() returns readonly & FunctionDefn[];
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
+    public function getPrefixForModuleId(ModuleId id) returns string?;
 };
 
 public type ModuleId readonly & record {|
@@ -46,6 +47,26 @@ public type InternalSymbol readonly & record {|
 |};
 
 public type Symbol InternalSymbol|ExternalSymbol;
+
+public function symbolToString(Module mod, Symbol sym) returns string {
+    string prefix;
+    if sym is InternalSymbol {
+        prefix = "";
+    }
+    else {
+        ModuleId modId = sym.module;
+        string? importPrefix = mod.getPrefixForModuleId(modId);
+        if importPrefix == () {
+            string? org = modId.organization;
+            string orgString = org == () ? "" : org + "/";
+            prefix = "{" + orgString  + ".".'join(...sym.module.names) + "}";
+        }
+        else {
+            prefix = importPrefix + ":";
+        }
+    }
+    return prefix + sym.identifier;
+}
 
 public type FunctionRef readonly & record {|
     Symbol symbol;
