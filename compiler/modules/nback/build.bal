@@ -35,7 +35,7 @@ class Scaffold {
     private final llvm:Module llMod;
     private final llvm:FunctionDefn llFunc;
     // LLVM type for each BIR register
-    private final llvm:IntType[] types;
+    // private final llvm:IntType[] types;
     // LLVM ValueRef referring to address (allocated with alloca)
     // of each BIR register
     private final llvm:PointerValue[] addresses;
@@ -59,7 +59,7 @@ class Scaffold {
         foreach var reg in code.registers {
             types.push(check buildValueType(reg.semType));
         }
-        self.types = types;
+        // self.types = types;
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock();
         builder.positionAtEnd(self.blocks[0]);
         self.addresses = [];
@@ -79,7 +79,7 @@ class Scaffold {
        
     function basicBlock(int label) returns llvm:BasicBlock  => self.blocks[label];
 
-    function valueType(bir:Register r) returns llvm:IntType => self.types[r.number];
+    // function valueType(bir:Register r) returns llvm:IntType => self.types[r.number];
 
     function getFunctionDefn(string name) returns llvm:FunctionDefn => self.functionDefns.get(name);
 
@@ -418,17 +418,17 @@ final readonly & map<llvm:IntrinsicFunctionName> binaryIntIntrinsics = {
     "*": "smul.with.overflow.i64"
 };
 
-final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
-    "+": "add",
-    "-": "sub",
-    "*": "mul",
-    "/": "sdiv",
-    "%": "srem"
-};
+// final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
+//     "+": "add",
+//     "-": "sub",
+//     "*": "mul",
+//     "/": "sdiv",
+//     "%": "srem"
+// };
 
-function buildBinaryIntOp(bir:ArithmeticBinaryOp op) returns llvm:BinaryIntOp {
-    return <llvm:BinaryIntOp>binaryIntOps[op];
-}
+// function buildBinaryIntOp(bir:ArithmeticBinaryOp op) returns llvm:BinaryIntOp {
+//     return <llvm:BinaryIntOp>binaryIntOps[op];
+// }
 
 function buildBinaryIntIntrinsic(bir:ArithmeticBinaryOp op) returns llvm:IntrinsicFunctionName? {
     return binaryIntIntrinsics[op];
