@@ -5,7 +5,7 @@ public function main() {
 }
 
 function printComp() {
-    if (true > false) {
+    if true > false {
         io:println(1);
     }
 }

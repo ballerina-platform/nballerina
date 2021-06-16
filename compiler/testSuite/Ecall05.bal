@@ -3,6 +3,4 @@ public function main() {
     foo(x); // @error
 }
 
-type foo(
-
-);
+type foo int[];
