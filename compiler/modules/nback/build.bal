@@ -32,11 +32,10 @@ type ImportedFunction record {|
 type ImportedFunctionTable table<ImportedFunction> key(symbol);
 
 class Scaffold {
-    private final bir:ModuleId modId;
     private final llvm:Module llMod;
     private final llvm:FunctionDefn llFunc;
     // LLVM type for each BIR register
-    private final llvm:IntType[] types;
+    // private final llvm:IntType[] types;
     // LLVM ValueRef referring to address (allocated with alloca)
     // of each BIR register
     private final llvm:PointerValue[] addresses;
@@ -49,8 +48,7 @@ class Scaffold {
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
 
-    function init(bir:ModuleId modId, llvm:Module llMod, llvm:FunctionDefn llFunc, map<llvm:FunctionDefn> functions, ImportedFunctionTable importedFunctions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
-        self.modId = modId;
+    function init(llvm:Module llMod, llvm:FunctionDefn llFunc, map<llvm:FunctionDefn> functions, ImportedFunctionTable importedFunctions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.llMod = llMod;
         self.llFunc = llFunc;
         self.functionDefns = functions;
@@ -61,7 +59,7 @@ class Scaffold {
         foreach var reg in code.registers {
             types.push(check buildValueType(reg.semType));
         }
-        self.types = types;
+        // self.types = types;
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock();
         builder.positionAtEnd(self.blocks[0]);
         self.addresses = [];
@@ -81,13 +79,11 @@ class Scaffold {
        
     function basicBlock(int label) returns llvm:BasicBlock  => self.blocks[label];
 
-    function valueType(bir:Register r) returns llvm:IntType => self.types[r.number];
+    // function valueType(bir:Register r) returns llvm:IntType => self.types[r.number];
 
     function getFunctionDefn(string name) returns llvm:FunctionDefn => self.functionDefns.get(name);
 
     function getModule() returns llvm:Module => self.llMod;
-
-    function getModuleId() returns bir:ModuleId => self.modId;
 
     function getImportedFunction(bir:ExternalSymbol symbol) returns llvm:FunctionDecl? {
         ImportedFunction? fn = self.importedFunctions[symbol];
@@ -143,7 +139,7 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
-        Scaffold scaffold = check new(mod.getId(), llMod, llFuncs[i], llFuncMap, importedFunctions, builder, functionDefns[i], code);
+        Scaffold scaffold = check new(llMod, llFuncs[i], llFuncMap, importedFunctions, builder, functionDefns[i], code);
         check buildFunctionBody(builder, scaffold, code);
     }
     return llMod;
@@ -225,7 +221,7 @@ function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalR
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
-    builder.store(check buildValueAsInt(builder, scaffold, insn.operand), scaffold.address(insn.result));
+    builder.store(check buildValue(builder, scaffold, insn.operand), scaffold.address(insn.result));
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
@@ -422,17 +418,17 @@ final readonly & map<llvm:IntrinsicFunctionName> binaryIntIntrinsics = {
     "*": "smul.with.overflow.i64"
 };
 
-final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
-    "+": "add",
-    "-": "sub",
-    "*": "mul",
-    "/": "sdiv",
-    "%": "srem"
-};
+// final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
+//     "+": "add",
+//     "-": "sub",
+//     "*": "mul",
+//     "/": "sdiv",
+//     "%": "srem"
+// };
 
-function buildBinaryIntOp(bir:ArithmeticBinaryOp op) returns llvm:BinaryIntOp {
-    return <llvm:BinaryIntOp>binaryIntOps[op];
-}
+// function buildBinaryIntOp(bir:ArithmeticBinaryOp op) returns llvm:BinaryIntOp {
+//     return <llvm:BinaryIntOp>binaryIntOps[op];
+// }
 
 function buildBinaryIntIntrinsic(bir:ArithmeticBinaryOp op) returns llvm:IntrinsicFunctionName? {
     return binaryIntIntrinsics[op];
