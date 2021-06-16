@@ -40,7 +40,7 @@ class Module {
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
         FunctionDef ast = self.functionDefSource[i];
-        return codeGenFunction(self, self.functionDefns[i].signature, ast.paramNames, ast.body);
+        return codeGenFunction(self, ast.name, self.functionDefns[i].signature, ast.paramNames, ast.body);
     }
    
     public function getFunctionDefns() returns readonly & bir:FunctionDefn[] {

@@ -13,10 +13,12 @@ type CodeGenError err:Semantic|err:Unimplemented;
 class CodeGenContext {
     final Module mod;
     final bir:FunctionCode code;
+    final string functionName;
 
-    function init(Module mod) {
+    function init(Module mod, string functionName) {
         self.mod = mod;
         self.code = {};
+        self.functionName = functionName;
     }
 
     function createRegister(bir:SemType t, string? varName = ()) returns bir:Register {
@@ -26,11 +28,15 @@ class CodeGenContext {
     function createBasicBlock() returns bir:BasicBlock {
         return bir:createBasicBlock(self.code);
     }
+
+    function semanticErr(err:Message msg) returns err:Semantic {
+        return err:semantic(msg, functionName=self.functionName);
+    }
     
 }
 
-function codeGenFunction(Module mod, bir:FunctionSignature signature, string[] paramNames, Stmt[] body) returns bir:FunctionCode|CodeGenError {
-    CodeGenContext cx = new(mod);
+function codeGenFunction(Module mod, string functionName, bir:FunctionSignature signature, string[] paramNames, Stmt[] body) returns bir:FunctionCode|CodeGenError {
+    CodeGenContext cx = new(mod, functionName);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Scope? scope = ();
     foreach int i in 0 ..< paramNames.length() {
@@ -75,7 +81,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
     Scope? scope = initialScope;
     foreach var stmt in stmts {
         if curBlock is () {
-            return err:semantic("unreachable code");
+            return cx.semanticErr("unreachable code");
         }
         else if stmt is IfElseStmt {
             curBlock = check codeGenIfElseStmt(cx, curBlock, scope, stmt);
@@ -98,7 +104,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
             bir:Register reg;
             [reg, curBlock] = check codeGenFunctionCall(cx, <bir:BasicBlock>curBlock, scope, stmt);
             if reg.semType !== t:NIL {
-                return err:semantic("return type of function call statement not nil");
+                return cx.semanticErr("return type of function call statement not nil");
             }
         }
         else {
@@ -209,7 +215,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
 
 function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, AssignStmt stmt) returns CodeGenError|bir:BasicBlock? {
     var { varName, expr } = stmt;
-    bir:Register reg = check mustLookup(varName, scope);
+    bir:Register reg = check mustLookup(cx, varName, scope);
     var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, expr);
     bir:AssignInsn load = { result: reg, operand };
     nextBlock.insns.push(load);
@@ -249,7 +255,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
                 var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
                 TypedOperandPair? pair = typedOperandPair(l, r);
                 if pair is () {
-                    return err:semantic("different basic types for relational operator");
+                    return cx.semanticErr("different basic types for relational operator");
                 }
                 else if op is "!="|"==" {
                     insn = <bir:EqualInsn> { negate: op == "!=", operands: pair[1], result };
@@ -293,7 +299,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
         }
         // Variable reference
         var { varName } => {
-            return [check mustLookup(varName, scope), bb];
+            return [check mustLookup(cx, varName, scope), bb];
         }
         // Constant
         var { value } => {
@@ -354,14 +360,14 @@ function genLocalFunctionRef(CodeGenContext cx, Scope? scope, string identifier)
         else {
             msg = `${identifier} is not a function`;
         }
-        return err:semantic(msg);
+        return cx.semanticErr(msg);
     }  
 }
 
 function genImportedFunctionRef(CodeGenContext cx, Scope? scope, string prefix, string identifier) returns bir:FunctionRef|CodeGenError {
     bir:ModuleId? moduleId = cx.mod.imports[prefix];
     if moduleId is () {
-        return err:semantic(`no import declaration for prefix ${prefix}`);
+        return cx.semanticErr(`no import declaration for prefix ${prefix}`);
     }
     else {
         bir:FunctionSignature? signature = getLibFunction(moduleId, identifier);
@@ -375,8 +381,8 @@ function genImportedFunctionRef(CodeGenContext cx, Scope? scope, string prefix, 
     }
 }
 
-function mustLookup(string name, Scope? scope) returns bir:Register|CodeGenError {
-    return lookup(name, scope) ?: err:semantic(`variable ${name} not found`);
+function mustLookup(CodeGenContext cx, string name, Scope? scope) returns bir:Register|CodeGenError {
+    return lookup(name, scope) ?: cx.semanticErr(`variable ${name} not found`);
 }
 
 function lookup(string name, Scope? scope) returns bir:Register? {
