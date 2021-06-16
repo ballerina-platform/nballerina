@@ -221,7 +221,7 @@ function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalR
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
-    builder.store(check buildValueAsInt(builder, scaffold, insn.operand), scaffold.address(insn.result));
+    builder.store(check buildValue(builder, scaffold, insn.operand), scaffold.address(insn.result));
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
