@@ -131,7 +131,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? s
         return exit;
     }
     else if condition == false {
-        return startBlock;
+        return nextBlock;
     }
     else {
         // not much point without break
