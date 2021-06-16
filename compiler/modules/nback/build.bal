@@ -32,7 +32,6 @@ type ImportedFunction record {|
 type ImportedFunctionTable table<ImportedFunction> key(symbol);
 
 class Scaffold {
-    private final bir:ModuleId modId;
     private final llvm:Module llMod;
     private final llvm:FunctionDefn llFunc;
     // LLVM type for each BIR register
@@ -49,8 +48,7 @@ class Scaffold {
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
 
-    function init(bir:ModuleId modId, llvm:Module llMod, llvm:FunctionDefn llFunc, map<llvm:FunctionDefn> functions, ImportedFunctionTable importedFunctions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
-        self.modId = modId;
+    function init(llvm:Module llMod, llvm:FunctionDefn llFunc, map<llvm:FunctionDefn> functions, ImportedFunctionTable importedFunctions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.llMod = llMod;
         self.llFunc = llFunc;
         self.functionDefns = functions;
@@ -86,8 +84,6 @@ class Scaffold {
     function getFunctionDefn(string name) returns llvm:FunctionDefn => self.functionDefns.get(name);
 
     function getModule() returns llvm:Module => self.llMod;
-
-    function getModuleId() returns bir:ModuleId => self.modId;
 
     function getImportedFunction(bir:ExternalSymbol symbol) returns llvm:FunctionDecl? {
         ImportedFunction? fn = self.importedFunctions[symbol];
@@ -143,7 +139,7 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
-        Scaffold scaffold = check new(mod.getId(), llMod, llFuncs[i], llFuncMap, importedFunctions, builder, functionDefns[i], code);
+        Scaffold scaffold = check new(llMod, llFuncs[i], llFuncMap, importedFunctions, builder, functionDefns[i], code);
         check buildFunctionBody(builder, scaffold, code);
     }
     return llMod;
