@@ -1,5 +1,5 @@
 public function main() {
-    while (true){ // @error
+    while true { // @error
         return;
     } 
 }
