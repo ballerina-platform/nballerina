@@ -83,9 +83,12 @@ function verifyCallInsn(VerifyContext vc, CallInsn insn) returns err:Semantic? {
             return vc.err(`too many arguments for call to function ${name}`);
         }
     }
+    foreach int i in 0 ..< nSuppliedArgs {
+        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`);
+    }
 }
 
-function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, string msg) returns err:Semantic? {
+function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, err:Message msg) returns err:Semantic? {
     if operand is Register {
         if !vc.isSubtype(operand.semType, semType) {
             return vc.err(msg);
