@@ -6,6 +6,7 @@ function parseStmtBlock(Tokenizer tok) returns Stmt[]|err:Syntax {
     if cur == "{" {
         Stmt[] stmts = [];
         check tok.advance();
+        cur = tok.current();
         while cur != "}" {
             stmts.push(check parseStmt(tok));
             cur = tok.current();
