@@ -1,5 +1,5 @@
 public function main() {
-    foo(x);
+    foo(x); // @error
 }
 function foo(int x) {
     return;
