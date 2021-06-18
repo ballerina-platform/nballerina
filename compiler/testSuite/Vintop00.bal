@@ -14,5 +14,3 @@ public function main() {
   io:println( 4 + -3); // @output 1
   io:println(-3 + 4); // @output 1
 }
-
-
