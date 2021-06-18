@@ -22,11 +22,11 @@ The initial goals for nBallerina are the things that jBallerina does not yet do:
 The nBallerina compiler, which is organized as a Ballerina project in the [compiler](compiler/) directory, is structured into the following components written in Ballerina:
 
 
-*   Semantic subtyping implementation (in the [types](compiler/module/types) module). This provides a normalized representation of Ballerina types and operations on that normalized representation.
-*   BIR (in the [bir](compiler/module/bit) module). This is a definition of BIR as a Ballerina type, together with some utility functions. BIR (as used in nBallerina) represents types using the normalized representation provided by the semantic subtyping implementation. This also includes a verifier that uses the semantic subtyper to verify that the BIR is well-typed. This depends on the types module.
-*   Frontend (in the [front](compiler/module/front) module). This generates BIR from the source code of a Ballerina module. This depends on the bir module.
+*   Semantic subtyping implementation (in the [types](compiler/modules/types) module). This provides a normalized representation of Ballerina types and operations on that normalized representation.
+*   BIR (in the [bir](compiler/modules/bit) module). This is a definition of BIR as a Ballerina type, together with some utility functions. BIR (as used in nBallerina) represents types using the normalized representation provided by the semantic subtyping implementation. This also includes a verifier that uses the semantic subtyper to verify that the BIR is well-typed. This depends on the types module.
+*   Frontend (in the [front](compiler/modules/front) module). This generates BIR from the source code of a Ballerina module. This depends on the bir module.
 *   Native backend (in modules/nback). This builds the LLVM IR representation of a Ballerina module from the BIR representation of a Ballerina module. This depends on the bir module (but and the front module).
-*   LLVM API (in the [nback.llvm](compiler/module/nback.llvm) module). This provides a Ballerina API to LLVM, which is used by the native backend. This is designed to be very similar to the LLVM C API. The implementation of this API builds a textual representation of the LLVM IR as LLVM assembly language, which can be written to an `.ll` file and then compiled with LLVM's clang command. This does not depend on any of the other modules.
+*   LLVM API (in the [nback.llvm](compiler/modules/nback.llvm) module). This provides a Ballerina API to LLVM, which is used by the native backend. This is designed to be very similar to the LLVM C API. The implementation of this API builds a textual representation of the LLVM IR as LLVM assembly language, which can be written to an `.ll` file and then compiled with LLVM's clang command. This does not depend on any of the other modules.
 *   A compiler driver (in [default](compiler/main.bal) module). This calls the frontend to generate the BIR and then calls the backend to generate LLVM. It depends on the bir, front and nback modules.
 
 The starting point for the `types` and `front` modules were the [semtype](https://github.com/jclark/semtype) project.
@@ -39,7 +39,7 @@ As well as a compiler, nBallerina needs a runtime, which is in the [runtime](run
 *   garbage collector (current plan is eventually for this to be in Rust and built on top of [MMTK](https://www.mmtk.io/));
 *   scheduler.
 
-<!-->
+<!--
 Say something about libraries
 Safe FFI interface. We have not started this bit yet.
 -->
@@ -72,8 +72,8 @@ The compiler is tested using the test cases in the [compiler/testSuite])(compile
 
 For those test cases that are valid Ballerina programs, the scripts in the [test](test/) directory further test that the generated LLVM assembly file can be compiled with LLVM and gives the correct output when executed:
 
-* (compile.sh)[test/compile.sh] uses `nballerina.jar` to compiles all of the test cases into `.ll` files;
-* (testll.sh)[test/testll.sh] uses `clang` to compile every test case into a native executable, then runs it and checks that the output is what it should be
+* [compile.sh](test/compile.sh) uses `nballerina.jar` to compiles all of the test cases into `.ll` files;
+* [testll.sh](test/testll.sh) uses `clang` to compile every test case into a native executable, then runs it and checks that the output is what it should be
 
 ## Status
 
