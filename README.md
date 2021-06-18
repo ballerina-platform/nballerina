@@ -97,4 +97,4 @@ For those test cases that are valid Ballerina programs, the scripts in the [test
 
 We are finishing up the implementation of [subset 1](docs/subset01.md).
 
-The semantic subtyping implementation is further along than the backend. It implements the type syntax according to this [grammar](type-subset.md).
+The semantic subtyping implementation is further along than the backend. It implements the subset of Ballerina's type syntax described by this [grammar](docs/type-subset.md).
