@@ -23,9 +23,9 @@ The nBallerina compiler, which is organized as a Ballerina project in the [compi
 
 
 *   Semantic subtyping implementation (in the [types](compiler/modules/types) module). This provides a normalized representation of Ballerina types and operations on that normalized representation.
-*   BIR (in the [bir](compiler/modules/bit) module). This is a definition of BIR as a Ballerina type, together with some utility functions. BIR (as used in nBallerina) represents types using the normalized representation provided by the semantic subtyping implementation. This also includes a verifier that uses the semantic subtyper to verify that the BIR is well-typed. This depends on the types module.
+*   BIR (in the [bir](compiler/modules/bir) module). This is a definition of BIR as a Ballerina type, together with some utility functions. BIR (as used in nBallerina) represents types using the normalized representation provided by the semantic subtyping implementation. This also includes a verifier that uses the semantic subtyper to verify that the BIR is well-typed. This depends on the types module.
 *   Frontend (in the [front](compiler/modules/front) module). This generates BIR from the source code of a Ballerina module. This depends on the bir module.
-*   Native backend (in modules/nback). This builds the LLVM IR representation of a Ballerina module from the BIR representation of a Ballerina module. This depends on the bir module (but and the front module).
+*   Native backend (in the [nback](compiler/modules/nback) module). This builds the LLVM IR representation of a Ballerina module from the BIR representation of a Ballerina module. This depends on the bir module (but and the front module).
 *   LLVM API (in the [nback.llvm](compiler/modules/nback.llvm) module). This provides a Ballerina API to LLVM, which is used by the native backend. This is designed to be very similar to the LLVM C API. The implementation of this API builds a textual representation of the LLVM IR as LLVM assembly language, which can be written to an `.ll` file and then compiled with LLVM's clang command. This does not depend on any of the other modules.
 *   A compiler driver (in [default](compiler/main.bal) module). This calls the frontend to generate the BIR and then calls the backend to generate LLVM. It depends on the bir, front and nback modules.
 
