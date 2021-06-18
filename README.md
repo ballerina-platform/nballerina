@@ -22,11 +22,12 @@ The initial goals for nBallerina are the things that jBallerina does not yet do:
 The nBallerina compiler, which is organized as a Ballerina project in the [compiler](compiler/) directory, is structured into the following components written in Ballerina:
 
 
-*   Semantic subtyping implementation (in the [types](compiler/modules/types) module). This provides a normalized representation of Ballerina types and operations on that normalized representation.
+*   Semantic subtyping implementation (in the [types](compiler/modules/types) module). This provides a normalized representation of Ballerina types, and operations on that normalized representation.
 *   BIR (in the [bir](compiler/modules/bir) module). This is a definition of BIR as a Ballerina type, together with some utility functions. BIR (as used in nBallerina) represents types using the normalized representation provided by the semantic subtyping implementation. This also includes a verifier that uses the semantic subtyper to verify that the BIR is well-typed. This depends on the types module.
 *   Frontend (in the [front](compiler/modules/front) module). This generates BIR from the source code of a Ballerina module. This depends on the bir module.
 *   Native backend (in the [nback](compiler/modules/nback) module). This builds the LLVM IR representation of a Ballerina module from the BIR representation of a Ballerina module. This depends on the bir module (but and the front module).
-*   LLVM API (in the [nback.llvm](compiler/modules/nback.llvm) module). This provides a Ballerina API to LLVM, which is used by the native backend. This is designed to be very similar to the LLVM C API. The implementation of this API builds a textual representation of the LLVM IR as LLVM assembly language, which can be written to an `.ll` file and then compiled with LLVM's clang command. This does not depend on any of the other modules.
+*   LLVM API (in the [nback.llvm](compiler/modules/nback.llvm) module). This provides a Ballerina API to LLVM, which is used by the native backend. This is designed to be very similar to the LLVM C API. The implementation of this API builds a textual representation of the LLVM IR as LLVM assembly language, which can be written to an `.ll` file and then compiled with LLVM's clang command. This does not depend on any of the other modules. The idea here is that we can
+eventually implement the same API on top of the LLVM C API, and link the compiler with the LLVM libraries.
 *   A compiler driver (in [default](compiler/main.bal) module). This calls the frontend to generate the BIR and then calls the backend to generate LLVM. It depends on the bir, front and nback modules.
 
 The starting point for the `types` and `front` modules were the [semtype](https://github.com/jclark/semtype) project.
@@ -46,7 +47,27 @@ Safe FFI interface. We have not started this bit yet.
 
 ## Implementation plan
 
-Initially the nBallerina will have just enough of a frontend will to support these priorities. Later, we will evolve it into something more usable.
+The implementation strategy is start by implementing a tiny subset of the language, and then implement progressively larger subsets. The plan is that
+each subset will be implemented correctly. This implies that
+
+- if the compiler accepts the program, then the result when executed will behave as the language spec requires it to behave;
+- the compiler will not accept a program that the language spec says is not a valid program.
+
+In accordance with the initial goals of the project, we will *not* initially devote much engineering effort to usability aspects of the front end, such as high-quality error messages and error recovery. The initial priority for the front-end is correctness; we will evolve it into something more usable later.
+
+In designing the sequence of subsets, we want to
+
+* maintain correctness
+* be able to write the appropriate parts of the runtime needed for each subset in Ballerina
+
+and then work towards implementing a subset that is sufficient for each of the following milestones
+
+1. Supporting all the BIR instructions needed to self-host the compiler. This will allow us to run the entire nBallerina compiler natively, by compiling it using the jBallerina frontend in conjunction with the nBallerina backend.
+2. A full implementation of semantic typing. This provides a foundation for jBallerina to switch over to doing semantic subtyping.
+3. Self-hosting the compiler.
+4. Implementing useful Ballerina clients.
+
+Note that as regards the third of the above milestones, we will allow the nBallerina to make use all the relevant language features implemented by jBallerina, since a secondary goal of the nBallerina project is to help with testing jBallerina. This should not affect how long it takes us to get to the first of the above milestones, but will mean it takes us longer to get to the third. We will, however, initially restrict nBallerina's use of concurrency: we don't want to have to implement Ballerina's concurrency features before we can self-host.
 
 ## Usage
 
@@ -77,6 +98,6 @@ For those test cases that are valid Ballerina programs, the scripts in the [test
 
 ## Status
 
-We are finishing up the implementation of subset 1.
+We are finishing up the implementation of [subset 1](docs/subset01.md).
 
 The semantic subtyping implementation is further along than the backend. It implements the type syntax according to this grammar.
