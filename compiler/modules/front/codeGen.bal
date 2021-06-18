@@ -10,10 +10,22 @@ type Scope record {|
 
 type CodeGenError err:Semantic|err:Unimplemented;
 
+type LoopContext record {|
+    bir:BasicBlock onBreak;
+    bir:BasicBlock onContinue;
+    // JBUG does not allow `outer` here
+    LoopContext? enclosing;
+    // will use this with while true to determine whether
+    // following block is reachable
+    boolean breakUsed = false;
+|};
+
+
 class CodeGenContext {
     final Module mod;
     final bir:FunctionCode code;
     final string functionName;
+    LoopContext? loopContext = ();
 
     function init(Module mod, string functionName) {
         self.mod = mod;
@@ -33,6 +45,39 @@ class CodeGenContext {
         return err:semantic(msg, functionName=self.functionName);
     }
     
+    function pushLoopContext(bir:BasicBlock onBreak, bir:BasicBlock onContinue) {
+        LoopContext c = { onBreak, onContinue, enclosing: self.loopContext };
+        self.loopContext = c;
+    }
+
+    function loopUsedBreak() returns boolean {
+        return (<LoopContext>self.loopContext).breakUsed;
+    }
+
+    function popLoopContext() {
+        self.loopContext = (<LoopContext>self.loopContext).enclosing;
+    }
+
+    function onBreakLabel() returns bir:Label|err:Semantic {
+        LoopContext? c = self.loopContext;
+        if c is () {
+            return self.semanticErr("break not in loop");
+        }
+        else {
+            c.breakUsed = true;
+            return c.onBreak.label;
+        }
+    }
+
+    function onContinueLabel() returns bir:Label|err:Semantic {
+        LoopContext? c = self.loopContext;
+        if c is () {
+            return self.semanticErr("continue not in loop");
+        }
+        else {
+            return c.onContinue.label;
+        }
+    }
 }
 
 function codeGenFunction(Module mod, string functionName, bir:FunctionSignature signature, string[] paramNames, Stmt[] body) returns bir:FunctionCode|CodeGenError {
@@ -68,7 +113,7 @@ function codeGenOnPanic(CodeGenContext cx) {
             b.onPanic = pb.label;
         }
     }
-    if !(onPanicBlock  is ()) {
+    if !(onPanicBlock is ()) {
         bir:Register reg = cx.createRegister(t:ERROR);
         bir:CatchInsn catch = { result: reg };
         onPanicBlock.insns.push(catch);
@@ -90,6 +135,12 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
             // JBUG cast
             curBlock = check codeGenWhileStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
+        else if stmt is BreakStmt {
+            curBlock = check codeGenBreakStmt(cx, <bir:BasicBlock>curBlock);
+        }
+        else if stmt is ContinueStmt {
+            curBlock = check codeGenContinueStmt(cx, <bir:BasicBlock>curBlock);
+        }
         else if stmt is ReturnStmt {
             // JBUG cast
             curBlock = check codeGenReturnStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
@@ -100,15 +151,13 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
         else if stmt is AssignStmt {
             curBlock = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
-        else if stmt is FunctionCallExpr {
+        else {
+            // stmt is FunctionCallExpr 
             bir:Register reg;
             [reg, curBlock] = check codeGenFunctionCall(cx, <bir:BasicBlock>curBlock, scope, stmt);
             if reg.semType !== t:NIL {
                 return cx.semanticErr("return type of function call statement not nil");
             }
-        }
-        else {
-            return err:unreached();
         }
     }
     return curBlock;
@@ -117,16 +166,18 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
 function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, WhileStmt stmt) returns CodeGenError|bir:BasicBlock? {
     bir:BasicBlock loopHead = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
-    bir:BranchInsn jumpToLoopHead = { dest: loopHead.label };
-    startBlock.insns.push(jumpToLoopHead);
+    bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
+    startBlock.insns.push(branchToLoopHead);
     var [condition, nextBlock] = check codeGenExprForBoolean(cx, loopHead, scope, stmt.condition);
     if condition is bir:Register {
         bir:BasicBlock afterCondition = cx.createBasicBlock();
         bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
         nextBlock.insns.push(branch);
+        cx.pushLoopContext(exit, loopHead);
         bir:BasicBlock? loopEnd = check codeGenStmts(cx, afterCondition, scope, stmt.body);
+        cx.popLoopContext();
         if !(loopEnd is ()) {
-            loopEnd.insns.push(jumpToLoopHead);
+            loopEnd.insns.push(branchToLoopHead);
         }
         return exit;
     }
@@ -134,9 +185,23 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? s
         return nextBlock;
     }
     else {
-        // not much point without break
+        // XXX use cx.loopUsedBreak to decide whether to return 
         return err:unimplemented("'while true' not implemented yet");
     }
+}
+
+function codeGenBreakStmt(CodeGenContext cx, bir:BasicBlock startBlock) returns CodeGenError? {
+    bir:Label dest = check cx.onBreakLabel();
+    bir:BranchInsn branch = { dest };
+    startBlock.insns.push(branch);
+    return ();
+}
+
+function codeGenContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock) returns CodeGenError? {
+    bir:Label dest = check cx.onContinueLabel();
+    bir:BranchInsn branch = { dest };
+    startBlock.insns.push(branch);
+    return ();
 }
 
 function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, IfElseStmt stmt) returns CodeGenError|bir:BasicBlock? {
