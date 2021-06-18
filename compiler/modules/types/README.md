@@ -1,7 +1,5 @@
-# Semantic Subtyping for Ballerina
+# Semantic subtyping for Ballerina
 
-This is an implementation of semantic subtyping for the type system
-of the [Ballerina](https://ballerina.io) programming language, implemented in Ballerina.
 
 The algorithm here is based on the work of Giuseppe Castagna and Alain Frisch, implemented in
 [CDuce](http://cduce.org). I have found the most accessible paper to be:
@@ -33,10 +31,10 @@ The implementation currently handles a subset of Ballerina type system:
 * any, never (can be derived from the above)
 * complement and difference (Ballerina has no syntax for this, but deciding whether S is a subtype of T is equivalent to deciding whether the difference of S and T is empty)
 
-The default module implements the subtyping algorithm. There are two other modules:
+This module module implements the subtyping algorithm. There are two other modules:
 
-* bdd - this implements binary decision diagrams, which is a key data-structure used by the default module
-* json - this parses a JSON representation of types, and uses the default module to build an internal representation
+* `types.bdd` - this implements binary decision diagrams, which is a key data-structure used by the default module
+* `types.json` - this parses a JSON representation of types, and uses the default module to build an internal representation
 
 The JSON  representation of types is Lisp-like, and documented in the file [`schema.bal`](modules/json/schema.bal).
 
