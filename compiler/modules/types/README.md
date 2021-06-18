@@ -47,4 +47,4 @@ the json file is an array of tests, where each test is a triple [R, T1 T2], wher
 - proper_subtype: T1 is a subtype of T2 and T2 is not a subtype of T1
 - incomparable: T1 is not a subtype of T2 and T2 is not a subtype of T1
 
-An example input file is in [tests.json]()../../tests.json).
+An example input file is in [tests.json](../../tests.json).
