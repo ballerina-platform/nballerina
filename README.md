@@ -92,7 +92,7 @@ The compiler is tested using the test cases in the [compiler/testSuite](compiler
 
 For those test cases that are valid Ballerina programs, the scripts in the [test](test/) directory further test that the generated LLVM assembly files can be compiled with LLVM and give the correct output when executed:
 
-* [compile.sh](test/compile.sh) uses `nballerina.jar` to compiles all of the test cases into `.ll` files;
+* [compile.sh](test/compile.sh) uses `nballerina.jar` to compile all of the test cases into `.ll` files;
 * [testll.sh](test/testll.sh) uses `clang` to compile every test case into a native executable, then runs it and checks that the output is what it should be
 
 ## Status
