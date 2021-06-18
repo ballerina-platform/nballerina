@@ -2,7 +2,7 @@
 
 ## Goals
 
-The long-term goal of the nBallerina project is to create a new compiler for the [Ballerina language](https://ballerina.io/) that is written in Ballerina and can generate native code using LLVM. It will implement the Ballerina language as defined by the [2021R1 version of the language specification](https://ballerina.io/spec/lang/2021R1/).
+The long-term goal of the nBallerina project is to create a new compiler for the [Ballerina language](https://ballerina.io/) that is written in Ballerina and can generate native code using LLVM. It will implement the Ballerina language as defined by the [2021R1](https://ballerina.io/spec/lang/2021R1/)  version of the language specification.
 
 Eventually we expect nBallerina to replace the existing [jBallerina](https://github.com/ballerina-platform/ballerina-lang) compiler, which is written in Java. The long-term vision for Ballerina is to support execution both natively and on top of the JVM, which means it will eventually need to be possible also to generate JVM bytecode using nBallerina.
 
@@ -21,19 +21,16 @@ The initial goals for nBallerina are the things that jBallerina does not yet do:
 
 The nBallerina compiler, which is organized as a Ballerina project in the [compiler](compiler/) directory, is structured into the following components written in Ballerina:
 
-
 *   Semantic subtyping implementation (in the [types](compiler/modules/types) module). This provides a normalized representation of Ballerina types, and operations on that normalized representation.
 *   BIR (in the [bir](compiler/modules/bir) module). This is a definition of BIR as a Ballerina type, together with some utility functions. BIR (as used in nBallerina) represents types using the normalized representation provided by the semantic subtyping implementation. This also includes a verifier that uses the semantic subtyper to verify that the BIR is well-typed. This depends on the types module.
 *   Frontend (in the [front](compiler/modules/front) module). This generates BIR from the source code of a Ballerina module. This depends on the bir module.
-*   Native backend (in the [nback](compiler/modules/nback) module). This builds the LLVM IR representation of a Ballerina module from the BIR representation of a Ballerina module. This depends on the bir module (but and the front module).
-*   LLVM API (in the [nback.llvm](compiler/modules/nback.llvm) module). This provides a Ballerina API to LLVM, which is used by the native backend. This is designed to be very similar to the LLVM C API. The implementation of this API builds a textual representation of the LLVM IR as LLVM assembly language, which can be written to an `.ll` file and then compiled with LLVM's clang command. This does not depend on any of the other modules. The idea here is that we can
-eventually implement the same API on top of the LLVM C API, and link the compiler with the LLVM libraries.
+*   LLVM API (in the [nback.llvm](compiler/modules/nback.llvm) module). This provides a Ballerina API to LLVM. The implementation of this API builds a textual representation of the LLVM IR as LLVM assembly language, which can be written to an `.ll` file and then compiled with LLVM's clang command. This is designed to be very similar to the LLVM C API; the idea  is that we can eventually implement the same API on top of the LLVM C API, and link the compiler with the LLVM libraries. This does not depend on any of the other modules.
+*   Native backend (in the [nback](compiler/modules/nback) module). This builds the LLVM IR representation of a Ballerina module from the BIR representation of a Ballerina module. It depends on the bir and the nback.llvm modules (but not the front module).
 *   A compiler driver (in [default](compiler/main.bal) module). This calls the frontend to generate the BIR and then calls the backend to generate LLVM. It depends on the bir, front and nback modules.
 
-The starting point for the `types` and `front` modules were the [semtype](https://github.com/jclark/semtype) project.
+The starting point for the `types` and `front` modules was the [semtype](https://github.com/jclark/semtype) project.
 
 As well as a compiler, nBallerina needs a runtime, which is in the [runtime](runtime) directory. This is currently in C and trivial. The major components will include
-
 
 *   runtime type checker (we hope to write this mostly in Ballerina);
 *   implementation of the langlib;
@@ -89,9 +86,9 @@ where `example.bal` is a Ballerina module containing only type definitions and c
 
 ## Testing
 
-The compiler is tested using the test cases in the [compiler/testSuite])(compiler/testSuite/) directory. The `bal build` command performs a first level of testing on these: it checks that the test cases that should get compile errors do, and that the test cases that should not get compile errors do not. This should work on any platform on which the Ballerina distribution works.
+The compiler is tested using the test cases in the [compiler/testSuite](compiler/testSuite/) directory. The `bal build` command performs a first level of testing on these: it checks that the test cases that should get compile errors do, and that the test cases that should not get compile errors do not. This should work on any platform on which the Ballerina distribution works.
 
-For those test cases that are valid Ballerina programs, the scripts in the [test](test/) directory further test that the generated LLVM assembly file can be compiled with LLVM and gives the correct output when executed:
+For those test cases that are valid Ballerina programs, the scripts in the [test](test/) directory further test that the generated LLVM assembly files can be compiled with LLVM and give the correct output when executed:
 
 * [compile.sh](test/compile.sh) uses `nballerina.jar` to compiles all of the test cases into `.ll` files;
 * [testll.sh](test/testll.sh) uses `clang` to compile every test case into a native executable, then runs it and checks that the output is what it should be
