@@ -35,7 +35,7 @@ The `types` module implements the subtyping algorithm. There are two other modul
 * `types.bdd` - this implements binary decision diagrams, which is a key data-structure used by the default module
 * `types.json` - this parses a JSON representation of types, and uses the `types` module to build an internal representation
 
-The JSON  representation of types is Lisp-like, and documented in the file [`schema.bal`](../modules/types.json/schema.bal).
+The JSON  representation of types is Lisp-like, and documented in the file [`schema.bal`](../types.json/schema.bal).
 
 There is a [list](TODO.md) of everything still to be done to handle the whole type system. There
 are also implementation [notes](NOTES.md).
