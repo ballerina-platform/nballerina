@@ -19,9 +19,11 @@ public function main(string[] filenames, *Options opts) returns error? {
     foreach string filename in filenames {
         if opts.testJsonTypes {
             check testJsonTypes(filename);
+            continue;
         }
         if opts.showTypes {
             check showTypes(filename);
+            continue;
         }
         check compileFile(filename, check chooseOutputFilename(filename, opts.outDir));
     }  
