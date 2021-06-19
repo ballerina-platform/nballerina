@@ -169,24 +169,31 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? s
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
     startBlock.insns.push(branchToLoopHead);
     var [condition, nextBlock] = check codeGenExprForBoolean(cx, loopHead, scope, stmt.condition);
-    if condition is bir:Register {
-        bir:BasicBlock afterCondition = cx.createBasicBlock();
-        bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
-        nextBlock.insns.push(branch);
+    if condition is false {
+        return nextBlock;
+    }
+    else {
         cx.pushLoopContext(exit, loopHead);
-        bir:BasicBlock? loopEnd = check codeGenStmts(cx, afterCondition, scope, stmt.body);
+        boolean exitReachable;
+        if condition is bir:Register {
+            bir:BasicBlock afterCondition = cx.createBasicBlock();
+            bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
+            nextBlock.insns.push(branch);
+            nextBlock = afterCondition;
+            exitReachable = true;
+        }
+        else {
+            exitReachable = false;
+        }
+        bir:BasicBlock? loopEnd = check codeGenStmts(cx, nextBlock, scope, stmt.body);
+        if cx.loopUsedBreak() {
+            exitReachable = true;
+        }
         cx.popLoopContext();
         if !(loopEnd is ()) {
             loopEnd.insns.push(branchToLoopHead);
         }
-        return exit;
-    }
-    else if condition == false {
-        return nextBlock;
-    }
-    else {
-        // XXX use cx.loopUsedBreak to decide whether to return 
-        return err:unimplemented("'while true' not implemented yet");
+        return exitReachable ? exit : ();
     }
 }
 

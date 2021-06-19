@@ -1,12 +1,9 @@
 import ballerina/io;
 
 public function main() {
-    printWhile(); //@output 0
-}
-
-function printWhile() {
     while true {
-        io:println(0); 
+        io:println(0); // @output 0
         break;
     }
+    io:println(1); // @output 1
 }
