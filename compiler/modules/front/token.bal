@@ -219,6 +219,9 @@ class Tokenizer {
                         digits += ch;
                     }
                 }
+                if digits.startsWith("0") && digits.length() > 1 {
+                    return self.err("leading zeros not allowed in integer literals");
+                }
                 return [DECIMAL_NUMBER, digits];
             }
             else if ch == "\"" {
