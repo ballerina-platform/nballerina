@@ -148,9 +148,10 @@ The following restrictions apply to imported modules:
 
 ## Additions from subset 1
 
-Type `any` and `()` and some minimal operations on them:
+Type `any` and some related operations:
 
-* New type descriptors: `any` and `()`
+* New type descriptor: `any`
+* Explicit nil values
 * New expression syntax:
    * type cast `<TD>E` (can panic)
    * `===` and `!==` operators
