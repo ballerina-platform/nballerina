@@ -121,9 +121,7 @@ function-reference = identifier | qualified-identifier
 
 qualified-identifier = module-prefix ":" identifier
 
-module-prefix = identifier | predeclared-prefix
-
-predeclared-prefix = basic-type-name
+module-prefix = identifier
 
 expr-list = expression ["," expression]*
 
