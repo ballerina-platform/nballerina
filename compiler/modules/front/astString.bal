@@ -71,7 +71,8 @@ function stmtToWords(Word[] w, Stmt stmt) {
         w.push(stmt, ";");
     }
     else {
-        panic err:unimplemented(`stmt not supported ${(typeof stmt).toString()}`);
+        functionCallToWords(w, stmt);
+        w.push(";");
     }
 }
 
@@ -83,7 +84,7 @@ function blockToWords(Word[] w, Stmt[] body) {
         firstInBlock = false;
         stmtToWords(w, stmt);
     }
-    w.push(<Word>LF_OUTDENT, "}");
+    w.push(<Word>(firstInBlock ? LF :LF_OUTDENT), "}");
 }
 
 function typeDescToWords(Word[] w, TypeDesc td) {
@@ -111,18 +112,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         }
     }
     else if expr is FunctionCallExpr {
-        w.push(expr.funcName);
-        w.push(ZWJ);
-        w.push("(");
-        boolean firstArg = true;
-        foreach var arg in expr.args {
-            if !firstArg {
-                w.push(",");
-            }
-            exprToWords(w, arg);
-            firstArg = false;
-        }
-        w.push(")");
+        functionCallToWords(w, expr);
     }
     else if expr is BinaryExpr {
         if wrap {
@@ -138,6 +128,21 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     else {
         w.push(expr.varName);
     }
+}
+
+function functionCallToWords(Word[] w, FunctionCallExpr func) {
+    w.push(func.funcName);
+    w.push(ZWJ);
+    w.push("(");
+    boolean firstArg = true;
+    foreach var arg in func.args {
+        if !firstArg {
+            w.push(",");
+        }
+        exprToWords(w, arg);
+        firstArg = false;
+    }
+    w.push(")");
 }
 
 function wordsToString(Word[] s) returns string {
