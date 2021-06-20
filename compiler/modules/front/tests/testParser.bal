@@ -2,6 +2,8 @@ import ballerina/test;
 import ballerina/io;
 
 import wso2/nballerina.err;
+import ballerina/regex;
+import ballerina/file;
 
 @test:Config {
     dataProvider: sourceFragments
@@ -136,5 +138,30 @@ function sourceFragments() returns string[][]|error {
         ["V", "stmt", "int i = 10;", "int i = 10;"],
         ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
         ["V", "stmt", "boolean b = false;", "boolean b = false;"]];
+
+    var cases = check file:readDir("modules/front/tests/data");
+    foreach var caseFile in cases {
+        string[] lines = check io:fileReadLines(caseFile.absPath);
+        string[] caseLines = [];
+        boolean inCase = false;
+        int indented = 0;
+        foreach var l in lines {
+            if regex:matches(l, "^\\s*//\\s*@case\\s*$") {
+                inCase = true;
+                indented = l.length() - regex:replaceFirst(l, "^\\s*", "").length();
+                continue;
+            }
+            if regex:matches(l, "^\\s*//\\s*@end\\s*$") {
+                break;
+            }
+            if inCase {
+                caseLines.push(l.substring(4));
+            }
+        }
+        string case = "\n".'join(...caseLines);
+        string base = check file:basename(caseFile.absPath);
+        string[] baseParts = regex:split(base, "-");
+        s.push([baseParts[0], baseParts[1], case, case]);
+    }
     return s;
 }
