@@ -59,6 +59,7 @@ In designing the sequence of subsets, we want to
 
 * maintain correctness
 * be able to write the appropriate parts of the runtime needed for each subset in Ballerina
+* define subsets syntactically as much as possible (i.e. the subset is all programs that have this grammar) 
 
 and then work towards implementing a subset that is sufficient for each of the following milestones
 
