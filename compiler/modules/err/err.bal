@@ -25,9 +25,10 @@ public type Detail record {
 public type Any Syntax|Semantic|Unimplemented;
 
 // Grammatical inconsistency here is reluctantly intentional
-public type Syntax error<Detail> & distinct error;
-public type Semantic error<Detail> & distinct error;
-public type Unimplemented error<Detail> & distinct error;
+// JBUG defining these as `error<Detail> & distinct error` results in these errors not being distinct
+public type Syntax distinct error<Detail>;
+public type Semantic distinct error<Detail>;
+public type Unimplemented distinct error<Detail>;
 
 public function syntax(Message m, Position? pos = (), string? functionName = (), error? cause = ()) returns Syntax {
     return error Syntax(messageToString(m), cause, position=pos, functionName=functionName);
@@ -38,7 +39,7 @@ public function semantic(Message m, Position? pos = (), string? functionName = (
 }
 
 public function unimplemented(Message m, Position? pos = (), string? functionName = (), error? cause = ()) returns Unimplemented {
-    return error Semantic(messageToString(m), cause, position=pos, functionName=functionName);
+    return error Unimplemented(messageToString(m), cause, position=pos, functionName=functionName);
 }
 
 public function messageToString(Message m) returns string {

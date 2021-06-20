@@ -88,7 +88,7 @@ function addModulePart(ModuleTable mod, ModulePart part) returns err:Semantic? {
 }
 
 // This is old interface for showTypes
-public function typesFromString(string contents) returns [t:Env, map<t:SemType>]|err:Syntax {
+public function typesFromString(string contents) returns [t:Env, map<t:SemType>]|err:Syntax|err:Semantic {
     ModulePart part = check parseModulePart(contents);
     ModuleTable mod = table [];
     check addModulePart(mod, part);

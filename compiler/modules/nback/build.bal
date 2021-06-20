@@ -349,7 +349,7 @@ function buildBooleanCompare(llvm:Builder builder, Scaffold scaffold, bir:Boolea
                   scaffold.address(insn.result));                          
 }
 
-function buildEqual(llvm:Builder builder, Scaffold scaffold, bir:EqualInsn insn) returns err:Any? {
+function buildEqual(llvm:Builder builder, Scaffold scaffold, bir:EqualInsn insn) returns BuildError? {
     builder.store(builder.iCmp(insn.negate ? "ne" : "eq",
                                check buildValue(builder, scaffold, insn.operands[0]),
                                check buildValue(builder, scaffold, insn.operands[1])),
@@ -366,11 +366,11 @@ function buildBooleanNotInsn(llvm:Builder builder, Scaffold scaffold, bir:Boolea
                   scaffold.address(insn.result));
 }
 
-function buildRetValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value?|err:Any {
+function buildRetValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value?|BuildError {
     return operand is () ? () : buildValue(builder, scaffold, operand);
 }
 
-function buildValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value|err:Any {
+function buildValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value|BuildError {
     if operand is bir:Register {
         return builder.load(scaffold.address(operand));
     }
@@ -385,7 +385,7 @@ function buildValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand
     }
 }
 
-function buildValueAsInt(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value|err:Any {
+function buildValueAsInt(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value|BuildError {
     if operand is bir:IntOperand {
         return buildInt(builder, scaffold, operand);
     }
