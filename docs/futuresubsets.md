@@ -6,11 +6,12 @@ We will give them symbolic names until implemented. We may group some together. 
 
 Subsets towards the end are less well worked out.
 
-## Subset optional type
+## Subset nil/optional types
 
-Summary: allow `T?`
+Summary: allow type descriptors `T?` and `()`
 
 * New type descriptor `T?`
+* New type descriptor `()`
 
 Implementation notes:
 * We could use a different representation for `int?` as an `{i64,i1}`.

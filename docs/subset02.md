@@ -2,7 +2,8 @@
 
 ## Summary
 
-* The only types for variables and parameters are `any`, `int`, `boolean` and `()` (nil).
+* Only values allowed are of basic type int, boolean and nil.
+* The only type descriptors allowed are `any`, `int`, `boolean`.
 * At module level, only function definitions:
    * no default arguments
    * no rest arguments
@@ -19,7 +20,7 @@
    * Binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`
    * Unary operators: `-`, `!`
    * Type cast
-   * Literals
+   * Literals for int, boolean and nil
 * The only imported function that can be called is `io:println` and
   it can only be called with a single argument.
 
@@ -35,10 +36,9 @@ module-decl = function-defn
 
 function-defn = ["public"] "function" identifier signature stmt-block
 signature = "(" [param-list] ")" [ "returns" type-desc ]
-type-desc = basic-type-name | "any" | nil-type-desc
+type-desc = basic-type-name | "any"
 
 basic-type-name = "int" | "boolean"
-nil-type-desc = nil-literal
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -115,7 +115,7 @@ primary-expr =
 
 literal = integer-literal | boolean-literal | nil-literal
 boolean-literal = "true" | "false"
-nil-literal = "(" ")"
+nil-literal = "(" ")" | "null"
 
 function-call-expr = function-reference arg-list
 
