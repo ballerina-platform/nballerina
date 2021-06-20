@@ -48,7 +48,7 @@ Safe FFI interface. We have not started this bit yet.
 ## Implementation plan
 
 The implementation strategy is start by implementing a tiny subset of the language, and then implement progressively larger subsets. The plan is that
-each subset will be implemented correctly. This implies that
+each subset will be implemented [correctly](docs/correctness.md). This implies that
 
 - if the compiler accepts the program, then the result when executed will behave as the language spec requires it to behave;
 - the compiler will not accept a program that the language spec says is not a valid program.
