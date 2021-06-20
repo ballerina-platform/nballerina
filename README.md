@@ -99,6 +99,6 @@ For those test cases that are valid Ballerina programs, the scripts in the [test
 
 ## Status
 
-We are finishing up the implementation of [subset 1](docs/subset01.md).
+We have completed [subset 1](docs/subset01.md) and are working on [subset 2](docs/subset02.md)
 
 The semantic subtyping implementation is further along than the backend. It implements the subset of Ballerina's type syntax described by this [grammar](docs/type-subset.md).
