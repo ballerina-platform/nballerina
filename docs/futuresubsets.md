@@ -12,8 +12,8 @@ Summary: allow `T?`
 
 * New type descriptor `T?`
 
-Notes:
-* T? will always use the same tagged representation as any, so conversion between T? and any? will not involve a representation change
+Implementation notes:
+* We could use a different representation for `int?` as an `{i64,i1}`.
 
 ## Subset langlib
 
