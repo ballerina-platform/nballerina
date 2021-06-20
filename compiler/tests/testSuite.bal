@@ -29,9 +29,9 @@ function testCompileVP(string path) returns io:Error? {
 }
 
 @test:Config {
-    dataProvider: listSourcesE
+    dataProvider: listSourcesEU
 }
-function testCompileE(string path) returns io:Error? {
+function testCompileEU(string path) returns file:Error|io:Error? {
     CompileError? err = compileFile(path, ());
     // JBUG parentheses needed
     if (err is err:Any?) {
@@ -39,10 +39,17 @@ function testCompileE(string path) returns io:Error? {
             test:assertNotExactEquals(err, (), "expected an error " + path);
         }
         else {
-            // XXX distinguish E and U tests
+            string base = check file:basename(path);
+            boolean isE = base[0].toUpperAscii() == "E";
+            if isE {
+                test:assertFalse(err is err:Unimplemented, "unimplemented error on E test" + path);
+            }
+            else {
+                test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
+            }
             // JBUG cast needed
             err:Position? pos = (<err:Detail>err.detail())?.position;
-            if pos != () {
+            if isE && pos != () {
                 test:assertEquals(pos.lineNumber, check errorLine(path), "wrong line number in error " + path);
             }
         }
@@ -54,7 +61,7 @@ function testCompileE(string path) returns io:Error? {
 
 function listSourcesVP() returns string[][]|error => listSources("VP");
 
-function listSourcesE() returns string[][]|error => listSources("E");
+function listSourcesEU() returns string[][]|error => listSources("EU");
 
 function listSources(string initialChars) returns string[][]|io:Error|file:Error {
     return from var entry in check file:readDir(SOURCE_DIR)
