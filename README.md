@@ -2,7 +2,8 @@
 
 ## Goals
 
-The long-term goal of the nBallerina project is to create a new compiler for the [Ballerina language](https://ballerina.io/) that is written in Ballerina and can generate native code using LLVM. It will implement the Ballerina language as defined by the [2021R1](https://ballerina.io/spec/lang/2021R1/)  version of the language specification.
+The long-term goal of the nBallerina project is to create a new compiler for the [Ballerina language](https://ballerina.io/) that is written in Ballerina and can generate native code using LLVM. It will implement the Ballerina language as defined by the [2021R1](https://ballerina.io/spec/lang/2021R1/) version of the language specification; we will aim to
+track any agreed changes to the spec.
 
 Eventually we expect nBallerina to replace the existing [jBallerina](https://github.com/ballerina-platform/ballerina-lang) compiler, which is written in Java. The long-term vision for Ballerina is to support execution both natively and on top of the JVM, which means it will eventually need to be possible also to generate JVM bytecode using nBallerina.
 
