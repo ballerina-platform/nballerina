@@ -1,33 +1,10 @@
 # Possible future subsets
 
-This are possible future subsets are subset [01](subset01.md).
+These are possible future subsets that build on [subset 2](subset02.md).
 
 We will give them symbolic names until implemented. We may group some together. We only specify immediate dependencies of each subset.
 
 Subsets towards the end are less well worked out.
-
-Key idea here (compared to previous schemes) is to start by doing `any` rather than general unions. This keeps runtime type-checking simple.
-
-## Subset any
-
-Summary: type `any` and `()` and some minimal operations on them
-
-Depends on subset: (none)
-
-* New type descriptors: `any` and `()`
-* New expression syntax:
-   * type cast `<TD>E` (can panic)
-   * `===` and `!==` operators
-   * nil constant `()`
-* Standard Library
-   * `io:println` takes a single argument of type `any`
-
-Implementation notes:
-* When a variable has type any, its representation is a tagged representation: at this stage, the tagged representation of an `int` puts it on the heap; the tagged representation of nil and booleans are represented using low-bits of a tagged pointer
-* Type cast converts from tagged representation to untagged representation
-* There is no explicit widening instruction BIR, but widening can result in converting from untagged representation to tagged representation
-* Operations on `any` are `===`, `!==` and type cast
-* We now have the subtype relationships: `int <: any` and `boolean <: any`
 
 ## Subset optional type
 
