@@ -18,7 +18,7 @@ The initial goals for nBallerina are the things that jBallerina does not yet do:
 *   generating LLVM IR from BIR
 *   semantic subtyping.
 
-There is an earlier project which was called nBallerina. It took a different approach: a backend written in C++, which read serialized BIR from the jBallerina frontend. This is archived in the [nballerina-cpp](https://github.com/ballerina-platform/nballerina-cpp) repository.
+There is an earlier project that was called nBallerina. It took a different approach: a backend written in C++, which read serialized BIR from the jBallerina frontend. This is in the [nballerina-cpp](https://github.com/ballerina-platform/nballerina-cpp) repository and is no longer being developed.
 
 ## Structure
 
