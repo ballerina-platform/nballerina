@@ -9,8 +9,9 @@ import nballerina.err;
 import ballerina/io;
 
 // "i64" corresponds to  LLVMInt64Type
+// "i8" corresponds to LLVMInt8Type
 // "i1" corresponds to LLVMInt1Type
-public type IntType "i64"|"i1";
+public type IntType "i64"|"i8"|"i1";
 
 // Used to constrain parameters that represent an alignment
 public type Alignment 1|2|4|8|16;
@@ -21,6 +22,12 @@ public type PointerType readonly & record {|
     IntType pointsTo;
     Alignment align;
 |};
+
+// Corresponds to LLVMPointerType function
+public function pointerType(IntType ty, int addressSpace = 0) returns PointerType {
+    // XXX need to fix how we do alignment #112
+    return { pointsTo: ty, align: 8 };
+}
 
 // Corresponds to llvm::StructType
 public type StructType readonly & record {
