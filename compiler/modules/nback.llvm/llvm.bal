@@ -399,6 +399,26 @@ public class Builder {
         return new Value(destinationType, reg);
     }
 
+    // Corresponds to LLVMBuildBitCast
+    public function trunc(Value val, IntType destinationType, string? name = ()) returns Value {
+        if val.ty is IntType {
+            if largerType(<IntType>val.ty, destinationType) != val.ty {
+                panic error("Bit size of value must be larger than bit size of destination type");
+            }
+            if val.ty == destinationType {
+                panic error("Equal sized types are not allowed");
+            }
+            BasicBlock bb = self.bb();
+            string reg = bb.func.genReg();
+            bb.addInsn(reg, "=", "trunc", typeToString(val.ty), val.operand, "to", typeToString(destinationType));
+            return new Value(destinationType, reg);
+        } 
+        else {
+
+            panic error("Value must be an integer type");
+        }
+    }
+
     public function unreachable() {
         BasicBlock bb = self.bb();
         bb.addInsn("unreachable");
@@ -552,6 +572,22 @@ function sameIntType(Value v1, Value v2) returns IntType {
         return ty1;
     }
     panic error("expected an int type");
+}
+
+function largerType(IntType t1, IntType t2) returns IntType {
+    string rep1 = typeToString(t1);
+    string rep2 = typeToString(t2);
+    int|error size1 = int:fromString(rep1.substring(1));
+    int|error size2 = int:fromString(rep2.substring(1));
+    if size1 is error || size2 is error {
+        panic error("Failed to parse the type");
+    } else {
+        if size1 > size2 {
+            return t1;
+        } else {
+            return t2;
+        }
+    }
 }
 
 function typeToString(RetType ty) returns string {
