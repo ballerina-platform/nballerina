@@ -68,11 +68,17 @@ public readonly class PointerValue {
     }
 }
 
-// Corresponds to LLVMConstInst
+// Corresponds to LLVMConstInt
 // XXX Need to think about SignExtend argument
 public function constInt(IntType ty, int val) returns Value {
     return new Value(ty, val.toString());
 }
+
+// Corresponds to LLVMConstNull
+public function constNull(PointerType ty) returns Value {
+    return new Value(ty, "null");
+}
+
 public type IntrinsicFunctionName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
 
 # Corresponds to llvm::Module class
