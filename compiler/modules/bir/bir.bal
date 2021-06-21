@@ -342,7 +342,6 @@ public type RetInsn readonly & record {|
     *InsnBase;
     INSN_RET name = INSN_RET;
     Operand operand;
-    SemType returnType;
 |};
 
 # Return abnormally from the function
