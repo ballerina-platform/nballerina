@@ -54,6 +54,9 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         "boolean" => {
             return parseVarDeclStmt(tok, "boolean", t:BOOLEAN);
         }
+        "any" => {
+            return parseVarDeclStmt(tok, "boolean", t:TOP);
+        }
     }
     return parseError(tok, "unhandled statement");
 }
