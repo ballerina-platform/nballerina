@@ -1,4 +1,4 @@
-declare {i64, i1} @llvm.smul.with.overflow.i64 (i64, i64)
+declare {i64, i1} @llvm.smul.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 declare void @_Bio__println (i64)
 declare void @_bal_panic (i64)
 define void @_B_main () {
