@@ -81,8 +81,8 @@ public function constInt(IntType ty, int val) returns Value {
 }
 
 // Corresponds to LLVMConstNull
-public function constNull(PointerType ty) returns Value {
-    return new Value(ty, "null");
+public function constNull(PointerType ty) returns PointerValue {
+    return new PointerValue(ty, "null");
 }
 
 public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
