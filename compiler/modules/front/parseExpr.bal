@@ -103,6 +103,11 @@ function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     }
     else if t == "(" {
         check tok.advance();
+        if tok.current() == ")" {
+            check tok.advance();
+            SimpleConstExpr expr = { value: () };
+            return expr;
+        }
         Expr expr = check parseExpr(tok);
         check tok.expect(")");
         return expr;

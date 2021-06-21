@@ -377,11 +377,12 @@ function buildValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand
     else if operand is int {
         return llvm:constInt(LLVM_INT, operand);
     }
-    else if operand is boolean {
-        return llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0);
+    else if operand is () {
+        return llvm:constInt(LLVM_NIL, 0);
     }
     else {
-        return err:unimplemented("only support expressions of type int and boolean");
+        // operand is boolean
+        return llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0);
     }
 }
 
