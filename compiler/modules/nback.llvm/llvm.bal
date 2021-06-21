@@ -399,7 +399,7 @@ public class Builder {
         return new Value(destinationType, reg);
     }
 
-    // Corresponds to LLVMBuildBitCast
+    // Corresponds to LLVMBuildTrunc
     public function trunc(Value val, IntType destinationType, string? name = ()) returns Value {
         if val.ty is IntType {
             if largerType(<IntType>val.ty, destinationType) != val.ty {
@@ -414,7 +414,6 @@ public class Builder {
             return new Value(destinationType, reg);
         } 
         else {
-
             panic error("Value must be an integer type");
         }
     }
