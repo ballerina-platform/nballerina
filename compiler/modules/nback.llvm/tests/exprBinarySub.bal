@@ -4,10 +4,6 @@ function exprBinarySub() returns Module {
     Module m = new ();
     StructType addReturnType = structType(["i64", "i1"]);
     FunctionDecl sub = m.getIntrinsicDeclaration("ssub.with.overflow.i64");
-    sub.addEnumAttribute("nounwind");
-    sub.addEnumAttribute("readnone");
-    sub.addEnumAttribute("speculatable");
-    sub.addEnumAttribute("willreturn");
     Function abort = m.addFunctionDefn("abort", {returnType:"void", paramTypes:[]});
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();

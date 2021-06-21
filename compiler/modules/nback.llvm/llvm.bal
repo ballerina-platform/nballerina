@@ -86,7 +86,9 @@ public function constNull(PointerType ty) returns Value {
     return new Value(ty, "null");
 }
 
-public type IntrinsicFunctionName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
+public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
+
+public type IntrinsicFunctionName IntegerArithmeticIntrinsicName;
 
 # Corresponds to llvm::Module class
 public class Module {
@@ -130,6 +132,12 @@ public class Module {
             }
         }
         if fn is FunctionDecl {
+            if name is IntegerArithmeticIntrinsicName {
+                fn.addEnumAttribute("nounwind");
+                fn.addEnumAttribute("readnone");
+                fn.addEnumAttribute("speculatable");
+                fn.addEnumAttribute("willreturn");
+            }
             self.intrinsicFunctions[name] = fn;
             return fn;
         } else {
