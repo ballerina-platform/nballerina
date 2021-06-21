@@ -25,12 +25,15 @@ class CodeGenContext {
     final Module mod;
     final bir:FunctionCode code;
     final string functionName;
+    final t:SemType returnType;
+
     LoopContext? loopContext = ();
 
-    function init(Module mod, string functionName) {
+    function init(Module mod, string functionName, t:SemType returnType) {
         self.mod = mod;
         self.code = {};
         self.functionName = functionName;
+        self.returnType = returnType;
     }
 
     function createRegister(bir:SemType t, string? varName = ()) returns bir:Register {
@@ -81,7 +84,7 @@ class CodeGenContext {
 }
 
 function codeGenFunction(Module mod, string functionName, bir:FunctionSignature signature, string[] paramNames, Stmt[] body) returns bir:FunctionCode|CodeGenError {
-    CodeGenContext cx = new(mod, functionName);
+    CodeGenContext cx = new(mod, functionName, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Scope? scope = ();
     foreach int i in 0 ..< paramNames.length() {
@@ -90,7 +93,7 @@ function codeGenFunction(Module mod, string functionName, bir:FunctionSignature 
     }
     bir:BasicBlock? endBlock = check codeGenStmts(cx, startBlock, scope, body);
     if !(endBlock is ()) {
-        bir:RetInsn ret = { operand: () };
+        bir:RetInsn ret = { operand: (), returnType: signature.returnType };
         endBlock.insns.push(ret);
     }
     codeGenOnPanic(cx);
@@ -266,7 +269,7 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
 function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, ReturnStmt stmt) returns CodeGenError? {
     var { returnExpr } = stmt;
     var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, returnExpr);
-    bir:RetInsn insn = { operand };
+    bir:RetInsn insn = { operand, returnType: cx.returnType };
     nextBlock.insns.push(insn);
     return ();
 }

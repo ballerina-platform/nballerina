@@ -6,12 +6,12 @@ import wso2/nballerina.err;
 class VerifyContext {
     private final Module mod;
     private final t:TypeCheckContext tc;
-    private final FunctionDefn defn;
+    private final string functionName;
 
     function init(Module mod, FunctionDefn defn) {
         self.mod = mod;
         self.tc = mod.getTypeCheckContext();
-        self.defn = defn;
+        self.functionName = defn.symbol.identifier;
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
@@ -23,10 +23,8 @@ class VerifyContext {
     }
 
     function err(err:Message msg) returns err:Semantic {
-        return err:semantic(msg, functionName=self.defn.symbol.identifier);
+        return err:semantic(msg, functionName=self.functionName);
     }
-
-    function returnType() returns t:SemType => self.defn.signature.returnType;
 
     function symbolToString(Symbol sym) returns string {
         return symbolToString(self.mod, sym);
@@ -75,7 +73,7 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
         check verifyOperandBoolean(vc, name, insn.operand);
     }
     else if insn is RetInsn {
-        check verifyOperandType(vc, insn.operand, vc.returnType(), "value is not a subtype of the return type");
+        check verifyOperandType(vc, insn.operand, insn.returnType, "value is not a subtype of the return type");
     }
     else if insn is CallInsn {
         check verifyCallInsn(vc, insn);
