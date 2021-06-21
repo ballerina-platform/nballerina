@@ -383,6 +383,14 @@ public class Builder {
         }
     }
 
+    // Corresponds to LLVMBuildPtrToInt
+    public function ptrToInt(PointerValue ptr, IntType destinationType, string? name=()) returns Value {
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        bb.addInsn(reg, "=", "ptrtoint", typeToString(ptr.ty), ptr.operand, "to", typeToString(destinationType));
+        return new Value(destinationType, reg);
+    }
+
     public function unreachable() {
         BasicBlock bb = self.bb();
         bb.addInsn("unreachable");
