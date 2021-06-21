@@ -436,6 +436,14 @@ public class Builder {
         }
     }
 
+    // Corresponds to LLVMBuildGEP
+    public function getElementPointer(PointerValue ptr, Value index, string? name = ()) returns Value {
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        bb.addInsn(reg, "=", "getelementptr", typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand, ",", typeToString(index.ty), index.operand);
+        return new Value(ptr.ty.pointsTo, reg);
+    }
+
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
         if tem is () {
