@@ -399,6 +399,14 @@ public class Builder {
         return new Value(destTy, reg);
     }
 
+    // Corresponds to LLVMBuildZExt
+    public function zExt(Value val, IntType destTy, string? name=()) returns Value {
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        bb.addInsn(reg, "=", "zext", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        return new Value(destTy, reg);
+    }
+
     public function unreachable() {
         BasicBlock bb = self.bb();
         bb.addInsn("unreachable");
