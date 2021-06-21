@@ -370,6 +370,14 @@ public class Builder {
         bb.addInsn(reg, "=", "icmp", op, typeToString(ty), lhs.operand, ",", rhs.operand);
         return new Value("i1", reg);
     }
+
+    // Corresponds to LLVMBuildBitCast
+    public function bitCast(PointerValue val, PointerType destTy) returns PointerValue {
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        bb.addInsn(reg, "=", "bitcast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        return new (destTy, reg);
+    }
     
     // Corresponds to LLVMBuildRet/LLVMBuildRetVoid
     // value of () represents void return value
