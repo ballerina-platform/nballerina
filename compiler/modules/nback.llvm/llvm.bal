@@ -87,8 +87,9 @@ public function constNull(PointerType ty) returns Value {
 }
 
 public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
+public type GeneralIntrinsicName "ptrmask.p0i8.i64";
 
-public type IntrinsicFunctionName IntegerArithmeticIntrinsicName;
+public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsicName;
 
 # Corresponds to llvm::Module class
 public class Module {
@@ -129,6 +130,13 @@ public class Module {
             }
             "smul.with.overflow.i64" => {
                 fn = new ("llvm.smul.with.overflow.i64", overflowArithmeticFunctionType);
+            }
+            "ptrmask.p0i8.i64" => {
+                FunctionType fnType = {returnType: pointerType("i8"), paramTypes:[pointerType("i8"),"i64"] };
+                FunctionDecl f = new("llvm.ptrmask", fnType);
+                f.addEnumAttribute("readnone");
+                f.addEnumAttribute("speculatable");
+                fn = f;
             }
         }
         if fn is FunctionDecl {
