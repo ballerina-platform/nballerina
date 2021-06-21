@@ -63,13 +63,11 @@ Summary: type descriptor `any[]` and some minimal operations on it
 
 Depends on subsets: any, langlib
 
-If this is does before
-
 * New type descriptors: `any[]`
 * New expressions
    * list constructors `[1, 2, 3]` - syntactically allowed only where there is an explicit contextually expected type e.g. as function argument, initializer or following a type cast
 * Statements
-   * `foreach` with ranges `foreach int  i in MinExpr ..< MaxExpr { ... }`
+   * `foreach` with ranges `foreach int i in MinExpr ..< MaxExpr { ... }`
  * Langlib (called using method call syntax)
     * array:length
 
