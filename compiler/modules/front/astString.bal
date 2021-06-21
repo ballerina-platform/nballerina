@@ -12,14 +12,19 @@ const LF_OUTDENT = -1;
 
 type Word string|LF_INDENT|LF_OUTDENT|LF|ZWJ;
 
-function modulePartToString(ModulePart mod) returns string {
-    Word[] w = [];
+function modulePartToWords(Word[] w, ModulePart mod) {
+     ImportDecl? im = mod.importDecl;
+    if im != () {
+        w.push("import", im.org, ZWJ, "/", ZWJ, im.module, ";");
+    }
     foreach var def in mod.defs {
         if def is FunctionDef {
             functionDefToWords(w, def);
         }
+        else {
+            // XXX type defs are not part of the current subset
+        }
     }
-    return wordsToString(w);
 }
 
 function functionDefToWords(Word[] w, FunctionDef func) {
@@ -27,8 +32,21 @@ function functionDefToWords(Word[] w, FunctionDef func) {
     if func.vis != () {
         w.push(<Word>func.vis);
     }
-    w.push(func.name, "(", ")", "returns");
-    typeDescToWords(w, func.typeDesc.ret);
+    w.push(func.name, ZWJ, "(");
+    boolean firstArg = true;
+    foreach int i in 0..<func.typeDesc.args.length() {
+        if i != 0 {
+            w.push(",");
+        }
+        typeDescToWords(w, func.typeDesc.args[i]);
+        w.push(func.paramNames[i]);
+        firstArg = false;
+    }
+    w.push(")");
+    if !(func.typeDesc.ret is "()") {
+        w.push("returns");
+        typeDescToWords(w, func.typeDesc.ret);
+    }
     blockToWords(w, func.body);
 }
 
@@ -96,16 +114,28 @@ function typeDescToWords(Word[] w, TypeDesc td) {
     }
 }
 
+function exprsToWords(Word[] w, Expr[] exprs) {
+    boolean firstExpr = true;
+    foreach var expr in exprs {
+        if !firstExpr {
+            w.push(",");
+        }
+        exprToWords(w, expr);
+        firstExpr = false;
+    }
+}
+
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     if expr is SimpleConstExpr {
-        w.push(expr.value.toString());
+        if expr.value != () {
+            w.push(expr.value.toString());
+        }
     } 
     else if expr is UnaryExpr {
         if wrap {
             w.push("(");
         }
-        w.push(expr.op);
-        w.push(ZWJ);
+        w.push(expr.op, ZWJ);
         exprToWords(w, expr.operand, true);
         if wrap {
             w.push(")");
@@ -131,17 +161,11 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
 }
 
 function functionCallToWords(Word[] w, FunctionCallExpr func) {
-    w.push(func.funcName);
-    w.push(ZWJ);
-    w.push("(");
-    boolean firstArg = true;
-    foreach var arg in func.args {
-        if !firstArg {
-            w.push(",");
-        }
-        exprToWords(w, arg);
-        firstArg = false;
+    if func.prefix != () {
+        w.push(func.prefix, ":");
     }
+    w.push(func.funcName, ZWJ, "(");
+    exprsToWords(w, func.args);
     w.push(")");
 }
 
@@ -179,9 +203,9 @@ function wordsToString(Word[] s) returns string {
 }
 
 function alwaysClingLeft(string a) returns boolean {
-    return a == "(";
+    return a == "(" || a == ":";
 }
 
 function alwaysClingRight(string a) returns boolean {
-    return a == ";" || a == ")" || a == ",";
+    return a == ";" || a == ":" || a == ")" || a == ",";
 }

@@ -1,0 +1,4 @@
+// @case
+function f() {
+}
+// @end

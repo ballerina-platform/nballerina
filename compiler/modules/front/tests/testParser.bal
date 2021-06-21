@@ -6,11 +6,19 @@ import ballerina/regex;
 import ballerina/file;
 
 const SOURCE_EXTENSION = ".bal";
+const CASE_START = "// @case";
+final int CASE_START_LENGTH = CASE_START.length();
+const CASE_END = "// @end";
 
 @test:Config {
     dataProvider: sourceFragments
 }
 function testParser(string k, string rule, string subject, string expected) returns err:Syntax|io:Error? {
+    if k.includes("U") {
+        // XXX validate unimplemented error is being returned
+        return;
+    }
+
     Tokenizer tok = new (subject);
     var tokErr = tok.advance();
     test:assertTrue(!(tokErr is error), "tokenizer error for '" + subject + "'");
@@ -24,7 +32,7 @@ function testParser(string k, string rule, string subject, string expected) retu
             test:assertTrue(parsed is Word[], "test marked as failing but correctly got an error for '" + subject + "'");
             return;
         }
-        err:unreached("kind must be FE or FV : " + k + expected);
+        err:unreached("kind must be FE or FV but was '" + k + "'");
     }
     if k.includes("E") {
         test:assertTrue(parsed is err:Syntax, "expected a syntax error for '" + subject);
@@ -32,7 +40,7 @@ function testParser(string k, string rule, string subject, string expected) retu
     }
     if parsed is err:Syntax {
         error e = error("syntax error for '" + subject + "'", parsed);
-        panic e;
+        panic e; // If we use assert we'll lose the info in the syntax error
     }
     var actual = wordsToString(check parsed);
     test:assertEquals(actual, expected, "wrong ast");
@@ -50,6 +58,9 @@ function reduceToWords(string rule, Tokenizer tok) returns err:Syntax|Word[] {
         "stmt" => {
             stmtToWords(w, check parseStmt(tok));
         }
+        "mod" => {
+            modulePartToWords(w, check parseModulePart(tok));
+        }
         _ => {
             err:unreached("unknown production rule " + rule);
         }
@@ -65,6 +76,8 @@ function sourceFragments() returns string[][]|error {
          ["V", "expr", "0", "0"],
          ["V", "expr", "1", "1"],
          ["FE", "expr", "01", ""],
+         ["U", "expr", "()", "()"],
+         ["E", "expr", "-()", ""],
          ["V", "expr", "9223372036854775807", "9223372036854775807"],
          ["E", "expr", "9223372036854775808", ""],
          ["V", "expr", "true", "true"],
@@ -128,12 +141,20 @@ function sourceFragments() returns string[][]|error {
          ["V", "expr", "(f())", "f()"],
          ["E", "expr", "(f()())", ""],
          ["V", "expr", "(((x)))", "x"],
-         // statements
+         // statement
          ["E", "stmt", "", ""],
          ["E", "stmt", ";", ""],
          ["E", "stmt", "1;", ""],
          ["E", "stmt", "--a;", ""],
          ["E", "stmt", "a + b;", ""],
+         ["V", "stmt", "break;", "break;"],
+         ["V", "stmt", "continue;", "continue;"],
+         ["V", "stmt", "a:x(c,d);", "a:x(c, d);"],
+         // statement return
+         ["V", "stmt", "return;", "return;"],
+         ["V", "stmt", "return ok;", "return ok;"],
+         ["E", "stmt", "return a, b;", "return a, b;"],
+         // statement var decl
          ["E", "stmt", "int 1i = 0;", ""],
          ["E", "stmt", "int i = 1(-1);", ""],
          ["E", "stmt", "int i = (-1)1;", ""],
@@ -145,8 +166,18 @@ function sourceFragments() returns string[][]|error {
          ["V", "stmt", "int i = 10;", "int i = 10;"],
          ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
          ["V", "stmt", "boolean b = false;", "boolean b = false;"],
-         ["E", "stmt", "if a noOp(1);", ""]];
-
+         // statement assign
+         ["E", "stmt", "a = b = d;", ""],
+         ["V", "stmt", "a = 0;", "a = 0;"],
+         ["V", "stmt", "a = 0 == 1;", "a = 0 == 1;"],
+         ["V", "stmt", "a = 0 != 1;", "a = 0 != 1;"],
+         // statement if else
+         ["E", "stmt", "if a noOp(1);", ""],
+         ["E", "stmt", "if a {} else return;", ""],
+         // module parts
+         ["E", "mod", "import;", ""],
+         ["U", "mod", "import x;", "import x;"],
+         ["V", "mod", "import x/y;", "import x/y;"]];
     var cases = check file:readDir("modules/front/tests/data");
     foreach var caseFile in cases {
         string base = check file:basename(caseFile.absPath);
@@ -162,7 +193,6 @@ function sourceFragments() returns string[][]|error {
         }
         string[] baseParts = regex:split(base, "-");
         s.push([baseParts[0], baseParts[1], case, expected]);
-        
     }
     return s;
 }
@@ -173,16 +203,17 @@ function readCase(string path) returns string|error {
     boolean inCase = false;
     int indented = 0;
     foreach var l in lines {
-        if regex:matches(l, "^\\s*//\\s*@case\\s*$") {
+        string lTrim = l.trim();
+        if  lTrim == CASE_START && l.endsWith(CASE_START) {
             inCase = true;
-            indented = l.length() - regex:replaceFirst(l, "^\\s*", "").length();
+            indented = l.length() - CASE_START_LENGTH;
             continue;
         }
-        if regex:matches(l, "^\\s*//\\s*@end\\s*$") {
+        if lTrim == CASE_END {
             break;
         }
         if inCase {
-            caseLines.push(l.substring(4));
+            caseLines.push(l.substring(indented));
         }
     }
     return  "\n".'join(...caseLines);
