@@ -4,10 +4,6 @@ function exprBinaryAdd() returns Module {
     Module m = new ();
     StructType addReturnType = structType(["i64", "i1"]);
     FunctionDecl add = m.getIntrinsicDeclaration("sadd.with.overflow.i64");
-    add.addEnumAttribute("nounwind");
-    add.addEnumAttribute("readnone");
-    add.addEnumAttribute("speculatable");
-    add.addEnumAttribute("willreturn");
     FunctionDefn abort = m.addFunctionDefn("abort", {returnType: "void", paramTypes: []});
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
