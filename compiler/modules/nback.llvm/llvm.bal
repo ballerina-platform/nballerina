@@ -133,7 +133,7 @@ public class Module {
             }
             "ptrmask.p0i8.i64" => {
                 FunctionType fnType = {returnType: pointerType("i8"), paramTypes:[pointerType("i8"),"i64"] };
-                FunctionDecl f = new("llvm.ptrmask", fnType);
+                FunctionDecl f = new("llvm.ptrmask.p0i8.i64", fnType);
                 f.addEnumAttribute("readnone");
                 f.addEnumAttribute("speculatable");
                 fn = f;
