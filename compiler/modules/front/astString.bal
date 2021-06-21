@@ -59,7 +59,10 @@ function stmtToWords(Word[] w, Stmt stmt) {
     } 
     else if stmt is ReturnStmt {
         w.push("return");
-        exprToWords(w, stmt.returnExpr);
+        Expr ret = stmt.returnExpr;
+        if !(ret is SimpleConstExpr) || ret.value != () {
+            exprToWords(w, stmt.returnExpr);
+        }
         w.push(";");
     }
     else if stmt is AssignStmt {
@@ -127,7 +130,10 @@ function exprsToWords(Word[] w, Expr[] exprs) {
 
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     if expr is SimpleConstExpr {
-        if expr.value != () {
+        if expr.value == () {
+            w.push("(", ")");
+        }
+        else {
             w.push(expr.value.toString());
         }
     } 

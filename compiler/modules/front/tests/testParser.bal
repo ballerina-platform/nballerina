@@ -21,6 +21,16 @@ function testParser(string k, string rule, string subject, string expected) retu
 
     Tokenizer tok = new (subject);
     var tokErr = tok.advance();
+    if tokErr is error {
+        if (k.includes("E") && !k.includes("F")) || 
+           (k.includes("V") && k.includes("F")) {
+            return;
+        }
+        else {
+            error e = error("Token error for '" + subject + "'", tokErr);
+            panic e; // If we use assert we'll lose the info in the error
+        }
+    }
     test:assertTrue(!(tokErr is error), "tokenizer error for '" + subject + "'");
     err:Syntax|Word[] parsed = reduceToWords(rule, tok);
     if k.includes("F") {
@@ -40,7 +50,7 @@ function testParser(string k, string rule, string subject, string expected) retu
     }
     if parsed is err:Syntax {
         error e = error("syntax error for '" + subject + "'", parsed);
-        panic e; // If we use assert we'll lose the info in the syntax error
+        panic e;
     }
     var actual = wordsToString(check parsed);
     test:assertEquals(actual, expected, "wrong ast");
@@ -75,9 +85,11 @@ function sourceFragments() returns string[][]|error {
         // literals
          ["V", "expr", "0", "0"],
          ["V", "expr", "1", "1"],
-         ["FE", "expr", "01", ""],
-         ["U", "expr", "()", "()"],
-         ["E", "expr", "-()", ""],
+         ["E", "expr", "01", ""],
+         ["V", "expr", "()", "()"],
+         ["V", "expr", "-()", "-()"],
+         ["V", "expr", "-true", "-true"],
+         ["E", "expr", "\"", ""],
          ["V", "expr", "9223372036854775807", "9223372036854775807"],
          ["E", "expr", "9223372036854775808", ""],
          ["V", "expr", "true", "true"],
@@ -174,6 +186,7 @@ function sourceFragments() returns string[][]|error {
          // statement if else
          ["E", "stmt", "if a noOp(1);", ""],
          ["E", "stmt", "if a {} else return;", ""],
+         ["E", "stmt", "if a = b {}", ""],
          // module parts
          ["E", "mod", "import;", ""],
          ["U", "mod", "import x;", "import x;"],
