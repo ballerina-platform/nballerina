@@ -10,8 +10,8 @@ function stmtFuncCallWithLiterals() returns Module{
     FunctionDefn test = m.addFunctionDefn("test", {returnType:"void", paramTypes:[]});
     BasicBlock bb5 = test.appendBasicBlock();
     builder.positionAtEnd(bb5);
-    PointerValue R1 = builder.alloca("i64", 8);
-    PointerValue R2 = builder.alloca("i64", 8);
+    PointerValue R1 = builder.alloca("i64");
+    PointerValue R2 = builder.alloca("i64");
     _ = builder.call(f1, []);
     _ = builder.call(f2, [constInt("i64", 42), constInt("i64", 43)]);
     Value R3;
@@ -47,8 +47,8 @@ function foo2(Builder builder, Module m) returns FunctionDefn{
     FunctionDefn foo2 = m.addFunctionDefn("foo2", {returnType:"void", paramTypes:["i64","i64"]});
     BasicBlock bb2 = foo2.appendBasicBlock();
     builder.positionAtEnd(bb2);
-    PointerValue R3 = builder.alloca("i64", 8);
-    PointerValue R4 = builder.alloca("i64", 8);
+    PointerValue R3 = builder.alloca("i64");
+    PointerValue R4 = builder.alloca("i64");
     Value R0 = foo2.getParam(0);
     Value R1 = foo2.getParam(1);
     builder.store(R0, R3);
@@ -70,8 +70,8 @@ function foo4(Builder builder, Module m) returns FunctionDefn{
     FunctionDefn foo4 = m.addFunctionDefn("foo4", {returnType:"i64", paramTypes:["i64", "i64"]});
     BasicBlock bb4 = foo4.appendBasicBlock();
     builder.positionAtEnd(bb4);
-    PointerValue R3 = builder.alloca("i64", 8);
-    PointerValue R4 = builder.alloca("i64", 8);
+    PointerValue R3 = builder.alloca("i64");
+    PointerValue R4 = builder.alloca("i64");
     Value R0 = foo4.getParam(0);
     Value R1 = foo4.getParam(1);
     builder.store(R0, R3);

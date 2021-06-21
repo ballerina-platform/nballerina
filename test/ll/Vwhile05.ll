@@ -1,7 +1,7 @@
 define void @_B_main () {
-  %_0 = alloca i1, align 8
+  %_0 = alloca i8*
   call void @_B_foo ()
-  store i1 0, i1* %_0, align 8
+  store i8* null, i8** %_0
   ret void
 }
 define internal void @_B_foo () {

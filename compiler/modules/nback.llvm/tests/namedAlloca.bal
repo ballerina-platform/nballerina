@@ -7,14 +7,14 @@ function nameAlloca() returns Module {
     BasicBlock initBlock = mainFunction.appendBasicBlock();
     Builder builder = new ();
     builder.positionAtEnd(initBlock);
-    _ = builder.alloca("i64", 8);
-    _ = builder.alloca("i64", 8,"V");
-    _ = builder.alloca("i64", 8,"V.1");
-    _ = builder.alloca("i64", 8,"V");
-    _ = builder.alloca("i64", 8, "var");
-    _ = builder.alloca("i64", 8,"V.1");
-    _ = builder.alloca("i64", 8,"V.1");
-    _ = builder.alloca("i64", 8);
+    _ = builder.alloca("i64");
+    _ = builder.alloca("i64", (),"V");
+    _ = builder.alloca("i64", (),"V.1");
+    _ = builder.alloca("i64", (),"V");
+    _ = builder.alloca("i64", (), "var");
+    _ = builder.alloca("i64", (),"V.1");
+    _ = builder.alloca("i64", (),"V.1");
+    _ = builder.alloca("i64");
     return m;
 }
 

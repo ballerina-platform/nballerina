@@ -17,16 +17,15 @@ public type IntType "i64"|"i8"|"i1";
 public type Alignment 1|2|4|8|16;
 
 // Corresponds to LLVMPointerType
-// XXX how is alignment dealt with in the C API?
 public type PointerType readonly & record {|
-    IntType pointsTo;
-    Alignment align;
+    Type pointsTo;
 |};
+
+public type IntegralType IntType|PointerType;
 
 // Corresponds to LLVMPointerType function
 public function pointerType(IntType ty, int addressSpace = 0) returns PointerType {
-    // XXX need to fix how we do alignment #112
-    return { pointsTo: ty, align: 8 };
+    return { pointsTo: ty };
 }
 
 // Corresponds to llvm::StructType
@@ -311,30 +310,30 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildAlloca
-    public function alloca(IntType ty, Alignment align, string? name=()) returns PointerValue {
+    public function alloca(IntegralType ty, Alignment? align = (), string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg(name);
-        PointerType ptrTy = { pointsTo: ty, align };
-        bb.addInsn(reg, "=", "alloca", ty, ",", "align", align.toString());
+        PointerType ptrTy = { pointsTo: ty };
+        addInsnWithAlign(bb, [reg, "=", "alloca", typeToString(ty)], align);
         return new PointerValue(ptrTy, reg);
     }
 
     // Corresponds to LLVMBuildLoad
-    public function load(PointerValue ptr, string? name=()) returns Value {
+    public function load(PointerValue ptr, Alignment? align = (), string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        IntType ty = ptr.ty.pointsTo;
+        Type ty = ptr.ty.pointsTo;
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "load", ty, ",", pointerTo(ty), ptr.operand, ",", "align", ptr.ty.align.toString());
+        addInsnWithAlign(bb, [reg, "=", "load", typeToString(ty), ",", typeToString(ptr.ty), ptr.operand], align);
         return new Value(ty, reg);
     }
 
     // Corresponds to LLVMBuildStore
-    public function store(Value val, PointerValue ptr) {
-        IntType ty = ptr.ty.pointsTo;
+    public function store(Value val, PointerValue ptr, Alignment? align = ()) {
+        Type ty = ptr.ty.pointsTo;
         if ty != val.ty {
             panic error("store type mismatch");
         }
-        self.bb().addInsn("store", ty, val.operand, ",", pointerTo(ty), ptr.operand, ",", "align", ptr.ty.align.toString());
+        addInsnWithAlign(self.bb(), ["store", typeToString(ty), val.operand, ",", typeToString(ptr.ty), ptr.operand], align);
     }
 
     // binary operation with int operands and (same) int result
@@ -351,8 +350,8 @@ public class Builder {
     public function iCmp(IntPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        IntType ty = sameIntType(lhs, rhs);
-        bb.addInsn(reg, "=", "icmp", op, ty, lhs.operand, ",", rhs.operand);
+        IntegralType ty = sameIntegralType(lhs, rhs);
+        bb.addInsn(reg, "=", "icmp", op, typeToString(ty), lhs.operand, ",", rhs.operand);
         return new Value("i1", reg);
     }
     
@@ -447,6 +446,13 @@ public class Builder {
     }
 }
 
+function addInsnWithAlign(BasicBlock bb, string[] words, Alignment? align) {
+    if !(align is ()) {
+        words.push(",", "align", align.toString());
+    }
+    bb.addInsn(...words);
+}
+
 const INDENT = "  ";
 
 # Corresponds to LLVMBasicBlockRef
@@ -484,6 +490,18 @@ public distinct class BasicBlock {
     }
 }
 
+function sameIntegralType(Value v1, Value v2) returns IntegralType {
+    Type ty1 = v1.ty;
+    Type ty2 = v2.ty;
+    if ty1 != ty2 {
+        panic error("expected same types");
+    }
+    else if ty1 is IntegralType {
+        return ty1;
+    }
+    panic error("expected an integral type");
+}
+
 function sameIntType(Value v1, Value v2) returns IntType {
     Type ty1 = v1.ty;
     Type ty2 = v2.ty;
@@ -496,14 +514,10 @@ function sameIntType(Value v1, Value v2) returns IntType {
     panic error("expected an int type");
 }
 
-function pointerTo(IntType ty) returns string {
-    return ty + "*";
-}
-
 function typeToString(RetType ty) returns string {
     string typeTag;
     if ty is PointerType {
-        typeTag = ty.pointsTo + "*";
+        typeTag = typeToString(ty.pointsTo) + "*";
     } else if ty is StructType {
         string[] typeStringBody = [];
         typeStringBody.push("{");

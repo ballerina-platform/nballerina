@@ -6,7 +6,7 @@ function stmtAssignLiteral() returns Module {
     FunctionDefn foo = m.addFunctionDefn("main", {returnType: "i64", paramTypes: []});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
-    PointerValue R1 = builder.alloca("i64", 8);
+    PointerValue R1 = builder.alloca("i64");
     builder.store(constInt("i64", 42), R1);
     builder.store(constInt("i64", 43), R1);
     builder.store(constInt("i64", 44), R1);

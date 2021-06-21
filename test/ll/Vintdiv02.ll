@@ -1,47 +1,47 @@
 declare void @_Bio__println (i64)
 declare void @_bal_panic (i64)
 define void @_B_main () {
-  %_0 = alloca i64, align 8
-  %_1 = alloca i1, align 8
-  %_2 = alloca i64, align 8
-  %_3 = alloca i64, align 8
-  %_4 = alloca i1, align 8
-  %_5 = alloca i64, align 8
-  %_6 = alloca i64, align 8
-  %_7 = alloca i64, align 8
-  %_8 = alloca i1, align 8
-  %_9 = alloca i64, align 8
-  %_10 = alloca i64, align 8
-  %_11 = alloca i64, align 8
-  %_12 = alloca i1, align 8
-  %_13 = alloca i64, align 8
-  %_14 = alloca i64, align 8
-  %_15 = alloca i64, align 8
-  %_16 = alloca i64, align 8
-  %_17 = alloca i1, align 8
-  %_18 = alloca i64, align 8
-  %_19 = alloca i64, align 8
-  %_20 = alloca i64, align 8
-  %_21 = alloca i64, align 8
-  %_22 = alloca i64, align 8
-  %_23 = alloca i1, align 8
-  %_24 = alloca i64, align 8
-  %_25 = alloca i64, align 8
-  %_26 = alloca i64, align 8
-  %_27 = alloca i64, align 8
-  %_28 = alloca i64, align 8
-  %_29 = alloca i64, align 8
-  %_30 = alloca i64, align 8
-  %_31 = alloca i1, align 8
-  %_32 = alloca i64, align 8
+  %_0 = alloca i64
+  %_1 = alloca i8*
+  %_2 = alloca i64
+  %_3 = alloca i64
+  %_4 = alloca i8*
+  %_5 = alloca i64
+  %_6 = alloca i64
+  %_7 = alloca i64
+  %_8 = alloca i8*
+  %_9 = alloca i64
+  %_10 = alloca i64
+  %_11 = alloca i64
+  %_12 = alloca i8*
+  %_13 = alloca i64
+  %_14 = alloca i64
+  %_15 = alloca i64
+  %_16 = alloca i64
+  %_17 = alloca i8*
+  %_18 = alloca i64
+  %_19 = alloca i64
+  %_20 = alloca i64
+  %_21 = alloca i64
+  %_22 = alloca i64
+  %_23 = alloca i8*
+  %_24 = alloca i64
+  %_25 = alloca i64
+  %_26 = alloca i64
+  %_27 = alloca i64
+  %_28 = alloca i64
+  %_29 = alloca i64
+  %_30 = alloca i64
+  %_31 = alloca i8*
+  %_32 = alloca i64
   %_33 = icmp eq i64 2, 0
   br i1 %_33, label %L2, label %L3
 L1:
-  %_183 = load i64, i64* %_32, align 8
+  %_183 = load i64, i64* %_32
   call void @_bal_panic (i64 %_183)
   unreachable
 L2:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L3:
   %_34 = icmp eq i64 60, -9223372036854775808
@@ -50,17 +50,17 @@ L3:
   br i1 %_36, label %L5, label %L4
 L4:
   %_37 = sdiv i64 60, 2
-  store i64 %_37, i64* %_0, align 8
-  %_38 = load i64, i64* %_0, align 8
+  store i64 %_37, i64* %_0
+  %_38 = load i64, i64* %_0
   call void @_Bio__println (i64 %_38)
-  store i1 0, i1* %_1, align 8
+  store i8* null, i8** %_1
   %_39 = icmp eq i64 3, 0
   br i1 %_39, label %L6, label %L7
 L5:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L6:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L7:
   %_40 = icmp eq i64 120, -9223372036854775808
@@ -69,15 +69,15 @@ L7:
   br i1 %_42, label %L9, label %L8
 L8:
   %_43 = sdiv i64 120, 3
-  store i64 %_43, i64* %_2, align 8
-  %_44 = load i64, i64* %_2, align 8
+  store i64 %_43, i64* %_2
+  %_44 = load i64, i64* %_2
   %_45 = icmp eq i64 4, 0
   br i1 %_45, label %L10, label %L11
 L9:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L10:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L11:
   %_46 = icmp eq i64 %_44, -9223372036854775808
@@ -86,17 +86,17 @@ L11:
   br i1 %_48, label %L13, label %L12
 L12:
   %_49 = sdiv i64 %_44, 4
-  store i64 %_49, i64* %_3, align 8
-  %_50 = load i64, i64* %_3, align 8
+  store i64 %_49, i64* %_3
+  %_50 = load i64, i64* %_3
   call void @_Bio__println (i64 %_50)
-  store i1 0, i1* %_4, align 8
+  store i8* null, i8** %_4
   %_51 = icmp eq i64 3, 0
   br i1 %_51, label %L14, label %L15
 L13:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L14:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L15:
   %_52 = icmp eq i64 120, -9223372036854775808
@@ -105,14 +105,14 @@ L15:
   br i1 %_54, label %L17, label %L16
 L16:
   %_55 = sdiv i64 120, 3
-  store i64 %_55, i64* %_5, align 8
+  store i64 %_55, i64* %_5
   %_56 = icmp eq i64 4, 0
   br i1 %_56, label %L18, label %L19
 L17:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L18:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L19:
   %_57 = icmp eq i64 16, -9223372036854775808
@@ -121,16 +121,16 @@ L19:
   br i1 %_59, label %L21, label %L20
 L20:
   %_60 = sdiv i64 16, 4
-  store i64 %_60, i64* %_6, align 8
-  %_61 = load i64, i64* %_5, align 8
-  %_62 = load i64, i64* %_6, align 8
+  store i64 %_60, i64* %_6
+  %_61 = load i64, i64* %_5
+  %_62 = load i64, i64* %_6
   %_63 = icmp eq i64 %_62, 0
   br i1 %_63, label %L22, label %L23
 L21:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L22:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L23:
   %_64 = icmp eq i64 %_61, -9223372036854775808
@@ -139,17 +139,17 @@ L23:
   br i1 %_66, label %L25, label %L24
 L24:
   %_67 = sdiv i64 %_61, %_62
-  store i64 %_67, i64* %_7, align 8
-  %_68 = load i64, i64* %_7, align 8
+  store i64 %_67, i64* %_7
+  %_68 = load i64, i64* %_7
   call void @_Bio__println (i64 %_68)
-  store i1 0, i1* %_8, align 8
+  store i8* null, i8** %_8
   %_69 = icmp eq i64 3, 0
   br i1 %_69, label %L26, label %L27
 L25:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L26:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L27:
   %_70 = icmp eq i64 120, -9223372036854775808
@@ -158,14 +158,14 @@ L27:
   br i1 %_72, label %L29, label %L28
 L28:
   %_73 = sdiv i64 120, 3
-  store i64 %_73, i64* %_9, align 8
+  store i64 %_73, i64* %_9
   %_74 = icmp eq i64 4, 0
   br i1 %_74, label %L30, label %L31
 L29:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L30:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L31:
   %_75 = icmp eq i64 16, -9223372036854775808
@@ -174,16 +174,16 @@ L31:
   br i1 %_77, label %L33, label %L32
 L32:
   %_78 = sdiv i64 16, 4
-  store i64 %_78, i64* %_10, align 8
-  %_79 = load i64, i64* %_9, align 8
-  %_80 = load i64, i64* %_10, align 8
+  store i64 %_78, i64* %_10
+  %_79 = load i64, i64* %_9
+  %_80 = load i64, i64* %_10
   %_81 = icmp eq i64 %_80, 0
   br i1 %_81, label %L34, label %L35
 L33:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L34:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L35:
   %_82 = icmp eq i64 %_79, -9223372036854775808
@@ -192,17 +192,17 @@ L35:
   br i1 %_84, label %L37, label %L36
 L36:
   %_85 = sdiv i64 %_79, %_80
-  store i64 %_85, i64* %_11, align 8
-  %_86 = load i64, i64* %_11, align 8
+  store i64 %_85, i64* %_11
+  %_86 = load i64, i64* %_11
   call void @_Bio__println (i64 %_86)
-  store i1 0, i1* %_12, align 8
+  store i8* null, i8** %_12
   %_87 = icmp eq i64 3, 0
   br i1 %_87, label %L38, label %L39
 L37:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L38:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L39:
   %_88 = icmp eq i64 120, -9223372036854775808
@@ -211,14 +211,14 @@ L39:
   br i1 %_90, label %L41, label %L40
 L40:
   %_91 = sdiv i64 120, 3
-  store i64 %_91, i64* %_13, align 8
+  store i64 %_91, i64* %_13
   %_92 = icmp eq i64 4, 0
   br i1 %_92, label %L42, label %L43
 L41:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L42:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L43:
   %_93 = icmp eq i64 16, -9223372036854775808
@@ -227,16 +227,16 @@ L43:
   br i1 %_95, label %L45, label %L44
 L44:
   %_96 = sdiv i64 16, 4
-  store i64 %_96, i64* %_14, align 8
-  %_97 = load i64, i64* %_13, align 8
-  %_98 = load i64, i64* %_14, align 8
+  store i64 %_96, i64* %_14
+  %_97 = load i64, i64* %_13
+  %_98 = load i64, i64* %_14
   %_99 = icmp eq i64 %_98, 0
   br i1 %_99, label %L46, label %L47
 L45:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L46:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L47:
   %_100 = icmp eq i64 %_97, -9223372036854775808
@@ -245,15 +245,15 @@ L47:
   br i1 %_102, label %L49, label %L48
 L48:
   %_103 = sdiv i64 %_97, %_98
-  store i64 %_103, i64* %_15, align 8
-  %_104 = load i64, i64* %_15, align 8
+  store i64 %_103, i64* %_15
+  %_104 = load i64, i64* %_15
   %_105 = icmp eq i64 2, 0
   br i1 %_105, label %L50, label %L51
 L49:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L50:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L51:
   %_106 = icmp eq i64 %_104, -9223372036854775808
@@ -262,17 +262,17 @@ L51:
   br i1 %_108, label %L53, label %L52
 L52:
   %_109 = sdiv i64 %_104, 2
-  store i64 %_109, i64* %_16, align 8
-  %_110 = load i64, i64* %_16, align 8
+  store i64 %_109, i64* %_16
+  %_110 = load i64, i64* %_16
   call void @_Bio__println (i64 %_110)
-  store i1 0, i1* %_17, align 8
+  store i8* null, i8** %_17
   %_111 = icmp eq i64 3, 0
   br i1 %_111, label %L54, label %L55
 L53:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L54:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L55:
   %_112 = icmp eq i64 120, -9223372036854775808
@@ -281,14 +281,14 @@ L55:
   br i1 %_114, label %L57, label %L56
 L56:
   %_115 = sdiv i64 120, 3
-  store i64 %_115, i64* %_18, align 8
+  store i64 %_115, i64* %_18
   %_116 = icmp eq i64 4, 0
   br i1 %_116, label %L58, label %L59
 L57:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L58:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L59:
   %_117 = icmp eq i64 16, -9223372036854775808
@@ -297,16 +297,16 @@ L59:
   br i1 %_119, label %L61, label %L60
 L60:
   %_120 = sdiv i64 16, 4
-  store i64 %_120, i64* %_19, align 8
-  %_121 = load i64, i64* %_18, align 8
-  %_122 = load i64, i64* %_19, align 8
+  store i64 %_120, i64* %_19
+  %_121 = load i64, i64* %_18
+  %_122 = load i64, i64* %_19
   %_123 = icmp eq i64 %_122, 0
   br i1 %_123, label %L62, label %L63
 L61:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L62:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L63:
   %_124 = icmp eq i64 %_121, -9223372036854775808
@@ -315,14 +315,14 @@ L63:
   br i1 %_126, label %L65, label %L64
 L64:
   %_127 = sdiv i64 %_121, %_122
-  store i64 %_127, i64* %_20, align 8
+  store i64 %_127, i64* %_20
   %_128 = icmp eq i64 5, 0
   br i1 %_128, label %L66, label %L67
 L65:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L66:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L67:
   %_129 = icmp eq i64 10, -9223372036854775808
@@ -331,16 +331,16 @@ L67:
   br i1 %_131, label %L69, label %L68
 L68:
   %_132 = sdiv i64 10, 5
-  store i64 %_132, i64* %_21, align 8
-  %_133 = load i64, i64* %_20, align 8
-  %_134 = load i64, i64* %_21, align 8
+  store i64 %_132, i64* %_21
+  %_133 = load i64, i64* %_20
+  %_134 = load i64, i64* %_21
   %_135 = icmp eq i64 %_134, 0
   br i1 %_135, label %L70, label %L71
 L69:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L70:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L71:
   %_136 = icmp eq i64 %_133, -9223372036854775808
@@ -349,17 +349,17 @@ L71:
   br i1 %_138, label %L73, label %L72
 L72:
   %_139 = sdiv i64 %_133, %_134
-  store i64 %_139, i64* %_22, align 8
-  %_140 = load i64, i64* %_22, align 8
+  store i64 %_139, i64* %_22
+  %_140 = load i64, i64* %_22
   call void @_Bio__println (i64 %_140)
-  store i1 0, i1* %_23, align 8
+  store i8* null, i8** %_23
   %_141 = icmp eq i64 3, 0
   br i1 %_141, label %L74, label %L75
 L73:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L74:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L75:
   %_142 = icmp eq i64 120, -9223372036854775808
@@ -368,14 +368,14 @@ L75:
   br i1 %_144, label %L77, label %L76
 L76:
   %_145 = sdiv i64 120, 3
-  store i64 %_145, i64* %_24, align 8
+  store i64 %_145, i64* %_24
   %_146 = icmp eq i64 4, 0
   br i1 %_146, label %L78, label %L79
 L77:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L78:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L79:
   %_147 = icmp eq i64 16, -9223372036854775808
@@ -384,16 +384,16 @@ L79:
   br i1 %_149, label %L81, label %L80
 L80:
   %_150 = sdiv i64 16, 4
-  store i64 %_150, i64* %_25, align 8
-  %_151 = load i64, i64* %_24, align 8
-  %_152 = load i64, i64* %_25, align 8
+  store i64 %_150, i64* %_25
+  %_151 = load i64, i64* %_24
+  %_152 = load i64, i64* %_25
   %_153 = icmp eq i64 %_152, 0
   br i1 %_153, label %L82, label %L83
 L81:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L82:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L83:
   %_154 = icmp eq i64 %_151, -9223372036854775808
@@ -402,14 +402,14 @@ L83:
   br i1 %_156, label %L85, label %L84
 L84:
   %_157 = sdiv i64 %_151, %_152
-  store i64 %_157, i64* %_26, align 8
+  store i64 %_157, i64* %_26
   %_158 = icmp eq i64 20, 0
   br i1 %_158, label %L86, label %L87
 L85:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L86:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L87:
   %_159 = icmp eq i64 400, -9223372036854775808
@@ -418,14 +418,14 @@ L87:
   br i1 %_161, label %L89, label %L88
 L88:
   %_162 = sdiv i64 400, 20
-  store i64 %_162, i64* %_27, align 8
+  store i64 %_162, i64* %_27
   %_163 = icmp eq i64 10, 0
   br i1 %_163, label %L90, label %L91
 L89:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L90:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L91:
   %_164 = icmp eq i64 100, -9223372036854775808
@@ -434,16 +434,16 @@ L91:
   br i1 %_166, label %L93, label %L92
 L92:
   %_167 = sdiv i64 100, 10
-  store i64 %_167, i64* %_28, align 8
-  %_168 = load i64, i64* %_27, align 8
-  %_169 = load i64, i64* %_28, align 8
+  store i64 %_167, i64* %_28
+  %_168 = load i64, i64* %_27
+  %_169 = load i64, i64* %_28
   %_170 = icmp eq i64 %_169, 0
   br i1 %_170, label %L94, label %L95
 L93:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L94:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L95:
   %_171 = icmp eq i64 %_168, -9223372036854775808
@@ -452,16 +452,16 @@ L95:
   br i1 %_173, label %L97, label %L96
 L96:
   %_174 = sdiv i64 %_168, %_169
-  store i64 %_174, i64* %_29, align 8
-  %_175 = load i64, i64* %_26, align 8
-  %_176 = load i64, i64* %_29, align 8
+  store i64 %_174, i64* %_29
+  %_175 = load i64, i64* %_26
+  %_176 = load i64, i64* %_29
   %_177 = icmp eq i64 %_176, 0
   br i1 %_177, label %L98, label %L99
 L97:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 L98:
-  store i64 2, i64* %_32, align 8
+  store i64 2, i64* %_32
   br label %L1
 L99:
   %_178 = icmp eq i64 %_175, -9223372036854775808
@@ -470,12 +470,12 @@ L99:
   br i1 %_180, label %L101, label %L100
 L100:
   %_181 = sdiv i64 %_175, %_176
-  store i64 %_181, i64* %_30, align 8
-  %_182 = load i64, i64* %_30, align 8
+  store i64 %_181, i64* %_30
+  %_182 = load i64, i64* %_30
   call void @_Bio__println (i64 %_182)
-  store i1 0, i1* %_31, align 8
+  store i8* null, i8** %_31
   ret void
 L101:
-  store i64 1, i64* %_32, align 8
+  store i64 1, i64* %_32
   br label %L1
 }

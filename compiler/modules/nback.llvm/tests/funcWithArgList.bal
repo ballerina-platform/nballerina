@@ -13,7 +13,7 @@ function funcWithArgList1(Builder builder, Module m) {
     FunctionDefn foo1 = m.addFunctionDefn("foo1", {returnType: "i64", paramTypes: ["i64"]});
     BasicBlock foo1BB = foo1.appendBasicBlock();
     builder.positionAtEnd(foo1BB);
-    PointerValue R2 = builder.alloca("i64",8);
+    PointerValue R2 = builder.alloca("i64");
     Value R0 = foo1.getParam(0);
     builder.store(R0, R2);
     Value R3 = builder.load(R2);
@@ -24,8 +24,8 @@ function funcWithArgList2(Builder builder, Module m) {
     FunctionDefn foo2 = m.addFunctionDefn("foo2", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock bb2 = foo2.appendBasicBlock();
     builder.positionAtEnd(bb2);
-    PointerValue R3 = builder.alloca("i64",8);
-    PointerValue R4 = builder.alloca("i64",8);
+    PointerValue R3 = builder.alloca("i64");
+    PointerValue R4 = builder.alloca("i64");
     Value R0 = foo2.getParam(0);
     Value R1 = foo2.getParam(1);
     builder.store(R0, R3);
@@ -38,9 +38,9 @@ function funcWithArgList3(Builder builder, Module m) {
     FunctionDefn foo3 = m.addFunctionDefn("foo3", {returnType: "i64", paramTypes: ["i64", "i64", "i64"]});
     BasicBlock bb3 = foo3.appendBasicBlock();
     builder.positionAtEnd(bb3);
-    PointerValue R4 = builder.alloca("i64",8);
-    PointerValue R5 = builder.alloca("i64",8);
-    PointerValue R6 = builder.alloca("i64",8);
+    PointerValue R4 = builder.alloca("i64");
+    PointerValue R5 = builder.alloca("i64");
+    PointerValue R6 = builder.alloca("i64");
     Value R0 = foo3.getParam(0);
     Value R1 = foo3.getParam(1);
     Value R2 = foo3.getParam(2);

@@ -2,12 +2,12 @@ declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone spec
 define void @abort () {
 }
 define i64 @foo (i64 %_0, i64 %_1) {
-  %_2 = alloca i64, align 8
-  %_3 = alloca i64, align 8
-  store i64 %_0, i64* %_2, align 8
-  store i64 %_1, i64* %_3, align 8
-  %_4 = load i64, i64* %_2, align 8
-  %_5 = load i64, i64* %_3, align 8
+  %_2 = alloca i64
+  %_3 = alloca i64
+  store i64 %_0, i64* %_2
+  store i64 %_1, i64* %_3
+  %_4 = load i64, i64* %_2
+  %_5 = load i64, i64* %_3
   %_6 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_4, i64 %_5)
   %_7 = extractvalue {i64, i1} %_6, 0
   %_8 = extractvalue {i64, i1} %_6, 1

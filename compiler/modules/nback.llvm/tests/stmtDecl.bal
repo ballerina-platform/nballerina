@@ -8,8 +8,8 @@ function stmtDecl() returns Module {
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     Value R0 = foo.getParam(0);
-    PointerValue R2 = builder.alloca("i64", 8);
-    PointerValue R3 = builder.alloca("i64", 8);
+    PointerValue R2 = builder.alloca("i64");
+    PointerValue R3 = builder.alloca("i64");
     builder.store(R0, R2);
     Value R4 = builder.load(R2);
     builder.store(R4,R3);

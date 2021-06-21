@@ -13,8 +13,8 @@ function exprBinarySub() returns Module {
     BasicBlock initBlock = foo.appendBasicBlock();
     Builder builder = new ();
     builder.positionAtEnd(initBlock);
-    PointerValue R3 = builder.alloca("i64", 8);
-    PointerValue R4 = builder.alloca("i64", 8);
+    PointerValue R3 = builder.alloca("i64");
+    PointerValue R4 = builder.alloca("i64");
     Value R0 = foo.getParam(0);
     Value R1 = foo.getParam(1);
     builder.store(R0, R3);

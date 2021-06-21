@@ -9,8 +9,12 @@ type Alignment 1|8;
 
 const LLVM_INT = "i64";
 const LLVM_BOOLEAN = "i1";
-const LLVM_NIL = "i1";
 const LLVM_VOID = "void";
+
+final llvm:PointerType LLVM_TAGGED_PTR = llvm:pointerType("i8");
+final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
+
+type ValueType llvm:IntegralType;
 
 const PANIC_OVERFLOW = 1;
 const PANIC_DIVIDE_BY_ZERO = 2;
@@ -55,7 +59,7 @@ class Scaffold {
         self.importedFunctions = importedFunctions;
         self.birBlocks = code.blocks;
         // JBUG 31008 if this is a query expression
-        final llvm:IntType[] types = [];
+        final ValueType[] types = [];
         foreach var reg in code.registers {
             types.push(check buildValueType(reg.semType));
         }
@@ -65,7 +69,7 @@ class Scaffold {
         self.addresses = [];
         foreach int i in 0 ..< types.length() {
             var ty = types[i];
-            self.addresses.push(builder.alloca(ty, typeAlignment(ty), code.registers[i].varName));
+            self.addresses.push(builder.alloca(ty, (), code.registers[i].varName));
         } 
         bir:FunctionSignature ty = defn.signature;
 
@@ -245,7 +249,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
         builder.store(ret, scaffold.address(insn.result));
     }
     else if insn.result.semType === t:NIL {
-        builder.store(llvm:constInt(LLVM_NIL, 0), scaffold.address(insn.result));
+        builder.store(buildConstNil(), scaffold.address(insn.result));
     }
 }
 
@@ -378,7 +382,7 @@ function buildValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand
         return llvm:constInt(LLVM_INT, operand);
     }
     else if operand is () {
-        return llvm:constInt(LLVM_NIL, 0);
+        return buildConstNil();
     }
     else {
         // operand is boolean
@@ -466,6 +470,10 @@ function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:Fu
     return ty;
 }
 
+function buildConstNil() returns llvm:Value {
+    return llvm:constNull(LLVM_NIL_TYPE);
+}
+
 function buildRetType(t:SemType ty) returns llvm:RetType|BuildError {
     if ty === t:NIL {
         return LLVM_VOID;
@@ -473,7 +481,7 @@ function buildRetType(t:SemType ty) returns llvm:RetType|BuildError {
     return buildValueType(ty);
 }
 
-function buildValueType(t:SemType ty) returns llvm:IntType|BuildError {
+function buildValueType(t:SemType ty) returns ValueType|BuildError {
     if ty === t:INT {
         return LLVM_INT;
     }
@@ -485,18 +493,14 @@ function buildValueType(t:SemType ty) returns llvm:IntType|BuildError {
     else if ty === t:ERROR {
         return LLVM_INT;
     }
-    // This happens with function call statement
     else if ty === t:NIL {
-        return LLVM_NIL;
+        return LLVM_NIL_TYPE;
     }
+    // else if ty === t:TOP {
+    //     return LLVM_TAGGED_PTR;
+    // }
     return err:unimplemented("unimplemented type");
 }
-
-// XXX what's the right alignment for i1
-function typeAlignment(llvm:IntType ty) returns Alignment {
-    return 8;
-}
-
 
 function mangleRuntimeSymbol(string name) returns string {
     return "_bal_" + name;

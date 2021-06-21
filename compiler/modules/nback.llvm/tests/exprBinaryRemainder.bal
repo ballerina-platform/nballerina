@@ -9,9 +9,9 @@ function exprBinaryRemainder() returns Module {
     builder.positionAtEnd(initBlock);
     Value R0 = foo.getParam(0);
     Value R1 = foo.getParam(1);
-    PointerValue R3 = builder.alloca("i64", 8);
-    PointerValue R4 = builder.alloca("i64", 8);
-    PointerValue R5 = builder.alloca("i64", 8);
+    PointerValue R3 = builder.alloca("i64");
+    PointerValue R4 = builder.alloca("i64");
+    PointerValue R5 = builder.alloca("i64");
     builder.store(R0, R4);
     builder.store(R1, R5);
     Value R6 = builder.load(R5);
