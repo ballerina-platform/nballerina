@@ -18,20 +18,7 @@ function testParser(string k, string rule, string subject, string expected) retu
         return;
     }
 
-    Tokenizer tok = new (subject);
-    var tokErr = tok.advance();
-    if tokErr is error {
-        if (k.includes("E") && !k.includes("F")) || 
-           (k.includes("V") && k.includes("F")) {
-            return;
-        }
-        else {
-            error e = error("Token error for '" + subject + "'", tokErr);
-            panic e; // If we use assert we'll lose the info in the error
-        }
-    }
-    test:assertTrue(!(tokErr is error), "tokenizer error for '" + subject + "'");
-    err:Syntax|Word[] parsed = reduceToWords(rule, tok);
+    err:Syntax|Word[] parsed = reduceToWords(rule, subject);
     if k.includes("F") {
         if k.includes("V") {
             test:assertTrue(parsed is err:Syntax, "test marked as failing but parsed for '" + subject + "'");
@@ -53,22 +40,23 @@ function testParser(string k, string rule, string subject, string expected) retu
     }
     var actual = wordsToString(check parsed);
     test:assertEquals(actual, expected, "wrong ast");
-    var last = tok.advance();
-    test:assertEquals(last, (), "extra token  at the end for '" + subject + "'" );
-
 }
 
-function reduceToWords(string rule, Tokenizer tok) returns err:Syntax|Word[] {
+function reduceToWords(string rule, string fragment) returns err:Syntax|Word[] {
     Word[] w = [];
     match rule {
         "expr" => {
+            Tokenizer tok = new (fragment);
+            check tok.advance();
             exprToWords(w, check parseExpr(tok));
         }
         "stmt" => {
+            Tokenizer tok = new (fragment);
+            check tok.advance();
             stmtToWords(w, check parseStmt(tok));
         }
         "mod" => {
-            modulePartToWords(w, check parseModulePart(tok));
+            modulePartToWords(w, check parseModulePart(fragment));
         }
         _ => {
             err:unreached("unknown production rule " + rule);

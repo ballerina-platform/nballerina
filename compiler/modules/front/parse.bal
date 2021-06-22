@@ -2,13 +2,9 @@
 
 import wso2/nballerina.err;
 
-function parse(string moduleSource) returns ModulePart|err:Syntax {
-    Tokenizer tok = new (moduleSource);
+function parseModulePart(string str) returns ModulePart|err:Syntax {
+    Tokenizer tok = new (str);
     check tok.advance();
-    return check parseModulePart(tok);
-}
-
-function parseModulePart(Tokenizer tok) returns ModulePart|err:Syntax {
     ModulePart part = {
         defs: [],
         importDecl: check parseImportDecl(tok)

@@ -60,7 +60,7 @@ class Module {
 
 public function loadModule(string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
     string contents = check io:fileReadString(filename);
-    ModulePart part = check parse(contents);
+    ModulePart part = check parseModulePart(contents);
     ModuleTable mod = table [];
     check addModulePart(mod, part);
     t:Env env = new;
@@ -89,7 +89,7 @@ function addModulePart(ModuleTable mod, ModulePart part) returns err:Semantic? {
 
 // This is old interface for showTypes
 public function typesFromString(string contents) returns [t:Env, map<t:SemType>]|err:Any {
-    ModulePart part = check parse(contents);
+    ModulePart part = check parseModulePart(contents);
     ModuleTable mod = table [];
     check addModulePart(mod, part);
     t:Env env = new;

@@ -1,8 +1,8 @@
 import wso2/nballerina.err;
 
 
-// zero-width joiner
-const ZWJ = ();
+// join words without space
+const CLING = ();
 // line feed
 const LF = 0;
 // line feed and indent
@@ -10,12 +10,12 @@ const LF_INDENT = 1;
 // line feed and outdent
 const LF_OUTDENT = -1;
 
-type Word string|LF_INDENT|LF_OUTDENT|LF|ZWJ;
+type Word string|LF_INDENT|LF_OUTDENT|LF|CLING;
 
 function modulePartToWords(Word[] w, ModulePart mod) {
      ImportDecl? im = mod.importDecl;
     if im != () {
-        w.push("import", im.org, ZWJ, "/", ZWJ, im.module, ";");
+        w.push("import", im.org, CLING, "/", CLING, im.module, ";");
     }
     foreach var def in mod.defs {
         if def is FunctionDef {
@@ -32,7 +32,7 @@ function functionDefToWords(Word[] w, FunctionDef func) {
     if func.vis != () {
         w.push(<Word>func.vis);
     }
-    w.push(func.name, ZWJ, "(");
+    w.push(func.name, CLING, "(");
     boolean firstArg = true;
     foreach int i in 0..<func.typeDesc.args.length() {
         if i != 0 {
@@ -141,7 +141,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         if wrap {
             w.push("(");
         }
-        w.push(expr.op, ZWJ);
+        w.push(expr.op, CLING);
         exprToWords(w, expr.operand, true);
         if wrap {
             w.push(")");
@@ -170,7 +170,7 @@ function functionCallToWords(Word[] w, FunctionCallExpr func) {
     if func.prefix != () {
         w.push(func.prefix, ":");
     }
-    w.push(func.funcName, ZWJ, "(");
+    w.push(func.funcName, CLING, "(");
     exprsToWords(w, func.args);
     w.push(")");
 }
@@ -193,7 +193,7 @@ function wordsToString(Word[] s) returns string {
                 clingNext = true;
             }
         }
-        else if a is ZWJ {
+        else if a is CLING {
             clingNext = true;
         }
         else {
