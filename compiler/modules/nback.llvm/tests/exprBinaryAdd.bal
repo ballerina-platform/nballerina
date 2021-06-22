@@ -1,13 +1,14 @@
 import ballerina/test;
 
 function exprBinaryAdd() returns Module {
-    Module m = new ();
+    Context context = contextCreate();
+    Builder builder = new (context);
+    Module m = new (context);
     StructType addReturnType = structType(["i64", "i1"]);
     FunctionDecl add = m.getIntrinsicDeclaration("sadd.with.overflow.i64");
     FunctionDefn abort = m.addFunctionDefn("abort", {returnType: "void", paramTypes: []});
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
-    Builder builder = new ();
     builder.positionAtEnd(initBlock);
     PointerValue R3 = builder.alloca("i64");
     PointerValue R4 = builder.alloca("i64");
@@ -38,6 +39,7 @@ function exprBinaryAdd() returns Module {
 
     builder.positionAtEnd(ifFalse);
     _ = builder.call(abort,[]);
+    contextDispose(context);
     return m;
 }
 

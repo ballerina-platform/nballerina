@@ -1,13 +1,14 @@
 import ballerina/test;
 
 function exprBinaryMul() returns Module {
-    Module m = new ();
+    Context context = contextCreate();
+    Module m = new (context);
     StructType addReturnType = structType(["i64", "i1"]);
     FunctionDecl mul = m.getIntrinsicDeclaration("smul.with.overflow.i64");
     Function abort = m.addFunctionDefn("abort", {returnType:"void", paramTypes:[]});
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
-    Builder builder = new ();
+    Builder builder = new (context);
     builder.positionAtEnd(initBlock);
     PointerValue R3 = builder.alloca("i64");
     PointerValue R4 = builder.alloca("i64");
@@ -38,6 +39,7 @@ function exprBinaryMul() returns Module {
 
     builder.positionAtEnd(ifFalse);
     _ = builder.call(abort, []);
+    contextDispose(context);
     return m;
 }
 

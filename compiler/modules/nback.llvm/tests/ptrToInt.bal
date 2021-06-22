@@ -1,9 +1,10 @@
 import ballerina/test;
 
 function ptToInt() returns Module {
-    Builder builder = new ();
+    Context context = contextCreate();
+    Builder builder = new (context);
 
-    Module m = new ();
+    Module m = new (context);
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: [pointerType("i8")]});
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
@@ -24,6 +25,7 @@ function ptToInt() returns Module {
     } else {
         panic error("Invalid argument type");
     }
+    contextDispose(context);
     return m;
 }
 

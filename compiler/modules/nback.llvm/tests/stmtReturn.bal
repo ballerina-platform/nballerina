@@ -1,8 +1,9 @@
 import ballerina/test;
 
 function stmtReturn() returns Module {
-    Builder builder = new ();
-    Module m = new ();
+    Context context = contextCreate();
+    Builder builder = new (context);
+    Module m = new (context);
     FunctionDefn foo1 = m.addFunctionDefn("foo1", {returnType: "i64", paramTypes: []});
     BasicBlock bb1 = foo1.appendBasicBlock();
     builder.positionAtEnd(bb1);
@@ -16,6 +17,7 @@ function stmtReturn() returns Module {
     builder.store(c, R1);
     Value R2 = builder.load(R1);
     builder.ret(R2);
+    contextDispose(context);
     return m;
 }
 

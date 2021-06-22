@@ -8,7 +8,8 @@ function testLLVMOverflowArithmeticFunctionType(FunctionType fType) {
 
 @test:Config {}
 function testArithmeticIntrinsicGeneration() {
-    Module m = new ();
+    Context context = contextCreate();
+    Module m = new (context);
     IntrinsicFunctionName[] names = ["sadd.with.overflow.i64", "ssub.with.overflow.i64", "smul.with.overflow.i64"];
     foreach var name in names {
         FunctionDecl f = m.getIntrinsicDeclaration(name);
@@ -16,21 +17,25 @@ function testArithmeticIntrinsicGeneration() {
         string functionName = "llvm." + name;
         test:assertEquals(f.functionName, functionName);
     }
+    contextDispose(context);
 }
 
 @test:Config {}
 function testIntrinsicRepeatedAddition() {
-    Module m = new ();
+    Context context = contextCreate();
+    Module m = new (context);
     IntrinsicFunctionName name = "sadd.with.overflow.i64";
     FunctionDecl f1 = m.getIntrinsicDeclaration(name);
     FunctionDecl f2 = m.getIntrinsicDeclaration(name);
     test:assertTrue(f1 === f2);
+    contextDispose(context);
 }
 
 @test:Config {}
 function testFunctionAttributeAddition() {
-    Module m = new ();
-    EnumAttribute[] attributes = ["noreturn", "cold", "nounwind", "readnone", "speculatable", "willreturn"]; //FIXME: add others
+    Context context = contextCreate();
+    Module m = new (context);
+    EnumAttribute[] attributes = ["noreturn", "cold", "nounwind", "readnone", "speculatable", "willreturn"]; 
     FunctionDecl fDecl = m.addFunctionDecl("decl", {returnType: "void", paramTypes: []});
     foreach var attribute in attributes {
         fDecl.addEnumAttribute(attribute);
@@ -41,11 +46,13 @@ function testFunctionAttributeAddition() {
         fDefn.addEnumAttribute(attribute);
         test:assertNotExactEquals(fDefn.attributes.indexOf(attribute), ());
     }
+    contextDispose(context);
 }
 
 @test:Config {}
 function testFunctionAttributeNoDuplicate() {
-    Module m = new ();
+    Context context = contextCreate();
+    Module m = new (context);
     EnumAttribute attribute = "cold";
     FunctionDecl fDecl = m.addFunctionDecl("decl", {returnType: "void", paramTypes: []});
     fDecl.addEnumAttribute(attribute);
@@ -55,4 +62,5 @@ function testFunctionAttributeNoDuplicate() {
     fDefn.addEnumAttribute(attribute);
     fDefn.addEnumAttribute(attribute);
     test:assertEquals(fDefn.attributes.length(), 1);
+    contextDispose(context);
 }

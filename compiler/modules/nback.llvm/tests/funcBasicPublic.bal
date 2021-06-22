@@ -1,8 +1,9 @@
 import ballerina/test;
 
 function funcBasicPublic() returns Module {
-    Builder builder = new ();
-    Module m = new ();
+    Context context = contextCreate();
+    Builder builder = new (context);
+    Module m = new (context);
 
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "void", paramTypes: []});
     BasicBlock fooBB = foo.appendBasicBlock();
@@ -13,6 +14,7 @@ function funcBasicPublic() returns Module {
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
     builder.ret(constInt("i64",42));
+    contextDispose(context);
     return m;
 }
 

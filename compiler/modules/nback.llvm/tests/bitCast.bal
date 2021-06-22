@@ -1,9 +1,9 @@
 import ballerina/test;
 
 function bitCast() returns Module {
-    Builder builder = new ();
-
-    Module m = new ();
+    Context context = contextCreate();
+    Builder builder = new (context);
+    Module m = new (context);
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: pointerType("i64"), paramTypes: [pointerType("i8")]});
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
@@ -14,6 +14,7 @@ function bitCast() returns Module {
     } else {
         panic error("Invalid argument type");
     }
+    contextDispose(context);
     return m;
 }
 

@@ -1,8 +1,9 @@
 import ballerina/test;
 
 function funcBasicPrivate() returns Module {
-    Builder builder = new ();
-    Module m = new ();
+    Context context = contextCreate();
+    Builder builder = new (context);
+    Module m = new (context);
 
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "void", paramTypes: []});
     foo.setLinkage("internal");
@@ -15,6 +16,7 @@ function funcBasicPrivate() returns Module {
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
     builder.ret(constInt("i64",42));
+    contextDispose(context);
     return m;
 }
 

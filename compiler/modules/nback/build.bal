@@ -121,8 +121,9 @@ class Scaffold {
 }
 
 function buildModule(bir:Module mod) returns llvm:Module|BuildError {
+    llvm:Context context = llvm:contextCreate();
     bir:ModuleId modId = mod.getId();
-    llvm:Module llMod = new;
+    llvm:Module llMod = new(context);
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
     llvm:FunctionDefn[] llFuncs = [];
     llvm:FunctionType[] llFuncTypes = [];
@@ -138,7 +139,7 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
         llFuncs.push(llFunc);
         llFuncMap[defn.symbol.identifier] = llFunc;
     }  
-    llvm:Builder builder = new;
+    llvm:Builder builder = new(context);
     ImportedFunctionTable importedFunctions = table [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
@@ -146,6 +147,7 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
         Scaffold scaffold = check new(llMod, llFuncs[i], llFuncMap, importedFunctions, builder, functionDefns[i], code);
         check buildFunctionBody(builder, scaffold, code);
     }
+    llvm:contextDispose(context);
     return llMod;
 }
 
