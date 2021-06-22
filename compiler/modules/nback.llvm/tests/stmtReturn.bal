@@ -17,7 +17,6 @@ function stmtReturn() returns Module {
     builder.store(c, R1);
     Value R2 = builder.load(R1);
     builder.ret(R2);
-    context.dispose();
     return m;
 }
 

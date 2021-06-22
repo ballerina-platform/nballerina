@@ -17,7 +17,6 @@ function testArithmeticIntrinsicGeneration() {
         string functionName = "llvm." + name;
         test:assertEquals(f.functionName, functionName);
     }
-    context.dispose();
 }
 
 @test:Config {}
@@ -28,7 +27,6 @@ function testIntrinsicRepeatedAddition() {
     FunctionDecl f1 = m.getIntrinsicDeclaration(name);
     FunctionDecl f2 = m.getIntrinsicDeclaration(name);
     test:assertTrue(f1 === f2);
-    context.dispose();
 }
 
 @test:Config {}
@@ -46,7 +44,6 @@ function testFunctionAttributeAddition() {
         fDefn.addEnumAttribute(attribute);
         test:assertNotExactEquals(fDefn.attributes.indexOf(attribute), ());
     }
-    context.dispose();
 }
 
 @test:Config {}
@@ -62,5 +59,4 @@ function testFunctionAttributeNoDuplicate() {
     fDefn.addEnumAttribute(attribute);
     fDefn.addEnumAttribute(attribute);
     test:assertEquals(fDefn.attributes.length(), 1);
-    context.dispose();
 }

@@ -147,7 +147,6 @@ function buildModule(bir:Module mod) returns llvm:Module|BuildError {
         Scaffold scaffold = check new(llMod, llFuncs[i], llFuncMap, importedFunctions, builder, functionDefns[i], code);
         check buildFunctionBody(builder, scaffold, code);
     }
-    context.dispose();
     return llMod;
 }
 

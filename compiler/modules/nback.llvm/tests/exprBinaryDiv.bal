@@ -42,7 +42,6 @@ function exprBinaryDiv() returns Module {
     Value R16 = builder.load(R4);
     Value R17 = builder.binaryInt("sdiv", R15, R16);
     builder.ret(R17);
-    context.dispose();
     return m;
 }
 

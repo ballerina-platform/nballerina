@@ -18,7 +18,6 @@ function stmtDeclLiteral() returns Module {
     builder.store(constInt("i64", 9223372036854775807), R4);
     builder.store(constInt("i64", -9223372036854775808), R5);
     builder.ret();
-    context.dispose();
     return m;
 }
 

@@ -9,7 +9,6 @@ function stmtDeclUninitialized() returns Module {
     builder.positionAtEnd(initBlock);
     Value R1 = builder.alloca("i64");
     builder.ret();
-    context.dispose();
     return m;
 }
 

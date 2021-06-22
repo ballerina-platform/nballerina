@@ -18,7 +18,6 @@ function externalFunc() returns Module {
         panic error("return void from non void function");
     }
     builder.ret(R1);
-    context.dispose();
     return m;
 }
 

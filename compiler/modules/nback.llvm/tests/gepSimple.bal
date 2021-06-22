@@ -25,7 +25,6 @@ function gepSimple() returns Module {
     } else {
         panic error("Invalid argument type");
     }
-    context.dispose();
     return m;
 }
 

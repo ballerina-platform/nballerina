@@ -15,7 +15,6 @@ function stmtDecl() returns Module {
     Value R4 = builder.load(R2);
     builder.store(R4,R3);
     builder.ret();
-    context.dispose();
     return m;
 }
 

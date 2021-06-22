@@ -14,7 +14,6 @@ function funcBasicPublic() returns Module {
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
     builder.ret(constInt("i64",42));
-    context.dispose();
     return m;
 }
 

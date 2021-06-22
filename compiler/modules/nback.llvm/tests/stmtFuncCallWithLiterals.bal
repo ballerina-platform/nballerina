@@ -32,7 +32,6 @@ function stmtFuncCallWithLiterals() returns Module{
     }
     builder.store(R4, R2);
     builder.ret();
-    context.dispose();
     return m;
 }
 

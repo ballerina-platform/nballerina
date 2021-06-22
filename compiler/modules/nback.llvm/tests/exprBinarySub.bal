@@ -39,7 +39,6 @@ function exprBinarySub() returns Module {
 
     builder.positionAtEnd(ifFalse);
     _ = builder.call(abort, []);
-    context.dispose();
     return m;
 }
 

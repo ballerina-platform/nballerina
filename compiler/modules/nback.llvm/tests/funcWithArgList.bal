@@ -7,7 +7,6 @@ function funcWithArgList() returns Module {
     funcWithArgList1(builder, m);
     funcWithArgList2(builder, m);
     funcWithArgList3(builder, m);
-    context.dispose();
     return m;
 }
 

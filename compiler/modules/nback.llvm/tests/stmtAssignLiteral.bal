@@ -14,7 +14,6 @@ function stmtAssignLiteral() returns Module {
     builder.store(constInt("i64", 9223372036854775807), R1);
     builder.store(constInt("i64", -9223372036854775808), R1);
     builder.ret();
-    context.dispose();
     return m;
 }
 

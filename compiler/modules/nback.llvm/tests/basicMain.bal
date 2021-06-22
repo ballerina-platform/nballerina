@@ -8,7 +8,6 @@ function basicMain() returns Module {
     BasicBlock initBlock = mainFunction.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     builder.ret(constInt("i64",0));
-    context.dispose();
     return m;
 }
 

@@ -11,7 +11,6 @@ function ptrMaskIntrinsic() returns Module {
     Value arg = foo.getParam(0);
     Value? result = builder.call(mask, [arg, constInt("i64",72057594037927928)]);
     builder.ret(result);
-    context.dispose();
     return m;
 }
 

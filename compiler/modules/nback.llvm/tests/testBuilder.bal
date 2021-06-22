@@ -14,7 +14,6 @@ function builderStoreTypeCheck() {
     if !(e is error) {
         test:assertFail("invalid store allowed");
     }
-    context.dispose();
 }
 
 @test:Config {}
@@ -30,7 +29,6 @@ function builderCallTypeCheck() {
     if !(e is error) {
         test:assertFail("invalid call allowed");
     }
-    context.dispose();
 }
 
 @test:Config {}
@@ -46,7 +44,6 @@ function builderExtractValueCheck() {
     if !(e is error) {
         test:assertFail("invalid extract value allowed");
     }
-    context.dispose();
 }
 
 @test:Config {}
@@ -62,5 +59,4 @@ function builderCondBrCheck() {
     if !(e is error) {
         test:assertFail("invalid cond br allowed");
     }
-    context.dispose();
 }

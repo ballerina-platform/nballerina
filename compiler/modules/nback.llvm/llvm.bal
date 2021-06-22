@@ -99,9 +99,6 @@ public class Context {
     public function  createBuilderInContext() returns Builder {
         return new(self);
     }
-
-    // Corresponds to LLVMContextDispose
-    public function dispose(){}
 }
 public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
 public type GeneralIntrinsicName "ptrmask.p0i8.i64";
