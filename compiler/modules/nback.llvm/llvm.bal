@@ -407,6 +407,22 @@ public class Builder {
         return new Value(destTy, reg);
     }
 
+    // Corresponds to LLVMBuildTrunc
+    public function trunc(Value val, IntType destinationType, string? name = ()) returns Value {
+        if val.ty is IntType {
+            if val.ty == destinationType {
+                panic error("Equal sized types are not allowed");
+            }
+            BasicBlock bb = self.bb();
+            string reg = bb.func.genReg();
+            bb.addInsn(reg, "=", "trunc", typeToString(val.ty), val.operand, "to", typeToString(destinationType));
+            return new Value(destinationType, reg);
+        } 
+        else {
+            panic error("Value must be an integer type");
+        }
+    }
+
     public function unreachable() {
         BasicBlock bb = self.bb();
         bb.addInsn("unreachable");
