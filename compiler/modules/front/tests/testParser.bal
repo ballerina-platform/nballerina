@@ -165,6 +165,8 @@ function sourceFragments() returns string[][]|error {
          ["V", "stmt", "int i = 10;", "int i = 10;"],
          ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
          ["V", "stmt", "boolean b = false;", "boolean b = false;"],
+         ["V", "stmt", "any v = false;", "any v = false;"],
+         ["V", "stmt", "any v = 1;", "any v = 1;"],
          // statement assign
          ["E", "stmt", "a = b = d;", ""],
          ["V", "stmt", "a = 0;", "a = 0;"],
