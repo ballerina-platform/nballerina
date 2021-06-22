@@ -13,7 +13,7 @@ type CodeGenError err:Semantic|err:Unimplemented;
 type LoopContext record {|
     bir:BasicBlock onBreak;
     bir:BasicBlock onContinue;
-    // JBUG does not allow `outer` here
+    // JBUG #31311 does not allow `outer` here
     LoopContext? enclosing;
     // will use this with while true to determine whether
     // following block is reachable
@@ -132,7 +132,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
             curBlock = check codeGenIfElseStmt(cx, curBlock, scope, stmt);
         }
         else if stmt is WhileStmt {
-            // JBUG cast
+            // JBUG #31327 cast
             curBlock = check codeGenWhileStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
         else if stmt is BreakStmt {
@@ -142,7 +142,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
             curBlock = check codeGenContinueStmt(cx, <bir:BasicBlock>curBlock);
         }
         else if stmt is ReturnStmt {
-            // JBUG cast
+            // JBUG #31327 cast
             curBlock = check codeGenReturnStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
         else if stmt is VarDeclStmt {
