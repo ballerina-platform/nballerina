@@ -2,8 +2,8 @@ import ballerina/test;
 
 function stmtDeclUninitialized() returns Module {
     Context context = new;
-    Builder builder = context.createBuilderInContext();
-    Module m = context.createModuleInContext();
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes:[]});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);

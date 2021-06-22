@@ -2,8 +2,8 @@ import ballerina/test;
 
 function basicMain() returns Module {
     Context context = new;
-    Builder builder = context.createBuilderInContext();
-    Module m = context.createModuleInContext();
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
     FunctionDefn mainFunction = m.addFunctionDefn("main", {returnType: "i64", paramTypes: []});
     BasicBlock initBlock = mainFunction.appendBasicBlock();
     builder.positionAtEnd(initBlock);

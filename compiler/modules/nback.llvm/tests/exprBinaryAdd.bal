@@ -2,8 +2,8 @@ import ballerina/test;
 
 function exprBinaryAdd() returns Module {
     Context context = new;
-    Builder builder = context.createBuilderInContext();
-    Module m = context.createModuleInContext();
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
     StructType addReturnType = structType(["i64", "i1"]);
     FunctionDecl add = m.getIntrinsicDeclaration("sadd.with.overflow.i64");
     FunctionDefn abort = m.addFunctionDefn("abort", {returnType: "void", paramTypes: []});

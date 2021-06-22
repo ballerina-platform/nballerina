@@ -2,8 +2,8 @@ import ballerina/test;
 
 function funcBasicPublic() returns Module {
     Context context = new;
-    Builder builder = context.createBuilderInContext();
-    Module m = context.createModuleInContext();
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
 
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "void", paramTypes: []});
     BasicBlock fooBB = foo.appendBasicBlock();

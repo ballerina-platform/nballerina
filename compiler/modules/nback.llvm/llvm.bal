@@ -92,11 +92,11 @@ public class Context {
         
     }
 
-    public function createModuleInContext() returns Module {
+    public function createModule() returns Module {
         return new(self);
     }
 
-    public function  createBuilderInContext() returns Builder {
+    public function  createBuilder() returns Builder {
         return new(self);
     }
 }

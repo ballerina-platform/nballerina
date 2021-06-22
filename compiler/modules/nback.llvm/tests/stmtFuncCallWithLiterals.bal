@@ -2,8 +2,8 @@ import ballerina/test;
 
 function stmtFuncCallWithLiterals() returns Module{
     Context context = new;
-    Builder builder = context.createBuilderInContext();
-    Module m = context.createModuleInContext();
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
     FunctionDefn f1 = foo1(builder, m);
     FunctionDefn f2 = foo2(builder, m);
     FunctionDefn f3 = foo3(builder, m);

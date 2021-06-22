@@ -2,9 +2,9 @@ import ballerina/test;
 
 function gepSimple() returns Module {
     Context context = new;
-    Builder builder = context.createBuilderInContext();
+    Builder builder = context.createBuilder();
 
-    Module m = context.createModuleInContext();
+    Module m = context.createModule();
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: pointerType("i64"), paramTypes: [pointerType("i64")]});
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);

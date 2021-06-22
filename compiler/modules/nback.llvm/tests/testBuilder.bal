@@ -3,10 +3,10 @@ import ballerina/test;
 @test:Config {}
 function builderStoreTypeCheck() {
     Context context = new;
-    Module m = context.createModuleInContext();
+    Module m = context.createModule();
     FunctionDefn f = m.addFunctionDefn("f", {returnType: "void", paramTypes: []});
     BasicBlock bb = f.appendBasicBlock();
-    Builder builder = context.createBuilderInContext();
+    Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
     Value s = new ("i64", "s");
     PointerValue d = new ({pointsTo: "i1"}, "d");
@@ -19,10 +19,10 @@ function builderStoreTypeCheck() {
 @test:Config {}
 function builderCallTypeCheck() {
     Context context = new;
-    Module m = context.createModuleInContext();
+    Module m = context.createModule();
     FunctionDefn f = m.addFunctionDefn("f", {returnType: "void", paramTypes: []});
     BasicBlock bb = f.appendBasicBlock();
-    Builder builder = context.createBuilderInContext();
+    Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
     Value s = new ("i64", "s");
     Value?|error e = trap builder.call(f, [s]);
@@ -34,10 +34,10 @@ function builderCallTypeCheck() {
 @test:Config {}
 function builderExtractValueCheck() {
     Context context = new;
-    Module m = context.createModuleInContext();
+    Module m = context.createModule();
     FunctionDefn f = m.addFunctionDefn("f", {returnType: "void", paramTypes: []});
     BasicBlock bb = f.appendBasicBlock();
-    Builder builder = context.createBuilderInContext();
+    Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
     Value s = new ("i64", "s");
     Value?|error e = trap builder.extractValue(s, 0);
@@ -49,7 +49,7 @@ function builderExtractValueCheck() {
 @test:Config {}
 function builderCondBrCheck() {
     Context context = new;
-    Module m = context.createModuleInContext();
+    Module m = context.createModule();
     FunctionDefn f = m.addFunctionDefn("f", {returnType: "void", paramTypes: []});
     BasicBlock bb = f.appendBasicBlock();
     Builder builder = new (context);

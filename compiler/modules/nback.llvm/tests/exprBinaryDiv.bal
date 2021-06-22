@@ -2,8 +2,8 @@ import ballerina/test;
 
 function exprBinaryDiv() returns Module {
     Context context = new;
-    Module m = context.createModuleInContext();
-    Builder builder = context.createBuilderInContext();
+    Module m = context.createModule();
+    Builder builder = context.createBuilder();
     FunctionDefn abort = m.addFunctionDefn("abort", {returnType:"void", paramTypes:[]});
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();

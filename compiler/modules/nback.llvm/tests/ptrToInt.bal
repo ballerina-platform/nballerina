@@ -2,9 +2,9 @@ import ballerina/test;
 
 function ptToInt() returns Module {
     Context context = new;
-    Builder builder = context.createBuilderInContext();
+    Builder builder = context.createBuilder();
 
-    Module m = context.createModuleInContext();
+    Module m = context.createModule();
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: [pointerType("i8")]});
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
