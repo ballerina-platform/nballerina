@@ -95,19 +95,21 @@ public class Module {
     private final FunctionDefn[] functions = [];
     private final map<FunctionDecl> intrinsicFunctions = {};
     private final FunctionDecl[] functionDecls = [];
+    private final Context context;
 
-    public function init() {
+    public function init(Context context) {
+        self.context = context;
     }
 
     // Corresponds to LLVMAddFunction
     public function addFunctionDefn(string name, FunctionType fnType) returns FunctionDefn {
-        FunctionDefn fn = new FunctionDefn(name, fnType);
+        FunctionDefn fn = new (self.context, name, fnType);
         self.functions.push(fn);
         return fn;
     }
 
     public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl{
-        FunctionDecl fn = new(name, fnType);
+        FunctionDecl fn = new(self.context, name, fnType);
         self.functionDecls.push(fn);
         return fn;
     }
@@ -122,17 +124,17 @@ public class Module {
         FunctionDecl? fn = ();
         match name {
             "sadd.with.overflow.i64" => {
-                fn = new ("llvm.sadd.with.overflow.i64", overflowArithmeticFunctionType);
+                fn = new (self.context, "llvm.sadd.with.overflow.i64", overflowArithmeticFunctionType);
             }
             "ssub.with.overflow.i64" => {
-                fn = new ("llvm.ssub.with.overflow.i64", overflowArithmeticFunctionType);
+                fn = new (self.context, "llvm.ssub.with.overflow.i64", overflowArithmeticFunctionType);
             }
             "smul.with.overflow.i64" => {
-                fn = new ("llvm.smul.with.overflow.i64", overflowArithmeticFunctionType);
+                fn = new (self.context, "llvm.smul.with.overflow.i64", overflowArithmeticFunctionType);
             }
             "ptrmask.p0i8.i64" => {
                 FunctionType fnType = {returnType: pointerType("i8"), paramTypes:[pointerType("i8"),"i64"] };
-                FunctionDecl f = new("llvm.ptrmask.p0i8.i64", fnType);
+                FunctionDecl f = new(self.context, "llvm.ptrmask.p0i8.i64", fnType);
                 f.addEnumAttribute("readnone");
                 f.addEnumAttribute("speculatable");
                 fn = f;
@@ -193,7 +195,7 @@ public class FunctionDecl {
     final string functionName;
     final EnumAttribute[] attributes = [];
 
-    function init(string functionName, FunctionType functionType) {
+    function init(Context context, string functionName, FunctionType functionType) {
         self.functionName = functionName;
         self.functionType = functionType;
     }
@@ -221,8 +223,10 @@ public class FunctionDefn {
     private int labelCount = 0;
     private Value[] paramValues;
     private Linkage linkage = "external";
+    private final Context context;
 
-    function init(string functionName, FunctionType functionType) {
+    function init(Context context, string functionName, FunctionType functionType) {
+        self.context = context;
         self.functionName = functionName;
         self.functionType = functionType;
         self.paramValues = [];
@@ -262,7 +266,7 @@ public class FunctionDefn {
 
     // Corresponds to LLVMAppendBasicBlock
     public function appendBasicBlock(string? name=()) returns BasicBlock {
-        BasicBlock tem = new BasicBlock(self.genLabel(), self);
+        BasicBlock tem = new (self.context, self.genLabel(), self);
         self.basicBlocks.push(tem);
         return tem;
     }
@@ -318,7 +322,7 @@ public class Builder {
     private BasicBlock? currentBlock = ();
 
     // Corresponds to LLVMCreateBuilder
-    public function init() { }
+    public function init(Context context) { }
 
     // Corresponds to LLVMPositionBuilderAtEnd
     public function positionAtEnd(BasicBlock block) {
@@ -512,7 +516,7 @@ public distinct class BasicBlock {
     private final string[] lines = [];
     private boolean isReferenced = false;
 
-    function init(string label, FunctionDefn func) {
+    function init(Context context, string label, FunctionDefn func) {
         self.label = label;
         self.func = func;
     }
@@ -602,6 +606,7 @@ class Output {
     }
 }
 
+
 function functionHeader(Function fn) returns string {
     string[] words = [];
     if fn is FunctionDefn {
@@ -652,4 +657,16 @@ function omitSpaceBefore(string word) returns boolean {
 
 function omitSpaceAfter(string word) returns boolean {
     return word == "(" || word == "{";
+}
+
+// Corresponds to LLVMContextRef
+public type Context readonly & record {||};
+
+// Corresponds to LLVMContextCreate
+public function contextCreate() returns Context {
+    return {};
+}
+
+// Corresponds to LLVMContextDispose
+public function contextDispose(Context context) {
 }
