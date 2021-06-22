@@ -18,14 +18,14 @@ function testCompileVP(string path) returns io:Error? {
         // JBUG #31146 let's assert instead check to see the file name
         string msg = "compilation error: ";
         if err is err:Any {
-            // JBUG cast
+            // JBUG #31334 cast
             string? functionName = (<err:Detail>err.detail()).functionName;
             if functionName is string {
                 msg += "function " + functionName + ": ";
             }
         }
         test:assertEquals(err, (), msg + path);
-    }  
+    }
 }
 
 @test:Config {
@@ -33,7 +33,7 @@ function testCompileVP(string path) returns io:Error? {
 }
 function testCompileEU(string path) returns file:Error|io:Error? {
     CompileError? err = compileFile(path, ());
-    // JBUG parentheses needed
+    // JBUG #31337 parentheses needed
     if (err is err:Any?) {
         if err is () {
             test:assertNotExactEquals(err, (), "expected an error " + path);
@@ -48,7 +48,7 @@ function testCompileEU(string path) returns file:Error|io:Error? {
             else if !err.message().includes("'io:println'") {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
-            // JBUG cast needed
+            // JBUG #31334 cast needed
             err:Position? pos = (<err:Detail>err.detail())?.position;
             if isE && pos != () {
                 test:assertEquals(pos.lineNumber, check errorLine(path), "wrong line number in error " + path);
@@ -67,7 +67,7 @@ function listSourcesEU() returns string[][]|error => listSources("EU");
 function listSources(string initialChars) returns string[][]|io:Error|file:Error {
     return from var entry in check file:readDir(SOURCE_DIR)
            let string path = entry.absPath
-           // JBUG gets a bad, sad if includePath is inlined in the obvious way
+           // JBUG #31360 gets a bad, sad if includePath is inlined in the obvious way
            where check includePath(path, initialChars)
            select [path];
 }
@@ -87,7 +87,7 @@ function errorLine(string path) returns int|io:Error {
         }
     }
     test:assertFail("Test with 'E' prefix missing error annotation : " + path);
-    // JBUG panic here cases a bytecode error
+    // JBUG #31338 panic here cases a bytecode error
     // panic err:unreached();
     return 0;
 }
