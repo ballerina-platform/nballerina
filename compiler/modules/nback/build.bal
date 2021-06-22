@@ -16,12 +16,47 @@ final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
 
 type ValueType llvm:IntegralType;
 
+// A Repr is way of representing values.
+// It's a mapping from a SemType to an LLVM type.
+type Repr REPR_INT|REPR_BOOLEAN|REPR_ERROR|REPR_TAGGED;
+type RetRepr Repr|REPR_VOID;
+
+// Maps int to i64
+const REPR_INT = 0;
+// Maps int to i1
+const int REPR_BOOLEAN = REPR_INT + 1;
+// Maps error value to (for now) int (for panics)
+const int REPR_ERROR = REPR_BOOLEAN + 1;
+// Maps any Ballerina value to a tagged pointer
+const int REPR_TAGGED = REPR_ERROR + 1;
+// JBUG this goes wrong when you use REPR_VOID as a type as in buildRet
+// const int REPR_VOID = REPR_TAGGED + 1;
+const int REPR_VOID = 4;
+
+final llvm:IntegralType[] reprTypes = [
+    LLVM_INT,
+    LLVM_BOOLEAN,
+    // For now we represent an error as an i64
+    LLVM_INT,
+    LLVM_TAGGED_PTR
+];
+
+final llvm:RetType[] retReprTypes = [
+    LLVM_INT,
+    LLVM_BOOLEAN,
+    // For now we represent an error as an i64
+    LLVM_INT,
+    LLVM_TAGGED_PTR,
+    LLVM_VOID
+];
+
 const PANIC_OVERFLOW = 1;
 const PANIC_DIVIDE_BY_ZERO = 2;
 
 final llvm:FunctionType panicFunctionType = { returnType: "void", paramTypes: ["i64"] };
+final llvm:FunctionType allocFunctionType = { returnType: llvm:pointerType("i8"), paramTypes: ["i64"] };
 
-type RuntimeFunctionName "panic";
+type RuntimeFunctionName "panic"|"alloc";
 
 final bir:ModuleId runtimeModule = {
     organization: "ballerinai",
@@ -38,8 +73,9 @@ type ImportedFunctionTable table<ImportedFunction> key(symbol);
 class Scaffold {
     private final llvm:Module llMod;
     private final llvm:FunctionDefn llFunc;
-    // LLVM type for each BIR register
-    // private final llvm:IntType[] types;
+    // Representation for each BIR register
+    private final Repr[] reprs;
+    private final RetRepr retRepr;
     // LLVM ValueRef referring to address (allocated with alloca)
     // of each BIR register
     private final llvm:PointerValue[] addresses;
@@ -59,31 +95,32 @@ class Scaffold {
         self.importedFunctions = importedFunctions;
         self.birBlocks = code.blocks;
         // JBUG 31008 if this is a query expression
-        final ValueType[] types = [];
+        final Repr[] reprs = [];
         foreach var reg in code.registers {
-            types.push(check buildValueType(reg.semType));
+            reprs.push(check semTypeRepr(reg.semType));
         }
-        // self.types = types;
+        self.reprs = reprs;
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock();
         builder.positionAtEnd(self.blocks[0]);
         self.addresses = [];
-        foreach int i in 0 ..< types.length() {
-            var ty = types[i];
-            self.addresses.push(builder.alloca(ty, (), code.registers[i].varName));
+        foreach int i in 0 ..< reprs.length() {
+            self.addresses.push(builder.alloca(reprTypes[reprs[i]], (), code.registers[i].varName));
         } 
         bir:FunctionSignature ty = defn.signature;
 
         foreach int i in 0 ..< ty.paramTypes.length() {
             builder.store(llFunc.getParam(i), self.addresses[i]);
         }
+        self.retRepr = check semTypeRetRepr(defn.signature.returnType);
     }
 
     function address(bir:Register r) returns llvm:PointerValue => self.addresses[r.number];
-
        
     function basicBlock(int label) returns llvm:BasicBlock  => self.blocks[label];
 
-    // function valueType(bir:Register r) returns llvm:IntType => self.types[r.number];
+    function getRepr(bir:Register r) returns Repr => self.reprs[r.number];
+
+    function getRetRepr() returns RetRepr => self.retRepr;
 
     function getFunctionDefn(string name) returns llvm:FunctionDefn => self.functionDefns.get(name);
 
@@ -197,7 +234,7 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             // scaffold.panicAddress uses this to figure out where to store the panic info
         }
         else if insn is bir:AbnormalRetInsn {
-            check buildAbnormalRet(builder, scaffold, insn);
+            buildAbnormalRet(builder, scaffold, insn);
         }
         else {
             return err:unimplemented(`BIR insn ${insn.name} not implemented`);
@@ -216,26 +253,29 @@ function buildCondBranch(llvm:Builder builder, Scaffold scaffold, bir:CondBranch
 }
 
 function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) returns BuildError? {
-    builder.ret(check buildRetValue(builder, scaffold, insn.operand));
+    RetRepr repr = scaffold.getRetRepr();
+    builder.ret(repr is REPR_VOID ? () : check buildRepr(builder, scaffold, insn.operand, repr));
 }
 
-function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) returns BuildError? {
-    _ = builder.call(buildRuntimeFunctionDecl(scaffold, "panic", panicFunctionType), [check buildValueAsInt(builder, scaffold, insn.operand)]);
+function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) {
+    _ = builder.call(buildRuntimeFunctionDecl(scaffold, "panic", panicFunctionType), [buildInt(builder, scaffold, insn.operand)]);
     builder.unreachable();   
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
-    builder.store(check buildValue(builder, scaffold, insn.operand), scaffold.address(insn.result));
+    builder.store(check buildRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result)), scaffold.address(insn.result));
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
-    // JBUG #31008 cannot write this with select
-    llvm:Value[] args = [];
-    foreach var arg in insn.args {
-        args.push(check buildValue(builder, scaffold, arg));
-    }
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
+    // JBUG #31008 cannot write this with select
+    llvm:Value[] args = [];
+    t:SemType[] paramTypes = funcRef.signature.paramTypes;
+    foreach int i in 0 ..< insn.args.length() {
+        args.push(check buildRepr(builder, scaffold, insn.args[i], check semTypeRepr(paramTypes[i])));
+    }
+
     bir:Symbol funcSymbol = funcRef.symbol;
     llvm:Function func;
     if funcSymbol is bir:InternalSymbol {
@@ -244,12 +284,18 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     else {
         func = check buildFunctionDecl(scaffold, funcSymbol, funcRef.signature);
     }  
-    llvm:Value? ret = builder.call(func, args);
-    if !(ret is ()) {
-        builder.store(ret, scaffold.address(insn.result));
+    llvm:Value? retValue = builder.call(func, args);
+    RetRepr retRepr = check semTypeRetRepr(funcRef.signature.returnType);
+    check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
+}
+
+function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
+    if retRepr == REPR_VOID {
+         builder.store(buildConstNil(), scaffold.address(reg));
     }
-    else if insn.result.semType === t:NIL {
-        builder.store(buildConstNil(), scaffold.address(insn.result));
+    else {
+        builder.store(check buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
+                      scaffold.address(reg));
     }
 }
 
@@ -331,8 +377,8 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         }
         builder.positionAtEnd(continueBlock);
         result = builder.binaryInt(op, lhs, rhs);
-    }                                    
-    builder.store(result, scaffold.address(insn.result));
+    }
+    buildStoreInt(builder, scaffold, result, insn.result);                                  
     if !(joinBlock is ()) {
         builder.br(joinBlock);
         builder.positionAtEnd(joinBlock);
@@ -340,65 +386,123 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
 }
 
 function buildIntCompare(llvm:Builder builder, Scaffold scaffold, bir:IntCompareInsn insn) {
-    builder.store(builder.iCmp(buildIntCompareOp(insn.op),
-                               buildInt(builder, scaffold, insn.operands[0]),
-                               buildInt(builder, scaffold, insn.operands[1])),
-                  scaffold.address(insn.result));                          
+    buildStoreBoolean(builder, scaffold,
+                      builder.iCmp(buildIntCompareOp(insn.op),
+                                   buildInt(builder, scaffold, insn.operands[0]),
+                                   buildInt(builder, scaffold, insn.operands[1])),
+                      insn.result);                          
 }
 
 function buildBooleanCompare(llvm:Builder builder, Scaffold scaffold, bir:BooleanCompareInsn insn) {
-    builder.store(builder.iCmp(buildBooleanCompareOp(insn.op),
+    buildStoreBoolean(builder, scaffold,
+                      builder.iCmp(buildBooleanCompareOp(insn.op),
                                buildBoolean(builder, scaffold, insn.operands[0]),
                                buildBoolean(builder, scaffold, insn.operands[1])),
-                  scaffold.address(insn.result));                          
+                      insn.result);
 }
 
 function buildEqual(llvm:Builder builder, Scaffold scaffold, bir:EqualInsn insn) returns BuildError? {
-    builder.store(builder.iCmp(insn.negate ? "ne" : "eq",
-                               check buildValue(builder, scaffold, insn.operands[0]),
-                               check buildValue(builder, scaffold, insn.operands[1])),
-                  scaffold.address(insn.result));                          
+    var [lhsRepr, lhsValue] = buildReprValue(builder, scaffold, insn.operands[0]);
+    var [rhsRepr, rhsValue] = buildReprValue(builder, scaffold, insn.operands[1]);
+    // This will only work for int/boolean/nil
+    if lhsRepr != rhsRepr {
+        return err:unimplemented("comparing different representations");
+    }
+    buildStoreBoolean(builder, scaffold,
+                      builder.iCmp(insn.negate ? "ne" : "eq", lhsValue, rhsValue),
+                      insn.result);                     
 }
 
 function buildIntNegateInsn(llvm:Builder builder, Scaffold scaffold, bir:IntNegateInsn insn) {
-    builder.store(builder.binaryInt("sub", llvm:constInt(LLVM_INT, 0), buildInt(builder, scaffold, insn.operand)),
-                  scaffold.address(insn.result));
+    buildStoreInt(builder, scaffold,
+                  builder.binaryInt("sub", llvm:constInt(LLVM_INT, 0), buildInt(builder, scaffold, insn.operand)),
+                  insn.result);
 }
 
 function buildBooleanNotInsn(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {
-    builder.store(builder.binaryInt("xor", llvm:constInt(LLVM_BOOLEAN, 1), builder.load(scaffold.address(insn.operand))),
-                  scaffold.address(insn.result));
+    buildStoreBoolean(builder, scaffold,
+                      builder.binaryInt("xor", llvm:constInt(LLVM_BOOLEAN, 1), builder.load(scaffold.address(insn.operand))),
+                      insn.result);
 }
 
-function buildRetValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value?|BuildError {
-    return operand is () ? () : buildValue(builder, scaffold, operand);
+function buildStoreInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(scaffold.getRepr(reg) == REPR_TAGGED ? buildTaggedInt(builder, scaffold, value) : value,
+                  scaffold.address(reg));
 }
 
-function buildValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value|BuildError {
-    if operand is bir:Register {
-        return builder.load(scaffold.address(operand));
+function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(scaffold.getRepr(reg) == REPR_TAGGED ? buildTaggedBoolean(builder, value) : value,
+                  scaffold.address(reg));
+}
+
+function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
+    var [sourceRepr, value] = buildReprValue(builder, scaffold, operand);
+    return buildConvertRepr(builder, scaffold, sourceRepr, value, targetRepr);
+}
+
+function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value|BuildError {
+    if sourceRepr == targetRepr {
+        return value;
     }
-    else if operand is int {
-        return llvm:constInt(LLVM_INT, operand);
+    if targetRepr == REPR_TAGGED {
+        if sourceRepr == REPR_INT {
+            return buildTaggedInt(builder, scaffold, value);
+        }
+        else if sourceRepr == REPR_BOOLEAN {
+            return buildTaggedBoolean(builder, value);
+        }
+    }
+    // this shouldn't ever happen I think
+    return err:unimplemented("unimplemented conversion required");
+}
+
+const TAG_MASK = 0xFF;
+const TAG_SHIFT = 56;
+const TAG_BOOLEAN = 1;
+const TAG_INT = 2;
+const ALIGN_HEAP = 8;
+
+function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
+    return builder.getElementPointer(llvm:constNull(LLVM_TAGGED_PTR),
+                                     builder.binaryInt("or",
+                                                        builder.zExt(value, LLVM_INT),
+                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN << TAG_SHIFT)));
+}
+
+function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:Value {
+    llvm:Function allocFunction = buildRuntimeFunctionDecl(scaffold, "alloc", allocFunctionType);
+    llvm:PointerValue mem = <llvm:PointerValue>builder.call(allocFunction, [llvm:constInt(LLVM_INT, 8)]);
+    builder.store(value, builder.bitCast(mem, llvm:pointerType(LLVM_INT)), ALIGN_HEAP);
+    return builder.getElementPointer(mem, llvm:constInt(LLVM_INT, TAG_INT << TAG_SHIFT));
+}
+
+function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns [Repr, llvm:Value] {
+    if operand is bir:Register {
+        return buildLoad(builder, scaffold, operand);
+    }
+    else {
+        return buildConst(operand);
+    }
+}
+
+function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) returns [Repr, llvm:Value] {
+    return [scaffold.getRepr(reg), builder.load(scaffold.address(reg))];
+}
+
+function buildConst(bir:ConstOperand operand) returns [Repr, llvm:Value] {
+    if operand is int {
+        return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
     }
     else if operand is () {
-        return buildConstNil();
+        return [REPR_TAGGED, buildConstNil()];
     }
     else {
         // operand is boolean
-        return llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0);
+        return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0)];
     }
 }
 
-function buildValueAsInt(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns llvm:Value|BuildError {
-    if operand is bir:IntOperand {
-        return buildInt(builder, scaffold, operand);
-    }
-    else {
-        return err:unimplemented("expected an expression of type int");
-    }
-}
-
+// Build a value as REPR_INT
 function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operand) returns llvm:Value {
     if operand is int {
         return llvm:constInt(LLVM_INT, operand);
@@ -408,6 +512,7 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
     }
 }
 
+// Build a value as REPR_BOOLEAN
 function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperand operand) returns llvm:Value {
     if operand is boolean {
         return llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0);
@@ -462,9 +567,10 @@ function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
 }
 
 function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:FunctionType|BuildError {
-    llvm:Type[] paramTypes = from var ty in signature.paramTypes select check buildValueType(ty);
+    llvm:Type[] paramTypes = from var ty in signature.paramTypes select reprTypes[check semTypeRepr(ty)];
+    RetRepr repr = check semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {
-        returnType: check buildRetType(signature.returnType),
+        returnType: retReprTypes[repr],
         paramTypes: paramTypes.cloneReadOnly()
     };
     return ty;
@@ -474,31 +580,28 @@ function buildConstNil() returns llvm:Value {
     return llvm:constNull(LLVM_NIL_TYPE);
 }
 
-function buildRetType(t:SemType ty) returns llvm:RetType|BuildError {
+function semTypeRetRepr(t:SemType ty) returns RetRepr|BuildError {
     if ty === t:NIL {
-        return LLVM_VOID;
+        return REPR_VOID;
     }
-    return buildValueType(ty);
+    return semTypeRepr(ty);
 }
 
-function buildValueType(t:SemType ty) returns ValueType|BuildError {
+// Return the representation for a SemType.
+function semTypeRepr(t:SemType ty) returns Repr|BuildError {
     if ty === t:INT {
-        return LLVM_INT;
+        return REPR_INT;
     }
     else if ty === t:BOOLEAN {
-        return LLVM_BOOLEAN;
+        return REPR_BOOLEAN;
     }
     // This happens with the code generated for potential panics.
-    // For now we will represent panics with an i64
     else if ty === t:ERROR {
-        return LLVM_INT;
+        return REPR_ERROR;
     }
-    else if ty === t:NIL {
-        return LLVM_NIL_TYPE;
+    else if ty === t:NIL || ty === t:TOP {
+        return REPR_TAGGED;
     }
-    // else if ty === t:TOP {
-    //     return LLVM_TAGGED_PTR;
-    // }
     return err:unimplemented("unimplemented type");
 }
 

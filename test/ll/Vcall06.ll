@@ -1,5 +1,6 @@
 declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare void @_Bio__println (i64)
+declare i8* @_bal_alloc (i64)
+declare void @_Bio__println (i8*)
 declare void @_bal_panic (i64)
 define void @_B_main () {
   %_0 = alloca i64
@@ -23,7 +24,11 @@ define void @_B_main () {
   %_14 = call i64 @_B_foo (i64 %_13)
   store i64 %_14, i64* %_4
   %_15 = load i64, i64* %_4
-  call void @_Bio__println (i64 %_15)
+  %_16 = call i8* @_bal_alloc (i64 8)
+  %_17 = bitcast i8* %_16 to i64*
+  store i64 %_15, i64* %_17, align 8
+  %_18 = getelementptr i8, i8* %_16, i64 144115188075855872
+  call void @_Bio__println (i8* %_18)
   store i8* null, i8** %_5
   ret void
 }

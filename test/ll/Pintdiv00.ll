@@ -1,5 +1,6 @@
 declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare void @_Bio__println (i64)
+declare i8* @_bal_alloc (i64)
+declare void @_Bio__println (i8*)
 declare void @_bal_panic (i64)
 define void @_B_main () {
   %_0 = alloca i64
@@ -13,8 +14,8 @@ define void @_B_main () {
   %_7 = extractvalue {i64, i1} %_6, 1
   br i1 %_7, label %L3, label %L2
 L1:
-  %_13 = load i64, i64* %_5
-  call void @_bal_panic (i64 %_13)
+  %_16 = load i64, i64* %_5
+  call void @_bal_panic (i64 %_16)
   unreachable
 L2:
   %_8 = extractvalue {i64, i1} %_6, 0
@@ -25,7 +26,11 @@ L2:
   %_11 = call i64 @_B_div (i64 %_10, i64 -1)
   store i64 %_11, i64* %_3
   %_12 = load i64, i64* %_3
-  call void @_Bio__println (i64 %_12)
+  %_13 = call i8* @_bal_alloc (i64 8)
+  %_14 = bitcast i8* %_13 to i64*
+  store i64 %_12, i64* %_14, align 8
+  %_15 = getelementptr i8, i8* %_13, i64 144115188075855872
+  call void @_Bio__println (i8* %_15)
   store i8* null, i8** %_4
   ret void
 L3:

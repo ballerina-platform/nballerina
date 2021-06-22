@@ -1,4 +1,5 @@
-declare void @_Bio__println (i64)
+declare i8* @_bal_alloc (i64)
+declare void @_Bio__println (i8*)
 declare void @_bal_panic (i64)
 define void @_B_main () {
   %_0 = alloca i64
@@ -7,7 +8,11 @@ define void @_B_main () {
   %_3 = call i64 @_B_rem (i64 -10000, i64 0)
   store i64 %_3, i64* %_1
   %_4 = load i64, i64* %_1
-  call void @_Bio__println (i64 %_4)
+  %_5 = call i8* @_bal_alloc (i64 8)
+  %_6 = bitcast i8* %_5 to i64*
+  store i64 %_4, i64* %_6, align 8
+  %_7 = getelementptr i8, i8* %_5, i64 144115188075855872
+  call void @_Bio__println (i8* %_7)
   store i8* null, i8** %_2
   ret void
 }
