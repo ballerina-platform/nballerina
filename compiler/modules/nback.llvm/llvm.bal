@@ -347,7 +347,7 @@ public class Builder {
     public function store(Value val, PointerValue ptr, Alignment? align = ()) {
         Type ty = ptr.ty.pointsTo;
         if ty != val.ty {
-            panic error("store type mismatch");
+            panic error("store type mismatch: " + typeToString(val.ty) + ", " + typeToString(ptr.ty));
         }
         addInsnWithAlign(self.bb(), ["store", typeToString(ty), val.operand, ",", typeToString(ptr.ty), ptr.operand], align);
     }
@@ -454,7 +454,8 @@ public class Builder {
             bb.addInsn(reg, "=", "extractvalue", typeToString(value.ty), value.operand, ",", index.toString());
             Type elementType = getTypeAtIndex(<StructType>value.ty, index);
             return new Value(elementType, reg);
-        } else {
+        }
+        else {
             panic error("Extract value from non aggregate data type");
         }
     }
@@ -470,17 +471,18 @@ public class Builder {
         if condition.ty is "i1" {
             BasicBlock bb = self.bb();
             bb.addInsn("br", "i1", condition.operand, ",", "label", ifTrue.ref(), ",", "label", ifFalse.ref());
-        } else {
+        }
+        else {
             panic error("Condition must be a u1");
         }
     }
 
     // Corresponds to LLVMBuildGEP
-    public function getElementPointer(PointerValue ptr, Value index, string? name = ()) returns Value {
+    public function getElementPointer(PointerValue ptr, Value index, string? name = ()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         bb.addInsn(reg, "=", "getelementptr", typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand, ",", typeToString(index.ty), index.operand);
-        return new Value(ptr.ty.pointsTo, reg);
+        return new PointerValue(ptr.ty, reg);
     }
 
     private function bb() returns BasicBlock {

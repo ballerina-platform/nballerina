@@ -4,7 +4,7 @@ function gepSimple() returns Module {
     Builder builder = new ();
 
     Module m = new ();
-    FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: [pointerType("i64")]});
+    FunctionDefn foo = m.addFunctionDefn("foo", {returnType: pointerType("i64"), paramTypes: [pointerType("i64")]});
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
     Value arg = foo.getParam(0);
@@ -14,7 +14,7 @@ function gepSimple() returns Module {
     } else {
         panic error("Invalid argument type");
     }
-    FunctionDefn bar = m.addFunctionDefn("bar", {returnType: "i8", paramTypes: [pointerType("i8")]});
+    FunctionDefn bar = m.addFunctionDefn("bar", {returnType: pointerType("i8"), paramTypes: [pointerType("i8")]});
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
     Value arg_1 = bar.getParam(0);
