@@ -57,6 +57,7 @@ function exprBinaryRemainder() returns Module {
     builder.positionAtEnd(bb20);
     Value R21 = builder.load(R3);
     builder.ret(R21);
+    contextDispose(context);
     return m;
 }
 
