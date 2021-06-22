@@ -2,7 +2,6 @@ import ballerina/test;
 import ballerina/io;
 
 import wso2/nballerina.err;
-import ballerina/regex;
 import ballerina/file;
 
 const SOURCE_EXTENSION = ".bal";
@@ -204,10 +203,27 @@ function sourceFragments() returns string[][]|error {
         if check file:test(canonCase, file:EXISTS) {
             expected = check readCase(canonCase);
         }
-        string[] baseParts = regex:split(base, "-");
+
+        string[] baseParts = splitTestName(base);
         s.push([baseParts[0], baseParts[1], case, expected]);
     }
     return s;
+}
+function splitTestName(string base) returns [string, string] {
+    int len = base.length();
+    int kindPos = base.indexOf("-") ?: 0;
+    string kind = base.substring(0, kindPos);
+    int afterKindPos = min(kindPos + 1, len);
+    int rulePos = base.indexOf("-", afterKindPos) ?: afterKindPos;
+    string rule = base.substring(afterKindPos, rulePos);
+    return [kind, rule];
+}
+
+function min(int a, int b) returns int {
+    if a < b {
+        return a;
+    }
+    return b;
 }
 
 function readCase(string path) returns string|error {
@@ -215,18 +231,18 @@ function readCase(string path) returns string|error {
     string[] caseLines = [];
     boolean inCase = false;
     int indented = 0;
-    foreach var l in lines {
-        string lTrim = l.trim();
-        if  lTrim == CASE_START && l.endsWith(CASE_START) {
+    foreach var line in lines {
+        string trimLine = line.trim();
+        if  trimLine == CASE_START && line.endsWith(CASE_START) {
             inCase = true;
-            indented = l.length() - CASE_START_LENGTH;
+            indented = line.length() - CASE_START_LENGTH;
             continue;
         }
-        if lTrim == CASE_END {
+        if trimLine == CASE_END {
             break;
         }
         if inCase {
-            caseLines.push(l.substring(indented));
+            caseLines.push(line.substring(indented));
         }
     }
     return  "\n".'join(...caseLines);
