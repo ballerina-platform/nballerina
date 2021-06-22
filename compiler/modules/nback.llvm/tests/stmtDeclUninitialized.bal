@@ -1,15 +1,15 @@
 import ballerina/test;
 
 function stmtDeclUninitialized() returns Module {
-    Context context = contextCreate();
-    Builder builder = new (context);
-    Module m = new (context);
+    Context context = new;
+    Builder builder = context.createBuilderInContext();
+    Module m = context.createModuleInContext();
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes:[]});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     Value R1 = builder.alloca("i64");
     builder.ret();
-    contextDispose(context);
+    context.dispose();
     return m;
 }
 

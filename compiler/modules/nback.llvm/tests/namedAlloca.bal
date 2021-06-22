@@ -1,11 +1,11 @@
 import ballerina/test;
 
 function nameAlloca() returns Module {
-    Context context = contextCreate();
-    Module m = new (context);
+    Context context = new;
+    Module m = context.createModuleInContext();
     FunctionDefn mainFunction = m.addFunctionDefn("main", {returnType: "void", paramTypes: []});
     BasicBlock initBlock = mainFunction.appendBasicBlock();
-    Builder builder = new (context);
+    Builder builder = context.createBuilderInContext();
     builder.positionAtEnd(initBlock);
     _ = builder.alloca("i64");
     _ = builder.alloca("i64", (),"V");
@@ -15,7 +15,7 @@ function nameAlloca() returns Module {
     _ = builder.alloca("i64", (),"V.1");
     _ = builder.alloca("i64", (),"V.1");
     _ = builder.alloca("i64");
-    contextDispose(context);
+    context.dispose();
     return m;
 }
 

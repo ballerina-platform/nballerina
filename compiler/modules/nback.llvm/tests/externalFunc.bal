@@ -1,9 +1,9 @@
 import ballerina/test;
 
 function externalFunc() returns Module {
-    Context context = contextCreate();
-    Builder builder = new (context);
-    Module m = new (context);
+    Context context = new;
+    Builder builder = context.createBuilderInContext();
+    Module m = context.createModuleInContext();
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: []});
     FunctionDecl bar = m.addFunctionDecl("bar",{returnType:"i64", paramTypes:["i64"]});
     FunctionDecl barVoid = m.addFunctionDecl("barVoid", {returnType:"void", paramTypes: []});
@@ -18,7 +18,7 @@ function externalFunc() returns Module {
         panic error("return void from non void function");
     }
     builder.ret(R1);
-    contextDispose(context);
+    context.dispose();
     return m;
 }
 

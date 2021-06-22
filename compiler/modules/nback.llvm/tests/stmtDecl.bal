@@ -2,9 +2,9 @@ import ballerina/file;
 import ballerina/test;
 
 function stmtDecl() returns Module {
-    Context context = contextCreate();
-    Builder builder = new (context);
-    Module m = new (context);
+    Context context = new;
+    Builder builder = context.createBuilderInContext();
+    Module m = context.createModuleInContext();
     FunctionDefn foo = m.addFunctionDefn("main", {returnType: "i64", paramTypes:["i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
@@ -15,7 +15,7 @@ function stmtDecl() returns Module {
     Value R4 = builder.load(R2);
     builder.store(R4,R3);
     builder.ret();
-    contextDispose(context);
+    context.dispose();
     return m;
 }
 

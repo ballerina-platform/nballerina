@@ -1,9 +1,9 @@
 import ballerina/test;
 
 function ptrMaskIntrinsic() returns Module {
-    Context context = contextCreate();
-    Builder builder = new (context);
-    Module m = new (context);
+    Context context = new;
+    Builder builder = context.createBuilderInContext();
+    Module m = context.createModuleInContext();
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: pointerType("i8"), paramTypes: [pointerType("i8")]});
     FunctionDecl mask = m.getIntrinsicDeclaration("ptrmask.p0i8.i64");
     BasicBlock bb = foo.appendBasicBlock();
@@ -11,7 +11,7 @@ function ptrMaskIntrinsic() returns Module {
     Value arg = foo.getParam(0);
     Value? result = builder.call(mask, [arg, constInt("i64",72057594037927928)]);
     builder.ret(result);
-    contextDispose(context);
+    context.dispose();
     return m;
 }
 

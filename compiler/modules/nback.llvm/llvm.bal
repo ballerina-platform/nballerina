@@ -85,6 +85,24 @@ public function constNull(PointerType ty) returns PointerValue {
     return new PointerValue(ty, "null");
 }
 
+// Corresponds to LLVMContextRef
+public class Context {
+    // Corresponds to LLVMContextCreate
+    public function init() {
+        
+    }
+
+    public function createModuleInContext() returns Module {
+        return new(self);
+    }
+
+    public function  createBuilderInContext() returns Builder {
+        return new(self);
+    }
+
+    // Corresponds to LLVMContextDispose
+    public function dispose(){}
+}
 public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
 public type GeneralIntrinsicName "ptrmask.p0i8.i64";
 
@@ -97,7 +115,7 @@ public class Module {
     private final FunctionDecl[] functionDecls = [];
     private final Context context;
 
-    public function init(Context context) {
+    function init(Context context) {
         self.context = context;
     }
 
@@ -657,16 +675,4 @@ function omitSpaceBefore(string word) returns boolean {
 
 function omitSpaceAfter(string word) returns boolean {
     return word == "(" || word == "{";
-}
-
-// Corresponds to LLVMContextRef
-public type Context readonly & record {||};
-
-// Corresponds to LLVMContextCreate
-public function contextCreate() returns Context {
-    return {};
-}
-
-// Corresponds to LLVMContextDispose
-public function contextDispose(Context context) {
 }
