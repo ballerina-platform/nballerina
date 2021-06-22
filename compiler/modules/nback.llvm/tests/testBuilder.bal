@@ -52,7 +52,7 @@ function builderCondBrCheck() {
     Module m = context.createModule();
     FunctionDefn f = m.addFunctionDefn("f", {returnType: "void", paramTypes: []});
     BasicBlock bb = f.appendBasicBlock();
-    Builder builder = new (context);
+    Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
     Value s = new ("i64", "s");
     error? e = trap builder.condBr(s,bb,bb);
