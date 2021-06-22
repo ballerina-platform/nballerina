@@ -39,18 +39,3 @@ function testTruncSameType() returns error? {
 	    test:assertFail("Same type trunc must not be allowed");
     }
 }
-
-@test:Config {}
-function testTruncLargerType() returns error? {
-    Builder builder = new ();
-
-    Module m = new ();
-    FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i8"]});
-    BasicBlock fooBB = foo.appendBasicBlock();
-    builder.positionAtEnd(fooBB);
-    Value arg = foo.getParam(0);
-    Value|error v1 = trap builder.trunc(arg, "i64");
-    if !(v1 is error){
-	    test:assertFail("trunc to larger type must not be allowed");
-    }
-}
