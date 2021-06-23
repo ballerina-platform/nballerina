@@ -10,7 +10,7 @@ final int CASE_START_LENGTH = CASE_START.length();
 const CASE_END = "// @end";
 
 @test:Config {
-    dataProvider: sourceFragments
+    dataProvider: validTokenSourceFragments
 }
 function testParser(string k, string rule, string subject, string expected) returns err:Syntax|io:Error? {
     if k.includes("U") {
@@ -42,6 +42,63 @@ function testParser(string k, string rule, string subject, string expected) retu
     test:assertEquals(actual, expected, "wrong ast");
 }
 
+@test:Config {
+    dataProvider: sourceFragments
+}
+function testTokenizer(string k, string src) returns error? {
+    int[] lines = findLineFeeds(src);
+    Tokenizer tok = new (src);
+
+    err:Syntax|Token? t = advance(tok, k, src);
+    while t is Token {
+        err:Position pos = tok.currentPos();
+        string tStr = tokenToString(t);
+        // XXX change below after making indexInLine 1-indexed
+        int tStart = lines[pos.lineNumber - 1] + pos.indexInLine;
+        string srcAtPos = src.substring(tStart, tStart + tStr.length());
+        test:assertEquals(srcAtPos, tStr);
+        t = advance(tok, k, src);
+    }
+    if k.includes("E") {
+        test:assertTrue(t is err:Syntax, "an error expected for '" + src + "'");
+    }
+}
+
+function advance(Tokenizer tok, string k, string subject) returns err:Syntax|Token? {
+    err:Syntax? e = tok.advance();
+    if e is err:Syntax {
+        if k.includes("E") {
+            return e;
+        }
+        else {
+            panic error("tokenizer error for '" + subject + "'", e);
+        }
+    }
+    return tok.current();
+}
+
+function tokenToString(Token t) returns string {
+    if t is VariableLengthToken {
+        return t[1];
+    }
+    return <string>t;
+}
+
+function findLineFeeds(string str) returns int[] {
+    int[] lineFeeds = [0];
+    var itr = str.iterator();
+    int i = 1;
+    var char = itr.next();
+    while char != () {
+        if char.value == "\n" {
+            lineFeeds.push(i);
+        }
+        char = itr.next();
+        i += 1;
+    }
+    return lineFeeds;
+}
+
 function reduceToWords(string rule, string fragment) returns err:Syntax|Word[] {
     Word[] w = [];
     match rule {
@@ -66,17 +123,33 @@ function reduceToWords(string rule, string fragment) returns err:Syntax|Word[] {
 }
 
 function sourceFragments() returns string[][]|error {
+     string[][] s = check invalidTokenSourceFragments();
+     string[][] valid = check validTokenSourceFragments();
+     foreach var v in valid {
+         s.push(["V", v[2]]);
+     }
+     return s;
+}
 
+function invalidTokenSourceFragments() returns string[][]|error {
+    return [["OE", "\""],
+            ["OE", "'"],
+            ["OE", "`"],
+            ["OE", "\"\\\""],
+            ["OE", "\\"],
+            ["OE", "\"\n\""],
+            ["E", "01"]];
+}
+
+function validTokenSourceFragments() returns string[][]|error {
     string[][] s = 
         [["E", "expr", "", ""],
         // literals
          ["V", "expr", "0", "0"],
          ["V", "expr", "1", "1"],
-         ["E", "expr", "01", ""],
          ["V", "expr", "()", "()"],
          ["V", "expr", "-()", "-()"],
          ["V", "expr", "-true", "-true"],
-         ["E", "expr", "\"", ""],
          ["V", "expr", "9223372036854775807", "9223372036854775807"],
          ["E", "expr", "9223372036854775808", ""],
          ["V", "expr", "true", "true"],
