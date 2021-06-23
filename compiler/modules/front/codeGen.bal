@@ -378,6 +378,24 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
                 return [reg, nextBlock];
             }
         }
+        var { td, operand: o } => {
+            var [operand, nextBlock] = check codeGenExpr(cx, bb, scope, o);
+            // JBUG cast needed
+            TypeCastExpr tcExpr = <TypeCastExpr>expr;
+            if operand is bir:Register {
+                t:SemType resultType = t:intersect(operand.semType, tcExpr.semType);
+                bir:Register reg = cx.createRegister(resultType);
+                bir:TypeCastInsn insn = { operand, semType: tcExpr.semType, position: tcExpr.pos, result:reg };
+                bb.insns.push(insn);
+                return [reg, nextBlock];
+            }
+            else {
+                if !t:containsConst(tcExpr.semType, operand) {
+                    return err:semantic("impossible cast", pos=tcExpr.pos);
+                }
+                return [operand, nextBlock];
+            }
+        }
         // Variable reference
         var { varName } => {
             return [check mustLookup(cx, varName, scope), bb];
