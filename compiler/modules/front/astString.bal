@@ -161,6 +161,18 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(")");
         }
     }
+    else if expr is TypeCastExpr {
+        if wrap {
+            w.push("(");
+        }
+        w.push("<", CLING);
+        typeDescToWords(w, expr.td);
+        w.push(CLING, ">", CLING);
+        exprToWords(w, expr.operand, true);
+        if wrap {
+            w.push(")");
+        }
+    }
     else {
         w.push(expr.varName);
     }

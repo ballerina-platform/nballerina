@@ -79,8 +79,25 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         Expr operand = check parseUnaryExpr(tok);
         UnaryExpr expr = { op: t, operand };
         return expr;
-    }  
+    }
+    else if t is "<" {
+        return parseTypeCastExpr(tok);
+    }
     return parsePrimaryExpr(tok);
+}
+
+function parseTypeCastExpr(Tokenizer tok) returns Expr|err:Syntax {
+    err:Position pos = tok.currentPos();
+    check tok.advance();
+    Token? t = tok.current();
+    if t is InlineTypeDesc {
+        check tok.advance();
+        check tok.expect(">");
+        Expr operand = check parseUnaryExpr(tok);
+        TypeCastExpr expr = { pos, td: t, operand, semType: convertInlineTypeDesc(t) };
+        return expr;
+    }
+    return parseError(tok, "expected type descriptor");
 }
 
 function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {

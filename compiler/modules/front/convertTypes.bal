@@ -73,6 +73,17 @@ function convertTypeDef(t:Env env, ModuleTable mod, int depth, TypeDef def) retu
     }
 }
 
+function convertInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
+    match td {
+        "any" => { return t:TOP; }  // convenient to treat "any" as "any|error" until we implement errors
+        "boolean" => { return t:BOOLEAN; }
+        "int" => { return t:INT; }
+    }
+    // JBUG next line gets a bad, sad
+    // return err:unreached();
+    panic error("unreachable in convertInlineTypeDesc");
+}
+
 function convertTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) returns t:SemType|err:Semantic {
     match td {
         // These are easy

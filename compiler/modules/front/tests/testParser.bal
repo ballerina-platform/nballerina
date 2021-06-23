@@ -91,6 +91,12 @@ function sourceFragments() returns string[][]|error {
          ["E", "expr", "*1", "1"],
          ["V", "expr", "--1", "-(-1)"],
          ["V", "expr", "!!!true", "!(!(!true))"],
+         // type cast
+         ["V", "expr", "<int>x", "<int>x"],
+         ["V", "expr", "< boolean > x", "<boolean>x"],
+         ["V", "expr", "<int>x + <int>y", "(<int>x) + (<int>y)"],
+         ["V", "expr", "<int><any>x", "<int>(<any>x)"],
+         ["E", "expr", "<>x", ""],
          // binary op
          ["V", "expr", "1 + 1", "1 + 1"],
          ["V", "expr", "2 - a2", "2 - a2"],

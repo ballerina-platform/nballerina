@@ -299,6 +299,7 @@ public type TypeCastInsn readonly & record {|
     Register result;
     Register operand;
     SemType semType;
+    err:Position position;
 |};
 
 

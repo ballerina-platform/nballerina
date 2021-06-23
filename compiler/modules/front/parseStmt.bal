@@ -1,5 +1,4 @@
 import wso2/nballerina.err;
-import wso2/nballerina.types as t;
 
 function parseStmtBlock(Tokenizer tok) returns Stmt[]|err:Syntax {
     Token? cur = tok.current();
@@ -47,15 +46,8 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parseWhileStmt(tok);
         }
-        // only int and boolean types for now
-        "int" => {
-            return parseVarDeclStmt(tok, "int", t:INT);
-        }
-        "boolean" => {
-            return parseVarDeclStmt(tok, "boolean", t:BOOLEAN);
-        }
-        "any" => {
-            return parseVarDeclStmt(tok, "any", t:TOP);
+        var td if td is InlineTypeDesc => {
+            return parseVarDeclStmt(tok, td);
         }
     }
     return parseError(tok, "unhandled statement");
@@ -87,7 +79,6 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
     return parseError(tok, "invalid statement");
 }
 
-
 function finishAssignStmt(Tokenizer tok, string identifier, err:Position pos) returns AssignStmt|err:Syntax {
     check tok.advance();
     string varName = identifier;
@@ -97,7 +88,7 @@ function finishAssignStmt(Tokenizer tok, string identifier, err:Position pos) re
     return stmt;    
 }
 
-function parseVarDeclStmt(Tokenizer tok, TypeDesc td, t:SemType semType) returns VarDeclStmt|err:Syntax {
+function parseVarDeclStmt(Tokenizer tok, InlineTypeDesc td) returns VarDeclStmt|err:Syntax {
     check tok.advance();
     Token? cur = tok.current();
     if cur is [IDENTIFIER, string] {
@@ -106,7 +97,7 @@ function parseVarDeclStmt(Tokenizer tok, TypeDesc td, t:SemType semType) returns
         check tok.expect("=");
         Expr initExpr = check parseExpr(tok);
         check tok.expect(";");
-        return { td, varName: cur[1], initExpr, semType };
+        return { td, varName: cur[1], initExpr, semType: convertInlineTypeDesc(td) };
     }
     return parseError(tok, "invalid VarDeclStmt");
 }

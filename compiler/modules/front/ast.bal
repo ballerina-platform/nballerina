@@ -31,7 +31,7 @@ type FunctionDef record {|
 
 type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|
             WhileStmt|BreakStmt|ContinueStmt;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr;
+type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr|TypeCastExpr;
 
 type AssignStmt record {|
     string varName;
@@ -58,7 +58,7 @@ type BreakStmt "break";
 type ContinueStmt "continue";
 
 type VarDeclStmt record {|
-    TypeDesc td;
+    InlineTypeDesc td;
     string varName;
     Expr initExpr;
     // For now this should be filled in during parse
@@ -94,9 +94,20 @@ type VarRefExpr record {|
     string varName;
 |};
 
+type TypeCastExpr record {|
+    InlineTypeDesc td;
+    Expr operand;
+    err:Position pos;
+    t:SemType semType;
+|};
+
 type SimpleConstExpr record {|
     ()|boolean|int value;
 |};
+
+// This is the subtype of TypeDesc that we currently allow
+// within expressions and statements.
+type InlineTypeDesc "boolean"|"any"|"int";
 
 // Types
 
@@ -154,7 +165,7 @@ type TypeDescRef record {|
     err:Position pos;
 |};
 
-type SingletonTypeDesc  record {|
+type SingletonTypeDesc record {|
     (string|int|boolean) value;
 |};
 
