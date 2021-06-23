@@ -383,6 +383,10 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             // JBUG cast needed
             TypeCastExpr tcExpr = <TypeCastExpr>expr;
             if operand is bir:Register {
+                if t:isSubtype(cx.mod.tc, operand.semType, tcExpr.semType) {
+                    // it's redundant, so we can remove it
+                    return [operand, nextBlock];
+                }
                 t:SemType resultType = t:intersect(operand.semType, tcExpr.semType);
                 bir:Register reg = cx.createRegister(resultType);
                 bir:TypeCastInsn insn = { operand, semType: tcExpr.semType, position: tcExpr.pos, result:reg };
