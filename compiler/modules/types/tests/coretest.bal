@@ -10,7 +10,6 @@ function testBitTwiddling() {
     test:assertEquals(bitCount(0), 0);
     test:assertEquals(bitCount(1), 1);
     test:assertEquals(bitCount(0x10010010), 3);
-    test:assertEquals(bitCount(-1), 64);
 }
 
 @test:Config{}

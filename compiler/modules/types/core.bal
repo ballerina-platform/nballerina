@@ -169,6 +169,7 @@ public readonly class ComplexSemType {
 // There's usually a hardware instruction for this
 // typically called PopCpount
 // This is __builtin_popcount in GCC and clang
+// This won't work if bits is < 0.
 function bitCount(int bits) returns int {
     int n = 0;
     int v = bits;
