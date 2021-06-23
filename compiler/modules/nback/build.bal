@@ -158,8 +158,7 @@ class Scaffold {
     }
 }
 
-function buildModule(bir:Module mod) returns llvm:Module|BuildError {
-    llvm:Context context = new;
+function buildModule(bir:Module mod, llvm:Context context) returns llvm:Module|BuildError {
     bir:ModuleId modId = mod.getId();
     llvm:Module llMod = context.createModule();
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();

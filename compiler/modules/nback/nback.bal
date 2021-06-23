@@ -9,7 +9,8 @@ public const OUTPUT_EXTENSION = ".ll";
 
 // If outputFilename is non-nil write the output to this file.
 public function compileModule(bir:Module mod, string? outputFilename) returns err:Any|io:Error? {
-    llvm:Module llMod = check buildModule(mod);
+    llvm:Context context = new;
+    llvm:Module llMod = check buildModule(mod, context);
     if outputFilename != () {
         return llMod.writeFile(outputFilename);
     }
