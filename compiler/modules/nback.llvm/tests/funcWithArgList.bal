@@ -1,8 +1,9 @@
 import ballerina/test;
 
 function funcWithArgList() returns Module {
-    Builder builder = new;
-    Module m = new;
+    Context context = new;
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
     funcWithArgList1(builder, m);
     funcWithArgList2(builder, m);
     funcWithArgList3(builder, m);

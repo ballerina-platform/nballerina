@@ -1,8 +1,9 @@
 import ballerina/test;
 
 function stmtDeclLiteral() returns Module {
-    Builder builder = new ();
-    Module m = new ();
+    Context context = new;
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
     FunctionDefn test = m.addFunctionDefn("test", {returnType: "i64", paramTypes:[]});
     BasicBlock initBlock = test.appendBasicBlock();
     builder.positionAtEnd(initBlock);

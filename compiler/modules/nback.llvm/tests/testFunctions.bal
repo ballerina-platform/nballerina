@@ -8,7 +8,8 @@ function testLLVMOverflowArithmeticFunctionType(FunctionType fType) {
 
 @test:Config {}
 function testArithmeticIntrinsicGeneration() {
-    Module m = new ();
+    Context context = new;
+    Module m = context.createModule();
     IntrinsicFunctionName[] names = ["sadd.with.overflow.i64", "ssub.with.overflow.i64", "smul.with.overflow.i64"];
     foreach var name in names {
         FunctionDecl f = m.getIntrinsicDeclaration(name);
@@ -20,7 +21,8 @@ function testArithmeticIntrinsicGeneration() {
 
 @test:Config {}
 function testIntrinsicRepeatedAddition() {
-    Module m = new ();
+    Context context = new;
+    Module m = context.createModule();
     IntrinsicFunctionName name = "sadd.with.overflow.i64";
     FunctionDecl f1 = m.getIntrinsicDeclaration(name);
     FunctionDecl f2 = m.getIntrinsicDeclaration(name);
@@ -29,8 +31,9 @@ function testIntrinsicRepeatedAddition() {
 
 @test:Config {}
 function testFunctionAttributeAddition() {
-    Module m = new ();
-    EnumAttribute[] attributes = ["noreturn", "cold", "nounwind", "readnone", "speculatable", "willreturn"]; //FIXME: add others
+    Context context = new;
+    Module m = context.createModule();
+    EnumAttribute[] attributes = ["noreturn", "cold", "nounwind", "readnone", "speculatable", "willreturn"]; 
     FunctionDecl fDecl = m.addFunctionDecl("decl", {returnType: "void", paramTypes: []});
     foreach var attribute in attributes {
         fDecl.addEnumAttribute(attribute);
@@ -45,7 +48,8 @@ function testFunctionAttributeAddition() {
 
 @test:Config {}
 function testFunctionAttributeNoDuplicate() {
-    Module m = new ();
+    Context context = new;
+    Module m = context.createModule();
     EnumAttribute attribute = "cold";
     FunctionDecl fDecl = m.addFunctionDecl("decl", {returnType: "void", paramTypes: []});
     fDecl.addEnumAttribute(attribute);

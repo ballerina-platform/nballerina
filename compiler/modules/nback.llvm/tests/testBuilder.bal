@@ -2,10 +2,11 @@ import ballerina/test;
 
 @test:Config {}
 function builderStoreTypeCheck() {
-    Module m = new ();
+    Context context = new;
+    Module m = context.createModule();
     FunctionDefn f = m.addFunctionDefn("f", {returnType: "void", paramTypes: []});
     BasicBlock bb = f.appendBasicBlock();
-    Builder builder = new ();
+    Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
     Value s = new ("i64", "s");
     PointerValue d = new ({pointsTo: "i1"}, "d");
@@ -17,10 +18,11 @@ function builderStoreTypeCheck() {
 
 @test:Config {}
 function builderCallTypeCheck() {
-    Module m = new ();
+    Context context = new;
+    Module m = context.createModule();
     FunctionDefn f = m.addFunctionDefn("f", {returnType: "void", paramTypes: []});
     BasicBlock bb = f.appendBasicBlock();
-    Builder builder = new ();
+    Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
     Value s = new ("i64", "s");
     Value?|error e = trap builder.call(f, [s]);
@@ -31,10 +33,11 @@ function builderCallTypeCheck() {
 
 @test:Config {}
 function builderExtractValueCheck() {
-    Module m = new ();
+    Context context = new;
+    Module m = context.createModule();
     FunctionDefn f = m.addFunctionDefn("f", {returnType: "void", paramTypes: []});
     BasicBlock bb = f.appendBasicBlock();
-    Builder builder = new ();
+    Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
     Value s = new ("i64", "s");
     Value?|error e = trap builder.extractValue(s, 0);
@@ -45,10 +48,11 @@ function builderExtractValueCheck() {
 
 @test:Config {}
 function builderCondBrCheck() {
-    Module m = new ();
+    Context context = new;
+    Module m = context.createModule();
     FunctionDefn f = m.addFunctionDefn("f", {returnType: "void", paramTypes: []});
     BasicBlock bb = f.appendBasicBlock();
-    Builder builder = new ();
+    Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
     Value s = new ("i64", "s");
     error? e = trap builder.condBr(s,bb,bb);

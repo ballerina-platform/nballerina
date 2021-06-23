@@ -2,8 +2,9 @@ import ballerina/file;
 import ballerina/test;
 
 function stmtDecl() returns Module {
-    Builder builder = new ();
-    Module m = new ();
+    Context context = new;
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
     FunctionDefn foo = m.addFunctionDefn("main", {returnType: "i64", paramTypes:["i64"]});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
