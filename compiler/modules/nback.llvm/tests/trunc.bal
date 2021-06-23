@@ -1,9 +1,10 @@
 import ballerina/test;
 
 function trunc() returns Module {
-    Builder builder = new ();
+    Context context = new();
+    Builder builder = context.createBuilder();
 
-    Module m = new ();
+    Module m = context.createModule();
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i8", paramTypes: ["i64"]});
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
@@ -27,9 +28,10 @@ function testTruncSuccess() returns error? {
 
 @test:Config {}
 function testTruncSameType() returns error? {
-    Builder builder = new ();
+    Context context = new();
+    Builder builder = context.createBuilder();
 
-    Module m = new ();
+    Module m = context.createModule();
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i64"]});
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
