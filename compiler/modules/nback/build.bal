@@ -52,6 +52,7 @@ final llvm:RetType[] retReprTypes = [
 
 const PANIC_OVERFLOW = 1;
 const PANIC_DIVIDE_BY_ZERO = 2;
+const PANIC_TYPE_CAST = 3;
 
 final llvm:FunctionType panicFunctionType = { returnType: "void", paramTypes: ["i64"] };
 final llvm:FunctionType allocFunctionType = { returnType: llvm:pointerType("i8"), paramTypes: ["i64"] };
@@ -220,6 +221,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         }
         else if insn is bir:AssignInsn {
             check buildAssign(builder, scaffold, insn);
+        }
+        else if insn is bir:TypeCastInsn {
+            check buildTypeCast(builder, scaffold, insn);
         }
         else if insn is bir:CallInsn {
             check buildCall(builder, scaffold, insn);
@@ -414,6 +418,43 @@ function buildEqual(llvm:Builder builder, Scaffold scaffold, bir:EqualInsn insn)
                       insn.result);                     
 }
 
+function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
+    var [repr, val] = buildReprValue(builder, scaffold, insn.operand);
+    if repr != REPR_TAGGED {
+        return err:unimplemented("cast from untagged value"); // should not happen in subset 2
+    }
+    llvm:Value intVal = builder.ptrToInt(<llvm:PointerValue>val, LLVM_INT);
+    llvm:Value tagVal = builder.binaryInt("and", intVal, llvm:constInt(LLVM_INT, TAG_MASK));
+    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock castFailBlock = scaffold.addBasicBlock();
+    if insn.semType === t:BOOLEAN {
+        builder.condBr(builder.iCmp("eq", tagVal, llvm:constInt(LLVM_INT, TAG_BOOLEAN)),
+                       continueBlock,
+                       castFailBlock);
+        builder.positionAtEnd(continueBlock);
+        buildStoreBoolean(builder, scaffold, builder.trunc(intVal, LLVM_BOOLEAN), insn.result);
+    }
+    else if insn.semType === t:INT {
+        builder.condBr(builder.iCmp("eq", tagVal, llvm:constInt(LLVM_INT, TAG_INT)),
+                       continueBlock,
+                       castFailBlock);
+        builder.positionAtEnd(continueBlock);
+        buildStoreInt(builder, scaffold,
+                      builder.load(builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p0i8.i64"),
+                                                                                   [val, llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                                   llvm:pointerType(LLVM_INT)),
+                                   ALIGN_HEAP),
+                      insn.result);
+    }
+    else {
+        return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
+    }
+    builder.positionAtEnd(castFailBlock);
+    builder.store(llvm:constInt(LLVM_INT, PANIC_TYPE_CAST), scaffold.panicAddress());
+    builder.br(scaffold.getOnPanic());
+    builder.positionAtEnd(continueBlock);
+}
+
 function buildIntNegateInsn(llvm:Builder builder, Scaffold scaffold, bir:IntNegateInsn insn) {
     buildStoreInt(builder, scaffold,
                   builder.binaryInt("sub", llvm:constInt(LLVM_INT, 0), buildInt(builder, scaffold, insn.operand)),
@@ -457,24 +498,27 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
     return err:unimplemented("unimplemented conversion required");
 }
 
-const TAG_MASK = 0xFF;
-const TAG_SHIFT = 56;
-const TAG_BOOLEAN = 1;
-const TAG_INT = 2;
+// JBUG #31394 would be better to use shifts for these
+                     //1234567812345678
+const TAG_MASK     = 0x7f00000000000000;
+const TAG_BOOLEAN  = 0x0100000000000000;
+const TAG_INT      = 0x0200000000000000;
+const POINTER_MASK = 0x00ffffffffffffff;
+
 const ALIGN_HEAP = 8;
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
     return builder.getElementPointer(llvm:constNull(LLVM_TAGGED_PTR),
                                      builder.binaryInt("or",
                                                         builder.zExt(value, LLVM_INT),
-                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN << TAG_SHIFT)));
+                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN)));
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:Value {
     llvm:Function allocFunction = buildRuntimeFunctionDecl(scaffold, "alloc", allocFunctionType);
     llvm:PointerValue mem = <llvm:PointerValue>builder.call(allocFunction, [llvm:constInt(LLVM_INT, 8)]);
     builder.store(value, builder.bitCast(mem, llvm:pointerType(LLVM_INT)), ALIGN_HEAP);
-    return builder.getElementPointer(mem, llvm:constInt(LLVM_INT, TAG_INT << TAG_SHIFT));
+    return builder.getElementPointer(mem, llvm:constInt(LLVM_INT, TAG_INT));
 }
 
 function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns [Repr, llvm:Value] {

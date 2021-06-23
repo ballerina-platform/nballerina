@@ -53,7 +53,8 @@ void _Bio__println(TaggedPtr p) {
 const char *panicMessages[] = {
     0,
     "arithmetic overflow",
-    "divide by zero"
+    "divide by zero",
+    "bad type cast"
 };
 
 void _bal_panic(int64_t code) {
