@@ -395,7 +395,8 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             }
             else {
                 if !t:containsConst(tcExpr.semType, operand) {
-                    return err:semantic("impossible cast", pos=tcExpr.pos);
+                    // the verifier uses the same wording
+                    return err:semantic("type cast cannot succeed", pos=tcExpr.pos);
                 }
                 return [operand, nextBlock];
             }

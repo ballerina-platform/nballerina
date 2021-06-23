@@ -80,6 +80,9 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is CallInsn {
         check verifyCallInsn(vc, insn);
     }
+    else if insn is TypeCastInsn {
+        check verifyTypeCastInsn(vc, insn);
+    }
 }
 
 function verifyCallInsn(VerifyContext vc, CallInsn insn) returns err:Semantic? {
@@ -98,6 +101,19 @@ function verifyCallInsn(VerifyContext vc, CallInsn insn) returns err:Semantic? {
     }
     foreach int i in 0 ..< nSuppliedArgs {
         check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`);
+    }
+}
+
+function verifyTypeCastInsn(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
+    if vc.isEmpty(insn.result.semType) {
+        return vc.err("type cast cannot succeed");
+    }
+    // These should not happen with the nballerina front-end
+    if !vc.isSubtype(insn.result.semType, insn.operand.semType) {
+        return vc.err("bad BIR: result of type cast is not subtype of operand");
+    }
+    if !vc.isSubtype(insn.result.semType, insn.semType) {
+        return vc.err("bad BIR: result of type cast is not subtype of cast to type");
     }
 }
 
