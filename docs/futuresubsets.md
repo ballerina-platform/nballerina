@@ -6,15 +6,18 @@ We will give them symbolic names until implemented. We may group some together. 
 
 Subsets towards the end are less well worked out.
 
-## Subset nil/optional types
+## Subset type narrowing
 
-Summary: allow type descriptors `T?` and `()`
+Summary: support `is` operator
 
+* New expression `is`
 * New type descriptor `T?`
 * New type descriptor `()`
 
-Implementation notes:
+Notes:
+* If x is type `T?`, then `if x == ()` requires type narrowing; so we cannot add `T?` without doing type narrowing.
 * We could use a different representation for `int?` as an `{i64,i1}`.
+* We have to think about we handle type checking in BIR when there is type narrowing.
 
 ## Subset langlib
 
