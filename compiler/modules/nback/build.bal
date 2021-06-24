@@ -33,6 +33,9 @@ const int REPR_TAGGED = REPR_ERROR + 1;
 // const int REPR_VOID = REPR_TAGGED + 1;
 const int REPR_VOID = 4;
 
+// XXX This is not quite right yet
+// We need to capture subtyping relationships between representations
+// e.g. that nil is a subtype of TAGGED_PTR
 final llvm:IntegralType[] reprTypes = [
     LLVM_INT,
     LLVM_BOOLEAN,
@@ -405,17 +408,120 @@ function buildBooleanCompare(llvm:Builder builder, Scaffold scaffold, bir:Boolea
                       insn.result);
 }
 
+type CmpEqOp "ne"|"eq";
+
+// For subset 2, == and === are the same: they differ only in when they are allowed
 function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn insn) returns BuildError? {
     var [lhsRepr, lhsValue] = buildReprValue(builder, scaffold, insn.operands[0]);
     var [rhsRepr, rhsValue] = buildReprValue(builder, scaffold, insn.operands[1]);
-    // This will only work for int/boolean/nil
-    if lhsRepr != rhsRepr {
-        return err:unimplemented("comparing different representations");
+    CmpEqOp op = insn.op[0] == "!" ?  "ne" : "eq"; 
+    bir:Register result = insn.result;
+    match [lhsRepr, rhsRepr] {
+        [REPR_TAGGED, REPR_TAGGED] => {
+            if operandIsNil(insn.operands[0]) || operandIsNil(insn.operands[1]) {
+                return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
+            }
+            else {
+                return buildEqualTaggedTagged(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
+            }
+        }
+        [REPR_TAGGED, REPR_BOOLEAN] => {
+            return buildEqualTaggedBoolean(builder, scaffold, op, <llvm:PointerValue>lhsValue, rhsValue, result);
+        }
+        [REPR_BOOLEAN, REPR_TAGGED] => {
+            return buildEqualTaggedBoolean(builder, scaffold, op, <llvm:PointerValue>rhsValue, lhsValue, result);
+        }
+        [REPR_TAGGED, REPR_INT] => {
+            return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>lhsValue, rhsValue, result);
+        }
+        [REPR_INT, REPR_TAGGED] => {
+            return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>rhsValue, lhsValue, result);
+        }
+        [REPR_BOOLEAN, REPR_BOOLEAN]
+        | [REPR_INT, REPR_INT] => {
+             // no tags involved, same representation, boolean/int
+            return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
+        }
     }
-    boolean negate = insn.op[0] == "!";
+    return err:unimplemented("equality with two different untagged representations");    
+}
+
+function operandIsNil(bir:Operand operand) returns boolean {
+    return operand is bir:Register ? operand.semType === t:NIL : operand == (); 
+}
+
+function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {
     buildStoreBoolean(builder, scaffold,
-                      builder.iCmp(negate ? "ne" : "eq", lhsValue, rhsValue),
-                      insn.result);                     
+                      builder.iCmp(op, tagged, buildTaggedBoolean(builder, untagged)),
+                      result);
+}
+
+function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result) {
+    llvm:BasicBlock intTagBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock otherTagBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
+    builder.condBr(buildHasTag(builder, tagged, TAG_INT), intTagBlock, otherTagBlock);
+    builder.positionAtEnd(otherTagBlock);
+    buildStoreBoolean(builder, scaffold,
+                      // result is false if op is "eq", true if op is "ne"
+                      buildConstBoolean(op == "ne"),
+                      result);
+    builder.br(joinBlock);
+    builder.positionAtEnd(intTagBlock);
+    buildStoreBoolean(builder, scaffold, builder.iCmp(op, buildUntagInt(builder, scaffold, tagged), untagged), result);
+    builder.br(joinBlock);
+    builder.positionAtEnd(joinBlock);
+}
+
+function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
+    llvm:BasicBlock samePointerBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock diffPointerBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
+    builder.condBr(builder.iCmp("eq", tagged1, tagged2), samePointerBlock, diffPointerBlock);
+    builder.positionAtEnd(samePointerBlock);
+    // if the pointers are the same, we know they are ===
+    buildStoreBoolean(builder, scaffold,
+                      // in the case where the pointers are equal
+                      // result is true if op is "eq", false if op is "ne"
+                      buildConstBoolean(op == "eq"),
+                      result);
+    builder.br(joinBlock);
+    builder.positionAtEnd(diffPointerBlock);
+    // the pointers are not the same
+    // in this case, they can still be equal if they are both tagged ints
+    llvm:BasicBlock bothIntsBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock diffBlock = scaffold.addBasicBlock();
+    // check if they are both tagged ints
+    builder.condBr(builder.binaryInt("and", buildHasTag(builder, tagged1, TAG_INT), buildHasTag(builder, tagged2, TAG_INT)),
+                   bothIntsBlock, diffBlock);
+    builder.positionAtEnd(diffBlock);
+    // at this point, we know they are different
+    buildStoreBoolean(builder, scaffold, buildConstBoolean(op == "ne"), result);
+    builder.br(joinBlock);
+    builder.positionAtEnd(bothIntsBlock);
+    buildStoreBoolean(builder, scaffold,
+                      builder.iCmp(op, buildUntagInt(builder, scaffold, tagged1),
+                                       buildUntagInt(builder, scaffold, tagged2)),
+                      result);
+    builder.br(joinBlock);
+    builder.positionAtEnd(joinBlock);
+}
+
+function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) returns llvm:Value {
+    return builder.iCmp("eq", builder.binaryInt("and", builder.ptrToInt(tagged, LLVM_INT),
+                                                       llvm:constInt(LLVM_INT, TAG_MASK)),
+                              llvm:constInt(LLVM_INT, tag));
+}
+
+function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
+    return builder.load(builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p0i8.i64"),
+                                                                        [tagged, llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                        llvm:pointerType(LLVM_INT)),
+                        ALIGN_HEAP);
+}
+
+function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
+    return builder.trunc(builder.ptrToInt(tagged, LLVM_INT), LLVM_BOOLEAN);
 }
 
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
@@ -623,6 +729,10 @@ function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:Fu
 
 function buildConstNil() returns llvm:Value {
     return llvm:constNull(LLVM_NIL_TYPE);
+}
+
+function buildConstBoolean(boolean b) returns llvm:Value {
+    return llvm:constInt(LLVM_BOOLEAN, b ? 1 : 0);
 }
 
 function semTypeRetRepr(t:SemType ty) returns RetRepr|BuildError {
