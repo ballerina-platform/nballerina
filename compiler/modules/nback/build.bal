@@ -206,8 +206,8 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:BooleanCompareInsn {
             buildBooleanCompare(builder, scaffold, insn);
         }
-        else if insn is bir:EqualInsn {
-            check buildEqual(builder, scaffold, insn);
+        else if insn is bir:EqualityInsn {
+            check buildEquality(builder, scaffold, insn);
         }
         else if insn is bir:IntNegateInsn {
             buildIntNegateInsn(builder, scaffold, insn);
@@ -405,15 +405,16 @@ function buildBooleanCompare(llvm:Builder builder, Scaffold scaffold, bir:Boolea
                       insn.result);
 }
 
-function buildEqual(llvm:Builder builder, Scaffold scaffold, bir:EqualInsn insn) returns BuildError? {
+function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn insn) returns BuildError? {
     var [lhsRepr, lhsValue] = buildReprValue(builder, scaffold, insn.operands[0]);
     var [rhsRepr, rhsValue] = buildReprValue(builder, scaffold, insn.operands[1]);
     // This will only work for int/boolean/nil
     if lhsRepr != rhsRepr {
         return err:unimplemented("comparing different representations");
     }
+    boolean negate = insn.op[0] == "!";
     buildStoreBoolean(builder, scaffold,
-                      builder.iCmp(insn.negate ? "ne" : "eq", lhsValue, rhsValue),
+                      builder.iCmp(negate ? "ne" : "eq", lhsValue, rhsValue),
                       insn.result);                     
 }
 

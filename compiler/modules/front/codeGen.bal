@@ -314,43 +314,43 @@ function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Scope? scop
 
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:Operand, bir:BasicBlock] {
     match expr {
-        // Binary int operations
-        var { op, left, right } => {
-            // JBUG #31123 using guard gets unreachable pattern error
-            if op is bir:ArithmeticBinaryOp {
-                var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
-                var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
-                bir:Register result = cx.createRegister(t:INT);
-                bir:IntArithmeticBinaryInsn insn = { op, operands: [l, r], result };
-                bb.insns.push(insn);
-                return [result, nextBlock];
+        var { arithmeticOp: op, left, right } => {
+            var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
+            var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
+            bir:Register result = cx.createRegister(t:INT);
+            bir:IntArithmeticBinaryInsn insn = { op, operands: [l, r], result };
+            bb.insns.push(insn);
+            return [result, nextBlock];
+        }
+        var { equalityOp: op, left, right } => {
+            bir:Register result = cx.createRegister(t:BOOLEAN);
+            var [l, block1] = check codeGenExpr(cx, bb, scope, left);
+            var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
+            // XXX Can we do all the checking in the verifier?
+            bir:EqualityInsn insn = { op, operands: [l, r], result };
+            bb.insns.push(insn);
+            return [result, nextBlock];
+        }
+        var { relationalOp: op, left, right } => {
+            bir:Insn insn;
+            bir:Register result = cx.createRegister(t:BOOLEAN);
+            var [l, block1] = check codeGenExpr(cx, bb, scope, left);
+            var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
+            TypedOperandPair? pair = typedOperandPair(l, r);
+            if pair is () {
+                return cx.semanticErr("different basic types for relational operator");
             }
-            // Compare
+            else if pair is IntOperandPair {
+                insn = <bir:IntCompareInsn> { op, operands: pair[1], result };
+            }
+            else if pair is BooleanOperandPair {
+                insn = <bir:BooleanCompareInsn> { op, operands: pair[1], result };
+            }
             else {
-                bir:Insn insn;
-                bir:Register result = cx.createRegister(t:BOOLEAN);
-                var [l, block1] = check codeGenExpr(cx, bb, scope, left);
-                var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
-                TypedOperandPair? pair = typedOperandPair(l, r);
-                if pair is () {
-                    return cx.semanticErr("different basic types for relational operator");
-                }
-                else if op is "!="|"==" {
-                    insn = <bir:EqualInsn> { negate: op == "!=", operands: pair[1], result };
-                }
-                else if pair is IntOperandPair {
-                    insn = <bir:IntCompareInsn> { op, operands: pair[1], result };
-                }
-                else if pair is BooleanOperandPair {
-                    // pair is BooleanOperandPair 
-                    insn = <bir:BooleanCompareInsn> { op, operands: pair[1], result };
-                }
-                else {
-                    return cx.semanticErr("cannot apply relational operator to nil operands");
-                }
-                bb.insns.push(insn);
-                return [result, nextBlock];
-            }              
+                return cx.semanticErr("cannot apply relational operator to nil operands");
+            }
+            bb.insns.push(insn);
+            return [result, nextBlock];         
         }
         // Negation
         { op: "-",  operand: var o } => {

@@ -8,11 +8,10 @@ function parseEqualityExpr(Tokenizer tok)  returns Expr|err:Syntax {
     Expr expr = check parseRelationalExpr(tok);
     while true {
         Token? t = tok.current();
-        if t is ("!="|"==") {
-            BinaryExprOp op = t;
+        if t is BinaryEqualityOp {
             check tok.advance();
             Expr right = check parseRelationalExpr(tok);
-            BinaryExpr bin = { op, left: expr, right };
+            BinaryEqualityExpr bin = { equalityOp: t, left: expr, right };
             expr = bin;
         } 
         else {
@@ -25,10 +24,10 @@ function parseEqualityExpr(Tokenizer tok)  returns Expr|err:Syntax {
 function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
     Expr expr = check parseAdditiveExpr(tok);
     Token? t = tok.current();
-    if t is ("<"|">"|"<="|">=") {
+    if t is BinaryRelationalOp {
         check tok.advance();
         Expr right = check parseAdditiveExpr(tok);
-        BinaryExpr bin = { op: t, left: expr, right };
+        BinaryRelationalExpr bin = { relationalOp: t, left: expr, right };
         return bin;
     }
     else {
@@ -41,10 +40,9 @@ function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t is ("+"|"-") {
-            BinaryExprOp op = t;
             check tok.advance();
             Expr right = check parseMultiplicativeExpr(tok);
-            BinaryExpr bin = { op, left: expr, right };
+            BinaryArithmeticExpr bin = { arithmeticOp: t, left: expr, right };
             expr = bin;
         } 
         else {
@@ -59,10 +57,9 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t is ("*"|"/"|"%") {
-            BinaryExprOp op = t;
             check tok.advance();
             Expr right = check parseUnaryExpr(tok);
-            BinaryExpr bin = { op, left: expr, right };
+            BinaryArithmeticExpr bin = { arithmeticOp: t, left: expr, right };
             expr = bin;
         } 
         else {

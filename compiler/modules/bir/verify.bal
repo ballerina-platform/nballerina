@@ -65,8 +65,8 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
         check verifyOperandBoolean(vc, name, insn.operands[0]);
         check verifyOperandBoolean(vc, name, insn.operands[1]);
     }
-    else if insn is EqualInsn {
-        check verifyEqualInsn(vc, insn);
+    else if insn is EqualityInsn {
+        check verifyEqualityInsn(vc, insn);
     }
     else if insn is AssignInsn {
         check verifyOperandType(vc, insn.operand, insn.result.semType, "value is not a subtype of the LHS");
@@ -117,7 +117,7 @@ function verifyTypeCastInsn(VerifyContext vc, TypeCastInsn insn) returns err:Sem
     }
 }
 
-function verifyEqualInsn(VerifyContext vc, EqualInsn insn) returns err:Semantic? {
+function verifyEqualityInsn(VerifyContext vc, EqualityInsn insn) returns err:Semantic? {
     Operand lhs = insn.operands[0];
     Operand rhs = insn.operands[1];
     if lhs is Register {
@@ -139,7 +139,7 @@ function verifyEqualInsn(VerifyContext vc, EqualInsn insn) returns err:Semantic?
     else if lhs == rhs {
         return;
     }
-    return vc.err(`intersection of operands of operator ${insn.negate ? "!=" : "=="} is empty`);
+    return vc.err(`intersection of operands of operator ${insn.op} is empty`);
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, err:Message msg) returns err:Semantic? {

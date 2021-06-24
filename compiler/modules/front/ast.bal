@@ -32,6 +32,7 @@ type FunctionDef record {|
 type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|
             WhileStmt|BreakStmt|ContinueStmt;
 type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr|TypeCastExpr;
+type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr;
 
 type AssignStmt record {|
     string varName;
@@ -68,13 +69,33 @@ type VarDeclStmt record {|
     t:SemType? semType = ();
 |};
 
-type BinaryExprOp "+" | "-" | "*" | "/" | "%" | "<" | ">" | "<=" | ">=" | "==" | "!=";
+
+type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
+type BinaryRelationalOp "<" | ">" | "<=" | ">=";
+type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
+
+type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
+
 type UnaryExprOp "-" | "!";
 
-type BinaryExpr record {|
-    BinaryExprOp op;
+type BinaryExprBase record {|
     Expr left;
     Expr right;
+|};
+
+type BinaryEqualityExpr record {|
+    *BinaryExprBase;
+    BinaryEqualityOp equalityOp;
+|};
+
+type BinaryRelationalExpr record {|
+    *BinaryExprBase;
+    BinaryRelationalOp relationalOp;
+|};
+
+type BinaryArithmeticExpr record {|
+    *BinaryExprBase;
+    BinaryArithmeticOp arithmeticOp;
 |};
 
 type UnaryExpr record {|

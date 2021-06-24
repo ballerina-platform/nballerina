@@ -139,6 +139,7 @@ public function createRegister(FunctionCode code, SemType semType, string? varNa
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
 public type OrderOp "<=" | ">=" | "<" | ">";
+public type EqualityOp "==" | "!=" | "===" | "!==";
 
 public enum InsnName {
     INSN_INT_ARITHMETIC_BINARY,
@@ -147,8 +148,7 @@ public enum InsnName {
     INSN_INT_NO_PANIC_NEGATE,
     INSN_INT_COMPARE,
     INSN_BOOLEAN_COMPARE,
-    INSN_EQUAL,
-    INSN_IDENTICAL,
+    INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
     INSN_RET,
     INSN_ABNORMAL_RET,
@@ -175,7 +175,7 @@ public type InsnBase record {
 
 public type Insn 
     IntArithmeticBinaryInsn|IntNegateInsn
-    |IntCompareInsn|BooleanCompareInsn|EqualInsn|IdenticalInsn|BooleanNotInsn
+    |IntCompareInsn|BooleanCompareInsn|EqualityInsn|BooleanNotInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|NarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
@@ -236,28 +236,20 @@ public type BooleanCompareInsn readonly & record {|
     BooleanOperand[2] operands;
 |};
 
-# This does == and !=
-# If `negate` is true, the operation is !=
-# Otherwise it is ==.
-# XXX cases that allocate memory can potentially panic
-public type EqualInsn readonly & record {|
+# This does equality expressions.
+# This includes `==`, `!=`, `===` and `!==`
+// XXX Complex cases (comparing structures deeply) can use memory in
+// a way that cannot be bounded at compile time so may result in memory exhaustion
+// Should this mean this is a PPI? Should we distinguish these as different
+// kind of instruction.
+public type EqualityInsn readonly & record {|
     *InsnBase;
-    INSN_EQUAL name = INSN_EQUAL;
-    boolean negate;
+    INSN_EQUALITY name = INSN_EQUALITY;
+    EqualityOp op;
     Register result;
     Operand[2] operands;
 |};
 
-# This does == and !=
-# If `negate` is true, the operation is !=
-# Otherwise it is ==.
-public type IdenticalInsn readonly & record {|
-    *InsnBase;
-    INSN_IDENTICAL name = INSN_IDENTICAL;
-    boolean negate;
-    Register result;
-    Operand[2] operands;
-|};
 
 # Call a function.
 # This is a not a terminator.
@@ -291,8 +283,10 @@ public type AssignInsn readonly & record {|
 # Don't need to allow for operand to be a const
 # Since we can do that at compile-time.
 # This is a PPI.
-# Typing rule:
-# typeof(operand) & semType <: typeof(result)
+# Typing rules:
+# typeof(result) <: semType
+# typeof(result) <: typeof(operand)
+# semType not empty
 public type TypeCastInsn readonly & record {|
     *InsnBase;
     INSN_TYPE_CAST name = INSN_TYPE_CAST;

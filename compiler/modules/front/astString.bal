@@ -155,7 +155,17 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push("(");
         }
         exprToWords(w, expr.left, true);
-        w.push(expr.op);
+        string op;
+        if expr is BinaryArithmeticExpr {
+            op = expr.arithmeticOp;
+        }
+        else if expr is BinaryRelationalExpr {
+            op = expr.relationalOp;
+        }
+        else {
+            op = expr.equalityOp;
+        }
+        w.push(op);
         exprToWords(w, expr.right, true);
         if wrap {
             w.push(")");

@@ -12,7 +12,7 @@ type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_L
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | "!" | ":" | "," | "/" | "%" | "=";
-type MultiCharDelim "{|" | "|}" | "..." | "==" | "!=" | ">=" | "<=";
+type MultiCharDelim "{|" | "|}" | "..." | "==" | "!=" | ">=" | "<=" | "===" | "!==";
 type Keyword
     "any"
     | "boolean"
