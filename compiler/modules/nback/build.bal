@@ -210,10 +210,10 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             check buildEquality(builder, scaffold, insn);
         }
         else if insn is bir:IntNegateInsn {
-            buildIntNegateInsn(builder, scaffold, insn);
+            buildIntNegate(builder, scaffold, insn);
         }
         else if insn is bir:BooleanNotInsn {
-            buildBooleanNotInsn(builder, scaffold, insn);
+            buildBooleanNot(builder, scaffold, insn);
         }
         else if insn is bir:RetInsn {
             check buildRet(builder, scaffold, insn);
@@ -455,13 +455,13 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     builder.positionAtEnd(continueBlock);
 }
 
-function buildIntNegateInsn(llvm:Builder builder, Scaffold scaffold, bir:IntNegateInsn insn) {
+function buildIntNegate(llvm:Builder builder, Scaffold scaffold, bir:IntNegateInsn insn) {
     buildStoreInt(builder, scaffold,
                   builder.binaryInt("sub", llvm:constInt(LLVM_INT, 0), buildInt(builder, scaffold, insn.operand)),
                   insn.result);
 }
 
-function buildBooleanNotInsn(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {
+function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {
     buildStoreBoolean(builder, scaffold,
                       builder.binaryInt("xor", llvm:constInt(LLVM_BOOLEAN, 1), builder.load(scaffold.address(insn.operand))),
                       insn.result);
