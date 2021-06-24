@@ -40,8 +40,8 @@ define void @_B_main () {
   %_25 = icmp eq i64 %_24, 144115188075855872
   br i1 %_25, label %L2, label %L3
 L1:
-  %_67 = load i64, i64* %_16
-  call void @_bal_panic (i64 %_67)
+  %_69 = load i64, i64* %_16
+  call void @_bal_panic (i64 %_69)
   unreachable
 L2:
   %_26 = call i8* @llvm.ptrmask.p0i8.i64 (i8* %_22, i64 72057594037927935)
@@ -90,34 +90,36 @@ L5:
   store i64 3, i64* %_16
   br label %L1
 L6:
-  %_51 = trunc i64 %_48 to i1
-  store i1 %_51, i1* %_11
-  %_52 = load i1, i1* %_11
-  %_53 = zext i1 %_52 to i64
-  %_54 = or i64 %_53, 72057594037927936
-  %_55 = getelementptr i8, i8* null, i64 %_54
-  call void @_Bio__println (i8* %_55)
+  %_51 = ptrtoint i8* %_47 to i64
+  %_52 = trunc i64 %_51 to i1
+  store i1 %_52, i1* %_11
+  %_53 = load i1, i1* %_11
+  %_54 = zext i1 %_53 to i64
+  %_55 = or i64 %_54, 72057594037927936
+  %_56 = getelementptr i8, i8* null, i64 %_55
+  call void @_Bio__println (i8* %_56)
   store i8* null, i8** %_12
-  %_56 = call i8* @_B_ifElse (i1 0, i64 21, i1 0)
-  store i8* %_56, i8** %_13
-  %_57 = load i8*, i8** %_13
-  %_58 = ptrtoint i8* %_57 to i64
-  %_59 = and i64 %_58, 9151314442816847872
-  %_60 = icmp eq i64 %_59, 72057594037927936
-  br i1 %_60, label %L8, label %L9
+  %_57 = call i8* @_B_ifElse (i1 0, i64 21, i1 0)
+  store i8* %_57, i8** %_13
+  %_58 = load i8*, i8** %_13
+  %_59 = ptrtoint i8* %_58 to i64
+  %_60 = and i64 %_59, 9151314442816847872
+  %_61 = icmp eq i64 %_60, 72057594037927936
+  br i1 %_61, label %L8, label %L9
 L7:
   store i64 3, i64* %_16
   br label %L1
 L8:
-  %_61 = trunc i64 %_58 to i1
-  store i1 %_61, i1* %_14
-  %_62 = load i1, i1* %_14
-  store i1 %_62, i1* %b
-  %_63 = load i1, i1* %b
-  %_64 = zext i1 %_63 to i64
-  %_65 = or i64 %_64, 72057594037927936
-  %_66 = getelementptr i8, i8* null, i64 %_65
-  call void @_Bio__println (i8* %_66)
+  %_62 = ptrtoint i8* %_58 to i64
+  %_63 = trunc i64 %_62 to i1
+  store i1 %_63, i1* %_14
+  %_64 = load i1, i1* %_14
+  store i1 %_64, i1* %b
+  %_65 = load i1, i1* %b
+  %_66 = zext i1 %_65 to i64
+  %_67 = or i64 %_66, 72057594037927936
+  %_68 = getelementptr i8, i8* null, i64 %_67
+  call void @_Bio__println (i8* %_68)
   store i8* null, i8** %_15
   ret void
 L9:

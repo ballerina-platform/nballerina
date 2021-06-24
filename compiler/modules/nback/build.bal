@@ -507,50 +507,23 @@ function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, CmpEqOp
     builder.positionAtEnd(joinBlock);
 }
 
-function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) returns llvm:Value {
-    return builder.iCmp("eq", builder.binaryInt("and", builder.ptrToInt(tagged, LLVM_INT),
-                                                       llvm:constInt(LLVM_INT, TAG_MASK)),
-                              llvm:constInt(LLVM_INT, tag));
-}
-
-function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
-    return builder.load(builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p0i8.i64"),
-                                                                        [tagged, llvm:constInt(LLVM_INT, POINTER_MASK)]),
-                                        llvm:pointerType(LLVM_INT)),
-                        ALIGN_HEAP);
-}
-
-function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
-    return builder.trunc(builder.ptrToInt(tagged, LLVM_INT), LLVM_BOOLEAN);
-}
-
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
     var [repr, val] = buildReprValue(builder, scaffold, insn.operand);
     if repr != REPR_TAGGED {
         return err:unimplemented("cast from untagged value"); // should not happen in subset 2
     }
-    llvm:Value intVal = builder.ptrToInt(<llvm:PointerValue>val, LLVM_INT);
-    llvm:Value tagVal = builder.binaryInt("and", intVal, llvm:constInt(LLVM_INT, TAG_MASK));
+    llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock castFailBlock = scaffold.addBasicBlock();
     if insn.semType === t:BOOLEAN {
-        builder.condBr(builder.iCmp("eq", tagVal, llvm:constInt(LLVM_INT, TAG_BOOLEAN)),
-                       continueBlock,
-                       castFailBlock);
+        builder.condBr(buildHasTag(builder, tagged, TAG_BOOLEAN), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
-        buildStoreBoolean(builder, scaffold, builder.trunc(intVal, LLVM_BOOLEAN), insn.result);
+        buildStoreBoolean(builder, scaffold, buildUntagBoolean(builder, tagged), insn.result);
     }
     else if insn.semType === t:INT {
-        builder.condBr(builder.iCmp("eq", tagVal, llvm:constInt(LLVM_INT, TAG_INT)),
-                       continueBlock,
-                       castFailBlock);
+        builder.condBr(buildHasTag(builder, tagged, TAG_INT), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
-        buildStoreInt(builder, scaffold,
-                      builder.load(builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p0i8.i64"),
-                                                                                   [val, llvm:constInt(LLVM_INT, POINTER_MASK)]),
-                                                   llvm:pointerType(LLVM_INT)),
-                                   ALIGN_HEAP),
-                      insn.result);
+        buildStoreInt(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn.result);
     }
     else {
         return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
@@ -625,6 +598,23 @@ function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value valu
     llvm:PointerValue mem = <llvm:PointerValue>builder.call(allocFunction, [llvm:constInt(LLVM_INT, 8)]);
     builder.store(value, builder.bitCast(mem, llvm:pointerType(LLVM_INT)), ALIGN_HEAP);
     return builder.getElementPointer(mem, llvm:constInt(LLVM_INT, TAG_INT));
+}
+
+function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) returns llvm:Value {
+    return builder.iCmp("eq", builder.binaryInt("and", builder.ptrToInt(tagged, LLVM_INT),
+                                                       llvm:constInt(LLVM_INT, TAG_MASK)),
+                              llvm:constInt(LLVM_INT, tag));
+}
+
+function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
+    return builder.load(builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p0i8.i64"),
+                                                                        [tagged, llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                        llvm:pointerType(LLVM_INT)),
+                        ALIGN_HEAP);
+}
+
+function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
+    return builder.trunc(builder.ptrToInt(tagged, LLVM_INT), LLVM_BOOLEAN);
 }
 
 function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns [Repr, llvm:Value] {
