@@ -176,6 +176,15 @@ class Tokenizer {
                 if !(multi is ()) {
                     Char? peekCh = self.getc();
                     if peekCh == "=" {
+                        if multi == "==" || multi == "!=" {
+                            peekCh = self.getc();
+                            if peekCh == "=" {
+                                return multi == "==" ? "===" : "!==";
+                            }
+                            else if !(peekCh is ()) {
+                                self.ungetc(peekCh);
+                            }
+                        }
                         return multi;
                     }
                     else if !(peekCh is ()) {
