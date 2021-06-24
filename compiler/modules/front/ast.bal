@@ -32,7 +32,6 @@ type FunctionDef record {|
 type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|
             WhileStmt|BreakStmt|ContinueStmt;
 type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr|TypeCastExpr;
-type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr;
 
 type AssignStmt record {|
     string varName;
@@ -78,6 +77,9 @@ type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
 type UnaryExprOp "-" | "!";
 
+type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr;
+
+// We use different operator names so things work better with match statements
 type BinaryExprBase record {|
     Expr left;
     Expr right;
