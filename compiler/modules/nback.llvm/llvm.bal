@@ -181,16 +181,6 @@ public class Module {
         return val;
     }
 
-    // Corresponds to LLVMGetNamedGlobal
-    public function getNamedGlobal(string name) returns PointerValue {
-        PointerValue? val = self.globalVariables[name];
-        if val is PointerValue {
-            return val;
-        } else {
-            panic error(createLine(["No", "global", "variable", "by", "name", name]));
-        }
-    }
-
     // Does not correspond directly any LLVM function
     // XXX can perhaps be turned into a command to compile the module
     public function writeFile(string path) returns io:Error? {
