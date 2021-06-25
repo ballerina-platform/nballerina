@@ -109,6 +109,7 @@ public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsi
 public class Module {
     private final FunctionDefn[] functions = [];
     private final map<FunctionDecl> intrinsicFunctions = {};
+    private final map<PointerValue> globalVariables = {};
     private final FunctionDecl[] functionDecls = [];
     private final Context context;
 
@@ -169,6 +170,15 @@ public class Module {
         }
     }
 
+    // Corresponds to LLVMAddGlobal
+    public function addGlobal(Type ty, string name) {
+        if self.globalVariables.hasKey(name) {
+            panic error(createLine(["Variable", name, "already", "declared"]));
+        }
+        PointerType ptrType = {pointsTo: ty};
+        self.globalVariables[name] = new PointerValue(ptrType, "@"+name);
+    }
+
     // Does not correspond directly any LLVM function
     // XXX can perhaps be turned into a command to compile the module
     public function writeFile(string path) returns io:Error? {
@@ -184,6 +194,9 @@ public class Module {
     }
 
     function output(Output out) {
+        foreach var globalVar in self.globalVariables {
+           out.push(createLine([globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)])); 
+        }
         foreach var decl in self.intrinsicFunctions {
             decl.output(out);
         }
