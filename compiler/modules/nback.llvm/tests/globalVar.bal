@@ -4,14 +4,12 @@ function globalVar() returns Module {
     Context context = new;
     Builder builder = context.createBuilder();
     Module m = context.createModule();
-    Value g = m.addGlobal("i64", "g1");
+    PointerValue g = m.addGlobal("i64", "g1");
     FunctionDefn testFn = m.addFunctionDefn("testFn", {returnType: "i64", paramTypes: ["i64"]});
     BasicBlock initBlock = testFn.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     Value arg = testFn.getParam(0);
-    PointerValue g1 =m.getNamedGlobal("g1");
-    Value val = builder.ptrToInt(g1, "i64");
-    test:assertTrue(g1 === g);
+    Value val = builder.ptrToInt(g, "i64");
     Value ret = builder.binaryInt("add", val, arg);
     builder.ret(ret);
     return m;
@@ -31,21 +29,5 @@ function testRepeatedVarDecln() {
     error|PointerValue e = trap m.addGlobal("i64", "g1");
     if !(e is error) {
         test:assertFail("Repeated global variable declaration allowed");
-    }
-}
-
-@test:Config {}
-function testGetUnDeclaredGlobalVar() {
-    Context context = new;
-    Builder builder = context.createBuilder();
-    Module m = context.createModule();
-    _ = m.addGlobal("i64", "g1");
-    FunctionDefn testFn = m.addFunctionDefn("testFn", {returnType: "i64", paramTypes: ["i64"]});
-    BasicBlock initBlock = testFn.appendBasicBlock();
-    builder.positionAtEnd(initBlock);
-    Value arg = testFn.getParam(0);
-    error|PointerValue e = trap m.getNamedGlobal("g2");
-    if !(e is error) {
-        test:assertFail("Access undeclared global variables allowed");
     }
 }
