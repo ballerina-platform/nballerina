@@ -124,6 +124,10 @@ function verifyEqualityInsn(VerifyContext vc, EqualityInsn insn) returns err:Sem
         if rhs is Register {
             t:SemType intersectType = t:intersect(lhs.semType, rhs.semType);
             if !vc.isEmpty(intersectType) {
+                // JBUG cast should not be needed
+                if (<string>insn.op).length() == 2 && !vc.isSubtype(lhs.semType, t:SIMPLE_OR_STRING) && !vc.isSubtype(lhs.semType, t:SIMPLE_OR_STRING) {
+                    return vc.err("at least one operand of an == or != expression must be a subtype of anydata");
+                }
                 return;
             }
         }
