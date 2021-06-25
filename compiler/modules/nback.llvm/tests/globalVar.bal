@@ -19,3 +19,31 @@ function globalVar() returns Module {
 function testGlobalVar() returns error? {
     return runTest(globalVar, "global_var.ll");
 }
+
+@test:Config {}
+function testRepeatedVarDecln() {
+    Context context = new;
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
+    m.addGlobal("i64", "g1");
+    error? e = trap m.addGlobal("i64", "g1");
+    if !(e is error) {
+        test:assertFail("Repeated global variable declaration allowed");
+    }
+}
+
+@test:Config {}
+function testGetUnDeclaredGlobalVar() {
+    Context context = new;
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
+    m.addGlobal("i64", "g1");
+    FunctionDefn testFn = m.addFunctionDefn("testFn", {returnType: "i64", paramTypes: ["i64"]});
+    BasicBlock initBlock = testFn.appendBasicBlock();
+    builder.positionAtEnd(initBlock);
+    Value arg = testFn.getParam(0);
+    error|PointerValue e = trap m.getNamedGlobal("g2");
+    if !(e is error) {
+        test:assertFail("Access undeclared global variables allowed");
+    }
+}
