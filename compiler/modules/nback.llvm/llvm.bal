@@ -107,9 +107,7 @@ public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsi
 
 # Corresponds to llvm::Module class
 public class Module {
-    private final FunctionDefn[] functions = [];
-    private final map<FunctionDecl> intrinsicFunctions = {};
-    private final FunctionDecl[] functionDecls = [];
+    private final map<FunctionDefn|FunctionDecl|PointerValue> declarations = {};
     private final Context context;
 
     function init(Context context) {
@@ -118,21 +116,33 @@ public class Module {
 
     // Corresponds to LLVMAddFunction
     public function addFunctionDefn(string name, FunctionType fnType) returns FunctionDefn {
+        if name is IntrinsicFunctionName {
+            panic error("Reserved intrinsic function name");
+        }
+        if self.declarations.hasKey(name) {
+            panic error("This module already has a declaration by that name");
+        }
         FunctionDefn fn = new (self.context, name, fnType);
-        self.functions.push(fn);
+        self.declarations[name] = fn;
         return fn;
     }
 
     public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl{
+        if name is IntrinsicFunctionName {
+            panic error("Reserved intrinsic function name");
+        }
+        if self.declarations.hasKey(name) {
+            panic error("This module already has a declaration by that name");
+        }
         FunctionDecl fn = new(self.context, name, fnType);
-        self.functionDecls.push(fn);
+        self.declarations[name] = fn;
         return fn;
     }
 
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
-        if self.intrinsicFunctions.hasKey(name) {
-            return self.intrinsicFunctions.get(name);
+        if self.declarations.hasKey(name) {
+            return <FunctionDecl>self.declarations.get(name);
         }
         StructType overflowArithmeticReturnType = structType(["i64", "i1"]);
         FunctionType overflowArithmeticFunctionType = {returnType: overflowArithmeticReturnType, paramTypes: ["i64", "i64"]};
@@ -162,11 +172,25 @@ public class Module {
                 fn.addEnumAttribute("speculatable");
                 fn.addEnumAttribute("willreturn");
             }
-            self.intrinsicFunctions[name] = fn;
+            self.declarations[name] = fn;
             return fn;
         } else {
             return err:unreached();
         }
+    }
+
+    // Corresponds to LLVMAddGlobal
+    public function addGlobal(Type ty, string name) returns PointerValue {
+        if name is IntrinsicFunctionName {
+            panic error("Reserved intrinsic function name");
+        }
+        if self.declarations.hasKey(name) {
+            panic error("This module already has a declaration by that name");
+        }
+        PointerType ptrType = {pointsTo: ty};
+        PointerValue val = new PointerValue(ptrType, "@"+name); 
+        self.declarations[name] = val; 
+        return val;
     }
 
     // Does not correspond directly any LLVM function
@@ -184,14 +208,26 @@ public class Module {
     }
 
     function output(Output out) {
-        foreach var decl in self.intrinsicFunctions {
-            decl.output(out);
+        PointerValue[] globalVariables = [];
+        FunctionDecl[] functionDeclarations = [];
+        FunctionDefn[] functionDefinitions = [];
+        foreach var each in self.declarations {
+            if each is PointerValue {
+                globalVariables.push(each);
+            } else if each is FunctionDefn {
+                functionDefinitions.push(each);
+            } else {
+                functionDeclarations.push(each);
+            }
         }
-        foreach var externFn in self.functionDecls {
-            externFn.output(out);
+        foreach var globalVar in globalVariables{
+            out.push(createLine([globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)])); 
         }
-        foreach var f in self.functions {
-            f.output(out);
+        foreach var fn in functionDeclarations{
+            fn.output(out);
+        }
+        foreach var fn in functionDefinitions{
+            fn.output(out);
         }
     }
 
