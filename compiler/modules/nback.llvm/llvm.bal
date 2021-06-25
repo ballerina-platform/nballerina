@@ -171,12 +171,14 @@ public class Module {
     }
 
     // Corresponds to LLVMAddGlobal
-    public function addGlobal(Type ty, string name) {
+    public function addGlobal(Type ty, string name) returns PointerValue {
         if self.globalVariables.hasKey(name) {
             panic error(createLine(["Variable", name, "already", "declared"]));
         }
         PointerType ptrType = {pointsTo: ty};
-        self.globalVariables[name] = new PointerValue(ptrType, "@"+name);
+        PointerValue val = new PointerValue(ptrType, "@"+name); 
+        self.globalVariables[name] = val; 
+        return val;
     }
 
     // Corresponds to LLVMGetNamedGlobal
