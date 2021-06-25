@@ -41,7 +41,7 @@ function testSameNamedDeclarations1() {
     _ =  m.addGlobal("i64", "g1");
     error|FunctionDefn fn = trap m.addFunctionDefn("g1",{returnType:"i64", paramTypes:["i64"]});
     if !(fn is error) {
-        test:assertFail("Global variables named as reserved intrinsic allowed");
+        test:assertFail("Repeated use of same name allowed");
     }
 }
 
@@ -53,7 +53,7 @@ function testSameNamedDeclarations2() {
     _ =  m.addGlobal("i64", "g1");
     error|FunctionDecl fn = trap m.addFunctionDecl("g1",{returnType:"i64", paramTypes:["i64"]});
     if !(fn is error) {
-        test:assertFail("Global variables named as reserved intrinsic allowed");
+        test:assertFail("Repeated use of same name allowed");
     }
 }
 
@@ -65,6 +65,6 @@ function testSameNamedDeclarations3() {
     _ = m.addFunctionDefn("g1",{returnType:"i64", paramTypes:["i64"]});
     error|FunctionDecl fn = trap m.addFunctionDecl("g1",{returnType:"i64", paramTypes:["i64"]});
     if !(fn is error) {
-        test:assertFail("Global variables named as reserved intrinsic allowed");
+        test:assertFail("Repeated use of same name allowed");
     }
 }
