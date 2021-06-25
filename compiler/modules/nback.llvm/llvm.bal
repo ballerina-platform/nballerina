@@ -107,7 +107,12 @@ public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsi
 
 # Corresponds to llvm::Module class
 public class Module {
-    private final map<FunctionDefn|FunctionDecl|PointerValue> declarations = {};
+    private final map<FunctionDefn|FunctionDecl|PointerValue> globals = {};
+    // We have these because we don't rely on order of iteration over map.
+    private PointerValue[] globalVariables = [];
+    private FunctionDecl[] functionDecls = [];
+    private FunctionDefn[] functionDefns = [];
+
     private final Context context;
 
     function init(Context context) {
@@ -117,82 +122,77 @@ public class Module {
     // Corresponds to LLVMAddFunction
     public function addFunctionDefn(string name, FunctionType fnType) returns FunctionDefn {
         if name is IntrinsicFunctionName {
-            panic error("Reserved intrinsic function name");
+            panic error("reserved intrinsic function name");
         }
-        if self.declarations.hasKey(name) {
-            panic error("This module already has a declaration by that name");
+        if self.globals.hasKey(name) {
+            panic error("this module already has a declaration by that name");
         }
         FunctionDefn fn = new (self.context, name, fnType);
-        self.declarations[name] = fn;
+        self.globals[name] = fn;
+        self.functionDefns.push(fn);
         return fn;
     }
 
-    public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl{
+    public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl {
         if name is IntrinsicFunctionName {
-            panic error("Reserved intrinsic function name");
+            panic error("reserved intrinsic function name");
         }
-        if self.declarations.hasKey(name) {
-            panic error("This module already has a declaration by that name");
+        if self.globals.hasKey(name) {
+            panic error("this module already has a declaration by that name");
         }
         FunctionDecl fn = new(self.context, name, fnType);
-        self.declarations[name] = fn;
+        self.globals[name] = fn;
+        self.functionDecls.push(fn);
         return fn;
     }
 
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
-        if self.declarations.hasKey(name) {
-            return <FunctionDecl>self.declarations.get(name);
+        FunctionDecl? fnExisting = <FunctionDecl?>self.globals[name];
+        if !(fnExisting is ()) {
+            return fnExisting;
         }
-        StructType overflowArithmeticReturnType = structType(["i64", "i1"]);
-        FunctionType overflowArithmeticFunctionType = {returnType: overflowArithmeticReturnType, paramTypes: ["i64", "i64"]};
-        FunctionDecl? fn = ();
-        match name {
-            "sadd.with.overflow.i64" => {
-                fn = new (self.context, "llvm.sadd.with.overflow.i64", overflowArithmeticFunctionType);
-            }
-            "ssub.with.overflow.i64" => {
-                fn = new (self.context, "llvm.ssub.with.overflow.i64", overflowArithmeticFunctionType);
-            }
-            "smul.with.overflow.i64" => {
-                fn = new (self.context, "llvm.smul.with.overflow.i64", overflowArithmeticFunctionType);
-            }
-            "ptrmask.p0i8.i64" => {
-                FunctionType fnType = {returnType: pointerType("i8"), paramTypes:[pointerType("i8"),"i64"] };
-                FunctionDecl f = new(self.context, "llvm.ptrmask.p0i8.i64", fnType);
-                f.addEnumAttribute("readnone");
-                f.addEnumAttribute("speculatable");
-                fn = f;
-            }
+        if name is IntegerArithmeticIntrinsicName {
+            return self.addIntrinsic(name,
+                                     { returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"] },
+                                     ["nounwind", "readnone", "speculatable", "willreturn"]);
+
         }
-        if fn is FunctionDecl {
-            if name is IntegerArithmeticIntrinsicName {
-                fn.addEnumAttribute("nounwind");
-                fn.addEnumAttribute("readnone");
-                fn.addEnumAttribute("speculatable");
-                fn.addEnumAttribute("willreturn");
-            }
-            self.declarations[name] = fn;
-            return fn;
-        } else {
+        else if name == "ptrmask.p0i8.i64" {
+            return self.addIntrinsic(name,
+                                     { returnType: pointerType("i8"), paramTypes: [pointerType("i8"), "i64"] },
+                                     ["readnone", "speculatable"]);
+        }
+        else {
             return err:unreached();
         }
+    }
+
+    private function addIntrinsic(IntrinsicFunctionName name, FunctionType fnType, EnumAttribute[] attrs) returns FunctionDecl {
+        FunctionDecl fn = new(self.context, "llvm." + name, fnType);
+        foreach var attr in attrs {
+            fn.addEnumAttribute(attr);
+        }
+        self.globals[name] = fn;
+        self.functionDecls.push(fn);
+        return fn;
     }
 
     // Corresponds to LLVMAddGlobal
     public function addGlobal(Type ty, string name) returns PointerValue {
         if name is IntrinsicFunctionName {
-            panic error("Reserved intrinsic function name");
+            panic error("reserved intrinsic function name");
         }
-        if self.declarations.hasKey(name) {
-            panic error("This module already has a declaration by that name");
+        if self.globals.hasKey(name) {
+            panic error("this module already has a declaration by that name");
         }
-        PointerType ptrType = {pointsTo: ty};
-        PointerValue val = new PointerValue(ptrType, "@"+name); 
-        self.declarations[name] = val; 
+        PointerType ptrType = { pointsTo: ty };
+        PointerValue val = new PointerValue(ptrType, "@" + name); 
+        self.globals[name] = val;
+        self.globalVariables.push(val);
         return val;
     }
-
+ 
     // Does not correspond directly any LLVM function
     // XXX can perhaps be turned into a command to compile the module
     public function writeFile(string path) returns io:Error? {
@@ -208,29 +208,16 @@ public class Module {
     }
 
     function output(Output out) {
-        PointerValue[] globalVariables = [];
-        FunctionDecl[] functionDeclarations = [];
-        FunctionDefn[] functionDefinitions = [];
-        foreach var each in self.declarations {
-            if each is PointerValue {
-                globalVariables.push(each);
-            } else if each is FunctionDefn {
-                functionDefinitions.push(each);
-            } else {
-                functionDeclarations.push(each);
-            }
-        }
-        foreach var globalVar in globalVariables{
+        foreach var globalVar in self.globalVariables {
             out.push(createLine([globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)])); 
         }
-        foreach var fn in functionDeclarations{
+        foreach var fn in self.functionDecls {
             fn.output(out);
         }
-        foreach var fn in functionDefinitions{
+        foreach var fn in self.functionDefns {
             fn.output(out);
         }
     }
-
 }
 
 // Corresponds to LLVMLinkage enum
@@ -255,7 +242,7 @@ public class FunctionDecl {
         out.push(functionHeader(self));
     }
 
-    public function addEnumAttribute(EnumAttribute attribute){
+    public function addEnumAttribute(EnumAttribute attribute) {
         if self.attributes.indexOf(attribute) == () {
            self.attributes.push(attribute); 
         }

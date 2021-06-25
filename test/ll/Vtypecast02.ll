@@ -1,5 +1,5 @@
-declare i8* @llvm.ptrmask.p0i8.i64 (i8*, i64) readnone speculatable
 declare void @_Bio__println (i8*)
+declare i8* @llvm.ptrmask.p0i8.i64 (i8*, i64) readnone speculatable
 declare i8* @_bal_alloc (i64)
 declare void @_bal_panic (i64)
 define void @_B_main () {
