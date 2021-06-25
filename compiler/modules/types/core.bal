@@ -244,6 +244,7 @@ public final UniformTypeBitSet FUTURE = uniformType(UT_FUTURE);
 public final UniformTypeBitSet TOP = uniformTypeUnion(UT_MASK);
 public final UniformTypeBitSet ANY = uniformTypeUnion(UT_MASK & ~(1 << UT_ERROR));
 public final UniformTypeBitSet READONLY = uniformTypeUnion(UT_READONLY);
+public final UniformTypeBitSet SIMPLE_OR_STRING = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
 public final SemType BYTE = intWidthUnsigned(8);
 
 // Need this type to workaround slalpha4 bug.
@@ -633,8 +634,7 @@ public function typeCheckContext(Env env) returns TypeCheckContext {
 public function createJson(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType simple = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
-    SemType j = union(simple, union(listDef.getSemType(env), mapDef.getSemType(env)));
+    SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, [], j);
     _ = mapDef.define(env, [], j);
     return j;
