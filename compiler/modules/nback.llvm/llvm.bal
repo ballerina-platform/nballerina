@@ -215,6 +215,10 @@ public class Module {
     }
 
     function output(Output out) {
+        if self.target is TargetTriple {
+            string[] words = ["target", "triple", "=", "\"", <TargetTriple>self.target, "\""];
+            out.push(createLine(words));
+        }
         foreach var globalVar in self.globalVariables {
             out.push(createLine([globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)])); 
         }
