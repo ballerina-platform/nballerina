@@ -155,7 +155,7 @@ public enum InsnName {
     INSN_CALL,
     INSN_INVOKE,
     INSN_ASSIGN,
-    INSN_NARROW,
+    INSN_COND_NARROW,
     INSN_TYPE_CAST,
     INSN_TYPE_TEST,
     INSN_BRANCH,
@@ -177,7 +177,7 @@ public type Insn
     IntArithmeticBinaryInsn|IntNegateInsn
     |IntCompareInsn|BooleanCompareInsn|EqualityInsn|BooleanNotInsn
     |RetInsn|AbnormalRetInsn|CallInsn
-    |AssignInsn|NarrowInsn|TypeCastInsn|TypeTestInsn
+    |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
 
 public type Operand ConstOperand|Register;
@@ -316,17 +316,37 @@ public type TypeTestInsn readonly & record {|
 |};
 
 
-# A type narrowing that can be verified to succeed because of an TypeTestInsn.
+# A type narrowing that is justified by an earlier condition.
+# The condition must be a TypeTestInsn or an EqualInsn.
 # Usually this would require a TypeCastInsn, but the compiler emits this
 # to support Ballerina's type narrowing feature, when it knows the cast
-# will succeed.
-# This must be verifiable purely from the BIR.
-# XXX Is there a better way to do this? e.g. combine test and cast somehow
-public type NarrowInsn readonly & record {|
+# would succeed.
+# The `testBlock` and `testInsnIndex` together refer to the instruction
+# that justifies the narrowing.
+# The justification divides into two parts.
+# First, the narrowing to the type of the result must be justified
+# if the referenced instruction evaluates to the specified `condResult`.
+# For example, if condResult is true, and the referenced insn is a TypeTestInsn,
+# then the operand of this insn must be the same as the operand of
+# the TypeTestInsn and the type of the result must be the intersection of the type of the operand
+# and the semType in the TypeTestInsn.
+# Second, the flow through the basic blocks must be such that this block is only
+# reached when the condition is true. In particular, the referenced block must end
+# with a CondBranchInsn whose operand comes from the result of the condition
+# (possibly via a BooleanNotInsn), and the block containing this insn must be
+# reachable only through the applicable branch of that CondBranchInsn.
+public type CondNarrowInsn readonly & record {|
     *InsnBase;
-    INSN_NARROW name = INSN_NARROW;
+    INSN_COND_NARROW name = INSN_COND_NARROW;
     Register result;
     Register operand;
+    // label of the block that contains the test that justifies the narrowing
+    Label testBlock;
+    // Index in testBlock of the insn that justifies the narrowing
+    int testInsnIndex;
+    // The type narrowing is justified by the result of the condition
+    // having this value.
+    boolean condResult;
 |};
 
 # Return normally from a function.
