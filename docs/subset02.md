@@ -162,3 +162,7 @@ Type `any` and some related operations:
 ## Deviations
 
 * Stack overflow is undefined behaviour, rather than resulting in a panic
+
+## Implemented spec changes since 2021R1
+
+* [#814](https://github.com/ballerina-platform/ballerina-spec/issues/814) - improved typing rules for `==` and `!=`
