@@ -32,3 +32,39 @@ function testIntrinsicNamedFunctionDefn() {
         test:assertFail("Function declarations named as reserved intrinsic allowed");
     }
 }
+
+@test:Config {}
+function testSameNamedDeclarations1() {
+    Context context = new;
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
+    _ =  m.addGlobal("i64", "g1");
+    error|FunctionDefn fn = trap m.addFunctionDefn("g1",{returnType:"i64", paramTypes:["i64"]});
+    if !(fn is error) {
+        test:assertFail("Global variables named as reserved intrinsic allowed");
+    }
+}
+
+@test:Config {}
+function testSameNamedDeclarations2() {
+    Context context = new;
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
+    _ =  m.addGlobal("i64", "g1");
+    error|FunctionDecl fn = trap m.addFunctionDecl("g1",{returnType:"i64", paramTypes:["i64"]});
+    if !(fn is error) {
+        test:assertFail("Global variables named as reserved intrinsic allowed");
+    }
+}
+
+@test:Config {}
+function testSameNamedDeclarations3() {
+    Context context = new;
+    Builder builder = context.createBuilder();
+    Module m = context.createModule();
+    _ = m.addFunctionDefn("g1",{returnType:"i64", paramTypes:["i64"]});
+    error|FunctionDecl fn = trap m.addFunctionDecl("g1",{returnType:"i64", paramTypes:["i64"]});
+    if !(fn is error) {
+        test:assertFail("Global variables named as reserved intrinsic allowed");
+    }
+}
