@@ -46,17 +46,17 @@ function testParser(string k, string rule, string subject, string expected) retu
     dataProvider: sourceFragments
 }
 function testTokenizer(string k, string src) returns error? {
-    int[] lines = findLineFeeds(src);
+    int[] lines = findLineStarts(src);
     Tokenizer tok = new (src);
 
     err:Syntax|Token? t = advance(tok, k, src);
     while t is Token {
         err:Position pos = tok.currentPos();
-        string tStr = tokenToString(t);
         // XXX change below after making indexInLine 1-indexed
         int tStart = lines[pos.lineNumber - 1] + pos.indexInLine;
+        string tStr = tokenToString(t);
         string srcAtPos = src.substring(tStart, tStart + tStr.length());
-        test:assertEquals(srcAtPos, tStr);
+        test:assertEquals(srcAtPos, tStr, "token: '" + tStr + "' source: '" + srcAtPos + "'");
         t = advance(tok, k, src);
     }
     if k.includes("E") {
@@ -78,25 +78,63 @@ function advance(Tokenizer tok, string k, string subject) returns err:Syntax|Tok
 }
 
 function tokenToString(Token t) returns string {
-    if t is VariableLengthToken {
-        return t[1];
+    match t {
+        [STRING_LITERAL, var str] => {
+            // can't recover original string, so
+            // lets just return a minimal expectation
+            return "\"";
+        }
+        [_, var str] => {
+            return str;
+        }
     }
     return <string>t;
 }
 
-function findLineFeeds(string str) returns int[] {
-    int[] lineFeeds = [0];
-    var itr = str.iterator();
+function findLineStarts(string str) returns int[] {
+    int[] lineStarts = [0];
+    BiIterator itr = new(str);
+    var [first, second] = itr.next();
     int i = 1;
-    var char = itr.next();
-    while char != () {
-        if char.value == "\n" {
-            lineFeeds.push(i);
+    while !(first == () && second == ()) {
+        if first == "\r" && second == "\n" {
+            i += 1;
+            _ = itr.next();
+            lineStarts.push(i);
         }
-        char = itr.next();
+        else if first == "\r" || first == "\n" {
+            lineStarts.push(i);
+        }
         i += 1;
+        [first, second] = itr.next();
     }
-    return lineFeeds;
+    return lineStarts;
+}
+
+class BiIterator {
+    StringIterator itr;
+    boolean unstarted = true;
+    Char? second = ();
+
+    function init(string str) {
+        self.itr = str.iterator();
+    }
+
+    function next() returns [string?, string?] {
+        if self.unstarted {
+            self.fillSecond();
+            self.unstarted = false;
+        }
+
+        Char? first = self.second;
+        self.fillSecond();
+        return [first, self.second];
+    }
+
+    function fillSecond() {
+        var next = self.itr.next();
+        self.second = next != () ? next.value : ();
+    }
 }
 
 function reduceToWords(string rule, string fragment) returns err:Syntax|Word[] {
@@ -132,13 +170,16 @@ function sourceFragments() returns string[][]|error {
 }
 
 function invalidTokenSourceFragments() returns string[][]|error {
-    return [["OE", "\""],
+    return [["OE", string`"`],
             ["OE", "'"],
             ["OE", "`"],
-            ["OE", "\"\\\""],
-            ["OE", "\\"],
+            ["OE", string`"\"`],
+            ["OE", string`"\a"`],
+            ["OE", "\\"], // JBUG #31431 can't use string template
             ["OE", "\"\n\""],
-            ["E", "01"]];
+            ["OE", "\"\r\""],
+            ["E", "01"],
+            ["E", "-01"]];
 }
 
 function validTokenSourceFragments() returns string[][]|error {
@@ -154,6 +195,21 @@ function validTokenSourceFragments() returns string[][]|error {
          ["E", "expr", "9223372036854775808", ""],
          ["V", "expr", "true", "true"],
          ["V", "expr", "false", "false"],
+         ["V", "expr", "\n0", "0"],
+         ["V", "expr", "\r0", "0"],
+         ["V", "expr", "\r\n0", "0"],
+        // literals string
+         ["UV", "expr", string`"\t"`, string`"\t"`],
+         ["UV", "expr", "\"\t\"", "\"\t\""],
+         ["UV", "expr", string`"\n"`, string`"\n"`],
+         ["UV", "expr", string`"\r"`, string`"\r"`],
+         ["UV", "expr", string`"\\"`, string`"\\"`],
+         ["UV", "expr", string`"\""`, string`"\""`],
+         ["UV", "expr", string`"what"`, string`"what"`],
+         ["UV", "expr", string`"Say \"what\" again."`, string`"Say \"what\" again."`],
+         //ref
+         ["V", "expr", "x", "x"],
+         ["V", "expr", "truefalse", "truefalse"],
          // unary op
          ["E", "expr", "!", ""],
          ["E", "expr", "!-", ""],
@@ -185,6 +241,10 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "expr", "4 <= 4", "4 <= 4"],
          ["V", "expr", "4 > 4", "4 > 4"],
          ["V", "expr", "4 >= 4", "4 >= 4"],
+         ["V", "expr", "a +\n b", "a + b"],
+         ["V", "expr", "a +\r b", "a + b"],
+         ["V", "expr", "a +\r\n b", "a + b"],
+         ["V", "expr", "a +\n\r b", "a + b"],
          // binary op associativity
          ["V", "expr", "1 + 2 + 3", "(1 + 2) + 3"],
          ["V", "expr", "1 + 2 + 3 + 4", "((1 + 2) + 3) + 4"],
@@ -199,6 +259,10 @@ function validTokenSourceFragments() returns string[][]|error {
          ["E", "expr", "1-+1", ""],
          ["V", "expr", "x+1===y-3", "(x + 1) === (y - 3)"],
          ["V", "expr", "x*1!=y/3", "(x * 1) != (y / 3)"],
+         // binary op precedence
+         ["V", "expr", "(1 * 2) + 3", "(1 * 2) + 3"],
+         ["V", "expr", "1 + 2 * 3", "1 + (2 * 3)"],
+         ["V", "expr", "1 + (2 * 3)", "1 + (2 * 3)"],
          // ref
          ["V", "expr", "x", "x"],
          ["V", "expr", "x1", "x1"],
@@ -234,6 +298,7 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "stmt", "break;", "break;"],
          ["V", "stmt", "continue;", "continue;"],
          ["V", "stmt", "a:x(c,d);", "a:x(c, d);"],
+         ["UE", "expr", string`string w = "Say "what" one more time.";`, ""],
          // statement return
          ["V", "stmt", "return;", "return;"],
          ["V", "stmt", "return ok;", "return ok;"],
