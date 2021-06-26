@@ -1,20 +1,29 @@
+@_bal_stack_guard = external global i8*
+declare void @_bal_panic (i64)
 declare i8* @_bal_alloc (i64)
 declare void @_Bio__println (i8*)
 declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare void @_bal_panic (i64)
 define void @_B_main () {
   %_0 = alloca i64
   %_1 = alloca i8*
-  %_2 = call i64 @_B_foo (i64 10)
-  store i64 %_2, i64* %_0
-  %_3 = load i64, i64* %_0
-  %_4 = call i8* @_bal_alloc (i64 8)
-  %_5 = bitcast i8* %_4 to i64*
-  store i64 %_3, i64* %_5, align 8
-  %_6 = getelementptr i8, i8* %_4, i64 144115188075855872
-  call void @_Bio__println (i8* %_6)
+  %_2 = alloca i8
+  %_3 = load i8*, i8** @_bal_stack_guard
+  %_4 = icmp ult i8* %_2, %_3
+  br i1 %_4, label %L2, label %L1
+L1:
+  %_5 = call i64 @_B_foo (i64 10)
+  store i64 %_5, i64* %_0
+  %_6 = load i64, i64* %_0
+  %_7 = call i8* @_bal_alloc (i64 8)
+  %_8 = bitcast i8* %_7 to i64*
+  store i64 %_6, i64* %_8, align 8
+  %_9 = getelementptr i8, i8* %_7, i64 144115188075855872
+  call void @_Bio__println (i8* %_9)
   store i8* null, i8** %_1
   ret void
+L2:
+  call void @_bal_panic (i64 4)
+  unreachable
 }
 define internal i64 @_B_foo (i64 %_0) {
   %x = alloca i64
@@ -28,72 +37,80 @@ define internal i64 @_B_foo (i64 %_0) {
   %_7 = alloca i64
   %_8 = alloca i64
   %_9 = alloca i64
-  store i64 %_0, i64* %x
-  %_10 = load i64, i64* %x
-  store i64 %_10, i64* %i
-  br label %L1
+  %_10 = alloca i8
+  %_11 = load i8*, i8** @_bal_stack_guard
+  %_12 = icmp ult i8* %_10, %_11
+  br i1 %_12, label %L10, label %L1
 L1:
-  %_11 = load i64, i64* %i
-  %_12 = icmp sge i64 %_11, 0
-  store i1 %_12, i1* %_1
-  %_13 = load i1, i1* %_1
-  br i1 %_13, label %L3, label %L2
+  store i64 %_0, i64* %x
+  %_13 = load i64, i64* %x
+  store i64 %_13, i64* %i
+  br label %L2
 L2:
   %_14 = load i64, i64* %i
-  %_15 = icmp slt i64 %_14, 0
-  store i1 %_15, i1* %_6
-  %_16 = load i1, i1* %_6
-  br i1 %_16, label %L6, label %L7
+  %_15 = icmp sge i64 %_14, 0
+  store i1 %_15, i1* %_1
+  %_16 = load i1, i1* %_1
+  br i1 %_16, label %L4, label %L3
 L3:
   %_17 = load i64, i64* %i
-  %_18 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_17, i64 1)
-  %_19 = extractvalue {i64, i1} %_18, 1
-  br i1 %_19, label %L10, label %L9
+  %_18 = icmp slt i64 %_17, 0
+  store i1 %_18, i1* %_6
+  %_19 = load i1, i1* %_6
+  br i1 %_19, label %L7, label %L8
 L4:
-  %_30 = load i64, i64* %i
-  %_31 = call i8* @_bal_alloc (i64 8)
-  %_32 = bitcast i8* %_31 to i64*
-  store i64 %_30, i64* %_32, align 8
-  %_33 = getelementptr i8, i8* %_31, i64 144115188075855872
-  call void @_Bio__println (i8* %_33)
-  store i8* null, i8** %_5
-  br label %L2
+  %_20 = load i64, i64* %i
+  %_21 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_20, i64 1)
+  %_22 = extractvalue {i64, i1} %_21, 1
+  br i1 %_22, label %L12, label %L11
 L5:
-  br label %L1
+  %_33 = load i64, i64* %i
+  %_34 = call i8* @_bal_alloc (i64 8)
+  %_35 = bitcast i8* %_34 to i64*
+  store i64 %_33, i64* %_35, align 8
+  %_36 = getelementptr i8, i8* %_34, i64 144115188075855872
+  call void @_Bio__println (i8* %_36)
+  store i8* null, i8** %_5
+  br label %L3
 L6:
-  ret i64 -1
+  br label %L2
 L7:
-  %_34 = load i64, i64* %i
-  %_35 = call i64 @_B_foo (i64 %_34)
-  store i64 %_35, i64* %_8
-  %_36 = load i64, i64* %_8
-  ret i64 %_36
+  ret i64 -1
 L8:
-  %_37 = load i64, i64* %_9
-  call void @_bal_panic (i64 %_37)
-  unreachable
+  %_37 = load i64, i64* %i
+  %_38 = call i64 @_B_foo (i64 %_37)
+  store i64 %_38, i64* %_8
+  %_39 = load i64, i64* %_8
+  ret i64 %_39
 L9:
-  %_20 = extractvalue {i64, i1} %_18, 0
-  store i64 %_20, i64* %_2
-  %_21 = load i64, i64* %_2
-  store i64 %_21, i64* %i
-  %_22 = load i64, i64* %x
-  %_23 = load i64, i64* %i
-  %_24 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_22, i64 %_23)
-  %_25 = extractvalue {i64, i1} %_24, 1
-  br i1 %_25, label %L12, label %L11
+  %_40 = load i64, i64* %_9
+  call void @_bal_panic (i64 %_40)
+  unreachable
 L10:
-  store i64 1, i64* %_9
-  br label %L8
+  call void @_bal_panic (i64 4)
+  unreachable
 L11:
-  %_26 = extractvalue {i64, i1} %_24, 0
-  store i64 %_26, i64* %_4
-  %_27 = load i64, i64* %_4
-  %_28 = icmp eq i64 %_27, 2
-  store i1 %_28, i1* %_3
-  %_29 = load i1, i1* %_3
-  br i1 %_29, label %L4, label %L5
+  %_23 = extractvalue {i64, i1} %_21, 0
+  store i64 %_23, i64* %_2
+  %_24 = load i64, i64* %_2
+  store i64 %_24, i64* %i
+  %_25 = load i64, i64* %x
+  %_26 = load i64, i64* %i
+  %_27 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_25, i64 %_26)
+  %_28 = extractvalue {i64, i1} %_27, 1
+  br i1 %_28, label %L14, label %L13
 L12:
   store i64 1, i64* %_9
-  br label %L8
+  br label %L9
+L13:
+  %_29 = extractvalue {i64, i1} %_27, 0
+  store i64 %_29, i64* %_4
+  %_30 = load i64, i64* %_4
+  %_31 = icmp eq i64 %_30, 2
+  store i1 %_31, i1* %_3
+  %_32 = load i1, i1* %_3
+  br i1 %_32, label %L5, label %L6
+L14:
+  store i64 1, i64* %_9
+  br label %L9
 }

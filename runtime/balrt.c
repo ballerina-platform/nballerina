@@ -2,6 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifndef STACK_SIZE
+#ifdef STACK_DEBUG
+#define STACK_SIZE 1024
+#else
+#define STACK_SIZE (1024*1024)
+#endif
+#endif
+
 #define TAG_MASK 0xFF
 #define TAG_SHIFT 56
 #define TAG_BOOLEAN 1
@@ -9,6 +17,7 @@
 #define ALIGN_HEAP 8
 
 extern void _B_main();
+char *_bal_stack_guard;
 
 typedef char *TaggedPtr;
 
@@ -46,6 +55,9 @@ static void printTagged(FILE *fp, TaggedPtr p) {
 }
 
 void _Bio__println(TaggedPtr p) {
+#ifdef STACK_DEBUG
+    fprintf(stderr, "Used stack %ld bytes\n", (long)((_bal_stack_guard + STACK_SIZE) - (char *)__builtin_frame_address(0)));
+#endif
     printTagged(stdout, p);
     putchar('\n');
 }
@@ -54,7 +66,8 @@ const char *panicMessages[] = {
     0,
     "arithmetic overflow",
     "divide by zero",
-    "bad type cast"
+    "bad type cast",
+    "stack overflow"
 };
 
 void _bal_panic(int64_t code) {
@@ -72,6 +85,7 @@ char *_bal_alloc(int64_t nBytes) {
 }
 
 int main() {
+    _bal_stack_guard = __builtin_frame_address(0) - STACK_SIZE;
     _B_main();
     return 0;
 } 

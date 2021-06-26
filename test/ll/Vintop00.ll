@@ -1,9 +1,10 @@
+@_bal_stack_guard = external global i8*
+declare void @_bal_panic (i64)
 declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 declare i8* @_bal_alloc (i64)
 declare void @_Bio__println (i8*)
 declare {i64, i1} @llvm.smul.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare void @_bal_panic (i64)
 define void @_B_main () {
   %_0 = alloca i64
   %_1 = alloca i64
@@ -43,420 +44,428 @@ define void @_B_main () {
   %_35 = alloca i64
   %_36 = alloca i8*
   %_37 = alloca i64
-  %_38 = icmp eq i64 3, 0
-  br i1 %_38, label %L2, label %L3
+  %_38 = alloca i8
+  %_39 = load i8*, i8** @_bal_stack_guard
+  %_40 = icmp ult i8* %_38, %_39
+  br i1 %_40, label %L3, label %L1
 L1:
-  %_192 = load i64, i64* %_37
-  call void @_bal_panic (i64 %_192)
-  unreachable
+  %_41 = icmp eq i64 3, 0
+  br i1 %_41, label %L4, label %L5
 L2:
-  store i64 2, i64* %_37
-  br label %L1
+  %_195 = load i64, i64* %_37
+  call void @_bal_panic (i64 %_195)
+  unreachable
 L3:
-  %_39 = icmp eq i64 6, -9223372036854775808
-  %_40 = icmp eq i64 3, -1
-  %_41 = and i1 %_39, %_40
-  br i1 %_41, label %L5, label %L4
+  call void @_bal_panic (i64 4)
+  unreachable
 L4:
-  %_42 = sdiv i64 6, 3
-  store i64 %_42, i64* %_0
-  %_43 = load i64, i64* %_0
-  %_44 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 12, i64 %_43)
-  %_45 = extractvalue {i64, i1} %_44, 1
-  br i1 %_45, label %L7, label %L6
+  store i64 2, i64* %_37
+  br label %L2
 L5:
-  store i64 1, i64* %_37
-  br label %L1
+  %_42 = icmp eq i64 6, -9223372036854775808
+  %_43 = icmp eq i64 3, -1
+  %_44 = and i1 %_42, %_43
+  br i1 %_44, label %L7, label %L6
 L6:
-  %_46 = extractvalue {i64, i1} %_44, 0
-  store i64 %_46, i64* %_1
-  %_47 = load i64, i64* %_1
-  %_48 = call i8* @_bal_alloc (i64 8)
-  %_49 = bitcast i8* %_48 to i64*
-  store i64 %_47, i64* %_49, align 8
-  %_50 = getelementptr i8, i8* %_48, i64 144115188075855872
-  call void @_Bio__println (i8* %_50)
-  store i8* null, i8** %_2
-  %_51 = icmp eq i64 3, 0
-  br i1 %_51, label %L8, label %L9
+  %_45 = sdiv i64 6, 3
+  store i64 %_45, i64* %_0
+  %_46 = load i64, i64* %_0
+  %_47 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 12, i64 %_46)
+  %_48 = extractvalue {i64, i1} %_47, 1
+  br i1 %_48, label %L9, label %L8
 L7:
   store i64 1, i64* %_37
-  br label %L1
+  br label %L2
 L8:
-  store i64 2, i64* %_37
-  br label %L1
+  %_49 = extractvalue {i64, i1} %_47, 0
+  store i64 %_49, i64* %_1
+  %_50 = load i64, i64* %_1
+  %_51 = call i8* @_bal_alloc (i64 8)
+  %_52 = bitcast i8* %_51 to i64*
+  store i64 %_50, i64* %_52, align 8
+  %_53 = getelementptr i8, i8* %_51, i64 144115188075855872
+  call void @_Bio__println (i8* %_53)
+  store i8* null, i8** %_2
+  %_54 = icmp eq i64 3, 0
+  br i1 %_54, label %L10, label %L11
 L9:
-  %_52 = icmp eq i64 30, -9223372036854775808
-  %_53 = icmp eq i64 3, -1
-  %_54 = and i1 %_52, %_53
-  br i1 %_54, label %L11, label %L10
-L10:
-  %_55 = sdiv i64 30, 3
-  store i64 %_55, i64* %_3
-  %_56 = load i64, i64* %_3
-  %_57 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_56, i64 12)
-  %_58 = extractvalue {i64, i1} %_57, 1
-  br i1 %_58, label %L13, label %L12
-L11:
   store i64 1, i64* %_37
-  br label %L1
+  br label %L2
+L10:
+  store i64 2, i64* %_37
+  br label %L2
+L11:
+  %_55 = icmp eq i64 30, -9223372036854775808
+  %_56 = icmp eq i64 3, -1
+  %_57 = and i1 %_55, %_56
+  br i1 %_57, label %L13, label %L12
 L12:
-  %_59 = extractvalue {i64, i1} %_57, 0
-  store i64 %_59, i64* %_4
-  %_60 = load i64, i64* %_4
-  %_61 = call i8* @_bal_alloc (i64 8)
-  %_62 = bitcast i8* %_61 to i64*
-  store i64 %_60, i64* %_62, align 8
-  %_63 = getelementptr i8, i8* %_61, i64 144115188075855872
-  call void @_Bio__println (i8* %_63)
-  store i8* null, i8** %_5
-  %_64 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 6, i64 3)
-  %_65 = extractvalue {i64, i1} %_64, 1
-  br i1 %_65, label %L15, label %L14
+  %_58 = sdiv i64 30, 3
+  store i64 %_58, i64* %_3
+  %_59 = load i64, i64* %_3
+  %_60 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_59, i64 12)
+  %_61 = extractvalue {i64, i1} %_60, 1
+  br i1 %_61, label %L15, label %L14
 L13:
   store i64 1, i64* %_37
-  br label %L1
+  br label %L2
 L14:
-  %_66 = extractvalue {i64, i1} %_64, 0
-  store i64 %_66, i64* %_6
-  %_67 = load i64, i64* %_6
-  %_68 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_67, i64 2)
-  %_69 = extractvalue {i64, i1} %_68, 1
-  br i1 %_69, label %L17, label %L16
+  %_62 = extractvalue {i64, i1} %_60, 0
+  store i64 %_62, i64* %_4
+  %_63 = load i64, i64* %_4
+  %_64 = call i8* @_bal_alloc (i64 8)
+  %_65 = bitcast i8* %_64 to i64*
+  store i64 %_63, i64* %_65, align 8
+  %_66 = getelementptr i8, i8* %_64, i64 144115188075855872
+  call void @_Bio__println (i8* %_66)
+  store i8* null, i8** %_5
+  %_67 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 6, i64 3)
+  %_68 = extractvalue {i64, i1} %_67, 1
+  br i1 %_68, label %L17, label %L16
 L15:
   store i64 1, i64* %_37
-  br label %L1
+  br label %L2
 L16:
-  %_70 = extractvalue {i64, i1} %_68, 0
-  store i64 %_70, i64* %_7
-  %_71 = load i64, i64* %_7
-  %_72 = call i8* @_bal_alloc (i64 8)
-  %_73 = bitcast i8* %_72 to i64*
-  store i64 %_71, i64* %_73, align 8
-  %_74 = getelementptr i8, i8* %_72, i64 144115188075855872
-  call void @_Bio__println (i8* %_74)
-  store i8* null, i8** %_8
-  %_75 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 4, i64 2)
-  %_76 = extractvalue {i64, i1} %_75, 1
-  br i1 %_76, label %L19, label %L18
+  %_69 = extractvalue {i64, i1} %_67, 0
+  store i64 %_69, i64* %_6
+  %_70 = load i64, i64* %_6
+  %_71 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_70, i64 2)
+  %_72 = extractvalue {i64, i1} %_71, 1
+  br i1 %_72, label %L19, label %L18
 L17:
   store i64 1, i64* %_37
-  br label %L1
+  br label %L2
 L18:
-  %_77 = extractvalue {i64, i1} %_75, 0
-  store i64 %_77, i64* %_9
-  %_78 = load i64, i64* %_9
-  %_79 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 8, i64 %_78)
-  %_80 = extractvalue {i64, i1} %_79, 1
-  br i1 %_80, label %L21, label %L20
+  %_73 = extractvalue {i64, i1} %_71, 0
+  store i64 %_73, i64* %_7
+  %_74 = load i64, i64* %_7
+  %_75 = call i8* @_bal_alloc (i64 8)
+  %_76 = bitcast i8* %_75 to i64*
+  store i64 %_74, i64* %_76, align 8
+  %_77 = getelementptr i8, i8* %_75, i64 144115188075855872
+  call void @_Bio__println (i8* %_77)
+  store i8* null, i8** %_8
+  %_78 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 4, i64 2)
+  %_79 = extractvalue {i64, i1} %_78, 1
+  br i1 %_79, label %L21, label %L20
 L19:
   store i64 1, i64* %_37
-  br label %L1
+  br label %L2
 L20:
-  %_81 = extractvalue {i64, i1} %_79, 0
-  store i64 %_81, i64* %_10
-  %_82 = load i64, i64* %_10
-  %_83 = call i8* @_bal_alloc (i64 8)
-  %_84 = bitcast i8* %_83 to i64*
-  store i64 %_82, i64* %_84, align 8
-  %_85 = getelementptr i8, i8* %_83, i64 144115188075855872
-  call void @_Bio__println (i8* %_85)
-  store i8* null, i8** %_11
-  %_86 = icmp eq i64 3, 0
-  br i1 %_86, label %L22, label %L23
+  %_80 = extractvalue {i64, i1} %_78, 0
+  store i64 %_80, i64* %_9
+  %_81 = load i64, i64* %_9
+  %_82 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 8, i64 %_81)
+  %_83 = extractvalue {i64, i1} %_82, 1
+  br i1 %_83, label %L23, label %L22
 L21:
   store i64 1, i64* %_37
-  br label %L1
+  br label %L2
 L22:
-  store i64 2, i64* %_37
-  br label %L1
+  %_84 = extractvalue {i64, i1} %_82, 0
+  store i64 %_84, i64* %_10
+  %_85 = load i64, i64* %_10
+  %_86 = call i8* @_bal_alloc (i64 8)
+  %_87 = bitcast i8* %_86 to i64*
+  store i64 %_85, i64* %_87, align 8
+  %_88 = getelementptr i8, i8* %_86, i64 144115188075855872
+  call void @_Bio__println (i8* %_88)
+  store i8* null, i8** %_11
+  %_89 = icmp eq i64 3, 0
+  br i1 %_89, label %L24, label %L25
 L23:
-  %_87 = icmp eq i64 4, -9223372036854775808
-  %_88 = icmp eq i64 3, -1
-  %_89 = and i1 %_87, %_88
-  br i1 %_89, label %L25, label %L24
+  store i64 1, i64* %_37
+  br label %L2
 L24:
-  %_90 = srem i64 4, 3
-  store i64 %_90, i64* %_12
-  br label %L26
+  store i64 2, i64* %_37
+  br label %L2
 L25:
-  store i64 0, i64* %_12
-  br label %L26
+  %_90 = icmp eq i64 4, -9223372036854775808
+  %_91 = icmp eq i64 3, -1
+  %_92 = and i1 %_90, %_91
+  br i1 %_92, label %L27, label %L26
 L26:
-  %_91 = load i64, i64* %_12
-  %_92 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 9, i64 %_91)
-  %_93 = extractvalue {i64, i1} %_92, 1
-  br i1 %_93, label %L28, label %L27
+  %_93 = srem i64 4, 3
+  store i64 %_93, i64* %_12
+  br label %L28
 L27:
-  %_94 = extractvalue {i64, i1} %_92, 0
-  store i64 %_94, i64* %_13
-  %_95 = load i64, i64* %_13
-  %_96 = call i8* @_bal_alloc (i64 8)
-  %_97 = bitcast i8* %_96 to i64*
-  store i64 %_95, i64* %_97, align 8
-  %_98 = getelementptr i8, i8* %_96, i64 144115188075855872
-  call void @_Bio__println (i8* %_98)
-  store i8* null, i8** %_14
-  %_99 = icmp eq i64 3, 0
-  br i1 %_99, label %L29, label %L30
+  store i64 0, i64* %_12
+  br label %L28
 L28:
-  store i64 1, i64* %_37
-  br label %L1
+  %_94 = load i64, i64* %_12
+  %_95 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 9, i64 %_94)
+  %_96 = extractvalue {i64, i1} %_95, 1
+  br i1 %_96, label %L30, label %L29
 L29:
-  store i64 2, i64* %_37
-  br label %L1
+  %_97 = extractvalue {i64, i1} %_95, 0
+  store i64 %_97, i64* %_13
+  %_98 = load i64, i64* %_13
+  %_99 = call i8* @_bal_alloc (i64 8)
+  %_100 = bitcast i8* %_99 to i64*
+  store i64 %_98, i64* %_100, align 8
+  %_101 = getelementptr i8, i8* %_99, i64 144115188075855872
+  call void @_Bio__println (i8* %_101)
+  store i8* null, i8** %_14
+  %_102 = icmp eq i64 3, 0
+  br i1 %_102, label %L31, label %L32
 L30:
-  %_100 = icmp eq i64 4, -9223372036854775808
-  %_101 = icmp eq i64 3, -1
-  %_102 = and i1 %_100, %_101
-  br i1 %_102, label %L32, label %L31
+  store i64 1, i64* %_37
+  br label %L2
 L31:
-  %_103 = srem i64 4, 3
-  store i64 %_103, i64* %_15
-  br label %L33
+  store i64 2, i64* %_37
+  br label %L2
 L32:
-  store i64 0, i64* %_15
-  br label %L33
+  %_103 = icmp eq i64 4, -9223372036854775808
+  %_104 = icmp eq i64 3, -1
+  %_105 = and i1 %_103, %_104
+  br i1 %_105, label %L34, label %L33
 L33:
-  %_104 = load i64, i64* %_15
-  %_105 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_104, i64 9)
-  %_106 = extractvalue {i64, i1} %_105, 1
-  br i1 %_106, label %L35, label %L34
+  %_106 = srem i64 4, 3
+  store i64 %_106, i64* %_15
+  br label %L35
 L34:
-  %_107 = extractvalue {i64, i1} %_105, 0
-  store i64 %_107, i64* %_16
-  %_108 = load i64, i64* %_16
-  %_109 = call i8* @_bal_alloc (i64 8)
-  %_110 = bitcast i8* %_109 to i64*
-  store i64 %_108, i64* %_110, align 8
-  %_111 = getelementptr i8, i8* %_109, i64 144115188075855872
-  call void @_Bio__println (i8* %_111)
-  store i8* null, i8** %_17
-  %_112 = icmp eq i64 11, 0
-  br i1 %_112, label %L36, label %L37
+  store i64 0, i64* %_15
+  br label %L35
 L35:
-  store i64 1, i64* %_37
-  br label %L1
+  %_107 = load i64, i64* %_15
+  %_108 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_107, i64 9)
+  %_109 = extractvalue {i64, i1} %_108, 1
+  br i1 %_109, label %L37, label %L36
 L36:
-  store i64 2, i64* %_37
-  br label %L1
+  %_110 = extractvalue {i64, i1} %_108, 0
+  store i64 %_110, i64* %_16
+  %_111 = load i64, i64* %_16
+  %_112 = call i8* @_bal_alloc (i64 8)
+  %_113 = bitcast i8* %_112 to i64*
+  store i64 %_111, i64* %_113, align 8
+  %_114 = getelementptr i8, i8* %_112, i64 144115188075855872
+  call void @_Bio__println (i8* %_114)
+  store i8* null, i8** %_17
+  %_115 = icmp eq i64 11, 0
+  br i1 %_115, label %L38, label %L39
 L37:
-  %_113 = icmp eq i64 18, -9223372036854775808
-  %_114 = icmp eq i64 11, -1
-  %_115 = and i1 %_113, %_114
-  br i1 %_115, label %L39, label %L38
+  store i64 1, i64* %_37
+  br label %L2
 L38:
-  %_116 = srem i64 18, 11
-  store i64 %_116, i64* %_18
-  br label %L40
+  store i64 2, i64* %_37
+  br label %L2
 L39:
-  store i64 0, i64* %_18
-  br label %L40
+  %_116 = icmp eq i64 18, -9223372036854775808
+  %_117 = icmp eq i64 11, -1
+  %_118 = and i1 %_116, %_117
+  br i1 %_118, label %L41, label %L40
 L40:
-  %_117 = load i64, i64* %_18
-  %_118 = icmp eq i64 3, 0
-  br i1 %_118, label %L41, label %L42
+  %_119 = srem i64 18, 11
+  store i64 %_119, i64* %_18
+  br label %L42
 L41:
-  store i64 2, i64* %_37
-  br label %L1
+  store i64 0, i64* %_18
+  br label %L42
 L42:
-  %_119 = icmp eq i64 %_117, -9223372036854775808
-  %_120 = icmp eq i64 3, -1
-  %_121 = and i1 %_119, %_120
-  br i1 %_121, label %L44, label %L43
+  %_120 = load i64, i64* %_18
+  %_121 = icmp eq i64 3, 0
+  br i1 %_121, label %L43, label %L44
 L43:
-  %_122 = srem i64 %_117, 3
-  store i64 %_122, i64* %_19
-  br label %L45
+  store i64 2, i64* %_37
+  br label %L2
 L44:
-  store i64 0, i64* %_19
-  br label %L45
+  %_122 = icmp eq i64 %_120, -9223372036854775808
+  %_123 = icmp eq i64 3, -1
+  %_124 = and i1 %_122, %_123
+  br i1 %_124, label %L46, label %L45
 L45:
-  %_123 = load i64, i64* %_19
-  %_124 = call i8* @_bal_alloc (i64 8)
-  %_125 = bitcast i8* %_124 to i64*
-  store i64 %_123, i64* %_125, align 8
-  %_126 = getelementptr i8, i8* %_124, i64 144115188075855872
-  call void @_Bio__println (i8* %_126)
-  store i8* null, i8** %_20
-  %_127 = icmp eq i64 18, 0
-  br i1 %_127, label %L46, label %L47
+  %_125 = srem i64 %_120, 3
+  store i64 %_125, i64* %_19
+  br label %L47
 L46:
-  store i64 2, i64* %_37
-  br label %L1
+  store i64 0, i64* %_19
+  br label %L47
 L47:
-  %_128 = icmp eq i64 30, -9223372036854775808
-  %_129 = icmp eq i64 18, -1
-  %_130 = and i1 %_128, %_129
-  br i1 %_130, label %L49, label %L48
+  %_126 = load i64, i64* %_19
+  %_127 = call i8* @_bal_alloc (i64 8)
+  %_128 = bitcast i8* %_127 to i64*
+  store i64 %_126, i64* %_128, align 8
+  %_129 = getelementptr i8, i8* %_127, i64 144115188075855872
+  call void @_Bio__println (i8* %_129)
+  store i8* null, i8** %_20
+  %_130 = icmp eq i64 18, 0
+  br i1 %_130, label %L48, label %L49
 L48:
-  %_131 = srem i64 30, 18
-  store i64 %_131, i64* %_21
-  br label %L50
+  store i64 2, i64* %_37
+  br label %L2
 L49:
-  store i64 0, i64* %_21
-  br label %L50
+  %_131 = icmp eq i64 30, -9223372036854775808
+  %_132 = icmp eq i64 18, -1
+  %_133 = and i1 %_131, %_132
+  br i1 %_133, label %L51, label %L50
 L50:
-  %_132 = load i64, i64* %_21
-  %_133 = icmp eq i64 11, 0
-  br i1 %_133, label %L51, label %L52
+  %_134 = srem i64 30, 18
+  store i64 %_134, i64* %_21
+  br label %L52
 L51:
-  store i64 2, i64* %_37
-  br label %L1
+  store i64 0, i64* %_21
+  br label %L52
 L52:
-  %_134 = icmp eq i64 %_132, -9223372036854775808
-  %_135 = icmp eq i64 11, -1
-  %_136 = and i1 %_134, %_135
-  br i1 %_136, label %L54, label %L53
+  %_135 = load i64, i64* %_21
+  %_136 = icmp eq i64 11, 0
+  br i1 %_136, label %L53, label %L54
 L53:
-  %_137 = srem i64 %_132, 11
-  store i64 %_137, i64* %_22
-  br label %L55
+  store i64 2, i64* %_37
+  br label %L2
 L54:
-  store i64 0, i64* %_22
-  br label %L55
+  %_137 = icmp eq i64 %_135, -9223372036854775808
+  %_138 = icmp eq i64 11, -1
+  %_139 = and i1 %_137, %_138
+  br i1 %_139, label %L56, label %L55
 L55:
-  %_138 = load i64, i64* %_22
-  %_139 = icmp eq i64 5, 0
-  br i1 %_139, label %L56, label %L57
+  %_140 = srem i64 %_135, 11
+  store i64 %_140, i64* %_22
+  br label %L57
 L56:
-  store i64 2, i64* %_37
-  br label %L1
+  store i64 0, i64* %_22
+  br label %L57
 L57:
-  %_140 = icmp eq i64 %_138, -9223372036854775808
-  %_141 = icmp eq i64 5, -1
-  %_142 = and i1 %_140, %_141
-  br i1 %_142, label %L59, label %L58
+  %_141 = load i64, i64* %_22
+  %_142 = icmp eq i64 5, 0
+  br i1 %_142, label %L58, label %L59
 L58:
-  %_143 = srem i64 %_138, 5
-  store i64 %_143, i64* %_23
-  br label %L60
+  store i64 2, i64* %_37
+  br label %L2
 L59:
-  store i64 0, i64* %_23
-  br label %L60
+  %_143 = icmp eq i64 %_141, -9223372036854775808
+  %_144 = icmp eq i64 5, -1
+  %_145 = and i1 %_143, %_144
+  br i1 %_145, label %L61, label %L60
 L60:
-  %_144 = load i64, i64* %_23
-  %_145 = call i8* @_bal_alloc (i64 8)
-  %_146 = bitcast i8* %_145 to i64*
-  store i64 %_144, i64* %_146, align 8
-  %_147 = getelementptr i8, i8* %_145, i64 144115188075855872
-  call void @_Bio__println (i8* %_147)
-  store i8* null, i8** %_24
-  %_148 = icmp eq i64 12, 0
-  br i1 %_148, label %L61, label %L62
+  %_146 = srem i64 %_141, 5
+  store i64 %_146, i64* %_23
+  br label %L62
 L61:
-  store i64 2, i64* %_37
-  br label %L1
+  store i64 0, i64* %_23
+  br label %L62
 L62:
-  %_149 = icmp eq i64 18, -9223372036854775808
-  %_150 = icmp eq i64 12, -1
-  %_151 = and i1 %_149, %_150
-  br i1 %_151, label %L64, label %L63
+  %_147 = load i64, i64* %_23
+  %_148 = call i8* @_bal_alloc (i64 8)
+  %_149 = bitcast i8* %_148 to i64*
+  store i64 %_147, i64* %_149, align 8
+  %_150 = getelementptr i8, i8* %_148, i64 144115188075855872
+  call void @_Bio__println (i8* %_150)
+  store i8* null, i8** %_24
+  %_151 = icmp eq i64 12, 0
+  br i1 %_151, label %L63, label %L64
 L63:
-  %_152 = srem i64 18, 12
-  store i64 %_152, i64* %_25
-  br label %L65
+  store i64 2, i64* %_37
+  br label %L2
 L64:
-  store i64 0, i64* %_25
-  br label %L65
+  %_152 = icmp eq i64 18, -9223372036854775808
+  %_153 = icmp eq i64 12, -1
+  %_154 = and i1 %_152, %_153
+  br i1 %_154, label %L66, label %L65
 L65:
-  %_153 = load i64, i64* %_25
-  %_154 = icmp eq i64 3, 0
-  br i1 %_154, label %L66, label %L67
+  %_155 = srem i64 18, 12
+  store i64 %_155, i64* %_25
+  br label %L67
 L66:
-  store i64 2, i64* %_37
-  br label %L1
+  store i64 0, i64* %_25
+  br label %L67
 L67:
-  %_155 = icmp eq i64 %_153, -9223372036854775808
-  %_156 = icmp eq i64 3, -1
-  %_157 = and i1 %_155, %_156
-  br i1 %_157, label %L69, label %L68
+  %_156 = load i64, i64* %_25
+  %_157 = icmp eq i64 3, 0
+  br i1 %_157, label %L68, label %L69
 L68:
-  %_158 = sdiv i64 %_153, 3
-  store i64 %_158, i64* %_26
-  %_159 = load i64, i64* %_26
-  %_160 = call i8* @_bal_alloc (i64 8)
-  %_161 = bitcast i8* %_160 to i64*
-  store i64 %_159, i64* %_161, align 8
-  %_162 = getelementptr i8, i8* %_160, i64 144115188075855872
-  call void @_Bio__println (i8* %_162)
-  store i8* null, i8** %_27
-  %_163 = icmp eq i64 8, 0
-  br i1 %_163, label %L70, label %L71
+  store i64 2, i64* %_37
+  br label %L2
 L69:
-  store i64 1, i64* %_37
-  br label %L1
+  %_158 = icmp eq i64 %_156, -9223372036854775808
+  %_159 = icmp eq i64 3, -1
+  %_160 = and i1 %_158, %_159
+  br i1 %_160, label %L71, label %L70
 L70:
-  store i64 2, i64* %_37
-  br label %L1
+  %_161 = sdiv i64 %_156, 3
+  store i64 %_161, i64* %_26
+  %_162 = load i64, i64* %_26
+  %_163 = call i8* @_bal_alloc (i64 8)
+  %_164 = bitcast i8* %_163 to i64*
+  store i64 %_162, i64* %_164, align 8
+  %_165 = getelementptr i8, i8* %_163, i64 144115188075855872
+  call void @_Bio__println (i8* %_165)
+  store i8* null, i8** %_27
+  %_166 = icmp eq i64 8, 0
+  br i1 %_166, label %L72, label %L73
 L71:
-  %_164 = icmp eq i64 16, -9223372036854775808
-  %_165 = icmp eq i64 8, -1
-  %_166 = and i1 %_164, %_165
-  br i1 %_166, label %L73, label %L72
+  store i64 1, i64* %_37
+  br label %L2
 L72:
-  %_167 = sdiv i64 16, 8
-  store i64 %_167, i64* %_28
-  %_168 = load i64, i64* %_28
-  %_169 = icmp eq i64 6, 0
-  br i1 %_169, label %L74, label %L75
-L73:
-  store i64 1, i64* %_37
-  br label %L1
-L74:
   store i64 2, i64* %_37
-  br label %L1
+  br label %L2
+L73:
+  %_167 = icmp eq i64 16, -9223372036854775808
+  %_168 = icmp eq i64 8, -1
+  %_169 = and i1 %_167, %_168
+  br i1 %_169, label %L75, label %L74
+L74:
+  %_170 = sdiv i64 16, 8
+  store i64 %_170, i64* %_28
+  %_171 = load i64, i64* %_28
+  %_172 = icmp eq i64 6, 0
+  br i1 %_172, label %L76, label %L77
 L75:
-  %_170 = icmp eq i64 %_168, -9223372036854775808
-  %_171 = icmp eq i64 6, -1
-  %_172 = and i1 %_170, %_171
-  br i1 %_172, label %L77, label %L76
-L76:
-  %_173 = srem i64 %_168, 6
-  store i64 %_173, i64* %_29
-  br label %L78
-L77:
-  store i64 0, i64* %_29
-  br label %L78
-L78:
-  %_174 = load i64, i64* %_29
-  %_175 = call i8* @_bal_alloc (i64 8)
-  %_176 = bitcast i8* %_175 to i64*
-  store i64 %_174, i64* %_176, align 8
-  %_177 = getelementptr i8, i8* %_175, i64 144115188075855872
-  call void @_Bio__println (i8* %_177)
-  store i8* null, i8** %_30
-  %_178 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 4, i64 -3)
-  %_179 = extractvalue {i64, i1} %_178, 1
-  br i1 %_179, label %L80, label %L79
-L79:
-  %_180 = extractvalue {i64, i1} %_178, 0
-  store i64 %_180, i64* %_32
-  %_181 = load i64, i64* %_32
-  %_182 = call i8* @_bal_alloc (i64 8)
-  %_183 = bitcast i8* %_182 to i64*
-  store i64 %_181, i64* %_183, align 8
-  %_184 = getelementptr i8, i8* %_182, i64 144115188075855872
-  call void @_Bio__println (i8* %_184)
-  store i8* null, i8** %_33
-  %_185 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 -3, i64 4)
-  %_186 = extractvalue {i64, i1} %_185, 1
-  br i1 %_186, label %L82, label %L81
-L80:
   store i64 1, i64* %_37
-  br label %L1
+  br label %L2
+L76:
+  store i64 2, i64* %_37
+  br label %L2
+L77:
+  %_173 = icmp eq i64 %_171, -9223372036854775808
+  %_174 = icmp eq i64 6, -1
+  %_175 = and i1 %_173, %_174
+  br i1 %_175, label %L79, label %L78
+L78:
+  %_176 = srem i64 %_171, 6
+  store i64 %_176, i64* %_29
+  br label %L80
+L79:
+  store i64 0, i64* %_29
+  br label %L80
+L80:
+  %_177 = load i64, i64* %_29
+  %_178 = call i8* @_bal_alloc (i64 8)
+  %_179 = bitcast i8* %_178 to i64*
+  store i64 %_177, i64* %_179, align 8
+  %_180 = getelementptr i8, i8* %_178, i64 144115188075855872
+  call void @_Bio__println (i8* %_180)
+  store i8* null, i8** %_30
+  %_181 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 4, i64 -3)
+  %_182 = extractvalue {i64, i1} %_181, 1
+  br i1 %_182, label %L82, label %L81
 L81:
-  %_187 = extractvalue {i64, i1} %_185, 0
-  store i64 %_187, i64* %_35
-  %_188 = load i64, i64* %_35
-  %_189 = call i8* @_bal_alloc (i64 8)
-  %_190 = bitcast i8* %_189 to i64*
-  store i64 %_188, i64* %_190, align 8
-  %_191 = getelementptr i8, i8* %_189, i64 144115188075855872
-  call void @_Bio__println (i8* %_191)
-  store i8* null, i8** %_36
-  ret void
+  %_183 = extractvalue {i64, i1} %_181, 0
+  store i64 %_183, i64* %_32
+  %_184 = load i64, i64* %_32
+  %_185 = call i8* @_bal_alloc (i64 8)
+  %_186 = bitcast i8* %_185 to i64*
+  store i64 %_184, i64* %_186, align 8
+  %_187 = getelementptr i8, i8* %_185, i64 144115188075855872
+  call void @_Bio__println (i8* %_187)
+  store i8* null, i8** %_33
+  %_188 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 -3, i64 4)
+  %_189 = extractvalue {i64, i1} %_188, 1
+  br i1 %_189, label %L84, label %L83
 L82:
   store i64 1, i64* %_37
-  br label %L1
+  br label %L2
+L83:
+  %_190 = extractvalue {i64, i1} %_188, 0
+  store i64 %_190, i64* %_35
+  %_191 = load i64, i64* %_35
+  %_192 = call i8* @_bal_alloc (i64 8)
+  %_193 = bitcast i8* %_192 to i64*
+  store i64 %_191, i64* %_193, align 8
+  %_194 = getelementptr i8, i8* %_192, i64 144115188075855872
+  call void @_Bio__println (i8* %_194)
+  store i8* null, i8** %_36
+  ret void
+L84:
+  store i64 1, i64* %_37
+  br label %L2
 }

@@ -1,3 +1,5 @@
+@_bal_stack_guard = external global i8*
+declare void @_bal_panic (i64)
 declare i8* @_bal_alloc (i64)
 declare void @_Bio__println (i8*)
 define void @_B_main () {
@@ -19,97 +21,129 @@ define void @_B_main () {
   %_15 = alloca i64
   %_16 = alloca i1
   %_17 = alloca i8*
-  %_18 = call i1 @_B_gte (i64 1, i64 2)
-  store i1 %_18, i1* %_0
-  %_19 = load i1, i1* %_0
-  call void @_B_printBoolean (i1 %_19)
+  %_18 = alloca i8
+  %_19 = load i8*, i8** @_bal_stack_guard
+  %_20 = icmp ult i8* %_18, %_19
+  br i1 %_20, label %L2, label %L1
+L1:
+  %_21 = call i1 @_B_gte (i64 1, i64 2)
+  store i1 %_21, i1* %_0
+  %_22 = load i1, i1* %_0
+  call void @_B_printBoolean (i1 %_22)
   store i8* null, i8** %_1
-  %_20 = call i1 @_B_gte (i64 2, i64 1)
-  store i1 %_20, i1* %_2
-  %_21 = load i1, i1* %_2
-  call void @_B_printBoolean (i1 %_21)
+  %_23 = call i1 @_B_gte (i64 2, i64 1)
+  store i1 %_23, i1* %_2
+  %_24 = load i1, i1* %_2
+  call void @_B_printBoolean (i1 %_24)
   store i8* null, i8** %_3
-  %_22 = call i1 @_B_gte (i64 2, i64 -1)
-  store i1 %_22, i1* %_5
-  %_23 = load i1, i1* %_5
-  call void @_B_printBoolean (i1 %_23)
+  %_25 = call i1 @_B_gte (i64 2, i64 -1)
+  store i1 %_25, i1* %_5
+  %_26 = load i1, i1* %_5
+  call void @_B_printBoolean (i1 %_26)
   store i8* null, i8** %_6
-  %_24 = call i1 @_B_gte (i64 42, i64 42)
-  store i1 %_24, i1* %_7
-  %_25 = load i1, i1* %_7
-  call void @_B_printBoolean (i1 %_25)
+  %_27 = call i1 @_B_gte (i64 42, i64 42)
+  store i1 %_27, i1* %_7
+  %_28 = load i1, i1* %_7
+  call void @_B_printBoolean (i1 %_28)
   store i8* null, i8** %_8
-  %_26 = call i1 @_B_lte (i64 1, i64 2)
-  store i1 %_26, i1* %_9
-  %_27 = load i1, i1* %_9
-  call void @_B_printBoolean (i1 %_27)
+  %_29 = call i1 @_B_lte (i64 1, i64 2)
+  store i1 %_29, i1* %_9
+  %_30 = load i1, i1* %_9
+  call void @_B_printBoolean (i1 %_30)
   store i8* null, i8** %_10
-  %_28 = call i1 @_B_lte (i64 0, i64 0)
-  store i1 %_28, i1* %_11
-  %_29 = load i1, i1* %_11
-  call void @_B_printBoolean (i1 %_29)
+  %_31 = call i1 @_B_lte (i64 0, i64 0)
+  store i1 %_31, i1* %_11
+  %_32 = load i1, i1* %_11
+  call void @_B_printBoolean (i1 %_32)
   store i8* null, i8** %_12
-  %_30 = call i1 @_B_lte (i64 2, i64 1)
-  store i1 %_30, i1* %_13
-  %_31 = load i1, i1* %_13
-  call void @_B_printBoolean (i1 %_31)
+  %_33 = call i1 @_B_lte (i64 2, i64 1)
+  store i1 %_33, i1* %_13
+  %_34 = load i1, i1* %_13
+  call void @_B_printBoolean (i1 %_34)
   store i8* null, i8** %_14
-  %_32 = call i1 @_B_lte (i64 -1, i64 17)
-  store i1 %_32, i1* %_16
-  %_33 = load i1, i1* %_16
-  call void @_B_printBoolean (i1 %_33)
+  %_35 = call i1 @_B_lte (i64 -1, i64 17)
+  store i1 %_35, i1* %_16
+  %_36 = load i1, i1* %_16
+  call void @_B_printBoolean (i1 %_36)
   store i8* null, i8** %_17
   ret void
+L2:
+  call void @_bal_panic (i64 4)
+  unreachable
 }
 define internal void @_B_printBoolean (i1 %_0) {
   %b = alloca i1
   %_1 = alloca i8*
   %_2 = alloca i8*
-  store i1 %_0, i1* %b
-  %_3 = load i1, i1* %b
-  br i1 %_3, label %L1, label %L2
+  %_3 = alloca i8
+  %_4 = load i8*, i8** @_bal_stack_guard
+  %_5 = icmp ult i8* %_3, %_4
+  br i1 %_5, label %L5, label %L1
 L1:
-  %_4 = call i8* @_bal_alloc (i64 8)
-  %_5 = bitcast i8* %_4 to i64*
-  store i64 1, i64* %_5, align 8
-  %_6 = getelementptr i8, i8* %_4, i64 144115188075855872
-  call void @_Bio__println (i8* %_6)
-  store i8* null, i8** %_1
-  br label %L3
+  store i1 %_0, i1* %b
+  %_6 = load i1, i1* %b
+  br i1 %_6, label %L2, label %L3
 L2:
   %_7 = call i8* @_bal_alloc (i64 8)
   %_8 = bitcast i8* %_7 to i64*
-  store i64 0, i64* %_8, align 8
+  store i64 1, i64* %_8, align 8
   %_9 = getelementptr i8, i8* %_7, i64 144115188075855872
   call void @_Bio__println (i8* %_9)
-  store i8* null, i8** %_2
-  br label %L3
+  store i8* null, i8** %_1
+  br label %L4
 L3:
+  %_10 = call i8* @_bal_alloc (i64 8)
+  %_11 = bitcast i8* %_10 to i64*
+  store i64 0, i64* %_11, align 8
+  %_12 = getelementptr i8, i8* %_10, i64 144115188075855872
+  call void @_Bio__println (i8* %_12)
+  store i8* null, i8** %_2
+  br label %L4
+L4:
   ret void
+L5:
+  call void @_bal_panic (i64 4)
+  unreachable
 }
 define internal i1 @_B_lte (i64 %_0, i64 %_1) {
   %x = alloca i64
   %y = alloca i64
   %_2 = alloca i1
+  %_3 = alloca i8
+  %_4 = load i8*, i8** @_bal_stack_guard
+  %_5 = icmp ult i8* %_3, %_4
+  br i1 %_5, label %L2, label %L1
+L1:
   store i64 %_0, i64* %x
   store i64 %_1, i64* %y
-  %_3 = load i64, i64* %x
-  %_4 = load i64, i64* %y
-  %_5 = icmp sle i64 %_3, %_4
-  store i1 %_5, i1* %_2
-  %_6 = load i1, i1* %_2
-  ret i1 %_6
+  %_6 = load i64, i64* %x
+  %_7 = load i64, i64* %y
+  %_8 = icmp sle i64 %_6, %_7
+  store i1 %_8, i1* %_2
+  %_9 = load i1, i1* %_2
+  ret i1 %_9
+L2:
+  call void @_bal_panic (i64 4)
+  unreachable
 }
 define internal i1 @_B_gte (i64 %_0, i64 %_1) {
   %x = alloca i64
   %y = alloca i64
   %_2 = alloca i1
+  %_3 = alloca i8
+  %_4 = load i8*, i8** @_bal_stack_guard
+  %_5 = icmp ult i8* %_3, %_4
+  br i1 %_5, label %L2, label %L1
+L1:
   store i64 %_0, i64* %x
   store i64 %_1, i64* %y
-  %_3 = load i64, i64* %x
-  %_4 = load i64, i64* %y
-  %_5 = icmp sge i64 %_3, %_4
-  store i1 %_5, i1* %_2
-  %_6 = load i1, i1* %_2
-  ret i1 %_6
+  %_6 = load i64, i64* %x
+  %_7 = load i64, i64* %y
+  %_8 = icmp sge i64 %_6, %_7
+  store i1 %_8, i1* %_2
+  %_9 = load i1, i1* %_2
+  ret i1 %_9
+L2:
+  call void @_bal_panic (i64 4)
+  unreachable
 }

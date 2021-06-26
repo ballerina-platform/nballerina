@@ -53,9 +53,10 @@ final llvm:RetType[] retReprTypes = [
     LLVM_VOID
 ];
 
-const PANIC_OVERFLOW = 1;
+const PANIC_ARITHMETIC_OVERFLOW = 1;
 const PANIC_DIVIDE_BY_ZERO = 2;
 const PANIC_TYPE_CAST = 3;
+const PANIC_STACK_OVERFLOW = 4;
 
 final llvm:FunctionType panicFunctionType = { returnType: "void", paramTypes: ["i64"] };
 final llvm:FunctionType allocFunctionType = { returnType: llvm:pointerType("i8"), paramTypes: ["i64"] };
@@ -91,6 +92,7 @@ class Scaffold {
     private final ImportedFunctionTable importedFunctions;
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
+    private final int nParams;
 
     function init(llvm:Module llMod, llvm:FunctionDefn llFunc, map<llvm:FunctionDefn> functions, ImportedFunctionTable importedFunctions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.llMod = llMod;
@@ -104,18 +106,23 @@ class Scaffold {
             reprs.push(check semTypeRepr(reg.semType));
         }
         self.reprs = reprs;
+        self.retRepr = check semTypeRetRepr(defn.signature.returnType);
+        self.nParams = defn.signature.paramTypes.length();
+        llvm:BasicBlock entry = llFunc.appendBasicBlock();
+
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock();
-        builder.positionAtEnd(self.blocks[0]);
+
+        builder.positionAtEnd(entry);
         self.addresses = [];
         foreach int i in 0 ..< reprs.length() {
             self.addresses.push(builder.alloca(reprTypes[reprs[i]], (), code.registers[i].varName));
         } 
-        bir:FunctionSignature ty = defn.signature;
+    }
 
-        foreach int i in 0 ..< ty.paramTypes.length() {
-            builder.store(llFunc.getParam(i), self.addresses[i]);
+    function saveParams(llvm:Builder builder) {
+         foreach int i in 0 ..< self.nParams {
+            builder.store(self.llFunc.getParam(i), self.addresses[i]);
         }
-        self.retRepr = check semTypeRetRepr(defn.signature.returnType);
     }
 
     function address(bir:Register r) returns llvm:PointerValue => self.addresses[r.number];
@@ -180,14 +187,27 @@ function buildModule(bir:Module mod, llvm:Context context) returns llvm:Module|B
         llFuncMap[defn.symbol.identifier] = llFunc;
     }  
     llvm:Builder builder = context.createBuilder();
+    llvm:PointerValue stackGuard = llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard"));
     ImportedFunctionTable importedFunctions = table [];
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionCode code = check mod.generateFunctionCode(i);
         check bir:verifyFunctionCode(mod, functionDefns[i], code);
         Scaffold scaffold = check new(llMod, llFuncs[i], llFuncMap, importedFunctions, builder, functionDefns[i], code);
+        buildPrologue(builder, scaffold, stackGuard);
         check buildFunctionBody(builder, scaffold, code);
     }
     return llMod;
+}
+
+function buildPrologue(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue stackGuard) {
+    llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock firstBlock = scaffold.basicBlock(0);
+    builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(stackGuard)),
+                   overflowBlock, firstBlock);
+    builder.positionAtEnd(overflowBlock);
+    buildPanic(builder, scaffold, llvm:constInt(LLVM_INT, PANIC_STACK_OVERFLOW));
+    builder.positionAtEnd(firstBlock);
+    scaffold.saveParams(builder);
 }
 
 function buildFunctionBody(llvm:Builder builder, Scaffold scaffold, bir:FunctionCode code) returns BuildError? {
@@ -265,8 +285,12 @@ function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) ret
 }
 
 function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) {
-    _ = builder.call(buildRuntimeFunctionDecl(scaffold, "panic", panicFunctionType), [buildInt(builder, scaffold, insn.operand)]);
-    builder.unreachable();   
+    buildPanic(builder, scaffold, buildInt(builder, scaffold, insn.operand));
+}
+
+function buildPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicCode) {
+    _ = builder.call(buildRuntimeFunctionDecl(scaffold, "panic", panicFunctionType), [panicCode]);
+    builder.unreachable();
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
@@ -348,7 +372,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
         builder.condBr(builder.extractValue(resultWithOverflow, 1), overflowBlock, continueBlock);
         builder.positionAtEnd(overflowBlock);
-        builder.store(llvm:constInt(LLVM_INT, PANIC_OVERFLOW), scaffold.panicAddress());
+        builder.store(llvm:constInt(LLVM_INT, PANIC_ARITHMETIC_OVERFLOW), scaffold.panicAddress());
         builder.br(scaffold.getOnPanic());
         builder.positionAtEnd(continueBlock);
         result = builder.extractValue(resultWithOverflow, 0);
@@ -372,7 +396,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:BinaryIntOp op;
         if insn.op == "/" {
             op = "sdiv";
-            builder.store(llvm:constInt(LLVM_INT, PANIC_OVERFLOW), scaffold.panicAddress());
+            builder.store(llvm:constInt(LLVM_INT, PANIC_ARITHMETIC_OVERFLOW), scaffold.panicAddress());
             builder.br(scaffold.getOnPanic());
         }
         else {
