@@ -40,9 +40,10 @@ function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t is ("+"|"-") {
+            err:Position pos = tok.currentPos();
             check tok.advance();
             Expr right = check parseMultiplicativeExpr(tok);
-            BinaryArithmeticExpr bin = { arithmeticOp: t, left: expr, right };
+            BinaryArithmeticExpr bin = { arithmeticOp: t, left: expr, right, pos };
             expr = bin;
         } 
         else {
@@ -57,9 +58,10 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t is ("*"|"/"|"%") {
+            err:Position pos = tok.currentPos();
             check tok.advance();
             Expr right = check parseUnaryExpr(tok);
-            BinaryArithmeticExpr bin = { arithmeticOp: t, left: expr, right };
+            BinaryArithmeticExpr bin = { arithmeticOp: t, left: expr, right, pos };
             expr = bin;
         } 
         else {

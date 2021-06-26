@@ -98,6 +98,7 @@ type BinaryRelationalExpr record {|
 type BinaryArithmeticExpr record {|
     *BinaryExprBase;
     BinaryArithmeticOp arithmeticOp;
+    err:Position pos;
 |};
 
 type UnaryExpr record {|
