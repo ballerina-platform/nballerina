@@ -1,5 +1,7 @@
 # Possible future subsets
 
+**This is in the process of being migrated into issues.**
+
 These are possible future subsets that build on [subset 2](subset02.md).
 
 We will give them symbolic names until implemented. We may group some together. We only specify immediate dependencies of each subset.
