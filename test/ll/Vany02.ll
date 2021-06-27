@@ -24,7 +24,7 @@ L1:
   store i8* null, i8** %_3
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal i8* @_B_foo () {
@@ -39,7 +39,7 @@ L1:
   %_5 = getelementptr i8, i8* %_3, i64 144115188075855872
   ret i8* %_5
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2052)
   unreachable
 }
 define internal i8* @_B_bar () {
@@ -53,6 +53,6 @@ L1:
   %_5 = getelementptr i8, i8* null, i64 %_4
   ret i8* %_5
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 3076)
   unreachable
 }

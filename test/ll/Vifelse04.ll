@@ -43,7 +43,7 @@ L1:
   store i8* null, i8** %_5
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal i64 @_B_foo (i64 %_0, i64 %_1) {
@@ -95,7 +95,7 @@ L4:
 L5:
   ret i64 -1
 L6:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2308)
   unreachable
 }
 define internal i64 @_B_bar (i64 %_0) {
@@ -109,7 +109,7 @@ L1:
   %_4 = load i64, i64* %x
   ret i64 %_4
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 5380)
   unreachable
 }
 define internal i64 @_B_baz (i64 %_0) {
@@ -123,6 +123,6 @@ L1:
   %_4 = load i64, i64* %x
   ret i64 %_4
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 6404)
   unreachable
 }

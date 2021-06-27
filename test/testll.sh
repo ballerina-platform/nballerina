@@ -10,7 +10,7 @@ do
         sed -ne 's;^.* // *@output  *;;p' "../compiler/testSuite/$b.bal" | tr -d '\r' > "output/$b-expect.txt"
         clang-11 -Wno-override-module "$f" ../runtime/balrt.c -o "output/$b.out" && "./output/$b.out" > "output/$b-actual.txt"
     else
-        sed -ne 's;^.* // *@panic  *;panic: ;p' "../compiler/testSuite/$b.bal" | tr -d '\r' > "output/$b-expect.txt"
+        grep -n '// *@panic' "../compiler/testSuite/$b.bal"  | sed -e 's/^\([1-9][0-9]*\):.*@panic *\(.*\)/panic: line \1: \2/'  | tr -d '\r' > "output/$b-expect.txt"
         clang-11 -Wno-override-module "$f" ../runtime/balrt.c -o "output/$b.out" && $("./output/$b.out" >/dev/null 2>"output/$b-actual.txt")
     fi
     diff "output/$b-expect.txt" "output/$b-actual.txt" >"output/$b-diff.txt" || echo $b failed

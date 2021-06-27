@@ -49,7 +49,7 @@ L2:
   call void @_bal_panic (i64 %_91)
   unreachable
 L3:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 L4:
   %_37 = extractvalue {i64, i1} %_35, 0
@@ -58,7 +58,7 @@ L4:
   %_39 = extractvalue {i64, i1} %_38, 1
   br i1 %_39, label %L7, label %L6
 L5:
-  store i64 1, i64* %_31
+  store i64 1025, i64* %_31
   br label %L2
 L6:
   %_40 = extractvalue {i64, i1} %_38, 0
@@ -74,7 +74,7 @@ L6:
   %_46 = extractvalue {i64, i1} %_45, 1
   br i1 %_46, label %L9, label %L8
 L7:
-  store i64 1, i64* %_31
+  store i64 1025, i64* %_31
   br label %L2
 L8:
   %_47 = extractvalue {i64, i1} %_45, 0
@@ -100,7 +100,7 @@ L8:
   %_58 = extractvalue {i64, i1} %_57, 1
   br i1 %_58, label %L11, label %L10
 L9:
-  store i64 1, i64* %_31
+  store i64 1281, i64* %_31
   br label %L2
 L10:
   %_59 = extractvalue {i64, i1} %_57, 0
@@ -109,7 +109,7 @@ L10:
   %_61 = extractvalue {i64, i1} %_60, 1
   br i1 %_61, label %L13, label %L12
 L11:
-  store i64 1, i64* %_31
+  store i64 1793, i64* %_31
   br label %L2
 L12:
   %_62 = extractvalue {i64, i1} %_60, 0
@@ -127,7 +127,7 @@ L12:
   %_69 = extractvalue {i64, i1} %_68, 1
   br i1 %_69, label %L15, label %L14
 L13:
-  store i64 1, i64* %_31
+  store i64 1793, i64* %_31
   br label %L2
 L14:
   %_70 = extractvalue {i64, i1} %_68, 0
@@ -149,7 +149,7 @@ L14:
   %_80 = extractvalue {i64, i1} %_79, 1
   br i1 %_80, label %L17, label %L16
 L15:
-  store i64 1, i64* %_31
+  store i64 2049, i64* %_31
   br label %L2
 L16:
   %_81 = extractvalue {i64, i1} %_79, 0
@@ -175,7 +175,7 @@ L16:
   store i8* null, i8** %_30
   ret void
 L17:
-  store i64 1, i64* %_31
+  store i64 2305, i64* %_31
   br label %L2
 }
 define internal void @_B_printBoolean (i1 %_0) {
@@ -209,6 +209,6 @@ L3:
 L4:
   ret void
 L5:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 3844)
   unreachable
 }

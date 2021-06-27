@@ -27,7 +27,7 @@ L1:
   store i8* null, i8** %_2
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal void @_B_makeNil () {
@@ -38,6 +38,6 @@ define internal void @_B_makeNil () {
 L1:
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2308)
   unreachable
 }

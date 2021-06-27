@@ -70,8 +70,14 @@ const char *panicMessages[] = {
     "stack overflow"
 };
 
-void _bal_panic(int64_t code) {
-    fprintf(stderr, "panic: %s\n", panicMessages[code]);
+void _bal_panic(int64_t packedPanic) {
+    int code = packedPanic & 0xFF;
+    int64_t lineNumber = packedPanic >> 8;
+    fputs("panic: ", stderr);
+    if (lineNumber > 0) {
+        fprintf(stderr, "line %ld: ", (long)lineNumber);
+    }
+    fprintf(stderr, "%s\n", panicMessages[code]);
     fflush(stderr);
     abort();
 }

@@ -45,7 +45,7 @@ L1:
   %_34 = icmp eq i8* %_32, %_33
   br i1 %_34, label %L3, label %L4
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 L3:
   store i1 1, i1* %_0
@@ -249,7 +249,7 @@ define internal i8* @_B_mkNil () {
 L1:
   ret i8* null
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 3588)
   unreachable
 }
 define internal i8* @_B_mkInt (i64 %_0) {
@@ -267,7 +267,7 @@ L1:
   %_7 = getelementptr i8, i8* %_5, i64 144115188075855872
   ret i8* %_7
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 4612)
   unreachable
 }
 define internal i8* @_B_mkBoolean (i1 %_0) {
@@ -284,6 +284,6 @@ L1:
   %_7 = getelementptr i8, i8* null, i64 %_6
   ret i8* %_7
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 5636)
   unreachable
 }

@@ -27,7 +27,7 @@ L1:
   %_13 = icmp eq i8* %_11, %_12
   br i1 %_13, label %L3, label %L4
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 L3:
   store i1 1, i1* %_1
@@ -114,6 +114,6 @@ L1:
   %_7 = getelementptr i8, i8* %_5, i64 144115188075855872
   ret i8* %_7
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2564)
   unreachable
 }

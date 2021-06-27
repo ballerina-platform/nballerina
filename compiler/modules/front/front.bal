@@ -27,7 +27,8 @@ class Module {
                 functionDefns.push({
                     symbol: <bir:InternalSymbol>{ identifier: def.name, isPublic: def.vis == "public" },
                     // casting away nil here, because it was filled in by `convertTypes`
-                    signature: <bir:FunctionSignature>def.signature
+                    signature: <bir:FunctionSignature>def.signature,
+                    position: def.pos
                 });
             }
         }

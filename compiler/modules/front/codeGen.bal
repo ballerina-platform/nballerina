@@ -314,11 +314,11 @@ function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Scope? scop
 
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:Operand, bir:BasicBlock] {
     match expr {
-        var { arithmeticOp: op, left, right } => {
+        var { arithmeticOp: op, left, right, pos } => {
             var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
             var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
             bir:Register result = cx.createRegister(t:INT);
-            bir:IntArithmeticBinaryInsn insn = { op, operands: [l, r], result };
+            bir:IntArithmeticBinaryInsn insn = { op, operands: [l, r], result, position: pos };
             bb.insns.push(insn);
             return [result, nextBlock];
         }

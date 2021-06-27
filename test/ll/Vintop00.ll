@@ -56,10 +56,10 @@ L2:
   call void @_bal_panic (i64 %_195)
   unreachable
 L3:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 L4:
-  store i64 2, i64* %_37
+  store i64 1026, i64* %_37
   br label %L2
 L5:
   %_42 = icmp eq i64 6, -9223372036854775808
@@ -74,7 +74,7 @@ L6:
   %_48 = extractvalue {i64, i1} %_47, 1
   br i1 %_48, label %L9, label %L8
 L7:
-  store i64 1, i64* %_37
+  store i64 1025, i64* %_37
   br label %L2
 L8:
   %_49 = extractvalue {i64, i1} %_47, 0
@@ -89,10 +89,10 @@ L8:
   %_54 = icmp eq i64 3, 0
   br i1 %_54, label %L10, label %L11
 L9:
-  store i64 1, i64* %_37
+  store i64 1025, i64* %_37
   br label %L2
 L10:
-  store i64 2, i64* %_37
+  store i64 1282, i64* %_37
   br label %L2
 L11:
   %_55 = icmp eq i64 30, -9223372036854775808
@@ -107,7 +107,7 @@ L12:
   %_61 = extractvalue {i64, i1} %_60, 1
   br i1 %_61, label %L15, label %L14
 L13:
-  store i64 1, i64* %_37
+  store i64 1281, i64* %_37
   br label %L2
 L14:
   %_62 = extractvalue {i64, i1} %_60, 0
@@ -123,7 +123,7 @@ L14:
   %_68 = extractvalue {i64, i1} %_67, 1
   br i1 %_68, label %L17, label %L16
 L15:
-  store i64 1, i64* %_37
+  store i64 1281, i64* %_37
   br label %L2
 L16:
   %_69 = extractvalue {i64, i1} %_67, 0
@@ -133,7 +133,7 @@ L16:
   %_72 = extractvalue {i64, i1} %_71, 1
   br i1 %_72, label %L19, label %L18
 L17:
-  store i64 1, i64* %_37
+  store i64 1537, i64* %_37
   br label %L2
 L18:
   %_73 = extractvalue {i64, i1} %_71, 0
@@ -149,7 +149,7 @@ L18:
   %_79 = extractvalue {i64, i1} %_78, 1
   br i1 %_79, label %L21, label %L20
 L19:
-  store i64 1, i64* %_37
+  store i64 1537, i64* %_37
   br label %L2
 L20:
   %_80 = extractvalue {i64, i1} %_78, 0
@@ -159,7 +159,7 @@ L20:
   %_83 = extractvalue {i64, i1} %_82, 1
   br i1 %_83, label %L23, label %L22
 L21:
-  store i64 1, i64* %_37
+  store i64 1793, i64* %_37
   br label %L2
 L22:
   %_84 = extractvalue {i64, i1} %_82, 0
@@ -174,10 +174,10 @@ L22:
   %_89 = icmp eq i64 3, 0
   br i1 %_89, label %L24, label %L25
 L23:
-  store i64 1, i64* %_37
+  store i64 1793, i64* %_37
   br label %L2
 L24:
-  store i64 2, i64* %_37
+  store i64 2050, i64* %_37
   br label %L2
 L25:
   %_90 = icmp eq i64 4, -9223372036854775808
@@ -209,10 +209,10 @@ L29:
   %_102 = icmp eq i64 3, 0
   br i1 %_102, label %L31, label %L32
 L30:
-  store i64 1, i64* %_37
+  store i64 2049, i64* %_37
   br label %L2
 L31:
-  store i64 2, i64* %_37
+  store i64 2306, i64* %_37
   br label %L2
 L32:
   %_103 = icmp eq i64 4, -9223372036854775808
@@ -244,10 +244,10 @@ L36:
   %_115 = icmp eq i64 11, 0
   br i1 %_115, label %L38, label %L39
 L37:
-  store i64 1, i64* %_37
+  store i64 2305, i64* %_37
   br label %L2
 L38:
-  store i64 2, i64* %_37
+  store i64 2562, i64* %_37
   br label %L2
 L39:
   %_116 = icmp eq i64 18, -9223372036854775808
@@ -266,7 +266,7 @@ L42:
   %_121 = icmp eq i64 3, 0
   br i1 %_121, label %L43, label %L44
 L43:
-  store i64 2, i64* %_37
+  store i64 2562, i64* %_37
   br label %L2
 L44:
   %_122 = icmp eq i64 %_120, -9223372036854775808
@@ -291,7 +291,7 @@ L47:
   %_130 = icmp eq i64 18, 0
   br i1 %_130, label %L48, label %L49
 L48:
-  store i64 2, i64* %_37
+  store i64 2818, i64* %_37
   br label %L2
 L49:
   %_131 = icmp eq i64 30, -9223372036854775808
@@ -310,7 +310,7 @@ L52:
   %_136 = icmp eq i64 11, 0
   br i1 %_136, label %L53, label %L54
 L53:
-  store i64 2, i64* %_37
+  store i64 2818, i64* %_37
   br label %L2
 L54:
   %_137 = icmp eq i64 %_135, -9223372036854775808
@@ -329,7 +329,7 @@ L57:
   %_142 = icmp eq i64 5, 0
   br i1 %_142, label %L58, label %L59
 L58:
-  store i64 2, i64* %_37
+  store i64 2818, i64* %_37
   br label %L2
 L59:
   %_143 = icmp eq i64 %_141, -9223372036854775808
@@ -354,7 +354,7 @@ L62:
   %_151 = icmp eq i64 12, 0
   br i1 %_151, label %L63, label %L64
 L63:
-  store i64 2, i64* %_37
+  store i64 3074, i64* %_37
   br label %L2
 L64:
   %_152 = icmp eq i64 18, -9223372036854775808
@@ -373,7 +373,7 @@ L67:
   %_157 = icmp eq i64 3, 0
   br i1 %_157, label %L68, label %L69
 L68:
-  store i64 2, i64* %_37
+  store i64 3074, i64* %_37
   br label %L2
 L69:
   %_158 = icmp eq i64 %_156, -9223372036854775808
@@ -393,10 +393,10 @@ L70:
   %_166 = icmp eq i64 8, 0
   br i1 %_166, label %L72, label %L73
 L71:
-  store i64 1, i64* %_37
+  store i64 3073, i64* %_37
   br label %L2
 L72:
-  store i64 2, i64* %_37
+  store i64 3330, i64* %_37
   br label %L2
 L73:
   %_167 = icmp eq i64 16, -9223372036854775808
@@ -410,10 +410,10 @@ L74:
   %_172 = icmp eq i64 6, 0
   br i1 %_172, label %L76, label %L77
 L75:
-  store i64 1, i64* %_37
+  store i64 3329, i64* %_37
   br label %L2
 L76:
-  store i64 2, i64* %_37
+  store i64 3330, i64* %_37
   br label %L2
 L77:
   %_173 = icmp eq i64 %_171, -9223372036854775808
@@ -452,7 +452,7 @@ L81:
   %_189 = extractvalue {i64, i1} %_188, 1
   br i1 %_189, label %L84, label %L83
 L82:
-  store i64 1, i64* %_37
+  store i64 3585, i64* %_37
   br label %L2
 L83:
   %_190 = extractvalue {i64, i1} %_188, 0
@@ -466,6 +466,6 @@ L83:
   store i8* null, i8** %_36
   ret void
 L84:
-  store i64 1, i64* %_37
+  store i64 3841, i64* %_37
   br label %L2
 }

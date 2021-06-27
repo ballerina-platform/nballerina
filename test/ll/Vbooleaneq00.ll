@@ -34,7 +34,7 @@ L1:
   store i8* null, i8** %_7
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal void @_B_printEq (i1 %_0, i1 %_1) {
@@ -75,7 +75,7 @@ L3:
 L4:
   ret void
 L5:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 3588)
   unreachable
 }
 define internal void @_B_printNotEq (i1 %_0, i1 %_1) {
@@ -116,6 +116,6 @@ L3:
 L4:
   ret void
 L5:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 5892)
   unreachable
 }

@@ -21,7 +21,7 @@ L1:
   store i8* null, i8** %_3
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal void @_B_printIfBetween (i64 %_0, i64 %_1, i64 %_2) {
@@ -80,7 +80,7 @@ L7:
   call void @_bal_panic (i64 %_29)
   unreachable
 L8:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2308)
   unreachable
 L9:
   %_27 = extractvalue {i64, i1} %_25, 0
@@ -89,6 +89,6 @@ L9:
   store i64 %_28, i64* %i
   br label %L2
 L10:
-  store i64 1, i64* %_7
+  store i64 4097, i64* %_7
   br label %L7
 }

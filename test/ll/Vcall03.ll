@@ -17,7 +17,7 @@ L1:
   store i8* null, i8** %_1
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal i1 @_B_foo () {
@@ -40,7 +40,7 @@ L2:
 L3:
   ret i1 0
 L4:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 1796)
   unreachable
 }
 define internal i1 @_B_bar (i64 %_0) {
@@ -58,7 +58,7 @@ L1:
   %_7 = load i1, i1* %_1
   ret i1 %_7
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 3844)
   unreachable
 }
 define internal void @_B_printBoolean (i1 %_0) {
@@ -92,6 +92,6 @@ L3:
 L4:
   ret void
 L5:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 4868)
   unreachable
 }

@@ -19,7 +19,7 @@ L1:
   store i8* null, i8** %_2
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal void @_B_printBranch (i64 %_0) {
@@ -57,6 +57,6 @@ L3:
 L4:
   ret void
 L5:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2308)
   unreachable
 }

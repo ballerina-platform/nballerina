@@ -43,7 +43,7 @@ L1:
   %_31 = icmp eq i64 %_30, 144115188075855872
   br i1 %_31, label %L3, label %L4
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 L3:
   %_32 = call i8* @llvm.ptrmask.p0i8.i64 (i8* %_28, i64 72057594037927935)
@@ -215,7 +215,7 @@ L1:
   %_7 = getelementptr i8, i8* %_5, i64 144115188075855872
   ret i8* %_7
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 4612)
   unreachable
 }
 define internal i8* @_B_mkBoolean (i1 %_0) {
@@ -232,6 +232,6 @@ L1:
   %_7 = getelementptr i8, i8* null, i64 %_6
   ret i8* %_7
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 5636)
   unreachable
 }

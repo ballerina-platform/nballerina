@@ -135,6 +135,6 @@ L15:
 L16:
   ret void
 L17:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }

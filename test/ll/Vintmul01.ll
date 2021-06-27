@@ -59,7 +59,7 @@ L2:
   call void @_bal_panic (i64 %_150)
   unreachable
 L3:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 L4:
   %_47 = extractvalue {i64, i1} %_45, 0
@@ -75,7 +75,7 @@ L4:
   %_53 = extractvalue {i64, i1} %_52, 1
   br i1 %_53, label %L7, label %L6
 L5:
-  store i64 1, i64* %_41
+  store i64 1025, i64* %_41
   br label %L2
 L6:
   %_54 = extractvalue {i64, i1} %_52, 0
@@ -91,7 +91,7 @@ L6:
   %_60 = extractvalue {i64, i1} %_59, 1
   br i1 %_60, label %L9, label %L8
 L7:
-  store i64 1, i64* %_41
+  store i64 1281, i64* %_41
   br label %L2
 L8:
   %_61 = extractvalue {i64, i1} %_59, 0
@@ -107,7 +107,7 @@ L8:
   %_67 = extractvalue {i64, i1} %_66, 1
   br i1 %_67, label %L11, label %L10
 L9:
-  store i64 1, i64* %_41
+  store i64 1537, i64* %_41
   br label %L2
 L10:
   %_68 = extractvalue {i64, i1} %_66, 0
@@ -123,7 +123,7 @@ L10:
   %_74 = extractvalue {i64, i1} %_73, 1
   br i1 %_74, label %L13, label %L12
 L11:
-  store i64 1, i64* %_41
+  store i64 2049, i64* %_41
   br label %L2
 L12:
   %_75 = extractvalue {i64, i1} %_73, 0
@@ -139,7 +139,7 @@ L12:
   %_81 = extractvalue {i64, i1} %_80, 1
   br i1 %_81, label %L15, label %L14
 L13:
-  store i64 1, i64* %_41
+  store i64 2305, i64* %_41
   br label %L2
 L14:
   %_82 = extractvalue {i64, i1} %_80, 0
@@ -155,7 +155,7 @@ L14:
   %_88 = extractvalue {i64, i1} %_87, 1
   br i1 %_88, label %L17, label %L16
 L15:
-  store i64 1, i64* %_41
+  store i64 2561, i64* %_41
   br label %L2
 L16:
   %_89 = extractvalue {i64, i1} %_87, 0
@@ -171,7 +171,7 @@ L16:
   %_95 = extractvalue {i64, i1} %_94, 1
   br i1 %_95, label %L19, label %L18
 L17:
-  store i64 1, i64* %_41
+  store i64 3073, i64* %_41
   br label %L2
 L18:
   %_96 = extractvalue {i64, i1} %_94, 0
@@ -187,7 +187,7 @@ L18:
   %_102 = extractvalue {i64, i1} %_101, 1
   br i1 %_102, label %L21, label %L20
 L19:
-  store i64 1, i64* %_41
+  store i64 3329, i64* %_41
   br label %L2
 L20:
   %_103 = extractvalue {i64, i1} %_101, 0
@@ -203,7 +203,7 @@ L20:
   %_109 = extractvalue {i64, i1} %_108, 1
   br i1 %_109, label %L23, label %L22
 L21:
-  store i64 1, i64* %_41
+  store i64 3585, i64* %_41
   br label %L2
 L22:
   %_110 = extractvalue {i64, i1} %_108, 0
@@ -219,7 +219,7 @@ L22:
   %_116 = extractvalue {i64, i1} %_115, 1
   br i1 %_116, label %L25, label %L24
 L23:
-  store i64 1, i64* %_41
+  store i64 4097, i64* %_41
   br label %L2
 L24:
   %_117 = extractvalue {i64, i1} %_115, 0
@@ -235,7 +235,7 @@ L24:
   %_123 = extractvalue {i64, i1} %_122, 1
   br i1 %_123, label %L27, label %L26
 L25:
-  store i64 1, i64* %_41
+  store i64 4353, i64* %_41
   br label %L2
 L26:
   %_124 = extractvalue {i64, i1} %_122, 0
@@ -251,7 +251,7 @@ L26:
   %_130 = extractvalue {i64, i1} %_129, 1
   br i1 %_130, label %L29, label %L28
 L27:
-  store i64 1, i64* %_41
+  store i64 4609, i64* %_41
   br label %L2
 L28:
   %_131 = extractvalue {i64, i1} %_129, 0
@@ -267,7 +267,7 @@ L28:
   %_137 = extractvalue {i64, i1} %_136, 1
   br i1 %_137, label %L31, label %L30
 L29:
-  store i64 1, i64* %_41
+  store i64 5121, i64* %_41
   br label %L2
 L30:
   %_138 = extractvalue {i64, i1} %_136, 0
@@ -283,7 +283,7 @@ L30:
   %_144 = extractvalue {i64, i1} %_143, 1
   br i1 %_144, label %L33, label %L32
 L31:
-  store i64 1, i64* %_41
+  store i64 5377, i64* %_41
   br label %L2
 L32:
   %_145 = extractvalue {i64, i1} %_143, 0
@@ -297,6 +297,6 @@ L32:
   store i8* null, i8** %_40
   ret void
 L33:
-  store i64 1, i64* %_41
+  store i64 5633, i64* %_41
   br label %L2
 }

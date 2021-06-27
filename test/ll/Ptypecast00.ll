@@ -26,7 +26,7 @@ L2:
   call void @_bal_panic (i64 %_20)
   unreachable
 L3:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 L4:
   %_12 = call i8* @llvm.ptrmask.p0i8.i64 (i8* %_8, i64 72057594037927935)
@@ -44,7 +44,7 @@ L4:
   store i8* null, i8** %_2
   ret void
 L5:
-  store i64 3, i64* %_3
+  store i64 1027, i64* %_3
   br label %L2
 }
 define internal i8* @_B_ifElse (i1 %_0, i1 %_1, i64 %_2) {
@@ -75,6 +75,6 @@ L3:
   %_14 = getelementptr i8, i8* %_12, i64 144115188075855872
   ret i8* %_14
 L4:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2052)
   unreachable
 }

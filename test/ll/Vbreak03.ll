@@ -22,7 +22,7 @@ L1:
   store i8* null, i8** %_1
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal i64 @_B_foo (i64 %_0) {
@@ -87,7 +87,7 @@ L9:
   call void @_bal_panic (i64 %_40)
   unreachable
 L10:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 3332)
   unreachable
 L11:
   %_23 = extractvalue {i64, i1} %_21, 0
@@ -100,7 +100,7 @@ L11:
   %_28 = extractvalue {i64, i1} %_27, 1
   br i1 %_28, label %L14, label %L13
 L12:
-  store i64 1, i64* %_9
+  store i64 4097, i64* %_9
   br label %L9
 L13:
   %_29 = extractvalue {i64, i1} %_27, 0
@@ -111,6 +111,6 @@ L13:
   %_32 = load i1, i1* %_3
   br i1 %_32, label %L5, label %L6
 L14:
-  store i64 1, i64* %_9
+  store i64 4353, i64* %_9
   br label %L9
 }

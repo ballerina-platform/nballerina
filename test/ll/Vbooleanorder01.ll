@@ -13,7 +13,7 @@ L1:
   store i8* null, i8** %_0
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal void @_B_printComp () {
@@ -39,6 +39,6 @@ L2:
 L3:
   ret void
 L4:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 1796)
   unreachable
 }

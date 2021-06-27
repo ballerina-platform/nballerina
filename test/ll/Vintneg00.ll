@@ -58,7 +58,7 @@ L1:
   store i8* null, i8** %_8
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 516)
   unreachable
 }
 define internal i64 @_B_neg (i64 %_0) {
@@ -80,7 +80,7 @@ L1:
   call void @_bal_panic (i64 %_9)
   unreachable
 L3:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2564)
   unreachable
 }
 define internal i64 @_B_negneg (i64 %_0) {
@@ -106,6 +106,6 @@ L1:
   call void @_bal_panic (i64 %_12)
   unreachable
 L3:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 3588)
   unreachable
 }

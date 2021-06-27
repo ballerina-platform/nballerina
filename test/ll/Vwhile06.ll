@@ -28,6 +28,6 @@ L3:
   store i8* null, i8** %_1
   ret void
 L4:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }

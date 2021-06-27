@@ -39,6 +39,8 @@ public type FunctionDefn readonly & record {|
     InternalSymbol symbol;
     # The signature of the function
     FunctionSignature signature;
+    # The position of the definition
+    err:Position position;
 |};
 
 public type InternalSymbol readonly & record {|
@@ -187,14 +189,22 @@ public type BooleanOperand boolean|Register;
 public type FunctionOperand FunctionRef|Register;
 
 # Perform a arithmetic operand on ints with two operands.
-# This has a PPI and non-PPI variant.
-# INSN_INT_ARITHMETIC_BINARY is a PPI.
-# INSN_INT_NO_PANIC_ARITHMETIC_BINARY is not a PPI;
-# it is an optimization to be used only when the compiler can prove that a panic is impossible;
-# the NO_PANIC version of % must not be used if first operand is int:MIN_VALUE and second operand is -1.
+# This is a PPI.
 public type IntArithmeticBinaryInsn readonly & record {|
     *InsnBase;
-    (INSN_INT_ARITHMETIC_BINARY|INSN_INT_NO_PANIC_ARITHMETIC_BINARY) name = INSN_INT_ARITHMETIC_BINARY;
+    INSN_INT_ARITHMETIC_BINARY name = INSN_INT_ARITHMETIC_BINARY;
+    ArithmeticBinaryOp op;
+    Register result;
+    IntOperand[2] operands;
+    err:Position position;
+|};
+
+# This is a non-PPI variant of IntArithmeticBinaryInsn.
+# It is an optimization to be used only when the compiler can prove that a panic is impossible;
+# the NO_PANIC version of % must not be used if first operand is int:MIN_VALUE and second operand is -1.
+public type IntNoPanicArithmeticBinaryInsn readonly & record {|
+    *InsnBase;
+    INSN_INT_NO_PANIC_ARITHMETIC_BINARY name = INSN_INT_NO_PANIC_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
     Register result;
     IntOperand[2] operands;

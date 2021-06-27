@@ -25,7 +25,7 @@ L1:
   store i8* null, i8** %_3
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal void @_B_printClosestSquareNum (i64 %_0) {
@@ -78,7 +78,7 @@ L7:
   call void @_bal_panic (i64 %_25)
   unreachable
 L8:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2564)
   unreachable
 L9:
   %_23 = extractvalue {i64, i1} %_21, 0
@@ -87,7 +87,7 @@ L9:
   store i64 %_24, i64* %i
   br label %L2
 L10:
-  store i64 1, i64* %_5
+  store i64 4353, i64* %_5
   br label %L7
 }
 define internal i1 @_B_isSquareNumber (i64 %_0) {
@@ -145,7 +145,7 @@ L10:
   call void @_bal_panic (i64 %_38)
   unreachable
 L11:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 5380)
   unreachable
 L12:
   %_19 = extractvalue {i64, i1} %_17, 0
@@ -157,7 +157,7 @@ L12:
   %_23 = load i1, i1* %_2
   br i1 %_23, label %L5, label %L6
 L13:
-  store i64 1, i64* %_7
+  store i64 6145, i64* %_7
   br label %L10
 L14:
   %_28 = extractvalue {i64, i1} %_26, 0
@@ -169,7 +169,7 @@ L14:
   %_32 = load i1, i1* %_4
   br i1 %_32, label %L7, label %L8
 L15:
-  store i64 1, i64* %_7
+  store i64 6657, i64* %_7
   br label %L10
 L16:
   %_36 = extractvalue {i64, i1} %_34, 0
@@ -178,6 +178,6 @@ L16:
   store i64 %_37, i64* %i
   br label %L2
 L17:
-  store i64 1, i64* %_7
+  store i64 7425, i64* %_7
   br label %L10
 }

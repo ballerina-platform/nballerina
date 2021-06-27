@@ -59,7 +59,7 @@ L8:
   call void @_bal_panic (i64 %_30)
   unreachable
 L9:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 L10:
   %_19 = extractvalue {i64, i1} %_17, 0
@@ -68,7 +68,7 @@ L10:
   store i64 %_20, i64* %i
   br label %L2
 L11:
-  store i64 1, i64* %_5
+  store i64 2817, i64* %_5
   br label %L8
 L12:
   %_28 = extractvalue {i64, i1} %_26, 0
@@ -77,6 +77,6 @@ L12:
   store i64 %_29, i64* %j
   br label %L5
 L13:
-  store i64 1, i64* %_5
+  store i64 2305, i64* %_5
   br label %L8
 }

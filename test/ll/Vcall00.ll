@@ -24,7 +24,7 @@ L1:
   store i8* null, i8** %_1
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal i64 @_B_foo () {
@@ -35,6 +35,6 @@ define internal i64 @_B_foo () {
 L1:
   ret i64 2
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2052)
   unreachable
 }

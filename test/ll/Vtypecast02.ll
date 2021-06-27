@@ -50,7 +50,7 @@ L2:
   call void @_bal_panic (i64 %_72)
   unreachable
 L3:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 L4:
   %_29 = call i8* @llvm.ptrmask.p0i8.i64 (i8* %_25, i64 72057594037927935)
@@ -72,7 +72,7 @@ L4:
   %_40 = icmp eq i64 %_39, 144115188075855872
   br i1 %_40, label %L6, label %L7
 L5:
-  store i64 3, i64* %_16
+  store i64 1539, i64* %_16
   br label %L2
 L6:
   %_41 = call i8* @llvm.ptrmask.p0i8.i64 (i8* %_37, i64 72057594037927935)
@@ -96,7 +96,7 @@ L6:
   %_53 = icmp eq i64 %_52, 72057594037927936
   br i1 %_53, label %L8, label %L9
 L7:
-  store i64 3, i64* %_16
+  store i64 1795, i64* %_16
   br label %L2
 L8:
   %_54 = ptrtoint i8* %_50 to i64
@@ -116,7 +116,7 @@ L8:
   %_64 = icmp eq i64 %_63, 72057594037927936
   br i1 %_64, label %L10, label %L11
 L9:
-  store i64 3, i64* %_16
+  store i64 2307, i64* %_16
   br label %L2
 L10:
   %_65 = ptrtoint i8* %_61 to i64
@@ -132,7 +132,7 @@ L10:
   store i8* null, i8** %_15
   ret void
 L11:
-  store i64 3, i64* %_16
+  store i64 2563, i64* %_16
   br label %L2
 }
 define internal i8* @_B_ifElse (i1 %_0, i64 %_1, i1 %_2) {
@@ -163,6 +163,6 @@ L3:
   %_14 = getelementptr i8, i8* null, i64 %_13
   ret i8* %_14
 L4:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 3588)
   unreachable
 }

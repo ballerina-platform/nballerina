@@ -46,7 +46,7 @@ L2:
   call void @_bal_panic (i64 %_83)
   unreachable
 L3:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 L4:
   %_30 = extractvalue {i64, i1} %_28, 0
@@ -68,7 +68,7 @@ L4:
   %_40 = extractvalue {i64, i1} %_39, 1
   br i1 %_40, label %L7, label %L6
 L5:
-  store i64 1, i64* %_20
+  store i64 1025, i64* %_20
   br label %L2
 L6:
   %_41 = extractvalue {i64, i1} %_39, 0
@@ -90,7 +90,7 @@ L6:
   %_51 = extractvalue {i64, i1} %_50, 1
   br i1 %_51, label %L9, label %L8
 L7:
-  store i64 1, i64* %_20
+  store i64 1281, i64* %_20
   br label %L2
 L8:
   %_52 = extractvalue {i64, i1} %_50, 0
@@ -111,10 +111,10 @@ L8:
   %_61 = icmp eq i64 %_60, 0
   br i1 %_61, label %L10, label %L11
 L9:
-  store i64 1, i64* %_20
+  store i64 1537, i64* %_20
   br label %L2
 L10:
-  store i64 2, i64* %_20
+  store i64 1794, i64* %_20
   br label %L2
 L11:
   %_62 = icmp eq i64 %_59, -9223372036854775808
@@ -140,10 +140,10 @@ L12:
   %_74 = icmp eq i64 %_73, 0
   br i1 %_74, label %L14, label %L15
 L13:
-  store i64 1, i64* %_20
+  store i64 1793, i64* %_20
   br label %L2
 L14:
-  store i64 2, i64* %_20
+  store i64 2050, i64* %_20
   br label %L2
 L15:
   %_75 = icmp eq i64 %_72, -9223372036854775808
@@ -175,7 +175,7 @@ define internal i64 @_B_foo () {
 L1:
   ret i64 105
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 2820)
   unreachable
 }
 define internal i64 @_B_bar () {
@@ -186,6 +186,6 @@ define internal i64 @_B_bar () {
 L1:
   ret i64 2
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 3844)
   unreachable
 }

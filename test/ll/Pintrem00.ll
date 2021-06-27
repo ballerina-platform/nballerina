@@ -22,7 +22,7 @@ L1:
   store i8* null, i8** %_2
   ret void
 L2:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 772)
   unreachable
 }
 define internal i64 @_B_rem (i64 %_0, i64 %_1) {
@@ -46,10 +46,10 @@ L2:
   call void @_bal_panic (i64 %_15)
   unreachable
 L3:
-  call void @_bal_panic (i64 4)
+  call void @_bal_panic (i64 1796)
   unreachable
 L4:
-  store i64 2, i64* %_3
+  store i64 2050, i64* %_3
   br label %L2
 L5:
   %_10 = icmp eq i64 %_7, -9223372036854775808
