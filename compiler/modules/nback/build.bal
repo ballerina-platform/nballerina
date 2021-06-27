@@ -226,6 +226,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
         }
+        else if insn is bir:IntBitwiseBinaryInsn {
+            buildBitwiseBinary(builder, scaffold, insn);
+        }
         else if insn is bir:IntCompareInsn {
             buildIntCompare(builder, scaffold, insn);
         }
@@ -417,6 +420,14 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         builder.br(joinBlock);
         builder.positionAtEnd(joinBlock);
     }                         
+}
+
+function buildBitwiseBinary(llvm:Builder builder, Scaffold scaffold, bir:IntBitwiseBinaryInsn insn) {
+    llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
+    llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
+    llvm:BinaryBitwiseOp op = insn.op == "&" ? "and" : "or";
+    llvm:Value result = builder.binaryInt(op, lhs, rhs);
+    buildStoreInt(builder, scaffold, result, insn.result);                                  
 }
 
 function buildIntCompare(llvm:Builder builder, Scaffold scaffold, bir:IntCompareInsn insn) {

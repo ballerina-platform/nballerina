@@ -1,7 +1,41 @@
 import wso2/nballerina.err;
 
 function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
-    return parseEqualityExpr(tok);
+    return parseBinaryOrExpr(tok);
+}
+
+function parseBinaryOrExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Expr expr = check parseBinaryAndExpr(tok);
+    while true {
+        Token? t = tok.current();
+        if t == "|" {
+            check tok.advance();
+            Expr right = check parseBinaryAndExpr(tok);
+            BinaryBitwiseExpr bin = { bitwiseOp: t, left: expr, right };
+            expr = bin;
+        } 
+        else {
+            break;
+        }
+    }
+    return expr;
+}
+
+function parseBinaryAndExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Expr expr = check parseEqualityExpr(tok);
+    while true {
+        Token? t = tok.current();
+        if t == "&" {
+            check tok.advance();
+            Expr right = check parseEqualityExpr(tok);
+            BinaryBitwiseExpr bin = { bitwiseOp: t, left: expr, right };
+            expr = bin;
+        } 
+        else {
+            break;
+        }
+    }
+    return expr;
 }
 
 function parseEqualityExpr(Tokenizer tok)  returns Expr|err:Syntax {

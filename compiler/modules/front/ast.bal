@@ -70,6 +70,7 @@ type VarDeclStmt record {|
 
 
 type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
+type BinaryBitwiseOp "|" | "&";
 type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
 
@@ -77,7 +78,7 @@ type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
 type UnaryExprOp "-" | "!";
 
-type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr;
+type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr;
 
 // We use different operator names so things work better with match statements
 type BinaryExprBase record {|
@@ -99,6 +100,11 @@ type BinaryArithmeticExpr record {|
     *BinaryExprBase;
     BinaryArithmeticOp arithmeticOp;
     err:Position pos;
+|};
+
+type BinaryBitwiseExpr record {|
+    *BinaryExprBase;
+    BinaryBitwiseOp bitwiseOp; 
 |};
 
 type UnaryExpr record {|

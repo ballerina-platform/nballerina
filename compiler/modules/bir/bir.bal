@@ -140,12 +140,14 @@ public function createRegister(FunctionCode code, SemType semType, string? varNa
 }
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
+public type BitwiseBinaryOp "|" | "&";
 public type OrderOp "<=" | ">=" | "<" | ">";
 public type EqualityOp "==" | "!=" | "===" | "!==";
 
 public enum InsnName {
     INSN_INT_ARITHMETIC_BINARY,
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY,
+    INSN_INT_BITWISE_BINARY,
     INSN_INT_NEGATE,
     INSN_INT_NO_PANIC_NEGATE,
     INSN_INT_COMPARE,
@@ -176,7 +178,7 @@ public type InsnBase record {
 };
 
 public type Insn 
-    IntArithmeticBinaryInsn|IntNegateInsn
+    IntArithmeticBinaryInsn|IntBitwiseBinaryInsn|IntNegateInsn
     |IntCompareInsn|BooleanCompareInsn|EqualityInsn|BooleanNotInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
@@ -206,6 +208,14 @@ public type IntNoPanicArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY name = INSN_INT_NO_PANIC_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
+    Register result;
+    IntOperand[2] operands;
+|};
+
+public type IntBitwiseBinaryInsn readonly & record {|
+    *InsnBase;
+    INSN_INT_BITWISE_BINARY name = INSN_INT_BITWISE_BINARY;
+    BitwiseBinaryOp op;
     Register result;
     IntOperand[2] operands;
 |};
