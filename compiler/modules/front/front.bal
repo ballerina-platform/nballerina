@@ -66,6 +66,8 @@ public function loadModule(string filename, bir:ModuleId id) returns bir:Module|
     check addModulePart(mod, part);
     t:Env env = new;
     check convertTypes(env, mod);
+    // XXX Should have an option that controls whether we perform this check
+    check validEntryPoint(mod);
     return new Module(id, imports(part), mod, t:typeCheckContext(env));
 }
 
@@ -76,6 +78,21 @@ function imports(ModulePart part) returns map<bir:ModuleId> {
     }
     else {
         return { [decl.module]: { organization: decl.org, names: [decl.module]} };
+    }
+}
+
+function validEntryPoint(ModuleTable mod) returns err:Any? {
+    ModuleLevelDef? def = mod["main"];
+    if def is FunctionDef {
+        if def.vis != "public" {
+            return err:semantic(`${"main"} is not public`, pos=def.pos);
+        }
+        if def.paramNames.length() > 0 {
+            return err:unimplemented(`parameters for ${"main"} not yet implemented`, pos=def.pos);
+        }
+        if (<bir:FunctionSignature>def.signature).returnType !== t:NIL {
+            return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, pos=def.pos);
+        }
     }
 }
 
