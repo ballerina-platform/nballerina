@@ -159,6 +159,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         if expr is BinaryArithmeticExpr {
             op = expr.arithmeticOp;
         }
+        else if expr is BinaryBitwiseExpr {
+            op = expr.bitwiseOp;
+        }
         else if expr is BinaryRelationalExpr {
             op = expr.relationalOp;
         }
