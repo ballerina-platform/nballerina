@@ -5,10 +5,27 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseBinaryOrExpr(Tokenizer tok) returns Expr|err:Syntax {
-    Expr expr = check parseBinaryAndExpr(tok);
+    Expr expr = check parseBinaryXorExpr(tok);
     while true {
         Token? t = tok.current();
         if t == "|" {
+            check tok.advance();
+            Expr right = check parseBinaryXorExpr(tok);
+            BinaryBitwiseExpr bin = { bitwiseOp: t, left: expr, right };
+            expr = bin;
+        } 
+        else {
+            break;
+        }
+    }
+    return expr;
+}
+
+function parseBinaryXorExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Expr expr = check parseBinaryAndExpr(tok);
+    while true {
+        Token? t = tok.current();
+        if t == "^" {
             check tok.advance();
             Expr right = check parseBinaryAndExpr(tok);
             BinaryBitwiseExpr bin = { bitwiseOp: t, left: expr, right };

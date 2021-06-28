@@ -70,7 +70,7 @@ type VarDeclStmt record {|
 
 
 type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
-type BinaryBitwiseOp "|" | "&";
+type BinaryBitwiseOp "|" | "^" | "&";
 type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
 

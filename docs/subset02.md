@@ -17,7 +17,7 @@
    * while
    * break and continue
 * Expressions:
-   * Binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `|`
+   * Binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`
    * Unary operators: `-`, `!`
    * Type cast
    * Literals for int, boolean and nil
@@ -76,8 +76,12 @@ continue-stmt = "continue" ";"
 expression = bitwise-or-expr
 
 bitwise-or-expr =
+  bitwise-xor-expr
+  | bitwise-or-expr "|" bitwise-xor-expr
+
+bitwise-xor-expr =
   bitwise-and-expr
-  | bitwise-or-expr "|" bitwise-and-expr
+  | bitwise-xor-expr "|" bitwise-and-expr
 
 bitwise-and-expr =
   equality-expr

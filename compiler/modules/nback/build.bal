@@ -422,10 +422,16 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
     }                         
 }
 
+final readonly & map<llvm:BinaryBitwiseOp> binaryBitwiseOp = {
+    "&": "and",
+    "^": "xor",
+    "|": "or"
+};
+
 function buildBitwiseBinary(llvm:Builder builder, Scaffold scaffold, bir:IntBitwiseBinaryInsn insn) {
     llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
-    llvm:BinaryBitwiseOp op = insn.op == "&" ? "and" : "or";
+    llvm:BinaryBitwiseOp op = binaryBitwiseOp.get(insn.op);
     llvm:Value result = builder.binaryInt(op, lhs, rhs);
     buildStoreInt(builder, scaffold, result, insn.result);                                  
 }

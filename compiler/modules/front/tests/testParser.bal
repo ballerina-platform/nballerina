@@ -247,6 +247,7 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "expr", "a +\n\r b", "a + b"],
          ["V", "expr", "a | b", "a | b"],
          ["V", "expr", "a & b", "a & b"],
+         ["V", "expr", "a ^ b", "a ^ b"],
          // binary op associativity
          ["V", "expr", "1 + 2 + 3", "(1 + 2) + 3"],
          ["V", "expr", "1 + 2 + 3 + 4", "((1 + 2) + 3) + 4"],
@@ -260,6 +261,8 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "expr", "a | (b | c)", "a | (b | c)"],
          ["V", "expr", "a & b & c", "(a & b) & c"],
          ["V", "expr", "a & (b & c)", "a & (b & c)"],
+         ["V", "expr", "a ^ b ^ c", "(a ^ b) ^ c"],
+         ["V", "expr", "a ^ (b ^ c)", "a ^ (b ^ c)"],
          ["V", "expr", "1--1", "1 - (-1)"],
          ["V", "expr", "1+-1", "1 + (-1)"],
          ["E", "expr", "1-+1", ""],
@@ -277,6 +280,10 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "expr", "a & b == c", "a & (b == c)"],
          ["V", "expr", "a & b | c", "(a & b) | c"],
          ["V", "expr", "a | b & c", "a | (b & c)"],
+         ["V", "expr", "a ^ b | c", "(a ^ b) | c"],
+         ["V", "expr", "a | b ^ c", "a | (b ^ c)"],
+         ["V", "expr", "a ^ b & c", "a ^ (b & c)"],
+         ["V", "expr", "a & b ^ c", "(a & b) ^ c"],
          // ref
          ["V", "expr", "x", "x"],
          ["V", "expr", "x1", "x1"],

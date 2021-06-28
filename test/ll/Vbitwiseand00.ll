@@ -1,3 +1,4 @@
+target triple ="x86_64-pc-linux-gnu"
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
 declare i8* @_bal_alloc (i64)

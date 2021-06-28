@@ -26,7 +26,7 @@ L1:
   store i64 9, i64* %j
   %_14 = load i64, i64* %i
   %_15 = load i64, i64* %j
-  %_16 = or i64 %_14, %_15
+  %_16 = xor i64 %_14, %_15
   store i64 %_16, i64* %_0
   %_17 = load i64, i64* %_0
   %_18 = call i8* @_bal_alloc (i64 8)
@@ -39,7 +39,7 @@ L1:
   store i64 9223372036854775807, i64* %j
   %_21 = load i64, i64* %i
   %_22 = load i64, i64* %j
-  %_23 = or i64 %_21, %_22
+  %_23 = xor i64 %_21, %_22
   store i64 %_23, i64* %_2
   %_24 = load i64, i64* %_2
   %_25 = call i8* @_bal_alloc (i64 8)
@@ -52,7 +52,7 @@ L1:
   store i64 -1, i64* %j
   %_28 = load i64, i64* %i
   %_29 = load i64, i64* %j
-  %_30 = or i64 %_28, %_29
+  %_30 = xor i64 %_28, %_29
   store i64 %_30, i64* %_6
   %_31 = load i64, i64* %_6
   %_32 = call i8* @_bal_alloc (i64 8)
@@ -65,7 +65,7 @@ L1:
   store i64 -1, i64* %j
   %_35 = load i64, i64* %i
   %_36 = load i64, i64* %j
-  %_37 = or i64 %_35, %_36
+  %_37 = xor i64 %_35, %_36
   store i64 %_37, i64* %_9
   %_38 = load i64, i64* %_9
   %_39 = call i8* @_bal_alloc (i64 8)
