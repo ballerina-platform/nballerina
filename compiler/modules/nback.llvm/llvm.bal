@@ -105,7 +105,8 @@ public type GeneralIntrinsicName "ptrmask.p0i8.i64";
 
 public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsicName;
 
-public type TargetTriple "x86_64-pc-linux-gnu"|"x86_64-pc-win32"|"x86_64-apple-darwin"|"aarch64-apple-darwin";
+public type TargetTriple string;
+
 # Corresponds to llvm::Module class
 public class Module {
     private final map<FunctionDefn|FunctionDecl|PointerValue> globals = {};
