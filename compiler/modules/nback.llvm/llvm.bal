@@ -655,6 +655,14 @@ function typeToString(RetType ty) returns string {
     return typeTag;
 }
 
+public function stringToTargetTriple(string target) returns TargetTriple|error {
+    if target is TargetTriple {
+        return target;
+    } else {
+        return error(string `${target} is an unknown target`);
+    }
+}
+
 class Output {
     final string[] lines = [];
 

@@ -6,7 +6,7 @@ import wso2/nballerina.err;
 import ballerina/io;
 import ballerina/file;
 
-type CompileError  err:Any? | io:Error;
+type CompileError  err:Any? | io:Error | error;
 
 public type Options record {|
     boolean testJsonTypes = false;

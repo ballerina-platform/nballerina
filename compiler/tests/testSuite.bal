@@ -31,7 +31,7 @@ function testCompileVP(string path) returns io:Error? {
 @test:Config {
     dataProvider: listSourcesEU
 }
-function testCompileEU(string path) returns file:Error|io:Error? {
+function testCompileEU(string path) returns file:Error|io:Error|error? {
     CompileError? err = compileFile(path, ());
     // JBUG #31337 parentheses needed
     if (err is err:Any?) {
