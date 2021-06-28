@@ -5,6 +5,7 @@ import wso2/nballerina.err;
 type Scope record {|
     string name;
     bir:Register reg;
+    boolean isFinal;
     Scope? prev;
 |};
 
@@ -86,7 +87,7 @@ function codeGenFunction(Module mod, string functionName, bir:FunctionSignature 
     Scope? scope = ();
     foreach int i in 0 ..< paramNames.length() {
         bir:Register reg = cx.createRegister(signature.paramTypes[i], paramNames[i]);
-        scope = { name: paramNames[i], reg, prev: scope };
+        scope = { name: paramNames[i], reg, prev: scope, isFinal: true };
     }
     bir:BasicBlock? endBlock = check codeGenStmts(cx, startBlock, scope, body);
     if !(endBlock is ()) {
@@ -281,13 +282,13 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
         bir:Register result = cx.createRegister(semType, varName);
         bir:AssignInsn insn = { result, operand };
         nextBlock.insns.push(insn);
-        return [nextBlock, { name: varName, reg: result, prev: scope }];
+        return [nextBlock, { name: varName, reg: result, prev: scope, isFinal: false }];
     }   
 }
 
 function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, AssignStmt stmt) returns CodeGenError|bir:BasicBlock? {
     var { varName, expr } = stmt;
-    bir:Register reg = check mustLookup(cx, varName, scope);
+    bir:Register reg = check mustLookup(cx, varName, scope, forAssign=true);
     var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, expr);
     bir:AssignInsn load = { result: reg, operand };
     nextBlock.insns.push(load);
@@ -485,18 +486,27 @@ function genImportedFunctionRef(CodeGenContext cx, Scope? scope, string prefix, 
     }
 }
 
-function mustLookup(CodeGenContext cx, string name, Scope? scope) returns bir:Register|CodeGenError {
-    return lookup(name, scope) ?: cx.semanticErr(`variable ${name} not found`);
+function mustLookup(CodeGenContext cx, string name, Scope? scope, boolean forAssign = false) returns bir:Register|CodeGenError {
+    Scope? binding = lookup(name, scope);
+    if binding is () {
+        return cx.semanticErr(`variable ${name} not found`);
+    }
+    else if forAssign && binding.isFinal {
+        return cx.semanticErr(`cannot assign to parameter ${name}`);
+    }
+    else {
+        return binding.reg;
+    }
 }
 
-function lookup(string name, Scope? scope) returns bir:Register? {
+function lookup(string name, Scope? scope) returns Scope? {
     Scope? tem = scope;
     while true {
         if tem is () {
             break;
         }
         else if tem.name == name {
-            return tem.reg;
+            return tem;
         }
         else {
             tem = tem.prev;
