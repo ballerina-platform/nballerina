@@ -460,6 +460,14 @@ public class Builder {
         return new Value(destTy, reg);
     }
 
+    // Corresponds to LLVMBuildSExt
+    public function sExt(Value val, IntType destTy, string? name=()) returns Value {
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        bb.addInsn(reg, "=", "sext", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        return  new Value(destTy, reg);
+    }
+
     // Corresponds to LLVMBuildTrunc
     public function trunc(Value val, IntType destinationType, string? name = ()) returns Value {
         if val.ty is IntType {
