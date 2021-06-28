@@ -323,7 +323,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             bb.insns.push(insn);
             return [result, nextBlock];
         }
-        var {bitwiseOp: op, left, right} => {
+        var { bitwiseOp: op, left, right } => {
             var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
             var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
             bir:Register result = cx.createRegister(t:INT);
