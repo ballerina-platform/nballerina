@@ -81,11 +81,11 @@ bitwise-or-expr =
 
 bitwise-xor-expr =
   bitwise-and-expr
-  | bitwise-xor-expr "|" bitwise-and-expr
+  | bitwise-xor-expr "^" bitwise-and-expr
 
 bitwise-and-expr =
   equality-expr
-  | bitwise-and-expr "|" equality-expr
+  | bitwise-and-expr "&" equality-expr
 
 equality-expr =
   relational-expr
