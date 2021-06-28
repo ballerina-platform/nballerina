@@ -1,6 +1,7 @@
 import ballerina/test;
 import ballerina/file;
 import ballerina/io;
+import wso2/nballerina.nback;
 
 import wso2/nballerina.err;
 
@@ -31,7 +32,7 @@ function testCompileVP(string path) returns io:Error? {
 @test:Config {
     dataProvider: listSourcesEU
 }
-function testCompileEU(string path) returns file:Error|io:Error? {
+function testCompileEU(string path) returns file:Error|io:Error|nback:ConfigError? {
     CompileError? err = compileFile(path, ());
     // JBUG #31337 parentheses needed
     if (err is err:Any?) {

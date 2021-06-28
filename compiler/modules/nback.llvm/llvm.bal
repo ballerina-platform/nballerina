@@ -105,6 +105,7 @@ public type GeneralIntrinsicName "ptrmask.p0i8.i64";
 
 public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsicName;
 
+public type TargetTriple "x86_64-pc-linux-gnu"|"x86_64-pc-win32"|"x86_64-apple-darwin"|"aarch64-apple-darwin";
 # Corresponds to llvm::Module class
 public class Module {
     private final map<FunctionDefn|FunctionDecl|PointerValue> globals = {};
@@ -114,6 +115,7 @@ public class Module {
     private FunctionDefn[] functionDefns = [];
 
     private final Context context;
+    private TargetTriple? target = ();
 
     function init(Context context) {
         self.context = context;
@@ -144,6 +146,11 @@ public class Module {
         self.globals[name] = fn;
         self.functionDecls.push(fn);
         return fn;
+    }
+
+    // Corresponds to LLVMSetTarget
+    public function setTarget(TargetTriple targetTriple){
+        self.target = targetTriple;
     }
 
     // Corresponds to LLVMGetIntrinsicDeclaration
@@ -208,6 +215,10 @@ public class Module {
     }
 
     function output(Output out) {
+        if self.target is TargetTriple {
+            string[] words = ["target", "triple", "=", "\"", <TargetTriple>self.target, "\""];
+            out.push(createLine(words));
+        }
         foreach var globalVar in self.globalVariables {
             out.push(createLine([globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)])); 
         }
@@ -706,9 +717,9 @@ function createLine(string[] words, string indent = "") returns string {
 }
 
 function omitSpaceBefore(string word) returns boolean {
-    return word == "," || word == ")" || word == "}";
+    return word == "," || word == ")" || word == "}" || word == "\"";
 }
 
 function omitSpaceAfter(string word) returns boolean {
-    return word == "(" || word == "{";
+    return word == "(" || word == "{" || word == "\"";
 }
