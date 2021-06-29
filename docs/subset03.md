@@ -76,7 +76,7 @@ lvexpr =
    identifier
    | identifier "[" expression "]"
 
-return-stmt = "return" [expression] ";"
+return-stmt = "return" [initializer] ";"
 
 if-else-stmt = "if" stmt ["else" (if-else-stmt | stmt-block)]
 
