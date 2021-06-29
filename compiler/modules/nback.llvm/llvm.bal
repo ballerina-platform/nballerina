@@ -28,6 +28,16 @@ public function pointerType(IntType ty, int addressSpace = 0) returns PointerTyp
     return { pointsTo: ty };
 }
 
+// Corresponds to LLVMArrayType
+public type ArrayType readonly & record {|
+    Type elementType;
+    int elementCount;
+|};
+
+public function arrayType(Type ty, int elementCount) returns ArrayType {
+    return {elementType:ty, elementCount:elementCount};
+}
+
 // Corresponds to llvm::StructType
 public type StructType readonly & record {
     IntType[] memberTypes;
@@ -41,7 +51,7 @@ function getTypeAtIndex(StructType ty, int index) returns IntType {
     return ty.memberTypes[index];
 }
 
-public type Type IntType|PointerType|StructType;
+public type Type IntType|PointerType|StructType|ArrayType;
 
 // A RetType is valid only as the return type of a function
 public type RetType Type|"void";
@@ -658,6 +668,14 @@ function typeToString(RetType ty) returns string {
         }
         typeStringBody.push("}");
         typeTag = createLine(typeStringBody, "");
+    } else if ty is ArrayType {
+        string[] typeStringBody = [];
+        typeStringBody.push("[");
+        typeStringBody.push(ty.elementCount.toString());
+        typeStringBody.push("x");
+        typeStringBody.push(typeToString(ty.elementType));
+        typeStringBody.push("]");
+        typeTag = createLine(typeStringBody, "");
     } else {
         typeTag = ty;
     }
@@ -726,9 +744,9 @@ function createLine(string[] words, string indent = "") returns string {
 }
 
 function omitSpaceBefore(string word) returns boolean {
-    return word == "," || word == ")" || word == "}" || word == "\"";
+    return word == "," || word == ")" || word == "}" || word == "\"" || word == "]";
 }
 
 function omitSpaceAfter(string word) returns boolean {
-    return word == "(" || word == "{" || word == "\"";
+    return word == "(" || word == "{" || word == "\"" || word == "[";
 }
