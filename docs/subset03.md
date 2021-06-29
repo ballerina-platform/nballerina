@@ -10,7 +10,7 @@
    * may be declared public
 * Statements:
    * function call statement
-   * local variable declaration with explicit type and initializer
+   * local variable declaration with explicit type and expression
    * assignment
       * to variable `v = E;`
       * to member of a list `v[E1] = E2;`
@@ -66,17 +66,17 @@ statement =
   | continue-stmt
   | foreach-stmt
 
-local-var-decl-stmt = type-desc identifier "=" initializer ";"
+local-var-decl-stmt = type-desc identifier "=" expression ";"
 
 function-call-stmt = function-call-expr ";"
 
-assign-stmt = lvexpr "=" initializer ";"
+assign-stmt = lvexpr "=" expression ";"
 
 lvexpr =
    identifier
    | identifier "[" expression "]"
 
-return-stmt = "return" [initializer] ";"
+return-stmt = "return" [expression] ";"
 
 if-else-stmt = "if" stmt ["else" (if-else-stmt | stmt-block)]
 
@@ -88,9 +88,7 @@ continue-stmt = "continue" ";"
 
 foreach-stmt = "foreach" typedesc identifier "in" expression "..<" expression stmt-block
 
-initializer = expression | list-constructor-expr
-
-expression = bitwise-or-expr
+expression = bitwise-or-expr | list-constructor-expr
 
 bitwise-or-expr =
   bitwise-xor-expr
@@ -142,7 +140,7 @@ primary-expr =
   | function-call-expr
   | method-call-expr
   | variable-reference-expr
-  | "(" expression ")"
+  | "(" bitwise-or-expr ")"
 
 literal = integer-literal | boolean-literal | nil-literal
 boolean-literal = "true" | "false"
@@ -150,7 +148,7 @@ nil-literal = "(" ")" | "null"
 
 list-constructor-expr = "[" expr-list "]"
 
-expr-list = expression ["," expression]*
+expr-list = expression ["," expression ]*
 
 member-access-expr = primary-expr "[" expression "]"
 
@@ -158,15 +156,13 @@ function-call-expr = function-reference arg-list
 
 method-call-expr = primary-expr "." identifier arg-list
 
-arg-list = "(" [initializer-list] ")"
+arg-list = "(" [expr-list] ")"
 
 function-reference = identifier | qualified-identifier
 
 qualified-identifier = module-prefix ":" identifier
 
 module-prefix = identifier
-
-initializer-list = initializer ["," initializer]*
 
 variable-reference-expr = identifier
 
@@ -191,10 +187,9 @@ The following restrictions apply to imported modules:
 * the only function from `ballerina/io` that can be called is `println`
 * `println` only accepts a single argument (which is of type `any`)
 
-
 ## Notes
 
-* The syntax restricts where a `list-constructor-expr` can occur to contexts where a declared type applies, to avoid the need to infer a type for the constructed list.
+* The syntax restricts where a `list-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 
 ## Additions from subset 2
 
@@ -202,7 +197,7 @@ Type `any[]` and some related operations:
 
 * New type descriptors: `any[]`
 * New expressions
-   * list constructors `[1, 2, 3]` - syntactically allowed only where there is an explicit contextually expected type e.g. as function argument, initializer or following a type cast
+   * list constructors `[1, 2, 3]`
    * `E[n]`
  * Allow member access lvalues in assignment `V[k] = E;`
  * Langlib (called using method call syntax)
