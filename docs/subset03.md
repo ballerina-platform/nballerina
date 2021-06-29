@@ -2,27 +2,37 @@
 
 ## Summary
 
-* Only values allowed are of basic type int, boolean and nil.
-* The only type descriptors allowed are `any`, `int`, `boolean`.
+* Only values allowed are of basic type nil, booelan, int and list.
+* The only type descriptors allowed are `boolean`, `int`, `any` and `any[]`.
 * At module level, only function definitions:
    * no default arguments
    * no rest arguments
    * may be declared public
 * Statements:
-   * function call
+   * function call statement
    * local variable declaration with explicit type and initializer
    * assignment
-   * return
-   * if/else
-   * while
-   * break and continue
+      * to variable `v = E;`
+      * to member of a list `v[E1] = E2;`
+   * `return` statement
+   * `if`/`else` statements
+   * `while` statement
+   * `break` and `continue` statements
+   * `foreach` statements that use  `<..`
 * Expressions:
-   * Binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`
-   * Unary operators: `-`, `!`
-   * Type cast
-   * Literals for int, boolean and nil
-* The only imported function that can be called is `io:println` and
-  it can only be called with a single argument.
+   * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`
+   * unary operators: `-`, `!`
+   * type cast
+   * function call
+   * method call `v.f(args)` syntax for calling langlib functions
+   * member access `E[i]`
+   * list constructor `[E1, E2, ..., En]`
+   * literals for nil, boolean and int
+* Langlib functions:
+  * `array:length`
+  * `array:push`
+  * `array:setLength`
+* The only imported function that can be called is `io:println` and it can only be called with a single argument.
 
 ## Grammar
 
@@ -54,14 +64,17 @@ statement =
   | while-stmt
   | break-stmt
   | continue-stmt
+  | foreach-stmt
 
-local-var-decl-stmt = type-desc identifier "=" expression ";"
+local-var-decl-stmt = type-desc identifier "=" initializer ";"
 
 function-call-stmt = function-call-expr ";"
 
-assign-stmt = lvexpr "=" expression ";"
+assign-stmt = lvexpr "=" initializer ";"
 
-lvexpr = identifier 
+lvexpr =
+   identifier
+   | identifier "[" expression "]"
 
 return-stmt = "return" [expression];
 
@@ -72,6 +85,10 @@ while-stmt = "while" expression stmt-block
 break-stmt = "break" ";"
 
 continue-stmt = "continue" ";"
+
+foreach-stmt = "foreach" typedesc identifier "in" expression "..<" expression stmt-block
+
+initializer = expression | list-constructor-expr
 
 expression = bitwise-or-expr
 
@@ -121,7 +138,9 @@ type-cast-expr = "<" type-desc ">" unary-expr
 
 primary-expr =
   literal
+  | member-access-expr
   | function-call-expr
+  | method-call-expr
   | variable-reference-expr
   | "(" expression ")"
 
@@ -129,9 +148,17 @@ literal = integer-literal | boolean-literal | nil-literal
 boolean-literal = "true" | "false"
 nil-literal = "(" ")" | "null"
 
+list-constructor-expr = "[" expr-list "]"
+
+expr-list = expression ["," expression]*
+
+member-access-expr = primary-expr "[" expression "]"
+
 function-call-expr = function-reference arg-list
 
-arg-list = "(" [expr-list] ")"
+method-call-expr = primary-expr "." identifier arg-list
+
+arg-list = "(" [initializer-list] ")"
 
 function-reference = identifier | qualified-identifier
 
@@ -139,7 +166,7 @@ qualified-identifier = module-prefix ":" identifier
 
 module-prefix = identifier
 
-expr-list = expression ["," expression]*
+initializer-list = initializer ["," initializer]*
 
 variable-reference-expr = identifier
 
@@ -152,28 +179,38 @@ identifier = [A-Za-z][A-Za-z0-9_]*
 
 ## Semantic restrictions
 
+Method call syntax can be used for calling the following langlib functions:
+
+* `array:length`
+* `array:push`
+* `array:setLength`
+
 The following restrictions apply to imported modules:
 
 * only `ballerina/io` can be imported
 * the only function from `ballerina/io` that can be called is `println`
 * `println` only accepts a single argument (which is of type `any`)
 
-## Additions from subset 1
+## Additions from subset 2
 
-Type `any` and some related operations:
+Type `any[]` and some related operations:
 
-* New type descriptor: `any`
-* Explicit nil values
-* New expression syntax:
-   * type cast `<TD>E` (can panic)
-   * `===` and `!==` operators
-   * nil constant `()`
-* Standard Library
-   * Argument for `io:println` has type `any` not just `int`
+* New type descriptors: `any[]`
+* New expressions
+   * list constructors `[1, 2, 3]` - syntactically allowed only where there is an explicit contextually expected type e.g. as function argument, initializer or following a type cast
+   * `E[n]`
+ * Allow member access lvalues in assignment `V[k] = E;`
+ * Langlib (called using method call syntax)
+    * array:length
 
-## Deviations
+Existing syntax extended:
+* `===`, `!==`
+* `io:println`
 
-* Stack overflow is undefined behaviour, rather than resulting in a panic
+Langlib:
+* `array:length`
+* `array:push`
+* `array:setLength`
 
 ## Implemented spec changes since 2021R1
 
