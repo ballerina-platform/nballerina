@@ -31,7 +31,9 @@ type FunctionDef record {|
 
 type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|
             WhileStmt|BreakStmt|ContinueStmt;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr|TypeCastExpr;
+type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr;
+
+type ConstructorExpr ListConstructorExpr;
 
 type AssignStmt record {|
     string varName;
@@ -118,6 +120,10 @@ type FunctionCallExpr record {|
     Expr[] args;
     // We can get type/def mismatch errors here
     err:Position pos;
+|};
+
+type ListConstructorExpr record {|
+    Expr[] members;
 |};
 
 type VarRefExpr record {|

@@ -296,6 +296,16 @@ function validTokenSourceFragments() returns string[][]|error {
          ["E", "expr", "x(a,)", ""],
          ["E", "expr", "x(a b)", ""],
          ["V", "expr", "xxx(123, 12 + 2)", "xxx(123, 12 + 2)"],
+         // list constructor
+         ["V", "expr", "[ ]", "[]"],
+         ["V", "expr", "[foo(42)]", "[foo(42)]"],
+         ["V", "expr", "[1,a,true ]", "[1, a, true]"],
+         ["V", "expr", "[ [] ]", "[[]]"],
+         ["V", "expr", "[ [1,2],[3,4] ]", "[[1, 2], [3, 4]]"],
+         ["E", "expr", "[1)", ""],
+         ["E", "expr", "[1 2]", ""],
+         ["E", "expr", "[1,]", ""],
+         ["E", "expr", "[,1]", ""],
          // paren
          ["V", "expr", "(0)", "0"],
          ["V", "expr", "( 1 )", "1"],

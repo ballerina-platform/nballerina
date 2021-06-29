@@ -1,16 +1,27 @@
 import wso2/nballerina.err;
 
 function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
-    return parseBinaryOrExpr(tok);
+    Token? t = tok.current();
+    if t == "[" {
+        check tok.advance();
+        Expr[] members = check parseExprList(tok, "]");
+        ListConstructorExpr expr = { members };
+        return expr;
+    }
+    return parseInnerExpr(tok);
 }
 
-function parseBinaryOrExpr(Tokenizer tok) returns Expr|err:Syntax {
-    Expr expr = check parseBinaryXorExpr(tok);
+function parseInnerExpr(Tokenizer tok) returns Expr|err:Syntax {
+    return parseBitwiseOrExpr(tok);
+}
+
+function parseBitwiseOrExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Expr expr = check parseBitwiseXorExpr(tok);
     while true {
         Token? t = tok.current();
         if t == "|" {
             check tok.advance();
-            Expr right = check parseBinaryXorExpr(tok);
+            Expr right = check parseBitwiseXorExpr(tok);
             BinaryBitwiseExpr bin = { bitwiseOp: t, left: expr, right };
             expr = bin;
         } 
@@ -21,13 +32,13 @@ function parseBinaryOrExpr(Tokenizer tok) returns Expr|err:Syntax {
     return expr;
 }
 
-function parseBinaryXorExpr(Tokenizer tok) returns Expr|err:Syntax {
-    Expr expr = check parseBinaryAndExpr(tok);
+function parseBitwiseXorExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Expr expr = check parseBitwiseAndExpr(tok);
     while true {
         Token? t = tok.current();
         if t == "^" {
             check tok.advance();
-            Expr right = check parseBinaryAndExpr(tok);
+            Expr right = check parseBitwiseAndExpr(tok);
             BinaryBitwiseExpr bin = { bitwiseOp: t, left: expr, right };
             expr = bin;
         } 
@@ -38,7 +49,7 @@ function parseBinaryXorExpr(Tokenizer tok) returns Expr|err:Syntax {
     return expr;
 }
 
-function parseBinaryAndExpr(Tokenizer tok) returns Expr|err:Syntax {
+function parseBitwiseAndExpr(Tokenizer tok) returns Expr|err:Syntax {
     Expr expr = check parseEqualityExpr(tok);
     while true {
         Token? t = tok.current();
@@ -175,7 +186,7 @@ function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
             SimpleConstExpr expr = { value: () };
             return expr;
         }
-        Expr expr = check parseExpr(tok);
+        Expr expr = check parseInnerExpr(tok);
         check tok.expect(")");
         return expr;
     }
@@ -189,27 +200,31 @@ function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     }
 }
 
-// current token is the "("
 function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, err:Position pos) returns FunctionCallExpr|err:Syntax {
-    Expr[] args = [];
-    if tok.current() != ")" {
+    Expr[] args = check parseExprList(tok, ")");
+    return { funcName, pos, args, prefix };
+}
+
+function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syntax {
+    Expr[] exprs = [];
+     if tok.current() != terminator {
         while true {
-            Expr arg = check parseExpr(tok);
-            args.push(arg);
+            Expr expr = check parseExpr(tok);
+            exprs.push(expr);
             Token? t = tok.current();
             if t == "," {
                 check tok.advance();
             }
-            else if t == ")" {
+            else if t == terminator {
                 break;
             }
             else {
-                return parseError(tok, "invalid function argument");
+                return parseError(tok, "invalid expression list");
             }
         }
     }
     check tok.advance();
-    return { funcName, pos, args, prefix };
+    return exprs;
 }
 
 function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {

@@ -186,6 +186,11 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(")");
         }
     }
+    else if expr is ListConstructorExpr {
+        w.push("[");
+        exprsToWords(w, expr.members);
+        w.push("]");
+    }
     else {
         w.push(expr.varName);
     }
@@ -234,9 +239,9 @@ function wordsToString(Word[] s) returns string {
 }
 
 function alwaysClingLeft(string a) returns boolean {
-    return a == "(" || a == ":";
+    return a == "(" || a == ":" || a == "[";
 }
 
 function alwaysClingRight(string a) returns boolean {
-    return a == ";" || a == ":" || a == ")" || a == ",";
+    return a == ";" || a == ":" || a == ")" || a == "," || a == "]";
 }
