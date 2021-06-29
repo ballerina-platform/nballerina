@@ -642,17 +642,17 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
 }
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
-    return builder.getElementPointer(llvm:constNull(LLVM_TAGGED_PTR),
-                                     builder.binaryInt("or",
+    return builder.getElementPtr(llvm:constNull(LLVM_TAGGED_PTR),
+                                     [builder.binaryInt("or",
                                                         builder.zExt(value, LLVM_INT),
-                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN)));
+                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:Value {
     llvm:Function allocFunction = buildRuntimeFunctionDecl(scaffold, "alloc", allocFunctionType);
     llvm:PointerValue mem = <llvm:PointerValue>builder.call(allocFunction, [llvm:constInt(LLVM_INT, 8)]);
     builder.store(value, builder.bitCast(mem, llvm:pointerType(LLVM_INT)), ALIGN_HEAP);
-    return builder.getElementPointer(mem, llvm:constInt(LLVM_INT, TAG_INT));
+    return builder.getElementPtr(mem, [llvm:constInt(LLVM_INT, TAG_INT)]);
 }
 
 function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) returns llvm:Value {
