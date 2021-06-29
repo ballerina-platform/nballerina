@@ -567,10 +567,22 @@ public class Builder {
 
     // Corresponds to LLVMBuildGEP
     public function getElementPtr(PointerValue ptr, Value[] indices,"inbounds"? inbounds=(), string? name = ()) returns PointerValue {
-        Value index = indices[0];
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "getelementptr", typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand, ",", typeToString(index.ty), index.operand);
+        string[] insWords = [];
+        insWords.push(reg);
+        insWords.push("=");
+        insWords.push("getelementptr");
+        insWords.push(typeToString(ptr.ty.pointsTo));
+        insWords.push(",");
+        insWords.push(typeToString(ptr.ty));
+        insWords.push(ptr.operand);
+        foreach var index in indices {
+            insWords.push(",");
+            insWords.push(typeToString(index.ty));
+            insWords.push(index.operand);
+        }
+        bb.addInsn(...insWords);
         return new PointerValue(ptr.ty, reg);
     }
 
