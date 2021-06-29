@@ -191,6 +191,11 @@ The following restrictions apply to imported modules:
 * the only function from `ballerina/io` that can be called is `println`
 * `println` only accepts a single argument (which is of type `any`)
 
+
+## Notes
+
+* The syntax restricts where a `list-constructor-expr` can occur to contexts where a declared type applies, to avoid the need to infer a type for the constructed list.
+
 ## Additions from subset 2
 
 Type `any[]` and some related operations:
