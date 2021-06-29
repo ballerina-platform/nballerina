@@ -78,6 +78,7 @@ final readonly & map<MultiCharDelim> WITH_EQUALS = {
 };
 
 class Tokenizer {
+    // Restorable state
     Token? cur = ();
     // The index in `str` of the first character of `cur`
     private int startIndex = 0;
@@ -85,10 +86,13 @@ class Tokenizer {
     private int lineStartIndex = 0;
     // Line number of line starting at lineStartIndex
     private int lineNumber = 1;
-    private final string str;
+    private Char[] ungot = [];
+    private Char[] peeked = [];
+    private boolean peeking = false;
 
+    // Non-restorable state
+    private final string str;
     private final StringIterator iter;
-    private Char? ungot = ();
     // Number of characters returned by `iter`
     private int nextCount = 0;
    
@@ -96,6 +100,25 @@ class Tokenizer {
     function init(string str) {
         self.iter = str.iterator();
         self.str = str;
+    }
+
+    function peek() returns Token|err:Syntax? {
+        Token? cur = self.cur;
+        int startIndex = self.startIndex;
+        int lineStartIndex = self.lineStartIndex;
+        int lineNumber = self.lineNumber;
+        self.peeking = true;
+
+        Token? t = check self.next();
+        
+        self.peeking = false;
+        self.ungot = self.peeked.reverse();
+        self.peeked = [];
+        self.lineNumber = lineNumber;
+        self.lineStartIndex = lineStartIndex;
+        self.startIndex = startIndex;
+        self.cur = cur;
+        return t;
     }
    
     // Moves to next token.record
@@ -315,28 +338,25 @@ class Tokenizer {
 
     // number of characters returned by getc and not ungot
     private function getCount() returns int {
-        return self.ungot is Char ? self.nextCount - 1 : self.nextCount;
+        return self.nextCount - self.ungot.length();
     }
 
     private function getc() returns Char? {
-        Char? ch = self.ungot;
-        if ch is () {
-            return self.nextc();
+        Char? ret;
+        if self.ungot.length() > 0 {
+            ret = self.ungot.pop();
         }
         else {
-            self.ungot = ();
-            return ch;
+            ret = self.nextc();
         }
+        if self.peeking && ret != () {
+            self.peeked.push(ret);
+        }
+        return ret;
     }
 
     private function ungetc(Char ch) {
-        // we could support arbitrary numbers of unget, by allowing
-        // the ungot string to be longer than 1
-        // but we don't need it (yet)
-        if self.ungot != () {
-            panic error("double ungetc");
-        }
-        self.ungot = ch;
+        self.ungot.push(ch);
     }
 
     private function nextc() returns string? {

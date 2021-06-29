@@ -73,12 +73,14 @@ type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
 type BinaryBitwiseOp "|" | "^" | "&";
 type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
+type BinaryShiftOp  "<<" | ">>" | ">>>";
+
 
 type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
 type UnaryExprOp "-" | "!";
 
-type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr;
+type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr|BinaryShiftExpr;
 
 // We use different operator names so things work better with match statements
 type BinaryExprBase record {|
@@ -100,6 +102,11 @@ type BinaryArithmeticExpr record {|
     *BinaryExprBase;
     BinaryArithmeticOp arithmeticOp;
     err:Position pos;
+|};
+
+type BinaryShiftExpr record {|
+    *BinaryExprBase;
+    BinaryShiftOp shiftOp;
 |};
 
 type BinaryBitwiseExpr record {|

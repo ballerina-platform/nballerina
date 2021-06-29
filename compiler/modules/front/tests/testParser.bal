@@ -245,6 +245,7 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "expr", "a +\r b", "a + b"],
          ["V", "expr", "a +\r\n b", "a + b"],
          ["V", "expr", "a +\n\r b", "a + b"],
+         ["V", "expr", "a >> b", "a >> b"],
          ["V", "expr", "a | b", "a | b"],
          ["V", "expr", "a & b", "a & b"],
          ["V", "expr", "a ^ b", "a ^ b"],

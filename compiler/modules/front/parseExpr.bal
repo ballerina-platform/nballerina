@@ -73,17 +73,30 @@ function parseEqualityExpr(Tokenizer tok)  returns Expr|err:Syntax {
 }
 
 function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
-    Expr expr = check parseAdditiveExpr(tok);
+    Expr expr = check parseShiftExpr(tok);
     Token? t = tok.current();
     if t is BinaryRelationalOp {
         check tok.advance();
-        Expr right = check parseAdditiveExpr(tok);
+        Expr right = check parseShiftExpr(tok);
         BinaryRelationalExpr bin = { relationalOp: t, left: expr, right };
         return bin;
     }
     else {
         return expr;
     }
+}
+
+function parseShiftExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Expr expr = check parseAdditiveExpr(tok);
+    Token? t = tok.current();
+    if t is ">" && tok.peek() is ">"  {
+        check tok.advance();
+        check tok.advance();
+        Expr right = check parseAdditiveExpr(tok);
+        BinaryShiftExpr shift = { shiftOp: ">>", left: expr, right };
+        return shift;
+    }
+    return expr;
 }
 
 function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
