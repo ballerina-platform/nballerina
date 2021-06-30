@@ -17,8 +17,9 @@ function gepComplex() returns Module {
     PointerValue v0 = builder.getElementPtr(g1, [constInt("i32", 1)]);
     PointerValue v1 = builder.getElementPtr(v0, [constInt("i32", 0), constInt("i32", 2)]);
     PointerValue v2 = builder.getElementPtr(v1, [constInt("i32", 0), constInt("i32", 1)]);
-    PointerValue v3 = builder.getElementPtr(v2, [constInt("i32", 0), constInt("i32", 5)]);
-    PointerValue v4 = builder.getElementPtr(v3, [constInt("i32", 0), constInt("i32", 13)]);
+    PointerValue v3 = builder.getElementPtr(v2, [constInt("i64", 0), constInt("i64", 5)]);
+    PointerValue v4 = builder.getElementPtr(v3, [constInt("i64", 0), constInt("i64", 13)]);
+    builder.ret();
     return m;
 }
 
