@@ -209,7 +209,7 @@ public class Module {
         self.globals[name] = val;
         self.globalVariables.push(val);
         return val;
-    }       
+    }
  
     // Does not correspond directly any LLVM function
     // XXX can perhaps be turned into a command to compile the module
