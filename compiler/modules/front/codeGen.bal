@@ -422,6 +422,19 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
         var callExpr if callExpr is FunctionCallExpr => {
             return codeGenFunctionCall(cx, bb, scope, callExpr);
         }
+        var { members } => {
+            bir:BasicBlock nextBlock = bb;
+            bir:Operand[] operands = [];
+            foreach var member in members {
+                bir:Operand operand;
+                [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, member);
+                operands.push(operand);
+            }
+            bir:Register result = cx.createRegister(t:LIST_RW);
+            bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, inherentType: t:LIST_RW };
+            nextBlock.insns.push(insn);
+            return [result, nextBlock];
+        }
     }
     return err:unreached();
 }

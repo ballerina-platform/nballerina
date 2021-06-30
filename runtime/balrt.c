@@ -21,6 +21,12 @@ char *_bal_stack_guard;
 
 typedef char *TaggedPtr;
 
+typedef struct {
+    int64_t length;
+    int64_t capacity;
+    TaggedPtr *members;
+} *ListPtr;
+
 static inline int getTag(TaggedPtr p) {
     return (int)((((uint64_t)p) >> TAG_SHIFT) & TAG_MASK);
 }
@@ -33,13 +39,23 @@ static inline int64_t taggedToInt(TaggedPtr p) {
     return *(int64_t *)(char *)(~(((uint64_t)TAG_MASK) << TAG_SHIFT) & (uint64_t)p);
 }
 
-static void printTagged(FILE *fp, TaggedPtr p) {
+static inline ListPtr taggedToList(TaggedPtr p) {
+    return (ListPtr)(char *)(~(((uint64_t)TAG_MASK) << TAG_SHIFT) & (uint64_t)p);
+}
+
+#define STYLE_DIRECT 0
+#define STYLE_INFORMAL 1
+
+static void printTagged(FILE *fp, TaggedPtr p, int style) {
     int tag = getTag(p);
     switch (tag) {
         case 0:
             if (p != 0) {
                 fprintf(stderr, "zero tag with non-zero payload %p\n", p);
                 abort();
+            }
+            if (style == STYLE_INFORMAL) {
+                fputs("null", fp);
             }
             break;
         case TAG_BOOLEAN:
@@ -48,6 +64,20 @@ static void printTagged(FILE *fp, TaggedPtr p) {
         case TAG_INT:
             fprintf(fp, "%ld", (long)taggedToInt(p));
             break;
+        case TAG_LIST_RW:
+            {
+                ListPtr lp = taggedToList(p);
+                fputs("[", fp);
+                int i;
+                for (i = 0; i < lp->length; i++) {
+                    if (i > 0) {
+                        fputs(",", fp);
+                    }
+                    printTagged(fp, lp->members[i], STYLE_INFORMAL);
+                }
+                fputs("]", fp);
+                break;
+            }
         default:
             fprintf(stderr, "unknown tag %d\n", tag);
             abort();
@@ -58,7 +88,7 @@ void _Bio__println(TaggedPtr p) {
 #ifdef STACK_DEBUG
     fprintf(stderr, "Used stack %ld bytes\n", (long)((_bal_stack_guard + STACK_SIZE) - (char *)__builtin_frame_address(0)));
 #endif
-    printTagged(stdout, p);
+    printTagged(stdout, p, STYLE_DIRECT);
     putchar('\n');
 }
 

@@ -154,6 +154,7 @@ public enum InsnName {
     INSN_BOOLEAN_COMPARE,
     INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
+    INSN_LIST_CONSTRUCT_RW,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -178,8 +179,9 @@ public type InsnBase record {
 };
 
 public type Insn 
-    IntArithmeticBinaryInsn|IntBitwiseBinaryInsn|IntNegateInsn
-    |IntCompareInsn|BooleanCompareInsn|EqualityInsn|BooleanNotInsn
+    IntArithmeticBinaryInsn|IntBitwiseBinaryInsn|IntNegateInsn|IntCompareInsn
+    |BooleanNotInsn|BooleanCompareInsn|EqualityInsn
+    |ListConstructInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
@@ -254,6 +256,14 @@ public type BooleanCompareInsn readonly & record {|
     OrderOp op;
     Register result;
     BooleanOperand[2] operands;
+|};
+
+# Constructs a new mutable list value.
+public type ListConstructInsn readonly & record {|
+    INSN_LIST_CONSTRUCT_RW name = INSN_LIST_CONSTRUCT_RW;
+    SemType inherentType;
+    Register result;
+    Operand[] operands;
 |};
 
 # This does equality expressions.

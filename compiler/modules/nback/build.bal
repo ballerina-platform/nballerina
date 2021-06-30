@@ -18,6 +18,8 @@ const int TAG_MASK     = 0x7f * TAG_FACTOR;
 const TAG_NIL      = 0;
 const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
 const int TAG_INT      = t:UT_INT * TAG_FACTOR;
+const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
+
 
 const ALIGN_HEAP = 8;
 
@@ -269,6 +271,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:CallInsn {
             check buildCall(builder, scaffold, insn);
         }
+        else if insn is bir:ListConstructInsn {
+            check buildListConstruct(builder, scaffold, insn);
+        }
         else if insn is bir:BranchInsn {
             check buildBranch(builder, scaffold, insn);
         }
@@ -337,6 +342,40 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     llvm:Value? retValue = builder.call(func, args);
     RetRepr retRepr = check semTypeRetRepr(funcRef.signature.returnType);
     check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
+}
+
+const LLVM_INDEX = "i32";
+
+function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
+    final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
+    final llvm:PointerType ptrUnsizedArrayType = llvm:pointerType(unsizedArrayType);
+    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
+    final int length = insn.operands.length();
+    llvm:PointerValue array;
+    if length > 0 {
+        final llvm:Type sizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, length);
+        final llvm:PointerType ptrSizedArrayType = llvm:pointerType(sizedArrayType);
+
+        array = buildTypedAlloc(builder, scaffold, sizedArrayType);
+        foreach int i in 0 ..< length {
+            builder.store(check buildRepr(builder, scaffold, insn.operands[i], REPR_ANY),
+                          builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));
+        }
+        array = builder.bitCast(array, ptrUnsizedArrayType);
+    }
+    else {
+        array = llvm:constNull(ptrUnsizedArrayType);
+    }
+    final llvm:PointerValue structMem = buildUntypedAlloc(builder, scaffold, structType);
+    final llvm:PointerValue struct = builder.bitCast(structMem, llvm:pointerType(structType));
+    foreach int i in 0 ..< 2 {
+        builder.store(llvm:constInt(LLVM_INT, length),
+                      builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, i)], "inbounds"));
+    }
+    builder.store(array,
+                  builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 2)], "inbounds"));
+    // Don't need to convert here
+    builder.store(buildTaggedPtr(builder, structMem, TAG_LIST_RW), scaffold.address(insn.result));
 }
 
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
@@ -649,10 +688,43 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:Value {
-    llvm:Function allocFunction = buildRuntimeFunctionDecl(scaffold, "alloc", allocFunctionType);
-    llvm:PointerValue mem = <llvm:PointerValue>builder.call(allocFunction, [llvm:constInt(LLVM_INT, 8)]);
+    llvm:PointerValue mem = buildUntypedAlloc(builder, scaffold, LLVM_INT);
     builder.store(value, builder.bitCast(mem, llvm:pointerType(LLVM_INT)), ALIGN_HEAP);
-    return builder.getElementPtr(mem, [llvm:constInt(LLVM_INT, TAG_INT)]);
+    return buildTaggedPtr(builder, mem, TAG_INT);
+}
+
+function buildTaggedPtr(llvm:Builder builder, llvm:PointerValue mem, int tag) returns llvm:PointerValue {
+    return builder.getElementPtr(mem, [llvm:constInt(LLVM_INT, tag)]);
+}
+
+function buildTypedAlloc(llvm:Builder builder, Scaffold scaffold, llvm:Type ty) returns llvm:PointerValue {
+    return builder.bitCast(buildUntypedAlloc(builder, scaffold, ty), llvm:pointerType(ty));
+}
+
+function buildUntypedAlloc(llvm:Builder builder, Scaffold scaffold, llvm:Type ty) returns llvm:PointerValue {
+    llvm:Function allocFunction = buildRuntimeFunctionDecl(scaffold, "alloc", allocFunctionType);
+    return <llvm:PointerValue>builder.call(allocFunction, [llvm:constInt(LLVM_INT, typeSize(ty))]);
+}
+
+// XXX this should go in llvm module, because it needs to know about alignment
+function typeSize(llvm:Type ty) returns int {
+    if ty is llvm:PointerType || ty == "i64" {
+        return 8;
+    }
+    else if ty is llvm:StructType {
+        int size = 0;
+        foreach var elemTy in ty.elementTypes {
+            size += typeSize(elemTy);
+        }
+        return size;
+    }
+    else if ty is llvm:ArrayType {
+        if ty.elementCount == 0 {
+            panic error("cannot take size of 0-length array");
+        }
+        return ty.elementCount * typeSize(ty.elementType);
+    }
+    panic error("size of unsized type");
 }
 
 function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) returns llvm:Value {

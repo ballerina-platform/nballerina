@@ -200,6 +200,7 @@ public final UniformTypeBitSet FLOAT = uniformType(UT_FLOAT);
 public final UniformTypeBitSet DECIMAL = uniformType(UT_DECIMAL);
 public final UniformTypeBitSet STRING = uniformType(UT_STRING);
 public final UniformTypeBitSet ERROR = uniformType(UT_ERROR);
+public final UniformTypeBitSet LIST_RW = uniformType(UT_LIST_RW);
 
 // matches all functions
 public final UniformTypeBitSet FUNCTION = uniformType(UT_FUNCTION);
