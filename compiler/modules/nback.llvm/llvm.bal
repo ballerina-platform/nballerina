@@ -11,7 +11,7 @@ import ballerina/io;
 // "i64" corresponds to  LLVMInt64Type
 // "i8" corresponds to LLVMInt8Type
 // "i1" corresponds to LLVMInt1Type
-public type IntType "i64"|"i8"|"i1";
+public type IntType "i64"|"i32"|"i8"|"i1";
 
 // Used to constrain parameters that represent an alignment
 public type Alignment 1|2|4|8|16;
@@ -209,7 +209,7 @@ public class Module {
         self.globals[name] = val;
         self.globalVariables.push(val);
         return val;
-    }
+    }       
  
     // Does not correspond directly any LLVM function
     // XXX can perhaps be turned into a command to compile the module
@@ -567,8 +567,13 @@ public class Builder {
 
     // Corresponds to LLVMBuildGEP
     public function getElementPtr(PointerValue ptr, Value[] indices,"inbounds"? inbounds=(), string? name = ()) returns PointerValue {
-        if indices.length() > 1 {
-            panic error ("More than one index not supported");
+        if ptr.ty.pointsTo is StructType {
+            foreach var index in indices {
+             int|error tmp = int:fromString(index.operand);
+               if index.ty != "i32" || tmp is error {
+                   panic error ("Structures can be indexed only by i32 constants");
+               }
+            }
         }
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
