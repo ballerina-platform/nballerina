@@ -11,7 +11,7 @@ import ballerina/io;
 // "i64" corresponds to  LLVMInt64Type
 // "i8" corresponds to LLVMInt8Type
 // "i1" corresponds to LLVMInt1Type
-public type IntType "i64"|"i8"|"i1";
+public type IntType "i64"|"i32"|"i8"|"i1";
 
 // Used to constrain parameters that represent an alignment
 public type Alignment 1|2|4|8|16;
@@ -566,27 +566,44 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildGEP
-    public function getElementPtr(PointerValue ptr, Value[] indices,"inbounds"? inbounds=(), string? name = ()) returns PointerValue {
-        if indices.length() > 1 {
-            panic error ("More than one index not supported");
-        }
+    public function getElementPtr(PointerValue ptr, Value[] indices, "inbounds"? inbounds = (), string? name = ()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        string[] insWords = [];
-        insWords.push(reg);
-        insWords.push("=");
-        insWords.push("getelementptr");
-        insWords.push(typeToString(ptr.ty.pointsTo));
-        insWords.push(",");
-        insWords.push(typeToString(ptr.ty));
-        insWords.push(ptr.operand);
+        string[] words = [];
+        words.push(reg, "=", "getelementptr");
+        if inbounds != () {
+            words.push(inbounds);
+        } 
+        words.push(typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand);
+        Type resultType = ptr.ty;
         foreach var index in indices {
-            insWords.push(",");
-            insWords.push(typeToString(index.ty));
-            insWords.push(index.operand);
+            words.push(",");
+            words.push(typeToString(index.ty));
+            words.push(index.operand);
+            if resultType is PointerType {
+                resultType = resultType.pointsTo;
+            } 
+            else {
+                if resultType is ArrayType {
+                    resultType = resultType.elementType;
+                } 
+                else if resultType is StructType {
+                    int i = checkpanic int:fromString(index.operand);
+                    if index.ty != "i32" {
+                        panic error("structures can be index only using i32 constants"); 
+                    } 
+                    else {
+                        resultType = getTypeAtIndex(resultType, i);
+                    }
+                } 
+                else {
+                    panic error(string `type  ${typeToString(resultType)} can't be indexed`);
+                }
+            }
         }
-        bb.addInsn(...insWords);
-        return new PointerValue(ptr.ty, reg);
+        bb.addInsn(...words);
+        PointerType resultPtrType = pointerType(resultType);
+        return new PointerValue(resultPtrType, reg);
     }
 
     private function bb() returns BasicBlock {
