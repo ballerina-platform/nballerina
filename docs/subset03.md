@@ -2,7 +2,7 @@
 
 ## Summary
 
-* Only values allowed are of basic type nil, booelan, int and list.
+* Only values allowed are of basic type nil, boolean, int and list.
 * The only type descriptors allowed are `boolean`, `int`, `any` and `any[]`.
 * At module level, only function definitions:
    * no default arguments
