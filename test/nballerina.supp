@@ -1,0 +1,8 @@
+# Suppression file for valgrind
+# We don't do any GC, so we certainly leak
+{
+	alloc
+	Memcheck:Leak
+	...
+	fun:_bal_alloc
+}
