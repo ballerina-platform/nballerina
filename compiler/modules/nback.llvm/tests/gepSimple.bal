@@ -10,7 +10,7 @@ function gepSimple() returns Module {
     builder.positionAtEnd(fooBB);
     Value arg = foo.getParam(0);
     if arg is PointerValue {
-        Value third = builder.getElementPointer(arg, constInt("i64", 3));
+        Value third = builder.getElementPtr(arg, [constInt("i64", 3)]);
         builder.ret(third);
     } else {
         panic error("Invalid argument type");
@@ -20,7 +20,7 @@ function gepSimple() returns Module {
     builder.positionAtEnd(barBB);
     Value arg_1 = bar.getParam(0);
     if arg_1 is PointerValue {
-        Value third = builder.getElementPointer(arg_1, constInt("i64", 3));
+        Value third = builder.getElementPtr(arg_1, [constInt("i64", 3)]);
         builder.ret(third);
     } else {
         panic error("Invalid argument type");

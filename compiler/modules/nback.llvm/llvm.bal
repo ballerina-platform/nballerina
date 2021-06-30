@@ -28,6 +28,16 @@ public function pointerType(IntType ty, int addressSpace = 0) returns PointerTyp
     return { pointsTo: ty };
 }
 
+// Corresponds to LLVMArrayType
+public type ArrayType readonly & record {|
+    Type elementType;
+    int elementCount;
+|};
+
+public function arrayType(Type ty, int elementCount) returns ArrayType {
+    return {elementType:ty, elementCount:elementCount};
+}
+
 // Corresponds to llvm::StructType
 public type StructType readonly & record {
     IntType[] memberTypes;
@@ -41,7 +51,7 @@ function getTypeAtIndex(StructType ty, int index) returns IntType {
     return ty.memberTypes[index];
 }
 
-public type Type IntType|PointerType|StructType;
+public type Type IntType|PointerType|StructType|ArrayType;
 
 // A RetType is valid only as the return type of a function
 public type RetType Type|"void";
@@ -556,10 +566,26 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildGEP
-    public function getElementPointer(PointerValue ptr, Value index, string? name = ()) returns PointerValue {
+    public function getElementPtr(PointerValue ptr, Value[] indices,"inbounds"? inbounds=(), string? name = ()) returns PointerValue {
+        if indices.length() > 1 {
+            panic error ("More than one index not supported");
+        }
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "getelementptr", typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand, ",", typeToString(index.ty), index.operand);
+        string[] insWords = [];
+        insWords.push(reg);
+        insWords.push("=");
+        insWords.push("getelementptr");
+        insWords.push(typeToString(ptr.ty.pointsTo));
+        insWords.push(",");
+        insWords.push(typeToString(ptr.ty));
+        insWords.push(ptr.operand);
+        foreach var index in indices {
+            insWords.push(",");
+            insWords.push(typeToString(index.ty));
+            insWords.push(index.operand);
+        }
+        bb.addInsn(...insWords);
         return new PointerValue(ptr.ty, reg);
     }
 
@@ -658,6 +684,14 @@ function typeToString(RetType ty) returns string {
         }
         typeStringBody.push("}");
         typeTag = createLine(typeStringBody, "");
+    } else if ty is ArrayType {
+        string[] typeStringBody = [];
+        typeStringBody.push("[");
+        typeStringBody.push(ty.elementCount.toString());
+        typeStringBody.push("x");
+        typeStringBody.push(typeToString(ty.elementType));
+        typeStringBody.push("]");
+        typeTag = createLine(typeStringBody, "");
     } else {
         typeTag = ty;
     }
@@ -726,9 +760,9 @@ function createLine(string[] words, string indent = "") returns string {
 }
 
 function omitSpaceBefore(string word) returns boolean {
-    return word == "," || word == ")" || word == "}" || word == "\"";
+    return word == "," || word == ")" || word == "}" || word == "\"" || word == "]";
 }
 
 function omitSpaceAfter(string word) returns boolean {
-    return word == "(" || word == "{" || word == "\"";
+    return word == "(" || word == "{" || word == "\"" || word == "[";
 }
