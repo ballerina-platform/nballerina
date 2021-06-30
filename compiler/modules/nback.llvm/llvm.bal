@@ -597,7 +597,7 @@ public class Builder {
                     }
                 } 
                 else {
-                    panic error(string `Type  ${typeToString(resultType)} can't be indexed`);
+                    panic error(string `type  ${typeToString(resultType)} can't be indexed`);
                 }
             }
         }
