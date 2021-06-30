@@ -569,35 +569,39 @@ public class Builder {
     public function getElementPtr(PointerValue ptr, Value[] indices, "inbounds"? inbounds = (), string? name = ()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        string[] insWords = [];
-        insWords.push(reg, "=", "getelementptr");
+        string[] words = [];
+        words.push(reg, "=", "getelementptr");
         if inbounds != () {
-            insWords.push(inbounds);
+            words.push(inbounds);
         } 
-        insWords.push(typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand);
+        words.push(typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand);
         Type resultType = ptr.ty;
         foreach var index in indices {
-            insWords.push(",");
-            insWords.push(typeToString(index.ty));
-            insWords.push(index.operand);
+            words.push(",");
+            words.push(typeToString(index.ty));
+            words.push(index.operand);
             if resultType is PointerType {
                 resultType = resultType.pointsTo;
-            } else {
+            } 
+            else {
                 if resultType is ArrayType {
                     resultType = resultType.elementType;
-                } else if resultType is StructType {
-                    int|error i = int:fromString(index.operand);
-                    if i is error || index.ty != "i32" {
-                        panic error("Structures can be index only using i32 constants"); 
-                    } else {
+                } 
+                else if resultType is StructType {
+                    int i = checkpanic int:fromString(index.operand);
+                    if index.ty != "i32" {
+                        panic error("structures can be index only using i32 constants"); 
+                    } 
+                    else {
                         resultType = getTypeAtIndex(resultType, i);
                     }
-                } else {
+                } 
+                else {
                     panic error(string `Type  ${typeToString(resultType)} can't be indexed`);
                 }
             }
         }
-        bb.addInsn(...insWords);
+        bb.addInsn(...words);
         PointerType resultPtrType = pointerType(resultType);
         return new PointerValue(resultPtrType, reg);
     }
