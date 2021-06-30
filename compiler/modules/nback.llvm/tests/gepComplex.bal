@@ -38,10 +38,6 @@ function gepComplexInbounds() returns Module {
     builder.positionAtEnd(bb);
 
     PointerValue v0 = builder.getElementPtr(g1, [constInt("i32", 1)], "inbounds");
-    PointerValue v1 = builder.getElementPtr(v0, [constInt("i32", 0), constInt("i32", 2)], "inbounds");
-    PointerValue v2 = builder.getElementPtr(v1, [constInt("i32", 0), constInt("i32", 1)], "inbounds");
-    PointerValue v3 = builder.getElementPtr(v2, [constInt("i64", 0), constInt("i64", 5)], "inbounds");
-    PointerValue v4 = builder.getElementPtr(v3, [constInt("i64", 0), constInt("i64", 13)], "inbounds");
     builder.ret();
     return m;
 }
