@@ -567,6 +567,9 @@ public class Builder {
 
     // Corresponds to LLVMBuildGEP
     public function getElementPtr(PointerValue ptr, Value[] indices,"inbounds"? inbounds=(), string? name = ()) returns PointerValue {
+        if indices.length() > 1 {
+            panic error ("More than one index not supported");
+        }
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         string[] insWords = [];
