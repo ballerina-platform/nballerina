@@ -566,15 +566,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildGEP
-    public function getElementPtr(PointerValue ptr, Value[] indices,"inbounds"? inbounds=(), string? name = ()) returns PointerValue {
-        if ptr.ty.pointsTo is StructType {
-            foreach var index in indices {
-             int|error tmp = int:fromString(index.operand);
-               if index.ty != "i32" || tmp is error {
-                   panic error ("Structures can be indexed only by i32 constants");
-               }
-            }
-        }
+    public function getElementPtr(PointerValue ptr, Value[] indices, "inbounds"? inbounds = (), string? name = ()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         string[] insWords = [];
@@ -585,13 +577,31 @@ public class Builder {
         insWords.push(",");
         insWords.push(typeToString(ptr.ty));
         insWords.push(ptr.operand);
+        Type resultType = ptr.ty;
         foreach var index in indices {
             insWords.push(",");
             insWords.push(typeToString(index.ty));
             insWords.push(index.operand);
+            if resultType is PointerType {
+                resultType = resultType.pointsTo;
+            } else {
+                if resultType is ArrayType {
+                    resultType = resultType.elementType;
+                } else if resultType is StructType {
+                    int|error i = int:fromString(index.operand);
+                    if i is error || index.ty != "i32" {
+                        panic error("Structures can be index only using i32 constants"); 
+                    } else {
+                        resultType = getTypeAtIndex(resultType, i);
+                    }
+                } else {
+                    panic error(string `Type  ${typeToString(resultType)} can't be indexed`);
+                }
+            }
         }
         bb.addInsn(...insWords);
-        return new PointerValue(ptr.ty, reg);
+        PointerType resultPtrType = pointerType(resultType);
+        return new PointerValue(resultPtrType, reg);
     }
 
     private function bb() returns BasicBlock {
