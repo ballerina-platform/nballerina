@@ -543,6 +543,17 @@ public function isSubtype(TypeCheckContext tc, SemType t1, SemType t2) returns b
     return isEmpty(tc, diff(t1, t2));
 }
 
+public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolean {
+    int bits;
+    if t1 is UniformTypeBitSet {
+        bits = t1;
+    }
+    else {
+        bits = t1.all | t1.some;
+    }
+    return (bits & ~<int>t2) == 0;
+}
+
 public function isReadOnly(SemType t) returns boolean {
     UniformTypeBitSet bits;
     if t is UniformTypeBitSet {

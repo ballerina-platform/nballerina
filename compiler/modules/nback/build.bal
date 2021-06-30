@@ -32,40 +32,39 @@ type ValueType llvm:IntegralType;
 
 // A Repr is way of representing values.
 // It's a mapping from a SemType to an LLVM type.
-type Repr REPR_INT|REPR_BOOLEAN|REPR_ERROR|REPR_TAGGED;
-type RetRepr Repr|REPR_VOID;
 
-// Maps int to i64
-const REPR_INT = 0;
-// Maps int to i1
-const int REPR_BOOLEAN = REPR_INT + 1;
-// Maps error value to (for now) int (for panics)
-const int REPR_ERROR = REPR_BOOLEAN + 1;
+enum UniformBaseRepr {
+    BASE_REPR_INT,
+    BASE_REPR_BOOLEAN,
+    BASE_REPR_ERROR
+}
+
+const BASE_REPR_VOID = "BASE_REPR_VOID";
+const BASE_REPR_TAGGED = "BASE_REPR_TAGGED";
+type BaseRepr UniformBaseRepr|BASE_REPR_TAGGED;
+type RetBaseRepr BaseRepr|BASE_REPR_VOID;
+
+type UniformRepr readonly & record {|
+    UniformBaseRepr base;
+    llvm:IntegralType llvm;
+    t:UniformTypeBitSet subtype?;
+|};
+
 // Maps any Ballerina value to a tagged pointer
-const int REPR_TAGGED = REPR_ERROR + 1;
-// JBUG this goes wrong when you use REPR_VOID as a type as in buildRet
-// const int REPR_VOID = REPR_TAGGED + 1;
-const int REPR_VOID = 4;
+type TaggedRepr readonly & record {|
+    BaseRepr base;
+    t:UniformTypeBitSet subtype;
+    llvm:IntegralType llvm;
+|};
 
-// XXX This is not quite right yet
-// We need to capture subtyping relationships between representations
-// e.g. that nil is a subtype of TAGGED_PTR
-final llvm:IntegralType[] reprTypes = [
-    LLVM_INT,
-    LLVM_BOOLEAN,
-    // For now we represent an error as an i64
-    LLVM_INT,
-    LLVM_TAGGED_PTR
-];
+type Repr UniformRepr|TaggedRepr;
 
-final llvm:RetType[] retReprTypes = [
-    LLVM_INT,
-    LLVM_BOOLEAN,
-    // For now we represent an error as an i64
-    LLVM_INT,
-    LLVM_TAGGED_PTR,
-    LLVM_VOID
-];
+type VoidRepr readonly & record {|
+    BASE_REPR_VOID base;
+    LLVM_VOID llvm;
+|};
+
+type RetRepr Repr|VoidRepr;
 
 const PANIC_ARITHMETIC_OVERFLOW = 1;
 const PANIC_DIVIDE_BY_ZERO = 2;
@@ -131,7 +130,7 @@ class Scaffold {
         builder.positionAtEnd(entry);
         self.addresses = [];
         foreach int i in 0 ..< reprs.length() {
-            self.addresses.push(builder.alloca(reprTypes[reprs[i]], (), code.registers[i].varName));
+            self.addresses.push(builder.alloca(reprs[i].llvm, (), code.registers[i].varName));
         } 
     }
 
@@ -301,7 +300,7 @@ function buildCondBranch(llvm:Builder builder, Scaffold scaffold, bir:CondBranch
 
 function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) returns BuildError? {
     RetRepr repr = scaffold.getRetRepr();
-    builder.ret(repr is REPR_VOID ? () : check buildRepr(builder, scaffold, insn.operand, repr));
+    builder.ret(repr is Repr ? check buildRepr(builder, scaffold, insn.operand, repr) : ());
 }
 
 function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) {
@@ -341,12 +340,12 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
 }
 
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
-    if retRepr == REPR_VOID {
-         builder.store(buildConstNil(), scaffold.address(reg));
-    }
-    else {
+    if retRepr is Repr {
         builder.store(check buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
                       scaffold.address(reg));
+    }
+    else {
+         builder.store(buildConstNil(), scaffold.address(reg));
     }
 }
 
@@ -474,29 +473,29 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
     var [rhsRepr, rhsValue] = buildReprValue(builder, scaffold, insn.operands[1]);
     CmpEqOp op = insn.op[0] == "!" ?  "ne" : "eq"; 
     bir:Register result = insn.result;
-    match [lhsRepr, rhsRepr] {
-        [REPR_TAGGED, REPR_TAGGED] => {
-            if operandIsNil(insn.operands[0]) || operandIsNil(insn.operands[1]) {
+    match [lhsRepr.base, rhsRepr.base] {
+        [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
+            if reprIsNil(lhsRepr) || reprIsNil(rhsRepr) {
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else {
                 return buildEqualTaggedTagged(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
         }
-        [REPR_TAGGED, REPR_BOOLEAN] => {
+        [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
             return buildEqualTaggedBoolean(builder, scaffold, op, <llvm:PointerValue>lhsValue, rhsValue, result);
         }
-        [REPR_BOOLEAN, REPR_TAGGED] => {
+        [BASE_REPR_BOOLEAN, BASE_REPR_TAGGED] => {
             return buildEqualTaggedBoolean(builder, scaffold, op, <llvm:PointerValue>rhsValue, lhsValue, result);
         }
-        [REPR_TAGGED, REPR_INT] => {
+        [BASE_REPR_TAGGED, BASE_REPR_INT] => {
             return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>lhsValue, rhsValue, result);
         }
-        [REPR_INT, REPR_TAGGED] => {
+        [BASE_REPR_INT, BASE_REPR_TAGGED] => {
             return buildEqualTaggedInt(builder, scaffold, op, <llvm:PointerValue>rhsValue, lhsValue, result);
         }
-        [REPR_BOOLEAN, REPR_BOOLEAN]
-        | [REPR_INT, REPR_INT] => {
+        [BASE_REPR_BOOLEAN, BASE_REPR_BOOLEAN]
+        | [BASE_REPR_INT, BASE_REPR_INT] => {
              // no tags involved, same representation, boolean/int
             return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
         }
@@ -504,8 +503,8 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
     return err:unimplemented("equality with two different untagged representations");    
 }
 
-function operandIsNil(bir:Operand operand) returns boolean {
-    return operand is bir:Register ? operand.semType === t:NIL : operand == (); 
+function reprIsNil(Repr repr) returns boolean {
+    return repr is TaggedRepr && repr.subtype == t:NIL;
 }
 
 function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {
@@ -567,7 +566,7 @@ function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, CmpEqOp
 
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
     var [repr, val] = buildReprValue(builder, scaffold, insn.operand);
-    if repr != REPR_TAGGED {
+    if repr.base != BASE_REPR_TAGGED {
         return err:unimplemented("cast from untagged value"); // should not happen in subset 2
     }
     llvm:PointerValue tagged = <llvm:PointerValue>val;
@@ -610,12 +609,12 @@ function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNot
 }
 
 function buildStoreInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
-    builder.store(scaffold.getRepr(reg) == REPR_TAGGED ? buildTaggedInt(builder, scaffold, value) : value,
+    builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedInt(builder, scaffold, value) : value,
                   scaffold.address(reg));
 }
 
 function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
-    builder.store(scaffold.getRepr(reg) == REPR_TAGGED ? buildTaggedBoolean(builder, value) : value,
+    builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedBoolean(builder, value) : value,
                   scaffold.address(reg));
 }
 
@@ -625,14 +624,16 @@ function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand,
 }
 
 function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value|BuildError {
-    if sourceRepr == targetRepr {
+    BaseRepr sourceBaseRepr = sourceRepr.base;
+    BaseRepr targetBaseRepr = targetRepr.base;
+    if sourceBaseRepr == targetBaseRepr {
         return value;
     }
-    if targetRepr == REPR_TAGGED {
-        if sourceRepr == REPR_INT {
+    if targetBaseRepr == BASE_REPR_TAGGED {
+        if sourceBaseRepr == BASE_REPR_INT {
             return buildTaggedInt(builder, scaffold, value);
         }
-        else if sourceRepr == REPR_BOOLEAN {
+        else if sourceBaseRepr == BASE_REPR_BOOLEAN {
             return buildTaggedBoolean(builder, value);
         }
     }
@@ -689,7 +690,7 @@ function buildConst(bir:ConstOperand operand) returns [Repr, llvm:Value] {
         return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
     }
     else if operand is () {
-        return [REPR_TAGGED, buildConstNil()];
+        return [REPR_NIL, buildConstNil()];
     }
     else {
         // operand is boolean
@@ -762,10 +763,10 @@ function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
 }
 
 function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:FunctionType|BuildError {
-    llvm:Type[] paramTypes = from var ty in signature.paramTypes select reprTypes[check semTypeRepr(ty)];
+    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (check semTypeRepr(ty)).llvm;
     RetRepr repr = check semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {
-        returnType: retReprTypes[repr],
+        returnType: repr.llvm,
         paramTypes: paramTypes.cloneReadOnly()
     };
     return ty;
@@ -779,6 +780,33 @@ function buildConstBoolean(boolean b) returns llvm:Value {
     return llvm:constInt(LLVM_BOOLEAN, b ? 1 : 0);
 }
 
+// Maps int to i64
+final Repr REPR_INT = { base: BASE_REPR_INT, llvm: LLVM_INT };
+// Maps int to i1
+final Repr REPR_BOOLEAN = { base: BASE_REPR_BOOLEAN, llvm: LLVM_BOOLEAN };
+// Maps error value to (for now) int (for panics)
+final Repr REPR_ERROR = { base: BASE_REPR_ERROR, llvm: LLVM_INT };
+
+final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:NIL };
+final TaggedRepr REPR_TOP = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:TOP };
+final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ANY };
+// JBUG this goes wrong when you use REPR_VOID as a type as in buildRet
+// const int REPR_VOID = REPR_TAGGED + 1;
+final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, llvm: LLVM_VOID };
+
+final readonly & record {|
+    t:UniformTypeBitSet domain;
+    Repr repr;
+|}[] typeReprs = [
+    // These are ordered from most to least specific
+    { domain: t:INT, repr: REPR_INT },
+    { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
+    { domain: t:NIL, repr: REPR_NIL },
+    { domain: t:ERROR, repr: REPR_ERROR },
+    { domain: t:ANY, repr: REPR_ANY },
+    { domain: t:TOP, repr: REPR_TOP }
+];
+
 function semTypeRetRepr(t:SemType ty) returns RetRepr|BuildError {
     if ty === t:NIL {
         return REPR_VOID;
@@ -788,18 +816,10 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr|BuildError {
 
 // Return the representation for a SemType.
 function semTypeRepr(t:SemType ty) returns Repr|BuildError {
-    if ty === t:INT {
-        return REPR_INT;
-    }
-    else if ty === t:BOOLEAN {
-        return REPR_BOOLEAN;
-    }
-    // This happens with the code generated for potential panics.
-    else if ty === t:ERROR {
-        return REPR_ERROR;
-    }
-    else if ty === t:NIL || ty === t:TOP {
-        return REPR_TAGGED;
+    foreach var tr in typeReprs {
+        if t:isSubtypeSimple(ty, tr.domain) {
+            return tr.repr;
+        }
     }
     return err:unimplemented("unimplemented type");
 }

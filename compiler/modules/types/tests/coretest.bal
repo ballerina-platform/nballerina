@@ -1,6 +1,15 @@
 import ballerina/test;
 
 @test:Config{}
+function testSubtypeSimple() {
+    test:assertTrue(isSubtypeSimple(NIL, ANY));
+    test:assertTrue(isSubtypeSimple(INT, TOP));
+    test:assertTrue(isSubtypeSimple(ANY, TOP));
+    test:assertFalse(isSubtypeSimple(INT, BOOLEAN));
+    test:assertFalse(isSubtypeSimple(ERROR, ANY));
+}
+
+@test:Config{}
 function testBitTwiddling() {
     test:assertEquals(numberOfTrailingZeros(0x10), 4);
     test:assertEquals(numberOfTrailingZeros(0x100), 8);
