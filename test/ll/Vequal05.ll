@@ -40,7 +40,7 @@ L1:
   %_28 = load i8*, i8** %_1
   %_29 = ptrtoint i8* %_28 to i64
   %_30 = and i64 %_29, 9151314442816847872
-  %_31 = icmp eq i64 %_30, 144115188075855872
+  %_31 = icmp eq i64 %_30, 504403158265495552
   br i1 %_31, label %L3, label %L4
 L2:
   call void @_bal_panic (i64 772)
@@ -67,7 +67,7 @@ L5:
   %_41 = load i8*, i8** %_4
   %_42 = ptrtoint i8* %_41 to i64
   %_43 = and i64 %_42, 9151314442816847872
-  %_44 = icmp eq i64 %_43, 144115188075855872
+  %_44 = icmp eq i64 %_43, 504403158265495552
   br i1 %_44, label %L6, label %L7
 L6:
   %_45 = call i8* @llvm.ptrmask.p0i8.i64 (i8* %_41, i64 72057594037927935)
@@ -121,7 +121,7 @@ L8:
   %_75 = load i64, i64* %n
   %_76 = ptrtoint i8* %_74 to i64
   %_77 = and i64 %_76, 9151314442816847872
-  %_78 = icmp eq i64 %_77, 144115188075855872
+  %_78 = icmp eq i64 %_77, 504403158265495552
   br i1 %_78, label %L9, label %L10
 L9:
   %_79 = call i8* @llvm.ptrmask.p0i8.i64 (i8* %_74, i64 72057594037927935)
@@ -147,7 +147,7 @@ L11:
   %_89 = load i8*, i8** %_16
   %_90 = ptrtoint i8* %_89 to i64
   %_91 = and i64 %_90, 9151314442816847872
-  %_92 = icmp eq i64 %_91, 144115188075855872
+  %_92 = icmp eq i64 %_91, 504403158265495552
   br i1 %_92, label %L12, label %L13
 L12:
   %_93 = call i8* @llvm.ptrmask.p0i8.i64 (i8* %_89, i64 72057594037927935)
@@ -212,7 +212,7 @@ L1:
   %_5 = call i8* @_bal_alloc (i64 8)
   %_6 = bitcast i8* %_5 to i64*
   store i64 %_4, i64* %_6, align 8
-  %_7 = getelementptr i8, i8* %_5, i64 144115188075855872
+  %_7 = getelementptr i8, i8* %_5, i64 504403158265495552
   ret i8* %_7
 L2:
   call void @_bal_panic (i64 4612)

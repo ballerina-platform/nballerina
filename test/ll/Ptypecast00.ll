@@ -19,7 +19,7 @@ L1:
   %_8 = load i8*, i8** %_0
   %_9 = ptrtoint i8* %_8 to i64
   %_10 = and i64 %_9, 9151314442816847872
-  %_11 = icmp eq i64 %_10, 144115188075855872
+  %_11 = icmp eq i64 %_10, 504403158265495552
   br i1 %_11, label %L4, label %L5
 L2:
   %_20 = load i64, i64* %_3
@@ -39,7 +39,7 @@ L4:
   %_17 = call i8* @_bal_alloc (i64 8)
   %_18 = bitcast i8* %_17 to i64*
   store i64 %_16, i64* %_18, align 8
-  %_19 = getelementptr i8, i8* %_17, i64 144115188075855872
+  %_19 = getelementptr i8, i8* %_17, i64 504403158265495552
   call void @_Bio__println (i8* %_19)
   store i8* null, i8** %_2
   ret void
@@ -72,7 +72,7 @@ L3:
   %_12 = call i8* @_bal_alloc (i64 8)
   %_13 = bitcast i8* %_12 to i64*
   store i64 %_11, i64* %_13, align 8
-  %_14 = getelementptr i8, i8* %_12, i64 144115188075855872
+  %_14 = getelementptr i8, i8* %_12, i64 504403158265495552
   ret i8* %_14
 L4:
   call void @_bal_panic (i64 2052)

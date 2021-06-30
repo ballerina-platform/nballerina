@@ -43,7 +43,7 @@ L1:
   %_25 = load i8*, i8** %_4
   %_26 = ptrtoint i8* %_25 to i64
   %_27 = and i64 %_26, 9151314442816847872
-  %_28 = icmp eq i64 %_27, 144115188075855872
+  %_28 = icmp eq i64 %_27, 504403158265495552
   br i1 %_28, label %L4, label %L5
 L2:
   %_72 = load i64, i64* %_16
@@ -61,7 +61,7 @@ L4:
   %_33 = call i8* @_bal_alloc (i64 8)
   %_34 = bitcast i8* %_33 to i64*
   store i64 %_32, i64* %_34, align 8
-  %_35 = getelementptr i8, i8* %_33, i64 144115188075855872
+  %_35 = getelementptr i8, i8* %_33, i64 504403158265495552
   call void @_Bio__println (i8* %_35)
   store i8* null, i8** %_6
   %_36 = call i8* @_B_ifElse (i1 1, i64 42, i1 0)
@@ -69,7 +69,7 @@ L4:
   %_37 = load i8*, i8** %_7
   %_38 = ptrtoint i8* %_37 to i64
   %_39 = and i64 %_38, 9151314442816847872
-  %_40 = icmp eq i64 %_39, 144115188075855872
+  %_40 = icmp eq i64 %_39, 504403158265495552
   br i1 %_40, label %L6, label %L7
 L5:
   store i64 1539, i64* %_16
@@ -85,7 +85,7 @@ L6:
   %_46 = call i8* @_bal_alloc (i64 8)
   %_47 = bitcast i8* %_46 to i64*
   store i64 %_45, i64* %_47, align 8
-  %_48 = getelementptr i8, i8* %_46, i64 144115188075855872
+  %_48 = getelementptr i8, i8* %_46, i64 504403158265495552
   call void @_Bio__println (i8* %_48)
   store i8* null, i8** %_9
   %_49 = call i8* @_B_ifElse (i1 0, i64 21, i1 1)
@@ -154,7 +154,7 @@ L2:
   %_8 = call i8* @_bal_alloc (i64 8)
   %_9 = bitcast i8* %_8 to i64*
   store i64 %_7, i64* %_9, align 8
-  %_10 = getelementptr i8, i8* %_8, i64 144115188075855872
+  %_10 = getelementptr i8, i8* %_8, i64 504403158265495552
   ret i8* %_10
 L3:
   %_11 = load i1, i1* %b

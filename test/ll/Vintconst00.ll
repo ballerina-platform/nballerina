@@ -15,19 +15,19 @@ L1:
   %_7 = call i8* @_bal_alloc (i64 8)
   %_8 = bitcast i8* %_7 to i64*
   store i64 42, i64* %_8, align 8
-  %_9 = getelementptr i8, i8* %_7, i64 144115188075855872
+  %_9 = getelementptr i8, i8* %_7, i64 504403158265495552
   call void @_Bio__println (i8* %_9)
   store i8* null, i8** %_0
   %_10 = call i8* @_bal_alloc (i64 8)
   %_11 = bitcast i8* %_10 to i64*
   store i64 -1, i64* %_11, align 8
-  %_12 = getelementptr i8, i8* %_10, i64 144115188075855872
+  %_12 = getelementptr i8, i8* %_10, i64 504403158265495552
   call void @_Bio__println (i8* %_12)
   store i8* null, i8** %_2
   %_13 = call i8* @_bal_alloc (i64 8)
   %_14 = bitcast i8* %_13 to i64*
   store i64 0, i64* %_14, align 8
-  %_15 = getelementptr i8, i8* %_13, i64 144115188075855872
+  %_15 = getelementptr i8, i8* %_13, i64 504403158265495552
   call void @_Bio__println (i8* %_15)
   store i8* null, i8** %_3
   ret void

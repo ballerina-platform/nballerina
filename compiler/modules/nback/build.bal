@@ -7,6 +7,20 @@ type BuildError err:Semantic|err:Unimplemented;
 
 type Alignment 1|8;
 
+
+// Pointer tagging
+// JBUG #31394 would be better to use shifts for these
+                     //1234567812345678
+const TAG_FACTOR   = 0x0100000000000000;
+const POINTER_MASK = 0x00ffffffffffffff;
+
+const int TAG_MASK     = 0x7f * TAG_FACTOR;
+const TAG_NIL      = 0;
+const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
+const int TAG_INT      = t:UT_INT * TAG_FACTOR;
+
+const ALIGN_HEAP = 8;
+
 const LLVM_INT = "i64";
 const LLVM_BOOLEAN = "i1";
 const LLVM_VOID = "void";
@@ -625,15 +639,6 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
     // this shouldn't ever happen I think
     return err:unimplemented("unimplemented conversion required");
 }
-
-// JBUG #31394 would be better to use shifts for these
-                     //1234567812345678
-const TAG_MASK     = 0x7f00000000000000;
-const TAG_BOOLEAN  = 0x0100000000000000;
-const TAG_INT      = 0x0200000000000000;
-const POINTER_MASK = 0x00ffffffffffffff;
-
-const ALIGN_HEAP = 8;
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
     return builder.getElementPointer(llvm:constNull(LLVM_TAGGED_PTR),

@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "tag.h"
+
 #ifndef STACK_SIZE
 #ifdef STACK_DEBUG
 #define STACK_SIZE 1024
@@ -12,8 +14,6 @@
 
 #define TAG_MASK 0xFF
 #define TAG_SHIFT 56
-#define TAG_BOOLEAN 1
-#define TAG_INT 2
 #define ALIGN_HEAP 8
 
 extern void _B_main();

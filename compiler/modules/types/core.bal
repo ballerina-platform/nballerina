@@ -5,47 +5,17 @@ import nballerina.types.bdd;
 // Uniform types are like basic types except that each selectively immutable
 // basic type is split into two uniform types, one immutable and on mutable.
 
-// Inherently immutable
-public const UT_NIL = 0;
-public const UT_BOOLEAN = 1;
-public const UT_INT = 2;
-public const UT_FLOAT = 3;
-public const UT_DECIMAL = 4;
-public const UT_STRING = 5;
-public const UT_ERROR = 6;
-public const UT_FUNCTION = 7;
-public const UT_TYPEDESC = 8;
-public const UT_HANDLE = 9;
+// JBUG bad, sad if UT_OBJECT_RW + 1
+public const UT_COUNT = 0x17;
 
-// Selectively immutable; immutable half
-public const UT_XML_RO = 10;
-public const UT_LIST_RO = 11;
-public const UT_MAPPING_RO = 12;
-public const UT_TABLE_RO = 13;
-public const UT_OBJECT_RO = 14;
+const int UT_MASK = (1 << UT_COUNT) - 1;
 
-// Selectively immutable; mutable half
-public const UT_XML_RW = 15;
-public const UT_LIST_RW = 16;
-public const UT_MAPPING_RW = 17;
-public const UT_TABLE_RW = 18;
-public const UT_OBJECT_RW = 19;
-
-// Inherently mutable
-public const UT_STREAM = 20;
-public const UT_FUTURE = 21;
-
-public const UT_COUNT = 22;
-
-public const int UT_MASK = (1 << UT_COUNT) - 1;
-
-public const int UT_COUNT_RO = UT_OBJECT_RO + 1;
-public const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
+const int UT_COUNT_RO = 0x10;
+const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
 
 // It would be easier to use ~ here, but slalpha5 doesn't support
-public const int UT_RW_MASK = ((1 << (UT_COUNT - UT_COUNT_RO)) - 1) << UT_COUNT_RO;
+const int UT_RW_MASK = ((1 << (UT_COUNT - UT_COUNT_RO)) - 1) << UT_COUNT_RO;
 
-public const int UT_SOME = 1 | (1 << UT_COUNT);
 
 public type UniformTypeCode
     UT_NIL|UT_BOOLEAN|UT_INT|UT_FLOAT|UT_DECIMAL
@@ -646,6 +616,11 @@ function init() {
     ops = [
         {}, // nil
         booleanOps, // boolean
+        listRoOps, // RO list
+        mappingRoOps, // RO mapping
+        {}, // RO table
+        {}, // RO xml
+        {}, // RO object
         intOps, // int
         {}, // float
         {}, // decimal
@@ -654,17 +629,13 @@ function init() {
         functionOps,  // function
         {}, // typedesc
         {}, // handle
-        {}, // RO xml
-        listRoOps, // RO list
-        mappingRoOps, // RO mapping
-        {}, // RO table
-        {}, // RO object
-        {}, // RW xml
+        {}, // unused
+        {}, // RW future
+        {}, // RW stream
         listRwOps, // RW list
         mappingRwOps, // RW mapping
         {}, // RW table
-        {}, // RW object
-        {}, // RW stream
-        {} // RW future
+        {}, // RW xml
+        {} // RW object
    ];
 }

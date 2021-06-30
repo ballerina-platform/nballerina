@@ -49,7 +49,7 @@ L4:
   %_15 = call i8* @_bal_alloc (i64 8)
   %_16 = bitcast i8* %_15 to i64*
   store i64 %_14, i64* %_16, align 8
-  %_17 = getelementptr i8, i8* %_15, i64 144115188075855872
+  %_17 = getelementptr i8, i8* %_15, i64 504403158265495552
   call void @_Bio__println (i8* %_17)
   store i8* null, i8** %_3
   %_18 = load i64, i64* %i

@@ -36,7 +36,7 @@ L1:
   %_3 = call i8* @_bal_alloc (i64 8)
   %_4 = bitcast i8* %_3 to i64*
   store i64 17, i64* %_4, align 8
-  %_5 = getelementptr i8, i8* %_3, i64 144115188075855872
+  %_5 = getelementptr i8, i8* %_3, i64 504403158265495552
   ret i8* %_5
 L2:
   call void @_bal_panic (i64 2052)

@@ -38,7 +38,7 @@ L4:
   %_19 = call i8* @_bal_alloc (i64 8)
   %_20 = bitcast i8* %_19 to i64*
   store i64 %_18, i64* %_20, align 8
-  %_21 = getelementptr i8, i8* %_19, i64 144115188075855872
+  %_21 = getelementptr i8, i8* %_19, i64 504403158265495552
   call void @_Bio__println (i8* %_21)
   store i8* null, i8** %_1
   %_22 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 1, i64 9223372036854775806)
@@ -54,7 +54,7 @@ L6:
   %_26 = call i8* @_bal_alloc (i64 8)
   %_27 = bitcast i8* %_26 to i64*
   store i64 %_25, i64* %_27, align 8
-  %_28 = getelementptr i8, i8* %_26, i64 144115188075855872
+  %_28 = getelementptr i8, i8* %_26, i64 504403158265495552
   call void @_Bio__println (i8* %_28)
   store i8* null, i8** %_3
   %_29 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 -1, i64 0)
@@ -70,7 +70,7 @@ L8:
   %_33 = call i8* @_bal_alloc (i64 8)
   %_34 = bitcast i8* %_33 to i64*
   store i64 %_32, i64* %_34, align 8
-  %_35 = getelementptr i8, i8* %_33, i64 144115188075855872
+  %_35 = getelementptr i8, i8* %_33, i64 504403158265495552
   call void @_Bio__println (i8* %_35)
   store i8* null, i8** %_6
   %_36 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 -1, i64 -9223372036854775806)
@@ -86,7 +86,7 @@ L10:
   %_40 = call i8* @_bal_alloc (i64 8)
   %_41 = bitcast i8* %_40 to i64*
   store i64 %_39, i64* %_41, align 8
-  %_42 = getelementptr i8, i8* %_40, i64 144115188075855872
+  %_42 = getelementptr i8, i8* %_40, i64 504403158265495552
   call void @_Bio__println (i8* %_42)
   store i8* null, i8** %_10
   ret void

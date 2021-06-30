@@ -37,7 +37,7 @@ L6:
   %_20 = call i8* @_bal_alloc (i64 8)
   %_21 = bitcast i8* %_20 to i64*
   store i64 %_19, i64* %_21, align 8
-  %_22 = getelementptr i8, i8* %_20, i64 144115188075855872
+  %_22 = getelementptr i8, i8* %_20, i64 504403158265495552
   call void @_Bio__println (i8* %_22)
   store i8* null, i8** %_3
   br label %L2

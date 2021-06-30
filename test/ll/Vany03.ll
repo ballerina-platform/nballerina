@@ -20,7 +20,7 @@ L1:
   %_11 = call i8* @_bal_alloc (i64 8)
   %_12 = bitcast i8* %_11 to i64*
   store i64 57, i64* %_12, align 8
-  %_13 = getelementptr i8, i8* %_11, i64 144115188075855872
+  %_13 = getelementptr i8, i8* %_11, i64 504403158265495552
   call void @_B_foo (i8* %_13)
   store i8* null, i8** %_0
   %_14 = zext i1 1 to i64
@@ -33,7 +33,7 @@ L1:
   %_17 = call i8* @_bal_alloc (i64 8)
   %_18 = bitcast i8* %_17 to i64*
   store i64 9223372036854775807, i64* %_18, align 8
-  %_19 = getelementptr i8, i8* %_17, i64 144115188075855872
+  %_19 = getelementptr i8, i8* %_17, i64 504403158265495552
   call void @_B_foo (i8* %_19)
   store i8* null, i8** %_3
   %_20 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 -9223372036854775807, i64 1)
@@ -53,7 +53,7 @@ L4:
   %_24 = call i8* @_bal_alloc (i64 8)
   %_25 = bitcast i8* %_24 to i64*
   store i64 %_23, i64* %_25, align 8
-  %_26 = getelementptr i8, i8* %_24, i64 144115188075855872
+  %_26 = getelementptr i8, i8* %_24, i64 504403158265495552
   call void @_B_foo (i8* %_26)
   store i8* null, i8** %_6
   ret void
