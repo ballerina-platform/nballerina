@@ -24,7 +24,7 @@ public type PointerType readonly & record {|
 public type IntegralType IntType|PointerType;
 
 // Corresponds to LLVMPointerType function
-public function pointerType(IntType ty, int addressSpace = 0) returns PointerType {
+public function pointerType(Type ty, int addressSpace = 0) returns PointerType {
     return { pointsTo: ty };
 }
 
@@ -35,20 +35,20 @@ public type ArrayType readonly & record {|
 |};
 
 public function arrayType(Type ty, int elementCount) returns ArrayType {
-    return {elementType:ty, elementCount:elementCount};
+    return { elementType: ty, elementCount: elementCount };
 }
 
 // Corresponds to llvm::StructType
 public type StructType readonly & record {
-    IntType[] memberTypes;
+    Type[] elementTypes;
 };
 
-public function structType(IntType[] memberTypes) returns StructType {
-    return {memberTypes: memberTypes.cloneReadOnly()};
+public function structType(Type[] elementTypes) returns StructType {
+    return { elementTypes: elementTypes.cloneReadOnly() };
 }
 
-function getTypeAtIndex(StructType ty, int index) returns IntType {
-    return ty.memberTypes[index];
+function getTypeAtIndex(StructType ty, int index) returns Type {
+    return ty.elementTypes[index];
 }
 
 public type Type IntType|PointerType|StructType|ArrayType;
@@ -672,11 +672,12 @@ function typeToString(RetType ty) returns string {
     string typeTag;
     if ty is PointerType {
         typeTag = typeToString(ty.pointsTo) + "*";
-    } else if ty is StructType {
+    }
+    else if ty is StructType {
         string[] typeStringBody = [];
         typeStringBody.push("{");
-        foreach int i in 0 ..< ty.memberTypes.length() {
-            final Type elementType = ty.memberTypes[i];
+        foreach int i in 0 ..< ty.elementTypes.length() {
+            final Type elementType = ty.elementTypes[i];
             if i > 0 {
                 typeStringBody.push(",");
             }
@@ -684,7 +685,8 @@ function typeToString(RetType ty) returns string {
         }
         typeStringBody.push("}");
         typeTag = createLine(typeStringBody, "");
-    } else if ty is ArrayType {
+    }
+    else if ty is ArrayType {
         string[] typeStringBody = [];
         typeStringBody.push("[");
         typeStringBody.push(ty.elementCount.toString());
@@ -692,7 +694,8 @@ function typeToString(RetType ty) returns string {
         typeStringBody.push(typeToString(ty.elementType));
         typeStringBody.push("]");
         typeTag = createLine(typeStringBody, "");
-    } else {
+    }
+    else {
         typeTag = ty;
     }
     return typeTag;
@@ -722,7 +725,8 @@ function functionHeader(Function fn) returns string {
         if fn.getLinkage() != "external" {
             words.push(fn.getLinkage());
         }
-    } else {
+    }
+    else {
         words.push("declare");
     }
     words.push(typeToString(fn.functionType.returnType));
