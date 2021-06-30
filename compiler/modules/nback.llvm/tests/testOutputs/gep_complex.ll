@@ -1,0 +1,1 @@
+@g1 = external global {i64, i64, {i8, [10 x [20 x i64]], i8}}
