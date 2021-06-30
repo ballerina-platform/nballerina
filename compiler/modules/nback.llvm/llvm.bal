@@ -570,13 +570,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         string[] insWords = [];
-        insWords.push(reg);
-        insWords.push("=");
-        insWords.push("getelementptr");
-        insWords.push(typeToString(ptr.ty.pointsTo));
-        insWords.push(",");
-        insWords.push(typeToString(ptr.ty));
-        insWords.push(ptr.operand);
+        insWords.push(reg, "=", "getelementptr", typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand);
         Type resultType = ptr.ty;
         foreach var index in indices {
             insWords.push(",");
