@@ -66,7 +66,7 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
         check verifyOperandBoolean(vc, name, insn.operands[1]);
     }
     else if insn is EqualityInsn {
-        check verifyEqualityInsn(vc, insn);
+        check verifyEquality(vc, insn);
     }
     else if insn is AssignInsn {
         check verifyOperandType(vc, insn.operand, insn.result.semType, "value is not a subtype of the LHS");
@@ -78,14 +78,17 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
         check verifyOperandType(vc, insn.operand, vc.returnType(), "value is not a subtype of the return type");
     }
     else if insn is CallInsn {
-        check verifyCallInsn(vc, insn);
+        check verifyCall(vc, insn);
     }
     else if insn is TypeCastInsn {
-        check verifyTypeCastInsn(vc, insn);
+        check verifyTypeCast(vc, insn);
+    }
+    else if insn is ListConstructInsn {
+        check verifyListConstruct(vc, insn);
     }
 }
 
-function verifyCallInsn(VerifyContext vc, CallInsn insn) returns err:Semantic? {
+function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
     FunctionRef func = <FunctionRef>insn.func;
     FunctionSignature sig = func.signature;
     int nSuppliedArgs = insn.args.length();
@@ -104,7 +107,16 @@ function verifyCallInsn(VerifyContext vc, CallInsn insn) returns err:Semantic? {
     }
 }
 
-function verifyTypeCastInsn(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
+function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic? {
+    if !vc.isSubtype(insn.inherentType, t:LIST) {
+        return vc.err("bad BIR: inherent type of list construct is not a list");
+    }
+    // XXX we should also check the semtype is a single mutable list
+    // and that each argument has the right type
+}
+
+
+function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
     if vc.isEmpty(insn.result.semType) {
         return vc.err("type cast cannot succeed");
     }
@@ -117,7 +129,7 @@ function verifyTypeCastInsn(VerifyContext vc, TypeCastInsn insn) returns err:Sem
     }
 }
 
-function verifyEqualityInsn(VerifyContext vc, EqualityInsn insn) returns err:Semantic? {
+function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semantic? {
     Operand lhs = insn.operands[0];
     Operand rhs = insn.operands[1];
     if lhs is Register {

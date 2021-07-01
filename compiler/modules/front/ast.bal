@@ -141,11 +141,22 @@ type SimpleConstExpr record {|
     ()|boolean|int value;
 |};
 
-// This is the subtype of TypeDesc that we currently allow
-// within expressions and statements.
-type InlineTypeDesc "boolean"|"any"|"int";
+
 
 // Types
+
+
+// This is the subtype of TypeDesc that we currently allow
+// within expressions and statements.
+type InlineTypeDesc InlineLeafTypeDesc|InlineArrayTypeDesc;
+
+type InlineLeafTypeDesc "boolean"|"any"|"int";
+
+type InlineArrayTypeDesc record {|
+    *ListTypeDesc;
+    TypeDesc[0] members = [];
+    "any" rest = "any";
+|};
 
 type TypeDef record {|
     readonly string name;

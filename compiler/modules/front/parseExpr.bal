@@ -150,15 +150,11 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
 function parseTypeCastExpr(Tokenizer tok) returns Expr|err:Syntax {
     err:Position pos = tok.currentPos();
     check tok.advance();
-    Token? t = tok.current();
-    if t is InlineTypeDesc {
-        check tok.advance();
-        check tok.expect(">");
-        Expr operand = check parseUnaryExpr(tok);
-        TypeCastExpr expr = { pos, td: t, operand, semType: convertInlineTypeDesc(t) };
-        return expr;
-    }
-    return parseError(tok, "expected type descriptor");
+    InlineTypeDesc td = check parseInlineTypeDesc(tok);
+    check tok.expect(">");
+    Expr operand = check parseUnaryExpr(tok);
+    TypeCastExpr expr = { pos, td, operand, semType: convertInlineTypeDesc(td) };
+    return expr;
 }
 
 function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {

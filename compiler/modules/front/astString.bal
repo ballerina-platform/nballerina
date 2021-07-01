@@ -112,6 +112,10 @@ function typeDescToWords(Word[] w, TypeDesc td) {
     if td is string {
         w.push(td);
     }
+    else if td is InlineArrayTypeDesc {
+        w.push(td.rest, CLING);
+        w.push("[", "]");
+    }
     else {
         panic err:unimplemented(`typedesc not supported ${(typeof td).toString()}`);
     }

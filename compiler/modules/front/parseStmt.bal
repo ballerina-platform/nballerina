@@ -46,8 +46,8 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parseWhileStmt(tok);
         }
-        var td if td is InlineTypeDesc => {
-            return parseVarDeclStmt(tok, td);
+        var td if td is InlineLeafTypeDesc => {
+            return parseVarDeclStmt(tok);
         }
     }
     return parseError(tok, "unhandled statement");
@@ -88,8 +88,8 @@ function finishAssignStmt(Tokenizer tok, string identifier, err:Position pos) re
     return stmt;    
 }
 
-function parseVarDeclStmt(Tokenizer tok, InlineTypeDesc td) returns VarDeclStmt|err:Syntax {
-    check tok.advance();
+function parseVarDeclStmt(Tokenizer tok) returns VarDeclStmt|err:Syntax {
+    InlineTypeDesc td = check parseInlineTypeDesc(tok);
     Token? cur = tok.current();
     if cur is [IDENTIFIER, string] {
         check tok.advance();

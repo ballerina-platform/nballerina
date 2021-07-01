@@ -430,7 +430,9 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
                 [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, member);
                 operands.push(operand);
             }
-            bir:Register result = cx.createRegister(t:LIST_RW);
+            // In subset 3, we have only mutable lists of any
+            // We will have to do more work in future subsets to determine the types here
+            bir:Register result = cx.createRegister(t:LIST);
             bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, inherentType: t:LIST_RW };
             nextBlock.insns.push(insn);
             return [result, nextBlock];

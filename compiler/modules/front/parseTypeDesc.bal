@@ -1,6 +1,27 @@
 // Parsing of type descriptors
 import wso2/nballerina.err;
 
+// This is for the subset we currently support in the compiler
+function parseInlineTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
+    Token? t = tok.current();
+    if t == "any" {
+        check tok.advance();
+        t = tok.current();
+        if t == "[" {
+            check tok.advance();
+            check tok.expect("]");
+            InlineArrayTypeDesc td = {};
+            return td;
+        }
+        return "any";
+    }
+    else if t is InlineLeafTypeDesc {
+        check tok.advance();
+        return t;
+    }
+    return parseError(tok, "expected type descriptor");    
+}
+
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     if tok.current() == "function" {
         check tok.advance();

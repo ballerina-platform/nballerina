@@ -348,6 +348,8 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "stmt", "boolean b = false;", "boolean b = false;"],
          ["V", "stmt", "any v = false;", "any v = false;"],
          ["V", "stmt", "any v = 1;", "any v = 1;"],
+         ["V", "stmt", "any [ ] v = [1];", "any[] v = [1];"],
+         ["E", "stmt", "any [x ] v = [1];", ""],
          // statement assign
          ["E", "stmt", "a = b = d;", ""],
          ["V", "stmt", "a = 0;", "a = 0;"],

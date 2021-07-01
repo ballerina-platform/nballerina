@@ -217,3 +217,31 @@ function roTest() {
     boolean b = isEmpty(tc, t);
     test:assertTrue(b);
 }
+
+@test:Config{}
+function simpleArrayMemberTypeTest() {
+    Env env = new;
+    testArrayMemberTypeOk(env, ANY);
+    testArrayMemberTypeOk(env, STRING);
+    testArrayMemberTypeOk(env, INT);
+    testArrayMemberTypeOk(env, TOP);
+    testArrayMemberTypeOk(env, BOOLEAN);
+    testArrayMemberTypeFail(env, createJson(env));
+    testArrayMemberTypeFail(env, intWidthUnsigned(8));
+    test:assertEquals(simpleArrayMemberType(INT, []), ());
+    test:assertEquals(simpleArrayMemberType(uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW)), []), TOP);
+}
+
+function testArrayMemberTypeOk(Env env, UniformTypeBitSet memberType) {
+    ListDefinition def = new;
+    SemType t = def.define(env, [], memberType);
+    UniformTypeBitSet? bits = simpleArrayMemberType(t, env.listDefs);
+    test:assertTrue(bits == memberType);
+}
+
+function testArrayMemberTypeFail(Env env, SemType memberType) {
+    ListDefinition def = new;
+    SemType t = def.define(env, [], memberType);
+    UniformTypeBitSet? bits = simpleArrayMemberType(t, env.listDefs);
+    test:assertTrue(bits == ());
+}

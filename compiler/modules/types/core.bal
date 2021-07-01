@@ -32,6 +32,9 @@ public class Env {
         self.mappingDefs = [ MAPPING_SUBTYPE_RO ];
         self.listDefs = [ LIST_SUBTYPE_RO ];
     }
+    public function simpleArrayMemberType(SemType t) returns UniformTypeBitSet? {
+        return simpleArrayMemberType(t, self.listDefs);
+    }
 }
 
 public type BddMemo record {|
@@ -201,6 +204,7 @@ public final UniformTypeBitSet DECIMAL = uniformType(UT_DECIMAL);
 public final UniformTypeBitSet STRING = uniformType(UT_STRING);
 public final UniformTypeBitSet ERROR = uniformType(UT_ERROR);
 public final UniformTypeBitSet LIST_RW = uniformType(UT_LIST_RW);
+public final UniformTypeBitSet LIST = uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW));
 
 // matches all functions
 public final UniformTypeBitSet FUNCTION = uniformType(UT_FUNCTION);
@@ -553,6 +557,52 @@ public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolea
         bits = t1.all | t1.some;
     }
     return (bits & ~<int>t2) == 0;
+}
+
+// This is a temporary API that identifies when a SemType corresponds to a type T[]
+// where T is a union of complete basic types.
+function simpleArrayMemberType(SemType t, ListAtomicType[] listDefs) returns UniformTypeBitSet? {
+    UniformTypeBitSet list = uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW));
+    if t is UniformTypeBitSet {
+        return t == list ? TOP : ();
+    }
+    else {
+        if !isSubtypeSimple(t, list) {
+            return ();
+        }
+        bdd:Bdd[] bdds = [<bdd:Bdd>t.getSubtypeData(UT_LIST_RO), <bdd:Bdd>t.getSubtypeData(UT_LIST_RW)];
+        UniformTypeBitSet[] memberTypes = [];
+        foreach var bdd in bdds {
+            if bdd is boolean {
+                if bdd {
+                    memberTypes.push(TOP);
+                }
+                else {
+                    return ();
+                }
+            }
+            else {
+                if bdd.left != true || bdd.right != false || bdd.right != false {
+                    return ();
+                }
+                ListAtomicType atomic = listDefs[bdd.atom];
+                if atomic.members.length() > 0 {
+                    return ();
+                }
+                SemType memberType = atomic.rest;
+                if memberType is UniformTypeBitSet {
+                    memberTypes.push(memberType);
+                }
+                else {
+                    return ();
+                }
+            }
+        }
+        if memberTypes[0] != (memberTypes[1] & UT_READONLY) {
+            return ();
+        }
+        return memberTypes[1];
+    }
 }
 
 public function isReadOnly(SemType t) returns boolean {
