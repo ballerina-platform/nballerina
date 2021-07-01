@@ -46,9 +46,10 @@ module-decl = function-defn
 
 function-defn = ["public"] "function" identifier signature stmt-block
 signature = "(" [param-list] ")" [ "returns" type-desc ]
-type-desc = basic-type-name | "any"
+type-desc = basic-type-name | "any" | array-type-desc
 
 basic-type-name = "int" | "boolean"
+array-type-desc = "any" "[" "]"
 
 param-list = param ["," param]*
 param = type-desc identifier
