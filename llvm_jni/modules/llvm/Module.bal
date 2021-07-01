@@ -16,12 +16,12 @@ public distinct class Module {
         return fn;
     }
 
-    public function toFile(string fileName) returns error?{
+    public function printModuleToFile(string fileName) returns error?{
         byte[] e = [];
         _ = module_to_file(self.LLVMModule, java:fromString(fileName), check jarrays:toHandle(e, "byte"));
     }
     
-    public function toString() returns string {
+    public function printModuleToString() returns string {
         BytePointer bytePointer = new(module_to_string(self.LLVMModule));
         return bytePointer.toString();
     }
