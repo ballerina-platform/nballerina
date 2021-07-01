@@ -1,0 +1,83 @@
+[build-options]
+observabilityIncluded = true
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-platform-1.5.5.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-platform-11.1.0-1.5.5.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-linux-x86_64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-linux-arm64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-windows-x86_64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-macosx-arm64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-android-arm.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-android-x86_64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-ios-arm64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-linux-armhf.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-macosx-x86_64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-android-arm64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-android-x86.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-windows-x86.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-linux-ppc64le.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-ios-x86_64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/javacpp-1.5.5-linux-x86.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-11.1.0-1.5.5-linux-arm64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-11.1.0-1.5.5-windows-x86.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-11.1.0-1.5.5-macosx-x86_64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-11.1.0-1.5.5-linux-x86.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-11.1.0-1.5.5-linux-x86_64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-11.1.0-1.5.5-windows-x86_64.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-11.1.0-1.5.5.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-11.1.0-1.5.5-linux-armhf.jar"
+
+[[platform.java11.dependency]]
+path = "target/platform-libs/llvm-11.1.0-1.5.5-linux-ppc64le.jar"
