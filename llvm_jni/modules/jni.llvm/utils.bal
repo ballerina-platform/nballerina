@@ -20,11 +20,19 @@ distinct class PointerPointer {
     }
 }
 
+function PointerPointerFromValues(Value[] values) returns PointerPointer {
+    PointerPointer arr = new (values.length());
+    foreach var val in values {
+        arr.put(val.LLVMValueRef);
+    }
+    return arr;
+}
+
 distinct class BytePointer {
     handle jObject;
 
     function init(handle jObject) {
-       self.jObject = jObject; 
+        self.jObject = jObject;
     }
 
     function toString() returns string {

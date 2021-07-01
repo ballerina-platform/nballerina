@@ -8,7 +8,7 @@ public distinct class Context {
     }
 
     public function createBuilder() returns Builder {
-        return new(self);
+        return new (self);
     }
 
     public function createModule(string? name = ()) returns Module {
@@ -20,18 +20,20 @@ public distinct class Context {
 function initializeLLVM() {
     llvm_link_initialize_core(llvm_get_global_pass_registry());
     llvm_link_in_MCJIT();
-    _ =llvm_initialize_native_asm_printer();
-    _ =llvm_initialize_native_asm_parser();
-    _ =llvm_initialize_native_target();
+    _ = llvm_initialize_native_asm_printer();
+    _ = llvm_initialize_native_asm_parser();
+    _ = llvm_initialize_native_target();
 }
 
 function create_llvm_context() returns handle = @java:Method {
     name: "LLVMContextCreate",
-    'class: "org.bytedeco.llvm.global.LLVM"} external;
+    'class: "org.bytedeco.llvm.global.LLVM"
+} external;
 
 function llvm_get_global_pass_registry() returns handle = @java:Method {
     name: "LLVMGetGlobalPassRegistry",
-    'class: "org.bytedeco.llvm.global.LLVM"} external;
+    'class: "org.bytedeco.llvm.global.LLVM"
+} external;
 
 function llvm_link_initialize_core(handle passRegistryRef) = @java:Method {
     name: "LLVMInitializeCore",
@@ -39,18 +41,22 @@ function llvm_link_initialize_core(handle passRegistryRef) = @java:Method {
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMPassRegistryRef"]
 } external;
 
-function llvm_link_in_MCJIT()= @java:Method {
+function llvm_link_in_MCJIT() = @java:Method {
     name: "LLVMLinkInMCJIT",
-    'class: "org.bytedeco.llvm.global.LLVM"} external;
+    'class: "org.bytedeco.llvm.global.LLVM"
+} external;
 
 function llvm_initialize_native_asm_printer() returns int = @java:Method {
     name: "LLVMInitializeNativeAsmPrinter",
-    'class: "org.bytedeco.llvm.global.LLVM"} external;
+    'class: "org.bytedeco.llvm.global.LLVM"
+} external;
 
 function llvm_initialize_native_asm_parser() returns int = @java:Method {
     name: "LLVMInitializeNativeAsmParser",
-    'class: "org.bytedeco.llvm.global.LLVM"} external;
+    'class: "org.bytedeco.llvm.global.LLVM"
+} external;
 
 function llvm_initialize_native_target() returns int = @java:Method {
     name: "LLVMInitializeNativeAsmParser",
-    'class: "org.bytedeco.llvm.global.LLVM"} external;
+    'class: "org.bytedeco.llvm.global.LLVM"
+} external;
