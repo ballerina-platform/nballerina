@@ -38,11 +38,8 @@ function convertFunctionSignature(t:Env env, ModuleTable mod, FunctionTypeDesc t
 
 function convertSubsetTypeDesc(t:Env env, ModuleTable mod, TypeDesc td, err:Position pos) returns t:SemType|err:Semantic|err:Unimplemented {
     t:SemType ty = check convertTypeDesc(env, mod, 0, td);
-    if ty === t:INT || ty === t:BOOLEAN || ty === t:NIL {
+    if ty === t:INT || ty === t:BOOLEAN || ty === t:NIL || ty === t:ANY {
         return ty;
-    }
-    else if ty === t:ANY {
-        return t:TOP;
     }
     return err:unimplemented("unimplemented type descriptor", pos=pos);
 }
@@ -75,7 +72,7 @@ function convertTypeDef(t:Env env, ModuleTable mod, int depth, TypeDef def) retu
 
 function convertInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
     match td {
-        "any" => { return t:TOP; }  // convenient to treat "any" as "any|error" until we implement errors
+        "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }
         "int" => { return t:INT; }
     }
