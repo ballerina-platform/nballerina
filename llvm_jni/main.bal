@@ -9,5 +9,5 @@ public function main() {
     builder.positionAtEnd(initBlock);
     builder.ret(llvm:constInt("i64",0));
     io:println(m.toString());
-    error? err = m.toFile("test.ll");
+    checkpanic m.toFile("test.ll");
 }
