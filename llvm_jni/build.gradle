@@ -16,9 +16,46 @@ dependencies {
         implementation 'org.bytedeco:llvm-platform:11.1.0-1.5.5'
 }
 
+String platformLibs = 'target/platform-libs'
+String tmpBuildDir = '../testbuild'
+String compilerDir = '../compiler'
+
 configurations.implementation.setCanBeResolved(true) 
 configurations.api.setCanBeResolved(true)
 task copyDependencies(type: Copy) {
         from configurations.implementation
-        into 'target/platform-libs'
+        into platformLibs
+}
+
+task copyNbal(type: Copy) {
+        from compilerDir
+        into tmpBuildDir
+        filter { line -> line.replaceAll('nback.llvm', 'jni.llvm') }
+}
+
+task copyJNILLVM(type: Copy) {
+        from 'modules/jni.llvm'
+        into "${tmpBuildDir}/modules/jni.llvm"
+}
+copyJNILLVM.dependsOn(copyNbal)
+
+task copyLocalDependencies(type: Copy) {
+        from platformLibs
+        into "${tmpBuildDir}/target/platform-libs"
+}
+
+task copyBalConfig(type: Copy) {
+        from 'Ballerina.toml'
+        into tmpBuildDir
+}
+copyBalConfig.dependsOn(copyLocalDependencies)
+
+task testBuild(type: Exec) {
+        workingDir tmpBuildDir
+        commandLine 'bal', 'build'
+}
+testBuild.dependsOn(copyNbal, copyJNILLVM, copyLocalDependencies, copyBalConfig)
+
+task cleanTestBuild(type: Delete) {
+        delete tmpBuildDir
 }
