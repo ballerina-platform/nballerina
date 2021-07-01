@@ -21,7 +21,6 @@ public distinct class Module {
         _ = module_to_file(self.LLVMModule, java:fromString(fileName), check jarrays:toHandle(e, "byte"));
     }
     
-    //FIXME: convert to string
     public function toString() returns string {
         BytePointer bytePointer = new(module_to_string(self.LLVMModule));
         return bytePointer.toString();

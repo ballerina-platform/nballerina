@@ -18,7 +18,6 @@ public distinct class Context {
 }
 
 function initializeLLVM() {
-    //TODO: find what is not needed among these and remove them
     llvm_link_initialize_core(llvm_get_global_pass_registry());
     llvm_link_in_MCJIT();
     _ =llvm_initialize_native_asm_printer();

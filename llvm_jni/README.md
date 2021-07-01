@@ -1,3 +1,9 @@
+# Usage
+1. Run `./gradlew copyDependencies` to download and copy dependencies to the local `target/platform-libs` directory. (This needs to be done only once for the first build)
+2. Run `bal build` to build the project
+
+# Sample code
+```
 import llvm_jni.llvm;
 import  ballerina/io;
 public function main() {
@@ -11,3 +17,4 @@ public function main() {
     io:println(m.toString());
     error? err = m.toFile("test.ll");
 }
+```
