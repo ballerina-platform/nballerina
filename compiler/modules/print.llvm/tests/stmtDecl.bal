@@ -21,6 +21,6 @@ function stmtDecl() returns Module {
 
 @test:Config {}
 function testStmtDecl() returns error? {
-    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "nback.llvm", "tests", "testOutputs", "stmt_decl.ll");
+    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "print.llvm", "tests", "testOutputs", "stmt_decl.ll");
     return runTest(stmtDecl, "stmt_decl.ll");
 }

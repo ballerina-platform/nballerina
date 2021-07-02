@@ -38,41 +38,39 @@ public distinct class Module {
         return self.addFunction(name, fnType);
     }
 
-    //FIXME: rename printModuleToString 
-    public function toString() returns string {
+    public function printModuleToString() returns string {
         BytePointer bytePointer = new (module_to_string(self.LLVMModule));
         return bytePointer.toString();
     }
 
-    //FIXME: rename printModuleToFile
-    public function writeFile(string fileName) returns io:Error? {
+    public function printModuleToFile(string fileName) returns io:Error? {
         byte[] e = [];
         handle err = checkpanic jarrays:toHandle(e, "byte");
         _ = module_to_file(self.LLVMModule, java:fromString(fileName), err);
     }
 
     public function addGlobal(Type ty, string name) returns PointerValue {
-        return new(llvm_add_global(self.LLVMModule, typeToLLVMType(ty), java:fromString(name)));    
+        return new (llvm_add_global(self.LLVMModule, typeToLLVMType(ty), java:fromString(name)));
     }
 
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
         int id = intrinsicNameToId(name);
         if name is IntegerArithmeticIntrinsicName {
-            FunctionType fnType = {returnType:structType(["i64", "i1"]), paramTypes:["i64", "i64"]};
+            FunctionType fnType = {returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"]};
             PointerPointer paramTypes = PointerPointerFromTypes(fnType.paramTypes);
-            return new (llvm_get_intrinsic_declaration(self.LLVMModule, id, paramTypes.jObject, 2),fnType, self.context);
+            return new (llvm_get_intrinsic_declaration(self.LLVMModule, id, paramTypes.jObject, 2), fnType, self.context);
         }
         if name is "ptrmask.p0i8.i64" {
-            FunctionType fnType = {returnType:pointerType("i8"), paramTypes:[pointerType("i8"), "i64"]};
+            FunctionType fnType = {returnType: pointerType("i8"), paramTypes: [pointerType("i8"), "i64"]};
             PointerPointer paramTypes = PointerPointerFromTypes(fnType.paramTypes);
-            return new (llvm_get_intrinsic_declaration(self.LLVMModule, id, paramTypes.jObject, 2),fnType, self.context);
+            return new (llvm_get_intrinsic_declaration(self.LLVMModule, id, paramTypes.jObject, 2), fnType, self.context);
 
         }
         panic error(string `${<string>name} not implemented`);
     }
-    
+
     // FIXME: fix this
-    public function setTarget(TargetTriple targetTriple){
+    public function setTarget(TargetTriple targetTriple) {
     }
 }
 

@@ -1,7 +1,7 @@
 import wso2/nballerina.err;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
-import wso2/nballerina.nback.llvm;
+import wso2/nballerina.print.llvm;
 
 type BuildError err:Semantic|err:Unimplemented;
 

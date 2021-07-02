@@ -30,11 +30,11 @@ task copyDependencies(type: Copy) {
 task copyNbal(type: Copy) {
         from compilerDir
         into tmpBuildDir
-        filter { line -> line.replaceAll('nback.llvm', 'jni.llvm') }
+        filter { line -> line.replaceAll('print.llvm', 'jni.llvm') }
 }
 
 task cleanNbackLLVM(type: Delete) {
-        delete "${tmpBuildDir}/modules/nback.llvm"
+        delete "${tmpBuildDir}/modules/print.llvm"
 }
 cleanNbackLLVM.dependsOn(copyNbal)
 

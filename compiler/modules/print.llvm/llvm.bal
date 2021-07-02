@@ -211,15 +211,15 @@ public class Module {
         return val;
     }
  
-    // Does not correspond directly any LLVM function
-    // XXX can perhaps be turned into a command to compile the module
-    public function writeFile(string path) returns io:Error? {
+    // Corresponds to LLVMPrintModuleToFile
+    public function printModuleToFile(string path) returns io:Error? {
         Output out = new;
         self.output(out);
         return out.writeFile(path);
     }
 
-    public function toString() returns string {
+    // Corresponds to LLVMPrintModuleToString
+    public function printModuleToString() returns string {
         Output out = new;
         self.output(out);
         return out.toString();

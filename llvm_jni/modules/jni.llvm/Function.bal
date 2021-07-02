@@ -7,7 +7,7 @@ public type FunctionType readonly & record {|
 
 function toLLVmFunctionType(FunctionType fnType, Context context) returns handle {
     int paramCount = fnType.paramTypes.length();
-    PointerPointer paramType = new(paramCount);
+    PointerPointer paramType = new (paramCount);
     foreach var ty in fnType.paramTypes {
         paramType.put(typeToLLVMType(ty));
     }
@@ -16,18 +16,25 @@ function toLLVmFunctionType(FunctionType fnType, Context context) returns handle
 
 // LLVM C-API don't differentiate between function declarations and definitions
 public type FunctionDefn Function;
+
 public type FunctionDecl Function;
 
 public type Linkage "internal"|"external";
 
 function linkageToInt(Linkage linkage) returns int {
     match linkage {
-        "external" => {return 0;}
-        "internal" => {return 8;}
+        "external" => {
+            return 0;
+        }
+        "internal" => {
+            return 8;
+        }
     }
     panic error(string `${<string>linkage} not implemented`);
 }
+
 public type EnumAttribute "noreturn"|"cold"|"nounwind"|"readnone"|"speculatable"|"willreturn"; //FIXME: add others
+
 public distinct class Function {
     handle LLVMFunction;
     FunctionType fnType;
@@ -36,22 +43,22 @@ public distinct class Function {
         self.LLVMFunction = llvmFunction;
         set_function_call_convention(llvmFunction, 0);
         self.fnType = fnType;
-	self.context = context;
+        self.context = context;
     }
 
     public function getParam(int index) returns Value {
         if self.fnType.paramTypes[index] is PointerType {
-            PointerValue val = new (llvm_get_param(self.LLVMFunction, index)); 
+            PointerValue val = new (llvm_get_param(self.LLVMFunction, index));
             return val;
         } else {
-            return new (llvm_get_param(self.LLVMFunction, index)); 
+            return new (llvm_get_param(self.LLVMFunction, index));
         }
     }
 
-    public function appendBasicBlock(string? label=()) returns BasicBlock {
+    public function appendBasicBlock(string? label = ()) returns BasicBlock {
         string bbLabel = label ?: "";
-	    BasicBlock bb = new(llvm_append_basic_block(self.context.LLVMContext, self.LLVMFunction, java:fromString(bbLabel)));
-	    return bb;
+        BasicBlock bb = new (llvm_append_basic_block(self.context.LLVMContext, self.LLVMFunction, java:fromString(bbLabel)));
+        return bb;
     }
 
     public function setLinkage(Linkage linkage) {
@@ -59,9 +66,9 @@ public distinct class Function {
         llvm_set_linkage(self.LLVMFunction, linkageVal);
     }
 
-    public function addEnumAttribute(EnumAttribute attribute){
+    public function addEnumAttribute(EnumAttribute attribute) {
         handle attributeName = java:fromString(attribute);
-        int attrKind = llvm_get_enum_attribute_for_name(attributeName,(<string>attribute).length());
+        int attrKind = llvm_get_enum_attribute_for_name(attributeName, (<string>attribute).length());
         handle attr = llvm_create_enum_attribute(self.context.LLVMContext, attrKind, 0);
         llvm_add_attribute_at_index(self.LLVMFunction, -1, attr);
     }

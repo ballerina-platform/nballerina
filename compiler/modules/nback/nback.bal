@@ -2,7 +2,7 @@ import ballerina/io;
 
 import wso2/nballerina.err;
 import wso2/nballerina.bir;
-import wso2/nballerina.nback.llvm;
+import wso2/nballerina.print.llvm;
 
 # The preferred output extension for the output filename.
 public const OUTPUT_EXTENSION = ".ll";
@@ -18,7 +18,7 @@ public function compileModule(bir:Module mod, string? outputFilename) returns er
         llMod.setTarget(target);
     }
     if outputFilename != () {
-        return llMod.writeFile(outputFilename);
+        return llMod.printModuleToFile(outputFilename);
     }
 }
 
