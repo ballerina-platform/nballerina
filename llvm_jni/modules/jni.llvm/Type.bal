@@ -72,6 +72,11 @@ public function constInt(Type ty, int value) returns Value {
     return val;
 }
 
+public function constNull(PointerType ty) returns PointerValue {
+    TypeRef typeRef = new(ty.pointsTo);
+    return new(create_llvm_const_pointer_null(typeRef.llvmType));
+}
+
 public distinct class Value {
     handle LLVMValueRef;
 
@@ -122,4 +127,10 @@ function create_llvm_const_i64(handle ty, int value, int signExtend) returns han
     name: "LLVMConstInt",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "long", "int"]
+} external;
+
+function create_llvm_const_pointer_null(handle ty) returns handle = @java:Method {
+    name: "LLVMConstPointerNull",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef"]
 } external;

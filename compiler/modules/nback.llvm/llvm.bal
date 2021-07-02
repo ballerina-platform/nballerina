@@ -409,6 +409,7 @@ public class Builder {
         return new Value(ty, reg);
     }
 
+    // FIXME: remove align
     // Corresponds to LLVMBuildStore
     public function store(Value val, PointerValue ptr, Alignment? align = ()) {
         Type ty = ptr.ty.pointsTo;

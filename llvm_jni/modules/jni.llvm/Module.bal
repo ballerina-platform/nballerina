@@ -20,8 +20,9 @@ public distinct class Module {
         byte[] e = [];
         _ = module_to_file(self.LLVMModule, java:fromString(fileName), check jarrays:toHandle(e, "byte"));
     }
-    
-    public function printModuleToString() returns string {
+
+    //FIXME: rename printModuleToString 
+    public function writeFile() returns string {
         BytePointer bytePointer = new(module_to_string(self.LLVMModule));
         return bytePointer.toString();
     }
