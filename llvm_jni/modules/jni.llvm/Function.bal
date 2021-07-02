@@ -40,8 +40,12 @@ public distinct class Function {
     }
 
     public function getParam(int index) returns Value {
-        Value val = new (llvm_get_param(self.LLVMFunction, index));
-        return val;
+        if self.fnType.paramTypes[index] is PointerType {
+            PointerValue val = new (llvm_get_param(self.LLVMFunction, index)); 
+            return val;
+        } else {
+            return new (llvm_get_param(self.LLVMFunction, index)); 
+        }
     }
 
     public function appendBasicBlock(string? label=()) returns BasicBlock {

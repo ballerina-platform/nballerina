@@ -38,10 +38,16 @@ function getTypeAtIndex(StructType ty, int index) returns Type {
 
 public type Type IntType|PointerType|StructType|ArrayType|"void";
 
-//TODO: change this to a function that returns handle
 function typeToLLVMType(Type ty) returns handle {
     if ty is PointerType {
-        return typeToLLVMType(ty.pointsTo);
+        handle baseType = typeToLLVMType(ty.pointsTo);
+        return create_llvm_pointer_type(baseType, 0);
+    }
+    if ty is StructType {
+        panic error ("StructType not implemented");
+    }
+    if ty is ArrayType {
+        panic error ("ArrayType not implemented");
     }
     match ty {
         "void" => {
@@ -51,7 +57,7 @@ function typeToLLVMType(Type ty) returns handle {
             return create_llvm_i1();
         }
         "i8" => {
-            return create_llvm_i32();
+            return create_llvm_i8();
         }
         "i32" => {
             return create_llvm_i32();
@@ -109,7 +115,7 @@ function create_llvm_i32() returns handle = @java:Method {
 } external;
 
 function create_llvm_i8() returns handle = @java:Method {
-    name: "LLVMInt32Type",
+    name: "LLVMInt8Type",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: []
 } external;
@@ -130,4 +136,10 @@ function create_llvm_const_pointer_null(handle ty) returns handle = @java:Method
     name: "LLVMConstPointerNull",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef"]
+} external;
+
+function create_llvm_pointer_type(handle ty,int addressSpace) returns handle = @java:Method {
+    name: "LLVMPointerType",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "int"]
 } external;
