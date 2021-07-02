@@ -72,8 +72,9 @@ const PANIC_ARITHMETIC_OVERFLOW = 1;
 const PANIC_DIVIDE_BY_ZERO = 2;
 const PANIC_TYPE_CAST = 3;
 const PANIC_STACK_OVERFLOW = 4;
+const PANIC_INDEX_OUT_OF_BOUNDS = 5;
 
-type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW;
+type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
 final llvm:FunctionType panicFunctionType = { returnType: "void", paramTypes: ["i64"] };
 final llvm:FunctionType allocFunctionType = { returnType: llvm:pointerType("i8"), paramTypes: ["i64"] };
@@ -274,6 +275,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:ListConstructInsn {
             check buildListConstruct(builder, scaffold, insn);
         }
+        else if insn is bir:ListGetInsn {
+            check buildListGet(builder, scaffold, insn);
+        }
         else if insn is bir:BranchInsn {
             check buildBranch(builder, scaffold, insn);
         }
@@ -376,6 +380,37 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
                   builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 2)], "inbounds"));
     // Don't need to convert here
     builder.store(buildTaggedPtr(builder, structMem, TAG_LIST_RW), scaffold.address(insn.result));
+}
+
+function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
+    final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
+    final llvm:PointerType ptrUnsizedArrayType = llvm:pointerType(unsizedArrayType);
+    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
+
+    llvm:Value index = buildInt(builder, scaffold, insn.operand);
+    // struct is the untagged pointer to the struct
+    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p0i8.i64"),
+                                                                               [builder.load(scaffold.address(insn.list)), llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                               llvm:pointerType(structType));
+    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
+    builder.condBr(builder.iCmp("ult",
+                                index,
+                                builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP)),
+                   continueBlock,
+                   outOfBoundsBlock);
+    builder.positionAtEnd(outOfBoundsBlock);
+    builder.store(buildPanicError(PANIC_INDEX_OUT_OF_BOUNDS, insn.position), scaffold.panicAddress());
+    builder.br(scaffold.getOnPanic());
+    builder.positionAtEnd(continueBlock);
+    // array is a pointer to the array
+    llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct,
+                                                                                    [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 2)], "inbounds"),
+                                                                                    ALIGN_HEAP);
+    builder.store(builder.load(builder.getElementPtr(array,
+                                                     [llvm:constInt(LLVM_INT, 0), index], "inbounds"),
+                                                     ALIGN_HEAP),
+                  scaffold.address(insn.result));
 }
 
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {

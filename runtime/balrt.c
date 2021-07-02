@@ -97,7 +97,8 @@ const char *panicMessages[] = {
     "arithmetic overflow",
     "divide by zero",
     "bad type cast",
-    "stack overflow"
+    "stack overflow",
+    "index out of bounds"
 };
 
 void _bal_panic(int64_t packedPanic) {
