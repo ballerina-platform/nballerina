@@ -9,22 +9,14 @@ function ptToInt() returns Module {
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
     Value arg = foo.getParam(0);
-    if arg is PointerValue {
-        Value v1 = builder.ptrToInt(arg, "i64");
-        builder.ret(v1);
-    } else {
-        panic error("Invalid argument type");
-    }
+    Value v1 = builder.ptrToInt(arg, "i64");
+    builder.ret(v1);
     FunctionDefn bar = m.addFunctionDefn("bar", {returnType: "i1", paramTypes: [pointerType("i8")]});
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
     arg = bar.getParam(0);
-    if arg is PointerValue {
-        Value V1 = builder.ptrToInt(arg, "i1");
-        builder.ret(V1);
-    } else {
-        panic error("Invalid argument type");
-    }
+    Value V1 = builder.ptrToInt(arg, "i1");
+    builder.ret(V1);
     return m;
 }
 

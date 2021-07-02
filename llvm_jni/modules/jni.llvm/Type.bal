@@ -84,7 +84,7 @@ public function constNull(PointerType ty) returns PointerValue {
     return new (create_llvm_const_pointer_null(typeToLLVMType(ty)));
 }
 
-public distinct class Value {
+public readonly distinct class Value {
     handle LLVMValueRef;
 
     function init(handle valueRef) {
