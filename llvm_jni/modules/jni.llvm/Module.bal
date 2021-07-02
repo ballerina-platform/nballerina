@@ -9,6 +9,11 @@ public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsi
 
 public type TargetTriple string;
 
+function intrinsicNameToId(IntrinsicFunctionName name) returns int {
+    string str_name = "llvm." + name;
+    return llvm_lookup_intrinsic_id(java:fromString(str_name), str_name.length());
+}
+
 public distinct class Module {
     handle LLVMModule;
     Context context;
@@ -47,6 +52,22 @@ public distinct class Module {
     public function addGlobal(Type ty, string name) returns PointerValue {
         return new(llvm_add_global(self.LLVMModule, typeToLLVMType(ty), java:fromString(name)));    
     }
+
+    public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
+        int id = intrinsicNameToId(name);
+        if name is IntegerArithmeticIntrinsicName {
+            FunctionType fnType = {returnType:structType(["i64", "i1"]), paramTypes:["i64", "i64"]};
+            PointerPointer paramTypes = PointerPointerFromTypes(fnType.paramTypes);
+            return new (llvm_get_intrinsic_declaration(self.LLVMModule, id, paramTypes.jObject, 2),fnType, self.context);
+        }
+        if name is "ptrmask.p0i8.i64" {
+            FunctionType fnType = {returnType:pointerType("i8"), paramTypes:[pointerType("i8"), "i64"]};
+            PointerPointer paramTypes = PointerPointerFromTypes(fnType.paramTypes);
+            return new (llvm_get_intrinsic_declaration(self.LLVMModule, id, paramTypes.jObject, 2),fnType, self.context);
+
+        }
+        panic error(string `${<string>name} not implemented`);
+    }
 }
 
 function create_llvm_moduleRef(handle moduleId, handle context) returns handle = @java:Method {
@@ -77,4 +98,16 @@ function llvm_add_global(handle moduleRef, handle typeRef, handle name) returns 
     name: "LLVMAddGlobal",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "java.lang.String"]
+} external;
+
+function llvm_lookup_intrinsic_id(handle name, int nameLen) returns int = @java:Method {
+    name: "LLVMLookupIntrinsicID",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["java.lang.String", "long"]
+} external;
+
+function llvm_get_intrinsic_declaration(handle moduleRef, int id, handle paramTypes, int paramCount) returns handle = @java:Method {
+    name: "LLVMGetIntrinsicDeclaration",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "int", "org.bytedeco.javacpp.PointerPointer", "long"]
 } external;
