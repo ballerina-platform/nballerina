@@ -6,12 +6,13 @@ public type Alignment 1|2|4|8|16;
 
 public type PointerType readonly & record {|
     Type pointsTo;
+    int addressSpace;
 |};
 
 public type IntegralType IntType|PointerType;
 
 public function pointerType(Type ty, int addressSpace = 0) returns PointerType {
-    return {pointsTo: ty};
+    return {pointsTo: ty, addressSpace};
 }
 
 public type ArrayType readonly & record {|
@@ -41,13 +42,16 @@ public type Type IntType|PointerType|StructType|ArrayType|"void";
 function typeToLLVMType(Type ty) returns handle {
     if ty is PointerType {
         handle baseType = typeToLLVMType(ty.pointsTo);
-        return create_llvm_pointer_type(baseType, 0);
+        return create_llvm_pointer_type(baseType, ty.addressSpace);
     }
     if ty is StructType {
-        panic error ("StructType not implemented");
+        PointerPointer typeArr = PointerPointerFromTypes(ty.elementTypes);
+        int elementCount = ty.elementTypes.length();
+        return create_llvm_struct_type(typeArr.jObject, elementCount, 0);
     }
     if ty is ArrayType {
-        panic error ("ArrayType not implemented");
+        handle elementType = typeToLLVMType(ty.elementType);
+        return create_llvm_array_type(elementType, ty.elementCount);
     }
     match ty {
         "void" => {
@@ -138,8 +142,20 @@ function create_llvm_const_pointer_null(handle ty) returns handle = @java:Method
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef"]
 } external;
 
-function create_llvm_pointer_type(handle ty,int addressSpace) returns handle = @java:Method {
+function create_llvm_pointer_type(handle ty, int addressSpace) returns handle = @java:Method {
     name: "LLVMPointerType",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "int"]
+} external;
+
+function create_llvm_array_type(handle elementType, int elementCount) returns handle = @java:Method {
+    name: "LLVMArrayType",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "int"]
+} external;
+
+function create_llvm_struct_type(handle elementTypes, int elementCount, int packed) returns handle = @java:Method {
+    name: "LLVMStructType",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.javacpp.PointerPointer", "int", "int"]
 } external;

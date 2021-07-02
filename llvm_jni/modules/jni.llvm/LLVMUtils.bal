@@ -28,6 +28,14 @@ function PointerPointerFromValues(Value[] values) returns PointerPointer {
     return arr;
 }
 
+function PointerPointerFromTypes(Type[] values) returns PointerPointer {
+    PointerPointer arr = new (values.length());
+    foreach var val in values {
+        arr.put(typeToLLVMType(val));
+    }
+    return arr;
+}
+
 distinct class BytePointer {
     handle jObject;
 
