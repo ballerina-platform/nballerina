@@ -363,7 +363,8 @@ public class FunctionDefn {
 // Subtype of LLVMOpcode
 public type BinaryIntOp BinaryArithmeticOp|BinaryBitwiseOp;
 public type BinaryArithmeticOp "add"|"mul"|"sub"|"sdiv"|"srem";
-public type BinaryBitwiseOp "xor"|"or"|"and";
+public type BinaryBitwiseOp "xor"|"or"|"and"|"shl"|"ashr"|"lshr";
+
 // Corresponds to LLVMIntPredicate
 public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sle";
 

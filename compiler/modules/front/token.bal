@@ -12,7 +12,7 @@ type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_L
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=";
-type MultiCharDelim "{|" | "|}" | "..." | "==" | "!=" | ">=" | "<=" | "===" | "!==";
+type MultiCharDelim "{|" | "|}" | "..." | "==" | "!=" | ">=" | "<=" | "===" | "!==" | "<<" | ">>" | ">>>";
 type Keyword
     "any"
     | "boolean"
@@ -77,6 +77,10 @@ final readonly & map<MultiCharDelim> WITH_EQUALS = {
     ">": ">="
 };
 
+const MODE_NORMAL = 1;
+const MODE_TYPE = 2;
+type Mode MODE_NORMAL|MODE_TYPE;
+
 class Tokenizer {
     Token? cur = ();
     // The index in `str` of the first character of `cur`
@@ -91,7 +95,7 @@ class Tokenizer {
     private Char? ungot = ();
     // Number of characters returned by `iter`
     private int nextCount = 0;
-   
+    private Mode mode = MODE_NORMAL;
 
     function init(string str) {
         self.iter = str.iterator();
@@ -106,6 +110,10 @@ class Tokenizer {
 
     function current() returns Token? {
         return self.cur;
+    }
+
+    function setMode(Mode m) {
+        self.mode = m;
     }
 
     function currentPos() returns err:Position {
@@ -186,6 +194,30 @@ class Tokenizer {
                             }
                         }
                         return multi;
+                    }
+                    else if !(peekCh is ()) {
+                        self.ungetc(peekCh);
+                    }
+                }
+                if ch == ">" && self.mode == MODE_NORMAL {
+                    Char? peekCh = self.getc();
+                    if peekCh == ">" {
+                        peekCh = self.getc();
+                        if peekCh == ">" {
+                            return ">>>";
+                        } else if !(peekCh is ()) {
+                            self.ungetc(peekCh);
+                        }
+                        return ">>";
+                    }
+                    else if !(peekCh is ()) {
+                        self.ungetc(peekCh);
+                    }
+                }
+                else if ch == "<" {
+                    Char? peekCh = self.getc();
+                    if peekCh == "<" {
+                        return "<<";
                     }
                     else if !(peekCh is ()) {
                         self.ungetc(peekCh);
