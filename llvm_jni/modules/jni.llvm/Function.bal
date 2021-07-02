@@ -6,14 +6,12 @@ public type FunctionType readonly & record {|
 |};
 
 function toLLVmFunctionType(FunctionType fnType, Context context) returns handle {
-    TypeRef returnType = new (fnType.returnType);
     int paramCount = fnType.paramTypes.length();
     PointerPointer paramType = new(paramCount);
     foreach var ty in fnType.paramTypes {
-        TypeRef tyRef = new (ty);
-        paramType.put(tyRef.llvmType);
+        paramType.put(typeToLLVMType(ty));
     }
-    return create_llvm_functionType(returnType.llvmType, paramType.jObject, paramCount, 0);
+    return create_llvm_functionType(typeToLLVMType(fnType.returnType), paramType.jObject, paramCount, 0);
 }
 
 // LLVM C-API don't differentiate between function declarations and definitions

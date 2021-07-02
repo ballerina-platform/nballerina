@@ -38,43 +38,40 @@ function getTypeAtIndex(StructType ty, int index) returns Type {
 
 public type Type IntType|PointerType|StructType|ArrayType|"void";
 
-distinct class TypeRef {
-    handle llvmType;
-
-    function init(Type ty) {
-        match ty {
-            "void" => {
-                self.llvmType = create_llvm_void();
-            }
-            "i1" => {
-                self.llvmType = create_llvm_i1();
-            }
-            "i8" => {
-                self.llvmType = create_llvm_i32();
-            }
-            "i32" => {
-                self.llvmType = create_llvm_i32();
-            }
-            "i64" => {
-                self.llvmType = create_llvm_i64();
-            }
-            _ => {
-                self.llvmType = create_llvm_void(); // Used to avoid compiler throwing uninitialized field error
-                panic error(string `Type: ${<string>ty} is not implemented`);
-            }
+//TODO: change this to a function that returns handle
+function typeToLLVMType(Type ty) returns handle {
+    if ty is PointerType {
+        return typeToLLVMType(ty.pointsTo);
+    }
+    match ty {
+        "void" => {
+            return create_llvm_void();
+        }
+        "i1" => {
+            return create_llvm_i1();
+        }
+        "i8" => {
+            return create_llvm_i32();
+        }
+        "i32" => {
+            return create_llvm_i32();
+        }
+        "i64" => {
+            return create_llvm_i64();
+        }
+        _ => {
+            panic error(string `Type: ${<string>ty} is not implemented`);
         }
     }
 }
 
 public function constInt(Type ty, int value) returns Value {
-    TypeRef typeRef = new (ty);
-    Value val = new (create_llvm_const_i64(typeRef.llvmType, value, 0));
+    Value val = new (create_llvm_const_i64(typeToLLVMType(ty), value, 0));
     return val;
 }
 
 public function constNull(PointerType ty) returns PointerValue {
-    TypeRef typeRef = new(ty.pointsTo);
-    return new(create_llvm_const_pointer_null(typeRef.llvmType));
+    return new (create_llvm_const_pointer_null(typeToLLVMType(ty)));
 }
 
 public distinct class Value {

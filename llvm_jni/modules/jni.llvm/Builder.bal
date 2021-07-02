@@ -59,9 +59,8 @@ public distinct class Builder {
         if align != () {
             panic error("setting alignment not supported");
         }
-        TypeRef tyRef = new (ty);
         string regName = self.extractName(name);
-        return new (llvm_alloca(self.LLVMBuilder, tyRef.llvmType, java:fromString(regName)));
+        return new (llvm_alloca(self.LLVMBuilder, typeToLLVMType(ty), java:fromString(regName)));
     }
 
     public function load(PointerValue ptr, Alignment? align = (), string? name = ()) returns Value {
@@ -124,9 +123,8 @@ public distinct class Builder {
     }
 
     public function bitCast(PointerValue val, PointerType destTy, string? name = ()) returns PointerValue {
-        TypeRef ty = new (destTy);
         string reg = self.extractName(name);
-        return new (llvm_bit_cast(self.LLVMBuilder, val.LLVMValueRef, ty.llvmType, java:fromString(reg)));
+        return new (llvm_bit_cast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
     public function ret(Value? val = ()) {
@@ -139,26 +137,22 @@ public distinct class Builder {
 
     public function ptrToInt(PointerValue ptr, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        TypeRef ty = new (destTy);
-        return new (llvm_ptr_to_int(self.LLVMBuilder, ptr.LLVMValueRef, ty.llvmType, java:fromString(reg)));
+        return new (llvm_ptr_to_int(self.LLVMBuilder, ptr.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
     public function zExt(Value val, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        TypeRef ty = new (destTy);
-        return new (llvm_z_ext(self.LLVMBuilder, val.LLVMValueRef, ty.llvmType, java:fromString(reg)));
+        return new (llvm_z_ext(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
     public function sExt(Value val, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        TypeRef ty = new (destTy);
-        return new (llvm_s_ext(self.LLVMBuilder, val.LLVMValueRef, ty.llvmType, java:fromString(reg)));
+        return new (llvm_s_ext(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
     public function trunc(Value val, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        TypeRef ty = new (destTy);
-        return new (llvm_trunc(self.LLVMBuilder, val.LLVMValueRef, ty.llvmType, java:fromString(reg)));
+        return new (llvm_trunc(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
     public function unreachable() {

@@ -9,6 +9,6 @@ function runTest(TestFunction func, string expectedFilename) returns io:Error|fi
     string[] expectedLines = check io:fileReadLines(expectedPath);
     string expectedOutput = "\n".'join(...expectedLines).trim();
     Module mod = func();
-    string actualOutput = mod.printModuleToString().trim();
+    string actualOutput = mod.toString().trim();
     test:assertEquals(actualOutput, expectedOutput);
 }
