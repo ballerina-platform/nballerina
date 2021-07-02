@@ -69,8 +69,8 @@ public distinct class Module {
         panic error(string `${<string>name} not implemented`);
     }
 
-    // FIXME: fix this
     public function setTarget(TargetTriple targetTriple) {
+        llvm_set_target(self.LLVMModule, java:fromString(targetTriple));
     }
 }
 
@@ -114,4 +114,10 @@ function llvm_get_intrinsic_declaration(handle moduleRef, int id, handle paramTy
     name: "LLVMGetIntrinsicDeclaration",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "int", "org.bytedeco.javacpp.PointerPointer", "long"]
+} external;
+
+function llvm_set_target(handle moduleRef, handle target) = @java:Method {
+    name: "LLVMSetTarget",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "java.lang.String"]
 } external;

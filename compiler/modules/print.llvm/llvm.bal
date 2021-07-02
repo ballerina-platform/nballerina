@@ -438,9 +438,8 @@ public class Builder {
         return new Value("i1", reg);
     }
 
-    // FIXME:add support for name
     // Corresponds to LLVMBuildBitCast
-    public function bitCast(PointerValue val, PointerType destTy) returns PointerValue {
+    public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         bb.addInsn(reg, "=", "bitcast", typeToString(val.ty), val.operand, "to", typeToString(destTy));

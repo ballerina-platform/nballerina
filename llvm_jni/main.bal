@@ -8,6 +8,6 @@ public function main() {
     llvm:BasicBlock initBlock = mainFunction.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     builder.ret(llvm:constInt("i64",0));
-    io:println(m.toString());
-    checkpanic m.writeFile("test.ll");
+    io:println(m.printModuleToString());
+    checkpanic m.printModuleToFile("test.ll");
 }
