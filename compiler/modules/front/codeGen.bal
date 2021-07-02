@@ -422,6 +422,21 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
         var callExpr if callExpr is FunctionCallExpr => {
             return codeGenFunctionCall(cx, bb, scope, callExpr);
         }
+        // Member access E[i]
+        var { container, index, pos } => {
+            var [l, block1] = check codeGenExpr(cx, bb, scope, container);
+            var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, index);
+            if l is bir:Register {
+                bir:Register result = cx.createRegister(t:ANY);
+                bir:ListGetInsn insn = { result, list: l, operand: r, position: pos };
+                bb.insns.push(insn);
+                return [result, nextBlock];
+            }
+            else {
+                return cx.semanticErr("cannot apply member access to constant of simple type");
+            }
+        }
+        // List construct
         var { members } => {
             bir:BasicBlock nextBlock = bb;
             bir:Operand[] operands = [];
@@ -437,6 +452,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             nextBlock.insns.push(insn);
             return [result, nextBlock];
         }
+
     }
     return err:unreached();
 }

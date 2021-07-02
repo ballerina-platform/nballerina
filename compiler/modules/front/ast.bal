@@ -127,8 +127,8 @@ type ListConstructorExpr record {|
 |};
 
 type MemberAccessExpr record {|
-    Expr containerExpr;
-    Expr indexExpr;
+    Expr container;
+    Expr index;
     err:Position pos;
 |};
 
@@ -146,8 +146,6 @@ type TypeCastExpr record {|
 type SimpleConstExpr record {|
     ()|boolean|int value;
 |};
-
-
 
 // Types
 

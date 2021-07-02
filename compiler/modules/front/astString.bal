@@ -199,9 +199,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         if wrap {
             w.push("(");
         }
-        exprToWords(w, expr.containerExpr, true);
+        exprToWords(w, expr.container, true);
         w.push(CLING, "[");
-        exprToWords(w, expr.indexExpr, false);
+        exprToWords(w, expr.index, false);
         w.push("]");
         if wrap {
             w.push(")");

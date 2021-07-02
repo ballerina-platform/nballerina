@@ -86,6 +86,9 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is ListConstructInsn {
         check verifyListConstruct(vc, insn);
     }
+    else if insn is ListGetInsn {
+        check verifyListGet(vc, insn);
+    }
 }
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
@@ -115,6 +118,16 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
     // and that each argument has the right type
 }
 
+function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic? {
+    check verifyOperandInt(vc, insn.name, insn.operand);
+    if !vc.isSubtype(insn.list.semType, t:LIST) {
+        return vc.err("list get applied to non-list");
+    }
+    // XXX generalize this to array types other than `any[]`
+    if insn.result.semType !== t:ANY {
+        return vc.err("bad BIR: only any supported as list type");
+    }  
+}
 
 function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
     if vc.isEmpty(insn.result.semType) {

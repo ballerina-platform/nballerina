@@ -205,9 +205,9 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr) returns Expr|err:Syntax {
     if t == "[" {
         err:Position pos = tok.currentPos();
         check tok.advance();
-        Expr indexExpr = check parseInnerExpr(tok);
+        Expr index = check parseInnerExpr(tok);
         check tok.expect("]");
-        MemberAccessExpr accessExpr = { containerExpr: expr, indexExpr, pos };
+        MemberAccessExpr accessExpr = { container: expr, index, pos };
         return finishPrimaryExpr(tok, accessExpr);
     }
     else {

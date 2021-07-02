@@ -155,6 +155,7 @@ public enum InsnName {
     INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
     INSN_LIST_CONSTRUCT_RW,
+    INSN_LIST_GET,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -181,7 +182,7 @@ public type InsnBase record {
 public type Insn 
     IntArithmeticBinaryInsn|IntBitwiseBinaryInsn|IntNegateInsn|IntCompareInsn
     |BooleanNotInsn|BooleanCompareInsn|EqualityInsn
-    |ListConstructInsn
+    |ListConstructInsn|ListGetInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
@@ -264,6 +265,16 @@ public type ListConstructInsn readonly & record {|
     SemType inherentType;
     Register result;
     Operand[] operands;
+|};
+
+# Gets a member of a list at a specified index.
+# This is a PPI (since the index may be out of bounds).
+public type ListGetInsn readonly & record {|
+    INSN_LIST_GET name = INSN_LIST_GET;
+    Register result;
+    Register list;
+    IntOperand operand;
+    err:Position position;
 |};
 
 # This does equality expressions.
@@ -462,7 +473,8 @@ final readonly & map<true> PPI_INSNS = {
     [INSN_PANIC]: true,
     [INSN_INT_ARITHMETIC_BINARY]: true,
     [INSN_TYPE_CAST]: true,
-    [INSN_INT_NEGATE]: true
+    [INSN_INT_NEGATE]: true,
+    [INSN_LIST_GET]: true
 };
 
 public function isInsnPotentiallyPanicking(Insn insn) returns boolean {
