@@ -33,11 +33,16 @@ task copyNbal(type: Copy) {
         filter { line -> line.replaceAll('nback.llvm', 'jni.llvm') }
 }
 
+task cleanNbackLLVM(type: Delete) {
+        delete "${tmpBuildDir}/modules/nback.llvm"
+}
+cleanNbackLLVM.dependsOn(copyNbal)
+
 task copyJNILLVM(type: Copy) {
         from 'modules/jni.llvm'
         into "${tmpBuildDir}/modules/jni.llvm"
 }
-copyJNILLVM.dependsOn(copyNbal)
+copyJNILLVM.dependsOn(copyNbal, cleanNbackLLVM)
 
 task copyLocalDependencies(type: Copy) {
         from platformLibs
@@ -48,7 +53,7 @@ task copyBalConfig(type: Copy) {
         from 'Ballerina.toml'
         into tmpBuildDir
 }
-copyBalConfig.dependsOn(copyLocalDependencies)
+copyBalConfig.dependsOn(copyLocalDependencies, copyNbal)
 
 task testBuild(type: Exec) {
         workingDir tmpBuildDir
