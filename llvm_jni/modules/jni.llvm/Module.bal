@@ -1,5 +1,6 @@
 import ballerina/jballerina.java;
 import ballerina/jballerina.java.arrays as jarrays;
+import ballerina/io;
 
 public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
 
@@ -44,9 +45,10 @@ public distinct class Module {
     }
 
     //FIXME: rename printModuleToFile
-    public function writeFile(string fileName) returns error? {
+    public function writeFile(string fileName) returns io:Error? {
         byte[] e = [];
-        _ = module_to_file(self.LLVMModule, java:fromString(fileName), check jarrays:toHandle(e, "byte"));
+        handle err = checkpanic jarrays:toHandle(e, "byte");
+        _ = module_to_file(self.LLVMModule, java:fromString(fileName), err);
     }
 
     public function addGlobal(Type ty, string name) returns PointerValue {
@@ -67,6 +69,10 @@ public distinct class Module {
 
         }
         panic error(string `${<string>name} not implemented`);
+    }
+    
+    // FIXME: fix this
+    public function setTarget(TargetTriple targetTriple){
     }
 }
 

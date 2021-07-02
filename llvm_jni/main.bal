@@ -1,4 +1,4 @@
-import nballerina.jni.llvm;
+import wso2/nballerina.jni.llvm;
 import  ballerina/io;
 public function main() {
     llvm:Context context = new;
