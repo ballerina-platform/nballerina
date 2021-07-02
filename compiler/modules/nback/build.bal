@@ -477,7 +477,10 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
 final readonly & map<llvm:BinaryBitwiseOp> binaryBitwiseOp = {
     "&": "and",
     "^": "xor",
-    "|": "or"
+    "|": "or",
+    "<<": "shl",
+    ">>": "ashr",
+    ">>>" : "lshr"
 };
 
 function buildBitwiseBinary(llvm:Builder builder, Scaffold scaffold, bir:IntBitwiseBinaryInsn insn) {
