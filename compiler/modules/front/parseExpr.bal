@@ -158,6 +158,10 @@ function parseTypeCastExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
+    return finishPrimaryExpr(tok, check startPrimaryExpr(tok));
+}
+
+function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
         err:Position pos = tok.currentPos();
@@ -193,6 +197,21 @@ function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     }
     else {
         return parseError(tok);
+    }
+}
+
+function finishPrimaryExpr(Tokenizer tok, Expr expr) returns Expr|err:Syntax {
+    Token? t = tok.current();
+    if t == "[" {
+        err:Position pos = tok.currentPos();
+        check tok.advance();
+        Expr indexExpr = check parseInnerExpr(tok);
+        check tok.expect("]");
+        MemberAccessExpr accessExpr = { containerExpr: expr, indexExpr, pos };
+        return finishPrimaryExpr(tok, accessExpr);
+    }
+    else {
+        return expr;
     }
 }
 

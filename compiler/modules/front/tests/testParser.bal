@@ -306,6 +306,11 @@ function validTokenSourceFragments() returns string[][]|error {
          ["E", "expr", "[1 2]", ""],
          ["E", "expr", "[1,]", ""],
          ["E", "expr", "[,1]", ""],
+         // member access
+         ["V", "expr", "a [ 2 ]", "a[2]"],
+         ["V", "expr", "v [ i + 1 ]", "v[i + 1]"],
+         ["V", "expr", "a[m][n]", "(a[m])[n]"],
+         ["V", "expr", "a[i]+b[j]", "(a[i]) + (b[j])"],
          // paren
          ["V", "expr", "(0)", "0"],
          ["V", "expr", "( 1 )", "1"],

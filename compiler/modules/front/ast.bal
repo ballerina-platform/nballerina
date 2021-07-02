@@ -31,7 +31,7 @@ type FunctionDef record {|
 
 type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|
             WhileStmt|BreakStmt|ContinueStmt;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr;
+type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
 
 type ConstructorExpr ListConstructorExpr;
 
@@ -124,6 +124,12 @@ type FunctionCallExpr record {|
 
 type ListConstructorExpr record {|
     Expr[] members;
+|};
+
+type MemberAccessExpr record {|
+    Expr containerExpr;
+    Expr indexExpr;
+    err:Position pos;
 |};
 
 type VarRefExpr record {|

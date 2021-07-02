@@ -195,6 +195,18 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         exprsToWords(w, expr.members);
         w.push("]");
     }
+    else if expr is MemberAccessExpr {
+        if wrap {
+            w.push("(");
+        }
+        exprToWords(w, expr.containerExpr, true);
+        w.push(CLING, "[");
+        exprToWords(w, expr.indexExpr, false);
+        w.push("]");
+        if wrap {
+            w.push(")");
+        }
+    }
     else {
         w.push(expr.varName);
     }
