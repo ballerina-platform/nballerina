@@ -207,6 +207,18 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(")");
         }
     }
+    else if expr is MethodCallExpr {
+         if wrap {
+            w.push("(");
+        }
+        exprToWords(w, expr.target, true);
+        w.push(".", expr.methodName, CLING, "(");
+        exprsToWords(w, expr.args);
+        w.push(")");
+        if wrap {
+            w.push(")");
+        }
+    }
     else {
         w.push(expr.varName);
     }
@@ -255,9 +267,9 @@ function wordsToString(Word[] s) returns string {
 }
 
 function alwaysClingLeft(string a) returns boolean {
-    return a == "(" || a == ":" || a == "[";
+    return a == "(" || a == ":" || a == "." || a == "[";
 }
 
 function alwaysClingRight(string a) returns boolean {
-    return a == ";" || a == ":" || a == ")" || a == "," || a == "]";
+    return a == ";" || a == ":" || a == "." || a == ")" || a == "," || a == "]";
 }

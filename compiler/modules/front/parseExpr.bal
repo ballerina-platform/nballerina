@@ -210,6 +210,23 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr) returns Expr|err:Syntax {
         MemberAccessExpr accessExpr = { container: expr, index, pos };
         return finishPrimaryExpr(tok, accessExpr);
     }
+    else if t == "." {
+        err:Position pos = tok.currentPos();
+        check tok.advance();
+        t = tok.current();
+        if t is [IDENTIFIER, string] {
+            string name = t[1];
+            check tok.advance();
+            t = tok.current();
+            if t == "(" {
+                check tok.advance();
+                Expr[] args = check parseExprList(tok, ")");
+                MethodCallExpr methodCallExpr = { methodName: name, target: expr, pos, args };
+                return finishPrimaryExpr(tok, methodCallExpr);
+            }
+        }
+        return parseError(tok, "expected method call after dot");
+    }
     else {
         return expr;
     }

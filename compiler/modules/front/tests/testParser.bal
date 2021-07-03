@@ -178,6 +178,7 @@ function invalidTokenSourceFragments() returns string[][]|error {
             ["OE", "\\"], // JBUG #31431 can't use string template
             ["OE", "\"\n\""],
             ["OE", "\"\r\""],
+            ["E", "obj..x(args)"],
             ["E", "01"],
             ["E", "-01"]];
 }
@@ -306,6 +307,13 @@ function validTokenSourceFragments() returns string[][]|error {
          ["E", "expr", "[1 2]", ""],
          ["E", "expr", "[1,]", ""],
          ["E", "expr", "[,1]", ""],
+          // method call
+         ["V", "expr", "obj.x(1)", "obj.x(1)"],
+         ["V", "expr", "(x+y).length()", "(x + y).length()"],
+         ["V", "expr", "x+y.length()", "x + (y.length())"],
+         ["V", "expr", "x.foo().bar()", "(x.foo()).bar()"],
+         ["V", "expr", "x.foo()[n].bar()", "((x.foo())[n]).bar()"],
+         ["E", "expr", "obj.(1)", ""],
          // member access
          ["V", "expr", "a [ 2 ]", "a[2]"],
          ["V", "expr", "v [ i + 1 ]", "v[i + 1]"],
