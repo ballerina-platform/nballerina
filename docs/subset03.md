@@ -87,7 +87,7 @@ break-stmt = "break" ";"
 
 continue-stmt = "continue" ";"
 
-foreach-stmt = "foreach" typedesc identifier "in" expression "..<" expression stmt-block
+foreach-stmt = "foreach" typedesc identifier "in" additive-expr "..<" additive-expr stmt-block
 
 expression = bitwise-or-expr | list-constructor-expr
 
