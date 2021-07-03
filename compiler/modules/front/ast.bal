@@ -31,7 +31,8 @@ type FunctionDef record {|
 
 type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|
             WhileStmt|BreakStmt|ContinueStmt;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
+type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr|
+            TypeCastExpr|ConstructorExpr|MemberAccessExpr|RangeExpr;
 
 type ConstructorExpr ListConstructorExpr;
 
@@ -75,6 +76,7 @@ type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
 type BinaryBitwiseOp "|" | "^" | "&";
 type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
+type RangeOp  "..." | "..<";
 
 type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
@@ -130,6 +132,12 @@ type MemberAccessExpr record {|
     Expr container;
     Expr index;
     err:Position pos;
+|};
+
+type RangeExpr record {|
+    Expr lower;
+    Expr upper;
+    RangeOp op;
 |};
 
 type VarRefExpr record {|

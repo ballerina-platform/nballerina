@@ -84,13 +84,27 @@ function parseEqualityExpr(Tokenizer tok)  returns Expr|err:Syntax {
 }
 
 function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
-    Expr expr = check parseAdditiveExpr(tok);
+    Expr expr = check parseRangeExpr(tok);
     Token? t = tok.current();
     if t is BinaryRelationalOp {
         check tok.advance();
-        Expr right = check parseAdditiveExpr(tok);
+        Expr right = check parseRangeExpr(tok);
         BinaryRelationalExpr bin = { relationalOp: t, left: expr, right };
         return bin;
+    }
+    else {
+        return expr;
+    }
+}
+
+function parseRangeExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Expr expr = check parseAdditiveExpr(tok);
+    Token? t = tok.current();
+    if t is RangeOp {
+        check tok.advance();
+        Expr upper = check parseAdditiveExpr(tok);
+        RangeExpr range = { op: t, lower: expr, upper };
+        return range;
     }
     else {
         return expr;
