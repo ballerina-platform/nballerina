@@ -38,8 +38,14 @@ typedef struct {
     TaggedPtr *members;
 } *ListPtr;
 
+struct PrintStack {
+    TaggedPtr p;
+    struct PrintStack *next;
+};
+
 extern void *_bal_alloc(int64_t nBytes);
 static void array_grow(ListPtr lp);
+static int stackContains(struct PrintStack *stackPtr, TaggedPtr p);
 
 static inline int getTag(TaggedPtr p) {
     return (int)((((uint64_t)p) >> TAG_SHIFT) & TAG_MASK);
@@ -60,7 +66,7 @@ static inline ListPtr taggedToList(TaggedPtr p) {
 #define STYLE_DIRECT 0
 #define STYLE_INFORMAL 1
 
-static void printTagged(FILE *fp, TaggedPtr p, int style) {
+static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *stackPtr) {
     int tag = getTag(p);
     switch (tag) {
         case 0:
@@ -79,23 +85,39 @@ static void printTagged(FILE *fp, TaggedPtr p, int style) {
             fprintf(fp, "%ld", (long)taggedToInt(p));
             break;
         case TAG_LIST_RW:
-            {
+            if (stackContains(stackPtr, p)) {
+                fputs("...", fp);
+            }
+            else {
                 ListPtr lp = taggedToList(p);
-                fputs("[", fp);
+                struct PrintStack stack;
                 int i;
+                fputs("[", fp);
+                stack.next = stackPtr;
+                stack.p = p;
                 for (i = 0; i < lp->length; i++) {
                     if (i > 0) {
                         fputs(",", fp);
                     }
-                    printTagged(fp, lp->members[i], STYLE_INFORMAL);
+                    printTagged(fp, lp->members[i], STYLE_INFORMAL, &stack);
                 }
                 fputs("]", fp);
-                break;
             }
+            break;
         default:
             fprintf(stderr, "unknown tag %d\n", tag);
             abort();
     }
+}
+
+static int stackContains(struct PrintStack *stackPtr, TaggedPtr p) {
+    while (stackPtr) {
+        if (p == stackPtr->p) {
+            return 1;
+        }
+        stackPtr = stackPtr->next;
+    }
+    return 0;
 }
  
 int64_t _Barray__length(TaggedPtr p) {
@@ -153,7 +175,7 @@ void _Bio__println(TaggedPtr p) {
 #ifdef STACK_DEBUG
     fprintf(stderr, "Used stack %ld bytes\n", (long)((_bal_stack_guard + STACK_SIZE) - (char *)__builtin_frame_address(0)));
 #endif
-    printTagged(stdout, p, STYLE_DIRECT);
+    printTagged(stdout, p, STYLE_DIRECT, NULL);
     putchar('\n');
 }
 
