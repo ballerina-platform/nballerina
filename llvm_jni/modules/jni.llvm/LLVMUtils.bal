@@ -1,5 +1,7 @@
 import ballerina/jballerina.java;
 
+// The peer class to native pointers and arrays of void*
+// Used to represent arrays
 distinct class PointerPointer {
     handle jObject;
     int index;
