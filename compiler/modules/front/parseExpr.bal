@@ -211,25 +211,31 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr) returns Expr|err:Syntax {
         return finishPrimaryExpr(tok, accessExpr);
     }
     else if t == "." {
-        err:Position pos = tok.currentPos();
-        check tok.advance();
-        t = tok.current();
-        if t is [IDENTIFIER, string] {
-            string name = t[1];
-            check tok.advance();
-            t = tok.current();
-            if t == "(" {
-                check tok.advance();
-                Expr[] args = check parseExprList(tok, ")");
-                MethodCallExpr methodCallExpr = { methodName: name, target: expr, pos, args };
-                return finishPrimaryExpr(tok, methodCallExpr);
-            }
-        }
-        return parseError(tok, "expected method call after dot");
+        MethodCallExpr methodCallExpr = check finishMethodCallExpr(tok, expr);
+        return finishPrimaryExpr(tok, methodCallExpr);
     }
     else {
         return expr;
     }
+}
+
+// Called with current token as "."
+function finishMethodCallExpr(Tokenizer tok, Expr target) returns MethodCallExpr|err:Syntax {
+    err:Position pos = tok.currentPos();
+    check tok.advance();
+    Token? t = tok.current();
+    if t is [IDENTIFIER, string] {
+        string name = t[1];
+        check tok.advance();
+        t = tok.current();
+        if t == "(" {
+            check tok.advance();
+            Expr[] args = check parseExprList(tok, ")");
+            MethodCallExpr methodCallExpr = { methodName: name, target, pos, args };
+            return methodCallExpr;
+        }
+    }
+    return parseError(tok, "expected method call after dot");
 }
 
 function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, err:Position pos) returns FunctionCallExpr|err:Syntax {

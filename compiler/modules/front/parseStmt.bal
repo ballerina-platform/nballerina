@@ -49,9 +49,13 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         var td if td is InlineLeafTypeDesc => {
             return parseVarDeclStmt(tok);
         }
+        "("|[DECIMAL_NUMBER, _]|"true"|"false" => {
+            return parseMethodCallStmt(tok);
+        }
     }
     return parseError(tok, "unhandled statement");
 }
+
 
 function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
@@ -60,9 +64,22 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
     }
     else if cur == "(" {
         check tok.advance();
-        FunctionCallExpr stmt = check finishFunctionCallExpr(tok, (), identifier, pos);
-        check tok.expect(";");
-        return stmt;
+        FunctionCallExpr expr = check finishFunctionCallExpr(tok, (), identifier, pos);
+        return finishCallStmt(tok, expr);
+    }
+    else if cur == "." {
+        VarRefExpr varRef = { varName: identifier };
+        MethodCallExpr expr = check finishMethodCallExpr(tok, varRef);
+        return finishCallStmt(tok, expr);
+    }
+    else if cur == "[" {
+        VarRefExpr varRef = { varName: identifier };
+        Expr expr = check finishPrimaryExpr(tok, varRef);
+        if expr is MethodCallExpr {
+            check tok.expect(";");
+            return expr;
+        }
+        return parseError(tok, "member access expr not allowed as a statement"); 
     }
     else if cur == ":" {
         check tok.advance();
@@ -77,6 +94,31 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
         }
     }
     return parseError(tok, "invalid statement");
+}
+
+function parseMethodCallStmt(Tokenizer tok) returns Stmt|err:Syntax {
+    Expr expr = check parsePrimaryExpr(tok);
+    if expr is MethodCallExpr {
+        check tok.expect(";");
+        return expr;
+    }
+    return parseError(tok, "expression not allowed as a statement");
+}
+
+function finishCallStmt(Tokenizer tok, CallStmt expr) returns Stmt|err:Syntax {
+    Expr primary = check finishPrimaryExpr(tok, expr);
+    CallStmt stmt;
+    if primary === expr {
+        stmt = expr;
+    }
+    else if primary is MethodCallExpr {
+        stmt = primary;
+    }
+    else {
+        return parseError(tok, "member access expr not allowed as a statement");
+    }
+    check tok.expect(";");
+    return stmt;
 }
 
 function finishAssignStmt(Tokenizer tok, string identifier, err:Position pos) returns AssignStmt|err:Syntax {

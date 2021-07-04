@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 
 #include "tag.h"
@@ -27,11 +28,18 @@ char *_bal_stack_guard;
 
 typedef char NODEREF *TaggedPtr;
 
+// An error is currently represented as int with the error code in the lo byte
+typedef uint64_t Error;
+
 typedef struct {
     int64_t length;
+    // capacity is always >= length
     int64_t capacity;
     TaggedPtr *members;
 } *ListPtr;
+
+extern void *_bal_alloc(int64_t nBytes);
+static void array_grow(ListPtr lp);
 
 static inline int getTag(TaggedPtr p) {
     return (int)((((uint64_t)p) >> TAG_SHIFT) & TAG_MASK);
@@ -95,6 +103,52 @@ int64_t _Barray__length(TaggedPtr p) {
     return lp->length;
 }
 
+void _Barray__push(TaggedPtr p, TaggedPtr val) {
+    ListPtr lp = taggedToList(p);
+    int64_t len = lp->length;
+    if (len >= lp->capacity) {
+        array_grow(lp);
+    }
+    // note that array_grow does not change length
+    lp->members[len] = val;
+    lp->length = len + 1;
+}
+
+#define INITIAL_LIST_SIZE 4
+#define ARRAY_LENGTH_MAX (INT64_MAX/sizeof(TaggedPtr))
+
+// Increase the capacity by at least 1
+static void array_grow(ListPtr lp) {
+    int64_t old_capacity = lp->capacity;
+    // Deal with case where capacity is 0
+    // Implies length is also 0
+    if (old_capacity == 0) {
+        lp->members = _bal_alloc(sizeof(TaggedPtr) * INITIAL_LIST_SIZE);
+        lp->capacity = INITIAL_LIST_SIZE;
+        return;
+    }
+    // Increase capacity by a factor of 1.5
+    int64_t extra_capacity = lp->capacity >> 1;
+    int64_t new_capacity; 
+    if (old_capacity <= ARRAY_LENGTH_MAX - extra_capacity) {
+        // we know that this addition cannot overflow
+        // and that new_capacity <= ARRAY_LENGTH_MAX
+        new_capacity = old_capacity + extra_capacity;
+    }
+    else {
+        new_capacity = ARRAY_LENGTH_MAX;
+        if (new_capacity == old_capacity)
+            abort(); // we cannot grow any more; implies we allocated INT64_MAX bytes successfully! XXX should handle this better
+    }
+    // we know the multiplication cannot overflow because new_capacity <= ARRAY_MAX
+    TaggedPtr *new_members = _bal_alloc(sizeof(TaggedPtr) * new_capacity);
+    // lp->length may be zero, but lp->members will not be null in this case
+    // because we checked at the beginning that capacity was not zero
+    memcpy(new_members, lp->members, lp->length * sizeof(TaggedPtr));
+    lp->members = new_members;
+    lp->capacity = new_capacity;
+}
+
 void _Bio__println(TaggedPtr p) {
 #ifdef STACK_DEBUG
     fprintf(stderr, "Used stack %ld bytes\n", (long)((_bal_stack_guard + STACK_SIZE) - (char *)__builtin_frame_address(0)));
@@ -112,10 +166,12 @@ const char *panicMessages[] = {
     "index out of bounds"
 };
 
-void _bal_panic(int64_t packedPanic) {
-    int code = packedPanic & 0xFF;
-    int64_t lineNumber = packedPanic >> 8;
+void _bal_panic(Error err) {
+    int code = err & 0xFF;
+    int64_t lineNumber = err >> 8;
     fputs("panic: ", stderr);
+    if (code <= 0 || code >= sizeof(panicMessages)/sizeof(panicMessages[0]))
+        abort();
     if (lineNumber > 0) {
         fprintf(stderr, "line %ld: ", (long)lineNumber);
     }
@@ -124,7 +180,7 @@ void _bal_panic(int64_t packedPanic) {
     abort();
 }
 
-char *_bal_alloc(int64_t nBytes) {
+void *_bal_alloc(int64_t nBytes) {
     void *p = malloc(nBytes);
     if (p != 0)
         return p;

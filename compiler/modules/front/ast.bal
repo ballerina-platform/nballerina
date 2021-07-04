@@ -29,8 +29,8 @@ type FunctionDef record {|
     bir:FunctionSignature? signature = ();
 |};
 
-type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|
-            WhileStmt|BreakStmt|ContinueStmt;
+type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|BreakStmt|ContinueStmt;
+type CallStmt FunctionCallExpr|MethodCallExpr;
 type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
 
 type ConstructorExpr ListConstructorExpr;

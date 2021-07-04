@@ -342,6 +342,14 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "stmt", "break;", "break;"],
          ["V", "stmt", "continue;", "continue;"],
          ["V", "stmt", "a:x(c,d);", "a:x(c, d);"],
+         ["V", "stmt", "obj.x(c,d);", "obj.x(c, d);"],
+         ["V", "stmt", "foo().bar(c,d);", "foo().bar(c, d);"],
+         ["V", "stmt", "true.ok();", "true.ok();"], // not semantically valid
+         ["V", "stmt", "(x|y).ok();", "(x | y).ok();"], // not semantically valid
+         ["V", "stmt", "foo()[0].push(1);", "(foo()[0]).push(1);"],
+         ["V", "stmt", "foo[1].push(2);", "(foo[1]).push(2);"],
+         ["E", "stmt", "foo.push(1)[0];", ""],
+         ["E", "stmt", "foo[0];", ""],
          ["UE", "expr", string`string w = "Say "what" one more time.";`, ""],
          // statement return
          ["V", "stmt", "return;", "return;"],

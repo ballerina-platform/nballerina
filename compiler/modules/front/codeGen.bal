@@ -153,12 +153,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
             curBlock = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
         else {
-            // stmt is FunctionCallExpr 
-            bir:Register reg;
-            [reg, curBlock] = check codeGenFunctionCall(cx, <bir:BasicBlock>curBlock, scope, stmt);
-            if reg.semType !== t:NIL {
-                return cx.semanticErr("return type of function call statement not nil");
-            }
+            curBlock = check codeGenCallStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
     }
     return curBlock;
@@ -292,6 +287,22 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
     var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, expr);
     bir:AssignInsn load = { result: reg, operand };
     nextBlock.insns.push(load);
+    return nextBlock;
+}
+
+function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, CallStmt stmt) returns CodeGenError|bir:BasicBlock? {
+    // stmt is FunctionCallExpr or MethodCallExpr
+    bir:Register reg;
+    bir:BasicBlock nextBlock;
+    if stmt is FunctionCallExpr {
+        [reg, nextBlock] = check codeGenFunctionCall(cx, <bir:BasicBlock>startBlock, scope, stmt);
+    }
+    else {
+        [reg, nextBlock] = check codeGenMethodCall(cx, <bir:BasicBlock>startBlock, scope, stmt);
+    }
+    if reg.semType !== t:NIL {
+        return cx.semanticErr("return type of function or method in call statement must be nil");
+    }
     return nextBlock;
 }
 

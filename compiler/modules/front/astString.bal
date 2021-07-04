@@ -92,7 +92,8 @@ function stmtToWords(Word[] w, Stmt stmt) {
         w.push(stmt, ";");
     }
     else {
-        functionCallToWords(w, stmt);
+        // This deals with function call and method call
+        exprToWords(w, stmt);
         w.push(";");
     }
 }
@@ -151,8 +152,13 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(")");
         }
     }
-    else if expr is FunctionCallExpr {
-        functionCallToWords(w, expr);
+     else if expr is FunctionCallExpr {
+        if expr.prefix != () {
+            w.push(expr.prefix, ":");
+        }
+        w.push(expr.funcName, CLING, "(");
+        exprsToWords(w, expr.args);
+        w.push(")");
     }
     else if expr is BinaryExpr {
         if wrap {
@@ -222,15 +228,6 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     else {
         w.push(expr.varName);
     }
-}
-
-function functionCallToWords(Word[] w, FunctionCallExpr func) {
-    if func.prefix != () {
-        w.push(func.prefix, ":");
-    }
-    w.push(func.funcName, CLING, "(");
-    exprsToWords(w, func.args);
-    w.push(")");
 }
 
 function wordsToString(Word[] s) returns string {
