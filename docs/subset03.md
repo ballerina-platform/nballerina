@@ -9,7 +9,7 @@
    * no rest arguments
    * may be declared public
 * Statements:
-   * function call statement
+   * function/method call statement
    * local variable declaration with explicit type and expression
    * assignment
       * to variable `v = E;`
@@ -58,7 +58,7 @@ stmt-block = "{" statement* "}"
 
 statement =
   local-var-decl-stmt
-  | function-call-stmt
+  | call-stmt
   | assign-stmt
   | return-stmt
   | if-else-stmt
@@ -69,7 +69,9 @@ statement =
 
 local-var-decl-stmt = type-desc identifier "=" expression ";"
 
-function-call-stmt = function-call-expr ";"
+call-stmt =
+   function-call-expr ";"
+   | method-call-expr ";"
 
 assign-stmt = lvexpr "=" expression ";"
 
@@ -200,7 +202,9 @@ Type `any[]` and some related operations:
 * New expressions
    * list constructors `[1, 2, 3]`
    * `E[n]`
+   * method call
  * Allow member access lvalues in assignment `V[k] = E;`
+ * Allow call statements to be method calls
  * Langlib (called using method call syntax)
     * array:length
 
