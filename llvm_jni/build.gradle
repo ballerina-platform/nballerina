@@ -48,6 +48,7 @@ task copyLocalDependencies(type: Copy) {
         from platformLibs
         into "${tmpBuildDir}/target/platform-libs"
 }
+copyLocalDependencies.dependsOn(copyDependencies);
 
 task copyBalConfig(type: Copy) {
         from 'Ballerina.toml'
