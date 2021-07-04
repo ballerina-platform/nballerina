@@ -226,6 +226,17 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(")");
         }
     }
+    else if expr is RangeExpr {
+        if wrap {
+            w.push("(");
+        }
+        exprToWords(w, expr.lower, true);
+        w.push(expr.op);
+        exprToWords(w, expr.upper, true);
+        if wrap {
+            w.push(")");
+        }
+    }
     else {
         w.push(expr.varName);
     }

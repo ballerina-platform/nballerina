@@ -12,7 +12,7 @@ type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_L
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=" | ".";
-type MultiCharDelim "{|" | "|}" | "..." | "==" | "!=" | ">=" | "<=" | "===" | "!==";
+type MultiCharDelim "{|" | "|}" | "..." | "..<" | "==" | "!=" | ">=" | "<=" | "===" | "!==";
 type Keyword
     "any"
     | "boolean"
@@ -169,10 +169,16 @@ class Tokenizer {
             else if ch == "." {
                 ch = self.getc();
                 if ch == "." {
-                    if self.getc() != "." {
+                    ch = self.getc();
+                    if ch == "." {
+                        return "...";
+                    }
+                    if ch == "<" {
+                        return "..<";
+                    }
+                    else {
                         break;
                     }
-                    return "...";
                 }
                 else if !(ch is ()) {
                     self.ungetc(ch);

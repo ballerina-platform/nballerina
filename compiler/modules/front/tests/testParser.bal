@@ -250,6 +250,8 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "expr", "a | b", "a | b"],
          ["V", "expr", "a & b", "a & b"],
          ["V", "expr", "a ^ b", "a ^ b"],
+         ["U", "expr", "a ..< b", "a ..< b"],
+         ["U", "expr", "a ... b", "a ... b"],
          // binary op associativity
          ["V", "expr", "1 + 2 + 3", "(1 + 2) + 3"],
          ["V", "expr", "1 + 2 + 3 + 4", "((1 + 2) + 3) + 4"],
@@ -375,6 +377,7 @@ function validTokenSourceFragments() returns string[][]|error {
          ["E", "stmt", "int x = a =! b;", ""],
          ["V", "stmt", "int i = 10;", "int i = 10;"],
          ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
+         ["E", "stmt", "int i = a ... b ... c;", ""],
          ["V", "stmt", "boolean b = false;", "boolean b = false;"],
          ["V", "stmt", "any v = false;", "any v = false;"],
          ["V", "stmt", "any v = 1;", "any v = 1;"],

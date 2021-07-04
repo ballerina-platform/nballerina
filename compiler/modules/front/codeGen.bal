@@ -474,6 +474,10 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
                 return cx.semanticErr("cannot apply member access to constant of simple type");
             }
         }
+        // Range
+        var {upper, lower, op} => {
+            return err:unimplemented("range expressions outside foreach statements are yet to be supported");
+        }
         // List construct
         var { members } => {
             bir:BasicBlock nextBlock = bb;

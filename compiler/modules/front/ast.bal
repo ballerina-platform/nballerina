@@ -30,7 +30,7 @@ type FunctionDef record {|
 
 type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|BreakStmt|ContinueStmt;
 type CallStmt FunctionCallExpr|MethodCallExpr;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
+type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr|RangeExpr;
 
 type ConstructorExpr ListConstructorExpr;
 
@@ -77,6 +77,7 @@ type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
 type BinaryBitwiseOp "|" | "^" | "&";
 type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
+type RangeOp  "..." | "..<";
 
 type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
@@ -146,6 +147,12 @@ type MemberAccessLExpr record {|
     VarRefExpr container;
     Expr index;
     err:Position pos;
+|};
+
+type RangeExpr record {|
+    Expr lower;
+    Expr upper;
+    RangeOp op;
 |};
 
 type VarRefExpr record {|
