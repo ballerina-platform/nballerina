@@ -19,7 +19,13 @@
 extern void _B_main();
 char *_bal_stack_guard;
 
-typedef char *TaggedPtr;
+#ifdef __clang__
+#define NODEREF __attribute__((noderef))
+#else
+#define NODEREF /* as nothing */
+#endif
+
+typedef char NODEREF *TaggedPtr;
 
 typedef struct {
     int64_t length;
