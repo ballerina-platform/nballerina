@@ -2,7 +2,8 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 
 final [string, string[], string, readonly & t:SemType[], t:SemType][] libFunctions = [
-    ["ballerina", ["io"], "println", [t:TOP], t:NIL]
+    ["ballerina", ["io"], "println", [t:TOP], t:NIL],
+    ["ballerina", ["lang", "array"], "length", [t:LIST], t:INT]
 ];
 
 function getLibFunction(bir:ModuleId id, string name) returns bir:FunctionSignature? {
@@ -13,4 +14,3 @@ function getLibFunction(bir:ModuleId id, string name) returns bir:FunctionSignat
     }
     return ();
 }
-

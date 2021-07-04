@@ -83,6 +83,11 @@ static void printTagged(FILE *fp, TaggedPtr p, int style) {
             abort();
     }
 }
+ 
+int64_t _Barray__length(TaggedPtr p) {
+    ListPtr lp = taggedToList(p);
+    return lp->length;
+}
 
 void _Bio__println(TaggedPtr p) {
 #ifdef STACK_DEBUG

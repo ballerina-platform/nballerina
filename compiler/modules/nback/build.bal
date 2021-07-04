@@ -935,11 +935,13 @@ function mangleRuntimeSymbol(string name) returns string {
     return "_bal_" + name;
 }
 
-// This is jsut enough to get us started.
+// This is just enough to get us started.
 // C++ starts mangled names with `_Z` (why `Z`?),
 // so I'm starting Ballerina names with `_B`.
 function mangleExternalSymbol(bir:ExternalSymbol symbol) returns string {
-    return "_B" + symbol.module.names[0] + "__" + symbol.identifier;
+    string[] names = symbol.module.names;
+    // use the last segment of the module name to distinguish between lang.* modules
+    return "_B" + names[names.length() - 1] + "__" + symbol.identifier;
 }
 
 function mangleInternalSymbol(bir:ModuleId modId, bir:InternalSymbol symbol) returns string {

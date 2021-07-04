@@ -418,9 +418,14 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
         var { value } => {
             return [value, bb];
         }
-        // Function call
-        var callExpr if callExpr is FunctionCallExpr => {
-            return codeGenFunctionCall(cx, bb, scope, callExpr);
+        // Function/method call
+        var callExpr if callExpr is (FunctionCallExpr|MethodCallExpr) => {
+            if callExpr is FunctionCallExpr {
+                return codeGenFunctionCall(cx, bb, scope, callExpr);
+            }
+            else {
+                return codeGenMethodCall(cx, bb, scope, callExpr);
+            }
         }
         // Member access E[i]
         var { container, index, pos } => {
@@ -525,6 +530,44 @@ function genImportedFunctionRef(CodeGenContext cx, Scope? scope, string prefix, 
     }
 }
 
+function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, MethodCallExpr expr) returns CodeGenError|[bir:Register, bir:BasicBlock] {
+    var [target, curBlock] = check codeGenExpr(cx, bb, scope, expr.target);
+    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName);
+    bir:Operand[] args = [target];
+    foreach var argExpr in expr.args {
+        var [arg, nextBlock] = check codeGenExpr(cx, curBlock, scope, argExpr);
+        curBlock = nextBlock;
+        args.push(arg);
+    }
+    bir:Register result = cx.createRegister(func.signature.returnType);
+    bir:CallInsn call = {
+        func,
+        result,
+        args: args.cloneReadOnly(),
+        position: expr.pos
+    };
+    curBlock.insns.push(call);
+    return [result, curBlock];
+}
+
+type LangLibModuleName "int"|"boolean"|"string"|"array";
+
+function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName) returns bir:FunctionRef|CodeGenError {
+    TypedOperand? t = typedOperand(target);
+    if !(t is ()) && t[0] is LangLibModuleName {
+        bir:ModuleId moduleId = { organization: "ballerina", names: ["lang", t[0]] };
+        bir:FunctionSignature? signature = getLibFunction(moduleId, methodName);
+        if signature is () {
+            return err:unimplemented(`unrecognized lang library function ${t[0] + ":" + methodName}`);
+        }
+        else {
+            bir:ExternalSymbol symbol = { module: moduleId, identifier: methodName };
+            return { symbol, signature }; 
+        }
+    }
+    return err:unimplemented(`cannot resolve ${methodName} to lang lib function`);
+}
+
 function mustLookup(CodeGenContext cx, string name, Scope? scope, boolean forAssign = false) returns bir:Register|CodeGenError {
     Scope? binding = lookup(name, scope);
     if binding is () {
@@ -561,7 +604,7 @@ type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 
 type TypedOperandPair BooleanOperandPair|IntOperandPair|NilOperandPair;
 
-type TypedOperand readonly & (["int", bir:IntOperand] | ["boolean", bir:BooleanOperand] | ["nil", NilOperand]);
+type TypedOperand readonly & (["array", bir:Register]|["int", bir:IntOperand] | ["boolean", bir:BooleanOperand] | ["nil", NilOperand]);
 
 function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperandPair? {
     TypedOperand? l = typedOperand(lhs);
@@ -588,6 +631,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         }
         else if operand.semType === t:NIL {
             return ["nil", operand];
+        }
+        else if t:isSubtypeSimple(operand.semType, t:LIST) {
+            return ["array", operand];
         }
     }
     else if operand is int {
