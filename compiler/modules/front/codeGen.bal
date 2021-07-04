@@ -269,6 +269,9 @@ function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
 
 function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, VarDeclStmt stmt) returns CodeGenError|[bir:BasicBlock?, Scope?] {
     var { varName, initExpr, semType } = stmt;
+    if lookup(varName, scope) !== () {
+        return cx.semanticErr(`duplicate declaration of ${varName}`);
+    }
     if semType is () {
         panic error("type was not normalized");
     }
