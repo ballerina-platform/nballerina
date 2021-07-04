@@ -389,7 +389,6 @@ public class Builder {
         self.currentBlock = block;
     }
 
-    // FIXME: remove align
     // Corresponds to LLVMBuildAlloca
     public function alloca(IntegralType ty, Alignment? align = (), string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
@@ -399,7 +398,6 @@ public class Builder {
         return new PointerValue(ptrTy, reg);
     }
 
-    // FIXME: remove align
     // Corresponds to LLVMBuildLoad
     public function load(PointerValue ptr, Alignment? align = (), string? name=()) returns Value {
         BasicBlock bb = self.bb();
@@ -409,7 +407,6 @@ public class Builder {
         return new Value(ty, reg);
     }
 
-    // FIXME: remove align
     // Corresponds to LLVMBuildStore
     public function store(Value val, PointerValue ptr, Alignment? align = ()) {
         Type ty = ptr.ty.pointsTo;

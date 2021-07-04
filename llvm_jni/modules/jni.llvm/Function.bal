@@ -39,7 +39,7 @@ public distinct class Function {
     handle LLVMFunction;
     FunctionType fnType;
     Context context;
-    public function init(handle llvmFunction, FunctionType fnType, Context context) {
+    function init(handle llvmFunction, FunctionType fnType, Context context) {
         self.LLVMFunction = llvmFunction;
         set_function_call_convention(llvmFunction, 0);
         self.fnType = fnType;

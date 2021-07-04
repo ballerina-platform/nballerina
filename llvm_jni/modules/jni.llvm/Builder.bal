@@ -51,31 +51,37 @@ public distinct class Builder {
         self.LLVMBuilder = create_llvm_builderRef(context.LLVMContext);
     }
 
+    function setAlignment(Value val, Alignment align) {
+        llvm_set_alignment(val.LLVMValueRef, align);
+    }
+
     public function positionAtEnd(BasicBlock bb) {
         llvm_position_at_end(self.LLVMBuilder, bb.LLVMBasicBlockRef);
     }
 
     public function alloca(IntegralType ty, Alignment? align = (), string? name = ()) returns PointerValue {
-        if align != () {
-            panic error("setting alignment not supported");
-        }
         string regName = self.extractName(name);
-        return new (llvm_alloca(self.LLVMBuilder, typeToLLVMType(ty), java:fromString(regName)));
+        PointerValue val = new (llvm_alloca(self.LLVMBuilder, typeToLLVMType(ty), java:fromString(regName)));
+        if align != () {
+            self.setAlignment(val, align);
+        }
+        return val;
     }
 
     public function load(PointerValue ptr, Alignment? align = (), string? name = ()) returns Value {
-        if align != () {
-            panic error("setting alignment not supported");
-        }
         string regName = self.extractName(name);
-        return new (llvm_load(self.LLVMBuilder, ptr.LLVMValueRef, java:fromString(regName)));
+        Value val = new (llvm_load(self.LLVMBuilder, ptr.LLVMValueRef, java:fromString(regName)));
+        if align != () {
+            self.setAlignment(val, align);
+        }
+        return val;
     }
 
     public function store(Value val, PointerValue ptr, Alignment? align = ()) {
+        Value tmpVal = new (llvm_store(self.LLVMBuilder, val.LLVMValueRef, ptr.LLVMValueRef));
         if align != () {
-            panic error("setting alignment not supported");
+            self.setAlignment(tmpVal, align);
         }
-        _ = llvm_store(self.LLVMBuilder, val.LLVMValueRef, ptr.LLVMValueRef);
     }
 
     public function binaryInt(BinaryIntOp op, Value lhs, Value rhs, string? name = ()) returns Value {
@@ -363,4 +369,10 @@ function llvm_inbounds_gep(handle builder, handle pointer, handle indices, int n
     name: "LLVMBuildInBoundsGEP",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
+} external;
+
+function llvm_set_alignment(handle valueRef, int bytes) = @java:Method {
+    name: "LLVMSetAlignment",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "int"]
 } external;
