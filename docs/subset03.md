@@ -31,7 +31,6 @@
 * Langlib functions:
   * `array:length`
   * `array:push`
-  * `array:setLength`
 * The only imported function that can be called is `io:println` and it can only be called with a single argument.
 
 ## Grammar
@@ -182,7 +181,6 @@ Method call syntax can be used for calling the following langlib functions:
 
 * `array:length`
 * `array:push`
-* `array:setLength`
 
 The following restrictions apply to imported modules:
 
