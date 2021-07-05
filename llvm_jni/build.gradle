@@ -82,7 +82,7 @@ normalizeExpectedTestCases.dependsOn(compileExpectedTestCases)
 
 task copyCompatibility_test(type: Copy) {
         from 'compatibility_test'
-        into tmpBuildDir
+        into "${tmpBuildDir}/compatibility_test"
 }
 copyCompatibility_test.dependsOn(testBuild)
 
@@ -102,7 +102,7 @@ task compareTestCases(type: Exec) {
         workingDir "${tmpBuildDir}/compatibility_test"
         commandLine './compare.sh'
 }
-compareTestCases.dependsOn(normalizeActualTestCases)
+compareTestCases.dependsOn(normalizeActualTestCases, normalizeExpectedTestCases)
 
 task cleanTestBuild(type: Delete) {
         delete tmpBuildDir
