@@ -39,3 +39,6 @@ target
 
 # Default output from C compiler
 a.out
+
+# Output from jni test build
+testbuild
