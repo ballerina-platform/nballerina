@@ -13,7 +13,7 @@ function testIntTypeSerialization() {
 function testPointerTypeSerialization() {
     IntType[] intTypes = ["i64", "i1"];
     foreach var ty in intTypes {
-        PointerType pTy = {pointsTo: ty};
+        PointerType pTy = pointerType(ty);
         string out = typeToString(pTy);
         test:assertEquals(out, string `${<string>ty}*`);
     }

@@ -1,13 +1,5 @@
 import ballerina/jballerina.java;
 
-public type BinaryIntOp BinaryArithmeticOp|BinaryBitwiseOp;
-
-public type BinaryArithmeticOp "add"|"mul"|"sub"|"sdiv"|"srem";
-
-public type BinaryBitwiseOp "xor"|"or"|"and";
-
-public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sle";
-
 function predicateToInt(IntPredicate predicate) returns int {
     match predicate {
         "eq" => {

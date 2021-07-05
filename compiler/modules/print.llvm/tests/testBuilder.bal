@@ -9,7 +9,7 @@ function builderStoreTypeCheck() {
     Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
     Value s = new ("i64", "s");
-    PointerValue d = new ({pointsTo: "i1"}, "d");
+    PointerValue d = new (pointerType("i1"), "d");
     error? e = trap builder.store(s, d);
     if !(e is error) {
         test:assertFail("invalid store allowed");

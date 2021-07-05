@@ -2,14 +2,6 @@ import ballerina/jballerina.java;
 import ballerina/jballerina.java.arrays as jarrays;
 import ballerina/io;
 
-public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
-
-public type GeneralIntrinsicName "ptrmask.p0i8.i64";
-
-public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsicName;
-
-public type TargetTriple string;
-
 function intrinsicNameToId(IntrinsicFunctionName name) returns int {
     string str_name = "llvm." + name;
     return jLLVMLookupIntrinsicID(java:fromString(str_name), str_name.length());

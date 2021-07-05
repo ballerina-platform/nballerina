@@ -1,45 +1,7 @@
 import ballerina/jballerina.java;
 
-public type IntType "i64"|"i32"|"i8"|"i1";
 
-public type Alignment 1|2|4|8|16;
-
-public type PointerType readonly & record {|
-    Type pointsTo;
-    int addressSpace;
-|};
-
-public type IntegralType IntType|PointerType;
-
-public function pointerType(Type ty, int addressSpace = 0) returns PointerType {
-    return {pointsTo: ty, addressSpace};
-}
-
-public type ArrayType readonly & record {|
-    Type elementType;
-    int elementCount;
-|};
-
-public function arrayType(Type ty, int elementCount) returns ArrayType {
-    return {elementType: ty, elementCount: elementCount};
-}
-
-// Corresponds to llvm::StructType
-public type StructType readonly & record {
-    Type[] elementTypes;
-};
-
-public function structType(Type[] elementTypes) returns StructType {
-    return {elementTypes: elementTypes.cloneReadOnly()};
-}
-
-function getTypeAtIndex(StructType ty, int index) returns Type {
-    return ty.elementTypes[index];
-}
-
-public type Type IntType|PointerType|StructType|ArrayType|"void";
-
-function typeToLLVMType(Type ty) returns handle {
+function typeToLLVMType(RetType ty) returns handle {
     if ty is PointerType {
         handle baseType = typeToLLVMType(ty.pointsTo);
         return jLLVMPointerType(baseType, ty.addressSpace);

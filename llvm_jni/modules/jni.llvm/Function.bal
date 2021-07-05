@@ -1,10 +1,5 @@
 import ballerina/jballerina.java;
 
-public type FunctionType readonly & record {|
-    Type returnType;
-    Type[] paramTypes;
-|};
-
 function toLLVmFunctionType(FunctionType fnType, Context context) returns handle {
     int paramCount = fnType.paramTypes.length();
     PointerPointer paramType = new (paramCount);
@@ -19,8 +14,6 @@ public type FunctionDefn Function;
 
 public type FunctionDecl Function;
 
-public type Linkage "internal"|"external";
-
 function linkageToInt(Linkage linkage) returns int {
     match linkage {
         "external" => {
@@ -32,8 +25,6 @@ function linkageToInt(Linkage linkage) returns int {
     }
     panic error(string `${<string>linkage} not implemented`);
 }
-
-public type EnumAttribute "noreturn"|"cold"|"nounwind"|"readnone"|"speculatable"|"willreturn"; //FIXME: add others
 
 public distinct class Function {
     handle LLVMFunction;
