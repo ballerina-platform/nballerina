@@ -19,6 +19,7 @@ dependencies {
 String platformLibs = 'target/platform-libs'
 String tmpBuildDir = '../testbuild'
 String compilerDir = '../compiler'
+String testDir = '../test'
 
 configurations.implementation.setCanBeResolved(true) 
 configurations.api.setCanBeResolved(true)
@@ -61,6 +62,47 @@ task testBuild(type: Exec) {
         commandLine 'bal', 'build'
 }
 testBuild.dependsOn(copyNbal, copyJNILLVM, copyLocalDependencies, copyBalConfig)
+
+task buildNBalCompilerBase(type: Exec) {
+        workingDir compilerDir
+        commandLine 'bal', 'build', '--skip-tests'
+}
+
+task compileExpectedTestCases(type: Exec) {
+        workingDir testDir
+        commandLine './compile.sh'
+}
+compileExpectedTestCases.dependsOn(buildNBalCompilerBase)
+
+task normalizeExpectedTestCases(type: Exec) {
+        workingDir testDir
+        commandLine './normalize.sh'
+}
+normalizeExpectedTestCases.dependsOn(compileExpectedTestCases)
+
+task copyCompatibility_test(type: Copy) {
+        from 'compatibility_test'
+        into tmpBuildDir
+}
+copyCompatibility_test.dependsOn(testBuild)
+
+task compileActualTestCases(type: Exec) {
+        workingDir "${tmpBuildDir}/compatibility_test"
+        commandLine './compile-jni.sh'
+}
+compileActualTestCases.dependsOn(copyCompatibility_test)
+
+task normalizeActualTestCases(type: Exec) {
+        workingDir "${tmpBuildDir}/compatibility_test"
+        commandLine './normalize.sh'
+}
+normalizeActualTestCases.dependsOn(compileActualTestCases)
+
+task compareTestCases(type: Exec) {
+        workingDir "${tmpBuildDir}/compatibility_test"
+        commandLine './compare.sh'
+}
+compareTestCases.dependsOn(normalizeActualTestCases)
 
 task cleanTestBuild(type: Delete) {
         delete tmpBuildDir

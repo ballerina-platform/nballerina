@@ -12,6 +12,9 @@ This will create new ballerina package in `testbuild` directory the root directo
 3. Run `bal build` on the new ballerina package
 
 To clean this build either delete the `testbuild` directory or run `./gradlew cleanTestBuild`.
+
+## Compare llvm ir generated against print.llvm
+Run `./gradlew compareTestCases`
 # Sample code
 ```
 import llvm_jni.llvm;
