@@ -66,7 +66,8 @@ function stmtToWords(Word[] w, Stmt stmt) {
         w.push(";");
     }
     else if stmt is AssignStmt {
-        w.push(stmt.varName, "=");
+        exprToWords(w, stmt.lValue);
+        w.push("=");
         exprToWords(w, stmt.expr);
         w.push(";");
     }

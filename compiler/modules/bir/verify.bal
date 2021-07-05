@@ -89,6 +89,9 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is ListGetInsn {
         check verifyListGet(vc, insn);
     }
+    else if insn is ListSetInsn {
+        check verifyListSet(vc, insn);
+    }
 }
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
@@ -127,6 +130,14 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
     if insn.result.semType !== t:ANY {
         return vc.err("bad BIR: only any supported as list type");
     }  
+}
+
+function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic? {
+    check verifyOperandInt(vc, insn.name, insn.index);
+    if !vc.isSubtype(insn.list.semType, t:LIST) {
+        return vc.err("list set applied to non-list");
+    }
+    // XXX also check type compatibility of operand and list type
 }
 
 function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {

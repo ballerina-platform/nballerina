@@ -285,11 +285,30 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
 }
 
 function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, AssignStmt stmt) returns CodeGenError|bir:BasicBlock? {
-    var { varName, expr } = stmt;
+    var { lValue, expr } = stmt;
+    if lValue is VarRefExpr {
+        return codeGenAssignToVar(cx, startBlock, scope, lValue.varName, expr);
+    }
+    else {
+        return codeGenAssignToMember(cx, startBlock, scope, lValue, expr);
+    }
+}
+
+function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, string varName, Expr expr) returns CodeGenError|bir:BasicBlock? {
     bir:Register reg = check mustLookup(cx, varName, scope, forAssign=true);
     var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, expr);
-    bir:AssignInsn load = { result: reg, operand };
-    nextBlock.insns.push(load);
+    bir:AssignInsn assign = { result: reg, operand };
+    nextBlock.insns.push(assign);
+    return nextBlock;
+}
+
+function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, MemberAccessLExpr lValue, Expr expr) returns CodeGenError|bir:BasicBlock? {
+    bir:Register reg = check mustLookup(cx, lValue.container.varName, scope, forAssign=true);
+    var [index, nextBlock] = check codeGenExprForInt(cx, startBlock, scope, lValue.index);
+    bir:Operand operand;
+    [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, expr);
+    bir:ListSetInsn set = { list: reg, index, operand, position: lValue.pos };
+    nextBlock.insns.push(set);
     return nextBlock;
 }
 

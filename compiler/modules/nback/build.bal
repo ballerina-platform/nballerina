@@ -76,15 +76,36 @@ const PANIC_INDEX_OUT_OF_BOUNDS = 5;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc";
+type RuntimeFunctionName "panic"|"alloc"|"list_set";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
     llvm:FunctionType ty;
 |};
 
-final RuntimeFunction panicFunction = { name: "panic", ty: { returnType: "void", paramTypes: ["i64"] } };
-final RuntimeFunction allocFunction = { name: "alloc", ty: { returnType: llvm:pointerType("i8"), paramTypes: ["i64"] }} ;
+final RuntimeFunction panicFunction = {
+    name: "panic",
+    ty: {
+        returnType: "void",
+        paramTypes: ["i64"]
+    }
+};
+
+final RuntimeFunction allocFunction = {
+    name: "alloc",
+    ty: {
+        returnType: llvm:pointerType("i8"),
+        paramTypes: ["i64"]
+    }
+};
+
+final RuntimeFunction listSetFunction = {
+    name: "list_set",
+    ty: {
+        returnType: REPR_ERROR.llvm,
+        paramTypes: [LLVM_TAGGED_PTR, "i64", LLVM_TAGGED_PTR]
+    }
+};
 
 final bir:ModuleId runtimeModule = {
     organization: "ballerinai",
@@ -229,7 +250,7 @@ function buildPrologue(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
     builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(stackGuard)),
                    overflowBlock, firstBlock);
     builder.positionAtEnd(overflowBlock);
-    buildPanic(builder, scaffold, buildPanicError(PANIC_STACK_OVERFLOW, pos));
+    buildPanic(builder, scaffold, buildConstPanicError(PANIC_STACK_OVERFLOW, pos));
     builder.positionAtEnd(firstBlock);
     scaffold.saveParams(builder);
 }
@@ -282,6 +303,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         }
         else if insn is bir:ListGetInsn {
             check buildListGet(builder, scaffold, insn);
+        }
+        else if insn is bir:ListSetInsn {
+            check buildListSet(builder, scaffold, insn);
         }
         else if insn is bir:BranchInsn {
             check buildBranch(builder, scaffold, insn);
@@ -405,7 +429,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
                    continueBlock,
                    outOfBoundsBlock);
     builder.positionAtEnd(outOfBoundsBlock);
-    builder.store(buildPanicError(PANIC_INDEX_OUT_OF_BOUNDS, insn.position), scaffold.panicAddress());
+    builder.store(buildConstPanicError(PANIC_INDEX_OUT_OF_BOUNDS, insn.position), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
     // array is a pointer to the array
@@ -416,6 +440,22 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
                                                      [llvm:constInt(LLVM_INT, 0), index], "inbounds"),
                                                      ALIGN_HEAP),
                   scaffold.address(insn.result));
+}
+
+function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
+    llvm:Value? err = builder.call(buildRuntimeFunctionDecl(scaffold, listSetFunction),
+                                   [builder.load(scaffold.address(insn.list)),
+                                    buildInt(builder, scaffold, insn.index),
+                                    check buildRepr(builder, scaffold, insn.operand, REPR_ANY)]);
+    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock errorBlock = scaffold.addBasicBlock();
+    builder.condBr(builder.iCmp("eq", <llvm:Value>err, llvm:constInt("i64", 0)),
+                   continueBlock,
+                   errorBlock);
+    builder.positionAtEnd(errorBlock);
+    builder.store(buildPanicError(builder, <llvm:Value>err, insn.position), scaffold.panicAddress());
+    builder.br(scaffold.getOnPanic());
+    builder.positionAtEnd(continueBlock);
 }
 
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
@@ -470,7 +510,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
         builder.condBr(builder.extractValue(resultWithOverflow, 1), overflowBlock, continueBlock);
         builder.positionAtEnd(overflowBlock);
-        builder.store(buildPanicError(PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
+        builder.store(buildConstPanicError(PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
         builder.br(scaffold.getOnPanic());
         builder.positionAtEnd(continueBlock);
         result = builder.extractValue(resultWithOverflow, 0);
@@ -480,7 +520,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
         builder.condBr(builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, 0)), zeroDivisorBlock, continueBlock);
         builder.positionAtEnd(zeroDivisorBlock);
-        builder.store(buildPanicError(PANIC_DIVIDE_BY_ZERO, insn.position), scaffold.panicAddress());
+        builder.store(buildConstPanicError(PANIC_DIVIDE_BY_ZERO, insn.position), scaffold.panicAddress());
         builder.br(scaffold.getOnPanic());
         builder.positionAtEnd(continueBlock);
         continueBlock = scaffold.addBasicBlock();
@@ -494,7 +534,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:BinaryIntOp op;
         if insn.op == "/" {
             op = "sdiv";
-            builder.store(buildPanicError(PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
+            builder.store(buildConstPanicError(PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
             builder.br(scaffold.getOnPanic());
         }
         else {
@@ -665,14 +705,18 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
         return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
     }
     builder.positionAtEnd(castFailBlock);
-    builder.store(buildPanicError(PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
+    builder.store(buildConstPanicError(PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
 }
 
-function buildPanicError(PanicIndex panicIndex, err:Position pos) returns llvm:Value {
+function buildConstPanicError(PanicIndex panicIndex, err:Position pos) returns llvm:Value {
     // JBUG cast
     return llvm:constInt(LLVM_INT, <int>panicIndex | (pos.lineNumber << 8));
+}
+
+function buildPanicError(llvm:Builder builder, llvm:Value panicIndex, err:Position pos) returns llvm:Value {
+    return builder.binaryInt("or", panicIndex, llvm:constInt(LLVM_INT, pos.lineNumber << 8));
 }
 
 function buildIntNegate(llvm:Builder builder, Scaffold scaffold, bir:IntNegateInsn insn) {

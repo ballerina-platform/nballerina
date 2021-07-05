@@ -12,7 +12,6 @@ type ModuleLevelDef TypeDef|FunctionDef;
 
 type Visibility "public"?;
 
-
 type ImportDecl record {|
     string org;
     string module;
@@ -36,9 +35,12 @@ type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|V
 type ConstructorExpr ListConstructorExpr;
 
 type AssignStmt record {|
-    string varName;
+    LExpr lValue;
     Expr expr;
 |};
+
+// L-value expression
+type LExpr VarRefExpr|MemberAccessLExpr;
 
 type ReturnStmt record {|
     Expr returnExpr;
@@ -135,6 +137,13 @@ type ListConstructorExpr record {|
 
 type MemberAccessExpr record {|
     Expr container;
+    Expr index;
+    err:Position pos;
+|};
+
+// JBUG gets a bad, sad if this uses *MemberAccessExpr and overrides container
+type MemberAccessLExpr record {|
+    VarRefExpr container;
     Expr index;
     err:Position pos;
 |};

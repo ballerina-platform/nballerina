@@ -156,6 +156,7 @@ public enum InsnName {
     INSN_BOOLEAN_NOT,
     INSN_LIST_CONSTRUCT_RW,
     INSN_LIST_GET,
+    INSN_LIST_SET,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -182,7 +183,7 @@ public type InsnBase record {
 public type Insn 
     IntArithmeticBinaryInsn|IntBitwiseBinaryInsn|IntNegateInsn|IntCompareInsn
     |BooleanNotInsn|BooleanCompareInsn|EqualityInsn
-    |ListConstructInsn|ListGetInsn
+    |ListConstructInsn|ListGetInsn|ListSetInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
@@ -274,6 +275,17 @@ public type ListGetInsn readonly & record {|
     Register result;
     Register list;
     IntOperand operand;
+    err:Position position;
+|};
+
+# Sets a member of a list at a specified index.
+# This is a PPI (since the index may be out of bounds).
+public type ListSetInsn readonly & record {|
+    INSN_LIST_SET name = INSN_LIST_SET;
+    Register list;
+    IntOperand index;
+    // operand is the value to store in the list
+    Operand operand;
     err:Position position;
 |};
 
@@ -474,7 +486,8 @@ final readonly & map<true> PPI_INSNS = {
     [INSN_INT_ARITHMETIC_BINARY]: true,
     [INSN_TYPE_CAST]: true,
     [INSN_INT_NEGATE]: true,
-    [INSN_LIST_GET]: true
+    [INSN_LIST_GET]: true,
+    [INSN_LIST_SET]: true
 };
 
 public function isInsnPotentiallyPanicking(Insn insn) returns boolean {

@@ -60,7 +60,8 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     if cur == "=" {
-        return finishAssignStmt(tok, identifier, pos);
+        VarRefExpr lValue = { varName: identifier };
+        return finishAssignStmt(tok, lValue);
     }
     else if cur == "(" {
         check tok.advance();
@@ -74,7 +75,17 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
     }
     else if cur == "[" {
         VarRefExpr varRef = { varName: identifier };
-        Expr expr = check finishPrimaryExpr(tok, varRef);
+        err:Position bracketPos = tok.currentPos();
+        check tok.advance();
+        Expr index = check parseInnerExpr(tok);
+        check tok.expect("]");
+        cur = tok.current();
+        if cur == "=" {
+            MemberAccessLExpr lValue = { container: varRef, index, pos: bracketPos };
+            return finishAssignStmt(tok, lValue);
+        }
+        MemberAccessExpr memberAccess = { container: varRef, index, pos: bracketPos };
+        Expr expr = check finishPrimaryExpr(tok, memberAccess);
         if expr is MethodCallExpr {
             check tok.expect(";");
             return expr;
@@ -121,13 +132,12 @@ function finishCallStmt(Tokenizer tok, CallStmt expr) returns Stmt|err:Syntax {
     return stmt;
 }
 
-function finishAssignStmt(Tokenizer tok, string identifier, err:Position pos) returns AssignStmt|err:Syntax {
+function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Syntax {
     check tok.advance();
-    string varName = identifier;
     Expr expr = check parseExpr(tok);
-    AssignStmt stmt = { varName, expr };
+    AssignStmt stmt = { lValue, expr };
     check tok.expect(";");
-    return stmt;    
+    return stmt; 
 }
 
 function parseVarDeclStmt(Tokenizer tok) returns VarDeclStmt|err:Syntax {
