@@ -45,6 +45,12 @@ task copyJNILLVM(type: Copy) {
 }
 copyJNILLVM.dependsOn(copyNbal, cleanNbackLLVM)
 
+task copyLLVMCommon(type: Copy) {
+        from "${compilerDir}/modules/print.llvm/common.bal"
+        into "${tmpBuildDir}/modules/jni.llvm"
+}
+copyLLVMCommon.mustRunAfter(copyJNILLVM)
+
 task copyLocalDependencies(type: Copy) {
         from platformLibs
         into "${tmpBuildDir}/target/platform-libs"
