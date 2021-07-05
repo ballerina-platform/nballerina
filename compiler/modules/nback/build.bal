@@ -76,10 +76,15 @@ const PANIC_INDEX_OUT_OF_BOUNDS = 5;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-final llvm:FunctionType panicFunctionType = { returnType: "void", paramTypes: ["i64"] };
-final llvm:FunctionType allocFunctionType = { returnType: llvm:pointerType("i8"), paramTypes: ["i64"] };
-
 type RuntimeFunctionName "panic"|"alloc";
+
+type RuntimeFunction readonly & record {|
+    RuntimeFunctionName name;
+    llvm:FunctionType ty;
+|};
+
+final RuntimeFunction panicFunction = { name: "panic", ty: { returnType: "void", paramTypes: ["i64"] } };
+final RuntimeFunction allocFunction = { name: "alloc", ty: { returnType: llvm:pointerType("i8"), paramTypes: ["i64"] }} ;
 
 final bir:ModuleId runtimeModule = {
     organization: "ballerinai",
@@ -317,7 +322,7 @@ function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalR
 }
 
 function buildPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicCode) {
-    _ = builder.call(buildRuntimeFunctionDecl(scaffold, "panic", panicFunctionType), [panicCode]);
+    _ = builder.call(buildRuntimeFunctionDecl(scaffold, panicFunction), [panicCode]);
     builder.unreachable();
 }
 
@@ -437,15 +442,15 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
     }
 }
 
-function buildRuntimeFunctionDecl(Scaffold scaffold, RuntimeFunctionName name, llvm:FunctionType ty) returns llvm:FunctionDecl {
-    bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: name };
+function buildRuntimeFunctionDecl(Scaffold scaffold, RuntimeFunction rf) returns llvm:FunctionDecl {
+    bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: rf.name };
     llvm:FunctionDecl? decl = scaffold.getImportedFunction(symbol);
     if !(decl is ()) {
         return decl;
     }
     else {
         llvm:Module mod = scaffold.getModule();
-        llvm:FunctionDecl d = mod.addFunctionDecl(mangleRuntimeSymbol(name), ty);
+        llvm:FunctionDecl d = mod.addFunctionDecl(mangleRuntimeSymbol(rf.name), rf.ty);
         scaffold.addImportedFunction(symbol, d);
         return d;
     } 
@@ -737,8 +742,8 @@ function buildTypedAlloc(llvm:Builder builder, Scaffold scaffold, llvm:Type ty) 
 }
 
 function buildUntypedAlloc(llvm:Builder builder, Scaffold scaffold, llvm:Type ty) returns llvm:PointerValue {
-    llvm:Function allocFunction = buildRuntimeFunctionDecl(scaffold, "alloc", allocFunctionType);
-    return <llvm:PointerValue>builder.call(allocFunction, [llvm:constInt(LLVM_INT, typeSize(ty))]);
+    return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, allocFunction),
+                                           [llvm:constInt(LLVM_INT, typeSize(ty))]);
 }
 
 // XXX this should go in llvm module, because it needs to know about alignment
