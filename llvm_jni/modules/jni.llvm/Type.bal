@@ -42,32 +42,32 @@ public type Type IntType|PointerType|StructType|ArrayType|"void";
 function typeToLLVMType(Type ty) returns handle {
     if ty is PointerType {
         handle baseType = typeToLLVMType(ty.pointsTo);
-        return create_llvm_pointer_type(baseType, ty.addressSpace);
+        return jLLVMPointerType(baseType, ty.addressSpace);
     }
     if ty is StructType {
         PointerPointer typeArr = PointerPointerFromTypes(ty.elementTypes);
         int elementCount = ty.elementTypes.length();
-        return create_llvm_struct_type(typeArr.jObject, elementCount, 0);
+        return jLLVMStructType(typeArr.jObject, elementCount, 0);
     }
     if ty is ArrayType {
         handle elementType = typeToLLVMType(ty.elementType);
-        return create_llvm_array_type(elementType, ty.elementCount);
+        return jLLVMArrayType(elementType, ty.elementCount);
     }
     match ty {
         "void" => {
-            return create_llvm_void();
+            return jLLVMVoidType();
         }
         "i1" => {
-            return create_llvm_i1();
+            return jLLVMInt1Type();
         }
         "i8" => {
-            return create_llvm_i8();
+            return jLLVMInt8Type();
         }
         "i32" => {
-            return create_llvm_i32();
+            return jLLVMInt32Type();
         }
         "i64" => {
-            return create_llvm_i64();
+            return jLLVMInt64Type();
         }
         _ => {
             panic error(string `Type: ${<string>ty} is not implemented`);
@@ -76,12 +76,12 @@ function typeToLLVMType(Type ty) returns handle {
 }
 
 public function constInt(Type ty, int value) returns Value {
-    Value val = new (create_llvm_const_i64(typeToLLVMType(ty), value, 0));
+    Value val = new (jLLVMConstInt(typeToLLVMType(ty), value, 0));
     return val;
 }
 
 public function constNull(PointerType ty) returns PointerValue {
-    return new (create_llvm_const_pointer_null(typeToLLVMType(ty)));
+    return new (jLLVMConstPointerNull(typeToLLVMType(ty)));
 }
 
 public readonly distinct class Value {
@@ -100,61 +100,61 @@ public readonly class PointerValue {
     }
 }
 
-function create_llvm_void() returns handle = @java:Method {
+function jLLVMVoidType() returns handle = @java:Method {
     name: "LLVMVoidType",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: []
 } external;
 
-function create_llvm_i64() returns handle = @java:Method {
+function jLLVMInt64Type() returns handle = @java:Method {
     name: "LLVMInt64Type",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: []
 } external;
 
-function create_llvm_i32() returns handle = @java:Method {
+function jLLVMInt32Type() returns handle = @java:Method {
     name: "LLVMInt32Type",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: []
 } external;
 
-function create_llvm_i8() returns handle = @java:Method {
+function jLLVMInt8Type() returns handle = @java:Method {
     name: "LLVMInt8Type",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: []
 } external;
 
-function create_llvm_i1() returns handle = @java:Method {
+function jLLVMInt1Type() returns handle = @java:Method {
     name: "LLVMInt1Type",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: []
 } external;
 
-function create_llvm_const_i64(handle ty, int value, int signExtend) returns handle = @java:Method {
+function jLLVMConstInt(handle ty, int value, int signExtend) returns handle = @java:Method {
     name: "LLVMConstInt",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "long", "int"]
 } external;
 
-function create_llvm_const_pointer_null(handle ty) returns handle = @java:Method {
+function jLLVMConstPointerNull(handle ty) returns handle = @java:Method {
     name: "LLVMConstPointerNull",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef"]
 } external;
 
-function create_llvm_pointer_type(handle ty, int addressSpace) returns handle = @java:Method {
+function jLLVMPointerType(handle ty, int addressSpace) returns handle = @java:Method {
     name: "LLVMPointerType",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "int"]
 } external;
 
-function create_llvm_array_type(handle elementType, int elementCount) returns handle = @java:Method {
+function jLLVMArrayType(handle elementType, int elementCount) returns handle = @java:Method {
     name: "LLVMArrayType",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "int"]
 } external;
 
-function create_llvm_struct_type(handle elementTypes, int elementCount, int packed) returns handle = @java:Method {
+function jLLVMStructType(handle elementTypes, int elementCount, int packed) returns handle = @java:Method {
     name: "LLVMStructType",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.javacpp.PointerPointer", "int", "int"]

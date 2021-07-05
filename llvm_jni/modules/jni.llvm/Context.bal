@@ -3,7 +3,7 @@ import ballerina/jballerina.java;
 public distinct class Context {
     handle LLVMContext;
     public function init() {
-        self.LLVMContext = create_llvm_context();
+        self.LLVMContext = LLVMContextCreate();
     }
 
     public function createBuilder() returns Builder {
@@ -16,12 +16,7 @@ public distinct class Context {
     }
 }
 
-function create_llvm_context() returns handle = @java:Method {
+function LLVMContextCreate() returns handle = @java:Method {
     name: "LLVMContextCreate",
-    'class: "org.bytedeco.llvm.global.LLVM"
-} external;
-
-function llvm_get_global_pass_registry() returns handle = @java:Method {
-    name: "LLVMGetGlobalPassRegistry",
     'class: "org.bytedeco.llvm.global.LLVM"
 } external;
