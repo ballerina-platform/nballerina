@@ -258,7 +258,7 @@ function jLLVMBuildStore(handle builder, handle val, handle ptr) returns handle 
 } external;
 
 function jLLVMBuildNSWAdd(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
-    name: "LLVMBuildFAdd",
+    name: "LLVMBuildNSWAdd",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;
