@@ -28,9 +28,9 @@ type FunctionDef record {|
     bir:FunctionSignature? signature = ();
 |};
 
-type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|BreakStmt|ContinueStmt;
+type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
 type CallStmt FunctionCallExpr|MethodCallExpr;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
+type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr|RangeExpr;
 
 type ConstructorExpr ListConstructorExpr;
 
@@ -57,6 +57,15 @@ type WhileStmt record {|
     Stmt[] body;
 |};
 
+type ForeachStmt record {|
+    InlineTypeDesc td;
+    string varName;
+    Expr iterable;
+    Stmt[] body;
+    // See comment in VarDeclStmt
+    t:SemType? semType = ();
+|};
+
 type BreakStmt "break";
 
 type ContinueStmt "continue";
@@ -77,6 +86,7 @@ type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
 type BinaryBitwiseOp "|" | "^" | "&";
 type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
+type RangeOp  "..." | "..<";
 
 type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
@@ -146,6 +156,12 @@ type MemberAccessLExpr record {|
     VarRefExpr container;
     Expr index;
     err:Position pos;
+|};
+
+type RangeExpr record {|
+    Expr lower;
+    Expr upper;
+    RangeOp op;
 |};
 
 type VarRefExpr record {|

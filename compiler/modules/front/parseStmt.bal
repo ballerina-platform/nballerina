@@ -46,6 +46,10 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parseWhileStmt(tok);
         }
+        "foreach" => {
+            check tok.advance();
+            return parseForeachStmt(tok);
+        }
         var td if td is InlineLeafTypeDesc => {
             return parseVarDeclStmt(tok);
         }
@@ -196,4 +200,18 @@ function parseWhileStmt(Tokenizer tok) returns WhileStmt|err:Syntax {
     Expr condition = check parseExpr(tok);
     Stmt[] body = check parseStmtBlock(tok);
     return { condition, body };
+}
+
+function parseForeachStmt(Tokenizer tok) returns ForeachStmt|err:Syntax {
+    InlineTypeDesc td = check parseInlineTypeDesc(tok);
+    Token? cur = tok.current();
+
+    if cur is [IDENTIFIER, string] {
+        check tok.advance();
+        check tok.expect("in");
+        Expr iterable = check parseRangeExpr(tok);
+        Stmt[] body = check parseStmtBlock(tok);
+        return { td, varName: cur[1], iterable, body, semType: convertInlineTypeDesc(td) };
+    }
+    return parseError(tok, "invalid foreach statement");
 }
