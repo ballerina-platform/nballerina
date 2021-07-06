@@ -12,6 +12,7 @@ public type Options record {|
     boolean testJsonTypes = false;
     boolean showTypes = false;
     string? outDir = ();
+    string? gc = ();
 |};
 
 const SOURCE_EXTENSION = ".bal";
@@ -25,18 +26,18 @@ public function main(string[] filenames, *Options opts) returns error? {
             check showTypes(filename);
             continue;
         }
-        check compileFile(filename, check chooseOutputFilename(filename, opts.outDir));
+        check compileFile(filename, check chooseOutputFilename(filename, opts.outDir), opts.gc);
     }  
 }
 
 //  outputFilename of () means don't output anything
-function compileFile(string filename, string? outputFilename) returns CompileError {
+function compileFile(string filename, string? outputFilename, string? gcStrategy) returns CompileError {
     bir:ModuleId id = {
        names: [filename],
        organization: "dummy"
     };
     bir:Module module = check front:loadModule(filename, id);
-    check nback:compileModule(module, outputFilename);
+    check nback:compileModule(module, outputFilename, gcStrategy);
 }
 
 function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error? {
