@@ -195,6 +195,11 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         SimpleConstExpr expr = { value: t == "true" };
         return expr;
     }
+    else if t is "null" {
+        check tok.advance();
+        SimpleConstExpr expr = { value: () };
+        return expr;
+    }
     else {
         return parseError(tok);
     }

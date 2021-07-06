@@ -28,6 +28,7 @@ type Keyword
     | "json"
     | "map"
     | "never"
+    | "null"
     | "readonly"
     | "record"
     | "return"

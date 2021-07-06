@@ -190,6 +190,7 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "expr", "0", "0"],
          ["V", "expr", "1", "1"],
          ["V", "expr", "()", "()"],
+         ["V", "expr", "null", "()"],
          ["V", "expr", "-()", "-()"],
          ["V", "expr", "-true", "-true"],
          ["V", "expr", "9223372036854775807", "9223372036854775807"],
@@ -311,6 +312,12 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "expr", "obj.x(1)", "obj.x(1)"],
          ["V", "expr", "(x+y).length()", "(x + y).length()"],
          ["V", "expr", "x+y.length()", "x + (y.length())"],
+         ["V", "expr", "().length()", "().length()"],
+         ["V", "expr", "null.length()", "().length()"],
+         ["V", "expr", "true.length()", "true.length()"],
+         ["V", "expr", "false.length()", "false.length()"],
+         // XXX Output  will need to change when we do floats/decimal, because "42." is a float literal
+         ["V", "expr", "42 .length()", "42.length()"],
          ["V", "expr", "x.foo().bar()", "(x.foo()).bar()"],
          ["V", "expr", "x.foo()[n].bar()", "((x.foo())[n]).bar()"],
          ["E", "expr", "obj.(1)", ""],
@@ -345,6 +352,8 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "stmt", "obj.x(c,d);", "obj.x(c, d);"],
          ["V", "stmt", "foo().bar(c,d);", "foo().bar(c, d);"],
          ["V", "stmt", "true.ok();", "true.ok();"], // not semantically valid
+         ["V", "stmt", "null.ok();", "().ok();"], // not semantically valid
+         ["V", "stmt", "().ok();", "().ok();"], // not semantically valid
          ["V", "stmt", "(x|y).ok();", "(x | y).ok();"], // not semantically valid
          ["V", "stmt", "foo()[0].push(1);", "(foo()[0]).push(1);"],
          ["V", "stmt", "foo[1].push(2);", "(foo[1]).push(2);"],
