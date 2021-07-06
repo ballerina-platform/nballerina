@@ -9,9 +9,9 @@ function arithmeticNoWrap() returns Module {
     builder.positionAtEnd(initBlock);
     Value v0 = foo.getParam(0);
     Value v1 = foo.getParam(1);
-	Value a = builder.iArithmeticNoWrap("add", v0, v1);
-	Value b = builder.iArithmeticNoWrap("sub", v0, v1);
-	Value c = builder.iArithmeticNoWrap("mul", a, b);
+    Value a = builder.iArithmeticNoWrap("add", v0, v1);
+    Value b = builder.iArithmeticNoWrap("sub", v0, v1);
+    Value c = builder.iArithmeticNoWrap("mul", a, b);
     builder.ret(c);
     return m;
 }
