@@ -28,7 +28,7 @@ type FunctionDef record {|
     bir:FunctionSignature? signature = ();
 |};
 
-type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|BreakStmt|ContinueStmt;
+type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
 type CallStmt FunctionCallExpr|MethodCallExpr;
 type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr|RangeExpr;
 
@@ -55,6 +55,15 @@ type IfElseStmt record {|
 type WhileStmt record {|
     Expr condition;
     Stmt[] body;
+|};
+
+type ForeachStmt record {|
+    InlineTypeDesc td;
+    string varName;
+    Expr iterable;
+    Stmt[] body;
+    // See comment in VarDeclStmt
+    t:SemType? semType = ();
 |};
 
 type BreakStmt "break";

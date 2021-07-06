@@ -89,6 +89,14 @@ function stmtToWords(Word[] w, Stmt stmt) {
         exprToWords(w, stmt.condition);
         blockToWords(w, stmt.body);
     }
+    else if stmt is ForeachStmt{
+        w.push("foreach");
+        typeDescToWords(w, stmt.td);
+        w.push(stmt.varName);
+        w.push("in");
+        exprToWords(w, stmt.iterable);
+        blockToWords(w, stmt.body);
+    }
     else if stmt is BreakStmt || stmt is ContinueStmt {
         w.push(stmt, ";");
     }

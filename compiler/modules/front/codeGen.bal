@@ -136,6 +136,9 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
             // JBUG #31327 cast
             curBlock = check codeGenWhileStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
         }
+        else if stmt is ForeachStmt {
+            curBlock = check codeGenForeachStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+        }
         else if stmt is BreakStmt {
             curBlock = check codeGenBreakStmt(cx, <bir:BasicBlock>curBlock);
         }
@@ -157,6 +160,59 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope,
         }
     }
     return curBlock;
+}
+
+final readonly & map<bir:OrderOp> RANGE_TO_ORDER = {
+    "...": "<=",
+    "..<": "<"
+};
+
+function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, ForeachStmt stmt) returns CodeGenError|bir:BasicBlock? {
+    Expr range = stmt.iterable;
+    var { varName, semType} = stmt;
+    if lookup(varName, scope) !== () {
+        return cx.semanticErr(`duplicate declaration of ${varName}`);
+    }
+    if !(range is RangeExpr) {
+        return cx.semanticErr("iterable expected in foreach");
+    } else {
+        if semType is () {
+            panic error("type was not normalized");
+        }
+        else {
+            var [lower, evalUpper] = check codeGenExpr(cx, startBlock, scope, range.lower);
+            var [upper, initLoopVar] = check codeGenExpr(cx, evalUpper, scope, range.upper);
+            bir:Register loopVar = cx.createRegister(semType, varName);
+            bir:AssignInsn init = { result:loopVar, operand: lower };
+            initLoopVar.insns.push(init);
+            Scope loopVarScope = { name: varName, reg: loopVar, prev: scope, isFinal: true };
+            bir:BasicBlock loopHead = cx.createBasicBlock();
+            bir:BasicBlock exit = cx.createBasicBlock();
+            bir:BasicBlock loopStep = cx.createBasicBlock();
+            bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
+            initLoopVar.insns.push(branchToLoopHead);
+            bir:Register condition = cx.createRegister(t:BOOLEAN);
+            bir:IntCompareInsn compare = { op: RANGE_TO_ORDER.get(range.op), operands: [loopVar, <bir:IntOperand>upper], result: condition };
+            loopHead.insns.push(compare);
+            bir:BasicBlock afterCondition = cx.createBasicBlock();
+            bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
+            loopHead.insns.push(branch);
+
+            cx.pushLoopContext(exit, loopStep);
+            bir:BasicBlock? loopBody = check codeGenStmts(cx, afterCondition, loopVarScope, stmt.body);
+            cx.popLoopContext();
+
+            if !(loopBody is ()) {
+                bir:BranchInsn branchToLoopStep = { dest: loopStep.label };
+                loopBody.insns.push(branchToLoopStep);
+            }
+            // XXX replace with non-panicking add
+            bir:IntArithmeticBinaryInsn increment = { op: "+", operands: [loopVar, 1], result: loopVar, position: { lineNumber: 0, indexInLine: 0 } };
+            loopStep.insns.push(increment);
+            loopStep.insns.push(branchToLoopHead);
+            return exit;
+        }   
+    }
 }
 
 function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, WhileStmt stmt) returns CodeGenError|bir:BasicBlock? {
@@ -611,7 +667,7 @@ function mustLookup(CodeGenContext cx, string name, Scope? scope, boolean forAss
         return cx.semanticErr(`variable ${name} not found`);
     }
     else if forAssign && binding.isFinal {
-        return cx.semanticErr(`cannot assign to parameter ${name}`);
+        return cx.semanticErr(`cannot assign to final variable ${name}`);
     }
     else {
         return binding.reg;
