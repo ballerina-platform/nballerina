@@ -58,6 +58,15 @@ public distinct class Function {
         handle attr = jLLVMCreateEnumAttribute(self.context.LLVMContext, attrKind, 0);
         jLLVMAddAttributeAtIndex(self.LLVMFunction, -1, attr);
     }
+
+    public function setGC(string? name) {
+        if name is string {
+            jLLVMSetGC(self.LLVMFunction, java:fromString(name));
+        } 
+        else {
+            jLLVMSetGC(self.LLVMFunction, java:fromString(""));
+        }
+    }
 }
 
 public distinct class BasicBlock {
@@ -113,4 +122,10 @@ function jLLVMAddAttributeAtIndex(handle fn, int idx, handle attribute) = @java:
     name: "LLVMAddAttributeAtIndex",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "int", "org.bytedeco.llvm.LLVM.LLVMAttributeRef"]
+} external;
+
+function jLLVMSetGC(handle fn, handle name) = @java:Method {
+    name: "LLVMSetGC",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;
