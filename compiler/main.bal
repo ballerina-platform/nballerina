@@ -17,6 +17,10 @@ public type Options record {|
 
 const SOURCE_EXTENSION = ".bal";
 public function main(string[] filenames, *Options opts) returns error? {
+    if !isValidGCStrategy(opts.gc) {
+        return error("Invalid GC strategy " + <string>opts.gc);
+    }
+
     foreach string filename in filenames {
         if opts.testJsonTypes {
             check testJsonTypes(filename);
@@ -28,6 +32,17 @@ public function main(string[] filenames, *Options opts) returns error? {
         }
         check compileFile(filename, check chooseOutputFilename(filename, opts.outDir), opts.gc);
     }  
+}
+
+function isValidGCStrategy(string? gcStrategy) returns boolean {
+    match gcStrategy {
+        "statepoint-example" | "shadow-stack" | () => {
+            return true;
+        }
+        _ => {
+            return false;
+        }
+    }
 }
 
 //  outputFilename of () means don't output anything
