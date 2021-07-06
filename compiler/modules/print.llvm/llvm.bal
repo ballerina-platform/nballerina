@@ -349,7 +349,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
-        bb.addInsn(reg, "=", op, "nuw", "nsw", ty, lhs.operand, ",", rhs.operand);
+        bb.addInsn(reg, "=", op, "nsw", ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
     // Corresponds to LLVMBuild{Add,Mul,Sub}
