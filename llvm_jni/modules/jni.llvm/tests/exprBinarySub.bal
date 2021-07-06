@@ -27,7 +27,7 @@ function exprBinarySub() returns Module {
     }
     Value R8 = builder.extractValue(R7, 0);
     Value R9 = builder.extractValue(R7, 1);
-    Value R10 = builder.binaryInt("xor", R9, constInt("i1", 1));
+    Value R10 = builder.iBitwise("xor", R9, constInt("i1", 1));
 
     BasicBlock ifTrue = foo.appendBasicBlock();
     BasicBlock ifFalse = foo.appendBasicBlock();

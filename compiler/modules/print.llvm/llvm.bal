@@ -344,20 +344,22 @@ public class Builder {
         addInsnWithAlign(self.bb(), ["store", typeToString(ty), val.operand, ",", typeToString(ptr.ty), ptr.operand], align);
     }
 
+    // Corresponds to LLVMBuild{Add,Mul,Sub}
     public function iArithmeticWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         return self.binaryIntNoWrap(op, lhs, rhs, name);
     }
 
+    // Corresponds to LLVMBuild{SDiv,SRem}
     public function iArithmeticSigned(IntArithmeticSignedOp op, Value lhs, Value rhs, string? name=()) returns Value {
         return self.binaryIntNoWrap(op, lhs, rhs, name);
     }
 
+    // Corresponds to LLVMBuild{And, Or, Xor}
     public function iBitwise(IntBitwiseOp op, Value lhs, Value rhs, string? name=()) returns Value {
         return self.binaryIntNoWrap(op, lhs, rhs, name);
     }
 
-    // binary operation with int operands and (same) int result
-    // Corresponds to LLVMBuild{Add,Mul,Sub,SDiv,SRem}
+    // Internally handle binary int operations without wrapping
     function binaryIntNoWrap(IntOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();

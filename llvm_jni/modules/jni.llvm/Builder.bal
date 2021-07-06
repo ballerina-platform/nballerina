@@ -76,7 +76,19 @@ public distinct class Builder {
         }
     }
 
-    public function binaryInt(BinaryIntOp op, Value lhs, Value rhs, string? name = ()) returns Value {
+    public function iArithmeticWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
+        return self.binaryIntNoWrap(op, lhs, rhs, name);
+    }
+
+    public function iArithmeticSigned(IntArithmeticSignedOp op, Value lhs, Value rhs, string? name=()) returns Value {
+        return self.binaryIntNoWrap(op, lhs, rhs, name);
+    }
+
+    public function iBitwise(IntBitwiseOp op, Value lhs, Value rhs, string? name=()) returns Value {
+        return self.binaryIntNoWrap(op, lhs, rhs, name);
+    }
+
+    function binaryIntNoWrap(IntOp op, Value lhs, Value rhs, string? name = ()) returns Value {
         string regName = self.extractName(name);
         match op {
             "add" => {
