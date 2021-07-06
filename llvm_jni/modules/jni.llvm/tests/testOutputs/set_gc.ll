@@ -3,7 +3,7 @@ declare void @bar() gc "shadow-stack"
 ; Function Attrs: noreturn
 declare void @bar2() #0 gc "shadow-stack"
 
-define i64 @foo() {
+define i64 @foo() gc "shadow-stack" {
   ret i64 0
 }
 

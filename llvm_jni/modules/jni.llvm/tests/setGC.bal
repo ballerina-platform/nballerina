@@ -27,7 +27,7 @@ function setGC() returns Module {
     BasicBlock bbfoo3 = foo3.appendBasicBlock();
     builder.positionAtEnd(bbfoo3);
     builder.ret(constInt("i64", 0));
-    foo.setGC(());
+    foo3.setGC(());
     return m;
 }
 
