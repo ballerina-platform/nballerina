@@ -189,6 +189,7 @@ public class FunctionDecl {
     final false isDefn = false;
     final FunctionType functionType;
     final string functionName;
+    string? gcName = ();
     final EnumAttribute[] attributes = [];
 
     function init(Context context, string functionName, FunctionType functionType) {
@@ -205,6 +206,11 @@ public class FunctionDecl {
            self.attributes.push(attribute); 
         }
     }
+
+    // Corresponds to LLVMSetGC
+    public function setGC(string name) {
+        self.gcName = name;
+    }
 }
 
 public class FunctionDefn {
@@ -212,6 +218,7 @@ public class FunctionDefn {
     final FunctionType functionType;
     final string functionName;
     final EnumAttribute[] attributes = [];
+    string? gcName = ();
 
     private BasicBlock[] basicBlocks = [];
     private map<int> variableNames = {};
@@ -302,6 +309,11 @@ public class FunctionDefn {
         if self.attributes.indexOf(attribute) == () {
            self.attributes.push(attribute); 
         }
+    }
+
+    // Corresponds to LLVMSetGC
+    public function setGC(string name) {
+        self.gcName = name;
     }
 }
 
@@ -690,6 +702,9 @@ function functionHeader(Function fn) returns string {
     words.push(")");
     foreach int i in 0 ..< fn.attributes.length() {
         words.push(fn.attributes[i]);
+    }
+    if fn.gcName is string {
+        words.push("gc", string `"${<string>fn.gcName}"`);
     }
     if fn is FunctionDefn {
         words.push("{");
