@@ -344,6 +344,14 @@ public class Builder {
         addInsnWithAlign(self.bb(), ["store", typeToString(ty), val.operand, ",", typeToString(ptr.ty), ptr.operand], align);
     }
 
+    // Corresponds to LLVMBuildNSW{Add,Mul,Sub}
+    public function iArithmeticNoWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        IntType ty = sameIntType(lhs, rhs);
+        bb.addInsn(reg, "=", op, "nuw", "nsw", ty, lhs.operand, ",", rhs.operand);
+        return new Value(ty, reg);
+    }
     // Corresponds to LLVMBuild{Add,Mul,Sub}
     public function iArithmeticWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         return self.binaryIntNoWrap(op, lhs, rhs, name);
