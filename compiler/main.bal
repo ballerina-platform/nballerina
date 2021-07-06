@@ -15,7 +15,9 @@ public type Options record {|
     string? gc = ();
 |};
 
-const VALID_GC_NAME_CHARS = "statepoint-example shadow-stack";
+const LOWER = "abcdefghijklmnopqrstuvwxyz";
+const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const string VALID_GC_NAME_CHARS = LOWER + UPPER + "-_";
 
 const SOURCE_EXTENSION = ".bal";
 public function main(string[] filenames, *Options opts) returns error? {
