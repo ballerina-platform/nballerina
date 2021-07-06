@@ -167,25 +167,25 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
     RangeExpr range = stmt.range;
-    var [lower, evalUpper] = check codeGenExpr(cx, startBlock, scope, range.lower);
-    var [upper, initLoopVar] = check codeGenExpr(cx, evalUpper, scope, range.upper);
+    var [lower, evalUpper] = check codeGenExprForInt(cx, startBlock, scope, range.lower);
+    var [upper, initLoopVar] = check codeGenExprForInt(cx, evalUpper, scope, range.upper);
     bir:Register loopVar = cx.createRegister(t:INT, varName);
-    bir:AssignInsn init = { result:loopVar, operand: lower };
+    bir:AssignInsn init = { result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
-    Scope loopVarScope = { name: varName, reg: loopVar, prev: scope, isFinal: true };
     bir:BasicBlock loopHead = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
     bir:BasicBlock loopStep = cx.createBasicBlock();
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
     initLoopVar.insns.push(branchToLoopHead);
     bir:Register condition = cx.createRegister(t:BOOLEAN);
-    bir:IntCompareInsn compare = { op: "<", operands: [loopVar, <bir:IntOperand>upper], result: condition };
+    bir:IntCompareInsn compare = { op: "<", operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
     bir:BasicBlock afterCondition = cx.createBasicBlock();
     bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
     loopHead.insns.push(branch);
     cx.pushLoopContext(exit, loopStep);
-    bir:BasicBlock? loopBody = check codeGenStmts(cx, afterCondition, loopVarScope, stmt.body);
+    Scope loopScope = { name: varName, reg: loopVar, prev: scope, isFinal: true };
+    bir:BasicBlock? loopBody = check codeGenStmts(cx, afterCondition, loopScope, stmt.body);
     cx.popLoopContext();
     if !(loopBody is ()) {
         bir:BranchInsn branchToLoopStep = { dest: loopStep.label };
