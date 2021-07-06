@@ -44,6 +44,8 @@ struct PrintStack {
 };
 
 extern void *_bal_alloc(int64_t nBytes);
+extern void _bal_panic(Error err);
+
 extern void _Bio__println(TaggedPtr p);
 
 static void array_grow(ListPtr lp, int64_t min_capacity);
@@ -127,7 +129,9 @@ int64_t _Barray__length(TaggedPtr p) {
     return lp->length;
 }
 
+// These should be shared with build.bal
 #define PANIC_INDEX_OUT_OF_BOUNDS 5
+#define PANIC_LIST_TOO_LONG 6
 #define ARRAY_LENGTH_MAX (INT64_MAX/sizeof(TaggedPtr))
 
 Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
@@ -138,7 +142,7 @@ Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     }
     if ((uint64_t)index >= lp->capacity) {
         if ((uint64_t)index >= ARRAY_LENGTH_MAX) {
-            return PANIC_INDEX_OUT_OF_BOUNDS; // XXX maybe a different panic if non-negative
+            return index < 0 ? PANIC_INDEX_OUT_OF_BOUNDS : PANIC_LIST_TOO_LONG; 
         }
         array_grow(lp, index + 1);
     }
@@ -192,7 +196,7 @@ static void array_grow(ListPtr lp, int64_t min_capacity) {
     else {
         new_capacity = ARRAY_LENGTH_MAX;
         if (new_capacity == old_capacity)
-            abort(); // we cannot grow any more; implies we allocated INT64_MAX bytes successfully! XXX should handle this better
+            _bal_panic(PANIC_LIST_TOO_LONG);  // we won't get a line number, but this is very unlikely to be possible
     }
     if (new_capacity < min_capacity) {
         new_capacity = min_capacity;
@@ -220,7 +224,8 @@ const char *panicMessages[] = {
     "divide by zero",
     "bad type cast",
     "stack overflow",
-    "index out of bounds"
+    "index out of bounds",
+    "list too long"
 };
 
 void _bal_panic(Error err) {

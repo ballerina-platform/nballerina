@@ -16,3 +16,4 @@ public function main() {
     }
     io:println(sum); // @output 1001000
 }
+
