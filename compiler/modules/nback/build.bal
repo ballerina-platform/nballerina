@@ -758,7 +758,7 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
     return builder.getElementPtr(llvm:constNull(LLVM_TAGGED_PTR),
-                                     [builder.iBitwise("or", 
+                                     [builder.iBitwise("or",
                                                        builder.zExt(value, LLVM_INT),
                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
 }
