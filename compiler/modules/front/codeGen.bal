@@ -395,6 +395,14 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             bb.insns.push(insn);
             return [result, nextBlock];
         }
+        // Negation
+        { op: "-",  operand: var o, pos: var pos } => {
+            var [operand, nextBlock] = check codeGenExprForInt(cx, bb, scope, o);
+            bir:Register result = cx.createRegister(t:INT);
+            bir:IntArithmeticBinaryInsn insn = { op: "-", operands: [0, operand], result, position: pos };
+            bb.insns.push(insn);
+            return [result, nextBlock];
+        }
         var { bitwiseOp: op, left, right } => {
             var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
             var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
@@ -432,20 +440,6 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             }
             bb.insns.push(insn);
             return [result, nextBlock];         
-        }
-        // Negation
-        { op: "-",  operand: var o } => {
-            var [operand, nextBlock] = check codeGenExprForInt(cx, bb, scope, o);
-            bir:Register reg = cx.createRegister(t:INT);
-            if operand is int {
-                // XXX catch overflow
-                return [-operand, nextBlock];
-            }
-            else {
-                bir:IntNegateInsn insn = { operand, result: reg };
-                bb.insns.push(insn);
-                return [reg, nextBlock];
-            }
         }
         { op: "!",  operand: var o } => {
             var [operand, nextBlock] = check codeGenExprForBoolean(cx, bb, scope, o);

@@ -55,9 +55,6 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
         check verifyOperandInt(vc, name, insn.operands[0]);
         check verifyOperandInt(vc, name, insn.operands[1]);
     }
-    else if insn is IntNegateInsn {
-        check verifyOperandInt(vc, name, insn.operand);
-    }
     else if insn is BooleanNotInsn {
         check verifyOperandBoolean(vc, name, insn.operand);
     }

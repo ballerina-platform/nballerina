@@ -143,9 +143,10 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
 function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
     if t is "-"|"!" {
+        err:Position pos = tok.currentPos();
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
-        UnaryExpr expr = { op: t, operand };
+        UnaryExpr expr = { op: t, operand, pos };
         return expr;
     }
     else if t is "<" {

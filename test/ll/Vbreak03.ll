@@ -75,16 +75,18 @@ L5:
 L6:
   br label %L2
 L7:
-  ret i64 -1
+  %_37 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
+  %_38 = extractvalue {i64, i1} %_37, 1
+  br i1 %_38, label %L16, label %L15
 L8:
-  %_37 = load i64, i64* %i
-  %_38 = call i64 @_B_foo (i64 %_37)
-  store i64 %_38, i64* %_8
-  %_39 = load i64, i64* %_8
-  ret i64 %_39
+  %_41 = load i64, i64* %i
+  %_42 = call i64 @_B_foo (i64 %_41)
+  store i64 %_42, i64* %_8
+  %_43 = load i64, i64* %_8
+  ret i64 %_43
 L9:
-  %_40 = load i64, i64* %_9
-  call void @_bal_panic (i64 %_40)
+  %_44 = load i64, i64* %_9
+  call void @_bal_panic (i64 %_44)
   unreachable
 L10:
   call void @_bal_panic (i64 3332)
@@ -112,5 +114,13 @@ L13:
   br i1 %_32, label %L5, label %L6
 L14:
   store i64 4353, i64* %_9
+  br label %L9
+L15:
+  %_39 = extractvalue {i64, i1} %_37, 0
+  store i64 %_39, i64* %_7
+  %_40 = load i64, i64* %_7
+  ret i64 %_40
+L16:
+  store i64 5889, i64* %_9
   br label %L9
 }

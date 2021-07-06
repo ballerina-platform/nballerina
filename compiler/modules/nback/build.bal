@@ -281,9 +281,6 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:EqualityInsn {
             check buildEquality(builder, scaffold, insn);
         }
-        else if insn is bir:IntNegateInsn {
-            buildIntNegate(builder, scaffold, insn);
-        }
         else if insn is bir:BooleanNotInsn {
             buildBooleanNot(builder, scaffold, insn);
         }
@@ -718,12 +715,6 @@ function buildConstPanicError(PanicIndex panicIndex, err:Position pos) returns l
 
 function buildPanicError(llvm:Builder builder, llvm:Value panicIndex, err:Position pos) returns llvm:Value {
     return builder.binaryInt("or", panicIndex, llvm:constInt(LLVM_INT, pos.lineNumber << 8));
-}
-
-function buildIntNegate(llvm:Builder builder, Scaffold scaffold, bir:IntNegateInsn insn) {
-    buildStoreInt(builder, scaffold,
-                  builder.binaryInt("sub", llvm:constInt(LLVM_INT, 0), buildInt(builder, scaffold, insn.operand)),
-                  insn.result);
 }
 
 function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {

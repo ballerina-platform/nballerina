@@ -16,34 +16,54 @@ define void @_B_main () {
   %_8 = icmp ult i8* %_6, %_7
   br i1 %_8, label %L3, label %L1
 L1:
-  %_9 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 -9223372036854775807, i64 1)
+  %_9 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775807)
   %_10 = extractvalue {i64, i1} %_9, 1
   br i1 %_10, label %L5, label %L4
 L2:
-  %_19 = load i64, i64* %_5
-  call void @_bal_panic (i64 %_19)
+  %_27 = load i64, i64* %_5
+  call void @_bal_panic (i64 %_27)
   unreachable
 L3:
   call void @_bal_panic (i64 772)
   unreachable
 L4:
   %_11 = extractvalue {i64, i1} %_9, 0
-  store i64 %_11, i64* %_1
-  %_12 = load i64, i64* %_1
-  store i64 %_12, i64* %INT_MIN
-  %_13 = load i64, i64* %INT_MIN
-  %_14 = call i64 @_B_div (i64 %_13, i64 -1)
-  store i64 %_14, i64* %_3
-  %_15 = load i64, i64* %_3
-  %_16 = call i8* @_bal_alloc (i64 8)
-  %_17 = bitcast i8* %_16 to i64*
-  store i64 %_15, i64* %_17, align 8
-  %_18 = getelementptr i8, i8* %_16, i64 504403158265495552
-  call void @_Bio__println (i8* %_18)
-  store i8* null, i8** %_4
-  ret void
+  store i64 %_11, i64* %_0
+  %_12 = load i64, i64* %_0
+  %_13 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_12, i64 1)
+  %_14 = extractvalue {i64, i1} %_13, 1
+  br i1 %_14, label %L7, label %L6
 L5:
   store i64 1025, i64* %_5
+  br label %L2
+L6:
+  %_15 = extractvalue {i64, i1} %_13, 0
+  store i64 %_15, i64* %_1
+  %_16 = load i64, i64* %_1
+  store i64 %_16, i64* %INT_MIN
+  %_17 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
+  %_18 = extractvalue {i64, i1} %_17, 1
+  br i1 %_18, label %L9, label %L8
+L7:
+  store i64 1025, i64* %_5
+  br label %L2
+L8:
+  %_19 = extractvalue {i64, i1} %_17, 0
+  store i64 %_19, i64* %_2
+  %_20 = load i64, i64* %INT_MIN
+  %_21 = load i64, i64* %_2
+  %_22 = call i64 @_B_div (i64 %_20, i64 %_21)
+  store i64 %_22, i64* %_3
+  %_23 = load i64, i64* %_3
+  %_24 = call i8* @_bal_alloc (i64 8)
+  %_25 = bitcast i8* %_24 to i64*
+  store i64 %_23, i64* %_25, align 8
+  %_26 = getelementptr i8, i8* %_24, i64 504403158265495552
+  call void @_Bio__println (i8* %_26)
+  store i8* null, i8** %_4
+  ret void
+L9:
+  store i64 1281, i64* %_5
   br label %L2
 }
 define internal i64 @_B_div (i64 %_0, i64 %_1) {

@@ -148,8 +148,6 @@ public enum InsnName {
     INSN_INT_ARITHMETIC_BINARY,
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY,
     INSN_INT_BITWISE_BINARY,
-    INSN_INT_NEGATE,
-    INSN_INT_NO_PANIC_NEGATE,
     INSN_INT_COMPARE,
     INSN_BOOLEAN_COMPARE,
     INSN_EQUALITY,
@@ -181,7 +179,7 @@ public type InsnBase record {
 };
 
 public type Insn 
-    IntArithmeticBinaryInsn|IntBitwiseBinaryInsn|IntNegateInsn|IntCompareInsn
+    IntArithmeticBinaryInsn|IntBitwiseBinaryInsn|IntCompareInsn
     |BooleanNotInsn|BooleanCompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |RetInsn|AbnormalRetInsn|CallInsn
@@ -222,14 +220,6 @@ public type IntBitwiseBinaryInsn readonly & record {|
     BitwiseBinaryOp op;
     Register result;
     IntOperand[2] operands;
-|};
-
-# This has PPI and non-PPI variants.
-public type IntNegateInsn readonly & record {|
-    *InsnBase;
-    (INSN_INT_NEGATE|INSN_INT_NO_PANIC_NEGATE) name = INSN_INT_NEGATE;
-    Register result;
-    Register operand;
 |};
 
 # Perform logical not operation on a boolean.
@@ -485,7 +475,6 @@ final readonly & map<true> PPI_INSNS = {
     [INSN_PANIC]: true,
     [INSN_INT_ARITHMETIC_BINARY]: true,
     [INSN_TYPE_CAST]: true,
-    [INSN_INT_NEGATE]: true,
     [INSN_LIST_GET]: true,
     [INSN_LIST_SET]: true
 };

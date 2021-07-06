@@ -120,6 +120,7 @@ type BinaryBitwiseExpr record {|
 type UnaryExpr record {|
     UnaryExprOp op;
     Expr operand;
+    err:Position pos;
 |};
 
 type FunctionCallExpr record {|

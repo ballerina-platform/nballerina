@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
+declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 declare i8* @_bal_alloc (i64)
 declare void @_Bio__println (i8*)
 define void @_B_main () {
@@ -19,50 +20,75 @@ define void @_B_main () {
   %_13 = alloca i64
   %_14 = alloca i1
   %_15 = alloca i8*
-  %_16 = alloca i8
-  %_17 = load i8*, i8** @_bal_stack_guard
-  %_18 = icmp ult i8* %_16, %_17
-  br i1 %_18, label %L2, label %L1
+  %_16 = alloca i64
+  %_17 = alloca i8
+  %_18 = load i8*, i8** @_bal_stack_guard
+  %_19 = icmp ult i8* %_17, %_18
+  br i1 %_19, label %L3, label %L1
 L1:
-  %_19 = call i1 @_B_eq (i64 1, i64 2)
-  store i1 %_19, i1* %_0
-  %_20 = load i1, i1* %_0
-  call void @_B_printBoolean (i1 %_20)
+  %_20 = call i1 @_B_eq (i64 1, i64 2)
+  store i1 %_20, i1* %_0
+  %_21 = load i1, i1* %_0
+  call void @_B_printBoolean (i1 %_21)
   store i8* null, i8** %_1
-  %_21 = call i1 @_B_ne (i64 2, i64 1)
-  store i1 %_21, i1* %_2
-  %_22 = load i1, i1* %_2
-  call void @_B_printBoolean (i1 %_22)
+  %_22 = call i1 @_B_ne (i64 2, i64 1)
+  store i1 %_22, i1* %_2
+  %_23 = load i1, i1* %_2
+  call void @_B_printBoolean (i1 %_23)
   store i8* null, i8** %_3
-  %_23 = call i1 @_B_eq (i64 2, i64 -1)
-  store i1 %_23, i1* %_5
-  %_24 = load i1, i1* %_5
-  call void @_B_printBoolean (i1 %_24)
-  store i8* null, i8** %_6
-  %_25 = call i1 @_B_ne (i64 1, i64 2)
-  store i1 %_25, i1* %_7
-  %_26 = load i1, i1* %_7
-  call void @_B_printBoolean (i1 %_26)
-  store i8* null, i8** %_8
-  %_27 = call i1 @_B_eq (i64 0, i64 0)
-  store i1 %_27, i1* %_9
-  %_28 = load i1, i1* %_9
-  call void @_B_printBoolean (i1 %_28)
-  store i8* null, i8** %_10
-  %_29 = call i1 @_B_ne (i64 2, i64 1)
-  store i1 %_29, i1* %_11
-  %_30 = load i1, i1* %_11
-  call void @_B_printBoolean (i1 %_30)
-  store i8* null, i8** %_12
-  %_31 = call i1 @_B_eq (i64 -1, i64 17)
-  store i1 %_31, i1* %_14
-  %_32 = load i1, i1* %_14
-  call void @_B_printBoolean (i1 %_32)
-  store i8* null, i8** %_15
-  ret void
+  %_24 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
+  %_25 = extractvalue {i64, i1} %_24, 1
+  br i1 %_25, label %L5, label %L4
 L2:
+  %_42 = load i64, i64* %_16
+  call void @_bal_panic (i64 %_42)
+  unreachable
+L3:
   call void @_bal_panic (i64 772)
   unreachable
+L4:
+  %_26 = extractvalue {i64, i1} %_24, 0
+  store i64 %_26, i64* %_4
+  %_27 = load i64, i64* %_4
+  %_28 = call i1 @_B_eq (i64 2, i64 %_27)
+  store i1 %_28, i1* %_5
+  %_29 = load i1, i1* %_5
+  call void @_B_printBoolean (i1 %_29)
+  store i8* null, i8** %_6
+  %_30 = call i1 @_B_ne (i64 1, i64 2)
+  store i1 %_30, i1* %_7
+  %_31 = load i1, i1* %_7
+  call void @_B_printBoolean (i1 %_31)
+  store i8* null, i8** %_8
+  %_32 = call i1 @_B_eq (i64 0, i64 0)
+  store i1 %_32, i1* %_9
+  %_33 = load i1, i1* %_9
+  call void @_B_printBoolean (i1 %_33)
+  store i8* null, i8** %_10
+  %_34 = call i1 @_B_ne (i64 2, i64 1)
+  store i1 %_34, i1* %_11
+  %_35 = load i1, i1* %_11
+  call void @_B_printBoolean (i1 %_35)
+  store i8* null, i8** %_12
+  %_36 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
+  %_37 = extractvalue {i64, i1} %_36, 1
+  br i1 %_37, label %L7, label %L6
+L5:
+  store i64 1537, i64* %_16
+  br label %L2
+L6:
+  %_38 = extractvalue {i64, i1} %_36, 0
+  store i64 %_38, i64* %_13
+  %_39 = load i64, i64* %_13
+  %_40 = call i1 @_B_eq (i64 %_39, i64 17)
+  store i1 %_40, i1* %_14
+  %_41 = load i1, i1* %_14
+  call void @_B_printBoolean (i1 %_41)
+  store i8* null, i8** %_15
+  ret void
+L7:
+  store i64 2561, i64* %_16
+  br label %L2
 }
 define internal void @_B_printBoolean (i1 %_0) {
   %b = alloca i1

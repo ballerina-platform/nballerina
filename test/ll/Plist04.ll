@@ -1,6 +1,7 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
 declare i8* @_bal_alloc (i64)
+declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 declare i64 @_bal_list_set (i8*, i64, i8*)
 declare i64 @_Barray__length (i8*)
 declare void @_Bio__println (i8*)
@@ -29,37 +30,47 @@ L1:
   store i8* %_13, i8** %_0
   %_14 = load i8*, i8** %_0
   store i8* %_14, i8** %v
-  store i64 -1, i64* %i
-  %_15 = load i8*, i8** %v
-  %_16 = load i64, i64* %i
-  %_17 = call i8* @_bal_alloc (i64 8)
-  %_18 = bitcast i8* %_17 to i64*
-  store i64 0, i64* %_18, align 8
-  %_19 = getelementptr i8, i8* %_17, i64 504403158265495552
-  %_20 = call i64 @_bal_list_set (i8* %_15, i64 %_16, i8* %_19)
-  %_21 = icmp eq i64 %_20, 0
-  br i1 %_21, label %L4, label %L5
+  %_15 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
+  %_16 = extractvalue {i64, i1} %_15, 1
+  br i1 %_16, label %L5, label %L4
 L2:
-  %_29 = load i64, i64* %_4
-  call void @_bal_panic (i64 %_29)
+  %_33 = load i64, i64* %_4
+  call void @_bal_panic (i64 %_33)
   unreachable
 L3:
   call void @_bal_panic (i64 516)
   unreachable
 L4:
-  %_23 = load i8*, i8** %v
-  %_24 = call i64 @_Barray__length (i8* %_23)
-  store i64 %_24, i64* %_2
-  %_25 = load i64, i64* %_2
-  %_26 = call i8* @_bal_alloc (i64 8)
-  %_27 = bitcast i8* %_26 to i64*
-  store i64 %_25, i64* %_27, align 8
-  %_28 = getelementptr i8, i8* %_26, i64 504403158265495552
-  call void @_Bio__println (i8* %_28)
+  %_17 = extractvalue {i64, i1} %_15, 0
+  store i64 %_17, i64* %_1
+  %_18 = load i64, i64* %_1
+  store i64 %_18, i64* %i
+  %_19 = load i8*, i8** %v
+  %_20 = load i64, i64* %i
+  %_21 = call i8* @_bal_alloc (i64 8)
+  %_22 = bitcast i8* %_21 to i64*
+  store i64 0, i64* %_22, align 8
+  %_23 = getelementptr i8, i8* %_21, i64 504403158265495552
+  %_24 = call i64 @_bal_list_set (i8* %_19, i64 %_20, i8* %_23)
+  %_25 = icmp eq i64 %_24, 0
+  br i1 %_25, label %L6, label %L7
+L5:
+  store i64 1025, i64* %_4
+  br label %L2
+L6:
+  %_27 = load i8*, i8** %v
+  %_28 = call i64 @_Barray__length (i8* %_27)
+  store i64 %_28, i64* %_2
+  %_29 = load i64, i64* %_2
+  %_30 = call i8* @_bal_alloc (i64 8)
+  %_31 = bitcast i8* %_30 to i64*
+  store i64 %_29, i64* %_31, align 8
+  %_32 = getelementptr i8, i8* %_30, i64 504403158265495552
+  call void @_Bio__println (i8* %_32)
   store i8* null, i8** %_3
   ret void
-L5:
-  %_22 = or i64 %_20, 1280
-  store i64 %_22, i64* %_4
+L7:
+  %_26 = or i64 %_24, 1280
+  store i64 %_26, i64* %_4
   br label %L2
 }
