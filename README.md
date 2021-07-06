@@ -27,7 +27,8 @@ The nBallerina compiler, which is organized as a Ballerina project in the [compi
 *   Semantic subtyping implementation (in the [types](compiler/modules/types) module). This provides a normalized representation of Ballerina types, and operations on that normalized representation.
 *   BIR (in the [bir](compiler/modules/bir) module). This is a definition of BIR as a Ballerina type, together with some utility functions. BIR (as used in nBallerina) represents types using the normalized representation provided by the semantic subtyping implementation. This also includes a verifier that uses the semantic subtyper to verify that the BIR is well-typed. This depends on the types module.
 *   Frontend (in the [front](compiler/modules/front) module). This generates BIR from the source code of a Ballerina module. This depends on the bir module.
-*   LLVM API (in the [nback.llvm](compiler/modules/nback.llvm) module). This provides a Ballerina API to LLVM. The implementation of this API builds a textual representation of the LLVM IR as LLVM assembly language, which can be written to an `.ll` file and then compiled with LLVM's clang command. This is designed to be very similar to the LLVM C API; the idea  is that we can eventually implement the same API on top of the LLVM C API, and link the compiler with the LLVM libraries. This does not depend on any of the other modules.
+*   LLVM API (in the [print.llvm](compiler/modules/print.llvm) module). This provides a Ballerina API to LLVM. The implementation of this API builds a textual representation of the LLVM IR as LLVM assembly language, which can be written to an `.ll` file and then compiled with LLVM's clang command. This is designed to be very similar to the LLVM C API. This does not depend on any of the other modules.
+*   LLVM API on top of JNI (in the [jni.llvm](llvm_jni/modules/jni.llvm) module). This implements the same API as the print.llvm module on top of the LLVM C API via JNI. (So this is Ballerina, on top of Java, on top of C via JNI, on top of C++.)
 *   Native backend (in the [nback](compiler/modules/nback) module). This builds the LLVM IR representation of a Ballerina module from the BIR representation of a Ballerina module. It depends on the bir and the nback.llvm modules (but not the front module).
 *   A compiler driver (in [default](compiler/main.bal) module). This calls the frontend to generate the BIR and then calls the backend to generate LLVM. It depends on the bir, front and nback modules.
 
@@ -99,6 +100,6 @@ For those test cases that are valid Ballerina programs, the scripts in the [test
 
 ## Status
 
-We have completed [subset 2](docs/subset02.md) and have started working on [subset 3](docs/subset03.md).
+We have completed [subset 3](docs/subset03.md). This GitHub [project](https://github.com/ballerina-platform/nballerina/projects/2) shows what we're working on.
 
 The semantic subtyping implementation is further along than the backend. It implements the subset of Ballerina's type syntax described by this [grammar](docs/type-subset.md).
