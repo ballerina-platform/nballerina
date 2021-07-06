@@ -59,8 +59,13 @@ public distinct class Function {
         jLLVMAddAttributeAtIndex(self.LLVMFunction, -1, attr);
     }
 
-    public function setGC(string name) {
-        jLLVMSetGC(self.LLVMFunction, java:fromString(name));
+    public function setGC(string? name) {
+        if name is string {
+            jLLVMSetGC(self.LLVMFunction, java:fromString(name));
+        } 
+        else {
+            jLLVMSetGC(self.LLVMFunction, java:fromString(""));
+        }
     }
 }
 

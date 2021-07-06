@@ -22,6 +22,12 @@ function setGC() returns Module {
     builder.ret(constInt("i64", 0));
     foo2.setGC("shadow-stack");
     foo2.addEnumAttribute("noreturn");
+
+    FunctionDefn foo3 = m.addFunctionDefn("foo3", {returnType: "i64", paramTypes: []});
+    BasicBlock bbfoo3 = foo3.appendBasicBlock();
+    builder.positionAtEnd(bbfoo3);
+    builder.ret(constInt("i64", 0));
+    foo.setGC(());
     return m;
 }
 

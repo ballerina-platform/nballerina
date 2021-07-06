@@ -208,7 +208,7 @@ public class FunctionDecl {
     }
 
     // Corresponds to LLVMSetGC
-    public function setGC(string name) {
+    public function setGC(string? name) {
         self.gcName = name;
     }
 }
@@ -312,7 +312,7 @@ public class FunctionDefn {
     }
 
     // Corresponds to LLVMSetGC
-    public function setGC(string name) {
+    public function setGC(string? name) {
         self.gcName = name;
     }
 }
