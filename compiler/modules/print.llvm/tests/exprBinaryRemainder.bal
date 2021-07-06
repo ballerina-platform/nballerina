@@ -50,7 +50,7 @@ function exprBinaryRemainder() returns Module {
     builder.positionAtEnd(bb16);
     Value R17 = builder.load(R4);
     Value R18 = builder.load(R5);
-    Value R19 = builder.binaryInt("srem", R17, R18);
+    Value R19 = builder.iArithmeticSigned("srem", R17, R18);
     builder.store(R19, R3);
     builder.br(bb20);
 

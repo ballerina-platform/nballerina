@@ -40,7 +40,7 @@ function exprBinaryDiv() returns Module {
     builder.positionAtEnd(bb14);
     Value R15 = builder.load(R3);
     Value R16 = builder.load(R4);
-    Value R17 = builder.binaryInt("sdiv", R15, R16);
+    Value R17 = builder.iArithmeticSigned("sdiv", R15, R16);
     builder.ret(R17);
     return m;
 }
