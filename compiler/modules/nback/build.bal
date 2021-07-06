@@ -524,8 +524,8 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         continueBlock = scaffold.addBasicBlock();
         llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
         builder.condBr(builder.iBitwise("and",
-                                         builder.iCmp("eq", lhs, llvm:constInt(LLVM_INT, int:MIN_VALUE)),
-                                         builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, -1))),
+                                        builder.iCmp("eq", lhs, llvm:constInt(LLVM_INT, int:MIN_VALUE)),
+                                        builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, -1))),
                        overflowBlock,
                        continueBlock);
         builder.positionAtEnd(overflowBlock);
@@ -758,9 +758,7 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
     return builder.getElementPtr(llvm:constNull(LLVM_TAGGED_PTR),
-                                     [builder.iBitwise("or",
-                                                        builder.zExt(value, LLVM_INT),
-                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
+                                [builder.iBitwise("or", builder.zExt(value, LLVM_INT), llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:Value {

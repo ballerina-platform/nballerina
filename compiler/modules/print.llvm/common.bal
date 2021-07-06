@@ -18,7 +18,7 @@ public type IntegralType IntType|PointerType;
 
 // Corresponds to LLVMPointerType function
 public function pointerType(Type ty, int addressSpace = 0) returns PointerType {
-    return {pointsTo: ty, addressSpace};
+    return { pointsTo: ty, addressSpace };
 }
 
 // Corresponds to LLVMArrayType
@@ -28,7 +28,7 @@ public type ArrayType readonly & record {|
 |};
 
 public function arrayType(Type ty, int elementCount) returns ArrayType {
-    return {elementType: ty, elementCount: elementCount};
+    return { elementType: ty, elementCount: elementCount };
 }
 
 // Corresponds to llvm::StructType
@@ -37,7 +37,7 @@ public type StructType readonly & record {
 };
 
 public function structType(Type[] elementTypes) returns StructType {
-    return {elementTypes: elementTypes.cloneReadOnly()};
+    return { elementTypes: elementTypes.cloneReadOnly() };
 }
 
 function getTypeAtIndex(StructType ty, int index) returns Type {
@@ -68,7 +68,7 @@ public type IntArithmeticSignedOp "sdiv"|"srem";
 
 public type IntBitwiseOp "xor"|"or"|"and";
 
-public type IntOp IntArithmeticOp|IntArithmeticSignedOp|IntBitwiseOp;
+type IntOp IntArithmeticOp|IntArithmeticSignedOp|IntBitwiseOp;
 
 // Corresponds to LLVMIntPredicate
 public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sle";
