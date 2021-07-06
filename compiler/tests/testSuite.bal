@@ -44,13 +44,13 @@ function testCompileEU(string path) returns file:Error|io:Error? {
             if isE {
                 test:assertFalse(err is err:Unimplemented, "unimplemented error on E test" + path);
             }
-            // io:println U errors and reported as semantic errors
+            // io:println U errors are reported as semantic errors
             else if !err.message().includes("'io:println'") {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
             // JBUG #31334 cast needed
             err:Position? pos = (<err:Detail>err.detail())?.position;
-            if isE && pos != () {
+            if (isE || base[1].toUpperAscii() == "E") && pos != () {
                 test:assertEquals(pos.lineNumber, check errorLine(path), "wrong line number in error " + path);
             }
         }
