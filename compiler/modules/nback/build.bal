@@ -213,7 +213,7 @@ class Scaffold {
     }
 }
 
-function buildModule(bir:Module mod, llvm:Context context, Options opt) returns llvm:Module|BuildError {
+function buildModule(bir:Module mod, llvm:Context context, *Options options) returns llvm:Module|BuildError {
     bir:ModuleId modId = mod.getId();
     llvm:Module llMod = context.createModule();
     bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
@@ -225,7 +225,7 @@ function buildModule(bir:Module mod, llvm:Context context, Options opt) returns 
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangleInternalSymbol(modId, symbol), ty);
-        llFunc.setGC(opt.gcName);
+        llFunc.setGC(options.gcName);
         if !symbol.isPublic {
             llFunc.setLinkage("internal");
         }

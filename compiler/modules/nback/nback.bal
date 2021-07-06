@@ -14,12 +14,9 @@ public type Options record {|
 |};
 
 // If outputFilename is non-nil write the output to this file.
-public function compileModule(bir:Module mod, string? outputFilename, string? gcName) returns err:Any|io:Error? {
+public function compileModule(bir:Module mod, string? outputFilename, *Options options) returns err:Any|io:Error? {
     llvm:Context context = new;
-    Options opt = {
-        gcName: gcName
-    };
-    llvm:Module llMod = check buildModule(mod, context, opt);
+    llvm:Module llMod = check buildModule(mod, context, options);
            
     if target != "" {
         llMod.setTarget(target);

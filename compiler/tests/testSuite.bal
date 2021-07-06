@@ -10,7 +10,7 @@ const SOURCE_DIR = "testSuite";
     dataProvider: listSourcesVPO
 }
 function testCompileVPO(string path) returns io:Error? {
-    CompileError? err = compileFile(path, (), ());
+    CompileError? err = compileFile(path, ());
     if err is io:Error {
         return err;
     }
@@ -32,7 +32,7 @@ function testCompileVPO(string path) returns io:Error? {
     dataProvider: listSourcesEU
 }
 function testCompileEU(string path) returns file:Error|io:Error? {
-    CompileError? err = compileFile(path, (), ());
+    CompileError? err = compileFile(path, ());
     // JBUG #31337 parentheses needed
     if (err is err:Any?) {
         if err is () {
