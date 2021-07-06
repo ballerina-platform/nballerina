@@ -22,9 +22,15 @@ char *_bal_stack_guard;
 
 #ifdef __clang__
 #define NODEREF __attribute__((noderef))
+#define NORETURN __attribute__((noreturn))
 #else
 #define NODEREF /* as nothing */
+#define NORETURN /* as nothing */
 #endif
+
+#define likely(x) __builtin_expect((x), 1)
+#define unlikely(x) __builtin_expect((x), 0)
+
 
 typedef char NODEREF *TaggedPtr;
 
@@ -44,7 +50,7 @@ struct PrintStack {
 };
 
 extern void *_bal_alloc(int64_t nBytes);
-extern void _bal_panic(Error err);
+extern NORETURN void _bal_panic(Error err);
 
 extern void _Bio__println(TaggedPtr p);
 
@@ -136,12 +142,12 @@ int64_t _Barray__length(TaggedPtr p) {
 
 Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToList(p);
-    if ((uint64_t)index < lp->length) {
+    if (likely((uint64_t)index < lp->length)) {
         lp->members[index] = val;
         return 0;
     }
-    if ((uint64_t)index >= lp->capacity) {
-        if ((uint64_t)index >= ARRAY_LENGTH_MAX) {
+    if (unlikely((uint64_t)index >= lp->capacity)) {
+        if (unlikely((uint64_t)index >= ARRAY_LENGTH_MAX)) {
             return index < 0 ? PANIC_INDEX_OUT_OF_BOUNDS : PANIC_LIST_TOO_LONG; 
         }
         array_grow(lp, index + 1);
@@ -160,7 +166,7 @@ Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
 void _Barray__push(TaggedPtr p, TaggedPtr val) {
     ListPtr lp = taggedToList(p);
     int64_t len = lp->length;
-    if (len >= lp->capacity) {
+    if (unlikely(len >= lp->capacity)) {
         array_grow(lp, 0);
     }
     // note that array_grow does not change length
@@ -188,7 +194,7 @@ static void array_grow(ListPtr lp, int64_t min_capacity) {
     }
     // Increase capacity by a factor of 1.5
     int64_t extra_capacity = lp->capacity >> 1;
-    if (old_capacity <= ARRAY_LENGTH_MAX - extra_capacity) {
+    if (likely(old_capacity <= ARRAY_LENGTH_MAX - extra_capacity)) {
         // we know that this addition cannot overflow
         // and that new_capacity <= ARRAY_LENGTH_MAX
         new_capacity = old_capacity + extra_capacity;
@@ -198,7 +204,7 @@ static void array_grow(ListPtr lp, int64_t min_capacity) {
         if (new_capacity == old_capacity)
             _bal_panic(PANIC_LIST_TOO_LONG);  // we won't get a line number, but this is very unlikely to be possible
     }
-    if (new_capacity < min_capacity) {
+    if (unlikely(new_capacity < min_capacity)) {
         new_capacity = min_capacity;
     }
     // we know the multiplication cannot overflow because new_capacity <= ARRAY_MAX
@@ -228,7 +234,7 @@ const char *panicMessages[] = {
     "list too long"
 };
 
-void _bal_panic(Error err) {
+NORETURN void _bal_panic(Error err) {
     int code = err & 0xFF;
     int64_t lineNumber = err >> 8;
     fputs("panic: ", stderr);
