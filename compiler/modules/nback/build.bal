@@ -225,7 +225,9 @@ function buildModule(bir:Module mod, llvm:Context context, *Options options) ret
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangleInternalSymbol(modId, symbol), ty);
-        llFunc.setGC(options.gcName);
+        if !(options.gcName is ()) {
+            llFunc.setGC(options.gcName);
+        }
         if !symbol.isPublic {
             llFunc.setLinkage("internal");
         }
