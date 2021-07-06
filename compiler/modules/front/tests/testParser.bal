@@ -209,7 +209,7 @@ function validTokenSourceFragments() returns string[][]|error {
          ["UV", "expr", string`"\""`, string`"\""`],
          ["UV", "expr", string`"what"`, string`"what"`],
          ["UV", "expr", string`"Say \"what\" again."`, string`"Say \"what\" again."`],
-         //ref
+         // ref
          ["V", "expr", "x", "x"],
          ["V", "expr", "truefalse", "truefalse"],
          // unary op
@@ -250,8 +250,6 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "expr", "a | b", "a | b"],
          ["V", "expr", "a & b", "a & b"],
          ["V", "expr", "a ^ b", "a ^ b"],
-         ["U", "expr", "a ..< b", "a ..< b"],
-         ["U", "expr", "a ... b", "a ... b"],
          // binary op associativity
          ["V", "expr", "1 + 2 + 3", "(1 + 2) + 3"],
          ["V", "expr", "1 + 2 + 3 + 4", "((1 + 2) + 3) + 4"],

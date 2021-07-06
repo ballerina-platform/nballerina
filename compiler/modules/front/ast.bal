@@ -30,7 +30,7 @@ type FunctionDef record {|
 
 type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
 type CallStmt FunctionCallExpr|MethodCallExpr;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr|RangeExpr;
+type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
 
 type ConstructorExpr ListConstructorExpr;
 
@@ -58,12 +58,9 @@ type WhileStmt record {|
 |};
 
 type ForeachStmt record {|
-    InlineTypeDesc td;
     string varName;
-    Expr iterable;
+    RangeExpr range;
     Stmt[] body;
-    // See comment in VarDeclStmt
-    t:SemType? semType = ();
 |};
 
 type BreakStmt "break";
@@ -80,7 +77,6 @@ type VarDeclStmt record {|
     // and it will be filled in later.
     t:SemType? semType = ();
 |};
-
 
 type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
 type BinaryBitwiseOp "|" | "^" | "&";
@@ -161,7 +157,6 @@ type MemberAccessLExpr record {|
 type RangeExpr record {|
     Expr lower;
     Expr upper;
-    RangeOp op;
 |};
 
 type VarRefExpr record {|
@@ -180,7 +175,6 @@ type SimpleConstExpr record {|
 |};
 
 // Types
-
 
 // This is the subtype of TypeDesc that we currently allow
 // within expressions and statements.

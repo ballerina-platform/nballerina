@@ -97,18 +97,11 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
     }
 }
 
-function parseRangeExpr(Tokenizer tok) returns Expr|err:Syntax {
-    Expr expr = check parseAdditiveExpr(tok);
-    Token? t = tok.current();
-    if t is "..<" {
-        check tok.advance();
-        Expr upper = check parseAdditiveExpr(tok);
-        RangeExpr range = { op: t, lower: expr, upper };
-        return range;
-    }
-    else {
-        return expr;
-    }
+function parseRangeExpr(Tokenizer tok) returns RangeExpr|err:Syntax {
+    Expr lower = check parseAdditiveExpr(tok);
+    check tok.expect("..<");
+    Expr upper = check parseAdditiveExpr(tok);
+    return { lower, upper };
 }
 
 function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {

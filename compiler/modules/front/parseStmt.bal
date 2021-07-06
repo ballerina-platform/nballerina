@@ -203,15 +203,17 @@ function parseWhileStmt(Tokenizer tok) returns WhileStmt|err:Syntax {
 }
 
 function parseForeachStmt(Tokenizer tok) returns ForeachStmt|err:Syntax {
-    InlineTypeDesc td = check parseInlineTypeDesc(tok);
+    if tok.current() != "int" {
+        return parseError(tok, "type of foreach variable must be int");
+    }
+    check tok.advance();
     Token? cur = tok.current();
-
     if cur is [IDENTIFIER, string] {
         check tok.advance();
         check tok.expect("in");
-        Expr iterable = check parseRangeExpr(tok);
+        RangeExpr range = check parseRangeExpr(tok);
         Stmt[] body = check parseStmtBlock(tok);
-        return { td, varName: cur[1], iterable, body, semType: convertInlineTypeDesc(td) };
+        return { varName: cur[1], range, body };
     }
     return parseError(tok, "invalid foreach statement");
 }
