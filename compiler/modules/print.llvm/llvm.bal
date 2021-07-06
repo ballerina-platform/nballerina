@@ -191,16 +191,10 @@ public class FunctionDecl {
     final string functionName;
     string? gcName = ();
     final EnumAttribute[] attributes = [];
-    string? gcStratergy = ();
 
     function init(Context context, string functionName, FunctionType functionType) {
         self.functionName = functionName;
         self.functionType = functionType;
-    }
-
-    // Corresponds to LLVMSetGC
-    public function setGC(string? stratergy) {
-        self.gcStratergy = stratergy;
     }
 
     function output(Output out) {
@@ -224,7 +218,7 @@ public class FunctionDefn {
     final FunctionType functionType;
     final string functionName;
     final EnumAttribute[] attributes = [];
-    string? gcStratergy = ();
+    string? gcName = ();
 
     private BasicBlock[] basicBlocks = [];
     private map<int> variableNames = {};
@@ -244,11 +238,6 @@ public class FunctionDefn {
             Value arg = new (paramType, register);
             self.paramValues.push(arg);
         }
-    }
-
-    // Corresponds to LLVMSetGC
-    public function setGC(string? stratergy) {
-        self.gcStratergy = stratergy;
     }
 
     // Correspond to LLVMGetParam
@@ -714,8 +703,8 @@ function functionHeader(Function fn) returns string {
     foreach int i in 0 ..< fn.attributes.length() {
         words.push(fn.attributes[i]);
     }
-    if fn.gcStratergy is string {
-        words.push("gc", string `"${<string>fn.gcStratergy}"`);
+    if fn.gcName is string {
+        words.push("gc", string `"${<string>fn.gcName}"`);
     }
     if fn is FunctionDefn {
         words.push("{");

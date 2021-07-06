@@ -9,10 +9,17 @@ public const OUTPUT_EXTENSION = ".ll";
 
 configurable string target = "";
 
+public type Options record {|
+    string? gcName = ();
+|};
+
 // If outputFilename is non-nil write the output to this file.
-public function compileModule(bir:Module mod, string? outputFilename, string? gcStrategy) returns err:Any|io:Error? {
+public function compileModule(bir:Module mod, string? outputFilename, string? gcName) returns err:Any|io:Error? {
     llvm:Context context = new;
-    llvm:Module llMod = check buildModule(mod, context, gcStrategy);
+    Options opt = {
+        gcName: gcName
+    };
+    llvm:Module llMod = check buildModule(mod, context, opt);
            
     if target != "" {
         llMod.setTarget(target);

@@ -5,6 +5,7 @@ import wso2/nballerina.err;
 
 import ballerina/io;
 import ballerina/file;
+import ballerina/regex;
 
 type CompileError err:Any?|io:Error;
 
@@ -15,9 +16,11 @@ public type Options record {|
     string? gc = ();
 |};
 
+const GC_NAME_REGEX = "[A-Za-z]+[-_][A-Za-z]+";
+
 const SOURCE_EXTENSION = ".bal";
 public function main(string[] filenames, *Options opts) returns error? {
-    if !isValidGCStrategy(opts.gc) {
+    if !isValidGCName(opts.gc) {
         return error("Invalid GC strategy " + <string>opts.gc);
     }
 
@@ -34,25 +37,22 @@ public function main(string[] filenames, *Options opts) returns error? {
     }  
 }
 
-function isValidGCStrategy(string? gcStrategy) returns boolean {
-    match gcStrategy {
-        "statepoint-example" | "shadow-stack" | () => {
-            return true;
-        }
-        _ => {
-            return false;
-        }
+function isValidGCName(string? gcName) returns boolean {
+    if (gcName is ()) {
+        return true;
+    } else {
+        return regex:matches(gcName, GC_NAME_REGEX);
     }
 }
 
 //  outputFilename of () means don't output anything
-function compileFile(string filename, string? outputFilename, string? gcStrategy) returns CompileError {
+function compileFile(string filename, string? outputFilename, string? gcName) returns CompileError {
     bir:ModuleId id = {
        names: [filename],
        organization: "dummy"
     };
     bir:Module module = check front:loadModule(filename, id);
-    check nback:compileModule(module, outputFilename, gcStrategy);
+    check nback:compileModule(module, outputFilename, gcName);
 }
 
 function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error? {
