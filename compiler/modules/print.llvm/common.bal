@@ -55,16 +55,21 @@ public type FunctionType readonly & record {|
     Type[] paramTypes;
 |};
 
-
 // Corresponds to LLVMLinkage enum
 public type Linkage "internal"|"external";
-public type EnumAttribute "noreturn"|"cold"|"nounwind"|"readnone"|"speculatable"|"willreturn"; 
 
-// Used with Builder.binaryInt
+public type EnumAttribute "noreturn"|"cold"|"nounwind"|"readnone"|"speculatable"|"willreturn";
+
 // Subtype of LLVMOpcode
-public type BinaryIntOp BinaryArithmeticOp|BinaryBitwiseOp;
-public type BinaryArithmeticOp "add"|"mul"|"sub"|"sdiv"|"srem";
-public type BinaryBitwiseOp "xor"|"or"|"and";
+
+public type IntArithmeticOp "add"|"sub"|"mul";
+
+public type IntArithmeticSignedOp "sdiv"|"srem";
+
+public type IntBitwiseOp "xor"|"or"|"and";
+
+type IntOp IntArithmeticOp|IntArithmeticSignedOp|IntBitwiseOp;
+
 // Corresponds to LLVMIntPredicate
 public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sle";
 

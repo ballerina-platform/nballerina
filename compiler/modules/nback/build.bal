@@ -523,13 +523,13 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         builder.positionAtEnd(continueBlock);
         continueBlock = scaffold.addBasicBlock();
         llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
-        builder.condBr(builder.binaryInt("and",
-                                         builder.iCmp("eq", lhs, llvm:constInt(LLVM_INT, int:MIN_VALUE)),
-                                         builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, -1))),
+        builder.condBr(builder.iBitwise("and",
+                                        builder.iCmp("eq", lhs, llvm:constInt(LLVM_INT, int:MIN_VALUE)),
+                                        builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, -1))),
                        overflowBlock,
                        continueBlock);
         builder.positionAtEnd(overflowBlock);
-        llvm:BinaryIntOp op;
+        llvm:IntArithmeticSignedOp op;
         if insn.op == "/" {
             op = "sdiv";
             builder.store(buildConstPanicError(PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
@@ -543,7 +543,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
             op = "srem";
         }
         builder.positionAtEnd(continueBlock);
-        result = builder.binaryInt(op, lhs, rhs);
+        result = builder.iArithmeticSigned(op, lhs, rhs);
     }
     buildStoreInt(builder, scaffold, result, insn.result);                                  
     if !(joinBlock is ()) {
@@ -552,7 +552,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
     }                         
 }
 
-final readonly & map<llvm:BinaryBitwiseOp> binaryBitwiseOp = {
+final readonly & map<llvm:IntBitwiseOp> binaryBitwiseOp = {
     "&": "and",
     "^": "xor",
     "|": "or"
@@ -561,8 +561,8 @@ final readonly & map<llvm:BinaryBitwiseOp> binaryBitwiseOp = {
 function buildBitwiseBinary(llvm:Builder builder, Scaffold scaffold, bir:IntBitwiseBinaryInsn insn) {
     llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
-    llvm:BinaryBitwiseOp op = binaryBitwiseOp.get(insn.op);
-    llvm:Value result = builder.binaryInt(op, lhs, rhs);
+    llvm:IntBitwiseOp op = binaryBitwiseOp.get(insn.op);
+    llvm:Value result = builder.iBitwise(op, lhs, rhs);
     buildStoreInt(builder, scaffold, result, insn.result);                                  
 }
 
@@ -666,7 +666,7 @@ function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, CmpEqOp
     llvm:BasicBlock bothIntsBlock = scaffold.addBasicBlock();
     llvm:BasicBlock diffBlock = scaffold.addBasicBlock();
     // check if they are both tagged ints
-    builder.condBr(builder.binaryInt("and", buildHasTag(builder, tagged1, TAG_INT), buildHasTag(builder, tagged2, TAG_INT)),
+    builder.condBr(builder.iBitwise("and", buildHasTag(builder, tagged1, TAG_INT), buildHasTag(builder, tagged2, TAG_INT)),
                    bothIntsBlock, diffBlock);
     builder.positionAtEnd(diffBlock);
     // at this point, we know they are different
@@ -714,12 +714,12 @@ function buildConstPanicError(PanicIndex panicIndex, err:Position pos) returns l
 }
 
 function buildPanicError(llvm:Builder builder, llvm:Value panicIndex, err:Position pos) returns llvm:Value {
-    return builder.binaryInt("or", panicIndex, llvm:constInt(LLVM_INT, pos.lineNumber << 8));
+    return builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, pos.lineNumber << 8));
 }
 
 function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {
     buildStoreBoolean(builder, scaffold,
-                      builder.binaryInt("xor", llvm:constInt(LLVM_BOOLEAN, 1), builder.load(scaffold.address(insn.operand))),
+                      builder.iBitwise("xor", llvm:constInt(LLVM_BOOLEAN, 1), builder.load(scaffold.address(insn.operand))),
                       insn.result);
 }
 
@@ -758,9 +758,9 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
     return builder.getElementPtr(llvm:constNull(LLVM_TAGGED_PTR),
-                                     [builder.binaryInt("or",
-                                                        builder.zExt(value, LLVM_INT),
-                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
+                                     [builder.iBitwise("or",
+                                                       builder.zExt(value, LLVM_INT),
+                                                       llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:Value {
@@ -804,7 +804,7 @@ function typeSize(llvm:Type ty) returns int {
 }
 
 function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) returns llvm:Value {
-    return builder.iCmp("eq", builder.binaryInt("and", builder.ptrToInt(tagged, LLVM_INT),
+    return builder.iCmp("eq", builder.iBitwise("and", builder.ptrToInt(tagged, LLVM_INT),
                                                        llvm:constInt(LLVM_INT, TAG_MASK)),
                               llvm:constInt(LLVM_INT, tag));
 }

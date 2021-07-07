@@ -10,7 +10,7 @@ function globalVar() returns Module {
     builder.positionAtEnd(initBlock);
     Value arg = testFn.getParam(0);
     Value val = builder.ptrToInt(g, "i64");
-    Value ret = builder.binaryInt("add", val, arg);
+    Value ret = builder.iArithmeticWrap("add", val, arg);
     builder.ret(ret);
     return m;
 }
