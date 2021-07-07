@@ -179,8 +179,8 @@ public type InsnBase record {
 };
 
 public type Insn 
-    IntArithmeticBinaryInsn|IntBitwiseBinaryInsn|IntCompareInsn
-    |BooleanNotInsn|BooleanCompareInsn|EqualityInsn
+    IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
+    |IntCompareInsn|BooleanNotInsn|BooleanCompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
