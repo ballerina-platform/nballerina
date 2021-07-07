@@ -21,7 +21,7 @@ const string VALID_GC_NAME_CHARS = LOWER + UPPER + "-_";
 
 const SOURCE_EXTENSION = ".bal";
 public function main(string[] filenames, *Options opts) returns error? {
-    string? gc = check validateGC(opts.gc);
+    string? gc = check validGcName(opts.gc);
     foreach string filename in filenames {
         if opts.testJsonTypes {
             check testJsonTypes(filename);
@@ -35,10 +35,11 @@ public function main(string[] filenames, *Options opts) returns error? {
     }  
 }
 
-function validateGC(string? gcName) returns string|error? {
+function validGcName(string? gcName) returns string|error? {
     if gcName is () {
         return ();
-    } else {
+    } 
+    else {
         foreach var c in gcName {
             if !VALID_GC_NAME_CHARS.includes(c) { 
                 return error("invalid gc name " + gcName); 
