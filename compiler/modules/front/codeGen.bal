@@ -191,8 +191,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
         bir:BranchInsn branchToLoopStep = { dest: loopStep.label };
         loopBody.insns.push(branchToLoopStep);
     }
-    // XXX replace with non-panicking add
-    bir:IntArithmeticBinaryInsn increment = { op: "+", operands: [loopVar, 1], result: loopVar, position: { lineNumber: 0, indexInLine: 0 } };
+    bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", operands: [loopVar, 1], result: loopVar };
     loopStep.insns.push(increment);
     loopStep.insns.push(branchToLoopHead);
     return exit;

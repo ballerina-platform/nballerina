@@ -272,6 +272,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
         }
+        else if insn is bir:IntNoPanicArithmeticBinaryInsn {
+            buildNoPanicArithmeticBinary(builder, scaffold, insn);
+        }
         else if insn is bir:IntBitwiseBinaryInsn {
             buildBitwiseBinary(builder, scaffold, insn);
         }
@@ -553,6 +556,14 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         builder.br(joinBlock);
         builder.positionAtEnd(joinBlock);
     }                         
+}
+
+function buildNoPanicArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntNoPanicArithmeticBinaryInsn insn) {
+    llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
+    llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
+    llvm:IntArithmeticOp op = arithmeticOps.get(insn.op);
+    llvm:Value result = builder.iArithmeticNoWrap(op, lhs, rhs);
+    buildStoreInt(builder, scaffold, result, insn.result);                                  
 }
 
 final readonly & map<llvm:IntBitwiseOp> binaryBitwiseOp = {
@@ -873,6 +884,12 @@ final readonly & map<llvm:IntrinsicFunctionName> binaryIntIntrinsics = {
     "+": "sadd.with.overflow.i64",
     "-": "ssub.with.overflow.i64",
     "*": "smul.with.overflow.i64"
+};
+
+final readonly & map<llvm:IntArithmeticOp> arithmeticOps = {
+    "+": "add",
+    "-": "sub",
+    "*": "mul"
 };
 
 // final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
