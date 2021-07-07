@@ -7,6 +7,7 @@ JAVA?=$(shell test/findJava.sh)
 export CLANG CFLAGS BAL JAVA
 
 all: $(COMPILER_JAR)
+	$(MAKE) -C runtime
 
 test: $(COMPILER_JAR)
 	$(MAKE) -C runtime
@@ -20,5 +21,5 @@ clean:
 	$(MAKE) -C runtime clean
 	$(MAKE) -C test clean
 
-.PHONY: clean test all
+.PHONY: clean test all runtime
 

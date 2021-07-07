@@ -1,6 +1,6 @@
 # This compiles, runs and checks the output of out/ll/*.ll
 CLANG ?= clang-11
-RT=../runtime/balrt.o
+RT=../runtime/balrt.a
 ll_files = $(wildcard out/ll/*.ll)
 expect_files = $(addsuffix .txt, $(addprefix out/expect/, $(basename $(notdir $(ll_files)))))
 diff_files = $(addsuffix .diff, $(addprefix out/result/, $(basename $(notdir $(ll_files)))))

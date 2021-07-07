@@ -37,6 +37,9 @@ target
 # Object files
 *.o
 
+# Library archives
+*.a
+
 # Default output from C compiler
 a.out
 

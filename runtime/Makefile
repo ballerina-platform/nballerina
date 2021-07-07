@@ -1,9 +1,16 @@
-CLANG ?= clang
+CLANG ?= clang-11
+OBJS=alloc.o list.o main.o panic.o print.o
+INCLUDES=tag.h balrt.h
+AR=ar
+LIB=balrt.a
 
-balrt.o: balrt.c tag.h
+$(LIB): $(OBJS)
+	$(AR) r $@ $^
+
+%.o: %.c
 	$(CLANG) $(CFLAGS) -c -o $@ $<
 
+$(OBJS): $(INCLUDES)
+
 clean:
-	-rm -f balrt.o
-
-
+	-rm -f $(LIB) $(OBJS)
