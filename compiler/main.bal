@@ -12,10 +12,16 @@ public type Options record {|
     boolean testJsonTypes = false;
     boolean showTypes = false;
     string? outDir = ();
+    string? gc = ();
 |};
+
+const LOWER = "abcdefghijklmnopqrstuvwxyz";
+const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const string VALID_GC_NAME_CHARS = LOWER + UPPER + "-_";
 
 const SOURCE_EXTENSION = ".bal";
 public function main(string[] filenames, *Options opts) returns error? {
+    string? gc = check validGcName(opts.gc);
     foreach string filename in filenames {
         if opts.testJsonTypes {
             check testJsonTypes(filename);
@@ -25,18 +31,32 @@ public function main(string[] filenames, *Options opts) returns error? {
             check showTypes(filename);
             continue;
         }
-        check compileFile(filename, check chooseOutputFilename(filename, opts.outDir));
+        check compileFile(filename, check chooseOutputFilename(filename, opts.outDir), { gcName: gc });
     }  
 }
 
+function validGcName(string? gcName) returns string|error? {
+    if gcName is () {
+        return ();
+    } 
+    else {
+        foreach var c in gcName {
+            if !VALID_GC_NAME_CHARS.includes(c) { 
+                return error("invalid gc name " + gcName); 
+            }
+        }
+        return gcName;
+    }
+}
+
 //  outputFilename of () means don't output anything
-function compileFile(string filename, string? outputFilename) returns CompileError {
+function compileFile(string filename, string? outputFilename, *nback:Options nbackOptions) returns CompileError {
     bir:ModuleId id = {
        names: [filename],
        organization: "dummy"
     };
     bir:Module module = check front:loadModule(filename, id);
-    check nback:compileModule(module, outputFilename);
+    check nback:compileModule(module, outputFilename, nbackOptions);
 }
 
 function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error? {
