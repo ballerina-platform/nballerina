@@ -1,0 +1,1 @@
+export BAL="/mnt/c/Windows/System32/cmd.exe /c bal"
