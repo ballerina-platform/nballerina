@@ -663,7 +663,11 @@ function sameIntType(Value v1, Value v2) returns IntType {
 function typeToString(RetType ty) returns string {
     string typeTag;
     if ty is PointerType {
-        typeTag = typeToString(ty.pointsTo) + "*";
+        if ty.addressSpace == 0 {
+            typeTag = typeToString(ty.pointsTo) + "*";
+        } else {
+            typeTag = typeToString(ty.pointsTo) + string `addrspace(${ty.addressSpace})*`;
+        }
     }
     else if ty is StructType {
         string[] typeStringBody = [];
