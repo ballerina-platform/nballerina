@@ -580,6 +580,14 @@ public class Builder {
         PointerType resultPtrType = pointerType(resultType);
         return new PointerValue(resultPtrType, reg);
     }
+    
+    // Corresponds to LLVMBuildAddrSpaceCast
+    public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        bb.addInsn(reg, "=" , "addrspacecast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        return new PointerValue(destTy, reg);
+    }
 
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
@@ -666,7 +674,7 @@ function typeToString(RetType ty) returns string {
         if ty.addressSpace == 0 {
             typeTag = typeToString(ty.pointsTo) + "*";
         } else {
-            typeTag = typeToString(ty.pointsTo) + string `addrspace(${ty.addressSpace})*`;
+            typeTag = createLine([typeToString(ty.pointsTo), "addrspace", "(" , ty.addressSpace.toString(), ")*"]);
         }
     }
     else if ty is StructType {

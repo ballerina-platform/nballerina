@@ -216,6 +216,11 @@ public distinct class Builder {
         } else {
             return new (jLLVMBuildGEP(self.LLVMBuilder, ptr.LLVMValueRef, arr.jObject, indices.length(), java:fromString(reg)));
         }
+    }    
+    
+    public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
+        string reg = self.extractName(name);
+        return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
     function extractName(string? name) returns string {
@@ -417,4 +422,10 @@ function LLVMSetAlignment(handle valueRef, int bytes) = @java:Method {
     name: "LLVMSetAlignment",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "int"]
+} external;
+
+function jLLVMBuildAddrSpaceCast(handle builder, handle pointer, handle destTy, handle name) returns handle = @java:Method {
+    name: "LLVMBuildAddrSpaceCast",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "java.lang.String"]
 } external;
