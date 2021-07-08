@@ -64,3 +64,5 @@ static inline int64_t taggedToInt(TaggedPtr p) {
 static inline ListPtr taggedToList(TaggedPtr p) {
     return (ListPtr)(char *)(~(((uint64_t)TAG_MASK) << TAG_SHIFT) & (uint64_t)p);
 }
+
+extern void _bal_array_grow(ListPtr lp, int64_t min_capacity);

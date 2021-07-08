@@ -1,10 +1,11 @@
 COMPILER_SRC=$(wildcard compiler/*.bal) $(wildcard compiler/modules/*/*.bal)
 COMPILER_JAR=compiler/target/bin/nballerina.jar
 BAL?=bal
-CLANG?=clang-11
+LLVM_SUFFIX?=-11
+CLANG?=clang$(LLVM_SUFFIX)
 CFLAGS=-O2
 JAVA?=$(shell test/findJava.sh)
-export CLANG CFLAGS BAL JAVA
+export CLANG CFLAGS BAL JAVA LLVM_SUFFIX
 
 all: $(COMPILER_JAR)
 	$(MAKE) -C runtime

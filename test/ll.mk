@@ -1,6 +1,10 @@
 # This compiles, runs and checks the output of out/ll/*.ll
-CLANG ?= clang-11
+LLVM_SUFFIX ?=-11
+CLANG ?= clang$(LLVM_SUFFIX)
+LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
+CFLAGS ?= -O2
 RT=../runtime/balrt.a
+RT_INLINE=../runtime/balrt_inline.bc
 ll_files = $(wildcard out/ll/*.ll)
 expect_files = $(addsuffix .txt, $(addprefix out/expect/, $(basename $(notdir $(ll_files)))))
 diff_files = $(addsuffix .diff, $(addprefix out/result/, $(basename $(notdir $(ll_files)))))
@@ -20,9 +24,12 @@ out/result/fail.txt: $(diff_files)
 out/result/%.diff: out/result/%.exe out/expect/%.txt
 	-./runcheck.sh $^ >$@
 
-out/result/%.exe: out/ll/%.ll $(RT)
+out/result/%.exe: out/result/%.bc $(RT)
+	$(CLANG) $(CFLAGS) $< -o $@ $(RT)
+
+out/result/%.bc: out/ll/%.ll $(RT_INLINE)
 	@mkdir -p out/result
-	$(CLANG) $(CFLAGS) -Wno-override-module $< -o $@ $(RT)
+	$(LLVM_LINK) -o $@ $^
 
 out/expect/%.txt: ../compiler/testSuite/%.bal
 	@mkdir -p out/expect

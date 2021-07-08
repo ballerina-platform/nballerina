@@ -2,14 +2,6 @@
 
 #include <string.h>
 
-static void array_grow(ListPtr lp, int64_t min_capacity);
-
-int64_t _Barray__length(TaggedPtr p) {
-    ListPtr lp = taggedToList(p);
-    return lp->length;
-}
-
-
 #define ARRAY_LENGTH_MAX (INT64_MAX/sizeof(TaggedPtr))
 
 Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
@@ -22,7 +14,7 @@ Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
         if (unlikely((uint64_t)index >= ARRAY_LENGTH_MAX)) {
             return index < 0 ? PANIC_INDEX_OUT_OF_BOUNDS : PANIC_LIST_TOO_LONG; 
         }
-        array_grow(lp, index + 1);
+        _bal_array_grow(lp, index + 1);
     }
     // Know that: lp->length <= index < lp->capacity
     if (index > lp->length) {
@@ -35,16 +27,7 @@ Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     return 0;
 }
 
-void _Barray__push(TaggedPtr p, TaggedPtr val) {
-    ListPtr lp = taggedToList(p);
-    int64_t len = lp->length;
-    if (unlikely(len >= lp->capacity)) {
-        array_grow(lp, 0);
-    }
-    // note that array_grow does not change length
-    lp->members[len] = val;
-    lp->length = len + 1;
-}
+
 
 #define INITIAL_CAPACITY 4
 
@@ -52,7 +35,7 @@ void _Barray__push(TaggedPtr p, TaggedPtr val) {
 // The new capacity must be greater than both the old capacity
 // and min_capacity.
 // Caller must ensure min_capacity <= ARRAY_LENGTH_MAX
-static void array_grow(ListPtr lp, int64_t min_capacity) {
+void _bal_array_grow(ListPtr lp, int64_t min_capacity) {
     int64_t old_capacity = lp->capacity;
     
     int64_t new_capacity; 
