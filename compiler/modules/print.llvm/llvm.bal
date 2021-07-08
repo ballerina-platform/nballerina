@@ -137,14 +137,14 @@ public class Module {
     }
 
     // Corresponds to LLVMAddGlobal
-    public function addGlobal(Type ty, string name) returns PointerValue {
+    public function addGlobal(Type ty, string name, int addressSpace = 0) returns PointerValue {
         if name is IntrinsicFunctionName {
             panic error("reserved intrinsic function name");
         }
         if self.globals.hasKey(name) {
             panic error("this module already has a declaration by that name");
         }
-        PointerType ptrType = pointerType(ty);
+        PointerType ptrType = pointerType(ty, addressSpace);
         PointerValue val = new PointerValue(ptrType, "@" + name); 
         self.globals[name] = val;
         self.globalVariables.push(val);
@@ -171,7 +171,20 @@ public class Module {
             out.push(createLine(words));
         }
         foreach var globalVar in self.globalVariables {
-            out.push(createLine([globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)])); 
+            if globalVar.ty.addressSpace == 0 {
+                out.push(createLine([globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)]));
+            } else {
+                out.push(createLine([
+                    globalVar.operand, 
+                    "=", 
+                    "external", 
+                    "addrspace", 
+                    "(", 
+                    globalVar.ty.addressSpace.toString(),
+                    ")",
+                    "global", 
+                    typeToString(globalVar.ty.pointsTo)])); 
+            }
         }
         foreach var fn in self.functionDecls {
             fn.output(out);
