@@ -318,6 +318,10 @@ public class FunctionDefn {
         return reg;
     } 
 
+    function getVariableName(string name) returns string {
+
+    }
+
     public function addEnumAttribute(EnumAttribute attribute){
         if self.attributes.indexOf(attribute) == () {
            self.attributes.push(attribute); 
@@ -632,6 +636,34 @@ public distinct class BasicBlock {
         self.lines.push(createLine(words, INDENT));
     }
 
+    function replaceUnnamedVariables(string line) returns string {
+        int? startIndex = line.indexOf("%_");
+        while startIndex is int {
+            int? endIndexSpace = line.indexOf(" ", startIndex);
+            int? endIndexComma = line.indexOf(",", startIndex);
+            int end;
+            if endIndexSpace is int && !(endIndexComma is int) {
+                end = endIndexSpace;
+            } else if !(endIndexSpace is int) && endIndexComma is int {
+                end = endIndexComma;
+            } else if endIndexSpace is int && endIndexComma is int {
+                end = int:min(endIndexSpace, endIndexComma);
+            } else {
+                end = line.length();
+            }
+            string variableName = line.substring(startIndex, end);
+            int s = end-1;
+            startIndex = line.indexOf("%_", s);
+        }
+        return line;
+    }
+
+    function updateLine(string line) returns string {
+        string newLine = self.replaceUnnamedVariables(line);
+
+        return newLine;
+    }
+
     function output(Output out) {
         // This ensures we leave out the label in two cases
         // 1. the first block (provided it is not referenced)
@@ -641,7 +673,8 @@ public distinct class BasicBlock {
             out.push(self.label + ":");
         }
         foreach var line in self.lines {
-            out.push(line);
+            string outputLine = self.updateLine(line);
+            out.push(outputLine);
         }
     }
 }
