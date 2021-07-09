@@ -674,7 +674,7 @@ function typeToString(RetType ty) returns string {
         if ty.addressSpace == 0 {
             typeTag = typeToString(ty.pointsTo) + "*";
         } else {
-            typeTag = createLine([typeToString(ty.pointsTo), "addrspace", "(" , ty.addressSpace.toString(), ")*"]);
+            typeTag = createLine([typeToString(ty.pointsTo), "addrspace", "(" , ty.addressSpace.toString(), ")", "*"]);
         }
     }
     else if ty is StructType {
