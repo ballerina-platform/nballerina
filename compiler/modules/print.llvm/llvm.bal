@@ -240,13 +240,17 @@ public class FunctionDefn {
     private Value[] paramValues;
     private Linkage linkage = "external";
     private final Context context;
+    private map<string> nameTranslation = {};
+    private int nameCounter;
 
     function init(Context context, string functionName, FunctionType functionType) {
         self.context = context;
         self.functionName = functionName;
         self.functionType = functionType;
         self.paramValues = [];
+        self.nameCounter = 0;
         foreach var paramType in functionType.paramTypes {
+            // TODO: change this so correct name is used directly
             string register = self.genReg();
             Value arg = new (paramType, register);
             self.paramValues.push(arg);
@@ -287,6 +291,7 @@ public class FunctionDefn {
         return tem;
     }
 
+    // FIXME: fix this so name is easy to detect
     function genLabel() returns string {
         string label = "L" + self.labelCount.toString();
         self.labelCount += 1;
@@ -294,7 +299,7 @@ public class FunctionDefn {
     }
 
     function genReg(string? name = ()) returns string {
-        string regName = "_" + self.unnamedRegisterCount.toString();
+        string regName = "?" + self.unnamedRegisterCount.toString();
         if name is string {
             regName = name;
         } else {
@@ -327,6 +332,31 @@ public class FunctionDefn {
     // Corresponds to LLVMSetGC
     public function setGC(string? name) {
         self.gcName = name;
+    }
+
+    function translateName(string name) returns string {
+        if name.length() < 2 {
+            return name;
+        }
+        if self.nameTranslation.hasKey(name) {
+            return self.nameTranslation.get(name);
+        }
+        string tag = name.trim().substring(0,2);
+        if tag == "%?" {
+            // unnamed variable
+            // FIXME: change this
+            string new_name = "%_" + self.nameCounter.toString();
+            self.nameCounter += 1; 
+            self.nameTranslation[name] = new_name;
+            return new_name;
+        }
+        // if tag == "L?" {
+        //     // FIXME: change this
+        //     string new_name = "L" + name.substring(2);
+        //     self.nameTranslation[name] = new_name;
+        //     return new_name;
+        // }
+        return name;
     }
 }
 
@@ -644,7 +674,11 @@ public distinct class BasicBlock {
             out.push(self.label + ":");
         }
         foreach var line in self.lines {
-            string outputLine = createLine(line, INDENT);
+            string[] newLine = [];
+            foreach var name in line {
+               newLine.push(self.func.translateName(name));
+            }
+            string outputLine = createLine(newLine, INDENT);
             out.push(outputLine);
         }
     }
@@ -749,7 +783,7 @@ function functionHeader(Function fn) returns string {
         }
         words.push(typeToString(ty));
         if fn is FunctionDefn {
-            words.push(fn.getParam(i).operand);
+            words.push(fn.translateName(fn.getParam(i).operand));
         }
     }
     words.push(")");
