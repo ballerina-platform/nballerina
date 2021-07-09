@@ -318,10 +318,6 @@ public class FunctionDefn {
         return reg;
     } 
 
-    function getVariableName(string name) returns string {
-
-    }
-
     public function addEnumAttribute(EnumAttribute attribute){
         if self.attributes.indexOf(attribute) == () {
            self.attributes.push(attribute); 
@@ -351,7 +347,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg(name);
         PointerType ptrTy = pointerType(ty);
-        addInsnWithAlign(bb, [reg, "=", "alloca", typeToString(ty)], align);
+        addInsnWithAlign(bb, [reg, createLine(["=", "alloca", typeToString(ty)])], align);
         return new PointerValue(ptrTy, reg);
     }
 
@@ -360,7 +356,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         Type ty = ptr.ty.pointsTo;
         string reg = bb.func.genReg();
-        addInsnWithAlign(bb, [reg, "=", "load", typeToString(ty), ",", typeToString(ptr.ty), ptr.operand], align);
+        addInsnWithAlign(bb, [reg, createLine(["=", "load", typeToString(ty), ",", typeToString(ptr.ty)]), ptr.operand], align);
         return new Value(ty, reg);
     }
 
@@ -370,7 +366,7 @@ public class Builder {
         if ty != val.ty {
             panic err:illegalArgument("store type mismatch: " + typeToString(val.ty) + ", " + typeToString(ptr.ty));
         }
-        addInsnWithAlign(self.bb(), ["store", typeToString(ty), val.operand, ",", typeToString(ptr.ty), ptr.operand], align);
+        addInsnWithAlign(self.bb(), [createLine(["store", typeToString(ty)]), val.operand, createLine([",", typeToString(ptr.ty)]), ptr.operand], align);
     }
 
     // Corresponds to LLVMBuildNSW{Add,Mul,Sub}
@@ -378,7 +374,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
-        bb.addInsn(reg, "=", op, "nsw", ty, lhs.operand, ",", rhs.operand);
+        bb.addInsn(reg, createLine(["=", op, "nsw", ty]), lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
     // Corresponds to LLVMBuild{Add,Mul,Sub}
@@ -401,7 +397,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
-        bb.addInsn(reg, "=", op, ty, lhs.operand, ",", rhs.operand);
+        bb.addInsn(reg, createLine(["=", op, ty]), lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
 
@@ -410,7 +406,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntegralType ty = sameIntegralType(lhs, rhs);
-        bb.addInsn(reg, "=", "icmp", op, typeToString(ty), lhs.operand, ",", rhs.operand);
+        bb.addInsn(reg, createLine(["=", "icmp", op, typeToString(ty)]), lhs.operand, ",", rhs.operand);
         return new Value("i1", reg);
     }
 
@@ -418,7 +414,7 @@ public class Builder {
     public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "bitcast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        bb.addInsn(reg, createLine(["=", "bitcast", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destTy)]));
         return new (destTy, reg);
     }
     
@@ -427,10 +423,10 @@ public class Builder {
     public function ret(Value? value = ()) {
         BasicBlock bb = self.bb();
         if value is () {
-            bb.addInsn("ret", "void");
+            bb.addInsn(createLine(["ret", "void"]));
         }
         else {
-            bb.addInsn("ret", typeToString(value.ty), value.operand);
+            bb.addInsn(createLine(["ret", typeToString(value.ty)]), value.operand);
         }
     }
 
@@ -438,7 +434,7 @@ public class Builder {
     public function ptrToInt(PointerValue ptr, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "ptrtoint", typeToString(ptr.ty), ptr.operand, "to", typeToString(destTy));
+        bb.addInsn(reg, createLine(["=", "ptrtoint", typeToString(ptr.ty)]), ptr.operand, createLine(["to", typeToString(destTy)]));
         return new Value(destTy, reg);
     }
 
@@ -446,7 +442,7 @@ public class Builder {
     public function zExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "zext", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        bb.addInsn(reg, createLine(["=", "zext", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destTy)]));
         return new Value(destTy, reg);
     }
 
@@ -454,7 +450,7 @@ public class Builder {
     public function sExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "sext", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        bb.addInsn(reg, createLine(["=", "sext", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destTy)]));
         return  new Value(destTy, reg);
     }
 
@@ -466,7 +462,7 @@ public class Builder {
             }
             BasicBlock bb = self.bb();
             string reg = bb.func.genReg();
-            bb.addInsn(reg, "=", "trunc", typeToString(val.ty), val.operand, "to", typeToString(destinationType));
+            bb.addInsn(reg, createLine(["=", "trunc", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destinationType)]));
             return new Value(destinationType, reg);
         } 
         else {
@@ -486,30 +482,31 @@ public class Builder {
             panic err:illegalArgument(`number of arguments is invalid for function ${fn.functionName}`);
         }
         BasicBlock bb = self.bb();
-        string reg = "";
         string[] insnWords = [];
         RetType retType = fn.functionType.returnType;
         if retType != "void" {
-            reg = bb.func.genReg();
-            insnWords.push(reg);
             insnWords.push("=");
         }
         insnWords.push("call");
         insnWords.push(typeToString(retType));
         insnWords.push("@" + fn.functionName);
         insnWords.push("(");
+        string[] argsWords = [];
         foreach int i in 0 ..< args.length() {
             final Value arg = args[i];
             if i > 0 {
-                insnWords.push(",");
+                argsWords.push(",");
             }
-            insnWords.push(typeToString(arg.ty));
-            insnWords.push(arg.operand);
+            argsWords.push(typeToString(arg.ty));
+            argsWords.push(arg.operand);
         }
-        insnWords.push(")");
-        bb.addInsn(...insnWords);
+        argsWords.push(")");
         if retType != "void" {
+            string reg = bb.func.genReg();
+            bb.addInsn(reg, createLine(insnWords), ...argsWords);
             return new Value(retType, reg);
+        } else {
+            bb.addInsn(createLine(insnWords), ...argsWords);
         }
     }
 
@@ -518,7 +515,7 @@ public class Builder {
         if value.ty is StructType {
             BasicBlock bb = self.bb();
             string reg = bb.func.genReg();
-            bb.addInsn(reg, "=", "extractvalue", typeToString(value.ty), value.operand, ",", index.toString());
+            bb.addInsn(reg, createLine(["=", "extractvalue", typeToString(value.ty)]), value.operand, createLine([",", index.toString()]));
             Type elementType = getTypeAtIndex(<StructType>value.ty, index);
             return new Value(elementType, reg);
         }
@@ -530,14 +527,14 @@ public class Builder {
     // Corresponds to LLVMBuildBr
     public function br(BasicBlock destination) {
         BasicBlock bb = self.bb();
-        bb.addInsn("br", "label", destination.ref());
+        bb.addInsn(createLine(["br", "label"]), destination.ref());
     }
 
     // Corresponds to LLVMBuildCondBr
     public function condBr(Value condition, BasicBlock ifTrue, BasicBlock ifFalse) {
         if condition.ty is "i1" {
             BasicBlock bb = self.bb();
-            bb.addInsn("br", "i1", condition.operand, ",", "label", ifTrue.ref(), ",", "label", ifFalse.ref());
+            bb.addInsn(createLine(["br", "i1"]), condition.operand, createLine([",", "label"]), ifTrue.ref(), createLine([",", "label"]), ifFalse.ref());
         }
         else {
             panic err:illegalArgument("Condition must be a u1");
@@ -549,17 +546,18 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         string[] words = [];
-        words.push(reg, "=", "getelementptr");
+        words.push("=", "getelementptr");
         if inbounds != () {
             words.push(inbounds);
         } 
-        words.push(typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand);
+        words.push(typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty));
+        string[] indexBody = [ptr.operand];
         Type resultType = ptr.ty;
         int resultAddressSpace = 0;
         foreach var index in indices {
-            words.push(",");
-            words.push(typeToString(index.ty));
-            words.push(index.operand);
+            indexBody.push(",");
+            indexBody.push(typeToString(index.ty));
+            indexBody.push(index.operand);
             if resultType is PointerType {
                 resultAddressSpace = resultType.addressSpace;
                 resultType = resultType.pointsTo;
@@ -583,6 +581,7 @@ public class Builder {
             }
         }
         bb.addInsn(...words);
+        bb.addInsn(reg, createLine(words), ...indexBody);
         PointerType resultPtrType = pointerType(resultType, resultAddressSpace);
         return new PointerValue(resultPtrType, reg);
     }
@@ -608,7 +607,7 @@ public class Builder {
 
 function addInsnWithAlign(BasicBlock bb, string[] words, Alignment? align) {
     if !(align is ()) {
-        words.push(",", "align", align.toString());
+        words.push(createLine([",", "align", align.toString()]));
     }
     bb.addInsn(...words);
 }
@@ -619,7 +618,7 @@ const INDENT = "  ";
 public distinct class BasicBlock {
     final FunctionDefn func;
     private final string label;
-    private final string[] lines = [];
+    private final string[][] lines = [];
     private boolean isReferenced = false;
 
     function init(Context context, string label, FunctionDefn func) {
@@ -633,35 +632,7 @@ public distinct class BasicBlock {
     }
 
     function addInsn(string... words) {
-        self.lines.push(createLine(words, INDENT));
-    }
-
-    function replaceUnnamedVariables(string line) returns string {
-        int? startIndex = line.indexOf("%_");
-        while startIndex is int {
-            int? endIndexSpace = line.indexOf(" ", startIndex);
-            int? endIndexComma = line.indexOf(",", startIndex);
-            int end;
-            if endIndexSpace is int && !(endIndexComma is int) {
-                end = endIndexSpace;
-            } else if !(endIndexSpace is int) && endIndexComma is int {
-                end = endIndexComma;
-            } else if endIndexSpace is int && endIndexComma is int {
-                end = int:min(endIndexSpace, endIndexComma);
-            } else {
-                end = line.length();
-            }
-            string variableName = line.substring(startIndex, end);
-            int s = end-1;
-            startIndex = line.indexOf("%_", s);
-        }
-        return line;
-    }
-
-    function updateLine(string line) returns string {
-        string newLine = self.replaceUnnamedVariables(line);
-
-        return newLine;
+        self.lines.push(words);
     }
 
     function output(Output out) {
@@ -673,7 +644,7 @@ public distinct class BasicBlock {
             out.push(self.label + ":");
         }
         foreach var line in self.lines {
-            string outputLine = self.updateLine(line);
+            string outputLine = createLine(line, INDENT);
             out.push(outputLine);
         }
     }
@@ -797,7 +768,14 @@ function functionHeader(Function fn) returns string {
 function createLine(string[] words, string indent = "") returns string {
     string[] parts = [];
     foreach string word in words {
-        if !omitSpaceBefore(word) && parts.length() > 0 && !omitSpaceAfter(parts[parts.length() - 1]) {
+        string lastTail = parts.length() > 0 ? parts[parts.length() - 1] : "";
+        if lastTail.length() > 0 {
+            lastTail = lastTail.substring(lastTail.length() - 1);
+        }
+        string head = word.length() > 0 ? word.substring(0, 1) : "";
+        if !(omitSpaceBefore(word) || (head != "\"" && omitSpaceBefore(head))) 
+                && parts.length() > 0 
+                && !(omitSpaceAfter(parts[parts.length() - 1]) || (lastTail != "\"" && omitSpaceAfter(lastTail))) {
             parts.push(" ");
         }
         parts.push(word);
