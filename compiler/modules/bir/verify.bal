@@ -52,6 +52,8 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns err:Semantic?
 function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     string name = insn.name;
     if insn is IntBinaryInsn {
+        // XXX need to check result also
+        // different rules for bitwise
         check verifyOperandInt(vc, name, insn.operands[0]);
         check verifyOperandInt(vc, name, insn.operands[1]);
     }
