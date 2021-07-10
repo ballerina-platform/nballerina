@@ -45,3 +45,6 @@ a.out
 
 # Output from jni test build
 testbuild
+
+# bal command seems to produce this
+heap-dump.hprof
