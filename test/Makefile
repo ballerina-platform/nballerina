@@ -70,4 +70,8 @@ out/expect/%.txt: ../compiler/testSuite/%.bal
 clean:
 	-rm -fr out
 
-.PHONY: test clean compile testll
+
+update:
+	cd out/ll; for f in *.ll; do cmp -s $$f ../../ll/$$f || cp -p $$f ../../ll/; done
+
+.PHONY: test clean compile testll update
