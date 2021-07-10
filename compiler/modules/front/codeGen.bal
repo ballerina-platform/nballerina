@@ -202,8 +202,11 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? s
     bir:BasicBlock exit = cx.createBasicBlock();
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
     startBlock.insns.push(branchToLoopHead);
-    var [condition, nextBlock] = check codeGenExprForBoolean(cx, loopHead, scope, stmt.condition);
+    var [condition, nextBlock] = check codeGenConditionalExpr(cx, loopHead, scope, stmt.condition);
     if condition is false {
+        if stmt.body.length() > 0 {
+            return cx.semanticErr("unreachable code");
+        }
         return nextBlock;
     }
     else {
@@ -247,17 +250,23 @@ function codeGenContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock) retur
 
 function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, IfElseStmt stmt) returns CodeGenError|bir:BasicBlock? {
     var { condition, ifTrue, ifFalse } = stmt;
-    var [operand, branchBlock] = check codeGenExprForBoolean(cx, startBlock, scope, condition);
+    var [operand, branchBlock] = check codeGenConditionalExpr(cx, startBlock, scope, condition);
     if operand is boolean {
+        Stmt[] taken;
+        Stmt[] notTaken;
         if operand {
-            return codeGenStmts(cx, branchBlock, scope, ifTrue);
-        }
-        else if ifFalse.length() == 0 {
-            return branchBlock;
+            taken = ifTrue;
+            notTaken = ifFalse;
         }
         else {
-            return codeGenStmts(cx, branchBlock, scope, ifFalse);
+            taken = ifFalse;
+            notTaken = ifTrue;
         }
+        if notTaken.length() > 0 {
+            // XXX position should come from first member of notTaken
+            return cx.semanticErr("unreachable code");
+        }
+        return codeGenStmts(cx, branchBlock, scope, taken);
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
@@ -366,13 +375,12 @@ function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? sc
     return nextBlock;
 }
 
-function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:IntOperand, bir:BasicBlock] {
-    var [op, nextBlock] = check codeGenExpr(cx, bb, scope, expr);
-    if op is bir:IntOperand {
-        // rest of the type checking is in the verifier
-        return [op, nextBlock];
+function codeGenConditionalExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:BooleanOperand, bir:BasicBlock] {
+    var constValue = check evalConstExpr(expr);
+    if constValue is boolean {
+        return [constValue, bb];
     }
-    return cx.semanticErr("expected integer operand");
+    return codeGenExprForBoolean(cx, bb, scope, expr);
 }
 
 function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:BooleanOperand, bir:BasicBlock] {
@@ -382,6 +390,15 @@ function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Scope? scop
         return [op, nextBlock];
     }
     return cx.semanticErr("expected boolean operand");
+}
+
+function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:IntOperand, bir:BasicBlock] {
+    var [op, nextBlock] = check codeGenExpr(cx, bb, scope, expr);
+    if op is bir:IntOperand {
+        // rest of the type checking is in the verifier
+        return [op, nextBlock];
+    }
+    return cx.semanticErr("expected integer operand");
 }
 
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:Operand, bir:BasicBlock] {
@@ -405,7 +422,10 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
         var { bitwiseOp: op, left, right } => {
             var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
             var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
-            bir:Register result = cx.createRegister(t:INT);
+            t:SemType lt = bitwiseOperandType(l);
+            t:SemType rt = bitwiseOperandType(l);
+            t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
+            bir:Register result = cx.createRegister(resultType);
             bir:IntBitwiseBinaryInsn insn = { op, operands: [l, r], result };
             bb.insns.push(insn);
             return [result, nextBlock];
@@ -444,13 +464,16 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             var [operand, nextBlock] = check codeGenExprForBoolean(cx, bb, scope, o);
             bir:Register reg = cx.createRegister(t:BOOLEAN);
             if operand is boolean {
-                return [!operand, nextBlock];
+                // Do it like this, because type of result is int not a singleton
+                bir:AssignInsn insn = { operand: !operand, result: reg };
+                bb.insns.push(insn);
             }
             else {
                 bir:BooleanNotInsn insn = { operand, result: reg };
                 bb.insns.push(insn);
-                return [reg, nextBlock];
             }
+            return [reg, nextBlock];
+
         }
         var { td, operand: o } => {
             var [operand, nextBlock] = check codeGenExpr(cx, bb, scope, o);
@@ -659,6 +682,17 @@ function lookup(string name, Scope? scope) returns Scope? {
         }
     }
     return ();
+}
+
+function bitwiseOperandType(bir:IntOperand operand) returns t:SemType {
+    t:SemType t;
+    if operand is int {
+        t = t:intConst(operand);
+    }
+    else {
+        t = operand.semType;
+    }
+    return t:widenUnsigned(t);
 }
 
 type NilOperand ()|bir:Register;

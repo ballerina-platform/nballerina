@@ -16,7 +16,8 @@ public function main() {
     if () != makeNil() {
         io:println(5);
     }
-    if () != () {
+    boolean b = () != ();
+    if b {
         io:println(6);
     }
 }

@@ -49,6 +49,27 @@ public function intWidthUnsigned(int bits) returns SemType {
     return uniformSubtype(UT_INT, t);
 }
 
+// Widen to UnsignedN
+function intSubtypeWidenUnsigned(SubtypeData d) returns SubtypeData {
+    if d is boolean {
+        return d;
+    }
+    IntSubtype v = <IntSubtype>d;
+    if v[0].min < 0 {
+        return true;
+    }
+    Range r = v[v.length() - 1];
+    int i = 8;
+    while i <= 32 {
+        if r.max < (1 << i) {
+            IntSubtype w = [{ min: 0, max: (1 << i) - 1 }];
+            return w;
+        }
+        i = i * 2;
+    }
+    return true;
+}
+
 function intSubtypeContains(SubtypeData d, int n) returns boolean {
     if d is boolean {
         return d;

@@ -79,4 +79,11 @@ public function unreached(string? detail = ()) returns never {
     panic error(msg);
 }
 
+public function impossible(string? detail = ()) returns error {
+    string msg = "something impossible happened";
+    if detail is string {
+        msg += " (" + detail + ")";
+    }
+    return error(msg);
+}
 

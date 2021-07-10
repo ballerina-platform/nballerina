@@ -45,8 +45,8 @@ L1:
   %_36 = extractvalue {i64, i1} %_35, 1
   br i1 %_36, label %L5, label %L4
 L2:
-  %_91 = load i64, i64* %_31
-  call void @_bal_panic (i64 %_91)
+  %_93 = load i64, i64* %_31
+  call void @_bal_panic (i64 %_93)
   unreachable
 L3:
   call void @_bal_panic (i64 772)
@@ -163,15 +163,19 @@ L16:
   %_86 = load i1, i1* %_21
   call void @_B_printBoolean (i1 %_86)
   store i8* null, i8** %_24
-  %_87 = icmp eq i1 0, 0
-  store i1 %_87, i1* %_25
-  %_88 = load i1, i1* %_25
-  call void @_B_printBoolean (i1 %_88)
+  store i1 0, i1* %_26
+  %_87 = load i1, i1* %_26
+  %_88 = icmp eq i1 %_87, 0
+  store i1 %_88, i1* %_25
+  %_89 = load i1, i1* %_25
+  call void @_B_printBoolean (i1 %_89)
   store i8* null, i8** %_27
-  %_89 = icmp eq i1 0, 0
-  store i1 %_89, i1* %_28
-  %_90 = load i1, i1* %_28
-  call void @_B_printBoolean (i1 %_90)
+  store i1 0, i1* %_29
+  %_90 = load i1, i1* %_29
+  %_91 = icmp eq i1 0, %_90
+  store i1 %_91, i1* %_28
+  %_92 = load i1, i1* %_28
+  call void @_B_printBoolean (i1 %_92)
   store i8* null, i8** %_30
   ret void
 L17:

@@ -559,15 +559,34 @@ public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolea
     return (bits & ~<int>t2) == 0;
 }
 
+// If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),
+// then return the smallest such subtype. Otherwise, return t.
+public function widenUnsigned(SemType t) returns SemType {
+    if t is UniformTypeBitSet {
+        return t;
+    }
+    else {
+        if !isSubtypeSimple(t, INT) {
+            return t;
+        }
+        SubtypeData data = intSubtypeWidenUnsigned(subtypeData(t, UT_INT));
+        if data is boolean {
+            return INT;
+        }
+        else {
+            return uniformSubtype(UT_INT, data);
+        }
+    }
+}
+
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
 function simpleArrayMemberType(SemType t, ListAtomicType[] listDefs) returns UniformTypeBitSet? {
-    UniformTypeBitSet list = uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW));
     if t is UniformTypeBitSet {
-        return t == list ? TOP : ();
+        return t == LIST ? TOP : ();
     }
     else {
-        if !isSubtypeSimple(t, list) {
+        if !isSubtypeSimple(t, LIST) {
             return ();
         }
         bdd:Bdd[] bdds = [<bdd:Bdd>t.getSubtypeData(UT_LIST_RO), <bdd:Bdd>t.getSubtypeData(UT_LIST_RW)];
