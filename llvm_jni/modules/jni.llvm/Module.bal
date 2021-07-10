@@ -41,8 +41,8 @@ public distinct class Module {
         _ = jLLVMPrintModuleToFile(self.LLVMModule, java:fromString(fileName), err);
     }
 
-    public function addGlobal(Type ty, string name) returns PointerValue {
-        return new (jLLVMAddGlobal(self.LLVMModule, typeToLLVMType(ty), java:fromString(name)));
+    public function addGlobal(Type ty, string name, int addressSpace = 0) returns PointerValue {
+        return new (jLLVMAddGlobalInAddressSpace(self.LLVMModule, typeToLLVMType(ty), java:fromString(name), addressSpace));
     }
 
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
@@ -90,10 +90,10 @@ function jLLVMPrintModuleToString(handle moduleRef) returns handle = @java:Metho
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef"]
 } external;
 
-function jLLVMAddGlobal(handle moduleRef, handle typeRef, handle name) returns handle = @java:Method {
-    name: "LLVMAddGlobal",
+function jLLVMAddGlobalInAddressSpace(handle moduleRef, handle typeRef, handle name, int addressSpace) returns handle = @java:Method {
+    name: "LLVMAddGlobalInAddressSpace",
     'class: "org.bytedeco.llvm.global.LLVM",
-    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "java.lang.String"]
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "java.lang.String", "int"]
 } external;
 
 function jLLVMLookupIntrinsicID(handle name, int nameLen) returns int = @java:Method {

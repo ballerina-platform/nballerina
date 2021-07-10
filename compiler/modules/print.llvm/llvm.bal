@@ -137,14 +137,14 @@ public class Module {
     }
 
     // Corresponds to LLVMAddGlobal
-    public function addGlobal(Type ty, string name) returns PointerValue {
+    public function addGlobal(Type ty, string name, int addressSpace = 0) returns PointerValue {
         if name is IntrinsicFunctionName {
             panic error("reserved intrinsic function name");
         }
         if self.globals.hasKey(name) {
             panic error("this module already has a declaration by that name");
         }
-        PointerType ptrType = pointerType(ty);
+        PointerType ptrType = pointerType(ty, addressSpace);
         PointerValue val = new PointerValue(ptrType, "@" + name); 
         self.globals[name] = val;
         self.globalVariables.push(val);
@@ -171,7 +171,20 @@ public class Module {
             out.push(createLine(words));
         }
         foreach var globalVar in self.globalVariables {
-            out.push(createLine([globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)])); 
+            if globalVar.ty.addressSpace == 0 {
+                out.push(createLine([globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)]));
+            } else {
+                out.push(createLine([
+                    globalVar.operand, 
+                    "=", 
+                    "external", 
+                    "addrspace", 
+                    "(", 
+                    globalVar.ty.addressSpace.toString(),
+                    ")",
+                    "global", 
+                    typeToString(globalVar.ty.pointsTo)])); 
+            }
         }
         foreach var fn in self.functionDecls {
             fn.output(out);
@@ -567,6 +580,14 @@ public class Builder {
         PointerType resultPtrType = pointerType(resultType);
         return new PointerValue(resultPtrType, reg);
     }
+    
+    // Corresponds to LLVMBuildAddrSpaceCast
+    public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
+        BasicBlock bb = self.bb();
+        string reg = bb.func.genReg();
+        bb.addInsn(reg, "=" , "addrspacecast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        return new PointerValue(destTy, reg);
+    }
 
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
@@ -650,7 +671,11 @@ function sameIntType(Value v1, Value v2) returns IntType {
 function typeToString(RetType ty) returns string {
     string typeTag;
     if ty is PointerType {
-        typeTag = typeToString(ty.pointsTo) + "*";
+        if ty.addressSpace == 0 {
+            typeTag = typeToString(ty.pointsTo) + "*";
+        } else {
+            typeTag = createLine([typeToString(ty.pointsTo), "addrspace", "(" , ty.addressSpace.toString(), ")", "*"]);
+        }
     }
     else if ty is StructType {
         string[] typeStringBody = [];
@@ -746,7 +771,7 @@ function createLine(string[] words, string indent = "") returns string {
 }
 
 function omitSpaceBefore(string word) returns boolean {
-    return word == "," || word == ")" || word == "}" || word == "\"" || word == "]";
+    return word == "," || word == ")" || word == "}" || word == "\"" || word == "]" || word == "*";
 }
 
 function omitSpaceAfter(string word) returns boolean {

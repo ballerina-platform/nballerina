@@ -5,12 +5,13 @@ function globalVar() returns Module {
     Builder builder = context.createBuilder();
     Module m = context.createModule();
     PointerValue g = m.addGlobal("i64", "g1");
-    FunctionDefn testFn = m.addFunctionDefn("testFn", {returnType: "i64", paramTypes: ["i64"]});
+    PointerValue g2 = m.addGlobal("i64", "g2", 2);
+    FunctionDefn testFn = m.addFunctionDefn("testFn", {returnType: "i64", paramTypes: []});
     BasicBlock initBlock = testFn.appendBasicBlock();
     builder.positionAtEnd(initBlock);
-    Value arg = testFn.getParam(0);
-    Value val = builder.ptrToInt(g, "i64");
-    Value ret = builder.iArithmeticWrap("add", val, arg);
+    Value val1 = builder.ptrToInt(g, "i64");
+    Value val2 = builder.ptrToInt(g2, "i64");
+    Value ret = builder.iArithmeticWrap("add", val1, val2);
     builder.ret(ret);
     return m;
 }
