@@ -1,32 +1,32 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
-declare i8* @_bal_alloc (i64)
-declare void @_Bio__println (i8*)
+declare i8 addrspace (1)* @_bal_alloc (i64)
+declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
   %_0 = alloca i64
-  %_1 = alloca i8*
+  %_1 = alloca i8 addrspace (1)*
   %_2 = alloca i64
   %_3 = alloca i64
-  %_4 = alloca i8*
+  %_4 = alloca i8 addrspace (1)*
   %_5 = alloca i64
   %_6 = alloca i64
   %_7 = alloca i64
-  %_8 = alloca i8*
+  %_8 = alloca i8 addrspace (1)*
   %_9 = alloca i64
   %_10 = alloca i64
   %_11 = alloca i64
-  %_12 = alloca i8*
+  %_12 = alloca i8 addrspace (1)*
   %_13 = alloca i64
   %_14 = alloca i64
   %_15 = alloca i64
   %_16 = alloca i64
-  %_17 = alloca i8*
+  %_17 = alloca i8 addrspace (1)*
   %_18 = alloca i64
   %_19 = alloca i64
   %_20 = alloca i64
   %_21 = alloca i64
   %_22 = alloca i64
-  %_23 = alloca i8*
+  %_23 = alloca i8 addrspace (1)*
   %_24 = alloca i64
   %_25 = alloca i64
   %_26 = alloca i64
@@ -34,7 +34,7 @@ define void @_B_main () {
   %_28 = alloca i64
   %_29 = alloca i64
   %_30 = alloca i64
-  %_31 = alloca i8*
+  %_31 = alloca i8 addrspace (1)*
   %_32 = alloca i64
   %_33 = alloca i8
   %_34 = load i8*, i8** @_bal_stack_guard
@@ -62,12 +62,12 @@ L6:
   %_40 = sdiv i64 60, 2
   store i64 %_40, i64* %_0
   %_41 = load i64, i64* %_0
-  %_42 = call i8* @_bal_alloc (i64 8)
-  %_43 = bitcast i8* %_42 to i64*
-  store i64 %_41, i64* %_43, align 8
-  %_44 = getelementptr i8, i8* %_42, i64 504403158265495552
-  call void @_Bio__println (i8* %_44)
-  store i8* null, i8** %_1
+  %_42 = call i8 addrspace (1)* @_bal_alloc (i64 8)
+  %_43 = bitcast i8 addrspace (1)* %_42 to i64 addrspace (1)*
+  store i64 %_41, i64 addrspace (1)* %_43, align 8
+  %_44 = getelementptr i8, i8 addrspace (1)* %_42, i64 504403158265495552
+  call void @_Bio__println (i8 addrspace (1)* %_44)
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_1
   %_45 = icmp eq i64 3, 0
   br i1 %_45, label %L8, label %L9
 L7:
@@ -102,12 +102,12 @@ L14:
   %_55 = sdiv i64 %_50, 4
   store i64 %_55, i64* %_3
   %_56 = load i64, i64* %_3
-  %_57 = call i8* @_bal_alloc (i64 8)
-  %_58 = bitcast i8* %_57 to i64*
-  store i64 %_56, i64* %_58, align 8
-  %_59 = getelementptr i8, i8* %_57, i64 504403158265495552
-  call void @_Bio__println (i8* %_59)
-  store i8* null, i8** %_4
+  %_57 = call i8 addrspace (1)* @_bal_alloc (i64 8)
+  %_58 = bitcast i8 addrspace (1)* %_57 to i64 addrspace (1)*
+  store i64 %_56, i64 addrspace (1)* %_58, align 8
+  %_59 = getelementptr i8, i8 addrspace (1)* %_57, i64 504403158265495552
+  call void @_Bio__println (i8 addrspace (1)* %_59)
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_4
   %_60 = icmp eq i64 3, 0
   br i1 %_60, label %L16, label %L17
 L15:
@@ -159,12 +159,12 @@ L26:
   %_76 = sdiv i64 %_70, %_71
   store i64 %_76, i64* %_7
   %_77 = load i64, i64* %_7
-  %_78 = call i8* @_bal_alloc (i64 8)
-  %_79 = bitcast i8* %_78 to i64*
-  store i64 %_77, i64* %_79, align 8
-  %_80 = getelementptr i8, i8* %_78, i64 504403158265495552
-  call void @_Bio__println (i8* %_80)
-  store i8* null, i8** %_8
+  %_78 = call i8 addrspace (1)* @_bal_alloc (i64 8)
+  %_79 = bitcast i8 addrspace (1)* %_78 to i64 addrspace (1)*
+  store i64 %_77, i64 addrspace (1)* %_79, align 8
+  %_80 = getelementptr i8, i8 addrspace (1)* %_78, i64 504403158265495552
+  call void @_Bio__println (i8 addrspace (1)* %_80)
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_8
   %_81 = icmp eq i64 3, 0
   br i1 %_81, label %L28, label %L29
 L27:
@@ -216,12 +216,12 @@ L38:
   %_97 = sdiv i64 %_91, %_92
   store i64 %_97, i64* %_11
   %_98 = load i64, i64* %_11
-  %_99 = call i8* @_bal_alloc (i64 8)
-  %_100 = bitcast i8* %_99 to i64*
-  store i64 %_98, i64* %_100, align 8
-  %_101 = getelementptr i8, i8* %_99, i64 504403158265495552
-  call void @_Bio__println (i8* %_101)
-  store i8* null, i8** %_12
+  %_99 = call i8 addrspace (1)* @_bal_alloc (i64 8)
+  %_100 = bitcast i8 addrspace (1)* %_99 to i64 addrspace (1)*
+  store i64 %_98, i64 addrspace (1)* %_100, align 8
+  %_101 = getelementptr i8, i8 addrspace (1)* %_99, i64 504403158265495552
+  call void @_Bio__println (i8 addrspace (1)* %_101)
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_12
   %_102 = icmp eq i64 3, 0
   br i1 %_102, label %L40, label %L41
 L39:
@@ -290,12 +290,12 @@ L54:
   %_124 = sdiv i64 %_119, 2
   store i64 %_124, i64* %_16
   %_125 = load i64, i64* %_16
-  %_126 = call i8* @_bal_alloc (i64 8)
-  %_127 = bitcast i8* %_126 to i64*
-  store i64 %_125, i64* %_127, align 8
-  %_128 = getelementptr i8, i8* %_126, i64 504403158265495552
-  call void @_Bio__println (i8* %_128)
-  store i8* null, i8** %_17
+  %_126 = call i8 addrspace (1)* @_bal_alloc (i64 8)
+  %_127 = bitcast i8 addrspace (1)* %_126 to i64 addrspace (1)*
+  store i64 %_125, i64 addrspace (1)* %_127, align 8
+  %_128 = getelementptr i8, i8 addrspace (1)* %_126, i64 504403158265495552
+  call void @_Bio__println (i8 addrspace (1)* %_128)
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_17
   %_129 = icmp eq i64 3, 0
   br i1 %_129, label %L56, label %L57
 L55:
@@ -381,12 +381,12 @@ L74:
   %_157 = sdiv i64 %_151, %_152
   store i64 %_157, i64* %_22
   %_158 = load i64, i64* %_22
-  %_159 = call i8* @_bal_alloc (i64 8)
-  %_160 = bitcast i8* %_159 to i64*
-  store i64 %_158, i64* %_160, align 8
-  %_161 = getelementptr i8, i8* %_159, i64 504403158265495552
-  call void @_Bio__println (i8* %_161)
-  store i8* null, i8** %_23
+  %_159 = call i8 addrspace (1)* @_bal_alloc (i64 8)
+  %_160 = bitcast i8 addrspace (1)* %_159 to i64 addrspace (1)*
+  store i64 %_158, i64 addrspace (1)* %_160, align 8
+  %_161 = getelementptr i8, i8 addrspace (1)* %_159, i64 504403158265495552
+  call void @_Bio__println (i8 addrspace (1)* %_161)
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_23
   %_162 = icmp eq i64 3, 0
   br i1 %_162, label %L76, label %L77
 L75:
@@ -506,12 +506,12 @@ L102:
   %_202 = sdiv i64 %_196, %_197
   store i64 %_202, i64* %_30
   %_203 = load i64, i64* %_30
-  %_204 = call i8* @_bal_alloc (i64 8)
-  %_205 = bitcast i8* %_204 to i64*
-  store i64 %_203, i64* %_205, align 8
-  %_206 = getelementptr i8, i8* %_204, i64 504403158265495552
-  call void @_Bio__println (i8* %_206)
-  store i8* null, i8** %_31
+  %_204 = call i8 addrspace (1)* @_bal_alloc (i64 8)
+  %_205 = bitcast i8 addrspace (1)* %_204 to i64 addrspace (1)*
+  store i64 %_203, i64 addrspace (1)* %_205, align 8
+  %_206 = getelementptr i8, i8 addrspace (1)* %_204, i64 504403158265495552
+  call void @_Bio__println (i8 addrspace (1)* %_206)
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_31
   ret void
 L103:
   store i64 2561, i64* %_32

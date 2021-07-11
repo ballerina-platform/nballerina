@@ -2,10 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void *_bal_alloc(int64_t nBytes) {
+UntypedPtr _bal_alloc(int64_t nBytes) {
     void *p = malloc(nBytes);
     if (p != 0)
-        return p;
+        return (UntypedPtr)p;
     fprintf(stderr, "out of memory\n");
     abort();
 }

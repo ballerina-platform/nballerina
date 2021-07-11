@@ -1,40 +1,40 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
 declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare i8* @_bal_alloc (i64)
-declare void @_Bio__println (i8*)
+declare i8 addrspace (1)* @_bal_alloc (i64)
+declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
   %_0 = alloca i1
   %_1 = alloca i64
   %_2 = alloca i64
-  %_3 = alloca i8*
+  %_3 = alloca i8 addrspace (1)*
   %_4 = alloca i1
   %_5 = alloca i64
-  %_6 = alloca i8*
+  %_6 = alloca i8 addrspace (1)*
   %_7 = alloca i1
   %_8 = alloca i1
   %_9 = alloca i1
-  %_10 = alloca i8*
+  %_10 = alloca i8 addrspace (1)*
   %_11 = alloca i1
   %_12 = alloca i64
   %_13 = alloca i64
-  %_14 = alloca i8*
+  %_14 = alloca i8 addrspace (1)*
   %_15 = alloca i1
   %_16 = alloca i1
   %_17 = alloca i1
   %_18 = alloca i1
   %_19 = alloca i64
-  %_20 = alloca i8*
+  %_20 = alloca i8 addrspace (1)*
   %_21 = alloca i1
   %_22 = alloca i1
   %_23 = alloca i64
-  %_24 = alloca i8*
+  %_24 = alloca i8 addrspace (1)*
   %_25 = alloca i1
   %_26 = alloca i1
-  %_27 = alloca i8*
+  %_27 = alloca i8 addrspace (1)*
   %_28 = alloca i1
   %_29 = alloca i1
-  %_30 = alloca i8*
+  %_30 = alloca i8 addrspace (1)*
   %_31 = alloca i64
   %_32 = alloca i8
   %_33 = load i8*, i8** @_bal_stack_guard
@@ -69,7 +69,7 @@ L6:
   store i1 %_43, i1* %_0
   %_44 = load i1, i1* %_0
   call void @_B_printBoolean (i1 %_44)
-  store i8* null, i8** %_3
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_3
   %_45 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 5, i64 2)
   %_46 = extractvalue {i64, i1} %_45, 1
   br i1 %_46, label %L9, label %L8
@@ -84,7 +84,7 @@ L8:
   store i1 %_49, i1* %_4
   %_50 = load i1, i1* %_4
   call void @_B_printBoolean (i1 %_50)
-  store i8* null, i8** %_6
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_6
   %_51 = icmp slt i64 5, 9
   store i1 %_51, i1* %_8
   %_52 = icmp sgt i64 5, 2
@@ -95,7 +95,7 @@ L8:
   store i1 %_55, i1* %_7
   %_56 = load i1, i1* %_7
   call void @_B_printBoolean (i1 %_56)
-  store i8* null, i8** %_10
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_10
   %_57 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 1, i64 3)
   %_58 = extractvalue {i64, i1} %_57, 1
   br i1 %_58, label %L11, label %L10
@@ -120,7 +120,7 @@ L12:
   store i1 %_65, i1* %_11
   %_66 = load i1, i1* %_11
   call void @_B_printBoolean (i1 %_66)
-  store i8* null, i8** %_14
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_14
   %_67 = icmp sge i64 1, 5
   store i1 %_67, i1* %_17
   %_68 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 1, i64 2)
@@ -144,7 +144,7 @@ L14:
   store i1 %_77, i1* %_15
   %_78 = load i1, i1* %_15
   call void @_B_printBoolean (i1 %_78)
-  store i8* null, i8** %_20
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_20
   %_79 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 7, i64 1)
   %_80 = extractvalue {i64, i1} %_79, 1
   br i1 %_80, label %L17, label %L16
@@ -162,21 +162,21 @@ L16:
   store i1 %_85, i1* %_21
   %_86 = load i1, i1* %_21
   call void @_B_printBoolean (i1 %_86)
-  store i8* null, i8** %_24
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_24
   store i1 0, i1* %_26
   %_87 = load i1, i1* %_26
   %_88 = icmp eq i1 %_87, 0
   store i1 %_88, i1* %_25
   %_89 = load i1, i1* %_25
   call void @_B_printBoolean (i1 %_89)
-  store i8* null, i8** %_27
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_27
   store i1 0, i1* %_29
   %_90 = load i1, i1* %_29
   %_91 = icmp eq i1 0, %_90
   store i1 %_91, i1* %_28
   %_92 = load i1, i1* %_28
   call void @_B_printBoolean (i1 %_92)
-  store i8* null, i8** %_30
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_30
   ret void
 L17:
   store i64 2305, i64* %_31
@@ -184,8 +184,8 @@ L17:
 }
 define internal void @_B_printBoolean (i1 %_0) {
   %x = alloca i1
-  %_1 = alloca i8*
-  %_2 = alloca i8*
+  %_1 = alloca i8 addrspace (1)*
+  %_2 = alloca i8 addrspace (1)*
   %_3 = alloca i8
   %_4 = load i8*, i8** @_bal_stack_guard
   %_5 = icmp ult i8* %_3, %_4
@@ -195,20 +195,20 @@ L1:
   %_6 = load i1, i1* %x
   br i1 %_6, label %L2, label %L3
 L2:
-  %_7 = call i8* @_bal_alloc (i64 8)
-  %_8 = bitcast i8* %_7 to i64*
-  store i64 1, i64* %_8, align 8
-  %_9 = getelementptr i8, i8* %_7, i64 504403158265495552
-  call void @_Bio__println (i8* %_9)
-  store i8* null, i8** %_1
+  %_7 = call i8 addrspace (1)* @_bal_alloc (i64 8)
+  %_8 = bitcast i8 addrspace (1)* %_7 to i64 addrspace (1)*
+  store i64 1, i64 addrspace (1)* %_8, align 8
+  %_9 = getelementptr i8, i8 addrspace (1)* %_7, i64 504403158265495552
+  call void @_Bio__println (i8 addrspace (1)* %_9)
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_1
   br label %L4
 L3:
-  %_10 = call i8* @_bal_alloc (i64 8)
-  %_11 = bitcast i8* %_10 to i64*
-  store i64 0, i64* %_11, align 8
-  %_12 = getelementptr i8, i8* %_10, i64 504403158265495552
-  call void @_Bio__println (i8* %_12)
-  store i8* null, i8** %_2
+  %_10 = call i8 addrspace (1)* @_bal_alloc (i64 8)
+  %_11 = bitcast i8 addrspace (1)* %_10 to i64 addrspace (1)*
+  store i64 0, i64 addrspace (1)* %_11, align 8
+  %_12 = getelementptr i8, i8 addrspace (1)* %_10, i64 504403158265495552
+  call void @_Bio__println (i8 addrspace (1)* %_12)
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_2
   br label %L4
 L4:
   ret void

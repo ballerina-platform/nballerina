@@ -74,7 +74,7 @@ type IntOp IntArithmeticOp|IntArithmeticSignedOp|IntBitwiseOp;
 public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sle";
 
 public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
-public type GeneralIntrinsicName "ptrmask.p0i8.i64";
+public type GeneralIntrinsicName "ptrmask.p1i8.i64";
 
 public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsicName;
 

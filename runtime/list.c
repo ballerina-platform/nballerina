@@ -27,8 +27,6 @@ Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     return 0;
 }
 
-
-
 #define INITIAL_CAPACITY 4
 
 // Grows the array.
@@ -63,7 +61,7 @@ void _bal_array_grow(ListPtr lp, int64_t min_capacity) {
         new_capacity = min_capacity;
     }
     // we know the multiplication cannot overflow because new_capacity <= ARRAY_MAX
-    TaggedPtr *new_members = _bal_alloc(sizeof(TaggedPtr) * new_capacity);
+    TaggedPtr HEAP_STAR(new_members) = _bal_alloc(sizeof(TaggedPtr) * new_capacity);
     // lp->length may be zero, but lp->members will not be null in this case
     // because we checked at the beginning that capacity was not zero
     memcpy(new_members, lp->members, lp->length * sizeof(TaggedPtr));

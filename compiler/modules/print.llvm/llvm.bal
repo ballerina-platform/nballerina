@@ -116,9 +116,9 @@ public class Module {
                                      ["nounwind", "readnone", "speculatable", "willreturn"]);
 
         }
-        else if name == "ptrmask.p0i8.i64" {
+        else if name == "ptrmask.p1i8.i64" {
             return self.addIntrinsic(name,
-                                     { returnType: pointerType("i8"), paramTypes: [pointerType("i8"), "i64"] },
+                                     { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] },
                                      ["readnone", "speculatable"]);
         }
         else {
@@ -551,11 +551,13 @@ public class Builder {
         } 
         words.push(typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand);
         Type resultType = ptr.ty;
+        int resultAddressSpace = 0;
         foreach var index in indices {
             words.push(",");
             words.push(typeToString(index.ty));
             words.push(index.operand);
             if resultType is PointerType {
+                resultAddressSpace = resultType.addressSpace;
                 resultType = resultType.pointsTo;
             } 
             else {
@@ -577,7 +579,7 @@ public class Builder {
             }
         }
         bb.addInsn(...words);
-        PointerType resultPtrType = pointerType(resultType);
+        PointerType resultPtrType = pointerType(resultType, resultAddressSpace);
         return new PointerValue(resultPtrType, reg);
     }
     

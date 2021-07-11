@@ -20,15 +20,16 @@ const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
 const int TAG_INT      = t:UT_INT * TAG_FACTOR;
 const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
 
-
+const HEAP_ADDR_SPACE = 1;
 const ALIGN_HEAP = 8;
 
 const LLVM_INT = "i64";
 const LLVM_BOOLEAN = "i1";
 const LLVM_VOID = "void";
 
-final llvm:PointerType LLVM_TAGGED_PTR = llvm:pointerType("i8");
+final llvm:PointerType LLVM_TAGGED_PTR = heapPointerType("i8");
 final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
+final llvm:PointerType LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
 
 type ValueType llvm:IntegralType;
 
@@ -95,7 +96,7 @@ final RuntimeFunction panicFunction = {
 final RuntimeFunction allocFunction = {
     name: "alloc",
     ty: {
-        returnType: llvm:pointerType("i8"),
+        returnType: heapPointerType("i8"),
         paramTypes: ["i64"]
     }
 };
@@ -385,13 +386,13 @@ const LLVM_INDEX = "i32";
 
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
     final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
-    final llvm:PointerType ptrUnsizedArrayType = llvm:pointerType(unsizedArrayType);
+    final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
     final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
     final int length = insn.operands.length();
     llvm:PointerValue array;
     if length > 0 {
         final llvm:Type sizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, length);
-        final llvm:PointerType ptrSizedArrayType = llvm:pointerType(sizedArrayType);
+        final llvm:PointerType ptrSizedArrayType = heapPointerType(sizedArrayType);
 
         array = buildTypedAlloc(builder, scaffold, sizedArrayType);
         foreach int i in 0 ..< length {
@@ -404,7 +405,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
         array = llvm:constNull(ptrUnsizedArrayType);
     }
     final llvm:PointerValue structMem = buildUntypedAlloc(builder, scaffold, structType);
-    final llvm:PointerValue struct = builder.bitCast(structMem, llvm:pointerType(structType));
+    final llvm:PointerValue struct = builder.bitCast(structMem, heapPointerType(structType));
     foreach int i in 0 ..< 2 {
         builder.store(llvm:constInt(LLVM_INT, length),
                       builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, i)], "inbounds"));
@@ -417,14 +418,14 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
     final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
-    final llvm:PointerType ptrUnsizedArrayType = llvm:pointerType(unsizedArrayType);
+    final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
     final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
 
     llvm:Value index = buildInt(builder, scaffold, insn.operand);
     // struct is the untagged pointer to the struct
-    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p0i8.i64"),
+    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
                                                                                [builder.load(scaffold.address(insn.list)), llvm:constInt(LLVM_INT, POINTER_MASK)]),
-                                               llvm:pointerType(structType));
+                                               heapPointerType(structType));
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
     builder.condBr(builder.iCmp("ult",
@@ -779,7 +780,7 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:Value {
     llvm:PointerValue mem = buildUntypedAlloc(builder, scaffold, LLVM_INT);
-    builder.store(value, builder.bitCast(mem, llvm:pointerType(LLVM_INT)), ALIGN_HEAP);
+    builder.store(value, builder.bitCast(mem, heapPointerType(LLVM_INT)), ALIGN_HEAP);
     return buildTaggedPtr(builder, mem, TAG_INT);
 }
 
@@ -788,7 +789,7 @@ function buildTaggedPtr(llvm:Builder builder, llvm:PointerValue mem, int tag) re
 }
 
 function buildTypedAlloc(llvm:Builder builder, Scaffold scaffold, llvm:Type ty) returns llvm:PointerValue {
-    return builder.bitCast(buildUntypedAlloc(builder, scaffold, ty), llvm:pointerType(ty));
+    return builder.bitCast(buildUntypedAlloc(builder, scaffold, ty), heapPointerType(ty));
 }
 
 function buildUntypedAlloc(llvm:Builder builder, Scaffold scaffold, llvm:Type ty) returns llvm:PointerValue {
@@ -818,20 +819,24 @@ function typeSize(llvm:Type ty) returns int {
 }
 
 function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) returns llvm:Value {
-    return builder.iCmp("eq", builder.iBitwise("and", builder.ptrToInt(tagged, LLVM_INT),
+    return builder.iCmp("eq", builder.iBitwise("and", buildTaggedPtrToInt(builder, tagged),
                                                        llvm:constInt(LLVM_INT, TAG_MASK)),
                               llvm:constInt(LLVM_INT, tag));
 }
 
 function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
-    return builder.load(builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p0i8.i64"),
+    return builder.load(builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
                                                                         [tagged, llvm:constInt(LLVM_INT, POINTER_MASK)]),
-                                        llvm:pointerType(LLVM_INT)),
+                                        heapPointerType(LLVM_INT)),
                         ALIGN_HEAP);
 }
 
 function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
-    return builder.trunc(builder.ptrToInt(tagged, LLVM_INT), LLVM_BOOLEAN);
+    return builder.trunc(buildTaggedPtrToInt(builder, tagged), LLVM_BOOLEAN);
+}
+
+function buildTaggedPtrToInt(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
+    return builder.ptrToInt(builder.addrSpaceCast(tagged, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_INT);
 }
 
 function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns [Repr, llvm:Value] {
@@ -990,6 +995,10 @@ function semTypeRepr(t:SemType ty) returns Repr|BuildError {
         }
     }
     return err:unimplemented("unimplemented type");
+}
+
+function heapPointerType(llvm:Type ty) returns llvm:PointerType {
+    return llvm:pointerType(ty, HEAP_ADDR_SPACE);
 }
 
 function mangleRuntimeSymbol(string name) returns string {

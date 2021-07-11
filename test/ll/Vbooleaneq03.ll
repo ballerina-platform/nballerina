@@ -1,10 +1,10 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
-declare void @_Bio__println (i8*)
+declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
   %_0 = alloca i1
   %_1 = alloca i1
-  %_2 = alloca i8*
+  %_2 = alloca i8 addrspace (1)*
   %_3 = alloca i8
   %_4 = load i8*, i8** @_bal_stack_guard
   %_5 = icmp ult i8* %_3, %_4
@@ -17,9 +17,9 @@ L1:
   %_8 = load i1, i1* %_0
   %_9 = zext i1 %_8 to i64
   %_10 = or i64 %_9, 72057594037927936
-  %_11 = getelementptr i8, i8* null, i64 %_10
-  call void @_Bio__println (i8* %_11)
-  store i8* null, i8** %_2
+  %_11 = getelementptr i8, i8 addrspace (1)* null, i64 %_10
+  call void @_Bio__println (i8 addrspace (1)* %_11)
+  store i8 addrspace (1)* null, i8 addrspace (1)** %_2
   ret void
 L2:
   call void @_bal_panic (i64 772)
