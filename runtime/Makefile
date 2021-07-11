@@ -28,7 +28,7 @@ $(LIB): $(OBJS)
 %.ll: %.c
 	$(CLANG) $(CFLAGS) -O2 -S -emit-llvm -o $@ $<
 
-$(OBJS): $(INCLUDES)
+$(OBJS) $(BCS): $(INCLUDES)
 
 clean:
 	-rm -f $(LIB) $(OBJS) $(BCLIB) $(BCS) 
