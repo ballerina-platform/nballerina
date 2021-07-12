@@ -1,11 +1,7 @@
 public function main() {
-    if 1 == 1 {
-    }
-    else {
+    if false >= true {
         foo(); // @error
     }
 }
 
-function foo() {
-
-}
+function foo() { }

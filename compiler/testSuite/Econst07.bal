@@ -1,7 +1,5 @@
 public function main() {
-    if 1 == 1 {
-    }
-    else {
+    if 2 <= 1 {
         foo(); // @error
     }
 }
