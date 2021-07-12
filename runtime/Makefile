@@ -17,7 +17,7 @@ $(LIB): $(OBJS)
 	$(CLANG) $(CFLAGS) -c -o $@ $<
 
 %.bc: %.ll
-	sed -e '/define .*@_B[a-zA-Z]/s/^define /define linkonce_odr /' $< | $(LLVM_AS) >$@
+	sed -e '/define .*@_B[a-zA-Z]/s/^define /define linkonce_odr /' -e '/target datalayout/ s/"$$/-ni:1"/' $< | $(LLVM_AS) >$@
 
 # we have to use -O2 here, otherwise the function will get a noinline attribute
 %.ll: %.c
