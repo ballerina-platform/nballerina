@@ -21,7 +21,6 @@ function gepComplex() returns Module {
     PointerValue v4 = builder.getElementPtr(v3, [constInt("i64", 0), constInt("i64", 13)]);
     builder.ret(v4);
 
-
     Type arrTy3 = arrayType(pointerType("i64", 1), 10);
     Type rtTy2 = structType([ "i32", arrTy3, "i32" ]);
     Type stTy2 = structType(["i8", "i8", rtTy2]);
