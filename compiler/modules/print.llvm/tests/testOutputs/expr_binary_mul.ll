@@ -12,9 +12,9 @@ define i64 @foo (i64 %0, i64 %1) {
   %8 = extractvalue {i64, i1} %7, 0
   %9 = extractvalue {i64, i1} %7, 1
   %10 = xor i1 %9, 1
-  br i1 %10, label %L1, label %L2
-L1:
+  br i1 %10, label %11, label %12
+11:
   ret i64 %8
-L2:
+12:
   call void @abort ()
 }

@@ -291,9 +291,8 @@ public class FunctionDefn {
         return tem;
     }
 
-    // FIXME: fix this so name is easy to detect
     function genLabel() returns string {
-        string label = "L" + self.labelCount.toString();
+        string label = "#" + self.labelCount.toString();
         self.labelCount += 1;
         return label;
     }
@@ -315,17 +314,17 @@ public class FunctionDefn {
             }
             regName = newName;
             self.variableNames[regName] = 1; // save the augmented name in case user use the same  
-        }
+        } 
         else {
             self.variableNames[regName] = 1;
         }
         string reg = "%" + regName;
         return reg;
-    } 
+    }
 
-    public function addEnumAttribute(EnumAttribute attribute){
+    public function addEnumAttribute(EnumAttribute attribute) {
         if self.attributes.indexOf(attribute) == () {
-           self.attributes.push(attribute); 
+            self.attributes.push(attribute);
         }
     }
 
@@ -334,27 +333,35 @@ public class FunctionDefn {
         self.gcName = name;
     }
 
-    function translateName(string name) returns string {
+    function translateName(string valName) returns string {
+        string name = valName.substring(0);
+        if name.startsWith("#") {
+            // label of unnamed basic block. Change so that we get same checks for both reference and label
+            name = "%" + name;
+        }
         if name.length() < 2 {
             return name;
         }
         if self.nameTranslation.hasKey(name) {
-            return self.nameTranslation.get(name);
+            string newName = self.nameTranslation.get(name);
+            if valName.startsWith("#") {
+                // unnamed basic block label
+                return newName.substring(1);
+            }
+            return newName;
         }
-        string tag = name.trim().substring(0,2);
-        if tag == "%?" {
-            // unnamed variable
-            string new_name = "%" + self.nameCounter.toString();
-            self.nameCounter += 1; 
-            self.nameTranslation[name] = new_name;
-            return new_name;
+        string tag = name.trim().substring(0, 2);
+        if tag == "%?" || tag == "%#" {
+            // unnamed variable or basic block reference
+            string newName = "%" + self.nameCounter.toString();
+            self.nameTranslation[name] = newName;
+            self.nameCounter += 1;
+            if valName.startsWith("#") {
+                // unnamed basic block label
+                return newName.substring(1);
+            }
+            return newName;
         }
-        // if tag == "L?" {
-        //     // FIXME: change this
-        //     string new_name = "L" + name.substring(2);
-        //     self.nameTranslation[name] = new_name;
-        //     return new_name;
-        // }
         return name;
     }
 }
@@ -669,7 +676,7 @@ public distinct class BasicBlock {
         // 2. basic blocks that were in BIR but are unreferenced (and empty) in LL
         //    (happens at the moment for blocks starting with `catch`)
         if self.isReferenced {
-            out.push(self.label + ":");
+            out.push(self.func.translateName(self.label) + ":");
         }
         foreach var line in self.lines {
             string[] newLine = [];
