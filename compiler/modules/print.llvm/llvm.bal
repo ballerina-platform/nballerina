@@ -610,7 +610,6 @@ public class Builder {
                 }
             }
         }
-        bb.addInsn(...words);
         bb.addInsn(reg, createLine(words), ...indexBody);
         PointerType resultPtrType = pointerType(resultType, resultAddressSpace);
         return new PointerValue(resultPtrType, reg);
