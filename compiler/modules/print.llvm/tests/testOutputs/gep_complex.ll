@@ -9,6 +9,6 @@ define void @foo() {
   ret void
 }
 define i64 addrspace(1)** @bar() {
-  %_0 = getelementptr {i8, i8, {i32, [10 x i64 addrspace(1)*], i32}}, {i8, i8, {i32, [10 x i64 addrspace(1)*], i32}}* @g2, i32 1, i32 2, i32 1, i32 4
-  ret i64 addrspace(1)** %_0
+  %1 = getelementptr {i8, i8, {i32, [10 x i64 addrspace(1)*], i32}}, {i8, i8, {i32, [10 x i64 addrspace(1)*], i32}}* @g2, i32 1, i32 2, i32 1, i32 4
+  ret i64 addrspace(1)** %1
 }
