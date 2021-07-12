@@ -14,21 +14,21 @@ define i64 @foo(i64 %0, i64 %1) {
 9:
   %10 = load i64, i64* %4
   %11 = icmp eq i64 %10, -9223372036854775808
-  br i1 %11, label %12, label %13
-13:
-  %14 = load i64, i64* %4
-  %15 = load i64, i64* %5
-  %16 = srem i64 %14, %15
-  store i64 %16, i64* %3
-  br label %17
+  br i1 %11, label %16, label %12
 12:
-  %18 = load i64, i64* %5
-  %19 = icmp eq i64 %18, -1
-  br i1 %19, label %20, label %13
-20:
+  %13 = load i64, i64* %4
+  %14 = load i64, i64* %5
+  %15 = srem i64 %13, %14
+  store i64 %15, i64* %3
+  br label %20
+16:
+  %17 = load i64, i64* %5
+  %18 = icmp eq i64 %17, -1
+  br i1 %18, label %19, label %12
+19:
   store i64 0, i64* %3
-  br label %17
-17:
+  br label %20
+20:
   %21 = load i64, i64* %3
   ret i64 %21
 }
