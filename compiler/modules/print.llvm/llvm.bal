@@ -290,7 +290,7 @@ public class FunctionDefn {
     }
 
     // Corresponds to LLVMAppendBasicBlock
-    public function appendBasicBlock(string? name = ()) returns BasicBlock {
+    public function appendBasicBlock(string? name=()) returns BasicBlock {
         BasicBlock tem = new (self.context, self.genLabel(), self);
         self.basicBlocks.push(tem);
         return tem;
@@ -319,7 +319,7 @@ public class FunctionDefn {
             }
             regName = newName;
             self.variableNames[regName] = 1; // save the augmented name in case user use the same  
-        } 
+        }
         else {
             self.variableNames[regName] = 1;
         }
@@ -398,8 +398,7 @@ public class Builder {
     private BasicBlock? currentBlock = ();
 
     // Corresponds to LLVMCreateBuilder
-    public function init(Context context) {
-    }
+    public function init(Context context) { }
 
     // Corresponds to LLVMPositionBuilderAtEnd
     public function positionAtEnd(BasicBlock block) {
@@ -407,7 +406,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildAlloca
-    public function alloca(IntegralType ty, Alignment? align = (), string? name = ()) returns PointerValue {
+    public function alloca(IntegralType ty, Alignment? align=(), string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg(name);
         PointerType ptrTy = pointerType(ty);
@@ -416,7 +415,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildLoad
-    public function load(PointerValue ptr, Alignment? align = (), string? name = ()) returns Value {
+    public function load(PointerValue ptr, Alignment? align=(), string? name=()) returns Value {
         BasicBlock bb = self.bb();
         Type ty = ptr.ty.pointsTo;
         string reg = bb.func.genReg();
@@ -425,7 +424,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildStore
-    public function store(Value val, PointerValue ptr, Alignment? align = ()) {
+    public function store(Value val, PointerValue ptr, Alignment? align=()) {
         Type ty = ptr.ty.pointsTo;
         if ty != val.ty {
             panic err:illegalArgument("store type mismatch: " + typeToString(val.ty) + ", " + typeToString(ptr.ty));
@@ -434,7 +433,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildNSW{Add,Mul,Sub}
-    public function iArithmeticNoWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name = ()) returns Value {
+    public function iArithmeticNoWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
@@ -442,22 +441,22 @@ public class Builder {
         return new Value(ty, reg);
     }
     // Corresponds to LLVMBuild{Add,Mul,Sub}
-    public function iArithmeticWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name = ()) returns Value {
+    public function iArithmeticWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         return self.binaryIntNoWrap(op, lhs, rhs, name);
     }
 
     // Corresponds to LLVMBuild{SDiv,SRem}
-    public function iArithmeticSigned(IntArithmeticSignedOp op, Value lhs, Value rhs, string? name = ()) returns Value {
+    public function iArithmeticSigned(IntArithmeticSignedOp op, Value lhs, Value rhs, string? name=()) returns Value {
         return self.binaryIntNoWrap(op, lhs, rhs, name);
     }
 
     // Corresponds to LLVMBuild{And, Or, Xor}
-    public function iBitwise(IntBitwiseOp op, Value lhs, Value rhs, string? name = ()) returns Value {
+    public function iBitwise(IntBitwiseOp op, Value lhs, Value rhs, string? name=()) returns Value {
         return self.binaryIntNoWrap(op, lhs, rhs, name);
     }
 
     // Internally handle binary int operations without wrapping
-    function binaryIntNoWrap(IntOp op, Value lhs, Value rhs, string? name = ()) returns Value {
+    function binaryIntNoWrap(IntOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
@@ -466,7 +465,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildICmp
-    public function iCmp(IntPredicate op, Value lhs, Value rhs, string? name = ()) returns Value {
+    public function iCmp(IntPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntegralType ty = sameIntegralType(lhs, rhs);
@@ -475,7 +474,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildBitCast
-    public function bitCast(PointerValue val, PointerType destTy, string? name = ()) returns PointerValue {
+    public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         bb.addInsn(reg, createLine(["=", "bitcast", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destTy)]));
@@ -484,7 +483,7 @@ public class Builder {
 
     // Corresponds to LLVMBuildRet/LLVMBuildRetVoid
     // value of () represents void return value
-    public function ret(Value? value = ()) {
+    public function ret(Value? value=()) {
         BasicBlock bb = self.bb();
         if value is () {
             bb.addInsn(createLine(["ret", "void"]));
@@ -495,7 +494,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildPtrToInt
-    public function ptrToInt(PointerValue ptr, IntType destTy, string? name = ()) returns Value {
+    public function ptrToInt(PointerValue ptr, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         bb.addInsn(reg, createLine(["=", "ptrtoint", typeToString(ptr.ty)]), ptr.operand, createLine(["to", typeToString(destTy)]));
@@ -503,7 +502,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildZExt
-    public function zExt(Value val, IntType destTy, string? name = ()) returns Value {
+    public function zExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         bb.addInsn(reg, createLine(["=", "zext", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destTy)]));
@@ -511,7 +510,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildSExt
-    public function sExt(Value val, IntType destTy, string? name = ()) returns Value {
+    public function sExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         bb.addInsn(reg, createLine(["=", "sext", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destTy)]));
@@ -519,7 +518,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildTrunc
-    public function trunc(Value val, IntType destinationType, string? name = ()) returns Value {
+    public function trunc(Value val, IntType destinationType, string? name=()) returns Value {
         if val.ty is IntType {
             if val.ty == destinationType {
                 panic err:illegalArgument("equal sized types are not allowed");
@@ -541,7 +540,7 @@ public class Builder {
 
     // Corresponds to LLVMBuildCall
     // Returns () if there is no result i.e. function return type is void
-    public function call(Function fn, Value[] args, string? name = ()) returns Value? {
+    public function call(Function fn, Value[] args, string? name=()) returns Value? {
         if fn.functionType.paramTypes.length() != args.length() {
             panic err:illegalArgument(`number of arguments is invalid for function ${fn.functionName}`);
         }
@@ -575,7 +574,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildExtractValue
-    public function extractValue(Value value, int index, string? name = ()) returns Value {
+    public function extractValue(Value value, int index, string? name=()) returns Value {
         if value.ty is StructType {
             BasicBlock bb = self.bb();
             string reg = bb.func.genReg();
@@ -606,7 +605,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildGEP
-    public function getElementPtr(PointerValue ptr, Value[] indices, "inbounds"? inbounds = (), string? name = ()) returns PointerValue {
+    public function getElementPtr(PointerValue ptr, Value[] indices, "inbounds"? inbounds=(), string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         string[] words = [];
@@ -650,7 +649,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildAddrSpaceCast
-    public function addrSpaceCast(PointerValue val, PointerType destTy, string? name = ()) returns PointerValue {
+    public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         bb.addInsn(reg, "=", "addrspacecast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
@@ -766,7 +765,7 @@ function typeToString(RetType ty) returns string {
         } else {
             typeTag = createLine([typeToString(ty.pointsTo), "addrspace", "(", ty.addressSpace.toString(), ")", "*"]);
         }
-    } 
+    }
     else if ty is StructType {
         string[] typeStringBody = [];
         typeStringBody.push("{");
@@ -779,7 +778,7 @@ function typeToString(RetType ty) returns string {
         }
         typeStringBody.push("}");
         typeTag = createLine(typeStringBody, "");
-    } 
+    }
     else if ty is ArrayType {
         string[] typeStringBody = [];
         typeStringBody.push("[");
@@ -788,7 +787,7 @@ function typeToString(RetType ty) returns string {
         typeStringBody.push(typeToString(ty.elementType));
         typeStringBody.push("]");
         typeTag = createLine(typeStringBody, "");
-    } 
+    }
     else {
         typeTag = ty;
     }
@@ -818,7 +817,7 @@ function functionHeader(Function fn) returns string {
         if fn.getLinkage() != "external" {
             words.push(fn.getLinkage());
         }
-    } 
+    }
     else {
         words.push("declare");
     }
@@ -832,7 +831,7 @@ function functionHeader(Function fn) returns string {
         }
         words.push(typeToString(ty));
         if fn is FunctionDefn {
-            words.push((fn.getParam(i).operand));
+            words.push(fn.getParam(i).operand);
         }
     }
     words.push(")");
