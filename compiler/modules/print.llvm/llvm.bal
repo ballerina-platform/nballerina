@@ -334,35 +334,32 @@ public class FunctionDefn {
     }
 
     function translateName(string valName) returns string {
-        string name = valName.substring(0);
-        if name.startsWith("#") {
-            // label of unnamed basic block. Change so that we get same checks for both reference and label
+        string name = valName;
+        boolean isBBLabel = name.startsWith("#");
+        if isBBLabel {
+            // label of unnamed basic block. Change so that we use same reference in nameTranslation
             name = "%" + name;
         }
         if name.length() < 2 {
-            return name;
+            return valName;
         }
+        string newName = valName;
         if self.nameTranslation.hasKey(name) {
-            string newName = self.nameTranslation.get(name);
-            if valName.startsWith("#") {
-                // unnamed basic block label
-                return newName.substring(1);
+            newName = self.nameTranslation.get(name);
+        } 
+        else {
+            string tag = name.trim().substring(0, 2);
+            if tag == "%?" || tag == "%#" {
+                // unnamed variable or basic block
+                newName = "%" + self.nameCounter.toString();
+                self.nameTranslation[name] = newName;
+                self.nameCounter += 1;
             }
-            return newName;
         }
-        string tag = name.trim().substring(0, 2);
-        if tag == "%?" || tag == "%#" {
-            // unnamed variable or basic block reference
-            string newName = "%" + self.nameCounter.toString();
-            self.nameTranslation[name] = newName;
-            self.nameCounter += 1;
-            if valName.startsWith("#") {
-                // unnamed basic block label
-                return newName.substring(1);
-            }
-            return newName;
+        if isBBLabel {
+            return newName.substring(1);
         }
-        return name;
+        return newName;
     }
 }
 
