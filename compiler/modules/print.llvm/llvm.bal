@@ -323,8 +323,27 @@ public class FunctionDefn {
         else {
             self.variableNames[regName] = 1;
         }
+        if name is string && !self.nameValid(regName) {
+            regName = "\"" + regName + "\"";
+        }
         string reg = "%" + regName;
         return reg;
+    }
+
+    // Verify name is a valid LLVM name otherwise must escape
+    function nameValid(string name) returns boolean{
+        string nameLower = name.toLowerAscii();
+        // Currently check only the first character
+        string firstChar = nameLower.substring(0,1);
+        if firstChar == "_" || firstChar == "$" {
+            return true;
+        }
+        int first = firstChar.getCodePoint(0);
+        if firstChar >= "a" && firstChar <= "z" {
+            // First character is an alphabetic character
+            return true;
+        }
+        return false;
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {

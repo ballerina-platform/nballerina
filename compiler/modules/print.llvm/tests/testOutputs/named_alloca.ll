@@ -7,4 +7,8 @@ define void @main() {
   %V.1.1 = alloca i64
   %V.1.2 = alloca i64
   %2 = alloca i64
+  %"1" = alloca i64
+  %"?" = alloca i64
+  %"#" = alloca i64
+  ret void
 }
