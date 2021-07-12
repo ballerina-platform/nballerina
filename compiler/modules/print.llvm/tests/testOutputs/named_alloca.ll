@@ -1,4 +1,4 @@
-define void @main () {
+define void @main() {
   %1 = alloca i64
   %V = alloca i64
   %V.1 = alloca i64

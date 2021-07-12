@@ -1,6 +1,6 @@
-define void @abort () {
+define void @abort() {
 }
-define i64 @foo (i64 %0, i64 %1) {
+define i64 @foo(i64 %0, i64 %1) {
   %3 = alloca i64
   %4 = alloca i64
   %5 = alloca i64
@@ -10,7 +10,7 @@ define i64 @foo (i64 %0, i64 %1) {
   %7 = icmp eq i64 %6, 0
   br i1 %7, label %8, label %9
 8:
-  call void @abort ()
+  call void @abort()
 9:
   %10 = load i64, i64* %4
   %11 = icmp eq i64 %10, -9223372036854775808

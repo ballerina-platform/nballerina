@@ -820,7 +820,7 @@ function createLine(string[] words, string indent = "") returns string {
 }
 
 function omitSpaceBefore(string word) returns boolean {
-    return word == "," || word == ")" || word == "}" || word == "\"" || word == "]" || word == "*";
+    return word == "," || word == "(" || word == ")" || word == "}" || word == "\"" || word == "]" || word == "*";
 }
 
 function omitSpaceAfter(string word) returns boolean {

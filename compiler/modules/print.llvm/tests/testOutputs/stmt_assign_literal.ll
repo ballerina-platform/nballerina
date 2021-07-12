@@ -1,4 +1,4 @@
-define i64 @main () {
+define i64 @main() {
   %1 = alloca i64
   store i64 42, i64* %1
   store i64 43, i64* %1

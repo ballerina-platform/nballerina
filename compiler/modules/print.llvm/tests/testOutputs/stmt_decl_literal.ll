@@ -1,4 +1,4 @@
-define i64 @test () {
+define i64 @test() {
   %1 = alloca i64
   %2 = alloca i64
   %3 = alloca i64
