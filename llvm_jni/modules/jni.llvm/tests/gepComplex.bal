@@ -20,6 +20,18 @@ function gepComplex() returns Module {
     PointerValue v3 = builder.getElementPtr(v2, [constInt("i64", 0), constInt("i64", 5)]);
     PointerValue v4 = builder.getElementPtr(v3, [constInt("i64", 0), constInt("i64", 13)]);
     builder.ret(v4);
+
+
+    Type arrTy3 = arrayType(pointerType("i64", 1), 10);
+    Type rtTy2 = structType([ "i32", arrTy3, "i32" ]);
+    Type stTy2 = structType(["i8", "i8", rtTy2]);
+    PointerValue g2 = m.addGlobal(stTy2, "g2");
+    FunctionDefn bar = m.addFunctionDefn("bar", {returnType: pointerType(pointerType("i64",1)), paramTypes: []});
+    bb = bar.appendBasicBlock();
+    builder.positionAtEnd(bb);
+
+    PointerValue t0 = builder.getElementPtr(g2, [constInt("i32", 1),constInt("i32", 2), constInt("i32", 1), constInt("i32", 4)]);
+    builder.ret(t0);
     return m;
 }
 
