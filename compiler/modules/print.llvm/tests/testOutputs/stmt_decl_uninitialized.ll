@@ -1,4 +1,4 @@
 define i64 @foo () {
-  %_0 = alloca i64
+  %1 = alloca i64
   ret void
 }

@@ -248,10 +248,10 @@ public class FunctionDefn {
         self.functionName = functionName;
         self.functionType = functionType;
         self.paramValues = [];
-        self.nameCounter = 0;
-        foreach var paramType in functionType.paramTypes {
-            // TODO: change this so correct name is used directly
-            string register = self.genReg();
+        self.nameCounter = functionType.paramTypes.length() + 1;
+        foreach int i in 0 ..< functionType.paramTypes.length() {
+            final Type paramType = functionType.paramTypes[i];
+            string register = "%" + i.toString();
             Value arg = new (paramType, register);
             self.paramValues.push(arg);
         }
@@ -344,8 +344,7 @@ public class FunctionDefn {
         string tag = name.trim().substring(0,2);
         if tag == "%?" {
             // unnamed variable
-            // FIXME: change this
-            string new_name = "%_" + self.nameCounter.toString();
+            string new_name = "%" + self.nameCounter.toString();
             self.nameCounter += 1; 
             self.nameTranslation[name] = new_name;
             return new_name;

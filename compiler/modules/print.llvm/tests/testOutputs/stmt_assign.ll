@@ -1,8 +1,8 @@
-define i64 @main (i64 %_0) {
-  %_1 = alloca i64
-  %_2 = alloca i64
-  store i64 %_0, i64* %_1
-  %_3 = load i64, i64* %_1
-  store i64 %_3, i64* %_2
+define i64 @main (i64 %0) {
+  %2 = alloca i64
+  %3 = alloca i64
+  store i64 %0, i64* %2
+  %4 = load i64, i64* %2
+  store i64 %4, i64* %3
   ret void
 }
