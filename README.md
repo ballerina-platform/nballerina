@@ -2,8 +2,7 @@
 
 ## Goals
 
-The long-term goal of the nBallerina project is to create a new compiler for the [Ballerina language](https://ballerina.io/) that is written in Ballerina and can generate native code using LLVM. It will implement the Ballerina language as defined by the [2021R1](https://ballerina.io/spec/lang/2021R1/) version of the language specification; we will aim to
-track any agreed changes to the spec.
+The long-term goal of the nBallerina project is to create a new compiler for the [Ballerina language](https://ballerina.io/) that is written in Ballerina and can generate native code using LLVM. It will implement the Ballerina language as defined by the [2021R1](https://ballerina.io/spec/lang/2021R1/) version of the language specification; we will aim to track any agreed changes to the spec.
 
 Eventually we expect nBallerina to replace the existing [jBallerina](https://github.com/ballerina-platform/ballerina-lang) compiler, which is written in Java. The long-term vision for Ballerina is to support execution both natively and on top of the JVM, which means it will eventually need to be possible also to generate JVM bytecode using nBallerina.
 
@@ -34,7 +33,7 @@ The nBallerina compiler, which is organized as a Ballerina project in the [compi
 
 The starting point for the `types` and `front` modules was the [semtype](https://github.com/jclark/semtype) project.
 
-As well as a compiler, nBallerina needs a runtime, which is in the [runtime](runtime) directory. This is currently in C and trivial. The major components will include
+As well as a compiler, nBallerina needs a runtime, which is in the [runtime](runtime) directory. This is currently in C and fairly minimal. The major components will include
 
 *   runtime type checker (we hope to write this mostly in Ballerina);
 *   implementation of the langlib;
@@ -76,10 +75,12 @@ Note that as regards the third of the above milestones, we will allow the nBalle
 The compiler has not yet got to a stage where it is useful. But if you want to play with it or help with development, this is the way:
 
 1. Clone the nBallerina repository.
-2. [Download](https://ballerina.io/downloads/) and [install](https://ballerina.io/learn/user-guide/getting-started/installation-options/) the current Ballerina distribution.
-3. Build the compiler by using the command `bal build` in the `compiler` directory; this will generate a file `target/bin/nballerina.jar`.
-4. You can use` java -jar nballerina.jar example.bal` to compile a Ballerina module into an LLVM assembly file `example.ll`.
-5. The LLVM assembly file then needs to be compiled and combined with the runtime using the LLVM `clang` command. See [test/run.sh](test/run.sh) for exact command.
+2. [Download](https://ballerina.io/downloads/) and [install](https://ballerina.io/learn/user-guide/getting-started/installation-options/) the latest Ballerina distribution (Swan Lake not 1.2.x)
+3. You can build the compiler by using the command `bal build` in the `compiler` directory; this will generate a file `target/bin/nballerina.jar`. This should work on any system that Ballerina works on.
+4. You can use `java -jar nballerina.jar example.bal` to compile a Ballerina module into an LLVM assembly file `example.ll` (note that only a tiny subset of the language is currently implemented, as described in the Status section).
+5. If you want to be able to turn the LLVM assembly file into something you can execute, there are additional requirements: Linux or OS X, LLVM 11 and GNU make. With these, you can build the runtime and run the tests by running `make test` in the top-level directory. This compiles and executes all the test cases and checks that they produce the right outputs. You can use e.g. `make -j8` to make it run tests in parallel.
+
+If you want to turn the LLVM assembly into an executable, you can use the [test/run.sh](test/run.sh) command.
 
 You can try out the semantic subtyping implementation using
 
@@ -93,10 +94,11 @@ where `example.bal` is a Ballerina module containing only type definitions and c
 
 The compiler is tested using the test cases in the [compiler/testSuite](compiler/testSuite/) directory. The `bal build` command performs a first level of testing on these: it checks that the test cases that should get compile errors do, and that the test cases that should not get compile errors do not. This should work on any platform on which the Ballerina distribution works.
 
-For those test cases that are valid Ballerina programs, the scripts in the [test](test/) directory further test that the generated LLVM assembly files can be compiled with LLVM and give the correct output when executed:
+For those test cases that are valid Ballerina programs, the Makefile in the [test](test/) directory is used to further test that the generated LLVM assembly files can be compiled with LLVM and give the correct output when executed. This Makefile has the following targets:
 
-* [compile.sh](test/compile.sh) uses `nballerina.jar` to compile all of the test cases into `.ll` files;
-* [testll.sh](test/testll.sh) uses `clang` to compile every test case into a native executable, then runs it and checks that the output is what it should be
+* `test` (the default target) forces a rebuild of all the `.ll` files if the compiler jar has changed, and then does `compile` and `testll`
+* `compile` builds any out of date `.ll` files (but does not consider the compiler jar when determining whether a `.ll` is out of date)
+* `testll` builds an executable for each test case, executes it and checks its output
 
 ## Status
 
