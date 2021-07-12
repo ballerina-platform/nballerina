@@ -3,6 +3,7 @@ declare void @_bal_panic (i64)
 declare i8 addrspace (1)* @_bal_alloc (i64)
 declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 declare i64 @_bal_list_set (i8 addrspace (1)*, i64, i8 addrspace (1)*)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare i64 @_Barray__length (i8 addrspace (1)*)
 declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
@@ -34,8 +35,8 @@ L1:
   %_16 = extractvalue {i64, i1} %_15, 1
   br i1 %_16, label %L5, label %L4
 L2:
-  %_33 = load i64, i64* %_4
-  call void @_bal_panic (i64 %_33)
+  %_29 = load i64, i64* %_4
+  call void @_bal_panic (i64 %_29)
   unreachable
 L3:
   call void @_bal_panic (i64 516)
@@ -47,30 +48,24 @@ L4:
   store i64 %_18, i64* %i
   %_19 = load i8 addrspace (1)*, i8 addrspace (1)** %v
   %_20 = load i64, i64* %i
-  %_21 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_22 = bitcast i8 addrspace (1)* %_21 to i64 addrspace (1)*
-  store i64 0, i64 addrspace (1)* %_22, align 8
-  %_23 = getelementptr i8, i8 addrspace (1)* %_21, i64 504403158265495552
-  %_24 = call i64 @_bal_list_set (i8 addrspace (1)* %_19, i64 %_20, i8 addrspace (1)* %_23)
-  %_25 = icmp eq i64 %_24, 0
-  br i1 %_25, label %L6, label %L7
+  %_21 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 0)
+  %_22 = call i64 @_bal_list_set (i8 addrspace (1)* %_19, i64 %_20, i8 addrspace (1)* %_21)
+  %_23 = icmp eq i64 %_22, 0
+  br i1 %_23, label %L6, label %L7
 L5:
   store i64 1025, i64* %_4
   br label %L2
 L6:
-  %_27 = load i8 addrspace (1)*, i8 addrspace (1)** %v
-  %_28 = call i64 @_Barray__length (i8 addrspace (1)* %_27)
-  store i64 %_28, i64* %_2
-  %_29 = load i64, i64* %_2
-  %_30 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_31 = bitcast i8 addrspace (1)* %_30 to i64 addrspace (1)*
-  store i64 %_29, i64 addrspace (1)* %_31, align 8
-  %_32 = getelementptr i8, i8 addrspace (1)* %_30, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_32)
+  %_25 = load i8 addrspace (1)*, i8 addrspace (1)** %v
+  %_26 = call i64 @_Barray__length (i8 addrspace (1)* %_25)
+  store i64 %_26, i64* %_2
+  %_27 = load i64, i64* %_2
+  %_28 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_27)
+  call void @_Bio__println (i8 addrspace (1)* %_28)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_3
   ret void
 L7:
-  %_26 = or i64 %_24, 1280
-  store i64 %_26, i64* %_4
+  %_24 = or i64 %_22, 1280
+  store i64 %_24, i64* %_4
   br label %L2
 }

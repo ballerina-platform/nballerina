@@ -1,8 +1,8 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
-declare i8 addrspace (1)* @llvm.ptrmask.p1i8.i64 (i8 addrspace (1)*, i64) readnone speculatable
+declare i64 @_bal_tagged_to_int (i8 addrspace (1)*)
 declare void @_Bio__println (i8 addrspace (1)*)
-declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 define void @_B_main () {
   %_0 = alloca i1
   %_1 = alloca i8 addrspace (1)*
@@ -26,81 +26,77 @@ L1:
   %_16 = load i8 addrspace (1)*, i8 addrspace (1)** %_1
   %_17 = addrspacecast i8 addrspace (1)* %_16 to i8*
   %_18 = ptrtoint i8* %_17 to i64
-  %_19 = and i64 %_18, 9151314442816847872
+  %_19 = and i64 %_18, 2233785415175766016
   %_20 = icmp eq i64 %_19, 504403158265495552
   br i1 %_20, label %L3, label %L4
 L2:
   call void @_bal_panic (i64 772)
   unreachable
 L3:
-  %_21 = call i8 addrspace (1)* @llvm.ptrmask.p1i8.i64 (i8 addrspace (1)* %_16, i64 72057594037927935)
-  %_22 = bitcast i8 addrspace (1)* %_21 to i64 addrspace (1)*
-  %_23 = load i64, i64 addrspace (1)* %_22, align 8
-  %_24 = icmp eq i64 %_23, 2
-  store i1 %_24, i1* %_0
+  %_21 = call i64 @_bal_tagged_to_int (i8 addrspace (1)* %_16)
+  %_22 = icmp eq i64 %_21, 2
+  store i1 %_22, i1* %_0
   br label %L5
 L4:
   store i1 0, i1* %_0
   br label %L5
 L5:
-  %_25 = load i1, i1* %_0
-  %_26 = zext i1 %_25 to i64
-  %_27 = or i64 %_26, 72057594037927936
-  %_28 = getelementptr i8, i8 addrspace (1)* null, i64 %_27
-  call void @_Bio__println (i8 addrspace (1)* %_28)
+  %_23 = load i1, i1* %_0
+  %_24 = zext i1 %_23 to i64
+  %_25 = or i64 %_24, 72057594037927936
+  %_26 = getelementptr i8, i8 addrspace (1)* null, i64 %_25
+  call void @_Bio__println (i8 addrspace (1)* %_26)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_2
-  %_29 = call i8 addrspace (1)* @_B_mkInt (i64 17)
-  store i8 addrspace (1)* %_29, i8 addrspace (1)** %_4
-  %_30 = load i8 addrspace (1)*, i8 addrspace (1)** %_4
-  %_31 = addrspacecast i8 addrspace (1)* %_30 to i8*
-  %_32 = ptrtoint i8* %_31 to i64
-  %_33 = and i64 %_32, 9151314442816847872
-  %_34 = icmp eq i64 %_33, 504403158265495552
-  br i1 %_34, label %L6, label %L7
+  %_27 = call i8 addrspace (1)* @_B_mkInt (i64 17)
+  store i8 addrspace (1)* %_27, i8 addrspace (1)** %_4
+  %_28 = load i8 addrspace (1)*, i8 addrspace (1)** %_4
+  %_29 = addrspacecast i8 addrspace (1)* %_28 to i8*
+  %_30 = ptrtoint i8* %_29 to i64
+  %_31 = and i64 %_30, 2233785415175766016
+  %_32 = icmp eq i64 %_31, 504403158265495552
+  br i1 %_32, label %L6, label %L7
 L6:
-  %_35 = call i8 addrspace (1)* @llvm.ptrmask.p1i8.i64 (i8 addrspace (1)* %_30, i64 72057594037927935)
-  %_36 = bitcast i8 addrspace (1)* %_35 to i64 addrspace (1)*
-  %_37 = load i64, i64 addrspace (1)* %_36, align 8
-  %_38 = icmp ne i64 %_37, 17
-  store i1 %_38, i1* %_3
+  %_33 = call i64 @_bal_tagged_to_int (i8 addrspace (1)* %_28)
+  %_34 = icmp ne i64 %_33, 17
+  store i1 %_34, i1* %_3
   br label %L8
 L7:
   store i1 1, i1* %_3
   br label %L8
 L8:
-  %_39 = load i1, i1* %_3
-  %_40 = zext i1 %_39 to i64
-  %_41 = or i64 %_40, 72057594037927936
-  %_42 = getelementptr i8, i8 addrspace (1)* null, i64 %_41
-  call void @_Bio__println (i8 addrspace (1)* %_42)
+  %_35 = load i1, i1* %_3
+  %_36 = zext i1 %_35 to i64
+  %_37 = or i64 %_36, 72057594037927936
+  %_38 = getelementptr i8, i8 addrspace (1)* null, i64 %_37
+  call void @_Bio__println (i8 addrspace (1)* %_38)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_5
-  %_43 = call i8 addrspace (1)* @_B_mkBoolean (i1 1)
-  store i8 addrspace (1)* %_43, i8 addrspace (1)** %_7
-  %_44 = load i8 addrspace (1)*, i8 addrspace (1)** %_7
-  %_45 = zext i1 1 to i64
-  %_46 = or i64 %_45, 72057594037927936
-  %_47 = getelementptr i8, i8 addrspace (1)* null, i64 %_46
-  %_48 = icmp eq i8 addrspace (1)* %_44, %_47
-  store i1 %_48, i1* %_6
-  %_49 = load i1, i1* %_6
-  %_50 = zext i1 %_49 to i64
-  %_51 = or i64 %_50, 72057594037927936
-  %_52 = getelementptr i8, i8 addrspace (1)* null, i64 %_51
-  call void @_Bio__println (i8 addrspace (1)* %_52)
+  %_39 = call i8 addrspace (1)* @_B_mkBoolean (i1 1)
+  store i8 addrspace (1)* %_39, i8 addrspace (1)** %_7
+  %_40 = load i8 addrspace (1)*, i8 addrspace (1)** %_7
+  %_41 = zext i1 1 to i64
+  %_42 = or i64 %_41, 72057594037927936
+  %_43 = getelementptr i8, i8 addrspace (1)* null, i64 %_42
+  %_44 = icmp eq i8 addrspace (1)* %_40, %_43
+  store i1 %_44, i1* %_6
+  %_45 = load i1, i1* %_6
+  %_46 = zext i1 %_45 to i64
+  %_47 = or i64 %_46, 72057594037927936
+  %_48 = getelementptr i8, i8 addrspace (1)* null, i64 %_47
+  call void @_Bio__println (i8 addrspace (1)* %_48)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_8
-  %_53 = call i8 addrspace (1)* @_B_mkBoolean (i1 0)
-  store i8 addrspace (1)* %_53, i8 addrspace (1)** %_10
-  %_54 = load i8 addrspace (1)*, i8 addrspace (1)** %_10
-  %_55 = zext i1 0 to i64
-  %_56 = or i64 %_55, 72057594037927936
-  %_57 = getelementptr i8, i8 addrspace (1)* null, i64 %_56
-  %_58 = icmp ne i8 addrspace (1)* %_54, %_57
-  store i1 %_58, i1* %_9
-  %_59 = load i1, i1* %_9
-  %_60 = zext i1 %_59 to i64
-  %_61 = or i64 %_60, 72057594037927936
-  %_62 = getelementptr i8, i8 addrspace (1)* null, i64 %_61
-  call void @_Bio__println (i8 addrspace (1)* %_62)
+  %_49 = call i8 addrspace (1)* @_B_mkBoolean (i1 0)
+  store i8 addrspace (1)* %_49, i8 addrspace (1)** %_10
+  %_50 = load i8 addrspace (1)*, i8 addrspace (1)** %_10
+  %_51 = zext i1 0 to i64
+  %_52 = or i64 %_51, 72057594037927936
+  %_53 = getelementptr i8, i8 addrspace (1)* null, i64 %_52
+  %_54 = icmp ne i8 addrspace (1)* %_50, %_53
+  store i1 %_54, i1* %_9
+  %_55 = load i1, i1* %_9
+  %_56 = zext i1 %_55 to i64
+  %_57 = or i64 %_56, 72057594037927936
+  %_58 = getelementptr i8, i8 addrspace (1)* null, i64 %_57
+  call void @_Bio__println (i8 addrspace (1)* %_58)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_11
   ret void
 }
@@ -124,11 +120,8 @@ define internal i8 addrspace (1)* @_B_mkInt (i64 %_0) {
 L1:
   store i64 %_0, i64* %n
   %_4 = load i64, i64* %n
-  %_5 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_6 = bitcast i8 addrspace (1)* %_5 to i64 addrspace (1)*
-  store i64 %_4, i64 addrspace (1)* %_6, align 8
-  %_7 = getelementptr i8, i8 addrspace (1)* %_5, i64 504403158265495552
-  ret i8 addrspace (1)* %_7
+  %_5 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_4)
+  ret i8 addrspace (1)* %_5
 L2:
   call void @_bal_panic (i64 3588)
   unreachable

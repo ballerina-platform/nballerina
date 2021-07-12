@@ -2,6 +2,7 @@
 declare void @_bal_panic (i64)
 declare i8 addrspace (1)* @_bal_alloc (i64)
 declare i64 @_Barray__length (i8 addrspace (1)*)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
   %_0 = alloca i8 addrspace (1)*
@@ -44,11 +45,8 @@ L1:
   %_26 = call i64 @_Barray__length (i8 addrspace (1)* %_25)
   store i64 %_26, i64* %_1
   %_27 = load i64, i64* %_1
-  %_28 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_29 = bitcast i8 addrspace (1)* %_28 to i64 addrspace (1)*
-  store i64 %_27, i64 addrspace (1)* %_29, align 8
-  %_30 = getelementptr i8, i8 addrspace (1)* %_28, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_30)
+  %_28 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_27)
+  call void @_Bio__println (i8 addrspace (1)* %_28)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_2
   ret void
 L2:

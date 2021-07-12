@@ -2,6 +2,7 @@
 declare void @_bal_panic (i64)
 declare i8 addrspace (1)* @_bal_alloc (i64)
 declare i64 @_bal_list_set (i8 addrspace (1)*, i64, i8 addrspace (1)*)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
   %_0 = alloca i8 addrspace (1)*
@@ -26,27 +27,24 @@ L1:
   %_12 = load i8 addrspace (1)*, i8 addrspace (1)** %_0
   store i8 addrspace (1)* %_12, i8 addrspace (1)** %v
   %_13 = load i8 addrspace (1)*, i8 addrspace (1)** %v
-  %_14 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_15 = bitcast i8 addrspace (1)* %_14 to i64 addrspace (1)*
-  store i64 2, i64 addrspace (1)* %_15, align 8
-  %_16 = getelementptr i8, i8 addrspace (1)* %_14, i64 504403158265495552
-  %_17 = call i64 @_bal_list_set (i8 addrspace (1)* %_13, i64 1, i8 addrspace (1)* %_16)
-  %_18 = icmp eq i64 %_17, 0
-  br i1 %_18, label %L4, label %L5
+  %_14 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 2)
+  %_15 = call i64 @_bal_list_set (i8 addrspace (1)* %_13, i64 1, i8 addrspace (1)* %_14)
+  %_16 = icmp eq i64 %_15, 0
+  br i1 %_16, label %L4, label %L5
 L2:
-  %_21 = load i64, i64* %_2
-  call void @_bal_panic (i64 %_21)
+  %_19 = load i64, i64* %_2
+  call void @_bal_panic (i64 %_19)
   unreachable
 L3:
   call void @_bal_panic (i64 772)
   unreachable
 L4:
-  %_20 = load i8 addrspace (1)*, i8 addrspace (1)** %v
-  call void @_Bio__println (i8 addrspace (1)* %_20)
+  %_18 = load i8 addrspace (1)*, i8 addrspace (1)** %v
+  call void @_Bio__println (i8 addrspace (1)* %_18)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_1
   ret void
 L5:
-  %_19 = or i64 %_17, 1280
-  store i64 %_19, i64* %_2
+  %_17 = or i64 %_15, 1280
+  store i64 %_17, i64* %_2
   br label %L2
 }

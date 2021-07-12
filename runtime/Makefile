@@ -3,17 +3,12 @@ CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 OBJS=alloc.o list.o main.o panic.o print.o
-# When we have more than one thing in this list, change from cp to $(LLVM_LINK) below 
-BCS=list_inline.bc
 INCLUDES=tag.h balrt.h
 AR=ar
 LIB=balrt.a
 BCLIB=balrt_inline.bc
 
 all: $(LIB) $(BCLIB)
-
-$(BCLIB): $(BCS)
-	cp $< $@
 
 $(LIB): $(OBJS)
 	$(AR) r $@ $^
@@ -28,7 +23,7 @@ $(LIB): $(OBJS)
 %.ll: %.c
 	$(CLANG) $(CFLAGS) -O2 -S -emit-llvm -o $@ $<
 
-$(OBJS) $(BCS): $(INCLUDES)
+$(OBJS) $(BCLIB): $(INCLUDES)
 
 clean:
-	-rm -f $(LIB) $(OBJS) $(BCLIB) $(BCS) 
+	-rm -f $(LIB) $(OBJS) $(BCLIB)

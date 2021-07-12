@@ -14,7 +14,7 @@ static int stackContains(struct PrintStack *stackPtr, TaggedPtr p);
 
 static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *stackPtr) {
     int tag = getTag(p);
-    switch (tag) {
+    switch (tag & UT_MASK) {
         case 0:
             if (p != 0) {
                 fprintf(stderr, "zero tag with non-zero payload %p\n", p);
@@ -28,14 +28,14 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
             fprintf(fp, "%s", taggedToBoolean(p) ? "true" : "false");
             break;
         case TAG_INT:
-            fprintf(fp, "%ld", (long)taggedToInt(p));
+            fprintf(fp, "%ld", (long)_bal_tagged_to_int(p));
             break;
         case TAG_LIST_RW:
             if (stackContains(stackPtr, p)) {
                 fputs("...", fp);
             }
             else {
-                ListPtr lp = taggedToList(p);
+                ListPtr lp = taggedToPtr(p);
                 struct PrintStack stack;
                 int i;
                 fputs("[", fp);
@@ -65,7 +65,6 @@ static int stackContains(struct PrintStack *stackPtr, TaggedPtr p) {
     }
     return 0;
 }
-
 
 void _Bio__println(TaggedPtr p) {
 #ifdef STACK_DEBUG

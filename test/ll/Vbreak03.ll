@@ -1,6 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
-declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 define void @_B_main () {
@@ -14,11 +14,8 @@ L1:
   %_5 = call i64 @_B_foo (i64 10)
   store i64 %_5, i64* %_0
   %_6 = load i64, i64* %_0
-  %_7 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_8 = bitcast i8 addrspace (1)* %_7 to i64 addrspace (1)*
-  store i64 %_6, i64 addrspace (1)* %_8, align 8
-  %_9 = getelementptr i8, i8 addrspace (1)* %_7, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_9)
+  %_7 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_6)
+  call void @_Bio__println (i8 addrspace (1)* %_7)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_1
   ret void
 L2:
@@ -65,28 +62,25 @@ L4:
   br i1 %_22, label %L12, label %L11
 L5:
   %_33 = load i64, i64* %i
-  %_34 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_35 = bitcast i8 addrspace (1)* %_34 to i64 addrspace (1)*
-  store i64 %_33, i64 addrspace (1)* %_35, align 8
-  %_36 = getelementptr i8, i8 addrspace (1)* %_34, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_36)
+  %_34 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_33)
+  call void @_Bio__println (i8 addrspace (1)* %_34)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_5
   br label %L3
 L6:
   br label %L2
 L7:
-  %_37 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_38 = extractvalue {i64, i1} %_37, 1
-  br i1 %_38, label %L16, label %L15
+  %_35 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
+  %_36 = extractvalue {i64, i1} %_35, 1
+  br i1 %_36, label %L16, label %L15
 L8:
-  %_41 = load i64, i64* %i
-  %_42 = call i64 @_B_foo (i64 %_41)
-  store i64 %_42, i64* %_8
-  %_43 = load i64, i64* %_8
-  ret i64 %_43
+  %_39 = load i64, i64* %i
+  %_40 = call i64 @_B_foo (i64 %_39)
+  store i64 %_40, i64* %_8
+  %_41 = load i64, i64* %_8
+  ret i64 %_41
 L9:
-  %_44 = load i64, i64* %_9
-  call void @_bal_panic (i64 %_44)
+  %_42 = load i64, i64* %_9
+  call void @_bal_panic (i64 %_42)
   unreachable
 L10:
   call void @_bal_panic (i64 3332)
@@ -116,10 +110,10 @@ L14:
   store i64 4353, i64* %_9
   br label %L9
 L15:
-  %_39 = extractvalue {i64, i1} %_37, 0
-  store i64 %_39, i64* %_7
-  %_40 = load i64, i64* %_7
-  ret i64 %_40
+  %_37 = extractvalue {i64, i1} %_35, 0
+  store i64 %_37, i64* %_7
+  %_38 = load i64, i64* %_7
+  ret i64 %_38
 L16:
   store i64 5889, i64* %_9
   br label %L9

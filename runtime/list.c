@@ -5,7 +5,7 @@
 #define ARRAY_LENGTH_MAX (INT64_MAX/sizeof(TaggedPtr))
 
 Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
-    ListPtr lp = taggedToList(p);
+    ListPtr lp = taggedToPtr(p);
     if (likely((uint64_t)index < lp->length)) {
         lp->members[index] = val;
         return 0;

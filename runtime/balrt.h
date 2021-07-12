@@ -2,6 +2,7 @@
 
 #include "tag.h"
 #define TAG_MASK 0xFF
+#define UT_MASK 0x1F
 #define TAG_SHIFT 56
 
 #ifdef __clang__
@@ -34,12 +35,14 @@ typedef void HEAP_STAR(UntypedPtr);
 // An error is currently represented as int with the error code in the lo byte
 typedef uint64_t Error;
 
-typedef struct {
+struct List {
     int64_t length;
     // capacity is always >= length
     int64_t capacity;
     TaggedPtr HEAP_STAR(members);
-} HEAP_STAR(ListPtr);
+};
+ 
+typedef struct List HEAP_STAR(ListPtr);
 
 // These should be shared with build.bal
 #define PANIC_INDEX_OUT_OF_BOUNDS 5
@@ -64,12 +67,12 @@ static inline int taggedToBoolean(TaggedPtr p) {
     return (int)(taggedPtrBits(p) & 1);
 }
 
-static inline int64_t taggedToInt(TaggedPtr p) {
-    return *(int64_t *)(char *)(~(((uint64_t)TAG_MASK) << TAG_SHIFT) & taggedPtrBits(p));
-}
-
-static inline ListPtr taggedToList(TaggedPtr p) {
-    return (ListPtr)(char *)(~(((uint64_t)TAG_MASK) << TAG_SHIFT) & taggedPtrBits(p));
+static inline UntypedPtr taggedToPtr(TaggedPtr p) {
+    return (UntypedPtr)(char *)(~(((uint64_t)TAG_MASK) << TAG_SHIFT) & taggedPtrBits(p));
 }
 
 extern void _bal_array_grow(ListPtr lp, int64_t min_capacity);
+extern TaggedPtr _bal_int_to_tagged(int64_t n);
+extern int64_t _bal_tagged_to_int(TaggedPtr p);
+
+

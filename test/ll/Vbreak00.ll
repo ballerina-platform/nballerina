@@ -1,7 +1,7 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
 declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 define void @_B_main () {
@@ -79,30 +79,27 @@ L4:
   br i1 %_19, label %L5, label %L6
 L5:
   %_20 = load i64, i64* %n
-  %_21 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_22 = bitcast i8 addrspace (1)* %_21 to i64 addrspace (1)*
-  store i64 %_20, i64 addrspace (1)* %_22, align 8
-  %_23 = getelementptr i8, i8 addrspace (1)* %_21, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_23)
+  %_21 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_20)
+  call void @_Bio__println (i8 addrspace (1)* %_21)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_5
   br label %L3
 L6:
-  %_24 = load i64, i64* %i
-  %_25 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_24, i64 1)
-  %_26 = extractvalue {i64, i1} %_25, 1
-  br i1 %_26, label %L10, label %L9
+  %_22 = load i64, i64* %i
+  %_23 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_22, i64 1)
+  %_24 = extractvalue {i64, i1} %_23, 1
+  br i1 %_24, label %L10, label %L9
 L7:
-  %_29 = load i64, i64* %_7
-  call void @_bal_panic (i64 %_29)
+  %_27 = load i64, i64* %_7
+  call void @_bal_panic (i64 %_27)
   unreachable
 L8:
   call void @_bal_panic (i64 2308)
   unreachable
 L9:
-  %_27 = extractvalue {i64, i1} %_25, 0
-  store i64 %_27, i64* %_6
-  %_28 = load i64, i64* %_6
-  store i64 %_28, i64* %i
+  %_25 = extractvalue {i64, i1} %_23, 0
+  store i64 %_25, i64* %_6
+  %_26 = load i64, i64* %_6
+  store i64 %_26, i64* %i
   br label %L2
 L10:
   store i64 4097, i64* %_7

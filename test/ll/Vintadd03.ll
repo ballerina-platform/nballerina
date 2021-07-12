@@ -1,7 +1,7 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
 declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 define void @_B_main () {
@@ -85,8 +85,8 @@ L1:
   %_75 = extractvalue {i64, i1} %_74, 1
   br i1 %_75, label %L5, label %L4
 L2:
-  %_291 = load i64, i64* %_70
-  call void @_bal_panic (i64 %_291)
+  %_277 = load i64, i64* %_70
+  call void @_bal_panic (i64 %_277)
   unreachable
 L3:
   call void @_bal_panic (i64 516)
@@ -108,458 +108,437 @@ L6:
   %_82 = call i64 @_B_add (i64 %_80, i64 %_81)
   store i64 %_82, i64* %_2
   %_83 = load i64, i64* %_2
-  %_84 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_85 = bitcast i8 addrspace (1)* %_84 to i64 addrspace (1)*
-  store i64 %_83, i64 addrspace (1)* %_85, align 8
-  %_86 = getelementptr i8, i8 addrspace (1)* %_84, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_86)
+  %_84 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_83)
+  call void @_Bio__println (i8 addrspace (1)* %_84)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_3
-  %_87 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
-  %_88 = extractvalue {i64, i1} %_87, 1
-  br i1 %_88, label %L9, label %L8
+  %_85 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
+  %_86 = extractvalue {i64, i1} %_85, 1
+  br i1 %_86, label %L9, label %L8
 L7:
   store i64 769, i64* %_70
   br label %L2
 L8:
-  %_89 = extractvalue {i64, i1} %_87, 0
-  store i64 %_89, i64* %_4
-  %_90 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_91 = extractvalue {i64, i1} %_90, 1
-  br i1 %_91, label %L11, label %L10
+  %_87 = extractvalue {i64, i1} %_85, 0
+  store i64 %_87, i64* %_4
+  %_88 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_89 = extractvalue {i64, i1} %_88, 1
+  br i1 %_89, label %L11, label %L10
 L9:
   store i64 1025, i64* %_70
   br label %L2
 L10:
-  %_92 = extractvalue {i64, i1} %_90, 0
-  store i64 %_92, i64* %_5
-  %_93 = load i64, i64* %_4
-  %_94 = load i64, i64* %_5
-  %_95 = call i64 @_B_add (i64 %_93, i64 %_94)
-  store i64 %_95, i64* %_6
-  %_96 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 11)
-  %_97 = extractvalue {i64, i1} %_96, 1
-  br i1 %_97, label %L13, label %L12
+  %_90 = extractvalue {i64, i1} %_88, 0
+  store i64 %_90, i64* %_5
+  %_91 = load i64, i64* %_4
+  %_92 = load i64, i64* %_5
+  %_93 = call i64 @_B_add (i64 %_91, i64 %_92)
+  store i64 %_93, i64* %_6
+  %_94 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 11)
+  %_95 = extractvalue {i64, i1} %_94, 1
+  br i1 %_95, label %L13, label %L12
 L11:
   store i64 1025, i64* %_70
   br label %L2
 L12:
-  %_98 = extractvalue {i64, i1} %_96, 0
-  store i64 %_98, i64* %_7
-  %_99 = load i64, i64* %_6
-  %_100 = load i64, i64* %_7
-  %_101 = call i64 @_B_add (i64 %_99, i64 %_100)
-  store i64 %_101, i64* %_8
-  %_102 = load i64, i64* %_8
-  %_103 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_104 = bitcast i8 addrspace (1)* %_103 to i64 addrspace (1)*
-  store i64 %_102, i64 addrspace (1)* %_104, align 8
-  %_105 = getelementptr i8, i8 addrspace (1)* %_103, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_105)
+  %_96 = extractvalue {i64, i1} %_94, 0
+  store i64 %_96, i64* %_7
+  %_97 = load i64, i64* %_6
+  %_98 = load i64, i64* %_7
+  %_99 = call i64 @_B_add (i64 %_97, i64 %_98)
+  store i64 %_99, i64* %_8
+  %_100 = load i64, i64* %_8
+  %_101 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_100)
+  call void @_Bio__println (i8 addrspace (1)* %_101)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_9
-  %_106 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
-  %_107 = extractvalue {i64, i1} %_106, 1
-  br i1 %_107, label %L15, label %L14
+  %_102 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
+  %_103 = extractvalue {i64, i1} %_102, 1
+  br i1 %_103, label %L15, label %L14
 L13:
   store i64 1025, i64* %_70
   br label %L2
 L14:
-  %_108 = extractvalue {i64, i1} %_106, 0
-  store i64 %_108, i64* %_10
-  %_109 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_110 = extractvalue {i64, i1} %_109, 1
-  br i1 %_110, label %L17, label %L16
+  %_104 = extractvalue {i64, i1} %_102, 0
+  store i64 %_104, i64* %_10
+  %_105 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_106 = extractvalue {i64, i1} %_105, 1
+  br i1 %_106, label %L17, label %L16
 L15:
   store i64 1281, i64* %_70
   br label %L2
 L16:
-  %_111 = extractvalue {i64, i1} %_109, 0
-  store i64 %_111, i64* %_11
-  %_112 = load i64, i64* %_10
-  %_113 = load i64, i64* %_11
-  %_114 = call i64 @_B_add (i64 %_112, i64 %_113)
-  store i64 %_114, i64* %_12
-  %_115 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_116 = extractvalue {i64, i1} %_115, 1
-  br i1 %_116, label %L19, label %L18
+  %_107 = extractvalue {i64, i1} %_105, 0
+  store i64 %_107, i64* %_11
+  %_108 = load i64, i64* %_10
+  %_109 = load i64, i64* %_11
+  %_110 = call i64 @_B_add (i64 %_108, i64 %_109)
+  store i64 %_110, i64* %_12
+  %_111 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_112 = extractvalue {i64, i1} %_111, 1
+  br i1 %_112, label %L19, label %L18
 L17:
   store i64 1281, i64* %_70
   br label %L2
 L18:
-  %_117 = extractvalue {i64, i1} %_115, 0
-  store i64 %_117, i64* %_13
-  %_118 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9)
-  %_119 = extractvalue {i64, i1} %_118, 1
-  br i1 %_119, label %L21, label %L20
+  %_113 = extractvalue {i64, i1} %_111, 0
+  store i64 %_113, i64* %_13
+  %_114 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9)
+  %_115 = extractvalue {i64, i1} %_114, 1
+  br i1 %_115, label %L21, label %L20
 L19:
   store i64 1281, i64* %_70
   br label %L2
 L20:
-  %_120 = extractvalue {i64, i1} %_118, 0
-  store i64 %_120, i64* %_14
-  %_121 = load i64, i64* %_13
-  %_122 = load i64, i64* %_14
-  %_123 = call i64 @_B_add (i64 %_121, i64 %_122)
-  store i64 %_123, i64* %_15
-  %_124 = load i64, i64* %_12
-  %_125 = load i64, i64* %_15
-  %_126 = call i64 @_B_add (i64 %_124, i64 %_125)
-  store i64 %_126, i64* %_16
-  %_127 = load i64, i64* %_16
-  %_128 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_129 = bitcast i8 addrspace (1)* %_128 to i64 addrspace (1)*
-  store i64 %_127, i64 addrspace (1)* %_129, align 8
-  %_130 = getelementptr i8, i8 addrspace (1)* %_128, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_130)
+  %_116 = extractvalue {i64, i1} %_114, 0
+  store i64 %_116, i64* %_14
+  %_117 = load i64, i64* %_13
+  %_118 = load i64, i64* %_14
+  %_119 = call i64 @_B_add (i64 %_117, i64 %_118)
+  store i64 %_119, i64* %_15
+  %_120 = load i64, i64* %_12
+  %_121 = load i64, i64* %_15
+  %_122 = call i64 @_B_add (i64 %_120, i64 %_121)
+  store i64 %_122, i64* %_16
+  %_123 = load i64, i64* %_16
+  %_124 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_123)
+  call void @_Bio__println (i8 addrspace (1)* %_124)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_17
-  %_131 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
-  %_132 = extractvalue {i64, i1} %_131, 1
-  br i1 %_132, label %L23, label %L22
+  %_125 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
+  %_126 = extractvalue {i64, i1} %_125, 1
+  br i1 %_126, label %L23, label %L22
 L21:
   store i64 1281, i64* %_70
   br label %L2
 L22:
-  %_133 = extractvalue {i64, i1} %_131, 0
-  store i64 %_133, i64* %_18
-  %_134 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_135 = extractvalue {i64, i1} %_134, 1
-  br i1 %_135, label %L25, label %L24
+  %_127 = extractvalue {i64, i1} %_125, 0
+  store i64 %_127, i64* %_18
+  %_128 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_129 = extractvalue {i64, i1} %_128, 1
+  br i1 %_129, label %L25, label %L24
 L23:
   store i64 1537, i64* %_70
   br label %L2
 L24:
-  %_136 = extractvalue {i64, i1} %_134, 0
-  store i64 %_136, i64* %_19
-  %_137 = load i64, i64* %_18
-  %_138 = load i64, i64* %_19
-  %_139 = call i64 @_B_add (i64 %_137, i64 %_138)
-  store i64 %_139, i64* %_20
-  %_140 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_141 = extractvalue {i64, i1} %_140, 1
-  br i1 %_141, label %L27, label %L26
+  %_130 = extractvalue {i64, i1} %_128, 0
+  store i64 %_130, i64* %_19
+  %_131 = load i64, i64* %_18
+  %_132 = load i64, i64* %_19
+  %_133 = call i64 @_B_add (i64 %_131, i64 %_132)
+  store i64 %_133, i64* %_20
+  %_134 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_135 = extractvalue {i64, i1} %_134, 1
+  br i1 %_135, label %L27, label %L26
 L25:
   store i64 1537, i64* %_70
   br label %L2
 L26:
-  %_142 = extractvalue {i64, i1} %_140, 0
-  store i64 %_142, i64* %_21
-  %_143 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9)
-  %_144 = extractvalue {i64, i1} %_143, 1
-  br i1 %_144, label %L29, label %L28
+  %_136 = extractvalue {i64, i1} %_134, 0
+  store i64 %_136, i64* %_21
+  %_137 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9)
+  %_138 = extractvalue {i64, i1} %_137, 1
+  br i1 %_138, label %L29, label %L28
 L27:
   store i64 1537, i64* %_70
   br label %L2
 L28:
-  %_145 = extractvalue {i64, i1} %_143, 0
-  store i64 %_145, i64* %_22
-  %_146 = load i64, i64* %_21
-  %_147 = load i64, i64* %_22
-  %_148 = call i64 @_B_add (i64 %_146, i64 %_147)
-  store i64 %_148, i64* %_23
-  %_149 = load i64, i64* %_20
-  %_150 = load i64, i64* %_23
-  %_151 = call i64 @_B_add (i64 %_149, i64 %_150)
-  store i64 %_151, i64* %_24
-  %_152 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 12)
-  %_153 = extractvalue {i64, i1} %_152, 1
-  br i1 %_153, label %L31, label %L30
+  %_139 = extractvalue {i64, i1} %_137, 0
+  store i64 %_139, i64* %_22
+  %_140 = load i64, i64* %_21
+  %_141 = load i64, i64* %_22
+  %_142 = call i64 @_B_add (i64 %_140, i64 %_141)
+  store i64 %_142, i64* %_23
+  %_143 = load i64, i64* %_20
+  %_144 = load i64, i64* %_23
+  %_145 = call i64 @_B_add (i64 %_143, i64 %_144)
+  store i64 %_145, i64* %_24
+  %_146 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 12)
+  %_147 = extractvalue {i64, i1} %_146, 1
+  br i1 %_147, label %L31, label %L30
 L29:
   store i64 1537, i64* %_70
   br label %L2
 L30:
-  %_154 = extractvalue {i64, i1} %_152, 0
-  store i64 %_154, i64* %_25
-  %_155 = load i64, i64* %_24
-  %_156 = load i64, i64* %_25
-  %_157 = call i64 @_B_add (i64 %_155, i64 %_156)
-  store i64 %_157, i64* %_26
-  %_158 = load i64, i64* %_26
-  %_159 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_160 = bitcast i8 addrspace (1)* %_159 to i64 addrspace (1)*
-  store i64 %_158, i64 addrspace (1)* %_160, align 8
-  %_161 = getelementptr i8, i8 addrspace (1)* %_159, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_161)
+  %_148 = extractvalue {i64, i1} %_146, 0
+  store i64 %_148, i64* %_25
+  %_149 = load i64, i64* %_24
+  %_150 = load i64, i64* %_25
+  %_151 = call i64 @_B_add (i64 %_149, i64 %_150)
+  store i64 %_151, i64* %_26
+  %_152 = load i64, i64* %_26
+  %_153 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_152)
+  call void @_Bio__println (i8 addrspace (1)* %_153)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_27
-  %_162 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
-  %_163 = extractvalue {i64, i1} %_162, 1
-  br i1 %_163, label %L33, label %L32
+  %_154 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
+  %_155 = extractvalue {i64, i1} %_154, 1
+  br i1 %_155, label %L33, label %L32
 L31:
   store i64 1537, i64* %_70
   br label %L2
 L32:
-  %_164 = extractvalue {i64, i1} %_162, 0
-  store i64 %_164, i64* %_28
-  %_165 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_166 = extractvalue {i64, i1} %_165, 1
-  br i1 %_166, label %L35, label %L34
+  %_156 = extractvalue {i64, i1} %_154, 0
+  store i64 %_156, i64* %_28
+  %_157 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_158 = extractvalue {i64, i1} %_157, 1
+  br i1 %_158, label %L35, label %L34
 L33:
   store i64 1793, i64* %_70
   br label %L2
 L34:
-  %_167 = extractvalue {i64, i1} %_165, 0
-  store i64 %_167, i64* %_29
-  %_168 = load i64, i64* %_28
-  %_169 = load i64, i64* %_29
-  %_170 = call i64 @_B_add (i64 %_168, i64 %_169)
-  store i64 %_170, i64* %_30
-  %_171 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_172 = extractvalue {i64, i1} %_171, 1
-  br i1 %_172, label %L37, label %L36
+  %_159 = extractvalue {i64, i1} %_157, 0
+  store i64 %_159, i64* %_29
+  %_160 = load i64, i64* %_28
+  %_161 = load i64, i64* %_29
+  %_162 = call i64 @_B_add (i64 %_160, i64 %_161)
+  store i64 %_162, i64* %_30
+  %_163 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_164 = extractvalue {i64, i1} %_163, 1
+  br i1 %_164, label %L37, label %L36
 L35:
   store i64 1793, i64* %_70
   br label %L2
 L36:
-  %_173 = extractvalue {i64, i1} %_171, 0
-  store i64 %_173, i64* %_31
-  %_174 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9)
-  %_175 = extractvalue {i64, i1} %_174, 1
-  br i1 %_175, label %L39, label %L38
+  %_165 = extractvalue {i64, i1} %_163, 0
+  store i64 %_165, i64* %_31
+  %_166 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9)
+  %_167 = extractvalue {i64, i1} %_166, 1
+  br i1 %_167, label %L39, label %L38
 L37:
   store i64 1793, i64* %_70
   br label %L2
 L38:
-  %_176 = extractvalue {i64, i1} %_174, 0
-  store i64 %_176, i64* %_32
-  %_177 = load i64, i64* %_31
-  %_178 = load i64, i64* %_32
-  %_179 = call i64 @_B_add (i64 %_177, i64 %_178)
-  store i64 %_179, i64* %_33
-  %_180 = load i64, i64* %_30
-  %_181 = load i64, i64* %_33
-  %_182 = call i64 @_B_add (i64 %_180, i64 %_181)
-  store i64 %_182, i64* %_34
-  %_183 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 4)
-  %_184 = extractvalue {i64, i1} %_183, 1
-  br i1 %_184, label %L41, label %L40
+  %_168 = extractvalue {i64, i1} %_166, 0
+  store i64 %_168, i64* %_32
+  %_169 = load i64, i64* %_31
+  %_170 = load i64, i64* %_32
+  %_171 = call i64 @_B_add (i64 %_169, i64 %_170)
+  store i64 %_171, i64* %_33
+  %_172 = load i64, i64* %_30
+  %_173 = load i64, i64* %_33
+  %_174 = call i64 @_B_add (i64 %_172, i64 %_173)
+  store i64 %_174, i64* %_34
+  %_175 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 4)
+  %_176 = extractvalue {i64, i1} %_175, 1
+  br i1 %_176, label %L41, label %L40
 L39:
   store i64 1793, i64* %_70
   br label %L2
 L40:
-  %_185 = extractvalue {i64, i1} %_183, 0
-  store i64 %_185, i64* %_35
-  %_186 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 7)
-  %_187 = extractvalue {i64, i1} %_186, 1
-  br i1 %_187, label %L43, label %L42
+  %_177 = extractvalue {i64, i1} %_175, 0
+  store i64 %_177, i64* %_35
+  %_178 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 7)
+  %_179 = extractvalue {i64, i1} %_178, 1
+  br i1 %_179, label %L43, label %L42
 L41:
   store i64 1793, i64* %_70
   br label %L2
 L42:
-  %_188 = extractvalue {i64, i1} %_186, 0
-  store i64 %_188, i64* %_36
-  %_189 = load i64, i64* %_35
-  %_190 = load i64, i64* %_36
-  %_191 = call i64 @_B_add (i64 %_189, i64 %_190)
-  store i64 %_191, i64* %_37
-  %_192 = load i64, i64* %_34
-  %_193 = load i64, i64* %_37
-  %_194 = call i64 @_B_add (i64 %_192, i64 %_193)
-  store i64 %_194, i64* %_38
-  %_195 = load i64, i64* %_38
-  %_196 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_197 = bitcast i8 addrspace (1)* %_196 to i64 addrspace (1)*
-  store i64 %_195, i64 addrspace (1)* %_197, align 8
-  %_198 = getelementptr i8, i8 addrspace (1)* %_196, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_198)
+  %_180 = extractvalue {i64, i1} %_178, 0
+  store i64 %_180, i64* %_36
+  %_181 = load i64, i64* %_35
+  %_182 = load i64, i64* %_36
+  %_183 = call i64 @_B_add (i64 %_181, i64 %_182)
+  store i64 %_183, i64* %_37
+  %_184 = load i64, i64* %_34
+  %_185 = load i64, i64* %_37
+  %_186 = call i64 @_B_add (i64 %_184, i64 %_185)
+  store i64 %_186, i64* %_38
+  %_187 = load i64, i64* %_38
+  %_188 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_187)
+  call void @_Bio__println (i8 addrspace (1)* %_188)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_39
-  %_199 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
-  %_200 = extractvalue {i64, i1} %_199, 1
-  br i1 %_200, label %L45, label %L44
+  %_189 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
+  %_190 = extractvalue {i64, i1} %_189, 1
+  br i1 %_190, label %L45, label %L44
 L43:
   store i64 1793, i64* %_70
   br label %L2
 L44:
-  %_201 = extractvalue {i64, i1} %_199, 0
-  store i64 %_201, i64* %_40
-  %_202 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_203 = extractvalue {i64, i1} %_202, 1
-  br i1 %_203, label %L47, label %L46
+  %_191 = extractvalue {i64, i1} %_189, 0
+  store i64 %_191, i64* %_40
+  %_192 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_193 = extractvalue {i64, i1} %_192, 1
+  br i1 %_193, label %L47, label %L46
 L45:
   store i64 2049, i64* %_70
   br label %L2
 L46:
-  %_204 = extractvalue {i64, i1} %_202, 0
-  store i64 %_204, i64* %_41
-  %_205 = load i64, i64* %_40
-  %_206 = load i64, i64* %_41
-  %_207 = call i64 @_B_add (i64 %_205, i64 %_206)
-  store i64 %_207, i64* %_42
-  %_208 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_209 = extractvalue {i64, i1} %_208, 1
-  br i1 %_209, label %L49, label %L48
+  %_194 = extractvalue {i64, i1} %_192, 0
+  store i64 %_194, i64* %_41
+  %_195 = load i64, i64* %_40
+  %_196 = load i64, i64* %_41
+  %_197 = call i64 @_B_add (i64 %_195, i64 %_196)
+  store i64 %_197, i64* %_42
+  %_198 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_199 = extractvalue {i64, i1} %_198, 1
+  br i1 %_199, label %L49, label %L48
 L47:
   store i64 2049, i64* %_70
   br label %L2
 L48:
-  %_210 = extractvalue {i64, i1} %_208, 0
-  store i64 %_210, i64* %_43
-  %_211 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9)
-  %_212 = extractvalue {i64, i1} %_211, 1
-  br i1 %_212, label %L51, label %L50
+  %_200 = extractvalue {i64, i1} %_198, 0
+  store i64 %_200, i64* %_43
+  %_201 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9)
+  %_202 = extractvalue {i64, i1} %_201, 1
+  br i1 %_202, label %L51, label %L50
 L49:
   store i64 2049, i64* %_70
   br label %L2
 L50:
-  %_213 = extractvalue {i64, i1} %_211, 0
-  store i64 %_213, i64* %_44
-  %_214 = load i64, i64* %_43
-  %_215 = load i64, i64* %_44
-  %_216 = call i64 @_B_add (i64 %_214, i64 %_215)
-  store i64 %_216, i64* %_45
-  %_217 = load i64, i64* %_42
-  %_218 = load i64, i64* %_45
-  %_219 = call i64 @_B_add (i64 %_217, i64 %_218)
-  store i64 %_219, i64* %_46
-  %_220 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 4)
-  %_221 = extractvalue {i64, i1} %_220, 1
-  br i1 %_221, label %L53, label %L52
+  %_203 = extractvalue {i64, i1} %_201, 0
+  store i64 %_203, i64* %_44
+  %_204 = load i64, i64* %_43
+  %_205 = load i64, i64* %_44
+  %_206 = call i64 @_B_add (i64 %_204, i64 %_205)
+  store i64 %_206, i64* %_45
+  %_207 = load i64, i64* %_42
+  %_208 = load i64, i64* %_45
+  %_209 = call i64 @_B_add (i64 %_207, i64 %_208)
+  store i64 %_209, i64* %_46
+  %_210 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 4)
+  %_211 = extractvalue {i64, i1} %_210, 1
+  br i1 %_211, label %L53, label %L52
 L51:
   store i64 2049, i64* %_70
   br label %L2
 L52:
-  %_222 = extractvalue {i64, i1} %_220, 0
-  store i64 %_222, i64* %_47
-  %_223 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 7)
-  %_224 = extractvalue {i64, i1} %_223, 1
-  br i1 %_224, label %L55, label %L54
+  %_212 = extractvalue {i64, i1} %_210, 0
+  store i64 %_212, i64* %_47
+  %_213 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 7)
+  %_214 = extractvalue {i64, i1} %_213, 1
+  br i1 %_214, label %L55, label %L54
 L53:
   store i64 2049, i64* %_70
   br label %L2
 L54:
-  %_225 = extractvalue {i64, i1} %_223, 0
-  store i64 %_225, i64* %_48
-  %_226 = load i64, i64* %_47
-  %_227 = load i64, i64* %_48
-  %_228 = call i64 @_B_add (i64 %_226, i64 %_227)
-  store i64 %_228, i64* %_49
-  %_229 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_230 = extractvalue {i64, i1} %_229, 1
-  br i1 %_230, label %L57, label %L56
+  %_215 = extractvalue {i64, i1} %_213, 0
+  store i64 %_215, i64* %_48
+  %_216 = load i64, i64* %_47
+  %_217 = load i64, i64* %_48
+  %_218 = call i64 @_B_add (i64 %_216, i64 %_217)
+  store i64 %_218, i64* %_49
+  %_219 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_220 = extractvalue {i64, i1} %_219, 1
+  br i1 %_220, label %L57, label %L56
 L55:
   store i64 2049, i64* %_70
   br label %L2
 L56:
-  %_231 = extractvalue {i64, i1} %_229, 0
-  store i64 %_231, i64* %_50
-  %_232 = load i64, i64* %_49
-  %_233 = load i64, i64* %_50
-  %_234 = call i64 @_B_add (i64 %_232, i64 %_233)
-  store i64 %_234, i64* %_51
-  %_235 = load i64, i64* %_46
-  %_236 = load i64, i64* %_51
-  %_237 = call i64 @_B_add (i64 %_235, i64 %_236)
-  store i64 %_237, i64* %_52
-  %_238 = load i64, i64* %_52
-  %_239 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_240 = bitcast i8 addrspace (1)* %_239 to i64 addrspace (1)*
-  store i64 %_238, i64 addrspace (1)* %_240, align 8
-  %_241 = getelementptr i8, i8 addrspace (1)* %_239, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_241)
+  %_221 = extractvalue {i64, i1} %_219, 0
+  store i64 %_221, i64* %_50
+  %_222 = load i64, i64* %_49
+  %_223 = load i64, i64* %_50
+  %_224 = call i64 @_B_add (i64 %_222, i64 %_223)
+  store i64 %_224, i64* %_51
+  %_225 = load i64, i64* %_46
+  %_226 = load i64, i64* %_51
+  %_227 = call i64 @_B_add (i64 %_225, i64 %_226)
+  store i64 %_227, i64* %_52
+  %_228 = load i64, i64* %_52
+  %_229 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_228)
+  call void @_Bio__println (i8 addrspace (1)* %_229)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_53
-  %_242 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
-  %_243 = extractvalue {i64, i1} %_242, 1
-  br i1 %_243, label %L59, label %L58
+  %_230 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 3)
+  %_231 = extractvalue {i64, i1} %_230, 1
+  br i1 %_231, label %L59, label %L58
 L57:
   store i64 2049, i64* %_70
   br label %L2
 L58:
-  %_244 = extractvalue {i64, i1} %_242, 0
-  store i64 %_244, i64* %_54
-  %_245 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_246 = extractvalue {i64, i1} %_245, 1
-  br i1 %_246, label %L61, label %L60
+  %_232 = extractvalue {i64, i1} %_230, 0
+  store i64 %_232, i64* %_54
+  %_233 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_234 = extractvalue {i64, i1} %_233, 1
+  br i1 %_234, label %L61, label %L60
 L59:
   store i64 2305, i64* %_70
   br label %L2
 L60:
-  %_247 = extractvalue {i64, i1} %_245, 0
-  store i64 %_247, i64* %_55
-  %_248 = load i64, i64* %_54
-  %_249 = load i64, i64* %_55
-  %_250 = call i64 @_B_add (i64 %_248, i64 %_249)
-  store i64 %_250, i64* %_56
-  %_251 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
-  %_252 = extractvalue {i64, i1} %_251, 1
-  br i1 %_252, label %L63, label %L62
+  %_235 = extractvalue {i64, i1} %_233, 0
+  store i64 %_235, i64* %_55
+  %_236 = load i64, i64* %_54
+  %_237 = load i64, i64* %_55
+  %_238 = call i64 @_B_add (i64 %_236, i64 %_237)
+  store i64 %_238, i64* %_56
+  %_239 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 5)
+  %_240 = extractvalue {i64, i1} %_239, 1
+  br i1 %_240, label %L63, label %L62
 L61:
   store i64 2305, i64* %_70
   br label %L2
 L62:
-  %_253 = extractvalue {i64, i1} %_251, 0
-  store i64 %_253, i64* %_57
-  %_254 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9)
-  %_255 = extractvalue {i64, i1} %_254, 1
-  br i1 %_255, label %L65, label %L64
+  %_241 = extractvalue {i64, i1} %_239, 0
+  store i64 %_241, i64* %_57
+  %_242 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9)
+  %_243 = extractvalue {i64, i1} %_242, 1
+  br i1 %_243, label %L65, label %L64
 L63:
   store i64 2305, i64* %_70
   br label %L2
 L64:
-  %_256 = extractvalue {i64, i1} %_254, 0
-  store i64 %_256, i64* %_58
-  %_257 = load i64, i64* %_57
-  %_258 = load i64, i64* %_58
-  %_259 = call i64 @_B_add (i64 %_257, i64 %_258)
-  store i64 %_259, i64* %_59
-  %_260 = load i64, i64* %_56
-  %_261 = load i64, i64* %_59
-  %_262 = call i64 @_B_add (i64 %_260, i64 %_261)
-  store i64 %_262, i64* %_60
-  %_263 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 4)
-  %_264 = extractvalue {i64, i1} %_263, 1
-  br i1 %_264, label %L67, label %L66
+  %_244 = extractvalue {i64, i1} %_242, 0
+  store i64 %_244, i64* %_58
+  %_245 = load i64, i64* %_57
+  %_246 = load i64, i64* %_58
+  %_247 = call i64 @_B_add (i64 %_245, i64 %_246)
+  store i64 %_247, i64* %_59
+  %_248 = load i64, i64* %_56
+  %_249 = load i64, i64* %_59
+  %_250 = call i64 @_B_add (i64 %_248, i64 %_249)
+  store i64 %_250, i64* %_60
+  %_251 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 4)
+  %_252 = extractvalue {i64, i1} %_251, 1
+  br i1 %_252, label %L67, label %L66
 L65:
   store i64 2305, i64* %_70
   br label %L2
 L66:
-  %_265 = extractvalue {i64, i1} %_263, 0
-  store i64 %_265, i64* %_61
-  %_266 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 7)
-  %_267 = extractvalue {i64, i1} %_266, 1
-  br i1 %_267, label %L69, label %L68
+  %_253 = extractvalue {i64, i1} %_251, 0
+  store i64 %_253, i64* %_61
+  %_254 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 7)
+  %_255 = extractvalue {i64, i1} %_254, 1
+  br i1 %_255, label %L69, label %L68
 L67:
   store i64 2305, i64* %_70
   br label %L2
 L68:
-  %_268 = extractvalue {i64, i1} %_266, 0
-  store i64 %_268, i64* %_62
-  %_269 = load i64, i64* %_61
-  %_270 = load i64, i64* %_62
-  %_271 = call i64 @_B_add (i64 %_269, i64 %_270)
-  store i64 %_271, i64* %_63
-  %_272 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 23)
-  %_273 = extractvalue {i64, i1} %_272, 1
-  br i1 %_273, label %L71, label %L70
+  %_256 = extractvalue {i64, i1} %_254, 0
+  store i64 %_256, i64* %_62
+  %_257 = load i64, i64* %_61
+  %_258 = load i64, i64* %_62
+  %_259 = call i64 @_B_add (i64 %_257, i64 %_258)
+  store i64 %_259, i64* %_63
+  %_260 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 23)
+  %_261 = extractvalue {i64, i1} %_260, 1
+  br i1 %_261, label %L71, label %L70
 L69:
   store i64 2305, i64* %_70
   br label %L2
 L70:
-  %_274 = extractvalue {i64, i1} %_272, 0
-  store i64 %_274, i64* %_64
-  %_275 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 50)
-  %_276 = extractvalue {i64, i1} %_275, 1
-  br i1 %_276, label %L73, label %L72
+  %_262 = extractvalue {i64, i1} %_260, 0
+  store i64 %_262, i64* %_64
+  %_263 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 50)
+  %_264 = extractvalue {i64, i1} %_263, 1
+  br i1 %_264, label %L73, label %L72
 L71:
   store i64 2305, i64* %_70
   br label %L2
 L72:
-  %_277 = extractvalue {i64, i1} %_275, 0
-  store i64 %_277, i64* %_65
-  %_278 = load i64, i64* %_64
-  %_279 = load i64, i64* %_65
-  %_280 = call i64 @_B_add (i64 %_278, i64 %_279)
-  store i64 %_280, i64* %_66
-  %_281 = load i64, i64* %_63
-  %_282 = load i64, i64* %_66
-  %_283 = call i64 @_B_add (i64 %_281, i64 %_282)
-  store i64 %_283, i64* %_67
-  %_284 = load i64, i64* %_60
-  %_285 = load i64, i64* %_67
-  %_286 = call i64 @_B_add (i64 %_284, i64 %_285)
-  store i64 %_286, i64* %_68
-  %_287 = load i64, i64* %_68
-  %_288 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_289 = bitcast i8 addrspace (1)* %_288 to i64 addrspace (1)*
-  store i64 %_287, i64 addrspace (1)* %_289, align 8
-  %_290 = getelementptr i8, i8 addrspace (1)* %_288, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_290)
+  %_265 = extractvalue {i64, i1} %_263, 0
+  store i64 %_265, i64* %_65
+  %_266 = load i64, i64* %_64
+  %_267 = load i64, i64* %_65
+  %_268 = call i64 @_B_add (i64 %_266, i64 %_267)
+  store i64 %_268, i64* %_66
+  %_269 = load i64, i64* %_63
+  %_270 = load i64, i64* %_66
+  %_271 = call i64 @_B_add (i64 %_269, i64 %_270)
+  store i64 %_271, i64* %_67
+  %_272 = load i64, i64* %_60
+  %_273 = load i64, i64* %_67
+  %_274 = call i64 @_B_add (i64 %_272, i64 %_273)
+  store i64 %_274, i64* %_68
+  %_275 = load i64, i64* %_68
+  %_276 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_275)
+  call void @_Bio__println (i8 addrspace (1)* %_276)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_69
   ret void
 L73:

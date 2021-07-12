@@ -1,6 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
-declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 define void @_B_main () {
@@ -25,52 +25,40 @@ L1:
   %_14 = load i64, i64* %_0
   store i64 %_14, i64* %neg1
   %_15 = load i64, i64* %neg1
-  %_16 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_17 = bitcast i8 addrspace (1)* %_16 to i64 addrspace (1)*
-  store i64 %_15, i64 addrspace (1)* %_17, align 8
-  %_18 = getelementptr i8, i8 addrspace (1)* %_16, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_18)
+  %_16 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_15)
+  call void @_Bio__println (i8 addrspace (1)* %_16)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_1
-  %_19 = call i64 @_B_neg (i64 0)
-  store i64 %_19, i64* %_2
-  %_20 = load i64, i64* %_2
-  %_21 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_22 = bitcast i8 addrspace (1)* %_21 to i64 addrspace (1)*
-  store i64 %_20, i64 addrspace (1)* %_22, align 8
-  %_23 = getelementptr i8, i8 addrspace (1)* %_21, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_23)
+  %_17 = call i64 @_B_neg (i64 0)
+  store i64 %_17, i64* %_2
+  %_18 = load i64, i64* %_2
+  %_19 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_18)
+  call void @_Bio__println (i8 addrspace (1)* %_19)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_3
-  %_24 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_25 = extractvalue {i64, i1} %_24, 1
-  br i1 %_25, label %L5, label %L4
+  %_20 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
+  %_21 = extractvalue {i64, i1} %_20, 1
+  br i1 %_21, label %L5, label %L4
 L2:
-  %_38 = load i64, i64* %_9
-  call void @_bal_panic (i64 %_38)
+  %_30 = load i64, i64* %_9
+  call void @_bal_panic (i64 %_30)
   unreachable
 L3:
   call void @_bal_panic (i64 516)
   unreachable
 L4:
-  %_26 = extractvalue {i64, i1} %_24, 0
-  store i64 %_26, i64* %_4
-  %_27 = load i64, i64* %_4
-  %_28 = call i64 @_B_neg (i64 %_27)
-  store i64 %_28, i64* %_5
-  %_29 = load i64, i64* %_5
-  %_30 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_31 = bitcast i8 addrspace (1)* %_30 to i64 addrspace (1)*
-  store i64 %_29, i64 addrspace (1)* %_31, align 8
-  %_32 = getelementptr i8, i8 addrspace (1)* %_30, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_32)
+  %_22 = extractvalue {i64, i1} %_20, 0
+  store i64 %_22, i64* %_4
+  %_23 = load i64, i64* %_4
+  %_24 = call i64 @_B_neg (i64 %_23)
+  store i64 %_24, i64* %_5
+  %_25 = load i64, i64* %_5
+  %_26 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_25)
+  call void @_Bio__println (i8 addrspace (1)* %_26)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_6
-  %_33 = call i64 @_B_negneg (i64 1)
-  store i64 %_33, i64* %_7
-  %_34 = load i64, i64* %_7
-  %_35 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_36 = bitcast i8 addrspace (1)* %_35 to i64 addrspace (1)*
-  store i64 %_34, i64 addrspace (1)* %_36, align 8
-  %_37 = getelementptr i8, i8 addrspace (1)* %_35, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_37)
+  %_27 = call i64 @_B_negneg (i64 1)
+  store i64 %_27, i64* %_7
+  %_28 = load i64, i64* %_7
+  %_29 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_28)
+  call void @_Bio__println (i8 addrspace (1)* %_29)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_8
   ret void
 L5:

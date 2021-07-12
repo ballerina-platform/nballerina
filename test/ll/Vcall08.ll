@@ -1,6 +1,7 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
 declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Barray__push (i8 addrspace (1)*, i8 addrspace (1)*)
 declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
@@ -47,14 +48,11 @@ L1:
   %_15 = call i8 addrspace (1)* @_B_foo (i8 addrspace (1)* %_14)
   store i8 addrspace (1)* %_15, i8 addrspace (1)** %_1
   %_16 = load i8 addrspace (1)*, i8 addrspace (1)** %_1
-  %_17 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_18 = bitcast i8 addrspace (1)* %_17 to i64 addrspace (1)*
-  store i64 1, i64 addrspace (1)* %_18, align 8
-  %_19 = getelementptr i8, i8 addrspace (1)* %_17, i64 504403158265495552
-  call void @_Barray__push (i8 addrspace (1)* %_16, i8 addrspace (1)* %_19)
+  %_17 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 1)
+  call void @_Barray__push (i8 addrspace (1)* %_16, i8 addrspace (1)* %_17)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_2
-  %_20 = load i8 addrspace (1)*, i8 addrspace (1)** %x
-  call void @_Bio__println (i8 addrspace (1)* %_20)
+  %_18 = load i8 addrspace (1)*, i8 addrspace (1)** %x
+  call void @_Bio__println (i8 addrspace (1)* %_18)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_3
   ret void
 L2:
@@ -88,14 +86,11 @@ L1:
   %_15 = call i8 addrspace (1)* @_B_foo (i8 addrspace (1)* %_14)
   store i8 addrspace (1)* %_15, i8 addrspace (1)** %_1
   %_16 = load i8 addrspace (1)*, i8 addrspace (1)** %_1
-  %_17 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_18 = bitcast i8 addrspace (1)* %_17 to i64 addrspace (1)*
-  store i64 2, i64 addrspace (1)* %_18, align 8
-  %_19 = getelementptr i8, i8 addrspace (1)* %_17, i64 504403158265495552
-  call void @_Barray__push (i8 addrspace (1)* %_16, i8 addrspace (1)* %_19)
+  %_17 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 2)
+  call void @_Barray__push (i8 addrspace (1)* %_16, i8 addrspace (1)* %_17)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_2
-  %_20 = load i8 addrspace (1)*, i8 addrspace (1)** %x
-  call void @_Bio__println (i8 addrspace (1)* %_20)
+  %_18 = load i8 addrspace (1)*, i8 addrspace (1)** %x
+  call void @_Bio__println (i8 addrspace (1)* %_18)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_3
   ret void
 L2:

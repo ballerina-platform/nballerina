@@ -1,6 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
-declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
   %_0 = alloca i1
@@ -32,80 +32,62 @@ L1:
   %_20 = load i1, i1* %_0
   br i1 %_20, label %L2, label %L3
 L2:
-  %_21 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_22 = bitcast i8 addrspace (1)* %_21 to i64 addrspace (1)*
-  store i64 1, i64 addrspace (1)* %_22, align 8
-  %_23 = getelementptr i8, i8 addrspace (1)* %_21, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_23)
+  %_21 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 1)
+  call void @_Bio__println (i8 addrspace (1)* %_21)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_2
   br label %L3
 L3:
   call void @_B_makeNil ()
   store i8 addrspace (1)* null, i8 addrspace (1)** %_4
-  %_24 = load i8 addrspace (1)*, i8 addrspace (1)** %_4
-  %_25 = icmp eq i8 addrspace (1)* null, %_24
-  store i1 %_25, i1* %_3
-  %_26 = load i1, i1* %_3
-  br i1 %_26, label %L4, label %L5
+  %_22 = load i8 addrspace (1)*, i8 addrspace (1)** %_4
+  %_23 = icmp eq i8 addrspace (1)* null, %_22
+  store i1 %_23, i1* %_3
+  %_24 = load i1, i1* %_3
+  br i1 %_24, label %L4, label %L5
 L4:
-  %_27 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_28 = bitcast i8 addrspace (1)* %_27 to i64 addrspace (1)*
-  store i64 2, i64 addrspace (1)* %_28, align 8
-  %_29 = getelementptr i8, i8 addrspace (1)* %_27, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_29)
+  %_25 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 2)
+  call void @_Bio__println (i8 addrspace (1)* %_25)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_5
   br label %L5
 L5:
-  %_30 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_31 = bitcast i8 addrspace (1)* %_30 to i64 addrspace (1)*
-  store i64 3, i64 addrspace (1)* %_31, align 8
-  %_32 = getelementptr i8, i8 addrspace (1)* %_30, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_32)
+  %_26 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 3)
+  call void @_Bio__println (i8 addrspace (1)* %_26)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_6
   call void @_B_makeNil ()
   store i8 addrspace (1)* null, i8 addrspace (1)** %_8
-  %_33 = load i8 addrspace (1)*, i8 addrspace (1)** %_8
-  %_34 = icmp ne i8 addrspace (1)* %_33, null
-  store i1 %_34, i1* %_7
-  %_35 = load i1, i1* %_7
-  br i1 %_35, label %L6, label %L7
+  %_27 = load i8 addrspace (1)*, i8 addrspace (1)** %_8
+  %_28 = icmp ne i8 addrspace (1)* %_27, null
+  store i1 %_28, i1* %_7
+  %_29 = load i1, i1* %_7
+  br i1 %_29, label %L6, label %L7
 L6:
-  %_36 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_37 = bitcast i8 addrspace (1)* %_36 to i64 addrspace (1)*
-  store i64 4, i64 addrspace (1)* %_37, align 8
-  %_38 = getelementptr i8, i8 addrspace (1)* %_36, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_38)
+  %_30 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 4)
+  call void @_Bio__println (i8 addrspace (1)* %_30)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_9
   br label %L7
 L7:
   call void @_B_makeNil ()
   store i8 addrspace (1)* null, i8 addrspace (1)** %_11
-  %_39 = load i8 addrspace (1)*, i8 addrspace (1)** %_11
-  %_40 = icmp ne i8 addrspace (1)* null, %_39
-  store i1 %_40, i1* %_10
-  %_41 = load i1, i1* %_10
-  br i1 %_41, label %L8, label %L9
+  %_31 = load i8 addrspace (1)*, i8 addrspace (1)** %_11
+  %_32 = icmp ne i8 addrspace (1)* null, %_31
+  store i1 %_32, i1* %_10
+  %_33 = load i1, i1* %_10
+  br i1 %_33, label %L8, label %L9
 L8:
-  %_42 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_43 = bitcast i8 addrspace (1)* %_42 to i64 addrspace (1)*
-  store i64 5, i64 addrspace (1)* %_43, align 8
-  %_44 = getelementptr i8, i8 addrspace (1)* %_42, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_44)
+  %_34 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 5)
+  call void @_Bio__println (i8 addrspace (1)* %_34)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_12
   br label %L9
 L9:
-  %_45 = icmp ne i8 addrspace (1)* null, null
-  store i1 %_45, i1* %_13
-  %_46 = load i1, i1* %_13
-  store i1 %_46, i1* %b
-  %_47 = load i1, i1* %b
-  br i1 %_47, label %L10, label %L11
+  %_35 = icmp ne i8 addrspace (1)* null, null
+  store i1 %_35, i1* %_13
+  %_36 = load i1, i1* %_13
+  store i1 %_36, i1* %b
+  %_37 = load i1, i1* %b
+  br i1 %_37, label %L10, label %L11
 L10:
-  %_48 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_49 = bitcast i8 addrspace (1)* %_48 to i64 addrspace (1)*
-  store i64 6, i64 addrspace (1)* %_49, align 8
-  %_50 = getelementptr i8, i8 addrspace (1)* %_48, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_50)
+  %_38 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 6)
+  call void @_Bio__println (i8 addrspace (1)* %_38)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_14
   br label %L11
 L11:

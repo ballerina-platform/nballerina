@@ -1,7 +1,7 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
-declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 define void @_B_main () {
   %i = alloca i64
   %_0 = alloca i1
@@ -36,24 +36,21 @@ L4:
   br label %L2
 L5:
   %_16 = load i64, i64* %i
-  %_17 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_18 = bitcast i8 addrspace (1)* %_17 to i64 addrspace (1)*
-  store i64 %_16, i64 addrspace (1)* %_18, align 8
-  %_19 = getelementptr i8, i8 addrspace (1)* %_17, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_19)
+  %_17 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_16)
+  call void @_Bio__println (i8 addrspace (1)* %_17)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_1
-  %_20 = load i64, i64* %i
-  %_21 = icmp eq i64 %_20, 6
-  store i1 %_21, i1* %_2
-  %_22 = load i1, i1* %_2
-  br i1 %_22, label %L6, label %L7
+  %_18 = load i64, i64* %i
+  %_19 = icmp eq i64 %_18, 6
+  store i1 %_19, i1* %_2
+  %_20 = load i1, i1* %_2
+  br i1 %_20, label %L6, label %L7
 L6:
   br label %L4
 L7:
-  %_23 = zext i1 1 to i64
-  %_24 = or i64 %_23, 72057594037927936
-  %_25 = getelementptr i8, i8 addrspace (1)* null, i64 %_24
-  call void @_Bio__println (i8 addrspace (1)* %_25)
+  %_21 = zext i1 1 to i64
+  %_22 = or i64 %_21, 72057594037927936
+  %_23 = getelementptr i8, i8 addrspace (1)* null, i64 %_22
+  call void @_Bio__println (i8 addrspace (1)* %_23)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_3
   ret void
 L8:

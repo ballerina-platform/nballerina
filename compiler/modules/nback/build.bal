@@ -14,7 +14,7 @@ type Alignment 1|8;
 const TAG_FACTOR   = 0x0100000000000000;
 const POINTER_MASK = 0x00ffffffffffffff;
 
-const int TAG_MASK     = 0x7f * TAG_FACTOR;
+const int TAG_MASK     = 0x1f * TAG_FACTOR;
 const TAG_NIL      = 0;
 const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
 const int TAG_INT      = t:UT_INT * TAG_FACTOR;
@@ -78,7 +78,7 @@ const PANIC_LIST_TOO_LONG = 6;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc"|"list_set";
+type RuntimeFunctionName "panic"|"alloc"|"list_set"|"int_to_tagged"|"tagged_to_int";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -108,6 +108,23 @@ final RuntimeFunction listSetFunction = {
         paramTypes: [LLVM_TAGGED_PTR, "i64", LLVM_TAGGED_PTR]
     }
 };
+
+final RuntimeFunction intToTaggedFunction = {
+    name: "int_to_tagged",
+    ty: {
+        returnType: heapPointerType("i8"),
+        paramTypes: ["i64"]
+    }
+};
+
+final RuntimeFunction taggedToIntFunction = {
+    name: "tagged_to_int",
+    ty: {
+        returnType: "i64",
+        paramTypes: [heapPointerType("i8")]
+    }
+};
+
 
 final bir:ModuleId runtimeModule = {
     organization: "ballerinai",
@@ -778,10 +795,8 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
 }
 
-function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:Value {
-    llvm:PointerValue mem = buildUntypedAlloc(builder, scaffold, LLVM_INT);
-    builder.store(value, builder.bitCast(mem, heapPointerType(LLVM_INT)), ALIGN_HEAP);
-    return buildTaggedPtr(builder, mem, TAG_INT);
+function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
+    return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, intToTaggedFunction), [value]);
 }
 
 function buildTaggedPtr(llvm:Builder builder, llvm:PointerValue mem, int tag) returns llvm:PointerValue {
@@ -825,10 +840,7 @@ function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) re
 }
 
 function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
-    return builder.load(builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
-                                                                        [tagged, llvm:constInt(LLVM_INT, POINTER_MASK)]),
-                                        heapPointerType(LLVM_INT)),
-                        ALIGN_HEAP);
+    return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, taggedToIntFunction), [tagged]);
 }
 
 function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {

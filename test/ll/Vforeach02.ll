@@ -1,6 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
-declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 define internal i64 @_B_lower () {
   %u = alloca i64
@@ -12,14 +12,11 @@ define internal i64 @_B_lower () {
 L1:
   store i64 2, i64* %u
   %_4 = load i64, i64* %u
-  %_5 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_6 = bitcast i8 addrspace (1)* %_5 to i64 addrspace (1)*
-  store i64 %_4, i64 addrspace (1)* %_6, align 8
-  %_7 = getelementptr i8, i8 addrspace (1)* %_5, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_7)
+  %_5 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_4)
+  call void @_Bio__println (i8 addrspace (1)* %_5)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_0
-  %_8 = load i64, i64* %u
-  ret i64 %_8
+  %_6 = load i64, i64* %u
+  ret i64 %_6
 L2:
   call void @_bal_panic (i64 772)
   unreachable
@@ -34,14 +31,11 @@ define internal i64 @_B_upper () {
 L1:
   store i64 5, i64* %u
   %_4 = load i64, i64* %u
-  %_5 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_6 = bitcast i8 addrspace (1)* %_5 to i64 addrspace (1)*
-  store i64 %_4, i64 addrspace (1)* %_6, align 8
-  %_7 = getelementptr i8, i8 addrspace (1)* %_5, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_7)
+  %_5 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_4)
+  call void @_Bio__println (i8 addrspace (1)* %_5)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_0
-  %_8 = load i64, i64* %u
-  ret i64 %_8
+  %_6 = load i64, i64* %u
+  ret i64 %_6
 L2:
   call void @_bal_panic (i64 2308)
   unreachable
@@ -80,11 +74,8 @@ L4:
   br label %L2
 L5:
   %_16 = load i64, i64* %i
-  %_17 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_18 = bitcast i8 addrspace (1)* %_17 to i64 addrspace (1)*
-  store i64 %_16, i64 addrspace (1)* %_18, align 8
-  %_19 = getelementptr i8, i8 addrspace (1)* %_17, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_19)
+  %_17 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_16)
+  call void @_Bio__println (i8 addrspace (1)* %_17)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_3
   br label %L4
 L6:

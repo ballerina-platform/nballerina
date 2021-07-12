@@ -7,6 +7,7 @@ declare i64 @_Barray__length (i8 addrspace (1)*)
 declare i8 addrspace (1)* @llvm.ptrmask.p1i8.i64 (i8 addrspace (1)*, i64) readnone speculatable
 declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
   %_0 = alloca i8 addrspace (1)*
@@ -250,13 +251,13 @@ L5:
   %_39 = extractvalue {i64, i1} %_38, 1
   br i1 %_39, label %L14, label %L13
 L6:
-  %_45 = load i64, i64* %i
-  %_46 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 %_45, i64 2)
-  %_47 = extractvalue {i64, i1} %_46, 1
-  br i1 %_47, label %L16, label %L15
+  %_43 = load i64, i64* %i
+  %_44 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 %_43, i64 2)
+  %_45 = extractvalue {i64, i1} %_44, 1
+  br i1 %_45, label %L16, label %L15
 L7:
-  %_50 = load i64, i64* %_9
-  call void @_bal_panic (i64 %_50)
+  %_48 = load i64, i64* %_9
+  call void @_bal_panic (i64 %_48)
   unreachable
 L8:
   call void @_bal_panic (i64 5892)
@@ -293,21 +294,18 @@ L13:
   %_40 = extractvalue {i64, i1} %_38, 0
   store i64 %_40, i64* %_6
   %_41 = load i64, i64* %_6
-  %_42 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_43 = bitcast i8 addrspace (1)* %_42 to i64 addrspace (1)*
-  store i64 %_41, i64 addrspace (1)* %_43, align 8
-  %_44 = getelementptr i8, i8 addrspace (1)* %_42, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_44)
+  %_42 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_41)
+  call void @_Bio__println (i8 addrspace (1)* %_42)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_7
   br label %L6
 L14:
   store i64 6913, i64* %_9
   br label %L7
 L15:
-  %_48 = extractvalue {i64, i1} %_46, 0
-  store i64 %_48, i64* %_8
-  %_49 = load i64, i64* %_8
-  store i64 %_49, i64* %i
+  %_46 = extractvalue {i64, i1} %_44, 0
+  store i64 %_46, i64* %_8
+  %_47 = load i64, i64* %_8
+  store i64 %_47, i64* %i
   br label %L2
 L16:
   store i64 8961, i64* %_9

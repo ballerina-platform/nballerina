@@ -1,6 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
-declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
   %_0 = alloca i8 addrspace (1)*
@@ -45,40 +45,28 @@ L2:
   %_10 = load i1, i1* %y
   br i1 %_10, label %L3, label %L4
 L3:
-  %_11 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_12 = bitcast i8 addrspace (1)* %_11 to i64 addrspace (1)*
-  store i64 0, i64 addrspace (1)* %_12, align 8
-  %_13 = getelementptr i8, i8 addrspace (1)* %_11, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_13)
+  %_11 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 0)
+  call void @_Bio__println (i8 addrspace (1)* %_11)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_2
   br label %L5
 L4:
-  %_14 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_15 = bitcast i8 addrspace (1)* %_14 to i64 addrspace (1)*
-  store i64 1, i64 addrspace (1)* %_15, align 8
-  %_16 = getelementptr i8, i8 addrspace (1)* %_14, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_16)
+  %_12 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 1)
+  call void @_Bio__println (i8 addrspace (1)* %_12)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_3
   br label %L5
 L5:
   br label %L10
 L6:
-  %_17 = load i1, i1* %y
-  br i1 %_17, label %L7, label %L8
+  %_13 = load i1, i1* %y
+  br i1 %_13, label %L7, label %L8
 L7:
-  %_18 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_19 = bitcast i8 addrspace (1)* %_18 to i64 addrspace (1)*
-  store i64 2, i64 addrspace (1)* %_19, align 8
-  %_20 = getelementptr i8, i8 addrspace (1)* %_18, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_20)
+  %_14 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 2)
+  call void @_Bio__println (i8 addrspace (1)* %_14)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_4
   br label %L9
 L8:
-  %_21 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_22 = bitcast i8 addrspace (1)* %_21 to i64 addrspace (1)*
-  store i64 3, i64 addrspace (1)* %_22, align 8
-  %_23 = getelementptr i8, i8 addrspace (1)* %_21, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_23)
+  %_15 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 3)
+  call void @_Bio__println (i8 addrspace (1)* %_15)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_5
   br label %L9
 L9:

@@ -1,6 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic (i64)
-declare i8 addrspace (1)* @_bal_alloc (i64)
+declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
   %_0 = alloca i1
@@ -23,11 +23,8 @@ L1:
   %_10 = load i1, i1* %_0
   br i1 %_10, label %L2, label %L3
 L2:
-  %_11 = call i8 addrspace (1)* @_bal_alloc (i64 8)
-  %_12 = bitcast i8 addrspace (1)* %_11 to i64 addrspace (1)*
-  store i64 1, i64 addrspace (1)* %_12, align 8
-  %_13 = getelementptr i8, i8 addrspace (1)* %_11, i64 504403158265495552
-  call void @_Bio__println (i8 addrspace (1)* %_13)
+  %_11 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 1)
+  call void @_Bio__println (i8 addrspace (1)* %_11)
   store i8 addrspace (1)* null, i8 addrspace (1)** %_3
   br label %L3
 L3:
