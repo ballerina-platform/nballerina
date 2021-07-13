@@ -1,3 +1,3 @@
-define i64 @main() {
+define i64 @main () {
   ret i64 0
 }

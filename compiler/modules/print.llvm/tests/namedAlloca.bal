@@ -15,11 +15,6 @@ function nameAlloca() returns Module {
     _ = builder.alloca("i64", (),"V.1");
     _ = builder.alloca("i64", (),"V.1");
     _ = builder.alloca("i64");
-    _ = builder.alloca("i64", (),"1");
-    _ = builder.alloca("i64", (),"?");
-    _ = builder.alloca("i64", (),"#");
-    _ = builder.alloca("i64", (),"\"test\"");
-    builder.ret();
     return m;
 }
 
