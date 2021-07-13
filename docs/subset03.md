@@ -148,7 +148,7 @@ literal = integer-literal | boolean-literal | nil-literal
 boolean-literal = "true" | "false"
 nil-literal = "(" ")" | "null"
 
-list-constructor-expr = "[" expr-list "]"
+list-constructor-expr = "[" [expr-list] "]"
 
 expr-list = expression ["," expression ]*
 
