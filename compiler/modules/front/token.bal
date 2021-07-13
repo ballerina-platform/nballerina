@@ -371,11 +371,10 @@ class Tokenizer {
             err:Template msg;
             Token? t = self.cur;
             if t is string {
-                // JBUG cast #30734
-                msg = `expected ${<string>tok}; got ${<string>t}`;
+                msg = `expected ${tok}; got ${t}`;
             }
             else {
-                msg = `expected ${<string>tok}`;
+                msg = `expected ${tok}`;
             }
             return self.err(msg);
         }

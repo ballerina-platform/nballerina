@@ -188,10 +188,7 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
         if tok.current() == ")" {
             break;
         }
-        // JBUG inlining td in args.push gets an error #30737
-        // invalid usage of the 'check' expression operator: no matching error return type(s) in the enclosing invokable
-        TypeDesc td = check parseTypeDesc(tok);
-        args.push(td);
+        args.push(check parseTypeDesc(tok));
         match tok.current() {
             [IDENTIFIER, var paramName] => {
                 if !(paramNames is ()) {
