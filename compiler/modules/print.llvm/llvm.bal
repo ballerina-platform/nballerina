@@ -52,7 +52,7 @@ public class Context {
         return new(self);
     }
 
-    public function  createBuilder() returns Builder {
+    public function createBuilder() returns Builder {
         return new(self);
     }
 }
@@ -410,7 +410,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg(name);
         PointerType ptrTy = pointerType(ty);
-        addInsnWithAlign(bb, [reg, createLine(["=", "alloca", typeToString(ty)])], align);
+        addInsnWithAlign(bb, [reg, concat("=", "alloca", typeToString(ty))], align);
         return new PointerValue(ptrTy, reg);
     }
 
@@ -419,7 +419,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         Type ty = ptr.ty.pointsTo;
         string reg = bb.func.genReg();
-        addInsnWithAlign(bb, [reg, createLine(["=", "load", typeToString(ty), ",", typeToString(ptr.ty)]), ptr.operand], align);
+        addInsnWithAlign(bb, [reg, concat("=", "load", typeToString(ty), ",", typeToString(ptr.ty)), ptr.operand], align);
         return new Value(ty, reg);
     }
 
@@ -429,7 +429,7 @@ public class Builder {
         if ty != val.ty {
             panic err:illegalArgument("store type mismatch: " + typeToString(val.ty) + ", " + typeToString(ptr.ty));
         }
-        addInsnWithAlign(self.bb(), [createLine(["store", typeToString(ty)]), val.operand, createLine([",", typeToString(ptr.ty)]), ptr.operand], align);
+        addInsnWithAlign(self.bb(), [concat("store", typeToString(ty)), val.operand, concat(",", typeToString(ptr.ty)), ptr.operand], align);
     }
 
     // Corresponds to LLVMBuildNSW{Add,Mul,Sub}
@@ -437,7 +437,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
-        bb.addInsn(reg, createLine(["=", op, "nsw", ty]), lhs.operand, ",", rhs.operand);
+        bb.addInsn(reg, concat("=", op, "nsw", ty), lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
     // Corresponds to LLVMBuild{Add,Mul,Sub}
@@ -460,7 +460,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
-        bb.addInsn(reg, createLine(["=", op, ty]), lhs.operand, ",", rhs.operand);
+        bb.addInsn(reg, concat("=", op, ty), lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
 
@@ -469,7 +469,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
         IntegralType ty = sameIntegralType(lhs, rhs);
-        bb.addInsn(reg, createLine(["=", "icmp", op, typeToString(ty)]), lhs.operand, ",", rhs.operand);
+        bb.addInsn(reg, concat("=", "icmp", op, typeToString(ty)), lhs.operand, ",", rhs.operand);
         return new Value("i1", reg);
     }
 
@@ -477,7 +477,7 @@ public class Builder {
     public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, createLine(["=", "bitcast", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destTy)]));
+        bb.addInsn(reg, concat("=", "bitcast", typeToString(val.ty)), val.operand, concat("to", typeToString(destTy)));
         return new (destTy, reg);
     }
 
@@ -486,10 +486,10 @@ public class Builder {
     public function ret(Value? value=()) {
         BasicBlock bb = self.bb();
         if value is () {
-            bb.addInsn(createLine(["ret", "void"]));
+            bb.addInsn(concat("ret", "void"));
         } 
         else {
-            bb.addInsn(createLine(["ret", typeToString(value.ty)]), value.operand);
+            bb.addInsn(concat("ret", typeToString(value.ty)), value.operand);
         }
     }
 
@@ -497,7 +497,7 @@ public class Builder {
     public function ptrToInt(PointerValue ptr, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, createLine(["=", "ptrtoint", typeToString(ptr.ty)]), ptr.operand, createLine(["to", typeToString(destTy)]));
+        bb.addInsn(reg, concat("=", "ptrtoint", typeToString(ptr.ty)), ptr.operand, concat("to", typeToString(destTy)));
         return new Value(destTy, reg);
     }
 
@@ -505,7 +505,7 @@ public class Builder {
     public function zExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, createLine(["=", "zext", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destTy)]));
+        bb.addInsn(reg, concat("=", "zext", typeToString(val.ty)), val.operand, concat("to", typeToString(destTy)));
         return new Value(destTy, reg);
     }
 
@@ -513,7 +513,7 @@ public class Builder {
     public function sExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, createLine(["=", "sext", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destTy)]));
+        bb.addInsn(reg, concat("=", "sext", typeToString(val.ty)), val.operand, concat("to", typeToString(destTy)));
         return new Value(destTy, reg);
     }
 
@@ -525,7 +525,7 @@ public class Builder {
             }
             BasicBlock bb = self.bb();
             string reg = bb.func.genReg();
-            bb.addInsn(reg, createLine(["=", "trunc", typeToString(val.ty)]), val.operand, createLine(["to", typeToString(destinationType)]));
+            bb.addInsn(reg, concat("=", "trunc", typeToString(val.ty)), val.operand, concat("to", typeToString(destinationType)));
             return new Value(destinationType, reg);
         } 
         else {
@@ -566,10 +566,10 @@ public class Builder {
         argsWords.push(")");
         if retType != "void" {
             string reg = bb.func.genReg();
-            bb.addInsn(reg, createLine(insnWords), ...argsWords);
+            bb.addInsn(reg, concat(...insnWords), ...argsWords);
             return new Value(retType, reg);
         } else {
-            bb.addInsn(createLine(insnWords), ...argsWords);
+            bb.addInsn(concat(...insnWords), ...argsWords);
         }
     }
 
@@ -578,7 +578,7 @@ public class Builder {
         if value.ty is StructType {
             BasicBlock bb = self.bb();
             string reg = bb.func.genReg();
-            bb.addInsn(reg, createLine(["=", "extractvalue", typeToString(value.ty)]), value.operand, createLine([",", index.toString()]));
+            bb.addInsn(reg, concat("=", "extractvalue", typeToString(value.ty)), value.operand, concat(",", index.toString()));
             Type elementType = getTypeAtIndex(<StructType>value.ty, index);
             return new Value(elementType, reg);
         } 
@@ -590,14 +590,14 @@ public class Builder {
     // Corresponds to LLVMBuildBr
     public function br(BasicBlock destination) {
         BasicBlock bb = self.bb();
-        bb.addInsn(createLine(["br", "label"]), destination.ref());
+        bb.addInsn(concat("br", "label"), destination.ref());
     }
 
     // Corresponds to LLVMBuildCondBr
     public function condBr(Value condition, BasicBlock ifTrue, BasicBlock ifFalse) {
         if condition.ty is "i1" {
             BasicBlock bb = self.bb();
-            bb.addInsn(createLine(["br", "i1"]), condition.operand, createLine([",", "label"]), ifTrue.ref(), createLine([",", "label"]), ifFalse.ref());
+            bb.addInsn(concat("br", "i1"), condition.operand, concat(",", "label"), ifTrue.ref(), concat(",", "label"), ifFalse.ref());
         } 
         else {
             panic err:illegalArgument("Condition must be a u1");
@@ -643,7 +643,7 @@ public class Builder {
                 }
             }
         }
-        bb.addInsn(reg, createLine(words), ...indexBody);
+        bb.addInsn(reg, concat(...words), ...indexBody);
         PointerType resultPtrType = pointerType(resultType, resultAddressSpace);
         return new PointerValue(resultPtrType, reg);
     }
@@ -652,7 +652,7 @@ public class Builder {
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string reg = bb.func.genReg();
-        bb.addInsn(reg, "=", "addrspacecast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        bb.addInsn(reg, concat("=", "addrspacecast", typeToString(val.ty)), val.operand, concat("to", typeToString(destTy)));
         return new PointerValue(destTy, reg);
     }
 
@@ -669,7 +669,7 @@ public class Builder {
 
 function addInsnWithAlign(BasicBlock bb, string[] words, Alignment? align) {
     if !(align is ()) {
-        words.push(createLine([",", "align", align.toString()]));
+        words.push(concat(",", "align", align.toString()));
     }
     bb.addInsn(...words);
 }
@@ -727,7 +727,7 @@ public distinct class BasicBlock {
             foreach var name in line {
                 newLine.push(self.func.updateBasicBlockRef(name));
             }
-            string outputLine = createLine(newLine, INDENT);
+            string outputLine = createLine([concat(...newLine)], INDENT);
             out.push(outputLine);
         }
     }
@@ -850,6 +850,24 @@ function functionHeader(Function fn) returns string {
 function createLine(string[] words, string indent = "") returns string {
     string[] parts = [];
     foreach string word in words {
+        if !omitSpaceBefore(word) && parts.length() > 0 && !omitSpaceAfter(parts[parts.length() - 1]) {
+            parts.push(" ");
+        }
+        parts.push(word);
+    }
+    return string:concat(indent, ...parts);
+}
+
+function concat((string|int) ... words) returns string {
+    string[] parts = [];
+    foreach string|int _word in words {
+        string word;
+        if _word is int {
+            word = _word.toString();
+        }
+        else {
+            word = _word;
+        }
         string lastTail = parts.length() > 0 ? parts[parts.length() - 1] : "";
         if lastTail.length() > 0 {
             lastTail = lastTail.substring(lastTail.length() - 1);
@@ -862,7 +880,7 @@ function createLine(string[] words, string indent = "") returns string {
         }
         parts.push(word);
     }
-    return string:concat(indent, ...parts);
+    return string:concat(...parts);
 }
 
 function omitSpaceBefore(string word) returns boolean {
