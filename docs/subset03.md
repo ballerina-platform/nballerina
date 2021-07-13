@@ -213,8 +213,8 @@ Existing syntax extended:
 Langlib:
 * `array:length`
 * `array:push`
-* `array:setLength`
 
 ## Implemented spec changes since 2021R1
 
 * [#814](https://github.com/ballerina-platform/ballerina-spec/issues/814) - improved typing rules for `==` and `!=`
+* [#887]((https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability
