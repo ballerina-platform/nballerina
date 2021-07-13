@@ -56,7 +56,7 @@ const DIGIT = "0123456789";
 const string ALPHA = LOWER + UPPER;
 const string IDENT = ALPHA + DIGIT + "_";
 
-// JBUG cannot use string:Char #30735
+// JBUG cannot use string:Char #31668 #31660
 type Char string;
 
 type StringIterator object {

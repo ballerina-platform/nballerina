@@ -169,11 +169,7 @@ class Scaffold {
         self.functionDefns = functions;
         self.importedFunctions = importedFunctions;
         self.birBlocks = code.blocks;
-        // JBUG 31008 if this is a query expression
-        final Repr[] reprs = [];
-        foreach var reg in code.registers {
-            reprs.push(check semTypeRepr(reg.semType));
-        }
+        final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType);
         self.reprs = reprs;
         self.retRepr = check semTypeRetRepr(defn.signature.returnType);
         self.nParams = defn.signature.paramTypes.length();
@@ -385,7 +381,6 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
-    // JBUG #31008 cannot write this with select
     llvm:Value[] args = [];
     t:SemType[] paramTypes = funcRef.signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
