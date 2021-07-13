@@ -175,7 +175,7 @@ function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
         ["OE", "`"],
         ["OE", string`"\"`],
         ["OE", string`"\a"`],
-        ["OE", "\\"], // JBUG #31431 can't use string template
+        ["OE", string `\`],
         ["OE", "\"\n\""],
         ["OE", "\"\r\""],
         ["E", "obj..x(args)"],
@@ -191,7 +191,7 @@ function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
 }
 
 function validTokenSourceFragments() returns map<ParserTestCase>|error {
-    ParserTestCase[] sources = 
+    ParserTestCase[] sources =
         [["E", "expr", "", ""],
         // literals
          ["V", "expr", "0", "0"],
