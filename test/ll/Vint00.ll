@@ -1,5 +1,5 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64)
+declare void @_bal_panic (i64) noreturn cold
 declare {i64, i1} @llvm.smul.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
 declare i64 @_bal_tagged_to_int (i8 addrspace (1)*)

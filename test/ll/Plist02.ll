@@ -1,5 +1,5 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64)
+declare void @_bal_panic (i64) noreturn cold
 declare i8 addrspace (1)* @_bal_alloc (i64)
 declare i8 addrspace (1)* @llvm.ptrmask.p1i8.i64 (i8 addrspace (1)*, i64) readnone speculatable
 declare void @_Bio__println (i8 addrspace (1)*)

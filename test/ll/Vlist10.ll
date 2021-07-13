@@ -1,5 +1,5 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64)
+declare void @_bal_panic (i64) noreturn cold
 declare i8 addrspace (1)* @_bal_alloc (i64)
 declare i64 @_bal_list_set (i8 addrspace (1)*, i64, i8 addrspace (1)*)
 declare i8 addrspace (1)* @_bal_int_to_tagged (i64)

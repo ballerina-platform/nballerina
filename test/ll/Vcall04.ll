@@ -1,5 +1,5 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64)
+declare void @_bal_panic (i64) noreturn cold
 declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
 declare void @_Bio__println (i8 addrspace (1)*)
 declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn

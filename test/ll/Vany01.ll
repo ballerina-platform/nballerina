@@ -1,5 +1,5 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64)
+declare void @_bal_panic (i64) noreturn cold
 declare void @_Bio__println (i8 addrspace (1)*)
 define void @_B_main () {
   %_0 = alloca i8 addrspace (1)*
