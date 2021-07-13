@@ -11,9 +11,9 @@ import ballerina/regex;
 
 # Corresponds to LLVMValueRef 
 public readonly distinct class Value {
-    string|int operand;
+    string|UnnamedIdentifier operand;
     Type ty;
-    function init(Type ty, string|int operand) {
+    function init(Type ty, string|UnnamedIdentifier operand) {
         self.ty = ty;
         self.operand = operand;
     }
@@ -23,9 +23,9 @@ public readonly distinct class Value {
 # Ensures compile-time checking that stores and loads use the right kinds of Value
 public readonly class PointerValue {
     *Value;
-    string|int operand;
+    string|UnnamedIdentifier operand;
     PointerType ty;
-    function init(PointerType ty, string|int operand) {
+    function init(PointerType ty, string|UnnamedIdentifier operand) {
         self.ty = ty;
         self.operand = operand;
     }
@@ -297,13 +297,13 @@ public class FunctionDefn {
         return tem;
     }
 
-    function genLabel() returns int {
-        int label = -(self.labelCount + 1);
+    function genLabel() returns UnnamedIdentifier {
+        int label = self.labelCount;
         self.labelCount += 1;
-        return label;
+        return {kind:"BasicBlock",value:label};
     }
 
-    function genReg(string? name = ()) returns string|int {
+    function genReg(string? name = ()) returns string|UnnamedIdentifier {
         if name is string {
             string regName = name;
             if self.variableNames.hasKey(regName) {
@@ -326,7 +326,7 @@ public class FunctionDefn {
         } else {
             int regName = self.unnamedRegisterCount;
             self.unnamedRegisterCount += 1;
-            return regName;
+            return {kind:"Variable", value:regName};
         }
     }
 
@@ -349,21 +349,22 @@ public class FunctionDefn {
         self.gcName = name;
     }
 
-    function updateBasicBlockLabel(int label) returns string {
-        string k = "b" + label.toString(); // key in name translation table
+    function updateBasicBlockLabel(UnnamedIdentifier label) returns string {
+        string k = "b" + label.value.toString(); // key in name translation table
         string newLabel = self.nameCounter.toString();
         self.nameCounter += 1;
         self.nameTranslation[k] = "%" + newLabel;
         return newLabel;
     }
 
-    function updateVariableNames(string|int name) returns string|int {
-        if name is int {
-            if name < 0 {
+    function updateVariableNames(string|UnnamedIdentifier name) returns string|UnnamedIdentifier {
+        if name is UnnamedIdentifier {
+            if !(name.kind is "Variable") {
                 // unnamed basic block
                 return name;
             }
-            string k = "v" + name.toString(); // key in name translation table
+            int val = name.value;
+            string k = "v" + val.toString(); // key in name translation table
             if self.nameTranslation.hasKey(k) {
                 return self.nameTranslation.get(k);
             }
@@ -376,12 +377,13 @@ public class FunctionDefn {
         }
     }
 
-    function updateBasicBlockRef(string|int name) returns string {
-        if name is int {
-            if name >= 0 {
+    function updateBasicBlockRef(string|UnnamedIdentifier name) returns string {
+        if name is UnnamedIdentifier {
+            if !(name.kind is "BasicBlock") {
                 panic error("Variable names must be updated before updating basic block names");
             }
-            string k = "b" + name.toString(); // key in name translation table
+            int val = name.value;
+            string k = "b" + val.toString(); // key in name translation table
             string? newName =  self.nameTranslation[k];
             if newName is () {
                 panic error("Unnamed basic block not in translation table");
@@ -391,29 +393,6 @@ public class FunctionDefn {
         } else {
             return name;
         }
-    }
-
-    function updateRefWithTag(string|int name, string targetTag) returns string {
-        string sName;
-        if name is int {
-            sName = name.toString();
-        }
-        else {
-            sName = name;
-        }
-        string newName = sName;
-        if self.nameTranslation.hasKey(sName) {
-            newName = self.nameTranslation.get(sName);
-        }
-        else {
-            if sName.length() < 2 {
-                return sName;
-            }
-            string tag = sName.trim().substring(0, 2);
-            if tag == targetTag {
-            }
-        }
-        return newName;
     }
 }
 
@@ -432,7 +411,7 @@ public class Builder {
     // Corresponds to LLVMBuildAlloca
     public function alloca(IntegralType ty, Alignment? align=(), string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
-        string|int reg = bb.func.genReg(name);
+        string|UnnamedIdentifier reg = bb.func.genReg(name);
         PointerType ptrTy = pointerType(ty);
         addInsnWithAlign(bb, [reg, concat("=", "alloca", typeToString(ty))], align);
         return new PointerValue(ptrTy, reg);
@@ -442,7 +421,7 @@ public class Builder {
     public function load(PointerValue ptr, Alignment? align=(), string? name=()) returns Value {
         BasicBlock bb = self.bb();
         Type ty = ptr.ty.pointsTo;
-        string|int reg = bb.func.genReg();
+        string|UnnamedIdentifier reg = bb.func.genReg();
         addInsnWithAlign(bb, [reg, concat("=", "load", typeToString(ty), ",", typeToString(ptr.ty)), ptr.operand], align);
         return new Value(ty, reg);
     }
@@ -459,7 +438,7 @@ public class Builder {
     // Corresponds to LLVMBuildNSW{Add,Mul,Sub}
     public function iArithmeticNoWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|int reg = bb.func.genReg();
+        string|UnnamedIdentifier reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
         bb.addInsn(reg, concat("=", op, "nsw", ty), lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
@@ -482,7 +461,7 @@ public class Builder {
     // Internally handle binary int operations without wrapping
     function binaryIntNoWrap(IntOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|int reg = bb.func.genReg();
+        string|UnnamedIdentifier reg = bb.func.genReg();
         IntType ty = sameIntType(lhs, rhs);
         bb.addInsn(reg, concat("=", op, ty), lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
@@ -491,7 +470,7 @@ public class Builder {
     // Corresponds to LLVMBuildICmp
     public function iCmp(IntPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|int reg = bb.func.genReg();
+        string|UnnamedIdentifier reg = bb.func.genReg();
         IntegralType ty = sameIntegralType(lhs, rhs);
         bb.addInsn(reg, concat("=", "icmp", op, typeToString(ty)), lhs.operand, ",", rhs.operand);
         return new Value("i1", reg);
@@ -500,7 +479,7 @@ public class Builder {
     // Corresponds to LLVMBuildBitCast
     public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
-        string|int reg = bb.func.genReg();
+        string|UnnamedIdentifier reg = bb.func.genReg();
         bb.addInsn(reg, concat("=", "bitcast", typeToString(val.ty)), val.operand, concat("to", typeToString(destTy)));
         return new (destTy, reg);
     }
@@ -520,7 +499,7 @@ public class Builder {
     // Corresponds to LLVMBuildPtrToInt
     public function ptrToInt(PointerValue ptr, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|int reg = bb.func.genReg();
+        string|UnnamedIdentifier reg = bb.func.genReg();
         bb.addInsn(reg, concat("=", "ptrtoint", typeToString(ptr.ty)), ptr.operand, concat("to", typeToString(destTy)));
         return new Value(destTy, reg);
     }
@@ -528,7 +507,7 @@ public class Builder {
     // Corresponds to LLVMBuildZExt
     public function zExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|int reg = bb.func.genReg();
+        string|UnnamedIdentifier reg = bb.func.genReg();
         bb.addInsn(reg, concat("=", "zext", typeToString(val.ty)), val.operand, concat("to", typeToString(destTy)));
         return new Value(destTy, reg);
     }
@@ -536,7 +515,7 @@ public class Builder {
     // Corresponds to LLVMBuildSExt
     public function sExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|int reg = bb.func.genReg();
+        string|UnnamedIdentifier reg = bb.func.genReg();
         bb.addInsn(reg, concat("=", "sext", typeToString(val.ty)), val.operand, concat("to", typeToString(destTy)));
         return new Value(destTy, reg);
     }
@@ -548,7 +527,7 @@ public class Builder {
                 panic err:illegalArgument("equal sized types are not allowed");
             }
             BasicBlock bb = self.bb();
-            string|int reg = bb.func.genReg();
+            string|UnnamedIdentifier reg = bb.func.genReg();
             bb.addInsn(reg, concat("=", "trunc", typeToString(val.ty)), val.operand, concat("to", typeToString(destinationType)));
             return new Value(destinationType, reg);
         } 
@@ -578,7 +557,7 @@ public class Builder {
         insnWords.push(typeToString(retType));
         insnWords.push("@" + fn.functionName);
         insnWords.push("(");
-        (string|int)[] argsWords = [];
+        (string|UnnamedIdentifier)[] argsWords = [];
         foreach int i in 0 ..< args.length() {
             final Value arg = args[i];
             if i > 0 {
@@ -589,7 +568,7 @@ public class Builder {
         }
         argsWords.push(")");
         if retType != "void" {
-            string|int reg = bb.func.genReg();
+            string|UnnamedIdentifier reg = bb.func.genReg();
             bb.addInsn(reg, concat(...insnWords), ...argsWords);
             return new Value(retType, reg);
         } else {
@@ -601,7 +580,7 @@ public class Builder {
     public function extractValue(Value value, int index, string? name=()) returns Value {
         if value.ty is StructType {
             BasicBlock bb = self.bb();
-            string|int reg = bb.func.genReg();
+            string|UnnamedIdentifier reg = bb.func.genReg();
             bb.addInsn(reg, concat("=", "extractvalue", typeToString(value.ty)), value.operand, concat(",", index.toString()));
             Type elementType = getTypeAtIndex(<StructType>value.ty, index);
             return new Value(elementType, reg);
@@ -631,14 +610,14 @@ public class Builder {
     // Corresponds to LLVMBuildGEP
     public function getElementPtr(PointerValue ptr, Value[] indices, "inbounds"? inbounds=(), string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
-        string|int reg = bb.func.genReg();
+        string|UnnamedIdentifier reg = bb.func.genReg();
         string[] words = [];
         words.push("=", "getelementptr");
         if inbounds != () {
             words.push(inbounds);
         }
         words.push(typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty));
-        (string|int)[] indexBody = [ptr.operand];
+        (string|UnnamedIdentifier)[] indexBody = [ptr.operand];
         Type resultType = ptr.ty;
         int resultAddressSpace = 0;
         foreach var index in indices {
@@ -655,8 +634,8 @@ public class Builder {
                 } 
                 else if resultType is StructType {
                     int i;
-                    if index.operand is int {
-                        i = <int>index.operand;
+                    if index.operand is UnnamedIdentifier {
+                        i = (<UnnamedIdentifier>index.operand).value;
                     } else {
                         i = checkpanic int:fromString(<string>index.operand);
                     }
@@ -680,7 +659,7 @@ public class Builder {
     // Corresponds to LLVMBuildAddrSpaceCast
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
-        string|int reg = bb.func.genReg();
+        string|UnnamedIdentifier reg = bb.func.genReg();
         bb.addInsn(reg, concat("=", "addrspacecast", typeToString(val.ty)), val.operand, concat("to", typeToString(destTy)));
         return new PointerValue(destTy, reg);
     }
@@ -696,7 +675,7 @@ public class Builder {
     }
 }
 
-function addInsnWithAlign(BasicBlock bb, (string|int)[] words, Alignment? align) {
+function addInsnWithAlign(BasicBlock bb, (string|UnnamedIdentifier)[] words, Alignment? align) {
     if !(align is ()) {
         words.push(concat(",", "align", align.toString()));
     }
@@ -705,40 +684,46 @@ function addInsnWithAlign(BasicBlock bb, (string|int)[] words, Alignment? align)
 
 const INDENT = "  ";
 
+type UnnamedIdentifierKind  "BasicBlock" | "Variable";
+type UnnamedIdentifier readonly & record {|
+    UnnamedIdentifierKind kind;
+    int value;
+|};
+
 # Corresponds to LLVMBasicBlockRef
 public distinct class BasicBlock {
     final FunctionDefn func;
-    private string|int label;
-    private (string|int)[][] lines = [];
+    private string|UnnamedIdentifier label;
+    private (string|UnnamedIdentifier)[][] lines = [];
     private boolean isReferenced = false;
 
-    function init(Context context, string|int label, FunctionDefn func) {
+    function init(Context context, string|UnnamedIdentifier label, FunctionDefn func) {
         self.label = label;
         self.func = func;
     }
 
-    function ref() returns string|int {
+    function ref() returns string|UnnamedIdentifier {
         self.isReferenced = true;
-        if self.label is int {
+        if self.label is UnnamedIdentifier {
             return self.label;
         } else {
             return "%" + <string>self.label;
         }
     }
 
-    function addInsn((string|int)... words) {
+    function addInsn((string|UnnamedIdentifier)... words) {
         self.lines.push(words);
     }
 
     // Used to to update the unnamed variable names and basic block declarations
     function updateDeclarations() {
-        (string|int)[][] newLines = [];
-        if self.isReferenced && self.label is int {
+        (string|UnnamedIdentifier)[][] newLines = [];
+        if self.isReferenced && self.label is UnnamedIdentifier {
             // unnamed basic block
-            self.label = self.func.updateBasicBlockLabel(<int>self.label);
+            self.label = self.func.updateBasicBlockLabel(<UnnamedIdentifier>self.label);
         }
         foreach var line in self.lines {
-            (string|int)[] newLine = [];
+            (string|UnnamedIdentifier)[] newLine = [];
             foreach var name in line {
                 newLine.push(self.func.updateVariableNames(name));
             }
