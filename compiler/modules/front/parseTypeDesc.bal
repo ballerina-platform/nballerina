@@ -151,9 +151,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             }
             // match falls through to parseError
         }
-        // JBUG #31329 language server sometimes flags `var ref`
-        // here as something like
-        // "some variable cannot repeat in a match pattern"
         [IDENTIFIER, var ref] => {
             TypeDescRef r = { ref, pos: tok.currentPos() };
             check tok.advance();
