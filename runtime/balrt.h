@@ -9,10 +9,12 @@
 #define NODEREF __attribute__((noderef))
 #define NORETURN __attribute__((noreturn))
 #define ONHEAP __attribute__((address_space(1)))
+#define COLD __attribute__((cold)) 
 #else
 #define NODEREF /* as nothing */
 #define NORETURN /* as nothing */
 #define ONHEAP /* as nothing */
+#define COLD /* as nothing */
 #endif
 
 #define likely(x) __builtin_expect((x), 1)

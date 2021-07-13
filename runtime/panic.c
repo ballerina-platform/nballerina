@@ -12,7 +12,7 @@ const char *panicMessages[] = {
     "list too long"
 };
 
-NORETURN void _bal_panic(Error err) {
+NORETURN COLD void _bal_panic(Error err) {
     int code = err & 0xFF;
     int64_t lineNumber = err >> 8;
     fputs("panic: ", stderr);
