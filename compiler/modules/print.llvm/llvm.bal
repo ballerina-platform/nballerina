@@ -173,10 +173,10 @@ public class Module {
         }
         foreach var globalVar in self.globalVariables {
             if globalVar.ty.addressSpace == 0 {
-                out.push(concat(globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)));
+                out.push(concat(<string>globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)));
             } else {
                 out.push(concat(
-                    globalVar.operand, 
+                    <string>globalVar.operand, 
                     "=", 
                     "external", 
                     "addrspace", 
@@ -280,9 +280,9 @@ public class FunctionDefn {
     }
 
     function outputBody(Output out) {
-        // This pass will update the unnamed variables and basic block declerations
+        // This pass will update the unnamed variables and basic block declarations
         foreach var b in self.basicBlocks {
-            b.updateLines();
+            b.updateDeclarations();
         }
         // This pass will fix the basic block references
         foreach var b in self.basicBlocks {
@@ -730,8 +730,8 @@ public distinct class BasicBlock {
         self.lines.push(words);
     }
 
-    // Used to to update the unnamed variable names correctly
-    function updateLines() {
+    // Used to to update the unnamed variable names and basic block declarations
+    function updateDeclarations() {
         (string|int)[][] newLines = [];
         if self.isReferenced && self.label is int {
             // unnamed basic block
@@ -844,7 +844,7 @@ class Output {
 }
 
 function functionHeader(Function fn) returns string {
-    (string|int)[] words = [];
+    string[] words = [];
     if fn is FunctionDefn {
         words.push("define");
         if fn.getLinkage() != "external" {
@@ -864,7 +864,7 @@ function functionHeader(Function fn) returns string {
         }
         words.push(typeToString(ty));
         if fn is FunctionDefn {
-            words.push(fn.getParam(i).operand);
+            words.push(<string>fn.getParam(i).operand);
         }
     }
     words.push(")");
@@ -891,16 +891,9 @@ function createLine(string[] words, string indent = "") returns string {
     return string:concat(indent, ...parts);
 }
 
-function concat((string|int) ... words) returns string {
+function concat(string... words) returns string {
     string[] parts = [];
-    foreach string|int _word in words {
-        string word;
-        if _word is int {
-            word = _word.toString();
-        }
-        else {
-            word = _word;
-        }
+    foreach string word in words {
         string lastTail = parts.length() > 0 ? parts[parts.length() - 1] : "";
         if lastTail.length() > 0 {
             lastTail = lastTail.substring(lastTail.length() - 1);
