@@ -10,5 +10,6 @@ define void @main() {
   %"1" = alloca i64
   %"?" = alloca i64
   %"#" = alloca i64
+  %"\22test\22" = alloca i64
   ret void
 }

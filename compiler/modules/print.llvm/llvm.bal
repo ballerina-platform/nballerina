@@ -7,7 +7,6 @@
 
 import nballerina.err;
 import ballerina/io;
-import ballerina/regex;
 
 // Operand of an unnamed variable/basic block
 type Unnamed int;
@@ -335,11 +334,26 @@ public class FunctionDefn {
         }
     }
 
+    // Name must be of the form [a-zA-Z$._][a-zA-Z$._0-9]* 
     function escapeName(string name) returns string {
-        if regex:matches(name, "[-a-zA-Z$._][-a-zA-Z$._0-9]*") {
-            return name;
+        string head = name.substring(0, 1);
+        if head == "\"" {
+            head = "\\22";
+        }
+        string tail = name.substring(1);
+        boolean escape = head != "$" && head != "." && head != "_" && (head < "a" || head > "z") && (head < "A" || head > "Z");
+        foreach var char in tail {
+            escape = escape || (char != "$" && char != "." && char != "_" && (char < "a" || char > "z") && (char < "A" || char > "Z") && (char < "0" || char > "9"));
+            if char == "\"" {
+                head += "\\22";
+            } else {
+                head += char;
+            }
+        }
+        if !escape {
+            return head;
         } else {
-            return "\"" + name + "\"";
+            return "\"" + head + "\"";
         }
     }
 
