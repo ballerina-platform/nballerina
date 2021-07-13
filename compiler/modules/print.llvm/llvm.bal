@@ -500,7 +500,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         if value is () {
             bb.addInsn("ret", "void");
-        } 
+        }
         else {
             bb.addInsn("ret", typeToString(value.ty), value.operand);
         }
@@ -593,7 +593,7 @@ public class Builder {
             bb.addInsn(reg, "=", "extractvalue", typeToString(value.ty), value.operand, ",", index.toString());
             Type elementType = getTypeAtIndex(<StructType>value.ty, index);
             return new Value(elementType, reg);
-        } 
+        }
         else {
             panic err:illegalArgument("extract value from non aggregate data type");
         }
