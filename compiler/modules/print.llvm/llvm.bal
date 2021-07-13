@@ -7,6 +7,7 @@
 
 import nballerina.err;
 import ballerina/io;
+import ballerina/regex;
 
 # Corresponds to LLVMValueRef 
 public readonly distinct class Value {
@@ -302,7 +303,6 @@ public class FunctionDefn {
         return label;
     }
 
-    // FIXME:
     function genReg(string? name = ()) returns string|int {
         if name is string {
             string regName = name;
@@ -320,9 +320,7 @@ public class FunctionDefn {
             else {
                 self.variableNames[regName] = 1;
             }
-            if name is string && !self.nameValid(regName) {
-                regName = "\"" + regName + "\"";
-            }
+            regName = self.escapeName(regName);
             string reg = "%" + regName;
             return reg;
         } else {
@@ -332,20 +330,12 @@ public class FunctionDefn {
         }
     }
 
-    // Verify name is a valid LLVM name otherwise must escape
-    function nameValid(string name) returns boolean{
-        string nameLower = name.toLowerAscii();
-        // Currently check only the first character
-        string firstChar = nameLower.substring(0,1);
-        if firstChar == "_" || firstChar == "$" {
-            return true;
+    function escapeName(string name) returns string {
+        if regex:matches(name, "[-a-zA-Z$._][-a-zA-Z$._0-9]*") {
+            return name;
+        } else {
+            return "\"" + name + "\"";
         }
-        int first = firstChar.getCodePoint(0);
-        if firstChar >= "a" && firstChar <= "z" {
-            // First character is an alphabetic character
-            return true;
-        }
-        return false;
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {
