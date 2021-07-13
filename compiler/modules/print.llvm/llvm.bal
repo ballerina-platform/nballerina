@@ -75,10 +75,10 @@ public class Module {
     // Corresponds to LLVMAddFunction
     public function addFunctionDefn(string name, FunctionType fnType) returns FunctionDefn {
         if name is IntrinsicFunctionName {
-            panic error("reserved intrinsic function name");
+            panic err:illegalArgument("reserved intrinsic function name");
         }
         if self.globals.hasKey(name) {
-            panic error("this module already has a declaration by that name");
+            panic err:illegalArgument("this module already has a declaration by that name");
         }
         FunctionDefn fn = new (self.context, name, fnType);
         self.globals[name] = fn;
@@ -88,10 +88,10 @@ public class Module {
 
     public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl {
         if name is IntrinsicFunctionName {
-            panic error("reserved intrinsic function name");
+            panic err:illegalArgument("reserved intrinsic function name");
         }
         if self.globals.hasKey(name) {
-            panic error("this module already has a declaration by that name");
+            panic err:illegalArgument("this module already has a declaration by that name");
         }
         FunctionDecl fn = new(self.context, name, fnType);
         self.globals[name] = fn;
@@ -122,7 +122,7 @@ public class Module {
                                      ["readnone", "speculatable"]);
         }
         else {
-            return err:unreached();
+            panic err:impossible();
         }
     }
 
@@ -139,10 +139,10 @@ public class Module {
     // Corresponds to LLVMAddGlobal
     public function addGlobal(Type ty, string name, int addressSpace = 0) returns PointerValue {
         if name is IntrinsicFunctionName {
-            panic error("reserved intrinsic function name");
+            panic err:illegalArgument("reserved intrinsic function name");
         }
         if self.globals.hasKey(name) {
-            panic error("this module already has a declaration by that name");
+            panic err:illegalArgument("this module already has a declaration by that name");
         }
         PointerType ptrType = pointerType(ty, addressSpace);
         PointerValue val = new PointerValue(ptrType, "@" + name); 
@@ -364,7 +364,7 @@ public class Builder {
     public function store(Value val, PointerValue ptr, Alignment? align = ()) {
         Type ty = ptr.ty.pointsTo;
         if ty != val.ty {
-            panic error("store type mismatch: " + typeToString(val.ty) + ", " + typeToString(ptr.ty));
+            panic err:illegalArgument("store type mismatch: " + typeToString(val.ty) + ", " + typeToString(ptr.ty));
         }
         addInsnWithAlign(self.bb(), ["store", typeToString(ty), val.operand, ",", typeToString(ptr.ty), ptr.operand], align);
     }
@@ -458,7 +458,7 @@ public class Builder {
     public function trunc(Value val, IntType destinationType, string? name = ()) returns Value {
         if val.ty is IntType {
             if val.ty == destinationType {
-                panic error("Equal sized types are not allowed");
+                panic err:illegalArgument("equal sized types are not allowed");
             }
             BasicBlock bb = self.bb();
             string reg = bb.func.genReg();
@@ -466,7 +466,7 @@ public class Builder {
             return new Value(destinationType, reg);
         } 
         else {
-            panic error("Value must be an integer type");
+            panic err:illegalArgument("value must be an integer type");
         }
     }
 
@@ -479,7 +479,7 @@ public class Builder {
     // Returns () if there is no result i.e. function return type is void
     public function call(Function fn, Value[] args, string? name=()) returns Value? {
         if fn.functionType.paramTypes.length() != args.length() {
-            panic error(string `Number of arguments is invalid for function ${fn.functionName}`);
+            panic err:illegalArgument(`number of arguments is invalid for function ${fn.functionName}`);
         }
         BasicBlock bb = self.bb();
         string reg = "";
@@ -519,7 +519,7 @@ public class Builder {
             return new Value(elementType, reg);
         }
         else {
-            panic error("Extract value from non aggregate data type");
+            panic err:illegalArgument("extract value from non aggregate data type");
         }
     }
 
@@ -536,7 +536,7 @@ public class Builder {
             bb.addInsn("br", "i1", condition.operand, ",", "label", ifTrue.ref(), ",", "label", ifFalse.ref());
         }
         else {
-            panic error("Condition must be a u1");
+            panic err:illegalArgument("Condition must be a u1");
         }
     }
 
@@ -567,14 +567,14 @@ public class Builder {
                 else if resultType is StructType {
                     int i = checkpanic int:fromString(index.operand);
                     if index.ty != "i32" {
-                        panic error("structures can be index only using i32 constants"); 
+                        panic err:illegalArgument("structures can be index only using i32 constants"); 
                     } 
                     else {
                         resultType = getTypeAtIndex(resultType, i);
                     }
                 } 
                 else {
-                    panic error(string `type  ${typeToString(resultType)} can't be indexed`);
+                    panic err:illegalArgument(string `type  ${typeToString(resultType)} can't be indexed`);
                 }
             }
         }
@@ -594,7 +594,7 @@ public class Builder {
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
         if tem is () {
-            panic error("no current basic block");
+            panic err:impossible("no current basic block");
         }
         else {
             return tem;
@@ -650,24 +650,24 @@ function sameIntegralType(Value v1, Value v2) returns IntegralType {
     Type ty1 = v1.ty;
     Type ty2 = v2.ty;
     if ty1 != ty2 {
-        panic error("expected same types");
+        panic err:illegalArgument("expected same types");
     }
     else if ty1 is IntegralType {
         return ty1;
     }
-    panic error("expected an integral type");
+    panic err:illegalArgument("expected an integral type");
 }
 
 function sameIntType(Value v1, Value v2) returns IntType {
     Type ty1 = v1.ty;
     Type ty2 = v2.ty;
     if ty1 != ty2 {
-        panic error("expected same types");
+        panic err:illegalArgument("expected same types");
     }
     else if ty1 is IntType {
         return ty1;
     }
-    panic error("expected an int type");
+    panic err:illegalArgument("expected an int type");
 }
 
 function typeToString(RetType ty) returns string {

@@ -546,7 +546,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             return [result, nextBlock];
         }
     }
-    return err:unreached();
+    panic err:impossible();
 }
 
 function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, FunctionCallExpr expr) returns CodeGenError|[bir:Register, bir:BasicBlock] {

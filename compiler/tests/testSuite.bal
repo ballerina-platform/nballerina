@@ -87,7 +87,6 @@ function errorLine(string path) returns int|io:Error {
         }
     }
     test:assertFail("Test with 'E' prefix missing error annotation : " + path);
-    // JBUG #31338 panic here cases a bytecode error
-    // panic err:unreached();
-    return 0;
+    // JBUG #31338 panic with function returning never here cases a bytecode error
+    panic err:impossible();
 }

@@ -87,9 +87,7 @@ function convertInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
     if td is InlineArrayTypeDesc {
         return t:LIST;
     }
-    // JBUG next line gets a bad, sad
-    // return err:unreached();
-    panic error("unreachable in convertInlineTypeDesc");
+    panic err:impossible("unreachable in convertInlineTypeDesc");
 }
 
 function convertTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) returns t:SemType|err:Semantic {

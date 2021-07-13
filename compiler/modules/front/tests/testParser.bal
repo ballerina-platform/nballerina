@@ -28,7 +28,7 @@ function testParser(string k, string rule, string subject, string expected) retu
             test:assertTrue(parsed is Word[], "test marked as failing but correctly got an error for '" + subject + "'");
             return;
         }
-        err:unreached("kind must be FE or FV but was '" + k + "'");
+        panic err:impossible("kind must be FE or FV but was '" + k + "'");
     }
     if k.includes("E") {
         test:assertTrue(parsed is err:Syntax, "expected a syntax error for '" + subject);
@@ -154,7 +154,7 @@ function reduceToWords(string rule, string fragment) returns err:Syntax|Word[] {
             modulePartToWords(w, check parseModulePart(fragment));
         }
         _ => {
-            err:unreached("unknown production rule " + rule);
+            panic err:impossible("unknown production rule " + rule);
         }
     }
     return w;
