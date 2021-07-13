@@ -83,6 +83,7 @@ type RuntimeFunctionName "panic"|"alloc"|"list_set"|"int_to_tagged"|"tagged_to_i
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
     llvm:FunctionType ty;
+    llvm:EnumAttribute[] attrs;
 |};
 
 final RuntimeFunction panicFunction = {
@@ -90,7 +91,8 @@ final RuntimeFunction panicFunction = {
     ty: {
         returnType: "void",
         paramTypes: ["i64"]
-    }
+    },
+    attrs: ["noreturn", "cold"]
 };
 
 final RuntimeFunction allocFunction = {
@@ -98,7 +100,8 @@ final RuntimeFunction allocFunction = {
     ty: {
         returnType: heapPointerType("i8"),
         paramTypes: ["i64"]
-    }
+    },
+    attrs: []
 };
 
 final RuntimeFunction listSetFunction = {
@@ -106,7 +109,8 @@ final RuntimeFunction listSetFunction = {
     ty: {
         returnType: REPR_ERROR.llvm,
         paramTypes: [LLVM_TAGGED_PTR, "i64", LLVM_TAGGED_PTR]
-    }
+    },
+    attrs: []
 };
 
 final RuntimeFunction intToTaggedFunction = {
@@ -114,7 +118,8 @@ final RuntimeFunction intToTaggedFunction = {
     ty: {
         returnType: heapPointerType("i8"),
         paramTypes: ["i64"]
-    }
+    },
+    attrs: []
 };
 
 final RuntimeFunction taggedToIntFunction = {
@@ -122,7 +127,8 @@ final RuntimeFunction taggedToIntFunction = {
     ty: {
         returnType: "i64",
         paramTypes: [heapPointerType("i8")]
-    }
+    },
+    attrs: []
 };
 
 
@@ -512,9 +518,12 @@ function buildRuntimeFunctionDecl(Scaffold scaffold, RuntimeFunction rf) returns
     }
     else {
         llvm:Module mod = scaffold.getModule();
-        llvm:FunctionDecl d = mod.addFunctionDecl(mangleRuntimeSymbol(rf.name), rf.ty);
-        scaffold.addImportedFunction(symbol, d);
-        return d;
+        llvm:FunctionDecl f = mod.addFunctionDecl(mangleRuntimeSymbol(rf.name), rf.ty);
+        foreach var attr in rf.attrs {
+            f.addEnumAttribute(attr);
+        }
+        scaffold.addImportedFunction(symbol, f);
+        return f;
     } 
 }
 
