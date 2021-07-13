@@ -60,16 +60,23 @@ function testCompileEU(string path) returns file:Error|io:Error? {
     }
 }
 
-function listSourcesVPO() returns string[][]|error => listSources("VPO");
+function listSourcesVPO() returns map<[string]>|error => listSources("VPO");
 
-function listSourcesEU() returns string[][]|error => listSources("EU");
+function listSourcesEU() returns map<[string]>|error => listSources("EU");
 
-function listSources(string initialChars) returns string[][]|io:Error|file:Error {
-    return from var entry in check file:readDir(SOURCE_DIR)
-           let string path = entry.absPath
-           // JBUG #31360 gets a bad, sad if includePath is inlined in the obvious way
-           where check includePath(path, initialChars)
-           select [path];
+function listSources(string initialChars) returns map<[string]>|io:Error|file:Error {
+    map<[string]> cases = {};
+    // JBUG #31681 `check from ...` doesn't work
+    var e = from var entry in check file:readDir(SOURCE_DIR)
+            let string path = entry.absPath
+            let string base = check file:basename(path)
+            // JBUG #31360 gets a bad, sad if includePath is inlined in the obvious way
+            where check includePath(path, initialChars)
+            do {
+              cases[base] = [path];
+            };
+    test:assertEquals(e, ());
+    return cases;
 }
 
 function includePath(string path, string initialChars) returns boolean|file:Error {
