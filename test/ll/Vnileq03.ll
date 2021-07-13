@@ -1,101 +1,101 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64) noreturn cold
-declare void @_Bio__println (i8 addrspace (1)*)
-define void @_B_main () {
-  %_0 = alloca i1
-  %_1 = alloca i8 addrspace (1)*
-  %_2 = alloca i8 addrspace (1)*
-  %_3 = alloca i1
-  %_4 = alloca i8 addrspace (1)*
-  %_5 = alloca i8 addrspace (1)*
-  %_6 = alloca i1
-  %_7 = alloca i8 addrspace (1)*
-  %x = alloca i8 addrspace (1)*
-  %_8 = alloca i1
-  %_9 = alloca i8 addrspace (1)*
-  %_10 = alloca i1
-  %_11 = alloca i8 addrspace (1)*
-  %_12 = alloca i8 addrspace (1)*
-  %_13 = alloca i8
-  %_14 = load i8*, i8** @_bal_stack_guard
-  %_15 = icmp ult i8* %_13, %_14
-  br i1 %_15, label %L2, label %L1
-L1:
-  call void @_B_makeNil ()
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_1
-  %_16 = load i8 addrspace (1)*, i8 addrspace (1)** %_1
-  %_17 = icmp eq i8 addrspace (1)* %_16, null
-  store i1 %_17, i1* %_0
-  %_18 = load i1, i1* %_0
-  %_19 = zext i1 %_18 to i64
-  %_20 = or i64 %_19, 72057594037927936
-  %_21 = getelementptr i8, i8 addrspace (1)* null, i64 %_20
-  call void @_Bio__println (i8 addrspace (1)* %_21)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_2
-  call void @_B_makeNil ()
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_4
-  %_22 = load i8 addrspace (1)*, i8 addrspace (1)** %_4
-  %_23 = icmp eq i8 addrspace (1)* %_22, null
-  store i1 %_23, i1* %_3
-  %_24 = load i1, i1* %_3
-  %_25 = zext i1 %_24 to i64
-  %_26 = or i64 %_25, 72057594037927936
-  %_27 = getelementptr i8, i8 addrspace (1)* null, i64 %_26
-  call void @_Bio__println (i8 addrspace (1)* %_27)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_5
-  %_28 = icmp ne i8 addrspace (1)* null, null
-  store i1 %_28, i1* %_6
-  %_29 = load i1, i1* %_6
-  %_30 = zext i1 %_29 to i64
-  %_31 = or i64 %_30, 72057594037927936
-  %_32 = getelementptr i8, i8 addrspace (1)* null, i64 %_31
-  call void @_Bio__println (i8 addrspace (1)* %_32)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_7
-  store i8 addrspace (1)* null, i8 addrspace (1)** %x
-  %_33 = load i8 addrspace (1)*, i8 addrspace (1)** %x
-  %_34 = icmp eq i8 addrspace (1)* %_33, null
-  store i1 %_34, i1* %_8
-  %_35 = load i1, i1* %_8
-  %_36 = zext i1 %_35 to i64
-  %_37 = or i64 %_36, 72057594037927936
-  %_38 = getelementptr i8, i8 addrspace (1)* null, i64 %_37
-  call void @_Bio__println (i8 addrspace (1)* %_38)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_9
-  %_39 = call i8 addrspace (1)* @_B_makeNilAny ()
-  store i8 addrspace (1)* %_39, i8 addrspace (1)** %_11
-  %_40 = load i8 addrspace (1)*, i8 addrspace (1)** %_11
-  %_41 = icmp ne i8 addrspace (1)* %_40, null
-  store i1 %_41, i1* %_10
-  %_42 = load i1, i1* %_10
-  %_43 = zext i1 %_42 to i64
-  %_44 = or i64 %_43, 72057594037927936
-  %_45 = getelementptr i8, i8 addrspace (1)* null, i64 %_44
-  call void @_Bio__println (i8 addrspace (1)* %_45)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_12
+declare void @_bal_panic(i64) noreturn cold
+declare void @_Bio__println(i8 addrspace(1)*)
+define void @_B_main() {
+  %1 = alloca i1
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i1
+  %5 = alloca i8 addrspace(1)*
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i1
+  %8 = alloca i8 addrspace(1)*
+  %x = alloca i8 addrspace(1)*
+  %9 = alloca i1
+  %10 = alloca i8 addrspace(1)*
+  %11 = alloca i1
+  %12 = alloca i8 addrspace(1)*
+  %13 = alloca i8 addrspace(1)*
+  %14 = alloca i8
+  %15 = load i8*, i8** @_bal_stack_guard
+  %16 = icmp ult i8* %14, %15
+  br i1 %16, label %48, label %17
+17:
+  call void @_B_makeNil()
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  %18 = load i8 addrspace(1)*, i8 addrspace(1)** %2
+  %19 = icmp eq i8 addrspace(1)* %18, null
+  store i1 %19, i1* %1
+  %20 = load i1, i1* %1
+  %21 = zext i1 %20 to i64
+  %22 = or i64 %21, 72057594037927936
+  %23 = getelementptr i8, i8 addrspace(1)* null, i64 %22
+  call void @_Bio__println(i8 addrspace(1)* %23)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  call void @_B_makeNil()
+  store i8 addrspace(1)* null, i8 addrspace(1)** %5
+  %24 = load i8 addrspace(1)*, i8 addrspace(1)** %5
+  %25 = icmp eq i8 addrspace(1)* %24, null
+  store i1 %25, i1* %4
+  %26 = load i1, i1* %4
+  %27 = zext i1 %26 to i64
+  %28 = or i64 %27, 72057594037927936
+  %29 = getelementptr i8, i8 addrspace(1)* null, i64 %28
+  call void @_Bio__println(i8 addrspace(1)* %29)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %30 = icmp ne i8 addrspace(1)* null, null
+  store i1 %30, i1* %7
+  %31 = load i1, i1* %7
+  %32 = zext i1 %31 to i64
+  %33 = or i64 %32, 72057594037927936
+  %34 = getelementptr i8, i8 addrspace(1)* null, i64 %33
+  call void @_Bio__println(i8 addrspace(1)* %34)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8
+  store i8 addrspace(1)* null, i8 addrspace(1)** %x
+  %35 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %36 = icmp eq i8 addrspace(1)* %35, null
+  store i1 %36, i1* %9
+  %37 = load i1, i1* %9
+  %38 = zext i1 %37 to i64
+  %39 = or i64 %38, 72057594037927936
+  %40 = getelementptr i8, i8 addrspace(1)* null, i64 %39
+  call void @_Bio__println(i8 addrspace(1)* %40)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %10
+  %41 = call i8 addrspace(1)* @_B_makeNilAny()
+  store i8 addrspace(1)* %41, i8 addrspace(1)** %12
+  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %12
+  %43 = icmp ne i8 addrspace(1)* %42, null
+  store i1 %43, i1* %11
+  %44 = load i1, i1* %11
+  %45 = zext i1 %44 to i64
+  %46 = or i64 %45, 72057594037927936
+  %47 = getelementptr i8, i8 addrspace(1)* null, i64 %46
+  call void @_Bio__println(i8 addrspace(1)* %47)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %13
   ret void
-L2:
-  call void @_bal_panic (i64 772)
+48:
+  call void @_bal_panic(i64 772)
   unreachable
 }
-define internal void @_B_makeNil () {
-  %_0 = alloca i8
-  %_1 = load i8*, i8** @_bal_stack_guard
-  %_2 = icmp ult i8* %_0, %_1
-  br i1 %_2, label %L2, label %L1
-L1:
+define internal void @_B_makeNil() {
+  %1 = alloca i8
+  %2 = load i8*, i8** @_bal_stack_guard
+  %3 = icmp ult i8* %1, %2
+  br i1 %3, label %5, label %4
+4:
   ret void
-L2:
-  call void @_bal_panic (i64 3076)
+5:
+  call void @_bal_panic(i64 3076)
   unreachable
 }
-define internal i8 addrspace (1)* @_B_makeNilAny () {
-  %_0 = alloca i8
-  %_1 = load i8*, i8** @_bal_stack_guard
-  %_2 = icmp ult i8* %_0, %_1
-  br i1 %_2, label %L2, label %L1
-L1:
-  ret i8 addrspace (1)* null
-L2:
-  call void @_bal_panic (i64 4100)
+define internal i8 addrspace(1)* @_B_makeNilAny() {
+  %1 = alloca i8
+  %2 = load i8*, i8** @_bal_stack_guard
+  %3 = icmp ult i8* %1, %2
+  br i1 %3, label %5, label %4
+4:
+  ret i8 addrspace(1)* null
+5:
+  call void @_bal_panic(i64 4100)
   unreachable
 }

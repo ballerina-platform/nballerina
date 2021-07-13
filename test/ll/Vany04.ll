@@ -1,112 +1,112 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64) noreturn cold
-declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
-declare void @_Bio__println (i8 addrspace (1)*)
-define void @_B_main () {
+declare void @_bal_panic(i64) noreturn cold
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+define void @_B_main() {
   %x = alloca i64
-  %_0 = alloca i64
-  %v = alloca i8 addrspace (1)*
-  %_1 = alloca i8 addrspace (1)*
-  %_2 = alloca i1
-  %_3 = alloca i8 addrspace (1)*
-  %_4 = alloca i1
-  %_5 = alloca i8 addrspace (1)*
-  %_6 = alloca i1
-  %_7 = alloca i1
-  %_8 = alloca i8 addrspace (1)*
-  %_9 = alloca i1
-  %_10 = alloca i8 addrspace (1)*
-  %_11 = alloca i64
-  %_12 = alloca i8 addrspace (1)*
-  %_13 = alloca i64
-  %_14 = alloca i8
-  %_15 = load i8*, i8** @_bal_stack_guard
-  %_16 = icmp ult i8* %_14, %_15
-  br i1 %_16, label %L3, label %L1
-L1:
+  %1 = alloca i64
+  %v = alloca i8 addrspace(1)*
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i1
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i1
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i1
+  %8 = alloca i1
+  %9 = alloca i8 addrspace(1)*
+  %10 = alloca i1
+  %11 = alloca i8 addrspace(1)*
+  %12 = alloca i64
+  %13 = alloca i8 addrspace(1)*
+  %14 = alloca i64
+  %15 = alloca i8
+  %16 = load i8*, i8** @_bal_stack_guard
+  %17 = icmp ult i8* %15, %16
+  br i1 %17, label %24, label %18
+18:
   store i64 1, i64* %x
-  %_17 = load i64, i64* %x
-  %_18 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_17, i64 3)
-  %_19 = extractvalue {i64, i1} %_18, 1
-  br i1 %_19, label %L5, label %L4
-L2:
-  %_59 = load i64, i64* %_13
-  call void @_bal_panic (i64 %_59)
+  %19 = load i64, i64* %x
+  %20 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %19, i64 3)
+  %21 = extractvalue {i64, i1} %20, 1
+  br i1 %21, label %62, label %25
+22:
+  %23 = load i64, i64* %14
+  call void @_bal_panic(i64 %23)
   unreachable
-L3:
-  call void @_bal_panic (i64 516)
+24:
+  call void @_bal_panic(i64 516)
   unreachable
-L4:
-  %_20 = extractvalue {i64, i1} %_18, 0
-  store i64 %_20, i64* %_0
-  %_21 = load i64, i64* %_0
-  %_22 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_21)
-  store i8 addrspace (1)* %_22, i8 addrspace (1)** %v
-  %_23 = load i8 addrspace (1)*, i8 addrspace (1)** %v
-  call void @_Bio__println (i8 addrspace (1)* %_23)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_1
-  %_24 = load i64, i64* %x
-  %_25 = icmp eq i64 %_24, 1
-  store i1 %_25, i1* %_2
-  %_26 = load i1, i1* %_2
-  %_27 = zext i1 %_26 to i64
-  %_28 = or i64 %_27, 72057594037927936
-  %_29 = getelementptr i8, i8 addrspace (1)* null, i64 %_28
-  store i8 addrspace (1)* %_29, i8 addrspace (1)** %v
-  %_30 = load i8 addrspace (1)*, i8 addrspace (1)** %v
-  call void @_Bio__println (i8 addrspace (1)* %_30)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_3
-  %_31 = load i64, i64* %x
-  %_32 = icmp sgt i64 %_31, 2
-  store i1 %_32, i1* %_4
-  %_33 = load i1, i1* %_4
-  %_34 = zext i1 %_33 to i64
-  %_35 = or i64 %_34, 72057594037927936
-  %_36 = getelementptr i8, i8 addrspace (1)* null, i64 %_35
-  store i8 addrspace (1)* %_36, i8 addrspace (1)** %v
-  %_37 = load i8 addrspace (1)*, i8 addrspace (1)** %v
-  call void @_Bio__println (i8 addrspace (1)* %_37)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_5
-  %_38 = load i64, i64* %x
-  %_39 = icmp sgt i64 %_38, 2
-  store i1 %_39, i1* %_6
-  %_40 = load i1, i1* %_6
-  %_41 = xor i1 1, %_40
-  store i1 %_41, i1* %_7
-  %_42 = load i1, i1* %_7
-  %_43 = zext i1 %_42 to i64
-  %_44 = or i64 %_43, 72057594037927936
-  %_45 = getelementptr i8, i8 addrspace (1)* null, i64 %_44
-  store i8 addrspace (1)* %_45, i8 addrspace (1)** %v
-  %_46 = load i8 addrspace (1)*, i8 addrspace (1)** %v
-  call void @_Bio__println (i8 addrspace (1)* %_46)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_8
-  %_47 = load i64, i64* %x
-  %_48 = icmp sge i64 %_47, 1
-  store i1 %_48, i1* %_9
-  %_49 = load i1, i1* %_9
-  %_50 = zext i1 %_49 to i64
-  %_51 = or i64 %_50, 72057594037927936
-  %_52 = getelementptr i8, i8 addrspace (1)* null, i64 %_51
-  call void @_Bio__println (i8 addrspace (1)* %_52)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_10
-  %_53 = load i64, i64* %x
-  %_54 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_53, i64 2)
-  %_55 = extractvalue {i64, i1} %_54, 1
-  br i1 %_55, label %L7, label %L6
-L5:
-  store i64 1025, i64* %_13
-  br label %L2
-L6:
-  %_56 = extractvalue {i64, i1} %_54, 0
-  store i64 %_56, i64* %_11
-  %_57 = load i64, i64* %_11
-  %_58 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_57)
-  call void @_Bio__println (i8 addrspace (1)* %_58)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_12
+25:
+  %26 = extractvalue {i64, i1} %20, 0
+  store i64 %26, i64* %1
+  %27 = load i64, i64* %1
+  %28 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %27)
+  store i8 addrspace(1)* %28, i8 addrspace(1)** %v
+  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  call void @_Bio__println(i8 addrspace(1)* %29)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  %30 = load i64, i64* %x
+  %31 = icmp eq i64 %30, 1
+  store i1 %31, i1* %3
+  %32 = load i1, i1* %3
+  %33 = zext i1 %32 to i64
+  %34 = or i64 %33, 72057594037927936
+  %35 = getelementptr i8, i8 addrspace(1)* null, i64 %34
+  store i8 addrspace(1)* %35, i8 addrspace(1)** %v
+  %36 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  call void @_Bio__println(i8 addrspace(1)* %36)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  %37 = load i64, i64* %x
+  %38 = icmp sgt i64 %37, 2
+  store i1 %38, i1* %5
+  %39 = load i1, i1* %5
+  %40 = zext i1 %39 to i64
+  %41 = or i64 %40, 72057594037927936
+  %42 = getelementptr i8, i8 addrspace(1)* null, i64 %41
+  store i8 addrspace(1)* %42, i8 addrspace(1)** %v
+  %43 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  call void @_Bio__println(i8 addrspace(1)* %43)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %44 = load i64, i64* %x
+  %45 = icmp sgt i64 %44, 2
+  store i1 %45, i1* %7
+  %46 = load i1, i1* %7
+  %47 = xor i1 1, %46
+  store i1 %47, i1* %8
+  %48 = load i1, i1* %8
+  %49 = zext i1 %48 to i64
+  %50 = or i64 %49, 72057594037927936
+  %51 = getelementptr i8, i8 addrspace(1)* null, i64 %50
+  store i8 addrspace(1)* %51, i8 addrspace(1)** %v
+  %52 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  call void @_Bio__println(i8 addrspace(1)* %52)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %9
+  %53 = load i64, i64* %x
+  %54 = icmp sge i64 %53, 1
+  store i1 %54, i1* %10
+  %55 = load i1, i1* %10
+  %56 = zext i1 %55 to i64
+  %57 = or i64 %56, 72057594037927936
+  %58 = getelementptr i8, i8 addrspace(1)* null, i64 %57
+  call void @_Bio__println(i8 addrspace(1)* %58)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %11
+  %59 = load i64, i64* %x
+  %60 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %59, i64 2)
+  %61 = extractvalue {i64, i1} %60, 1
+  br i1 %61, label %67, label %63
+62:
+  store i64 1025, i64* %14
+  br label %22
+63:
+  %64 = extractvalue {i64, i1} %60, 0
+  store i64 %64, i64* %12
+  %65 = load i64, i64* %12
+  %66 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %65)
+  call void @_Bio__println(i8 addrspace(1)* %66)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %13
   ret void
-L7:
-  store i64 3329, i64* %_13
-  br label %L2
+67:
+  store i64 3329, i64* %14
+  br label %22
 }

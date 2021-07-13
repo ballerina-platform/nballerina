@@ -1,245 +1,245 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64) noreturn cold
-declare {i64, i1} @llvm.smul.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare i64 @_bal_tagged_to_int (i8 addrspace (1)*)
-declare void @_Bio__println (i8 addrspace (1)*)
-declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
-define void @_B_main () {
-  %_0 = alloca i64
-  %_1 = alloca i64
+declare void @_bal_panic(i64) noreturn cold
+declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare i64 @_bal_tagged_to_int(i8 addrspace(1)*)
+declare void @_Bio__println(i8 addrspace(1)*)
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+define void @_B_main() {
+  %1 = alloca i64
+  %2 = alloca i64
   %two48 = alloca i64
-  %_2 = alloca i8 addrspace (1)*
-  %_3 = alloca i64
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i64
   %two55 = alloca i64
-  %_4 = alloca i8 addrspace (1)*
-  %_5 = alloca i64
+  %5 = alloca i8 addrspace(1)*
+  %6 = alloca i64
   %two56 = alloca i64
-  %_6 = alloca i8 addrspace (1)*
-  %_7 = alloca i64
+  %7 = alloca i8 addrspace(1)*
+  %8 = alloca i64
   %two62 = alloca i64
-  %_8 = alloca i8 addrspace (1)*
-  %_9 = alloca i64
-  %_10 = alloca i8
-  %_11 = load i8*, i8** @_bal_stack_guard
-  %_12 = icmp ult i8* %_10, %_11
-  br i1 %_12, label %L3, label %L1
-L1:
-  %_13 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 65536, i64 65536)
-  %_14 = extractvalue {i64, i1} %_13, 1
-  br i1 %_14, label %L5, label %L4
-L2:
-  %_40 = load i64, i64* %_9
-  call void @_bal_panic (i64 %_40)
+  %9 = alloca i8 addrspace(1)*
+  %10 = alloca i64
+  %11 = alloca i8
+  %12 = load i8*, i8** @_bal_stack_guard
+  %13 = icmp ult i8* %11, %12
+  br i1 %13, label %19, label %14
+14:
+  %15 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 65536, i64 65536)
+  %16 = extractvalue {i64, i1} %15, 1
+  br i1 %16, label %25, label %20
+17:
+  %18 = load i64, i64* %10
+  call void @_bal_panic(i64 %18)
   unreachable
-L3:
-  call void @_bal_panic (i64 772)
+19:
+  call void @_bal_panic(i64 772)
   unreachable
-L4:
-  %_15 = extractvalue {i64, i1} %_13, 0
-  store i64 %_15, i64* %_0
-  %_16 = load i64, i64* %_0
-  %_17 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 %_16, i64 65536)
-  %_18 = extractvalue {i64, i1} %_17, 1
-  br i1 %_18, label %L7, label %L6
-L5:
-  store i64 1025, i64* %_9
-  br label %L2
-L6:
-  %_19 = extractvalue {i64, i1} %_17, 0
-  store i64 %_19, i64* %_1
-  %_20 = load i64, i64* %_1
-  store i64 %_20, i64* %two48
-  %_21 = load i64, i64* %two48
-  call void @_B_testAround (i64 %_21)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_2
-  %_22 = load i64, i64* %two48
-  %_23 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 %_22, i64 128)
-  %_24 = extractvalue {i64, i1} %_23, 1
-  br i1 %_24, label %L9, label %L8
-L7:
-  store i64 1025, i64* %_9
-  br label %L2
-L8:
-  %_25 = extractvalue {i64, i1} %_23, 0
-  store i64 %_25, i64* %_3
-  %_26 = load i64, i64* %_3
-  store i64 %_26, i64* %two55
-  %_27 = load i64, i64* %two55
-  call void @_B_testAround (i64 %_27)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_4
-  %_28 = load i64, i64* %two55
-  %_29 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 %_28, i64 2)
-  %_30 = extractvalue {i64, i1} %_29, 1
-  br i1 %_30, label %L11, label %L10
-L9:
-  store i64 2561, i64* %_9
-  br label %L2
-L10:
-  %_31 = extractvalue {i64, i1} %_29, 0
-  store i64 %_31, i64* %_5
-  %_32 = load i64, i64* %_5
-  store i64 %_32, i64* %two56
-  %_33 = load i64, i64* %two56
-  call void @_B_testAround (i64 %_33)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_6
-  %_34 = load i64, i64* %two56
-  %_35 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 %_34, i64 64)
-  %_36 = extractvalue {i64, i1} %_35, 1
-  br i1 %_36, label %L13, label %L12
-L11:
-  store i64 4097, i64* %_9
-  br label %L2
-L12:
-  %_37 = extractvalue {i64, i1} %_35, 0
-  store i64 %_37, i64* %_7
-  %_38 = load i64, i64* %_7
-  store i64 %_38, i64* %two62
-  %_39 = load i64, i64* %two62
-  call void @_B_testAround (i64 %_39)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_8
+20:
+  %21 = extractvalue {i64, i1} %15, 0
+  store i64 %21, i64* %1
+  %22 = load i64, i64* %1
+  %23 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %22, i64 65536)
+  %24 = extractvalue {i64, i1} %23, 1
+  br i1 %24, label %33, label %26
+25:
+  store i64 1025, i64* %10
+  br label %17
+26:
+  %27 = extractvalue {i64, i1} %23, 0
+  store i64 %27, i64* %2
+  %28 = load i64, i64* %2
+  store i64 %28, i64* %two48
+  %29 = load i64, i64* %two48
+  call void @_B_testAround(i64 %29)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  %30 = load i64, i64* %two48
+  %31 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %30, i64 128)
+  %32 = extractvalue {i64, i1} %31, 1
+  br i1 %32, label %41, label %34
+33:
+  store i64 1025, i64* %10
+  br label %17
+34:
+  %35 = extractvalue {i64, i1} %31, 0
+  store i64 %35, i64* %4
+  %36 = load i64, i64* %4
+  store i64 %36, i64* %two55
+  %37 = load i64, i64* %two55
+  call void @_B_testAround(i64 %37)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %5
+  %38 = load i64, i64* %two55
+  %39 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %38, i64 2)
+  %40 = extractvalue {i64, i1} %39, 1
+  br i1 %40, label %49, label %42
+41:
+  store i64 2561, i64* %10
+  br label %17
+42:
+  %43 = extractvalue {i64, i1} %39, 0
+  store i64 %43, i64* %6
+  %44 = load i64, i64* %6
+  store i64 %44, i64* %two56
+  %45 = load i64, i64* %two56
+  call void @_B_testAround(i64 %45)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %7
+  %46 = load i64, i64* %two56
+  %47 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %46, i64 64)
+  %48 = extractvalue {i64, i1} %47, 1
+  br i1 %48, label %54, label %50
+49:
+  store i64 4097, i64* %10
+  br label %17
+50:
+  %51 = extractvalue {i64, i1} %47, 0
+  store i64 %51, i64* %8
+  %52 = load i64, i64* %8
+  store i64 %52, i64* %two62
+  %53 = load i64, i64* %two62
+  call void @_B_testAround(i64 %53)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %9
   ret void
-L13:
-  store i64 5633, i64* %_9
-  br label %L2
+54:
+  store i64 5633, i64* %10
+  br label %17
 }
-define internal void @_B_testAround (i64 %_0) {
+define internal void @_B_testAround(i64 %0) {
   %pow2 = alloca i64
-  %_1 = alloca i64
-  %_2 = alloca i8 addrspace (1)*
-  %_3 = alloca i64
-  %_4 = alloca i8 addrspace (1)*
-  %_5 = alloca i8 addrspace (1)*
-  %_6 = alloca i64
-  %_7 = alloca i64
-  %_8 = alloca i8 addrspace (1)*
-  %_9 = alloca i64
-  %_10 = alloca i8
-  %_11 = load i8*, i8** @_bal_stack_guard
-  %_12 = icmp ult i8* %_10, %_11
-  br i1 %_12, label %L3, label %L1
-L1:
-  store i64 %_0, i64* %pow2
-  %_13 = load i64, i64* %pow2
-  %_14 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_13, i64 1)
-  %_15 = extractvalue {i64, i1} %_14, 1
-  br i1 %_15, label %L5, label %L4
-L2:
-  %_33 = load i64, i64* %_9
-  call void @_bal_panic (i64 %_33)
+  %2 = alloca i64
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i64
+  %5 = alloca i8 addrspace(1)*
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i64
+  %8 = alloca i64
+  %9 = alloca i8 addrspace(1)*
+  %10 = alloca i64
+  %11 = alloca i8
+  %12 = load i8*, i8** @_bal_stack_guard
+  %13 = icmp ult i8* %11, %12
+  br i1 %13, label %20, label %14
+14:
+  store i64 %0, i64* %pow2
+  %15 = load i64, i64* %pow2
+  %16 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %15, i64 1)
+  %17 = extractvalue {i64, i1} %16, 1
+  br i1 %17, label %27, label %21
+18:
+  %19 = load i64, i64* %10
+  call void @_bal_panic(i64 %19)
   unreachable
-L3:
-  call void @_bal_panic (i64 7684)
+20:
+  call void @_bal_panic(i64 7684)
   unreachable
-L4:
-  %_16 = extractvalue {i64, i1} %_14, 0
-  store i64 %_16, i64* %_1
-  %_17 = load i64, i64* %_1
-  call void @_B_roundTrip (i64 %_17)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_2
-  %_18 = load i64, i64* %pow2
-  %_19 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 %_18)
-  %_20 = extractvalue {i64, i1} %_19, 1
-  br i1 %_20, label %L7, label %L6
-L5:
-  store i64 7937, i64* %_9
-  br label %L2
-L6:
-  %_21 = extractvalue {i64, i1} %_19, 0
-  store i64 %_21, i64* %_3
-  %_22 = load i64, i64* %_3
-  call void @_B_roundTrip (i64 %_22)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_4
-  %_23 = load i64, i64* %pow2
-  call void @_B_roundTrip (i64 %_23)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_5
-  %_24 = load i64, i64* %pow2
-  %_25 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 %_24)
-  %_26 = extractvalue {i64, i1} %_25, 1
-  br i1 %_26, label %L9, label %L8
-L7:
-  store i64 8193, i64* %_9
-  br label %L2
-L8:
-  %_27 = extractvalue {i64, i1} %_25, 0
-  store i64 %_27, i64* %_6
-  %_28 = load i64, i64* %_6
-  %_29 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_28, i64 1)
-  %_30 = extractvalue {i64, i1} %_29, 1
-  br i1 %_30, label %L11, label %L10
-L9:
-  store i64 8705, i64* %_9
-  br label %L2
-L10:
-  %_31 = extractvalue {i64, i1} %_29, 0
-  store i64 %_31, i64* %_7
-  %_32 = load i64, i64* %_7
-  call void @_B_roundTrip (i64 %_32)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_8
+21:
+  %22 = extractvalue {i64, i1} %16, 0
+  store i64 %22, i64* %2
+  %23 = load i64, i64* %2
+  call void @_B_roundTrip(i64 %23)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  %24 = load i64, i64* %pow2
+  %25 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 %24)
+  %26 = extractvalue {i64, i1} %25, 1
+  br i1 %26, label %35, label %28
+27:
+  store i64 7937, i64* %10
+  br label %18
+28:
+  %29 = extractvalue {i64, i1} %25, 0
+  store i64 %29, i64* %4
+  %30 = load i64, i64* %4
+  call void @_B_roundTrip(i64 %30)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %5
+  %31 = load i64, i64* %pow2
+  call void @_B_roundTrip(i64 %31)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %32 = load i64, i64* %pow2
+  %33 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 %32)
+  %34 = extractvalue {i64, i1} %33, 1
+  br i1 %34, label %41, label %36
+35:
+  store i64 8193, i64* %10
+  br label %18
+36:
+  %37 = extractvalue {i64, i1} %33, 0
+  store i64 %37, i64* %7
+  %38 = load i64, i64* %7
+  %39 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %38, i64 1)
+  %40 = extractvalue {i64, i1} %39, 1
+  br i1 %40, label %45, label %42
+41:
+  store i64 8705, i64* %10
+  br label %18
+42:
+  %43 = extractvalue {i64, i1} %39, 0
+  store i64 %43, i64* %8
+  %44 = load i64, i64* %8
+  call void @_B_roundTrip(i64 %44)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %9
   ret void
-L11:
-  store i64 8705, i64* %_9
-  br label %L2
+45:
+  store i64 8705, i64* %10
+  br label %18
 }
-define internal void @_B_roundTrip (i64 %_0) {
+define internal void @_B_roundTrip(i64 %0) {
   %n = alloca i64
-  %_1 = alloca i1
-  %_2 = alloca i8 addrspace (1)*
-  %_3 = alloca i64
-  %_4 = alloca i8 addrspace (1)*
-  %_5 = alloca i64
-  %_6 = alloca i8
-  %_7 = load i8*, i8** @_bal_stack_guard
-  %_8 = icmp ult i8* %_6, %_7
-  br i1 %_8, label %L3, label %L1
-L1:
-  store i64 %_0, i64* %n
-  %_9 = load i64, i64* %n
-  %_10 = call i8 addrspace (1)* @_B_toAny (i64 %_9)
-  store i8 addrspace (1)* %_10, i8 addrspace (1)** %_2
-  %_11 = load i8 addrspace (1)*, i8 addrspace (1)** %_2
-  %_12 = addrspacecast i8 addrspace (1)* %_11 to i8*
-  %_13 = ptrtoint i8* %_12 to i64
-  %_14 = and i64 %_13, 2233785415175766016
-  %_15 = icmp eq i64 %_14, 504403158265495552
-  br i1 %_15, label %L4, label %L5
-L2:
-  %_24 = load i64, i64* %_5
-  call void @_bal_panic (i64 %_24)
+  %2 = alloca i1
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i64
+  %5 = alloca i8 addrspace(1)*
+  %6 = alloca i64
+  %7 = alloca i8
+  %8 = load i8*, i8** @_bal_stack_guard
+  %9 = icmp ult i8* %7, %8
+  br i1 %9, label %20, label %10
+10:
+  store i64 %0, i64* %n
+  %11 = load i64, i64* %n
+  %12 = call i8 addrspace(1)* @_B_toAny(i64 %11)
+  store i8 addrspace(1)* %12, i8 addrspace(1)** %3
+  %13 = load i8 addrspace(1)*, i8 addrspace(1)** %3
+  %14 = addrspacecast i8 addrspace(1)* %13 to i8*
+  %15 = ptrtoint i8* %14 to i64
+  %16 = and i64 %15, 2233785415175766016
+  %17 = icmp eq i64 %16, 504403158265495552
+  br i1 %17, label %21, label %30
+18:
+  %19 = load i64, i64* %6
+  call void @_bal_panic(i64 %19)
   unreachable
-L3:
-  call void @_bal_panic (i64 9476)
+20:
+  call void @_bal_panic(i64 9476)
   unreachable
-L4:
-  %_16 = call i64 @_bal_tagged_to_int (i8 addrspace (1)* %_11)
-  store i64 %_16, i64* %_3
-  %_17 = load i64, i64* %n
-  %_18 = load i64, i64* %_3
-  %_19 = icmp eq i64 %_17, %_18
-  store i1 %_19, i1* %_1
-  %_20 = load i1, i1* %_1
-  %_21 = zext i1 %_20 to i64
-  %_22 = or i64 %_21, 72057594037927936
-  %_23 = getelementptr i8, i8 addrspace (1)* null, i64 %_22
-  call void @_Bio__println (i8 addrspace (1)* %_23)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_4
+21:
+  %22 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %13)
+  store i64 %22, i64* %4
+  %23 = load i64, i64* %n
+  %24 = load i64, i64* %4
+  %25 = icmp eq i64 %23, %24
+  store i1 %25, i1* %2
+  %26 = load i1, i1* %2
+  %27 = zext i1 %26 to i64
+  %28 = or i64 %27, 72057594037927936
+  %29 = getelementptr i8, i8 addrspace(1)* null, i64 %28
+  call void @_Bio__println(i8 addrspace(1)* %29)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %5
   ret void
-L5:
-  store i64 9731, i64* %_5
-  br label %L2
+30:
+  store i64 9731, i64* %6
+  br label %18
 }
-define internal i8 addrspace (1)* @_B_toAny (i64 %_0) {
+define internal i8 addrspace(1)* @_B_toAny(i64 %0) {
   %n = alloca i64
-  %_1 = alloca i8
-  %_2 = load i8*, i8** @_bal_stack_guard
-  %_3 = icmp ult i8* %_1, %_2
-  br i1 %_3, label %L2, label %L1
-L1:
-  store i64 %_0, i64* %n
-  %_4 = load i64, i64* %n
-  %_5 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_4)
-  ret i8 addrspace (1)* %_5
-L2:
-  call void @_bal_panic (i64 10500)
+  %2 = alloca i8
+  %3 = load i8*, i8** @_bal_stack_guard
+  %4 = icmp ult i8* %2, %3
+  br i1 %4, label %8, label %5
+5:
+  store i64 %0, i64* %n
+  %6 = load i64, i64* %n
+  %7 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %6)
+  ret i8 addrspace(1)* %7
+8:
+  call void @_bal_panic(i64 10500)
   unreachable
 }

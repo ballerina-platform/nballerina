@@ -1,107 +1,107 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64) noreturn cold
-declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
-declare void @_Bio__println (i8 addrspace (1)*)
-declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-define void @_B_main () {
-  %_0 = alloca i8 addrspace (1)*
-  %_1 = alloca i8 addrspace (1)*
-  %_2 = alloca i64
-  %_3 = alloca i8 addrspace (1)*
-  %_4 = alloca i64
-  %_5 = alloca i8
-  %_6 = load i8*, i8** @_bal_stack_guard
-  %_7 = icmp ult i8* %_5, %_6
-  br i1 %_7, label %L3, label %L1
-L1:
-  call void @_B_printIfBetween (i64 6, i64 5, i64 7)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_0
-  call void @_B_printIfBetween (i64 1, i64 2, i64 3)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_1
-  %_8 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_9 = extractvalue {i64, i1} %_8, 1
-  br i1 %_9, label %L5, label %L4
-L2:
-  %_12 = load i64, i64* %_4
-  call void @_bal_panic (i64 %_12)
+declare void @_bal_panic(i64) noreturn cold
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+define void @_B_main() {
+  %1 = alloca i8 addrspace(1)*
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i64
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i64
+  %6 = alloca i8
+  %7 = load i8*, i8** @_bal_stack_guard
+  %8 = icmp ult i8* %6, %7
+  br i1 %8, label %14, label %9
+9:
+  call void @_B_printIfBetween(i64 6, i64 5, i64 7)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %1
+  call void @_B_printIfBetween(i64 1, i64 2, i64 3)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  %10 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %11 = extractvalue {i64, i1} %10, 1
+  br i1 %11, label %18, label %15
+12:
+  %13 = load i64, i64* %5
+  call void @_bal_panic(i64 %13)
   unreachable
-L3:
-  call void @_bal_panic (i64 772)
+14:
+  call void @_bal_panic(i64 772)
   unreachable
-L4:
-  %_10 = extractvalue {i64, i1} %_8, 0
-  store i64 %_10, i64* %_2
-  %_11 = load i64, i64* %_2
-  call void @_B_printIfBetween (i64 0, i64 %_11, i64 4)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_3
+15:
+  %16 = extractvalue {i64, i1} %10, 0
+  store i64 %16, i64* %3
+  %17 = load i64, i64* %3
+  call void @_B_printIfBetween(i64 0, i64 %17, i64 4)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
-L5:
-  store i64 1537, i64* %_4
-  br label %L2
+18:
+  store i64 1537, i64* %5
+  br label %12
 }
-define internal void @_B_printIfBetween (i64 %_0, i64 %_1, i64 %_2) {
+define internal void @_B_printIfBetween(i64 %0, i64 %1, i64 %2) {
   %n = alloca i64
   %min = alloca i64
   %max = alloca i64
   %i = alloca i64
-  %_3 = alloca i1
-  %_4 = alloca i1
-  %_5 = alloca i8 addrspace (1)*
-  %_6 = alloca i64
-  %_7 = alloca i64
-  %_8 = alloca i8
-  %_9 = load i8*, i8** @_bal_stack_guard
-  %_10 = icmp ult i8* %_8, %_9
-  br i1 %_10, label %L8, label %L1
-L1:
-  store i64 %_0, i64* %n
-  store i64 %_1, i64* %min
-  store i64 %_2, i64* %max
-  %_11 = load i64, i64* %min
-  store i64 %_11, i64* %i
-  br label %L2
-L2:
-  %_12 = load i64, i64* %i
-  %_13 = load i64, i64* %max
-  %_14 = icmp sle i64 %_12, %_13
-  store i1 %_14, i1* %_3
-  %_15 = load i1, i1* %_3
-  br i1 %_15, label %L4, label %L3
-L3:
+  %4 = alloca i1
+  %5 = alloca i1
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i64
+  %8 = alloca i64
+  %9 = alloca i8
+  %10 = load i8*, i8** @_bal_stack_guard
+  %11 = icmp ult i8* %9, %10
+  br i1 %11, label %34, label %12
+12:
+  store i64 %0, i64* %n
+  store i64 %1, i64* %min
+  store i64 %2, i64* %max
+  %13 = load i64, i64* %min
+  store i64 %13, i64* %i
+  br label %14
+14:
+  %15 = load i64, i64* %i
+  %16 = load i64, i64* %max
+  %17 = icmp sle i64 %15, %16
+  store i1 %17, i1* %4
+  %18 = load i1, i1* %4
+  br i1 %18, label %20, label %19
+19:
   ret void
-L4:
-  %_16 = load i64, i64* %i
-  %_17 = load i64, i64* %n
-  %_18 = icmp eq i64 %_16, %_17
-  store i1 %_18, i1* %_4
-  %_19 = load i1, i1* %_4
-  br i1 %_19, label %L5, label %L6
-L5:
-  %_20 = load i64, i64* %n
-  %_21 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_20)
-  call void @_Bio__println (i8 addrspace (1)* %_21)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_5
-  br label %L3
-L6:
-  %_22 = load i64, i64* %i
-  %_23 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_22, i64 1)
-  %_24 = extractvalue {i64, i1} %_23, 1
-  br i1 %_24, label %L10, label %L9
-L7:
-  %_27 = load i64, i64* %_7
-  call void @_bal_panic (i64 %_27)
+20:
+  %21 = load i64, i64* %i
+  %22 = load i64, i64* %n
+  %23 = icmp eq i64 %21, %22
+  store i1 %23, i1* %5
+  %24 = load i1, i1* %5
+  br i1 %24, label %25, label %28
+25:
+  %26 = load i64, i64* %n
+  %27 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %26)
+  call void @_Bio__println(i8 addrspace(1)* %27)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  br label %19
+28:
+  %29 = load i64, i64* %i
+  %30 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %29, i64 1)
+  %31 = extractvalue {i64, i1} %30, 1
+  br i1 %31, label %38, label %35
+32:
+  %33 = load i64, i64* %8
+  call void @_bal_panic(i64 %33)
   unreachable
-L8:
-  call void @_bal_panic (i64 2308)
+34:
+  call void @_bal_panic(i64 2308)
   unreachable
-L9:
-  %_25 = extractvalue {i64, i1} %_23, 0
-  store i64 %_25, i64* %_6
-  %_26 = load i64, i64* %_6
-  store i64 %_26, i64* %i
-  br label %L2
-L10:
-  store i64 4097, i64* %_7
-  br label %L7
+35:
+  %36 = extractvalue {i64, i1} %30, 0
+  store i64 %36, i64* %7
+  %37 = load i64, i64* %7
+  store i64 %37, i64* %i
+  br label %14
+38:
+  store i64 4097, i64* %8
+  br label %32
 }

@@ -1,148 +1,148 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64) noreturn cold
-declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
-declare void @_Bio__println (i8 addrspace (1)*)
-define void @_B_main () {
-  %_0 = alloca i64
-  %_1 = alloca i64
-  %_2 = alloca i8 addrspace (1)*
-  %_3 = alloca i64
-  %_4 = alloca i64
-  %_5 = alloca i8 addrspace (1)*
-  %_6 = alloca i64
-  %_7 = alloca i64
-  %_8 = alloca i64
-  %_9 = alloca i8 addrspace (1)*
-  %_10 = alloca i64
-  %_11 = alloca i64
-  %_12 = alloca i64
-  %_13 = alloca i8 addrspace (1)*
-  %_14 = alloca i64
-  %_15 = alloca i8
-  %_16 = load i8*, i8** @_bal_stack_guard
-  %_17 = icmp ult i8* %_15, %_16
-  br i1 %_17, label %L3, label %L1
-L1:
-  %_18 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 8, i64 5)
-  %_19 = extractvalue {i64, i1} %_18, 1
-  br i1 %_19, label %L5, label %L4
-L2:
-  %_62 = load i64, i64* %_14
-  call void @_bal_panic (i64 %_62)
+declare void @_bal_panic(i64) noreturn cold
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+define void @_B_main() {
+  %1 = alloca i64
+  %2 = alloca i64
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i64
+  %5 = alloca i64
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i64
+  %8 = alloca i64
+  %9 = alloca i64
+  %10 = alloca i8 addrspace(1)*
+  %11 = alloca i64
+  %12 = alloca i64
+  %13 = alloca i64
+  %14 = alloca i8 addrspace(1)*
+  %15 = alloca i64
+  %16 = alloca i8
+  %17 = load i8*, i8** @_bal_stack_guard
+  %18 = icmp ult i8* %16, %17
+  br i1 %18, label %24, label %19
+19:
+  %20 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 8, i64 5)
+  %21 = extractvalue {i64, i1} %20, 1
+  br i1 %21, label %30, label %25
+22:
+  %23 = load i64, i64* %15
+  call void @_bal_panic(i64 %23)
   unreachable
-L3:
-  call void @_bal_panic (i64 772)
+24:
+  call void @_bal_panic(i64 772)
   unreachable
-L4:
-  %_20 = extractvalue {i64, i1} %_18, 0
-  store i64 %_20, i64* %_0
-  %_21 = load i64, i64* %_0
-  %_22 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_21, i64 11)
-  %_23 = extractvalue {i64, i1} %_22, 1
-  br i1 %_23, label %L7, label %L6
-L5:
-  store i64 1025, i64* %_14
-  br label %L2
-L6:
-  %_24 = extractvalue {i64, i1} %_22, 0
-  store i64 %_24, i64* %_1
-  %_25 = load i64, i64* %_1
-  %_26 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_25)
-  call void @_Bio__println (i8 addrspace (1)* %_26)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_2
-  %_27 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 8, i64 11)
-  %_28 = extractvalue {i64, i1} %_27, 1
-  br i1 %_28, label %L9, label %L8
-L7:
-  store i64 1025, i64* %_14
-  br label %L2
-L8:
-  %_29 = extractvalue {i64, i1} %_27, 0
-  store i64 %_29, i64* %_3
-  %_30 = load i64, i64* %_3
-  %_31 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_30, i64 5)
-  %_32 = extractvalue {i64, i1} %_31, 1
-  br i1 %_32, label %L11, label %L10
-L9:
-  store i64 1281, i64* %_14
-  br label %L2
-L10:
-  %_33 = extractvalue {i64, i1} %_31, 0
-  store i64 %_33, i64* %_4
-  %_34 = load i64, i64* %_4
-  %_35 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_34)
-  call void @_Bio__println (i8 addrspace (1)* %_35)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_5
-  %_36 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 3, i64 5)
-  %_37 = extractvalue {i64, i1} %_36, 1
-  br i1 %_37, label %L13, label %L12
-L11:
-  store i64 1281, i64* %_14
-  br label %L2
-L12:
-  %_38 = extractvalue {i64, i1} %_36, 0
-  store i64 %_38, i64* %_6
-  %_39 = load i64, i64* %_6
-  %_40 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_39, i64 5)
-  %_41 = extractvalue {i64, i1} %_40, 1
-  br i1 %_41, label %L15, label %L14
-L13:
-  store i64 1537, i64* %_14
-  br label %L2
-L14:
-  %_42 = extractvalue {i64, i1} %_40, 0
-  store i64 %_42, i64* %_7
-  %_43 = load i64, i64* %_7
-  %_44 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_43, i64 9)
-  %_45 = extractvalue {i64, i1} %_44, 1
-  br i1 %_45, label %L17, label %L16
-L15:
-  store i64 1537, i64* %_14
-  br label %L2
-L16:
-  %_46 = extractvalue {i64, i1} %_44, 0
-  store i64 %_46, i64* %_8
-  %_47 = load i64, i64* %_8
-  %_48 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_47)
-  call void @_Bio__println (i8 addrspace (1)* %_48)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_9
-  %_49 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 3, i64 5)
-  %_50 = extractvalue {i64, i1} %_49, 1
-  br i1 %_50, label %L19, label %L18
-L17:
-  store i64 1537, i64* %_14
-  br label %L2
-L18:
-  %_51 = extractvalue {i64, i1} %_49, 0
-  store i64 %_51, i64* %_10
-  %_52 = load i64, i64* %_10
-  %_53 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_52, i64 9)
-  %_54 = extractvalue {i64, i1} %_53, 1
-  br i1 %_54, label %L21, label %L20
-L19:
-  store i64 1793, i64* %_14
-  br label %L2
-L20:
-  %_55 = extractvalue {i64, i1} %_53, 0
-  store i64 %_55, i64* %_11
-  %_56 = load i64, i64* %_11
-  %_57 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 %_56, i64 4)
-  %_58 = extractvalue {i64, i1} %_57, 1
-  br i1 %_58, label %L23, label %L22
-L21:
-  store i64 1793, i64* %_14
-  br label %L2
-L22:
-  %_59 = extractvalue {i64, i1} %_57, 0
-  store i64 %_59, i64* %_12
-  %_60 = load i64, i64* %_12
-  %_61 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_60)
-  call void @_Bio__println (i8 addrspace (1)* %_61)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_13
+25:
+  %26 = extractvalue {i64, i1} %20, 0
+  store i64 %26, i64* %1
+  %27 = load i64, i64* %1
+  %28 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %27, i64 11)
+  %29 = extractvalue {i64, i1} %28, 1
+  br i1 %29, label %37, label %31
+30:
+  store i64 1025, i64* %15
+  br label %22
+31:
+  %32 = extractvalue {i64, i1} %28, 0
+  store i64 %32, i64* %2
+  %33 = load i64, i64* %2
+  %34 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %33)
+  call void @_Bio__println(i8 addrspace(1)* %34)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  %35 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 8, i64 11)
+  %36 = extractvalue {i64, i1} %35, 1
+  br i1 %36, label %43, label %38
+37:
+  store i64 1025, i64* %15
+  br label %22
+38:
+  %39 = extractvalue {i64, i1} %35, 0
+  store i64 %39, i64* %4
+  %40 = load i64, i64* %4
+  %41 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %40, i64 5)
+  %42 = extractvalue {i64, i1} %41, 1
+  br i1 %42, label %50, label %44
+43:
+  store i64 1281, i64* %15
+  br label %22
+44:
+  %45 = extractvalue {i64, i1} %41, 0
+  store i64 %45, i64* %5
+  %46 = load i64, i64* %5
+  %47 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %46)
+  call void @_Bio__println(i8 addrspace(1)* %47)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %48 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 3, i64 5)
+  %49 = extractvalue {i64, i1} %48, 1
+  br i1 %49, label %56, label %51
+50:
+  store i64 1281, i64* %15
+  br label %22
+51:
+  %52 = extractvalue {i64, i1} %48, 0
+  store i64 %52, i64* %7
+  %53 = load i64, i64* %7
+  %54 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %53, i64 5)
+  %55 = extractvalue {i64, i1} %54, 1
+  br i1 %55, label %62, label %57
+56:
+  store i64 1537, i64* %15
+  br label %22
+57:
+  %58 = extractvalue {i64, i1} %54, 0
+  store i64 %58, i64* %8
+  %59 = load i64, i64* %8
+  %60 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %59, i64 9)
+  %61 = extractvalue {i64, i1} %60, 1
+  br i1 %61, label %69, label %63
+62:
+  store i64 1537, i64* %15
+  br label %22
+63:
+  %64 = extractvalue {i64, i1} %60, 0
+  store i64 %64, i64* %9
+  %65 = load i64, i64* %9
+  %66 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %65)
+  call void @_Bio__println(i8 addrspace(1)* %66)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %10
+  %67 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 3, i64 5)
+  %68 = extractvalue {i64, i1} %67, 1
+  br i1 %68, label %75, label %70
+69:
+  store i64 1537, i64* %15
+  br label %22
+70:
+  %71 = extractvalue {i64, i1} %67, 0
+  store i64 %71, i64* %11
+  %72 = load i64, i64* %11
+  %73 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %72, i64 9)
+  %74 = extractvalue {i64, i1} %73, 1
+  br i1 %74, label %81, label %76
+75:
+  store i64 1793, i64* %15
+  br label %22
+76:
+  %77 = extractvalue {i64, i1} %73, 0
+  store i64 %77, i64* %12
+  %78 = load i64, i64* %12
+  %79 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %78, i64 4)
+  %80 = extractvalue {i64, i1} %79, 1
+  br i1 %80, label %86, label %82
+81:
+  store i64 1793, i64* %15
+  br label %22
+82:
+  %83 = extractvalue {i64, i1} %79, 0
+  store i64 %83, i64* %13
+  %84 = load i64, i64* %13
+  %85 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %84)
+  call void @_Bio__println(i8 addrspace(1)* %85)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %14
   ret void
-L23:
-  store i64 1793, i64* %_14
-  br label %L2
+86:
+  store i64 1793, i64* %15
+  br label %22
 }

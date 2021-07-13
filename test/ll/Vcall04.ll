@@ -1,90 +1,90 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64) noreturn cold
-declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
-declare void @_Bio__println (i8 addrspace (1)*)
-declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-define void @_B_main () {
-  %_0 = alloca i64
-  %_1 = alloca i8 addrspace (1)*
-  %_2 = alloca i64
-  %_3 = alloca i8 addrspace (1)*
-  %_4 = alloca i8
-  %_5 = load i8*, i8** @_bal_stack_guard
-  %_6 = icmp ult i8* %_4, %_5
-  br i1 %_6, label %L2, label %L1
-L1:
-  %_7 = call i64 @_B_foo (i64 13, i1 0)
-  store i64 %_7, i64* %_0
-  %_8 = load i64, i64* %_0
-  %_9 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_8)
-  call void @_Bio__println (i8 addrspace (1)* %_9)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_1
-  %_10 = call i64 @_B_foo (i64 14, i1 1)
-  store i64 %_10, i64* %_2
-  %_11 = load i64, i64* %_2
-  %_12 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_11)
-  call void @_Bio__println (i8 addrspace (1)* %_12)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_3
+declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+define void @_B_main() {
+  %1 = alloca i64
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i64
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i8
+  %6 = load i8*, i8** @_bal_stack_guard
+  %7 = icmp ult i8* %5, %6
+  br i1 %7, label %15, label %8
+8:
+  %9 = call i64 @_B_foo(i64 13, i1 0)
+  store i64 %9, i64* %1
+  %10 = load i64, i64* %1
+  %11 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %10)
+  call void @_Bio__println(i8 addrspace(1)* %11)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  %12 = call i64 @_B_foo(i64 14, i1 1)
+  store i64 %12, i64* %3
+  %13 = load i64, i64* %3
+  %14 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %13)
+  call void @_Bio__println(i8 addrspace(1)* %14)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
-L2:
-  call void @_bal_panic (i64 772)
+15:
+  call void @_bal_panic(i64 772)
   unreachable
 }
-define internal i64 @_B_foo (i64 %_0, i1 %_1) {
+define internal i64 @_B_foo(i64 %0, i1 %1) {
   %i = alloca i64
   %b = alloca i1
-  %_2 = alloca i64
-  %_3 = alloca i64
-  %_4 = alloca i64
-  %_5 = alloca i8
-  %_6 = load i8*, i8** @_bal_stack_guard
-  %_7 = icmp ult i8* %_5, %_6
-  br i1 %_7, label %L5, label %L1
-L1:
-  store i64 %_0, i64* %i
-  store i1 %_1, i1* %b
-  %_8 = load i1, i1* %b
-  br i1 %_8, label %L2, label %L3
-L2:
-  %_9 = load i64, i64* %i
-  %_10 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_9, i64 1)
-  %_11 = extractvalue {i64, i1} %_10, 1
-  br i1 %_11, label %L7, label %L6
-L3:
-  %_14 = load i64, i64* %i
-  %_15 = icmp eq i64 5, 0
-  br i1 %_15, label %L8, label %L9
-L4:
-  %_21 = load i64, i64* %_4
-  call void @_bal_panic (i64 %_21)
+  %3 = alloca i64
+  %4 = alloca i64
+  %5 = alloca i64
+  %6 = alloca i8
+  %7 = load i8*, i8** @_bal_stack_guard
+  %8 = icmp ult i8* %6, %7
+  br i1 %8, label %20, label %9
+9:
+  store i64 %0, i64* %i
+  store i1 %1, i1* %b
+  %10 = load i1, i1* %b
+  br i1 %10, label %11, label %15
+11:
+  %12 = load i64, i64* %i
+  %13 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %12, i64 1)
+  %14 = extractvalue {i64, i1} %13, 1
+  br i1 %14, label %24, label %21
+15:
+  %16 = load i64, i64* %i
+  %17 = icmp eq i64 5, 0
+  br i1 %17, label %25, label %26
+18:
+  %19 = load i64, i64* %5
+  call void @_bal_panic(i64 %19)
   unreachable
-L5:
-  call void @_bal_panic (i64 2052)
+20:
+  call void @_bal_panic(i64 2052)
   unreachable
-L6:
-  %_12 = extractvalue {i64, i1} %_10, 0
-  store i64 %_12, i64* %_2
-  %_13 = load i64, i64* %_2
-  ret i64 %_13
-L7:
-  store i64 2561, i64* %_4
-  br label %L4
-L8:
-  store i64 3074, i64* %_4
-  br label %L4
-L9:
-  %_16 = icmp eq i64 %_14, -9223372036854775808
-  %_17 = icmp eq i64 5, -1
-  %_18 = and i1 %_16, %_17
-  br i1 %_18, label %L11, label %L10
-L10:
-  %_19 = srem i64 %_14, 5
-  store i64 %_19, i64* %_3
-  br label %L12
-L11:
-  store i64 0, i64* %_3
-  br label %L12
-L12:
-  %_20 = load i64, i64* %_3
-  ret i64 %_20
+21:
+  %22 = extractvalue {i64, i1} %13, 0
+  store i64 %22, i64* %3
+  %23 = load i64, i64* %3
+  ret i64 %23
+24:
+  store i64 2561, i64* %5
+  br label %18
+25:
+  store i64 3074, i64* %5
+  br label %18
+26:
+  %27 = icmp eq i64 %16, -9223372036854775808
+  %28 = icmp eq i64 5, -1
+  %29 = and i1 %27, %28
+  br i1 %29, label %32, label %30
+30:
+  %31 = srem i64 %16, 5
+  store i64 %31, i64* %4
+  br label %33
+32:
+  store i64 0, i64* %4
+  br label %33
+33:
+  %34 = load i64, i64* %4
+  ret i64 %34
 }

@@ -1,1038 +1,1038 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64) noreturn cold
-declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
-declare void @_Bio__println (i8 addrspace (1)*)
-declare {i64, i1} @llvm.ssub.with.overflow.i64 (i64, i64) nounwind readnone speculatable willreturn
-define void @_B_main () {
-  %_0 = alloca i64
-  %_1 = alloca i8 addrspace (1)*
-  %_2 = alloca i64
-  %_3 = alloca i8 addrspace (1)*
-  %_4 = alloca i64
-  %_5 = alloca i8 addrspace (1)*
-  %_6 = alloca i64
-  %_7 = alloca i64
-  %_8 = alloca i8 addrspace (1)*
-  %_9 = alloca i64
-  %_10 = alloca i64
-  %_11 = alloca i8 addrspace (1)*
-  %_12 = alloca i64
-  %_13 = alloca i8 addrspace (1)*
-  %_14 = alloca i64
-  %_15 = alloca i8 addrspace (1)*
-  %_16 = alloca i64
-  %_17 = alloca i8 addrspace (1)*
-  %_18 = alloca i64
-  %_19 = alloca i64
-  %_20 = alloca i8 addrspace (1)*
-  %_21 = alloca i64
-  %_22 = alloca i64
-  %_23 = alloca i8 addrspace (1)*
-  %_24 = alloca i64
-  %_25 = alloca i8 addrspace (1)*
-  %_26 = alloca i64
-  %_27 = alloca i8 addrspace (1)*
-  %_28 = alloca i64
-  %_29 = alloca i8 addrspace (1)*
-  %_30 = alloca i64
-  %_31 = alloca i64
-  %_32 = alloca i8 addrspace (1)*
-  %_33 = alloca i64
-  %_34 = alloca i64
-  %_35 = alloca i8 addrspace (1)*
-  %_36 = alloca i64
-  %_37 = alloca i64
-  %_38 = alloca i8 addrspace (1)*
-  %_39 = alloca i64
-  %_40 = alloca i64
-  %_41 = alloca i8 addrspace (1)*
-  %_42 = alloca i64
-  %_43 = alloca i64
-  %_44 = alloca i8 addrspace (1)*
-  %_45 = alloca i64
-  %_46 = alloca i64
-  %_47 = alloca i64
-  %_48 = alloca i8 addrspace (1)*
-  %_49 = alloca i64
-  %_50 = alloca i64
-  %_51 = alloca i64
-  %_52 = alloca i8 addrspace (1)*
-  %_53 = alloca i64
-  %_54 = alloca i64
-  %_55 = alloca i8 addrspace (1)*
-  %_56 = alloca i64
-  %_57 = alloca i64
-  %_58 = alloca i8 addrspace (1)*
-  %_59 = alloca i64
-  %_60 = alloca i64
-  %_61 = alloca i8 addrspace (1)*
-  %_62 = alloca i64
-  %_63 = alloca i64
-  %_64 = alloca i64
-  %_65 = alloca i8 addrspace (1)*
-  %_66 = alloca i64
-  %_67 = alloca i64
-  %_68 = alloca i64
-  %_69 = alloca i8 addrspace (1)*
-  %_70 = alloca i64
-  %_71 = alloca i64
-  %_72 = alloca i8 addrspace (1)*
-  %_73 = alloca i64
-  %_74 = alloca i64
-  %_75 = alloca i8 addrspace (1)*
-  %_76 = alloca i64
-  %_77 = alloca i64
-  %_78 = alloca i8 addrspace (1)*
-  %_79 = alloca i64
-  %_80 = alloca i64
-  %_81 = alloca i64
-  %_82 = alloca i8 addrspace (1)*
-  %_83 = alloca i64
-  %_84 = alloca i64
-  %_85 = alloca i64
-  %_86 = alloca i8 addrspace (1)*
-  %_87 = alloca i64
-  %_88 = alloca i8
-  %_89 = load i8*, i8** @_bal_stack_guard
-  %_90 = icmp ult i8* %_88, %_89
-  br i1 %_90, label %L3, label %L1
-L1:
-  %_91 = icmp eq i64 9223372036854775806, 0
-  br i1 %_91, label %L4, label %L5
-L2:
-  %_409 = load i64, i64* %_87
-  call void @_bal_panic (i64 %_409)
+declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+define void @_B_main() {
+  %1 = alloca i64
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i64
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i64
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i64
+  %8 = alloca i64
+  %9 = alloca i8 addrspace(1)*
+  %10 = alloca i64
+  %11 = alloca i64
+  %12 = alloca i8 addrspace(1)*
+  %13 = alloca i64
+  %14 = alloca i8 addrspace(1)*
+  %15 = alloca i64
+  %16 = alloca i8 addrspace(1)*
+  %17 = alloca i64
+  %18 = alloca i8 addrspace(1)*
+  %19 = alloca i64
+  %20 = alloca i64
+  %21 = alloca i8 addrspace(1)*
+  %22 = alloca i64
+  %23 = alloca i64
+  %24 = alloca i8 addrspace(1)*
+  %25 = alloca i64
+  %26 = alloca i8 addrspace(1)*
+  %27 = alloca i64
+  %28 = alloca i8 addrspace(1)*
+  %29 = alloca i64
+  %30 = alloca i8 addrspace(1)*
+  %31 = alloca i64
+  %32 = alloca i64
+  %33 = alloca i8 addrspace(1)*
+  %34 = alloca i64
+  %35 = alloca i64
+  %36 = alloca i8 addrspace(1)*
+  %37 = alloca i64
+  %38 = alloca i64
+  %39 = alloca i8 addrspace(1)*
+  %40 = alloca i64
+  %41 = alloca i64
+  %42 = alloca i8 addrspace(1)*
+  %43 = alloca i64
+  %44 = alloca i64
+  %45 = alloca i8 addrspace(1)*
+  %46 = alloca i64
+  %47 = alloca i64
+  %48 = alloca i64
+  %49 = alloca i8 addrspace(1)*
+  %50 = alloca i64
+  %51 = alloca i64
+  %52 = alloca i64
+  %53 = alloca i8 addrspace(1)*
+  %54 = alloca i64
+  %55 = alloca i64
+  %56 = alloca i8 addrspace(1)*
+  %57 = alloca i64
+  %58 = alloca i64
+  %59 = alloca i8 addrspace(1)*
+  %60 = alloca i64
+  %61 = alloca i64
+  %62 = alloca i8 addrspace(1)*
+  %63 = alloca i64
+  %64 = alloca i64
+  %65 = alloca i64
+  %66 = alloca i8 addrspace(1)*
+  %67 = alloca i64
+  %68 = alloca i64
+  %69 = alloca i64
+  %70 = alloca i8 addrspace(1)*
+  %71 = alloca i64
+  %72 = alloca i64
+  %73 = alloca i8 addrspace(1)*
+  %74 = alloca i64
+  %75 = alloca i64
+  %76 = alloca i8 addrspace(1)*
+  %77 = alloca i64
+  %78 = alloca i64
+  %79 = alloca i8 addrspace(1)*
+  %80 = alloca i64
+  %81 = alloca i64
+  %82 = alloca i64
+  %83 = alloca i8 addrspace(1)*
+  %84 = alloca i64
+  %85 = alloca i64
+  %86 = alloca i64
+  %87 = alloca i8 addrspace(1)*
+  %88 = alloca i64
+  %89 = alloca i8
+  %90 = load i8*, i8** @_bal_stack_guard
+  %91 = icmp ult i8* %89, %90
+  br i1 %91, label %96, label %92
+92:
+  %93 = icmp eq i64 9223372036854775806, 0
+  br i1 %93, label %97, label %98
+94:
+  %95 = load i64, i64* %88
+  call void @_bal_panic(i64 %95)
   unreachable
-L3:
-  call void @_bal_panic (i64 772)
+96:
+  call void @_bal_panic(i64 772)
   unreachable
-L4:
-  store i64 1026, i64* %_87
-  br label %L2
-L5:
-  %_92 = icmp eq i64 9223372036854775806, -9223372036854775808
-  %_93 = icmp eq i64 9223372036854775806, -1
-  %_94 = and i1 %_92, %_93
-  br i1 %_94, label %L7, label %L6
-L6:
-  %_95 = srem i64 9223372036854775806, 9223372036854775806
-  store i64 %_95, i64* %_0
-  br label %L8
-L7:
-  store i64 0, i64* %_0
-  br label %L8
-L8:
-  %_96 = load i64, i64* %_0
-  %_97 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_96)
-  call void @_Bio__println (i8 addrspace (1)* %_97)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_1
-  %_98 = icmp eq i64 9223372036854775806, 0
-  br i1 %_98, label %L9, label %L10
-L9:
-  store i64 1282, i64* %_87
-  br label %L2
-L10:
-  %_99 = icmp eq i64 1, -9223372036854775808
-  %_100 = icmp eq i64 9223372036854775806, -1
-  %_101 = and i1 %_99, %_100
-  br i1 %_101, label %L12, label %L11
-L11:
-  %_102 = srem i64 1, 9223372036854775806
-  store i64 %_102, i64* %_2
-  br label %L13
-L12:
-  store i64 0, i64* %_2
-  br label %L13
-L13:
-  %_103 = load i64, i64* %_2
-  %_104 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_103)
-  call void @_Bio__println (i8 addrspace (1)* %_104)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_3
-  %_105 = icmp eq i64 9223372036854775806, 0
-  br i1 %_105, label %L14, label %L15
-L14:
-  store i64 1538, i64* %_87
-  br label %L2
-L15:
-  %_106 = icmp eq i64 0, -9223372036854775808
-  %_107 = icmp eq i64 9223372036854775806, -1
-  %_108 = and i1 %_106, %_107
-  br i1 %_108, label %L17, label %L16
-L16:
-  %_109 = srem i64 0, 9223372036854775806
-  store i64 %_109, i64* %_4
-  br label %L18
-L17:
-  store i64 0, i64* %_4
-  br label %L18
-L18:
-  %_110 = load i64, i64* %_4
-  %_111 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_110)
-  call void @_Bio__println (i8 addrspace (1)* %_111)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_5
-  %_112 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_113 = extractvalue {i64, i1} %_112, 1
-  br i1 %_113, label %L20, label %L19
-L19:
-  %_114 = extractvalue {i64, i1} %_112, 0
-  store i64 %_114, i64* %_6
-  %_115 = load i64, i64* %_6
-  %_116 = icmp eq i64 9223372036854775806, 0
-  br i1 %_116, label %L21, label %L22
-L20:
-  store i64 1793, i64* %_87
-  br label %L2
-L21:
-  store i64 1794, i64* %_87
-  br label %L2
-L22:
-  %_117 = icmp eq i64 %_115, -9223372036854775808
-  %_118 = icmp eq i64 9223372036854775806, -1
-  %_119 = and i1 %_117, %_118
-  br i1 %_119, label %L24, label %L23
-L23:
-  %_120 = srem i64 %_115, 9223372036854775806
-  store i64 %_120, i64* %_7
-  br label %L25
-L24:
-  store i64 0, i64* %_7
-  br label %L25
-L25:
-  %_121 = load i64, i64* %_7
-  %_122 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_121)
-  call void @_Bio__println (i8 addrspace (1)* %_122)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_8
-  %_123 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_124 = extractvalue {i64, i1} %_123, 1
-  br i1 %_124, label %L27, label %L26
-L26:
-  %_125 = extractvalue {i64, i1} %_123, 0
-  store i64 %_125, i64* %_9
-  %_126 = load i64, i64* %_9
-  %_127 = icmp eq i64 9223372036854775806, 0
-  br i1 %_127, label %L28, label %L29
-L27:
-  store i64 2049, i64* %_87
-  br label %L2
-L28:
-  store i64 2050, i64* %_87
-  br label %L2
-L29:
-  %_128 = icmp eq i64 %_126, -9223372036854775808
-  %_129 = icmp eq i64 9223372036854775806, -1
-  %_130 = and i1 %_128, %_129
-  br i1 %_130, label %L31, label %L30
-L30:
-  %_131 = srem i64 %_126, 9223372036854775806
-  store i64 %_131, i64* %_10
-  br label %L32
-L31:
-  store i64 0, i64* %_10
-  br label %L32
-L32:
-  %_132 = load i64, i64* %_10
-  %_133 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_132)
-  call void @_Bio__println (i8 addrspace (1)* %_133)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_11
-  %_134 = icmp eq i64 10, 0
-  br i1 %_134, label %L33, label %L34
-L33:
-  store i64 2562, i64* %_87
-  br label %L2
-L34:
-  %_135 = icmp eq i64 9223372036854775806, -9223372036854775808
-  %_136 = icmp eq i64 10, -1
-  %_137 = and i1 %_135, %_136
-  br i1 %_137, label %L36, label %L35
-L35:
-  %_138 = srem i64 9223372036854775806, 10
-  store i64 %_138, i64* %_12
-  br label %L37
-L36:
-  store i64 0, i64* %_12
-  br label %L37
-L37:
-  %_139 = load i64, i64* %_12
-  %_140 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_139)
-  call void @_Bio__println (i8 addrspace (1)* %_140)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_13
-  %_141 = icmp eq i64 10, 0
-  br i1 %_141, label %L38, label %L39
-L38:
-  store i64 2818, i64* %_87
-  br label %L2
-L39:
-  %_142 = icmp eq i64 1, -9223372036854775808
-  %_143 = icmp eq i64 10, -1
-  %_144 = and i1 %_142, %_143
-  br i1 %_144, label %L41, label %L40
-L40:
-  %_145 = srem i64 1, 10
-  store i64 %_145, i64* %_14
-  br label %L42
-L41:
-  store i64 0, i64* %_14
-  br label %L42
-L42:
-  %_146 = load i64, i64* %_14
-  %_147 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_146)
-  call void @_Bio__println (i8 addrspace (1)* %_147)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_15
-  %_148 = icmp eq i64 10, 0
-  br i1 %_148, label %L43, label %L44
-L43:
-  store i64 3074, i64* %_87
-  br label %L2
-L44:
-  %_149 = icmp eq i64 0, -9223372036854775808
-  %_150 = icmp eq i64 10, -1
-  %_151 = and i1 %_149, %_150
-  br i1 %_151, label %L46, label %L45
-L45:
-  %_152 = srem i64 0, 10
-  store i64 %_152, i64* %_16
-  br label %L47
-L46:
-  store i64 0, i64* %_16
-  br label %L47
-L47:
-  %_153 = load i64, i64* %_16
-  %_154 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_153)
-  call void @_Bio__println (i8 addrspace (1)* %_154)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_17
-  %_155 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_156 = extractvalue {i64, i1} %_155, 1
-  br i1 %_156, label %L49, label %L48
-L48:
-  %_157 = extractvalue {i64, i1} %_155, 0
-  store i64 %_157, i64* %_18
-  %_158 = load i64, i64* %_18
-  %_159 = icmp eq i64 10, 0
-  br i1 %_159, label %L50, label %L51
-L49:
-  store i64 3329, i64* %_87
-  br label %L2
-L50:
-  store i64 3330, i64* %_87
-  br label %L2
-L51:
-  %_160 = icmp eq i64 %_158, -9223372036854775808
-  %_161 = icmp eq i64 10, -1
-  %_162 = and i1 %_160, %_161
-  br i1 %_162, label %L53, label %L52
-L52:
-  %_163 = srem i64 %_158, 10
-  store i64 %_163, i64* %_19
-  br label %L54
-L53:
-  store i64 0, i64* %_19
-  br label %L54
-L54:
-  %_164 = load i64, i64* %_19
-  %_165 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_164)
-  call void @_Bio__println (i8 addrspace (1)* %_165)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_20
-  %_166 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_167 = extractvalue {i64, i1} %_166, 1
-  br i1 %_167, label %L56, label %L55
-L55:
-  %_168 = extractvalue {i64, i1} %_166, 0
-  store i64 %_168, i64* %_21
-  %_169 = load i64, i64* %_21
-  %_170 = icmp eq i64 10, 0
-  br i1 %_170, label %L57, label %L58
-L56:
-  store i64 3585, i64* %_87
-  br label %L2
-L57:
-  store i64 3586, i64* %_87
-  br label %L2
-L58:
-  %_171 = icmp eq i64 %_169, -9223372036854775808
-  %_172 = icmp eq i64 10, -1
-  %_173 = and i1 %_171, %_172
-  br i1 %_173, label %L60, label %L59
-L59:
-  %_174 = srem i64 %_169, 10
-  store i64 %_174, i64* %_22
-  br label %L61
-L60:
-  store i64 0, i64* %_22
-  br label %L61
-L61:
-  %_175 = load i64, i64* %_22
-  %_176 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_175)
-  call void @_Bio__println (i8 addrspace (1)* %_176)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_23
-  %_177 = icmp eq i64 1, 0
-  br i1 %_177, label %L62, label %L63
-L62:
-  store i64 4098, i64* %_87
-  br label %L2
-L63:
-  %_178 = icmp eq i64 9223372036854775806, -9223372036854775808
-  %_179 = icmp eq i64 1, -1
-  %_180 = and i1 %_178, %_179
-  br i1 %_180, label %L65, label %L64
-L64:
-  %_181 = srem i64 9223372036854775806, 1
-  store i64 %_181, i64* %_24
-  br label %L66
-L65:
-  store i64 0, i64* %_24
-  br label %L66
-L66:
-  %_182 = load i64, i64* %_24
-  %_183 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_182)
-  call void @_Bio__println (i8 addrspace (1)* %_183)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_25
-  %_184 = icmp eq i64 1, 0
-  br i1 %_184, label %L67, label %L68
-L67:
-  store i64 4354, i64* %_87
-  br label %L2
-L68:
-  %_185 = icmp eq i64 1, -9223372036854775808
-  %_186 = icmp eq i64 1, -1
-  %_187 = and i1 %_185, %_186
-  br i1 %_187, label %L70, label %L69
-L69:
-  %_188 = srem i64 1, 1
-  store i64 %_188, i64* %_26
-  br label %L71
-L70:
-  store i64 0, i64* %_26
-  br label %L71
-L71:
-  %_189 = load i64, i64* %_26
-  %_190 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_189)
-  call void @_Bio__println (i8 addrspace (1)* %_190)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_27
-  %_191 = icmp eq i64 1, 0
-  br i1 %_191, label %L72, label %L73
-L72:
-  store i64 4610, i64* %_87
-  br label %L2
-L73:
-  %_192 = icmp eq i64 0, -9223372036854775808
-  %_193 = icmp eq i64 1, -1
-  %_194 = and i1 %_192, %_193
-  br i1 %_194, label %L75, label %L74
-L74:
-  %_195 = srem i64 0, 1
-  store i64 %_195, i64* %_28
-  br label %L76
-L75:
-  store i64 0, i64* %_28
-  br label %L76
-L76:
-  %_196 = load i64, i64* %_28
-  %_197 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_196)
-  call void @_Bio__println (i8 addrspace (1)* %_197)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_29
-  %_198 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_199 = extractvalue {i64, i1} %_198, 1
-  br i1 %_199, label %L78, label %L77
-L77:
-  %_200 = extractvalue {i64, i1} %_198, 0
-  store i64 %_200, i64* %_30
-  %_201 = load i64, i64* %_30
-  %_202 = icmp eq i64 1, 0
-  br i1 %_202, label %L79, label %L80
-L78:
-  store i64 4865, i64* %_87
-  br label %L2
-L79:
-  store i64 4866, i64* %_87
-  br label %L2
-L80:
-  %_203 = icmp eq i64 %_201, -9223372036854775808
-  %_204 = icmp eq i64 1, -1
-  %_205 = and i1 %_203, %_204
-  br i1 %_205, label %L82, label %L81
-L81:
-  %_206 = srem i64 %_201, 1
-  store i64 %_206, i64* %_31
-  br label %L83
-L82:
-  store i64 0, i64* %_31
-  br label %L83
-L83:
-  %_207 = load i64, i64* %_31
-  %_208 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_207)
-  call void @_Bio__println (i8 addrspace (1)* %_208)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_32
-  %_209 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_210 = extractvalue {i64, i1} %_209, 1
-  br i1 %_210, label %L85, label %L84
-L84:
-  %_211 = extractvalue {i64, i1} %_209, 0
-  store i64 %_211, i64* %_33
-  %_212 = load i64, i64* %_33
-  %_213 = icmp eq i64 1, 0
-  br i1 %_213, label %L86, label %L87
-L85:
-  store i64 5121, i64* %_87
-  br label %L2
-L86:
-  store i64 5122, i64* %_87
-  br label %L2
-L87:
-  %_214 = icmp eq i64 %_212, -9223372036854775808
-  %_215 = icmp eq i64 1, -1
-  %_216 = and i1 %_214, %_215
-  br i1 %_216, label %L89, label %L88
-L88:
-  %_217 = srem i64 %_212, 1
-  store i64 %_217, i64* %_34
-  br label %L90
-L89:
-  store i64 0, i64* %_34
-  br label %L90
-L90:
-  %_218 = load i64, i64* %_34
-  %_219 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_218)
-  call void @_Bio__println (i8 addrspace (1)* %_219)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_35
-  %_220 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_221 = extractvalue {i64, i1} %_220, 1
-  br i1 %_221, label %L92, label %L91
-L91:
-  %_222 = extractvalue {i64, i1} %_220, 0
-  store i64 %_222, i64* %_36
-  %_223 = load i64, i64* %_36
-  %_224 = icmp eq i64 %_223, 0
-  br i1 %_224, label %L93, label %L94
-L92:
-  store i64 5633, i64* %_87
-  br label %L2
-L93:
-  store i64 5634, i64* %_87
-  br label %L2
-L94:
-  %_225 = icmp eq i64 9223372036854775806, -9223372036854775808
-  %_226 = icmp eq i64 %_223, -1
-  %_227 = and i1 %_225, %_226
-  br i1 %_227, label %L96, label %L95
-L95:
-  %_228 = srem i64 9223372036854775806, %_223
-  store i64 %_228, i64* %_37
-  br label %L97
-L96:
-  store i64 0, i64* %_37
-  br label %L97
-L97:
-  %_229 = load i64, i64* %_37
-  %_230 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_229)
-  call void @_Bio__println (i8 addrspace (1)* %_230)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_38
-  %_231 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_232 = extractvalue {i64, i1} %_231, 1
-  br i1 %_232, label %L99, label %L98
-L98:
-  %_233 = extractvalue {i64, i1} %_231, 0
-  store i64 %_233, i64* %_39
-  %_234 = load i64, i64* %_39
-  %_235 = icmp eq i64 %_234, 0
-  br i1 %_235, label %L100, label %L101
-L99:
-  store i64 5889, i64* %_87
-  br label %L2
-L100:
-  store i64 5890, i64* %_87
-  br label %L2
-L101:
-  %_236 = icmp eq i64 1, -9223372036854775808
-  %_237 = icmp eq i64 %_234, -1
-  %_238 = and i1 %_236, %_237
-  br i1 %_238, label %L103, label %L102
-L102:
-  %_239 = srem i64 1, %_234
-  store i64 %_239, i64* %_40
-  br label %L104
-L103:
-  store i64 0, i64* %_40
-  br label %L104
-L104:
-  %_240 = load i64, i64* %_40
-  %_241 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_240)
-  call void @_Bio__println (i8 addrspace (1)* %_241)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_41
-  %_242 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_243 = extractvalue {i64, i1} %_242, 1
-  br i1 %_243, label %L106, label %L105
-L105:
-  %_244 = extractvalue {i64, i1} %_242, 0
-  store i64 %_244, i64* %_42
-  %_245 = load i64, i64* %_42
-  %_246 = icmp eq i64 %_245, 0
-  br i1 %_246, label %L107, label %L108
-L106:
-  store i64 6145, i64* %_87
-  br label %L2
-L107:
-  store i64 6146, i64* %_87
-  br label %L2
-L108:
-  %_247 = icmp eq i64 0, -9223372036854775808
-  %_248 = icmp eq i64 %_245, -1
-  %_249 = and i1 %_247, %_248
-  br i1 %_249, label %L110, label %L109
-L109:
-  %_250 = srem i64 0, %_245
-  store i64 %_250, i64* %_43
-  br label %L111
-L110:
-  store i64 0, i64* %_43
-  br label %L111
-L111:
-  %_251 = load i64, i64* %_43
-  %_252 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_251)
-  call void @_Bio__println (i8 addrspace (1)* %_252)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_44
-  %_253 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_254 = extractvalue {i64, i1} %_253, 1
-  br i1 %_254, label %L113, label %L112
-L112:
-  %_255 = extractvalue {i64, i1} %_253, 0
-  store i64 %_255, i64* %_45
-  %_256 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_257 = extractvalue {i64, i1} %_256, 1
-  br i1 %_257, label %L115, label %L114
-L113:
-  store i64 6401, i64* %_87
-  br label %L2
-L114:
-  %_258 = extractvalue {i64, i1} %_256, 0
-  store i64 %_258, i64* %_46
-  %_259 = load i64, i64* %_45
-  %_260 = load i64, i64* %_46
-  %_261 = icmp eq i64 %_260, 0
-  br i1 %_261, label %L116, label %L117
-L115:
-  store i64 6401, i64* %_87
-  br label %L2
-L116:
-  store i64 6402, i64* %_87
-  br label %L2
-L117:
-  %_262 = icmp eq i64 %_259, -9223372036854775808
-  %_263 = icmp eq i64 %_260, -1
-  %_264 = and i1 %_262, %_263
-  br i1 %_264, label %L119, label %L118
-L118:
-  %_265 = srem i64 %_259, %_260
-  store i64 %_265, i64* %_47
-  br label %L120
-L119:
-  store i64 0, i64* %_47
-  br label %L120
-L120:
-  %_266 = load i64, i64* %_47
-  %_267 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_266)
-  call void @_Bio__println (i8 addrspace (1)* %_267)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_48
-  %_268 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_269 = extractvalue {i64, i1} %_268, 1
-  br i1 %_269, label %L122, label %L121
-L121:
-  %_270 = extractvalue {i64, i1} %_268, 0
-  store i64 %_270, i64* %_49
-  %_271 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_272 = extractvalue {i64, i1} %_271, 1
-  br i1 %_272, label %L124, label %L123
-L122:
-  store i64 6657, i64* %_87
-  br label %L2
-L123:
-  %_273 = extractvalue {i64, i1} %_271, 0
-  store i64 %_273, i64* %_50
-  %_274 = load i64, i64* %_49
-  %_275 = load i64, i64* %_50
-  %_276 = icmp eq i64 %_275, 0
-  br i1 %_276, label %L125, label %L126
-L124:
-  store i64 6657, i64* %_87
-  br label %L2
-L125:
-  store i64 6658, i64* %_87
-  br label %L2
-L126:
-  %_277 = icmp eq i64 %_274, -9223372036854775808
-  %_278 = icmp eq i64 %_275, -1
-  %_279 = and i1 %_277, %_278
-  br i1 %_279, label %L128, label %L127
-L127:
-  %_280 = srem i64 %_274, %_275
-  store i64 %_280, i64* %_51
-  br label %L129
-L128:
-  store i64 0, i64* %_51
-  br label %L129
-L129:
-  %_281 = load i64, i64* %_51
-  %_282 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_281)
-  call void @_Bio__println (i8 addrspace (1)* %_282)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_52
-  %_283 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 10)
-  %_284 = extractvalue {i64, i1} %_283, 1
-  br i1 %_284, label %L131, label %L130
-L130:
-  %_285 = extractvalue {i64, i1} %_283, 0
-  store i64 %_285, i64* %_53
-  %_286 = load i64, i64* %_53
-  %_287 = icmp eq i64 %_286, 0
-  br i1 %_287, label %L132, label %L133
-L131:
-  store i64 7169, i64* %_87
-  br label %L2
-L132:
-  store i64 7170, i64* %_87
-  br label %L2
-L133:
-  %_288 = icmp eq i64 9223372036854775806, -9223372036854775808
-  %_289 = icmp eq i64 %_286, -1
-  %_290 = and i1 %_288, %_289
-  br i1 %_290, label %L135, label %L134
-L134:
-  %_291 = srem i64 9223372036854775806, %_286
-  store i64 %_291, i64* %_54
-  br label %L136
-L135:
-  store i64 0, i64* %_54
-  br label %L136
-L136:
-  %_292 = load i64, i64* %_54
-  %_293 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_292)
-  call void @_Bio__println (i8 addrspace (1)* %_293)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_55
-  %_294 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 10)
-  %_295 = extractvalue {i64, i1} %_294, 1
-  br i1 %_295, label %L138, label %L137
-L137:
-  %_296 = extractvalue {i64, i1} %_294, 0
-  store i64 %_296, i64* %_56
-  %_297 = load i64, i64* %_56
-  %_298 = icmp eq i64 %_297, 0
-  br i1 %_298, label %L139, label %L140
-L138:
-  store i64 7425, i64* %_87
-  br label %L2
-L139:
-  store i64 7426, i64* %_87
-  br label %L2
-L140:
-  %_299 = icmp eq i64 1, -9223372036854775808
-  %_300 = icmp eq i64 %_297, -1
-  %_301 = and i1 %_299, %_300
-  br i1 %_301, label %L142, label %L141
-L141:
-  %_302 = srem i64 1, %_297
-  store i64 %_302, i64* %_57
-  br label %L143
-L142:
-  store i64 0, i64* %_57
-  br label %L143
-L143:
-  %_303 = load i64, i64* %_57
-  %_304 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_303)
-  call void @_Bio__println (i8 addrspace (1)* %_304)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_58
-  %_305 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 10)
-  %_306 = extractvalue {i64, i1} %_305, 1
-  br i1 %_306, label %L145, label %L144
-L144:
-  %_307 = extractvalue {i64, i1} %_305, 0
-  store i64 %_307, i64* %_59
-  %_308 = load i64, i64* %_59
-  %_309 = icmp eq i64 %_308, 0
-  br i1 %_309, label %L146, label %L147
-L145:
-  store i64 7681, i64* %_87
-  br label %L2
-L146:
-  store i64 7682, i64* %_87
-  br label %L2
-L147:
-  %_310 = icmp eq i64 0, -9223372036854775808
-  %_311 = icmp eq i64 %_308, -1
-  %_312 = and i1 %_310, %_311
-  br i1 %_312, label %L149, label %L148
-L148:
-  %_313 = srem i64 0, %_308
-  store i64 %_313, i64* %_60
-  br label %L150
-L149:
-  store i64 0, i64* %_60
-  br label %L150
-L150:
-  %_314 = load i64, i64* %_60
-  %_315 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_314)
-  call void @_Bio__println (i8 addrspace (1)* %_315)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_61
-  %_316 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_317 = extractvalue {i64, i1} %_316, 1
-  br i1 %_317, label %L152, label %L151
-L151:
-  %_318 = extractvalue {i64, i1} %_316, 0
-  store i64 %_318, i64* %_62
-  %_319 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 10)
-  %_320 = extractvalue {i64, i1} %_319, 1
-  br i1 %_320, label %L154, label %L153
-L152:
-  store i64 7937, i64* %_87
-  br label %L2
-L153:
-  %_321 = extractvalue {i64, i1} %_319, 0
-  store i64 %_321, i64* %_63
-  %_322 = load i64, i64* %_62
-  %_323 = load i64, i64* %_63
-  %_324 = icmp eq i64 %_323, 0
-  br i1 %_324, label %L155, label %L156
-L154:
-  store i64 7937, i64* %_87
-  br label %L2
-L155:
-  store i64 7938, i64* %_87
-  br label %L2
-L156:
-  %_325 = icmp eq i64 %_322, -9223372036854775808
-  %_326 = icmp eq i64 %_323, -1
-  %_327 = and i1 %_325, %_326
-  br i1 %_327, label %L158, label %L157
-L157:
-  %_328 = srem i64 %_322, %_323
-  store i64 %_328, i64* %_64
-  br label %L159
-L158:
-  store i64 0, i64* %_64
-  br label %L159
-L159:
-  %_329 = load i64, i64* %_64
-  %_330 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_329)
-  call void @_Bio__println (i8 addrspace (1)* %_330)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_65
-  %_331 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_332 = extractvalue {i64, i1} %_331, 1
-  br i1 %_332, label %L161, label %L160
-L160:
-  %_333 = extractvalue {i64, i1} %_331, 0
-  store i64 %_333, i64* %_66
-  %_334 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 10)
-  %_335 = extractvalue {i64, i1} %_334, 1
-  br i1 %_335, label %L163, label %L162
-L161:
-  store i64 8193, i64* %_87
-  br label %L2
-L162:
-  %_336 = extractvalue {i64, i1} %_334, 0
-  store i64 %_336, i64* %_67
-  %_337 = load i64, i64* %_66
-  %_338 = load i64, i64* %_67
-  %_339 = icmp eq i64 %_338, 0
-  br i1 %_339, label %L164, label %L165
-L163:
-  store i64 8193, i64* %_87
-  br label %L2
-L164:
-  store i64 8194, i64* %_87
-  br label %L2
-L165:
-  %_340 = icmp eq i64 %_337, -9223372036854775808
-  %_341 = icmp eq i64 %_338, -1
-  %_342 = and i1 %_340, %_341
-  br i1 %_342, label %L167, label %L166
-L166:
-  %_343 = srem i64 %_337, %_338
-  store i64 %_343, i64* %_68
-  br label %L168
-L167:
-  store i64 0, i64* %_68
-  br label %L168
-L168:
-  %_344 = load i64, i64* %_68
-  %_345 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_344)
-  call void @_Bio__println (i8 addrspace (1)* %_345)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_69
-  %_346 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_347 = extractvalue {i64, i1} %_346, 1
-  br i1 %_347, label %L170, label %L169
-L169:
-  %_348 = extractvalue {i64, i1} %_346, 0
-  store i64 %_348, i64* %_70
-  %_349 = load i64, i64* %_70
-  %_350 = icmp eq i64 %_349, 0
-  br i1 %_350, label %L171, label %L172
-L170:
-  store i64 8705, i64* %_87
-  br label %L2
-L171:
-  store i64 8706, i64* %_87
-  br label %L2
-L172:
-  %_351 = icmp eq i64 9223372036854775806, -9223372036854775808
-  %_352 = icmp eq i64 %_349, -1
-  %_353 = and i1 %_351, %_352
-  br i1 %_353, label %L174, label %L173
-L173:
-  %_354 = srem i64 9223372036854775806, %_349
-  store i64 %_354, i64* %_71
-  br label %L175
-L174:
-  store i64 0, i64* %_71
-  br label %L175
-L175:
-  %_355 = load i64, i64* %_71
-  %_356 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_355)
-  call void @_Bio__println (i8 addrspace (1)* %_356)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_72
-  %_357 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_358 = extractvalue {i64, i1} %_357, 1
-  br i1 %_358, label %L177, label %L176
-L176:
-  %_359 = extractvalue {i64, i1} %_357, 0
-  store i64 %_359, i64* %_73
-  %_360 = load i64, i64* %_73
-  %_361 = icmp eq i64 %_360, 0
-  br i1 %_361, label %L178, label %L179
-L177:
-  store i64 8961, i64* %_87
-  br label %L2
-L178:
-  store i64 8962, i64* %_87
-  br label %L2
-L179:
-  %_362 = icmp eq i64 1, -9223372036854775808
-  %_363 = icmp eq i64 %_360, -1
-  %_364 = and i1 %_362, %_363
-  br i1 %_364, label %L181, label %L180
-L180:
-  %_365 = srem i64 1, %_360
-  store i64 %_365, i64* %_74
-  br label %L182
-L181:
-  store i64 0, i64* %_74
-  br label %L182
-L182:
-  %_366 = load i64, i64* %_74
-  %_367 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_366)
-  call void @_Bio__println (i8 addrspace (1)* %_367)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_75
-  %_368 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_369 = extractvalue {i64, i1} %_368, 1
-  br i1 %_369, label %L184, label %L183
-L183:
-  %_370 = extractvalue {i64, i1} %_368, 0
-  store i64 %_370, i64* %_76
-  %_371 = load i64, i64* %_76
-  %_372 = icmp eq i64 %_371, 0
-  br i1 %_372, label %L185, label %L186
-L184:
-  store i64 9217, i64* %_87
-  br label %L2
-L185:
-  store i64 9218, i64* %_87
-  br label %L2
-L186:
-  %_373 = icmp eq i64 0, -9223372036854775808
-  %_374 = icmp eq i64 %_371, -1
-  %_375 = and i1 %_373, %_374
-  br i1 %_375, label %L188, label %L187
-L187:
-  %_376 = srem i64 0, %_371
-  store i64 %_376, i64* %_77
-  br label %L189
-L188:
-  store i64 0, i64* %_77
-  br label %L189
-L189:
-  %_377 = load i64, i64* %_77
-  %_378 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_377)
-  call void @_Bio__println (i8 addrspace (1)* %_378)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_78
-  %_379 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 1)
-  %_380 = extractvalue {i64, i1} %_379, 1
-  br i1 %_380, label %L191, label %L190
-L190:
-  %_381 = extractvalue {i64, i1} %_379, 0
-  store i64 %_381, i64* %_79
-  %_382 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_383 = extractvalue {i64, i1} %_382, 1
-  br i1 %_383, label %L193, label %L192
-L191:
-  store i64 9473, i64* %_87
-  br label %L2
-L192:
-  %_384 = extractvalue {i64, i1} %_382, 0
-  store i64 %_384, i64* %_80
-  %_385 = load i64, i64* %_79
-  %_386 = load i64, i64* %_80
-  %_387 = icmp eq i64 %_386, 0
-  br i1 %_387, label %L194, label %L195
-L193:
-  store i64 9473, i64* %_87
-  br label %L2
-L194:
-  store i64 9474, i64* %_87
-  br label %L2
-L195:
-  %_388 = icmp eq i64 %_385, -9223372036854775808
-  %_389 = icmp eq i64 %_386, -1
-  %_390 = and i1 %_388, %_389
-  br i1 %_390, label %L197, label %L196
-L196:
-  %_391 = srem i64 %_385, %_386
-  store i64 %_391, i64* %_81
-  br label %L198
-L197:
-  store i64 0, i64* %_81
-  br label %L198
-L198:
-  %_392 = load i64, i64* %_81
-  %_393 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_392)
-  call void @_Bio__println (i8 addrspace (1)* %_393)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_82
-  %_394 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_395 = extractvalue {i64, i1} %_394, 1
-  br i1 %_395, label %L200, label %L199
-L199:
-  %_396 = extractvalue {i64, i1} %_394, 0
-  store i64 %_396, i64* %_83
-  %_397 = call {i64, i1} @llvm.ssub.with.overflow.i64 (i64 0, i64 9223372036854775806)
-  %_398 = extractvalue {i64, i1} %_397, 1
-  br i1 %_398, label %L202, label %L201
-L200:
-  store i64 9729, i64* %_87
-  br label %L2
-L201:
-  %_399 = extractvalue {i64, i1} %_397, 0
-  store i64 %_399, i64* %_84
-  %_400 = load i64, i64* %_83
-  %_401 = load i64, i64* %_84
-  %_402 = icmp eq i64 %_401, 0
-  br i1 %_402, label %L203, label %L204
-L202:
-  store i64 9729, i64* %_87
-  br label %L2
-L203:
-  store i64 9730, i64* %_87
-  br label %L2
-L204:
-  %_403 = icmp eq i64 %_400, -9223372036854775808
-  %_404 = icmp eq i64 %_401, -1
-  %_405 = and i1 %_403, %_404
-  br i1 %_405, label %L206, label %L205
-L205:
-  %_406 = srem i64 %_400, %_401
-  store i64 %_406, i64* %_85
-  br label %L207
-L206:
-  store i64 0, i64* %_85
-  br label %L207
-L207:
-  %_407 = load i64, i64* %_85
-  %_408 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 %_407)
-  call void @_Bio__println (i8 addrspace (1)* %_408)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_86
+97:
+  store i64 1026, i64* %88
+  br label %94
+98:
+  %99 = icmp eq i64 9223372036854775806, -9223372036854775808
+  %100 = icmp eq i64 9223372036854775806, -1
+  %101 = and i1 %99, %100
+  br i1 %101, label %104, label %102
+102:
+  %103 = srem i64 9223372036854775806, 9223372036854775806
+  store i64 %103, i64* %1
+  br label %105
+104:
+  store i64 0, i64* %1
+  br label %105
+105:
+  %106 = load i64, i64* %1
+  %107 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %106)
+  call void @_Bio__println(i8 addrspace(1)* %107)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  %108 = icmp eq i64 9223372036854775806, 0
+  br i1 %108, label %109, label %110
+109:
+  store i64 1282, i64* %88
+  br label %94
+110:
+  %111 = icmp eq i64 1, -9223372036854775808
+  %112 = icmp eq i64 9223372036854775806, -1
+  %113 = and i1 %111, %112
+  br i1 %113, label %116, label %114
+114:
+  %115 = srem i64 1, 9223372036854775806
+  store i64 %115, i64* %3
+  br label %117
+116:
+  store i64 0, i64* %3
+  br label %117
+117:
+  %118 = load i64, i64* %3
+  %119 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %118)
+  call void @_Bio__println(i8 addrspace(1)* %119)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  %120 = icmp eq i64 9223372036854775806, 0
+  br i1 %120, label %121, label %122
+121:
+  store i64 1538, i64* %88
+  br label %94
+122:
+  %123 = icmp eq i64 0, -9223372036854775808
+  %124 = icmp eq i64 9223372036854775806, -1
+  %125 = and i1 %123, %124
+  br i1 %125, label %128, label %126
+126:
+  %127 = srem i64 0, 9223372036854775806
+  store i64 %127, i64* %5
+  br label %129
+128:
+  store i64 0, i64* %5
+  br label %129
+129:
+  %130 = load i64, i64* %5
+  %131 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %130)
+  call void @_Bio__println(i8 addrspace(1)* %131)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %132 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %133 = extractvalue {i64, i1} %132, 1
+  br i1 %133, label %138, label %134
+134:
+  %135 = extractvalue {i64, i1} %132, 0
+  store i64 %135, i64* %7
+  %136 = load i64, i64* %7
+  %137 = icmp eq i64 9223372036854775806, 0
+  br i1 %137, label %139, label %140
+138:
+  store i64 1793, i64* %88
+  br label %94
+139:
+  store i64 1794, i64* %88
+  br label %94
+140:
+  %141 = icmp eq i64 %136, -9223372036854775808
+  %142 = icmp eq i64 9223372036854775806, -1
+  %143 = and i1 %141, %142
+  br i1 %143, label %146, label %144
+144:
+  %145 = srem i64 %136, 9223372036854775806
+  store i64 %145, i64* %8
+  br label %147
+146:
+  store i64 0, i64* %8
+  br label %147
+147:
+  %148 = load i64, i64* %8
+  %149 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %148)
+  call void @_Bio__println(i8 addrspace(1)* %149)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %9
+  %150 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %151 = extractvalue {i64, i1} %150, 1
+  br i1 %151, label %156, label %152
+152:
+  %153 = extractvalue {i64, i1} %150, 0
+  store i64 %153, i64* %10
+  %154 = load i64, i64* %10
+  %155 = icmp eq i64 9223372036854775806, 0
+  br i1 %155, label %157, label %158
+156:
+  store i64 2049, i64* %88
+  br label %94
+157:
+  store i64 2050, i64* %88
+  br label %94
+158:
+  %159 = icmp eq i64 %154, -9223372036854775808
+  %160 = icmp eq i64 9223372036854775806, -1
+  %161 = and i1 %159, %160
+  br i1 %161, label %164, label %162
+162:
+  %163 = srem i64 %154, 9223372036854775806
+  store i64 %163, i64* %11
+  br label %165
+164:
+  store i64 0, i64* %11
+  br label %165
+165:
+  %166 = load i64, i64* %11
+  %167 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %166)
+  call void @_Bio__println(i8 addrspace(1)* %167)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12
+  %168 = icmp eq i64 10, 0
+  br i1 %168, label %169, label %170
+169:
+  store i64 2562, i64* %88
+  br label %94
+170:
+  %171 = icmp eq i64 9223372036854775806, -9223372036854775808
+  %172 = icmp eq i64 10, -1
+  %173 = and i1 %171, %172
+  br i1 %173, label %176, label %174
+174:
+  %175 = srem i64 9223372036854775806, 10
+  store i64 %175, i64* %13
+  br label %177
+176:
+  store i64 0, i64* %13
+  br label %177
+177:
+  %178 = load i64, i64* %13
+  %179 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %178)
+  call void @_Bio__println(i8 addrspace(1)* %179)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %14
+  %180 = icmp eq i64 10, 0
+  br i1 %180, label %181, label %182
+181:
+  store i64 2818, i64* %88
+  br label %94
+182:
+  %183 = icmp eq i64 1, -9223372036854775808
+  %184 = icmp eq i64 10, -1
+  %185 = and i1 %183, %184
+  br i1 %185, label %188, label %186
+186:
+  %187 = srem i64 1, 10
+  store i64 %187, i64* %15
+  br label %189
+188:
+  store i64 0, i64* %15
+  br label %189
+189:
+  %190 = load i64, i64* %15
+  %191 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %190)
+  call void @_Bio__println(i8 addrspace(1)* %191)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %16
+  %192 = icmp eq i64 10, 0
+  br i1 %192, label %193, label %194
+193:
+  store i64 3074, i64* %88
+  br label %94
+194:
+  %195 = icmp eq i64 0, -9223372036854775808
+  %196 = icmp eq i64 10, -1
+  %197 = and i1 %195, %196
+  br i1 %197, label %200, label %198
+198:
+  %199 = srem i64 0, 10
+  store i64 %199, i64* %17
+  br label %201
+200:
+  store i64 0, i64* %17
+  br label %201
+201:
+  %202 = load i64, i64* %17
+  %203 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %202)
+  call void @_Bio__println(i8 addrspace(1)* %203)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %18
+  %204 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %205 = extractvalue {i64, i1} %204, 1
+  br i1 %205, label %210, label %206
+206:
+  %207 = extractvalue {i64, i1} %204, 0
+  store i64 %207, i64* %19
+  %208 = load i64, i64* %19
+  %209 = icmp eq i64 10, 0
+  br i1 %209, label %211, label %212
+210:
+  store i64 3329, i64* %88
+  br label %94
+211:
+  store i64 3330, i64* %88
+  br label %94
+212:
+  %213 = icmp eq i64 %208, -9223372036854775808
+  %214 = icmp eq i64 10, -1
+  %215 = and i1 %213, %214
+  br i1 %215, label %218, label %216
+216:
+  %217 = srem i64 %208, 10
+  store i64 %217, i64* %20
+  br label %219
+218:
+  store i64 0, i64* %20
+  br label %219
+219:
+  %220 = load i64, i64* %20
+  %221 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %220)
+  call void @_Bio__println(i8 addrspace(1)* %221)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %21
+  %222 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %223 = extractvalue {i64, i1} %222, 1
+  br i1 %223, label %228, label %224
+224:
+  %225 = extractvalue {i64, i1} %222, 0
+  store i64 %225, i64* %22
+  %226 = load i64, i64* %22
+  %227 = icmp eq i64 10, 0
+  br i1 %227, label %229, label %230
+228:
+  store i64 3585, i64* %88
+  br label %94
+229:
+  store i64 3586, i64* %88
+  br label %94
+230:
+  %231 = icmp eq i64 %226, -9223372036854775808
+  %232 = icmp eq i64 10, -1
+  %233 = and i1 %231, %232
+  br i1 %233, label %236, label %234
+234:
+  %235 = srem i64 %226, 10
+  store i64 %235, i64* %23
+  br label %237
+236:
+  store i64 0, i64* %23
+  br label %237
+237:
+  %238 = load i64, i64* %23
+  %239 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %238)
+  call void @_Bio__println(i8 addrspace(1)* %239)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %24
+  %240 = icmp eq i64 1, 0
+  br i1 %240, label %241, label %242
+241:
+  store i64 4098, i64* %88
+  br label %94
+242:
+  %243 = icmp eq i64 9223372036854775806, -9223372036854775808
+  %244 = icmp eq i64 1, -1
+  %245 = and i1 %243, %244
+  br i1 %245, label %248, label %246
+246:
+  %247 = srem i64 9223372036854775806, 1
+  store i64 %247, i64* %25
+  br label %249
+248:
+  store i64 0, i64* %25
+  br label %249
+249:
+  %250 = load i64, i64* %25
+  %251 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %250)
+  call void @_Bio__println(i8 addrspace(1)* %251)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %26
+  %252 = icmp eq i64 1, 0
+  br i1 %252, label %253, label %254
+253:
+  store i64 4354, i64* %88
+  br label %94
+254:
+  %255 = icmp eq i64 1, -9223372036854775808
+  %256 = icmp eq i64 1, -1
+  %257 = and i1 %255, %256
+  br i1 %257, label %260, label %258
+258:
+  %259 = srem i64 1, 1
+  store i64 %259, i64* %27
+  br label %261
+260:
+  store i64 0, i64* %27
+  br label %261
+261:
+  %262 = load i64, i64* %27
+  %263 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %262)
+  call void @_Bio__println(i8 addrspace(1)* %263)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %28
+  %264 = icmp eq i64 1, 0
+  br i1 %264, label %265, label %266
+265:
+  store i64 4610, i64* %88
+  br label %94
+266:
+  %267 = icmp eq i64 0, -9223372036854775808
+  %268 = icmp eq i64 1, -1
+  %269 = and i1 %267, %268
+  br i1 %269, label %272, label %270
+270:
+  %271 = srem i64 0, 1
+  store i64 %271, i64* %29
+  br label %273
+272:
+  store i64 0, i64* %29
+  br label %273
+273:
+  %274 = load i64, i64* %29
+  %275 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %274)
+  call void @_Bio__println(i8 addrspace(1)* %275)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %30
+  %276 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %277 = extractvalue {i64, i1} %276, 1
+  br i1 %277, label %282, label %278
+278:
+  %279 = extractvalue {i64, i1} %276, 0
+  store i64 %279, i64* %31
+  %280 = load i64, i64* %31
+  %281 = icmp eq i64 1, 0
+  br i1 %281, label %283, label %284
+282:
+  store i64 4865, i64* %88
+  br label %94
+283:
+  store i64 4866, i64* %88
+  br label %94
+284:
+  %285 = icmp eq i64 %280, -9223372036854775808
+  %286 = icmp eq i64 1, -1
+  %287 = and i1 %285, %286
+  br i1 %287, label %290, label %288
+288:
+  %289 = srem i64 %280, 1
+  store i64 %289, i64* %32
+  br label %291
+290:
+  store i64 0, i64* %32
+  br label %291
+291:
+  %292 = load i64, i64* %32
+  %293 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %292)
+  call void @_Bio__println(i8 addrspace(1)* %293)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %33
+  %294 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %295 = extractvalue {i64, i1} %294, 1
+  br i1 %295, label %300, label %296
+296:
+  %297 = extractvalue {i64, i1} %294, 0
+  store i64 %297, i64* %34
+  %298 = load i64, i64* %34
+  %299 = icmp eq i64 1, 0
+  br i1 %299, label %301, label %302
+300:
+  store i64 5121, i64* %88
+  br label %94
+301:
+  store i64 5122, i64* %88
+  br label %94
+302:
+  %303 = icmp eq i64 %298, -9223372036854775808
+  %304 = icmp eq i64 1, -1
+  %305 = and i1 %303, %304
+  br i1 %305, label %308, label %306
+306:
+  %307 = srem i64 %298, 1
+  store i64 %307, i64* %35
+  br label %309
+308:
+  store i64 0, i64* %35
+  br label %309
+309:
+  %310 = load i64, i64* %35
+  %311 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %310)
+  call void @_Bio__println(i8 addrspace(1)* %311)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %36
+  %312 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %313 = extractvalue {i64, i1} %312, 1
+  br i1 %313, label %318, label %314
+314:
+  %315 = extractvalue {i64, i1} %312, 0
+  store i64 %315, i64* %37
+  %316 = load i64, i64* %37
+  %317 = icmp eq i64 %316, 0
+  br i1 %317, label %319, label %320
+318:
+  store i64 5633, i64* %88
+  br label %94
+319:
+  store i64 5634, i64* %88
+  br label %94
+320:
+  %321 = icmp eq i64 9223372036854775806, -9223372036854775808
+  %322 = icmp eq i64 %316, -1
+  %323 = and i1 %321, %322
+  br i1 %323, label %326, label %324
+324:
+  %325 = srem i64 9223372036854775806, %316
+  store i64 %325, i64* %38
+  br label %327
+326:
+  store i64 0, i64* %38
+  br label %327
+327:
+  %328 = load i64, i64* %38
+  %329 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %328)
+  call void @_Bio__println(i8 addrspace(1)* %329)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %39
+  %330 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %331 = extractvalue {i64, i1} %330, 1
+  br i1 %331, label %336, label %332
+332:
+  %333 = extractvalue {i64, i1} %330, 0
+  store i64 %333, i64* %40
+  %334 = load i64, i64* %40
+  %335 = icmp eq i64 %334, 0
+  br i1 %335, label %337, label %338
+336:
+  store i64 5889, i64* %88
+  br label %94
+337:
+  store i64 5890, i64* %88
+  br label %94
+338:
+  %339 = icmp eq i64 1, -9223372036854775808
+  %340 = icmp eq i64 %334, -1
+  %341 = and i1 %339, %340
+  br i1 %341, label %344, label %342
+342:
+  %343 = srem i64 1, %334
+  store i64 %343, i64* %41
+  br label %345
+344:
+  store i64 0, i64* %41
+  br label %345
+345:
+  %346 = load i64, i64* %41
+  %347 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %346)
+  call void @_Bio__println(i8 addrspace(1)* %347)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %42
+  %348 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %349 = extractvalue {i64, i1} %348, 1
+  br i1 %349, label %354, label %350
+350:
+  %351 = extractvalue {i64, i1} %348, 0
+  store i64 %351, i64* %43
+  %352 = load i64, i64* %43
+  %353 = icmp eq i64 %352, 0
+  br i1 %353, label %355, label %356
+354:
+  store i64 6145, i64* %88
+  br label %94
+355:
+  store i64 6146, i64* %88
+  br label %94
+356:
+  %357 = icmp eq i64 0, -9223372036854775808
+  %358 = icmp eq i64 %352, -1
+  %359 = and i1 %357, %358
+  br i1 %359, label %362, label %360
+360:
+  %361 = srem i64 0, %352
+  store i64 %361, i64* %44
+  br label %363
+362:
+  store i64 0, i64* %44
+  br label %363
+363:
+  %364 = load i64, i64* %44
+  %365 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %364)
+  call void @_Bio__println(i8 addrspace(1)* %365)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %45
+  %366 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %367 = extractvalue {i64, i1} %366, 1
+  br i1 %367, label %372, label %368
+368:
+  %369 = extractvalue {i64, i1} %366, 0
+  store i64 %369, i64* %46
+  %370 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %371 = extractvalue {i64, i1} %370, 1
+  br i1 %371, label %378, label %373
+372:
+  store i64 6401, i64* %88
+  br label %94
+373:
+  %374 = extractvalue {i64, i1} %370, 0
+  store i64 %374, i64* %47
+  %375 = load i64, i64* %46
+  %376 = load i64, i64* %47
+  %377 = icmp eq i64 %376, 0
+  br i1 %377, label %379, label %380
+378:
+  store i64 6401, i64* %88
+  br label %94
+379:
+  store i64 6402, i64* %88
+  br label %94
+380:
+  %381 = icmp eq i64 %375, -9223372036854775808
+  %382 = icmp eq i64 %376, -1
+  %383 = and i1 %381, %382
+  br i1 %383, label %386, label %384
+384:
+  %385 = srem i64 %375, %376
+  store i64 %385, i64* %48
+  br label %387
+386:
+  store i64 0, i64* %48
+  br label %387
+387:
+  %388 = load i64, i64* %48
+  %389 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %388)
+  call void @_Bio__println(i8 addrspace(1)* %389)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %49
+  %390 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %391 = extractvalue {i64, i1} %390, 1
+  br i1 %391, label %396, label %392
+392:
+  %393 = extractvalue {i64, i1} %390, 0
+  store i64 %393, i64* %50
+  %394 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %395 = extractvalue {i64, i1} %394, 1
+  br i1 %395, label %402, label %397
+396:
+  store i64 6657, i64* %88
+  br label %94
+397:
+  %398 = extractvalue {i64, i1} %394, 0
+  store i64 %398, i64* %51
+  %399 = load i64, i64* %50
+  %400 = load i64, i64* %51
+  %401 = icmp eq i64 %400, 0
+  br i1 %401, label %403, label %404
+402:
+  store i64 6657, i64* %88
+  br label %94
+403:
+  store i64 6658, i64* %88
+  br label %94
+404:
+  %405 = icmp eq i64 %399, -9223372036854775808
+  %406 = icmp eq i64 %400, -1
+  %407 = and i1 %405, %406
+  br i1 %407, label %410, label %408
+408:
+  %409 = srem i64 %399, %400
+  store i64 %409, i64* %52
+  br label %411
+410:
+  store i64 0, i64* %52
+  br label %411
+411:
+  %412 = load i64, i64* %52
+  %413 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %412)
+  call void @_Bio__println(i8 addrspace(1)* %413)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %53
+  %414 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 10)
+  %415 = extractvalue {i64, i1} %414, 1
+  br i1 %415, label %420, label %416
+416:
+  %417 = extractvalue {i64, i1} %414, 0
+  store i64 %417, i64* %54
+  %418 = load i64, i64* %54
+  %419 = icmp eq i64 %418, 0
+  br i1 %419, label %421, label %422
+420:
+  store i64 7169, i64* %88
+  br label %94
+421:
+  store i64 7170, i64* %88
+  br label %94
+422:
+  %423 = icmp eq i64 9223372036854775806, -9223372036854775808
+  %424 = icmp eq i64 %418, -1
+  %425 = and i1 %423, %424
+  br i1 %425, label %428, label %426
+426:
+  %427 = srem i64 9223372036854775806, %418
+  store i64 %427, i64* %55
+  br label %429
+428:
+  store i64 0, i64* %55
+  br label %429
+429:
+  %430 = load i64, i64* %55
+  %431 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %430)
+  call void @_Bio__println(i8 addrspace(1)* %431)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %56
+  %432 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 10)
+  %433 = extractvalue {i64, i1} %432, 1
+  br i1 %433, label %438, label %434
+434:
+  %435 = extractvalue {i64, i1} %432, 0
+  store i64 %435, i64* %57
+  %436 = load i64, i64* %57
+  %437 = icmp eq i64 %436, 0
+  br i1 %437, label %439, label %440
+438:
+  store i64 7425, i64* %88
+  br label %94
+439:
+  store i64 7426, i64* %88
+  br label %94
+440:
+  %441 = icmp eq i64 1, -9223372036854775808
+  %442 = icmp eq i64 %436, -1
+  %443 = and i1 %441, %442
+  br i1 %443, label %446, label %444
+444:
+  %445 = srem i64 1, %436
+  store i64 %445, i64* %58
+  br label %447
+446:
+  store i64 0, i64* %58
+  br label %447
+447:
+  %448 = load i64, i64* %58
+  %449 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %448)
+  call void @_Bio__println(i8 addrspace(1)* %449)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %59
+  %450 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 10)
+  %451 = extractvalue {i64, i1} %450, 1
+  br i1 %451, label %456, label %452
+452:
+  %453 = extractvalue {i64, i1} %450, 0
+  store i64 %453, i64* %60
+  %454 = load i64, i64* %60
+  %455 = icmp eq i64 %454, 0
+  br i1 %455, label %457, label %458
+456:
+  store i64 7681, i64* %88
+  br label %94
+457:
+  store i64 7682, i64* %88
+  br label %94
+458:
+  %459 = icmp eq i64 0, -9223372036854775808
+  %460 = icmp eq i64 %454, -1
+  %461 = and i1 %459, %460
+  br i1 %461, label %464, label %462
+462:
+  %463 = srem i64 0, %454
+  store i64 %463, i64* %61
+  br label %465
+464:
+  store i64 0, i64* %61
+  br label %465
+465:
+  %466 = load i64, i64* %61
+  %467 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %466)
+  call void @_Bio__println(i8 addrspace(1)* %467)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %62
+  %468 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %469 = extractvalue {i64, i1} %468, 1
+  br i1 %469, label %474, label %470
+470:
+  %471 = extractvalue {i64, i1} %468, 0
+  store i64 %471, i64* %63
+  %472 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 10)
+  %473 = extractvalue {i64, i1} %472, 1
+  br i1 %473, label %480, label %475
+474:
+  store i64 7937, i64* %88
+  br label %94
+475:
+  %476 = extractvalue {i64, i1} %472, 0
+  store i64 %476, i64* %64
+  %477 = load i64, i64* %63
+  %478 = load i64, i64* %64
+  %479 = icmp eq i64 %478, 0
+  br i1 %479, label %481, label %482
+480:
+  store i64 7937, i64* %88
+  br label %94
+481:
+  store i64 7938, i64* %88
+  br label %94
+482:
+  %483 = icmp eq i64 %477, -9223372036854775808
+  %484 = icmp eq i64 %478, -1
+  %485 = and i1 %483, %484
+  br i1 %485, label %488, label %486
+486:
+  %487 = srem i64 %477, %478
+  store i64 %487, i64* %65
+  br label %489
+488:
+  store i64 0, i64* %65
+  br label %489
+489:
+  %490 = load i64, i64* %65
+  %491 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %490)
+  call void @_Bio__println(i8 addrspace(1)* %491)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %66
+  %492 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %493 = extractvalue {i64, i1} %492, 1
+  br i1 %493, label %498, label %494
+494:
+  %495 = extractvalue {i64, i1} %492, 0
+  store i64 %495, i64* %67
+  %496 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 10)
+  %497 = extractvalue {i64, i1} %496, 1
+  br i1 %497, label %504, label %499
+498:
+  store i64 8193, i64* %88
+  br label %94
+499:
+  %500 = extractvalue {i64, i1} %496, 0
+  store i64 %500, i64* %68
+  %501 = load i64, i64* %67
+  %502 = load i64, i64* %68
+  %503 = icmp eq i64 %502, 0
+  br i1 %503, label %505, label %506
+504:
+  store i64 8193, i64* %88
+  br label %94
+505:
+  store i64 8194, i64* %88
+  br label %94
+506:
+  %507 = icmp eq i64 %501, -9223372036854775808
+  %508 = icmp eq i64 %502, -1
+  %509 = and i1 %507, %508
+  br i1 %509, label %512, label %510
+510:
+  %511 = srem i64 %501, %502
+  store i64 %511, i64* %69
+  br label %513
+512:
+  store i64 0, i64* %69
+  br label %513
+513:
+  %514 = load i64, i64* %69
+  %515 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %514)
+  call void @_Bio__println(i8 addrspace(1)* %515)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %70
+  %516 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %517 = extractvalue {i64, i1} %516, 1
+  br i1 %517, label %522, label %518
+518:
+  %519 = extractvalue {i64, i1} %516, 0
+  store i64 %519, i64* %71
+  %520 = load i64, i64* %71
+  %521 = icmp eq i64 %520, 0
+  br i1 %521, label %523, label %524
+522:
+  store i64 8705, i64* %88
+  br label %94
+523:
+  store i64 8706, i64* %88
+  br label %94
+524:
+  %525 = icmp eq i64 9223372036854775806, -9223372036854775808
+  %526 = icmp eq i64 %520, -1
+  %527 = and i1 %525, %526
+  br i1 %527, label %530, label %528
+528:
+  %529 = srem i64 9223372036854775806, %520
+  store i64 %529, i64* %72
+  br label %531
+530:
+  store i64 0, i64* %72
+  br label %531
+531:
+  %532 = load i64, i64* %72
+  %533 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %532)
+  call void @_Bio__println(i8 addrspace(1)* %533)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %73
+  %534 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %535 = extractvalue {i64, i1} %534, 1
+  br i1 %535, label %540, label %536
+536:
+  %537 = extractvalue {i64, i1} %534, 0
+  store i64 %537, i64* %74
+  %538 = load i64, i64* %74
+  %539 = icmp eq i64 %538, 0
+  br i1 %539, label %541, label %542
+540:
+  store i64 8961, i64* %88
+  br label %94
+541:
+  store i64 8962, i64* %88
+  br label %94
+542:
+  %543 = icmp eq i64 1, -9223372036854775808
+  %544 = icmp eq i64 %538, -1
+  %545 = and i1 %543, %544
+  br i1 %545, label %548, label %546
+546:
+  %547 = srem i64 1, %538
+  store i64 %547, i64* %75
+  br label %549
+548:
+  store i64 0, i64* %75
+  br label %549
+549:
+  %550 = load i64, i64* %75
+  %551 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %550)
+  call void @_Bio__println(i8 addrspace(1)* %551)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %76
+  %552 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %553 = extractvalue {i64, i1} %552, 1
+  br i1 %553, label %558, label %554
+554:
+  %555 = extractvalue {i64, i1} %552, 0
+  store i64 %555, i64* %77
+  %556 = load i64, i64* %77
+  %557 = icmp eq i64 %556, 0
+  br i1 %557, label %559, label %560
+558:
+  store i64 9217, i64* %88
+  br label %94
+559:
+  store i64 9218, i64* %88
+  br label %94
+560:
+  %561 = icmp eq i64 0, -9223372036854775808
+  %562 = icmp eq i64 %556, -1
+  %563 = and i1 %561, %562
+  br i1 %563, label %566, label %564
+564:
+  %565 = srem i64 0, %556
+  store i64 %565, i64* %78
+  br label %567
+566:
+  store i64 0, i64* %78
+  br label %567
+567:
+  %568 = load i64, i64* %78
+  %569 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %568)
+  call void @_Bio__println(i8 addrspace(1)* %569)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %79
+  %570 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %571 = extractvalue {i64, i1} %570, 1
+  br i1 %571, label %576, label %572
+572:
+  %573 = extractvalue {i64, i1} %570, 0
+  store i64 %573, i64* %80
+  %574 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %575 = extractvalue {i64, i1} %574, 1
+  br i1 %575, label %582, label %577
+576:
+  store i64 9473, i64* %88
+  br label %94
+577:
+  %578 = extractvalue {i64, i1} %574, 0
+  store i64 %578, i64* %81
+  %579 = load i64, i64* %80
+  %580 = load i64, i64* %81
+  %581 = icmp eq i64 %580, 0
+  br i1 %581, label %583, label %584
+582:
+  store i64 9473, i64* %88
+  br label %94
+583:
+  store i64 9474, i64* %88
+  br label %94
+584:
+  %585 = icmp eq i64 %579, -9223372036854775808
+  %586 = icmp eq i64 %580, -1
+  %587 = and i1 %585, %586
+  br i1 %587, label %590, label %588
+588:
+  %589 = srem i64 %579, %580
+  store i64 %589, i64* %82
+  br label %591
+590:
+  store i64 0, i64* %82
+  br label %591
+591:
+  %592 = load i64, i64* %82
+  %593 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %592)
+  call void @_Bio__println(i8 addrspace(1)* %593)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %83
+  %594 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %595 = extractvalue {i64, i1} %594, 1
+  br i1 %595, label %600, label %596
+596:
+  %597 = extractvalue {i64, i1} %594, 0
+  store i64 %597, i64* %84
+  %598 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %599 = extractvalue {i64, i1} %598, 1
+  br i1 %599, label %606, label %601
+600:
+  store i64 9729, i64* %88
+  br label %94
+601:
+  %602 = extractvalue {i64, i1} %598, 0
+  store i64 %602, i64* %85
+  %603 = load i64, i64* %84
+  %604 = load i64, i64* %85
+  %605 = icmp eq i64 %604, 0
+  br i1 %605, label %607, label %608
+606:
+  store i64 9729, i64* %88
+  br label %94
+607:
+  store i64 9730, i64* %88
+  br label %94
+608:
+  %609 = icmp eq i64 %603, -9223372036854775808
+  %610 = icmp eq i64 %604, -1
+  %611 = and i1 %609, %610
+  br i1 %611, label %614, label %612
+612:
+  %613 = srem i64 %603, %604
+  store i64 %613, i64* %86
+  br label %615
+614:
+  store i64 0, i64* %86
+  br label %615
+615:
+  %616 = load i64, i64* %86
+  %617 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %616)
+  call void @_Bio__println(i8 addrspace(1)* %617)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %87
   ret void
 }

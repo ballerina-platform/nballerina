@@ -1,46 +1,46 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic (i64) noreturn cold
-declare i8 addrspace (1)* @_bal_int_to_tagged (i64)
-declare void @_Bio__println (i8 addrspace (1)*)
-define void @_B_main () {
-  %_0 = alloca i1
-  %_1 = alloca i8 addrspace (1)*
-  %_2 = alloca i8 addrspace (1)*
-  %_3 = alloca i8 addrspace (1)*
-  %_4 = alloca i8
-  %_5 = load i8*, i8** @_bal_stack_guard
-  %_6 = icmp ult i8* %_4, %_5
-  br i1 %_6, label %L4, label %L1
-L1:
-  call void @_B_makeNil ()
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_1
-  call void @_B_makeNil ()
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_2
-  %_7 = load i8 addrspace (1)*, i8 addrspace (1)** %_1
-  %_8 = load i8 addrspace (1)*, i8 addrspace (1)** %_2
-  %_9 = icmp eq i8 addrspace (1)* %_7, %_8
-  store i1 %_9, i1* %_0
-  %_10 = load i1, i1* %_0
-  br i1 %_10, label %L2, label %L3
-L2:
-  %_11 = call i8 addrspace (1)* @_bal_int_to_tagged (i64 1)
-  call void @_Bio__println (i8 addrspace (1)* %_11)
-  store i8 addrspace (1)* null, i8 addrspace (1)** %_3
-  br label %L3
-L3:
+declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+define void @_B_main() {
+  %1 = alloca i1
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i8
+  %6 = load i8*, i8** @_bal_stack_guard
+  %7 = icmp ult i8* %5, %6
+  br i1 %7, label %16, label %8
+8:
+  call void @_B_makeNil()
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  call void @_B_makeNil()
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  %9 = load i8 addrspace(1)*, i8 addrspace(1)** %2
+  %10 = load i8 addrspace(1)*, i8 addrspace(1)** %3
+  %11 = icmp eq i8 addrspace(1)* %9, %10
+  store i1 %11, i1* %1
+  %12 = load i1, i1* %1
+  br i1 %12, label %13, label %15
+13:
+  %14 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
+  call void @_Bio__println(i8 addrspace(1)* %14)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  br label %15
+15:
   ret void
-L4:
-  call void @_bal_panic (i64 772)
+16:
+  call void @_bal_panic(i64 772)
   unreachable
 }
-define internal void @_B_makeNil () {
-  %_0 = alloca i8
-  %_1 = load i8*, i8** @_bal_stack_guard
-  %_2 = icmp ult i8* %_0, %_1
-  br i1 %_2, label %L2, label %L1
-L1:
+define internal void @_B_makeNil() {
+  %1 = alloca i8
+  %2 = load i8*, i8** @_bal_stack_guard
+  %3 = icmp ult i8* %1, %2
+  br i1 %3, label %5, label %4
+4:
   ret void
-L2:
-  call void @_bal_panic (i64 2308)
+5:
+  call void @_bal_panic(i64 2308)
   unreachable
 }
