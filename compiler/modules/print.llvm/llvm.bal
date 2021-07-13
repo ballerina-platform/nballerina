@@ -243,7 +243,7 @@ public class FunctionDefn {
     private Value[] paramValues;
     private Linkage linkage = "external";
     private final Context context;
-    private map<string> nameTranslation = {};
+    private string[] nameTranslation = [];
     private int nameCounter;
     private final boolean[] isBasicBlock = [];
 
@@ -355,10 +355,9 @@ public class FunctionDefn {
     }
 
     function updateBasicBlockLabel(Unnamed label) returns string {
-        string k = "b" + label.toString(); // key in name translation table
         string newLabel = self.nameCounter.toString();
         self.nameCounter += 1;
-        self.nameTranslation[k] = "%" + newLabel;
+        self.nameTranslation[label] = "%" + newLabel;
         return newLabel;
     }
 
@@ -368,13 +367,12 @@ public class FunctionDefn {
                 // unnamed basic block
                 return name;
             }
-            string k = "v" + name.toString(); // key in name translation table
-            if self.nameTranslation.hasKey(k) {
-                return self.nameTranslation.get(k);
+            if self.nameTranslation.length() > name && self.nameTranslation[name] != "" {
+                return self.nameTranslation[name];
             }
             string newName = "%" + self.nameCounter.toString();
             self.nameCounter += 1;
-            self.nameTranslation[k] = newName;
+            self.nameTranslation[name] = newName;
             return newName;
         } else {
             return name;
@@ -386,13 +384,8 @@ public class FunctionDefn {
             if !self.isBasicBlock[name] {
                 panic error("Variable names must be updated before updating basic block names");
             }
-            string k = "b" + name.toString(); // key in name translation table
-            string? newName =  self.nameTranslation[k];
-            if newName is () {
-                panic error("Unnamed basic block not in translation table");
-            } else {
-                return newName;
-            }
+            string newName =  self.nameTranslation[name];
+            return newName;
         } else {
             return name;
         }
@@ -424,7 +417,7 @@ public class Builder {
     public function load(PointerValue ptr, Alignment? align=(), string? name=()) returns Value {
         BasicBlock bb = self.bb();
         Type ty = ptr.ty.pointsTo;
-        string|Unnamed reg = bb.func.genReg();
+        string|Unnamed reg = bb.func.genReg(name);
         addInsnWithAlign(bb, [reg, "=", "load", typeToString(ty), ",", typeToString(ptr.ty), ptr.operand], align);
         return new Value(ty, reg);
     }
@@ -441,7 +434,7 @@ public class Builder {
     // Corresponds to LLVMBuildNSW{Add,Mul,Sub}
     public function iArithmeticNoWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|Unnamed reg = bb.func.genReg();
+        string|Unnamed reg = bb.func.genReg(name);
         IntType ty = sameIntType(lhs, rhs);
         bb.addInsn(reg, "=", op, "nsw", ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
@@ -464,7 +457,7 @@ public class Builder {
     // Internally handle binary int operations without wrapping
     function binaryIntNoWrap(IntOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|Unnamed reg = bb.func.genReg();
+        string|Unnamed reg = bb.func.genReg(name);
         IntType ty = sameIntType(lhs, rhs);
         bb.addInsn(reg, "=", op, ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
@@ -473,7 +466,7 @@ public class Builder {
     // Corresponds to LLVMBuildICmp
     public function iCmp(IntPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|Unnamed reg = bb.func.genReg();
+        string|Unnamed reg = bb.func.genReg(name);
         IntegralType ty = sameIntegralType(lhs, rhs);
         bb.addInsn(reg, "=", "icmp", op, typeToString(ty), lhs.operand, ",", rhs.operand);
         return new Value("i1", reg);
@@ -482,7 +475,7 @@ public class Builder {
     // Corresponds to LLVMBuildBitCast
     public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
-        string|Unnamed reg = bb.func.genReg();
+        string|Unnamed reg = bb.func.genReg(name);
         bb.addInsn(reg, "=", "bitcast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
         return new (destTy, reg);
     }
@@ -502,7 +495,7 @@ public class Builder {
     // Corresponds to LLVMBuildPtrToInt
     public function ptrToInt(PointerValue ptr, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|Unnamed reg = bb.func.genReg();
+        string|Unnamed reg = bb.func.genReg(name);
         bb.addInsn(reg, "=", "ptrtoint", typeToString(ptr.ty), ptr.operand, "to", typeToString(destTy));
         return new Value(destTy, reg);
     }
@@ -510,7 +503,7 @@ public class Builder {
     // Corresponds to LLVMBuildZExt
     public function zExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|Unnamed reg = bb.func.genReg();
+        string|Unnamed reg = bb.func.genReg(name);
         bb.addInsn(reg, "=", "zext", typeToString(val.ty), val.operand, "to", typeToString(destTy));
         return new Value(destTy, reg);
     }
@@ -518,7 +511,7 @@ public class Builder {
     // Corresponds to LLVMBuildSExt
     public function sExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
-        string|Unnamed reg = bb.func.genReg();
+        string|Unnamed reg = bb.func.genReg(name);
         bb.addInsn(reg, "=", "sext", typeToString(val.ty), val.operand, "to", typeToString(destTy));
         return new Value(destTy, reg);
     }
@@ -530,7 +523,7 @@ public class Builder {
                 panic err:illegalArgument("equal sized types are not allowed");
             }
             BasicBlock bb = self.bb();
-            string|Unnamed reg = bb.func.genReg();
+            string|Unnamed reg = bb.func.genReg(name);
             bb.addInsn(reg, "=", "trunc", typeToString(val.ty), val.operand, "to", typeToString(destinationType));
             return new Value(destinationType, reg);
         } 
@@ -570,7 +563,7 @@ public class Builder {
         }
         insnWords.push(")");
         if retType != "void" {
-            string|Unnamed reg = bb.func.genReg();
+            string|Unnamed reg = bb.func.genReg(name);
             bb.addInsn(reg, ...insnWords);
             return new Value(retType, reg);
         } else {
@@ -582,7 +575,7 @@ public class Builder {
     public function extractValue(Value value, int index, string? name=()) returns Value {
         if value.ty is StructType {
             BasicBlock bb = self.bb();
-            string|Unnamed reg = bb.func.genReg();
+            string|Unnamed reg = bb.func.genReg(name);
             bb.addInsn(reg, "=", "extractvalue", typeToString(value.ty), value.operand, ",", index.toString());
             Type elementType = getTypeAtIndex(<StructType>value.ty, index);
             return new Value(elementType, reg);
@@ -612,7 +605,7 @@ public class Builder {
     // Corresponds to LLVMBuildGEP
     public function getElementPtr(PointerValue ptr, Value[] indices, "inbounds"? inbounds=(), string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
-        string|Unnamed reg = bb.func.genReg();
+        string|Unnamed reg = bb.func.genReg(name);
         (string|Unnamed)[] words = [];
         words.push(reg, "=", "getelementptr");
         if inbounds != () {
@@ -660,7 +653,7 @@ public class Builder {
     // Corresponds to LLVMBuildAddrSpaceCast
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
-        string|Unnamed reg = bb.func.genReg();
+        string|Unnamed reg = bb.func.genReg(name);
         bb.addInsn(reg, "=", "addrspacecast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
         return new PointerValue(destTy, reg);
     }
