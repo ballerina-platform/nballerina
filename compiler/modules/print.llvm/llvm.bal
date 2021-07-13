@@ -296,8 +296,8 @@ public class FunctionDefn {
         return tem;
     }
 
-    function genLabel() returns string {
-        string label = "#" + self.labelCount.toString();
+    function genLabel() returns int {
+        int label = -(self.labelCount + 1);
         self.labelCount += 1;
         return label;
     }
@@ -359,16 +359,20 @@ public class FunctionDefn {
         self.gcName = name;
     }
 
-    function updateBasicBlockLabel(string label) returns string {
-        string reference = "%" + label;
+    function updateBasicBlockLabel(int label) returns string {
+        string k = "b" + label.toString(); // key in name translation table
         string newLabel = self.nameCounter.toString();
         self.nameCounter += 1;
-        self.nameTranslation[reference] = "%" + newLabel;
+        self.nameTranslation[k] = "%" + newLabel;
         return newLabel;
     }
 
-    function updateVariableNames(string|int name) returns string {
+    function updateVariableNames(string|int name) returns string|int {
         if name is int {
+            if name < 0 {
+                // unnamed basic block
+                return name;
+            }
             string k = "v" + name.toString(); // key in name translation table
             if self.nameTranslation.hasKey(k) {
                 return self.nameTranslation.get(k);
@@ -383,7 +387,20 @@ public class FunctionDefn {
     }
 
     function updateBasicBlockRef(string|int name) returns string {
-        return self.updateRefWithTag(name, "%#");
+        if name is int {
+            if name >= 0 {
+                panic error("Variable names must be updated before updating basic block names");
+            }
+            string k = "b" + name.toString(); // key in name translation table
+            string? newName =  self.nameTranslation[k];
+            if newName is () {
+                panic error("Unnamed basic block not in translation table");
+            } else {
+                return newName;
+            }
+        } else {
+            return name;
+        }
     }
 
     function updateRefWithTag(string|int name, string targetTag) returns string {
@@ -701,18 +718,22 @@ const INDENT = "  ";
 # Corresponds to LLVMBasicBlockRef
 public distinct class BasicBlock {
     final FunctionDefn func;
-    private string label;
+    private string|int label;
     private (string|int)[][] lines = [];
     private boolean isReferenced = false;
 
-    function init(Context context, string label, FunctionDefn func) {
+    function init(Context context, string|int label, FunctionDefn func) {
         self.label = label;
         self.func = func;
     }
 
-    function ref() returns string {
+    function ref() returns string|int {
         self.isReferenced = true;
-        return "%" + self.label;
+        if self.label is int {
+            return self.label;
+        } else {
+            return "%" + <string>self.label;
+        }
     }
 
     function addInsn((string|int)... words) {
@@ -721,13 +742,13 @@ public distinct class BasicBlock {
 
     // Used to to update the unnamed variable names correctly
     function updateLines() {
-        string[][] newLines = [];
-        if self.isReferenced && self.label.startsWith("#") {
+        (string|int)[][] newLines = [];
+        if self.isReferenced && self.label is int {
             // unnamed basic block
-            self.label = self.func.updateBasicBlockLabel(self.label);
+            self.label = self.func.updateBasicBlockLabel(<int>self.label);
         }
         foreach var line in self.lines {
-            string[] newLine = [];
+            (string|int)[] newLine = [];
             foreach var name in line {
                 newLine.push(self.func.updateVariableNames(name));
             }
@@ -742,7 +763,7 @@ public distinct class BasicBlock {
         // 2. basic blocks that were in BIR but are unreferenced (and empty) in LL
         //    (happens at the moment for blocks starting with `catch`)
         if self.isReferenced {
-            out.push(self.label + ":");
+            out.push(<string>self.label + ":");
         }
         foreach var line in self.lines {
             string[] newLine = [];
