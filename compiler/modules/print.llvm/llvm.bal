@@ -323,7 +323,7 @@ public class FunctionDefn {
             else {
                 self.variableNames[regName] = 1;
             }
-            regName = self.escapeName(regName);
+            regName = escapeIdent(regName);
             string reg = "%" + regName;
             return reg;
         } else {
@@ -331,29 +331,6 @@ public class FunctionDefn {
             self.unnamedLabelCount += 1;
             self.isBasicBlock[regName] = false;
             return regName;
-        }
-    }
-
-    // Name must be of the form [a-zA-Z$._][a-zA-Z$._0-9]* 
-    function escapeName(string name) returns string {
-        string head = name.substring(0, 1);
-        if head == "\"" {
-            head = "\\22";
-        }
-        string tail = name.substring(1);
-        boolean escape = head != "$" && head != "." && head != "_" && (head < "a" || head > "z") && (head < "A" || head > "Z");
-        foreach var char in tail {
-            escape = escape || (char != "$" && char != "." && char != "_" && (char < "a" || char > "z") && (char < "A" || char > "Z") && (char < "0" || char > "9"));
-            if char == "\"" {
-                head += "\\22";
-            } else {
-                head += char;
-            }
-        }
-        if !escape {
-            return head;
-        } else {
-            return "\"" + head + "\"";
         }
     }
 
@@ -902,6 +879,80 @@ function concat(string... words) returns string {
         parts.push(word);
     }
     return string:concat(...parts).trim();
+}
+
+ // Identifier must be of the form [-a-zA-Z$._][-a-zA-Z$._0-9]* 
+function escapeIdent(string name) returns string {
+    if isIdent(name) {
+        return name;
+    }
+    string escaped = "\"";
+    foreach var ch in name {
+        escaped += escapeIdentChar(ch);
+    }
+    escaped += "\"";
+    return escaped;
+}
+
+function escapeIdentChar(string:Char ch) returns string {
+    int cp = ch.toCodePointInt();
+    if cp >= 0x20 && cp < 0x7F && ch != "\"" && ch != "\\" {
+        return ch;
+    }
+    if cp > 0x7F {
+        byte[] bytes = ch.toBytes();
+        string result = "";
+        foreach byte b in bytes {
+            // JBUG int cast should not be required
+            // UTF-8 representation of a code point >= 0x80 consists of bytes >= 0x80
+            // so toHexString here will always produce two bytes
+            result += "\\" + (<int>b).toHexString();
+        } 
+        return result;
+    }
+    string hex = cp.toHexString();
+    if hex.length() == 1 {
+        return "\\0" + hex;
+    }
+    else {
+        return "\\" + hex;
+    }
+}
+
+function isIdent(string name) returns boolean {
+    if name.length() == 0 {
+        return false;
+    }
+    // JBUG type of name[0] is string:Char
+    if isDigit(<string:Char>name[0]) {
+        return false;
+    }
+    foreach var ch in name {
+        if !isIdentFollow(ch) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function isIdentFollow(string:Char ch) returns boolean {
+    return isAlnum(ch) || isIdentOther(ch);
+}
+
+function isIdentOther(string:Char ch) returns boolean {
+     return ch == "$" || ch == "." || ch == "_" || ch == "-";
+}
+
+function isAlnum(string:Char ch) returns boolean {
+    return isAlpha(ch) || isDigit(ch);
+}
+
+function isDigit(string:Char ch) returns boolean {
+    return "0" <= ch && ch <= "9";
+}
+
+function isAlpha(string:Char ch) returns boolean {
+    return ("a" <= ch && ch <= "z") || ("A" <= ch && ch <= "Z");
 }
 
 function omitSpaceBefore(string word) returns boolean {
