@@ -2,8 +2,8 @@
 
 ## Summary
 
-* Only values allowed are of basic type nil, boolean, int, string and list.
-* The only type descriptors allowed are `boolean`, `int`, `string`, `any` and `any[]`.
+* Only values allowed are of basic type nil, boolean, int, string, list and mapping.
+* The only type descriptors allowed are `boolean`, `int`, `string`, `any`, `any[]` and `map<any>`.
 * At module level, only function definitions:
    * no default arguments
    * no rest arguments
@@ -27,6 +27,7 @@
    * method call `v.f(args)` syntax for calling langlib functions
    * member access `E[i]`
    * list constructor `[E1, E2, ..., En]`
+   * mapping constructor `{ f1: E1, f2: E2,..., fn: En }`
    * literals for nil, boolean, int and string
 * Langlib functions:
   * `array:length`
@@ -46,10 +47,11 @@ module-decl = function-defn
 
 function-defn = ["public"] "function" identifier signature stmt-block
 signature = "(" [param-list] ")" [ "returns" type-desc ]
-type-desc = basic-type-name | "any" | array-type-desc
+type-desc = basic-type-name | "any" | array-type-desc | map-type-desc
 
 basic-type-name = "int" | "boolean"
 array-type-desc = "any" "[" "]"
+map-type-desc = "map" "<" "any" ">"
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -91,7 +93,7 @@ continue-stmt = "continue" ";"
 
 foreach-stmt = "foreach" typedesc identifier "in" additive-expr "..<" additive-expr stmt-block
 
-expression = bitwise-or-expr | list-constructor-expr
+expression = bitwise-or-expr | list-constructor-expr | mapping-constructor-expr
 
 bitwise-or-expr =
   bitwise-xor-expr
@@ -149,9 +151,15 @@ literal = nil-literal | boolean-literal | integer-literal | string-literal
 nil-literal = "(" ")" | "null"
 boolean-literal = "true" | "false"
 
-list-constructor-expr = "[" expr-list "]"
+list-constructor-expr = "[" [expr-list] "]"
 
 expr-list = expression ["," expression ]*
+
+mapping-constructor-expr = "{" [field-list] "}"
+
+field-list = field ["," field ]*
+
+field = string-literal ":" expression
 
 member-access-expr = primary-expr "[" expression "]"
 
@@ -205,21 +213,26 @@ The following restrictions apply to imported modules:
 
 ## Additions from subset 3
 
-Minimal support for type `string`:
+Add `string` and `map<any>`:
 
-* New type descriptor: `string`
-* New expressions: string literals `"abc"`
+* New type descriptors
+  * `string`
+  * `map<any>`
+* New expressions
+  * string literals `"abc"`
+  * mapping constructor `{"x": 1, "y": 2}`
 
-Existing syntax extended for string:
+Existing syntax extended:
 
-* `==`, `!=`
-* `<`, `<=`, `>`, `>=`
-* `===`, `!==`
-* `<T>E`
+* `===`, `!==` for string and map
+* `==`, `!=` for string
+* `<`, `<=`, `>`, `>=` for string
+* `<T>E` for `string` and `map<any>`
 * `io:println`
 
 Langlib:
 * `string:length`
+* `map:length`
 
 ## Implemented spec changes since 2021R1
 
