@@ -9,6 +9,8 @@ const CASE_START = "// @case";
 final int CASE_START_LENGTH = CASE_START.length();
 const CASE_END = "// @end";
 
+// JBUG #31673 can't specify the first type to be "V"|"E"|ect
+type ParserTestCase [string, string, string, string];
 @test:Config {
     dataProvider: validTokenSourceFragments
 }
@@ -21,27 +23,24 @@ function testParser(string k, string rule, string subject, string expected) retu
     err:Syntax|Word[] parsed = reduceToWords(rule, subject);
     if k.includes("F") {
         if k.includes("V") {
-            test:assertTrue(parsed is err:Syntax, "test marked as failing but parsed for '" + subject + "'");
+            test:assertTrue(parsed is err:Syntax, "test marked as failing but parsed");
             return;
         }
         if k.includes("E") {
-            test:assertTrue(parsed is Word[], "test marked as failing but correctly got an error for '" + subject + "'");
+            test:assertTrue(parsed is Word[], "test marked as failing but correctly got an error");
             return;
         }
         panic err:impossible("kind must be FE or FV but was '" + k + "'");
     }
     if k.includes("E") {
-        test:assertTrue(parsed is err:Syntax, "expected a syntax error for '" + subject);
+        test:assertTrue(parsed is err:Syntax, "expected a syntax error");
         return;
-    }
-    if parsed is err:Syntax {
-        error e = error("syntax error for '" + subject + "'", parsed);
-        panic e;
     }
     var actual = wordsToString(check parsed);
     test:assertEquals(actual, expected, "wrong ast");
 }
 
+type TokenizerTestCase [string, string];
 @test:Config {
     dataProvider: sourceFragments
 }
@@ -60,7 +59,7 @@ function testTokenizer(string k, string src) returns error? {
         t = advance(tok, k, src);
     }
     if k.includes("E") {
-        test:assertTrue(t is err:Syntax, "an error expected for '" + src + "'");
+        test:assertTrue(t is err:Syntax, "expected a syntax error");
     }
 }
 
@@ -160,31 +159,39 @@ function reduceToWords(string rule, string fragment) returns err:Syntax|Word[] {
     return w;
 }
 
-function sourceFragments() returns string[][]|error {
-     string[][] s = check invalidTokenSourceFragments();
-     string[][] valid = check validTokenSourceFragments();
-     foreach var v in valid {
-         s.push(["V", v[2]]);
+function sourceFragments() returns map<TokenizerTestCase>|error {
+     map<TokenizerTestCase> all = check invalidTokenSourceFragments();
+     map<ParserTestCase> valid = check validTokenSourceFragments();
+     foreach var [k, v] in valid.entries() {
+         all[k] = ["V", v[2]];
      }
-     return s;
+     return all;
 }
 
-function invalidTokenSourceFragments() returns string[][]|error {
-    return [["OE", string`"`],
-            ["OE", "'"],
-            ["OE", "`"],
-            ["OE", string`"\"`],
-            ["OE", string`"\a"`],
-            ["OE", "\\"], // JBUG #31431 can't use string template
-            ["OE", "\"\n\""],
-            ["OE", "\"\r\""],
-            ["E", "obj..x(args)"],
-            ["E", "01"],
-            ["E", "-01"]];
+function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
+    TokenizerTestCase[] sources = [
+        ["OE", string`"`],
+        ["OE", "'"],
+        ["OE", "`"],
+        ["OE", string`"\"`],
+        ["OE", string`"\a"`],
+        ["OE", "\\"], // JBUG #31431 can't use string template
+        ["OE", "\"\n\""],
+        ["OE", "\"\r\""],
+        ["E", "obj..x(args)"],
+        ["E", "01"],
+        ["E", "-01"]
+    ];
+
+    map<TokenizerTestCase> tests = {};
+    foreach var s in sources {
+        tests[s[1]] = s;
+    }
+    return tests;
 }
 
-function validTokenSourceFragments() returns string[][]|error {
-    string[][] s = 
+function validTokenSourceFragments() returns map<ParserTestCase>|error {
+    ParserTestCase[] sources = 
         [["E", "expr", "", ""],
         // literals
          ["V", "expr", "0", "0"],
@@ -209,9 +216,6 @@ function validTokenSourceFragments() returns string[][]|error {
          ["UV", "expr", string`"\""`, string`"\""`],
          ["UV", "expr", string`"what"`, string`"what"`],
          ["UV", "expr", string`"Say \"what\" again."`, string`"Say \"what\" again."`],
-         // ref
-         ["V", "expr", "x", "x"],
-         ["V", "expr", "truefalse", "truefalse"],
          // unary op
          ["E", "expr", "!", ""],
          ["E", "expr", "!-", ""],
@@ -290,6 +294,7 @@ function validTokenSourceFragments() returns string[][]|error {
          ["V", "expr", "x", "x"],
          ["V", "expr", "x1", "x1"],
          ["V", "expr", "x1a", "x1a"],
+         ["V", "expr", "truefalse", "truefalse"],
          // call
          ["V", "expr", "x()", "x()"],
          ["V", "expr", "x(a)", "x(a)"],
@@ -341,7 +346,6 @@ function validTokenSourceFragments() returns string[][]|error {
          ["E", "expr", "(f()())", ""],
          ["V", "expr", "(((x)))", "x"],
          // statement
-         ["E", "stmt", "", ""],
          ["E", "stmt", ";", ""],
          ["E", "stmt", "1;", ""],
          ["E", "stmt", "--a;", ""],
@@ -395,24 +399,31 @@ function validTokenSourceFragments() returns string[][]|error {
          ["E", "mod", "import;", ""],
          ["U", "mod", "import x;", "import x;"],
          ["V", "mod", "import x/y;", "import x/y;"]];
-    var cases = check file:readDir("modules/front/tests/data");
-    foreach var caseFile in cases {
-        string base = check file:basename(caseFile.absPath);
+    map<ParserTestCase> tests = {};
+    foreach var s in sources {
+        tests[s[2]] = s;
+    }
+    var testFiles = check file:readDir("modules/front/tests/data");
+    foreach var f in testFiles {
+        string path = f.absPath;
+        string base = check file:basename(path);
         if !base.endsWith(SOURCE_EXTENSION) {
             continue;
         }
-        string case = check readCase(caseFile.absPath);
-        string parentDir = check file:parentPath(caseFile.absPath);
-        string canonCase = check file:joinPath(parentDir, canonCaseName(base));
-        string expected = case;
-        if check file:test(canonCase, file:EXISTS) {
-            expected = check readCase(canonCase);
+        string src = check readCase(path);
+        string parentDir = check file:parentPath(path);
+        string canonFile = check file:joinPath(parentDir, canonFileName(base));
+        string expected;
+        if check file:test(canonFile, file:EXISTS) {
+            expected = check readCase(canonFile);
+        } else {
+            expected = src;
         }
 
         string[] baseParts = splitTestName(base);
-        s.push([baseParts[0], baseParts[1], case, expected]);
+        tests["file:" + base] = [baseParts[0], baseParts[1], src, expected];
     }
-    return s;
+    return tests;
 }
 function splitTestName(string base) returns [string, string] {
     int len = base.length();
@@ -453,7 +464,7 @@ function readCase(string path) returns string|error {
     return  "\n".'join(...caseLines);
 }
 
-function canonCaseName(string base) returns string{
+function canonFileName(string base) returns string{
     string sansExt = base.substring(0, base.length() - SOURCE_EXTENSION.length());
     return sansExt + "-canon" + SOURCE_EXTENSION;
 }
