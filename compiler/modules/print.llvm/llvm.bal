@@ -882,14 +882,7 @@ function functionHeader(Function fn) returns string {
 }
 
 function createLine(string[] words, string indent = "") returns string {
-    string[] parts = [];
-    foreach string word in words {
-        if !omitSpaceBefore(word) && parts.length() > 0 && !omitSpaceAfter(parts[parts.length() - 1]) {
-            parts.push(" ");
-        }
-        parts.push(word);
-    }
-    return string:concat(indent, ...parts);
+    return string:concat(indent, concat(...words));
 }
 
 function concat(string... words) returns string {
