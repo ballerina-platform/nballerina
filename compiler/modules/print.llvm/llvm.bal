@@ -33,10 +33,21 @@ public readonly class PointerValue {
     }
 }
 
+# Subtype of Value that refers to a constant
+public readonly class ConstValue {
+    *Value;
+    string operand;
+    Type ty;
+    function init(Type ty, string operand) {
+        self.ty = ty;
+        self.operand = operand;
+    }
+}
+
 // Corresponds to LLVMConstInt
 // XXX Need to think about SignExtend argument
-public function constInt(IntType ty, int val) returns Value {
-    return new Value(ty, val.toString());
+public function constInt(IntType ty, int val) returns ConstValue {
+    return new ConstValue(ty, val.toString());
 }
 
 // Corresponds to LLVMConstNull
@@ -59,7 +70,7 @@ public class Context {
         return new(self);
     }
 
-    public function constStruct(Value[] elements) returns Value {
+    public function constStruct(Value[] elements) returns ConstValue {
         string[] structBody = [];
         Type[] elemTypes = [];
         structBody.push("{");
@@ -82,9 +93,9 @@ public class Context {
     }
 
     // Corresponds to LLVMConstStringInContext
-    public function constString(byte[] bytes) returns Value {
+    public function constString(byte[] bytes) returns ConstValue {
         ArrayType ty = arrayType("i8", bytes.length());
-        Value val = new(ty, charArray(bytes));
+        ConstValue val = new(ty, charArray(bytes));
         return val;
     }
 }
@@ -236,9 +247,9 @@ public class Module {
             words.push("global");
         }
         words.push(typeToString(val.ty.pointsTo));
-        Value? initializer = prop.initializer;
+        ConstValue? initializer = prop.initializer;
         if initializer is Value {
-            words.push(<string> initializer.operand);
+            words.push(initializer.operand);
         }
         if prop.align is int {
             words.push(",", "align", prop.align.toString());

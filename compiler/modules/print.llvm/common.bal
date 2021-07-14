@@ -85,7 +85,7 @@ public type GlobalProperties record {|
     int? align = ();
     boolean unnamedAddr = false;
     int addressSpace = 0;
-    Value? initializer = ();
+    ConstValue? initializer = ();
     Linkage linkage = "external";
 |};
 
