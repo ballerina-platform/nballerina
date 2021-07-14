@@ -216,11 +216,33 @@ public class Module {
 
     function outputGlobalVar(PointerValue val, GlobalProperties prop, Output out){
         string[] words = [];
-        words.push(<string> val.operand, "=", "external");
+        words.push(<string> val.operand, "=");
+        if prop.initializer is Value {
+            if prop.linkage == "internal"{
+                words.push(prop.linkage);
+            }
+        } else {
+            words.push(prop.linkage);
+        }
+        if prop.unnamedAddr {
+            words.push("unnamed_addr");
+        }
         if val.ty.addressSpace != 0 {
             words.push("addrspace", "(", val.ty.addressSpace.toString(), ")");
         }
-        words.push("global", typeToString(val.ty.pointsTo));
+        if prop.isConstant {
+            words.push("constant");
+        } else {
+            words.push("global");
+        }
+        words.push(typeToString(val.ty.pointsTo));
+        Value? initializer = prop.initializer;
+        if initializer is Value {
+            words.push(<string> initializer.operand);
+        }
+        if prop.align is int {
+            words.push(",", "align", prop.align.toString());
+        }
         out.push(createLine(words));
     }
 }
