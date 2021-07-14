@@ -62,6 +62,13 @@ public class Context {
     public function constStruct(Value[] elements) returns Value {
         panic error("constStruct not implemented yet");
     }
+    // Corresponds to LLVMConstStringInContext
+    public function constString(byte[] bytes) returns Value {
+        string label = concat("c", "\"", checkpanic string:fromBytes(bytes), "\"");
+        ArrayType ty = arrayType("i8", bytes.length());
+        Value val = new(ty, label);
+        return val;
+    }
 }
 
 # Corresponds to llvm::Module class

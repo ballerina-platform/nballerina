@@ -14,9 +14,19 @@ public distinct class Context {
         string modName = name ?: "";
         return new (modName, self);
     }
+
+    public function constString(byte[] bytes) returns Value {
+        return new (LLVMConstStringInContext(self.LLVMContext, java:fromString(checkpanic string:fromBytes(bytes)), bytes.length(), 1));
+    }
 }
 
 function LLVMContextCreate() returns handle = @java:Method {
     name: "LLVMContextCreate",
     'class: "org.bytedeco.llvm.global.LLVM"
+} external;
+
+function LLVMConstStringInContext(handle context, handle str, int length, int donTNullTerminate) returns handle = @java:Method {
+    name: "LLVMConstStringInContext",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef", "java.lang.String", "int", "int"]
 } external;
