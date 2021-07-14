@@ -180,11 +180,17 @@ public class Module {
         PointerType ptrType = pointerType(ty, props.addressSpace);
         PointerValue val = new PointerValue(ptrType, "@" + name); 
         self.globals[name] = val;
-        string[] words = ["@" + name, "=", "external"];
+        string[] words = ["@" + name, "=", props.linkage];
         if props.addressSpace != 0 {
             words.push("addrspace", "(", props.addressSpace.toString(), ")");
         }
         words.push("global", typeToString(ty));
+        Value? initializer = props.initializer;
+        if !(initializer is ()) {
+            // XXX should check the type here
+            // XXX should check that it's not Unnamed
+            words.push(<string>initializer.operand);
+        }
         self.globalDefns.push(concat(...words));
         return val;
     }
