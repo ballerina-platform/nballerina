@@ -64,9 +64,8 @@ public class Context {
     }
     // Corresponds to LLVMConstStringInContext
     public function constString(byte[] bytes) returns Value {
-        string label = concat("c", "\"", checkpanic string:fromBytes(bytes), "\"");
         ArrayType ty = arrayType("i8", bytes.length());
-        Value val = new(ty, label);
+        Value val = new(ty, charArray(bytes));
         return val;
     }
 }
@@ -918,7 +917,7 @@ function escapeIdentChar(string:Char ch) returns string {
             // JBUG int cast should not be required
             // UTF-8 representation of a code point >= 0x80 consists of bytes >= 0x80
             // so toHexString here will always produce two bytes
-            result += "\\" + (<int>b).toHexString();
+            result += "\\" + (<int>b).toHexString().toUpperAscii();
         } 
         return result;
     }
@@ -929,6 +928,33 @@ function escapeIdentChar(string:Char ch) returns string {
     else {
         return "\\" + hex;
     }
+}
+
+// JBUG cast should not be necessary
+final int CP_DOUBLE_QUOTE = (<string:Char>"\"").toCodePointInt();
+final int CP_BACKSLASH = (<string:Char>"\\").toCodePointInt();
+
+function charArray(byte[] bytes) returns string {
+    string result = "c\"";
+    foreach var b in bytes {
+        // JBUG 31700 incorrect code generated if 32 is in hex
+        if b >= 32 && b < 127 && b != CP_DOUBLE_QUOTE && b != CP_BACKSLASH {
+            result += checkpanic string:fromBytes([b]);
+        }
+        else {
+            result += "\\";
+            // JBUG cast should not be necessary
+            string hex = (<int>b).toHexString().toUpperAscii();
+            if hex.length() == 1 {
+                result += "0" + hex;
+            }
+            else {
+                result += hex;
+            }
+        }
+    }
+    result += "\"";
+    return result;
 }
 
 function isIdent(string name) returns boolean {

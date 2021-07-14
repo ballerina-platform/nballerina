@@ -4,7 +4,7 @@ function strConst() returns Module {
     Context context = new;
     Builder builder = context.createBuilder();
     Module m = context.createModule();
-    byte[] strContent ="abc123#@% ".toBytes();
+    byte[] strContent ="abc123#@% \n\\\"".toBytes();
     Value str = context.constString(strContent);
     FunctionDefn strFn = m.addFunctionDefn("test", {returnType: arrayType("i8", strContent.length()), paramTypes: []});
     BasicBlock initBlock = strFn.appendBasicBlock();
