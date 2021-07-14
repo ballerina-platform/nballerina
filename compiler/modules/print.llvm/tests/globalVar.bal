@@ -5,7 +5,7 @@ function globalVar() returns Module {
     Builder builder = context.createBuilder();
     Module m = context.createModule();
     PointerValue g = m.addGlobal("i64", "g1");
-    PointerValue g2 = m.addGlobal("i64", "g2", 2);
+    PointerValue g2 = m.addGlobal("i64", "g2", addressSpace=2);
     FunctionDefn testFn = m.addFunctionDefn("testFn", {returnType: "i64", paramTypes: []});
     BasicBlock initBlock = testFn.appendBasicBlock();
     builder.positionAtEnd(initBlock);

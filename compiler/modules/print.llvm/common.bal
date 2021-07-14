@@ -79,3 +79,13 @@ public type GeneralIntrinsicName "ptrmask.p1i8.i64";
 public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsicName;
 
 public type TargetTriple string;
+
+public type GlobalProperties record {|
+    boolean isConstant = false;
+    int? align = ();
+    boolean unnamedAddr = false;
+    int addressSpace = 0;
+    Value? initializer = ();
+    Linkage linkage = "external";
+|};
+

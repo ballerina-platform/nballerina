@@ -140,14 +140,15 @@ public class Module {
     }
 
     // Corresponds to LLVMAddGlobal
-    public function addGlobal(Type ty, string name, int addressSpace = 0) returns PointerValue {
+    public function addGlobal(Type ty, string name, *GlobalProperties props) returns PointerValue {
+        // XXX implement all the GlobalProperties
         if name is IntrinsicFunctionName {
             panic err:illegalArgument("reserved intrinsic function name");
         }
         if self.globals.hasKey(name) {
             panic err:illegalArgument("this module already has a declaration by that name");
         }
-        PointerType ptrType = pointerType(ty, addressSpace);
+        PointerType ptrType = pointerType(ty, props.addressSpace);
         PointerValue val = new PointerValue(ptrType, "@" + name); 
         self.globals[name] = val;
         self.globalVariables.push(val);
