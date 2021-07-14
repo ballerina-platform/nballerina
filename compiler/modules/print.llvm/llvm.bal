@@ -93,7 +93,7 @@ public class Context {
 public class Module {
     private final map<FunctionDefn|FunctionDecl|PointerValue> globals = {};
     // We have these because we don't rely on order of iteration over map.
-    private PointerValue[] globalVariables = [];
+    private string[] globalDefns = [];
     private FunctionDecl[] functionDecls = [];
     private FunctionDefn[] functionDefns = [];
 
@@ -180,7 +180,12 @@ public class Module {
         PointerType ptrType = pointerType(ty, props.addressSpace);
         PointerValue val = new PointerValue(ptrType, "@" + name); 
         self.globals[name] = val;
-        self.globalVariables.push(val);
+        string[] words = ["@" + name, "=", "external"];
+        if props.addressSpace != 0 {
+            words.push("addrspace", "(", props.addressSpace.toString(), ")");
+        }
+        words.push("global", typeToString(ty));
+        self.globalDefns.push(concat(...words));
         return val;
     }
  
@@ -203,21 +208,8 @@ public class Module {
             string[] words = ["target", "triple", "=", "\"", <TargetTriple>self.target, "\""];
             out.push(createLine(words));
         }
-        foreach var globalVar in self.globalVariables {
-            if globalVar.ty.addressSpace == 0 {
-                out.push(concat(<string>globalVar.operand, "=", "external", "global", typeToString(globalVar.ty.pointsTo)));
-            } else {
-                out.push(concat(
-                    <string>globalVar.operand, 
-                    "=", 
-                    "external", 
-                    "addrspace", 
-                    "(", 
-                    globalVar.ty.addressSpace.toString(),
-                    ")",
-                    "global", 
-                    typeToString(globalVar.ty.pointsTo))); 
-            }
+        foreach string def in self.globalDefns {
+            out.push(def);
         }
         foreach var fn in self.functionDecls {
             fn.output(out);
