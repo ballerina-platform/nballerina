@@ -93,7 +93,7 @@ public class Context {
 public class Module {
     private final map<FunctionDefn|FunctionDecl|PointerValue> globals = {};
     // We have these because we don't rely on order of iteration over map.
-    private string[] globalDefns = [];
+    private [PointerValue, GlobalProperties][] globalVariables = [];
     private FunctionDecl[] functionDecls = [];
     private FunctionDefn[] functionDefns = [];
 
@@ -180,18 +180,7 @@ public class Module {
         PointerType ptrType = pointerType(ty, props.addressSpace);
         PointerValue val = new PointerValue(ptrType, "@" + name); 
         self.globals[name] = val;
-        string[] words = ["@" + name, "=", props.linkage];
-        if props.addressSpace != 0 {
-            words.push("addrspace", "(", props.addressSpace.toString(), ")");
-        }
-        words.push("global", typeToString(ty));
-        Value? initializer = props.initializer;
-        if !(initializer is ()) {
-            // XXX should check the type here
-            // XXX should check that it's not Unnamed
-            words.push(<string>initializer.operand);
-        }
-        self.globalDefns.push(concat(...words));
+        self.globalVariables.push([val, props]);
         return val;
     }
  
@@ -214,8 +203,8 @@ public class Module {
             string[] words = ["target", "triple", "=", "\"", <TargetTriple>self.target, "\""];
             out.push(createLine(words));
         }
-        foreach string def in self.globalDefns {
-            out.push(def);
+        foreach var val in self.globalVariables {
+            self.outputGlobalVar(val[0], val[1], out);
         }
         foreach var fn in self.functionDecls {
             fn.output(out);
@@ -223,6 +212,16 @@ public class Module {
         foreach var fn in self.functionDefns {
             fn.output(out);
         }
+    }
+
+    function outputGlobalVar(PointerValue val, GlobalProperties prop, Output out){
+        string[] words = [];
+        words.push(<string> val.operand, "=", "external");
+        if val.ty.addressSpace != 0 {
+            words.push("addrspace", "(", val.ty.addressSpace.toString(), ")");
+        }
+        words.push("global", typeToString(val.ty.pointsTo));
+        out.push(createLine(words));
     }
 }
 
