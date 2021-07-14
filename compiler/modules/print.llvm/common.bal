@@ -1,9 +1,9 @@
 // This contains the common definitions for both print.llvm and jni.llvm
 
-// "i64" corresponds to  LLVMInt64Type
+// "i64" corresponds to LLVMInt64Type
 // "i8" corresponds to LLVMInt8Type
 // "i1" corresponds to LLVMInt1Type
-public type IntType "i64"|"i32"|"i8"|"i1";
+public type IntType "i64"|"i32"|"i16"|"i8"|"i1";
 
 // Used to constrain parameters that represent an alignment
 public type Alignment 1|2|4|8|16;
