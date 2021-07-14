@@ -4,12 +4,13 @@ function strConst() returns Module {
     Context context = new;
     Builder builder = context.createBuilder();
     Module m = context.createModule();
-    FunctionDefn fn = m.addFunctionDefn("test", {returnType: pointerType("i8"), paramTypes: []});
-    BasicBlock initBlock = fn.appendBasicBlock();
+    byte[] strContent ="abc123#@% ".toBytes();
+    Value str = context.constString(strContent);
+    FunctionDefn strFn = m.addFunctionDefn("test", {returnType: arrayType("i8", strContent.length()), paramTypes: []});
+    BasicBlock initBlock = strFn.appendBasicBlock();
     builder.positionAtEnd(initBlock);
-    PointerValue str = context.constString("abc123#@% ".toBytes());
-    Value ret = builder.getElementPtr(str, [constInt("i64", 0), constInt("i64", 0)], "inbounds");
-    builder.ret(ret);
+    builder.ret(str);
+
     return m;
 }
 

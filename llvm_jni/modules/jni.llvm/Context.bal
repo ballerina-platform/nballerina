@@ -15,7 +15,7 @@ public distinct class Context {
         return new (modName, self);
     }
 
-    public function constString(byte[] bytes) returns PointerValue {
+    public function constString(byte[] bytes) returns Value {
         return new (LLVMConstStringInContext(self.LLVMContext, java:fromString(checkpanic string:fromBytes(bytes)), bytes.length(), 1));
     }
 }

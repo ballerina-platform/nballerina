@@ -46,7 +46,6 @@ public function constNull(PointerType ty) returns PointerValue {
 
 // Corresponds to LLVMContextRef
 public class Context {
-    private final [PointerValue, string][] stringConstants = [];
     private final string[] byteToChar = [];
 
     // Corresponds to LLVMContextCreate
@@ -64,6 +63,13 @@ public class Context {
 
     public function constStruct(Value[] elements) returns Value {
         panic error("constStruct not implemented yet");
+    }
+    // Corresponds to LLVMConstStringInContext
+    public function constString(byte[] bytes) returns Value {
+        string label = concat("c", "\"", checkpanic string:fromBytes(bytes), "\"");
+        ArrayType ty = arrayType("i8", bytes.length());
+        Value val = new(ty, label);
+        return val;
     }
 }
 
