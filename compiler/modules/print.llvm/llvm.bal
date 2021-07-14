@@ -60,8 +60,27 @@ public class Context {
     }
 
     public function constStruct(Value[] elements) returns Value {
-        panic error("constStruct not implemented yet");
+        string[] structBody = [];
+        Type[] elemTypes = [];
+        structBody.push("{");
+        foreach int i in 0 ..< elements.length() {
+            final Value element = elements[i];
+            if i > 0 {
+                structBody.push(",");
+            }
+            structBody.push(typeToString(element.ty));
+            if element.operand is Unnamed {
+                panic err:illegalArgument("All elements must be constants");
+            } else {
+                structBody.push(<string>element.operand);
+            }
+            elemTypes.push(element.ty);
+        }
+        structBody.push("}");
+        Type structTy = structType(elemTypes);
+        return new(structTy, concat(...structBody));
     }
+
     // Corresponds to LLVMConstStringInContext
     public function constString(byte[] bytes) returns Value {
         ArrayType ty = arrayType("i8", bytes.length());
