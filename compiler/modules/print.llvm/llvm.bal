@@ -58,6 +58,10 @@ public class Context {
     public function createBuilder() returns Builder {
         return new(self);
     }
+
+    public function constStruct(Value[] elements) returns Value {
+        panic error("constStruct not implemented yet");
+    }
 }
 
 # Corresponds to llvm::Module class
