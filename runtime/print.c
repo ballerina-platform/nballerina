@@ -50,6 +50,12 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
                 fputs("]", fp);
             }
             break;
+        case TAG_STRING:
+            {
+                struct StringData data = _bal_tagged_to_string(p);
+                fwrite((char *)data.bytes, 1, data.lengthInBytes, fp);
+            }
+            break;
         default:
             fprintf(stderr, "unknown tag %d\n", tag);
             abort();

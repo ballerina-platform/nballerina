@@ -635,12 +635,15 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
-public function containsConst(SemType t, int|boolean|() v) returns boolean {
+public function containsConst(SemType t, string|int|boolean|() v) returns boolean {
     if v is () {
         return containsNil(t);
     }
     else if v is int {
         return containsConstInt(t, v);
+    }
+    else if v is string {
+        return containsConstString(t, v);
     }
     else {
         return containsConstBoolean(t, v);
@@ -653,6 +656,16 @@ public function containsNil(SemType t) returns boolean {
     }
     else {
         return <boolean>t.getSubtypeData(UT_NIL);
+    }
+}
+
+
+public function containsConstString(SemType t, string s) returns boolean {
+    if t is UniformTypeBitSet {
+        return (t & (1 << UT_STRING)) != 0;
+    }
+    else {
+        return stringSubtypeContains(t.getSubtypeData(UT_STRING), s);
     }
 }
 

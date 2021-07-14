@@ -182,9 +182,14 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
             return finishFunctionCallExpr(tok, (), identifier, pos);
         }
         return expr;
-    } 
+    }
     else if t is [DECIMAL_NUMBER, string] {
         SimpleConstExpr expr = { value: check parseDigits(tok, t[1]) };
+        return expr;
+    }
+    else if t is [STRING_LITERAL, string] {
+        SimpleConstExpr expr = { value: t[1] };
+        check tok.advance();
         return expr;
     }
     else if t == "(" {

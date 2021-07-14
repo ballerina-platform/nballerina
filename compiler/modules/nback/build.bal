@@ -18,6 +18,8 @@ const int TAG_MASK     = 0x1f * TAG_FACTOR;
 const TAG_NIL      = 0;
 const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
 const int TAG_INT      = t:UT_INT * TAG_FACTOR;
+const int TAG_STRING   = t:UT_STRING * TAG_FACTOR;
+
 const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
 
 const HEAP_ADDR_SPACE = 1;
@@ -78,7 +80,7 @@ const PANIC_LIST_TOO_LONG = 6;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc"|"list_set"|"int_to_tagged"|"tagged_to_int";
+type RuntimeFunctionName "panic"|"alloc"|"list_set"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"eq";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -98,7 +100,7 @@ final RuntimeFunction panicFunction = {
 final RuntimeFunction allocFunction = {
     name: "alloc",
     ty: {
-        returnType: heapPointerType("i8"),
+        returnType: LLVM_TAGGED_PTR,
         paramTypes: ["i64"]
     },
     attrs: []
@@ -116,7 +118,7 @@ final RuntimeFunction listSetFunction = {
 final RuntimeFunction intToTaggedFunction = {
     name: "int_to_tagged",
     ty: {
-        returnType: heapPointerType("i8"),
+        returnType: LLVM_TAGGED_PTR,
         paramTypes: ["i64"]
     },
     attrs: []
@@ -126,11 +128,28 @@ final RuntimeFunction taggedToIntFunction = {
     name: "tagged_to_int",
     ty: {
         returnType: "i64",
-        paramTypes: [heapPointerType("i8")]
+        paramTypes: [LLVM_TAGGED_PTR]
     },
     attrs: []
 };
 
+final RuntimeFunction eqFunction = {
+    name: "eq",
+    ty: {
+        returnType: "i32",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction stringEqFunction = {
+    name: "string_eq",
+    ty: {
+        returnType: "i32",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
 
 final bir:ModuleId runtimeModule = {
     organization: "ballerinai",
@@ -144,9 +163,30 @@ type ImportedFunction record {|
 
 type ImportedFunctionTable table<ImportedFunction> key(symbol);
 
+const STRING_VARIANT_SMALL = 0;
+const STRING_VARIANT_MEDIUM = 1;
+type StringVariant STRING_VARIANT_SMALL|STRING_VARIANT_MEDIUM;
+
+type StringDefn readonly & record {|
+    llvm:PointerValue pointer;
+    StringVariant variant;
+|};
+
+type Module record {|
+    llvm:Context llContext;
+    llvm:Module llMod;
+    // LLVM functions in the module indexed by (unmangled) identifier within the module
+    map<llvm:FunctionDefn> functionDefns;
+     // List of all imported functions that have been added to the LLVM module
+    ImportedFunctionTable importedFunctions = table [];
+    llvm:PointerValue stackGuard;
+    map<StringDefn> stringDefns = {};
+|};
+
 class Scaffold {
-    private final llvm:Module llMod;
+    private final Module mod;
     private final llvm:FunctionDefn llFunc;
+
     // Representation for each BIR register
     private final Repr[] reprs;
     private final RetRepr retRepr;
@@ -155,19 +195,13 @@ class Scaffold {
     private final llvm:PointerValue[] addresses;
     // LLVM basic blocks indexed by BIR label
     private final llvm:BasicBlock[] blocks;
-    // LLVM functions in the module indexed by (unmangled) identifier within the module
-    private final map<llvm:FunctionDefn> functionDefns;
-    // List of all imported functions that have been added to the LLVM module
-    private final ImportedFunctionTable importedFunctions;
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
 
-    function init(llvm:Module llMod, llvm:FunctionDefn llFunc, map<llvm:FunctionDefn> functions, ImportedFunctionTable importedFunctions, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
-        self.llMod = llMod;
+    function init(Module mod, llvm:FunctionDefn llFunc, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
+        self.mod = mod;
         self.llFunc = llFunc;
-        self.functionDefns = functions;
-        self.importedFunctions = importedFunctions;
         self.birBlocks = code.blocks;
         final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType);
         self.reprs = reprs;
@@ -198,23 +232,35 @@ class Scaffold {
 
     function getRetRepr() returns RetRepr => self.retRepr;
 
-    function getFunctionDefn(string name) returns llvm:FunctionDefn => self.functionDefns.get(name);
+    function getFunctionDefn(string name) returns llvm:FunctionDefn => self.mod.functionDefns.get(name);
 
-    function getModule() returns llvm:Module => self.llMod;
+    function getModule() returns llvm:Module => self.mod.llMod;
+
+    function stackGuard() returns llvm:PointerValue => self.mod.stackGuard;
 
     function getImportedFunction(bir:ExternalSymbol symbol) returns llvm:FunctionDecl? {
-        ImportedFunction? fn = self.importedFunctions[symbol];
+        ImportedFunction? fn = self.mod.importedFunctions[symbol];
         return fn is () ? () : fn.decl;
     }
     
     function addImportedFunction(bir:ExternalSymbol symbol, llvm:FunctionDecl decl) {
-        self.importedFunctions.add({symbol, decl});
+        self.mod.importedFunctions.add({symbol, decl});
     }
 
     function getIntrinsicFunction(llvm:IntrinsicFunctionName name) returns llvm:FunctionDecl {
-        return self.llMod.getIntrinsicDeclaration(name);
+        return self.mod.llMod.getIntrinsicDeclaration(name);
     }
-    
+
+    function getString(string str) returns StringDefn|BuildError {
+        StringDefn? curDefn = self.mod.stringDefns[str];
+        if !(curDefn is ()) {
+            return curDefn;
+        }
+        StringDefn newDefn = check addStringDefn(self.mod.llContext, self.mod.llMod, self.mod.stringDefns.length(), str);
+        self.mod.stringDefns[str] = newDefn;
+        return newDefn;
+    }
+
     function addBasicBlock() returns llvm:BasicBlock {
         return self.llFunc.appendBasicBlock();
     }
@@ -233,10 +279,10 @@ class Scaffold {
     }
 }
 
-function buildModule(bir:Module mod, llvm:Context context, *Options options) returns llvm:Module|BuildError {
-    bir:ModuleId modId = mod.getId();
-    llvm:Module llMod = context.createModule();
-    bir:FunctionDefn[] functionDefns = mod.getFunctionDefns();
+function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
+    bir:ModuleId modId = birMod.getId();
+    llvm:Module llMod = llContext.createModule();
+    bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
     llvm:FunctionDefn[] llFuncs = [];
     llvm:FunctionType[] llFuncTypes = [];
     map<llvm:FunctionDefn> llFuncMap = {};
@@ -254,24 +300,28 @@ function buildModule(bir:Module mod, llvm:Context context, *Options options) ret
         llFuncs.push(llFunc);
         llFuncMap[defn.symbol.identifier] = llFunc;
     }  
-    llvm:Builder builder = context.createBuilder();
-    llvm:PointerValue stackGuard = llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard"));
-    ImportedFunctionTable importedFunctions = table [];
+    llvm:Builder builder = llContext.createBuilder();
+    Module mod = {
+        llContext,
+        llMod,
+        functionDefns: llFuncMap,
+        stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard"))
+    };  
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionDefn defn = functionDefns[i];
-        bir:FunctionCode code = check mod.generateFunctionCode(i);
-        check bir:verifyFunctionCode(mod, defn, code);
-        Scaffold scaffold = check new(llMod, llFuncs[i], llFuncMap, importedFunctions, builder, defn, code);
-        buildPrologue(builder, scaffold, stackGuard, defn.position);
+        bir:FunctionCode code = check birMod.generateFunctionCode(i);
+        check bir:verifyFunctionCode(birMod, defn, code);
+        Scaffold scaffold = check new(mod, llFuncs[i], builder, defn, code);
+        buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code);
     }
     return llMod;
 }
 
-function buildPrologue(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue stackGuard, err:Position pos) {
+function buildPrologue(llvm:Builder builder, Scaffold scaffold, err:Position pos) {
     llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
     llvm:BasicBlock firstBlock = scaffold.basicBlock(0);
-    builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(stackGuard)),
+    builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(scaffold.stackGuard())),
                    overflowBlock, firstBlock);
     builder.positionAtEnd(overflowBlock);
     buildPanic(builder, scaffold, buildConstPanicError(PANIC_STACK_OVERFLOW, pos));
@@ -622,8 +672,8 @@ type CmpEqOp "ne"|"eq";
 
 // For subset 2, == and === are the same: they differ only in when they are allowed
 function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn insn) returns BuildError? {
-    var [lhsRepr, lhsValue] = buildReprValue(builder, scaffold, insn.operands[0]);
-    var [rhsRepr, rhsValue] = buildReprValue(builder, scaffold, insn.operands[1]);
+    var [lhsRepr, lhsValue] = check buildReprValue(builder, scaffold, insn.operands[0]);
+    var [rhsRepr, rhsValue] = check buildReprValue(builder, scaffold, insn.operands[1]);
     CmpEqOp op = insn.op[0] == "!" ?  "ne" : "eq"; 
     bir:Register result = insn.result;
     match [lhsRepr.base, rhsRepr.base] {
@@ -684,41 +734,15 @@ function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op
 }
 
 function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
-    llvm:BasicBlock samePointerBlock = scaffold.addBasicBlock();
-    llvm:BasicBlock diffPointerBlock = scaffold.addBasicBlock();
-    llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
-    builder.condBr(builder.iCmp("eq", tagged1, tagged2), samePointerBlock, diffPointerBlock);
-    builder.positionAtEnd(samePointerBlock);
-    // if the pointers are the same, we know they are ===
-    buildStoreBoolean(builder, scaffold,
-                      // in the case where the pointers are equal
-                      // result is true if op is "eq", false if op is "ne"
-                      buildConstBoolean(op == "eq"),
-                      result);
-    builder.br(joinBlock);
-    builder.positionAtEnd(diffPointerBlock);
-    // the pointers are not the same
-    // in this case, they can still be equal if they are both tagged ints
-    llvm:BasicBlock bothIntsBlock = scaffold.addBasicBlock();
-    llvm:BasicBlock diffBlock = scaffold.addBasicBlock();
-    // check if they are both tagged ints
-    builder.condBr(builder.iBitwise("and", buildHasTag(builder, tagged1, TAG_INT), buildHasTag(builder, tagged2, TAG_INT)),
-                   bothIntsBlock, diffBlock);
-    builder.positionAtEnd(diffBlock);
-    // at this point, we know they are different
-    buildStoreBoolean(builder, scaffold, buildConstBoolean(op == "ne"), result);
-    builder.br(joinBlock);
-    builder.positionAtEnd(bothIntsBlock);
-    buildStoreBoolean(builder, scaffold,
-                      builder.iCmp(op, buildUntagInt(builder, scaffold, tagged1),
-                                       buildUntagInt(builder, scaffold, tagged2)),
-                      result);
-    builder.br(joinBlock);
-    builder.positionAtEnd(joinBlock);
+    llvm:Value b = builder.trunc(<llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, eqFunction), [tagged1, tagged2]), "i1");
+    if op == "ne" {
+        b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
+    }
+    buildStoreBoolean(builder, scaffold, b, result);
 }
 
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
-    var [repr, val] = buildReprValue(builder, scaffold, insn.operand);
+    var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
     if repr.base != BASE_REPR_TAGGED {
         return err:unimplemented("cast from untagged value"); // should not happen in subset 2
     }
@@ -734,6 +758,11 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
         builder.condBr(buildHasTag(builder, tagged, TAG_INT), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
         buildStoreInt(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn.result);
+    }
+    else if insn.semType === t:STRING {
+        builder.condBr(buildHasTag(builder, tagged, TAG_STRING), continueBlock, castFailBlock);
+        builder.positionAtEnd(continueBlock);
+        builder.store(tagged, scaffold.address(insn.result));
     }
     else {
         return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
@@ -770,7 +799,7 @@ function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value v
 }
 
 function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
-    var [sourceRepr, value] = buildReprValue(builder, scaffold, operand);
+    var [sourceRepr, value] = check buildReprValue(builder, scaffold, operand);
     return buildConvertRepr(builder, scaffold, sourceRepr, value, targetRepr);
 }
 
@@ -797,6 +826,13 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
                                      [builder.iBitwise("or",
                                                        builder.zExt(value, LLVM_INT),
                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
+}
+
+function buildTaggedString(llvm:Builder builder, StringDefn str) returns llvm:PointerValue {
+    return buildTaggedPtr(builder,
+                          builder.addrSpaceCast(builder.bitCast(str.pointer, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE),
+                                                LLVM_TAGGED_PTR),
+                          TAG_STRING | <int>str.variant);
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
@@ -855,20 +891,73 @@ function buildTaggedPtrToInt(llvm:Builder builder, llvm:PointerValue tagged) ret
     return builder.ptrToInt(builder.addrSpaceCast(tagged, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_INT);
 }
 
-function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns [Repr, llvm:Value] {
+function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand operand) returns [Repr, llvm:Value]|BuildError {
     if operand is bir:Register {
         return buildLoad(builder, scaffold, operand);
     }
-    else {
-        return buildConst(operand);
+    else if operand is string {
+        return [REPR_STRING, check buildConstString(builder, scaffold, operand)];
     }
+    else {
+        return buildSimpleConst(operand);
+    }
+}
+
+function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:Value|BuildError {   
+    return buildTaggedString(builder, check scaffold.getString(str));
+}
+
+function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns StringDefn|BuildError {
+    int nCodePoints = str.length();
+    byte[] bytes = str.toBytes();
+    int nBytes = bytes.length();
+
+    llvm:Type ty;
+    llvm:Value val;
+    StringVariant variant;
+    if nBytes == nCodePoints && nBytes <= 0xFF {
+        // We want the total size including the header to be a multiple of 8
+        int nBytesPadded = padBytes(bytes, 1);
+        val = context.constStruct([llvm:constInt("i8", nBytes), context.constString(bytes)]);
+        ty = llvm:structType(["i8", llvm:arrayType("i8", nBytesPadded)]);
+        variant = STRING_VARIANT_SMALL;
+    }
+    else if nBytes <= 0xFFFF {
+        int nBytesPadded = padBytes(bytes, 4);
+        val = context.constStruct([llvm:constInt("i16", nBytes), llvm:constInt("i16", nCodePoints), context.constString(bytes)]);
+        ty = llvm:structType(["i16", "i16", llvm:arrayType("i8", nBytesPadded)]);
+        variant = STRING_VARIANT_MEDIUM;
+    }
+    else {
+        return err:unimplemented("long constant strings");
+    }
+    return {
+        pointer: mod.addGlobal(ty,
+                               stringDefnSymbol(defnIndex),
+                               initializer = val,
+                               align = 8,
+                               isConstant = true,
+                               unnamedAddr = true,
+                               linkage = "internal"),
+        variant
+    };
+}
+
+// Returns the new, padded length
+function padBytes(byte[] bytes, int headerSize) returns int {
+    int nBytes = bytes.length();
+    int nBytesPadded = (((nBytes + headerSize + 7) >> 3) << 3) - headerSize;
+    foreach int i in 0 ..< nBytesPadded - nBytes {
+        bytes.push(0);
+    }
+    return nBytesPadded;
 }
 
 function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) returns [Repr, llvm:Value] {
     return [scaffold.getRepr(reg), builder.load(scaffold.address(reg))];
 }
 
-function buildConst(bir:ConstOperand operand) returns [Repr, llvm:Value] {
+function buildSimpleConst(bir:SimpleConstOperand operand) returns [Repr, llvm:Value] {
     if operand is int {
         return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
     }
@@ -977,6 +1066,7 @@ final Repr REPR_BOOLEAN = { base: BASE_REPR_BOOLEAN, llvm: LLVM_BOOLEAN };
 final Repr REPR_ERROR = { base: BASE_REPR_ERROR, llvm: LLVM_INT };
 
 final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:NIL };
+final TaggedRepr REPR_STRING = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:STRING };
 final TaggedRepr REPR_TOP = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:TOP };
 final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ANY };
 // JBUG this goes wrong when you use REPR_VOID as a type as in buildRet
@@ -991,6 +1081,7 @@ final readonly & record {|
     { domain: t:INT, repr: REPR_INT },
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
     { domain: t:NIL, repr: REPR_NIL },
+    { domain: t:STRING, repr: REPR_STRING },
     { domain: t:ERROR, repr: REPR_ERROR },
     { domain: t:ANY, repr: REPR_ANY },
     { domain: t:TOP, repr: REPR_TOP }
@@ -1033,3 +1124,8 @@ function mangleExternalSymbol(bir:ExternalSymbol symbol) returns string {
 function mangleInternalSymbol(bir:ModuleId modId, bir:InternalSymbol symbol) returns string {
     return "_B_" + symbol.identifier;
 }
+
+function stringDefnSymbol(int n) returns string {
+    return ".str" + n.toString();
+}
+

@@ -702,7 +702,11 @@ type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 
 type TypedOperandPair BooleanOperandPair|IntOperandPair|NilOperandPair;
 
-type TypedOperand readonly & (["array", bir:Register]|["int", bir:IntOperand] | ["boolean", bir:BooleanOperand] | ["nil", NilOperand]);
+type TypedOperand readonly & (["array", bir:Register]
+                              |["string", bir:StringOperand]
+                              |["int", bir:IntOperand]
+                              |["boolean", bir:BooleanOperand]
+                              |["nil", NilOperand]);
 
 function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperandPair? {
     TypedOperand? l = typedOperand(lhs);
@@ -727,12 +731,18 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         else if operand.semType === t:INT {
             return ["int", operand];
         }
+        else if operand.semType === t:STRING {
+            return ["string", operand];
+        }
         else if operand.semType === t:NIL {
             return ["nil", operand];
         }
         else if t:isSubtypeSimple(operand.semType, t:LIST) {
             return ["array", operand];
         }
+    }
+    else if operand is string {
+        return ["string", operand];
     }
     else if operand is int {
         return ["int", operand];

@@ -33,6 +33,8 @@ extern char *_bal_stack_guard;
 #define HEAP_STAR(d) ONHEAP *(d)
 typedef char NODEREF HEAP_STAR(TaggedPtr);
 typedef void HEAP_STAR(UntypedPtr);
+typedef int64_t HEAP_STAR(IntPtr);
+
 
 // An error is currently represented as int with the error code in the lo byte
 typedef uint64_t Error;
@@ -45,6 +47,26 @@ struct List {
 };
  
 typedef struct List HEAP_STAR(ListPtr);
+
+#define STRING_MEDIUM_FLAG 1
+
+// Both of these are 8-byte aligned and zero-padded so the total size is a multiple of 8
+struct SmallString {
+    uint8_t length;
+    char bytes[];
+};
+
+struct MediumString {
+    int16_t lengthInBytes;
+    int16_t lengthInCodePoints;
+    char bytes[];
+};
+
+struct StringData {
+    int64_t lengthInBytes;
+    int64_t lengthInCodePoints;
+    char HEAP_STAR(bytes);
+};
 
 // These should be shared with build.bal
 #define PANIC_INDEX_OUT_OF_BOUNDS 5
@@ -70,11 +92,18 @@ static inline int taggedToBoolean(TaggedPtr p) {
 }
 
 static inline UntypedPtr taggedToPtr(TaggedPtr p) {
-    return (UntypedPtr)(char *)(~(((uint64_t)TAG_MASK) << TAG_SHIFT) & taggedPtrBits(p));
+    return (UntypedPtr)(char *)(~((((uint64_t)TAG_MASK) << TAG_SHIFT) | 0x7) & taggedPtrBits(p));
 }
 
 extern void _bal_array_grow(ListPtr lp, int64_t min_capacity);
 extern TaggedPtr _bal_int_to_tagged(int64_t n);
 extern int64_t _bal_tagged_to_int(TaggedPtr p);
+
+extern struct StringData _bal_tagged_to_string(TaggedPtr p);
+extern int32_t _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
+extern int32_t _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
+
+
+
 
 

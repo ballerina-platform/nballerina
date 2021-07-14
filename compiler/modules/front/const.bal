@@ -1,8 +1,7 @@
 import wso2/nballerina.err;
 import wso2/nballerina.types as t;
 
-type SimpleConst int|boolean|();
-
+type SimpleConst string|int|boolean|();
 
 // We could use an error to represent this.
 // I have chosen not too,
@@ -125,8 +124,8 @@ function evalConstBinary(BinaryExpr expr, SimpleConst left, SimpleConst right) r
                 return opIsNegated;
             }
         }
-        else if left is boolean && right is boolean {
-            if !exprIsBooleanSubtype(expr.left) || !exprIsBooleanSubtype(expr.right) {
+        else if (left is boolean && right is boolean) || (left is string && right is string) {
+            if !exprTypeIsSingleton(expr.left) || !exprTypeIsSingleton(expr.right) {
                 return opIsNegated;
             }
         }
@@ -158,12 +157,12 @@ function exprIntSubtype(Expr expr) returns t:SemType? {
     return ();
 }
 
-function exprIsBooleanSubtype(Expr expr) returns boolean {
+function exprTypeIsSingleton(Expr expr) returns boolean {
     if expr is SimpleConstExpr {
-        return expr.value is boolean;
+        return true;
     }
     else if expr is TypeCastExpr {
-        return exprIsBooleanSubtype(expr.operand);
+        return exprTypeIsSingleton(expr.operand);
     }
     return false;
 }

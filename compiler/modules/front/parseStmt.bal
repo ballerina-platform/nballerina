@@ -53,7 +53,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         var td if td is InlineLeafTypeDesc => {
             return parseVarDeclStmt(tok);
         }
-        "("|[DECIMAL_NUMBER, _]|"true"|"false"|"null" => {
+        "("|[DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {
             return parseMethodCallStmt(tok);
         }
     }

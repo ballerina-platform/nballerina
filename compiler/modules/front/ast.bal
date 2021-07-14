@@ -172,7 +172,7 @@ type TypeCastExpr record {|
 |};
 
 type SimpleConstExpr record {|
-    ()|boolean|int value;
+    ()|boolean|int|string value;
 |};
 
 // Types
@@ -181,7 +181,7 @@ type SimpleConstExpr record {|
 // within expressions and statements.
 type InlineTypeDesc InlineLeafTypeDesc|InlineArrayTypeDesc;
 
-type InlineLeafTypeDesc "boolean"|"any"|"int";
+type InlineLeafTypeDesc "boolean"|"int"|"string"|"any";
 
 type InlineArrayTypeDesc record {|
     *ListTypeDesc;
