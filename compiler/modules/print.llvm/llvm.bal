@@ -46,6 +46,9 @@ public function constNull(PointerType ty) returns PointerValue {
 
 // Corresponds to LLVMContextRef
 public class Context {
+    private final [PointerValue, string][] stringConstants = [];
+    private final string[] byteToChar = [];
+
     // Corresponds to LLVMContextCreate
     public function init() {
         
