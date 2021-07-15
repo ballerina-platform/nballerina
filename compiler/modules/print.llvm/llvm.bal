@@ -771,8 +771,7 @@ public distinct class BasicBlock {
     // Used to to update the unnamed variable names and basic block declarations
     function updateDeclarations() {
         (string|Unnamed)[][] newLines = [];
-        //TODO: remove the exception for unreferenced basic blocks
-        if self.label is Unnamed && (self.isReferenced || self.label != 0){
+        if self.isReferenced && self.label is Unnamed {
             // unnamed basic block
             self.label = self.func.updateBasicBlockLabel(<Unnamed>self.label);
         }

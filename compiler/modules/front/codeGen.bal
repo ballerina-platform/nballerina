@@ -13,7 +13,7 @@ type CodeGenError err:Semantic|err:Unimplemented;
 
 type LoopContext record {|
     bir:BasicBlock onBreak;
-    bir:BasicBlock onContinue;
+    bir:BasicBlock? onContinue;
     // JBUG #31311 does not allow `outer` here
     LoopContext? enclosing;
     // will use this with while true to determine whether
@@ -45,13 +45,17 @@ class CodeGenContext {
         return err:semantic(msg, functionName=self.functionName);
     }
     
-    function pushLoopContext(bir:BasicBlock onBreak, bir:BasicBlock onContinue) {
+    function pushLoopContext(bir:BasicBlock onBreak, bir:BasicBlock? onContinue) {
         LoopContext c = { onBreak, onContinue, enclosing: self.loopContext };
         self.loopContext = c;
     }
 
     function loopUsedBreak() returns boolean {
         return (<LoopContext>self.loopContext).breakUsed;
+    }
+
+    function loopContinueBlock() returns bir:BasicBlock? {
+        return (<LoopContext>self.loopContext).onContinue;
     }
 
     function popLoopContext() {
@@ -75,7 +79,9 @@ class CodeGenContext {
             return self.semanticErr("continue not in loop");
         }
         else {
-            return c.onContinue.label;
+            bir:BasicBlock b = c.onContinue ?: self.createBasicBlock();
+            c.onContinue = b;
+            return b.label;
         }
     }
 }
@@ -174,7 +180,6 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
-    bir:BasicBlock loopStep = cx.createBasicBlock();
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
     initLoopVar.insns.push(branchToLoopHead);
     bir:Register condition = cx.createRegister(t:BOOLEAN);
@@ -183,17 +188,23 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
     bir:BasicBlock afterCondition = cx.createBasicBlock();
     bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
     loopHead.insns.push(branch);
-    cx.pushLoopContext(exit, loopStep);
+    cx.pushLoopContext(exit, ());
     Scope loopScope = { name: varName, reg: loopVar, prev: scope, isFinal: true };
     bir:BasicBlock? loopBody = check codeGenStmts(cx, afterCondition, loopScope, stmt.body);
-    cx.popLoopContext();
+    
+    bir:BasicBlock? loopStep = cx.loopContinueBlock();
     if !(loopBody is ()) {
-        bir:BranchInsn branchToLoopStep = { dest: loopStep.label };
+        loopStep = loopStep ?: cx.createBasicBlock();
+        bir:BranchInsn branchToLoopStep = { dest: (<bir:BasicBlock>loopStep).label };
         loopBody.insns.push(branchToLoopStep);
     }
-    bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", operands: [loopVar, 1], result: loopVar };
-    loopStep.insns.push(increment);
-    loopStep.insns.push(branchToLoopHead);
+
+    if !(loopStep is ()) {
+        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", operands: [loopVar, 1], result: loopVar };
+        loopStep.insns.push(increment);
+        loopStep.insns.push(branchToLoopHead);
+    }
+    cx.popLoopContext();
     return exit;
 }
 
