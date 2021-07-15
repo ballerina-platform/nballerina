@@ -913,7 +913,7 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
     int nBytes = bytes.length();
 
     llvm:Type ty;
-    llvm:Value val;
+    llvm:ConstValue val;
     StringVariant variant;
     if nBytes == nCodePoints && nBytes <= 0xFF {
         // We want the total size including the header to be a multiple of 8
