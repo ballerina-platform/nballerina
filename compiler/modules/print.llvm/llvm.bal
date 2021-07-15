@@ -273,9 +273,7 @@ public class FunctionDecl {
     function init(Context context, string functionName, FunctionType functionType) {
         self.functionName = functionName;
         self.functionType = functionType;
-        foreach var _i in 0..< functionType.paramTypes.length() {
-           self.paramAttributes.push([]); 
-        }
+        self.paramAttributes.setLength(functionType.paramTypes.length());
     }
 
     function output(Output out) {
@@ -284,30 +282,30 @@ public class FunctionDecl {
 
     public function addEnumAttribute(EnumAttribute attribute) {
         if attribute is FunctionEnumAttribute {
-            self.pushAttributeToContainer(self.functionAttributes, attribute);
+            self.addAttributeToSet(self.functionAttributes, attribute);
         }
         else {
-            if attribute[0] == "return" {
+            if attribute is (readonly & ["return", ReturnEnumAttribute]) {
                 ReturnEnumAttribute attrib = attribute[1];
-                self.pushAttributeToContainer(self.returnAttributes, attrib);
+                self.addAttributeToSet(self.returnAttributes, attrib);
             } else {
-                ParamEnumAttribute attrib = <ParamEnumAttribute>attribute[1];
-                int paramIndex = <int>attribute[0];
+                ParamEnumAttribute attrib = attribute[1];
+                int paramIndex = attribute[0];
                 if paramIndex >= self.paramAttributes.length() {
                     panic err:illegalArgument("Invalid index for parameter attribute");
                 } else {
-                    self.pushAttributeToContainer(self.paramAttributes[paramIndex], attrib);
+                    self.addAttributeToSet(self.paramAttributes[paramIndex], attrib);
                 }
             }
         }
     }
 
-    function pushAttributeToContainer((FunctionEnumAttribute|ParamEnumAttribute|ReturnEnumAttribute)[] container,
-                                      (FunctionEnumAttribute|ParamEnumAttribute|ReturnEnumAttribute) attribute) {
+    private function addAttributeToSet(string[] container, string attribute) {
         if container.indexOf(attribute) == () {
             container.push(attribute);
         }
     }
+
 
     // Corresponds to LLVMSetGC
     public function setGC(string? name) {
@@ -345,8 +343,8 @@ public class FunctionDefn {
             string register = "%" + i.toString();
             Value arg = new (paramType, register);
             self.paramValues.push(arg);
-            self.paramAttributes.push([]);
         }
+        self.paramAttributes.setLength(functionType.paramTypes.length());
     }
 
     // Correspond to LLVMGetParam
@@ -425,26 +423,25 @@ public class FunctionDefn {
 
     public function addEnumAttribute(EnumAttribute attribute) {
         if attribute is FunctionEnumAttribute {
-            self.pushAttributeToContainer(self.functionAttributes, attribute);
+            self.addAttributeToSet(self.functionAttributes, attribute);
         }
         else {
-            if attribute[0] == "return" {
+            if attribute is (readonly & ["return", ReturnEnumAttribute]) {
                 ReturnEnumAttribute attrib = attribute[1];
-                self.pushAttributeToContainer(self.returnAttributes, attrib);
+                self.addAttributeToSet(self.returnAttributes, attrib);
             } else {
-                ParamEnumAttribute attrib = <ParamEnumAttribute>attribute[1];
-                int paramIndex = <int>attribute[0];
+                ParamEnumAttribute attrib = attribute[1];
+                int paramIndex = attribute[0];
                 if paramIndex >= self.paramAttributes.length() {
                     panic err:illegalArgument("Invalid index for parameter attribute");
                 } else {
-                    self.pushAttributeToContainer(self.paramAttributes[paramIndex], attrib);
+                    self.addAttributeToSet(self.paramAttributes[paramIndex], attrib);
                 }
             }
         }
     }
 
-    function pushAttributeToContainer((FunctionEnumAttribute|ParamEnumAttribute|ReturnEnumAttribute)[] container,
-                                      (FunctionEnumAttribute|ParamEnumAttribute|ReturnEnumAttribute) attribute) {
+    private function addAttributeToSet(string[] container, string attribute) {
         if container.indexOf(attribute) == () {
             container.push(attribute);
         }
