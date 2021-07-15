@@ -266,11 +266,16 @@ public class FunctionDecl {
     final FunctionType functionType;
     final string functionName;
     string? gcName = ();
-    final EnumAttribute[] attributes = [];
+    final FunctionEnumAttribute[] functionAttributes = [];
+    final ReturnEnumAttribute[] returnAttributes = [];
+    final ParamEnumAttribute[][] paramAttributes = [];
 
     function init(Context context, string functionName, FunctionType functionType) {
         self.functionName = functionName;
         self.functionType = functionType;
+        foreach var _i in 0..< functionType.paramTypes.length() {
+           self.paramAttributes.push([]); 
+        }
     }
 
     function output(Output out) {
@@ -278,8 +283,29 @@ public class FunctionDecl {
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {
-        if self.attributes.indexOf(attribute) == () {
-           self.attributes.push(attribute); 
+        if attribute is FunctionEnumAttribute {
+            self.pushAttributeToContainer(self.functionAttributes, attribute);
+        }
+        else {
+            if attribute[0] == "return" {
+                ReturnEnumAttribute attrib = attribute[1];
+                self.pushAttributeToContainer(self.returnAttributes, attrib);
+            } else {
+                ParamEnumAttribute attrib = <ParamEnumAttribute>attribute[1];
+                int paramIndex = <int>attribute[0];
+                if paramIndex >= self.paramAttributes.length() {
+                    panic err:illegalArgument("Invalid index for parameter attribute");
+                } else {
+                    self.pushAttributeToContainer(self.paramAttributes[paramIndex], attrib);
+                }
+            }
+        }
+    }
+
+    function pushAttributeToContainer((FunctionEnumAttribute|ParamEnumAttribute|ReturnEnumAttribute)[] container,
+                                      (FunctionEnumAttribute|ParamEnumAttribute|ReturnEnumAttribute) attribute) {
+        if container.indexOf(attribute) == () {
+            container.push(attribute);
         }
     }
 
@@ -293,7 +319,9 @@ public class FunctionDefn {
     final true isDefn = true;
     final FunctionType functionType;
     final string functionName;
-    final EnumAttribute[] attributes = [];
+    final FunctionEnumAttribute[] functionAttributes = [];
+    final ReturnEnumAttribute[] returnAttributes = [];
+    final ParamEnumAttribute[][] paramAttributes = [];
     string? gcName = ();
 
     private BasicBlock[] basicBlocks = [];
@@ -317,6 +345,7 @@ public class FunctionDefn {
             string register = "%" + i.toString();
             Value arg = new (paramType, register);
             self.paramValues.push(arg);
+            self.paramAttributes.push([]);
         }
     }
 
@@ -395,8 +424,29 @@ public class FunctionDefn {
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {
-        if self.attributes.indexOf(attribute) == () {
-            self.attributes.push(attribute);
+        if attribute is FunctionEnumAttribute {
+            self.pushAttributeToContainer(self.functionAttributes, attribute);
+        }
+        else {
+            if attribute[0] == "return" {
+                ReturnEnumAttribute attrib = attribute[1];
+                self.pushAttributeToContainer(self.returnAttributes, attrib);
+            } else {
+                ParamEnumAttribute attrib = <ParamEnumAttribute>attribute[1];
+                int paramIndex = <int>attribute[0];
+                if paramIndex >= self.paramAttributes.length() {
+                    panic err:illegalArgument("Invalid index for parameter attribute");
+                } else {
+                    self.pushAttributeToContainer(self.paramAttributes[paramIndex], attrib);
+                }
+            }
+        }
+    }
+
+    function pushAttributeToContainer((FunctionEnumAttribute|ParamEnumAttribute|ReturnEnumAttribute)[] container,
+                                      (FunctionEnumAttribute|ParamEnumAttribute|ReturnEnumAttribute) attribute) {
+        if container.indexOf(attribute) == () {
+            container.push(attribute);
         }
     }
 
@@ -893,6 +943,9 @@ function functionHeader(Function fn) returns string {
     else {
         words.push("declare");
     }
+    foreach int i in 0 ..< fn.returnAttributes.length() {
+        words.push(fn.returnAttributes[i]);
+    }
     words.push(typeToString(fn.functionType.returnType));
     words.push("@" + fn.functionName);
     words.push("(");
@@ -902,13 +955,16 @@ function functionHeader(Function fn) returns string {
             words.push(",");
         }
         words.push(typeToString(ty));
+        foreach int j in 0 ..< fn.paramAttributes[i].length() {
+            words.push(fn.paramAttributes[i][j]);
+        }
         if fn is FunctionDefn {
             words.push(<string>fn.getParam(i).operand);
         }
     }
     words.push(")");
-    foreach int i in 0 ..< fn.attributes.length() {
-        words.push(fn.attributes[i]);
+    foreach int i in 0 ..< fn.functionAttributes.length() {
+        words.push(fn.functionAttributes[i]);
     }
     if fn.gcName is string {
         words.push("gc", string `"${<string>fn.gcName}"`);

@@ -58,7 +58,10 @@ public type FunctionType readonly & record {|
 // Corresponds to LLVMLinkage enum
 public type Linkage "internal"|"external";
 
-public type EnumAttribute "noreturn"|"cold"|"nounwind"|"readnone"|"readonly"|"speculatable"|"willreturn";
+public type FunctionEnumAttribute "noreturn"|"cold"|"nounwind"|"readnone"|"readonly"|"speculatable"|"willreturn";
+public type ParamEnumAttribute "signext"|"zeroext";
+public type ReturnEnumAttribute "signext"|"zeroext"|"noalias";
+public type EnumAttribute FunctionEnumAttribute | (readonly & [int, ParamEnumAttribute]) | (readonly & ["return", ReturnEnumAttribute]);
 
 // Subtype of LLVMOpcode
 
