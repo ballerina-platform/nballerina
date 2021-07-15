@@ -33,16 +33,16 @@ function testIntrinsicRepeatedAddition() {
 function testFunctionAttributeAddition() {
     Context context = new;
     Module m = context.createModule();
-    EnumAttribute[] attributes = ["noreturn", "cold", "nounwind", "readnone", "speculatable", "willreturn"]; 
+    FunctionEnumAttribute[] attributes = ["noreturn", "cold", "nounwind", "readnone", "speculatable", "willreturn"]; 
     FunctionDecl fDecl = m.addFunctionDecl("decl", {returnType: "void", paramTypes: []});
     foreach var attribute in attributes {
         fDecl.addEnumAttribute(attribute);
-        test:assertNotExactEquals(fDecl.attributes.indexOf(attribute), ());
+        test:assertNotExactEquals(fDecl.functionAttributes.indexOf(attribute), ());
     }
     FunctionDefn fDefn = m.addFunctionDefn("defn", {returnType: "void", paramTypes: []});
     foreach var attribute in attributes {
         fDefn.addEnumAttribute(attribute);
-        test:assertNotExactEquals(fDefn.attributes.indexOf(attribute), ());
+        test:assertNotExactEquals(fDefn.functionAttributes.indexOf(attribute), ());
     }
 }
 
@@ -54,9 +54,9 @@ function testFunctionAttributeNoDuplicate() {
     FunctionDecl fDecl = m.addFunctionDecl("decl", {returnType: "void", paramTypes: []});
     fDecl.addEnumAttribute(attribute);
     fDecl.addEnumAttribute(attribute);
-    test:assertEquals(fDecl.attributes.length(), 1);
+    test:assertEquals(fDecl.functionAttributes.length(), 1);
     FunctionDefn fDefn = m.addFunctionDefn("defn", {returnType: "void", paramTypes: []});
     fDefn.addEnumAttribute(attribute);
     fDefn.addEnumAttribute(attribute);
-    test:assertEquals(fDefn.attributes.length(), 1);
+    test:assertEquals(fDefn.functionAttributes.length(), 1);
 }

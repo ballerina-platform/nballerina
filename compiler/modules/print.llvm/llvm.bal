@@ -266,11 +266,14 @@ public class FunctionDecl {
     final FunctionType functionType;
     final string functionName;
     string? gcName = ();
-    final EnumAttribute[] attributes = [];
+    final FunctionEnumAttribute[] functionAttributes = [];
+    final ReturnEnumAttribute[] returnAttributes = [];
+    final ParamEnumAttribute[][] paramAttributes = [];
 
     function init(Context context, string functionName, FunctionType functionType) {
         self.functionName = functionName;
         self.functionType = functionType;
+        self.paramAttributes.setLength(functionType.paramTypes.length());
     }
 
     function output(Output out) {
@@ -278,10 +281,31 @@ public class FunctionDecl {
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {
-        if self.attributes.indexOf(attribute) == () {
-           self.attributes.push(attribute); 
+        if attribute is FunctionEnumAttribute {
+            self.addAttributeToSet(self.functionAttributes, attribute);
+        }
+        else {
+            if attribute is (readonly & ["return", ReturnEnumAttribute]) {
+                ReturnEnumAttribute attrib = attribute[1];
+                self.addAttributeToSet(self.returnAttributes, attrib);
+            } else {
+                ParamEnumAttribute attrib = attribute[1];
+                int paramIndex = attribute[0];
+                if paramIndex >= self.paramAttributes.length() {
+                    panic err:illegalArgument("Invalid index for parameter attribute");
+                } else {
+                    self.addAttributeToSet(self.paramAttributes[paramIndex], attrib);
+                }
+            }
         }
     }
+
+    private function addAttributeToSet(string[] container, string attribute) {
+        if container.indexOf(attribute) == () {
+            container.push(attribute);
+        }
+    }
+
 
     // Corresponds to LLVMSetGC
     public function setGC(string? name) {
@@ -293,7 +317,9 @@ public class FunctionDefn {
     final true isDefn = true;
     final FunctionType functionType;
     final string functionName;
-    final EnumAttribute[] attributes = [];
+    final FunctionEnumAttribute[] functionAttributes = [];
+    final ReturnEnumAttribute[] returnAttributes = [];
+    final ParamEnumAttribute[][] paramAttributes = [];
     string? gcName = ();
 
     private BasicBlock[] basicBlocks = [];
@@ -318,6 +344,7 @@ public class FunctionDefn {
             Value arg = new (paramType, register);
             self.paramValues.push(arg);
         }
+        self.paramAttributes.setLength(functionType.paramTypes.length());
     }
 
     // Correspond to LLVMGetParam
@@ -395,8 +422,28 @@ public class FunctionDefn {
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {
-        if self.attributes.indexOf(attribute) == () {
-            self.attributes.push(attribute);
+        if attribute is FunctionEnumAttribute {
+            self.addAttributeToSet(self.functionAttributes, attribute);
+        }
+        else {
+            if attribute is (readonly & ["return", ReturnEnumAttribute]) {
+                ReturnEnumAttribute attrib = attribute[1];
+                self.addAttributeToSet(self.returnAttributes, attrib);
+            } else {
+                ParamEnumAttribute attrib = attribute[1];
+                int paramIndex = attribute[0];
+                if paramIndex >= self.paramAttributes.length() {
+                    panic err:illegalArgument("Invalid index for parameter attribute");
+                } else {
+                    self.addAttributeToSet(self.paramAttributes[paramIndex], attrib);
+                }
+            }
+        }
+    }
+
+    private function addAttributeToSet(string[] container, string attribute) {
+        if container.indexOf(attribute) == () {
+            container.push(attribute);
         }
     }
 
@@ -892,6 +939,9 @@ function functionHeader(Function fn) returns string {
     else {
         words.push("declare");
     }
+    foreach int i in 0 ..< fn.returnAttributes.length() {
+        words.push(fn.returnAttributes[i]);
+    }
     words.push(typeToString(fn.functionType.returnType));
     words.push("@" + fn.functionName);
     words.push("(");
@@ -901,13 +951,16 @@ function functionHeader(Function fn) returns string {
             words.push(",");
         }
         words.push(typeToString(ty));
+        foreach int j in 0 ..< fn.paramAttributes[i].length() {
+            words.push(fn.paramAttributes[i][j]);
+        }
         if fn is FunctionDefn {
             words.push(<string>fn.getParam(i).operand);
         }
     }
     words.push(")");
-    foreach int i in 0 ..< fn.attributes.length() {
-        words.push(fn.attributes[i]);
+    foreach int i in 0 ..< fn.functionAttributes.length() {
+        words.push(fn.functionAttributes[i]);
     }
     if fn.gcName is string {
         words.push("gc", string `"${<string>fn.gcName}"`);
