@@ -41,8 +41,23 @@ public distinct class Module {
         _ = jLLVMPrintModuleToFile(self.LLVMModule, java:fromString(fileName), err);
     }
 
-    public function addGlobal(Type ty, string name, int addressSpace = 0) returns PointerValue {
-        return new (jLLVMAddGlobalInAddressSpace(self.LLVMModule, typeToLLVMType(ty), java:fromString(name), addressSpace));
+    public function addGlobal(Type ty, string name, *GlobalProperties props) returns PointerValue {
+        PointerValue val =  new (jLLVMAddGlobalInAddressSpace(self.LLVMModule, typeToLLVMType(ty), java:fromString(name), props.addressSpace));
+        if props.initializer is ConstValue {
+            ConstValue initializer = <ConstValue>props.initializer;
+            jLLVMSetInitializer(val.LLVMValueRef, initializer.LLVMValueRef);
+        }
+        if props.unnamedAddr {
+            jLLVMSetUnnamedAddr(val.LLVMValueRef, 1);
+        }
+        jLLVMSetLinkage(val.LLVMValueRef, linkageToInt(props.linkage));
+        if props.isConstant {
+            jLLVMSetGlobalConstant(val.LLVMValueRef, 1);
+        }
+        if props.align is int {
+            jLLVMSetAlignment(val.LLVMValueRef, <int>props.align);
+        }
+        return val;
     }
 
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
@@ -112,4 +127,22 @@ function jLLVMSetTarget(handle moduleRef, handle target) = @java:Method {
     name: "LLVMSetTarget",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "java.lang.String"]
+} external;
+
+function jLLVMSetInitializer(handle globalVar, handle constVar) = @java:Method {
+    name: "LLVMSetInitializer",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef"]
+} external;
+
+function jLLVMSetUnnamedAddr(handle globalVar, int hasUnnamedAddr) = @java:Method {
+    name: "LLVMSetUnnamedAddr",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "int"]
+} external;
+
+function jLLVMSetGlobalConstant(handle globalVar, int isConstant) = @java:Method {
+    name: "LLVMSetGlobalConstant",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "int"]
 } external;
