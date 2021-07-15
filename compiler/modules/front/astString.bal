@@ -145,11 +145,15 @@ function exprsToWords(Word[] w, Expr[] exprs) {
 
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     if expr is SimpleConstExpr {
-        if expr.value == () {
+        var val = expr.value;
+        if val == () {
             w.push("(", ")");
         }
+        else if val is string {
+            w.push("\"", CLING, escape(val), CLING, "\"");
+        }
         else {
-            w.push(expr.value.toString());
+            w.push(val.toString());
         }
     } 
     else if expr is UnaryExpr {
@@ -238,6 +242,37 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     else {
         w.push(expr.varName);
     }
+}
+
+final readonly & map<string:Char> REVERSE_ESCAPES = {
+    "\\": "\\",
+    "\"": "\"",
+    "\n": "n",
+    "\r": "r",
+    "\t": "t"
+};
+
+function escape(string str) returns string {
+    string[] escaped = [];
+    // JBUG `foreach var ch in str` gives wrong ch for some str like "\u{10FFFF}""
+    int[] cps = str.toCodePointInts();
+    foreach int cp in cps {
+        // JBUG can't lookup map with string:Char
+        string ch = checkpanic string:fromCodePointInt(cp);
+        string:Char? singleEscaped =  REVERSE_ESCAPES[ch];
+        if singleEscaped is () {
+            if 0x20 <= cp && cp < 0x7F {
+                escaped.push(ch);
+            }
+            else {
+                escaped.push("\\u{", cp.toHexString().toUpperAscii(), "}");
+            }
+        }
+        else {
+            escaped.push("\\", singleEscaped);
+        }
+    }
+    return "".'join(...escaped);
 }
 
 function wordsToString(Word[] s) returns string {

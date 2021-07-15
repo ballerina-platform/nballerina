@@ -175,12 +175,26 @@ function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
         ["OE", "`"],
         ["OE", string`"\"`],
         ["OE", string`"\a"`],
-        ["OE", string `\`],
+        // JBUG ballerina-plugin-vscode/#104 can't use string `\`
+        ["OE", "\\"],
         ["OE", "\"\n\""],
         ["OE", "\"\r\""],
         ["E", "obj..x(args)"],
         ["E", "01"],
-        ["E", "-01"]
+        ["E", "-01"],
+        ["E", "\"\n\""],
+        ["E", "\"\r\""],
+        ["E", "\"\\"],
+         // JBUG #31444 #31713 #31717 can't write below literals in a simpler way
+        ["E", "\"\\" + "u{}\""],
+        ["E", "\"\\" + "u{D800}\""],
+        ["E", "\"\\" + "u{DFFF}\""],
+        ["E", "\"\\" + "u{110000}\""],
+        ["E", "\"\\" + "u{X}\""],
+        ["E", "\"\\" + "u{-6A}\""],
+        ["E", "\"\\" + "u\""],
+        ["E", "\"\\" + "u{\""],
+        ["E", "\"\\" + "u{0\""]
     ];
 
     map<TokenizerTestCase> tests = {};
@@ -207,15 +221,28 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "\n0", "0"],
          ["V", "expr", "\r0", "0"],
          ["V", "expr", "\r\n0", "0"],
-        // literals string
-         ["UV", "expr", string`"\t"`, string`"\t"`],
-         ["UV", "expr", "\"\t\"", "\"\t\""],
-         ["UV", "expr", string`"\n"`, string`"\n"`],
-         ["UV", "expr", string`"\r"`, string`"\r"`],
-         ["UV", "expr", string`"\\"`, string`"\\"`],
-         ["UV", "expr", string`"\""`, string`"\""`],
-         ["UV", "expr", string`"what"`, string`"what"`],
-         ["UV", "expr", string`"Say \"what\" again."`, string`"Say \"what\" again."`],
+         // literals string
+         ["V", "expr", string`"what"`, string`"what"`],
+         ["V", "expr", string`"Say \"what\" again."`, string`"Say \"what\" again."`],
+         // literals string escape
+         ["V", "expr", "\"\t\"", string `"\t"`],
+         ["V", "expr", string`"\t"`, string `"\t"`],
+         ["V", "expr", string`"\n"`, string `"\n"`],
+         ["V", "expr", string`"\r"`, string `"\r"`],
+         ["V", "expr", string`"\\"`, string `"\\"`],
+         ["V", "expr", string`"\""`, string`"\""`],
+         // JBUG #31444 #31713 #31717 can't write below literals in a simpler way
+         ["V", "expr", "\"\\" + "u{0}\"", "\"\\" + "u{0}\""],
+         ["V", "expr", "\"\\" + "u{41}\"", string `"A"`],
+         ["V", "expr", "\"\\" + "u{6A}\"", string `"j"`],
+         ["V", "expr", "\"\\" + "u{6a}\"", string `"j"`],
+         ["V", "expr", "\"\\" + "u{0000000041}\"", string `"A"`],
+         ["V", "expr", "\"\\" + "u{d7fF}\"", "\"\\" + "u{D7FF}\""],
+         ["V", "expr", "\"\\" + "u{E000}\"", "\"\\" + "u{E000}\""],
+         ["V", "expr", "\"\\" + "u{FFFE}\"", "\"\\" + "u{FFFE}\""],
+         ["V", "expr", "\"\\" + "u{FFFF}\"", "\"\\" + "u{FFFF}\""],
+         ["V", "expr", "\"\\" + "u{10FFFF}\"", "\"\\" + "u{10FFFF}\""],
+         ["V", "expr", "\"\\\\" + "u{41}\"", "\"\\\\" + "u{41}\""],
          // unary op
          ["E", "expr", "!", ""],
          ["E", "expr", "!-", ""],
