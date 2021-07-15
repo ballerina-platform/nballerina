@@ -248,7 +248,7 @@ public class Module {
         }
         words.push(typeToString(val.ty.pointsTo));
         ConstValue? initializer = prop.initializer;
-        if initializer is Value {
+        if initializer is ConstValue {
             words.push(initializer.operand);
         }
         if prop.align is int {
