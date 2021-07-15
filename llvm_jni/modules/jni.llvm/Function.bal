@@ -53,10 +53,31 @@ public distinct class Function {
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {
-        handle attributeName = java:fromString(attribute);
-        int attrKind = jLLVMGetEnumAttributeKindForName(attributeName, (<string>attribute).length());
-        handle attr = jLLVMCreateEnumAttribute(self.context.LLVMContext, attrKind, 0);
-        jLLVMAddAttributeAtIndex(self.LLVMFunction, -1, attr);
+        handle? attributeName = ();
+        int? index = ();
+        int? attributeNameLength = ();
+        if attribute is FunctionEnumAttribute {
+            index = -1;
+            attributeName = java:fromString(attribute);
+            string attributeContent = attribute;
+            attributeNameLength = attributeContent.length();
+        } else {
+            if attribute[0] == "return" {
+                index = 0;
+            } else {
+                index = <int>attribute[0] + 1;
+            }
+            string attributeContent = attribute[1];
+            attributeNameLength = attributeContent.length();
+            attributeName = java:fromString(attributeContent);
+        }
+        if attributeName is () || index is () || attributeNameLength is (){
+            panic error("Failed to convert the given attribute");
+        } else {
+            int attrKind = jLLVMGetEnumAttributeKindForName(attributeName, attributeNameLength);
+            handle attr = jLLVMCreateEnumAttribute(self.context.LLVMContext, attrKind, 0);
+            jLLVMAddAttributeAtIndex(self.LLVMFunction, index, attr);
+        }
     }
 
     public function setGC(string? name) {
