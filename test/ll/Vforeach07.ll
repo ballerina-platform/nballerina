@@ -20,7 +20,7 @@ define void @_B_main() {
   %11 = icmp slt i64 %10, 10
   store i1 %11, i1* %1
   %12 = load i1, i1* %1
-  br i1 %12, label %20, label %13
+  br i1 %12, label %17, label %13
 13:
   %14 = zext i1 1 to i64
   %15 = or i64 %14, 72057594037927936
@@ -30,23 +30,23 @@ define void @_B_main() {
   ret void
 17:
   %18 = load i64, i64* %i
-  %19 = add nsw i64 %18, 1
-  store i64 %19, i64* %i
-  br label %9
-20:
-  %21 = load i64, i64* %i
-  %22 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %21)
-  call void @_Bio__println(i8 addrspace(1)* %22)
+  %19 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %18)
+  call void @_Bio__println(i8 addrspace(1)* %19)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %23 = load i64, i64* %i
-  %24 = icmp eq i64 %23, 8
-  store i1 %24, i1* %3
-  %25 = load i1, i1* %3
-  br i1 %25, label %26, label %27
-26:
+  %20 = load i64, i64* %i
+  %21 = icmp eq i64 %20, 8
+  store i1 %21, i1* %3
+  %22 = load i1, i1* %3
+  br i1 %22, label %23, label %24
+23:
   br label %13
-27:
-  br label %17
+24:
+  br label %25
+25:
+  %26 = load i64, i64* %i
+  %27 = add nsw i64 %26, 1
+  store i64 %27, i64* %i
+  br label %9
 28:
   call void @_bal_panic(i64 772)
   unreachable

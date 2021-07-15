@@ -136,19 +136,19 @@ final RuntimeFunction taggedToIntFunction = {
 final RuntimeFunction eqFunction = {
     name: "eq",
     ty: {
-        returnType: "i32",
+        returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [["return", "zeroext"]]
 };
 
 final RuntimeFunction stringEqFunction = {
     name: "string_eq",
     ty: {
-        returnType: "i32",
+        returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: [["return", "zeroext"]]
 };
 
 final bir:ModuleId runtimeModule = {
@@ -734,7 +734,7 @@ function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op
 }
 
 function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
-    llvm:Value b = builder.trunc(<llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, eqFunction), [tagged1, tagged2]), "i1");
+    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, eqFunction), [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }

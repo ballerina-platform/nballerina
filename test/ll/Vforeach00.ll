@@ -35,20 +35,20 @@ define void @_B_loop(i64 %0) {
   %11 = icmp slt i64 %9, %10
   store i1 %11, i1* %2
   %12 = load i1, i1* %2
-  br i1 %12, label %17, label %13
+  br i1 %12, label %14, label %13
 13:
   ret void
 14:
   %15 = load i64, i64* %i
-  %16 = add nsw i64 %15, 1
-  store i64 %16, i64* %i
-  br label %8
+  %16 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %15)
+  call void @_Bio__println(i8 addrspace(1)* %16)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  br label %17
 17:
   %18 = load i64, i64* %i
-  %19 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %18)
-  call void @_Bio__println(i8 addrspace(1)* %19)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3
-  br label %14
+  %19 = add nsw i64 %18, 1
+  store i64 %19, i64* %i
+  br label %8
 20:
   call void @_bal_panic(i64 1540)
   unreachable

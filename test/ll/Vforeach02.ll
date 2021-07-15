@@ -64,20 +64,20 @@ define void @_B_main() {
   %15 = icmp slt i64 %13, %14
   store i1 %15, i1* %3
   %16 = load i1, i1* %3
-  br i1 %16, label %21, label %17
+  br i1 %16, label %18, label %17
 17:
   ret void
 18:
   %19 = load i64, i64* %i
-  %20 = add nsw i64 %19, 1
-  store i64 %20, i64* %i
-  br label %12
+  %20 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %19)
+  call void @_Bio__println(i8 addrspace(1)* %20)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  br label %21
 21:
   %22 = load i64, i64* %i
-  %23 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %22)
-  call void @_Bio__println(i8 addrspace(1)* %23)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  br label %18
+  %23 = add nsw i64 %22, 1
+  store i64 %23, i64* %i
+  br label %12
 24:
   call void @_bal_panic(i64 3844)
   unreachable

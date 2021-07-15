@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdbool.h>
 
 #include "tag.h"
 #define TAG_MASK 0xFF
@@ -100,8 +101,8 @@ extern TaggedPtr _bal_int_to_tagged(int64_t n);
 extern int64_t _bal_tagged_to_int(TaggedPtr p);
 
 extern struct StringData _bal_tagged_to_string(TaggedPtr p);
-extern int32_t _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
-extern int32_t _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
+extern bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
+extern bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
 
 
 

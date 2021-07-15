@@ -33,7 +33,7 @@ define i64 @_B_loop() {
   %4 = alloca i8
   %5 = load i8*, i8** @_bal_stack_guard
   %6 = icmp ult i8* %4, %5
-  br i1 %6, label %22, label %7
+  br i1 %6, label %19, label %7
 7:
   store i64 5, i64* %i
   br label %8
@@ -42,31 +42,27 @@ define i64 @_B_loop() {
   %10 = icmp slt i64 %9, 10
   store i1 %10, i1* %1
   %11 = load i1, i1* %1
-  br i1 %11, label %18, label %12
+  br i1 %11, label %15, label %12
 12:
   %13 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
   %14 = extractvalue {i64, i1} %13, 1
-  br i1 %14, label %26, label %23
+  br i1 %14, label %23, label %20
+15:
   %16 = load i64, i64* %i
-  %17 = add nsw i64 %16, 1
-  store i64 %17, i64* %i
-  br label %8
-18:
-  %19 = load i64, i64* %i
-  ret i64 %19
-20:
-  %21 = load i64, i64* %3
-  call void @_bal_panic(i64 %21)
+  ret i64 %16
+17:
+  %18 = load i64, i64* %3
+  call void @_bal_panic(i64 %18)
   unreachable
-22:
+19:
   call void @_bal_panic(i64 1796)
   unreachable
+20:
+  %21 = extractvalue {i64, i1} %13, 0
+  store i64 %21, i64* %2
+  %22 = load i64, i64* %2
+  ret i64 %22
 23:
-  %24 = extractvalue {i64, i1} %13, 0
-  store i64 %24, i64* %2
-  %25 = load i64, i64* %2
-  ret i64 %25
-26:
   store i64 2817, i64* %3
-  br label %20
+  br label %17
 }

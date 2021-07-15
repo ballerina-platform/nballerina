@@ -1,6 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic(i64) noreturn cold
-declare i32 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*)
+declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
@@ -35,7 +35,7 @@ define void @_B_main() {
   %28 = alloca i8
   %29 = load i8*, i8** @_bal_stack_guard
   %30 = icmp ult i8* %28, %29
-  br i1 %30, label %79, label %31
+  br i1 %30, label %76, label %31
 31:
   %32 = call i8 addrspace(1)* @_B_mkInt(i64 2)
   store i8 addrspace(1)* %32, i8 addrspace(1)** %2
@@ -43,136 +43,133 @@ define void @_B_main() {
   store i8 addrspace(1)* %33, i8 addrspace(1)** %3
   %34 = load i8 addrspace(1)*, i8 addrspace(1)** %2
   %35 = load i8 addrspace(1)*, i8 addrspace(1)** %3
-  %36 = call i32 @_bal_eq(i8 addrspace(1)* %34, i8 addrspace(1)* %35)
-  %37 = trunc i32 %36 to i1
-  store i1 %37, i1* %1
-  %38 = load i1, i1* %1
-  %39 = zext i1 %38 to i64
-  %40 = or i64 %39, 72057594037927936
-  %41 = getelementptr i8, i8 addrspace(1)* null, i64 %40
-  call void @_Bio__println(i8 addrspace(1)* %41)
+  %36 = call i1 @_bal_eq(i8 addrspace(1)* %34, i8 addrspace(1)* %35)
+  store i1 %36, i1* %1
+  %37 = load i1, i1* %1
+  %38 = zext i1 %37 to i64
+  %39 = or i64 %38, 72057594037927936
+  %40 = getelementptr i8, i8 addrspace(1)* null, i64 %39
+  call void @_Bio__println(i8 addrspace(1)* %40)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  %42 = call i8 addrspace(1)* @_B_mkInt(i64 0)
-  store i8 addrspace(1)* %42, i8 addrspace(1)** %6
-  %43 = call i8 addrspace(1)* @_B_mkBoolean(i1 0)
-  store i8 addrspace(1)* %43, i8 addrspace(1)** %7
-  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %6
-  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %7
-  %46 = call i32 @_bal_eq(i8 addrspace(1)* %44, i8 addrspace(1)* %45)
-  %47 = trunc i32 %46 to i1
-  %48 = xor i1 %47, 1
-  store i1 %48, i1* %5
-  %49 = load i1, i1* %5
-  %50 = zext i1 %49 to i64
-  %51 = or i64 %50, 72057594037927936
-  %52 = getelementptr i8, i8 addrspace(1)* null, i64 %51
-  call void @_Bio__println(i8 addrspace(1)* %52)
+  %41 = call i8 addrspace(1)* @_B_mkInt(i64 0)
+  store i8 addrspace(1)* %41, i8 addrspace(1)** %6
+  %42 = call i8 addrspace(1)* @_B_mkBoolean(i1 0)
+  store i8 addrspace(1)* %42, i8 addrspace(1)** %7
+  %43 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %7
+  %45 = call i1 @_bal_eq(i8 addrspace(1)* %43, i8 addrspace(1)* %44)
+  %46 = xor i1 %45, 1
+  store i1 %46, i1* %5
+  %47 = load i1, i1* %5
+  %48 = zext i1 %47 to i64
+  %49 = or i64 %48, 72057594037927936
+  %50 = getelementptr i8, i8 addrspace(1)* null, i64 %49
+  call void @_Bio__println(i8 addrspace(1)* %50)
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
-  %53 = call i8 addrspace(1)* @_B_mkBoolean(i1 1)
-  store i8 addrspace(1)* %53, i8 addrspace(1)** %10
-  %54 = call i8 addrspace(1)* @_B_mkInt(i64 1)
-  store i8 addrspace(1)* %54, i8 addrspace(1)** %11
-  %55 = load i8 addrspace(1)*, i8 addrspace(1)** %10
-  %56 = load i8 addrspace(1)*, i8 addrspace(1)** %11
-  %57 = call i32 @_bal_eq(i8 addrspace(1)* %55, i8 addrspace(1)* %56)
-  %58 = trunc i32 %57 to i1
-  store i1 %58, i1* %9
-  %59 = load i1, i1* %9
-  %60 = zext i1 %59 to i64
-  %61 = or i64 %60, 72057594037927936
-  %62 = getelementptr i8, i8 addrspace(1)* null, i64 %61
-  call void @_Bio__println(i8 addrspace(1)* %62)
+  %51 = call i8 addrspace(1)* @_B_mkBoolean(i1 1)
+  store i8 addrspace(1)* %51, i8 addrspace(1)** %10
+  %52 = call i8 addrspace(1)* @_B_mkInt(i64 1)
+  store i8 addrspace(1)* %52, i8 addrspace(1)** %11
+  %53 = load i8 addrspace(1)*, i8 addrspace(1)** %10
+  %54 = load i8 addrspace(1)*, i8 addrspace(1)** %11
+  %55 = call i1 @_bal_eq(i8 addrspace(1)* %53, i8 addrspace(1)* %54)
+  store i1 %55, i1* %9
+  %56 = load i1, i1* %9
+  %57 = zext i1 %56 to i64
+  %58 = or i64 %57, 72057594037927936
+  %59 = getelementptr i8, i8 addrspace(1)* null, i64 %58
+  call void @_Bio__println(i8 addrspace(1)* %59)
   store i8 addrspace(1)* null, i8 addrspace(1)** %12
-  %63 = call i8 addrspace(1)* @_B_mkInt(i64 0)
-  store i8 addrspace(1)* %63, i8 addrspace(1)** %14
-  %64 = load i8 addrspace(1)*, i8 addrspace(1)** %14
-  %65 = zext i1 0 to i64
-  %66 = or i64 %65, 72057594037927936
-  %67 = getelementptr i8, i8 addrspace(1)* null, i64 %66
-  %68 = icmp ne i8 addrspace(1)* %64, %67
-  store i1 %68, i1* %13
-  %69 = load i1, i1* %13
-  %70 = zext i1 %69 to i64
-  %71 = or i64 %70, 72057594037927936
-  %72 = getelementptr i8, i8 addrspace(1)* null, i64 %71
-  call void @_Bio__println(i8 addrspace(1)* %72)
+  %60 = call i8 addrspace(1)* @_B_mkInt(i64 0)
+  store i8 addrspace(1)* %60, i8 addrspace(1)** %14
+  %61 = load i8 addrspace(1)*, i8 addrspace(1)** %14
+  %62 = zext i1 0 to i64
+  %63 = or i64 %62, 72057594037927936
+  %64 = getelementptr i8, i8 addrspace(1)* null, i64 %63
+  %65 = icmp ne i8 addrspace(1)* %61, %64
+  store i1 %65, i1* %13
+  %66 = load i1, i1* %13
+  %67 = zext i1 %66 to i64
+  %68 = or i64 %67, 72057594037927936
+  %69 = getelementptr i8, i8 addrspace(1)* null, i64 %68
+  call void @_Bio__println(i8 addrspace(1)* %69)
   store i8 addrspace(1)* null, i8 addrspace(1)** %15
-  %73 = call i8 addrspace(1)* @_B_mkBoolean(i1 1)
-  store i8 addrspace(1)* %73, i8 addrspace(1)** %17
-  %74 = load i8 addrspace(1)*, i8 addrspace(1)** %17
-  %75 = addrspacecast i8 addrspace(1)* %74 to i8*
-  %76 = ptrtoint i8* %75 to i64
-  %77 = and i64 %76, 2233785415175766016
-  %78 = icmp eq i64 %77, 504403158265495552
-  br i1 %78, label %80, label %83
-79:
+  %70 = call i8 addrspace(1)* @_B_mkBoolean(i1 1)
+  store i8 addrspace(1)* %70, i8 addrspace(1)** %17
+  %71 = load i8 addrspace(1)*, i8 addrspace(1)** %17
+  %72 = addrspacecast i8 addrspace(1)* %71 to i8*
+  %73 = ptrtoint i8* %72 to i64
+  %74 = and i64 %73, 2233785415175766016
+  %75 = icmp eq i64 %74, 504403158265495552
+  br i1 %75, label %77, label %80
+76:
   call void @_bal_panic(i64 772)
   unreachable
+77:
+  %78 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %71)
+  %79 = icmp eq i64 %78, 1
+  store i1 %79, i1* %16
+  br label %81
 80:
-  %81 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %74)
-  %82 = icmp eq i64 %81, 1
-  store i1 %82, i1* %16
-  br label %84
-83:
   store i1 0, i1* %16
-  br label %84
-84:
-  %85 = load i1, i1* %16
-  %86 = zext i1 %85 to i64
-  %87 = or i64 %86, 72057594037927936
-  %88 = getelementptr i8, i8 addrspace(1)* null, i64 %87
-  call void @_Bio__println(i8 addrspace(1)* %88)
+  br label %81
+81:
+  %82 = load i1, i1* %16
+  %83 = zext i1 %82 to i64
+  %84 = or i64 %83, 72057594037927936
+  %85 = getelementptr i8, i8 addrspace(1)* null, i64 %84
+  call void @_Bio__println(i8 addrspace(1)* %85)
   store i8 addrspace(1)* null, i8 addrspace(1)** %18
-  %89 = call i8 addrspace(1)* @_B_mkBoolean(i1 0)
-  store i8 addrspace(1)* %89, i8 addrspace(1)** %20
-  %90 = load i8 addrspace(1)*, i8 addrspace(1)** %20
-  %91 = addrspacecast i8 addrspace(1)* %90 to i8*
-  %92 = ptrtoint i8* %91 to i64
-  %93 = and i64 %92, 2233785415175766016
-  %94 = icmp eq i64 %93, 504403158265495552
-  br i1 %94, label %95, label %98
+  %86 = call i8 addrspace(1)* @_B_mkBoolean(i1 0)
+  store i8 addrspace(1)* %86, i8 addrspace(1)** %20
+  %87 = load i8 addrspace(1)*, i8 addrspace(1)** %20
+  %88 = addrspacecast i8 addrspace(1)* %87 to i8*
+  %89 = ptrtoint i8* %88 to i64
+  %90 = and i64 %89, 2233785415175766016
+  %91 = icmp eq i64 %90, 504403158265495552
+  br i1 %91, label %92, label %95
+92:
+  %93 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %87)
+  %94 = icmp ne i64 %93, 0
+  store i1 %94, i1* %19
+  br label %96
 95:
-  %96 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %90)
-  %97 = icmp ne i64 %96, 0
-  store i1 %97, i1* %19
-  br label %99
-98:
   store i1 1, i1* %19
-  br label %99
-99:
-  %100 = load i1, i1* %19
-  %101 = zext i1 %100 to i64
-  %102 = or i64 %101, 72057594037927936
-  %103 = getelementptr i8, i8 addrspace(1)* null, i64 %102
-  call void @_Bio__println(i8 addrspace(1)* %103)
+  br label %96
+96:
+  %97 = load i1, i1* %19
+  %98 = zext i1 %97 to i64
+  %99 = or i64 %98, 72057594037927936
+  %100 = getelementptr i8, i8 addrspace(1)* null, i64 %99
+  call void @_Bio__println(i8 addrspace(1)* %100)
   store i8 addrspace(1)* null, i8 addrspace(1)** %21
-  %104 = call i8 addrspace(1)* @_B_mkInt(i64 1)
-  store i8 addrspace(1)* %104, i8 addrspace(1)** %23
-  %105 = load i8 addrspace(1)*, i8 addrspace(1)** %23
-  %106 = zext i1 1 to i64
-  %107 = or i64 %106, 72057594037927936
-  %108 = getelementptr i8, i8 addrspace(1)* null, i64 %107
-  %109 = icmp eq i8 addrspace(1)* %105, %108
-  store i1 %109, i1* %22
-  %110 = load i1, i1* %22
-  %111 = zext i1 %110 to i64
-  %112 = or i64 %111, 72057594037927936
-  %113 = getelementptr i8, i8 addrspace(1)* null, i64 %112
-  call void @_Bio__println(i8 addrspace(1)* %113)
+  %101 = call i8 addrspace(1)* @_B_mkInt(i64 1)
+  store i8 addrspace(1)* %101, i8 addrspace(1)** %23
+  %102 = load i8 addrspace(1)*, i8 addrspace(1)** %23
+  %103 = zext i1 1 to i64
+  %104 = or i64 %103, 72057594037927936
+  %105 = getelementptr i8, i8 addrspace(1)* null, i64 %104
+  %106 = icmp eq i8 addrspace(1)* %102, %105
+  store i1 %106, i1* %22
+  %107 = load i1, i1* %22
+  %108 = zext i1 %107 to i64
+  %109 = or i64 %108, 72057594037927936
+  %110 = getelementptr i8, i8 addrspace(1)* null, i64 %109
+  call void @_Bio__println(i8 addrspace(1)* %110)
   store i8 addrspace(1)* null, i8 addrspace(1)** %24
-  %114 = call i8 addrspace(1)* @_B_mkInt(i64 0)
-  store i8 addrspace(1)* %114, i8 addrspace(1)** %26
-  %115 = load i8 addrspace(1)*, i8 addrspace(1)** %26
-  %116 = zext i1 0 to i64
-  %117 = or i64 %116, 72057594037927936
-  %118 = getelementptr i8, i8 addrspace(1)* null, i64 %117
-  %119 = icmp ne i8 addrspace(1)* %115, %118
-  store i1 %119, i1* %25
-  %120 = load i1, i1* %25
-  %121 = zext i1 %120 to i64
-  %122 = or i64 %121, 72057594037927936
-  %123 = getelementptr i8, i8 addrspace(1)* null, i64 %122
-  call void @_Bio__println(i8 addrspace(1)* %123)
+  %111 = call i8 addrspace(1)* @_B_mkInt(i64 0)
+  store i8 addrspace(1)* %111, i8 addrspace(1)** %26
+  %112 = load i8 addrspace(1)*, i8 addrspace(1)** %26
+  %113 = zext i1 0 to i64
+  %114 = or i64 %113, 72057594037927936
+  %115 = getelementptr i8, i8 addrspace(1)* null, i64 %114
+  %116 = icmp ne i8 addrspace(1)* %112, %115
+  store i1 %116, i1* %25
+  %117 = load i1, i1* %25
+  %118 = zext i1 %117 to i64
+  %119 = or i64 %118, 72057594037927936
+  %120 = getelementptr i8, i8 addrspace(1)* null, i64 %119
+  call void @_Bio__println(i8 addrspace(1)* %120)
   store i8 addrspace(1)* null, i8 addrspace(1)** %27
   ret void
 }

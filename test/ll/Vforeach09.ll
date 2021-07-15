@@ -22,19 +22,19 @@ define void @_B_main() {
   %11 = icmp slt i64 %10, 1000
   store i1 %11, i1* %2
   %12 = load i1, i1* %2
-  br i1 %12, label %18, label %13
+  br i1 %12, label %15, label %13
 13:
   %14 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_Bio__println(i8 addrspace(1)* %14)
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
   ret void
 15:
-  %16 = load i64, i64* %i
-  %17 = add nsw i64 %16, 1
-  store i64 %17, i64* %i
+  br label %16
+16:
+  %17 = load i64, i64* %i
+  %18 = add nsw i64 %17, 1
+  store i64 %18, i64* %i
   br label %9
-18:
-  br label %15
 19:
   call void @_bal_panic(i64 772)
   unreachable

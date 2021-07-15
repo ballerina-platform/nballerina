@@ -84,7 +84,7 @@ int64_t _Bstring__length(TaggedPtr p) {
     return data.lengthInCodePoints;
 }
 
-int32_t _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
+bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
     if (tp1 == tp2) {
         return 1;
     }
@@ -104,7 +104,7 @@ int32_t _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
     return 0;
 }
 
-int32_t _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
+bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
     IntPtr p1 = taggedToPtr(tp1);
     IntPtr p2 = taggedToPtr(tp2);
     int h1 = *p1;

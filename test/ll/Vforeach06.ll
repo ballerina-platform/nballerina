@@ -21,7 +21,7 @@ define void @_B_main() {
   %12 = icmp slt i64 %11, 10
   store i1 %12, i1* %1
   %13 = load i1, i1* %1
-  br i1 %13, label %21, label %14
+  br i1 %13, label %18, label %14
 14:
   %15 = zext i1 0 to i64
   %16 = or i64 %15, 72057594037927936
@@ -31,21 +31,21 @@ define void @_B_main() {
   ret void
 18:
   %19 = load i64, i64* %i
-  %20 = add nsw i64 %19, 1
-  store i64 %20, i64* %i
-  br label %10
-21:
-  %22 = load i64, i64* %i
-  %23 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %22)
-  call void @_Bio__println(i8 addrspace(1)* %23)
+  %20 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %19)
+  call void @_Bio__println(i8 addrspace(1)* %20)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %24 = load i64, i64* %i
-  %25 = icmp eq i64 %24, 6
-  store i1 %25, i1* %3
-  %26 = load i1, i1* %3
-  br i1 %26, label %27, label %28
-27:
-  br label %18
+  %21 = load i64, i64* %i
+  %22 = icmp eq i64 %21, 6
+  store i1 %22, i1* %3
+  %23 = load i1, i1* %3
+  br i1 %23, label %24, label %28
+24:
+  br label %25
+25:
+  %26 = load i64, i64* %i
+  %27 = add nsw i64 %26, 1
+  store i64 %27, i64* %i
+  br label %10
 28:
   %29 = zext i1 1 to i64
   %30 = or i64 %29, 72057594037927936
