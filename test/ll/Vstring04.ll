@@ -1,5 +1,5 @@
 @_bal_stack_guard = external global i8*
-@.str0 = internal global {i8, [7 x i8]} {i8 5, [7 x i8] c"hello\00\00"}
+@.str0 = internal unnamed_addr constant {i8, [7 x i8]} {i8 5, [7 x i8] c"hello\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
