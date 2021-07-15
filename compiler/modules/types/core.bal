@@ -13,8 +13,7 @@ const int UT_MASK = (1 << UT_COUNT) - 1;
 const int UT_COUNT_RO = 0x10;
 const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
 
-// It would be easier to use ~ here, but slalpha5 doesn't support
-const int UT_RW_MASK = ((1 << (UT_COUNT - UT_COUNT_RO)) - 1) << UT_COUNT_RO;
+const int UT_RW_MASK = UT_MASK & ~UT_READONLY;
 
 
 public type UniformTypeCode
