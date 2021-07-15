@@ -37,7 +37,7 @@ function typeToLLVMType(RetType ty) returns handle {
     }
 }
 
-public function constInt(Type ty, int value) returns Value {
+public function constInt(Type ty, int value) returns ConstValue {
     Value val = new (jLLVMConstInt(typeToLLVMType(ty), value, 0));
     return val;
 }
@@ -55,6 +55,14 @@ public readonly distinct class Value {
 }
 
 public readonly class PointerValue {
+    *Value;
+    handle LLVMValueRef;
+    function init(handle valueRef) {
+        self.LLVMValueRef = valueRef;
+    }
+}
+
+public readonly class ConstValue {
     *Value;
     handle LLVMValueRef;
     function init(handle valueRef) {

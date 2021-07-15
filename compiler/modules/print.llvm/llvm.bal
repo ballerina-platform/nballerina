@@ -33,10 +33,21 @@ public readonly class PointerValue {
     }
 }
 
+# Subtype of Value that refers to a constant
+public readonly class ConstValue {
+    *Value;
+    string operand;
+    Type ty;
+    function init(Type ty, string operand) {
+        self.ty = ty;
+        self.operand = operand;
+    }
+}
+
 // Corresponds to LLVMConstInt
 // XXX Need to think about SignExtend argument
-public function constInt(IntType ty, int val) returns Value {
-    return new Value(ty, val.toString());
+public function constInt(IntType ty, int val) returns ConstValue {
+    return new ConstValue(ty, val.toString());
 }
 
 // Corresponds to LLVMConstNull
@@ -59,7 +70,7 @@ public class Context {
         return new(self);
     }
 
-    public function constStruct(Value[] elements) returns Value {
+    public function constStruct(Value[] elements) returns ConstValue {
         string[] structBody = [];
         Type[] elemTypes = [];
         structBody.push("{");
@@ -82,9 +93,9 @@ public class Context {
     }
 
     // Corresponds to LLVMConstStringInContext
-    public function constString(byte[] bytes) returns Value {
+    public function constString(byte[] bytes) returns ConstValue {
         ArrayType ty = arrayType("i8", bytes.length());
-        Value val = new(ty, charArray(bytes));
+        ConstValue val = new(ty, charArray(bytes));
         return val;
     }
 }
@@ -93,7 +104,7 @@ public class Context {
 public class Module {
     private final map<FunctionDefn|FunctionDecl|PointerValue> globals = {};
     // We have these because we don't rely on order of iteration over map.
-    private string[] globalDefns = [];
+    private [PointerValue, GlobalProperties][] globalVariables = [];
     private FunctionDecl[] functionDecls = [];
     private FunctionDefn[] functionDefns = [];
 
@@ -180,18 +191,7 @@ public class Module {
         PointerType ptrType = pointerType(ty, props.addressSpace);
         PointerValue val = new PointerValue(ptrType, "@" + name); 
         self.globals[name] = val;
-        string[] words = ["@" + name, "=", props.linkage];
-        if props.addressSpace != 0 {
-            words.push("addrspace", "(", props.addressSpace.toString(), ")");
-        }
-        words.push("global", typeToString(ty));
-        Value? initializer = props.initializer;
-        if !(initializer is ()) {
-            // XXX should check the type here
-            // XXX should check that it's not Unnamed
-            words.push(<string>initializer.operand);
-        }
-        self.globalDefns.push(concat(...words));
+        self.globalVariables.push([val, props]);
         return val;
     }
  
@@ -214,8 +214,8 @@ public class Module {
             string[] words = ["target", "triple", "=", "\"", <TargetTriple>self.target, "\""];
             out.push(createLine(words));
         }
-        foreach string def in self.globalDefns {
-            out.push(def);
+        foreach var val in self.globalVariables {
+            self.outputGlobalVar(val[0], val[1], out);
         }
         foreach var fn in self.functionDecls {
             fn.output(out);
@@ -223,6 +223,38 @@ public class Module {
         foreach var fn in self.functionDefns {
             fn.output(out);
         }
+    }
+
+    function outputGlobalVar(PointerValue val, GlobalProperties prop, Output out){
+        string[] words = [];
+        words.push(<string> val.operand, "=");
+        if prop.initializer is Value {
+            if prop.linkage == "internal"{
+                words.push(prop.linkage);
+            }
+        } else {
+            words.push(prop.linkage);
+        }
+        if prop.unnamedAddr {
+            words.push("unnamed_addr");
+        }
+        if val.ty.addressSpace != 0 {
+            words.push("addrspace", "(", val.ty.addressSpace.toString(), ")");
+        }
+        if prop.isConstant {
+            words.push("constant");
+        } else {
+            words.push("global");
+        }
+        words.push(typeToString(val.ty.pointsTo));
+        ConstValue? initializer = prop.initializer;
+        if initializer is ConstValue {
+            words.push(initializer.operand);
+        }
+        if prop.align is int {
+            words.push(",", "align", prop.align.toString());
+        }
+        out.push(createLine(words));
     }
 }
 

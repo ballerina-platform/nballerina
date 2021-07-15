@@ -44,7 +44,7 @@ public distinct class Builder {
     }
 
     function setAlignment(Value val, Alignment align) {
-        LLVMSetAlignment(val.LLVMValueRef, align);
+        jLLVMSetAlignment(val.LLVMValueRef, align);
     }
 
     public function positionAtEnd(BasicBlock bb) {
@@ -212,7 +212,7 @@ public distinct class Builder {
         string reg = self.extractName(name);
         PointerPointer arr = PointerPointerFromValues(indices);
         if inbounds != () {
-            return new (LLVMBuildInBoundsGEP(self.LLVMBuilder, ptr.LLVMValueRef, arr.jObject, indices.length(), java:fromString(reg)));
+            return new (jLLVMBuildInBoundsGEP(self.LLVMBuilder, ptr.LLVMValueRef, arr.jObject, indices.length(), java:fromString(reg)));
         } else {
             return new (jLLVMBuildGEP(self.LLVMBuilder, ptr.LLVMValueRef, arr.jObject, indices.length(), java:fromString(reg)));
         }
@@ -412,13 +412,13 @@ function jLLVMBuildGEP(handle builder, handle pointer, handle indices, int numAr
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
 } external;
 
-function LLVMBuildInBoundsGEP(handle builder, handle pointer, handle indices, int numArgs, handle name) returns handle = @java:Method {
+function jLLVMBuildInBoundsGEP(handle builder, handle pointer, handle indices, int numArgs, handle name) returns handle = @java:Method {
     name: "LLVMBuildInBoundsGEP",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
 } external;
 
-function LLVMSetAlignment(handle valueRef, int bytes) = @java:Method {
+function jLLVMSetAlignment(handle valueRef, int bytes) = @java:Method {
     name: "LLVMSetAlignment",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "int"]

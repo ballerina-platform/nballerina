@@ -15,11 +15,11 @@ public distinct class Context {
         return new (modName, self);
     }
 
-    public function constString(byte[] bytes) returns Value {
+    public function constString(byte[] bytes) returns ConstValue {
         return new (jLLVMConstStringInContext(self.LLVMContext, java:fromString(checkpanic string:fromBytes(bytes)), bytes.length(), 1));
     }
 
-    public function constStruct(Value[] elements) returns Value {
+    public function constStruct(Value[] elements) returns ConstValue {
         PointerPointer elementArray = PointerPointerFromValues(elements);
         return new(jLLVMConstStructInContext(self.LLVMContext, elementArray.jObject, elements.length(), 0));
     }
