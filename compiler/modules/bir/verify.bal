@@ -40,8 +40,7 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
     }
 }
 
-type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn|IntCompareInsn;
-type BooleanBinaryInsn BooleanCompareInsn;
+type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns err:Semantic? {
     foreach Insn insn in bb.insns {
@@ -60,9 +59,8 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is BooleanNotInsn {
         check verifyOperandBoolean(vc, name, insn.operand);
     }
-    else if insn is BooleanBinaryInsn {
-        check verifyOperandBoolean(vc, name, insn.operands[0]);
-        check verifyOperandBoolean(vc, name, insn.operands[1]);
+    else if insn is CompareInsn {
+        check verifyCompare(vc, insn);
     }
     else if insn is EqualityInsn {
         check verifyEquality(vc, insn);
@@ -152,6 +150,24 @@ function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semanti
     }
 }
 
+function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
+    string name = insn.name;
+    match insn.orderType {
+        "boolean" => {
+            check verifyOperandBoolean(vc, name, <BooleanOperand>insn.operands[0]);
+            check verifyOperandBoolean(vc, name, <BooleanOperand>insn.operands[1]);
+        }
+        "int" => {
+            check verifyOperandInt(vc, name, <IntOperand>insn.operands[0]);
+            check verifyOperandInt(vc, name, <IntOperand>insn.operands[1]);
+        }
+        "string" => {
+            check verifyOperandString(vc, name, <StringOperand>insn.operands[0]);
+            check verifyOperandString(vc, name, <StringOperand>insn.operands[1]);
+        }
+    }
+}
+
 function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semantic? {
     Operand lhs = insn.operands[0];
     Operand rhs = insn.operands[1];
@@ -189,6 +205,12 @@ function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType,
     }
     else if !t:containsConst(semType, operand) {
         return vc.err(msg);
+    }
+}
+
+function verifyOperandString(VerifyContext vc, string insnName, StringOperand operand) returns err:Semantic? {
+    if operand is Register {
+        return verifyRegisterSemType(vc, insnName, operand, t:STRING, "string");
     }
 }
 

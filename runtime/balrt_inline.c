@@ -107,34 +107,34 @@ bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
 bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
     IntPtr p1 = taggedToPtr(tp1);
     IntPtr p2 = taggedToPtr(tp2);
-    int h1 = *p1;
-    int h2 = *p2;
+    int64_t h1 = *p1;
+    int64_t h2 = *p2;
     if (h1 != h2) {
         return 0;
     }
-    // I do this here on the basis that comparing a pointer with itself is not so common
+    // I do this here rather than earlier on the basis that comparing a pointer with itself is not so common
     // The comparison above will resolve a lot more comparisons (hopefully most).
     if (p1 == p2) {
-        return 1;
+        return true;
     }
     int variant1 = taggedPtrBits(tp1) & 0x7;
     int variant2 = taggedPtrBits(tp2) & 0x7;
     if (unlikely(variant1 != variant2)) {
-        return 0;
+        return false;
     }
     // number of 64-bit units including the header
     int nInts;
     if (variant1 == 0) {
         int nBytes = h1 & 0xFF;
-        nInts = (nBytes + 7 + 1) >> 3;
+        nInts = smallStringSize(nBytes) >> 3;
     }
     else {
         int nBytes = h1 & 0xFFFF;
-        nInts = (nBytes + 7 + 4) >> 3;
+        nInts = mediumStringSize(nBytes) >> 3;
     }
     while (--nInts > 0) {
-        if (*p1++ != *p2++)
-            return 0;
+        if (*++p1 != *++p2)
+            return false;
     }
-    return 1;
+    return true;
 }

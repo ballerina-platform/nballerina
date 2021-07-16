@@ -148,8 +148,7 @@ public enum InsnName {
     INSN_INT_ARITHMETIC_BINARY,
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY,
     INSN_INT_BITWISE_BINARY,
-    INSN_INT_COMPARE,
-    INSN_BOOLEAN_COMPARE,
+    INSN_COMPARE,
     INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
     INSN_LIST_CONSTRUCT_RW,
@@ -180,7 +179,7 @@ public type InsnBase record {
 
 public type Insn 
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
-    |IntCompareInsn|BooleanNotInsn|BooleanCompareInsn|EqualityInsn
+    |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
@@ -232,25 +231,18 @@ public type BooleanNotInsn readonly & record {|
     Register operand;
 |};
 
+public type OrderType "int"|"boolean"|"string";
 # This does ordered comparision
 # Equality and inequality are done by equal
-public type IntCompareInsn readonly & record {|
+public type CompareInsn readonly & record {|
     *InsnBase;
-    INSN_INT_COMPARE name = INSN_INT_COMPARE;
+    INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
+    OrderType orderType;
     Register result;
-    IntOperand[2] operands;
+    Operand[2] operands;
 |};
 
-# This does ordered comparision
-# Equality and inequality are done by equal
-public type BooleanCompareInsn readonly & record {|
-    *InsnBase;
-    INSN_BOOLEAN_COMPARE name = INSN_BOOLEAN_COMPARE;
-    OrderOp op;
-    Register result;
-    BooleanOperand[2] operands;
-|};
 
 # Constructs a new mutable list value.
 public type ListConstructInsn readonly & record {|

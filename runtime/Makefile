@@ -10,8 +10,14 @@ BCLIB=balrt_inline.bc
 
 all: $(LIB) $(BCLIB)
 
+test: all testrt
+	./testrt
+
 $(LIB): $(OBJS)
 	$(AR) r $@ $^
+
+testrt: testrt.c $(LIB) $(BCLIB)
+	$(CLANG) $(CFLAGS) -o $@ $< $(BCLIB) $(LIB)
 
 %.o: %.c
 	$(CLANG) $(CFLAGS) -c -o $@ $<
@@ -26,4 +32,4 @@ $(LIB): $(OBJS)
 $(OBJS) $(BCLIB): $(INCLUDES)
 
 clean:
-	-rm -f $(LIB) $(OBJS) $(BCLIB)
+	-rm -f $(LIB) $(OBJS) $(BCLIB) testrt

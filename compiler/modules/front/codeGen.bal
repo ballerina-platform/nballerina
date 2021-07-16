@@ -183,7 +183,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
     initLoopVar.insns.push(branchToLoopHead);
     bir:Register condition = cx.createRegister(t:BOOLEAN);
-    bir:IntCompareInsn compare = { op: "<", operands: [loopVar, upper], result: condition };
+    bir:CompareInsn compare = { op: "<", orderType: "int", operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
     bir:BasicBlock afterCondition = cx.createBasicBlock();
     bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
@@ -451,25 +451,18 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             return [result, nextBlock];
         }
         var { relationalOp: op, left, right } => {
-            bir:Insn insn;
             bir:Register result = cx.createRegister(t:BOOLEAN);
             var [l, block1] = check codeGenExpr(cx, bb, scope, left);
             var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
             TypedOperandPair? pair = typedOperandPair(l, r);
-            if pair is () {
-                return cx.semanticErr("different basic types for relational operator");
-            }
-            else if pair is IntOperandPair {
-                insn = <bir:IntCompareInsn> { op, operands: pair[1], result };
-            }
-            else if pair is BooleanOperandPair {
-                insn = <bir:BooleanCompareInsn> { op, operands: pair[1], result };
+            if pair is IntOperandPair|BooleanOperandPair|StringOperandPair {
+                bir:CompareInsn insn = { op, orderType: pair[0], operands: pair[1], result };
+                bb.insns.push(insn);
+                return [result, nextBlock];  
             }
             else {
-                return cx.semanticErr("cannot apply relational operator to nil operands");
-            }
-            bb.insns.push(insn);
-            return [result, nextBlock];         
+                return cx.semanticErr("operands of relational operator are not ordered");
+            }               
         }
         { op: "!",  operand: var o } => {
             var [operand, nextBlock] = check codeGenExprForBoolean(cx, bb, scope, o);
@@ -709,9 +702,11 @@ function bitwiseOperandType(bir:IntOperand operand) returns t:SemType {
 type NilOperand ()|bir:Register;
 type BooleanOperandPair readonly & ["boolean", [bir:BooleanOperand, bir:BooleanOperand]];
 type IntOperandPair readonly & ["int", [bir:IntOperand, bir:IntOperand]];
+type StringOperandPair readonly & ["string", [bir:StringOperand, bir:StringOperand]];
+
 type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 
-type TypedOperandPair BooleanOperandPair|IntOperandPair|NilOperandPair;
+type TypedOperandPair BooleanOperandPair|IntOperandPair|StringOperandPair|NilOperandPair;
 
 type TypedOperand readonly & (["array", bir:Register]
                               |["string", bir:StringOperand]
@@ -724,6 +719,9 @@ function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperand
     TypedOperand? r = typedOperand(rhs);
     if l is ["int", bir:IntOperand] && r is ["int", bir:IntOperand] {
         return ["int", [l[1], r[1]]];
+    }
+    if l is ["string", bir:StringOperand] && r is ["string", bir:StringOperand] {
+        return ["string", [l[1], r[1]]];
     }
     if l is ["boolean", bir:BooleanOperand] && r is ["boolean", bir:BooleanOperand] {
         return ["boolean", [l[1], r[1]]];

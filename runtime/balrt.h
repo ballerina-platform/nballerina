@@ -63,6 +63,17 @@ struct MediumString {
     char bytes[];
 };
 
+typedef struct SmallString HEAP_STAR(SmallStringPtr);
+typedef struct MediumString HEAP_STAR(MediumStringPtr);
+
+static inline int smallStringSize(int lengthInBytes) {
+    return ((lengthInBytes + 7 + 1) >> 3) << 3;
+}
+
+static inline int mediumStringSize(int lengthInBytes) {
+    return ((lengthInBytes + 7 + 4) >> 3) << 3;
+}
+
 struct StringData {
     int64_t lengthInBytes;
     int64_t lengthInCodePoints;
@@ -96,6 +107,12 @@ static inline UntypedPtr taggedToPtr(TaggedPtr p) {
     return (UntypedPtr)(char *)(~((((uint64_t)TAG_MASK) << TAG_SHIFT) | 0x7) & taggedPtrBits(p));
 }
 
+static inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {
+    char *p0 = (void *)p;
+    p0 = (char *)((uint64_t)p0 | flags);
+    return (TaggedPtr)p0;
+}
+
 extern void _bal_array_grow(ListPtr lp, int64_t min_capacity);
 extern TaggedPtr _bal_int_to_tagged(int64_t n);
 extern int64_t _bal_tagged_to_int(TaggedPtr p);
@@ -103,6 +120,8 @@ extern int64_t _bal_tagged_to_int(TaggedPtr p);
 extern struct StringData _bal_tagged_to_string(TaggedPtr p);
 extern bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
+extern int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
+
 
 
 
