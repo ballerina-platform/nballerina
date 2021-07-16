@@ -149,6 +149,11 @@ function reduceToWords(string rule, string fragment) returns err:Syntax|Word[] {
             check tok.advance();
             stmtToWords(w, check parseStmt(tok));
         }
+        "td" => {
+            Tokenizer tok = new (fragment);
+            check tok.advance();
+            typeDescToWords(w, check parseTypeDesc(tok));
+        }
         "mod" => {
             modulePartToWords(w, check parseModulePart(fragment));
         }
@@ -372,6 +377,11 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "(f())", "f()"],
          ["E", "expr", "(f()())", ""],
          ["V", "expr", "(((x)))", "x"],
+         // typedesc
+         ["V", "td", "int[]", "int[]"],
+         ["V", "td", "a|b", "a | b"],
+         ["V", "td", "a|b[]", "a | (b[])"],
+         ["V", "td", "(a|b)[]", "(a | b)[]"],
          // statement
          ["E", "stmt", ";", ""],
          ["E", "stmt", "1;", ""],

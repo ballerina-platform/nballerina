@@ -119,16 +119,36 @@ function blockToWords(Word[] w, Stmt[] body) {
     w.push(<Word>(firstInBlock ? LF :LF_OUTDENT), "}");
 }
 
-function typeDescToWords(Word[] w, TypeDesc td) {
+function typeDescToWords(Word[] w, TypeDesc td, boolean wrap = false) {
     if td is string {
         w.push(td);
+        return;
     }
-    else if td is InlineArrayTypeDesc {
-        w.push(td.rest, CLING);
+    else if td is TypeDescRef {
+        w.push(td.ref);
+        return;
+    }
+
+    if wrap {
+        w.push("(");
+    }
+
+    if td is ListTypeDesc {
+        typeDescToWords(w, td.rest, true);
+        w.push(CLING);
         w.push("[", "]");
+    }
+    else if td is BinaryTypeDesc {
+        typeDescToWords(w, td.left, true);
+        w.push(td.op);
+        typeDescToWords(w, td.right, true);
     }
     else {
         panic err:unimplemented(`typedesc not supported ${(typeof td).toString()}`);
+    }
+
+    if wrap {
+        w.push(")");
     }
 }
 
