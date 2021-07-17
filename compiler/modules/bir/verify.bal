@@ -111,10 +111,11 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
 }
 
 function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic? {
-    if !vc.isSubtype(insn.inherentType, t:LIST) {
+    t:SemType ty = insn.result.semType;
+    if !vc.isSubtype(ty, t:LIST_RW) {
         return vc.err("bad BIR: inherent type of list construct is not a list");
     }
-    // XXX we should also check the semtype is a single mutable list
+    // XXX we should also check that ty is a single mutable list
     // and that each argument has the right type
 }
 

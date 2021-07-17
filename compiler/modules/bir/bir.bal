@@ -247,7 +247,7 @@ public type CompareInsn readonly & record {|
 # Constructs a new mutable list value.
 public type ListConstructInsn readonly & record {|
     INSN_LIST_CONSTRUCT_RW name = INSN_LIST_CONSTRUCT_RW;
-    SemType inherentType;
+    // The type of the result gives the inherent type of the constructed list
     Register result;
     Operand[] operands;
 |};
