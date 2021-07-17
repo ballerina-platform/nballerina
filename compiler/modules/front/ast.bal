@@ -32,7 +32,7 @@ type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|Foreac
 type CallStmt FunctionCallExpr|MethodCallExpr;
 type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
 
-type ConstructorExpr ListConstructorExpr;
+type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
 
 type AssignStmt record {|
     LExpr lValue;
@@ -140,6 +140,16 @@ type MethodCallExpr record {|
 
 type ListConstructorExpr record {|
     Expr[] members;
+|};
+
+type MappingConstructorExpr record {|
+    Field[] fields;
+|};
+
+type Field record {|
+    err:Position pos; // position of name for now
+    string name;
+    Expr value;
 |};
 
 type MemberAccessExpr record {|

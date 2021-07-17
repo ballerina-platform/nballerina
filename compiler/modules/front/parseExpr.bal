@@ -8,6 +8,12 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
         ListConstructorExpr expr = { members };
         return expr;
     }
+    else if t == "{" {
+        check tok.advance();
+        Field[] fields = check parseFields(tok);
+        MappingConstructorExpr expr = { fields };
+        return expr;
+    }
     return parseInnerExpr(tok);
 }
 
@@ -263,7 +269,7 @@ function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, 
 
 function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syntax {
     Expr[] exprs = [];
-     if tok.current() != terminator {
+    if tok.current() != terminator {
         while true {
             Expr expr = check parseExpr(tok);
             exprs.push(expr);
@@ -281,6 +287,47 @@ function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syn
     }
     check tok.advance();
     return exprs;
+}
+
+function parseFields(Tokenizer tok) returns Field[]|err:Syntax {
+    Field[] fields = [];
+    if tok.current() != "}" {
+        while true {
+            Field f = check parseField(tok);
+            fields.push(f);
+            Token? t = tok.current();
+            if t == "," {
+                check tok.advance();
+            }
+            else if t == "}" {
+                break;
+            }
+            else {
+                return parseError(tok, "invalid field list");
+            }
+        }
+    }
+    check tok.advance();
+    return fields;
+}
+
+function parseField(Tokenizer tok) returns Field|err:Syntax {
+    Token? t = tok.current();
+    match t {
+        [IDENTIFIER, var name]
+        | [STRING_LITERAL, var name] => {
+            // Don't report an error for duplicates here
+            // (it's not a syntax error)
+            // Instead save the position and report during codeGen
+            err:Position pos = tok.currentPos();
+            check tok.advance();
+            check tok.expect(":");
+            Expr value = check parseExpr(tok);
+            Field f = { pos, name, value };
+            return f;
+        }
+    }
+    return err:syntax("expected field name");
 }
 
 function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
@@ -319,3 +366,6 @@ function parseDigits(Tokenizer tok, string signDigits) returns int|err:Syntax {
         return res;
     }
 }
+
+
+

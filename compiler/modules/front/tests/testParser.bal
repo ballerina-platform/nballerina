@@ -340,7 +340,12 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "expr", "[1 2]", ""],
          ["E", "expr", "[1,]", ""],
          ["E", "expr", "[,1]", ""],
-          // method call
+         // mapping constructor
+         ["V", "expr", "{ }", "{ }"],
+         ["V", "expr", "{x: 1, y: 2}", string`{ "x": 1, "y": 2 }`],
+         ["V", "expr", string`{x: 1, y: 2, "z": 3}`, string`{ "x": 1, "y": 2, "z": 3 }`],
+         ["V", "expr", string`{value: 1+2}`, string`{ "value": 1 + 2 }`],
+         // method call
          ["V", "expr", "obj.x(1)", "obj.x(1)"],
          ["V", "expr", "(x+y).length()", "(x + y).length()"],
          ["V", "expr", "x+y.length()", "x + (y.length())"],
