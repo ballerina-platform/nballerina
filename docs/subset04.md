@@ -20,7 +20,7 @@
    * `break` and `continue` statements
    * `foreach` statements that use  `<..`
 * Expressions:
-   * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`
+   * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`
    * unary operators: `-`, `!`
    * type cast
    * function call
@@ -115,11 +115,17 @@ equality-expr =
   | equality-expr "!==" relational-expr
 
 relational-expr =
+  shift-expr
+  | shift-expr "<" shift-expr
+  | shift-expr "<=" shift-expr
+  | shift-expr ">" shift-expr
+  | shift-expr ">=" shift-expr
+
+shift-expr =
   additive-expr
-  | additive-expr "<" additive-expr
-  | additive-expr "<=" additive-expr
-  | additive-expr ">" additive-expr
-  | additive-expr ">=" additive-expr
+  | shift-expr "<<" additive-expr
+  | shift-expr ">>" additive-expr
+  | shift-expr ">>>" additive-expr
 
 additive-expr =
   multiplicative-expr
@@ -221,6 +227,7 @@ Add `string` and `map<any>`:
 * New expressions
   * string literals `"abc"`
   * mapping constructor `{"x": 1, "y": 2}`
+  * shift expressions `255 >> 2`
 
 Existing syntax extended:
 

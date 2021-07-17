@@ -174,8 +174,10 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 
 function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
     check tok.expect("<");
+    tok.setMode(MODE_TYPE);
     TypeDesc td = check parseTypeDesc(tok);
     check tok.expect(">");
+    tok.setMode(MODE_NORMAL);
     return td;
 }
 
