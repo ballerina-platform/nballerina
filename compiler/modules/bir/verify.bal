@@ -83,6 +83,9 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is ListConstructInsn {
         check verifyListConstruct(vc, insn);
     }
+    else if insn is MappingConstructInsn {
+        check verifyMappingConstruct(vc, insn);
+    }
     else if insn is ListGetInsn {
         check verifyListGet(vc, insn);
     }
@@ -116,6 +119,15 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
         return vc.err("bad BIR: inherent type of list construct is not a list");
     }
     // XXX we should also check that ty is a single mutable list
+    // and that each argument has the right type
+}
+
+function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns err:Semantic? {
+    t:SemType ty = insn.result.semType;
+    if !vc.isSubtype(ty, t:MAPPING_RW) {
+        return vc.err("bad BIR: inherent type of list construct is not a list");
+    }
+    // XXX we should also check that ty is a single mutable mapping
     // and that each argument has the right type
 }
 

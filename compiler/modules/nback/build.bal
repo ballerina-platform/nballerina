@@ -79,7 +79,7 @@ const PANIC_LIST_TOO_LONG = 6;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc"|"list_set"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"string_cmp"|"eq";
+type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"string_cmp"|"eq";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -110,6 +110,24 @@ final RuntimeFunction listSetFunction = {
     ty: {
         returnType: REPR_ERROR.llvm,
         paramTypes: [LLVM_TAGGED_PTR, "i64", LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction mappingSetFunction = {
+    name: "mapping_set",
+    ty: {
+        returnType: REPR_VOID.llvm,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction mappingConstructFunction = {
+    name: "mapping_construct",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: ["i64"]
     },
     attrs: []
 };
@@ -389,6 +407,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:BranchInsn {
             check buildBranch(builder, scaffold, insn);
         }
+        else if insn is bir:MappingConstructInsn {
+            check buildMappingConstruct(builder, scaffold, insn);
+        }
         else if insn is bir:CondBranchInsn {
             check buildCondBranch(builder, scaffold, insn);
         }
@@ -534,6 +555,21 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     builder.store(buildPanicError(builder, <llvm:Value>err, insn.position), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
+}
+
+function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
+    int length = insn.operands.length();
+    llvm:PointerValue m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
+                                                          [llvm:constInt(LLVM_INT, length)]);
+    foreach int i in 0 ..< length {
+        _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingSetFunction),
+                         [
+                             m,
+                             check buildConstString(builder, scaffold, insn.fieldNames[i]),
+                             check buildRepr(builder, scaffold, insn.operands[i], REPR_ANY)
+                         ]);
+    }
+    builder.store(m, scaffold.address(insn.result));
 }
 
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {

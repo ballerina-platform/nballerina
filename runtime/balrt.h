@@ -51,7 +51,7 @@ typedef struct {
 } TaggedPtrArray;
 
 typedef GC struct List {
-    // XXX will have a typedescriptor here
+    // XXX will also have a typedescriptor here
     // This isn't strictly portable because void* and TaggedPtr* might have different alignments/sizes
     // But we ain't writing portable code here
     union {
@@ -59,7 +59,26 @@ typedef GC struct List {
         TaggedPtrArray tpArray;
     };
 } *ListPtr;
- 
+
+typedef struct {
+    TaggedPtr key;
+    TaggedPtr value;
+} MapField;
+
+typedef struct {
+    int64_t length;
+    int64_t capacity;
+    GC MapField *members;
+} MapFieldArray;
+
+typedef GC struct Mapping {
+    // XXX will also have a typedescriptor here
+    union {
+        GenericArray gArray;
+        MapFieldArray fArray;
+    };
+} *MappingPtr;
+
 #define STRING_MEDIUM_FLAG 1
 
 // Both of these are 8-byte aligned and zero-padded so the total size is a multiple of 8
@@ -121,9 +140,6 @@ static inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {
     return (TaggedPtr)p0;
 }
 
-#define TAGGED_PTR_SHIFT 3
-
-extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
 extern TaggedPtr _bal_int_to_tagged(int64_t n);
 extern int64_t _bal_tagged_to_int(TaggedPtr p);
 
@@ -132,6 +148,17 @@ extern bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
 extern uint64_t _bal_string_hash(TaggedPtr tp);
+
+#define TAGGED_PTR_SHIFT 3
+
+extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
+extern Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
+
+#define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
+
+extern TaggedPtr _bal_mapping_construct(int64_t capacity);
+extern void _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
+
 
 
 

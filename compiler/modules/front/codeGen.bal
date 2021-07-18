@@ -549,6 +549,30 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             nextBlock.insns.push(insn);
             return [result, nextBlock];
         }
+        // Mapping construct
+        var { fields } => {
+            bir:BasicBlock nextBlock = bb;
+            bir:Operand[] operands = [];
+            string[] fieldNames= [];
+            map<err:Position> fieldPos = {};
+            foreach var { pos, name, value } in fields {
+                err:Position? prevPos = fieldPos[name];
+                if prevPos == () {
+                    fieldPos[name] = pos;
+                }
+                else {
+                    return err:semantic(`duplicate field ${name}`, pos=pos);
+                }
+                bir:Operand operand;
+                [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, value);
+                operands.push(operand);
+                fieldNames.push(name);
+            }
+            bir:Register result = cx.createRegister(t:MAPPING_RW);
+            bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result };
+            nextBlock.insns.push(insn);
+            return [result, nextBlock];
+        }
     }
     panic err:impossible();
 }

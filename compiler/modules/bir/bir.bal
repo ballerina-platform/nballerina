@@ -154,6 +154,7 @@ public enum InsnName {
     INSN_LIST_CONSTRUCT_RW,
     INSN_LIST_GET,
     INSN_LIST_SET,
+    INSN_MAPPING_CONSTRUCT_RW,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -181,6 +182,7 @@ public type Insn
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
+    |MappingConstructInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
@@ -271,6 +273,15 @@ public type ListSetInsn readonly & record {|
     // operand is the value to store in the list
     Operand operand;
     err:Position position;
+|};
+
+# Constructs a new mutable list value.
+public type MappingConstructInsn readonly & record {|
+    INSN_MAPPING_CONSTRUCT_RW name = INSN_MAPPING_CONSTRUCT_RW;
+    // The type of the result gives the inherent type of the constructed list
+    Register result;
+    string[] fieldNames;
+    Operand[] operands;
 |};
 
 # This does equality expressions.
