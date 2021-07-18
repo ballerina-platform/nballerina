@@ -1,6 +1,5 @@
 #include "balrt.h"
 
-typedef char HEAP_STAR(UntaggedPtr);
 #define FLAG_INT_ON_HEAP 0x20
 
 #define IMMEDIATE_INT_MIN -(1L << (TAG_SHIFT - 1))
@@ -29,7 +28,7 @@ TaggedPtr _bal_int_to_tagged(int64_t n) {
         return bitsToTaggedPtr(IMMEDIATE_INT_TRUNCATE(n) | (((uint64_t)TAG_INT) << TAG_SHIFT));
     }
     else {
-        int64_t HEAP_STAR(p) = _bal_alloc(sizeof(int64_t));
+        GC int64_t *p = _bal_alloc(sizeof(int64_t));
         *p = n;
         return ptrAddShiftedTag(p, ((uint64_t)TAG_INT|FLAG_INT_ON_HEAP) << TAG_SHIFT);
     }
@@ -45,7 +44,7 @@ int64_t _bal_tagged_to_int(TaggedPtr p) {
         return ((int64_t)n) >> 8;
     }
     else {
-        int64_t HEAP_STAR(np) = taggedToPtr(p);
+        GC int64_t *np = taggedToPtr(p);
         return *np;
     }
 }
@@ -68,12 +67,12 @@ void _Barray__push(TaggedPtr p, TaggedPtr val) {
 
 struct StringData _bal_tagged_to_string(TaggedPtr p) {
     if (likely((taggedPtrBits(p) & 1) == 0)) {
-        struct SmallString HEAP_STAR(sp) = taggedToPtr(p);
+        SmallStringPtr sp = taggedToPtr(p);
         struct StringData data = { sp->length, sp->length, sp->bytes };
         return data;
     }
     else {
-        struct MediumString HEAP_STAR(sp) = taggedToPtr(p);
+        MediumStringPtr sp = taggedToPtr(p);
         struct StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
         return data;
     }

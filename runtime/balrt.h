@@ -9,12 +9,12 @@
 #ifdef __clang__
 #define NODEREF __attribute__((noderef))
 #define NORETURN __attribute__((noreturn))
-#define ONHEAP __attribute__((address_space(1)))
+#define GC __attribute__((address_space(1)))
 #define COLD __attribute__((cold)) 
 #else
 #define NODEREF /* as nothing */
 #define NORETURN /* as nothing */
-#define ONHEAP /* as nothing */
+#define GC /* as nothing */
 #define COLD /* as nothing */
 #endif
 
@@ -31,40 +31,34 @@
 
 extern char *_bal_stack_guard;
 
-#define HEAP_STAR(d) ONHEAP *(d)
-typedef char NODEREF HEAP_STAR(TaggedPtr);
-typedef void HEAP_STAR(UntypedPtr);
-typedef int64_t HEAP_STAR(IntPtr);
+typedef GC char NODEREF *TaggedPtr;
+typedef GC void *UntypedPtr;
+typedef GC int64_t*IntPtr;
 
 
 // An error is currently represented as int with the error code in the lo byte
 typedef uint64_t Error;
 
-struct List {
+typedef GC struct List {
     int64_t length;
     // capacity is always >= length
     int64_t capacity;
-    TaggedPtr HEAP_STAR(members);
-};
+    TaggedPtr GC *members;
+} *ListPtr;
  
-typedef struct List HEAP_STAR(ListPtr);
-
 #define STRING_MEDIUM_FLAG 1
 
 // Both of these are 8-byte aligned and zero-padded so the total size is a multiple of 8
-struct SmallString {
+typedef GC struct SmallString {
     uint8_t length;
     char bytes[];
-};
+} *SmallStringPtr;
 
-struct MediumString {
+typedef GC struct MediumString {
     int16_t lengthInBytes;
     int16_t lengthInCodePoints;
     char bytes[];
-};
-
-typedef struct SmallString HEAP_STAR(SmallStringPtr);
-typedef struct MediumString HEAP_STAR(MediumStringPtr);
+} *MediumStringPtr;
 
 static inline int smallStringSize(int lengthInBytes) {
     return ((lengthInBytes + 7 + 1) >> 3) << 3;
@@ -77,7 +71,7 @@ static inline int mediumStringSize(int lengthInBytes) {
 struct StringData {
     int64_t lengthInBytes;
     int64_t lengthInCodePoints;
-    char HEAP_STAR(bytes);
+    GC char *bytes;
 };
 
 // These should be shared with build.bal
