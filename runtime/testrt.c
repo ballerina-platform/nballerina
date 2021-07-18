@@ -186,8 +186,8 @@ static void checkMediumStringHash(TaggedPtr tp) {
 #define NHASH NSTRINGS*NSTRINGS
 
 void testStringHash() {
-    // for (int i = 0; i < NHASH; i++)
-    //     checkSmallStringHash(randSmallString());
+    for (int i = 0; i < NHASH; i++)
+        checkSmallStringHash(randSmallString());
     for (int i = 0; i < NHASH; i++)
         checkMediumStringHash(randMediumString());
 }
@@ -196,8 +196,8 @@ HASH_DEFINE_KEY;
 
 int main() {
     srand(1);
-    // testStringCmp();
-    // testStringEq();
+    testStringCmp();
+    testStringEq();
     testStringHash();
     return 0;
 }
