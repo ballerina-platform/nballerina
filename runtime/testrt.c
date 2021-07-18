@@ -1,7 +1,10 @@
 #include "balrt.h"
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include "hash.h"
+
 
 #define NSTRINGS 2*1024
 
@@ -120,9 +123,81 @@ void testStringEq() {
     checkStringEq(makeString("\xC2\x80"), makeString("\xC2\x81"), false);
 }
 
+static uint64_t smallStringHashRef(TaggedPtr tp) {
+    SmallStringPtr s = taggedToPtr(tp);
+    int len = s->length;
+    uint64_t buf[256/8];
+    memset(&buf, 0, sizeof(buf));
+    if (len > 7) {
+        memcpy(buf, s->bytes + 7, len - 7);
+        memcpy((char *)buf + len - 7, s->bytes, 7);
+    }
+    else {
+        memcpy(buf, s->bytes, len);
+    }
+    HashState h;
+    hashInit(&h);
+    int nInts = len / 8;
+    for (int i = 0; i < nInts; i++)
+        hashUpdate(&h, buf[i]);
+    int left = len % 8;
+    if (left) {
+        hashUpdatePartial(&h, buf[nInts], left);
+    }
+    return hashFinish(&h);
+}
+
+static uint64_t mediumStringHashRef(TaggedPtr tp) {
+    MediumStringPtr s = taggedToPtr(tp);
+    int len = s->lengthInBytes;
+    int paddedLength = (len + 7) & ~7;
+    uint64_t *mem = calloc(paddedLength, 1);
+    if (len > 4) {
+        memmove(mem, s->bytes + 4, len - 4);
+        memcpy((char *)mem + len - 4, s->bytes, 4);
+    }
+    else {
+        memcpy(mem, s->bytes, len);
+    }
+    HashState h;
+    hashInit(&h);
+    int nInts = len / 8;
+    for (int i = 0; i < nInts; i++)
+        hashUpdate(&h, mem[i]);
+    int left = len % 8;
+    if (left) {
+        hashUpdatePartial(&h, mem[nInts], left);
+    }
+    return hashFinish(&h);
+}
+
+static void checkSmallStringHash(TaggedPtr tp) {
+    uint64_t actual = _bal_string_hash(tp);
+    uint64_t expect = smallStringHashRef(tp);
+    assert(actual == expect);
+}
+
+static void checkMediumStringHash(TaggedPtr tp) {
+    uint64_t actual = _bal_string_hash(tp);
+    uint64_t expect = mediumStringHashRef(tp);
+    assert(actual == expect);
+}
+
+#define NHASH NSTRINGS*NSTRINGS
+
+void testStringHash() {
+    // for (int i = 0; i < NHASH; i++)
+    //     checkSmallStringHash(randSmallString());
+    for (int i = 0; i < NHASH; i++)
+        checkMediumStringHash(randMediumString());
+}
+
+HASH_DEFINE_KEY;
+
 int main() {
     srand(1);
     // testStringCmp();
-    testStringEq();
+    // testStringEq();
+    testStringHash();
     return 0;
 }

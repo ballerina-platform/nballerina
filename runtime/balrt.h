@@ -121,6 +121,9 @@ extern struct StringData _bal_tagged_to_string(TaggedPtr p);
 extern bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
+extern uint64_t _bal_string_hash(TaggedPtr tp);
+
+
 
 
 

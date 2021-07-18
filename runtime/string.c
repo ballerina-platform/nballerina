@@ -1,4 +1,6 @@
+#include <stdio.h>
 #include "balrt.h"
+#include "hash.h"
 #include <string.h>
 
 // Most of this assumes little-endian
@@ -97,5 +99,112 @@ static int64_t memcmp8(IntPtr p1, IntPtr p2, int64_t n) {
     return 0;
 }
 
+// We compute the hash with the first 7 bytes moved after the other bytes
+static void smallStringHash(HashState *hp, SmallStringPtr p) {
+    IntPtr ip = (IntPtr)p;
+    uint64_t start = *ip;
+    unsigned len = start & 0xFF;
+    start >>= 8;
+    if (len <= 7) {
+        if (len != 0) 
+            hashUpdatePartial(hp, start, len);
+        return;
+    }
+    int nBytes = smallStringSize(len);
+    int nInts = nBytes >> 3;
+    // nPad is number of zero padding bytes at the end (nPad <= 7)
+    int nPad = nBytes - (len + 1);
+    int nCompleteInts;
+    if (nPad) {
+        nCompleteInts = nInts - 1;
+    }
+    else {
+        nCompleteInts = nInts;
+    }
+    for (int i = 1; i < nCompleteInts; i++) {
+        hashUpdate(hp, ip[i]);
+    }
+    if (!nPad) {      
+        hashUpdatePartial(hp, start, 7);
+        return;
+    }
+    uint64_t last = ip[nCompleteInts];
 
+    // fill in the padding bytes of last from bottom bytes of start
+    // nPad 1 = shift 56
+    // nPad 2 = shift 48
+    // nPad 7 = shift 8
+    int shift = 8 * (8 - nPad);
+    last |= start << shift;
+    // we have 7 bytes at the beginning and
+    // no more than 7 bytes of padding, so we always fill this
+    hashUpdate(hp, last);
+    if (nPad == 7) {
+        return;
+    }
+    hashUpdatePartial(hp, start >> (64 - shift), 7 - nPad);    
+}
 
+// We compute the hash with the first 4 bytes moved after the other bytes
+static void mediumStringHash(HashState *hp, MediumStringPtr p) {
+    IntPtr ip = (IntPtr)p;
+    uint64_t start = *ip;
+    unsigned len = start & 0xFFFF;
+    start >>= 32;
+    if (len <= 4) {
+        if (len != 0)
+            hashUpdatePartial(hp, start, len);
+        return;
+    }
+    int nBytes = mediumStringSize(len);
+
+    int nInts = nBytes >> 3;
+    int nPad = nBytes - (len + 4);
+    int nCompleteInts;
+    if (nPad) {
+        nCompleteInts = nInts - 1;
+    }
+    else {
+        nCompleteInts = nInts;
+    }
+    for (int i = 1; i < nCompleteInts; i++) {
+        hashUpdate(hp, ip[i]);
+    }
+    if (!nPad) {      
+        hashUpdatePartial(hp, start, 4);
+        return;
+    }
+    uint64_t last = ip[nCompleteInts];
+    // fill in the padding bytes of last from bottom 4 bytes of start
+    int shift = 8 * (8 - nPad);
+    last |= start << shift;
+    if (nPad > 4) {
+        // cannot fill all the padding from `start` 
+        // nPad 5 - 7 bytes
+        // nPad 6 - 6 bytes
+        // nPad 7 - 5 bytes
+        hashUpdatePartial(hp, last, 12 - nPad);
+        return;
+    } 
+    hashUpdate(hp, last);
+    if (nPad == 4) {
+        return;
+    }
+    // If we had e.g. 3 bytes of padding, then we would use 3 of the 4 bytes
+    // in `start` to fill in the padding, leaving 1 byte left over
+    hashUpdatePartial(hp, start >> (64 - shift), 4 - nPad);
+}
+
+uint64_t _bal_string_hash(TaggedPtr tp) {
+    int variant = taggedPtrBits(tp) & 0x7;
+    UntypedPtr p = taggedToPtr(tp);
+    HashState h;
+    hashInit(&h);
+    if (variant == 0) {
+        smallStringHash(&h, p);
+    }
+    else {
+        mediumStringHash(&h, p);
+    }
+    return hashFinish(&h);
+}
