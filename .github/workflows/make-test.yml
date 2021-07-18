@@ -1,0 +1,37 @@
+name: Make test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+  
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install LLVM
+        run: |
+          sudo apt-get install llvm-11
+      - name: Cache jBallerina
+        id: cache-jbal
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/ballerina-linux-swan-lake-beta2
+          key: jbal-slbeta2
+      - name: Download jBallerina
+        if: steps.cache-jbal.outputs.cache-hit != 'true'
+        run: |
+          curl -L https://github.com/ballerina-platform/ballerina-distribution/releases/download/vswan-lake-beta2/ballerina-linux-swan-lake-beta2.zip > $HOME/ballerina-linux-swan-lake-beta2.zip
+          unzip "$HOME/ballerina-linux-swan-lake-beta2.zip" -d "$HOME"
+          chmod +x "$HOME/ballerina-linux-swan-lake-beta2/bin/bal"
+      - name: Install jBallerina
+        run: |
+          echo "$HOME/ballerina-linux-swan-lake-beta2/bin/" >> $GITHUB_PATH
+      - name: Test
+        run: |
+          make -j2 test
