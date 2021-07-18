@@ -2,6 +2,7 @@ LLVM_SUFFIX=-11
 CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
+VALGRIND ?= valgrind
 OBJS=alloc.o list.o main.o panic.o print.o string.o
 INCLUDES=tag.h balrt.h
 AR=ar
@@ -12,6 +13,9 @@ all: $(LIB) $(BCLIB)
 
 test: all testrt
 	./testrt
+
+valgrind: all testrt
+	$(VALGRIND) ./testrt
 
 $(LIB): $(OBJS)
 	$(AR) r $@ $^
