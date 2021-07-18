@@ -69,7 +69,7 @@ public type IntArithmeticOp "add"|"sub"|"mul";
 
 public type IntArithmeticSignedOp "sdiv"|"srem";
 
-public type IntBitwiseOp "xor"|"or"|"and";
+public type IntBitwiseOp "xor"|"or"|"and"|"shl"|"ashr"|"lshr";
 
 type IntOp IntArithmeticOp|IntArithmeticSignedOp|IntBitwiseOp;
 

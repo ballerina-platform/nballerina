@@ -140,7 +140,8 @@ public function createRegister(FunctionCode code, SemType semType, string? varNa
 }
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
-public type BitwiseBinaryOp "|" | "^" | "&";
+public type BitwiseBinaryOp "|" | "^" | "&" | BitwiseShiftOp;
+public type BitwiseShiftOp "<<" | ">>" | ">>>";
 public type OrderOp "<=" | ">=" | "<" | ">";
 public type EqualityOp "==" | "!=" | "===" | "!==";
 

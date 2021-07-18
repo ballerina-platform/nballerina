@@ -12,7 +12,7 @@ type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_L
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=" | ".";
-type MultiCharDelim "{|" | "|}" | "..." | "..<" | "==" | "!=" | ">=" | "<=" | "===" | "!==";
+type MultiCharDelim "{|" | "|}" | "..." | "..<" | "==" | "!=" | ">=" | "<=" | "===" | "!==" | "<<" | ">>" | ">>>";
 type Keyword
     "any"
     | "boolean"
@@ -80,6 +80,10 @@ final readonly & map<MultiCharDelim> WITH_EQUALS = {
     ">": ">="
 };
 
+const MODE_NORMAL = 0;
+const MODE_TYPE = 1;
+type Mode MODE_NORMAL|MODE_TYPE;
+
 class Tokenizer {
     Token? cur = ();
     // The index in `str` of the first character of `cur`
@@ -94,7 +98,7 @@ class Tokenizer {
     private Char? ungot = ();
     // Number of characters returned by `iter`
     private int nextCount = 0;
-   
+    private Mode mode = MODE_NORMAL;
 
     function init(string str) {
         self.iter = str.iterator();
@@ -109,6 +113,10 @@ class Tokenizer {
 
     function current() returns Token? {
         return self.cur;
+    }
+
+    function setMode(Mode m) {
+        self.mode = m;
     }
 
     function currentPos() returns err:Position {
@@ -207,6 +215,30 @@ class Tokenizer {
                         self.ungetc(peekCh);
                     }
                 }
+                if ch == ">" && self.mode == MODE_NORMAL {
+                    Char? peekCh = self.getc();
+                    if peekCh == ">" {
+                        peekCh = self.getc();
+                        if peekCh == ">" {
+                            return ">>>";
+                        } else if !(peekCh is ()) {
+                            self.ungetc(peekCh);
+                        }
+                        return ">>";
+                    }
+                    else if !(peekCh is ()) {
+                        self.ungetc(peekCh);
+                    }
+                }
+                else if ch == "<" {
+                    Char? peekCh = self.getc();
+                    if peekCh == "<" {
+                        return "<<";
+                    }
+                    else if !(peekCh is ()) {
+                        self.ungetc(peekCh);
+                    }
+                }
                 return ch;
             }
             else if ALPHA.includes(ch) {
@@ -250,77 +282,81 @@ class Tokenizer {
                 return [DECIMAL_NUMBER, digits];
             }
             else if ch == "\"" {
-                string content = "";
-                while true {
-                    ch = self.getc();
-                    if ch == "\"" {
-                        break;
-                    }
-                    if ch is () || self.isLineTerminator(ch) {
-                        return self.err("missing close quote");
-                    }
-                    else if ch == "\\" {
-                        ch = self.getc();
-                        if ch is () {
-                            return self.err("missing close quote");
-                        }
-                        else if ch is "u" {
-                            ch = self.getc();
-                            if ch == "{" {
-                                string hex = "";
-                                ch = self.getc();
-                                while ch != "}"  {
-                                    if !(ch is ()) {
-                                        hex += ch;
-                                    }
-                                    else {
-                                        return self.err("missing closing brace in numeric escape");
-                                    }
-                                    ch = self.getc();
-                                }
-                                int|error chCode = int:fromHexString(hex);
-                                if chCode is error {
-                                    return self.err("invalid hex string in numeric escape");
-                                }
-                                else {
-                                    // JBUG shouldn't need this check, fromCodePointInt should return an error
-                                    if (0xD800 <= chCode && chCode <= 0xDFFF) {
-                                        return self.err("invalid codepoint in numeric escape");
-                                    }
-                                    string:Char|error unescapedCh = string:fromCodePointInt(chCode);
-                                    if unescapedCh is error {
-                                        return self.err("invalid codepoint in numeric escape");
-                                    } else {
-                                        // JBUG cast
-                                        content += <string>unescapedCh;
-                                    }
-                                }
-                            }
-                            else {
-                                return self.err("missing opening brace in numeric escape");
-                            }
-                        }
-                        else {
-                            ch = ESCAPES[ch];
-                            if ch is () {
-                                return self.err("bad character after backslash");
-                            }
-                            else {
-                                content += ch;
-                            }
-                        }
-                    }
-                    else {
-                        content += ch;
-                    }
-                }
-                return [STRING_LITERAL, content];
+                return self.tokenizeStr();
             }
             else {
                break;
             }
         }
         return self.err("invalid token");
+    }
+    
+    private function tokenizeStr() returns Token?|err:Syntax {
+        string content = "";
+        while true {
+            Char? ch = self.getc();
+            if ch == "\"" {
+                break;
+            }
+            if ch is () || self.isLineTerminator(ch) {
+                return self.err("missing close quote");
+            }
+            else if ch == "\\" {
+                ch = self.getc();
+                if ch is () {
+                    return self.err("missing close quote");
+                }
+                else if ch is "u" {
+                    ch = self.getc();
+                    if ch == "{" {
+                        string hex = "";
+                        ch = self.getc();
+                        while ch != "}"  {
+                            if !(ch is ()) {
+                                hex += ch;
+                            }
+                            else {
+                                return self.err("missing closing brace in numeric escape");
+                            }
+                            ch = self.getc();
+                        }
+                        int|error chCode = int:fromHexString(hex);
+                        if chCode is error {
+                            return self.err("invalid hex string in numeric escape");
+                        }
+                        else {
+                            // JBUG shouldn't need this check, fromCodePointInt should return an error
+                            if (0xD800 <= chCode && chCode <= 0xDFFF) {
+                                return self.err("invalid codepoint in numeric escape");
+                            }
+                            string:Char|error unescapedCh = string:fromCodePointInt(chCode);
+                            if unescapedCh is error {
+                                return self.err("invalid codepoint in numeric escape");
+                            } else {
+                                // JBUG cast
+                                content += <string>unescapedCh;
+                            }
+                        }
+                    }
+                    else {
+                        return self.err("missing opening brace in numeric escape");
+                    }
+                }
+                else {
+                    ch = ESCAPES[ch];
+                    if ch is () {
+                        return self.err("bad character after backslash");
+                    }
+                    else {
+                        content += ch;
+                    }
+                }
+            }
+            else {
+                content += ch;
+            }
+        }
+        return [STRING_LITERAL, content];
     }
     
     private function isLineTerminator(Char ch) returns boolean {

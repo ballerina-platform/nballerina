@@ -682,12 +682,18 @@ function buildNoPanicArithmeticBinary(llvm:Builder builder, Scaffold scaffold, b
 final readonly & map<llvm:IntBitwiseOp> binaryBitwiseOp = {
     "&": "and",
     "^": "xor",
-    "|": "or"
+    "|": "or",
+    "<<": "shl",
+    ">>": "ashr",
+    ">>>" : "lshr"
 };
 
 function buildBitwiseBinary(llvm:Builder builder, Scaffold scaffold, bir:IntBitwiseBinaryInsn insn) {
     llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
+    if insn.op is bir:BitwiseShiftOp {
+        rhs = builder.iBitwise("and", llvm:constInt(LLVM_INT, 0x3F), rhs);
+    }
     llvm:IntBitwiseOp op = binaryBitwiseOp.get(insn.op);
     llvm:Value result = builder.iBitwise(op, lhs, rhs);
     buildStoreInt(builder, scaffold, result, insn.result);                                  
