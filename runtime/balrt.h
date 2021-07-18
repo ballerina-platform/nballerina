@@ -38,11 +38,26 @@ typedef GC int64_t *IntPtr;
 // An error is currently represented as int with the error code in the lo byte
 typedef uint64_t Error;
 
-typedef GC struct List {
+typedef struct {
     int64_t length;
-    // capacity is always >= length
     int64_t capacity;
-    TaggedPtr GC *members;
+    GC void *members;
+} GenericArray;
+
+typedef struct {
+    int64_t length;
+    int64_t capacity;
+    GC TaggedPtr *members;
+} TaggedPtrArray;
+
+typedef GC struct List {
+    // XXX will have a typedescriptor here
+    // This isn't strictly portable because void* and TaggedPtr* might have different alignments/sizes
+    // But we ain't writing portable code here
+    union {
+        GenericArray gArray;
+        TaggedPtrArray tpArray;
+    };
 } *ListPtr;
  
 #define STRING_MEDIUM_FLAG 1
@@ -106,7 +121,9 @@ static inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {
     return (TaggedPtr)p0;
 }
 
-extern void _bal_array_grow(ListPtr lp, int64_t min_capacity);
+#define TAGGED_PTR_SHIFT 3
+
+extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
 extern TaggedPtr _bal_int_to_tagged(int64_t n);
 extern int64_t _bal_tagged_to_int(TaggedPtr p);
 

@@ -41,11 +41,11 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
                 fputs("[", fp);
                 stack.next = stackPtr;
                 stack.p = p;
-                for (i = 0; i < lp->length; i++) {
+                for (i = 0; i < lp->tpArray.length; i++) {
                     if (i > 0) {
                         fputs(",", fp);
                     }
-                    printTagged(fp, lp->members[i], STYLE_INFORMAL, &stack);
+                    printTagged(fp, lp->tpArray.members[i], STYLE_INFORMAL, &stack);
                 }
                 fputs("]", fp);
             }
