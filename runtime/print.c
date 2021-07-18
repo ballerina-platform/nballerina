@@ -52,7 +52,7 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
             break;
         case TAG_STRING:
             {
-                struct StringData data = _bal_tagged_to_string(p);
+                StringData data = _bal_tagged_to_string(p);
                 fwrite((char *)data.bytes, 1, data.lengthInBytes, fp);
             }
             break;

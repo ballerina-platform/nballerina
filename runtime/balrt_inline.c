@@ -65,21 +65,21 @@ void _Barray__push(TaggedPtr p, TaggedPtr val) {
     lp->length = len + 1;
 }
 
-struct StringData _bal_tagged_to_string(TaggedPtr p) {
+StringData _bal_tagged_to_string(TaggedPtr p) {
     if (likely((taggedPtrBits(p) & 1) == 0)) {
         SmallStringPtr sp = taggedToPtr(p);
-        struct StringData data = { sp->length, sp->length, sp->bytes };
+        StringData data = { sp->length, sp->length, sp->bytes };
         return data;
     }
     else {
         MediumStringPtr sp = taggedToPtr(p);
-        struct StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
+        StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
         return data;
     }
 }
 
 int64_t _Bstring__length(TaggedPtr p) {
-    struct StringData data = _bal_tagged_to_string(p);
+    StringData data = _bal_tagged_to_string(p);
     return data.lengthInCodePoints;
 }
 

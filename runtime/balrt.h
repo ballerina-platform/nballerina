@@ -33,8 +33,7 @@ extern char *_bal_stack_guard;
 
 typedef GC char NODEREF *TaggedPtr;
 typedef GC void *UntypedPtr;
-typedef GC int64_t*IntPtr;
-
+typedef GC int64_t *IntPtr;
 
 // An error is currently represented as int with the error code in the lo byte
 typedef uint64_t Error;
@@ -68,11 +67,11 @@ static inline int mediumStringSize(int lengthInBytes) {
     return ((lengthInBytes + 7 + 4) >> 3) << 3;
 }
 
-struct StringData {
+typedef struct {
     int64_t lengthInBytes;
     int64_t lengthInCodePoints;
     GC char *bytes;
-};
+} StringData;
 
 // These should be shared with build.bal
 #define PANIC_INDEX_OUT_OF_BOUNDS 5
@@ -111,7 +110,7 @@ extern void _bal_array_grow(ListPtr lp, int64_t min_capacity);
 extern TaggedPtr _bal_int_to_tagged(int64_t n);
 extern int64_t _bal_tagged_to_int(TaggedPtr p);
 
-extern struct StringData _bal_tagged_to_string(TaggedPtr p);
+extern StringData _bal_tagged_to_string(TaggedPtr p);
 extern bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);

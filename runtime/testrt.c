@@ -41,8 +41,8 @@ static TaggedPtr copySmallString(TaggedPtr tp) {
 }
 
 static int64_t stringCmpRef(TaggedPtr tp1, TaggedPtr tp2) {
-    struct StringData sd1 = _bal_tagged_to_string(tp1);
-    struct StringData sd2 = _bal_tagged_to_string(tp2);
+    StringData sd1 = _bal_tagged_to_string(tp1);
+    StringData sd2 = _bal_tagged_to_string(tp2);
     int64_t minLength = sd1.lengthInBytes <= sd2.lengthInBytes ? sd1.lengthInBytes : sd2.lengthInBytes;
     int result = memcmp(sd1.bytes, sd2.bytes, minLength);
     if (result != 0) {
