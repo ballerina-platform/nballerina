@@ -21,6 +21,7 @@ type Keyword
     | "decimal"
     | "error"
     | "false"
+    | "final"
     | "float"
     | "foreach"
     | "function"

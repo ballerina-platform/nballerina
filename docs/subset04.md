@@ -69,7 +69,7 @@ statement =
   | continue-stmt
   | foreach-stmt
 
-local-var-decl-stmt = type-desc identifier "=" expression ";"
+local-var-decl-stmt = ["final"] type-desc identifier "=" expression ";"
 
 call-stmt =
    function-call-expr ";"
@@ -91,7 +91,7 @@ break-stmt = "break" ";"
 
 continue-stmt = "continue" ";"
 
-foreach-stmt = "foreach" typedesc identifier "in" additive-expr "..<" additive-expr stmt-block
+foreach-stmt = "foreach" "int" identifier "in" additive-expr "..<" additive-expr stmt-block
 
 expression = bitwise-or-expr | list-constructor-expr | mapping-constructor-expr
 
@@ -228,6 +228,7 @@ Add `string` and `map<any>`:
   * string literals `"abc"`
   * mapping constructor `{"x": 1, "y": 2}`
   * shift expressions `255 >> 2`
+* `final` qualifier for local variable declarations
 
 Existing syntax extended:
 

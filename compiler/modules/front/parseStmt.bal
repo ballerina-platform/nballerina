@@ -50,6 +50,10 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parseForeachStmt(tok);
         }
+        "final" => {
+            check tok.advance();
+            return parseVarDeclStmt(tok, true);
+        }
         var td if td is InlineLeafTypeDesc => {
             return parseVarDeclStmt(tok);
         }
@@ -144,7 +148,7 @@ function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Sy
     return stmt; 
 }
 
-function parseVarDeclStmt(Tokenizer tok) returns VarDeclStmt|err:Syntax {
+function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     InlineTypeDesc td = check parseInlineTypeDesc(tok);
     Token? cur = tok.current();
     if cur is [IDENTIFIER, string] {
@@ -153,7 +157,7 @@ function parseVarDeclStmt(Tokenizer tok) returns VarDeclStmt|err:Syntax {
         check tok.expect("=");
         Expr initExpr = check parseExpr(tok);
         check tok.expect(";");
-        return { td, varName: cur[1], initExpr, semType: convertInlineTypeDesc(td) };
+        return { td, varName: cur[1], initExpr, semType: convertInlineTypeDesc(td), isFinal };
     }
     return parseError(tok, "invalid VarDeclStmt");
 }

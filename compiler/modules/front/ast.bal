@@ -76,6 +76,7 @@ type VarDeclStmt record {|
     // Later on will support references to type definitions,
     // and it will be filled in later.
     t:SemType? semType = ();
+    boolean isFinal;
 |};
 
 type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";

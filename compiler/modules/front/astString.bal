@@ -52,6 +52,9 @@ function functionDefToWords(Word[] w, FunctionDef func) {
 
 function stmtToWords(Word[] w, Stmt stmt) {
     if stmt is VarDeclStmt {
+        if stmt.isFinal {
+            w.push("final");
+        }
         typeDescToWords(w, stmt.td);
         w.push(stmt.varName, "=");
         exprToWords(w, stmt.initExpr);

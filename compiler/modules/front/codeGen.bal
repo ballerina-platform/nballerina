@@ -326,7 +326,7 @@ function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
 }
 
 function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, VarDeclStmt stmt) returns CodeGenError|[bir:BasicBlock?, Scope?] {
-    var { varName, initExpr, semType } = stmt;
+    var { varName, initExpr, semType, isFinal } = stmt;
     if lookup(varName, scope) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
@@ -338,7 +338,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
         bir:Register result = cx.createRegister(semType, varName);
         bir:AssignInsn insn = { result, operand };
         nextBlock.insns.push(insn);
-        return [nextBlock, { name: varName, reg: result, prev: scope, isFinal: false }];
+        return [nextBlock, { name: varName, reg: result, prev: scope, isFinal }];
     }   
 }
 
