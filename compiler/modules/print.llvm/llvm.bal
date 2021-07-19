@@ -999,7 +999,8 @@ function escapeIdent(string name) returns string {
         return name;
     }
     string escaped = "\"";
-    foreach var ch in name {
+    foreach int i in 0 ..< name.length() { // JBUG issue:#31767
+        string:Char ch = <string:Char>name[i];
         escaped += escapeIdentChar(ch);
     }
     escaped += "\"";
@@ -1022,7 +1023,7 @@ function escapeIdentChar(string:Char ch) returns string {
         } 
         return result;
     }
-    string hex = cp.toHexString();
+    string hex = cp.toHexString().toUpperAscii();
     if hex.length() == 1 {
         return "\\0" + hex;
     }
@@ -1066,7 +1067,9 @@ function isIdent(string name) returns boolean {
     if isDigit(<string:Char>name[0]) {
         return false;
     }
-    foreach var ch in name {
+
+    foreach int i in 0 ..< name.length() {// JBUG issue:#31767
+        string:Char ch = <string:Char>name[i];
         if !isIdentFollow(ch) {
             return false;
         }

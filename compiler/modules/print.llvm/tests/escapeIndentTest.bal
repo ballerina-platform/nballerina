@@ -6,16 +6,16 @@ function firstPossibleSequence() returns error? {
 	test:assertEquals(escapeIdent("�"), "\"\\EF\\BF\\BD\"");
 	test:assertEquals(escapeIdent(""), "\"\\C2\\80\"");
 	test:assertEquals(escapeIdent("ࠀ"), "\"\\E0\\A0\\80\"");
-	// test:assertEquals(escapeIdent("𐀀"), "\"\\F0\\90\\80\\80\""); // java.lang.StringIndexOutOfBoundsException {"message":"String index out of range: 0"}
+	test:assertEquals(escapeIdent("𐀀"), "\"\\F0\\90\\80\\80\"");
 	test:assertEquals(escapeIdent("�����"), "\"\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\"");
 	test:assertEquals(escapeIdent("������"), "\"\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\"");
 }
 
 @test:Config {}
 function lastPossibleSequence() returns error? {
-	// test:assertEquals(escapeIdent(""), "\"\\7F\""); // 7f
+	test:assertEquals(escapeIdent(""), "\"\\7F\"");
 	test:assertEquals(escapeIdent("߿"), "\"\\DF\\BF\"");
-	// test:assertEquals(escapeIdent("￿"), "\"\\EF\\BF\\BF\""); // ￿
+	test:assertEquals(escapeIdent("￿"), "\"\\EF\\BF\\BF\"");
 	test:assertEquals(escapeIdent("����"), "\"\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\"");
 	test:assertEquals(escapeIdent("�����"), "\"\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\"");
 	test:assertEquals(escapeIdent("������"), "\"\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\"");
@@ -26,11 +26,11 @@ function otherBoundaryConditions() returns error? {
 	test:assertEquals(escapeIdent("퟿"), "\"\\ED\\9F\\BF\"");
 	test:assertEquals(escapeIdent(""), "\"\\EE\\80\\80\"");
 	test:assertEquals(escapeIdent("�"), "\"\\EF\\BF\\BD\"");
-	// test:assertEquals(escapeIdent("􏿿"), "\"\\F4\\8F\\BF\\BF\"");// java.lang.StringIndexOutOfBoundsException {"message":"String index out of range: 0"}
+	test:assertEquals(escapeIdent("􏿿"), "\"\\F4\\8F\\BF\\BF\"");
 	test:assertEquals(escapeIdent("����"), "\"\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\\EF\\BF\\BD\"");
 }
 
-// Test cases from https://www.cl.cam.ac.uk/~mgk25/ucs/examples/quickbrown.txt
+// Pangram test cases from https://www.cl.cam.ac.uk/~mgk25/ucs/examples/quickbrown.txt
 @test:Config {}
 function correctUnicodeSequencesDanish() returns error? {
 	test:assertEquals(escapeIdent("Quizdeltagerne"), "Quizdeltagerne");
