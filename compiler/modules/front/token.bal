@@ -196,50 +196,7 @@ class Tokenizer {
                 return ".";
             }
             else if ch is SingleCharDelim {
-                MultiCharDelim? multi = WITH_EQUALS[ch];
-                if !(multi is ()) {
-                    Char? peekCh = self.getc();
-                    if peekCh == "=" {
-                        if multi == "==" || multi == "!=" {
-                            peekCh = self.getc();
-                            if peekCh == "=" {
-                                return multi == "==" ? "===" : "!==";
-                            }
-                            else if !(peekCh is ()) {
-                                self.ungetc(peekCh);
-                            }
-                        }
-                        return multi;
-                    }
-                    else if !(peekCh is ()) {
-                        self.ungetc(peekCh);
-                    }
-                }
-                if ch == ">" && self.mode == MODE_NORMAL {
-                    Char? peekCh = self.getc();
-                    if peekCh == ">" {
-                        peekCh = self.getc();
-                        if peekCh == ">" {
-                            return ">>>";
-                        } else if !(peekCh is ()) {
-                            self.ungetc(peekCh);
-                        }
-                        return ">>";
-                    }
-                    else if !(peekCh is ()) {
-                        self.ungetc(peekCh);
-                    }
-                }
-                else if ch == "<" {
-                    Char? peekCh = self.getc();
-                    if peekCh == "<" {
-                        return "<<";
-                    }
-                    else if !(peekCh is ()) {
-                        self.ungetc(peekCh);
-                    }
-                }
-                return ch;
+                return self.nextSingleCharDelimPrefixed(ch);
             }
             else if ALPHA.includes(ch) {
                 string ident = ch;
@@ -282,7 +239,7 @@ class Tokenizer {
                 return [DECIMAL_NUMBER, digits];
             }
             else if ch == "\"" {
-                return self.tokenizeStr();
+                return self.nextStr();
             }
             else {
                break;
@@ -290,8 +247,55 @@ class Tokenizer {
         }
         return self.err("invalid token");
     }
+
+    private function nextSingleCharDelimPrefixed(SingleCharDelim ch) returns Token?|err:Syntax {
+        MultiCharDelim? multi = WITH_EQUALS[ch];
+        if !(multi is ()) {
+            Char? peekCh = self.getc();
+            if peekCh == "=" {
+                if multi == "==" || multi == "!=" {
+                    peekCh = self.getc();
+                    if peekCh == "=" {
+                        return multi == "==" ? "===" : "!==";
+                    }
+                    else if !(peekCh is ()) {
+                        self.ungetc(peekCh);
+                    }
+                }
+                return multi;
+            }
+            else if !(peekCh is ()) {
+                self.ungetc(peekCh);
+            }
+        }
+        if ch == ">" && self.mode == MODE_NORMAL {
+            Char? peekCh = self.getc();
+            if peekCh == ">" {
+                peekCh = self.getc();
+                if peekCh == ">" {
+                    return ">>>";
+                } else if !(peekCh is ()) {
+                    self.ungetc(peekCh);
+                }
+                return ">>";
+            }
+            else if !(peekCh is ()) {
+                self.ungetc(peekCh);
+            }
+        }
+        else if ch == "<" {
+            Char? peekCh = self.getc();
+            if peekCh == "<" {
+                return "<<";
+            }
+            else if !(peekCh is ()) {
+                self.ungetc(peekCh);
+            }
+        }
+        return ch;
+    }
     
-    private function tokenizeStr() returns Token?|err:Syntax {
+    private function nextStr() returns Token?|err:Syntax {
         string content = "";
         while true {
             Char? ch = self.getc();
