@@ -11,13 +11,18 @@ const SOURCE_DIR = "testSuite";
 function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
     foreach var f in check file:readDir(SOURCE_DIR) {
         string src = check io:fileReadString(f.absPath);
-        ModulePart|error part = parseModulePart(src);
+        ModulePart|err:Syntax part = parseModulePart(src);
         if part is error {
             continue;
         }
         else {
             string canonSrc = partToString(part);
-            string roundTripSrc = partToString(check parseModulePart(canonSrc));
+            part = parseModulePart(canonSrc);
+            if part is error {
+                test:assertEquals(src, canonSrc, "serialized ast can't be re-parsed");
+                panic err:impossible("if src is equal to canonSrc second parse can't fail");
+            }
+            string roundTripSrc = partToString(check part);
             test:assertEquals(canonSrc, roundTripSrc);
         }
     }
