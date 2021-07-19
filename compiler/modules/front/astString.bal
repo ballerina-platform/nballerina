@@ -28,10 +28,10 @@ function modulePartToWords(Word[] w, ModulePart mod) {
 }
 
 function functionDefToWords(Word[] w, FunctionDef func) {
-    w.push("function");
     if func.vis != () {
         w.push(<Word>func.vis);
     }
+    w.push("function");
     w.push(func.name, CLING, "(");
     boolean firstArg = true;
     foreach int i in 0..<func.typeDesc.args.length() {
