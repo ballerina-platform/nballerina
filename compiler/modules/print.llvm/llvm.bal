@@ -117,27 +117,29 @@ public class Module {
 
     // Corresponds to LLVMAddFunction
     public function addFunctionDefn(string name, FunctionType fnType) returns FunctionDefn {
-        if name is IntrinsicFunctionName {
+        string fnName = escapeIdent(name);
+        if fnName is IntrinsicFunctionName {
             panic err:illegalArgument("reserved intrinsic function name");
         }
-        if self.globals.hasKey(name) {
+        if self.globals.hasKey(fnName) {
             panic err:illegalArgument("this module already has a declaration by that name");
         }
-        FunctionDefn fn = new (self.context, name, fnType);
-        self.globals[name] = fn;
+        FunctionDefn fn = new (self.context, fnName, fnType);
+        self.globals[fnName] = fn;
         self.functionDefns.push(fn);
         return fn;
     }
 
     public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl {
-        if name is IntrinsicFunctionName {
+        string fnName = escapeIdent(name);
+        if fnName is IntrinsicFunctionName {
             panic err:illegalArgument("reserved intrinsic function name");
         }
-        if self.globals.hasKey(name) {
+        if self.globals.hasKey(fnName) {
             panic err:illegalArgument("this module already has a declaration by that name");
         }
-        FunctionDecl fn = new(self.context, name, fnType);
-        self.globals[name] = fn;
+        FunctionDecl fn = new(self.context, fnName, fnType);
+        self.globals[fnName] = fn;
         self.functionDecls.push(fn);
         return fn;
     }
@@ -181,16 +183,16 @@ public class Module {
 
     // Corresponds to LLVMAddGlobal
     public function addGlobal(Type ty, string name, *GlobalProperties props) returns PointerValue {
-        // XXX implement all the GlobalProperties
-        if name is IntrinsicFunctionName {
+        string varName = escapeIdent(name);
+        if varName is IntrinsicFunctionName {
             panic err:illegalArgument("reserved intrinsic function name");
         }
-        if self.globals.hasKey(name) {
+        if self.globals.hasKey(varName) {
             panic err:illegalArgument("this module already has a declaration by that name");
         }
         PointerType ptrType = pointerType(ty, props.addressSpace);
-        PointerValue val = new PointerValue(ptrType, "@" + name); 
-        self.globals[name] = val;
+        PointerValue val = new PointerValue(ptrType, "@" + varName); 
+        self.globals[varName] = val;
         self.globalVariables.push([val, props]);
         return val;
     }
