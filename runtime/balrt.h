@@ -10,12 +10,18 @@
 #define NODEREF __attribute__((noderef))
 #define NORETURN __attribute__((noreturn))
 #define GC __attribute__((address_space(1)))
-#define COLD __attribute__((cold)) 
+#define COLD __attribute__((cold))
+// LLVM readonly attribute corresponds to clang pure
+#define READONLY __attribute__((pure))
+// LLVM readnone attribute corresponds to clang const
+#define READNONE __attribute__((const))
 #else
 #define NODEREF /* as nothing */
 #define NORETURN /* as nothing */
 #define GC /* as nothing */
 #define COLD /* as nothing */
+#define READONLY /* as nothing */
+#define READNONE /* as nothing */
 #endif
 
 #define likely(x) __builtin_expect((x), 1)
@@ -77,6 +83,9 @@ typedef GC struct Mapping {
         GenericArray gArray;
         MapFieldArray fArray;
     };
+    UntypedPtr table;
+    uint8_t tableElementShift;
+    uint8_t tableLengthShift;
 } *MappingPtr;
 
 #define STRING_MEDIUM_FLAG 1
@@ -118,36 +127,36 @@ extern NORETURN void _bal_panic(Error err);
 
 extern void _Bio__println(TaggedPtr p);
 
-static inline uint64_t taggedPtrBits(TaggedPtr p) {
+static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;
 }
 
-static inline int getTag(TaggedPtr p) {
+static READNONE inline int getTag(TaggedPtr p) {
     return (int)((taggedPtrBits(p) >> TAG_SHIFT) & TAG_MASK);
 }
 
-static inline int taggedToBoolean(TaggedPtr p) {
+static READNONE inline int taggedToBoolean(TaggedPtr p) {
     return (int)(taggedPtrBits(p) & 1);
 }
 
-static inline UntypedPtr taggedToPtr(TaggedPtr p) {
+static READNONE inline UntypedPtr taggedToPtr(TaggedPtr p) {
     return (UntypedPtr)(char *)(~((((uint64_t)TAG_MASK) << TAG_SHIFT) | 0x7) & taggedPtrBits(p));
 }
 
-static inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {
+static READNONE inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {
     char *p0 = (void *)p;
     p0 = (char *)((uint64_t)p0 | flags);
     return (TaggedPtr)p0;
 }
 
 extern TaggedPtr _bal_int_to_tagged(int64_t n);
-extern int64_t _bal_tagged_to_int(TaggedPtr p);
+extern READONLY int64_t _bal_tagged_to_int(TaggedPtr p);
 
-extern StringData _bal_tagged_to_string(TaggedPtr p);
-extern bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
-extern bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
-extern int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
-extern uint64_t _bal_string_hash(TaggedPtr tp);
+extern READONLY StringData _bal_tagged_to_string(TaggedPtr p);
+extern READONLY bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
+extern READONLY bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
+extern READONLY int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
+extern READONLY uint64_t _bal_string_hash(TaggedPtr tp);
 
 #define TAGGED_PTR_SHIFT 3
 
@@ -157,7 +166,10 @@ extern Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
 #define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
 
 extern TaggedPtr _bal_mapping_construct(int64_t capacity);
+extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern void _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
+extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
+
 
 
 

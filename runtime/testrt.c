@@ -192,6 +192,36 @@ void testStringHash() {
         checkMediumStringHash(randMediumString());
 }
 
+void testRandMapping() {
+    int len = rand() & 2047;
+    TaggedPtr *k = malloc(len * sizeof(TaggedPtr));
+    TaggedPtr *v = malloc(len * sizeof(TaggedPtr));
+
+    for (int i = 0; i < len; i++) {
+        k[i] = randSmallString();
+        v[i] = randSmallString();
+    }
+    TaggedPtr m = _bal_mapping_construct(len);
+    for (int i = 0; i < len; i++) {
+        if (_bal_mapping_get(m, k[i]) == 0) {
+            _bal_mapping_init_member(m, k[i], v[i]);
+            k[i] = copySmallString(k[i]);
+        }
+        else {
+            k[i] = 0;
+        }
+    }
+    for (int i = 0; i < len; i++) {
+        if (k[i] != 0)
+            assert(_bal_mapping_get(m, k[i]) == v[i]);
+    }
+}
+
+void testMapping() {
+    for (int i = 0; i < 1000; i++)
+        testRandMapping();
+}
+
 HASH_DEFINE_KEY;
 
 int main() {
@@ -199,5 +229,6 @@ int main() {
     testStringCmp();
     testStringEq();
     testStringHash();
+    testMapping();
     return 0;
 }

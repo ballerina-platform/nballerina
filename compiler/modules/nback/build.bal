@@ -79,7 +79,7 @@ const PANIC_LIST_TOO_LONG = 6;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"string_cmp"|"eq";
+type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"string_cmp"|"eq";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -116,6 +116,25 @@ final RuntimeFunction listSetFunction = {
 
 final RuntimeFunction mappingSetFunction = {
     name: "mapping_set",
+    ty: {
+        returnType: REPR_VOID.llvm,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction mappingGetFunction = {
+    name: "mapping_get",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+
+final RuntimeFunction mappingInitMemberFunction = {
+    name: "mapping_init_member",
     ty: {
         returnType: REPR_VOID.llvm,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
@@ -562,7 +581,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     llvm:PointerValue m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
                                                           [llvm:constInt(LLVM_INT, length)]);
     foreach int i in 0 ..< length {
-        _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingSetFunction),
+        _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingInitMemberFunction),
                          [
                              m,
                              check buildConstString(builder, scaffold, insn.fieldNames[i]),
