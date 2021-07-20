@@ -1044,7 +1044,7 @@ function charArray(byte[] bytes) returns string {
         }
         else {
             result += "\\";
-            // JBUG cast should not be necessary
+            // JBUG #31776 cast should not be necessary
             string hex = (<int>b).toHexString().toUpperAscii();
             if hex.length() == 1 {
                 result += "0" + hex;
@@ -1062,7 +1062,7 @@ function isIdent(string name) returns boolean {
     if name.length() == 0 {
         return false;
     }
-    // JBUG type of name[0] is string:Char
+    // JBUG #31758 type of name[0] is string:Char
     if isDigit(<string:Char>name[0]) {
         return false;
     }
