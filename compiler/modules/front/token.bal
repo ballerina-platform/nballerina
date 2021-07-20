@@ -283,7 +283,7 @@ class Tokenizer {
                                     return self.err("invalid hex string in numeric escape");
                                 }
                                 else {
-                                    // JBUG shouldn't need this check, fromCodePointInt should return an error
+                                    // JBUG #31778 shouldn't need this check, fromCodePointInt should return an error
                                     if (0xD800 <= chCode && chCode <= 0xDFFF) {
                                         return self.err("invalid codepoint in numeric escape");
                                     }
@@ -291,8 +291,7 @@ class Tokenizer {
                                     if unescapedCh is error {
                                         return self.err("invalid codepoint in numeric escape");
                                     } else {
-                                        // JBUG cast
-                                        content += <string>unescapedCh;
+                                        content += unescapedCh;
                                     }
                                 }
                             }
