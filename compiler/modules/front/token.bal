@@ -238,7 +238,12 @@ class Tokenizer {
                             hex += ch;
                         }
                     }
-                    return [HEX_INT_LITERAL, hex];
+                    if hex.length() > 0 {
+                        return [HEX_INT_LITERAL, hex];
+                    }
+                    else {
+                        return self.err("missing digits in hex literal");
+                    }
                 }
                 else if !(ch is ()) {
                     if DIGIT.includes(ch) {
