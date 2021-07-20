@@ -49,6 +49,11 @@ int64_t _bal_tagged_to_int(TaggedPtr p) {
     }
 }
 
+int64_t _Bmap__length(TaggedPtr p) {
+    MappingPtr lp = taggedToPtr(p);
+    return lp->fArray.length;
+}
+
 int64_t _Barray__length(TaggedPtr p) {
     ListPtr lp = taggedToPtr(p);
     return lp->tpArray.length;

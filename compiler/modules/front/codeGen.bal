@@ -675,7 +675,7 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, M
     return [result, curBlock];
 }
 
-type LangLibModuleName "int"|"boolean"|"string"|"array";
+type LangLibModuleName "int"|"boolean"|"string"|"array"|"map";
 
 function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName) returns bir:FunctionRef|CodeGenError {
     TypedOperand? t = typedOperand(target);
