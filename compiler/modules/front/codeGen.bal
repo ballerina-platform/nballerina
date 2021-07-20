@@ -481,7 +481,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
         }
         var { td, operand: o } => {
             var [operand, nextBlock] = check codeGenExpr(cx, bb, scope, o);
-            // JBUG cast needed
+            // JBUG #31782 cast needed
             TypeCastExpr tcExpr = <TypeCastExpr>expr;
             if operand is bir:Register {
                 if t:isSubtype(cx.mod.tc, operand.semType, tcExpr.semType) {

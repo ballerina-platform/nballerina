@@ -5,7 +5,7 @@ import nballerina.types.bdd;
 // Uniform types are like basic types except that each selectively immutable
 // basic type is split into two uniform types, one immutable and on mutable.
 
-// JBUG bad, sad if UT_OBJECT_RW + 1
+// JBUG #31751 bad, sad if UT_OBJECT_RW + 1
 public const UT_COUNT = 0x17;
 
 const int UT_MASK = (1 << UT_COUNT) - 1;

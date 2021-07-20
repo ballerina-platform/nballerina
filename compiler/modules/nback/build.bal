@@ -868,7 +868,7 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
 }
 
 function buildConstPanicError(PanicIndex panicIndex, err:Position pos) returns llvm:Value {
-    // JBUG cast
+    // JBUG #31753 cast
     return llvm:constInt(LLVM_INT, <int>panicIndex | (pos.lineNumber << 8));
 }
 
