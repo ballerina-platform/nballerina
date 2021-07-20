@@ -6,9 +6,10 @@ const IDENTIFIER = 0;
 const DECIMAL_NUMBER = 1;
 const STRING_LITERAL = 2;
 const BOOLEAN_LITERAL = 3;
+const HEX_INT_LITERAL = 4;
 
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
-type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string];
+type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string];
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=" | ".";
@@ -54,6 +55,7 @@ const WS = "\n\r\t ";
 const LOWER = "abcdefghijklmnopqrstuvwxyz";
 const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const DIGIT = "0123456789";
+const string HEX_DIGIT = DIGIT + "abcdefABCDEF";
 const string ALPHA = LOWER + UPPER;
 const string IDENT = ALPHA + DIGIT + "_";
 
@@ -219,6 +221,35 @@ class Tokenizer {
                 }
                 return [IDENTIFIER, ident];
             }
+            else if ch == "0" {
+                ch = self.getc();
+                if ch == "x" || ch == "X" {
+                    string hex = "";
+                    while true {
+                        ch = self.getc();
+                        if ch is () {
+                            break;
+                        }
+                        else if !HEX_DIGIT.includes(ch) {
+                            self.ungetc(ch);
+                            break;
+                        }
+                        else {
+                            hex += ch;
+                        }
+                    }
+                    return [HEX_INT_LITERAL, hex];
+                }
+                else if !(ch is ()) {
+                    if DIGIT.includes(ch) {
+                        return self.err("leading zeros not allowed in integer literals");
+                    }
+                    else {
+                        self.ungetc(ch);
+                    }
+                }
+                return [DECIMAL_NUMBER, "0"];
+            }
             else if DIGIT.includes(ch) {
                 string digits = ch;
                 while true {
@@ -233,9 +264,6 @@ class Tokenizer {
                     else {
                         digits += ch;
                     }
-                }
-                if digits.startsWith("0") && digits.length() > 1 {
-                    return self.err("leading zeros not allowed in integer literals");
                 }
                 return [DECIMAL_NUMBER, digits];
             }
