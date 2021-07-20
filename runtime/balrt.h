@@ -91,7 +91,7 @@ typedef GC struct Mapping {
     // The length of fArray will always be <= (1 << tableLengthShift)/2 - 1.
     // For example, if tableLengthShift is 0, meaning table contains bytes, then the array can have a length of up to 255,
     // meaning indices into the array are between 0 and 254 inclusive, and the table can be up to 512 bytes long.
-    // The hash table uses open addressing ang linear probing (with probing backwards to 0).
+    // The hash table uses open addressing and linear probing (with probing backwards to 0).
     // Note that the load factor is fixed (1 element less than 50%), so that changes in table element size are in sync
     // with changes in table length (50% is a good load factor for linear probing anyway).
     UntypedPtr table;
