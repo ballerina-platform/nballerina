@@ -117,13 +117,7 @@ public class Module {
 
     // Corresponds to LLVMAddFunction
     public function addFunctionDefn(string name, FunctionType fnType) returns FunctionDefn {
-        string fnName = escapeIdent(name);
-        if fnName is IntrinsicFunctionName {
-            panic err:illegalArgument("reserved intrinsic function name");
-        }
-        if self.globals.hasKey(fnName) {
-            panic err:illegalArgument("this module already has a declaration by that name");
-        }
+        string fnName = self.escapeGlobalIdent(name);
         FunctionDefn fn = new (self.context, fnName, fnType);
         self.globals[fnName] = fn;
         self.functionDefns.push(fn);
@@ -131,13 +125,7 @@ public class Module {
     }
 
     public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl {
-        string fnName = escapeIdent(name);
-        if fnName is IntrinsicFunctionName {
-            panic err:illegalArgument("reserved intrinsic function name");
-        }
-        if self.globals.hasKey(fnName) {
-            panic err:illegalArgument("this module already has a declaration by that name");
-        }
+        string fnName = self.escapeGlobalIdent(name);
         FunctionDecl fn = new(self.context, fnName, fnType);
         self.globals[fnName] = fn;
         self.functionDecls.push(fn);
@@ -183,6 +171,15 @@ public class Module {
 
     // Corresponds to LLVMAddGlobal
     public function addGlobal(Type ty, string name, *GlobalProperties props) returns PointerValue {
+        string varName = self.escapeGlobalIdent(name);
+        PointerType ptrType = pointerType(ty, props.addressSpace);
+        PointerValue val = new PointerValue(ptrType, "@" + varName); 
+        self.globals[varName] = val;
+        self.globalVariables.push([val, props]);
+        return val;
+    }
+
+    private function escapeGlobalIdent(string name) returns string {
         string varName = escapeIdent(name);
         if varName is IntrinsicFunctionName {
             panic err:illegalArgument("reserved intrinsic function name");
@@ -190,11 +187,7 @@ public class Module {
         if self.globals.hasKey(varName) {
             panic err:illegalArgument("this module already has a declaration by that name");
         }
-        PointerType ptrType = pointerType(ty, props.addressSpace);
-        PointerValue val = new PointerValue(ptrType, "@" + varName); 
-        self.globals[varName] = val;
-        self.globalVariables.push([val, props]);
-        return val;
+        return varName;
     }
  
     // Corresponds to LLVMPrintModuleToFile
