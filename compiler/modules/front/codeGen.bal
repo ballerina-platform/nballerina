@@ -522,10 +522,20 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
         // Member access E[i]
         var { container, index, pos } => {
             var [l, block1] = check codeGenExpr(cx, bb, scope, container);
-            var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, index);
+            var [r, nextBlock] = check codeGenExpr(cx, block1, scope, index);
             if l is bir:Register {
                 bir:Register result = cx.createRegister(t:ANY);
-                bir:ListGetInsn insn = { result, list: l, operand: r, position: pos };
+                TypedOperand? k = typedOperand(r);
+                bir:Insn insn;
+                if k is ["int", bir:IntOperand] {
+                    insn = <bir:ListGetInsn>{ result, list: l, operand: k[1], position: pos };
+                }
+                else if k is ["string", bir:StringOperand] {
+                    insn = <bir:MappingGetInsn>{ result, operands: [l, k[1]] };
+                }
+                else {
+                    return cx.semanticErr("member access key must be a string or an int");
+                }
                 bb.insns.push(insn);
                 return [result, nextBlock];
             }
@@ -733,6 +743,7 @@ type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 type TypedOperandPair BooleanOperandPair|IntOperandPair|StringOperandPair|NilOperandPair;
 
 type TypedOperand readonly & (["array", bir:Register]
+                              |["map", bir:Register]
                               |["string", bir:StringOperand]
                               |["int", bir:IntOperand]
                               |["boolean", bir:BooleanOperand]
@@ -772,6 +783,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         }
         else if t:isSubtypeSimple(operand.semType, t:LIST) {
             return ["array", operand];
+        }
+        else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
+            return ["map", operand];
         }
     }
     else if operand is string {

@@ -429,6 +429,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:MappingConstructInsn {
             check buildMappingConstruct(builder, scaffold, insn);
         }
+        else if insn is bir:MappingGetInsn {
+            check buildMappingGet(builder, scaffold, insn);
+        }
         else if insn is bir:CondBranchInsn {
             check buildCondBranch(builder, scaffold, insn);
         }
@@ -590,6 +593,16 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     }
     builder.store(m, scaffold.address(insn.result));
 }
+
+function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGetInsn insn) returns BuildError? {
+    llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingGetFunction),
+                                                [
+                                                    builder.load(scaffold.address(insn.operands[0])),
+                                                    check buildString(builder, scaffold, insn.operands[1])
+                                                ]);
+    builder.store(value, scaffold.address(insn.result));
+}
+
 
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
     if retRepr is Repr {

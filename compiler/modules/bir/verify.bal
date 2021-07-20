@@ -92,6 +92,12 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is ListSetInsn {
         check verifyListSet(vc, insn);
     }
+     else if insn is MappingGetInsn {
+        check verifyMappingGet(vc, insn);
+    }
+    else if insn is MappingSetInsn {
+        check verifyMappingSet(vc, insn);
+    }
 }
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
@@ -138,7 +144,7 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
     }
     // XXX generalize this to array types other than `any[]`
     if insn.result.semType !== t:ANY {
-        return vc.err("bad BIR: only any supported as list type");
+        return vc.err("bad BIR: only any supported as list member type");
     }  
 }
 
@@ -148,6 +154,25 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic?
         return vc.err("list set applied to non-list");
     }
     // XXX also check type compatibility of operand and list type
+}
+
+function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic? {
+    check verifyOperandString(vc, insn.name, insn.operands[1]);
+    if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
+        return vc.err("mapping get applied to non-mapping");
+    }
+    // XXX generalize this to mapping types other than `map<any>`
+    if insn.result.semType !== t:ANY {
+        return vc.err("bad BIR: only any supported as mapping member type");
+    }  
+}
+
+function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic? {
+    check verifyOperandString(vc, insn.name, insn.operands[1]);
+    if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
+        return vc.err("mapping set applied to non-mapping");
+    }
+    // XXX also check type compatibility of operand and mapping type
 }
 
 function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {

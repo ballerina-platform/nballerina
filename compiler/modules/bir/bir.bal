@@ -156,6 +156,8 @@ public enum InsnName {
     INSN_LIST_GET,
     INSN_LIST_SET,
     INSN_MAPPING_CONSTRUCT_RW,
+    INSN_MAPPING_GET,
+    INSN_MAPPING_SET,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -183,7 +185,7 @@ public type Insn
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
-    |MappingConstructInsn
+    |MappingConstructInsn|MappingGetInsn|MappingSetInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
@@ -285,6 +287,23 @@ public type MappingConstructInsn readonly & record {|
     Operand[] operands;
 |};
 
+# Gets a member of a mapping with a specified key.
+# This returns nil if there is no such member.
+# So this is not a PPI
+public type MappingGetInsn readonly & record {|
+    INSN_MAPPING_GET name = INSN_MAPPING_GET;
+    Register result;
+    [Register, StringOperand] operands;
+|};
+
+# Sets a member of a mapping with a specified key.
+# This is a PPI.
+public type MappingSetInsn readonly & record {|
+    INSN_MAPPING_SET name = INSN_MAPPING_SET;
+    [Register, StringOperand, Operand] operands;
+    err:Position position;
+|};
+
 # This does equality expressions.
 # This includes `==`, `!=`, `===` and `!==`
 // XXX Complex cases (comparing structures deeply) can use memory in
@@ -298,7 +317,6 @@ public type EqualityInsn readonly & record {|
     Register result;
     Operand[2] operands;
 |};
-
 
 # Call a function.
 # This is a not a terminator.
@@ -482,7 +500,8 @@ final readonly & map<true> PPI_INSNS = {
     [INSN_INT_ARITHMETIC_BINARY]: true,
     [INSN_TYPE_CAST]: true,
     [INSN_LIST_GET]: true,
-    [INSN_LIST_SET]: true
+    [INSN_LIST_SET]: true,
+    [INSN_MAPPING_SET]: true
 };
 
 public function isInsnPotentiallyPanicking(Insn insn) returns boolean {
