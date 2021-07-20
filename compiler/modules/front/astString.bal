@@ -254,11 +254,10 @@ final readonly & map<string:Char> REVERSE_ESCAPES = {
 
 function escape(string str) returns string {
     string[] escaped = [];
-    // JBUG `foreach var ch in str` gives wrong ch for some str like "\u{10FFFF}""
+    // JBUG #31775 `foreach var ch in str` gives wrong ch for some str like "\u{10FFFF}""
     int[] cps = str.toCodePointInts();
     foreach int cp in cps {
-        // JBUG can't lookup map with string:Char
-        string ch = checkpanic string:fromCodePointInt(cp);
+        string:Char ch = checkpanic string:fromCodePointInt(cp);
         string:Char? singleEscaped =  REVERSE_ESCAPES[ch];
         if singleEscaped is () {
             if 0x20 <= cp && cp < 0x7F {
