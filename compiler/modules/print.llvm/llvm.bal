@@ -1015,7 +1015,7 @@ function escapeIdentChar(string:Char ch) returns string {
         byte[] bytes = ch.toBytes();
         string result = "";
         foreach byte b in bytes {
-            // JBUG int cast should not be required
+            // JBUG #31776 int cast should not be required
             // UTF-8 representation of a code point >= 0x80 consists of bytes >= 0x80
             // so toHexString here will always produce two bytes
             result += "\\" + (<int>b).toHexString().toUpperAscii();
