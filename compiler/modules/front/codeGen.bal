@@ -362,11 +362,21 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, MemberAccessLExpr lValue, Expr expr) returns CodeGenError|bir:BasicBlock? {
     bir:Register reg = check mustLookup(cx, lValue.container.varName, scope, forAssign=true);
-    var [index, nextBlock] = check codeGenExprForInt(cx, startBlock, scope, lValue.index);
+    var [index, nextBlock] = check codeGenExpr(cx, startBlock, scope, lValue.index);
     bir:Operand operand;
     [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, expr);
-    bir:ListSetInsn set = { list: reg, index, operand, position: lValue.pos };
-    nextBlock.insns.push(set);
+    TypedOperand? t = typedOperand(index);
+    bir:Insn insn;
+    if t is ["int", bir:IntOperand] {
+        insn = <bir:ListSetInsn>{ list: reg, index: t[1], operand, position: lValue.pos };
+    }
+    else if t is ["string", bir:StringOperand] {
+        insn = <bir:MappingSetInsn> { operands: [ reg, t[1], operand], position: lValue.pos };
+    }
+    else {
+        return cx.semanticErr("key in assignment to member must be int or string");
+    }
+    nextBlock.insns.push(insn);
     return nextBlock;
 }
 

@@ -169,7 +169,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
 
 function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic? {
     check verifyOperandString(vc, insn.name, insn.operands[1]);
-    if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
+    if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping set applied to non-mapping");
     }
     // XXX also check type compatibility of operand and mapping type
