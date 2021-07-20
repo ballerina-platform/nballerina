@@ -1015,7 +1015,7 @@ function escapeIdentChar(string:Char ch) returns string {
         byte[] bytes = ch.toBytes();
         string result = "";
         foreach byte b in bytes {
-            // JBUG int cast should not be required
+            // JBUG #31776 int cast should not be required
             // UTF-8 representation of a code point >= 0x80 consists of bytes >= 0x80
             // so toHexString here will always produce two bytes
             result += "\\" + (<int>b).toHexString().toUpperAscii();
@@ -1031,7 +1031,7 @@ function escapeIdentChar(string:Char ch) returns string {
     }
 }
 
-// JBUG cast should not be necessary
+// JBUG #31777 cast should not be necessary
 final int CP_DOUBLE_QUOTE = (<string:Char>"\"").toCodePointInt();
 final int CP_BACKSLASH = (<string:Char>"\\").toCodePointInt();
 
@@ -1044,7 +1044,7 @@ function charArray(byte[] bytes) returns string {
         }
         else {
             result += "\\";
-            // JBUG cast should not be necessary
+            // JBUG #31776 cast should not be necessary
             string hex = (<int>b).toHexString().toUpperAscii();
             if hex.length() == 1 {
                 result += "0" + hex;
@@ -1062,7 +1062,7 @@ function isIdent(string name) returns boolean {
     if name.length() == 0 {
         return false;
     }
-    // JBUG type of name[0] is string:Char
+    // JBUG #31758 type of name[0] is string:Char
     if isDigit(<string:Char>name[0]) {
         return false;
     }
