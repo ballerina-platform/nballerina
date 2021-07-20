@@ -7,6 +7,8 @@ function constExp() returns Module {
     PointerValue g1 = m.addGlobal(g1Ty, "g1", isConstant=true);
     ConstValue init = context.constGetElementPtr(g1, [constInt("i32", 0), constInt("i32", 0)], "inbounds");
     PointerValue g2 = m.addGlobal(pointerType("i64", 0), "g2", initializer=init);
+    ConstValue init2 = context.constBitCast(g2, pointerType("i32", 0));
+    PointerValue g3 = m.addGlobal(pointerType("i32", 0), "g3", initializer=init2);
     return m;
 }
 

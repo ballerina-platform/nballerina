@@ -110,6 +110,16 @@ public class Context {
         PointerType resultPtrType = body[1];
         return new (resultPtrType, operand);
     }
+
+    function constBitCast(PointerValue ptr, PointerType destTy) returns ConstValue {
+        var body = bitCastBody(ptr, destTy, "constantExp");
+        string[] words = [];
+        foreach var word in body {
+            words.push(<string> word);
+        }
+        string operand = concat(...words);
+        return new (destTy, operand);
+    }
 }
 
 # Corresponds to llvm::Module class
@@ -586,7 +596,8 @@ public class Builder {
     public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        bb.addInsn(reg, "=", "bitcast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        (string|Unnamed)[] body = bitCastBody(val, destTy);
+        bb.addInsn(reg, "=", ...body);
         return new (destTy, reg);
     }
 
@@ -1062,6 +1073,19 @@ function gepBody(Value ptr, Value[] indices, "inbounds"? inbounds, "constantExp"
     }
     PointerType resultPtrType = pointerType(resultType, resultAddressSpace);
     return [words, resultPtrType];
+}
+
+function bitCastBody(PointerValue val, PointerType destTy, "constantExp"? constantExp=()) returns (string|Unnamed)[] {
+    (string|Unnamed)[] words = [];
+    words.push("bitcast");
+    if constantExp != () {
+        words.push("(");
+    }
+    words.push(typeToString(val.ty), val.operand, "to", typeToString(destTy));
+    if constantExp != () {
+        words.push(")");
+    }
+    return words;
 }
 
 // JBUG cast should not be necessary
