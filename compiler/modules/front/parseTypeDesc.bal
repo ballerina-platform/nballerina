@@ -19,6 +19,14 @@ function parseInlineTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
         check tok.advance();
         return t;
     }
+    else if t is "map" {
+        check tok.advance();
+        check tok.expect("<");
+        check tok.expect("any");
+        check tok.expect(">");
+        InlineMapTypeDesc td = {};
+        return td;
+    }
     return parseError(tok, "expected type descriptor");    
 }
 
@@ -174,7 +182,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 
 function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
     check tok.expect("<");
-    tok.setMode(MODE_TYPE);
+    tok.setMode(MODE_TYPE_DESC);
     TypeDesc td = check parseTypeDesc(tok);
     check tok.expect(">");
     tok.setMode(MODE_NORMAL);

@@ -179,10 +179,12 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseTypeCastExpr(Tokenizer tok) returns Expr|err:Syntax {
+    tok.setMode(MODE_TYPE_DESC);
     err:Position pos = tok.currentPos();
     check tok.advance();
     InlineTypeDesc td = check parseInlineTypeDesc(tok);
     check tok.expect(">");
+    tok.setMode(MODE_NORMAL);
     Expr operand = check parseUnaryExpr(tok);
     TypeCastExpr expr = { pos, td, operand, semType: convertInlineTypeDesc(td) };
     return expr;

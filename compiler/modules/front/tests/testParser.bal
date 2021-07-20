@@ -266,6 +266,8 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "expr", "<>x", ""],
          ["V", "expr", "1 < <int>2", "1 < (<int>2)"],
          ["E", "expr", "1 <<int> 2", ""],
+         ["V", "expr", "<any[]>x", "<any[]>x"],
+         ["V", "expr", "<map<any>>x", "<map<any>>x"],
          // binary op
          ["V", "expr", "1 + 1", "1 + 1"],
          ["V", "expr", "2 - a2", "2 - a2"],
@@ -455,6 +457,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "stmt", "any v = 1;", "any v = 1;"],
          ["V", "stmt", "any [ ] v = [1];", "any[] v = [1];"],
          ["E", "stmt", "any [x ] v = [1];", ""],
+         ["V", "stmt", "map<any> v = {x:1};", string`map<any> v = { "x": 1 };`],
          // statement assign
          ["E", "stmt", "a = b = d;", ""],
          ["V", "stmt", "a = 0;", "a = 0;"],

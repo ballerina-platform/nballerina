@@ -131,15 +131,18 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean wrap = false) {
         w.push(td.ref);
         return;
     }
-
     if wrap {
         w.push("(");
     }
-
     if td is ListTypeDesc {
         typeDescToWords(w, td.rest, true);
         w.push(CLING);
         w.push("[", "]");
+    }
+    else if td is MappingTypeDesc {
+        w.push("map", CLING, "<", CLING);
+        typeDescToWords(w, td.rest);
+        w.push(CLING, ">");
     }
     else if td is BinaryTypeDesc {
         typeDescToWords(w, td.left, true);
@@ -149,7 +152,6 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean wrap = false) {
     else {
         panic err:unimplemented(`typedesc not supported ${(typeof td).toString()}`);
     }
-
     if wrap {
         w.push(")");
     }

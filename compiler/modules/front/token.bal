@@ -82,8 +82,8 @@ final readonly & map<MultiCharDelim> WITH_EQUALS = {
 };
 
 const MODE_NORMAL = 0;
-const MODE_TYPE = 1;
-type Mode MODE_NORMAL|MODE_TYPE;
+const MODE_TYPE_DESC = 1;
+type Mode MODE_NORMAL|MODE_TYPE_DESC;
 
 class Tokenizer {
     Token? cur = ();

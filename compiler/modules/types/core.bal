@@ -34,6 +34,9 @@ public class Env {
     public function simpleArrayMemberType(SemType t) returns UniformTypeBitSet? {
         return simpleArrayMemberType(t, self.listDefs);
     }
+    public function simpleMapMemberType(SemType t) returns UniformTypeBitSet? {
+        return simpleMapMemberType(t, self.mappingDefs);
+    }
 }
 
 public type BddMemo record {|
@@ -607,6 +610,51 @@ function simpleArrayMemberType(SemType t, ListAtomicType[] listDefs) returns Uni
                 }
                 ListAtomicType atomic = listDefs[bdd.atom];
                 if atomic.members.length() > 0 {
+                    return ();
+                }
+                SemType memberType = atomic.rest;
+                if memberType is UniformTypeBitSet {
+                    memberTypes.push(memberType);
+                }
+                else {
+                    return ();
+                }
+            }
+        }
+        if memberTypes[0] != (memberTypes[1] & UT_READONLY) {
+            return ();
+        }
+        return memberTypes[1];
+    }
+}
+
+// This is a temporary API that identifies when a SemType corresponds to a type T[]
+// where T is a union of complete basic types.
+function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns UniformTypeBitSet? {
+    if t is UniformTypeBitSet {
+        return t == MAPPING ? TOP : ();
+    }
+    else {
+        if !isSubtypeSimple(t, MAPPING) {
+            return ();
+        }
+        bdd:Bdd[] bdds = [<bdd:Bdd>t.getSubtypeData(UT_MAPPING_RO), <bdd:Bdd>t.getSubtypeData(UT_MAPPING_RW)];
+        UniformTypeBitSet[] memberTypes = [];
+        foreach var bdd in bdds {
+            if bdd is boolean {
+                if bdd {
+                    memberTypes.push(TOP);
+                }
+                else {
+                    return ();
+                }
+            }
+            else {
+                if bdd.left != true || bdd.right != false || bdd.right != false {
+                    return ();
+                }
+                MappingAtomicType atomic = mappingDefs[bdd.atom];
+                if atomic.names.length() > 0 {
                     return ();
                 }
                 SemType memberType = atomic.rest;

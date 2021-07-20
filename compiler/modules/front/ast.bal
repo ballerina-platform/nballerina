@@ -190,13 +190,19 @@ type SimpleConstExpr record {|
 
 // This is the subtype of TypeDesc that we currently allow
 // within expressions and statements.
-type InlineTypeDesc InlineLeafTypeDesc|InlineArrayTypeDesc;
+type InlineTypeDesc InlineLeafTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc;
 
 type InlineLeafTypeDesc "boolean"|"int"|"string"|"any";
 
 type InlineArrayTypeDesc record {|
     *ListTypeDesc;
     TypeDesc[0] members = [];
+    "any" rest = "any";
+|};
+
+type InlineMapTypeDesc record {|
+    *MappingTypeDesc;
+    FieldDesc[0] fields = [];
     "any" rest = "any";
 |};
 
