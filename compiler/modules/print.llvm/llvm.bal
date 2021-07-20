@@ -100,9 +100,12 @@ public class Context {
     }
 
     // Corresponds to LLVMConstGEP
-    function constGetElementPtr(ConstValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
-        var body = gepBody(ptr, indices, inbounds);
-        string[] words = <string[]>body[0];
+    function constGetElementPtr(PointerValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
+        var body = gepBody(ptr, indices, inbounds, "constantExp");
+        string[] words = [];
+        foreach var word in body[0] {
+           words.push(<string> word); 
+        }
         string operand = concat(...words);
         PointerType resultPtrType = body[1];
         return new (resultPtrType, operand);
@@ -1005,11 +1008,14 @@ function escapeIdentChar(string:Char ch) returns string {
     }
 }
 
-function gepBody(Value ptr, Value[] indices, "inbounds"? inbounds) returns [(string|Unnamed)[],PointerType] {
+function gepBody(Value ptr, Value[] indices, "inbounds"? inbounds, "constantExp"? constantExp=()) returns [(string|Unnamed)[],PointerType] {
     (string|Unnamed)[] words = [];
     words.push("getelementptr");
     if inbounds != () {
         words.push(inbounds);
+    }
+    if constantExp != () {
+        words.push("(");
     }
     Type ptrTy = ptr.ty;
     if ptrTy is PointerType {
@@ -1050,6 +1056,9 @@ function gepBody(Value ptr, Value[] indices, "inbounds"? inbounds) returns [(str
                 panic err:illegalArgument(string `type  ${typeToString(resultType)} can't be indexed`);
             }
         }
+    }
+    if constantExp != () {
+        words.push(")");
     }
     PointerType resultPtrType = pointerType(resultType, resultAddressSpace);
     return [words, resultPtrType];
