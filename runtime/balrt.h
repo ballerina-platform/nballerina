@@ -83,6 +83,17 @@ typedef GC struct Mapping {
         GenericArray gArray;
         MapFieldArray fArray;
     };
+    // The table is a hash table. Each element is either -1 representing an empty entry or is an index into fArray.
+    // It uses the hash of the key of the indexed mapField. 
+    // It consists of (1 << tableLengthShift) elements each of size (1 << tableElementShift) bytes.
+    // tableElementShift is between 0 and 3 inclusive, representing uint8_t, uint16_t, uint32_t and int64_t respectively.
+    // tableElementShift is the minimum to allow an element to represent all values between 0 and (1 << tableLengthShift)/2.
+    // The length of fArray will always be <= (1 << tableLengthShift)/2 - 1.
+    // For example, if tableLengthShift is 0, meaning table contains bytes, then the array can have a length of up to 255,
+    // meaning indices into the array are between 0 and 254 inclusive, and the table can be up to 512 bytes long.
+    // The hash table uses open addressing ang linear probing (with probing backwards to 0).
+    // Note that the load factor is fixed (1 element less than 50%), so that changes in table element size are in sync
+    // with changes in table length (50% is a good load factor for linear probing anyway).
     UntypedPtr table;
     uint8_t tableElementShift;
     uint8_t tableLengthShift;

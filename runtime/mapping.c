@@ -8,6 +8,8 @@ static READONLY inline bool matches(MappingPtr m, TaggedPtr key, int64_t mapInde
 // This part deals with table (and does not look at the fArray).
 // So later we can factor it out for the table type.
 
+// When fetch and replace are used in simple loops, LLVM is able to optimize
+// the loop into 4 separate loops, one for each size of int.
 static READONLY inline int64_t fetch(UntypedPtr table, int64_t i, int tableElementShift)  {
     switch (tableElementShift & 3) {
         case 0:
