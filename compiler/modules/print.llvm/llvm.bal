@@ -98,6 +98,15 @@ public class Context {
         ConstValue val = new(ty, charArray(bytes));
         return val;
     }
+
+    // Corresponds to LLVMConstGEP
+    function constGetElementPtr(ConstValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
+        var body = gepBody(ptr, indices, inbounds);
+        string[] words = <string[]>body[0];
+        string operand = concat(...words);
+        PointerType resultPtrType = body[1];
+        return new (resultPtrType, operand);
+    }
 }
 
 # Corresponds to llvm::Module class
@@ -705,46 +714,11 @@ public class Builder {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         (string|Unnamed)[] words = [];
-        words.push(reg, "=", "getelementptr");
-        if inbounds != () {
-            words.push(inbounds);
-        }
-        words.push(typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand);
-        Type resultType = ptr.ty;
-        int resultAddressSpace = 0;
-        foreach var index in indices {
-            words.push(",");
-            words.push(typeToString(index.ty));
-            words.push(index.operand);
-            if resultType is PointerType {
-                resultAddressSpace = resultType.addressSpace;
-                resultType = resultType.pointsTo;
-            } 
-            else {
-                if resultType is ArrayType {
-                    resultType = resultType.elementType;
-                } 
-                else if resultType is StructType {
-                    int i;
-                    if index.operand is Unnamed {
-                        i = <Unnamed>index.operand;
-                    } else {
-                        i = checkpanic int:fromString(<string>index.operand);
-                    }
-                    if index.ty != "i32" {
-                        panic err:illegalArgument("structures can be index only using i32 constants"); 
-                    } 
-                    else {
-                        resultType = getTypeAtIndex(resultType, i);
-                    }
-                } 
-                else {
-                    panic err:illegalArgument(string `type  ${typeToString(resultType)} can't be indexed`);
-                }
-            }
-        }
+        words.push(reg, "=");
+        var body = gepBody(ptr, indices, inbounds);
+        PointerType resultPtrType = body[1];
+        words.push(...(body[0]));
         bb.addInsn(...words);
-        PointerType resultPtrType = pointerType(resultType, resultAddressSpace);
         return new PointerValue(resultPtrType, reg);
     }
 
@@ -1031,7 +1005,57 @@ function escapeIdentChar(string:Char ch) returns string {
     }
 }
 
-// JBUG #31777 cast should not be necessary
+function gepBody(Value ptr, Value[] indices, "inbounds"? inbounds) returns [(string|Unnamed)[],PointerType] {
+    (string|Unnamed)[] words = [];
+    words.push("getelementptr");
+    if inbounds != () {
+        words.push(inbounds);
+    }
+    Type ptrTy = ptr.ty;
+    if ptrTy is PointerType {
+        words.push(typeToString(ptrTy.pointsTo));
+    } else {
+        panic err:illegalArgument("GEP on non-pointer type value"); 
+    }
+    words.push(",", typeToString(ptr.ty), ptr.operand);
+    Type resultType = ptr.ty;
+    int resultAddressSpace = 0;
+    foreach var index in indices {
+        words.push(",");
+        words.push(typeToString(index.ty));
+        words.push(index.operand);
+        if resultType is PointerType {
+            resultAddressSpace = resultType.addressSpace;
+            resultType = resultType.pointsTo;
+        } 
+        else {
+            if resultType is ArrayType {
+                resultType = resultType.elementType;
+            } 
+            else if resultType is StructType {
+                int i;
+                if index.operand is Unnamed {
+                    i = <Unnamed>index.operand;
+                } else {
+                    i = checkpanic int:fromString(<string>index.operand);
+                }
+                if index.ty != "i32" {
+                    panic err:illegalArgument("structures can be index only using i32 constants"); 
+                } 
+                else {
+                    resultType = getTypeAtIndex(resultType, i);
+                }
+            } 
+            else {
+                panic err:illegalArgument(string `type  ${typeToString(resultType)} can't be indexed`);
+            }
+        }
+    }
+    PointerType resultPtrType = pointerType(resultType, resultAddressSpace);
+    return [words, resultPtrType];
+}
+
+// JBUG cast should not be necessary
 final int CP_DOUBLE_QUOTE = (<string:Char>"\"").toCodePointInt();
 final int CP_BACKSLASH = (<string:Char>"\\").toCodePointInt();
 
