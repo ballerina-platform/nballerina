@@ -55,6 +55,10 @@ function testTokenizer(string k, string src) returns error? {
         int tStart = lines[pos.lineNumber - 1] + pos.indexInLine;
         string tStr = tokenToString(t);
         string srcAtPos = src.substring(tStart, tStart + tStr.length());
+        if t is [HEX_INT_LITERAL, string] {
+            // need to normalize `0x` vs `0X`
+            srcAtPos = srcAtPos.toLowerAscii();
+        }
         test:assertEquals(srcAtPos, tStr, "token: '" + tStr + "' source: '" + srcAtPos + "'");
         t = advance(tok, k, src);
     }
@@ -82,6 +86,9 @@ function tokenToString(Token t) returns string {
             // can't recover original string, so
             // lets just return a minimal expectation
             return "\"";
+        }
+        [HEX_INT_LITERAL, var num] => {
+            return "0x" + num.toLowerAscii();
         }
         [_, var str] => {
             return str;
@@ -185,6 +192,7 @@ function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
         ["OE", "\"\n\""],
         ["OE", "\"\r\""],
         ["E", "obj..x(args)"],
+        ["E", "00"],
         ["E", "01"],
         ["E", "-01"],
         ["E", "\"\n\""],
@@ -215,6 +223,13 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
         // literals
          ["V", "expr", "0", "0"],
          ["V", "expr", "1", "1"],
+         ["V", "expr", "0x1", "1"],
+         ["E", "expr", "0x", ""],
+         ["V", "expr", "0Xba1decaf", "3122523311"],
+         ["V", "expr", "0x00000000000000000001", "1"],
+         ["V", "expr", "0x7fFfFfFfFfFfFfFf", "9223372036854775807"],
+         ["E", "expr", "0x8000000000000000", ""],
+         ["V", "expr", "-0x10", "-16"],
          ["V", "expr", "()", "()"],
          ["V", "expr", "null", "()"],
          ["V", "expr", "-()", "-()"],
@@ -446,6 +461,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "stmt", "int x = a != b;", "int x = a != b;"],
          ["E", "stmt", "int i = {}", ""],
          ["E", "stmt", "int x = a =! b;", ""],
+         ["E", "stmt", "int i = 0xBABE1F1SH;", ""],
          ["V", "stmt", "int i = 10;", "int i = 10;"],
          ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
          ["E", "stmt", "int i = a ... b ... c;", ""],

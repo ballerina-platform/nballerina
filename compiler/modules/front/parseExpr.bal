@@ -210,6 +210,10 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         SimpleConstExpr expr = { value: check parseDigits(tok, t[1]) };
         return expr;
     }
+    else if t is [HEX_INT_LITERAL, string] {
+        SimpleConstExpr expr = { value: check parseHexDigits(tok, t[1]) };
+        return expr;
+    }
     else if t is [STRING_LITERAL, string] {
         SimpleConstExpr expr = { value: t[1] };
         check tok.advance();
@@ -384,5 +388,14 @@ function parseDigits(Tokenizer tok, string signDigits) returns int|err:Syntax {
     }
 }
 
-
+function parseHexDigits(Tokenizer tok, string digits) returns int|err:Syntax {
+    error|int res = int:fromHexString(digits);
+    if res is error {
+        return err:syntax("invalid hex literal", tok.currentPos(), cause=res);
+    } 
+    else {
+        check tok.advance();
+        return res;
+    }
+}
 
