@@ -2,7 +2,8 @@ LLVM_SUFFIX=-11
 CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
-OBJS=alloc.o list.o main.o panic.o print.o string.o
+VALGRIND ?= valgrind
+OBJS=alloc.o list.o main.o mapping.o panic.o print.o string.o
 INCLUDES=tag.h balrt.h
 AR=ar
 LIB=balrt.a
@@ -10,8 +11,17 @@ BCLIB=balrt_inline.bc
 
 all: $(LIB) $(BCLIB)
 
+test: all testrt
+	./testrt
+
+valgrind: all testrt
+	$(VALGRIND) ./testrt
+
 $(LIB): $(OBJS)
 	$(AR) r $@ $^
+
+testrt: testrt.c $(LIB) $(BCLIB)
+	$(CLANG) $(CFLAGS) -o $@ $< $(BCLIB) $(LIB)
 
 %.o: %.c
 	$(CLANG) $(CFLAGS) -c -o $@ $<
@@ -26,4 +36,4 @@ $(LIB): $(OBJS)
 $(OBJS) $(BCLIB): $(INCLUDES)
 
 clean:
-	-rm -f $(LIB) $(OBJS) $(BCLIB)
+	-rm -f $(LIB) $(OBJS) $(BCLIB) testrt

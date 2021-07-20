@@ -107,6 +107,9 @@ function evalConstBinary(BinaryExpr expr, SimpleConst left, SimpleConst right) r
         if left is int && right is int {
             return intRelationalEval(expr.relationalOp, left, right);
         }
+        else if left is string && right is string {
+            return stringRelationalEval(expr.relationalOp, left, right);
+        }
         else if left is boolean && right is boolean {
             return booleanRelationalEval(expr.relationalOp, left, right);
         }
@@ -213,7 +216,23 @@ function bitwiseEval(BinaryBitwiseOp op, int left, int right) returns int  {
 }
 
 
-
+function stringRelationalEval(BinaryRelationalOp op, string left, string right) returns boolean {
+    match op {
+        "<" => {
+            return left < right;
+        }
+        "<=" => {
+            return left <= right;
+        }
+        ">" => {
+            return left > right;
+        }
+        ">=" => {
+            return left >= right;
+        }
+    }
+    panic err:impossible();
+}
 
 function intRelationalEval(BinaryRelationalOp op, int left, int right) returns boolean {
     match op {

@@ -140,7 +140,8 @@ public function createRegister(FunctionCode code, SemType semType, string? varNa
 }
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
-public type BitwiseBinaryOp "|" | "^" | "&";
+public type BitwiseBinaryOp "|" | "^" | "&" | BitwiseShiftOp;
+public type BitwiseShiftOp "<<" | ">>" | ">>>";
 public type OrderOp "<=" | ">=" | "<" | ">";
 public type EqualityOp "==" | "!=" | "===" | "!==";
 
@@ -148,13 +149,13 @@ public enum InsnName {
     INSN_INT_ARITHMETIC_BINARY,
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY,
     INSN_INT_BITWISE_BINARY,
-    INSN_INT_COMPARE,
-    INSN_BOOLEAN_COMPARE,
+    INSN_COMPARE,
     INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
     INSN_LIST_CONSTRUCT_RW,
     INSN_LIST_GET,
     INSN_LIST_SET,
+    INSN_MAPPING_CONSTRUCT_RW,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -180,8 +181,9 @@ public type InsnBase record {
 
 public type Insn 
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
-    |IntCompareInsn|BooleanNotInsn|BooleanCompareInsn|EqualityInsn
+    |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
+    |MappingConstructInsn
     |RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
@@ -232,30 +234,23 @@ public type BooleanNotInsn readonly & record {|
     Register operand;
 |};
 
+public type OrderType "int"|"boolean"|"string";
 # This does ordered comparision
 # Equality and inequality are done by equal
-public type IntCompareInsn readonly & record {|
+public type CompareInsn readonly & record {|
     *InsnBase;
-    INSN_INT_COMPARE name = INSN_INT_COMPARE;
+    INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
+    OrderType orderType;
     Register result;
-    IntOperand[2] operands;
+    Operand[2] operands;
 |};
 
-# This does ordered comparision
-# Equality and inequality are done by equal
-public type BooleanCompareInsn readonly & record {|
-    *InsnBase;
-    INSN_BOOLEAN_COMPARE name = INSN_BOOLEAN_COMPARE;
-    OrderOp op;
-    Register result;
-    BooleanOperand[2] operands;
-|};
 
 # Constructs a new mutable list value.
 public type ListConstructInsn readonly & record {|
     INSN_LIST_CONSTRUCT_RW name = INSN_LIST_CONSTRUCT_RW;
-    SemType inherentType;
+    // The type of the result gives the inherent type of the constructed list
     Register result;
     Operand[] operands;
 |};
@@ -279,6 +274,15 @@ public type ListSetInsn readonly & record {|
     // operand is the value to store in the list
     Operand operand;
     err:Position position;
+|};
+
+# Constructs a new mutable list value.
+public type MappingConstructInsn readonly & record {|
+    INSN_MAPPING_CONSTRUCT_RW name = INSN_MAPPING_CONSTRUCT_RW;
+    // The type of the result gives the inherent type of the constructed list
+    Register result;
+    string[] fieldNames;
+    Operand[] operands;
 |};
 
 # This does equality expressions.

@@ -28,10 +28,10 @@ function modulePartToWords(Word[] w, ModulePart mod) {
 }
 
 function functionDefToWords(Word[] w, FunctionDef func) {
-    w.push("function");
     if func.vis != () {
         w.push(<Word>func.vis);
     }
+    w.push("function");
     w.push(func.name, CLING, "(");
     boolean firstArg = true;
     foreach int i in 0..<func.typeDesc.args.length() {
@@ -52,6 +52,9 @@ function functionDefToWords(Word[] w, FunctionDef func) {
 
 function stmtToWords(Word[] w, Stmt stmt) {
     if stmt is VarDeclStmt {
+        if stmt.isFinal {
+            w.push("final");
+        }
         typeDescToWords(w, stmt.td);
         w.push(stmt.varName, "=");
         exprToWords(w, stmt.initExpr);
@@ -119,16 +122,38 @@ function blockToWords(Word[] w, Stmt[] body) {
     w.push(<Word>(firstInBlock ? LF :LF_OUTDENT), "}");
 }
 
-function typeDescToWords(Word[] w, TypeDesc td) {
+function typeDescToWords(Word[] w, TypeDesc td, boolean wrap = false) {
     if td is string {
         w.push(td);
+        return;
     }
-    else if td is InlineArrayTypeDesc {
-        w.push(td.rest, CLING);
+    else if td is TypeDescRef {
+        w.push(td.ref);
+        return;
+    }
+    if wrap {
+        w.push("(");
+    }
+    if td is ListTypeDesc {
+        typeDescToWords(w, td.rest, true);
+        w.push(CLING);
         w.push("[", "]");
+    }
+    else if td is MappingTypeDesc {
+        w.push("map", CLING, "<", CLING);
+        typeDescToWords(w, td.rest);
+        w.push(CLING, ">");
+    }
+    else if td is BinaryTypeDesc {
+        typeDescToWords(w, td.left, true);
+        w.push(td.op);
+        typeDescToWords(w, td.right, true);
     }
     else {
         panic err:unimplemented(`typedesc not supported ${(typeof td).toString()}`);
+    }
+    if wrap {
+        w.push(")");
     }
 }
 
@@ -150,7 +175,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push("(", ")");
         }
         else if val is string {
-            w.push("\"", CLING, escape(val), CLING, "\"");
+            w.push(stringLiteral(val));
         }
         else {
             w.push(val.toString());
@@ -168,7 +193,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     }
      else if expr is FunctionCallExpr {
         if expr.prefix != () {
-            w.push(expr.prefix, ":");
+            w.push(expr.prefix, ":", CLING);
         }
         w.push(expr.funcName, CLING, "(");
         exprsToWords(w, expr.args);
@@ -215,6 +240,21 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         exprsToWords(w, expr.members);
         w.push("]");
     }
+    else if expr is MappingConstructorExpr {
+        w.push("{");
+        boolean isFirst = true;
+        foreach var f in expr.fields {
+            if isFirst {
+                isFirst = false;
+            }
+            else {
+                w.push(",");
+            }
+            w.push(stringLiteral(f.name), ":");
+            exprToWords(w, f.value);
+        }
+        w.push("}");
+    }
     else if expr is MemberAccessExpr {
         if wrap {
             w.push("(");
@@ -252,8 +292,8 @@ final readonly & map<string:Char> REVERSE_ESCAPES = {
     "\t": "t"
 };
 
-function escape(string str) returns string {
-    string[] escaped = [];
+function stringLiteral(string str) returns string {
+    string[] chunks = ["\""];
     // JBUG #31775 `foreach var ch in str` gives wrong ch for some str like "\u{10FFFF}""
     int[] cps = str.toCodePointInts();
     foreach int cp in cps {
@@ -261,17 +301,18 @@ function escape(string str) returns string {
         string:Char? singleEscaped =  REVERSE_ESCAPES[ch];
         if singleEscaped is () {
             if 0x20 <= cp && cp < 0x7F {
-                escaped.push(ch);
+                chunks.push(ch);
             }
             else {
-                escaped.push("\\u{", cp.toHexString().toUpperAscii(), "}");
+                chunks.push("\\u{", cp.toHexString().toUpperAscii(), "}");
             }
         }
         else {
-            escaped.push("\\", singleEscaped);
+            chunks.push("\\", singleEscaped);
         }
     }
-    return "".'join(...escaped);
+    chunks.push("\"");
+    return "".'join(...chunks);
 }
 
 function wordsToString(Word[] s) returns string {
@@ -281,14 +322,14 @@ function wordsToString(Word[] s) returns string {
     boolean clingNext = false;
     foreach var a in s {
         if a is string {
-            if !firstInLine && !alwaysClingRight(a) && !clingNext {
+            if !firstInLine && !alwaysClingBefore(a) && !clingNext {
                 buf.push(" ");
             }
             clingNext = false;
             firstInLine = false;
             buf.push(a);
             
-            if alwaysClingLeft(a) {
+            if alwaysClingAfter(a) {
                 clingNext = true;
             }
         }
@@ -307,10 +348,10 @@ function wordsToString(Word[] s) returns string {
     return "".'join(...buf);
 }
 
-function alwaysClingLeft(string a) returns boolean {
-    return a == "(" || a == ":" || a == "." || a == "[";
+function alwaysClingAfter(string a) returns boolean {
+    return a == "(" || a == "." || a == "[";
 }
 
-function alwaysClingRight(string a) returns boolean {
+function alwaysClingBefore(string a) returns boolean {
     return a == ";" || a == ":" || a == "." || a == ")" || a == "," || a == "]";
 }

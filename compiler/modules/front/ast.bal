@@ -32,7 +32,7 @@ type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|Foreac
 type CallStmt FunctionCallExpr|MethodCallExpr;
 type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
 
-type ConstructorExpr ListConstructorExpr;
+type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
 
 type AssignStmt record {|
     LExpr lValue;
@@ -76,10 +76,11 @@ type VarDeclStmt record {|
     // Later on will support references to type definitions,
     // and it will be filled in later.
     t:SemType? semType = ();
+    boolean isFinal;
 |};
 
 type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
-type BinaryBitwiseOp "|" | "^" | "&";
+type BinaryBitwiseOp "|" | "^" | "&" | "<<" | ">>" | ">>>";
 type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
 type RangeOp  "..." | "..<";
@@ -142,6 +143,16 @@ type ListConstructorExpr record {|
     Expr[] members;
 |};
 
+type MappingConstructorExpr record {|
+    Field[] fields;
+|};
+
+type Field record {|
+    err:Position pos; // position of name for now
+    string name;
+    Expr value;
+|};
+
 type MemberAccessExpr record {|
     Expr container;
     Expr index;
@@ -179,13 +190,19 @@ type SimpleConstExpr record {|
 
 // This is the subtype of TypeDesc that we currently allow
 // within expressions and statements.
-type InlineTypeDesc InlineLeafTypeDesc|InlineArrayTypeDesc;
+type InlineTypeDesc InlineLeafTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc;
 
 type InlineLeafTypeDesc "boolean"|"int"|"string"|"any";
 
 type InlineArrayTypeDesc record {|
     *ListTypeDesc;
     TypeDesc[0] members = [];
+    "any" rest = "any";
+|};
+
+type InlineMapTypeDesc record {|
+    *MappingTypeDesc;
+    FieldDesc[0] fields = [];
     "any" rest = "any";
 |};
 

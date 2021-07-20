@@ -20,7 +20,7 @@
    * `break` and `continue` statements
    * `foreach` statements that use  `<..`
 * Expressions:
-   * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`
+   * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`
    * unary operators: `-`, `!`
    * type cast
    * function call
@@ -69,7 +69,7 @@ statement =
   | continue-stmt
   | foreach-stmt
 
-local-var-decl-stmt = type-desc identifier "=" expression ";"
+local-var-decl-stmt = ["final"] type-desc identifier "=" expression ";"
 
 call-stmt =
    function-call-expr ";"
@@ -91,7 +91,7 @@ break-stmt = "break" ";"
 
 continue-stmt = "continue" ";"
 
-foreach-stmt = "foreach" typedesc identifier "in" additive-expr "..<" additive-expr stmt-block
+foreach-stmt = "foreach" "int" identifier "in" additive-expr "..<" additive-expr stmt-block
 
 expression = bitwise-or-expr | list-constructor-expr | mapping-constructor-expr
 
@@ -115,11 +115,17 @@ equality-expr =
   | equality-expr "!==" relational-expr
 
 relational-expr =
+  shift-expr
+  | shift-expr "<" shift-expr
+  | shift-expr "<=" shift-expr
+  | shift-expr ">" shift-expr
+  | shift-expr ">=" shift-expr
+
+shift-expr =
   additive-expr
-  | additive-expr "<" additive-expr
-  | additive-expr "<=" additive-expr
-  | additive-expr ">" additive-expr
-  | additive-expr ">=" additive-expr
+  | shift-expr "<<" additive-expr
+  | shift-expr ">>" additive-expr
+  | shift-expr ">>>" additive-expr
 
 additive-expr =
   multiplicative-expr
@@ -180,6 +186,7 @@ variable-reference-expr = identifier
 // tokens
 integer-literal = "0" | [1-9][0-9]* // leading zeros are not allowed (to prevent confusion with octal)
 string-literal = (as in Ballerina language spec)
+hex-int-literal = ( "0x" | "0X" ) [A-Fa-f0-9]+
 identifier = [A-Za-z][A-Za-z0-9_]*
 
 // comments starting with // allowed as in Ballerina language spec
@@ -221,6 +228,9 @@ Add `string` and `map<any>`:
 * New expressions
   * string literals `"abc"`
   * mapping constructor `{"x": 1, "y": 2}`
+  * shift expressions `255 >> 2`
+  * hex int literals `0Xba1decaf`
+* `final` qualifier for local variable declarations
 
 Existing syntax extended:
 

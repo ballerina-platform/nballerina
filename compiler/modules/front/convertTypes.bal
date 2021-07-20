@@ -49,6 +49,10 @@ function convertSubsetTypeDesc(t:Env env, ModuleTable mod, TypeDesc td, err:Posi
     if memberTy == t:ANY {
         return t:LIST;
     }
+    memberTy = env.simpleMapMemberType(ty);
+    if memberTy == t:ANY {
+        return t:MAPPING;
+    }
     return err:unimplemented("unimplemented type descriptor", pos=pos);
 }
 
@@ -87,6 +91,9 @@ function convertInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
     }
     if td is InlineArrayTypeDesc {
         return t:LIST;
+    }
+    if td is InlineMapTypeDesc {
+        return t:MAPPING;
     }
     panic err:impossible("unreachable in convertInlineTypeDesc");
 }

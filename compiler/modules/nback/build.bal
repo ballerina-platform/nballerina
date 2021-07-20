@@ -7,7 +7,6 @@ type BuildError err:Semantic|err:Unimplemented;
 
 type Alignment 1|8;
 
-
 // Pointer tagging
 // JBUG #31394 would be better to use shifts for these
                      //1234567812345678
@@ -80,7 +79,7 @@ const PANIC_LIST_TOO_LONG = 6;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc"|"list_set"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"eq";
+type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"string_cmp"|"eq";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -111,6 +110,43 @@ final RuntimeFunction listSetFunction = {
     ty: {
         returnType: REPR_ERROR.llvm,
         paramTypes: [LLVM_TAGGED_PTR, "i64", LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction mappingSetFunction = {
+    name: "mapping_set",
+    ty: {
+        returnType: REPR_VOID.llvm,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction mappingGetFunction = {
+    name: "mapping_get",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+
+final RuntimeFunction mappingInitMemberFunction = {
+    name: "mapping_init_member",
+    ty: {
+        returnType: REPR_VOID.llvm,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction mappingConstructFunction = {
+    name: "mapping_construct",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: ["i64"]
     },
     attrs: []
 };
@@ -149,6 +185,15 @@ final RuntimeFunction stringEqFunction = {
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
     attrs: [["return", "zeroext"]]
+};
+
+final RuntimeFunction stringCmpFunction = {
+    name: "string_cmp",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: []
 };
 
 final bir:ModuleId runtimeModule = {
@@ -348,11 +393,8 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:IntBitwiseBinaryInsn {
             buildBitwiseBinary(builder, scaffold, insn);
         }
-        else if insn is bir:IntCompareInsn {
-            buildIntCompare(builder, scaffold, insn);
-        }
-        else if insn is bir:BooleanCompareInsn {
-            buildBooleanCompare(builder, scaffold, insn);
+        else if insn is bir:CompareInsn {
+            check buildCompare(builder, scaffold, insn);
         }
         else if insn is bir:EqualityInsn {
             check buildEquality(builder, scaffold, insn);
@@ -383,6 +425,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         }
         else if insn is bir:BranchInsn {
             check buildBranch(builder, scaffold, insn);
+        }
+        else if insn is bir:MappingConstructInsn {
+            check buildMappingConstruct(builder, scaffold, insn);
         }
         else if insn is bir:CondBranchInsn {
             check buildCondBranch(builder, scaffold, insn);
@@ -531,6 +576,21 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     builder.positionAtEnd(continueBlock);
 }
 
+function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
+    int length = insn.operands.length();
+    llvm:PointerValue m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
+                                                          [llvm:constInt(LLVM_INT, length)]);
+    foreach int i in 0 ..< length {
+        _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingInitMemberFunction),
+                         [
+                             m,
+                             check buildConstString(builder, scaffold, insn.fieldNames[i]),
+                             check buildRepr(builder, scaffold, insn.operands[i], REPR_ANY)
+                         ]);
+    }
+    builder.store(m, scaffold.address(insn.result));
+}
+
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
     if retRepr is Repr {
         builder.store(check buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
@@ -641,31 +701,52 @@ function buildNoPanicArithmeticBinary(llvm:Builder builder, Scaffold scaffold, b
 final readonly & map<llvm:IntBitwiseOp> binaryBitwiseOp = {
     "&": "and",
     "^": "xor",
-    "|": "or"
+    "|": "or",
+    "<<": "shl",
+    ">>": "ashr",
+    ">>>" : "lshr"
 };
 
 function buildBitwiseBinary(llvm:Builder builder, Scaffold scaffold, bir:IntBitwiseBinaryInsn insn) {
     llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
+    if insn.op is bir:BitwiseShiftOp {
+        rhs = builder.iBitwise("and", llvm:constInt(LLVM_INT, 0x3F), rhs);
+    }
     llvm:IntBitwiseOp op = binaryBitwiseOp.get(insn.op);
     llvm:Value result = builder.iBitwise(op, lhs, rhs);
     buildStoreInt(builder, scaffold, result, insn.result);                                  
 }
 
-function buildIntCompare(llvm:Builder builder, Scaffold scaffold, bir:IntCompareInsn insn) {
-    buildStoreBoolean(builder, scaffold,
-                      builder.iCmp(buildIntCompareOp(insn.op),
-                                   buildInt(builder, scaffold, insn.operands[0]),
-                                   buildInt(builder, scaffold, insn.operands[1])),
-                      insn.result);                          
-}
-
-function buildBooleanCompare(llvm:Builder builder, Scaffold scaffold, bir:BooleanCompareInsn insn) {
-    buildStoreBoolean(builder, scaffold,
-                      builder.iCmp(buildBooleanCompareOp(insn.op),
-                               buildBoolean(builder, scaffold, insn.operands[0]),
-                               buildBoolean(builder, scaffold, insn.operands[1])),
-                      insn.result);
+function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) returns BuildError? {
+    match insn.orderType {
+        "int" => {
+            buildStoreBoolean(builder, scaffold,
+                              builder.iCmp(buildIntCompareOp(insn.op),
+                                           buildInt(builder, scaffold, <bir:IntOperand>insn.operands[0]),
+                                           buildInt(builder, scaffold, <bir:IntOperand>insn.operands[1])),
+                              insn.result); 
+        }
+        "boolean" => {
+            buildStoreBoolean(builder, scaffold,
+                              builder.iCmp(buildBooleanCompareOp(insn.op),
+                                           buildBoolean(builder, scaffold, <bir:BooleanOperand>insn.operands[0]),
+                                           buildBoolean(builder, scaffold, <bir:BooleanOperand>insn.operands[1])),
+                              insn.result);
+        }
+        "string" => {
+            llvm:Value s1 = check buildString(builder, scaffold, <bir:StringOperand>insn.operands[0]);
+            llvm:Value s2 = check buildString(builder, scaffold, <bir:StringOperand>insn.operands[1]);
+            buildStoreBoolean(builder, scaffold,
+                              builder.iCmp(buildIntCompareOp(insn.op),
+                                           <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringCmpFunction), [s1, s2]),
+                                           llvm:constInt(LLVM_INT, 0)),
+                              insn.result);
+        }
+        _ => {
+            panic err:impossible();
+        }
+    }
 }
 
 type CmpEqOp "ne"|"eq";
@@ -903,7 +984,7 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     }
 }
 
-function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:Value|BuildError {   
+function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:PointerValue|BuildError {   
     return buildTaggedString(builder, check scaffold.getString(str));
 }
 
@@ -967,6 +1048,15 @@ function buildSimpleConst(bir:SimpleConstOperand operand) returns [Repr, llvm:Va
     else {
         // operand is boolean
         return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0)];
+    }
+}
+
+function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {
+    if operand is string {
+        return buildConstString(builder, scaffold, operand);
+    }
+    else {
+        return builder.load(scaffold.address(operand));
     }
 }
 

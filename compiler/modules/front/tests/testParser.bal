@@ -55,6 +55,10 @@ function testTokenizer(string k, string src) returns error? {
         int tStart = lines[pos.lineNumber - 1] + pos.indexInLine;
         string tStr = tokenToString(t);
         string srcAtPos = src.substring(tStart, tStart + tStr.length());
+        if t is [HEX_INT_LITERAL, string] {
+            // need to normalize `0x` vs `0X`
+            srcAtPos = srcAtPos.toLowerAscii();
+        }
         test:assertEquals(srcAtPos, tStr, "token: '" + tStr + "' source: '" + srcAtPos + "'");
         t = advance(tok, k, src);
     }
@@ -82,6 +86,9 @@ function tokenToString(Token t) returns string {
             // can't recover original string, so
             // lets just return a minimal expectation
             return "\"";
+        }
+        [HEX_INT_LITERAL, var num] => {
+            return "0x" + num.toLowerAscii();
         }
         [_, var str] => {
             return str;
@@ -149,6 +156,11 @@ function reduceToWords(string rule, string fragment) returns err:Syntax|Word[] {
             check tok.advance();
             stmtToWords(w, check parseStmt(tok));
         }
+        "td" => {
+            Tokenizer tok = new (fragment);
+            check tok.advance();
+            typeDescToWords(w, check parseTypeDesc(tok));
+        }
         "mod" => {
             modulePartToWords(w, check parseModulePart(fragment));
         }
@@ -180,8 +192,10 @@ function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
         ["OE", "\"\n\""],
         ["OE", "\"\r\""],
         ["E", "obj..x(args)"],
+        ["E", "00"],
         ["E", "01"],
         ["E", "-01"],
+        ["E", "0x"],
         ["E", "\"\n\""],
         ["E", "\"\r\""],
         ["E", "\"\\"],
@@ -210,6 +224,12 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
         // literals
          ["V", "expr", "0", "0"],
          ["V", "expr", "1", "1"],
+         ["V", "expr", "0x1", "1"],
+         ["V", "expr", "0Xba1decaf", "3122523311"],
+         ["V", "expr", "0x00000000000000000001", "1"],
+         ["V", "expr", "0x7fFfFfFfFfFfFfFf", "9223372036854775807"],
+         ["E", "expr", "0x8000000000000000", ""],
+         ["V", "expr", "-0x10", "-16"],
          ["V", "expr", "()", "()"],
          ["V", "expr", "null", "()"],
          ["V", "expr", "-()", "-()"],
@@ -259,6 +279,10 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "<int>x + <int>y", "(<int>x) + (<int>y)"],
          ["V", "expr", "<int><any>x", "<int>(<any>x)"],
          ["E", "expr", "<>x", ""],
+         ["V", "expr", "1 < <int>2", "1 < (<int>2)"],
+         ["E", "expr", "1 <<int> 2", ""],
+         ["V", "expr", "<any[]>x", "<any[]>x"],
+         ["V", "expr", "<map<any>>x", "<map<any>>x"],
          // binary op
          ["V", "expr", "1 + 1", "1 + 1"],
          ["V", "expr", "2 - a2", "2 - a2"],
@@ -278,6 +302,14 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "a +\r b", "a + b"],
          ["V", "expr", "a +\r\n b", "a + b"],
          ["V", "expr", "a +\n\r b", "a + b"],
+         ["V", "expr", "a >> b", "a >> b"],
+         ["V", "expr", "<int>a >> <int>b", "(<int>a) >> (<int>b)"],
+         ["V", "expr", "a <<<int>b", "a << (<int>b)"],
+         ["U", "expr", "<map<int>>a", "<map<int>>a"],
+         ["V", "expr", "a << b", "a << b"],
+         ["V", "expr", "a >>> b", "a >>> b"],
+         ["E", "expr", "a <<< b", "a <<< b"],
+         ["E", "expr", "a >>>> b", "a >>>> b"],
          ["V", "expr", "a | b", "a | b"],
          ["V", "expr", "a & b", "a & b"],
          ["V", "expr", "a ^ b", "a ^ b"],
@@ -290,6 +322,16 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "1 * 2 * 3", "(1 * 2) * 3"],
          ["V", "expr", "1 % 2 % 3", "(1 % 2) % 3"],
          ["V", "expr", "1 - 2 + 3", "(1 - 2) + 3"],
+         ["V", "expr", "a >> b >> c", "(a >> b) >> c"],
+         ["V", "expr", "a << b << c", "(a << b) << c"],
+         ["V", "expr", "a >> b << c", "(a >> b) << c"],
+         ["V", "expr", "a << b >> c", "(a << b) >> c"],
+         ["V", "expr", "a >>> b >>> c", "(a >>> b) >>> c"],
+         ["V", "expr", "a >> b >>> c", "(a >> b) >>> c"],
+         ["V", "expr", "a << b >>> c", "(a << b) >>> c"],
+         ["V", "expr", "a >>> b >> c", "(a >>> b) >> c"],
+         ["V", "expr", "a >>> b << c", "(a >>> b) << c"],
+         ["V", "expr", "1 <<x> 3", "(1 << x) > 3"],
          ["V", "expr", "a | b | c", "(a | b) | c"],
          ["V", "expr", "a | (b | c)", "a | (b | c)"],
          ["V", "expr", "a & b & c", "(a & b) & c"],
@@ -309,6 +351,12 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "a & b + c", "a & (b + c)"],
          ["V", "expr", "a == b + c", "a == (b + c)"],
          ["V", "expr", "(a + b) == c", "(a + b) == c"],
+         ["V", "expr", "a > b >> c", "a > (b >> c)"],
+         ["V", "expr", "a >> b + c", "a >> (b + c)"],
+         ["V", "expr", "a == b >>> c", "a == (b >>> c)"],
+         ["V", "expr", "a >>> b - c", "a >>> (b - c)"],
+         ["V", "expr", "a & b << c", "a & (b << c)"],
+         ["V", "expr", "a << b * c", "a << (b * c)"],
          ["V", "expr", "a == b & c", "(a == b) & c"],
          ["V", "expr", "a & b == c", "a & (b == c)"],
          ["V", "expr", "a & b | c", "(a & b) | c"],
@@ -340,7 +388,12 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "expr", "[1 2]", ""],
          ["E", "expr", "[1,]", ""],
          ["E", "expr", "[,1]", ""],
-          // method call
+         // mapping constructor
+         ["V", "expr", "{ }", "{ }"],
+         ["V", "expr", "{x: 1, y: 2}", string`{ "x": 1, "y": 2 }`],
+         ["V", "expr", string`{x: 1, y: 2, "z": 3}`, string`{ "x": 1, "y": 2, "z": 3 }`],
+         ["V", "expr", string`{value: 1+2}`, string`{ "value": 1 + 2 }`],
+         // method call
          ["V", "expr", "obj.x(1)", "obj.x(1)"],
          ["V", "expr", "(x+y).length()", "(x + y).length()"],
          ["V", "expr", "x+y.length()", "x + (y.length())"],
@@ -372,6 +425,11 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "(f())", "f()"],
          ["E", "expr", "(f()())", ""],
          ["V", "expr", "(((x)))", "x"],
+         // typedesc
+         ["V", "td", "int[]", "int[]"],
+         ["V", "td", "a|b", "a | b"],
+         ["V", "td", "a|b[]", "a | (b[])"],
+         ["V", "td", "(a|b)[]", "(a | b)[]"],
          // statement
          ["E", "stmt", ";", ""],
          ["E", "stmt", "1;", ""],
@@ -390,6 +448,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "stmt", "foo[1].push(2);", "(foo[1]).push(2);"],
          ["E", "stmt", "foo.push(1)[0];", ""],
          ["E", "stmt", "foo[0];", ""],
+         ["V", "stmt", "x = a >> b;", "x = a >> b;"],
          ["UE", "expr", string`string w = "Say "what" one more time.";`, ""],
          // statement return
          ["V", "stmt", "return;", "return;"],
@@ -404,14 +463,17 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "stmt", "int x = a != b;", "int x = a != b;"],
          ["E", "stmt", "int i = {}", ""],
          ["E", "stmt", "int x = a =! b;", ""],
+         ["E", "stmt", "int i = 0xBABE1F1SH;", ""],
          ["V", "stmt", "int i = 10;", "int i = 10;"],
          ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
          ["E", "stmt", "int i = a ... b ... c;", ""],
+         ["V", "stmt", "final int i = 1;", "final int i = 1;"],
          ["V", "stmt", "boolean b = false;", "boolean b = false;"],
          ["V", "stmt", "any v = false;", "any v = false;"],
          ["V", "stmt", "any v = 1;", "any v = 1;"],
          ["V", "stmt", "any [ ] v = [1];", "any[] v = [1];"],
          ["E", "stmt", "any [x ] v = [1];", ""],
+         ["V", "stmt", "map<any> v = {x:1};", string`map<any> v = { "x": 1 };`],
          // statement assign
          ["E", "stmt", "a = b = d;", ""],
          ["V", "stmt", "a = 0;", "a = 0;"],
@@ -423,6 +485,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "stmt", "if a {} else return;", ""],
          ["E", "stmt", "if a = b {}", ""],
          // module parts
+         ["U", "mod", "type ER error<map<readonly>>;", ""],
          ["E", "mod", "import;", ""],
          ["U", "mod", "import x;", "import x;"],
          ["V", "mod", "import x/y;", "import x/y;"]];

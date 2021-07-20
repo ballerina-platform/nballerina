@@ -8,6 +8,12 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
         ListConstructorExpr expr = { members };
         return expr;
     }
+    else if t == "{" {
+        check tok.advance();
+        Field[] fields = check parseFields(tok);
+        MappingConstructorExpr expr = { fields };
+        return expr;
+    }
     return parseInnerExpr(tok);
 }
 
@@ -84,11 +90,11 @@ function parseEqualityExpr(Tokenizer tok)  returns Expr|err:Syntax {
 }
 
 function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
-    Expr expr = check parseAdditiveExpr(tok);
+    Expr expr = check parseShiftExpr(tok);
     Token? t = tok.current();
     if t is BinaryRelationalOp {
         check tok.advance();
-        Expr right = check parseAdditiveExpr(tok);
+        Expr right = check parseShiftExpr(tok);
         BinaryRelationalExpr bin = { relationalOp: t, left: expr, right };
         return bin;
     }
@@ -102,6 +108,23 @@ function parseRangeExpr(Tokenizer tok) returns RangeExpr|err:Syntax {
     check tok.expect("..<");
     Expr upper = check parseAdditiveExpr(tok);
     return { lower, upper };
+}
+
+function parseShiftExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Expr expr = check parseAdditiveExpr(tok);
+    while true {
+        Token? t = tok.current();
+        if t is ("<<"|">>>"|">>") {
+            check tok.advance();
+            Expr right = check parseAdditiveExpr(tok);
+            BinaryBitwiseExpr shift = { bitwiseOp: t, left: expr, right };
+            expr = shift;
+        }
+        else {
+            break;
+        }
+    }
+    return expr;
 }
 
 function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
@@ -156,10 +179,12 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseTypeCastExpr(Tokenizer tok) returns Expr|err:Syntax {
+    tok.setMode(MODE_TYPE_DESC);
     err:Position pos = tok.currentPos();
     check tok.advance();
     InlineTypeDesc td = check parseInlineTypeDesc(tok);
     check tok.expect(">");
+    tok.setMode(MODE_NORMAL);
     Expr operand = check parseUnaryExpr(tok);
     TypeCastExpr expr = { pos, td, operand, semType: convertInlineTypeDesc(td) };
     return expr;
@@ -185,6 +210,10 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     }
     else if t is [DECIMAL_NUMBER, string] {
         SimpleConstExpr expr = { value: check parseDigits(tok, t[1]) };
+        return expr;
+    }
+    else if t is [HEX_INT_LITERAL, string] {
+        SimpleConstExpr expr = { value: check parseHexDigits(tok, t[1]) };
         return expr;
     }
     else if t is [STRING_LITERAL, string] {
@@ -263,7 +292,7 @@ function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, 
 
 function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syntax {
     Expr[] exprs = [];
-     if tok.current() != terminator {
+    if tok.current() != terminator {
         while true {
             Expr expr = check parseExpr(tok);
             exprs.push(expr);
@@ -281,6 +310,47 @@ function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syn
     }
     check tok.advance();
     return exprs;
+}
+
+function parseFields(Tokenizer tok) returns Field[]|err:Syntax {
+    Field[] fields = [];
+    if tok.current() != "}" {
+        while true {
+            Field f = check parseField(tok);
+            fields.push(f);
+            Token? t = tok.current();
+            if t == "," {
+                check tok.advance();
+            }
+            else if t == "}" {
+                break;
+            }
+            else {
+                return parseError(tok, "invalid field list");
+            }
+        }
+    }
+    check tok.advance();
+    return fields;
+}
+
+function parseField(Tokenizer tok) returns Field|err:Syntax {
+    Token? t = tok.current();
+    match t {
+        [IDENTIFIER, var name]
+        | [STRING_LITERAL, var name] => {
+            // Don't report an error for duplicates here
+            // (it's not a syntax error)
+            // Instead save the position and report during codeGen
+            err:Position pos = tok.currentPos();
+            check tok.advance();
+            check tok.expect(":");
+            Expr value = check parseExpr(tok);
+            Field f = { pos, name, value };
+            return f;
+        }
+    }
+    return err:syntax("expected field name");
 }
 
 function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
@@ -319,3 +389,15 @@ function parseDigits(Tokenizer tok, string signDigits) returns int|err:Syntax {
         return res;
     }
 }
+
+function parseHexDigits(Tokenizer tok, string digits) returns int|err:Syntax {
+    error|int res = int:fromHexString(digits);
+    if res is error {
+        return err:syntax("invalid hex literal", tok.currentPos(), cause=res);
+    } 
+    else {
+        check tok.advance();
+        return res;
+    }
+}
+

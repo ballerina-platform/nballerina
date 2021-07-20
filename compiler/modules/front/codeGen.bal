@@ -183,7 +183,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
     initLoopVar.insns.push(branchToLoopHead);
     bir:Register condition = cx.createRegister(t:BOOLEAN);
-    bir:IntCompareInsn compare = { op: "<", operands: [loopVar, upper], result: condition };
+    bir:CompareInsn compare = { op: "<", orderType: "int", operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
     bir:BasicBlock afterCondition = cx.createBasicBlock();
     bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
@@ -326,7 +326,7 @@ function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
 }
 
 function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, VarDeclStmt stmt) returns CodeGenError|[bir:BasicBlock?, Scope?] {
-    var { varName, initExpr, semType } = stmt;
+    var { varName, initExpr, semType, isFinal } = stmt;
     if lookup(varName, scope) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
@@ -338,7 +338,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
         bir:Register result = cx.createRegister(semType, varName);
         bir:AssignInsn insn = { result, operand };
         nextBlock.insns.push(insn);
-        return [nextBlock, { name: varName, reg: result, prev: scope, isFinal: false }];
+        return [nextBlock, { name: varName, reg: result, prev: scope, isFinal }];
     }   
 }
 
@@ -451,25 +451,18 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             return [result, nextBlock];
         }
         var { relationalOp: op, left, right } => {
-            bir:Insn insn;
             bir:Register result = cx.createRegister(t:BOOLEAN);
             var [l, block1] = check codeGenExpr(cx, bb, scope, left);
             var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
             TypedOperandPair? pair = typedOperandPair(l, r);
-            if pair is () {
-                return cx.semanticErr("different basic types for relational operator");
-            }
-            else if pair is IntOperandPair {
-                insn = <bir:IntCompareInsn> { op, operands: pair[1], result };
-            }
-            else if pair is BooleanOperandPair {
-                insn = <bir:BooleanCompareInsn> { op, operands: pair[1], result };
+            if pair is IntOperandPair|BooleanOperandPair|StringOperandPair {
+                bir:CompareInsn insn = { op, orderType: pair[0], operands: pair[1], result };
+                bb.insns.push(insn);
+                return [result, nextBlock];  
             }
             else {
-                return cx.semanticErr("cannot apply relational operator to nil operands");
-            }
-            bb.insns.push(insn);
-            return [result, nextBlock];         
+                return cx.semanticErr("operands of relational operator are not ordered");
+            }               
         }
         { op: "!",  operand: var o } => {
             var [operand, nextBlock] = check codeGenExprForBoolean(cx, bb, scope, o);
@@ -551,8 +544,32 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             }
             // In subset 3, we have only mutable lists of any
             // We will have to do more work in future subsets to determine the types here
-            bir:Register result = cx.createRegister(t:LIST);
-            bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, inherentType: t:LIST_RW };
+            bir:Register result = cx.createRegister(t:LIST_RW);
+            bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result };
+            nextBlock.insns.push(insn);
+            return [result, nextBlock];
+        }
+        // Mapping construct
+        var { fields } => {
+            bir:BasicBlock nextBlock = bb;
+            bir:Operand[] operands = [];
+            string[] fieldNames= [];
+            map<err:Position> fieldPos = {};
+            foreach var { pos, name, value } in fields {
+                err:Position? prevPos = fieldPos[name];
+                if prevPos == () {
+                    fieldPos[name] = pos;
+                }
+                else {
+                    return err:semantic(`duplicate field ${name}`, pos=pos);
+                }
+                bir:Operand operand;
+                [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, value);
+                operands.push(operand);
+                fieldNames.push(name);
+            }
+            bir:Register result = cx.createRegister(t:MAPPING_RW);
+            bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result };
             nextBlock.insns.push(insn);
             return [result, nextBlock];
         }
@@ -709,9 +726,11 @@ function bitwiseOperandType(bir:IntOperand operand) returns t:SemType {
 type NilOperand ()|bir:Register;
 type BooleanOperandPair readonly & ["boolean", [bir:BooleanOperand, bir:BooleanOperand]];
 type IntOperandPair readonly & ["int", [bir:IntOperand, bir:IntOperand]];
+type StringOperandPair readonly & ["string", [bir:StringOperand, bir:StringOperand]];
+
 type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 
-type TypedOperandPair BooleanOperandPair|IntOperandPair|NilOperandPair;
+type TypedOperandPair BooleanOperandPair|IntOperandPair|StringOperandPair|NilOperandPair;
 
 type TypedOperand readonly & (["array", bir:Register]
                               |["string", bir:StringOperand]
@@ -724,6 +743,9 @@ function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperand
     TypedOperand? r = typedOperand(rhs);
     if l is ["int", bir:IntOperand] && r is ["int", bir:IntOperand] {
         return ["int", [l[1], r[1]]];
+    }
+    if l is ["string", bir:StringOperand] && r is ["string", bir:StringOperand] {
+        return ["string", [l[1], r[1]]];
     }
     if l is ["boolean", bir:BooleanOperand] && r is ["boolean", bir:BooleanOperand] {
         return ["boolean", [l[1], r[1]]];

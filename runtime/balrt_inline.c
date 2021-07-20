@@ -1,6 +1,5 @@
 #include "balrt.h"
 
-typedef char HEAP_STAR(UntaggedPtr);
 #define FLAG_INT_ON_HEAP 0x20
 
 #define IMMEDIATE_INT_MIN -(1L << (TAG_SHIFT - 1))
@@ -29,7 +28,7 @@ TaggedPtr _bal_int_to_tagged(int64_t n) {
         return bitsToTaggedPtr(IMMEDIATE_INT_TRUNCATE(n) | (((uint64_t)TAG_INT) << TAG_SHIFT));
     }
     else {
-        int64_t HEAP_STAR(p) = _bal_alloc(sizeof(int64_t));
+        GC int64_t *p = _bal_alloc(sizeof(int64_t));
         *p = n;
         return ptrAddShiftedTag(p, ((uint64_t)TAG_INT|FLAG_INT_ON_HEAP) << TAG_SHIFT);
     }
@@ -45,42 +44,42 @@ int64_t _bal_tagged_to_int(TaggedPtr p) {
         return ((int64_t)n) >> 8;
     }
     else {
-        int64_t HEAP_STAR(np) = taggedToPtr(p);
+        GC int64_t *np = taggedToPtr(p);
         return *np;
     }
 }
 
 int64_t _Barray__length(TaggedPtr p) {
     ListPtr lp = taggedToPtr(p);
-    return lp->length;
+    return lp->tpArray.length;
 }
 
 void _Barray__push(TaggedPtr p, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
-    int64_t len = lp->length;
-    if (unlikely(len >= lp->capacity)) {
-        _bal_array_grow(lp, 0);
+    int64_t len = lp->tpArray.length;
+    if (unlikely(len >= lp->tpArray.capacity)) {
+        _bal_array_grow(&(lp->gArray), 0, TAGGED_PTR_SHIFT);
     }
     // note that array_grow does not change length
-    lp->members[len] = val;
-    lp->length = len + 1;
+    lp->tpArray.members[len] = val;
+    lp->tpArray.length = len + 1;
 }
 
-struct StringData _bal_tagged_to_string(TaggedPtr p) {
+StringData _bal_tagged_to_string(TaggedPtr p) {
     if (likely((taggedPtrBits(p) & 1) == 0)) {
-        struct SmallString HEAP_STAR(sp) = taggedToPtr(p);
-        struct StringData data = { sp->length, sp->length, sp->bytes };
+        SmallStringPtr sp = taggedToPtr(p);
+        StringData data = { sp->length, sp->length, sp->bytes };
         return data;
     }
     else {
-        struct MediumString HEAP_STAR(sp) = taggedToPtr(p);
-        struct StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
+        MediumStringPtr sp = taggedToPtr(p);
+        StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
         return data;
     }
 }
 
 int64_t _Bstring__length(TaggedPtr p) {
-    struct StringData data = _bal_tagged_to_string(p);
+    StringData data = _bal_tagged_to_string(p);
     return data.lengthInCodePoints;
 }
 
@@ -107,34 +106,34 @@ bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
 bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
     IntPtr p1 = taggedToPtr(tp1);
     IntPtr p2 = taggedToPtr(tp2);
-    int h1 = *p1;
-    int h2 = *p2;
+    int64_t h1 = *p1;
+    int64_t h2 = *p2;
     if (h1 != h2) {
         return 0;
     }
-    // I do this here on the basis that comparing a pointer with itself is not so common
+    // I do this here rather than earlier on the basis that comparing a pointer with itself is not so common
     // The comparison above will resolve a lot more comparisons (hopefully most).
     if (p1 == p2) {
-        return 1;
+        return true;
     }
     int variant1 = taggedPtrBits(tp1) & 0x7;
     int variant2 = taggedPtrBits(tp2) & 0x7;
     if (unlikely(variant1 != variant2)) {
-        return 0;
+        return false;
     }
     // number of 64-bit units including the header
     int nInts;
     if (variant1 == 0) {
         int nBytes = h1 & 0xFF;
-        nInts = (nBytes + 7 + 1) >> 3;
+        nInts = smallStringSize(nBytes) >> 3;
     }
     else {
         int nBytes = h1 & 0xFFFF;
-        nInts = (nBytes + 7 + 4) >> 3;
+        nInts = mediumStringSize(nBytes) >> 3;
     }
     while (--nInts > 0) {
-        if (*p1++ != *p2++)
-            return 0;
+        if (*++p1 != *++p2)
+            return false;
     }
-    return 1;
+    return true;
 }
