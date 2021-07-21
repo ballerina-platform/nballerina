@@ -10,24 +10,18 @@ define void @_B_main() {
   %3 = alloca i8
   %4 = load i8*, i8** @_bal_stack_guard
   %5 = icmp ult i8* %3, %4
-  br i1 %5, label %15, label %6
+  br i1 %5, label %9, label %6
 6:
-  %7 = bitcast {i8, [7 x i8]}* @.str0 to i8*
-  %8 = addrspacecast i8* %7 to i8 addrspace(1)*
-  %9 = getelementptr i8, i8 addrspace(1)* %8, i64 720575940379279360
-  store i8 addrspace(1)* %9, i8 addrspace(1)** %s
-  %10 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  call void @_Bio__println(i8 addrspace(1)* %10)
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)** %s
+  %7 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  call void @_Bio__println(i8 addrspace(1)* %7)
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
-  %11 = bitcast {i8, [7 x i8]}* @.str1 to i8*
-  %12 = addrspacecast i8* %11 to i8 addrspace(1)*
-  %13 = getelementptr i8, i8 addrspace(1)* %12, i64 720575940379279360
-  store i8 addrspace(1)* %13, i8 addrspace(1)** %s
-  %14 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  call void @_Bio__println(i8 addrspace(1)* %14)
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)** %s
+  %8 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  call void @_Bio__println(i8 addrspace(1)* %8)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   ret void
-15:
+9:
   call void @_bal_panic(i64 772)
   unreachable
 }

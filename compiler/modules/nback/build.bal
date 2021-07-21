@@ -212,10 +212,7 @@ const STRING_VARIANT_SMALL = 0;
 const STRING_VARIANT_MEDIUM = 1;
 type StringVariant STRING_VARIANT_SMALL|STRING_VARIANT_MEDIUM;
 
-type StringDefn readonly & record {|
-    llvm:PointerValue pointer;
-    StringVariant variant;
-|};
+type StringDefn llvm:ConstPointerValue;
 
 type Module record {|
     llvm:Context llContext;
@@ -933,13 +930,6 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
                                                        llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
 }
 
-function buildTaggedString(llvm:Builder builder, StringDefn str) returns llvm:PointerValue {
-    return buildTaggedPtr(builder,
-                          builder.addrSpaceCast(builder.bitCast(str.pointer, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE),
-                                                LLVM_TAGGED_PTR),
-                          TAG_STRING | <int>str.variant);
-}
-
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
     return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, intToTaggedFunction), [value]);
 }
@@ -1008,11 +998,11 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     }
 }
 
-function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:PointerValue|BuildError {   
-    return buildTaggedString(builder, check scaffold.getString(str));
+function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:ConstPointerValue|BuildError {   
+    return check scaffold.getString(str);
 }
 
-function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns StringDefn|BuildError {
+function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue|BuildError {
     int nCodePoints = str.length();
     byte[] bytes = str.toBytes();
     int nBytes = bytes.length();
@@ -1036,16 +1026,15 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
     else {
         return err:unimplemented("long constant strings");
     }
-    return {
-        pointer: mod.addGlobal(ty,
-                               stringDefnSymbol(defnIndex),
-                               initializer = val,
-                               align = 8,
-                               isConstant = true,
-                               unnamedAddr = true,
-                               linkage = "internal"),
-        variant
-    };
+    llvm:ConstPointerValue ptr = mod.addGlobal(ty,
+                                               stringDefnSymbol(defnIndex),
+                                               initializer = val,
+                                               align = 8,
+                                               isConstant = true,
+                                               unnamedAddr = true,
+                                               linkage = "internal");
+    return context.constGetElementPtr(context.constAddrSpaceCast(context.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_TAGGED_PTR),
+                                      [llvm:constInt(LLVM_INT, TAG_STRING | <int>variant)]);
 }
 
 // Returns the new, padded length
