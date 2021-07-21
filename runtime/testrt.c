@@ -20,7 +20,11 @@ static TaggedPtr randSmallString() {
 }
 
 static TaggedPtr randMediumString() {
-    return randString(0x100 + (rand() & 0xFFF));
+    int size = rand() & 0xFFFF;
+    if (size <= 0xFF) {
+        size |= 0x100;
+    }
+    return randString(size);
 }
 
 static TaggedPtr copySmallString(TaggedPtr tp) {

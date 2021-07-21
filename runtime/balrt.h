@@ -109,8 +109,8 @@ typedef GC struct SmallString {
 } *SmallStringPtr;
 
 typedef GC struct MediumString {
-    int16_t lengthInBytes;
-    int16_t lengthInCodePoints;
+    uint16_t lengthInBytes;
+    uint16_t lengthInCodePoints;
     char bytes[];
 } *MediumStringPtr;
 
