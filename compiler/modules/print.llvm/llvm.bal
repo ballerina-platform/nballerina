@@ -19,6 +19,14 @@ public readonly distinct class Value {
         self.ty = ty;
         self.operand = operand;
     }
+
+    function toConstValue() returns ConstValue {
+        if self.operand is string {
+            return new(self.ty, <string>self.operand);
+        } else {
+            panic error("Unnamed operand");
+        }
+    }
 }
 
 # Subtype of Value that refers to a pointer
@@ -31,16 +39,36 @@ public readonly class PointerValue {
         self.ty = ty;
         self.operand = operand;
     }
+
+    function toConstValue() returns ConstValue {
+        if self.operand is string {
+            return new(self.ty, <string>self.operand);
+        } else {
+            panic error("Unnamed operand");
+        }
+    }
 }
 
 # Subtype of Value that refers to a constant
 public readonly class ConstValue {
     *Value;
-    string|Unnamed operand;
+    string operand;
     Type ty;
     function init(Type ty, string operand) {
         self.ty = ty;
         self.operand = operand;
+    }
+
+    function toPointerValue() returns PointerValue {
+        if self.ty is PointerType {
+            return new(<PointerType>self.ty, self.operand);
+        } else {
+            panic error("Constant value is not pointer type");
+        }
+    }
+
+    function toConstValue() returns ConstValue {
+        return self;
     }
 }
 
@@ -109,19 +137,19 @@ public class Context {
 
     // Corresponds to LLVMConstGEP
     public function constGetElementPtr(ConstValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
-        var body = gepBody(ptr, indices, inbounds, "constantExp");
+        var body = gepBody(ptr, indices, inbounds);
         return constValueWithBody(body[1], body[0]);
     }
 
     // Corresponds to LLVMConstBitCast
     public function constBitCast(ConstValue ptr, PointerType destTy) returns ConstValue {
-        var body = bitCastBody(ptr, destTy, "constantExp");
+        var body = bitCastBody(ptr, destTy);
         return constValueWithBody(destTy, body);
     }
 
     // Corresponds to LLVMConstAddrSpaceCast
     public function costAddrSpaceCast(ConstValue ptr, PointerType destTy) returns ConstValue {
-        var body = addrSpaceCastBody(ptr, destTy, "constantExp");
+        var body = addrSpaceCastBody(ptr, destTy);
         return constValueWithBody(destTy, body);
     }
 }
@@ -1022,13 +1050,13 @@ function escapeIdentChar(string:Char ch) returns string {
     }
 }
 
-function gepBody(Value ptr, Value[] indices, "inbounds"? inbounds, "constantExp"? constantExp=()) returns [(string|Unnamed)[],PointerType] {
+function gepBody(Value ptr, Value[] indices, "inbounds"? inbounds) returns [(string|Unnamed)[],PointerType] {
     (string|Unnamed)[] words = [];
     words.push("getelementptr");
     if inbounds != () {
         words.push(inbounds);
     }
-    if constantExp != () {
+    if ptr is ConstValue {
         words.push("(");
     }
     Type ptrTy = ptr.ty;
@@ -1071,34 +1099,34 @@ function gepBody(Value ptr, Value[] indices, "inbounds"? inbounds, "constantExp"
             }
         }
     }
-    if constantExp != () {
+    if ptr is ConstValue {
         words.push(")");
     }
     PointerType resultPtrType = pointerType(resultType, resultAddressSpace);
     return [words, resultPtrType];
 }
 
-function bitCastBody(Value val, PointerType destTy, "constantExp"? constantExp=()) returns (string|Unnamed)[] {
+function bitCastBody(Value val, PointerType destTy) returns (string|Unnamed)[] {
     (string|Unnamed)[] words = [];
     words.push("bitcast");
-    if constantExp != () {
+    if val is ConstValue {
         words.push("(");
     }
     words.push(typeToString(val.ty), val.operand, "to", typeToString(destTy));
-    if constantExp != () {
+    if val is ConstValue {
         words.push(")");
     }
     return words;
 }
 
-function addrSpaceCastBody(Value val, PointerType destTy, "constantExp"? constantExp=()) returns (string|Unnamed)[] {
+function addrSpaceCastBody(Value val, PointerType destTy) returns (string|Unnamed)[] {
     (string|Unnamed)[] words = [];
     words.push("addrspacecast");
-    if constantExp != () {
+    if val is ConstValue {
         words.push("(");
     }
     words.push(typeToString(val.ty), val.operand, "to", typeToString(destTy));
-    if constantExp != () {
+    if val is ConstValue {
         words.push(")");
     }
     return words;
