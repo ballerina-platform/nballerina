@@ -35,6 +35,11 @@ static TaggedPtr copySmallString(TaggedPtr tp) {
     return copy;
 }
 
+int64_t stringLen(TaggedPtr p) {
+    StringData data = _bal_tagged_to_string(p);
+    return data.lengthInCodePoints;
+}
+
 static int64_t stringCmpRef(TaggedPtr tp1, TaggedPtr tp2) {
     StringData sd1 = _bal_tagged_to_string(tp1);
     StringData sd2 = _bal_tagged_to_string(tp2);
@@ -116,6 +121,68 @@ static void checkStringEq(TaggedPtr tp1, TaggedPtr tp2, int expect) {
 
 void testStringEq() {
     checkStringEq(makeString("\xC2\x80"), makeString("\xC2\x81"), false);
+}
+
+void testStringConcatAssociative() {
+    TaggedPtr *strs = malloc(sizeof(TaggedPtr) * NTESTS * 3);
+    int i;
+    for (i = 0; i < NTESTS*3; i++) {
+        // XXX remove masking after BigString
+        strs[i] = randString(rand() & 0xFFFF);
+    }
+    for (i = 0; i < NTESTS*3; i = i + 3) {
+        int64_t expectedLen = stringLen(strs[i]) + 
+                              stringLen(strs[i + 1]) +
+                              stringLen(strs[i + 2]);
+        if (expectedLen >= 0xFFFF) {
+            // XXX remove when BigString is implimented, and reconsider overflowing of above
+            continue;
+        }
+        TaggedPtr s1 = _bal_string_concat(strs[i], _bal_string_concat(strs[i + 1], strs[i + 2]));
+        TaggedPtr s2 = _bal_string_concat(_bal_string_concat(strs[i], strs[i + 1]), strs[i + 2]);
+        assert(stringLen(s1) == expectedLen);
+        int cmp = _bal_string_cmp(s1, s2);  
+        assert(cmp == 0);
+    }
+    free(strs);
+}
+
+int min(int n1, int n2) {
+    return (n1 > n2 ) ? n2 : n1;
+}
+
+void testStringConcat() {
+    TaggedPtr *strs = malloc(sizeof(TaggedPtr) * NTESTS);
+    int i;
+    for (i = 0; i < NTESTS; i++) {
+        // XXX remove masking after BigString
+        strs[i] = randString(rand() & 0xFFFF);
+    }
+    i = 0;
+    while (i < NTESTS) {
+        int concatUpTo = min(i + (rand() & 0xF), NTESTS);
+        int j;
+        TaggedPtr p = strs[i];
+        uint64_t expectedLen = _bal_tagged_to_string(p).lengthInBytes;
+        for (j = i + 1; j < concatUpTo; j++) {
+            expectedLen += _bal_tagged_to_string(strs[j]).lengthInBytes;
+            if (expectedLen >= 0xFFFF) { // XXX change after BigString
+                concatUpTo = j;
+                continue;
+            }
+            p = _bal_string_concat(p, strs[j]);
+        }
+
+        StringData dataP = _bal_tagged_to_string(p);
+        uint64_t offset = 0;
+        for (j = i; j < concatUpTo; j++) {
+            StringData dataJ = _bal_tagged_to_string(strs[j]);
+            assert(memcmp(dataP.bytes + offset, dataJ.bytes, dataJ.lengthInBytes) == 0);
+            offset += dataJ.lengthInBytes;
+        }
+        i = concatUpTo;
+    }
+    free(strs);
 }
 
 static uint64_t smallStringHashRef(TaggedPtr tp) {
@@ -227,6 +294,8 @@ int main() {
     testStringCmp();
     testStringEq();
     testStringHash();
+    testStringConcat();
+    testStringConcatAssociative();
     testMapping();
     return 0;
 }

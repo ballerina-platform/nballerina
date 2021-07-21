@@ -79,7 +79,7 @@ const PANIC_LIST_TOO_LONG = 6;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"string_cmp"|"eq";
+type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"string_cmp"|"string_concat"|"eq";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -191,6 +191,15 @@ final RuntimeFunction stringCmpFunction = {
     name: "string_cmp",
     ty: {
         returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
+final RuntimeFunction stringConcatFunction = {
+    name: "string_concat",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
     attrs: []
@@ -432,6 +441,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:MappingSetInsn {
             check buildMappingSet(builder, scaffold, insn);
         }
+        else if insn is bir:StringConcatInsn {
+            check buildStringConcat(builder, scaffold, insn);
+        }
         else if insn is bir:CondBranchInsn {
             check buildCondBranch(builder, scaffold, insn);
         }
@@ -610,6 +622,15 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
                      check buildString(builder, scaffold, insn.operands[1]),
                      check buildRepr(builder, scaffold, insn.operands[2], REPR_ANY)
                  ]);
+}
+
+function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
+    llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringConcatFunction),
+                                                [
+                                                    check buildString(builder, scaffold, insn.operands[0]),
+                                                    check buildString(builder, scaffold, insn.operands[1])
+                                                ]);
+    builder.store(value, scaffold.address(insn.result));
 }
 
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
