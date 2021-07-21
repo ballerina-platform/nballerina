@@ -55,10 +55,10 @@ public readonly class ConstPointerValue {
     }
 }
 
-function constValueWithBody(Type ty, (string|Unnamed)[] body) returns ConstValue {
+function constValueWithBody(PointerType ty, string[] body) returns ConstPointerValue {
     string[] words = [];
     foreach var word in body {
-        words.push(<string> word);
+        words.push(word);
     }
     string operand = concat(...words);
     return new (ty, operand);
@@ -119,8 +119,8 @@ public class Context {
     }
 
     // Corresponds to LLVMConstGEP
-    public function constGetElementPtr(ConstValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
-        (string|Unnamed)[] words = [];
+    public function constGetElementPtr(ConstPointerValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstPointerValue {
+        string[] words = [];
         words.push("getelementptr");
         if inbounds != () {
             words.push(inbounds);
@@ -132,8 +132,8 @@ public class Context {
     }
 
     // Corresponds to LLVMConstBitCast
-    public function constBitCast(ConstValue ptr, PointerType destTy) returns ConstValue {
-        (string|Unnamed)[] words = [];
+    public function constBitCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
+        string[] words = [];
         words.push("bitcast", "(");
         bitCastArgs(words, ptr, destTy);
         words.push(")");
@@ -141,8 +141,8 @@ public class Context {
     }
 
     // Corresponds to LLVMConstAddrSpaceCast
-    public function constAddrSpaceCast(ConstValue ptr, PointerType destTy) returns ConstValue {
-        (string|Unnamed)[] words = [];
+    public function constAddrSpaceCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
+        string[] words = [];
         words.push("addrspacecast", "(");
         addrSpaceCastArgs(words, ptr, destTy);
         words.push(")");
