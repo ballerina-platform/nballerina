@@ -4,6 +4,7 @@ public function main() {
     int i = 42;
     string s = i.toHexString();
     io:println(s); // @output 2a
+    io:println(s == "2a"); // @output true
 
     io:println(0.toHexString());    // @output 0
     io:println((-1).toHexString()); // @output -1
