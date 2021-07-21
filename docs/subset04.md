@@ -10,10 +10,10 @@
    * may be declared public
 * Statements:
    * function/method call statement
-   * local variable declaration with explicit type and expression
+   * local variable declaration with explicit type and initializer
    * assignment
       * to variable `v = E;`
-      * to member of a list `v[E1] = E2;`
+      * to member of a list or mapping `v[E1] = E2;`
    * `return` statement
    * `if`/`else` statements
    * `while` statement
@@ -25,7 +25,7 @@
    * type cast
    * function call
    * method call `v.f(args)` syntax for calling langlib functions
-   * member access `E[i]`
+   * member access `E[i]` for both list and mapping
    * list constructor `[E1, E2, ..., En]`
    * mapping constructor `{ f1: E1, f2: E2,..., fn: En }`
    * literals for nil, boolean, int and string
@@ -33,6 +33,8 @@
   * `array:length`
   * `array:push`
   * `string:length`
+  * `map:length`
+  * `int:toHexString`
 * The only imported function that can be called is `io:println` and it can only be called with a single argument.
 
 ## Grammar
@@ -165,7 +167,9 @@ mapping-constructor-expr = "{" [field-list] "}"
 
 field-list = field ["," field ]*
 
-field = string-literal ":" expression
+field = field-name ":" expression
+
+field-name = string-literal | identifier
 
 member-access-expr = primary-expr "[" expression "]"
 
@@ -184,9 +188,8 @@ module-prefix = identifier
 variable-reference-expr = identifier
 
 // tokens
-integer-literal = "0" | [1-9][0-9]* // leading zeros are not allowed (to prevent confusion with octal)
+int-literal = (as in Ballerina language spec)
 string-literal = (as in Ballerina language spec)
-hex-int-literal = ( "0x" | "0X" ) [A-Fa-f0-9]+
 identifier = [A-Za-z][A-Za-z0-9_]*
 
 // comments starting with // allowed as in Ballerina language spec
@@ -194,6 +197,7 @@ identifier = [A-Za-z][A-Za-z0-9_]*
 
 Language spec syntax references:
 * [string-literal](https://ballerina.io/spec/lang/2021R1/#string-literal)
+* [int-literal](https://ballerina.io/spec/lang/2021R1/#int-literal)
 
 ## Semantic restrictions
 
@@ -207,6 +211,8 @@ Method call syntax can be used for calling the following langlib functions:
 * `array:length`
 * `array:push`
 * `string:length`
+* `map:length`
+* `int:toHexString`
 
 The following restrictions apply to imported modules:
 
@@ -216,7 +222,7 @@ The following restrictions apply to imported modules:
 
 ## Notes
 
-* The syntax restricts where a `list-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
+* The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 
 ## Additions from subset 3
 
@@ -228,9 +234,6 @@ Add `string` and `map<any>`:
 * New expressions
   * string literals `"abc"`
   * mapping constructor `{"x": 1, "y": 2}`
-  * shift expressions `255 >> 2`
-  * hex int literals `0Xba1decaf`
-* `final` qualifier for local variable declarations
 
 Existing syntax extended:
 
@@ -238,11 +241,17 @@ Existing syntax extended:
 * `==`, `!=` for string
 * `<`, `<=`, `>`, `>=` for string
 * `<T>E` for `string` and `map<any>`
-* `io:println`
+* `io:println` for `map<any>`
 
 Langlib:
 * `string:length`
 * `map:length`
+
+Other additions:
+* shift expressions `255 >> 2`
+* hex int literals `0Xba1decaf`
+* `final` qualifier for local variable declarations
+* `int:toHexString`
 
 ## Implemented spec changes since 2021R1
 
