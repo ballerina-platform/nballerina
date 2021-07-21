@@ -44,6 +44,14 @@ public readonly class ConstValue {
     }
 }
 
+function constValueWithBody(Type ty, (string|Unnamed)[] body) returns ConstValue {
+    string[] words = [];
+    foreach var word in body {
+        words.push(<string> word);
+    }
+    string operand = concat(...words);
+    return new (ty, operand);
+}
 // Corresponds to LLVMConstInt
 // XXX Need to think about SignExtend argument
 public function constInt(IntType ty, int val) returns ConstValue {
@@ -100,25 +108,21 @@ public class Context {
     }
 
     // Corresponds to LLVMConstGEP
-    function constGetElementPtr(PointerValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
+    public function constGetElementPtr(PointerValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
         var body = gepBody(ptr, indices, inbounds, "constantExp");
-        string[] words = [];
-        foreach var word in body[0] {
-           words.push(<string> word); 
-        }
-        string operand = concat(...words);
-        PointerType resultPtrType = body[1];
-        return new (resultPtrType, operand);
+        return constValueWithBody(body[1], body[0]);
     }
 
-    function constBitCast(PointerValue ptr, PointerType destTy) returns ConstValue {
+    // Corresponds to LLVMConstBitCast
+    public function constBitCast(PointerValue ptr, PointerType destTy) returns ConstValue {
         var body = bitCastBody(ptr, destTy, "constantExp");
-        string[] words = [];
-        foreach var word in body {
-            words.push(<string> word);
-        }
-        string operand = concat(...words);
-        return new (destTy, operand);
+        return constValueWithBody(destTy, body);
+    }
+
+    // Corresponds to LLVMConstAddrSpaceCast
+    public function costAddrSpaceCast(PointerValue ptr, PointerType destTy) returns ConstValue {
+        var body = addrSpaceCastBody(ptr, destTy, "constantExp");
+        return constValueWithBody(destTy, body);
     }
 }
 
@@ -596,8 +600,7 @@ public class Builder {
     public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        (string|Unnamed)[] body = bitCastBody(val, destTy);
-        bb.addInsn(reg, "=", ...body);
+        bb.addInsn(reg, "=", ...bitCastBody(val, destTy));
         return new (destTy, reg);
     }
 
@@ -740,7 +743,7 @@ public class Builder {
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        bb.addInsn(reg, "=", "addrspacecast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        bb.addInsn(reg, "=", ...addrSpaceCastBody(val, destTy));
         return new PointerValue(destTy, reg);
     }
 
@@ -1078,6 +1081,19 @@ function gepBody(Value ptr, Value[] indices, "inbounds"? inbounds, "constantExp"
 function bitCastBody(PointerValue val, PointerType destTy, "constantExp"? constantExp=()) returns (string|Unnamed)[] {
     (string|Unnamed)[] words = [];
     words.push("bitcast");
+    if constantExp != () {
+        words.push("(");
+    }
+    words.push(typeToString(val.ty), val.operand, "to", typeToString(destTy));
+    if constantExp != () {
+        words.push(")");
+    }
+    return words;
+}
+
+function addrSpaceCastBody(PointerValue val, PointerType destTy, "constantExp"? constantExp=()) returns (string|Unnamed)[] {
+    (string|Unnamed)[] words = [];
+    words.push("addrspacecast");
     if constantExp != () {
         words.push("(");
     }
