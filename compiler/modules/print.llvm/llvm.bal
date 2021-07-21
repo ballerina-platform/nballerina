@@ -19,14 +19,6 @@ public readonly distinct class Value {
         self.ty = ty;
         self.operand = operand;
     }
-
-    function toConstValue() returns ConstValue {
-        if self.operand is string {
-            return new(self.ty, <string>self.operand);
-        } else {
-            panic error("Unnamed operand");
-        }
-    }
 }
 
 # Subtype of Value that refers to a pointer
@@ -39,14 +31,6 @@ public readonly class PointerValue {
         self.ty = ty;
         self.operand = operand;
     }
-
-    function toConstValue() returns ConstValue {
-        if self.operand is string {
-            return new(self.ty, <string>self.operand);
-        } else {
-            panic error("Unnamed operand");
-        }
-    }
 }
 
 # Subtype of Value that refers to a constant
@@ -58,17 +42,16 @@ public readonly class ConstValue {
         self.ty = ty;
         self.operand = operand;
     }
+}
 
-    function toPointerValue() returns PointerValue {
-        if self.ty is PointerType {
-            return new(<PointerType>self.ty, self.operand);
-        } else {
-            panic error("Constant value is not pointer type");
-        }
-    }
-
-    function toConstValue() returns ConstValue {
-        return self;
+public readonly class ConstPointerValue {
+    *PointerValue;
+    *ConstValue;
+    string operand;
+    PointerType ty;
+    function init(PointerType ty, string operand) {
+        self.ty = ty;
+        self.operand = operand;
     }
 }
 
@@ -158,7 +141,7 @@ public class Context {
     }
 
     // Corresponds to LLVMConstAddrSpaceCast
-    public function costAddrSpaceCast(ConstValue ptr, PointerType destTy) returns ConstValue {
+    public function constAddrSpaceCast(ConstValue ptr, PointerType destTy) returns ConstValue {
         (string|Unnamed)[] words = [];
         words.push("addrspacecast", "(");
         addrSpaceCastArgs(words, ptr, destTy);
@@ -237,10 +220,10 @@ public class Module {
     }
 
     // Corresponds to LLVMAddGlobal
-    public function addGlobal(Type ty, string name, *GlobalProperties props) returns PointerValue {
+    public function addGlobal(Type ty, string name, *GlobalProperties props) returns ConstPointerValue {
         string varName = self.escapeGlobalIdent(name);
         PointerType ptrType = pointerType(ty, props.addressSpace);
-        PointerValue val = new PointerValue(ptrType, "@" + varName); 
+        ConstPointerValue val = new ConstPointerValue(ptrType, "@" + varName); 
         self.globals[varName] = val;
         self.globalVariables.push([val, props]);
         return val;
