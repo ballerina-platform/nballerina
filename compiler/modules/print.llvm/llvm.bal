@@ -36,7 +36,7 @@ public readonly class PointerValue {
 # Subtype of Value that refers to a constant
 public readonly class ConstValue {
     *Value;
-    string operand;
+    string|Unnamed operand;
     Type ty;
     function init(Type ty, string operand) {
         self.ty = ty;
@@ -108,19 +108,19 @@ public class Context {
     }
 
     // Corresponds to LLVMConstGEP
-    public function constGetElementPtr(PointerValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
+    public function constGetElementPtr(ConstValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
         var body = gepBody(ptr, indices, inbounds, "constantExp");
         return constValueWithBody(body[1], body[0]);
     }
 
     // Corresponds to LLVMConstBitCast
-    public function constBitCast(PointerValue ptr, PointerType destTy) returns ConstValue {
+    public function constBitCast(ConstValue ptr, PointerType destTy) returns ConstValue {
         var body = bitCastBody(ptr, destTy, "constantExp");
         return constValueWithBody(destTy, body);
     }
 
     // Corresponds to LLVMConstAddrSpaceCast
-    public function costAddrSpaceCast(PointerValue ptr, PointerType destTy) returns ConstValue {
+    public function costAddrSpaceCast(ConstValue ptr, PointerType destTy) returns ConstValue {
         var body = addrSpaceCastBody(ptr, destTy, "constantExp");
         return constValueWithBody(destTy, body);
     }
@@ -275,7 +275,7 @@ public class Module {
         words.push(typeToString(val.ty.pointsTo));
         ConstValue? initializer = prop.initializer;
         if initializer is ConstValue {
-            words.push(initializer.operand);
+            words.push(<string>initializer.operand);
         }
         if prop.align is int {
             words.push(",", "align", prop.align.toString());
@@ -1078,7 +1078,7 @@ function gepBody(Value ptr, Value[] indices, "inbounds"? inbounds, "constantExp"
     return [words, resultPtrType];
 }
 
-function bitCastBody(PointerValue val, PointerType destTy, "constantExp"? constantExp=()) returns (string|Unnamed)[] {
+function bitCastBody(Value val, PointerType destTy, "constantExp"? constantExp=()) returns (string|Unnamed)[] {
     (string|Unnamed)[] words = [];
     words.push("bitcast");
     if constantExp != () {
@@ -1091,7 +1091,7 @@ function bitCastBody(PointerValue val, PointerType destTy, "constantExp"? consta
     return words;
 }
 
-function addrSpaceCastBody(PointerValue val, PointerType destTy, "constantExp"? constantExp=()) returns (string|Unnamed)[] {
+function addrSpaceCastBody(Value val, PointerType destTy, "constantExp"? constantExp=()) returns (string|Unnamed)[] {
     (string|Unnamed)[] words = [];
     words.push("addrspacecast");
     if constantExp != () {
