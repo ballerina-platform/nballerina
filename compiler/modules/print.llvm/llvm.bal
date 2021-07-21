@@ -19,6 +19,14 @@ public readonly distinct class Value {
         self.ty = ty;
         self.operand = operand;
     }
+
+    function toConstValue() returns ConstValue {
+        if self.operand is string {
+            return new(self.ty, <string>self.operand);
+        } else {
+            panic error("Unnamed operand");
+        }
+    }
 }
 
 # Subtype of Value that refers to a pointer
@@ -31,6 +39,14 @@ public readonly class PointerValue {
         self.ty = ty;
         self.operand = operand;
     }
+
+    function toConstValue() returns ConstValue {
+        if self.operand is string {
+            return new(self.ty, <string>self.operand);
+        } else {
+            panic error("Unnamed operand");
+        }
+    }
 }
 
 # Subtype of Value that refers to a constant
@@ -42,8 +58,28 @@ public readonly class ConstValue {
         self.ty = ty;
         self.operand = operand;
     }
+
+    function toPointerValue() returns PointerValue {
+        if self.ty is PointerType {
+            return new(<PointerType>self.ty, self.operand);
+        } else {
+            panic error("Constant value is not pointer type");
+        }
+    }
+
+    function toConstValue() returns ConstValue {
+        return self;
+    }
 }
 
+function constValueWithBody(Type ty, (string|Unnamed)[] body) returns ConstValue {
+    string[] words = [];
+    foreach var word in body {
+        words.push(<string> word);
+    }
+    string operand = concat(...words);
+    return new (ty, operand);
+}
 // Corresponds to LLVMConstInt
 // XXX Need to think about SignExtend argument
 public function constInt(IntType ty, int val) returns ConstValue {
@@ -97,6 +133,37 @@ public class Context {
         ArrayType ty = arrayType("i8", bytes.length());
         ConstValue val = new(ty, charArray(bytes));
         return val;
+    }
+
+    // Corresponds to LLVMConstGEP
+    public function constGetElementPtr(ConstValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
+        (string|Unnamed)[] words = [];
+        words.push("getelementptr");
+        if inbounds != () {
+            words.push(inbounds);
+        }
+        words.push("(");
+        PointerType destTy = gepArgs(words, ptr, indices, inbounds);
+        words.push(")");
+        return constValueWithBody(destTy, words);
+    }
+
+    // Corresponds to LLVMConstBitCast
+    public function constBitCast(ConstValue ptr, PointerType destTy) returns ConstValue {
+        (string|Unnamed)[] words = [];
+        words.push("bitcast", "(");
+        bitCastArgs(words, ptr, destTy);
+        words.push(")");
+        return constValueWithBody(destTy, words);
+    }
+
+    // Corresponds to LLVMConstAddrSpaceCast
+    public function costAddrSpaceCast(ConstValue ptr, PointerType destTy) returns ConstValue {
+        (string|Unnamed)[] words = [];
+        words.push("addrspacecast", "(");
+        addrSpaceCastArgs(words, ptr, destTy);
+        words.push(")");
+        return constValueWithBody(destTy, words);
     }
 }
 
@@ -244,7 +311,7 @@ public class Module {
         words.push(typeToString(val.ty.pointsTo));
         ConstValue? initializer = prop.initializer;
         if initializer is ConstValue {
-            words.push(initializer.operand);
+            words.push(<string>initializer.operand);
         }
         if prop.align is int {
             words.push(",", "align", prop.align.toString());
@@ -569,7 +636,10 @@ public class Builder {
     public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        bb.addInsn(reg, "=", "bitcast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        (string|Unnamed)[] words = [];
+        words.push("bitcast");
+        bitCastArgs(words, val, destTy);
+        bb.addInsn(reg, "=", ...words);
         return new (destTy, reg);
     }
 
@@ -700,54 +770,24 @@ public class Builder {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         (string|Unnamed)[] words = [];
-        words.push(reg, "=", "getelementptr");
+        words.push(reg, "=");
+        words.push("getelementptr");
         if inbounds != () {
             words.push(inbounds);
         }
-        words.push(typeToString(ptr.ty.pointsTo), ",", typeToString(ptr.ty), ptr.operand);
-        Type resultType = ptr.ty;
-        int resultAddressSpace = 0;
-        foreach var index in indices {
-            words.push(",");
-            words.push(typeToString(index.ty));
-            words.push(index.operand);
-            if resultType is PointerType {
-                resultAddressSpace = resultType.addressSpace;
-                resultType = resultType.pointsTo;
-            } 
-            else {
-                if resultType is ArrayType {
-                    resultType = resultType.elementType;
-                } 
-                else if resultType is StructType {
-                    int i;
-                    if index.operand is Unnamed {
-                        i = <Unnamed>index.operand;
-                    } else {
-                        i = checkpanic int:fromString(<string>index.operand);
-                    }
-                    if index.ty != "i32" {
-                        panic err:illegalArgument("structures can be index only using i32 constants"); 
-                    } 
-                    else {
-                        resultType = getTypeAtIndex(resultType, i);
-                    }
-                } 
-                else {
-                    panic err:illegalArgument(string `type  ${typeToString(resultType)} can't be indexed`);
-                }
-            }
-        }
+        PointerType destTy = gepArgs(words, ptr, indices, inbounds);
         bb.addInsn(...words);
-        PointerType resultPtrType = pointerType(resultType, resultAddressSpace);
-        return new PointerValue(resultPtrType, reg);
+        return new PointerValue(destTy, reg);
     }
 
     // Corresponds to LLVMBuildAddrSpaceCast
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        bb.addInsn(reg, "=", "addrspacecast", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        (string|Unnamed)[] words = [];
+        words.push(reg, "=", "addrspacecast");
+        addrSpaceCastArgs(words, val, destTy);
+        bb.addInsn( ...words);
         return new PointerValue(destTy, reg);
     }
 
@@ -1025,6 +1065,58 @@ function escapeIdentChar(string:Char ch) returns string {
     else {
         return "\\" + hex;
     }
+}
+
+function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds"? inbounds) returns PointerType {
+    Type ptrTy = ptr.ty;
+    if ptrTy is PointerType {
+        words.push(typeToString(ptrTy.pointsTo));
+    } else {
+        panic err:illegalArgument("GEP on non-pointer type value"); 
+    }
+    words.push(",", typeToString(ptr.ty), ptr.operand);
+    Type resultType = ptr.ty;
+    int resultAddressSpace = 0;
+    foreach var index in indices {
+        words.push(",");
+        words.push(typeToString(index.ty));
+        words.push(index.operand);
+        if resultType is PointerType {
+            resultAddressSpace = resultType.addressSpace;
+            resultType = resultType.pointsTo;
+        } 
+        else {
+            if resultType is ArrayType {
+                resultType = resultType.elementType;
+            } 
+            else if resultType is StructType {
+                int i;
+                if index.operand is Unnamed {
+                    i = <Unnamed>index.operand;
+                } else {
+                    i = checkpanic int:fromString(<string>index.operand);
+                }
+                if index.ty != "i32" {
+                    panic err:illegalArgument("structures can be index only using i32 constants"); 
+                } 
+                else {
+                    resultType = getTypeAtIndex(resultType, i);
+                }
+            } 
+            else {
+                panic err:illegalArgument(string `type  ${typeToString(resultType)} can't be indexed`);
+            }
+        }
+    }
+    return pointerType(resultType, resultAddressSpace);
+}
+
+function bitCastArgs((string|Unnamed)[] words, Value val, PointerType destTy) {
+    words.push(typeToString(val.ty), val.operand, "to", typeToString(destTy));
+}
+
+function addrSpaceCastArgs((string|Unnamed)[] words, Value val, PointerType destTy) {
+    words.push(typeToString(val.ty), val.operand, "to", typeToString(destTy));
 }
 
 // JBUG #31777 cast should not be necessary
