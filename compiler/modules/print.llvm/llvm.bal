@@ -1104,7 +1104,7 @@ function addrSpaceCastBody(Value val, PointerType destTy, "constantExp"? constan
     return words;
 }
 
-// JBUG cast should not be necessary
+// JBUG #31777 cast should not be necessary
 final int CP_DOUBLE_QUOTE = (<string:Char>"\"").toCodePointInt();
 final int CP_BACKSLASH = (<string:Char>"\\").toCodePointInt();
 
