@@ -39,11 +39,12 @@ public function arrayType(Type ty, int elementCount) returns ArrayType {
 
 // Corresponds to llvm::StructType
 public type StructType readonly & record {
+    string? name;
     Type[] elementTypes;
 };
 
 public function structType(Type[] elementTypes) returns StructType {
-    return { elementTypes: elementTypes.cloneReadOnly() };
+    return { name:(), elementTypes: elementTypes.cloneReadOnly() };
 }
 
 function getTypeAtIndex(StructType ty, int index) returns Type {
