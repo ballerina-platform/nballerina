@@ -208,3 +208,40 @@ uint64_t _bal_string_hash(TaggedPtr tp) {
     }
     return hashFinish(&h);
 }
+
+GC char *_bal_string_alloc(int64_t lengthInBytes, int64_t lengthInCodePoints, TaggedPtr *resultPtr) {
+    GC char *bytes;
+    UntypedPtr p;
+    int variant;
+    if (lengthInBytes <= 0xFF && lengthInCodePoints == lengthInBytes) {
+        int len = lengthInBytes;
+        int size = smallStringSize(len);
+        p = _bal_alloc(size);
+        // Make the last 8 bytes of allocated space be 0
+        // so that all padding bytes will be 0.
+        // This needs to be done before setting the length
+        // in the case where only 8 bytes are allocated.
+        ((GC uint64_t *)((GC char *)p + size))[-1] = 0;
+        SmallStringPtr sp = p;
+        sp->length = len;
+        bytes = sp->bytes;
+        variant = 0;
+    }
+    else if (lengthInBytes <= 0xFFFF) {
+        int len = lengthInBytes;
+        int size = mediumStringSize(len);
+        p = _bal_alloc(size);
+        // See comment above
+        ((GC uint64_t *)((GC char *)p + size))[-1] = 0;
+        MediumStringPtr sp = p;
+        sp->lengthInBytes = len;
+        sp->lengthInCodePoints = (uint16_t)lengthInCodePoints;
+        bytes = sp->bytes;
+        variant = STRING_MEDIUM_FLAG;
+    }
+    else {
+        _bal_panic(PANIC_LIST_TOO_LONG); // XXX implement this for big strings
+    }
+    *resultPtr = ptrAddFlags(p, ((uint64_t)TAG_STRING << TAG_SHIFT) | variant);
+    return bytes;
+}

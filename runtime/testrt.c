@@ -5,39 +5,30 @@
 #include <assert.h>
 #include "hash.h"
 
+#define NTESTS 1024
 
-#define NSTRINGS 2*1024
+static TaggedPtr randString(int nBytes) {
+    TaggedPtr tp;
+    GC char *bytes = _bal_string_alloc(nBytes, nBytes, &tp);
+    for (int i = 0; i < nBytes; i++)
+        bytes[i] = (rand() & 0x3) << 5;
+    return tp;
+}
 
 static TaggedPtr randSmallString() {
-    uint8_t nBytes = rand() & 0xFF;
-    int size = smallStringSize(nBytes);
-    SmallStringPtr p = _bal_alloc(size);
-    memset(p, 0, size);
-    p->length = nBytes;
-    for (int i = 0; i < nBytes; i++)
-        p->bytes[i] = (rand() & 0x3) << 5;
-    return ptrAddFlags(p, (uint64_t)TAG_STRING << TAG_SHIFT);
+    return randString(rand() & 0xFF);
 }
 
 static TaggedPtr randMediumString() {
-    uint16_t nBytes = rand() & 0xFF;
-    int size = mediumStringSize(nBytes);
-    MediumStringPtr p = _bal_alloc(size);
-    memset(p, 0, size);
-    p->lengthInBytes = nBytes;
-    p->lengthInCodePoints = nBytes;
-    for (int i = 0; i < nBytes; i++)
-        p->bytes[i] = (rand() & 0x3) << 5;
-    return ptrAddFlags(p, ((uint64_t)TAG_STRING << TAG_SHIFT)|STRING_MEDIUM_FLAG);
+    return randString(0x100 + (rand() & 0xFFF));
 }
 
 static TaggedPtr copySmallString(TaggedPtr tp) {
-    SmallStringPtr s = taggedToPtr(tp);
-    int len = s->length;
-    int size = smallStringSize(len);
-    SmallStringPtr p = _bal_alloc(size);
-    memcpy(p, s, size);
-    return ptrAddFlags(p, ((uint64_t)TAG_STRING << TAG_SHIFT));
+    StringData sd = _bal_tagged_to_string(tp);
+    TaggedPtr copy;
+    GC char *bytes = _bal_string_alloc(sd.lengthInBytes, sd.lengthInCodePoints, &copy);
+    memcpy(bytes, sd.bytes, sd.lengthInBytes);
+    return copy;
 }
 
 static int64_t stringCmpRef(TaggedPtr tp1, TaggedPtr tp2) {
@@ -93,17 +84,17 @@ static TaggedPtr makeString(const char *s) {
 }
 
 void testStringCmp() {
-    TaggedPtr *strs = malloc(sizeof(TaggedPtr) * NSTRINGS * 3);
+    TaggedPtr *strs = malloc(sizeof(TaggedPtr) * NTESTS * 3);
     int i;
     int j = 0;
-    for (i = 0; i < NSTRINGS; i++) {
+    for (i = 0; i < NTESTS; i++) {
         strs[j] = randSmallString();
         strs[j + 1] = copySmallString(strs[j]);
         j += 2;
         strs[j++] = randMediumString();
     }
-    for (i = 0; i < NSTRINGS*3; i++) {
-        for (j = i; j < NSTRINGS*3; j++) {
+    for (i = 0; i < NTESTS*3; i++) {
+        for (j = i; j < NTESTS*3; j++) {
             TaggedPtr s1 = strs[i];
             TaggedPtr s2 = strs[j];
             int cmp = stringCmpRef(s1, s2);
@@ -183,13 +174,11 @@ static void checkMediumStringHash(TaggedPtr tp) {
     assert(actual == expect);
 }
 
-#define NHASH NSTRINGS*NSTRINGS
-
 void testStringHash() {
-    for (int i = 0; i < NHASH; i++)
+    for (int i = 0; i < NTESTS*NTESTS; i++)
         checkSmallStringHash(randSmallString());
-    for (int i = 0; i < NHASH; i++)
-        checkMediumStringHash(randMediumString());
+    for (int i = 0; i < NTESTS; i++)
+       checkMediumStringHash(randMediumString());
 }
 
 void testRandMapping() {
@@ -218,7 +207,7 @@ void testRandMapping() {
 }
 
 void testMapping() {
-    for (int i = 0; i < 1000; i++)
+    for (int i = 0; i < NTESTS; i++)
         testRandMapping();
 }
 

@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 #include "tag.h"
 #define TAG_MASK 0xFF
@@ -168,6 +169,7 @@ extern READONLY bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY uint64_t _bal_string_hash(TaggedPtr tp);
+extern GC char *_bal_string_alloc(int64_t lengthInBytes, int64_t lengthInCodePoints, TaggedPtr *resultPtr);
 
 #define TAGGED_PTR_SHIFT 3
 
