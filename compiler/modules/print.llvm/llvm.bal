@@ -117,27 +117,17 @@ public class Module {
 
     // Corresponds to LLVMAddFunction
     public function addFunctionDefn(string name, FunctionType fnType) returns FunctionDefn {
-        if name is IntrinsicFunctionName {
-            panic err:illegalArgument("reserved intrinsic function name");
-        }
-        if self.globals.hasKey(name) {
-            panic err:illegalArgument("this module already has a declaration by that name");
-        }
-        FunctionDefn fn = new (self.context, name, fnType);
-        self.globals[name] = fn;
+        string fnName = self.escapeGlobalIdent(name);
+        FunctionDefn fn = new (self.context, fnName, fnType);
+        self.globals[fnName] = fn;
         self.functionDefns.push(fn);
         return fn;
     }
 
     public function addFunctionDecl(string name, FunctionType fnType) returns FunctionDecl {
-        if name is IntrinsicFunctionName {
-            panic err:illegalArgument("reserved intrinsic function name");
-        }
-        if self.globals.hasKey(name) {
-            panic err:illegalArgument("this module already has a declaration by that name");
-        }
-        FunctionDecl fn = new(self.context, name, fnType);
-        self.globals[name] = fn;
+        string fnName = self.escapeGlobalIdent(name);
+        FunctionDecl fn = new(self.context, fnName, fnType);
+        self.globals[fnName] = fn;
         self.functionDecls.push(fn);
         return fn;
     }
@@ -181,18 +171,23 @@ public class Module {
 
     // Corresponds to LLVMAddGlobal
     public function addGlobal(Type ty, string name, *GlobalProperties props) returns PointerValue {
-        // XXX implement all the GlobalProperties
-        if name is IntrinsicFunctionName {
-            panic err:illegalArgument("reserved intrinsic function name");
-        }
-        if self.globals.hasKey(name) {
-            panic err:illegalArgument("this module already has a declaration by that name");
-        }
+        string varName = self.escapeGlobalIdent(name);
         PointerType ptrType = pointerType(ty, props.addressSpace);
-        PointerValue val = new PointerValue(ptrType, "@" + name); 
-        self.globals[name] = val;
+        PointerValue val = new PointerValue(ptrType, "@" + varName); 
+        self.globals[varName] = val;
         self.globalVariables.push([val, props]);
         return val;
+    }
+
+    private function escapeGlobalIdent(string name) returns string {
+        string varName = escapeIdent(name);
+        if varName is IntrinsicFunctionName {
+            panic err:illegalArgument("reserved intrinsic function name");
+        }
+        if self.globals.hasKey(varName) {
+            panic err:illegalArgument("this module already has a declaration by that name");
+        }
+        return varName;
     }
  
     // Corresponds to LLVMPrintModuleToFile
@@ -999,7 +994,8 @@ function escapeIdent(string name) returns string {
         return name;
     }
     string escaped = "\"";
-    foreach var ch in name {
+    foreach int i in 0 ..< name.length() { // JBUG issue:#31767
+        string:Char ch = <string:Char>name[i];
         escaped += escapeIdentChar(ch);
     }
     escaped += "\"";
@@ -1022,7 +1018,7 @@ function escapeIdentChar(string:Char ch) returns string {
         } 
         return result;
     }
-    string hex = cp.toHexString();
+    string hex = cp.toHexString().toUpperAscii();
     if hex.length() == 1 {
         return "\\0" + hex;
     }
@@ -1066,7 +1062,9 @@ function isIdent(string name) returns boolean {
     if isDigit(<string:Char>name[0]) {
         return false;
     }
-    foreach var ch in name {
+
+    foreach int i in 0 ..< name.length() {// JBUG issue:#31767
+        string:Char ch = <string:Char>name[i];
         if !isIdentFollow(ch) {
             return false;
         }
