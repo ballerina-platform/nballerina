@@ -229,6 +229,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "0x00000000000000000001", "1"],
          ["V", "expr", "0x7fFfFfFfFfFfFfFf", "9223372036854775807"],
          ["E", "expr", "0x8000000000000000", ""],
+         ["E", "expr", "-0x8000000000000000", ""],
          ["V", "expr", "-0x10", "-16"],
          ["V", "expr", "()", "()"],
          ["V", "expr", "null", "()"],
@@ -401,6 +402,8 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "null.length()", "().length()"],
          ["V", "expr", "true.length()", "true.length()"],
          ["V", "expr", "false.length()", "false.length()"],
+         ["V", "expr", "-1.hexStr()", "-(1.hexStr())"],
+         ["V", "expr", "-0xf.max()", "-(15.max())"],
          // XXX Output  will need to change when we do floats/decimal, because "42." is a float literal
          ["V", "expr", "42 .length()", "42.length()"],
          ["V", "expr", "x.foo().bar()", "(x.foo()).bar()"],
