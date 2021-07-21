@@ -181,8 +181,7 @@ void testStringHash() {
        checkMediumStringHash(randMediumString());
 }
 
-void testRandMapping() {
-    int len = rand() & 2047;
+void testRandMapping(int len) {
     TaggedPtr *k = malloc(len * sizeof(TaggedPtr));
     TaggedPtr *v = malloc(len * sizeof(TaggedPtr));
 
@@ -190,14 +189,15 @@ void testRandMapping() {
         k[i] = randSmallString();
         v[i] = randSmallString();
     }
-    TaggedPtr m = _bal_mapping_construct(len);
+    TaggedPtr m = _bal_mapping_construct(0);
     for (int i = 0; i < len; i++) {
-        if (_bal_mapping_get(m, k[i]) == 0) {
-            _bal_mapping_init_member(m, k[i], v[i]);
-            k[i] = copySmallString(k[i]);
+        bool dup = _bal_mapping_get(m, k[i]) != 0;
+        _bal_mapping_set(m, k[i], v[i]);
+        if (dup) {
+            k[i] = 0;
         }
         else {
-            k[i] = 0;
+            k[i] = copySmallString(k[i]);
         }
     }
     for (int i = 0; i < len; i++) {
@@ -208,7 +208,12 @@ void testRandMapping() {
 
 void testMapping() {
     for (int i = 0; i < NTESTS; i++)
-        testRandMapping();
+        testRandMapping(rand() & 2047);
+    testRandMapping(65534);
+    testRandMapping(65535);
+    testRandMapping(65536);
+    testRandMapping(65537);
+    testRandMapping(500000);
 }
 
 HASH_DEFINE_KEY;
