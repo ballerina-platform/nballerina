@@ -30,7 +30,7 @@ public distinct class Context {
         PointerPointer arr = PointerPointerFromValues(indices);
         if inbounds != () {
             return new (jLLVMConstInBoundsGEP(ptr.LLVMValueRef, arr.jObject, indices.length()));
-        } 
+        }
         else {
             return new (jLLVMConstGEP(ptr.LLVMValueRef, arr.jObject, indices.length()));
         }
@@ -60,7 +60,8 @@ public distinct class Context {
         handle? jType = self.namedStructTypes[name];
         if jType is handle {
             return jType;
-        } else {
+        }
+        else {
             panic error("Type by that name is unknown");
         }
     }
