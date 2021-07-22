@@ -12,19 +12,21 @@ static int min(int n1, int n2) {
 }
 
 
-#define NRANDOM 8
+#define NRANDOM 2
 
 static TaggedPtr randString(int nBytes) {
     TaggedPtr tp;
     GC char *bytes = _bal_string_alloc(nBytes, nBytes, &tp);
 
-    memset(bytes, 'X', nBytes);
+    memset(bytes, 'A', nBytes);
 
     int nRandom =  min(NRANDOM, nBytes); // avoid division by zero
     for (int i = 0; i < nRandom; i++) {
         bytes[rand() % nBytes] = rand() & 0x7F;
-    }
-    
+        // Put some randomness at the end
+        // to check handling of padding
+        bytes[nBytes - 1 - i] = rand() & 0x7F;
+    }    
     return tp;
 }
 
