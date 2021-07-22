@@ -341,6 +341,7 @@ bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
 TaggedPtr _bal_string_concat(TaggedPtr tp1, TaggedPtr tp2) {
     StringData s1 = _bal_tagged_to_string(tp1);
     StringData s2 = _bal_tagged_to_string(tp2);
+    // _bal_string_alloc will deal with the case where total length is > INT_MAX
     uint64_t byteLen = (uint64_t)s1.lengthInBytes + (uint64_t)s2.lengthInBytes;
     uint64_t cpLen = (uint64_t)s1.lengthInCodePoints + (uint64_t)s2.lengthInCodePoints;
     TaggedPtr result;
