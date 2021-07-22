@@ -1,18 +1,29 @@
 import ballerina/jballerina.java;
 
 
-function typeToLLVMType(RetType ty) returns handle {
+function typeToLLVMType(RetType ty, Context? context) returns handle {
     if ty is PointerType {
-        handle baseType = typeToLLVMType(ty.pointsTo);
+        handle baseType = typeToLLVMType(ty.pointsTo, context);
         return jLLVMPointerType(baseType, ty.addressSpace);
     }
     if ty is StructType {
-        PointerPointer typeArr = PointerPointerFromTypes(ty.elementTypes);
-        int elementCount = ty.elementTypes.length();
-        return jLLVMStructType(typeArr.jObject, elementCount, 0);
+        if ty.name is () {
+            PointerPointer typeArr = PointerPointerFromTypes(ty.elementTypes);
+            int elementCount = ty.elementTypes.length();
+            return jLLVMStructType(typeArr.jObject, elementCount, 0);
+        }
+        else {
+            if context is Context {
+                string name = <string>ty.name;
+                return context.namedStructTypeToLLVMType(name);
+            }
+            else {
+                panic error("Can't convert named struct type without context");
+            }
+        }
     }
     if ty is ArrayType {
-        handle elementType = typeToLLVMType(ty.elementType);
+        handle elementType = typeToLLVMType(ty.elementType, context);
         return jLLVMArrayType(elementType, ty.elementCount);
     }
     match ty {
@@ -44,7 +55,7 @@ function typeToLLVMType(RetType ty) returns handle {
 }
 
 public function constInt(Type ty, int value) returns ConstValue {
-    Value val = new (jLLVMConstInt(typeToLLVMType(ty), value, 0));
+    Value val = new (jLLVMConstInt(typeToLLVMType(ty, ()), value, 0));
     return val;
 }
 
@@ -54,7 +65,7 @@ public function constFloat(FloatType ty, float val) returns ConstValue {
 }
 
 public function constNull(PointerType ty) returns PointerValue {
-    return new (jLLVMConstPointerNull(typeToLLVMType(ty)));
+    return new (jLLVMConstPointerNull(typeToLLVMType(ty, ())));
 }
 
 public readonly distinct class Value {
@@ -82,8 +93,8 @@ public readonly class ConstValue {
 }
 
 public readonly class ConstPointerValue {
+    *Value;
     *PointerValue;
-    *ConstValue;
     handle LLVMValueRef;
     function init(handle valueRef) {
         self.LLVMValueRef = valueRef;

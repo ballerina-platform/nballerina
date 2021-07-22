@@ -33,7 +33,7 @@ function PointerPointerFromValues(Value[] values) returns PointerPointer {
 function PointerPointerFromTypes(Type[] values) returns PointerPointer {
     PointerPointer arr = new (values.length());
     foreach var val in values {
-        arr.put(typeToLLVMType(val));
+        arr.put(typeToLLVMType(val, ()));
     }
     return arr;
 }

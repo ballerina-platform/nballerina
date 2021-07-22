@@ -4,9 +4,9 @@ function toLLVmFunctionType(FunctionType fnType, Context context) returns handle
     int paramCount = fnType.paramTypes.length();
     PointerPointer paramType = new (paramCount);
     foreach var ty in fnType.paramTypes {
-        paramType.put(typeToLLVMType(ty));
+        paramType.put(typeToLLVMType(ty, context));
     }
-    return jLLVMFunctionType(typeToLLVMType(fnType.returnType), paramType.jObject, paramCount, 0);
+    return jLLVMFunctionType(typeToLLVMType(fnType.returnType, context), paramType.jObject, paramCount, 0);
 }
 
 // LLVM C-API don't differentiate between function declarations and definitions

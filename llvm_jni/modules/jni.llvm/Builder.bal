@@ -92,9 +92,11 @@ function floatPredicateToInt(FloatPredicate predicate) returns int {
 
 public distinct class Builder {
     handle LLVMBuilder;
+    private final Context context;
 
     function init(Context context) {
         self.LLVMBuilder = jLLVMCreateBuilderInContext(context.LLVMContext);
+        self.context = context;
     }
 
     function setAlignment(Value val, Alignment align) {
@@ -107,7 +109,7 @@ public distinct class Builder {
 
     public function alloca(SingleValueType ty, Alignment? align = (), string? name = ()) returns PointerValue {
         string regName = self.extractName(name);
-        PointerValue val = new (jLLVMBuildAlloca(self.LLVMBuilder, typeToLLVMType(ty), java:fromString(regName)));
+        PointerValue val = new (jLLVMBuildAlloca(self.LLVMBuilder, typeToLLVMType(ty, self.context), java:fromString(regName)));
         if align != () {
             self.setAlignment(val, align);
         }
@@ -233,7 +235,7 @@ public distinct class Builder {
 
     public function bitCast(PointerValue val, PointerType destTy, string? name = ()) returns PointerValue {
         string reg = self.extractName(name);
-        return new (jLLVMBuildBitCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+        return new (jLLVMBuildBitCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
     }
 
     public function ret(Value? val = ()) {
@@ -246,22 +248,22 @@ public distinct class Builder {
 
     public function ptrToInt(PointerValue ptr, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildPtrToInt(self.LLVMBuilder, ptr.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+        return new (jLLVMBuildPtrToInt(self.LLVMBuilder, ptr.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
     }
 
     public function zExt(Value val, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildZExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+        return new (jLLVMBuildZExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
     }
 
     public function sExt(Value val, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildSExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+        return new (jLLVMBuildSExt(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
     }
 
     public function trunc(Value val, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildTrunc(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+        return new (jLLVMBuildTrunc(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
     }
 
     public function fNeg(Value val, string? name=()) returns Value {
@@ -304,7 +306,7 @@ public distinct class Builder {
     
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         string reg = self.extractName(name);
-        return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+        return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
     }
 
     public function sIToFP(Value val, FloatType destTy, string? name=()) returns Value {
