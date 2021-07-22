@@ -185,13 +185,23 @@ public class Context {
     }
 
     public function structCreateNamed(string name, Type[] elementTypes) returns StructType {
-        string structName = escapeIdent("%" + name);
+        string structName = "%" + escapeIdent(name);
         if self.namedStructTypes.hasKey(structName) {
             panic err:illegalArgument("This context already has a struct type by that name");
         }
         StructType ty = {name:structName, elementTypes:elementTypes.cloneReadOnly()};
         self.namedStructTypes[structName] = [ty, false];
         return ty;
+    }
+
+    function output(Output out){
+        foreach var each in self.namedStructTypes {
+            if each[1] {
+                StructType ty = each[0];
+                string[] words = [<string>ty.name, "=", "type", typeToString(ty, self, "forceInline")];
+                out.push(concat(...words));
+            }
+        } 
     }
 
     function refStruct(string name) {
@@ -350,6 +360,7 @@ public class Module {
             string[] words = ["target", "triple", "=", "\"", <TargetTriple>self.target, "\""];
             out.push(createLine(words));
         }
+        self.context.output(out);
         foreach var val in self.globalVariables {
             self.outputGlobalVar(val[0], val[1], out);
         }
@@ -1332,7 +1343,7 @@ function sameNumberType(Value v1, Value v2) returns IntType|FloatType {
     panic err:illegalArgument("expected a number type");
 }
 
-function typeToString(RetType ty, Context context) returns string {
+function typeToString(RetType ty, Context context, "forceInline"?forceInline=()) returns string {
     string typeTag;
     if ty is PointerType {
         if ty.addressSpace == 0 {
@@ -1343,7 +1354,7 @@ function typeToString(RetType ty, Context context) returns string {
     }
     else if ty is StructType {
         string? name = ty.name;
-        if name is () {
+        if name is () || forceInline != () {
             string[] typeStringBody = [];
             typeStringBody.push("{");
             foreach int i in 0 ..< ty.elementTypes.length() {
