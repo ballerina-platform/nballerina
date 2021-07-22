@@ -5,7 +5,7 @@
 #include <assert.h>
 #include "hash.h"
 
-#define NTESTS 1024
+#define NTESTS 2*1024
 
 static int min(int n1, int n2) {
     return (n1 > n2 ) ? n2 : n1;
