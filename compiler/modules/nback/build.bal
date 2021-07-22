@@ -117,7 +117,7 @@ final RuntimeFunction listSetFunction = {
 final RuntimeFunction mappingSetFunction = {
     name: "mapping_set",
     ty: {
-        returnType: REPR_VOID.llvm,
+        returnType: REPR_ERROR.llvm,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
     attrs: []
@@ -210,7 +210,9 @@ type ImportedFunctionTable table<ImportedFunction> key(symbol);
 
 const STRING_VARIANT_SMALL = 0;
 const STRING_VARIANT_MEDIUM = 1;
-type StringVariant STRING_VARIANT_SMALL|STRING_VARIANT_MEDIUM;
+const STRING_VARIANT_LARGE = 2;
+
+type StringVariant STRING_VARIANT_SMALL|STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE;
 
 type StringDefn llvm:ConstPointerValue;
 
@@ -568,13 +570,18 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
                                    [builder.load(scaffold.address(insn.list)),
                                     buildInt(builder, scaffold, insn.index),
                                     check buildRepr(builder, scaffold, insn.operand, REPR_ANY)]);
+    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
+   
+}
+
+function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, err:Position pos) {
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errorBlock = scaffold.addBasicBlock();
-    builder.condBr(builder.iCmp("eq", <llvm:Value>err, llvm:constInt("i64", 0)),
+    builder.condBr(builder.iCmp("eq", err, llvm:constInt("i64", 0)),
                    continueBlock,
                    errorBlock);
     builder.positionAtEnd(errorBlock);
-    builder.store(buildPanicError(builder, <llvm:Value>err, insn.position), scaffold.panicAddress());
+    builder.store(buildPanicError(builder, err, pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
 }
@@ -604,12 +611,13 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
-    _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingSetFunction),
-                 [
-                     builder.load(scaffold.address(insn.operands[0])),
-                     check buildString(builder, scaffold, insn.operands[1]),
-                     check buildRepr(builder, scaffold, insn.operands[2], REPR_ANY)
-                 ]);
+    llvm:Value? err = builder.call(buildRuntimeFunctionDecl(scaffold, mappingSetFunction),
+                                   [
+                                       builder.load(scaffold.address(insn.operands[0])),
+                                       check buildString(builder, scaffold, insn.operands[1]),
+                                       check buildRepr(builder, scaffold, insn.operands[2], REPR_ANY)
+                                   ]);
+    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
 }
 
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
@@ -1024,7 +1032,10 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
         variant = STRING_VARIANT_MEDIUM;
     }
     else {
-        return err:unimplemented("long constant strings");
+        int nBytesPadded = padBytes(bytes, 16);
+        val = context.constStruct([llvm:constInt("i64", nBytes), llvm:constInt("i64", nCodePoints), context.constString(bytes)]);
+        ty = llvm:structType(["i64", "i64", llvm:arrayType("i8", nBytesPadded)]);
+        variant = STRING_VARIANT_LARGE;
     }
     llvm:ConstPointerValue ptr = mod.addGlobal(ty,
                                                stringDefnSymbol(defnIndex),

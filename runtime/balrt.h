@@ -195,7 +195,7 @@ extern Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
 
 extern TaggedPtr _bal_mapping_construct(int64_t capacity);
 extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
-extern void _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
+extern Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
 
 
