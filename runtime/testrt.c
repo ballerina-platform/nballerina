@@ -7,11 +7,24 @@
 
 #define NTESTS 1024
 
+static int min(int n1, int n2) {
+    return (n1 > n2 ) ? n2 : n1;
+}
+
+
+#define NRANDOM 8
+
 static TaggedPtr randString(int nBytes) {
     TaggedPtr tp;
     GC char *bytes = _bal_string_alloc(nBytes, nBytes, &tp);
-    for (int i = 0; i < nBytes; i++)
-        bytes[i] = (rand() & 0x3) << 5;
+
+    memset(bytes, 'X', nBytes);
+
+    int nRandom =  min(NRANDOM, nBytes); // avoid division by zero
+    for (int i = 0; i < nRandom; i++) {
+        bytes[rand() % nBytes] = rand() & 0x7F;
+    }
+    
     return tp;
 }
 
@@ -145,10 +158,6 @@ void testStringConcatAssociative() {
         assert(cmp == 0);
     }
     free(strs);
-}
-
-int min(int n1, int n2) {
-    return (n1 > n2 ) ? n2 : n1;
 }
 
 void testStringConcat() {
