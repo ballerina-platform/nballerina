@@ -24,7 +24,7 @@ public distinct class Context {
         return new(jLLVMConstStructInContext(self.LLVMContext, elementArray.jObject, elements.length(), 0));
     }
 
-    public function constGetElementPtr(ConstValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstValue {
+    public function constGetElementPtr(ConstPointerValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstPointerValue {
         PointerPointer arr = PointerPointerFromValues(indices);
         if inbounds != () {
             return new (jLLVMConstInBoundsGEP(ptr.LLVMValueRef, arr.jObject, indices.length()));
@@ -34,11 +34,11 @@ public distinct class Context {
         }
     }
 
-    public function constBitCast(ConstValue ptr, PointerType destTy) returns ConstValue {
+    public function constBitCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
         return new (jLLVMConstBitCast(ptr.LLVMValueRef, typeToLLVMType(destTy)));
     }
 
-    public function costAddrSpaceCast(ConstValue ptr, PointerType destTy) returns ConstValue {
+    public function constAddrSpaceCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
         return new (jLLVMConstAddrSpaceCast(ptr.LLVMValueRef, typeToLLVMType(destTy)));
     }
 }

@@ -10,7 +10,7 @@ function constExp() returns Module {
     ConstValue init2 = context.constBitCast(g2, pointerType("i32", 0));
     PointerValue g3 = m.addGlobal(pointerType("i32", 0), "g3", initializer=init2);
     PointerValue g4 = m.addGlobal(pointerType("i32", 0), "g4", isConstant=true);
-    ConstValue init3 = context.costAddrSpaceCast(g4, pointerType("i32", 1));
+    ConstValue init3 = context.constAddrSpaceCast(g4, pointerType("i32", 1));
     PointerValue g5 = m.addGlobal(pointerType("i32", 1), "g5", initializer=init3);
     return m;
 }

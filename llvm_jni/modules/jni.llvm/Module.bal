@@ -41,7 +41,7 @@ public distinct class Module {
         _ = jLLVMPrintModuleToFile(self.LLVMModule, java:fromString(fileName), err);
     }
 
-    public function addGlobal(Type ty, string name, *GlobalProperties props) returns PointerValue {
+    public function addGlobal(Type ty, string name, *GlobalProperties props) returns ConstPointerValue {
         PointerValue val =  new (jLLVMAddGlobalInAddressSpace(self.LLVMModule, typeToLLVMType(ty), java:fromString(name), props.addressSpace));
         if props.initializer is ConstValue {
             ConstValue initializer = <ConstValue>props.initializer;
