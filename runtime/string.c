@@ -289,7 +289,7 @@ GC char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, 
         uint64_t size = largeStringSize(lengthInBytes);
         p = _bal_alloc(size);
          ((GC uint64_t *)((GC char *)p + size))[-1] = 0;
-        MediumStringPtr sp = p;
+        LargeStringPtr sp = p;
         sp->lengthInBytes = lengthInBytes;
         sp->lengthInCodePoints = lengthInCodePoints;
         bytes = sp->bytes;
