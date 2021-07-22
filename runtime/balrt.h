@@ -100,7 +100,10 @@ typedef GC struct Mapping {
     uint8_t tableLengthShift;
 } *MappingPtr;
 
+#define STRING_SMALL_FLAG 0
 #define STRING_MEDIUM_FLAG 1
+#define STRING_LARGE_FLAG 2
+
 
 // Both of these are 8-byte aligned and zero-padded so the total size is a multiple of 8
 typedef GC struct SmallString {
@@ -114,12 +117,22 @@ typedef GC struct MediumString {
     char bytes[];
 } *MediumStringPtr;
 
+typedef GC struct LargeString {
+    int64_t lengthInBytes;
+    int64_t lengthInCodePoints;
+    char bytes[];
+} *LargeStringPtr;
+
 static inline int smallStringSize(int lengthInBytes) {
     return ((lengthInBytes + 7 + 1) >> 3) << 3;
 }
 
 static inline int mediumStringSize(int lengthInBytes) {
     return ((lengthInBytes + 7 + 4) >> 3) << 3;
+}
+
+static inline uint64_t largeStringSize(int64_t lengthInBytes) {
+    return (((uint64_t)lengthInBytes + 7 + 16) >> 3) << 3;
 }
 
 typedef struct {
@@ -131,10 +144,12 @@ typedef struct {
 // These should be shared with build.bal
 #define PANIC_INDEX_OUT_OF_BOUNDS 5
 #define PANIC_LIST_TOO_LONG 6
+// XXX Make this a separate panic
+#define PANIC_STRING_TOO_LONG 6
 
 #define ALIGN_HEAP 8
 
-extern UntypedPtr _bal_alloc(int64_t nBytes);
+extern UntypedPtr _bal_alloc(uint64_t nBytes);
 extern NORETURN void _bal_panic(Error err);
 
 extern void _Bio__println(TaggedPtr p);
@@ -169,7 +184,7 @@ extern READONLY bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY uint64_t _bal_string_hash(TaggedPtr tp);
-extern GC char *_bal_string_alloc(int64_t lengthInBytes, int64_t lengthInCodePoints, TaggedPtr *resultPtr);
+extern GC char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr);
 
 #define TAGGED_PTR_SHIFT 3
 

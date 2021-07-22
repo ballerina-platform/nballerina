@@ -109,18 +109,18 @@ bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
 }
 
 bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
+    // With hash tables, a lot of the time you are comparing things that are equal
+    // so this is worth doing early on.
+    if (tp1 == tp2) {
+        return true;
+    }
     IntPtr p1 = taggedToPtr(tp1);
     IntPtr p2 = taggedToPtr(tp2);
     int64_t h1 = *p1;
     int64_t h2 = *p2;
     if (h1 != h2) {
         return 0;
-    }
-    // I do this here rather than earlier on the basis that comparing a pointer with itself is not so common
-    // The comparison above will resolve a lot more comparisons (hopefully most).
-    if (p1 == p2) {
-        return true;
-    }
+    }    
     int variant1 = taggedPtrBits(tp1) & 0x7;
     int variant2 = taggedPtrBits(tp2) & 0x7;
     if (unlikely(variant1 != variant2)) {
@@ -128,13 +128,16 @@ bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
     }
     // number of 64-bit units including the header
     int nInts;
-    if (variant1 == 0) {
-        int nBytes = h1 & 0xFF;
-        nInts = smallStringSize(nBytes) >> 3;
+    if (likely(variant1 == STRING_SMALL_FLAG)) {
+        int len = h1 & 0xFF;
+        nInts = smallStringSize(len) >> 3;
+    }
+    else if (likely(variant1 == STRING_MEDIUM_FLAG)) {
+        int len = h1 & 0xFFFF;
+        nInts = mediumStringSize(len) >> 3;
     }
     else {
-        int nBytes = h1 & 0xFFFF;
-        nInts = mediumStringSize(nBytes) >> 3;
+        nInts = largeStringSize(h1) >> 3;
     }
     while (--nInts > 0) {
         if (*++p1 != *++p2)

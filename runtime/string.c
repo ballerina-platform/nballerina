@@ -9,6 +9,8 @@
 static int64_t stringCmpGeneric(TaggedPtr tp1, TaggedPtr tp2);
 static int64_t stringCmpSmall(SmallStringPtr s1, SmallStringPtr s2);
 static int64_t stringCmpMedium(MediumStringPtr s1, MediumStringPtr s2);
+static int64_t stringCmpLarge(LargeStringPtr s1, LargeStringPtr s2);
+
 static int64_t memcmp8(IntPtr p1, IntPtr p2, int64_t n);
 
 int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2) {
@@ -22,11 +24,15 @@ int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2) {
     }
     UntypedPtr p1 = taggedToPtr(tp1);
     UntypedPtr p2 = taggedToPtr(tp2);
-    if (likely((bits1 & 0x7) == 0)) {
+    int variant = (bits1 & 0x7);
+    if (likely(variant == STRING_SMALL_FLAG)) {
         return stringCmpSmall(p1, p2);
     }
-    else {
+    else if (likely(variant == STRING_MEDIUM_FLAG)) {
         return stringCmpMedium(p1, p2);
+    }
+    else {
+        return stringCmpLarge(p1, p2);
     }
 }
 
@@ -78,6 +84,18 @@ static int64_t stringCmpMedium(MediumStringPtr s1, MediumStringPtr s2) {
     int minLen = len1 <= len2 ? len1 : len2;
     int nInts = mediumStringSize(minLen) >> 3;
     int64_t result = memcmp8((IntPtr)s1 + 1, (IntPtr)s2 + 1, nInts - 1);
+    if (result != 0) {
+        return result;
+    }
+    return len1 - len2;
+}
+
+static int64_t stringCmpLarge(LargeStringPtr s1, LargeStringPtr s2) {
+    int64_t len1 = s1->lengthInBytes;
+    int64_t len2 = s2->lengthInBytes;
+    int64_t minLen = len1 <= len2 ? len1 : len2;
+    int64_t nInts = largeStringSize(minLen) >> 3;
+    int64_t result = memcmp8((IntPtr)s1 + 2, (IntPtr)s2 + 2, nInts - 2);
     if (result != 0) {
         return result;
     }
@@ -195,21 +213,46 @@ static void mediumStringHash(HashState *hp, MediumStringPtr p) {
     hashUpdatePartial(hp, start >> (64 - shift), 4 - nPad);
 }
 
+// We compute the hash with the first 4 bytes moved after the other bytes
+static void largeStringHash(HashState *hp, LargeStringPtr p) {
+    IntPtr ip = (IntPtr)(p->bytes);
+    int64_t len = p->lengthInBytes;
+    uint64_t nBytes = largeStringSize(len);
+    int64_t nInts = nBytes >> 3;
+    int nPad = nBytes - (len + 16);
+    int64_t nCompleteInts;
+    if (nPad) {
+        nCompleteInts = nInts - 1;
+    }
+    else {
+        nCompleteInts = nInts;
+    }
+    for (int64_t i = 2; i < nCompleteInts; i++) {
+        hashUpdate(hp, ip[i]); 
+    }
+    if (nPad) {
+        hashUpdatePartial(hp, ip[nCompleteInts], nPad);
+    }
+}
+
 uint64_t _bal_string_hash(TaggedPtr tp) {
     int variant = taggedPtrBits(tp) & 0x7;
     UntypedPtr p = taggedToPtr(tp);
     HashState h;
     hashInit(&h);
-    if (variant == 0) {
+    if (variant == STRING_SMALL_FLAG) {
         smallStringHash(&h, p);
     }
-    else {
+    else if (variant == STRING_MEDIUM_FLAG) {
         mediumStringHash(&h, p);
+    }
+    else {
+        largeStringHash(&h, p);
     }
     return hashFinish(&h);
 }
 
-GC char *_bal_string_alloc(int64_t lengthInBytes, int64_t lengthInCodePoints, TaggedPtr *resultPtr) {
+GC char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr) {
     GC char *bytes;
     UntypedPtr p;
     int variant;
@@ -225,7 +268,7 @@ GC char *_bal_string_alloc(int64_t lengthInBytes, int64_t lengthInCodePoints, Ta
         SmallStringPtr sp = p;
         sp->length = len;
         bytes = sp->bytes;
-        variant = 0;
+        variant = STRING_SMALL_FLAG;
     }
     else if (lengthInBytes <= 0xFFFF) {
         int len = lengthInBytes;
@@ -240,7 +283,17 @@ GC char *_bal_string_alloc(int64_t lengthInBytes, int64_t lengthInCodePoints, Ta
         variant = STRING_MEDIUM_FLAG;
     }
     else {
-        _bal_panic(PANIC_LIST_TOO_LONG); // XXX implement this for big strings
+        if (unlikely(lengthInBytes > INT64_MAX)) {
+            _bal_panic(PANIC_STRING_TOO_LONG);
+        }
+        uint64_t size = largeStringSize(lengthInBytes);
+        p = _bal_alloc(size);
+         ((GC uint64_t *)((GC char *)p + size))[-1] = 0;
+        MediumStringPtr sp = p;
+        sp->lengthInBytes = lengthInBytes;
+        sp->lengthInCodePoints = lengthInCodePoints;
+        bytes = sp->bytes;
+        variant = STRING_LARGE_FLAG;
     }
     *resultPtr = ptrAddFlags(p, ((uint64_t)TAG_STRING << TAG_SHIFT) | variant);
     return bytes;
