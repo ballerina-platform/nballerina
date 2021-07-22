@@ -14,7 +14,7 @@ declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) r
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare void @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
+declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
@@ -129,7 +129,7 @@ define void @_B_main() {
   %71 = load i64, i64* %i
   %72 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %71, i64 1)
   %73 = extractvalue {i64, i1} %72, 1
-  br i1 %73, label %81, label %75
+  br i1 %73, label %83, label %75
 74:
   store i64 1795, i64* %10
   br label %56
@@ -140,9 +140,16 @@ define void @_B_main() {
   %78 = load i8 addrspace(1)*, i8 addrspace(1)** %6
   %79 = load i64, i64* %7
   %80 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %79)
-  call void @_bal_mapping_set(i8 addrspace(1)* %77, i8 addrspace(1)* %78, i8 addrspace(1)* %80)
-  br label %53
-81:
+  %81 = call i64 @_bal_mapping_set(i8 addrspace(1)* %77, i8 addrspace(1)* %78, i8 addrspace(1)* %80)
+  %82 = icmp eq i64 %81, 0
+  br i1 %82, label %84, label %85
+83:
   store i64 1793, i64* %10
+  br label %56
+84:
+  br label %53
+85:
+  %86 = or i64 %81, 1792
+  store i64 %86, i64* %10
   br label %56
 }
