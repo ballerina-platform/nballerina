@@ -5,7 +5,8 @@ public function main() {
 }
 
 function foo() {
-    while false {
+    boolean b = false;
+    while b {
         io:println(0);
     }
 }

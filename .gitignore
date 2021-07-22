@@ -37,5 +37,14 @@ target
 # Object files
 *.o
 
+# Library archives
+*.a
+
 # Default output from C compiler
 a.out
+
+# Output from jni test build
+testbuild
+
+# bal command seems to produce this
+heap-dump.hprof

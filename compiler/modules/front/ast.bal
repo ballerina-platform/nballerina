@@ -12,7 +12,6 @@ type ModuleLevelDef TypeDef|FunctionDef;
 
 type Visibility "public"?;
 
-
 type ImportDecl record {|
     string org;
     string module;
@@ -29,14 +28,19 @@ type FunctionDef record {|
     bir:FunctionSignature? signature = ();
 |};
 
-type Stmt VarDeclStmt|AssignStmt|FunctionCallExpr|ReturnStmt|IfElseStmt|
-            WhileStmt|BreakStmt|ContinueStmt;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|VarRefExpr;
+type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
+type CallStmt FunctionCallExpr|MethodCallExpr;
+type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
+
+type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
 
 type AssignStmt record {|
-    string varName;
+    LExpr lValue;
     Expr expr;
 |};
+
+// L-value expression
+type LExpr VarRefExpr|MemberAccessLExpr;
 
 type ReturnStmt record {|
     Expr returnExpr;
@@ -53,12 +57,18 @@ type WhileStmt record {|
     Stmt[] body;
 |};
 
+type ForeachStmt record {|
+    string varName;
+    RangeExpr range;
+    Stmt[] body;
+|};
+
 type BreakStmt "break";
 
 type ContinueStmt "continue";
 
 type VarDeclStmt record {|
-    TypeDesc td;
+    InlineTypeDesc td;
     string varName;
     Expr initExpr;
     // For now this should be filled in during parse
@@ -66,20 +76,52 @@ type VarDeclStmt record {|
     // Later on will support references to type definitions,
     // and it will be filled in later.
     t:SemType? semType = ();
+    boolean isFinal;
 |};
 
-type BinaryExprOp "+" | "-" | "*" | "/" | "%" | "<" | ">" | "<=" | ">=" | "==" | "!=";
+type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
+type BinaryBitwiseOp "|" | "^" | "&" | "<<" | ">>" | ">>>";
+type BinaryRelationalOp "<" | ">" | "<=" | ">=";
+type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
+type RangeOp  "..." | "..<";
+
+type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
+
 type UnaryExprOp "-" | "!";
 
-type BinaryExpr record {|
-    BinaryExprOp op;
+type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr;
+
+// We use different operator names so things work better with match statements
+type BinaryExprBase record {|
     Expr left;
     Expr right;
+|};
+
+type BinaryEqualityExpr record {|
+    *BinaryExprBase;
+    BinaryEqualityOp equalityOp;
+|};
+
+type BinaryRelationalExpr record {|
+    *BinaryExprBase;
+    BinaryRelationalOp relationalOp;
+|};
+
+type BinaryArithmeticExpr record {|
+    *BinaryExprBase;
+    BinaryArithmeticOp arithmeticOp;
+    err:Position pos;
+|};
+
+type BinaryBitwiseExpr record {|
+    *BinaryExprBase;
+    BinaryBitwiseOp bitwiseOp; 
 |};
 
 type UnaryExpr record {|
     UnaryExprOp op;
     Expr operand;
+    err:Position pos;
 |};
 
 type FunctionCallExpr record {|
@@ -90,15 +132,79 @@ type FunctionCallExpr record {|
     err:Position pos;
 |};
 
+type MethodCallExpr record {|
+    string methodName;
+    Expr target;
+    Expr[] args;
+    err:Position pos;
+|};
+
+type ListConstructorExpr record {|
+    Expr[] members;
+|};
+
+type MappingConstructorExpr record {|
+    Field[] fields;
+|};
+
+type Field record {|
+    err:Position pos; // position of name for now
+    string name;
+    Expr value;
+|};
+
+type MemberAccessExpr record {|
+    Expr container;
+    Expr index;
+    err:Position pos;
+|};
+
+// JBUG gets a bad, sad if this uses *MemberAccessExpr and overrides container
+type MemberAccessLExpr record {|
+    VarRefExpr container;
+    Expr index;
+    err:Position pos;
+|};
+
+type RangeExpr record {|
+    Expr lower;
+    Expr upper;
+|};
+
 type VarRefExpr record {|
     string varName;
 |};
 
+type TypeCastExpr record {|
+    InlineTypeDesc td;
+    Expr operand;
+    err:Position pos;
+    t:SemType semType;
+|};
+
 type SimpleConstExpr record {|
-    ()|boolean|int value;
+    ()|boolean|int|string value;
 |};
 
 // Types
+
+// This is the subtype of TypeDesc that we currently allow
+// within expressions and statements.
+type InlineTypeDesc InlineLeafTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc;
+
+type InlineLeafTypeDesc "boolean"|"int"|"string"|"any";
+
+type InlineArrayTypeDesc record {|
+    *ListTypeDesc;
+    TypeDesc[0] members = [];
+    "any" rest = "any";
+|};
+
+type InlineMapTypeDesc record {|
+    *MappingTypeDesc;
+    FieldDesc[0] fields = [];
+    "any" rest = "any";
+|};
 
 type TypeDef record {|
     readonly string name;
@@ -154,7 +260,7 @@ type TypeDescRef record {|
     err:Position pos;
 |};
 
-type SingletonTypeDesc  record {|
+type SingletonTypeDesc record {|
     (string|int|boolean) value;
 |};
 

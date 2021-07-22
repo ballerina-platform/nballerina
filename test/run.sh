@@ -1,2 +1,6 @@
 #!/bin/sh
-clang-11 -Wno-override-module $1 ../runtime/balrt.c && ./a.out
+set -e
+b=`basename $1 .ll`
+llvm-link-11 $1 ../runtime/balrt_inline.bc -o $b.bc
+clang-11 -o $b $b.bc ../runtime/balrt.a
+./$b

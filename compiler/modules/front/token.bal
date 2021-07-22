@@ -6,13 +6,14 @@ const IDENTIFIER = 0;
 const DECIMAL_NUMBER = 1;
 const STRING_LITERAL = 2;
 const BOOLEAN_LITERAL = 3;
+const HEX_INT_LITERAL = 4;
 
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
-type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string];
+type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string];
 
 // Some of these are not yet used by the grammar
-type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "|" | "!" | ":" | "," | "/" | "%" | "=";
-type MultiCharDelim "{|" | "|}" | "..." | "==" | "!=" | ">=" | "<=";
+type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=" | ".";
+type MultiCharDelim "{|" | "|}" | "..." | "..<" | "==" | "!=" | ">=" | "<=" | "===" | "!==" | "<<" | ">>" | ">>>";
 type Keyword
     "any"
     | "boolean"
@@ -21,13 +22,17 @@ type Keyword
     | "decimal"
     | "error"
     | "false"
+    | "final"
     | "float"
+    | "foreach"
     | "function"
     | "handle"
+    | "in"
     | "int"
     | "json"
     | "map"
     | "never"
+    | "null"
     | "readonly"
     | "record"
     | "return"
@@ -50,10 +55,11 @@ const WS = "\n\r\t ";
 const LOWER = "abcdefghijklmnopqrstuvwxyz";
 const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const DIGIT = "0123456789";
+const string HEX_DIGIT = DIGIT + "abcdefABCDEF";
 const string ALPHA = LOWER + UPPER;
 const string IDENT = ALPHA + DIGIT + "_";
 
-// JBUG cannot use string:Char #30735
+// JBUG cannot use string:Char #31668 #31660
 type Char string;
 
 type StringIterator object {
@@ -77,6 +83,10 @@ final readonly & map<MultiCharDelim> WITH_EQUALS = {
     ">": ">="
 };
 
+const MODE_NORMAL = 0;
+const MODE_TYPE_DESC = 1;
+type Mode MODE_NORMAL|MODE_TYPE_DESC;
+
 class Tokenizer {
     Token? cur = ();
     // The index in `str` of the first character of `cur`
@@ -91,7 +101,7 @@ class Tokenizer {
     private Char? ungot = ();
     // Number of characters returned by `iter`
     private int nextCount = 0;
-   
+    private Mode mode = MODE_NORMAL;
 
     function init(string str) {
         self.iter = str.iterator();
@@ -106,6 +116,10 @@ class Tokenizer {
 
     function current() returns Token? {
         return self.cur;
+    }
+
+    function setMode(Mode m) {
+        self.mode = m;
     }
 
     function currentPos() returns err:Position {
@@ -166,23 +180,26 @@ class Tokenizer {
                 return "|";
             }
             else if ch == "." {
-                if self.getc() != "." || self.getc() != "." {
-                    break;
+                ch = self.getc();
+                if ch == "." {
+                    ch = self.getc();
+                    if ch == "." {
+                        return "...";
+                    }
+                    if ch == "<" {
+                        return "..<";
+                    }
+                    else {
+                        break;
+                    }
                 }
-                return "...";
+                else if !(ch is ()) {
+                    self.ungetc(ch);
+                }
+                return ".";
             }
             else if ch is SingleCharDelim {
-                MultiCharDelim? multi = WITH_EQUALS[ch];
-                if !(multi is ()) {
-                    Char? peekCh = self.getc();
-                    if peekCh == "=" {
-                        return multi;
-                    }
-                    else if !(peekCh is ()) {
-                        self.ungetc(peekCh);
-                    }
-                }
-                return ch;
+                return self.nextSingleCharDelimPrefixed(ch);
             }
             else if ALPHA.includes(ch) {
                 string ident = ch;
@@ -204,6 +221,40 @@ class Tokenizer {
                 }
                 return [IDENTIFIER, ident];
             }
+            else if ch == "0" {
+                ch = self.getc();
+                if ch == "x" || ch == "X" {
+                    string hex = "";
+                    while true {
+                        ch = self.getc();
+                        if ch is () {
+                            break;
+                        }
+                        else if !HEX_DIGIT.includes(ch) {
+                            self.ungetc(ch);
+                            break;
+                        }
+                        else {
+                            hex += ch;
+                        }
+                    }
+                    if hex.length() > 0 {
+                        return [HEX_INT_LITERAL, hex];
+                    }
+                    else {
+                        return self.err("missing digits in hex literal");
+                    }
+                }
+                else if !(ch is ()) {
+                    if DIGIT.includes(ch) {
+                        return self.err("leading zeros not allowed in integer literals");
+                    }
+                    else {
+                        self.ungetc(ch);
+                    }
+                }
+                return [DECIMAL_NUMBER, "0"];
+            }
             else if DIGIT.includes(ch) {
                 string digits = ch;
                 while true {
@@ -222,41 +273,127 @@ class Tokenizer {
                 return [DECIMAL_NUMBER, digits];
             }
             else if ch == "\"" {
-                string content = "";
-                while true {
-                    ch = self.getc();
-                    if ch == "\"" {
-                        break;
-                    }
-                    if ch is () || self.isLineTerminator(ch) {
-                        return self.err("missing close quote");
-                    }
-                    else if ch == "\\" {
-                        ch = self.getc();
-                        if ch is () {
-                            return self.err("missing close quote");
-                        }
-                        else {
-                            ch = ESCAPES[ch];
-                            if ch is () {
-                                return self.err("bad character after backslash");
-                            }
-                            else {
-                                content += ch;
-                            }
-                        }
-                    }
-                    else {
-                        content += ch;
-                    }
-                }
-                return [STRING_LITERAL, content];
+                return self.nextStr();
             }
             else {
                break;
             }
         }
         return self.err("invalid token");
+    }
+
+    private function nextSingleCharDelimPrefixed(SingleCharDelim ch) returns Token?|err:Syntax {
+        MultiCharDelim? multi = WITH_EQUALS[ch];
+        if !(multi is ()) {
+            Char? peekCh = self.getc();
+            if peekCh == "=" {
+                if multi == "==" || multi == "!=" {
+                    peekCh = self.getc();
+                    if peekCh == "=" {
+                        return multi == "==" ? "===" : "!==";
+                    }
+                    else if !(peekCh is ()) {
+                        self.ungetc(peekCh);
+                    }
+                }
+                return multi;
+            }
+            else if !(peekCh is ()) {
+                self.ungetc(peekCh);
+            }
+        }
+        if ch == ">" && self.mode == MODE_NORMAL {
+            Char? peekCh = self.getc();
+            if peekCh == ">" {
+                peekCh = self.getc();
+                if peekCh == ">" {
+                    return ">>>";
+                } else if !(peekCh is ()) {
+                    self.ungetc(peekCh);
+                }
+                return ">>";
+            }
+            else if !(peekCh is ()) {
+                self.ungetc(peekCh);
+            }
+        }
+        else if ch == "<" {
+            Char? peekCh = self.getc();
+            if peekCh == "<" {
+                return "<<";
+            }
+            else if !(peekCh is ()) {
+                self.ungetc(peekCh);
+            }
+        }
+        return ch;
+    }
+
+    private function nextStr() returns Token?|err:Syntax {
+        string content = "";
+        while true {
+            Char? ch = self.getc();
+            if ch == "\"" {
+                break;
+            }
+            if ch is () || self.isLineTerminator(ch) {
+                return self.err("missing close quote");
+            }
+            else if ch == "\\" {
+                ch = self.getc();
+                if ch is () {
+                    return self.err("missing close quote");
+                }
+                else if ch is "u" {
+                    ch = self.getc();
+                    if ch == "{" {
+                        string hex = "";
+                        ch = self.getc();
+                        while ch != "}"  {
+                            if !(ch is ()) {
+                                hex += ch;
+                            }
+                            else {
+                                return self.err("missing closing brace in numeric escape");
+                            }
+                            ch = self.getc();
+                        }
+                        int|error chCode = int:fromHexString(hex);
+                        if chCode is error {
+                            return self.err("invalid hex string in numeric escape");
+                        }
+                        else {
+                            // JBUG #31778 shouldn't need this check, fromCodePointInt should return an error
+                            if (0xD800 <= chCode && chCode <= 0xDFFF) {
+                                return self.err("invalid codepoint in numeric escape");
+                            }
+                            string:Char|error unescapedCh = string:fromCodePointInt(chCode);
+                            if unescapedCh is error {
+                                return self.err("invalid codepoint in numeric escape");
+                            } else {
+                                content += <string>unescapedCh;
+                            }
+                        }
+                    }
+                    else {
+                        return self.err("missing opening brace in numeric escape");
+                    }
+                }
+                else {
+                    ch = ESCAPES[ch];
+                    if ch is () {
+                        return self.err("bad character after backslash");
+                    }
+                    else {
+                        content += ch;
+                    }
+                }
+            }
+            else {
+                content += ch;
+            }
+        }
+        return [STRING_LITERAL, content];
     }
     
     private function isLineTerminator(Char ch) returns boolean {
@@ -343,11 +480,10 @@ class Tokenizer {
             err:Template msg;
             Token? t = self.cur;
             if t is string {
-                // JBUG cast #30734
-                msg = `expected ${<string>tok}; got ${<string>t}`;
+                msg = `expected ${tok}; got ${t}`;
             }
             else {
-                msg = `expected ${<string>tok}`;
+                msg = `expected ${tok}`;
             }
             return self.err(msg);
         }

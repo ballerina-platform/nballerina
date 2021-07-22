@@ -1,13 +1,15 @@
 import ballerina/io;
 
 public function main() {
-    if 17 == 17 {
+    boolean b = 17 == 17;
+    if b {
         io:println(17); // @output 17
     }
     else {
         io:println(0);
     }
-    if 21 != 21 {
+    b = 21 != 21;
+    if b {
         io:println(0); 
     }
     else {

@@ -1,6 +1,15 @@
 import ballerina/test;
 
 @test:Config{}
+function testSubtypeSimple() {
+    test:assertTrue(isSubtypeSimple(NIL, ANY));
+    test:assertTrue(isSubtypeSimple(INT, TOP));
+    test:assertTrue(isSubtypeSimple(ANY, TOP));
+    test:assertFalse(isSubtypeSimple(INT, BOOLEAN));
+    test:assertFalse(isSubtypeSimple(ERROR, ANY));
+}
+
+@test:Config{}
 function testBitTwiddling() {
     test:assertEquals(numberOfTrailingZeros(0x10), 4);
     test:assertEquals(numberOfTrailingZeros(0x100), 8);
@@ -10,7 +19,6 @@ function testBitTwiddling() {
     test:assertEquals(bitCount(0), 0);
     test:assertEquals(bitCount(1), 1);
     test:assertEquals(bitCount(0x10010010), 3);
-    test:assertEquals(bitCount(-1), 64);
 }
 
 @test:Config{}
@@ -208,4 +216,32 @@ function roTest() {
     TypeCheckContext tc = typeCheckContext(env);
     boolean b = isEmpty(tc, t);
     test:assertTrue(b);
+}
+
+@test:Config{}
+function simpleArrayMemberTypeTest() {
+    Env env = new;
+    testArrayMemberTypeOk(env, ANY);
+    testArrayMemberTypeOk(env, STRING);
+    testArrayMemberTypeOk(env, INT);
+    testArrayMemberTypeOk(env, TOP);
+    testArrayMemberTypeOk(env, BOOLEAN);
+    testArrayMemberTypeFail(env, createJson(env));
+    testArrayMemberTypeFail(env, intWidthUnsigned(8));
+    test:assertEquals(simpleArrayMemberType(INT, []), ());
+    test:assertEquals(simpleArrayMemberType(uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW)), []), TOP);
+}
+
+function testArrayMemberTypeOk(Env env, UniformTypeBitSet memberType) {
+    ListDefinition def = new;
+    SemType t = def.define(env, [], memberType);
+    UniformTypeBitSet? bits = simpleArrayMemberType(t, env.listDefs);
+    test:assertTrue(bits == memberType);
+}
+
+function testArrayMemberTypeFail(Env env, SemType memberType) {
+    ListDefinition def = new;
+    SemType t = def.define(env, [], memberType);
+    UniformTypeBitSet? bits = simpleArrayMemberType(t, env.listDefs);
+    test:assertTrue(bits == ());
 }

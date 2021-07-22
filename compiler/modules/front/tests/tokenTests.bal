@@ -11,6 +11,7 @@ function test1() {
     test:assertEquals(tokenization(string`"abc"`),  [[STRING_LITERAL, "abc"]]);
     test:assertEquals(tokenization(string`"abc\r\n\"" | "" | "123"`),
                       [[STRING_LITERAL, "abc\r\n\""], "|", [STRING_LITERAL, ""], "|", [STRING_LITERAL, "123"]]);
+    test:assertEquals(tokenization("ab.xy . f()"), [[IDENTIFIER, "ab"], ".", [IDENTIFIER, "xy"], ".",  [IDENTIFIER, "f"], "(", ")"]);
 }
 
 function tokenization(string str) returns Token[]|error {

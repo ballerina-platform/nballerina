@@ -12,7 +12,8 @@ function printTrue() {
 }
 
 function printFalse() {
-    if false {
+    boolean b = false;
+    if b {
         io:println(1);
     } else {
         io:println(0);

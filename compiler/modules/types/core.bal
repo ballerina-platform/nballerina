@@ -5,47 +5,16 @@ import nballerina.types.bdd;
 // Uniform types are like basic types except that each selectively immutable
 // basic type is split into two uniform types, one immutable and on mutable.
 
-// Inherently immutable
-public const UT_NIL = 0;
-public const UT_BOOLEAN = 1;
-public const UT_INT = 2;
-public const UT_FLOAT = 3;
-public const UT_DECIMAL = 4;
-public const UT_STRING = 5;
-public const UT_ERROR = 6;
-public const UT_FUNCTION = 7;
-public const UT_TYPEDESC = 8;
-public const UT_HANDLE = 9;
+// JBUG #31751 bad, sad if UT_OBJECT_RW + 1
+public const UT_COUNT = 0x17;
 
-// Selectively immutable; immutable half
-public const UT_XML_RO = 10;
-public const UT_LIST_RO = 11;
-public const UT_MAPPING_RO = 12;
-public const UT_TABLE_RO = 13;
-public const UT_OBJECT_RO = 14;
+const int UT_MASK = (1 << UT_COUNT) - 1;
 
-// Selectively immutable; mutable half
-public const UT_XML_RW = 15;
-public const UT_LIST_RW = 16;
-public const UT_MAPPING_RW = 17;
-public const UT_TABLE_RW = 18;
-public const UT_OBJECT_RW = 19;
+const int UT_COUNT_RO = 0x10;
+const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
 
-// Inherently mutable
-public const UT_STREAM = 20;
-public const UT_FUTURE = 21;
+const int UT_RW_MASK = UT_MASK & ~UT_READONLY;
 
-public const UT_COUNT = 22;
-
-public const int UT_MASK = (1 << UT_COUNT) - 1;
-
-public const int UT_COUNT_RO = UT_OBJECT_RO + 1;
-public const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
-
-// It would be easier to use ~ here, but slalpha5 doesn't support
-public const int UT_RW_MASK = ((1 << (UT_COUNT - UT_COUNT_RO)) - 1) << UT_COUNT_RO;
-
-public const int UT_SOME = 1 | (1 << UT_COUNT);
 
 public type UniformTypeCode
     UT_NIL|UT_BOOLEAN|UT_INT|UT_FLOAT|UT_DECIMAL
@@ -61,6 +30,12 @@ public class Env {
     public function init() {
         self.mappingDefs = [ MAPPING_SUBTYPE_RO ];
         self.listDefs = [ LIST_SUBTYPE_RO ];
+    }
+    public function simpleArrayMemberType(SemType t) returns UniformTypeBitSet? {
+        return simpleArrayMemberType(t, self.listDefs);
+    }
+    public function simpleMapMemberType(SemType t) returns UniformTypeBitSet? {
+        return simpleMapMemberType(t, self.mappingDefs);
     }
 }
 
@@ -169,6 +144,7 @@ public readonly class ComplexSemType {
 // There's usually a hardware instruction for this
 // typically called PopCpount
 // This is __builtin_popcount in GCC and clang
+// This won't work if bits is < 0.
 function bitCount(int bits) returns int {
     int n = 0;
     int v = bits;
@@ -229,6 +205,10 @@ public final UniformTypeBitSet FLOAT = uniformType(UT_FLOAT);
 public final UniformTypeBitSet DECIMAL = uniformType(UT_DECIMAL);
 public final UniformTypeBitSet STRING = uniformType(UT_STRING);
 public final UniformTypeBitSet ERROR = uniformType(UT_ERROR);
+public final UniformTypeBitSet LIST_RW = uniformType(UT_LIST_RW);
+public final UniformTypeBitSet LIST = uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW));
+public final UniformTypeBitSet MAPPING_RW = uniformType(UT_MAPPING_RW);
+public final UniformTypeBitSet MAPPING = uniformTypeUnion((1 << UT_MAPPING_RO) | (1 << UT_MAPPING_RW));
 
 // matches all functions
 public final UniformTypeBitSet FUNCTION = uniformType(UT_FUNCTION);
@@ -243,6 +223,7 @@ public final UniformTypeBitSet FUTURE = uniformType(UT_FUTURE);
 public final UniformTypeBitSet TOP = uniformTypeUnion(UT_MASK);
 public final UniformTypeBitSet ANY = uniformTypeUnion(UT_MASK & ~(1 << UT_ERROR));
 public final UniformTypeBitSet READONLY = uniformTypeUnion(UT_READONLY);
+public final UniformTypeBitSet SIMPLE_OR_STRING = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
 public final SemType BYTE = intWidthUnsigned(8);
 
 // Need this type to workaround slalpha4 bug.
@@ -571,6 +552,127 @@ public function isSubtype(TypeCheckContext tc, SemType t1, SemType t2) returns b
     return isEmpty(tc, diff(t1, t2));
 }
 
+public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolean {
+    int bits;
+    if t1 is UniformTypeBitSet {
+        bits = t1;
+    }
+    else {
+        bits = t1.all | t1.some;
+    }
+    return (bits & ~<int>t2) == 0;
+}
+
+// If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),
+// then return the smallest such subtype. Otherwise, return t.
+public function widenUnsigned(SemType t) returns SemType {
+    if t is UniformTypeBitSet {
+        return t;
+    }
+    else {
+        if !isSubtypeSimple(t, INT) {
+            return t;
+        }
+        SubtypeData data = intSubtypeWidenUnsigned(subtypeData(t, UT_INT));
+        if data is boolean {
+            return INT;
+        }
+        else {
+            return uniformSubtype(UT_INT, data);
+        }
+    }
+}
+
+// This is a temporary API that identifies when a SemType corresponds to a type T[]
+// where T is a union of complete basic types.
+function simpleArrayMemberType(SemType t, ListAtomicType[] listDefs) returns UniformTypeBitSet? {
+    if t is UniformTypeBitSet {
+        return t == LIST ? TOP : ();
+    }
+    else {
+        if !isSubtypeSimple(t, LIST) {
+            return ();
+        }
+        bdd:Bdd[] bdds = [<bdd:Bdd>t.getSubtypeData(UT_LIST_RO), <bdd:Bdd>t.getSubtypeData(UT_LIST_RW)];
+        UniformTypeBitSet[] memberTypes = [];
+        foreach var bdd in bdds {
+            if bdd is boolean {
+                if bdd {
+                    memberTypes.push(TOP);
+                }
+                else {
+                    return ();
+                }
+            }
+            else {
+                if bdd.left != true || bdd.right != false || bdd.right != false {
+                    return ();
+                }
+                ListAtomicType atomic = listDefs[bdd.atom];
+                if atomic.members.length() > 0 {
+                    return ();
+                }
+                SemType memberType = atomic.rest;
+                if memberType is UniformTypeBitSet {
+                    memberTypes.push(memberType);
+                }
+                else {
+                    return ();
+                }
+            }
+        }
+        if memberTypes[0] != (memberTypes[1] & UT_READONLY) {
+            return ();
+        }
+        return memberTypes[1];
+    }
+}
+
+// This is a temporary API that identifies when a SemType corresponds to a type T[]
+// where T is a union of complete basic types.
+function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns UniformTypeBitSet? {
+    if t is UniformTypeBitSet {
+        return t == MAPPING ? TOP : ();
+    }
+    else {
+        if !isSubtypeSimple(t, MAPPING) {
+            return ();
+        }
+        bdd:Bdd[] bdds = [<bdd:Bdd>t.getSubtypeData(UT_MAPPING_RO), <bdd:Bdd>t.getSubtypeData(UT_MAPPING_RW)];
+        UniformTypeBitSet[] memberTypes = [];
+        foreach var bdd in bdds {
+            if bdd is boolean {
+                if bdd {
+                    memberTypes.push(TOP);
+                }
+                else {
+                    return ();
+                }
+            }
+            else {
+                if bdd.left != true || bdd.right != false || bdd.right != false {
+                    return ();
+                }
+                MappingAtomicType atomic = mappingDefs[bdd.atom];
+                if atomic.names.length() > 0 {
+                    return ();
+                }
+                SemType memberType = atomic.rest;
+                if memberType is UniformTypeBitSet {
+                    memberTypes.push(memberType);
+                }
+                else {
+                    return ();
+                }
+            }
+        }
+        if memberTypes[0] != (memberTypes[1] & UT_READONLY) {
+            return ();
+        }
+        return memberTypes[1];
+    }
+}
+
 public function isReadOnly(SemType t) returns boolean {
     UniformTypeBitSet bits;
     if t is UniformTypeBitSet {
@@ -582,12 +684,15 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
-public function containsConst(SemType t, int|boolean|() v) returns boolean {
+public function containsConst(SemType t, string|int|boolean|() v) returns boolean {
     if v is () {
         return containsNil(t);
     }
     else if v is int {
         return containsConstInt(t, v);
+    }
+    else if v is string {
+        return containsConstString(t, v);
     }
     else {
         return containsConstBoolean(t, v);
@@ -600,6 +705,16 @@ public function containsNil(SemType t) returns boolean {
     }
     else {
         return <boolean>t.getSubtypeData(UT_NIL);
+    }
+}
+
+
+public function containsConstString(SemType t, string s) returns boolean {
+    if t is UniformTypeBitSet {
+        return (t & (1 << UT_STRING)) != 0;
+    }
+    else {
+        return stringSubtypeContains(t.getSubtypeData(UT_STRING), s);
     }
 }
 
@@ -632,8 +747,7 @@ public function typeCheckContext(Env env) returns TypeCheckContext {
 public function createJson(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType simple = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
-    SemType j = union(simple, union(listDef.getSemType(env), mapDef.getSemType(env)));
+    SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, [], j);
     _ = mapDef.define(env, [], j);
     return j;
@@ -645,6 +759,11 @@ function init() {
     ops = [
         {}, // nil
         booleanOps, // boolean
+        listRoOps, // RO list
+        mappingRoOps, // RO mapping
+        {}, // RO table
+        {}, // RO xml
+        {}, // RO object
         intOps, // int
         {}, // float
         {}, // decimal
@@ -653,17 +772,13 @@ function init() {
         functionOps,  // function
         {}, // typedesc
         {}, // handle
-        {}, // RO xml
-        listRoOps, // RO list
-        mappingRoOps, // RO mapping
-        {}, // RO table
-        {}, // RO object
-        {}, // RW xml
+        {}, // unused
+        {}, // RW future
+        {}, // RW stream
         listRwOps, // RW list
         mappingRwOps, // RW mapping
         {}, // RW table
-        {}, // RW object
-        {}, // RW stream
-        {} // RW future
+        {}, // RW xml
+        {} // RW object
    ];
 }

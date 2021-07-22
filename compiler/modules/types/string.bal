@@ -10,6 +10,14 @@ public function stringConst(string value) returns SemType {
     return uniformSubtype(UT_STRING, st);
 }
 
+function stringSubtypeContains(SubtypeData d, string s) returns boolean {
+    if d is boolean {
+        return d;
+    }
+    StringSubtype v = <StringSubtype>d;
+    return v.values.indexOf(s) != () ? v.allowed : !v.allowed;
+}
+
 function stringSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
     StringSubtype t1 = <StringSubtype>d1;
     StringSubtype t2 = <StringSubtype>d2;

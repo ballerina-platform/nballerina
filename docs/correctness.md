@@ -1,6 +1,5 @@
 # Correctness
 
-
 We need to be clear about what correctness means with respect to a
 language subset, where each subset is defined by:
 
@@ -35,8 +34,12 @@ Correctness means that for every input:
 * otherwise:
    * if the program does not conform to the grammar in the grammar section,
      the compiler must reject it with a syntax error
+   * otherwise, if the program does not satisfy the semantics restrictions of the subset
+     the compiler must reject it with an unimplemented error
    * otherwise, if the progam is not correct according to the Ballerina spec,
      the compiler must reject it with a semantic error
    * otherwise, the compiler must reject it with an unimplemented error
 
 The compiler must never panic for any input.
+
+As a pragmatic exception to the above criteria, we permit temporary overimplementation: we allow the compiler to accept a program outside the defined subset, provided the program is correct according to the Ballerina spec and the compiler compiles it into something that executes with the runtime behaviour required by the specification.

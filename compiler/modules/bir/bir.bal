@@ -39,6 +39,8 @@ public type FunctionDefn readonly & record {|
     InternalSymbol symbol;
     # The signature of the function
     FunctionSignature signature;
+    # The position of the definition
+    err:Position position;
 |};
 
 public type InternalSymbol readonly & record {|
@@ -138,24 +140,30 @@ public function createRegister(FunctionCode code, SemType semType, string? varNa
 }
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
+public type BitwiseBinaryOp "|" | "^" | "&" | BitwiseShiftOp;
+public type BitwiseShiftOp "<<" | ">>" | ">>>";
 public type OrderOp "<=" | ">=" | "<" | ">";
+public type EqualityOp "==" | "!=" | "===" | "!==";
 
 public enum InsnName {
     INSN_INT_ARITHMETIC_BINARY,
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY,
-    INSN_INT_NEGATE,
-    INSN_INT_NO_PANIC_NEGATE,
-    INSN_INT_COMPARE,
-    INSN_BOOLEAN_COMPARE,
-    INSN_EQUAL,
-    INSN_IDENTICAL,
+    INSN_INT_BITWISE_BINARY,
+    INSN_COMPARE,
+    INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
+    INSN_LIST_CONSTRUCT_RW,
+    INSN_LIST_GET,
+    INSN_LIST_SET,
+    INSN_MAPPING_CONSTRUCT_RW,
+    INSN_MAPPING_GET,
+    INSN_MAPPING_SET,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
     INSN_INVOKE,
     INSN_ASSIGN,
-    INSN_NARROW,
+    INSN_COND_NARROW,
     INSN_TYPE_CAST,
     INSN_TYPE_TEST,
     INSN_BRANCH,
@@ -174,38 +182,50 @@ public type InsnBase record {
 };
 
 public type Insn 
-    IntArithmeticBinaryInsn|IntNegateInsn
-    |IntCompareInsn|BooleanCompareInsn|EqualInsn|IdenticalInsn|BooleanNotInsn
+    IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
+    |BooleanNotInsn|CompareInsn|EqualityInsn
+    |ListConstructInsn|ListGetInsn|ListSetInsn
+    |MappingConstructInsn|MappingGetInsn|MappingSetInsn
     |RetInsn|AbnormalRetInsn|CallInsn
-    |AssignInsn|NarrowInsn|TypeCastInsn|TypeTestInsn
+    |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
 
 public type Operand ConstOperand|Register;
-public type ConstOperand ()|int|boolean;
+public type SimpleConstOperand ()|boolean|int;
+public type ConstOperand SimpleConstOperand|string;
+public type StringOperand string|Register;
 public type IntOperand int|Register;
 public type BooleanOperand boolean|Register;
 public type FunctionOperand FunctionRef|Register;
 
 # Perform a arithmetic operand on ints with two operands.
-# This has a PPI and non-PPI variant.
-# INSN_INT_ARITHMETIC_BINARY is a PPI.
-# INSN_INT_NO_PANIC_ARITHMETIC_BINARY is not a PPI;
-# it is an optimization to be used only when the compiler can prove that a panic is impossible;
-# the NO_PANIC version of % must not be used if first operand is int:MIN_VALUE and second operand is -1.
+# This is a PPI.
 public type IntArithmeticBinaryInsn readonly & record {|
     *InsnBase;
-    (INSN_INT_ARITHMETIC_BINARY|INSN_INT_NO_PANIC_ARITHMETIC_BINARY) name = INSN_INT_ARITHMETIC_BINARY;
+    INSN_INT_ARITHMETIC_BINARY name = INSN_INT_ARITHMETIC_BINARY;
+    ArithmeticBinaryOp op;
+    Register result;
+    IntOperand[2] operands;
+    err:Position position;
+|};
+
+# This is a non-PPI variant of IntArithmeticBinaryInsn.
+# It is an optimization to be used only when the compiler can prove that a panic is impossible;
+# the NO_PANIC version of % must not be used if first operand is int:MIN_VALUE and second operand is -1.
+public type IntNoPanicArithmeticBinaryInsn readonly & record {|
+    *InsnBase;
+    INSN_INT_NO_PANIC_ARITHMETIC_BINARY name = INSN_INT_NO_PANIC_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
     Register result;
     IntOperand[2] operands;
 |};
 
-# This has PPI and non-PPI variants.
-public type IntNegateInsn readonly & record {|
+public type IntBitwiseBinaryInsn readonly & record {|
     *InsnBase;
-    (INSN_INT_NEGATE|INSN_INT_NO_PANIC_NEGATE) name = INSN_INT_NEGATE;
+    INSN_INT_BITWISE_BINARY name = INSN_INT_BITWISE_BINARY;
+    BitwiseBinaryOp op;
     Register result;
-    Register operand;
+    IntOperand[2] operands;
 |};
 
 # Perform logical not operation on a boolean.
@@ -216,45 +236,84 @@ public type BooleanNotInsn readonly & record {|
     Register operand;
 |};
 
+public type OrderType "int"|"boolean"|"string";
 # This does ordered comparision
 # Equality and inequality are done by equal
-public type IntCompareInsn readonly & record {|
+public type CompareInsn readonly & record {|
     *InsnBase;
-    INSN_INT_COMPARE name = INSN_INT_COMPARE;
+    INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
-    Register result;
-    IntOperand[2] operands;
-|};
-
-# This does ordered comparision
-# Equality and inequality are done by equal
-public type BooleanCompareInsn readonly & record {|
-    *InsnBase;
-    INSN_BOOLEAN_COMPARE name = INSN_BOOLEAN_COMPARE;
-    OrderOp op;
-    Register result;
-    BooleanOperand[2] operands;
-|};
-
-# This does == and !=
-# If `negate` is true, the operation is !=
-# Otherwise it is ==.
-# XXX cases that allocate memory can potentially panic
-public type EqualInsn readonly & record {|
-    *InsnBase;
-    INSN_EQUAL name = INSN_EQUAL;
-    boolean negate;
+    OrderType orderType;
     Register result;
     Operand[2] operands;
 |};
 
-# This does == and !=
-# If `negate` is true, the operation is !=
-# Otherwise it is ==.
-public type IdenticalInsn readonly & record {|
+
+# Constructs a new mutable list value.
+public type ListConstructInsn readonly & record {|
+    INSN_LIST_CONSTRUCT_RW name = INSN_LIST_CONSTRUCT_RW;
+    // The type of the result gives the inherent type of the constructed list
+    Register result;
+    Operand[] operands;
+|};
+
+# Gets a member of a list at a specified index.
+# This is a PPI (since the index may be out of bounds).
+public type ListGetInsn readonly & record {|
+    INSN_LIST_GET name = INSN_LIST_GET;
+    Register result;
+    Register list;
+    IntOperand operand;
+    err:Position position;
+|};
+
+# Sets a member of a list at a specified index.
+# This is a PPI (since the index may be out of bounds).
+public type ListSetInsn readonly & record {|
+    INSN_LIST_SET name = INSN_LIST_SET;
+    Register list;
+    IntOperand index;
+    // operand is the value to store in the list
+    Operand operand;
+    err:Position position;
+|};
+
+# Constructs a new mutable list value.
+public type MappingConstructInsn readonly & record {|
+    INSN_MAPPING_CONSTRUCT_RW name = INSN_MAPPING_CONSTRUCT_RW;
+    // The type of the result gives the inherent type of the constructed list
+    Register result;
+    string[] fieldNames;
+    Operand[] operands;
+|};
+
+# Gets a member of a mapping with a specified key.
+# This returns nil if there is no such member.
+# So this is not a PPI
+public type MappingGetInsn readonly & record {|
+    INSN_MAPPING_GET name = INSN_MAPPING_GET;
+    Register result;
+    [Register, StringOperand] operands;
+|};
+
+# Sets a member of a mapping with a specified key.
+# This is a PPI.
+public type MappingSetInsn readonly & record {|
+    INSN_MAPPING_SET name = INSN_MAPPING_SET;
+    [Register, StringOperand, Operand] operands;
+    err:Position position;
+|};
+
+# This does equality expressions.
+# This includes `==`, `!=`, `===` and `!==`
+// XXX Complex cases (comparing structures deeply) can use memory in
+// a way that cannot be bounded at compile time so may result in memory exhaustion
+// Should this mean this is a PPI? Should we distinguish these as different
+// kind of instruction.
+public type EqualityInsn readonly & record {|
     *InsnBase;
-    INSN_IDENTICAL name = INSN_IDENTICAL;
-    boolean negate;
+    INSN_EQUALITY name = INSN_EQUALITY;
+    EqualityOp op;
     Register result;
     Operand[2] operands;
 |};
@@ -291,14 +350,17 @@ public type AssignInsn readonly & record {|
 # Don't need to allow for operand to be a const
 # Since we can do that at compile-time.
 # This is a PPI.
-# Typing rule:
-# typeof(operand) & semType <: typeof(result)
+# Typing rules:
+# typeof(result) <: semType
+# typeof(result) <: typeof(operand)
+# semType not empty
 public type TypeCastInsn readonly & record {|
     *InsnBase;
     INSN_TYPE_CAST name = INSN_TYPE_CAST;
     Register result;
     Register operand;
     SemType semType;
+    err:Position position;
 |};
 
 
@@ -321,17 +383,37 @@ public type TypeTestInsn readonly & record {|
 |};
 
 
-# A type narrowing that can be verified to succeed because of an TypeTestInsn.
+# A type narrowing that is justified by an earlier condition.
+# The condition must be a TypeTestInsn or an EqualInsn.
 # Usually this would require a TypeCastInsn, but the compiler emits this
 # to support Ballerina's type narrowing feature, when it knows the cast
-# will succeed.
-# This must be verifiable purely from the BIR.
-# XXX Is there a better way to do this? e.g. combine test and cast somehow
-public type NarrowInsn readonly & record {|
+# would succeed.
+# The `testBlock` and `testInsnIndex` together refer to the instruction
+# that justifies the narrowing.
+# The justification divides into two parts.
+# First, the narrowing to the type of the result must be justified
+# if the referenced instruction evaluates to the specified `condResult`.
+# For example, if condResult is true, and the referenced insn is a TypeTestInsn,
+# then the operand of this insn must be the same as the operand of
+# the TypeTestInsn and the type of the result must be the intersection of the type of the operand
+# and the semType in the TypeTestInsn.
+# Second, the flow through the basic blocks must be such that this block is only
+# reached when the condition is true. In particular, the referenced block must end
+# with a CondBranchInsn whose operand comes from the result of the condition
+# (possibly via a BooleanNotInsn), and the block containing this insn must be
+# reachable only through the applicable branch of that CondBranchInsn.
+public type CondNarrowInsn readonly & record {|
     *InsnBase;
-    INSN_NARROW name = INSN_NARROW;
+    INSN_COND_NARROW name = INSN_COND_NARROW;
     Register result;
     Register operand;
+    // label of the block that contains the test that justifies the narrowing
+    Label testBlock;
+    // Index in testBlock of the insn that justifies the narrowing
+    int testInsnIndex;
+    // The type narrowing is justified by the result of the condition
+    // having this value.
+    boolean condResult;
 |};
 
 # Return normally from a function.
@@ -417,7 +499,9 @@ final readonly & map<true> PPI_INSNS = {
     [INSN_PANIC]: true,
     [INSN_INT_ARITHMETIC_BINARY]: true,
     [INSN_TYPE_CAST]: true,
-    [INSN_INT_NEGATE]: true
+    [INSN_LIST_GET]: true,
+    [INSN_LIST_SET]: true,
+    [INSN_MAPPING_SET]: true
 };
 
 public function isInsnPotentiallyPanicking(Insn insn) returns boolean {

@@ -1,7 +1,4 @@
-# Semantic Subtyping for Ballerina
-
-This is an implementation of semantic subtyping for the type system
-of the [Ballerina](https://ballerina.io) programming language, implemented in Ballerina.
+# Semantic subtyping for Ballerina
 
 The algorithm here is based on the work of Giuseppe Castagna and Alain Frisch, implemented in
 [CDuce](http://cduce.org). I have found the most accessible paper to be:
@@ -33,22 +30,21 @@ The implementation currently handles a subset of Ballerina type system:
 * any, never (can be derived from the above)
 * complement and difference (Ballerina has no syntax for this, but deciding whether S is a subtype of T is equivalent to deciding whether the difference of S and T is empty)
 
-The default module implements the subtyping algorithm. There are two other modules:
+The `types` module implements the subtyping algorithm. There are two other modules:
 
-* bdd - this implements binary decision diagrams, which is a key data-structure used by the default module
-* json - this parses a JSON representation of types, and uses the default module to build an internal representation
+* `types.bdd` - this implements binary decision diagrams, which is a key data-structure used by the default module
+* `types.json` - this parses a JSON representation of types, and uses the `types` module to build an internal representation
 
-The JSON  representation of types is Lisp-like, and documented in the file [`schema.bal`](modules/json/schema.bal).
+The JSON  representation of types is Lisp-like, and documented in the file [`schema.bal`](../types.json/schema.bal).
 
-The `driver` package provides a `--testJsonTypes` command-line option that checks the type relationships asserted in[`tests.json`](../driver/tests.json). This is a JSON file that contains an
-array of tests; each test is a triple [R, T1 T2], where R is a string
-specifying the relationship that holds between T1 and T2, as follows:
+There is a [list](TODO.md) of everything still to be done to handle the whole type system. There
+are also implementation [notes](NOTES.md).
+
+The command-line interface provides a `--testJsonTypes` command-line option that checks the type relationships asserted in a JSON file. The format of
+the json file is an array of tests, where each test is a triple [R, T1 T2], where R is a string specifying the relationship that holds between T1 and T2, as follows:
 
 - equivalent: T1 is a subtype of T2 and T2 is a subtype of T1
 - proper_subtype: T1 is a subtype of T2 and T2 is not a subtype of T1
 - incomparable: T1 is not a subtype of T2 and T2 is not a subtype of T1
 
-The program can be built with the [Swan Lake Alpha5](https://ballerina.io/downloads/) version of Ballerina.
-
-There is a [list](TODO.md) of everything still to be done to handle the whole type system. There
-are also implementation [notes](NOTES.md).
+An example input file is in [tests.json](../../tests.json).

@@ -1,44 +1,63 @@
-declare void @_Bio__println (i64)
-declare void @_bal_panic (i64)
-define void @_B_main () {
-  %_0 = alloca i64, align 8
-  %_1 = alloca i1, align 8
-  %_2 = call i64 @_B_div (i64 8, i64 2)
-  store i64 %_2, i64* %_0, align 8
-  %_3 = load i64, i64* %_0, align 8
-  call void @_Bio__println (i64 %_3)
-  store i1 0, i1* %_1, align 8
+@_bal_stack_guard = external global i8*
+declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+define void @_B_main() {
+  %1 = alloca i64
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i8
+  %4 = load i8*, i8** @_bal_stack_guard
+  %5 = icmp ult i8* %3, %4
+  br i1 %5, label %10, label %6
+6:
+  %7 = call i64 @_B_div(i64 8, i64 2)
+  store i64 %7, i64* %1
+  %8 = load i64, i64* %1
+  %9 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %8)
+  call void @_Bio__println(i8 addrspace(1)* %9)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
   ret void
-}
-define internal i64 @_B_div (i64 %_0, i64 %_1) {
-  %x = alloca i64, align 8
-  %y = alloca i64, align 8
-  %_2 = alloca i64, align 8
-  %_3 = alloca i64, align 8
-  store i64 %_0, i64* %x, align 8
-  store i64 %_1, i64* %y, align 8
-  %_4 = load i64, i64* %x, align 8
-  %_5 = load i64, i64* %y, align 8
-  %_6 = icmp eq i64 %_5, 0
-  br i1 %_6, label %L2, label %L3
-L1:
-  %_12 = load i64, i64* %_3, align 8
-  call void @_bal_panic (i64 %_12)
+10:
+  call void @_bal_panic(i64 772)
   unreachable
-L2:
-  store i64 2, i64* %_3, align 8
-  br label %L1
-L3:
-  %_7 = icmp eq i64 %_4, -9223372036854775808
-  %_8 = icmp eq i64 %_5, -1
-  %_9 = and i1 %_7, %_8
-  br i1 %_9, label %L5, label %L4
-L4:
-  %_10 = sdiv i64 %_4, %_5
-  store i64 %_10, i64* %_2, align 8
-  %_11 = load i64, i64* %_2, align 8
-  ret i64 %_11
-L5:
-  store i64 1, i64* %_3, align 8
-  br label %L1
+}
+define internal i64 @_B_div(i64 %0, i64 %1) {
+  %x = alloca i64
+  %y = alloca i64
+  %3 = alloca i64
+  %4 = alloca i64
+  %5 = alloca i8
+  %6 = load i8*, i8** @_bal_stack_guard
+  %7 = icmp ult i8* %5, %6
+  br i1 %7, label %14, label %8
+8:
+  store i64 %0, i64* %x
+  store i64 %1, i64* %y
+  %9 = load i64, i64* %x
+  %10 = load i64, i64* %y
+  %11 = icmp eq i64 %10, 0
+  br i1 %11, label %15, label %16
+12:
+  %13 = load i64, i64* %4
+  call void @_bal_panic(i64 %13)
+  unreachable
+14:
+  call void @_bal_panic(i64 1796)
+  unreachable
+15:
+  store i64 2050, i64* %4
+  br label %12
+16:
+  %17 = icmp eq i64 %9, -9223372036854775808
+  %18 = icmp eq i64 %10, -1
+  %19 = and i1 %17, %18
+  br i1 %19, label %23, label %20
+20:
+  %21 = sdiv i64 %9, %10
+  store i64 %21, i64* %3
+  %22 = load i64, i64* %3
+  ret i64 %22
+23:
+  store i64 2049, i64* %4
+  br label %12
 }

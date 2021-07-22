@@ -1,217 +1,444 @@
-declare void @_Bio__println (i64)
-define void @_B_main () {
-  %_0 = alloca i1, align 8
-  %_1 = alloca i1, align 8
-  %_2 = alloca i1, align 8
-  %_3 = alloca i1, align 8
-  %_4 = alloca i1, align 8
-  %_5 = alloca i1, align 8
-  %_6 = alloca i1, align 8
-  %_7 = alloca i64, align 8
-  %_8 = alloca i1, align 8
-  %_9 = alloca i1, align 8
-  %_10 = alloca i64, align 8
-  %_11 = alloca i1, align 8
-  %_12 = alloca i1, align 8
-  %_13 = alloca i1, align 8
-  %_14 = alloca i1, align 8
-  %_15 = alloca i1, align 8
-  %_16 = alloca i1, align 8
-  %_17 = alloca i1, align 8
-  %_18 = alloca i1, align 8
-  %_19 = alloca i64, align 8
-  %_20 = alloca i1, align 8
-  %_21 = alloca i1, align 8
-  %_22 = alloca i64, align 8
-  %_23 = alloca i1, align 8
-  %_24 = alloca i1, align 8
-  %_25 = alloca i1, align 8
-  %_26 = alloca i1, align 8
-  %_27 = alloca i1, align 8
-  %_28 = alloca i1, align 8
-  %_29 = alloca i1, align 8
-  %_30 = alloca i1, align 8
-  %_31 = alloca i64, align 8
-  %_32 = alloca i1, align 8
-  %_33 = alloca i1, align 8
-  %_34 = alloca i64, align 8
-  %_35 = alloca i1, align 8
-  %_36 = alloca i1, align 8
-  %_37 = alloca i64, align 8
-  %_38 = alloca i1, align 8
-  %_39 = alloca i1, align 8
-  %_40 = alloca i64, align 8
-  %_41 = alloca i1, align 8
-  %_42 = alloca i1, align 8
-  %_43 = alloca i64, align 8
-  %_44 = alloca i1, align 8
-  %_45 = alloca i1, align 8
-  %_46 = alloca i64, align 8
-  %_47 = alloca i64, align 8
-  %_48 = alloca i1, align 8
-  %_49 = alloca i1, align 8
-  %_50 = alloca i64, align 8
-  %_51 = alloca i64, align 8
-  %_52 = alloca i1, align 8
-  %_53 = alloca i1, align 8
-  %_54 = alloca i64, align 8
-  %_55 = alloca i1, align 8
-  %_56 = alloca i1, align 8
-  %_57 = alloca i64, align 8
-  %_58 = alloca i1, align 8
-  %_59 = alloca i1, align 8
-  %_60 = alloca i64, align 8
-  %_61 = alloca i1, align 8
-  %_62 = alloca i1, align 8
-  %_63 = alloca i64, align 8
-  %_64 = alloca i64, align 8
-  %_65 = alloca i1, align 8
-  %_66 = alloca i1, align 8
-  %_67 = alloca i64, align 8
-  %_68 = alloca i64, align 8
-  %_69 = alloca i1, align 8
-  %_70 = icmp sle i64 9223372036854775806, 9223372036854775806
-  store i1 %_70, i1* %_0, align 8
-  %_71 = load i1, i1* %_0, align 8
-  call void @_B_printBoolean (i1 %_71)
-  store i1 0, i1* %_1, align 8
-  %_72 = icmp sle i64 9223372036854775806, 1
-  store i1 %_72, i1* %_2, align 8
-  %_73 = load i1, i1* %_2, align 8
-  call void @_B_printBoolean (i1 %_73)
-  store i1 0, i1* %_3, align 8
-  %_74 = icmp sle i64 9223372036854775806, 0
-  store i1 %_74, i1* %_4, align 8
-  %_75 = load i1, i1* %_4, align 8
-  call void @_B_printBoolean (i1 %_75)
-  store i1 0, i1* %_5, align 8
-  %_76 = icmp sle i64 9223372036854775806, -1
-  store i1 %_76, i1* %_6, align 8
-  %_77 = load i1, i1* %_6, align 8
-  call void @_B_printBoolean (i1 %_77)
-  store i1 0, i1* %_8, align 8
-  %_78 = icmp sle i64 9223372036854775806, -9223372036854775806
-  store i1 %_78, i1* %_9, align 8
-  %_79 = load i1, i1* %_9, align 8
-  call void @_B_printBoolean (i1 %_79)
-  store i1 0, i1* %_11, align 8
-  %_80 = icmp sle i64 1, 9223372036854775806
-  store i1 %_80, i1* %_12, align 8
-  %_81 = load i1, i1* %_12, align 8
-  call void @_B_printBoolean (i1 %_81)
-  store i1 0, i1* %_13, align 8
-  %_82 = icmp sle i64 1, 1
-  store i1 %_82, i1* %_14, align 8
-  %_83 = load i1, i1* %_14, align 8
-  call void @_B_printBoolean (i1 %_83)
-  store i1 0, i1* %_15, align 8
-  %_84 = icmp sle i64 1, 0
-  store i1 %_84, i1* %_16, align 8
-  %_85 = load i1, i1* %_16, align 8
-  call void @_B_printBoolean (i1 %_85)
-  store i1 0, i1* %_17, align 8
-  %_86 = icmp sle i64 1, -1
-  store i1 %_86, i1* %_18, align 8
-  %_87 = load i1, i1* %_18, align 8
-  call void @_B_printBoolean (i1 %_87)
-  store i1 0, i1* %_20, align 8
-  %_88 = icmp sle i64 1, -9223372036854775806
-  store i1 %_88, i1* %_21, align 8
-  %_89 = load i1, i1* %_21, align 8
-  call void @_B_printBoolean (i1 %_89)
-  store i1 0, i1* %_23, align 8
-  %_90 = icmp sle i64 0, 9223372036854775806
-  store i1 %_90, i1* %_24, align 8
-  %_91 = load i1, i1* %_24, align 8
-  call void @_B_printBoolean (i1 %_91)
-  store i1 0, i1* %_25, align 8
-  %_92 = icmp sle i64 0, 1
-  store i1 %_92, i1* %_26, align 8
-  %_93 = load i1, i1* %_26, align 8
-  call void @_B_printBoolean (i1 %_93)
-  store i1 0, i1* %_27, align 8
-  %_94 = icmp sle i64 0, 0
-  store i1 %_94, i1* %_28, align 8
-  %_95 = load i1, i1* %_28, align 8
-  call void @_B_printBoolean (i1 %_95)
-  store i1 0, i1* %_29, align 8
-  %_96 = icmp sle i64 0, -1
-  store i1 %_96, i1* %_30, align 8
-  %_97 = load i1, i1* %_30, align 8
-  call void @_B_printBoolean (i1 %_97)
-  store i1 0, i1* %_32, align 8
-  %_98 = icmp sle i64 0, -9223372036854775806
-  store i1 %_98, i1* %_33, align 8
-  %_99 = load i1, i1* %_33, align 8
-  call void @_B_printBoolean (i1 %_99)
-  store i1 0, i1* %_35, align 8
-  %_100 = icmp sle i64 -1, 9223372036854775806
-  store i1 %_100, i1* %_36, align 8
-  %_101 = load i1, i1* %_36, align 8
-  call void @_B_printBoolean (i1 %_101)
-  store i1 0, i1* %_38, align 8
-  %_102 = icmp sle i64 -1, 1
-  store i1 %_102, i1* %_39, align 8
-  %_103 = load i1, i1* %_39, align 8
-  call void @_B_printBoolean (i1 %_103)
-  store i1 0, i1* %_41, align 8
-  %_104 = icmp sle i64 -1, 0
-  store i1 %_104, i1* %_42, align 8
-  %_105 = load i1, i1* %_42, align 8
-  call void @_B_printBoolean (i1 %_105)
-  store i1 0, i1* %_44, align 8
-  %_106 = icmp sle i64 -1, -1
-  store i1 %_106, i1* %_45, align 8
-  %_107 = load i1, i1* %_45, align 8
-  call void @_B_printBoolean (i1 %_107)
-  store i1 0, i1* %_48, align 8
-  %_108 = icmp sle i64 -1, -9223372036854775806
-  store i1 %_108, i1* %_49, align 8
-  %_109 = load i1, i1* %_49, align 8
-  call void @_B_printBoolean (i1 %_109)
-  store i1 0, i1* %_52, align 8
-  %_110 = icmp sle i64 -9223372036854775806, 9223372036854775806
-  store i1 %_110, i1* %_53, align 8
-  %_111 = load i1, i1* %_53, align 8
-  call void @_B_printBoolean (i1 %_111)
-  store i1 0, i1* %_55, align 8
-  %_112 = icmp sle i64 -9223372036854775806, 1
-  store i1 %_112, i1* %_56, align 8
-  %_113 = load i1, i1* %_56, align 8
-  call void @_B_printBoolean (i1 %_113)
-  store i1 0, i1* %_58, align 8
-  %_114 = icmp sle i64 -9223372036854775806, 0
-  store i1 %_114, i1* %_59, align 8
-  %_115 = load i1, i1* %_59, align 8
-  call void @_B_printBoolean (i1 %_115)
-  store i1 0, i1* %_61, align 8
-  %_116 = icmp sle i64 -9223372036854775806, -1
-  store i1 %_116, i1* %_62, align 8
-  %_117 = load i1, i1* %_62, align 8
-  call void @_B_printBoolean (i1 %_117)
-  store i1 0, i1* %_65, align 8
-  %_118 = icmp sle i64 -9223372036854775806, -9223372036854775806
-  store i1 %_118, i1* %_66, align 8
-  %_119 = load i1, i1* %_66, align 8
-  call void @_B_printBoolean (i1 %_119)
-  store i1 0, i1* %_69, align 8
+@_bal_stack_guard = external global i8*
+declare void @_bal_panic(i64) noreturn cold
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+define void @_B_main() {
+  %1 = alloca i1
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i1
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i1
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i1
+  %8 = alloca i64
+  %9 = alloca i8 addrspace(1)*
+  %10 = alloca i1
+  %11 = alloca i64
+  %12 = alloca i8 addrspace(1)*
+  %13 = alloca i1
+  %14 = alloca i8 addrspace(1)*
+  %15 = alloca i1
+  %16 = alloca i8 addrspace(1)*
+  %17 = alloca i1
+  %18 = alloca i8 addrspace(1)*
+  %19 = alloca i1
+  %20 = alloca i64
+  %21 = alloca i8 addrspace(1)*
+  %22 = alloca i1
+  %23 = alloca i64
+  %24 = alloca i8 addrspace(1)*
+  %25 = alloca i1
+  %26 = alloca i8 addrspace(1)*
+  %27 = alloca i1
+  %28 = alloca i8 addrspace(1)*
+  %29 = alloca i1
+  %30 = alloca i8 addrspace(1)*
+  %31 = alloca i1
+  %32 = alloca i64
+  %33 = alloca i8 addrspace(1)*
+  %34 = alloca i1
+  %35 = alloca i64
+  %36 = alloca i8 addrspace(1)*
+  %37 = alloca i1
+  %38 = alloca i64
+  %39 = alloca i8 addrspace(1)*
+  %40 = alloca i1
+  %41 = alloca i64
+  %42 = alloca i8 addrspace(1)*
+  %43 = alloca i1
+  %44 = alloca i64
+  %45 = alloca i8 addrspace(1)*
+  %46 = alloca i1
+  %47 = alloca i64
+  %48 = alloca i64
+  %49 = alloca i8 addrspace(1)*
+  %50 = alloca i1
+  %51 = alloca i64
+  %52 = alloca i64
+  %53 = alloca i8 addrspace(1)*
+  %54 = alloca i1
+  %55 = alloca i64
+  %56 = alloca i8 addrspace(1)*
+  %57 = alloca i1
+  %58 = alloca i64
+  %59 = alloca i8 addrspace(1)*
+  %60 = alloca i1
+  %61 = alloca i64
+  %62 = alloca i8 addrspace(1)*
+  %63 = alloca i1
+  %64 = alloca i64
+  %65 = alloca i64
+  %66 = alloca i8 addrspace(1)*
+  %67 = alloca i1
+  %68 = alloca i64
+  %69 = alloca i64
+  %70 = alloca i8 addrspace(1)*
+  %71 = alloca i64
+  %72 = alloca i8
+  %73 = load i8*, i8** @_bal_stack_guard
+  %74 = icmp ult i8* %72, %73
+  br i1 %74, label %86, label %75
+75:
+  %76 = icmp sle i64 9223372036854775806, 9223372036854775806
+  store i1 %76, i1* %1
+  %77 = load i1, i1* %1
+  call void @_B_printBoolean(i1 %77)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  %78 = icmp sle i64 9223372036854775806, 1
+  store i1 %78, i1* %3
+  %79 = load i1, i1* %3
+  call void @_B_printBoolean(i1 %79)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  %80 = icmp sle i64 9223372036854775806, 0
+  store i1 %80, i1* %5
+  %81 = load i1, i1* %5
+  call void @_B_printBoolean(i1 %81)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %82 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %83 = extractvalue {i64, i1} %82, 1
+  br i1 %83, label %94, label %87
+84:
+  %85 = load i64, i64* %71
+  call void @_bal_panic(i64 %85)
+  unreachable
+86:
+  call void @_bal_panic(i64 772)
+  unreachable
+87:
+  %88 = extractvalue {i64, i1} %82, 0
+  store i64 %88, i64* %8
+  %89 = load i64, i64* %8
+  %90 = icmp sle i64 9223372036854775806, %89
+  store i1 %90, i1* %7
+  %91 = load i1, i1* %7
+  call void @_B_printBoolean(i1 %91)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %9
+  %92 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %93 = extractvalue {i64, i1} %92, 1
+  br i1 %93, label %108, label %95
+94:
+  store i64 1793, i64* %71
+  br label %84
+95:
+  %96 = extractvalue {i64, i1} %92, 0
+  store i64 %96, i64* %11
+  %97 = load i64, i64* %11
+  %98 = icmp sle i64 9223372036854775806, %97
+  store i1 %98, i1* %10
+  %99 = load i1, i1* %10
+  call void @_B_printBoolean(i1 %99)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12
+  %100 = icmp sle i64 1, 9223372036854775806
+  store i1 %100, i1* %13
+  %101 = load i1, i1* %13
+  call void @_B_printBoolean(i1 %101)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %14
+  %102 = icmp sle i64 1, 1
+  store i1 %102, i1* %15
+  %103 = load i1, i1* %15
+  call void @_B_printBoolean(i1 %103)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %16
+  %104 = icmp sle i64 1, 0
+  store i1 %104, i1* %17
+  %105 = load i1, i1* %17
+  call void @_B_printBoolean(i1 %105)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %18
+  %106 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %107 = extractvalue {i64, i1} %106, 1
+  br i1 %107, label %116, label %109
+108:
+  store i64 2049, i64* %71
+  br label %84
+109:
+  %110 = extractvalue {i64, i1} %106, 0
+  store i64 %110, i64* %20
+  %111 = load i64, i64* %20
+  %112 = icmp sle i64 1, %111
+  store i1 %112, i1* %19
+  %113 = load i1, i1* %19
+  call void @_B_printBoolean(i1 %113)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %21
+  %114 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %115 = extractvalue {i64, i1} %114, 1
+  br i1 %115, label %130, label %117
+116:
+  store i64 3329, i64* %71
+  br label %84
+117:
+  %118 = extractvalue {i64, i1} %114, 0
+  store i64 %118, i64* %23
+  %119 = load i64, i64* %23
+  %120 = icmp sle i64 1, %119
+  store i1 %120, i1* %22
+  %121 = load i1, i1* %22
+  call void @_B_printBoolean(i1 %121)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %24
+  %122 = icmp sle i64 0, 9223372036854775806
+  store i1 %122, i1* %25
+  %123 = load i1, i1* %25
+  call void @_B_printBoolean(i1 %123)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %26
+  %124 = icmp sle i64 0, 1
+  store i1 %124, i1* %27
+  %125 = load i1, i1* %27
+  call void @_B_printBoolean(i1 %125)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %28
+  %126 = icmp sle i64 0, 0
+  store i1 %126, i1* %29
+  %127 = load i1, i1* %29
+  call void @_B_printBoolean(i1 %127)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %30
+  %128 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %129 = extractvalue {i64, i1} %128, 1
+  br i1 %129, label %138, label %131
+130:
+  store i64 3585, i64* %71
+  br label %84
+131:
+  %132 = extractvalue {i64, i1} %128, 0
+  store i64 %132, i64* %32
+  %133 = load i64, i64* %32
+  %134 = icmp sle i64 0, %133
+  store i1 %134, i1* %31
+  %135 = load i1, i1* %31
+  call void @_B_printBoolean(i1 %135)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %33
+  %136 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %137 = extractvalue {i64, i1} %136, 1
+  br i1 %137, label %146, label %139
+138:
+  store i64 4865, i64* %71
+  br label %84
+139:
+  %140 = extractvalue {i64, i1} %136, 0
+  store i64 %140, i64* %35
+  %141 = load i64, i64* %35
+  %142 = icmp sle i64 0, %141
+  store i1 %142, i1* %34
+  %143 = load i1, i1* %34
+  call void @_B_printBoolean(i1 %143)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %36
+  %144 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %145 = extractvalue {i64, i1} %144, 1
+  br i1 %145, label %154, label %147
+146:
+  store i64 5121, i64* %71
+  br label %84
+147:
+  %148 = extractvalue {i64, i1} %144, 0
+  store i64 %148, i64* %38
+  %149 = load i64, i64* %38
+  %150 = icmp sle i64 %149, 9223372036854775806
+  store i1 %150, i1* %37
+  %151 = load i1, i1* %37
+  call void @_B_printBoolean(i1 %151)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %39
+  %152 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %153 = extractvalue {i64, i1} %152, 1
+  br i1 %153, label %162, label %155
+154:
+  store i64 5633, i64* %71
+  br label %84
+155:
+  %156 = extractvalue {i64, i1} %152, 0
+  store i64 %156, i64* %41
+  %157 = load i64, i64* %41
+  %158 = icmp sle i64 %157, 1
+  store i1 %158, i1* %40
+  %159 = load i1, i1* %40
+  call void @_B_printBoolean(i1 %159)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %42
+  %160 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %161 = extractvalue {i64, i1} %160, 1
+  br i1 %161, label %170, label %163
+162:
+  store i64 5889, i64* %71
+  br label %84
+163:
+  %164 = extractvalue {i64, i1} %160, 0
+  store i64 %164, i64* %44
+  %165 = load i64, i64* %44
+  %166 = icmp sle i64 %165, 0
+  store i1 %166, i1* %43
+  %167 = load i1, i1* %43
+  call void @_B_printBoolean(i1 %167)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %45
+  %168 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %169 = extractvalue {i64, i1} %168, 1
+  br i1 %169, label %175, label %171
+170:
+  store i64 6145, i64* %71
+  br label %84
+171:
+  %172 = extractvalue {i64, i1} %168, 0
+  store i64 %172, i64* %47
+  %173 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %174 = extractvalue {i64, i1} %173, 1
+  br i1 %174, label %184, label %176
+175:
+  store i64 6401, i64* %71
+  br label %84
+176:
+  %177 = extractvalue {i64, i1} %173, 0
+  store i64 %177, i64* %48
+  %178 = load i64, i64* %47
+  %179 = load i64, i64* %48
+  %180 = icmp sle i64 %178, %179
+  store i1 %180, i1* %46
+  %181 = load i1, i1* %46
+  call void @_B_printBoolean(i1 %181)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %49
+  %182 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %183 = extractvalue {i64, i1} %182, 1
+  br i1 %183, label %189, label %185
+184:
+  store i64 6401, i64* %71
+  br label %84
+185:
+  %186 = extractvalue {i64, i1} %182, 0
+  store i64 %186, i64* %51
+  %187 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %188 = extractvalue {i64, i1} %187, 1
+  br i1 %188, label %198, label %190
+189:
+  store i64 6657, i64* %71
+  br label %84
+190:
+  %191 = extractvalue {i64, i1} %187, 0
+  store i64 %191, i64* %52
+  %192 = load i64, i64* %51
+  %193 = load i64, i64* %52
+  %194 = icmp sle i64 %192, %193
+  store i1 %194, i1* %50
+  %195 = load i1, i1* %50
+  call void @_B_printBoolean(i1 %195)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %53
+  %196 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %197 = extractvalue {i64, i1} %196, 1
+  br i1 %197, label %206, label %199
+198:
+  store i64 6657, i64* %71
+  br label %84
+199:
+  %200 = extractvalue {i64, i1} %196, 0
+  store i64 %200, i64* %55
+  %201 = load i64, i64* %55
+  %202 = icmp sle i64 %201, 9223372036854775806
+  store i1 %202, i1* %54
+  %203 = load i1, i1* %54
+  call void @_B_printBoolean(i1 %203)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %56
+  %204 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %205 = extractvalue {i64, i1} %204, 1
+  br i1 %205, label %214, label %207
+206:
+  store i64 7169, i64* %71
+  br label %84
+207:
+  %208 = extractvalue {i64, i1} %204, 0
+  store i64 %208, i64* %58
+  %209 = load i64, i64* %58
+  %210 = icmp sle i64 %209, 1
+  store i1 %210, i1* %57
+  %211 = load i1, i1* %57
+  call void @_B_printBoolean(i1 %211)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %59
+  %212 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %213 = extractvalue {i64, i1} %212, 1
+  br i1 %213, label %222, label %215
+214:
+  store i64 7425, i64* %71
+  br label %84
+215:
+  %216 = extractvalue {i64, i1} %212, 0
+  store i64 %216, i64* %61
+  %217 = load i64, i64* %61
+  %218 = icmp sle i64 %217, 0
+  store i1 %218, i1* %60
+  %219 = load i1, i1* %60
+  call void @_B_printBoolean(i1 %219)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %62
+  %220 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %221 = extractvalue {i64, i1} %220, 1
+  br i1 %221, label %227, label %223
+222:
+  store i64 7681, i64* %71
+  br label %84
+223:
+  %224 = extractvalue {i64, i1} %220, 0
+  store i64 %224, i64* %64
+  %225 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %226 = extractvalue {i64, i1} %225, 1
+  br i1 %226, label %236, label %228
+227:
+  store i64 7937, i64* %71
+  br label %84
+228:
+  %229 = extractvalue {i64, i1} %225, 0
+  store i64 %229, i64* %65
+  %230 = load i64, i64* %64
+  %231 = load i64, i64* %65
+  %232 = icmp sle i64 %230, %231
+  store i1 %232, i1* %63
+  %233 = load i1, i1* %63
+  call void @_B_printBoolean(i1 %233)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %66
+  %234 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %235 = extractvalue {i64, i1} %234, 1
+  br i1 %235, label %241, label %237
+236:
+  store i64 7937, i64* %71
+  br label %84
+237:
+  %238 = extractvalue {i64, i1} %234, 0
+  store i64 %238, i64* %68
+  %239 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775806)
+  %240 = extractvalue {i64, i1} %239, 1
+  br i1 %240, label %248, label %242
+241:
+  store i64 8193, i64* %71
+  br label %84
+242:
+  %243 = extractvalue {i64, i1} %239, 0
+  store i64 %243, i64* %69
+  %244 = load i64, i64* %68
+  %245 = load i64, i64* %69
+  %246 = icmp sle i64 %244, %245
+  store i1 %246, i1* %67
+  %247 = load i1, i1* %67
+  call void @_B_printBoolean(i1 %247)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %70
   ret void
+248:
+  store i64 8193, i64* %71
+  br label %84
 }
-define internal void @_B_printBoolean (i1 %_0) {
-  %b = alloca i1, align 8
-  %_1 = alloca i1, align 8
-  %_2 = alloca i1, align 8
-  store i1 %_0, i1* %b, align 8
-  %_3 = load i1, i1* %b, align 8
-  br i1 %_3, label %L1, label %L2
-L1:
-  call void @_Bio__println (i64 1)
-  store i1 0, i1* %_1, align 8
-  br label %L3
-L2:
-  call void @_Bio__println (i64 0)
-  store i1 0, i1* %_2, align 8
-  br label %L3
-L3:
+define internal void @_B_printBoolean(i1 %0) {
+  %b = alloca i1
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i8
+  %5 = load i8*, i8** @_bal_stack_guard
+  %6 = icmp ult i8* %4, %5
+  br i1 %6, label %14, label %7
+7:
+  store i1 %0, i1* %b
+  %8 = load i1, i1* %b
+  br i1 %8, label %9, label %11
+9:
+  %10 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
+  call void @_Bio__println(i8 addrspace(1)* %10)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  br label %13
+11:
+  %12 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
+  call void @_Bio__println(i8 addrspace(1)* %12)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  br label %13
+13:
   ret void
+14:
+  call void @_bal_panic(i64 8964)
+  unreachable
 }

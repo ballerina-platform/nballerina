@@ -1,70 +1,90 @@
-declare {i64, i1} @llvm.sadd.with.overflow.i64 (i64, i64)
-declare void @_Bio__println (i64)
-declare void @_bal_panic (i64)
-define void @_B_main () {
-  %_0 = alloca i64, align 8
-  %_1 = alloca i1, align 8
-  %_2 = alloca i64, align 8
-  %_3 = alloca i1, align 8
-  %_4 = call i64 @_B_foo (i64 13, i1 0)
-  store i64 %_4, i64* %_0, align 8
-  %_5 = load i64, i64* %_0, align 8
-  call void @_Bio__println (i64 %_5)
-  store i1 0, i1* %_1, align 8
-  %_6 = call i64 @_B_foo (i64 14, i1 1)
-  store i64 %_6, i64* %_2, align 8
-  %_7 = load i64, i64* %_2, align 8
-  call void @_Bio__println (i64 %_7)
-  store i1 0, i1* %_3, align 8
+@_bal_stack_guard = external global i8*
+declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+define void @_B_main() {
+  %1 = alloca i64
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i64
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i8
+  %6 = load i8*, i8** @_bal_stack_guard
+  %7 = icmp ult i8* %5, %6
+  br i1 %7, label %15, label %8
+8:
+  %9 = call i64 @_B_foo(i64 13, i1 0)
+  store i64 %9, i64* %1
+  %10 = load i64, i64* %1
+  %11 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %10)
+  call void @_Bio__println(i8 addrspace(1)* %11)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  %12 = call i64 @_B_foo(i64 14, i1 1)
+  store i64 %12, i64* %3
+  %13 = load i64, i64* %3
+  %14 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %13)
+  call void @_Bio__println(i8 addrspace(1)* %14)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
-}
-define internal i64 @_B_foo (i64 %_0, i1 %_1) {
-  %i = alloca i64, align 8
-  %b = alloca i1, align 8
-  %_2 = alloca i64, align 8
-  %_3 = alloca i64, align 8
-  %_4 = alloca i64, align 8
-  store i64 %_0, i64* %i, align 8
-  store i1 %_1, i1* %b, align 8
-  %_5 = load i1, i1* %b, align 8
-  br i1 %_5, label %L1, label %L2
-L1:
-  %_6 = load i64, i64* %i, align 8
-  %_7 = call {i64, i1} @llvm.sadd.with.overflow.i64 (i64 %_6, i64 1)
-  %_8 = extractvalue {i64, i1} %_7, 1
-  br i1 %_8, label %L5, label %L4
-L2:
-  %_11 = load i64, i64* %i, align 8
-  %_12 = icmp eq i64 5, 0
-  br i1 %_12, label %L6, label %L7
-L3:
-  %_18 = load i64, i64* %_4, align 8
-  call void @_bal_panic (i64 %_18)
+15:
+  call void @_bal_panic(i64 772)
   unreachable
-L4:
-  %_9 = extractvalue {i64, i1} %_7, 0
-  store i64 %_9, i64* %_2, align 8
-  %_10 = load i64, i64* %_2, align 8
-  ret i64 %_10
-L5:
-  store i64 1, i64* %_4, align 8
-  br label %L3
-L6:
-  store i64 2, i64* %_4, align 8
-  br label %L3
-L7:
-  %_13 = icmp eq i64 %_11, -9223372036854775808
-  %_14 = icmp eq i64 5, -1
-  %_15 = and i1 %_13, %_14
-  br i1 %_15, label %L9, label %L8
-L8:
-  %_16 = srem i64 %_11, 5
-  store i64 %_16, i64* %_3, align 8
-  br label %L10
-L9:
-  store i64 0, i64* %_3, align 8
-  br label %L10
-L10:
-  %_17 = load i64, i64* %_3, align 8
-  ret i64 %_17
+}
+define internal i64 @_B_foo(i64 %0, i1 %1) {
+  %i = alloca i64
+  %b = alloca i1
+  %3 = alloca i64
+  %4 = alloca i64
+  %5 = alloca i64
+  %6 = alloca i8
+  %7 = load i8*, i8** @_bal_stack_guard
+  %8 = icmp ult i8* %6, %7
+  br i1 %8, label %20, label %9
+9:
+  store i64 %0, i64* %i
+  store i1 %1, i1* %b
+  %10 = load i1, i1* %b
+  br i1 %10, label %11, label %15
+11:
+  %12 = load i64, i64* %i
+  %13 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %12, i64 1)
+  %14 = extractvalue {i64, i1} %13, 1
+  br i1 %14, label %24, label %21
+15:
+  %16 = load i64, i64* %i
+  %17 = icmp eq i64 5, 0
+  br i1 %17, label %25, label %26
+18:
+  %19 = load i64, i64* %5
+  call void @_bal_panic(i64 %19)
+  unreachable
+20:
+  call void @_bal_panic(i64 2052)
+  unreachable
+21:
+  %22 = extractvalue {i64, i1} %13, 0
+  store i64 %22, i64* %3
+  %23 = load i64, i64* %3
+  ret i64 %23
+24:
+  store i64 2561, i64* %5
+  br label %18
+25:
+  store i64 3074, i64* %5
+  br label %18
+26:
+  %27 = icmp eq i64 %16, -9223372036854775808
+  %28 = icmp eq i64 5, -1
+  %29 = and i1 %27, %28
+  br i1 %29, label %32, label %30
+30:
+  %31 = srem i64 %16, 5
+  store i64 %31, i64* %4
+  br label %33
+32:
+  store i64 0, i64* %4
+  br label %33
+33:
+  %34 = load i64, i64* %4
+  ret i64 %34
 }

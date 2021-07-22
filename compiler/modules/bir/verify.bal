@@ -40,8 +40,7 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
     }
 }
 
-type IntBinaryInsn IntArithmeticBinaryInsn|IntCompareInsn;
-type BooleanBinaryInsn BooleanCompareInsn;
+type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns err:Semantic? {
     foreach Insn insn in bb.insns {
@@ -52,21 +51,19 @@ function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns err:Semantic?
 function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     string name = insn.name;
     if insn is IntBinaryInsn {
+        // XXX need to check result also
+        // different rules for bitwise
         check verifyOperandInt(vc, name, insn.operands[0]);
         check verifyOperandInt(vc, name, insn.operands[1]);
-    }
-    else if insn is IntNegateInsn {
-        check verifyOperandInt(vc, name, insn.operand);
     }
     else if insn is BooleanNotInsn {
         check verifyOperandBoolean(vc, name, insn.operand);
     }
-    else if insn is BooleanBinaryInsn {
-        check verifyOperandBoolean(vc, name, insn.operands[0]);
-        check verifyOperandBoolean(vc, name, insn.operands[1]);
+    else if insn is CompareInsn {
+        check verifyCompare(vc, insn);
     }
-    else if insn is EqualInsn {
-        check verifyEqualInsn(vc, insn);
+    else if insn is EqualityInsn {
+        check verifyEquality(vc, insn);
     }
     else if insn is AssignInsn {
         check verifyOperandType(vc, insn.operand, insn.result.semType, "value is not a subtype of the LHS");
@@ -78,11 +75,32 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
         check verifyOperandType(vc, insn.operand, vc.returnType(), "value is not a subtype of the return type");
     }
     else if insn is CallInsn {
-        check verifyCallInsn(vc, insn);
+        check verifyCall(vc, insn);
+    }
+    else if insn is TypeCastInsn {
+        check verifyTypeCast(vc, insn);
+    }
+    else if insn is ListConstructInsn {
+        check verifyListConstruct(vc, insn);
+    }
+    else if insn is MappingConstructInsn {
+        check verifyMappingConstruct(vc, insn);
+    }
+    else if insn is ListGetInsn {
+        check verifyListGet(vc, insn);
+    }
+    else if insn is ListSetInsn {
+        check verifyListSet(vc, insn);
+    }
+     else if insn is MappingGetInsn {
+        check verifyMappingGet(vc, insn);
+    }
+    else if insn is MappingSetInsn {
+        check verifyMappingSet(vc, insn);
     }
 }
 
-function verifyCallInsn(VerifyContext vc, CallInsn insn) returns err:Semantic? {
+function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
     FunctionRef func = <FunctionRef>insn.func;
     FunctionSignature sig = func.signature;
     int nSuppliedArgs = insn.args.length();
@@ -101,13 +119,104 @@ function verifyCallInsn(VerifyContext vc, CallInsn insn) returns err:Semantic? {
     }
 }
 
-function verifyEqualInsn(VerifyContext vc, EqualInsn insn) returns err:Semantic? {
+function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic? {
+    t:SemType ty = insn.result.semType;
+    if !vc.isSubtype(ty, t:LIST_RW) {
+        return vc.err("bad BIR: inherent type of list construct is not a list");
+    }
+    // XXX we should also check that ty is a single mutable list
+    // and that each argument has the right type
+}
+
+function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns err:Semantic? {
+    t:SemType ty = insn.result.semType;
+    if !vc.isSubtype(ty, t:MAPPING_RW) {
+        return vc.err("bad BIR: inherent type of list construct is not a list");
+    }
+    // XXX we should also check that ty is a single mutable mapping
+    // and that each argument has the right type
+}
+
+function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic? {
+    check verifyOperandInt(vc, insn.name, insn.operand);
+    if !vc.isSubtype(insn.list.semType, t:LIST) {
+        return vc.err("list get applied to non-list");
+    }
+    // XXX generalize this to array types other than `any[]`
+    if insn.result.semType !== t:ANY {
+        return vc.err("bad BIR: only any supported as list member type");
+    }  
+}
+
+function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic? {
+    check verifyOperandInt(vc, insn.name, insn.index);
+    if !vc.isSubtype(insn.list.semType, t:LIST) {
+        return vc.err("list set applied to non-list");
+    }
+    // XXX also check type compatibility of operand and list type
+}
+
+function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic? {
+    check verifyOperandString(vc, insn.name, insn.operands[1]);
+    if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
+        return vc.err("mapping get applied to non-mapping");
+    }
+    // XXX generalize this to mapping types other than `map<any>`
+    if insn.result.semType !== t:ANY {
+        return vc.err("bad BIR: only any supported as mapping member type");
+    }  
+}
+
+function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic? {
+    check verifyOperandString(vc, insn.name, insn.operands[1]);
+    if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
+        return vc.err("mapping set applied to non-mapping");
+    }
+    // XXX also check type compatibility of operand and mapping type
+}
+
+function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
+    if vc.isEmpty(insn.result.semType) {
+        return vc.err("type cast cannot succeed");
+    }
+    // These should not happen with the nballerina front-end
+    if !vc.isSubtype(insn.result.semType, insn.operand.semType) {
+        return vc.err("bad BIR: result of type cast is not subtype of operand");
+    }
+    if !vc.isSubtype(insn.result.semType, insn.semType) {
+        return vc.err("bad BIR: result of type cast is not subtype of cast to type");
+    }
+}
+
+function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
+    string name = insn.name;
+    match insn.orderType {
+        "boolean" => {
+            check verifyOperandBoolean(vc, name, <BooleanOperand>insn.operands[0]);
+            check verifyOperandBoolean(vc, name, <BooleanOperand>insn.operands[1]);
+        }
+        "int" => {
+            check verifyOperandInt(vc, name, <IntOperand>insn.operands[0]);
+            check verifyOperandInt(vc, name, <IntOperand>insn.operands[1]);
+        }
+        "string" => {
+            check verifyOperandString(vc, name, <StringOperand>insn.operands[0]);
+            check verifyOperandString(vc, name, <StringOperand>insn.operands[1]);
+        }
+    }
+}
+
+function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semantic? {
     Operand lhs = insn.operands[0];
     Operand rhs = insn.operands[1];
     if lhs is Register {
         if rhs is Register {
             t:SemType intersectType = t:intersect(lhs.semType, rhs.semType);
             if !vc.isEmpty(intersectType) {
+                // JBUG #31749 cast should not be needed
+                if (<string>insn.op).length() == 2 && !vc.isSubtype(lhs.semType, t:SIMPLE_OR_STRING) && !vc.isSubtype(rhs.semType, t:SIMPLE_OR_STRING) {
+                    return vc.err("at least one operand of an == or != expression must be a subtype of anydata");
+                }
                 return;
             }
         }
@@ -123,7 +232,7 @@ function verifyEqualInsn(VerifyContext vc, EqualInsn insn) returns err:Semantic?
     else if lhs == rhs {
         return;
     }
-    return vc.err(`intersection of operands of operator ${insn.negate ? "!=" : "=="} is empty`);
+    return vc.err(`intersection of operands of operator ${insn.op} is empty`);
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, err:Message msg) returns err:Semantic? {
@@ -134,6 +243,12 @@ function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType,
     }
     else if !t:containsConst(semType, operand) {
         return vc.err(msg);
+    }
+}
+
+function verifyOperandString(VerifyContext vc, string insnName, StringOperand operand) returns err:Semantic? {
+    if operand is Register {
+        return verifyRegisterSemType(vc, insnName, operand, t:STRING, "string");
     }
 }
 

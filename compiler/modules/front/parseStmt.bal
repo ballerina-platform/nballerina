@@ -1,5 +1,4 @@
 import wso2/nballerina.err;
-import wso2/nballerina.types as t;
 
 function parseStmtBlock(Tokenizer tok) returns Stmt[]|err:Syntax {
     Token? cur = tok.current();
@@ -47,27 +46,59 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parseWhileStmt(tok);
         }
-        // only int and boolean types for now
-        "int" => {
-            return parseVarDeclStmt(tok, "int", t:INT);
+        "foreach" => {
+            check tok.advance();
+            return parseForeachStmt(tok);
         }
-        "boolean" => {
-            return parseVarDeclStmt(tok, "boolean", t:BOOLEAN);
+        "final" => {
+            check tok.advance();
+            return parseVarDeclStmt(tok, true);
+        }
+        var td if td is InlineLeafTypeDesc|"map" => {
+            return parseVarDeclStmt(tok);
+        }
+        "("|[DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {
+            return parseMethodCallStmt(tok);
         }
     }
     return parseError(tok, "unhandled statement");
 }
 
+
 function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     if cur == "=" {
-        return finishAssignStmt(tok, identifier, pos);
+        VarRefExpr lValue = { varName: identifier };
+        return finishAssignStmt(tok, lValue);
     }
     else if cur == "(" {
         check tok.advance();
-        FunctionCallExpr stmt = check finishFunctionCallExpr(tok, (), identifier, pos);
-        check tok.expect(";");
-        return stmt;
+        FunctionCallExpr expr = check finishFunctionCallExpr(tok, (), identifier, pos);
+        return finishCallStmt(tok, expr);
+    }
+    else if cur == "." {
+        VarRefExpr varRef = { varName: identifier };
+        MethodCallExpr expr = check finishMethodCallExpr(tok, varRef);
+        return finishCallStmt(tok, expr);
+    }
+    else if cur == "[" {
+        VarRefExpr varRef = { varName: identifier };
+        err:Position bracketPos = tok.currentPos();
+        check tok.advance();
+        Expr index = check parseInnerExpr(tok);
+        check tok.expect("]");
+        cur = tok.current();
+        if cur == "=" {
+            MemberAccessLExpr lValue = { container: varRef, index, pos: bracketPos };
+            return finishAssignStmt(tok, lValue);
+        }
+        MemberAccessExpr memberAccess = { container: varRef, index, pos: bracketPos };
+        Expr expr = check finishPrimaryExpr(tok, memberAccess);
+        if expr is MethodCallExpr {
+            check tok.expect(";");
+            return expr;
+        }
+        return parseError(tok, "member access expr not allowed as a statement"); 
     }
     else if cur == ":" {
         check tok.advance();
@@ -84,18 +115,41 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
     return parseError(tok, "invalid statement");
 }
 
-
-function finishAssignStmt(Tokenizer tok, string identifier, err:Position pos) returns AssignStmt|err:Syntax {
-    check tok.advance();
-    string varName = identifier;
-    Expr expr = check parseExpr(tok);
-    AssignStmt stmt = { varName, expr };
-    check tok.expect(";");
-    return stmt;    
+function parseMethodCallStmt(Tokenizer tok) returns Stmt|err:Syntax {
+    Expr expr = check parsePrimaryExpr(tok);
+    if expr is MethodCallExpr {
+        check tok.expect(";");
+        return expr;
+    }
+    return parseError(tok, "expression not allowed as a statement");
 }
 
-function parseVarDeclStmt(Tokenizer tok, TypeDesc td, t:SemType semType) returns VarDeclStmt|err:Syntax {
+function finishCallStmt(Tokenizer tok, CallStmt expr) returns Stmt|err:Syntax {
+    Expr primary = check finishPrimaryExpr(tok, expr);
+    CallStmt stmt;
+    if primary === expr {
+        stmt = expr;
+    }
+    else if primary is MethodCallExpr {
+        stmt = primary;
+    }
+    else {
+        return parseError(tok, "member access expr not allowed as a statement");
+    }
+    check tok.expect(";");
+    return stmt;
+}
+
+function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Syntax {
     check tok.advance();
+    Expr expr = check parseExpr(tok);
+    AssignStmt stmt = { lValue, expr };
+    check tok.expect(";");
+    return stmt; 
+}
+
+function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
+    InlineTypeDesc td = check parseInlineTypeDesc(tok);
     Token? cur = tok.current();
     if cur is [IDENTIFIER, string] {
         check tok.advance();
@@ -103,7 +157,7 @@ function parseVarDeclStmt(Tokenizer tok, TypeDesc td, t:SemType semType) returns
         check tok.expect("=");
         Expr initExpr = check parseExpr(tok);
         check tok.expect(";");
-        return { td, varName: cur[1], initExpr, semType };
+        return { td, varName: cur[1], initExpr, semType: convertInlineTypeDesc(td), isFinal };
     }
     return parseError(tok, "invalid VarDeclStmt");
 }
@@ -150,4 +204,20 @@ function parseWhileStmt(Tokenizer tok) returns WhileStmt|err:Syntax {
     Expr condition = check parseExpr(tok);
     Stmt[] body = check parseStmtBlock(tok);
     return { condition, body };
+}
+
+function parseForeachStmt(Tokenizer tok) returns ForeachStmt|err:Syntax {
+    if tok.current() != "int" {
+        return parseError(tok, "type of foreach variable must be int");
+    }
+    check tok.advance();
+    Token? cur = tok.current();
+    if cur is [IDENTIFIER, string] {
+        check tok.advance();
+        check tok.expect("in");
+        RangeExpr range = check parseRangeExpr(tok);
+        Stmt[] body = check parseStmtBlock(tok);
+        return { varName: cur[1], range, body };
+    }
+    return parseError(tok, "invalid foreach statement");
 }

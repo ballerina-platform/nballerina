@@ -1,6 +1,35 @@
 // Parsing of type descriptors
 import wso2/nballerina.err;
 
+// This is for the subset we currently support in the compiler
+function parseInlineTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
+    Token? t = tok.current();
+    if t == "any" {
+        check tok.advance();
+        t = tok.current();
+        if t == "[" {
+            check tok.advance();
+            check tok.expect("]");
+            InlineArrayTypeDesc td = {};
+            return td;
+        }
+        return "any";
+    }
+    else if t is InlineLeafTypeDesc {
+        check tok.advance();
+        return t;
+    }
+    else if t is "map" {
+        check tok.advance();
+        check tok.expect("<");
+        check tok.expect("any");
+        check tok.expect(">");
+        InlineMapTypeDesc td = {};
+        return td;
+    }
+    return parseError(tok, "expected type descriptor");    
+}
+
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     if tok.current() == "function" {
         check tok.advance();
@@ -130,9 +159,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             }
             // match falls through to parseError
         }
-        // JBUG language server sometimes flags `var ref`
-        // here as something like
-        // "some variable cannot repeat in a match pattern"
         [IDENTIFIER, var ref] => {
             TypeDescRef r = { ref, pos: tok.currentPos() };
             check tok.advance();
@@ -156,8 +182,10 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 
 function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
     check tok.expect("<");
+    tok.setMode(MODE_TYPE_DESC);
     TypeDesc td = check parseTypeDesc(tok);
     check tok.expect(">");
+    tok.setMode(MODE_NORMAL);
     return td;
 }
 
@@ -170,10 +198,7 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
         if tok.current() == ")" {
             break;
         }
-        // JBUG inlining td in args.push gets an error #30737
-        // invalid usage of the 'check' expression operator: no matching error return type(s) in the enclosing invokable
-        TypeDesc td = check parseTypeDesc(tok);
-        args.push(td);
+        args.push(check parseTypeDesc(tok));
         match tok.current() {
             [IDENTIFIER, var paramName] => {
                 if !(paramNames is ()) {

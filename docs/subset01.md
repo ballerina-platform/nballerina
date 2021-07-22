@@ -121,16 +121,14 @@ function-reference = identifier | qualified-identifier
 
 qualified-identifier = module-prefix ":" identifier
 
-module-prefix = identifier | predeclared-prefix
-
-predeclared-prefix = basic-type-name
+module-prefix = identifier
 
 expr-list = expression ["," expression]*
 
 variable-reference-expr = identifier
 
 // tokens
-integer-literal = [0-9][[0-9]*
+integer-literal = "0" | [1-9][0-9]* // leading zeros are not allowed (to prevent confusion with octal)
 identifier = [A-Za-z][A-Za-z0-9_]*
 
 // comments starting with // allowed as in spec

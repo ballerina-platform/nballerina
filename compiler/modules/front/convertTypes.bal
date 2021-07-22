@@ -18,22 +18,42 @@ function createTypeMap(ModuleTable mod) returns map<t:SemType> {
     return defs;
 }
 
-function convertTypes(t:Env env, ModuleTable mod) returns err:Semantic? {
+function convertTypes(t:Env env, ModuleTable mod) returns err:Semantic|err:Unimplemented? {
     foreach var def in mod {
         if def is TypeDef {
             _ = check convertTypeDef(env, mod, 0, def);
         }
         else {
             // it's a FunctionDef
-            def.signature = check convertFunctionSignature(env, mod, def.typeDesc);
+            def.signature = check convertFunctionSignature(env, mod, def.typeDesc, def.pos);
         }
     }
 }
 
-function convertFunctionSignature(t:Env env, ModuleTable mod, FunctionTypeDesc td) returns bir:FunctionSignature|err:Semantic {
-    t:SemType[] params = from var x in td.args select check convertTypeDesc(env, mod, 0, x);
-    t:SemType ret = check convertTypeDesc(env, mod, 0, td.ret);
+function convertFunctionSignature(t:Env env, ModuleTable mod, FunctionTypeDesc td, err:Position pos) returns bir:FunctionSignature|err:Semantic|err:Unimplemented {
+    t:SemType[] params = [];
+    // JBUG if this is done with a select, then it gets a bad, sad at runtime if the check gets an error
+    foreach var x in td.args {
+        params.push(check convertSubsetTypeDesc(env, mod, x, pos));
+    }
+    t:SemType ret = check convertSubsetTypeDesc(env, mod, td.ret, pos);
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
+}
+
+function convertSubsetTypeDesc(t:Env env, ModuleTable mod, TypeDesc td, err:Position pos) returns t:SemType|err:Semantic|err:Unimplemented {
+    t:SemType ty = check convertTypeDesc(env, mod, 0, td);
+    if ty === t:STRING || ty === t:INT || ty === t:BOOLEAN || ty === t:NIL || ty === t:ANY {
+        return ty;
+    }
+    t:UniformTypeBitSet? memberTy = env.simpleArrayMemberType(ty);
+    if memberTy == t:ANY {
+        return t:LIST;
+    }
+    memberTy = env.simpleMapMemberType(ty);
+    if memberTy == t:ANY {
+        return t:MAPPING;
+    }
+    return err:unimplemented("unimplemented type descriptor", pos=pos);
 }
 
 function convertTypeDef(t:Env env, ModuleTable mod, int depth, TypeDef def) returns t:SemType|err:Semantic {
@@ -60,6 +80,22 @@ function convertTypeDef(t:Env env, ModuleTable mod, int depth, TypeDef def) retu
     else {
         return t;
     }
+}
+
+function convertInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
+    match td {
+        "any" => { return t:ANY; }
+        "boolean" => { return t:BOOLEAN; }
+        "int" => { return t:INT; }
+        "string" => { return t:STRING; }
+    }
+    if td is InlineArrayTypeDesc {
+        return t:LIST;
+    }
+    if td is InlineMapTypeDesc {
+        return t:MAPPING;
+    }
+    panic err:impossible("unreachable in convertInlineTypeDesc");
 }
 
 function convertTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) returns t:SemType|err:Semantic {

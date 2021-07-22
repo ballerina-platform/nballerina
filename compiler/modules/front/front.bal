@@ -27,7 +27,8 @@ class Module {
                 functionDefns.push({
                     symbol: <bir:InternalSymbol>{ identifier: def.name, isPublic: def.vis == "public" },
                     // casting away nil here, because it was filled in by `convertTypes`
-                    signature: <bir:FunctionSignature>def.signature
+                    signature: <bir:FunctionSignature>def.signature,
+                    position: def.pos
                 });
             }
         }
@@ -65,6 +66,8 @@ public function loadModule(string filename, bir:ModuleId id) returns bir:Module|
     check addModulePart(mod, part);
     t:Env env = new;
     check convertTypes(env, mod);
+    // XXX Should have an option that controls whether we perform this check
+    check validEntryPoint(mod);
     return new Module(id, imports(part), mod, t:typeCheckContext(env));
 }
 
@@ -78,6 +81,21 @@ function imports(ModulePart part) returns map<bir:ModuleId> {
     }
 }
 
+function validEntryPoint(ModuleTable mod) returns err:Any? {
+    ModuleLevelDef? def = mod["main"];
+    if def is FunctionDef {
+        if def.vis != "public" {
+            return err:semantic(`${"main"} is not public`, pos=def.pos);
+        }
+        if def.paramNames.length() > 0 {
+            return err:unimplemented(`parameters for ${"main"} not yet implemented`, pos=def.pos);
+        }
+        if (<bir:FunctionSignature>def.signature).returnType !== t:NIL {
+            return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, pos=def.pos);
+        }
+    }
+}
+
 function addModulePart(ModuleTable mod, ModulePart part) returns err:Semantic? {
     foreach ModuleLevelDef def in part.defs {
         if mod.hasKey(def.name) {
@@ -88,7 +106,7 @@ function addModulePart(ModuleTable mod, ModulePart part) returns err:Semantic? {
 }
 
 // This is old interface for showTypes
-public function typesFromString(string contents) returns [t:Env, map<t:SemType>]|err:Syntax {
+public function typesFromString(string contents) returns [t:Env, map<t:SemType>]|err:Any {
     ModulePart part = check parseModulePart(contents);
     ModuleTable mod = table [];
     check addModulePart(mod, part);

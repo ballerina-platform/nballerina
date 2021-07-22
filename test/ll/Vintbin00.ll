@@ -1,59 +1,78 @@
-declare {i64, i1} @llvm.smul.with.overflow.i64 (i64, i64)
-declare void @_Bio__println (i64)
-declare void @_bal_panic (i64)
-define void @_B_main () {
-  %_0 = alloca i64, align 8
-  %_1 = alloca i1, align 8
-  %_2 = call i64 @_B_bin (i64 6, i64 2, i64 3)
-  store i64 %_2, i64* %_0, align 8
-  %_3 = load i64, i64* %_0, align 8
-  call void @_Bio__println (i64 %_3)
-  store i1 0, i1* %_1, align 8
+@_bal_stack_guard = external global i8*
+declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+define void @_B_main() {
+  %1 = alloca i64
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i8
+  %4 = load i8*, i8** @_bal_stack_guard
+  %5 = icmp ult i8* %3, %4
+  br i1 %5, label %10, label %6
+6:
+  %7 = call i64 @_B_bin(i64 6, i64 2, i64 3)
+  store i64 %7, i64* %1
+  %8 = load i64, i64* %1
+  %9 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %8)
+  call void @_Bio__println(i8 addrspace(1)* %9)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
   ret void
-}
-define internal i64 @_B_bin (i64 %_0, i64 %_1, i64 %_2) {
-  %x = alloca i64, align 8
-  %y = alloca i64, align 8
-  %z = alloca i64, align 8
-  %_3 = alloca i64, align 8
-  %_4 = alloca i64, align 8
-  %_5 = alloca i64, align 8
-  store i64 %_0, i64* %x, align 8
-  store i64 %_1, i64* %y, align 8
-  store i64 %_2, i64* %z, align 8
-  %_6 = load i64, i64* %x, align 8
-  %_7 = load i64, i64* %y, align 8
-  %_8 = call {i64, i1} @llvm.smul.with.overflow.i64 (i64 %_6, i64 %_7)
-  %_9 = extractvalue {i64, i1} %_8, 1
-  br i1 %_9, label %L3, label %L2
-L1:
-  %_19 = load i64, i64* %_5, align 8
-  call void @_bal_panic (i64 %_19)
+10:
+  call void @_bal_panic(i64 772)
   unreachable
-L2:
-  %_10 = extractvalue {i64, i1} %_8, 0
-  store i64 %_10, i64* %_3, align 8
-  %_11 = load i64, i64* %_3, align 8
-  %_12 = load i64, i64* %z, align 8
-  %_13 = icmp eq i64 %_12, 0
-  br i1 %_13, label %L4, label %L5
-L3:
-  store i64 1, i64* %_5, align 8
-  br label %L1
-L4:
-  store i64 2, i64* %_5, align 8
-  br label %L1
-L5:
-  %_14 = icmp eq i64 %_11, -9223372036854775808
-  %_15 = icmp eq i64 %_12, -1
-  %_16 = and i1 %_14, %_15
-  br i1 %_16, label %L7, label %L6
-L6:
-  %_17 = sdiv i64 %_11, %_12
-  store i64 %_17, i64* %_4, align 8
-  %_18 = load i64, i64* %_4, align 8
-  ret i64 %_18
-L7:
-  store i64 1, i64* %_5, align 8
-  br label %L1
+}
+define internal i64 @_B_bin(i64 %0, i64 %1, i64 %2) {
+  %x = alloca i64
+  %y = alloca i64
+  %z = alloca i64
+  %4 = alloca i64
+  %5 = alloca i64
+  %6 = alloca i64
+  %7 = alloca i8
+  %8 = load i8*, i8** @_bal_stack_guard
+  %9 = icmp ult i8* %7, %8
+  br i1 %9, label %17, label %10
+10:
+  store i64 %0, i64* %x
+  store i64 %1, i64* %y
+  store i64 %2, i64* %z
+  %11 = load i64, i64* %x
+  %12 = load i64, i64* %y
+  %13 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %11, i64 %12)
+  %14 = extractvalue {i64, i1} %13, 1
+  br i1 %14, label %23, label %18
+15:
+  %16 = load i64, i64* %6
+  call void @_bal_panic(i64 %16)
+  unreachable
+17:
+  call void @_bal_panic(i64 1796)
+  unreachable
+18:
+  %19 = extractvalue {i64, i1} %13, 0
+  store i64 %19, i64* %4
+  %20 = load i64, i64* %4
+  %21 = load i64, i64* %z
+  %22 = icmp eq i64 %21, 0
+  br i1 %22, label %24, label %25
+23:
+  store i64 2049, i64* %6
+  br label %15
+24:
+  store i64 2050, i64* %6
+  br label %15
+25:
+  %26 = icmp eq i64 %20, -9223372036854775808
+  %27 = icmp eq i64 %21, -1
+  %28 = and i1 %26, %27
+  br i1 %28, label %32, label %29
+29:
+  %30 = sdiv i64 %20, %21
+  store i64 %30, i64* %5
+  %31 = load i64, i64* %5
+  ret i64 %31
+32:
+  store i64 2049, i64* %6
+  br label %15
 }

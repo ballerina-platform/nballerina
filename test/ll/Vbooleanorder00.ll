@@ -1,97 +1,134 @@
-declare void @_Bio__println (i64)
-define void @_B_main () {
-  %_0 = alloca i1, align 8
-  %_1 = alloca i1, align 8
-  %_2 = alloca i1, align 8
-  %_3 = alloca i1, align 8
-  %_4 = alloca i1, align 8
-  %_5 = alloca i1, align 8
-  %_6 = alloca i1, align 8
-  %_7 = alloca i1, align 8
-  %_8 = alloca i1, align 8
-  %_9 = alloca i1, align 8
-  %_10 = alloca i1, align 8
-  %_11 = alloca i1, align 8
-  %_12 = alloca i1, align 8
-  %_13 = alloca i1, align 8
-  %_14 = call i1 @_B_greaterThan (i1 1, i1 0)
-  store i1 %_14, i1* %_0, align 8
-  %_15 = load i1, i1* %_0, align 8
-  call void @_B_printBoolean (i1 %_15)
-  store i1 0, i1* %_1, align 8
-  %_16 = call i1 @_B_greaterThan (i1 1, i1 1)
-  store i1 %_16, i1* %_2, align 8
-  %_17 = load i1, i1* %_2, align 8
-  call void @_B_printBoolean (i1 %_17)
-  store i1 0, i1* %_3, align 8
-  %_18 = call i1 @_B_greaterThan (i1 0, i1 0)
-  store i1 %_18, i1* %_4, align 8
-  %_19 = load i1, i1* %_4, align 8
-  call void @_B_printBoolean (i1 %_19)
-  store i1 0, i1* %_5, align 8
-  %_20 = call i1 @_B_lessThan (i1 1, i1 0)
-  store i1 %_20, i1* %_6, align 8
-  %_21 = load i1, i1* %_6, align 8
-  call void @_B_printBoolean (i1 %_21)
-  store i1 0, i1* %_7, align 8
-  %_22 = call i1 @_B_lessThan (i1 0, i1 1)
-  store i1 %_22, i1* %_8, align 8
-  %_23 = load i1, i1* %_8, align 8
-  call void @_B_printBoolean (i1 %_23)
-  store i1 0, i1* %_9, align 8
-  %_24 = call i1 @_B_lessThan (i1 1, i1 1)
-  store i1 %_24, i1* %_10, align 8
-  %_25 = load i1, i1* %_10, align 8
-  call void @_B_printBoolean (i1 %_25)
-  store i1 0, i1* %_11, align 8
-  %_26 = call i1 @_B_lessThan (i1 0, i1 0)
-  store i1 %_26, i1* %_12, align 8
-  %_27 = load i1, i1* %_12, align 8
-  call void @_B_printBoolean (i1 %_27)
-  store i1 0, i1* %_13, align 8
+@_bal_stack_guard = external global i8*
+declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare void @_Bio__println(i8 addrspace(1)*)
+define void @_B_main() {
+  %1 = alloca i1
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i1
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i1
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i1
+  %8 = alloca i8 addrspace(1)*
+  %9 = alloca i1
+  %10 = alloca i8 addrspace(1)*
+  %11 = alloca i1
+  %12 = alloca i8 addrspace(1)*
+  %13 = alloca i1
+  %14 = alloca i8 addrspace(1)*
+  %15 = alloca i8
+  %16 = load i8*, i8** @_bal_stack_guard
+  %17 = icmp ult i8* %15, %16
+  br i1 %17, label %33, label %18
+18:
+  %19 = call i1 @_B_greaterThan(i1 1, i1 0)
+  store i1 %19, i1* %1
+  %20 = load i1, i1* %1
+  call void @_B_printBoolean(i1 %20)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  %21 = call i1 @_B_greaterThan(i1 1, i1 1)
+  store i1 %21, i1* %3
+  %22 = load i1, i1* %3
+  call void @_B_printBoolean(i1 %22)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  %23 = call i1 @_B_greaterThan(i1 0, i1 0)
+  store i1 %23, i1* %5
+  %24 = load i1, i1* %5
+  call void @_B_printBoolean(i1 %24)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %25 = call i1 @_B_lessThan(i1 1, i1 0)
+  store i1 %25, i1* %7
+  %26 = load i1, i1* %7
+  call void @_B_printBoolean(i1 %26)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8
+  %27 = call i1 @_B_lessThan(i1 0, i1 1)
+  store i1 %27, i1* %9
+  %28 = load i1, i1* %9
+  call void @_B_printBoolean(i1 %28)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %10
+  %29 = call i1 @_B_lessThan(i1 1, i1 1)
+  store i1 %29, i1* %11
+  %30 = load i1, i1* %11
+  call void @_B_printBoolean(i1 %30)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12
+  %31 = call i1 @_B_lessThan(i1 0, i1 0)
+  store i1 %31, i1* %13
+  %32 = load i1, i1* %13
+  call void @_B_printBoolean(i1 %32)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %14
   ret void
+33:
+  call void @_bal_panic(i64 772)
+  unreachable
 }
-define internal void @_B_printBoolean (i1 %_0) {
-  %b = alloca i1, align 8
-  %_1 = alloca i1, align 8
-  %_2 = alloca i1, align 8
-  store i1 %_0, i1* %b, align 8
-  %_3 = load i1, i1* %b, align 8
-  br i1 %_3, label %L1, label %L2
-L1:
-  call void @_Bio__println (i64 1)
-  store i1 0, i1* %_1, align 8
-  br label %L3
-L2:
-  call void @_Bio__println (i64 0)
-  store i1 0, i1* %_2, align 8
-  br label %L3
-L3:
+define internal void @_B_printBoolean(i1 %0) {
+  %b = alloca i1
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i8
+  %5 = load i8*, i8** @_bal_stack_guard
+  %6 = icmp ult i8* %4, %5
+  br i1 %6, label %14, label %7
+7:
+  store i1 %0, i1* %b
+  %8 = load i1, i1* %b
+  br i1 %8, label %9, label %11
+9:
+  %10 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
+  call void @_Bio__println(i8 addrspace(1)* %10)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  br label %13
+11:
+  %12 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
+  call void @_Bio__println(i8 addrspace(1)* %12)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  br label %13
+13:
   ret void
+14:
+  call void @_bal_panic(i64 3332)
+  unreachable
 }
-define internal i1 @_B_lessThan (i1 %_0, i1 %_1) {
-  %x = alloca i1, align 8
-  %y = alloca i1, align 8
-  %_2 = alloca i1, align 8
-  store i1 %_0, i1* %x, align 8
-  store i1 %_1, i1* %y, align 8
-  %_3 = load i1, i1* %x, align 8
-  %_4 = load i1, i1* %y, align 8
-  %_5 = icmp ult i1 %_3, %_4
-  store i1 %_5, i1* %_2, align 8
-  %_6 = load i1, i1* %_2, align 8
-  ret i1 %_6
+define internal i1 @_B_lessThan(i1 %0, i1 %1) {
+  %x = alloca i1
+  %y = alloca i1
+  %3 = alloca i1
+  %4 = alloca i8
+  %5 = load i8*, i8** @_bal_stack_guard
+  %6 = icmp ult i8* %4, %5
+  br i1 %6, label %12, label %7
+7:
+  store i1 %0, i1* %x
+  store i1 %1, i1* %y
+  %8 = load i1, i1* %x
+  %9 = load i1, i1* %y
+  %10 = icmp ult i1 %8, %9
+  store i1 %10, i1* %3
+  %11 = load i1, i1* %3
+  ret i1 %11
+12:
+  call void @_bal_panic(i64 5636)
+  unreachable
 }
-define internal i1 @_B_greaterThan (i1 %_0, i1 %_1) {
-  %x = alloca i1, align 8
-  %y = alloca i1, align 8
-  %_2 = alloca i1, align 8
-  store i1 %_0, i1* %x, align 8
-  store i1 %_1, i1* %y, align 8
-  %_3 = load i1, i1* %x, align 8
-  %_4 = load i1, i1* %y, align 8
-  %_5 = icmp ugt i1 %_3, %_4
-  store i1 %_5, i1* %_2, align 8
-  %_6 = load i1, i1* %_2, align 8
-  ret i1 %_6
+define internal i1 @_B_greaterThan(i1 %0, i1 %1) {
+  %x = alloca i1
+  %y = alloca i1
+  %3 = alloca i1
+  %4 = alloca i8
+  %5 = load i8*, i8** @_bal_stack_guard
+  %6 = icmp ult i8* %4, %5
+  br i1 %6, label %12, label %7
+7:
+  store i1 %0, i1* %x
+  store i1 %1, i1* %y
+  %8 = load i1, i1* %x
+  %9 = load i1, i1* %y
+  %10 = icmp ugt i1 %8, %9
+  store i1 %10, i1* %3
+  %11 = load i1, i1* %3
+  ret i1 %11
+12:
+  call void @_bal_panic(i64 6660)
+  unreachable
 }
