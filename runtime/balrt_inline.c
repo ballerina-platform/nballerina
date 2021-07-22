@@ -1,3 +1,4 @@
+#include <string.h>
 #include "balrt.h"
 
 #define FLAG_INT_ON_HEAP 0x20
@@ -150,4 +151,16 @@ bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
             return false;
     }
     return true;
+}
+
+TaggedPtr _bal_string_concat(TaggedPtr tp1, TaggedPtr tp2) {
+    StringData s1 = _bal_tagged_to_string(tp1);
+    StringData s2 = _bal_tagged_to_string(tp2);
+    uint64_t byteLen = (uint64_t)s1.lengthInBytes + (uint64_t)s2.lengthInBytes;
+    uint64_t cpLen = (uint64_t)s1.lengthInCodePoints + (uint64_t)s2.lengthInCodePoints;
+    TaggedPtr result;
+    GC char *bytes = _bal_string_alloc(byteLen, cpLen, &result);
+    memcpy(bytes, s1.bytes, s1.lengthInBytes);
+    memcpy(bytes + s1.lengthInBytes, s2.bytes, s2.lengthInBytes);
+    return result;
 }

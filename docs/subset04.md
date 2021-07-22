@@ -203,7 +203,6 @@ Language spec syntax references:
 
 The implementation of `string` has the following additional restrictions:
 
- * `+` operator is not supported with operands of type `string`
  * member access `s[i]` is not supported when `s` has type `string`
 
 Method call syntax can be used for calling the following langlib functions:
@@ -238,6 +237,7 @@ Add `string` and `map<any>`:
 Existing syntax extended:
 
 * `===`, `!==` for string and map
+* `+` for string
 * `==`, `!=` for string
 * `<`, `<=`, `>`, `>=` for string
 * `<T>E` for `string` and `map<any>`

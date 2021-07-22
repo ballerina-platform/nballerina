@@ -158,6 +158,7 @@ public enum InsnName {
     INSN_MAPPING_CONSTRUCT_RW,
     INSN_MAPPING_GET,
     INSN_MAPPING_SET,
+    INSN_STR_CONCAT,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -186,7 +187,7 @@ public type Insn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
-    |RetInsn|AbnormalRetInsn|CallInsn
+    |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
 
@@ -207,6 +208,14 @@ public type IntArithmeticBinaryInsn readonly & record {|
     Register result;
     IntOperand[2] operands;
     err:Position position;
+|};
+
+# Concatenate strings, returns a new string
+public type StringConcatInsn readonly & record {|
+    *InsnBase;
+    INSN_STR_CONCAT name = INSN_STR_CONCAT;
+    Register result;
+    StringOperand[2] operands;
 |};
 
 # This is a non-PPI variant of IntArithmeticBinaryInsn.

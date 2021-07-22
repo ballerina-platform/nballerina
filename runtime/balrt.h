@@ -183,6 +183,7 @@ extern READONLY StringData _bal_tagged_to_string(TaggedPtr p);
 extern READONLY bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
+extern READONLY TaggedPtr _bal_string_concat(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY uint64_t _bal_string_hash(TaggedPtr tp);
 extern GC char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr);
 

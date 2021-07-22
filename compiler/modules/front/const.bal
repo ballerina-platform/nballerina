@@ -97,6 +97,9 @@ function evalConstBinary(BinaryExpr expr, SimpleConst left, SimpleConst right) r
                 return err:semantic(`evaluation of constant ${expr.arithmeticOp} expression failed`, pos=expr.pos, cause=result);
             }
         }
+        else if left is string && right is string && expr.arithmeticOp == "+" {
+            return left + right;
+        }
     }
     else if expr is BinaryBitwiseExpr {
         if left is int && right is int {
