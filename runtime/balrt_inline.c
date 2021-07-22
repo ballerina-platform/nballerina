@@ -71,13 +71,19 @@ void _Barray__push(TaggedPtr p, TaggedPtr val) {
 }
 
 StringData _bal_tagged_to_string(TaggedPtr p) {
-    if (likely((taggedPtrBits(p) & 1) == 0)) {
+    int variant = taggedPtrBits(p) & 7;
+    if (likely(variant == STRING_SMALL_FLAG)) {
         SmallStringPtr sp = taggedToPtr(p);
         StringData data = { sp->length, sp->length, sp->bytes };
         return data;
     }
-    else {
+    else if (likely(variant == STRING_MEDIUM_FLAG)) {
         MediumStringPtr sp = taggedToPtr(p);
+        StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
+        return data;
+    }
+    else {
+        LargeStringPtr sp = taggedToPtr(p);
         StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
         return data;
     }
