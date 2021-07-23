@@ -361,7 +361,7 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
 }
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, MemberAccessLExpr lValue, Expr expr) returns CodeGenError|bir:BasicBlock? {
-    bir:Register reg = check mustLookup(cx, lValue.container.varName, scope, forAssign=true);
+    bir:Register reg = check mustLookup(cx, lValue.container.varName, scope);
     var [index, nextBlock] = check codeGenExpr(cx, startBlock, scope, lValue.index);
     bir:Operand operand;
     [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, expr);
