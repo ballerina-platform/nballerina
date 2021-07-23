@@ -21,6 +21,11 @@ const int TAG_STRING   = t:UT_STRING * TAG_FACTOR;
 
 const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
 
+const int TAG_BASIC_TYPE_MASK = 0xf * TAG_FACTOR;
+const int TAG_BASIC_TYPE_LIST = t:UT_LIST_RO * TAG_FACTOR;
+const int TAG_BASIC_TYPE_MAPPING = t:UT_MAPPING_RO * TAG_FACTOR;
+
+
 const HEAP_ADDR_SPACE = 1;
 const ALIGN_HEAP = 8;
 
@@ -880,23 +885,34 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock castFailBlock = scaffold.addBasicBlock();
-    if insn.semType === t:BOOLEAN {
+    t:SemType semType = insn.semType;
+    if semType === t:BOOLEAN {
         builder.condBr(buildHasTag(builder, tagged, TAG_BOOLEAN), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
         buildStoreBoolean(builder, scaffold, buildUntagBoolean(builder, tagged), insn.result);
     }
-    else if insn.semType === t:INT {
+    else if semType === t:INT {
         builder.condBr(buildHasTag(builder, tagged, TAG_INT), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
         buildStoreInt(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn.result);
     }
-    else if insn.semType === t:STRING {
-        builder.condBr(buildHasTag(builder, tagged, TAG_STRING), continueBlock, castFailBlock);
+    else {
+        llvm:Value hasTag;
+        if semType === t:STRING {
+            hasTag = buildHasTag(builder, tagged, TAG_STRING);
+        }
+        else if semType === t:LIST {
+            hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+        }
+        else if semType === t:MAPPING {
+            hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+        }
+        else {
+            return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
+        }
+        builder.condBr(hasTag, continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
         builder.store(tagged, scaffold.address(insn.result));
-    }
-    else {
-        return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
     }
     builder.positionAtEnd(castFailBlock);
     builder.store(buildConstPanicError(PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
@@ -998,9 +1014,18 @@ function typeSize(llvm:Type ty) returns int {
 }
 
 function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) returns llvm:Value {
+    return buildTestTag(builder, tagged, tag, TAG_MASK);    
+}
+
+function buildHasBasicTypeTag(llvm:Builder builder, llvm:PointerValue tagged, int basicTypeTag) returns llvm:Value {
+    return buildTestTag(builder, tagged, basicTypeTag, TAG_BASIC_TYPE_MASK);    
+}
+
+function buildTestTag(llvm:Builder builder, llvm:PointerValue tagged, int tag, int mask) returns llvm:Value {
     return builder.iCmp("eq", builder.iBitwise("and", buildTaggedPtrToInt(builder, tagged),
-                                                       llvm:constInt(LLVM_INT, TAG_MASK)),
+                                                       llvm:constInt(LLVM_INT, mask)),
                               llvm:constInt(LLVM_INT, tag));
+
 }
 
 function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
