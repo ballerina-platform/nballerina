@@ -1,8 +1,8 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic(i64) noreturn cold
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*)
+declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
-declare i64 @_bal_tagged_to_int(i8 addrspace(1)*)
+declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 define void @_B_main() {
   %1 = alloca i1

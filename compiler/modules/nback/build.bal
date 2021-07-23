@@ -137,7 +137,6 @@ final RuntimeFunction mappingGetFunction = {
     attrs: ["readonly"]
 };
 
-
 final RuntimeFunction mappingInitMemberFunction = {
     name: "mapping_init_member",
     ty: {
@@ -162,7 +161,7 @@ final RuntimeFunction intToTaggedFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: ["i64"]
     },
-    attrs: []
+    attrs: [] // NB not readonly because it allocates storage
 };
 
 final RuntimeFunction taggedToIntFunction = {
@@ -171,7 +170,7 @@ final RuntimeFunction taggedToIntFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: ["readonly"]
 };
 
 final RuntimeFunction eqFunction = {
@@ -180,7 +179,7 @@ final RuntimeFunction eqFunction = {
         returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: [["return", "zeroext"]]
+    attrs: [["return", "zeroext"], "readonly"]
 };
 
 final RuntimeFunction stringEqFunction = {
@@ -189,7 +188,7 @@ final RuntimeFunction stringEqFunction = {
         returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: [["return", "zeroext"]]
+    attrs: [["return", "zeroext"], "readonly"]
 };
 
 final RuntimeFunction stringCmpFunction = {
@@ -198,7 +197,7 @@ final RuntimeFunction stringCmpFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: ["readonly"]
 };
 
 final RuntimeFunction stringConcatFunction = {

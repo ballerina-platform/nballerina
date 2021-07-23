@@ -20,9 +20,9 @@
 @.str18 = internal unnamed_addr constant {i8, [7 x i8]} {i8 2, [7 x i8] c"eq\00\00\00\00\00"}, align 8
 @.str19 = internal unnamed_addr constant {i8, [7 x i8]} {i8 4, [7 x i8] c"fail\00\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
-declare i64 @_bal_string_cmp(i8 addrspace(1)*, i8 addrspace(1)*)
+declare i64 @_bal_string_cmp(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*)
+declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*

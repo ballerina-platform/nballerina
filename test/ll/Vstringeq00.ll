@@ -2,7 +2,7 @@
 @.str0 = internal unnamed_addr constant {i16, i16, [4 x i8]} {i16 2, i16 1, [4 x i8] c"\C2\80\00\00"}, align 8
 @.str1 = internal unnamed_addr constant {i16, i16, [4 x i8]} {i16 2, i16 1, [4 x i8] c"\C2\81\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*)
+declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
   %s1 = alloca i8 addrspace(1)*

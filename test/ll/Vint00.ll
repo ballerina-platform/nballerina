@@ -2,7 +2,7 @@
 declare void @_bal_panic(i64) noreturn cold
 declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare i64 @_bal_tagged_to_int(i8 addrspace(1)*)
+declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 define void @_B_main() {

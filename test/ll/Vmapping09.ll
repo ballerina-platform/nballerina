@@ -6,7 +6,7 @@ declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
-declare i64 @_bal_tagged_to_int(i8 addrspace(1)*)
+declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
   %m = alloca i8 addrspace(1)*

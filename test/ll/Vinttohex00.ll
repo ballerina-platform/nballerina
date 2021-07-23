@@ -3,7 +3,7 @@
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_Bint__toHexString(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*)
+declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 define void @_B_main() {
   %i = alloca i64

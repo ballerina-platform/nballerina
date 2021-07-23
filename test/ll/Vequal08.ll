@@ -2,7 +2,7 @@
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare i64 @_bal_tagged_to_int(i8 addrspace(1)*)
+declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
