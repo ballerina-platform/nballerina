@@ -1,13 +1,9 @@
 #include <string.h>
 #include "balrt.h"
 
-#define FLAG_INT_ON_HEAP 0x20
-
 #define IMMEDIATE_INT_MIN -(1L << (TAG_SHIFT - 1))
 #define IMMEDIATE_INT_MAX  ((1L << (TAG_SHIFT - 1)) - 1)
 #define IMMEDIATE_INT_TRUNCATE(n) (n & ((1L << TAG_SHIFT) - 1))
-
-#define POINTER_MASK ((1L << TAG_SHIFT) - 1)
 
 // We are trying to avoid doing inttoptr or ptrtoint in address space 1
 
@@ -36,18 +32,7 @@ TaggedPtr _bal_int_to_tagged(int64_t n) {
 }
 
 int64_t _bal_tagged_to_int(TaggedPtr p) {
-    int t = getTag(p);
-    if (likely(t & FLAG_INT_ON_HEAP) == 0) {
-        uint64_t n = taggedPtrBits(p);
-        n &= POINTER_MASK;
-        // sign extend
-        n <<= 8;
-        return ((int64_t)n) >> 8;
-    }
-    else {
-        GC int64_t *np = taggedToPtr(p);
-        return *np;
-    }
+    return taggedToInt(p);
 }
 
 int64_t _Bmap__length(TaggedPtr p) {
@@ -71,27 +56,8 @@ void _Barray__push(TaggedPtr p, TaggedPtr val) {
     lp->tpArray.length = len + 1;
 }
 
-StringData _bal_tagged_to_string(TaggedPtr p) {
-    int variant = taggedPtrBits(p) & 7;
-    if (likely(variant == STRING_SMALL_FLAG)) {
-        SmallStringPtr sp = taggedToPtr(p);
-        StringData data = { sp->length, sp->length, sp->bytes };
-        return data;
-    }
-    else if (likely(variant == STRING_MEDIUM_FLAG)) {
-        MediumStringPtr sp = taggedToPtr(p);
-        StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
-        return data;
-    }
-    else {
-        LargeStringPtr sp = taggedToPtr(p);
-        StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
-        return data;
-    }
-}
-
 int64_t _Bstring__length(TaggedPtr p) {
-    StringData data = _bal_tagged_to_string(p);
+    StringData data = taggedToStringData(p);
     return data.lengthInCodePoints;
 }
 

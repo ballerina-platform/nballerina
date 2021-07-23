@@ -52,7 +52,7 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
             fprintf(fp, "%s", taggedToBoolean(p) ? "true" : "false");
             break;
         case TAG_INT:
-            fprintf(fp, "%ld", (long)_bal_tagged_to_int(p));
+            fprintf(fp, "%" PRId64, taggedToInt(p));
             break;
         case TAG_LIST_RW:
             if (stackContains(stackPtr, p)) {
@@ -98,7 +98,7 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
             break;
         case TAG_STRING:
             {
-                StringData data = _bal_tagged_to_string(p);
+                StringData data = taggedToStringData(p);
                 int64_t len = data.lengthInBytes;
                 GC char *bytes = data.bytes;
                 if (style == STYLE_INFORMAL) {

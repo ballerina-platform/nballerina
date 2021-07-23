@@ -43,7 +43,7 @@ static TaggedPtr randMediumString() {
 }
 
 static TaggedPtr copySmallString(TaggedPtr tp) {
-    StringData sd = _bal_tagged_to_string(tp);
+    StringData sd = taggedToStringData(tp);
     TaggedPtr copy;
     GC char *bytes = _bal_string_alloc(sd.lengthInBytes, sd.lengthInCodePoints, &copy);
     memcpy(bytes, sd.bytes, sd.lengthInBytes);
@@ -51,13 +51,13 @@ static TaggedPtr copySmallString(TaggedPtr tp) {
 }
 
 int64_t stringLen(TaggedPtr p) {
-    StringData data = _bal_tagged_to_string(p);
+    StringData data = taggedToStringData(p);
     return data.lengthInCodePoints;
 }
 
 static int64_t stringCmpRef(TaggedPtr tp1, TaggedPtr tp2) {
-    StringData sd1 = _bal_tagged_to_string(tp1);
-    StringData sd2 = _bal_tagged_to_string(tp2);
+    StringData sd1 = taggedToStringData(tp1);
+    StringData sd2 = taggedToStringData(tp2);
     int64_t minLength = sd1.lengthInBytes <= sd2.lengthInBytes ? sd1.lengthInBytes : sd2.lengthInBytes;
     int result = memcmp(sd1.bytes, sd2.bytes, minLength);
     if (result != 0) {
@@ -174,9 +174,9 @@ void testStringConcat() {
         int concatUpTo = min(i + (rand() & 0xF), NTESTS);
         int j;
         TaggedPtr p = strs[i];
-        uint64_t expectedLen = _bal_tagged_to_string(p).lengthInBytes;
+        uint64_t expectedLen = taggedToStringData(p).lengthInBytes;
         for (j = i + 1; j < concatUpTo; j++) {
-            expectedLen += _bal_tagged_to_string(strs[j]).lengthInBytes;
+            expectedLen += taggedToStringData(strs[j]).lengthInBytes;
             if (expectedLen >= 0xFFFF) { // XXX change after BigString
                 concatUpTo = j;
                 continue;
@@ -184,10 +184,10 @@ void testStringConcat() {
             p = _bal_string_concat(p, strs[j]);
         }
 
-        StringData dataP = _bal_tagged_to_string(p);
+        StringData dataP = taggedToStringData(p);
         uint64_t offset = 0;
         for (j = i; j < concatUpTo; j++) {
-            StringData dataJ = _bal_tagged_to_string(strs[j]);
+            StringData dataJ = taggedToStringData(strs[j]);
             assert(memcmp(dataP.bytes + offset, dataJ.bytes, dataJ.lengthInBytes) == 0);
             offset += dataJ.lengthInBytes;
         }

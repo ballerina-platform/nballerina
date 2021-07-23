@@ -37,8 +37,8 @@ int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2) {
 }
 
 static int64_t stringCmpGeneric(TaggedPtr tp1, TaggedPtr tp2) {
-    StringData sd1 = _bal_tagged_to_string(tp1);
-    StringData sd2 = _bal_tagged_to_string(tp2);
+    StringData sd1 = taggedToStringData(tp1);
+    StringData sd2 = taggedToStringData(tp2);
     int64_t minLength = sd1.lengthInBytes <= sd2.lengthInBytes ? sd1.lengthInBytes : sd2.lengthInBytes;
     int result = memcmp(sd1.bytes, sd2.bytes, minLength);
     if (result != 0) {
@@ -339,8 +339,8 @@ bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
 }
 
 TaggedPtr _bal_string_concat(TaggedPtr tp1, TaggedPtr tp2) {
-    StringData s1 = _bal_tagged_to_string(tp1);
-    StringData s2 = _bal_tagged_to_string(tp2);
+    StringData s1 = taggedToStringData(tp1);
+    StringData s2 = taggedToStringData(tp2);
     // _bal_string_alloc will deal with the case where total length is > INT_MAX
     uint64_t byteLen = (uint64_t)s1.lengthInBytes + (uint64_t)s2.lengthInBytes;
     uint64_t cpLen = (uint64_t)s1.lengthInCodePoints + (uint64_t)s2.lengthInCodePoints;

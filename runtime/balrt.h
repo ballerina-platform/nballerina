@@ -7,6 +7,14 @@
 #define UT_MASK 0x1F
 #define TAG_SHIFT 56
 
+#define POINTER_MASK ((1L << TAG_SHIFT) - 1)
+
+#define FLAG_INT_ON_HEAP 0x20
+
+#define STRING_SMALL_FLAG 0
+#define STRING_MEDIUM_FLAG 1
+#define STRING_LARGE_FLAG 2
+
 #ifdef __clang__
 #define NODEREF __attribute__((noderef))
 #define NORETURN __attribute__((noreturn))
@@ -100,11 +108,6 @@ typedef GC struct Mapping {
     uint8_t tableLengthShift;
 } *MappingPtr;
 
-#define STRING_SMALL_FLAG 0
-#define STRING_MEDIUM_FLAG 1
-#define STRING_LARGE_FLAG 2
-
-
 // Both of these are 8-byte aligned and zero-padded so the total size is a multiple of 8
 typedef GC struct SmallString {
     uint8_t length;
@@ -141,6 +144,7 @@ typedef struct {
     GC char *bytes;
 } StringData;
 
+
 // These should be shared with build.bal
 #define PANIC_INDEX_OUT_OF_BOUNDS 5
 #define PANIC_LIST_TOO_LONG 6
@@ -170,16 +174,48 @@ static READNONE inline UntypedPtr taggedToPtr(TaggedPtr p) {
     return (UntypedPtr)(char *)(~((((uint64_t)TAG_MASK) << TAG_SHIFT) | 0x7) & taggedPtrBits(p));
 }
 
+static READONLY inline int64_t taggedToInt(TaggedPtr p) {
+    int t = getTag(p);
+    if (likely(t & FLAG_INT_ON_HEAP) == 0) {
+        uint64_t n = taggedPtrBits(p);
+        n &= POINTER_MASK;
+        // sign extend
+        n <<= 8;
+        return ((int64_t)n) >> 8;
+    }
+    else {
+        GC int64_t *np = taggedToPtr(p);
+        return *np;
+    }
+}
+
+static READONLY inline StringData taggedToStringData(TaggedPtr p) {
+    int variant = taggedPtrBits(p) & 7;
+    if (likely(variant == STRING_SMALL_FLAG)) {
+        SmallStringPtr sp = taggedToPtr(p);
+        StringData data = { sp->length, sp->length, sp->bytes };
+        return data;
+    }
+    else if (likely(variant == STRING_MEDIUM_FLAG)) {
+        MediumStringPtr sp = taggedToPtr(p);
+        StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
+        return data;
+    }
+    else {
+        LargeStringPtr sp = taggedToPtr(p);
+        StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
+        return data;
+    }
+}
+
 static READNONE inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {
     char *p0 = (void *)p;
     p0 = (char *)((uint64_t)p0 | flags);
     return (TaggedPtr)p0;
 }
 
-extern TaggedPtr _bal_int_to_tagged(int64_t n);
-extern READONLY int64_t _bal_tagged_to_int(TaggedPtr p);
+// Don't declare functions here if they are balrt_inline.c
 
-extern READONLY StringData _bal_tagged_to_string(TaggedPtr p);
 extern READONLY bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
