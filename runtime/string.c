@@ -214,7 +214,7 @@ static void mediumStringHash(HashState *hp, MediumStringPtr p) {
 }
 
 static void largeStringHash(HashState *hp, LargeStringPtr p) {
-    IntPtr ip = (IntPtr)(p->bytes);
+    IntPtr ip = (IntPtr)p;
     int64_t len = p->lengthInBytes;
     uint64_t nBytes = largeStringSize(len);
     int64_t nInts = nBytes >> 3;
