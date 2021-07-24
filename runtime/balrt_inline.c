@@ -31,7 +31,7 @@ TaggedPtr _bal_int_to_tagged(int64_t n) {
     }
 }
 
-int64_t _bal_tagged_to_int(TaggedPtr p) READONLY {
+int64_t READONLY _bal_tagged_to_int(TaggedPtr p) {
     return taggedToInt(p);
 }
 
@@ -61,7 +61,7 @@ int64_t _Bstring__length(TaggedPtr p) {
     return data.lengthInCodePoints;
 }
 
-bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2) READONLY {
+bool READONLY _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
     if (tp1 == tp2) {
         return 1;
     }
