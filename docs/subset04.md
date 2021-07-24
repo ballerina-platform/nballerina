@@ -85,7 +85,7 @@ lvexpr =
 
 return-stmt = "return" [expression] ";"
 
-if-else-stmt = "if" stmt ["else" (if-else-stmt | stmt-block)]
+if-else-stmt = "if" expression stmt-block ["else" (if-else-stmt | stmt-block)]
 
 while-stmt = "while" expression stmt-block
 
