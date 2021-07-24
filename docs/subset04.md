@@ -51,7 +51,7 @@ function-defn = ["public"] "function" identifier signature stmt-block
 signature = "(" [param-list] ")" [ "returns" type-desc ]
 type-desc = basic-type-name | "any" | array-type-desc | map-type-desc
 
-basic-type-name = "int" | "boolean"
+basic-type-name = "string" | "int" | "boolean"
 array-type-desc = "any" "[" "]"
 map-type-desc = "map" "<" "any" ">"
 
