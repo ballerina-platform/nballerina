@@ -11,6 +11,20 @@ static int min(int n1, int n2) {
     return (n1 > n2 ) ? n2 : n1;
 }
 
+static uint64_t handPickedLargeLen[] = {
+    0xFFFFF - 4,
+    0xFFFFF - 3,
+    0xFFFFF - 2,
+    0xFFFFF - 1,
+    0xFFFFF,
+    0xFFFFF + 1,
+    0xFFFFF + 2,
+    0xFFFFF + 3,
+    0xFFFFF + 4};
+
+// handPickedCount should be devisable by 3 for the associative test to work
+static int handPickedCount = sizeof(handPickedLargeLen) / sizeof(handPickedLargeLen[0]);
+
 
 #define NRANDOM 2
 
@@ -139,20 +153,20 @@ void testStringEq() {
 }
 
 void testStringConcatAssociative() {
-    TaggedPtr *strs = malloc(sizeof(TaggedPtr) * NTESTS * 3);
+    assert(handPickedCount % 3 == 0);
+    int totalStrs = NTESTS * 3 + handPickedCount;
+    TaggedPtr *strs = malloc(sizeof(TaggedPtr) * totalStrs);
     int i;
     for (i = 0; i < NTESTS*3; i++) {
-        // XXX remove masking after BigString
         strs[i] = randString(rand() & 0xFFFF);
     }
-    for (i = 0; i < NTESTS*3; i = i + 3) {
+    for (i = 0; i < handPickedCount; i++) {
+        strs[NTESTS*3 + i] = randString(handPickedLargeLen[i]);
+    }
+    for (i = 0; i < totalStrs; i = i + 3) {
         int64_t expectedLen = stringLen(strs[i]) + 
                               stringLen(strs[i + 1]) +
                               stringLen(strs[i + 2]);
-        if (expectedLen >= 0xFFFF) {
-            // XXX remove when BigString is implimented, and reconsider overflowing of above
-            continue;
-        }
         TaggedPtr s1 = _bal_string_concat(strs[i], _bal_string_concat(strs[i + 1], strs[i + 2]));
         TaggedPtr s2 = _bal_string_concat(_bal_string_concat(strs[i], strs[i + 1]), strs[i + 2]);
         assert(stringLen(s1) == expectedLen);
@@ -163,24 +177,23 @@ void testStringConcatAssociative() {
 }
 
 void testStringConcat() {
-    TaggedPtr *strs = malloc(sizeof(TaggedPtr) * NTESTS);
+    int totalStrs = NTESTS + handPickedCount;
+    TaggedPtr *strs = malloc(sizeof(TaggedPtr) * totalStrs);
     int i;
     for (i = 0; i < NTESTS; i++) {
-        // XXX remove masking after BigString
-        strs[i] = randString(rand() & 0xFFFF);
+        strs[i] = randString(rand() & 0xFFFFF);
+    }
+    for (i = 0; i < handPickedCount; i++) {
+        strs[NTESTS + i] = randString(handPickedLargeLen[i]);
     }
     i = 0;
-    while (i < NTESTS) {
-        int concatUpTo = min(i + (rand() & 0xF), NTESTS);
+    while (i < totalStrs) {
+        int concatUpTo = min(i + (rand() & 0xF), totalStrs);
         int j;
         TaggedPtr p = strs[i];
         uint64_t expectedLen = taggedToStringData(p).lengthInBytes;
         for (j = i + 1; j < concatUpTo; j++) {
             expectedLen += taggedToStringData(strs[j]).lengthInBytes;
-            if (expectedLen >= 0xFFFF) { // XXX change after BigString
-                concatUpTo = j;
-                continue;
-            }
             p = _bal_string_concat(p, strs[j]);
         }
 

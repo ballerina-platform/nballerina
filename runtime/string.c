@@ -213,7 +213,6 @@ static void mediumStringHash(HashState *hp, MediumStringPtr p) {
     hashUpdatePartial(hp, start >> (64 - shift), 4 - nPad);
 }
 
-// We compute the hash with the first 4 bytes moved after the other bytes
 static void largeStringHash(HashState *hp, LargeStringPtr p) {
     IntPtr ip = (IntPtr)(p->bytes);
     int64_t len = p->lengthInBytes;
