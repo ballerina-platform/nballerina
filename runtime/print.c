@@ -95,21 +95,21 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
                 }
                 fputs("}", fp);
             }
-            break;
+            break; 
         case TAG_STRING:
             {
-                StringData data = taggedToStringData(p);
-                int64_t len = data.lengthInBytes;
-                GC char *bytes = data.bytes;
+                StringLength len = taggedStringLength(p);
+                int64_t nBytes = len.nBytes;
+                char *bytes = taggedStringBytes(&p);
                 if (style == STYLE_INFORMAL) {
                     fputc('"', fp);
-                    for (int64_t i = 0; i < len; i++) {
+                    for (int64_t i = 0; i < nBytes; i++) {
                         printStringLiteralChar(fp, bytes[i]);
                     }
                     fputc('"', fp);
                 }
                 else {
-                    fwrite((char *)data.bytes, 1, data.lengthInBytes, fp);
+                    fwrite(bytes, 1, nBytes, fp);
                 }
             }
             break;

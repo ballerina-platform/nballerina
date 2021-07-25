@@ -1,5 +1,4 @@
 @_bal_stack_guard = external global i8*
-@.str0 = internal unnamed_addr constant {i8, [7 x i8]} {i8 5, [7 x i8] c"x\22y\5Cz\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
@@ -14,7 +13,7 @@ define void @_B_main() {
   %7 = call i8 addrspace(1)* @_bal_alloc(i64 8)
   %8 = bitcast i8 addrspace(1)* %7 to [1 x i8 addrspace(1)*] addrspace(1)*
   %9 = getelementptr inbounds [1 x i8 addrspace(1)*], [1 x i8 addrspace(1)*] addrspace(1)* %8, i64 0, i64 0
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %9
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475969656726136), i8 addrspace(1)* addrspace(1)* %9
   %10 = bitcast [1 x i8 addrspace(1)*] addrspace(1)* %8 to [0 x i8 addrspace(1)*] addrspace(1)*
   %11 = call i8 addrspace(1)* @_bal_alloc(i64 24)
   %12 = bitcast i8 addrspace(1)* %11 to {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*

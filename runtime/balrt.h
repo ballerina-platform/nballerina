@@ -10,10 +10,9 @@
 #define POINTER_MASK ((1L << TAG_SHIFT) - 1)
 
 #define FLAG_INT_ON_HEAP 0x20
+#define IMMEDIATE_FLAG (((uint64_t)0x20) << TAG_SHIFT)
 
-#define STRING_SMALL_FLAG 0
-#define STRING_MEDIUM_FLAG 1
-#define STRING_LARGE_FLAG 2
+#define STRING_LARGE_FLAG 1
 
 #ifdef __clang__
 #define NODEREF __attribute__((noderef))
@@ -109,10 +108,6 @@ typedef GC struct Mapping {
 } *MappingPtr;
 
 // Both of these are 8-byte aligned and zero-padded so the total size is a multiple of 8
-typedef GC struct SmallString {
-    uint8_t length;
-    char bytes[];
-} *SmallStringPtr;
 
 typedef GC struct MediumString {
     uint16_t lengthInBytes;
@@ -138,6 +133,12 @@ static inline uint64_t largeStringSize(int64_t lengthInBytes) {
     return (((uint64_t)lengthInBytes + 7 + 16) >> 3) << 3;
 }
 
+
+typedef struct {
+    int64_t nBytes;
+    int64_t nCodePoints;
+} StringLength;
+
 typedef struct {
     int64_t lengthInBytes;
     int64_t lengthInCodePoints;
@@ -160,6 +161,11 @@ extern void _Bio__println(TaggedPtr p);
 
 static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;
+}
+
+static inline TaggedPtr bitsToTaggedPtr(uint64_t bits) {
+    char *p = (char *)0 + bits;
+    return (TaggedPtr)p;
 }
 
 static READNONE inline int getTag(TaggedPtr p) {
@@ -189,22 +195,55 @@ static READONLY inline int64_t taggedToInt(TaggedPtr p) {
     }
 }
 
-static READONLY inline StringData taggedToStringData(TaggedPtr p) {
-    int variant = taggedPtrBits(p) & 7;
-    if (likely(variant == STRING_SMALL_FLAG)) {
-        SmallStringPtr sp = taggedToPtr(p);
-        StringData data = { sp->length, sp->length, sp->bytes };
-        return data;
+static READNONE inline StringLength immediateStringLength(uint64_t bits) {
+    StringLength len;
+    unsigned loByte = bits & 0xFF;
+    if (loByte == 0xFF) {
+        len.nBytes = 0;
+        len.nCodePoints = 0;
     }
-    else if (likely(variant == STRING_MEDIUM_FLAG)) {
+    else if (loByte & 0x80) {
+        len.nBytes = __builtin_clz((uint8_t)~loByte) - (sizeof(unsigned) - 1)*8;
+        len.nCodePoints = 1;
+    }
+    else {
+        bits = ~bits;
+        bits &= ((uint64_t)1 << 56) - 1;
+        len.nBytes = len.nCodePoints =  8 - (__builtin_clzl(bits) >> 3);
+    }
+    return len;
+}
+
+static READONLY inline StringLength taggedStringLength(TaggedPtr p) {
+    uint64_t bits = taggedPtrBits(p);
+    if (bits & IMMEDIATE_FLAG) {
+        return immediateStringLength(bits);
+    }
+    if (likely((bits & STRING_LARGE_FLAG) == 0)) {
         MediumStringPtr sp = taggedToPtr(p);
-        StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
-        return data;
+        StringLength len = { sp->lengthInBytes, sp->lengthInCodePoints };
+        return len;
     }
     else {
         LargeStringPtr sp = taggedToPtr(p);
-        StringData data = { sp->lengthInBytes, sp->lengthInCodePoints, sp->bytes };
-        return data;
+        StringLength len = { sp->lengthInBytes, sp->lengthInCodePoints };
+        return len;
+    }
+}
+
+static READONLY inline char *taggedStringBytes(TaggedPtr *p) {
+     uint64_t bits = taggedPtrBits(*p);
+    if (bits & IMMEDIATE_FLAG) {
+        return (char *)p;
+    }
+    if (likely((bits & STRING_LARGE_FLAG) == 0)) {
+        MediumStringPtr sp = taggedToPtr(*p);
+        // cast away address space
+        return (char *)sp->bytes;
+    }
+    else {
+        LargeStringPtr sp = taggedToPtr(*p);
+        return (char *)sp->bytes;
     }
 }
 
@@ -221,7 +260,7 @@ extern READONLY bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY TaggedPtr _bal_string_concat(TaggedPtr tp1, TaggedPtr tp2);
 extern READONLY uint64_t _bal_string_hash(TaggedPtr tp);
-extern GC char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr);
+extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr);
 
 #define TAGGED_PTR_SHIFT 3
 

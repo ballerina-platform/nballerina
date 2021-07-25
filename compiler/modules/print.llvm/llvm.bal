@@ -70,8 +70,8 @@ public function constInt(IntType ty, int val) returns ConstValue {
 }
 
 // Corresponds to LLVMConstNull
-public function constNull(PointerType ty) returns PointerValue {
-    return new PointerValue(ty, "null");
+public function constNull(PointerType ty) returns ConstPointerValue {
+    return new ConstPointerValue(ty, "null");
 }
 
 // Corresponds to LLVMContextRef

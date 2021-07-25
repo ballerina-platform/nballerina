@@ -25,6 +25,7 @@ const int TAG_BASIC_TYPE_MASK = 0xf * TAG_FACTOR;
 const int TAG_BASIC_TYPE_LIST = t:UT_LIST_RO * TAG_FACTOR;
 const int TAG_BASIC_TYPE_MAPPING = t:UT_MAPPING_RO * TAG_FACTOR;
 
+const int FLAG_IMMEDIATE = 0x20 * TAG_FACTOR;
 
 const HEAP_ADDR_SPACE = 1;
 const ALIGN_HEAP = 8;
@@ -221,11 +222,11 @@ type ImportedFunction record {|
 
 type ImportedFunctionTable table<ImportedFunction> key(symbol);
 
-const STRING_VARIANT_SMALL = 0;
-const STRING_VARIANT_MEDIUM = 1;
-const STRING_VARIANT_LARGE = 2;
+//const STRING_VARIANT_SMALL = 0;
+const STRING_VARIANT_MEDIUM = 0;
+const STRING_VARIANT_LARGE = 1;
 
-type StringVariant STRING_VARIANT_SMALL|STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE;
+type StringVariant STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE; // STRING_VARIANT_SMALL|;
 
 type StringDefn llvm:ConstPointerValue;
 
@@ -1063,13 +1064,22 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
     llvm:Type ty;
     llvm:ConstValue val;
     StringVariant variant;
-    if nBytes == nCodePoints && nBytes <= 0xFF {
-        // We want the total size including the header to be a multiple of 8
-        int nBytesPadded = padBytes(bytes, 1);
-        val = context.constStruct([llvm:constInt("i8", nBytes), context.constString(bytes)]);
-        ty = llvm:structType(["i8", llvm:arrayType("i8", nBytesPadded)]);
-        variant = STRING_VARIANT_SMALL;
+    if nCodePoints == 1 || (nBytes == nCodePoints && nBytes <= 7) {
+        int encoded = 0;
+        foreach int i in 0 ..< 7 {
+            // JBUG cast needed #31867
+            encoded |= <int>(i < nBytes ? bytes[i] : 0xFF) << i*8;
+        }
+        encoded |= FLAG_IMMEDIATE|TAG_STRING;
+        return context.constGetElementPtr(llvm:constNull(LLVM_TAGGED_PTR), [llvm:constInt(LLVM_INT, encoded)]);
     }
+    // if nBytes == nCodePoints && nBytes <= 0xFF {
+    //     // We want the total size including the header to be a multiple of 8
+    //     int nBytesPadded = padBytes(bytes, 1);
+    //     val = context.constStruct([llvm:constInt("i8", nBytes), context.constString(bytes)]);
+    //     ty = llvm:structType(["i8", llvm:arrayType("i8", nBytesPadded)]);
+    //     variant = STRING_VARIANT_SMALL;
+    // }
     else if nBytes <= 0xFFFF {
         int nBytesPadded = padBytes(bytes, 4);
         val = context.constStruct([llvm:constInt("i16", nBytes), llvm:constInt("i16", nCodePoints), context.constString(bytes)]);

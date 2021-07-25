@@ -28,9 +28,9 @@ static int handPickedCount = sizeof(handPickedLargeLen) / sizeof(handPickedLarge
 
 #define NRANDOM 2
 
-static TaggedPtr randString(int nBytes) {
+static TaggedPtr randAsciiString(int nBytes) {
     TaggedPtr tp;
-    GC char *bytes = _bal_string_alloc(nBytes, nBytes, &tp);
+    char *bytes = _bal_string_alloc(nBytes, nBytes, &tp);
 
     memset(bytes, 'A', nBytes);
 
@@ -45,7 +45,7 @@ static TaggedPtr randString(int nBytes) {
 }
 
 static TaggedPtr randSmallString() {
-    return randString(rand() & 0xFF);
+    return randAsciiString(rand() & 0x7);
 }
 
 static TaggedPtr randMediumString() {
@@ -53,31 +53,31 @@ static TaggedPtr randMediumString() {
     if (size <= 0xFF) {
         size |= 0x100;
     }
-    return randString(size);
+    return randAsciiString(size);
 }
 
-static TaggedPtr copySmallString(TaggedPtr tp) {
-    StringData sd = taggedToStringData(tp);
+static TaggedPtr copyString(TaggedPtr tp) {
+    StringLength len = taggedStringLength(tp);
     TaggedPtr copy;
-    GC char *bytes = _bal_string_alloc(sd.lengthInBytes, sd.lengthInCodePoints, &copy);
-    memcpy(bytes, sd.bytes, sd.lengthInBytes);
+    char *bytes = _bal_string_alloc(len.nBytes, len.nCodePoints, &copy);
+    memcpy(bytes, taggedStringBytes(&tp), len.nBytes);
     return copy;
 }
 
 int64_t stringLen(TaggedPtr p) {
-    StringData data = taggedToStringData(p);
-    return data.lengthInCodePoints;
+    StringLength len = taggedStringLength(p);
+    return len.nCodePoints;
 }
 
 static int64_t stringCmpRef(TaggedPtr tp1, TaggedPtr tp2) {
-    StringData sd1 = taggedToStringData(tp1);
-    StringData sd2 = taggedToStringData(tp2);
-    int64_t minLength = sd1.lengthInBytes <= sd2.lengthInBytes ? sd1.lengthInBytes : sd2.lengthInBytes;
-    int result = memcmp(sd1.bytes, sd2.bytes, minLength);
+    StringLength len1 = taggedStringLength(tp1);
+    StringLength len2 = taggedStringLength(tp2);
+    int64_t minLength = len1.nBytes <= len2.nBytes ? len1.nBytes : len2.nBytes;
+    int result = memcmp(taggedStringBytes(&tp1), taggedStringBytes(&tp2), minLength);
     if (result != 0) {
         return result;
     }
-    return sd1.lengthInBytes - sd2.lengthInBytes;
+    return len1.nBytes - len2.nBytes;
 }
 
 static int sign(int64_t n) {
@@ -95,30 +95,16 @@ static inline bool isContinuationByte(unsigned char c) {
 static TaggedPtr makeString(const char *s) {
     int64_t nBytes = strlen(s);
     int64_t i;
-    int64_t nc = 0;
+    int64_t nContinue = 0;
     for (i = 0; i < nBytes; i++) {
         if (isContinuationByte(s[i])) {
-            ++nc;
+            ++nContinue;
         }
     }
-    assert(nBytes <= 0xFFFF);
-    if (nc == 0 && nBytes <= 0xFF) {
-        int size = smallStringSize(nBytes);
-        SmallStringPtr p = _bal_alloc(size);
-        memset(p, 0, size);
-        p->length = nBytes;
-        memcpy(p->bytes, s, nBytes);
-        return ptrAddFlags(p, (uint64_t)TAG_STRING << TAG_SHIFT);
-    }
-    else {
-        int size = mediumStringSize(nBytes);
-        MediumStringPtr p = _bal_alloc(size);
-        memset(p, 0, size);
-        p->lengthInBytes = nBytes;
-        p->lengthInCodePoints = nBytes - nc;
-        memcpy(p->bytes, s, nBytes);
-        return ptrAddFlags(p, ((uint64_t)TAG_STRING << TAG_SHIFT)| STRING_MEDIUM_FLAG);
-    }  
+    TaggedPtr tp;
+    char *bytes = _bal_string_alloc(nBytes, nBytes - nContinue, &tp);
+    memcpy(bytes, s, nBytes);
+    return tp;
 }
 
 void testStringCmp() {
@@ -127,7 +113,7 @@ void testStringCmp() {
     int j = 0;
     for (i = 0; i < NTESTS; i++) {
         strs[j] = randSmallString();
-        strs[j + 1] = copySmallString(strs[j]);
+        strs[j + 1] = copyString(strs[j]);
         j += 2;
         strs[j++] = randMediumString();
     }
@@ -158,10 +144,10 @@ void testStringConcatAssociative() {
     TaggedPtr *strs = malloc(sizeof(TaggedPtr) * totalStrs);
     int i;
     for (i = 0; i < NTESTS*3; i++) {
-        strs[i] = randString(rand() & 0xFFFF);
+        strs[i] = randAsciiString(rand() & 0xFFFF);
     }
     for (i = 0; i < handPickedCount; i++) {
-        strs[NTESTS*3 + i] = randString(handPickedLargeLen[i]);
+        strs[NTESTS*3 + i] = randAsciiString(handPickedLargeLen[i]);
     }
     for (i = 0; i < totalStrs; i = i + 3) {
         int64_t expectedLen = stringLen(strs[i]) + 
@@ -181,28 +167,28 @@ void testStringConcat() {
     TaggedPtr *strs = malloc(sizeof(TaggedPtr) * totalStrs);
     int i;
     for (i = 0; i < NTESTS; i++) {
-        strs[i] = randString(rand() & 0xFFFFF);
+        strs[i] = randAsciiString(rand() & 0xFFFFF);
     }
     for (i = 0; i < handPickedCount; i++) {
-        strs[NTESTS + i] = randString(handPickedLargeLen[i]);
+        strs[NTESTS + i] = randAsciiString(handPickedLargeLen[i]);
     }
     i = 0;
     while (i < totalStrs) {
         int concatUpTo = min(i + (rand() & 0xF), totalStrs);
         int j;
         TaggedPtr p = strs[i];
-        uint64_t expectedLen = taggedToStringData(p).lengthInBytes;
+        uint64_t expectedLen = taggedStringLength(p).nBytes;
         for (j = i + 1; j < concatUpTo; j++) {
-            expectedLen += taggedToStringData(strs[j]).lengthInBytes;
+            expectedLen += taggedStringLength(strs[j]).nBytes;
             p = _bal_string_concat(p, strs[j]);
         }
 
-        StringData dataP = taggedToStringData(p);
+        char *bytes = taggedStringBytes(&p);
         uint64_t offset = 0;
         for (j = i; j < concatUpTo; j++) {
-            StringData dataJ = taggedToStringData(strs[j]);
-            assert(memcmp(dataP.bytes + offset, dataJ.bytes, dataJ.lengthInBytes) == 0);
-            offset += dataJ.lengthInBytes;
+            int64_t jLen = taggedStringLength(strs[j]).nBytes;
+            assert(memcmp(bytes + offset, taggedStringBytes(&strs[j]), jLen) == 0);
+            offset += jLen;
         }
         i = concatUpTo;
     }
@@ -210,26 +196,12 @@ void testStringConcat() {
 }
 
 static uint64_t smallStringHashRef(TaggedPtr tp) {
-    SmallStringPtr s = taggedToPtr(tp);
-    int len = s->length;
-    uint64_t buf[256/8];
-    memset(&buf, 0, sizeof(buf));
-    if (len > 7) {
-        memcpy(buf, s->bytes + 7, len - 7);
-        memcpy((char *)buf + len - 7, s->bytes, 7);
-    }
-    else {
-        memcpy(buf, s->bytes, len);
-    }
+    int len = taggedStringLength(tp).nBytes;
+    uint64_t data = 0;
+    memcpy(&data, taggedStringBytes(&tp), len);
     HashState h;
     hashInit(&h);
-    int nInts = len / 8;
-    for (int i = 0; i < nInts; i++)
-        hashUpdate(&h, buf[i]);
-    int left = len % 8;
-    if (left) {
-        hashUpdatePartial(&h, buf[nInts], left);
-    }
+    hashUpdatePartial(&h, data, len);
     return hashFinish(&h);
 }
 
@@ -292,7 +264,7 @@ void testRandMapping(int len) {
             k[i] = 0;
         }
         else {
-            k[i] = copySmallString(k[i]);
+            k[i] = copyString(k[i]);
         }
     }
     for (int i = 0; i < len; i++) {
@@ -315,9 +287,9 @@ HASH_DEFINE_KEY;
 
 int main() {
     srand(1);
+    testStringHash();
     testStringCmp();
     testStringEq();
-    testStringHash();
     testStringConcat();
     testStringConcatAssociative();
     testMapping();

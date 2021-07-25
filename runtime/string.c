@@ -7,7 +7,7 @@
 #define bswap(n) __builtin_bswap64(n)
 
 static int64_t stringCmpGeneric(TaggedPtr tp1, TaggedPtr tp2);
-static int64_t stringCmpSmall(SmallStringPtr s1, SmallStringPtr s2);
+static int64_t stringCmpImmediate(uint64_t bits1, uint64_t bits2);
 static int64_t stringCmpMedium(MediumStringPtr s1, MediumStringPtr s2);
 static int64_t stringCmpLarge(LargeStringPtr s1, LargeStringPtr s2);
 
@@ -19,16 +19,16 @@ int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2) {
     }
     uint64_t bits1 = taggedPtrBits(tp1);
     uint64_t bits2 = taggedPtrBits(tp2);
-    if (unlikely(((bits1 ^ bits2) & 0x7) != 0)) {
+    if (bits1 & bits2 & IMMEDIATE_FLAG) {
+        return stringCmpImmediate(bits1, bits2);
+    }
+    if (unlikely(((bits1 ^ bits2) & (IMMEDIATE_FLAG|STRING_LARGE_FLAG)) != 0)) {
         return stringCmpGeneric(tp1, tp2);
     }
+
     UntypedPtr p1 = taggedToPtr(tp1);
     UntypedPtr p2 = taggedToPtr(tp2);
-    int variant = (bits1 & 0x7);
-    if (likely(variant == STRING_SMALL_FLAG)) {
-        return stringCmpSmall(p1, p2);
-    }
-    else if (likely(variant == STRING_MEDIUM_FLAG)) {
+    if (likely((bits1 & STRING_LARGE_FLAG) == 0)) {
         return stringCmpMedium(p1, p2);
     }
     else {
@@ -37,37 +37,29 @@ int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2) {
 }
 
 static int64_t stringCmpGeneric(TaggedPtr tp1, TaggedPtr tp2) {
-    StringData sd1 = taggedToStringData(tp1);
-    StringData sd2 = taggedToStringData(tp2);
-    int64_t minLength = sd1.lengthInBytes <= sd2.lengthInBytes ? sd1.lengthInBytes : sd2.lengthInBytes;
-    int result = memcmp(sd1.bytes, sd2.bytes, minLength);
+    StringLength len1 = taggedStringLength(tp1);
+    StringLength len2 = taggedStringLength(tp2);
+    int64_t nBytes = len1.nBytes <= len2.nBytes ? len1.nBytes : len2.nBytes;
+    int result = memcmp(taggedStringBytes(&tp1), taggedStringBytes(&tp2), nBytes);
     if (result != 0) {
         return result;
     }
-    return sd1.lengthInBytes - sd2.lengthInBytes;
+    return len1.nBytes - len2.nBytes;
 }
 
-static int64_t stringCmpSmall(SmallStringPtr s1, SmallStringPtr s2) {
-    uint64_t h1 = *(IntPtr)s1;
-    uint64_t h2 = *(IntPtr)s2;
-    int len1 = h1 & 0xFF;
-    int len2 = h2 & 0xFF;
-    int64_t b1 = bswap(h1) & ((1UL << 56) - 1);
-    int64_t b2 = bswap(h2) & ((1UL << 56) - 1);
-    int64_t d = b1 - b2;
-    if (d != 0) {
-        return d;
+// precondition bits1 !== bits2
+static inline int64_t stringCmpImmediate(uint64_t bits1, uint64_t bits2) {
+    // how much to shift so that the first differing byte is the lo byte
+    // ctzl counts the number of trailing zero bits
+    int shift = __builtin_ctzl(bits1 ^ bits2) & ~7;
+    int byte1 = (bits1 >> shift) & 0xFF;
+    int byte2 = (bits2 >> shift) & 0xFF;
+    if (byte1 < byte2) {
+        return byte2 == 0xFF ? 1 : -1;
     }
-    int minLen = len1 <= len2 ? len1 : len2;
-    if (minLen <= 7) {
-        return len1 - len2;
+    else {
+        return byte1 == 0xFF ? -1 : 1;
     }
-    int nInts = smallStringSize(minLen) >> 3;
-    int64_t result = memcmp8((IntPtr)s1 + 1, (IntPtr)s2 + 1, nInts - 1);
-    if (result != 0) {
-        return result;
-    }
-    return len1 - len2;
 }
 
 static int64_t stringCmpMedium(MediumStringPtr s1, MediumStringPtr s2) {
@@ -117,50 +109,10 @@ static int64_t memcmp8(IntPtr p1, IntPtr p2, int64_t n) {
     return 0;
 }
 
-// We compute the hash with the first 7 bytes moved after the other bytes
-static void smallStringHash(HashState *hp, SmallStringPtr p) {
-    IntPtr ip = (IntPtr)p;
-    uint64_t start = *ip;
-    unsigned len = start & 0xFF;
-    start >>= 8;
-    if (len <= 7) {
-        if (len != 0) 
-            hashUpdatePartial(hp, start, len);
-        return;
-    }
-    int nBytes = smallStringSize(len);
-    int nInts = nBytes >> 3;
-    // nPad is number of zero padding bytes at the end (nPad <= 7)
-    int nPad = nBytes - (len + 1);
-    int nCompleteInts;
-    if (nPad) {
-        nCompleteInts = nInts - 1;
-    }
-    else {
-        nCompleteInts = nInts;
-    }
-    for (int i = 1; i < nCompleteInts; i++) {
-        hashUpdate(hp, ip[i]);
-    }
-    if (!nPad) {      
-        hashUpdatePartial(hp, start, 7);
-        return;
-    }
-    uint64_t last = ip[nCompleteInts];
-
-    // fill in the padding bytes of last from bottom bytes of start
-    // nPad 1 = shift 56
-    // nPad 2 = shift 48
-    // nPad 7 = shift 8
-    int shift = 8 * (8 - nPad);
-    last |= start << shift;
-    // we have 7 bytes at the beginning and
-    // no more than 7 bytes of padding, so we always fill this
-    hashUpdate(hp, last);
-    if (nPad == 7) {
-        return;
-    }
-    hashUpdatePartial(hp, start >> (64 - shift), 7 - nPad);    
+static void immediateStringHash(HashState *hp, uint64_t bits) {
+    StringLength len = immediateStringLength(bits);
+    bits &= ((uint64_t)1 << 8*len.nBytes) - 1;
+    hashUpdatePartial(hp, bits, len.nBytes);
 }
 
 // We compute the hash with the first 4 bytes moved after the other bytes
@@ -235,67 +187,55 @@ static void largeStringHash(HashState *hp, LargeStringPtr p) {
 }
 
 uint64_t _bal_string_hash(TaggedPtr tp) {
-    int variant = taggedPtrBits(tp) & 0x7;
-    UntypedPtr p = taggedToPtr(tp);
+    uint64_t bits = taggedPtrBits(tp);
     HashState h;
     hashInit(&h);
-    if (variant == STRING_SMALL_FLAG) {
-        smallStringHash(&h, p);
+    if (bits & IMMEDIATE_FLAG) {
+        immediateStringHash(&h, bits);
     }
-    else if (variant == STRING_MEDIUM_FLAG) {
-        mediumStringHash(&h, p);
+    else if (likely((bits & STRING_LARGE_FLAG) == 0)) {
+        mediumStringHash(&h, taggedToPtr(tp));
     }
     else {
-        largeStringHash(&h, p);
+        largeStringHash(&h, taggedToPtr(tp));
     }
     return hashFinish(&h);
 }
 
-GC char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr) {
-    GC char *bytes;
-    UntypedPtr p;
-    int variant;
-    if (lengthInBytes <= 0xFF && lengthInCodePoints == lengthInBytes) {
+char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr) {
+    if (lengthInCodePoints == 1 || (lengthInCodePoints == lengthInBytes && lengthInBytes <= 0x7)) {
+        // pad with 0xFF
+        *resultPtr = bitsToTaggedPtr(IMMEDIATE_FLAG | (((uint64_t)TAG_STRING) << TAG_SHIFT) | (((uint64_t)1 << (7*8)) -  1));
+        return (char *)resultPtr;
+    }
+    else if (lengthInBytes <= 0xFFFF) {
         int len = lengthInBytes;
-        int size = smallStringSize(len);
-        p = _bal_alloc(size);
+        int size = mediumStringSize(len);
+        UntypedPtr p = _bal_alloc(size);
         // Make the last 8 bytes of allocated space be 0
         // so that all padding bytes will be 0.
         // This needs to be done before setting the length
         // in the case where only 8 bytes are allocated.
         ((GC uint64_t *)((GC char *)p + size))[-1] = 0;
-        SmallStringPtr sp = p;
-        sp->length = len;
-        bytes = sp->bytes;
-        variant = STRING_SMALL_FLAG;
-    }
-    else if (lengthInBytes <= 0xFFFF) {
-        int len = lengthInBytes;
-        int size = mediumStringSize(len);
-        p = _bal_alloc(size);
-        // See comment above
-        ((GC uint64_t *)((GC char *)p + size))[-1] = 0;
         MediumStringPtr sp = p;
         sp->lengthInBytes = len;
         sp->lengthInCodePoints = (uint16_t)lengthInCodePoints;
-        bytes = sp->bytes;
-        variant = STRING_MEDIUM_FLAG;
+        *resultPtr = ptrAddFlags(p, (uint64_t)TAG_STRING << TAG_SHIFT);
+        return (char *)sp->bytes;
     }
     else {
         if (unlikely(lengthInBytes > INT64_MAX)) {
             _bal_panic(PANIC_STRING_TOO_LONG);
         }
         uint64_t size = largeStringSize(lengthInBytes);
-        p = _bal_alloc(size);
+        UntypedPtr p = _bal_alloc(size);
          ((GC uint64_t *)((GC char *)p + size))[-1] = 0;
         LargeStringPtr sp = p;
         sp->lengthInBytes = lengthInBytes;
         sp->lengthInCodePoints = lengthInCodePoints;
-        bytes = sp->bytes;
-        variant = STRING_LARGE_FLAG;
+        *resultPtr = ptrAddFlags(p, ((uint64_t)TAG_STRING << TAG_SHIFT) | STRING_LARGE_FLAG);
+        return (char *)sp->bytes;
     }
-    *resultPtr = ptrAddFlags(p, ((uint64_t)TAG_STRING << TAG_SHIFT) | variant);
-    return bytes;
 }
 
 
@@ -305,30 +245,35 @@ bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
     if (tp1 == tp2) {
         return true;
     }
+    uint64_t bits1 = taggedPtrBits(tp1);
+    uint64_t bits2 = taggedPtrBits(tp2);
+    if ((bits1 | bits2) & IMMEDIATE_FLAG) {
+        // one of them is immediate and the bits are not equal
+        // so they are not equal        
+        return false;
+    }
     IntPtr p1 = taggedToPtr(tp1);
     IntPtr p2 = taggedToPtr(tp2);
     int64_t h1 = *p1;
     int64_t h2 = *p2;
     if (h1 != h2) {
         return 0;
-    }    
-    int variant1 = taggedPtrBits(tp1) & 0x7;
-    int variant2 = taggedPtrBits(tp2) & 0x7;
-    if (unlikely(variant1 != variant2)) {
-        return false;
     }
     // number of 64-bit units including the header
     int nInts;
-    if (likely(variant1 == STRING_SMALL_FLAG)) {
-        int len = h1 & 0xFF;
-        nInts = smallStringSize(len) >> 3;
-    }
-    else if (likely(variant1 == STRING_MEDIUM_FLAG)) {
-        int len = h1 & 0xFFFF;
-        nInts = mediumStringSize(len) >> 3;
+    if (bits1 & STRING_LARGE_FLAG) {
+        if (!(bits2 & STRING_LARGE_FLAG)) {
+            return false;
+        }
+        // large case
+        nInts = largeStringSize(h1) >> 3;
     }
     else {
-        nInts = largeStringSize(h1) >> 3;
+        if (bits2 & STRING_LARGE_FLAG) {
+            return false;
+        }
+        int len = h1 & 0xFFFF;
+        nInts = mediumStringSize(len) >> 3;
     }
     while (--nInts > 0) {
         if (*++p1 != *++p2)
@@ -338,14 +283,14 @@ bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
 }
 
 TaggedPtr _bal_string_concat(TaggedPtr tp1, TaggedPtr tp2) {
-    StringData s1 = taggedToStringData(tp1);
-    StringData s2 = taggedToStringData(tp2);
+    StringLength len1 = taggedStringLength(tp1);
+    StringLength len2 = taggedStringLength(tp2);
     // _bal_string_alloc will deal with the case where total length is > INT_MAX
-    uint64_t byteLen = (uint64_t)s1.lengthInBytes + (uint64_t)s2.lengthInBytes;
-    uint64_t cpLen = (uint64_t)s1.lengthInCodePoints + (uint64_t)s2.lengthInCodePoints;
+    uint64_t nBytes = (uint64_t)len1.nBytes + (uint64_t)len2.nBytes;
+    uint64_t nCodePoints = (uint64_t)len1.nCodePoints + (uint64_t)len2.nCodePoints;
     TaggedPtr result;
-    GC char *bytes = _bal_string_alloc(byteLen, cpLen, &result);
-    memcpy(bytes, s1.bytes, s1.lengthInBytes);
-    memcpy(bytes + s1.lengthInBytes, s2.bytes, s2.lengthInBytes);
+    char *bytes = _bal_string_alloc(nBytes, nCodePoints, &result);
+    memcpy(bytes, taggedStringBytes(&tp1), len1.nBytes);
+    memcpy(bytes + len1.nBytes, taggedStringBytes(&tp2), len2.nBytes);
     return result;
 }

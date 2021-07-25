@@ -1,13 +1,4 @@
 @_bal_stack_guard = external global i8*
-@.str0 = internal unnamed_addr constant {i8, [7 x i8]} {i8 1, [7 x i8] c"x\00\00\00\00\00\00"}, align 8
-@.str1 = internal unnamed_addr constant {i8, [7 x i8]} {i8 0, [7 x i8] c"\00\00\00\00\00\00\00"}, align 8
-@.str2 = internal unnamed_addr constant {i8, [7 x i8]} {i8 1, [7 x i8] c"a\00\00\00\00\00\00"}, align 8
-@.str3 = internal unnamed_addr constant {i8, [7 x i8]} {i8 2, [7 x i8] c"ab\00\00\00\00\00"}, align 8
-@.str4 = internal unnamed_addr constant {i8, [7 x i8]} {i8 3, [7 x i8] c"abc\00\00\00\00"}, align 8
-@.str5 = internal unnamed_addr constant {i8, [7 x i8]} {i8 4, [7 x i8] c"abcd\00\00\00"}, align 8
-@.str6 = internal unnamed_addr constant {i8, [7 x i8]} {i8 5, [7 x i8] c"abcde\00\00"}, align 8
-@.str7 = internal unnamed_addr constant {i8, [7 x i8]} {i8 6, [7 x i8] c"abcdef\00"}, align 8
-@.str8 = internal unnamed_addr constant {i8, [7 x i8]} {i8 7, [7 x i8] c"abcdefg"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_mapping_construct(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
@@ -85,7 +76,7 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) {
 26:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %m
   store i64 %1, i64* %max
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)** %x
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)** %x
   store i64 1, i64* %xLen
   store i64 0, i64* %i
   br label %27
@@ -127,7 +118,7 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) {
   %49 = load i64, i64* %5
   store i64 %49, i64* %xLen
   %50 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %51 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %50, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %51 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %50, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901247))
   store i8 addrspace(1)* %51, i8 addrspace(1)** %6
   %52 = load i64, i64* %xLen
   %53 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %52, i64 0)
@@ -151,7 +142,7 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) {
   br label %44
 65:
   %66 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %67 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %66, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str2 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %67 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %66, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901089))
   store i8 addrspace(1)* %67, i8 addrspace(1)** %8
   %68 = load i64, i64* %xLen
   %69 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %68, i64 1)
@@ -176,7 +167,7 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) {
   br label %44
 82:
   %83 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %84 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %83, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str3 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %84 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %83, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630860897))
   store i8 addrspace(1)* %84, i8 addrspace(1)** %10
   %85 = load i64, i64* %xLen
   %86 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %85, i64 2)
@@ -201,7 +192,7 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) {
   br label %44
 99:
   %100 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %101 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %100, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str4 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %101 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %100, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620637281))
   store i8 addrspace(1)* %101, i8 addrspace(1)** %12
   %102 = load i64, i64* %xLen
   %103 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %102, i64 3)
@@ -226,7 +217,7 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) {
   br label %44
 116:
   %117 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %118 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %117, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str5 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %118 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %117, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541020168801))
   store i8 addrspace(1)* %118, i8 addrspace(1)** %14
   %119 = load i64, i64* %xLen
   %120 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %119, i64 4)
@@ -251,7 +242,7 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) {
   br label %44
 133:
   %134 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %135 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %134, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str6 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %135 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %134, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879595205217))
   store i8 addrspace(1)* %135, i8 addrspace(1)** %16
   %136 = load i64, i64* %xLen
   %137 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %136, i64 5)
@@ -276,7 +267,7 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) {
   br label %44
 150:
   %151 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %152 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %151, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str7 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %152 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %151, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098307654316155489))
   store i8 addrspace(1)* %152, i8 addrspace(1)** %18
   %153 = load i64, i64* %xLen
   %154 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %153, i64 6)
@@ -301,7 +292,7 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) {
   br label %44
 167:
   %168 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %169 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %168, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str8 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %169 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %168, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3055523457856135777))
   store i8 addrspace(1)* %169, i8 addrspace(1)** %20
   %170 = load i64, i64* %xLen
   %171 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %170, i64 7)
@@ -379,7 +370,7 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) {
 41:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %m
   store i64 %1, i64* %max
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)** %x
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)** %x
   store i64 0, i64* %res
   store i64 0, i64* %i
   br label %42
@@ -401,7 +392,7 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) {
   %53 = load i8 addrspace(1)*, i8 addrspace(1)** %4
   store i8 addrspace(1)* %53, i8 addrspace(1)** %x
   %54 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %55 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %54, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %55 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %54, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901247))
   store i8 addrspace(1)* %55, i8 addrspace(1)** %5
   %56 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %57 = load i8 addrspace(1)*, i8 addrspace(1)** %5
@@ -440,7 +431,7 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) {
   %78 = extractvalue {i64, i1} %74, 0
   store i64 %78, i64* %8
   %79 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %80 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %79, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str2 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %80 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %79, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901089))
   store i8 addrspace(1)* %80, i8 addrspace(1)** %9
   %81 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %82 = load i8 addrspace(1)*, i8 addrspace(1)** %9
@@ -470,7 +461,7 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) {
   %98 = extractvalue {i64, i1} %94, 0
   store i64 %98, i64* %12
   %99 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %100 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %99, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str3 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %100 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %99, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630860897))
   store i8 addrspace(1)* %100, i8 addrspace(1)** %13
   %101 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %102 = load i8 addrspace(1)*, i8 addrspace(1)** %13
@@ -500,7 +491,7 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) {
   %118 = extractvalue {i64, i1} %114, 0
   store i64 %118, i64* %16
   %119 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %120 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %119, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str4 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %120 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %119, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620637281))
   store i8 addrspace(1)* %120, i8 addrspace(1)** %17
   %121 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %122 = load i8 addrspace(1)*, i8 addrspace(1)** %17
@@ -530,7 +521,7 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) {
   %138 = extractvalue {i64, i1} %134, 0
   store i64 %138, i64* %20
   %139 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %140 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %139, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str5 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %140 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %139, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541020168801))
   store i8 addrspace(1)* %140, i8 addrspace(1)** %21
   %141 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %142 = load i8 addrspace(1)*, i8 addrspace(1)** %21
@@ -560,7 +551,7 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) {
   %158 = extractvalue {i64, i1} %154, 0
   store i64 %158, i64* %24
   %159 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %160 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %159, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str6 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %160 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %159, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879595205217))
   store i8 addrspace(1)* %160, i8 addrspace(1)** %25
   %161 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %162 = load i8 addrspace(1)*, i8 addrspace(1)** %25
@@ -590,7 +581,7 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) {
   %178 = extractvalue {i64, i1} %174, 0
   store i64 %178, i64* %28
   %179 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %180 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %179, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str7 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %180 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %179, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098307654316155489))
   store i8 addrspace(1)* %180, i8 addrspace(1)** %29
   %181 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %182 = load i8 addrspace(1)*, i8 addrspace(1)** %29
@@ -620,7 +611,7 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) {
   %198 = extractvalue {i64, i1} %194, 0
   store i64 %198, i64* %32
   %199 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %200 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %199, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str8 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %200 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %199, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3055523457856135777))
   store i8 addrspace(1)* %200, i8 addrspace(1)** %33
   %201 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %202 = load i8 addrspace(1)*, i8 addrspace(1)** %33

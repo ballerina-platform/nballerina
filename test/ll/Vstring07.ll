@@ -1,6 +1,5 @@
 @_bal_stack_guard = external global i8*
 @.str0 = internal unnamed_addr constant {i16, i16, [20 x i8]} {i16 15, i16 5, [20 x i8] c"\E0\B9\80\E0\B8\88\E0\B8\A1\E0\B8\AA\E0\B9\8C\00\00\00\00\00"}, align 8
-@.str1 = internal unnamed_addr constant {i8, [7 x i8]} {i8 5, [7 x i8] c"James\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i64 @_Bstring__length(i8 addrspace(1)*)
@@ -27,7 +26,7 @@ define void @_B_main() {
   %15 = icmp ult i8* %13, %14
   br i1 %15, label %51, label %16
 16:
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [20 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279361), i8 addrspace(1)** %name
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [20 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)** %name
   %17 = load i8 addrspace(1)*, i8 addrspace(1)** %name
   call void @_Bio__println(i8 addrspace(1)* %17)
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
@@ -38,7 +37,7 @@ define void @_B_main() {
   %21 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %20)
   call void @_Bio__println(i8 addrspace(1)* %21)
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [20 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279361), i8 addrspace(1)** %name2
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [20 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)** %name2
   %22 = load i8 addrspace(1)*, i8 addrspace(1)** %name2
   call void @_Bio__println(i8 addrspace(1)* %22)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
@@ -63,9 +62,9 @@ define void @_B_main() {
   %37 = getelementptr i8, i8 addrspace(1)* null, i64 %36
   call void @_Bio__println(i8 addrspace(1)* %37)
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)** %name3
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658), i8 addrspace(1)** %name3
   %38 = load i8 addrspace(1)*, i8 addrspace(1)** %name
-  %39 = call i1 @_bal_eq(i8 addrspace(1)* %38, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %39 = call i1 @_bal_eq(i8 addrspace(1)* %38, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658))
   store i1 %39, i1* %9
   %40 = load i1, i1* %9
   %41 = zext i1 %40 to i64
@@ -74,7 +73,7 @@ define void @_B_main() {
   call void @_Bio__println(i8 addrspace(1)* %43)
   store i8 addrspace(1)* null, i8 addrspace(1)** %10
   %44 = load i8 addrspace(1)*, i8 addrspace(1)** %name
-  %45 = call i1 @_bal_eq(i8 addrspace(1)* %44, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %45 = call i1 @_bal_eq(i8 addrspace(1)* %44, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658))
   %46 = xor i1 %45, 1
   store i1 %46, i1* %11
   %47 = load i1, i1* %11

@@ -1,14 +1,6 @@
 @_bal_stack_guard = external global i8*
-@.str0 = internal unnamed_addr constant {i8, [7 x i8]} {i8 0, [7 x i8] c"\00\00\00\00\00\00\00"}, align 8
-@.str1 = internal unnamed_addr constant {i8, [7 x i8]} {i8 1, [7 x i8] c"a\00\00\00\00\00\00"}, align 8
-@.str2 = internal unnamed_addr constant {i8, [7 x i8]} {i8 1, [7 x i8] c"b\00\00\00\00\00\00"}, align 8
-@.str3 = internal unnamed_addr constant {i8, [7 x i8]} {i8 2, [7 x i8] c"ab\00\00\00\00\00"}, align 8
-@.str4 = internal unnamed_addr constant {i8, [7 x i8]} {i8 5, [7 x i8] c"smile\00\00"}, align 8
-@.str5 = internal unnamed_addr constant {i16, i16, [4 x i8]} {i16 4, i16 1, [4 x i8] c"\F0\9F\99\82"}, align 8
 @.str6 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 9, i16 6, [12 x i8] c"smile\F0\9F\99\82\00\00\00"}, align 8
-@.str7 = internal unnamed_addr constant {i8, [7 x i8]} {i8 5, [7 x i8] c"frown\00\00"}, align 8
 @.str8 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 9, i16 6, [12 x i8] c"\F0\9F\99\82frown\00\00\00"}, align 8
-@.str9 = internal unnamed_addr constant {i16, i16, [4 x i8]} {i16 4, i16 1, [4 x i8] c"\F0\9F\99\81"}, align 8
 @.str10 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 2, [12 x i8] c"\F0\9F\99\81\F0\9F\99\82\00\00\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)*, i8 addrspace(1)*)
@@ -27,15 +19,15 @@ define void @_B_main() {
   %8 = icmp ult i8* %6, %7
   br i1 %8, label %10, label %9
 9:
-  call void @_B_concatTest(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  call void @_B_concatTest(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901247), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901247), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901247))
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
-  call void @_B_concatTest(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str2 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str3 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  call void @_B_concatTest(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901089), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901090), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630860897))
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  call void @_B_concatTest(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str4 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [4 x i8]}* @.str5 to i8*) to i8 addrspace(1)*), i64 720575940379279361), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str6 to i8*) to i8 addrspace(1)*), i64 720575940379279361))
+  call void @_B_concatTest(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879729818995), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541527039984), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str6 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
-  call void @_B_concatTest(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [4 x i8]}* @.str5 to i8*) to i8 addrspace(1)*), i64 720575940379279361), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str7 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str8 to i8*) to i8 addrspace(1)*), i64 720575940379279361))
+  call void @_B_concatTest(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541527039984), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475918569468518), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str8 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  call void @_B_concatTest(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [4 x i8]}* @.str9 to i8*) to i8 addrspace(1)*), i64 720575940379279361), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [4 x i8]}* @.str5 to i8*) to i8 addrspace(1)*), i64 720575940379279361), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str10 to i8*) to i8 addrspace(1)*), i64 720575940379279361))
+  call void @_B_concatTest(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541510262768), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541527039984), i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str10 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
   store i8 addrspace(1)* null, i8 addrspace(1)** %5
   ret void
 10:

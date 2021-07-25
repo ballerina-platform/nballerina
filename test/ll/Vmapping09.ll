@@ -1,5 +1,4 @@
 @_bal_stack_guard = external global i8*
-@.str0 = internal unnamed_addr constant {i8, [7 x i8]} {i8 4, [7 x i8] c"five\00\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_mapping_construct(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
@@ -23,10 +22,10 @@ define void @_B_main() {
   %10 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %10, i8 addrspace(1)** %m
   %11 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  call void @_B_put(i8 addrspace(1)* %11, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i64 5)
+  call void @_B_put(i8 addrspace(1)* %11, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541038192998), i64 5)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   %12 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %13 = call i64 @_B_get(i8 addrspace(1)* %12, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %13 = call i64 @_B_get(i8 addrspace(1)* %12, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541038192998))
   store i64 %13, i64* %3
   %14 = load i64, i64* %3
   %15 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %14)

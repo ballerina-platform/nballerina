@@ -1,5 +1,4 @@
 @_bal_stack_guard = external global i8*
-@.str0 = internal unnamed_addr constant {i8, [7 x i8]} {i8 1, [7 x i8] c"x\00\00\00\00\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare i64 @_Bstring__length(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
@@ -17,7 +16,7 @@ define void @_B_main() {
   %7 = icmp ult i8* %5, %6
   br i1 %7, label %25, label %8
 8:
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)** %str
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)** %str
   store i64 0, i64* %i
   br label %9
 9:

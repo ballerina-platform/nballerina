@@ -15,11 +15,6 @@ static inline TaggedPtr ptrAddShiftedTag(UntypedPtr tp, uint64_t shiftedTag) {
     return (TaggedPtr)p;
 }
 
-static inline TaggedPtr bitsToTaggedPtr(uint64_t bits) {
-    char *p = (char *)0 + bits;
-    return (TaggedPtr)p;
-}
-
 TaggedPtr _bal_int_to_tagged(int64_t n) {
     if (likely(n >= IMMEDIATE_INT_MIN & n <= IMMEDIATE_INT_MAX)) {
         return bitsToTaggedPtr(IMMEDIATE_INT_TRUNCATE(n) | (((uint64_t)TAG_INT) << TAG_SHIFT));
@@ -57,8 +52,8 @@ void _Barray__push(TaggedPtr p, TaggedPtr val) {
 }
 
 int64_t _Bstring__length(TaggedPtr p) {
-    StringData data = taggedToStringData(p);
-    return data.lengthInCodePoints;
+    StringLength len = taggedStringLength(p);
+    return len.nCodePoints;
 }
 
 bool READONLY _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
