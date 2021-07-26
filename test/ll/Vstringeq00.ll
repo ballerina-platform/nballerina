@@ -1,6 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic(i64) noreturn cold
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare zeroext i1 @_bal_string_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
   %s1 = alloca i8 addrspace(1)*
@@ -13,7 +13,7 @@ define void @_B_main() {
 6:
   store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630868674), i8 addrspace(1)** %s1
   %7 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %8 = call i1 @_bal_eq(i8 addrspace(1)* %7, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630868930))
+  %8 = call i1 @_bal_string_eq(i8 addrspace(1)* %7, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630868930))
   store i1 %8, i1* %1
   %9 = load i1, i1* %1
   %10 = zext i1 %9 to i64

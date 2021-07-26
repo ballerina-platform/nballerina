@@ -4,7 +4,7 @@ declare void @_bal_panic(i64) noreturn cold
 declare i64 @_Bstring__length(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare zeroext i1 @_bal_string_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare i64 @_bal_string_cmp(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_mapping_construct(i64)
@@ -58,7 +58,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   %38 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
   %39 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %40 = call i1 @_bal_eq(i8 addrspace(1)* %38, i8 addrspace(1)* %39)
+  %40 = call i1 @_bal_string_eq(i8 addrspace(1)* %38, i8 addrspace(1)* %39)
   store i1 %40, i1* %3
   %41 = load i1, i1* %3
   %42 = zext i1 %41 to i64
@@ -111,7 +111,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %13
   %74 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
   %75 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  %76 = call i1 @_bal_eq(i8 addrspace(1)* %74, i8 addrspace(1)* %75)
+  %76 = call i1 @_bal_string_eq(i8 addrspace(1)* %74, i8 addrspace(1)* %75)
   store i1 %76, i1* %14
   %77 = load i1, i1* %14
   %78 = zext i1 %77 to i64
@@ -141,7 +141,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %19
   %95 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
   %96 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  %97 = call i1 @_bal_eq(i8 addrspace(1)* %95, i8 addrspace(1)* %96)
+  %97 = call i1 @_bal_string_eq(i8 addrspace(1)* %95, i8 addrspace(1)* %96)
   store i1 %97, i1* %20
   %98 = load i1, i1* %20
   %99 = zext i1 %98 to i64

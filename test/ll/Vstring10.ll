@@ -7,7 +7,7 @@ declare i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)*, i8 addrspace(1)*)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i64 @_Bstring__length(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare zeroext i1 @_bal_string_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
@@ -71,7 +71,7 @@ define internal void @_B_concatTest(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i8
   store i8 addrspace(1)* null, i8 addrspace(1)** %7
   %23 = load i8 addrspace(1)*, i8 addrspace(1)** %s
   %24 = load i8 addrspace(1)*, i8 addrspace(1)** %expected
-  %25 = call i1 @_bal_eq(i8 addrspace(1)* %23, i8 addrspace(1)* %24)
+  %25 = call i1 @_bal_string_eq(i8 addrspace(1)* %23, i8 addrspace(1)* %24)
   store i1 %25, i1* %8
   %26 = load i1, i1* %8
   %27 = zext i1 %26 to i64

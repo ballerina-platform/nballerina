@@ -4,7 +4,7 @@ declare void @_bal_panic(i64) noreturn cold
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i64 @_Bstring__length(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare zeroext i1 @_bal_string_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 define void @_B_main() {
   %name = alloca i8 addrspace(1)*
   %1 = alloca i8 addrspace(1)*
@@ -43,7 +43,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   %23 = load i8 addrspace(1)*, i8 addrspace(1)** %name
   %24 = load i8 addrspace(1)*, i8 addrspace(1)** %name2
-  %25 = call i1 @_bal_eq(i8 addrspace(1)* %23, i8 addrspace(1)* %24)
+  %25 = call i1 @_bal_string_eq(i8 addrspace(1)* %23, i8 addrspace(1)* %24)
   store i1 %25, i1* %5
   %26 = load i1, i1* %5
   %27 = zext i1 %26 to i64
@@ -53,7 +53,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %6
   %30 = load i8 addrspace(1)*, i8 addrspace(1)** %name
   %31 = load i8 addrspace(1)*, i8 addrspace(1)** %name2
-  %32 = call i1 @_bal_eq(i8 addrspace(1)* %30, i8 addrspace(1)* %31)
+  %32 = call i1 @_bal_string_eq(i8 addrspace(1)* %30, i8 addrspace(1)* %31)
   %33 = xor i1 %32, 1
   store i1 %33, i1* %7
   %34 = load i1, i1* %7
@@ -64,7 +64,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
   store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658), i8 addrspace(1)** %name3
   %38 = load i8 addrspace(1)*, i8 addrspace(1)** %name
-  %39 = call i1 @_bal_eq(i8 addrspace(1)* %38, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658))
+  %39 = call i1 @_bal_string_eq(i8 addrspace(1)* %38, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658))
   store i1 %39, i1* %9
   %40 = load i1, i1* %9
   %41 = zext i1 %40 to i64
@@ -73,7 +73,7 @@ define void @_B_main() {
   call void @_Bio__println(i8 addrspace(1)* %43)
   store i8 addrspace(1)* null, i8 addrspace(1)** %10
   %44 = load i8 addrspace(1)*, i8 addrspace(1)** %name
-  %45 = call i1 @_bal_eq(i8 addrspace(1)* %44, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658))
+  %45 = call i1 @_bal_string_eq(i8 addrspace(1)* %44, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658))
   %46 = xor i1 %45, 1
   store i1 %46, i1* %11
   %47 = load i1, i1* %11

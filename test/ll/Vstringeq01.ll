@@ -5,7 +5,7 @@
 declare void @_bal_panic(i64) noreturn cold
 declare i64 @_bal_string_cmp(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare zeroext i1 @_bal_string_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
@@ -141,14 +141,14 @@ define internal void @_B_cmp(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %9
   %64 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
   %65 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  %66 = call i1 @_bal_eq(i8 addrspace(1)* %64, i8 addrspace(1)* %65)
+  %66 = call i1 @_bal_string_eq(i8 addrspace(1)* %64, i8 addrspace(1)* %65)
   store i1 %66, i1* %10
   %67 = load i1, i1* %10
   call void @_B_assert(i1 %67, i1 1)
   store i8 addrspace(1)* null, i8 addrspace(1)** %11
   %68 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
   %69 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  %70 = call i1 @_bal_eq(i8 addrspace(1)* %68, i8 addrspace(1)* %69)
+  %70 = call i1 @_bal_string_eq(i8 addrspace(1)* %68, i8 addrspace(1)* %69)
   %71 = xor i1 %70, 1
   store i1 %71, i1* %12
   %72 = load i1, i1* %12
@@ -156,14 +156,14 @@ define internal void @_B_cmp(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %13
   %73 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
   %74 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  %75 = call i1 @_bal_eq(i8 addrspace(1)* %73, i8 addrspace(1)* %74)
+  %75 = call i1 @_bal_string_eq(i8 addrspace(1)* %73, i8 addrspace(1)* %74)
   store i1 %75, i1* %14
   %76 = load i1, i1* %14
   call void @_B_assert(i1 %76, i1 1)
   store i8 addrspace(1)* null, i8 addrspace(1)** %15
   %77 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
   %78 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  %79 = call i1 @_bal_eq(i8 addrspace(1)* %77, i8 addrspace(1)* %78)
+  %79 = call i1 @_bal_string_eq(i8 addrspace(1)* %77, i8 addrspace(1)* %78)
   %80 = xor i1 %79, 1
   store i1 %80, i1* %16
   %81 = load i1, i1* %16
@@ -171,14 +171,14 @@ define internal void @_B_cmp(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %17
   %82 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
   %83 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %84 = call i1 @_bal_eq(i8 addrspace(1)* %82, i8 addrspace(1)* %83)
+  %84 = call i1 @_bal_string_eq(i8 addrspace(1)* %82, i8 addrspace(1)* %83)
   store i1 %84, i1* %18
   %85 = load i1, i1* %18
   call void @_B_assert(i1 %85, i1 1)
   store i8 addrspace(1)* null, i8 addrspace(1)** %19
   %86 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
   %87 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %88 = call i1 @_bal_eq(i8 addrspace(1)* %86, i8 addrspace(1)* %87)
+  %88 = call i1 @_bal_string_eq(i8 addrspace(1)* %86, i8 addrspace(1)* %87)
   %89 = xor i1 %88, 1
   store i1 %89, i1* %20
   %90 = load i1, i1* %20
@@ -186,14 +186,14 @@ define internal void @_B_cmp(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %21
   %91 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
   %92 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %93 = call i1 @_bal_eq(i8 addrspace(1)* %91, i8 addrspace(1)* %92)
+  %93 = call i1 @_bal_string_eq(i8 addrspace(1)* %91, i8 addrspace(1)* %92)
   store i1 %93, i1* %22
   %94 = load i1, i1* %22
   call void @_B_assert(i1 %94, i1 1)
   store i8 addrspace(1)* null, i8 addrspace(1)** %23
   %95 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
   %96 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %97 = call i1 @_bal_eq(i8 addrspace(1)* %95, i8 addrspace(1)* %96)
+  %97 = call i1 @_bal_string_eq(i8 addrspace(1)* %95, i8 addrspace(1)* %96)
   %98 = xor i1 %97, 1
   store i1 %98, i1* %24
   %99 = load i1, i1* %24
@@ -316,21 +316,21 @@ define internal void @_B_checkLessThan(i8 addrspace(1)* %0, i8 addrspace(1)* %1)
   store i8 addrspace(1)* %1, i8 addrspace(1)** %s2
   %39 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
   %40 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  %41 = call i1 @_bal_eq(i8 addrspace(1)* %39, i8 addrspace(1)* %40)
+  %41 = call i1 @_bal_string_eq(i8 addrspace(1)* %39, i8 addrspace(1)* %40)
   store i1 %41, i1* %3
   %42 = load i1, i1* %3
   call void @_B_assert(i1 %42, i1 0)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   %43 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
   %44 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  %45 = call i1 @_bal_eq(i8 addrspace(1)* %43, i8 addrspace(1)* %44)
+  %45 = call i1 @_bal_string_eq(i8 addrspace(1)* %43, i8 addrspace(1)* %44)
   store i1 %45, i1* %5
   %46 = load i1, i1* %5
   call void @_B_assert(i1 %46, i1 0)
   store i8 addrspace(1)* null, i8 addrspace(1)** %6
   %47 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
   %48 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  %49 = call i1 @_bal_eq(i8 addrspace(1)* %47, i8 addrspace(1)* %48)
+  %49 = call i1 @_bal_string_eq(i8 addrspace(1)* %47, i8 addrspace(1)* %48)
   %50 = xor i1 %49, 1
   store i1 %50, i1* %7
   %51 = load i1, i1* %7
@@ -338,7 +338,7 @@ define internal void @_B_checkLessThan(i8 addrspace(1)* %0, i8 addrspace(1)* %1)
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
   %52 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
   %53 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
-  %54 = call i1 @_bal_eq(i8 addrspace(1)* %52, i8 addrspace(1)* %53)
+  %54 = call i1 @_bal_string_eq(i8 addrspace(1)* %52, i8 addrspace(1)* %53)
   %55 = xor i1 %54, 1
   store i1 %55, i1* %9
   %56 = load i1, i1* %9
@@ -346,21 +346,21 @@ define internal void @_B_checkLessThan(i8 addrspace(1)* %0, i8 addrspace(1)* %1)
   store i8 addrspace(1)* null, i8 addrspace(1)** %10
   %57 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
   %58 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %59 = call i1 @_bal_eq(i8 addrspace(1)* %57, i8 addrspace(1)* %58)
+  %59 = call i1 @_bal_string_eq(i8 addrspace(1)* %57, i8 addrspace(1)* %58)
   store i1 %59, i1* %11
   %60 = load i1, i1* %11
   call void @_B_assert(i1 %60, i1 0)
   store i8 addrspace(1)* null, i8 addrspace(1)** %12
   %61 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
   %62 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %63 = call i1 @_bal_eq(i8 addrspace(1)* %61, i8 addrspace(1)* %62)
+  %63 = call i1 @_bal_string_eq(i8 addrspace(1)* %61, i8 addrspace(1)* %62)
   store i1 %63, i1* %13
   %64 = load i1, i1* %13
   call void @_B_assert(i1 %64, i1 0)
   store i8 addrspace(1)* null, i8 addrspace(1)** %14
   %65 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
   %66 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %67 = call i1 @_bal_eq(i8 addrspace(1)* %65, i8 addrspace(1)* %66)
+  %67 = call i1 @_bal_string_eq(i8 addrspace(1)* %65, i8 addrspace(1)* %66)
   %68 = xor i1 %67, 1
   store i1 %68, i1* %15
   %69 = load i1, i1* %15
@@ -368,7 +368,7 @@ define internal void @_B_checkLessThan(i8 addrspace(1)* %0, i8 addrspace(1)* %1)
   store i8 addrspace(1)* null, i8 addrspace(1)** %16
   %70 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
   %71 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %72 = call i1 @_bal_eq(i8 addrspace(1)* %70, i8 addrspace(1)* %71)
+  %72 = call i1 @_bal_string_eq(i8 addrspace(1)* %70, i8 addrspace(1)* %71)
   %73 = xor i1 %72, 1
   store i1 %73, i1* %17
   %74 = load i1, i1* %17
