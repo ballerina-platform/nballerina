@@ -4,6 +4,7 @@ public distinct class Context {
     handle LLVMContext;
     public function init() {
         self.LLVMContext = jLLVMContextCreate();
+        self.initializeLLVMTargets();
     }
 
     public function createBuilder() returns Builder {
@@ -40,6 +41,15 @@ public distinct class Context {
 
     public function constAddrSpaceCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
         return new (jLLVMConstAddrSpaceCast(ptr.LLVMValueRef, typeToLLVMType(destTy)));
+    }
+
+
+    function initializeLLVMTargets() {
+        jLLVMInitializeAllTargetInfos();
+        jLLVMInitializeAllTargets();
+        jLLVMInitializeAllTargetMCs();
+        jLLVMInitializeAllAsmParsers();
+        jLLVMInitializeAllAsmPrinters();
     }
 }
 
@@ -82,4 +92,34 @@ function jLLVMConstAddrSpaceCast(handle val, handle destTy) returns handle = @ja
     name: "LLVMConstAddrSpaceCast",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef"]
+} external;
+
+function jLLVMInitializeAllTargetInfos() = @java:Method {
+    name: "LLVMInitializeAllTargetInfos",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: []
+} external;
+
+function jLLVMInitializeAllTargets() = @java:Method {
+    name: "LLVMInitializeAllTargets",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: []
+} external;
+
+function jLLVMInitializeAllTargetMCs() = @java:Method {
+    name: "LLVMInitializeAllTargetMCs",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: []
+} external;
+
+function jLLVMInitializeAllAsmPrinters() = @java:Method {
+    name: "LLVMInitializeAllAsmPrinters",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: []
+} external;
+
+function jLLVMInitializeAllAsmParsers() = @java:Method {
+    name: "LLVMInitializeAllAsmParsers",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: []
 } external;
