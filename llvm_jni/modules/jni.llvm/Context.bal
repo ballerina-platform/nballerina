@@ -43,7 +43,7 @@ public distinct class Context {
         return new (jLLVMConstAddrSpaceCast(ptr.LLVMValueRef, typeToLLVMType(destTy)));
     }
 
-
+    // Use to initialize target information to help compiling directly to object file
     function initializeLLVMTargets() {
         jLLVMInitializeAllTargetInfos();
         jLLVMInitializeAllTargets();
