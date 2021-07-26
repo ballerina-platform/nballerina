@@ -452,6 +452,14 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             bb.insns.push(insn);
             return [result, nextBlock];
         }
+        // Bitwise complement 
+        { op: "~",  operand: var o } => {
+            var [operand, nextBlock] = check codeGenExprForInt(cx, bb, scope, o);
+            bir:Register result = cx.createRegister(t:INT);
+            bir:IntBitwiseBinaryInsn insn = { op: "^", operands: [-1, operand], result };
+            bb.insns.push(insn);
+            return [result, nextBlock];
+        }
         var { bitwiseOp: op, left, right } => {
             var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
             var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);

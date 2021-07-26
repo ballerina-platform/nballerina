@@ -71,6 +71,11 @@ function evalConstUnary(UnaryExpr expr, SimpleConst operand) returns EvalResult|
             return !operand;
         }
     }
+    else if op is "~" {
+        if operand is int {
+            return ~operand;
+        }
+    }
     else {
         // "-"
         if operand is int {

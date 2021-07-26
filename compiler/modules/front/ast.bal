@@ -87,7 +87,7 @@ type RangeOp  "..." | "..<";
 
 type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
-type UnaryExprOp "-" | "!";
+type UnaryExprOp "-" | "!" | "~";
 
 type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr;
 

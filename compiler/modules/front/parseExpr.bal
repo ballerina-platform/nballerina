@@ -165,7 +165,7 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
 
 function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
-    if t is "-"|"!" {
+    if t is "-"|"!"|"~" {
         err:Position pos = tok.currentPos();
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
