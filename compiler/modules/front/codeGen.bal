@@ -2,11 +2,40 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.err;
 
-type Scope record {|
+type Environment record {|
+    Binding? bindings;
+|};
+
+type Binding record {|
     string name;
     bir:Register reg;
     boolean isFinal;
-    Scope? prev;
+    Binding? prev;
+|};
+
+type StmtEffect record {|
+    bir:BasicBlock? block;
+    Binding? bindings = ();
+|};
+
+type ExprEffect record {|
+    bir:BasicBlock block;
+    bir:Operand result;
+|};
+
+type BooleanExprEffect record {|
+    *ExprEffect;
+    bir:BooleanOperand result;
+|};
+
+type IntExprEffect record {|
+    *ExprEffect;
+    bir:IntOperand result;
+|};
+
+type RegExprEffect record {|
+    *ExprEffect;
+    bir:Register result;
 |};
 
 type CodeGenError err:Semantic|err:Unimplemented;
@@ -89,12 +118,12 @@ class CodeGenContext {
 function codeGenFunction(Module mod, string functionName, bir:FunctionSignature signature, string[] paramNames, Stmt[] body) returns bir:FunctionCode|CodeGenError {
     CodeGenContext cx = new(mod, functionName);
     bir:BasicBlock startBlock = cx.createBasicBlock();
-    Scope? scope = ();
+    Binding? bindings = ();
     foreach int i in 0 ..< paramNames.length() {
         bir:Register reg = cx.createRegister(signature.paramTypes[i], paramNames[i]);
-        scope = { name: paramNames[i], reg, prev: scope, isFinal: true };
+        bindings = { name: paramNames[i], reg, prev: bindings, isFinal: true };
     }
-    bir:BasicBlock? endBlock = check codeGenStmts(cx, startBlock, scope, body);
+    var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, body);
     if !(endBlock is ()) {
         bir:RetInsn ret = { operand: () };
         endBlock.insns.push(ret);
@@ -127,54 +156,60 @@ function codeGenOnPanic(CodeGenContext cx) {
     }
 }
 
-function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Scope? initialScope, Stmt[] stmts) returns CodeGenError|bir:BasicBlock? {
+function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialEnv, Stmt[] stmts) returns CodeGenError|StmtEffect {
     bir:BasicBlock? curBlock = bb;
-    Scope? scope = initialScope;
+    Environment env = initialEnv;
     foreach var stmt in stmts {
+        StmtEffect effect;
         if curBlock is () {
             return cx.semanticErr("unreachable code");
         }
         else if stmt is IfElseStmt {
-            curBlock = check codeGenIfElseStmt(cx, curBlock, scope, stmt);
+            effect = check codeGenIfElseStmt(cx, curBlock, env, stmt);
         }
         else if stmt is WhileStmt {
             // JBUG #31327 cast
-            curBlock = check codeGenWhileStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            effect = check codeGenWhileStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
         else if stmt is ForeachStmt {
-            curBlock = check codeGenForeachStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            effect = check codeGenForeachStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
         else if stmt is BreakStmt {
-            curBlock = check codeGenBreakStmt(cx, <bir:BasicBlock>curBlock);
+            effect = check codeGenBreakStmt(cx, <bir:BasicBlock>curBlock);
         }
         else if stmt is ContinueStmt {
-            curBlock = check codeGenContinueStmt(cx, <bir:BasicBlock>curBlock);
+            effect = check codeGenContinueStmt(cx, <bir:BasicBlock>curBlock);
         }
         else if stmt is ReturnStmt {
             // JBUG #31327 cast
-            curBlock = check codeGenReturnStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            effect = check codeGenReturnStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
         else if stmt is VarDeclStmt {
-            [curBlock, scope] = check codeGenVarDeclStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            effect = check codeGenVarDeclStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
         else if stmt is AssignStmt {
-            curBlock = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            effect = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
         else {
-            curBlock = check codeGenCallStmt(cx, <bir:BasicBlock>curBlock, scope, stmt);
+            effect = check codeGenCallStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+        }
+        curBlock = effect.block;
+        Binding? bindings = effect.bindings;
+        if !(bindings is ()) {
+            env.bindings = bindings;
         }
     }
-    return curBlock;
+    return { block: curBlock };
 }
 
-function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, ForeachStmt stmt) returns CodeGenError|bir:BasicBlock? {
+function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, ForeachStmt stmt) returns CodeGenError|StmtEffect {
     string varName = stmt.varName;
-    if lookup(varName, scope) !== () {
+    if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
     RangeExpr range = stmt.range;
-    var [lower, evalUpper] = check codeGenExprForInt(cx, startBlock, scope, range.lower);
-    var [upper, initLoopVar] = check codeGenExprForInt(cx, evalUpper, scope, range.upper);
+    var { result: lower, block: evalUpper } = check codeGenExprForInt(cx, startBlock, env, range.lower);
+    var { result: upper, block: initLoopVar } = check codeGenExprForInt(cx, evalUpper, env, range.upper);
     bir:Register loopVar = cx.createRegister(t:INT, varName);
     bir:AssignInsn init = { result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
@@ -189,8 +224,8 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
     bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
     loopHead.insns.push(branch);
     cx.pushLoopContext(exit, ());
-    Scope loopScope = { name: varName, reg: loopVar, prev: scope, isFinal: true };
-    bir:BasicBlock? loopBody = check codeGenStmts(cx, afterCondition, loopScope, stmt.body);
+    Binding loopBindings = { name: varName, reg: loopVar, prev: env.bindings, isFinal: true };
+    var { block: loopBody } = check codeGenStmts(cx, afterCondition, { bindings: loopBindings }, stmt.body);
     
     bir:BasicBlock? loopStep = cx.loopContinueBlock();
     if !(loopBody is ()) {
@@ -205,20 +240,20 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
         loopStep.insns.push(branchToLoopHead);
     }
     cx.popLoopContext();
-    return exit;
+    return { block: exit };
 }
 
-function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, WhileStmt stmt) returns CodeGenError|bir:BasicBlock? {
+function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, WhileStmt stmt) returns CodeGenError|StmtEffect {
     bir:BasicBlock loopHead = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
     startBlock.insns.push(branchToLoopHead);
-    var [condition, nextBlock] = check codeGenConditionalExpr(cx, loopHead, scope, stmt.condition);
+    var { result: condition, block: nextBlock } = check codeGenConditionalExpr(cx, loopHead, env, stmt.condition);
     if condition is false {
         if stmt.body.length() > 0 {
             return cx.semanticErr("unreachable code");
         }
-        return nextBlock;
+        return { block: nextBlock };
     }
     else {
         cx.pushLoopContext(exit, loopHead);
@@ -233,7 +268,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? s
         else {
             exitReachable = false;
         }
-        bir:BasicBlock? loopEnd = check codeGenStmts(cx, nextBlock, scope, stmt.body);
+        var { block: loopEnd } = check codeGenStmts(cx, nextBlock, env, stmt.body);
         if cx.loopUsedBreak() {
             exitReachable = true;
         }
@@ -241,27 +276,27 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? s
         if !(loopEnd is ()) {
             loopEnd.insns.push(branchToLoopHead);
         }
-        return exitReachable ? exit : ();
+        return { block: exitReachable ? exit : () };
     }
 }
 
-function codeGenBreakStmt(CodeGenContext cx, bir:BasicBlock startBlock) returns CodeGenError? {
+function codeGenBreakStmt(CodeGenContext cx, bir:BasicBlock startBlock) returns CodeGenError|StmtEffect {
     bir:Label dest = check cx.onBreakLabel();
     bir:BranchInsn branch = { dest };
     startBlock.insns.push(branch);
-    return ();
+    return { block: () };
 }
 
-function codeGenContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock) returns CodeGenError? {
+function codeGenContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock) returns CodeGenError|StmtEffect {
     bir:Label dest = check cx.onContinueLabel();
     bir:BranchInsn branch = { dest };
     startBlock.insns.push(branch);
-    return ();
+    return { block: () };
 }
 
-function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, IfElseStmt stmt) returns CodeGenError|bir:BasicBlock? {
+function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, IfElseStmt stmt) returns CodeGenError|StmtEffect {
     var { condition, ifTrue, ifFalse } = stmt;
-    var [operand, branchBlock] = check codeGenConditionalExpr(cx, startBlock, scope, condition);
+    var { result: operand, block: branchBlock } = check codeGenConditionalExpr(cx, startBlock, env, condition);
     if operand is boolean {
         Stmt[] taken;
         Stmt[] notTaken;
@@ -277,11 +312,11 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
             // XXX position should come from first member of notTaken
             return cx.semanticErr("unreachable code");
         }
-        return codeGenStmts(cx, branchBlock, scope, taken);
+        return codeGenStmts(cx, branchBlock, env, taken);
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
-        var ifContBlock = check codeGenStmts(cx, ifBlock, scope, ifTrue);
+        var { block: ifContBlock } = check codeGenStmts(cx, ifBlock, env, ifTrue);
         bir:BasicBlock contBlock;
         if ifFalse.length() == 0 {
             // just an if branch
@@ -292,17 +327,17 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
                 bir:BranchInsn branch = { dest: contBlock.label };
                 ifContBlock.insns.push(branch);
             }
-            return contBlock;    
+            return { block: contBlock };    
         }
         else {
             // an if and an else
             bir:BasicBlock elseBlock = cx.createBasicBlock();
-            var elseContBlock = check codeGenStmts(cx, elseBlock, scope, ifFalse);
+            var { block: elseContBlock } = check codeGenStmts(cx, elseBlock, env, ifFalse);
             bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: elseBlock.label };
             branchBlock.insns.push(condBranch);
             if ifContBlock is () && elseContBlock is () {
                 // e.g. both arms have a return
-                return ();
+                return { block: () };
             }
             contBlock = cx.createBasicBlock();
             bir:BranchInsn branch = { dest: contBlock.label };
@@ -312,59 +347,59 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? 
             if !(elseContBlock is ()) {
                 elseContBlock.insns.push(branch);
             }
-            return contBlock;
+            return { block: contBlock };
         }
     }
 }
 
-function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, ReturnStmt stmt) returns CodeGenError? {
+function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, ReturnStmt stmt) returns CodeGenError|StmtEffect {
     var { returnExpr } = stmt;
-    var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, returnExpr);
+    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, returnExpr);
     bir:RetInsn insn = { operand };
     nextBlock.insns.push(insn);
-    return ();
+    return { block: () };
 }
 
-function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, VarDeclStmt stmt) returns CodeGenError|[bir:BasicBlock?, Scope?] {
+function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, VarDeclStmt stmt) returns CodeGenError|StmtEffect {
     var { varName, initExpr, semType, isFinal } = stmt;
-    if lookup(varName, scope) !== () {
+    if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
     if semType is () {
         panic error("type was not normalized");
     }
     else {
-        var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, initExpr);
+        var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
         bir:Register result = cx.createRegister(semType, varName);
         bir:AssignInsn insn = { result, operand };
         nextBlock.insns.push(insn);
-        return [nextBlock, { name: varName, reg: result, prev: scope, isFinal }];
+        return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };
     }   
 }
 
-function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, AssignStmt stmt) returns CodeGenError|bir:BasicBlock? {
+function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, AssignStmt stmt) returns CodeGenError|StmtEffect {
     var { lValue, expr } = stmt;
     if lValue is VarRefExpr {
-        return codeGenAssignToVar(cx, startBlock, scope, lValue.varName, expr);
+        return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
     }
     else {
-        return codeGenAssignToMember(cx, startBlock, scope, lValue, expr);
+        return codeGenAssignToMember(cx, startBlock, env, lValue, expr);
     }
 }
 
-function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, string varName, Expr expr) returns CodeGenError|bir:BasicBlock? {
-    bir:Register reg = check mustLookup(cx, varName, scope, forAssign=true);
-    var [operand, nextBlock] = check codeGenExpr(cx, startBlock, scope, expr);
+function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, Expr expr) returns CodeGenError|StmtEffect {
+    bir:Register reg = check mustLookup(cx, varName, env, forAssign=true);
+    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, expr);
     bir:AssignInsn assign = { result: reg, operand };
     nextBlock.insns.push(assign);
-    return nextBlock;
+    return { block: nextBlock };
 }
 
-function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, MemberAccessLExpr lValue, Expr expr) returns CodeGenError|bir:BasicBlock? {
-    bir:Register reg = check mustLookup(cx, lValue.container.varName, scope);
-    var [index, nextBlock] = check codeGenExpr(cx, startBlock, scope, lValue.index);
+function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, MemberAccessLExpr lValue, Expr expr) returns CodeGenError|StmtEffect {
+    bir:Register reg = check mustLookup(cx, lValue.container.varName, env);
+    var { result: index, block: nextBlock } = check codeGenExpr(cx, startBlock, env, lValue.index);
     bir:Operand operand;
-    [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, expr);
+    { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, expr);
     TypedOperand? t = typedOperand(index);
     bir:Insn insn;
     if t is ["int", bir:IntOperand] {
@@ -377,56 +412,56 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Sco
         return cx.semanticErr("key in assignment to member must be int or string");
     }
     nextBlock.insns.push(insn);
-    return nextBlock;
+    return { block: nextBlock };
 }
 
-function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, CallStmt stmt) returns CodeGenError|bir:BasicBlock? {
+function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, CallStmt stmt) returns CodeGenError|StmtEffect {
     // stmt is FunctionCallExpr or MethodCallExpr
     bir:Register reg;
     bir:BasicBlock nextBlock;
     if stmt is FunctionCallExpr {
-        [reg, nextBlock] = check codeGenFunctionCall(cx, <bir:BasicBlock>startBlock, scope, stmt);
+        { result: reg, block: nextBlock } = check codeGenFunctionCall(cx, <bir:BasicBlock>startBlock, env, stmt);
     }
     else {
-        [reg, nextBlock] = check codeGenMethodCall(cx, <bir:BasicBlock>startBlock, scope, stmt);
+        { result: reg, block: nextBlock } = check codeGenMethodCall(cx, <bir:BasicBlock>startBlock, env, stmt);
     }
     if reg.semType !== t:NIL {
         return cx.semanticErr("return type of function or method in call statement must be nil");
     }
-    return nextBlock;
+    return { block: nextBlock };
 }
 
-function codeGenConditionalExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:BooleanOperand, bir:BasicBlock] {
+function codeGenConditionalExpr(CodeGenContext cx, bir:BasicBlock block, Environment env, Expr expr) returns CodeGenError|BooleanExprEffect {
     var constValue = check evalConstExpr(expr);
     if constValue is boolean {
-        return [constValue, bb];
+        return { result: constValue, block };
     }
-    return codeGenExprForBoolean(cx, bb, scope, expr);
+    return codeGenExprForBoolean(cx, block, env, expr);
 }
 
-function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:BooleanOperand, bir:BasicBlock] {
-    var [op, nextBlock] = check codeGenExpr(cx, bb, scope, expr);
-    if op is bir:BooleanOperand {
+function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr expr) returns CodeGenError|BooleanExprEffect {
+    var { result, block } = check codeGenExpr(cx, bb, env, expr);
+    if result is bir:BooleanOperand {
         // rest of the type checking is in the verifier
-        return [op, nextBlock];
+        return { result, block };
     }
     return cx.semanticErr("expected boolean operand");
 }
 
-function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:IntOperand, bir:BasicBlock] {
-    var [op, nextBlock] = check codeGenExpr(cx, bb, scope, expr);
-    if op is bir:IntOperand {
+function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr expr) returns CodeGenError|IntExprEffect {
+    var { result, block } = check codeGenExpr(cx, bb, env, expr);
+    if result is bir:IntOperand {
         // rest of the type checking is in the verifier
-        return [op, nextBlock];
+        return { result, block };
     }
     return cx.semanticErr("expected integer operand");
 }
 
-function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:Operand, bir:BasicBlock] {
+function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr expr) returns CodeGenError|ExprEffect {
     match expr {
         var { arithmeticOp: op, left, right, pos } => {
-            var [l, block1] = check codeGenExpr(cx, bb, scope, left);
-            var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
+            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
+            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
             TypedOperandPair? pair = typedOperandPair(l, r);
             bir:Register result;
             if pair is IntOperandPair {
@@ -442,55 +477,55 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             else {
                 return cx.semanticErr("+ not supported for operand types");
             }               
-            return [result, nextBlock];
+            return { result, block: nextBlock };
         }
         // Negation
         { op: "-",  operand: var o, pos: var pos } => {
-            var [operand, nextBlock] = check codeGenExprForInt(cx, bb, scope, o);
+            var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, o);
             bir:Register result = cx.createRegister(t:INT);
             bir:IntArithmeticBinaryInsn insn = { op: "-", operands: [0, operand], result, position: pos };
             bb.insns.push(insn);
-            return [result, nextBlock];
+            return { result, block: nextBlock };
         }
         var { bitwiseOp: op, left, right } => {
-            var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
-            var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
+            var { result: l, block: block1} = check codeGenExprForInt(cx, bb, env, left);
+            var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, right);
             t:SemType lt = bitwiseOperandType(l);
             t:SemType rt = bitwiseOperandType(l);
             t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
             bir:Register result = cx.createRegister(resultType);
             bir:IntBitwiseBinaryInsn insn = { op, operands: [l, r], result };
             bb.insns.push(insn);
-            return [result, nextBlock];
+            return { result, block: nextBlock };
         }
         var { equalityOp: op, left, right } => {
             bir:Register result = cx.createRegister(t:BOOLEAN);
-            var [l, block1] = check codeGenExpr(cx, bb, scope, left);
-            var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
+            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
+            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
             // XXX Can we do all the checking in the verifier?
             bir:EqualityInsn insn = { op, operands: [l, r], result };
             bb.insns.push(insn);
-            return [result, nextBlock];
+            return { result, block: nextBlock };
         }
         var { relationalOp: op, left, right } => {
             bir:Register result = cx.createRegister(t:BOOLEAN);
-            var [l, block1] = check codeGenExpr(cx, bb, scope, left);
-            var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
+            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
+            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
             TypedOperandPair? pair = typedOperandPair(l, r);
             if pair is IntOperandPair|BooleanOperandPair|StringOperandPair {
                 bir:CompareInsn insn = { op, orderType: pair[0], operands: pair[1], result };
                 bb.insns.push(insn);
-                return [result, nextBlock];  
+                return { result, block: nextBlock };  
             }
             else {
                 return cx.semanticErr("operands of relational operator are not ordered");
             }               
         }
         { op: "!",  operand: var o } => {
-            var [operand, nextBlock] = check codeGenExprForBoolean(cx, bb, scope, o);
+            var { result: operand, block: nextBlock } = check codeGenExprForBoolean(cx, bb, env, o);
             bir:Register reg = cx.createRegister(t:BOOLEAN);
             if operand is boolean {
-                // Do it like this, because type of result is int not a singleton
+                // Do it like this, because type of result is boolean not a singleton
                 bir:AssignInsn insn = { operand: !operand, result: reg };
                 bb.insns.push(insn);
             }
@@ -498,53 +533,53 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
                 bir:BooleanNotInsn insn = { operand, result: reg };
                 bb.insns.push(insn);
             }
-            return [reg, nextBlock];
+            return { result: reg, block: nextBlock };
 
         }
         var { td, operand: o } => {
-            var [operand, nextBlock] = check codeGenExpr(cx, bb, scope, o);
+            var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
             // JBUG #31782 cast needed
             TypeCastExpr tcExpr = <TypeCastExpr>expr;
             if operand is bir:Register {
                 if t:isSubtype(cx.mod.tc, operand.semType, tcExpr.semType) {
                     // it's redundant, so we can remove it
-                    return [operand, nextBlock];
+                    return { result: operand, block: nextBlock };
                 }
                 t:SemType resultType = t:intersect(operand.semType, tcExpr.semType);
                 bir:Register reg = cx.createRegister(resultType);
                 bir:TypeCastInsn insn = { operand, semType: tcExpr.semType, position: tcExpr.pos, result:reg };
                 bb.insns.push(insn);
-                return [reg, nextBlock];
+                return { result: reg, block: nextBlock };
             }
             else {
                 if !t:containsConst(tcExpr.semType, operand) {
                     // the verifier uses the same wording
                     return err:semantic("type cast cannot succeed", pos=tcExpr.pos);
                 }
-                return [operand, nextBlock];
+                return { result: operand, block: nextBlock };
             }
         }
         // Variable reference
         var { varName } => {
-            return [check mustLookup(cx, varName, scope), bb];
+            return { result: check mustLookup(cx, varName, env), block: bb };
         }
         // Constant
         var { value } => {
-            return [value, bb];
+            return { result: value, block: bb };
         }
         // Function/method call
         var callExpr if callExpr is (FunctionCallExpr|MethodCallExpr) => {
             if callExpr is FunctionCallExpr {
-                return codeGenFunctionCall(cx, bb, scope, callExpr);
+                return codeGenFunctionCall(cx, bb, env, callExpr);
             }
             else {
-                return codeGenMethodCall(cx, bb, scope, callExpr);
+                return codeGenMethodCall(cx, bb, env, callExpr);
             }
         }
         // Member access E[i]
         var { container, index, pos } => {
-            var [l, block1] = check codeGenExpr(cx, bb, scope, container);
-            var [r, nextBlock] = check codeGenExpr(cx, block1, scope, index);
+            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, container);
+            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, index);
             if l is bir:Register {
                 bir:Register result = cx.createRegister(t:ANY);
                 TypedOperand? k = typedOperand(r);
@@ -559,7 +594,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
                     return cx.semanticErr("member access key must be a string or an int");
                 }
                 bb.insns.push(insn);
-                return [result, nextBlock];
+                return { result, block: nextBlock };
             }
             else {
                 return cx.semanticErr("cannot apply member access to constant of simple type");
@@ -571,7 +606,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             bir:Operand[] operands = [];
             foreach var member in members {
                 bir:Operand operand;
-                [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, member);
+                { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, member);
                 operands.push(operand);
             }
             // In subset 3, we have only mutable lists of any
@@ -579,7 +614,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
             bir:Register result = cx.createRegister(t:LIST_RW);
             bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result };
             nextBlock.insns.push(insn);
-            return [result, nextBlock];
+            return { result, block: nextBlock };
         }
         // Mapping construct
         var { fields } => {
@@ -596,32 +631,32 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr ex
                     return err:semantic(`duplicate field ${name}`, pos=pos);
                 }
                 bir:Operand operand;
-                [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, value);
+                { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, value);
                 operands.push(operand);
                 fieldNames.push(name);
             }
             bir:Register result = cx.createRegister(t:MAPPING_RW);
             bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result };
             nextBlock.insns.push(insn);
-            return [result, nextBlock];
+            return { result, block: nextBlock };
         }
     }
     panic err:impossible();
 }
 
-function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, FunctionCallExpr expr) returns CodeGenError|[bir:Register, bir:BasicBlock] {
+function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, FunctionCallExpr expr) returns CodeGenError|RegExprEffect {
     string? prefix = expr.prefix;
     bir:FunctionRef func;
     if prefix is () {
-        func =  check genLocalFunctionRef(cx, scope, expr.funcName);
+        func =  check genLocalFunctionRef(cx, env, expr.funcName);
     }
     else {
-        func = check genImportedFunctionRef(cx, scope, prefix, expr.funcName);
+        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName);
     }
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
     foreach var argExpr in expr.args {
-        var [arg, nextBlock] = check codeGenExpr(cx, curBlock, scope, argExpr);
+        var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, env, argExpr);
         curBlock = nextBlock;
         args.push(arg);
     }
@@ -633,11 +668,11 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope,
         position: expr.pos
     };
     curBlock.insns.push(call);
-    return [result, curBlock];
+    return { result, block: curBlock };
 }
 
-function genLocalFunctionRef(CodeGenContext cx, Scope? scope, string identifier) returns bir:FunctionRef|CodeGenError {
-    if !(lookup(identifier, scope) is ()) {
+function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifier) returns bir:FunctionRef|CodeGenError {
+    if !(lookup(identifier, env) is ()) {
         return err:unimplemented("local variables cannot yet have function type");
     }
     bir:FunctionSignature signature;
@@ -660,7 +695,7 @@ function genLocalFunctionRef(CodeGenContext cx, Scope? scope, string identifier)
     }  
 }
 
-function genImportedFunctionRef(CodeGenContext cx, Scope? scope, string prefix, string identifier) returns bir:FunctionRef|CodeGenError {
+function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier) returns bir:FunctionRef|CodeGenError {
     bir:ModuleId? moduleId = cx.mod.imports[prefix];
     if moduleId is () {
         return cx.semanticErr(`no import declaration for prefix ${prefix}`);
@@ -677,12 +712,12 @@ function genImportedFunctionRef(CodeGenContext cx, Scope? scope, string prefix, 
     }
 }
 
-function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, MethodCallExpr expr) returns CodeGenError|[bir:Register, bir:BasicBlock] {
-    var [target, curBlock] = check codeGenExpr(cx, bb, scope, expr.target);
+function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, MethodCallExpr expr) returns CodeGenError|RegExprEffect {
+    var { result: target, block: curBlock } = check codeGenExpr(cx, bb, env, expr.target);
     bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName);
     bir:Operand[] args = [target];
     foreach var argExpr in expr.args {
-        var [arg, nextBlock] = check codeGenExpr(cx, curBlock, scope, argExpr);
+        var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, env, argExpr);
         curBlock = nextBlock;
         args.push(arg);
     }
@@ -694,7 +729,7 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, M
         position: expr.pos
     };
     curBlock.insns.push(call);
-    return [result, curBlock];
+    return { result, block: curBlock };
 }
 
 type LangLibModuleName "int"|"boolean"|"string"|"array"|"map";
@@ -715,8 +750,8 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
     return err:unimplemented(`cannot resolve ${methodName} to lang lib function`);
 }
 
-function mustLookup(CodeGenContext cx, string name, Scope? scope, boolean forAssign = false) returns bir:Register|CodeGenError {
-    Scope? binding = lookup(name, scope);
+function mustLookup(CodeGenContext cx, string name, Environment env, boolean forAssign = false) returns bir:Register|CodeGenError {
+    Binding? binding = lookup(name, env);
     if binding is () {
         return cx.semanticErr(`variable ${name} not found`);
     }
@@ -728,8 +763,8 @@ function mustLookup(CodeGenContext cx, string name, Scope? scope, boolean forAss
     }
 }
 
-function lookup(string name, Scope? scope) returns Scope? {
-    Scope? tem = scope;
+function lookup(string name, Environment env) returns Binding? {
+    Binding? tem = env.bindings;
     while true {
         if tem is () {
             break;
