@@ -131,7 +131,7 @@ void testStringCmp() {
 }
 
 static void checkStringEq(TaggedPtr tp1, TaggedPtr tp2, int expect) {
-    assert(_bal_string_eq(tp1, tp2) == expect);
+    assert(taggedStringEqual(tp1, tp2) == expect);
 }
 
 void testStringEq() {

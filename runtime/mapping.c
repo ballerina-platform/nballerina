@@ -2,7 +2,7 @@
 #include <string.h>
 
 static READONLY inline bool matches(MappingPtr m, TaggedPtr key, int64_t mapIndex) {
-    return _bal_string_eq(m->fArray.members[mapIndex].key, key);
+    return taggedStringEqual(m->fArray.members[mapIndex].key, key);
 }
 
 // This part deals with table (and does not look at the fArray).

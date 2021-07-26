@@ -66,7 +66,7 @@ bool READONLY _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
         return 0;
     }
     if (tag1 == TAG_STRING) {
-        return _bal_string_eq(tp1, tp2);
+        return taggedStringEqual(tp1, tp2);
     }
     if (tag1 == (TAG_INT|FLAG_INT_ON_HEAP)) {
         IntPtr p1 = taggedToPtr(tp1);
@@ -74,4 +74,9 @@ bool READONLY _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
         return *p1 == *p2;
     }    
     return 0;
+}
+
+
+bool READONLY _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
+    return taggedStringEqual(tp1, tp2);
 }

@@ -154,10 +154,33 @@ typedef struct {
 
 #define ALIGN_HEAP 8
 
+// Don't declare functions here if they are balrt_inline.c
+
 extern UntypedPtr _bal_alloc(uint64_t nBytes);
 extern NORETURN void _bal_panic(Error err);
 
 extern void _Bio__println(TaggedPtr p);
+
+// precondition is that both strings are on the heap and the pointers are not ==
+extern READONLY bool _bal_string_heap_eq(TaggedPtr tp1, TaggedPtr tp2);
+
+extern READONLY int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
+extern READONLY TaggedPtr _bal_string_concat(TaggedPtr tp1, TaggedPtr tp2);
+extern READONLY uint64_t _bal_string_hash(TaggedPtr tp);
+extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr);
+
+#define TAGGED_PTR_SHIFT 3
+
+extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
+extern Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
+
+#define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
+
+extern TaggedPtr _bal_mapping_construct(int64_t capacity);
+extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
+extern Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
+extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
+
 
 static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;
@@ -247,33 +270,28 @@ static READONLY inline char *taggedStringBytes(TaggedPtr *p) {
     }
 }
 
+static READONLY inline bool taggedStringEqual(TaggedPtr tp1, TaggedPtr tp2) {    
+    uint64_t bits1 = taggedPtrBits(tp1);
+    uint64_t bits2 = taggedPtrBits(tp2);
+    if (bits1 == bits2) {
+        return true;
+    }
+    if (bits1 & IMMEDIATE_FLAG) {
+        return false;
+    }
+    if (bits2 & IMMEDIATE_FLAG) {
+        // one of them is immediate and the bits are not equal
+        // so they are not equal        
+        return false;
+    }
+    return _bal_string_heap_eq(tp1, tp2);
+}
+
 static READNONE inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {
     char *p0 = (void *)p;
     p0 = (char *)((uint64_t)p0 | flags);
     return (TaggedPtr)p0;
 }
-
-// Don't declare functions here if they are balrt_inline.c
-
-extern READONLY bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
-extern READONLY bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
-extern READONLY int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
-extern READONLY TaggedPtr _bal_string_concat(TaggedPtr tp1, TaggedPtr tp2);
-extern READONLY uint64_t _bal_string_hash(TaggedPtr tp);
-extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr);
-
-#define TAGGED_PTR_SHIFT 3
-
-extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
-extern Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
-
-#define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
-
-extern TaggedPtr _bal_mapping_construct(int64_t capacity);
-extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
-extern Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
-extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
-
 
 
 
