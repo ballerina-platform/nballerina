@@ -7,9 +7,14 @@ function intrinsicNameToId(IntrinsicFunctionName name) returns int {
     return jLLVMLookupIntrinsicID(java:fromString(str_name), str_name.length());
 }
 
-public type LLVMCodeGenOptLevel "None"|"Less"|"Default"|"Aggressive";
-public type LLVMRelocMode "Default"|"Static"|"PIC"|"DynamicNoPic"|"ROPI"|"RWPI"|"ROPI_RWPI";
-public type LLVMCodeModel "Default"|"JITDefault"|"Tiny"|"Small"|"Kernel"|"Medium"|"Large";
+// JBUG: #31447 make possible values for these strict
+public type LLVMCodeGenOptLevel string;
+public type LLVMRelocMode string;
+public type LLVMCodeModel string;
+
+configurable string optLevel = "Default";
+configurable string relocMode = "Default";
+configurable string codeModel = "Default";
 
 public distinct class Module {
     handle LLVMModule;
@@ -61,16 +66,15 @@ public distinct class Module {
         if isLookUpError != 0 {
             panic error(lookupError.toString());
         }
-        // TODO: make this configurable
         BytePointer cpu = new(jBytePointerFromString(java:fromString("generic")));
         BytePointer features = new(jBytePointerFromString(java:fromString("")));
         handle jTargetMachineRef = jLLVMCreateTargetMachine(jTargetRef,
                                                             targetTriple.jObject,
                                                             cpu.jObject,
                                                             features.jObject,
-                                                            getLLVMCodeGenOpLevel("Default"),
-                                                            getLLVMRelocMode("Default"),
-                                                            getLLVMCodeModel("Default"));
+                                                            getLLVMCodeGenOpLevel(optLevel),
+                                                            getLLVMRelocMode(relocMode),
+                                                            getLLVMCodeModel(codeModel));
         BytePointer emitError = new(jBytePointer());
         int isEmitError = jLLVMTargetMachineEmitToFile(jTargetMachineRef, self.LLVMModule, file.jObject, 1, emitError.jObject);
         if isEmitError != 0 {
