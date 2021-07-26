@@ -817,6 +817,9 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
             if reprIsNil(lhsRepr) || reprIsNil(rhsRepr) {
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
+            else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
+                return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
+            }
             else {
                 return buildEqualTaggedTagged(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
@@ -846,6 +849,11 @@ function reprIsNil(Repr repr) returns boolean {
     return repr is TaggedRepr && repr.subtype == t:NIL;
 }
 
+function reprIsString(Repr repr) returns boolean {
+    return repr is TaggedRepr && repr.subtype == t:STRING;
+}
+
+
 function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {
     buildStoreBoolean(builder, scaffold,
                       builder.iCmp(op, tagged, buildTaggedBoolean(builder, untagged)),
@@ -871,6 +879,14 @@ function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op
 
 function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
     llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, eqFunction), [tagged1, tagged2]);
+    if op == "ne" {
+        b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
+    }
+    buildStoreBoolean(builder, scaffold, b, result);
+}
+
+function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
+    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringEqFunction), [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
