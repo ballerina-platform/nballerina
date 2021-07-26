@@ -361,7 +361,7 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Scope?
 }
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Scope? scope, MemberAccessLExpr lValue, Expr expr) returns CodeGenError|bir:BasicBlock? {
-    bir:Register reg = check mustLookup(cx, lValue.container.varName, scope, forAssign=true);
+    bir:Register reg = check mustLookup(cx, lValue.container.varName, scope);
     var [index, nextBlock] = check codeGenExpr(cx, startBlock, scope, lValue.index);
     bir:Operand operand;
     [operand, nextBlock] = check codeGenExpr(cx, nextBlock, scope, expr);
@@ -425,11 +425,23 @@ function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, E
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Scope? scope, Expr expr) returns CodeGenError|[bir:Operand, bir:BasicBlock] {
     match expr {
         var { arithmeticOp: op, left, right, pos } => {
-            var [l, block1] = check codeGenExprForInt(cx, bb, scope, left);
-            var [r, nextBlock] = check codeGenExprForInt(cx, block1, scope, right);
-            bir:Register result = cx.createRegister(t:INT);
-            bir:IntArithmeticBinaryInsn insn = { op, operands: [l, r], result, position: pos };
-            bb.insns.push(insn);
+            var [l, block1] = check codeGenExpr(cx, bb, scope, left);
+            var [r, nextBlock] = check codeGenExpr(cx, block1, scope, right);
+            TypedOperandPair? pair = typedOperandPair(l, r);
+            bir:Register result;
+            if pair is IntOperandPair {
+                result = cx.createRegister(t:INT);
+                bir:IntArithmeticBinaryInsn insn = { op, operands: pair[1], result, position: pos };
+                bb.insns.push(insn);
+            }
+            else if pair is StringOperandPair {
+                result = cx.createRegister(t:STRING);
+                bir:StringConcatInsn insn = { operands:  pair[1], result };
+                bb.insns.push(insn);
+            }
+            else {
+                return cx.semanticErr("+ not supported for operand types");
+            }               
             return [result, nextBlock];
         }
         // Negation

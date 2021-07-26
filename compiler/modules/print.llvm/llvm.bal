@@ -70,8 +70,8 @@ public function constInt(IntType ty, int val) returns ConstValue {
 }
 
 // Corresponds to LLVMConstNull
-public function constNull(PointerType ty) returns PointerValue {
-    return new PointerValue(ty, "null");
+public function constNull(PointerType ty) returns ConstPointerValue {
+    return new ConstPointerValue(ty, "null");
 }
 
 // Corresponds to LLVMContextRef
@@ -416,11 +416,13 @@ public class FunctionDefn {
     function outputBody(Output out) {
         // This pass will update the unnamed variables and basic block declarations
         foreach var b in self.basicBlocks {
-            b.updateDeclarations();
+            b.updateUnnamed();
         }
         // This pass will fix the basic block references
+        boolean isFirst = true;
         foreach var b in self.basicBlocks {
-            b.output(out);
+            b.output(out, isFirst);
+            isFirst = false;
         }
     }
 
@@ -504,7 +506,7 @@ public class FunctionDefn {
         return newLabel;
     }
 
-    function updateVariableNames(string|Unnamed name) returns string|Unnamed {
+    function updateUnnamed(string|Unnamed name) returns string|Unnamed {
         if name is Unnamed {
             if self.isBasicBlock[name] {
                 // unnamed basic block
@@ -833,8 +835,8 @@ public distinct class BasicBlock {
         self.lines.push(chunks);
     }
 
-    // Used to to update the unnamed variable names and basic block declarations
-    function updateDeclarations() {
+    // Used to to update the unnamed variables and basic block labels
+    function updateUnnamed() {
         (string|Unnamed)[][] newLines = [];
         if self.isReferenced && self.label is Unnamed {
             // unnamed basic block
@@ -843,20 +845,23 @@ public distinct class BasicBlock {
         foreach var line in self.lines {
             (string|Unnamed)[] newLine = [];
             foreach var name in line {
-                newLine.push(self.func.updateVariableNames(name));
+                newLine.push(self.func.updateUnnamed(name));
             }
             newLines.push(newLine);
         }
         self.lines = newLines;
     }
 
-    function output(Output out) {
+    function output(Output out, boolean isFirst) {
         // This ensures we leave out the label in two cases
         // 1. the first block (provided it is not referenced)
         // 2. basic blocks that were in BIR but are unreferenced (and empty) in LL
         //    (happens at the moment for blocks starting with `catch`)
         if self.isReferenced {
             out.push(<string>self.label + ":");
+        }
+        else if !isFirst {
+            panic err:impossible("unreferenced basic block");
         }
         foreach var line in self.lines {
             string[] newLine = [];

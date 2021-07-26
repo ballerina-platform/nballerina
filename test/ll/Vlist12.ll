@@ -8,7 +8,7 @@ declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone specu
 declare i64 @_Barray__length(i8 addrspace(1)*)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
-declare i64 @_bal_tagged_to_int(i8 addrspace(1)*)
+declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
   %v = alloca i8 addrspace(1)*

@@ -25,6 +25,9 @@ function typeToLLVMType(RetType ty) returns handle {
         "i8" => {
             return jLLVMInt8Type();
         }
+        "i16" => {
+            return jLLVMInt16Type();
+        }
         "i32" => {
             return jLLVMInt32Type();
         }
@@ -70,6 +73,15 @@ public readonly class ConstValue {
     }
 }
 
+public readonly class ConstPointerValue {
+    *PointerValue;
+    *ConstValue;
+    handle LLVMValueRef;
+    function init(handle valueRef) {
+        self.LLVMValueRef = valueRef;
+    }
+}
+
 function jLLVMVoidType() returns handle = @java:Method {
     name: "LLVMVoidType",
     'class: "org.bytedeco.llvm.global.LLVM",
@@ -84,6 +96,12 @@ function jLLVMInt64Type() returns handle = @java:Method {
 
 function jLLVMInt32Type() returns handle = @java:Method {
     name: "LLVMInt32Type",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: []
+} external;
+
+function jLLVMInt16Type() returns handle = @java:Method {
+    name: "LLVMInt16Type",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: []
 } external;

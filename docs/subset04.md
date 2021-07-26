@@ -51,7 +51,7 @@ function-defn = ["public"] "function" identifier signature stmt-block
 signature = "(" [param-list] ")" [ "returns" type-desc ]
 type-desc = basic-type-name | "any" | array-type-desc | map-type-desc
 
-basic-type-name = "int" | "boolean"
+basic-type-name = "string" | "int" | "boolean"
 array-type-desc = "any" "[" "]"
 map-type-desc = "map" "<" "any" ">"
 
@@ -85,7 +85,7 @@ lvexpr =
 
 return-stmt = "return" [expression] ";"
 
-if-else-stmt = "if" stmt ["else" (if-else-stmt | stmt-block)]
+if-else-stmt = "if" expression stmt-block ["else" (if-else-stmt | stmt-block)]
 
 while-stmt = "while" expression stmt-block
 
@@ -203,7 +203,6 @@ Language spec syntax references:
 
 The implementation of `string` has the following additional restrictions:
 
- * `+` operator is not supported with operands of type `string`
  * member access `s[i]` is not supported when `s` has type `string`
 
 Method call syntax can be used for calling the following langlib functions:
@@ -238,6 +237,7 @@ Add `string` and `map<any>`:
 Existing syntax extended:
 
 * `===`, `!==` for string and map
+* `+` for string
 * `==`, `!=` for string
 * `<`, `<=`, `>`, `>=` for string
 * `<T>E` for `string` and `map<any>`
@@ -256,4 +256,4 @@ Other additions:
 ## Implemented spec changes since 2021R1
 
 * [#814](https://github.com/ballerina-platform/ballerina-spec/issues/814) - improved typing rules for `==` and `!=`
-* [#887]((https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability
+* [#887](https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability

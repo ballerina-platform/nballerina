@@ -1,9 +1,8 @@
 @_bal_stack_guard = external global i8*
-@.str0 = internal unnamed_addr constant {i8, [7 x i8]} {i8 2, [7 x i8] c"2a\00\00\00\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_Bint__toHexString(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*)
+declare zeroext i1 @_bal_string_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 define void @_B_main() {
   %i = alloca i64
@@ -44,7 +43,7 @@ define void @_B_main() {
   call void @_Bio__println(i8 addrspace(1)* %29)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   %30 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %31 = call i1 @_bal_eq(i8 addrspace(1)* %30, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %31 = call i1 @_bal_string_eq(i8 addrspace(1)* %30, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630860594))
   store i1 %31, i1* %3
   %32 = load i1, i1* %3
   %33 = zext i1 %32 to i64

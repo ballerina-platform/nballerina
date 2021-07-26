@@ -1,11 +1,7 @@
 @_bal_stack_guard = external global i8*
-@.str0 = internal unnamed_addr constant {i8, [7 x i8]} {i8 6, [7 x i8] c"Monday\00"}, align 8
-@.str1 = internal unnamed_addr constant {i8, [7 x i8]} {i8 7, [7 x i8] c"Tuesday"}, align 8
-@.str2 = internal unnamed_addr constant {i8, [15 x i8]} {i8 9, [15 x i8] c"Wednesday\00\00\00\00\00\00"}, align 8
-@.str3 = internal unnamed_addr constant {i8, [15 x i8]} {i8 8, [15 x i8] c"Thursday\00\00\00\00\00\00\00"}, align 8
-@.str4 = internal unnamed_addr constant {i8, [7 x i8]} {i8 6, [7 x i8] c"Friday\00"}, align 8
-@.str5 = internal unnamed_addr constant {i8, [15 x i8]} {i8 8, [15 x i8] c"Saturday\00\00\00\00\00\00\00"}, align 8
-@.str6 = internal unnamed_addr constant {i8, [7 x i8]} {i8 6, [7 x i8] c"Sunday\00"}, align 8
+@.str2 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 9, i16 9, [12 x i8] c"Wednesday\00\00\00"}, align 8
+@.str3 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"Thursday\00\00\00\00"}, align 8
+@.str5 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"Saturday\00\00\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_mapping_construct(i64)
@@ -14,7 +10,7 @@ declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) r
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare void @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
+declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
@@ -38,19 +34,19 @@ define void @_B_main() {
   %15 = call i8 addrspace(1)* @_bal_alloc(i64 56)
   %16 = bitcast i8 addrspace(1)* %15 to [7 x i8 addrspace(1)*] addrspace(1)*
   %17 = getelementptr inbounds [7 x i8 addrspace(1)*], [7 x i8 addrspace(1)*] addrspace(1)* %16, i64 0, i64 0
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %17
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098328527857938253), i8 addrspace(1)* addrspace(1)* %17
   %18 = getelementptr inbounds [7 x i8 addrspace(1)*], [7 x i8 addrspace(1)*] addrspace(1)* %16, i64 0, i64 1
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %18
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3060584505835615572), i8 addrspace(1)* addrspace(1)* %18
   %19 = getelementptr inbounds [7 x i8 addrspace(1)*], [7 x i8 addrspace(1)*] addrspace(1)* %16, i64 0, i64 2
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [15 x i8]}* @.str2 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %19
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str2 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %19
   %20 = getelementptr inbounds [7 x i8 addrspace(1)*], [7 x i8 addrspace(1)*] addrspace(1)* %16, i64 0, i64 3
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [15 x i8]}* @.str3 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %20
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str3 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %20
   %21 = getelementptr inbounds [7 x i8 addrspace(1)*], [7 x i8 addrspace(1)*] addrspace(1)* %16, i64 0, i64 4
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str4 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %21
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098328527857611334), i8 addrspace(1)* addrspace(1)* %21
   %22 = getelementptr inbounds [7 x i8 addrspace(1)*], [7 x i8 addrspace(1)*] addrspace(1)* %16, i64 0, i64 5
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [15 x i8]}* @.str5 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %22
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str5 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %22
   %23 = getelementptr inbounds [7 x i8 addrspace(1)*], [7 x i8 addrspace(1)*] addrspace(1)* %16, i64 0, i64 6
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str6 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* addrspace(1)* %23
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098328527857939795), i8 addrspace(1)* addrspace(1)* %23
   %24 = bitcast [7 x i8 addrspace(1)*] addrspace(1)* %16 to [0 x i8 addrspace(1)*] addrspace(1)*
   %25 = call i8 addrspace(1)* @_bal_alloc(i64 24)
   %26 = bitcast i8 addrspace(1)* %25 to {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
@@ -82,7 +78,7 @@ define void @_B_main() {
   br i1 %40, label %45, label %41
 41:
   %42 = load i8 addrspace(1)*, i8 addrspace(1)** %dayNumber
-  %43 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %42, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str6 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  %43 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %42, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098328527857939795))
   store i8 addrspace(1)* %43, i8 addrspace(1)** %8
   %44 = load i8 addrspace(1)*, i8 addrspace(1)** %8
   call void @_Bio__println(i8 addrspace(1)* %44)
@@ -129,7 +125,7 @@ define void @_B_main() {
   %71 = load i64, i64* %i
   %72 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %71, i64 1)
   %73 = extractvalue {i64, i1} %72, 1
-  br i1 %73, label %81, label %75
+  br i1 %73, label %83, label %75
 74:
   store i64 1795, i64* %10
   br label %56
@@ -140,9 +136,16 @@ define void @_B_main() {
   %78 = load i8 addrspace(1)*, i8 addrspace(1)** %6
   %79 = load i64, i64* %7
   %80 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %79)
-  call void @_bal_mapping_set(i8 addrspace(1)* %77, i8 addrspace(1)* %78, i8 addrspace(1)* %80)
-  br label %53
-81:
+  %81 = call i64 @_bal_mapping_set(i8 addrspace(1)* %77, i8 addrspace(1)* %78, i8 addrspace(1)* %80)
+  %82 = icmp eq i64 %81, 0
+  br i1 %82, label %84, label %85
+83:
   store i64 1793, i64* %10
+  br label %56
+84:
+  br label %53
+85:
+  %86 = or i64 %81, 1792
+  store i64 %86, i64* %10
   br label %56
 }

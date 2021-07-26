@@ -21,6 +21,12 @@ const int TAG_STRING   = t:UT_STRING * TAG_FACTOR;
 
 const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
 
+const int TAG_BASIC_TYPE_MASK = 0xf * TAG_FACTOR;
+const int TAG_BASIC_TYPE_LIST = t:UT_LIST_RO * TAG_FACTOR;
+const int TAG_BASIC_TYPE_MAPPING = t:UT_MAPPING_RO * TAG_FACTOR;
+
+const int FLAG_IMMEDIATE = 0x20 * TAG_FACTOR;
+
 const HEAP_ADDR_SPACE = 1;
 const ALIGN_HEAP = 8;
 
@@ -79,7 +85,7 @@ const PANIC_LIST_TOO_LONG = 6;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"string_cmp"|"eq";
+type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"string_cmp"|"string_concat"|"eq";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -117,7 +123,7 @@ final RuntimeFunction listSetFunction = {
 final RuntimeFunction mappingSetFunction = {
     name: "mapping_set",
     ty: {
-        returnType: REPR_VOID.llvm,
+        returnType: REPR_ERROR.llvm,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
     attrs: []
@@ -131,7 +137,6 @@ final RuntimeFunction mappingGetFunction = {
     },
     attrs: ["readonly"]
 };
-
 
 final RuntimeFunction mappingInitMemberFunction = {
     name: "mapping_init_member",
@@ -157,7 +162,7 @@ final RuntimeFunction intToTaggedFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: ["i64"]
     },
-    attrs: []
+    attrs: [] // NB not readonly because it allocates storage
 };
 
 final RuntimeFunction taggedToIntFunction = {
@@ -166,7 +171,7 @@ final RuntimeFunction taggedToIntFunction = {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR]
     },
-    attrs: []
+    attrs: ["readonly"]
 };
 
 final RuntimeFunction eqFunction = {
@@ -175,7 +180,7 @@ final RuntimeFunction eqFunction = {
         returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: [["return", "zeroext"]]
+    attrs: [["return", "zeroext"], "readonly"]
 };
 
 final RuntimeFunction stringEqFunction = {
@@ -184,13 +189,22 @@ final RuntimeFunction stringEqFunction = {
         returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
-    attrs: [["return", "zeroext"]]
+    attrs: [["return", "zeroext"], "readonly"]
 };
 
 final RuntimeFunction stringCmpFunction = {
     name: "string_cmp",
     ty: {
         returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction stringConcatFunction = {
+    name: "string_concat",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
     attrs: []
@@ -208,9 +222,11 @@ type ImportedFunction record {|
 
 type ImportedFunctionTable table<ImportedFunction> key(symbol);
 
-const STRING_VARIANT_SMALL = 0;
-const STRING_VARIANT_MEDIUM = 1;
-type StringVariant STRING_VARIANT_SMALL|STRING_VARIANT_MEDIUM;
+//const STRING_VARIANT_SMALL = 0;
+const STRING_VARIANT_MEDIUM = 0;
+const STRING_VARIANT_LARGE = 1;
+
+type StringVariant STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE; // STRING_VARIANT_SMALL|;
 
 type StringDefn llvm:ConstPointerValue;
 
@@ -432,6 +448,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:MappingSetInsn {
             check buildMappingSet(builder, scaffold, insn);
         }
+        else if insn is bir:StringConcatInsn {
+            check buildStringConcat(builder, scaffold, insn);
+        }
         else if insn is bir:CondBranchInsn {
             check buildCondBranch(builder, scaffold, insn);
         }
@@ -568,13 +587,18 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
                                    [builder.load(scaffold.address(insn.list)),
                                     buildInt(builder, scaffold, insn.index),
                                     check buildRepr(builder, scaffold, insn.operand, REPR_ANY)]);
+    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
+   
+}
+
+function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, err:Position pos) {
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errorBlock = scaffold.addBasicBlock();
-    builder.condBr(builder.iCmp("eq", <llvm:Value>err, llvm:constInt("i64", 0)),
+    builder.condBr(builder.iCmp("eq", err, llvm:constInt("i64", 0)),
                    continueBlock,
                    errorBlock);
     builder.positionAtEnd(errorBlock);
-    builder.store(buildPanicError(builder, <llvm:Value>err, insn.position), scaffold.panicAddress());
+    builder.store(buildPanicError(builder, err, pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
 }
@@ -604,12 +628,22 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
-    _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingSetFunction),
-                 [
-                     builder.load(scaffold.address(insn.operands[0])),
-                     check buildString(builder, scaffold, insn.operands[1]),
-                     check buildRepr(builder, scaffold, insn.operands[2], REPR_ANY)
-                 ]);
+    llvm:Value? err = builder.call(buildRuntimeFunctionDecl(scaffold, mappingSetFunction),
+                                   [
+                                       builder.load(scaffold.address(insn.operands[0])),
+                                       check buildString(builder, scaffold, insn.operands[1]),
+                                       check buildRepr(builder, scaffold, insn.operands[2], REPR_ANY)
+                                   ]);
+    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
+}
+
+function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
+    llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringConcatFunction),
+                                                [
+                                                    check buildString(builder, scaffold, insn.operands[0]),
+                                                    check buildString(builder, scaffold, insn.operands[1])
+                                                ]);
+    builder.store(value, scaffold.address(insn.result));
 }
 
 function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
@@ -783,6 +817,9 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
             if reprIsNil(lhsRepr) || reprIsNil(rhsRepr) {
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
+            else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
+                return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
+            }
             else {
                 return buildEqualTaggedTagged(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
@@ -811,6 +848,11 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
 function reprIsNil(Repr repr) returns boolean {
     return repr is TaggedRepr && repr.subtype == t:NIL;
 }
+
+function reprIsString(Repr repr) returns boolean {
+    return repr is TaggedRepr && repr.subtype == t:STRING;
+}
+
 
 function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {
     buildStoreBoolean(builder, scaffold,
@@ -843,6 +885,14 @@ function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, CmpEqOp
     buildStoreBoolean(builder, scaffold, b, result);
 }
 
+function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
+    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringEqFunction), [tagged1, tagged2]);
+    if op == "ne" {
+        b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
+    }
+    buildStoreBoolean(builder, scaffold, b, result);
+}
+
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
     var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
     if repr.base != BASE_REPR_TAGGED {
@@ -851,23 +901,34 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock castFailBlock = scaffold.addBasicBlock();
-    if insn.semType === t:BOOLEAN {
+    t:SemType semType = insn.semType;
+    if semType === t:BOOLEAN {
         builder.condBr(buildHasTag(builder, tagged, TAG_BOOLEAN), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
         buildStoreBoolean(builder, scaffold, buildUntagBoolean(builder, tagged), insn.result);
     }
-    else if insn.semType === t:INT {
+    else if semType === t:INT {
         builder.condBr(buildHasTag(builder, tagged, TAG_INT), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
         buildStoreInt(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn.result);
     }
-    else if insn.semType === t:STRING {
-        builder.condBr(buildHasTag(builder, tagged, TAG_STRING), continueBlock, castFailBlock);
+    else {
+        llvm:Value hasTag;
+        if semType === t:STRING {
+            hasTag = buildHasTag(builder, tagged, TAG_STRING);
+        }
+        else if semType === t:LIST {
+            hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+        }
+        else if semType === t:MAPPING {
+            hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+        }
+        else {
+            return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
+        }
+        builder.condBr(hasTag, continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
         builder.store(tagged, scaffold.address(insn.result));
-    }
-    else {
-        return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
     }
     builder.positionAtEnd(castFailBlock);
     builder.store(buildConstPanicError(PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
@@ -969,9 +1030,18 @@ function typeSize(llvm:Type ty) returns int {
 }
 
 function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) returns llvm:Value {
+    return buildTestTag(builder, tagged, tag, TAG_MASK);    
+}
+
+function buildHasBasicTypeTag(llvm:Builder builder, llvm:PointerValue tagged, int basicTypeTag) returns llvm:Value {
+    return buildTestTag(builder, tagged, basicTypeTag, TAG_BASIC_TYPE_MASK);    
+}
+
+function buildTestTag(llvm:Builder builder, llvm:PointerValue tagged, int tag, int mask) returns llvm:Value {
     return builder.iCmp("eq", builder.iBitwise("and", buildTaggedPtrToInt(builder, tagged),
-                                                       llvm:constInt(LLVM_INT, TAG_MASK)),
+                                                       llvm:constInt(LLVM_INT, mask)),
                               llvm:constInt(LLVM_INT, tag));
+
 }
 
 function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
@@ -1010,13 +1080,22 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
     llvm:Type ty;
     llvm:ConstValue val;
     StringVariant variant;
-    if nBytes == nCodePoints && nBytes <= 0xFF {
-        // We want the total size including the header to be a multiple of 8
-        int nBytesPadded = padBytes(bytes, 1);
-        val = context.constStruct([llvm:constInt("i8", nBytes), context.constString(bytes)]);
-        ty = llvm:structType(["i8", llvm:arrayType("i8", nBytesPadded)]);
-        variant = STRING_VARIANT_SMALL;
+    if nCodePoints == 1 || (nBytes == nCodePoints && nBytes <= 7) {
+        int encoded = 0;
+        foreach int i in 0 ..< 7 {
+            // JBUG cast needed #31867
+            encoded |= <int>(i < nBytes ? bytes[i] : 0xFF) << i*8;
+        }
+        encoded |= FLAG_IMMEDIATE|TAG_STRING;
+        return context.constGetElementPtr(llvm:constNull(LLVM_TAGGED_PTR), [llvm:constInt(LLVM_INT, encoded)]);
     }
+    // if nBytes == nCodePoints && nBytes <= 0xFF {
+    //     // We want the total size including the header to be a multiple of 8
+    //     int nBytesPadded = padBytes(bytes, 1);
+    //     val = context.constStruct([llvm:constInt("i8", nBytes), context.constString(bytes)]);
+    //     ty = llvm:structType(["i8", llvm:arrayType("i8", nBytesPadded)]);
+    //     variant = STRING_VARIANT_SMALL;
+    // }
     else if nBytes <= 0xFFFF {
         int nBytesPadded = padBytes(bytes, 4);
         val = context.constStruct([llvm:constInt("i16", nBytes), llvm:constInt("i16", nCodePoints), context.constString(bytes)]);
@@ -1024,7 +1103,10 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
         variant = STRING_VARIANT_MEDIUM;
     }
     else {
-        return err:unimplemented("long constant strings");
+        int nBytesPadded = padBytes(bytes, 16);
+        val = context.constStruct([llvm:constInt("i64", nBytes), llvm:constInt("i64", nCodePoints), context.constString(bytes)]);
+        ty = llvm:structType(["i64", "i64", llvm:arrayType("i8", nBytesPadded)]);
+        variant = STRING_VARIANT_LARGE;
     }
     llvm:ConstPointerValue ptr = mod.addGlobal(ty,
                                                stringDefnSymbol(defnIndex),

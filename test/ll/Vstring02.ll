@@ -1,6 +1,4 @@
 @_bal_stack_guard = external global i8*
-@.str0 = internal unnamed_addr constant {i8, [7 x i8]} {i8 5, [7 x i8] c"hello\00\00"}, align 8
-@.str1 = internal unnamed_addr constant {i8, [7 x i8]} {i8 2, [7 x i8] c"hi\00\00\00\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
@@ -12,7 +10,7 @@ define void @_B_main() {
   %6 = icmp ult i8* %4, %5
   br i1 %6, label %10, label %7
 7:
-  call void @_B_greet(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
+  call void @_B_greet(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504))
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
   %8 = call i8 addrspace(1)* @_B_greeting()
   store i8 addrspace(1)* %8, i8 addrspace(1)** %2
@@ -47,7 +45,7 @@ define internal i8 addrspace(1)* @_B_greeting() {
   %3 = icmp ult i8* %1, %2
   br i1 %3, label %5, label %4
 4:
-  ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i8, [7 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360)
+  ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696)
 5:
   call void @_bal_panic(i64 3076)
   unreachable

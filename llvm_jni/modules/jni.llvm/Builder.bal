@@ -112,39 +112,40 @@ public distinct class Builder {
         string regName = self.extractName(name);
         match op {
             "add" => {
-                Value val = new (jLLVMBuildAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
-                return val;
+                return new (jLLVMBuildAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
             }
             "mul" => {
-                Value val = new (jLLVMBuildMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
-                return val;
+                return new (jLLVMBuildMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
             }
             "sub" => {
-                Value val = new (jLLVMBuildSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
-                return val;
+                return new (jLLVMBuildSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
             }
             "sdiv" => {
-                Value val = new (jLLVMBuildSDiv(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
-                return val;
+                return new (jLLVMBuildSDiv(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
             }
             "srem" => {
-                Value val = new (jLLVMBuildSRem(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
-                return val;
+                return new (jLLVMBuildSRem(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
             }
             "xor" => {
-                Value val = new (jLLVMBuildXor(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
-                return val;
+                return new (jLLVMBuildXor(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
             }
             "or" => {
-                Value val = new (jLLVMBuildOr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
-                return val;
+                return new (jLLVMBuildOr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
             }
             "and" => {
-                Value val = new (jLLVMBuildAnd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
-                return val;
+                return new (jLLVMBuildAnd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "shl" => {
+                return new (jLLVMBuildShl(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "ashr" => {
+                return new (jLLVMBuildAShr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "lshr" => {
+                return new (jLLVMBuildLShr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
             }
         }
-        panic error("op not implemented");
+        panic error(string `op: ${<string>op} not implemented`);
     }
 
     public function iCmp(IntPredicate op, Value lhs, Value rhs, string? name = ()) returns Value {
@@ -324,6 +325,25 @@ function jLLVMBuildOr(handle builder, handle lhs, handle rhs, handle name) retur
 
 function jLLVMBuildAnd(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
     name: "LLVMBuildAnd",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildLShr(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildLShr",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildAShr(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildAShr",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+
+function jLLVMBuildShl(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildShl",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;

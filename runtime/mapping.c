@@ -203,7 +203,7 @@ void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr value)
     insert(mp, key, _bal_string_hash(key), len);
 }
 
-void _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
+Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
     int64_t len = mp->fArray.length;
    
@@ -212,7 +212,7 @@ void _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     // But it doesn't matter because in this case we will rebuild anyway
     bool inserted = insert(mp, key, _bal_string_hash(key), len);
     if (!inserted) {
-        return;
+        return 0;
     }
     if (unlikely(len >= mp->fArray.capacity)) {
         _bal_array_grow(&(mp->gArray), 0, MAP_FIELD_SHIFT);
@@ -225,4 +225,5 @@ void _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     if (len >= 1 << (mp->tableLengthShift - 1)) {
         mappingGrow(mp);
     }
+    return 0;
 }
