@@ -489,11 +489,11 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
         }
         // Bitwise complement 
         { op: "~",  operand: var o } => {
-            var [operand, nextBlock] = check codeGenExprForInt(cx, bb, scope, o);
+            var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, o);
             bir:Register result = cx.createRegister(t:INT);
             bir:IntBitwiseBinaryInsn insn = { op: "^", operands: [-1, operand], result };
             bb.insns.push(insn);
-            return [result, nextBlock];
+            return { result, block: nextBlock };
         }
         var { bitwiseOp: op, left, right } => {
             var { result: l, block: block1} = check codeGenExprForInt(cx, bb, env, left);
