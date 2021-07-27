@@ -99,12 +99,11 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
         return bin;
     }
     else if t == "is" {
-        err:Position pos = tok.currentPos();
         tok.setMode(MODE_TYPE_DESC);
         check tok.advance();
         InlineTypeDesc td = check parseInlineTypeDesc(tok);
         tok.setMode(MODE_NORMAL);
-        TypeTestExpr typeTest = { td, pos, left: expr, semType: convertInlineTypeDesc(td) };
+        TypeTestExpr typeTest = { td, left: expr, semType: convertInlineTypeDesc(td) };
         return typeTest;
     }
     else {

@@ -424,6 +424,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:TypeCastInsn {
             check buildTypeCast(builder, scaffold, insn);
         }
+        else if insn is bir:TypeTestInsn {
+            check buildTypeTest(builder, scaffold, insn);
+        }
         else if insn is bir:CallInsn {
             check buildCall(builder, scaffold, insn);
         }
@@ -891,6 +894,36 @@ function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
     buildStoreBoolean(builder, scaffold, b, result);
+}
+
+function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn insn) returns BuildError? {
+    var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
+    if repr.base != BASE_REPR_TAGGED {
+         // in subset 5 should be const true/false
+        return err:unimplemented("test of untagged value");
+    }
+    t:SemType semType = insn.semType;
+    llvm:PointerValue tagged = <llvm:PointerValue>val;
+    llvm:Value hasType;
+    if semType === t:BOOLEAN {
+        hasType = buildHasTag(builder, tagged, TAG_BOOLEAN);
+    }
+    else if semType === t:INT {
+        hasType = buildHasTag(builder, tagged, TAG_INT);
+    }
+    else if semType === t:STRING {
+        hasType = buildHasTag(builder, tagged, TAG_STRING);
+    }
+    else if semType === t:LIST {
+        hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+    }
+    else if semType === t:MAPPING {
+        hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+    }
+    else {
+        return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
+    }
+    buildStoreBoolean(builder, scaffold, hasType, insn.result);
 }
 
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {

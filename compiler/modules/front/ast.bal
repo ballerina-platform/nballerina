@@ -186,7 +186,6 @@ type TypeTestExpr record {|
     InlineTypeDesc td;
     // Use `left` here so this is distinguishable from TypeCastExpr and SimpleConstExpr
     Expr left;
-    err:Position pos;
     t:SemType semType;
 |};
 

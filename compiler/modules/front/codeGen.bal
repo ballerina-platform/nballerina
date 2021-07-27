@@ -567,6 +567,28 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
                 return { result: operand, block: nextBlock };
             }
         }
+        // Type test
+        var { td, left, semType } => {
+            var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, left);
+            if operand is bir:Register {
+                if t:isSubtype(cx.mod.tc, operand.semType, semType) {
+                    // always true
+                    return { result: true, block: bb };
+                }
+                if t:isEmpty(cx.mod.tc, t:intersect(operand.semType, semType)) {
+                    // always false
+                    return { result: true, block: bb };
+                }
+                bir:Register reg = cx.createRegister(t:BOOLEAN);
+                bir:TypeTestInsn insn = { operand, semType, result: reg };
+                bb.insns.push(insn);
+                return { result: reg, block: nextBlock };
+            }
+            else {
+                // revisit when we revamp constants
+                return { result: t:containsConst(semType, operand), block: bb };
+            }
+        }
         // Variable reference
         var { varName } => {
             return { result: check mustLookup(cx, varName, env), block: bb };
