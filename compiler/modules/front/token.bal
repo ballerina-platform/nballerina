@@ -28,6 +28,7 @@ type Keyword
     | "function"
     | "handle"
     | "in"
+    | "is"
     | "int"
     | "json"
     | "map"
