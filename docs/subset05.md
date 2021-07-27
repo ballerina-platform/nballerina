@@ -25,7 +25,7 @@
    * `match` statement with match patterns that are const
 * Expressions:
    * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`
-   * unary operators: `-`, `!`
+   * unary operators: `-`, `!`, `~`
    * type cast
    * type test `E is T`
    * function call
@@ -172,6 +172,7 @@ multiplicative-expr =
 unary-expr =
   primary-expr
   | "-" unary-expr
+  | "~" unary-expr
   | type-cast-expr
 
 type-cast-expr = "<" type-desc ">" unary-expr
@@ -257,7 +258,8 @@ The following restrictions apply to imported modules:
 
 * `match` statement
 * `const` declaration
-*  type test expressions `x is T`
+* type test expressions `x is T`
+* bitwise complement expressions `~x`
 
 ## Implemented spec changes since 2021R1
 

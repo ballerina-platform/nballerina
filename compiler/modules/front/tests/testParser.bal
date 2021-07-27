@@ -274,6 +274,12 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "expr", "*1", "1"],
          ["V", "expr", "--1", "-(-1)"],
          ["V", "expr", "!!!true", "!(!(!true))"],
+         ["V", "expr", "a--b", "a - (-b)"],
+         ["V", "expr", "~true", "~true"],
+         ["V", "expr", "-~-x", "-(~(-x))"],
+         ["V", "expr", "x-~y", "x - (~y)"],
+         ["V", "expr", "~x-y", "(~x) - y"],
+         ["V", "expr", "~x[i]", "~(x[i])"],
          // type cast
          ["V", "expr", "<int>x", "<int>x"],
          ["V", "expr", "< boolean > x", "<boolean>x"],
