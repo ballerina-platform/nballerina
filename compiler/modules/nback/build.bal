@@ -427,6 +427,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:TypeTestInsn {
             check buildTypeTest(builder, scaffold, insn);
         }
+        else if insn is bir:CondNarrowInsn {
+            check buildCondNarrow(builder, scaffold, insn);
+        }
         else if insn is bir:CallInsn {
             check buildCall(builder, scaffold, insn);
         }
@@ -967,6 +970,31 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     builder.store(buildConstPanicError(PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
+}
+
+function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrowInsn insn) returns BuildError? {
+    var [sourceRepr, value] = check buildReprValue(builder, scaffold, insn.operand);
+    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));   
+    builder.store(narrowed, scaffold.address(insn.result));
+}
+
+function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value|BuildError {
+    BaseRepr sourceBaseRepr = sourceRepr.base;
+    BaseRepr targetBaseRepr = targetRepr.base;
+    llvm:Value narrowed;
+    if sourceBaseRepr == targetBaseRepr {
+        return value;
+    }
+    if sourceBaseRepr == BASE_REPR_TAGGED {
+        llvm:PointerValue tagged = <llvm:PointerValue>value;
+        if targetBaseRepr == BASE_REPR_INT {
+            return buildUntagInt(builder, scaffold, tagged);
+        }
+        else if targetBaseRepr == BASE_REPR_BOOLEAN {
+            return buildUntagBoolean(builder, tagged);
+        }
+    }
+    return err:unimplemented("unimplemented narrowing conversion required");
 }
 
 function buildConstPanicError(PanicIndex panicIndex, err:Position pos) returns llvm:Value {

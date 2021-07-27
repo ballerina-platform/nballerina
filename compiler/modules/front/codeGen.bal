@@ -9,6 +9,7 @@ type Environment record {|
 type Binding record {|
     string name;
     bir:Register reg;
+    // XXX change this to be var|param|final|narrow
     boolean isFinal;
     Binding? prev;
 |};
@@ -21,6 +22,7 @@ type StmtEffect record {|
 type ExprEffect record {|
     bir:BasicBlock block;
     bir:Operand result;
+    Narrowing? narrowing = ();
 |};
 
 type BooleanExprEffect record {|
@@ -36,6 +38,17 @@ type IntExprEffect record {|
 type RegExprEffect record {|
     *ExprEffect;
     bir:Register result;
+|};
+
+type Narrowing record {|
+    string varName;
+    // register with narrowed variable
+    bir:Register reg;
+    t:SemType ifTrue;
+    t:SemType ifFalse;
+    bir:Label testBlock;
+    int testInsnIndex;
+    boolean negated = false;
 |};
 
 type CodeGenError err:Semantic|err:Unimplemented;
@@ -296,7 +309,7 @@ function codeGenContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock) retur
 
 function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, IfElseStmt stmt) returns CodeGenError|StmtEffect {
     var { condition, ifTrue, ifFalse } = stmt;
-    var { result: operand, block: branchBlock } = check codeGenConditionalExpr(cx, startBlock, env, condition);
+    var { result: operand, block: branchBlock, narrowing } = check codeGenConditionalExpr(cx, startBlock, env, condition);
     if operand is boolean {
         Stmt[] taken;
         Stmt[] notTaken;
@@ -316,7 +329,8 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
-        var { block: ifContBlock } = check codeGenStmts(cx, ifBlock, env, ifTrue);
+        Environment ifEnv = narrowing is () ? env : codeGenNarrowing(cx, ifBlock, env, narrowing, true);
+        var { block: ifContBlock } = check codeGenStmts(cx, ifBlock, ifEnv, ifTrue);
         bir:BasicBlock contBlock;
         if ifFalse.length() == 0 {
             // just an if branch
@@ -332,7 +346,8 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
         else {
             // an if and an else
             bir:BasicBlock elseBlock = cx.createBasicBlock();
-            var { block: elseContBlock } = check codeGenStmts(cx, elseBlock, env, ifFalse);
+            Environment elseEnv = narrowing is () ? env : codeGenNarrowing(cx, elseBlock, env, narrowing, false);
+            var { block: elseContBlock } = check codeGenStmts(cx, elseBlock, elseEnv, ifFalse);
             bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: elseBlock.label };
             branchBlock.insns.push(condBranch);
             if ifContBlock is () && elseContBlock is () {
@@ -350,6 +365,27 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
             return { block: contBlock };
         }
     }
+}
+
+// JBUG changing `returns` to `return` makes the parse get a NPE during error recovery
+function codeGenNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Narrowing narrowing, boolean condition) returns Environment {  
+    t:SemType narrowedType = condition == !narrowing.negated ? (narrowing.ifTrue) : narrowing.ifFalse;
+    bir:Register narrowed = cx.createRegister(narrowedType);
+    bir:CondNarrowInsn insn = {
+        result: narrowed,
+        operand: narrowing.reg,
+        testBlock: narrowing.testBlock,
+        testInsnIndex: narrowing.testInsnIndex,
+        condResult: condition == !narrowing.negated
+    };
+    bb.insns.push(insn);
+    Binding bindings = {
+        name: narrowing.varName,
+        reg: narrowed,
+        isFinal: false,
+        prev: env.bindings
+    };
+    return { bindings };
 }
 
 function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, ReturnStmt stmt) returns CodeGenError|StmtEffect {
@@ -440,10 +476,10 @@ function codeGenConditionalExpr(CodeGenContext cx, bir:BasicBlock block, Environ
 }
 
 function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr expr) returns CodeGenError|BooleanExprEffect {
-    var { result, block } = check codeGenExpr(cx, bb, env, expr);
+    var { result, block, narrowing } = check codeGenExpr(cx, bb, env, expr);
     if result is bir:BooleanOperand {
         // rest of the type checking is in the verifier
-        return { result, block };
+        return { result, block, narrowing };
     }
     return cx.semanticErr("expected boolean operand");
 }
@@ -530,7 +566,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
             }               
         }
         { op: "!",  operand: var o } => {
-            var { result: operand, block: nextBlock } = check codeGenExprForBoolean(cx, bb, env, o);
+            var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, env, o);
             bir:Register reg = cx.createRegister(t:BOOLEAN);
             if operand is boolean {
                 // Do it like this, because type of result is boolean not a singleton
@@ -541,7 +577,10 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
                 bir:BooleanNotInsn insn = { operand, result: reg };
                 bb.insns.push(insn);
             }
-            return { result: reg, block: nextBlock };
+            if !(narrowing is ()) {
+                narrowing.negated = !narrowing.negated;
+            }
+            return { result: reg, block: nextBlock, narrowing };
 
         }
         var { td, operand: o } => {
@@ -571,18 +610,31 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
         var { td, left, semType } => {
             var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, left);
             if operand is bir:Register {
-                if t:isSubtype(cx.mod.tc, operand.semType, semType) {
+                t:SemType diff = t:diff(operand.semType, semType);
+                if t:isEmpty(cx.mod.tc, diff) {
                     // always true
                     return { result: true, block: bb };
                 }
-                if t:isEmpty(cx.mod.tc, t:intersect(operand.semType, semType)) {
+                t:SemType intersect = t:intersect(operand.semType, semType);
+                if t:isEmpty(cx.mod.tc, intersect) {
                     // always false
                     return { result: true, block: bb };
                 }
                 bir:Register reg = cx.createRegister(t:BOOLEAN);
                 bir:TypeTestInsn insn = { operand, semType, result: reg };
+                Narrowing? narrowing = ();
+                if left is VarRefExpr {
+                    narrowing = {
+                        varName: left.varName,
+                        reg: operand,
+                        ifTrue: intersect,
+                        ifFalse: diff,
+                        testBlock: bb.label,
+                        testInsnIndex: bb.insns.length()
+                    };
+                }
                 bb.insns.push(insn);
-                return { result: reg, block: nextBlock };
+                return { result: reg, block: nextBlock, narrowing };
             }
             else {
                 // revisit when we revamp constants
