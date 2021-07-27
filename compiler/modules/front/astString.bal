@@ -223,6 +223,17 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(")");
         }
     }
+    else if expr is TypeTestExpr {
+        if wrap {
+            w.push("(");
+        }
+        exprToWords(w, expr.left, true);
+        w.push("is");
+        typeDescToWords(w, expr.td);
+        if wrap {
+            w.push(")");
+        }
+    }
     else if expr is TypeCastExpr {
         if wrap {
             w.push("(");

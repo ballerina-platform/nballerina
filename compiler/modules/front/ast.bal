@@ -30,7 +30,7 @@ type FunctionDef record {|
 
 type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
 type CallStmt FunctionCallExpr|MethodCallExpr;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
+type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 
 type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
 
@@ -178,6 +178,14 @@ type VarRefExpr record {|
 type TypeCastExpr record {|
     InlineTypeDesc td;
     Expr operand;
+    err:Position pos;
+    t:SemType semType;
+|};
+
+type TypeTestExpr record {|
+    InlineTypeDesc td;
+    // Use `left` here so this is distinguishable from TypeCastExpr and SimpleConstExpr
+    Expr left;
     err:Position pos;
     t:SemType semType;
 |};
