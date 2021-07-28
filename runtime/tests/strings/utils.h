@@ -1,9 +1,9 @@
-#include "../balrt.h"
+#include "../../balrt.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
-#include "../hash.h"
+#include "../../hash.h"
 
 #define NRANDOM 2
 #define NTESTS 2*1024
