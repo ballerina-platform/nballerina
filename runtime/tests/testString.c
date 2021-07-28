@@ -1,7 +1,5 @@
 #include "utils.h"
 
-#define NTESTS 2*1024
-
 static uint64_t handPickedLargeLen[] = {
     0xFFFFF - 4,
     0xFFFFF - 3,

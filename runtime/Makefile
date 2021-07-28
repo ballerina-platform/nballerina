@@ -20,6 +20,8 @@ valgrindString: all testString
 coverageString: all
 	cd tests && make coverageString
 
+test: testString
+
 $(LIB): $(OBJS)
 	$(AR) r $@ $^
 

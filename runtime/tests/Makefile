@@ -11,6 +11,7 @@ coverageString: testString
 	-rm -f default.profraw
 	llvm-cov show ./testString -instr-profile=string.profdata
 
+test:testString
 
 clean:
 	-rm -f testString *.profraw *.profdata
