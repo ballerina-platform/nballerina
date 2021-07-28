@@ -2,7 +2,7 @@ LLVM_SUFFIX?=-11
 export CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
-export VALGRIND ?= valgrind
+VALGRIND ?= valgrind
 OBJS=alloc.o list.o main.o mapping.o panic.o print.o string.o int.o
 INCLUDES=tag.h balrt.h
 AR=ar
@@ -13,12 +13,6 @@ all: $(LIB) $(BCLIB)
 
 testString: all 
 	cd tests && make testString
-
-valgrindString: all testString
-	cd tests && make valgrindString
-
-coverageString: all
-	cd tests && make coverageString
 
 test: testString
 

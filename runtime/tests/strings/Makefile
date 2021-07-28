@@ -1,6 +1,8 @@
-testString: testString.c
+tests = stringHash stringCmp stringConcat
+testString: $(tests)
+
+$(tests): %: %.c
 	$(CLANG) $(CFLAGS) -o ./$@ $< ../../$(LIB)
 	./$@
-
 clean:
-	-rm -f testString
+	-rm -f $(tests)

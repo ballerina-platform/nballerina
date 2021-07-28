@@ -8,6 +8,20 @@
 #define NRANDOM 2
 #define NTESTS 2*1024
 
+static uint64_t handPickedLargeLen[] = {
+    0xFFFFF - 4,
+    0xFFFFF - 3,
+    0xFFFFF - 2,
+    0xFFFFF - 1,
+    0xFFFFF,
+    0xFFFFF + 1,
+    0xFFFFF + 2,
+    0xFFFFF + 3,
+    0xFFFFF + 4};
+
+// handPickedCount should be devisable by 3 for the associative test to work
+static int handPickedCount = sizeof(handPickedLargeLen) / sizeof(handPickedLargeLen[0]);
+
 static int min(int n1, int n2) {
     return (n1 > n2 ) ? n2 : n1;
 }
