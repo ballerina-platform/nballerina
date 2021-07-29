@@ -12,9 +12,9 @@ define void @_B_main() {
   %v = alloca i8 addrspace(1)*
   %val = alloca i64
   %i = alloca i64
-  %2 = alloca i1
+  %2 = alloca i64
   %3 = alloca i64
-  %4 = alloca i64
+  %4 = alloca i1
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i8 addrspace(1)*
   %7 = alloca i64
@@ -41,8 +41,8 @@ define void @_B_main() {
 19:
   %20 = load i64, i64* %i
   %21 = icmp slt i64 %20, 62
-  store i1 %21, i1* %2
-  %22 = load i1, i1* %2
+  store i1 %21, i1* %4
+  %22 = load i1, i1* %4
   br i1 %22, label %29, label %23
 23:
   %24 = load i8 addrspace(1)*, i8 addrspace(1)** %v
@@ -91,8 +91,8 @@ define void @_B_main() {
   br label %33
 53:
   %54 = extractvalue {i64, i1} %31, 0
-  store i64 %54, i64* %3
-  %55 = load i64, i64* %3
+  store i64 %54, i64* %2
+  %55 = load i64, i64* %2
   store i64 %55, i64* %val
   %56 = load i64, i64* %i
   %57 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %56, i64 1)
@@ -103,8 +103,8 @@ define void @_B_main() {
   br label %33
 60:
   %61 = extractvalue {i64, i1} %57, 0
-  store i64 %61, i64* %4
-  %62 = load i64, i64* %4
+  store i64 %61, i64* %3
+  %62 = load i64, i64* %3
   store i64 %62, i64* %i
   br label %19
 63:

@@ -46,9 +46,9 @@ define internal void @_B_printIfBetween(i64 %0, i64 %1, i64 %2) {
   %max = alloca i64
   %i = alloca i64
   %4 = alloca i1
-  %5 = alloca i1
-  %6 = alloca i8 addrspace(1)*
-  %7 = alloca i64
+  %5 = alloca i8 addrspace(1)*
+  %6 = alloca i64
+  %7 = alloca i1
   %8 = alloca i64
   %9 = alloca i8
   %10 = load i8*, i8** @_bal_stack_guard
@@ -65,8 +65,8 @@ define internal void @_B_printIfBetween(i64 %0, i64 %1, i64 %2) {
   %15 = load i64, i64* %i
   %16 = load i64, i64* %max
   %17 = icmp sle i64 %15, %16
-  store i1 %17, i1* %4
-  %18 = load i1, i1* %4
+  store i1 %17, i1* %7
+  %18 = load i1, i1* %7
   br i1 %18, label %20, label %19
 19:
   ret void
@@ -74,14 +74,14 @@ define internal void @_B_printIfBetween(i64 %0, i64 %1, i64 %2) {
   %21 = load i64, i64* %i
   %22 = load i64, i64* %n
   %23 = icmp eq i64 %21, %22
-  store i1 %23, i1* %5
-  %24 = load i1, i1* %5
+  store i1 %23, i1* %4
+  %24 = load i1, i1* %4
   br i1 %24, label %25, label %28
 25:
   %26 = load i64, i64* %n
   %27 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %26)
   call void @_Bio__println(i8 addrspace(1)* %27)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  store i8 addrspace(1)* null, i8 addrspace(1)** %5
   br label %19
 28:
   %29 = load i64, i64* %i
@@ -97,8 +97,8 @@ define internal void @_B_printIfBetween(i64 %0, i64 %1, i64 %2) {
   unreachable
 35:
   %36 = extractvalue {i64, i1} %30, 0
-  store i64 %36, i64* %7
-  %37 = load i64, i64* %7
+  store i64 %36, i64* %6
+  %37 = load i64, i64* %6
   store i64 %37, i64* %i
   br label %14
 38:

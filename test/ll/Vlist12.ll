@@ -13,15 +13,15 @@ define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
   %v = alloca i8 addrspace(1)*
   %i = alloca i64
-  %2 = alloca i1
-  %3 = alloca i64
+  %2 = alloca i64
+  %3 = alloca i1
   %4 = alloca i64
   %sum = alloca i64
-  %5 = alloca i1
+  %5 = alloca i8 addrspace(1)*
   %6 = alloca i64
-  %7 = alloca i8 addrspace(1)*
+  %7 = alloca i64
   %8 = alloca i64
-  %9 = alloca i64
+  %9 = alloca i1
   %10 = alloca i64
   %11 = alloca i8 addrspace(1)*
   %12 = alloca i64
@@ -64,12 +64,12 @@ define void @_B_main() {
 38:
   %39 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   %40 = call i64 @_Barray__length(i8 addrspace(1)* %39)
-  store i64 %40, i64* %6
+  store i64 %40, i64* %10
   %41 = load i64, i64* %i
-  %42 = load i64, i64* %6
+  %42 = load i64, i64* %10
   %43 = icmp slt i64 %41, %42
-  store i1 %43, i1* %5
-  %44 = load i1, i1* %5
+  store i1 %43, i1* %9
+  %44 = load i1, i1* %9
   br i1 %44, label %48, label %45
 45:
   %46 = load i64, i64* %sum
@@ -95,12 +95,12 @@ define void @_B_main() {
   unreachable
 59:
   %60 = extractvalue {i64, i1} %25, 0
-  store i64 %60, i64* %3
+  store i64 %60, i64* %4
   %61 = load i64, i64* %i
-  %62 = load i64, i64* %3
+  %62 = load i64, i64* %4
   %63 = icmp slt i64 %61, %62
-  store i1 %63, i1* %2
-  %64 = load i1, i1* %2
+  store i1 %63, i1* %3
+  %64 = load i1, i1* %3
   br i1 %64, label %32, label %27
 65:
   store i64 1537, i64* %12
@@ -124,8 +124,8 @@ define void @_B_main() {
   br label %56
 75:
   %76 = extractvalue {i64, i1} %71, 0
-  store i64 %76, i64* %4
-  %77 = load i64, i64* %4
+  store i64 %76, i64* %2
+  %77 = load i64, i64* %2
   store i64 %77, i64* %i
   br label %24
 78:
@@ -136,8 +136,8 @@ define void @_B_main() {
   %81 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %80, align 8
   %82 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %81, i64 0, i64 %49
   %83 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %82, align 8
-  store i8 addrspace(1)* %83, i8 addrspace(1)** %7
-  %84 = load i8 addrspace(1)*, i8 addrspace(1)** %7
+  store i8 addrspace(1)* %83, i8 addrspace(1)** %5
+  %84 = load i8 addrspace(1)*, i8 addrspace(1)** %5
   %85 = addrspacecast i8 addrspace(1)* %84 to i8*
   %86 = ptrtoint i8* %85 to i64
   %87 = and i64 %86, 2233785415175766016
@@ -148,9 +148,9 @@ define void @_B_main() {
   br label %56
 90:
   %91 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %84)
-  store i64 %91, i64* %8
+  store i64 %91, i64* %6
   %92 = load i64, i64* %sum
-  %93 = load i64, i64* %8
+  %93 = load i64, i64* %6
   %94 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %92, i64 %93)
   %95 = extractvalue {i64, i1} %94, 1
   br i1 %95, label %103, label %97
@@ -159,8 +159,8 @@ define void @_B_main() {
   br label %56
 97:
   %98 = extractvalue {i64, i1} %94, 0
-  store i64 %98, i64* %9
-  %99 = load i64, i64* %9
+  store i64 %98, i64* %7
+  %99 = load i64, i64* %7
   store i64 %99, i64* %sum
   %100 = load i64, i64* %i
   %101 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %100, i64 1)
@@ -171,8 +171,8 @@ define void @_B_main() {
   br label %56
 104:
   %105 = extractvalue {i64, i1} %101, 0
-  store i64 %105, i64* %10
-  %106 = load i64, i64* %10
+  store i64 %105, i64* %8
+  %106 = load i64, i64* %8
   store i64 %106, i64* %i
   br label %38
 107:

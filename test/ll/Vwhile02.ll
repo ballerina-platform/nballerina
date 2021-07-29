@@ -20,9 +20,9 @@ define void @_B_main() {
 define internal void @_B_printInts(i64 %0) {
   %maxExclusive = alloca i64
   %i = alloca i64
-  %2 = alloca i1
+  %2 = alloca i8 addrspace(1)*
   %3 = alloca i64
-  %4 = alloca i8 addrspace(1)*
+  %4 = alloca i1
   %5 = alloca i64
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard
@@ -36,11 +36,11 @@ define internal void @_B_printInts(i64 %0) {
 11:
   %12 = load i64, i64* %i
   %13 = call i64 @_B_decrease(i64 %12)
-  store i64 %13, i64* %3
-  %14 = load i64, i64* %3
+  store i64 %13, i64* %5
+  %14 = load i64, i64* %5
   %15 = icmp sle i64 0, %14
-  store i1 %15, i1* %2
-  %16 = load i1, i1* %2
+  store i1 %15, i1* %4
+  %16 = load i1, i1* %4
   br i1 %16, label %18, label %17
 17:
   ret void
@@ -48,11 +48,11 @@ define internal void @_B_printInts(i64 %0) {
   %19 = load i64, i64* %i
   %20 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %19)
   call void @_Bio__println(i8 addrspace(1)* %20)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2
   %21 = load i64, i64* %i
   %22 = call i64 @_B_decrease(i64 %21)
-  store i64 %22, i64* %5
-  %23 = load i64, i64* %5
+  store i64 %22, i64* %3
+  %23 = load i64, i64* %3
   store i64 %23, i64* %i
   br label %11
 24:

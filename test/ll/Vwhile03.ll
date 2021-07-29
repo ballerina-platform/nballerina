@@ -5,12 +5,12 @@ declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
   %i = alloca i64
-  %1 = alloca i1
   %j = alloca i64
-  %2 = alloca i1
-  %3 = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
+  %2 = alloca i64
+  %3 = alloca i1
   %4 = alloca i64
-  %5 = alloca i64
+  %5 = alloca i1
   %6 = alloca i64
   %7 = alloca i8
   %8 = load i8*, i8** @_bal_stack_guard
@@ -22,8 +22,8 @@ define void @_B_main() {
 11:
   %12 = load i64, i64* %i
   %13 = icmp slt i64 %12, 5
-  store i1 %13, i1* %1
-  %14 = load i1, i1* %1
+  store i1 %13, i1* %5
+  %14 = load i1, i1* %5
   br i1 %14, label %16, label %15
 15:
   ret void
@@ -34,8 +34,8 @@ define void @_B_main() {
   %18 = load i64, i64* %j
   %19 = load i64, i64* %i
   %20 = icmp slt i64 %18, %19
-  store i1 %20, i1* %2
-  %21 = load i1, i1* %2
+  store i1 %20, i1* %3
+  %21 = load i1, i1* %3
   br i1 %21, label %26, label %22
 22:
   %23 = load i64, i64* %i
@@ -46,7 +46,7 @@ define void @_B_main() {
   %27 = load i64, i64* %j
   %28 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %27)
   call void @_Bio__println(i8 addrspace(1)* %28)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  store i8 addrspace(1)* null, i8 addrspace(1)** %1
   %29 = load i64, i64* %j
   %30 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %29, i64 1)
   %31 = extractvalue {i64, i1} %30, 1
@@ -60,8 +60,8 @@ define void @_B_main() {
   unreachable
 35:
   %36 = extractvalue {i64, i1} %24, 0
-  store i64 %36, i64* %5
-  %37 = load i64, i64* %5
+  store i64 %36, i64* %4
+  %37 = load i64, i64* %4
   store i64 %37, i64* %i
   br label %11
 38:
@@ -69,8 +69,8 @@ define void @_B_main() {
   br label %32
 39:
   %40 = extractvalue {i64, i1} %30, 0
-  store i64 %40, i64* %4
-  %41 = load i64, i64* %4
+  store i64 %40, i64* %2
+  %41 = load i64, i64* %2
   store i64 %41, i64* %j
   br label %17
 42:
