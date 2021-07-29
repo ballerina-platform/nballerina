@@ -15,6 +15,9 @@ all: $(LIB) $(BCLIB)
 test: all
 	$(MAKE) -C tests test
 
+testCoverage: $(LIB) $(BCLIB)
+	$(MAKE) -C tests testCoverage
+
 $(LIB): $(OBJS)
 	$(AR) r $@ $^
 
