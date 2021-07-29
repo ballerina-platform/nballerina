@@ -10,11 +10,10 @@ export LIB=balrt.a
 export BCLIB=balrt_inline.bc
 
 all: $(LIB) $(BCLIB)
+	$(MAKE) -C tests all
 
-testString: all 
-	cd tests && make testString
-
-test: testString
+test: all
+	$(MAKE) -C tests test
 
 $(LIB): $(OBJS)
 	$(AR) r $@ $^
@@ -33,4 +32,6 @@ $(OBJS) $(BCLIB): $(INCLUDES)
 
 clean:
 	-rm -f $(LIB) $(OBJS) $(BCLIB)
-	cd tests && make clean
+	$(MAKE) -C tests clean
+
+.PHONY: test all

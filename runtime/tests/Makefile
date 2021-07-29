@@ -1,8 +1,18 @@
-tests = stringHash stringCmp stringConcat
-testString: $(tests)
+TESTPROGS=stringHash stringCmp stringConcat
+TESTPROG_STAMPS=$(addsuffix .stamp, $(TESTPROGS))
 
-$(tests): %: %.c
+all: $(TESTPROGS)
+
+test: $(TESTPROG_STAMPS)
+
+%.stamp: %
+	./$<
+	touch $@
+
+%: %.c
 	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)
-	./$@
+
 clean:
-	-rm -f $(tests)
+	-rm -f $(TESTPROGS) $(TESTPROG_STAMPS)
+
+.PHONY: all test clean
