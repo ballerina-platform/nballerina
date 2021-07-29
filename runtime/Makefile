@@ -1,27 +1,23 @@
 LLVM_SUFFIX?=-11
-CLANG ?= clang$(LLVM_SUFFIX)
+export CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
 OBJS=alloc.o list.o main.o mapping.o panic.o print.o string.o int.o
 INCLUDES=tag.h balrt.h
 AR=ar
-LIB=balrt.a
-BCLIB=balrt_inline.bc
+export LIB=balrt.a
+export BCLIB=balrt_inline.bc
 
 all: $(LIB) $(BCLIB)
 
-test: all testrt
-	./testrt
+testString: all 
+	cd tests && make testString
 
-valgrind: all testrt
-	$(VALGRIND) ./testrt
+test: testString
 
 $(LIB): $(OBJS)
 	$(AR) r $@ $^
-
-testrt: testrt.c $(LIB)
-	$(CLANG) $(CFLAGS) -o $@ $< $(LIB)
 
 %.o: %.c
 	$(CLANG) $(CFLAGS) -c -o $@ $<
@@ -36,4 +32,5 @@ testrt: testrt.c $(LIB)
 $(OBJS) $(BCLIB): $(INCLUDES)
 
 clean:
-	-rm -f $(LIB) $(OBJS) $(BCLIB) testrt
+	-rm -f $(LIB) $(OBJS) $(BCLIB)
+	cd tests && make clean
