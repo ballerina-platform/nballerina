@@ -1,4 +1,4 @@
-TESTPROGS=stringHash stringCmp stringConcat
+TESTPROGS=stringHash stringCmp stringConcat stringLen
 TESTPROG_STAMPS=$(addsuffix .stamp, $(TESTPROGS))
 
 all: $(TESTPROGS)
