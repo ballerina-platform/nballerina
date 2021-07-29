@@ -121,18 +121,22 @@ typedef GC struct LargeString {
     char bytes[];
 } *LargeStringPtr;
 
-static inline int smallStringSize(int lengthInBytes) {
-    return ((lengthInBytes + 7 + 1) >> 3) << 3;
+// Roundup to multiple of 8
+static inline int roundUpInt(int n) {
+    return (n + 7) & ~7;
 }
 
 static inline int mediumStringSize(int lengthInBytes) {
-    return ((lengthInBytes + 7 + 4) >> 3) << 3;
+    return roundUpInt(lengthInBytes + sizeof(struct MediumString));
+}
+
+static inline uint64_t roundUpUint64(uint64_t n) {
+    return (n + 7) & ~(uint64_t)7;
 }
 
 static inline uint64_t largeStringSize(int64_t lengthInBytes) {
-    return (((uint64_t)lengthInBytes + 7 + 16) >> 3) << 3;
+    return roundUpUint64(lengthInBytes + sizeof(struct LargeString));
 }
-
 
 typedef struct {
     int64_t nBytes;
