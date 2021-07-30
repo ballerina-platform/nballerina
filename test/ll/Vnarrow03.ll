@@ -30,8 +30,8 @@ define internal i64 @_B_foo(i8 addrspace(1)* %0) {
   %2 = alloca i1
   %3 = alloca i64
   %i = alloca i64
-  %4 = alloca i64
-  %5 = alloca i1
+  %4 = alloca i1
+  %5 = alloca i64
   %6 = alloca i64
   %7 = alloca i8
   %8 = load i8*, i8** @_bal_stack_guard
@@ -58,18 +58,18 @@ define internal i64 @_B_foo(i8 addrspace(1)* %0) {
 21:
   %22 = load i64, i64* %i
   %23 = icmp eq i64 %22, 0
-  store i1 %23, i1* %5
-  %24 = load i1, i1* %5
-  br i1 %24, label %27, label %25
+  store i1 %23, i1* %4
+  %24 = load i1, i1* %4
+  br i1 %24, label %25, label %29
 25:
-  %26 = load i64, i64* %3
-  ret i64 %26
-27:
-  %28 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  store i8 addrspace(1)* %28, i8 addrspace(1)** %n
-  %29 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
-  %30 = extractvalue {i64, i1} %29, 1
-  br i1 %30, label %38, label %35
+  %26 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
+  store i8 addrspace(1)* %26, i8 addrspace(1)** %n
+  %27 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
+  %28 = extractvalue {i64, i1} %27, 1
+  br i1 %28, label %38, label %35
+29:
+  %30 = load i64, i64* %3
+  ret i64 %30
 31:
   ret i64 0
 32:
@@ -80,9 +80,9 @@ define internal i64 @_B_foo(i8 addrspace(1)* %0) {
   call void @_bal_panic(i64 1796)
   unreachable
 35:
-  %36 = extractvalue {i64, i1} %29, 0
-  store i64 %36, i64* %4
-  %37 = load i64, i64* %4
+  %36 = extractvalue {i64, i1} %27, 0
+  store i64 %36, i64* %5
+  %37 = load i64, i64* %5
   ret i64 %37
 38:
   store i64 3329, i64* %6

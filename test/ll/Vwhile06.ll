@@ -12,17 +12,17 @@ define void @_B_main() {
 6:
   br label %7
 7:
-  br label %10
+  br label %8
 8:
-  %9 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
+  %9 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
   call void @_Bio__println(i8 addrspace(1)* %9)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %1
+  br label %10
+10:
+  %11 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
+  call void @_Bio__println(i8 addrspace(1)* %11)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   ret void
-10:
-  %11 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
-  call void @_Bio__println(i8 addrspace(1)* %11)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %1
-  br label %8
 12:
   call void @_bal_panic(i64 772)
   unreachable

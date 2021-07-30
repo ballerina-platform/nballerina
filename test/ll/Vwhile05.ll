@@ -28,14 +28,14 @@ define internal void @_B_foo() {
   br label %6
 6:
   %7 = load i1, i1* %b
-  br i1 %7, label %9, label %8
+  br i1 %7, label %8, label %10
 8:
-  ret void
-9:
-  %10 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
-  call void @_Bio__println(i8 addrspace(1)* %10)
+  %9 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
+  call void @_Bio__println(i8 addrspace(1)* %9)
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
   br label %6
+10:
+  ret void
 11:
   call void @_bal_panic(i64 1796)
   unreachable
