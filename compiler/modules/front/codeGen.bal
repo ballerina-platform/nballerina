@@ -308,20 +308,23 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     bir:Register condition = cx.createRegister(t:BOOLEAN);
     bir:CompareInsn compare = { op: "<", orderType: "int", operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
-    bir:BasicBlock afterCondition = cx.createBasicBlock();
-    bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: afterCondition.label };
+    bir:BasicBlock loopBody = cx.createBasicBlock();
+    bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: loopBody.label };
     loopHead.insns.push(branch);
     cx.pushLoopContext(exit, ());
     Binding loopBindings = { name: varName, reg: loopVar, prev: env.bindings, isFinal: true };
-    var { block: loopBody } = check codeGenStmts(cx, afterCondition, { bindings: loopBindings }, stmt.body);
+    var { block: loopEnd, assignments } = check codeGenStmts(cx, loopBody, { bindings: loopBindings }, stmt.body);
     
     bir:BasicBlock? loopStep = cx.loopContinueBlock();
-    if !(loopBody is ()) {
+    if !(loopEnd is ()) {
         loopStep = loopStep ?: cx.createBasicBlock();
         bir:BranchInsn branchToLoopStep = { dest: (<bir:BasicBlock>loopStep).label };
-        loopBody.insns.push(branchToLoopStep);
+        loopEnd.insns.push(branchToLoopStep);
+        check validLoopAssignments(cx, assignments);
     }
-
+    check validLoopAssignments(cx, cx.onContinueAssignments());
+    assignments.push(...cx.onContinueAssignments());
+    assignments.push(...cx.onBreakAssignments());
     if !(loopStep is ()) {
         bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", operands: [loopVar, 1], result: loopVar };
         loopStep.insns.push(increment);
@@ -330,7 +333,6 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     cx.popLoopContext();
     return { block: exit };
 }
-
 
 function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, WhileStmt stmt) returns CodeGenError|StmtEffect {
     bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
@@ -362,7 +364,6 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     afterCondition.insns.push(branch);
     cx.pushLoopContext(exit, loopHead);
     var { block: loopEnd, assignments } = check codeGenStmts(cx, loopBody, env, stmt.body);
-    Environment conditionEnv = environmentCopy(env);
     if !(loopEnd is ()) {
         loopEnd.insns.push(branchToLoopHead);
         check validLoopAssignments(cx, assignments);
