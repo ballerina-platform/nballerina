@@ -65,6 +65,8 @@ type Narrowing record {|
 type CodeGenError err:Semantic|err:Unimplemented;
 
 type LoopContext record {|
+    // number of first register created in the loop
+    int startRegister;
     bir:BasicBlock onBreak;
     bir:BasicBlock? onContinue;
     // JBUG #31311 does not allow `outer` here
@@ -81,6 +83,7 @@ class CodeGenContext {
     final bir:FunctionCode code;
     final string functionName;
     LoopContext? loopContext = ();
+    private final string?[] registerVarNames = [];
 
     function init(Module mod, string functionName) {
         self.mod = mod;
@@ -88,12 +91,17 @@ class CodeGenContext {
         self.functionName = functionName;
     }
 
-    function registerCount() returns int {
-        return self.code.registers.length();
+    function createRegister(bir:SemType t, string? varName = ()) returns bir:Register {
+        bir:Register reg = bir:createRegister(self.code, t, varName);
+        self.registerVarNames[reg.number] = varName;
+        return reg;
     }
 
-    function createRegister(bir:SemType t, string? varName = ()) returns bir:Register {
-        return bir:createRegister(self.code, t, varName);
+    function nextRegisterNumber() returns int {
+        return self.code.registers.length();
+    }
+    function registerVarName(int registerNumber) returns string? {
+        return self.registerVarNames[registerNumber];
     }
     
     function createBasicBlock() returns bir:BasicBlock {
@@ -105,7 +113,7 @@ class CodeGenContext {
     }
     
     function pushLoopContext(bir:BasicBlock onBreak, bir:BasicBlock? onContinue) {
-        LoopContext c = { onBreak, onContinue, enclosing: self.loopContext };
+        LoopContext c = { onBreak, onContinue, enclosing: self.loopContext, startRegister: self.nextRegisterNumber()  };
         self.loopContext = c;
     }
 
@@ -115,6 +123,10 @@ class CodeGenContext {
 
     function loopContinueBlock() returns bir:BasicBlock? {
         return (<LoopContext>self.loopContext).onContinue;
+    }
+
+    function loopStartRegister() returns int {
+        return (<LoopContext>self.loopContext).startRegister;
     }
 
     function popLoopContext() {
@@ -149,7 +161,7 @@ class CodeGenContext {
             return;
         }
         LoopContext c = <LoopContext>self.loopContext;
-        c.onBreakAssignments.push(...assignments);
+        addAssignments(c.onBreakAssignments, assignments, c.startRegister);
     }
 
     function addOnContinueAssignments(int[] assignments) {
@@ -157,7 +169,7 @@ class CodeGenContext {
             return;
         }
         LoopContext c = <LoopContext>self.loopContext;
-        c.onContinueAssignments.push(...assignments);
+        addAssignments(c.onContinueAssignments, assignments, c.startRegister);
     }
 
     function onBreakAssignments() returns int[] {
@@ -166,6 +178,14 @@ class CodeGenContext {
 
      function onContinueAssignments() returns int[] {
         return  (<LoopContext>self.loopContext).onContinueAssignments;
+    }
+}
+
+function addAssignments(int[] dest, int[] src, int excludeStart) {
+    foreach int r in src {
+        if r < excludeStart {
+            dest.push(r);
+        }
     }
 }
 
@@ -213,6 +233,7 @@ function codeGenOnPanic(CodeGenContext cx) {
 function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialEnv, Stmt[] stmts) returns CodeGenError|StmtEffect {
     bir:BasicBlock? curBlock = bb;
     Environment env = environmentCopy(initialEnv);
+    final int startRegister = cx.nextRegisterNumber();
     foreach var stmt in stmts {
         StmtEffect effect;
         if curBlock is () {
@@ -258,9 +279,10 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
         else {
             env.assignments.push(...effect.assignments);
         }
-    }
-    // XXX should filter out assigments to things declared in this block (using numeric range of registers)
-    return { block: curBlock, assignments: env.assignments };
+    }                
+    int[] assignments = [];
+    addAssignments(assignments, env.assignments, startRegister);
+    return { block: curBlock, assignments };
 }
 
 
@@ -309,36 +331,23 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     return { block: exit };
 }
 
-// The tricky part of this is that the loop may affect the environment for the condition,
-// because the loop may contain assignments that invalidate narrowings of variables used in the condition.
-// XXX This doesn't work when the loop uses a variable narrowed outside the loop and then assigns to it
+
 function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, WhileStmt stmt) returns CodeGenError|StmtEffect {
     bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
-    bir:BasicBlock exit = cx.createBasicBlock();
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
     startBlock.insns.push(branchToLoopHead);
     bir:BasicBlock loopBody = cx.createBasicBlock();
-    cx.pushLoopContext(exit, loopHead);
-    var { block: loopEnd, assignments } = check codeGenStmts(cx, loopBody, env, stmt.body);
-    Environment conditionEnv = environmentCopy(env);
-    if !(loopEnd is ()) {
-        loopEnd.insns.push(branchToLoopHead);
-        conditionEnv.assignments.push(...assignments);
-    }
-    conditionEnv.assignments.push(...cx.onContinueAssignments());
-    // We won't used these if the exit isn't reachable
-    assignments.push(...cx.onContinueAssignments());
-    assignments.push(...cx.onBreakAssignments());
-    boolean exitReachable = cx.loopUsedBreak();
-    cx.popLoopContext();
-    var { result: condition, block: afterCondition } = check codeGenConditionalExpr(cx, loopHead, conditionEnv, stmt.condition);
+    bir:BasicBlock exit = cx.createBasicBlock();
+
+    boolean exitReachable = false;
+    var { result: condition, block: afterCondition } = check codeGenConditionalExpr(cx, loopHead, env, stmt.condition);
     bir:Insn branch;
     if condition is bir:Register {
         branch = <bir:CondBranchInsn>{ operand: condition, ifFalse: exit.label, ifTrue: loopBody.label };
         exitReachable = true;
     }
     else if condition is true {
-        branch = <bir:BranchInsn>{ dest: loopBody.label };        
+        branch = <bir:BranchInsn>{ dest: loopBody.label };     
     }
     else if stmt.body.length() == 0 {
         // this is `while false { }`
@@ -350,12 +359,36 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         // condition is false and body is non-empty
         return cx.semanticErr("unreachable code");
     }
-    afterCondition.insns.push(branch);        
+    afterCondition.insns.push(branch);
+    cx.pushLoopContext(exit, loopHead);
+    var { block: loopEnd, assignments } = check codeGenStmts(cx, loopBody, env, stmt.body);
+    Environment conditionEnv = environmentCopy(env);
+    if !(loopEnd is ()) {
+        loopEnd.insns.push(branchToLoopHead);
+        check validLoopAssignments(cx, assignments);
+    }
+    check validLoopAssignments(cx, cx.onContinueAssignments());
+    // We won't used these if the exit isn't reachable
+    assignments.push(...cx.onContinueAssignments());
+    assignments.push(...cx.onBreakAssignments());
+    if cx.loopUsedBreak() {
+        exitReachable = true;
+    }
+    cx.popLoopContext();
+   
     if exitReachable {
         return { block: exit, assignments };
     }
     else {
         return { block: () };
+    }
+}
+
+function validLoopAssignments(CodeGenContext cx, int[] assignments) returns CodeGenError? {
+    foreach int r in assignments {
+        if r < cx.loopStartRegister() {
+            return cx.semanticErr(`assignment to narrowed variable ${<string>cx.registerVarName(r)} in loop`);
+        }
     }
 }
 
