@@ -8,6 +8,13 @@ void validateImmediateStringLength(uint64_t bits, int nChars, int nCodePoints) {
 	assert(length.nCodePoints == nCodePoints);
 }
 
+void validateTaggedStringEquals(uint64_t lhs, uint64_t rhs, bool expected) {
+	TaggedPtr lhsPtr = bitsToTaggedPtr(lhs);
+	TaggedPtr rhsPtr = bitsToTaggedPtr(rhs);
+	bool result = taggedStringEqual(lhsPtr, rhsPtr);
+	assert(result == expected);
+}
+
 void testImmediateStringLength() {
 	// test ASCII
 	validateImmediateStringLength(0xABFFFFFFFFFFFFFF, 0, 0); // ""
@@ -23,8 +30,21 @@ void testImmediateStringLength() {
 	// validateImmediateStringLength(0xABFFFFFFFF01F980, 3, 1); // "🦀" //! : nBytes -> 1
 }
 
+void testTaggedStringEquals() {
+	// test ASCII
+	validateTaggedStringEquals(0xABFFFF6162606364, 0xABFFFF6162606364, true);
+	validateTaggedStringEquals(0xABFFFF6162606364, 0xAB61626364656667, false);
+	validateTaggedStringEquals(0xABFFFF6162606364, 0xABFFFFFFFFFF265E, false);
+	// test Unicode
+	validateTaggedStringEquals(0xABFFFFFFFFFF265E, 0xABFFFFFFFFFF265E, true);
+	validateTaggedStringEquals(0xABFFFFFFFFFF265E, 0xABFFFFFFFF01F980, false);
+	validateTaggedStringEquals(0xABFFFFFFFFFF265E, 0xABFFFF6162606364, false);
+	validateTaggedStringEquals(0x8FFFFFFFFFFF265E, 0xABFFFF6162606364, false);
+}
+
 int main() {
     testImmediateStringLength();
+    testTaggedStringEquals();
     return 0;
 }
 
