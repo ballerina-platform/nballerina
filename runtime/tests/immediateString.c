@@ -6,6 +6,9 @@ void validateImmediateStringLength(uint64_t bits, int nChars, int nCodePoints) {
 	StringLength length = immediateStringLength(bits);
 	assert(length.nBytes == nChars);
 	assert(length.nCodePoints == nCodePoints);
+	StringLength taggedLength = taggedStringLength(bitsToTaggedPtr(bits));
+	assert(taggedLength.nBytes == length.nBytes);
+	assert(taggedLength.nCodePoints == length.nCodePoints);
 }
 
 void validateTaggedStringEquals(uint64_t lhs, uint64_t rhs, bool expected) {
