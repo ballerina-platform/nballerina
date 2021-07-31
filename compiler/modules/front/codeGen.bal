@@ -79,6 +79,7 @@ type LoopContext record {|
 |};
 
 class CodeGenContext {
+    *FoldContext;
     final Module mod;
     final bir:FunctionCode code;
     final string functionName;
@@ -108,8 +109,8 @@ class CodeGenContext {
         return bir:createBasicBlock(self.code);
     }
 
-    function semanticErr(err:Message msg) returns err:Semantic {
-        return err:semantic(msg, functionName=self.functionName);
+    function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, pos=pos, cause=cause, functionName=self.functionName);
     }
     
     function pushLoopContext(bir:BasicBlock onBreak, bir:BasicBlock? onContinue) {
@@ -176,8 +177,12 @@ class CodeGenContext {
         return  (<LoopContext>self.loopContext).onBreakAssignments;
     }
 
-     function onContinueAssignments() returns int[] {
+    function onContinueAssignments() returns int[] {
         return  (<LoopContext>self.loopContext).onContinueAssignments;
+    }
+
+    function foldExpr(Expr expr, t:SemType? expectedType) returns Expr|err:Semantic {
+        return foldExpr(self, expectedType, expr);
     }
 }
 
@@ -596,11 +601,7 @@ function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environme
 }
 
 function codeGenConditionalExpr(CodeGenContext cx, bir:BasicBlock block, Environment env, Expr expr) returns CodeGenError|BooleanExprEffect {
-    var constValue = check evalConstExpr(expr);
-    if constValue is boolean {
-        return { result: constValue, block };
-    }
-    return codeGenExprForBoolean(cx, block, env, expr);
+    return codeGenExprForBoolean(cx, block, env,  check cx.foldExpr(expr, t:BOOLEAN));
 }
 
 function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr expr) returns CodeGenError|BooleanExprEffect {
@@ -789,8 +790,19 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
             return { result: (check lookupVarRef(cx, varName, env)).reg, block: bb };
         }
         // Constant
-        var { value } => {
-            return { result: value, block: bb };
+        // JBUG does not work as match pattern `var { value, multiSemType }`
+        var simpleConstExpr if simpleConstExpr is SimpleConstExpr => {
+            t:SemType? multiSemType = simpleConstExpr.multiSemType;
+            SimpleConst value = simpleConstExpr.value;
+            if multiSemType is () {
+                return { result: value, block: bb };
+            }
+            else {
+                bir:Register reg = cx.createRegister(multiSemType);
+                bir:AssignInsn insn = { operand: value, result: reg };
+                bb.insns.push(insn);
+                return { result: reg, block: bb };
+            }
         }
         // Function/method call
         var callExpr if callExpr is (FunctionCallExpr|MethodCallExpr) => {

@@ -1,14 +1,22 @@
 import ballerina/test;
+import wso2/nballerina.err;
 
 type ConstEvalTest [string,SimpleConst];
+
+class TestFoldContext {
+    function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, pos=pos, cause=cause);
+    }
+}
 
 @test:Config{ dataProvider: validConstExprs }
 function testConstExpr(string src, SimpleConst expected) {
     Tokenizer tok = new (src);
     checkpanic tok.advance();
     Expr parsed = checkpanic parseExpr(tok);
-    var result = checkpanic evalConstExpr(parsed);
-    test:assertTrue(result is SimpleConst && result == expected, "got: " + (result is NotConst ? "NotConst" : result.toString()));
+    TestFoldContext cx = new;
+    var result = foldExpr(cx, (), parsed);
+    test:assertTrue(result is SimpleConstExpr && result.value == expected, "got: " + (result is SimpleConstExpr ? result.value.toString()  : "not constant"));
 }
 
 function validConstExprs() returns map<ConstEvalTest> {
@@ -23,9 +31,9 @@ function validConstExprs() returns map<ConstEvalTest> {
         ["1 < -1", false],
         ["1 == 1", true],
         ["1 + 2 == 2 + 1", true],
-        ["(1 & 255) == 2", false],
+        ["(2 & 255) == 2", true],
         ["(1 & 255) != 1", false],
-        ["(1 | 1) == 2", false],
+        ["(1 | 1) != 1", false],
         ["<int>1 + <int>2", 3]
     ];
     map<ConstEvalTest> m = {};

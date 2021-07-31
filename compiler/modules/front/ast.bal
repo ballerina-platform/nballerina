@@ -191,6 +191,11 @@ type TypeTestExpr record {|
 
 type SimpleConstExpr record {|
     ()|boolean|int|string value;
+    // This is non-nil when the static type of the expression
+    // contains more than one shape.
+    // When it contains exactly one shape, then the shape is
+    // the shape of the value.
+    t:SemType? multiSemType = ();
 |};
 
 // Types

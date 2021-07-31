@@ -3,188 +3,232 @@ import wso2/nballerina.types as t;
 
 type SimpleConst string|int|boolean|();
 
-// We could use an error to represent this.
-// I have chosen not too,
-// because we will be using it often in if and while statements,
-// where not being constant is normal not an error.
-// I don't want to create an error object in this case,
-// because creating the backtrace is likely expensive.
-distinct class NotConst {
-    Expr expr;
-    function init(Expr expr) {
-        self.expr = expr;
-    }
-}
+// This is for handling const definitions in the future
+type FoldContext object {
+    function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic;
+ };
 
-type EvalResult SimpleConst|NotConst;
-
-function evalConstExpr(Expr expr) returns EvalResult|err:Semantic {
-    if expr is SimpleConstExpr {
-        return expr.value;
+function foldExpr(FoldContext cx, t:SemType? expectedType, Expr expr) returns Expr|err:Semantic {
+    if expr is BinaryArithmeticExpr {
+        return foldBinaryArithmeticExpr(cx, expectedType, expr);
+    } 
+    else if expr is BinaryBitwiseExpr {
+        return foldBinaryBitwiseExpr(cx, expectedType, expr);
     }
-    else if expr is BinaryExpr {
-        EvalResult left = check evalConstExpr(expr.left);
-        if left is NotConst {
-            return left;
-        }
-        else {
-            EvalResult right = check evalConstExpr(expr.right);
-            if right is NotConst {
-                return right;
-            }
-            else {
-                return evalConstBinary(expr, left, right);
-            }
-        }
+    else if expr is BinaryRelationalExpr {
+        return foldBinaryRelationalExpr(cx, expectedType, expr);
+    }
+    else if expr is BinaryEqualityExpr {
+        return foldBinaryEqualityExpr(cx, expectedType, expr);
     }
     else if expr is UnaryExpr {
-         EvalResult operand = check evalConstExpr(expr.operand);
-         if operand is NotConst {
-             return operand;
-         }
-         else {
-             return evalConstUnary(expr, operand);
-         }
+        return foldUnaryExpr(cx, expectedType, expr);
     }
     else if expr is TypeCastExpr {
-        EvalResult operand = check evalConstExpr(expr.operand);
-        if operand is NotConst {
-            return operand;
-        }
-        else if !t:containsConst(expr.semType, operand) {
-            return err:semantic(`type cast will always fail`, pos=expr.pos);
-        }
-        else {
-            return operand;
-        }
+        return foldTypeCastExpr(cx, expectedType, expr);
     }
     else {
-        return new NotConst(expr);
-    }
+        return expr;
+    } 
 }
 
-function evalConstUnary(UnaryExpr expr, SimpleConst operand) returns EvalResult|err:Semantic {
-    UnaryExprOp op = expr.op;
-    SimpleConst value;
-    if op is "!" {
-        if operand is boolean {
-            return !operand;
-        }
-    }
-    else if op is "~" {
-        if operand is int {
-            return ~operand;
-        }
-    }
-    else {
-        // "-"
-        if operand is int {
-            if operand == int:MIN_VALUE {
-                return err:semantic(`${"-"} applied to minimum integer value`, pos=expr.pos);
-            }
-            else {
-                return -operand;
-            }
-        }
-    }
-    // type error
-    return new NotConst(expr);
-}
-
-function evalConstBinary(BinaryExpr expr, SimpleConst left, SimpleConst right) returns EvalResult|err:Semantic {
-    if expr is BinaryArithmeticExpr {
+function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, BinaryArithmeticExpr expr) returns Expr|err:Semantic {
+    Expr leftExpr = check foldExpr(cx, expectedType, expr.left);
+    Expr rightExpr = check foldExpr(cx, expectedType, expr.right);
+    if leftExpr is SimpleConstExpr && rightExpr is SimpleConstExpr {
+        SimpleConst left = leftExpr.value;
+        SimpleConst right = rightExpr.value;
         if left is int && right is int {
             int|error result = trap intArithmeticEval(expr.arithmeticOp, left, right);
             if result is int {
-                return result;
+                return foldedBinaryConstExpr(result, t:INT, leftExpr, rightExpr);
             }
             else {
-                return err:semantic(`evaluation of constant ${expr.arithmeticOp} expression failed`, pos=expr.pos, cause=result);
+                return cx.semanticErr(`evaluation of constant ${expr.arithmeticOp} expression failed`, pos=expr.pos, cause=result);
             }
         }
         else if left is string && right is string && expr.arithmeticOp == "+" {
-            return left + right;
+            return foldedBinaryConstExpr(left + right, t:STRING, leftExpr, rightExpr);
+        }
+        else {
+            return cx.semanticErr(`invalid operand types for ${expr.arithmeticOp}`);
         }
     }
-    else if expr is BinaryBitwiseExpr {
+    expr.left = leftExpr;
+    expr.right = rightExpr;
+    return expr;
+}
+
+function foldBinaryBitwiseExpr(FoldContext cx, t:SemType? expectedType, BinaryBitwiseExpr expr) returns Expr|err:Semantic {
+    Expr leftExpr = check foldExpr(cx, t:INT, expr.left);
+    Expr rightExpr = check foldExpr(cx, t:INT, expr.right);
+    if leftExpr is SimpleConstExpr && rightExpr is SimpleConstExpr {
+        SimpleConst left = leftExpr.value;
+        SimpleConst right = rightExpr.value;
         if left is int && right is int {
-            return bitwiseEval(expr.bitwiseOp, left, right);
+            return <SimpleConstExpr> {
+                value: bitwiseEval(expr.bitwiseOp, left, right),
+                multiSemType: foldedBinaryBitwiseType(expr.bitwiseOp, left, leftExpr.multiSemType, right, rightExpr.multiSemType)
+            };
         }
+        return cx.semanticErr(`invalid operand types for ${expr.bitwiseOp}`);
     }
-     else if expr is BinaryRelationalExpr {
-        if left is int && right is int {
-            return intRelationalEval(expr.relationalOp, left, right);
-        }
-        else if left is string && right is string {
-            return stringRelationalEval(expr.relationalOp, left, right);
-        }
-        else if left is boolean && right is boolean {
-            return booleanRelationalEval(expr.relationalOp, left, right);
-        }
-
-    }
-    else {
-        boolean opIsNegated = expr.equalityOp[0] == "!";
-        if left == right {
-            return !opIsNegated;
-        }
-        else if left is int && right is int {
-            t:SemType? lt = exprIntSubtype(expr.left);
-            t:SemType? rt = exprIntSubtype(expr.right);
-            if lt is () || rt is () || !t:isNever(t:intersect(lt, rt)) {
-                return opIsNegated;
-            }
-        }
-        else if (left is boolean && right is boolean) || (left is string && right is string) {
-            if !exprTypeIsSingleton(expr.left) || !exprTypeIsSingleton(expr.right) {
-                return opIsNegated;
-            }
-        }
-    }
-    // If we get here, there's some sort of type error.
-    // When we do const expressions, we should give a better error here.
-    // For now, we leave this to get an error in the normal expression type-checking. 
-    return new NotConst(expr);
+    expr.left = leftExpr;
+    expr.right = rightExpr;
+    return expr;
 }
 
-// If the static type of the expression is a proper subtype of int,
-// then return the range of that type.
-function exprIntSubtype(Expr expr) returns t:SemType? {
-    if expr is SimpleConstExpr {
-        SimpleConst n = expr.value;
-        if n is int {
-            return t:intConst(n);
-        }
+function foldedBinaryBitwiseType(BinaryBitwiseOp op, int left, t:SemType? lt, int right, t:SemType? rt) returns t:SemType? {
+    if lt === () && rt === () {
+        return ();
     }
-    else if expr is TypeCastExpr {
-        // XXX when we get simple type subtypes then we need to intersect the types
-        return exprIntSubtype(expr.operand);
-    }
-    else if expr is BinaryBitwiseExpr {
-        t:SemType lt = bitwiseExprOperandWiden(expr.left);
-        t:SemType rt = bitwiseExprOperandWiden(expr.right);
-        return expr.bitwiseOp == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
-    }
-    return ();
+    t:SemType leftType = t:widenUnsigned(lt ?: t:intConst(left));
+    t:SemType rightType = t:widenUnsigned(rt ?: t:intConst(right));
+    return op == "&" ? t:intersect(leftType, rightType) : t:union(leftType, rightType);    
 }
 
-function exprTypeIsSingleton(Expr expr) returns boolean {
-    if expr is SimpleConstExpr {
-        return true;
-    }
-    else if expr is TypeCastExpr {
-        return exprTypeIsSingleton(expr.operand);
-    }
-    return false;
-}
+function bitwiseOperandWiden(SimpleConstExpr expr) returns t:SemType {
+    t:SemType? t = expr.multiSemType;
 
-// this promotes the type to int:UnsignedN
-function bitwiseExprOperandWiden(Expr expr) returns t:SemType {
-    t:SemType? t = exprIntSubtype(expr);
     if !(t is ()) {
         return t:widenUnsigned(t);
     }
     return t:INT;
+}
+
+function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, BinaryEqualityExpr expr) returns Expr|err:Semantic {
+    Expr leftExpr = check foldExpr(cx, (), expr.left);
+    Expr rightExpr = check foldExpr(cx, (), expr.right);
+    if leftExpr is SimpleConstExpr && rightExpr is SimpleConstExpr {
+        SimpleConst left = leftExpr.value;
+        SimpleConst right = rightExpr.value;
+        boolean equal = left == right;
+        if !equal && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
+            return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`);
+        }
+        boolean positive = expr.equalityOp[0] == "=";
+        if (<string>expr.equalityOp).length() == 2 {
+            return foldedBinaryConstExpr(positive == equal, t:BOOLEAN, leftExpr, rightExpr);
+        }
+        // This is the === or !== case
+        return <SimpleConstExpr> { value: positive == (left === right), multiSemType: t:BOOLEAN };
+    }
+    expr.left = leftExpr;
+    expr.right = rightExpr;
+    return expr;
+}
+
+// Precondition is that the values are !=
+function simpleConstExprIntersectIsEmpty(SimpleConstExpr leftExpr, SimpleConstExpr rightExpr) returns boolean {
+    t:SemType? lt = leftExpr.multiSemType;
+    t:SemType? rt = rightExpr.multiSemType;
+    if lt is () {
+        if rt is () {
+            // precondition of this function is that the values are != 
+            // so if the types are both singletons, the intersection must be empty
+            return true;
+        }
+        else {
+            return !t:containsConst(rt, leftExpr.value);
+        }
+    }
+    else if rt is () {
+        return !t:containsConst(lt, rightExpr.value);
+    }
+    else {
+        return t:isNever(t:intersect(lt, rt));
+    }
+}
+
+function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, BinaryRelationalExpr expr) returns Expr|err:Semantic {
+    Expr leftExpr = check foldExpr(cx, (), expr.left);
+    Expr rightExpr = check foldExpr(cx, (), expr.right);
+    if leftExpr is SimpleConstExpr && rightExpr is SimpleConstExpr {
+        SimpleConst left = leftExpr.value;
+        SimpleConst right = rightExpr.value;
+         if left is int && right is int {
+            return foldedBinaryConstExpr(intRelationalEval(expr.relationalOp, left, right), t:INT, leftExpr, rightExpr);
+        }
+        else if left is string && right is string {
+            return foldedBinaryConstExpr(stringRelationalEval(expr.relationalOp, left, right), t:INT, leftExpr, rightExpr);
+        }
+        else if left is boolean && right is boolean {
+            return foldedBinaryConstExpr(booleanRelationalEval(expr.relationalOp, left, right), t:INT, leftExpr, rightExpr);
+        }
+        return cx.semanticErr(`invalid operand types for ${expr.relationalOp}`);
+    }
+    expr.left = leftExpr;
+    expr.right = rightExpr;
+    return expr;
+}
+
+function foldedBinaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, SimpleConstExpr left, SimpleConstExpr right) returns SimpleConstExpr {
+    return { value, multiSemType: left.multiSemType === () && right.multiSemType === () ? () : basicType };
+}
+
+function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, UnaryExpr expr) returns Expr|err:Semantic {
+    Expr subExpr = expr.operand;
+    match expr.op {
+        "!" => {
+            subExpr = check foldExpr(cx, t:BOOLEAN, expr.operand);
+            if subExpr is SimpleConstExpr {
+                SimpleConst operand = subExpr.value;
+                if operand is boolean {
+                    return foldedUnaryConstExpr(!operand, t:BOOLEAN, subExpr);
+                }
+            }
+        }
+        "~" => {
+            subExpr = check foldExpr(cx, t:INT, expr.operand);
+            if subExpr is SimpleConstExpr {
+                SimpleConst operand = subExpr.value;
+                if operand is int {
+                    return foldedUnaryConstExpr(~operand, t:INT, subExpr);
+                }
+            }
+        }
+        "-" => {
+            subExpr = check foldExpr(cx, expectedType, expr.operand);
+            if subExpr is SimpleConstExpr {
+                SimpleConst operand = subExpr.value;
+                if operand is int {
+                    if operand == int:MIN_VALUE {
+                        return cx.semanticErr(`${"-"} applied to minimum integer value`, pos=expr.pos);
+                    }
+                    return foldedUnaryConstExpr(-operand, t:INT, subExpr);
+                }
+            }
+        }
+        _ => {
+            panic err:impossible();
+        }
+    }
+    if subExpr is SimpleConstExpr {
+        return cx.semanticErr(`invalid operand type for ${expr.op}`);
+    }
+    expr.operand = subExpr;
+    return expr;
+}
+
+function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, SimpleConstExpr subExpr) returns SimpleConstExpr {
+    return { value, multiSemType: subExpr.multiSemType === () ? () : basicType };
+}
+
+function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, TypeCastExpr expr) returns Expr|err:Semantic {
+    t:SemType targetType = expr.semType;
+    if !(expectedType is ()) {
+        targetType = t:intersect(targetType, expectedType);
+    }
+    Expr subExpr = check foldExpr(cx, targetType, expr.operand);
+    if subExpr is SimpleConstExpr {
+        if !t:containsConst(expr.semType, subExpr.value) {
+            return cx.semanticErr(`type cast will always fail`, pos=expr.pos);
+        }
+        // XXX when we have unions of singletons, will need to adjust the type here
+        return subExpr;
+    }
+    expr.operand = subExpr;
+    return expr;
 }
 
 function intArithmeticEval(BinaryArithmeticOp op, int left, int right) returns int  {
