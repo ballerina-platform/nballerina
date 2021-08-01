@@ -12,15 +12,19 @@ define void @_B_main() {
   %6 = alloca i8 addrspace(1)*
   %x = alloca i64
   %7 = alloca i1
+  %x.1 = alloca i64
   %8 = alloca i8 addrspace(1)*
+  %x.2 = alloca i64
   %9 = alloca i8 addrspace(1)*
   %10 = alloca i1
+  %x.3 = alloca i64
   %11 = alloca i8 addrspace(1)*
+  %x.4 = alloca i64
   %12 = alloca i8 addrspace(1)*
   %13 = alloca i8
   %14 = load i8*, i8** @_bal_stack_guard
   %15 = icmp ult i8* %13, %14
-  br i1 %15, label %49, label %16
+  br i1 %15, label %53, label %16
 16:
   %17 = icmp eq i64 17, 17
   store i1 %17, i1* %1
@@ -61,36 +65,44 @@ define void @_B_main() {
   %34 = icmp eq i64 %33, 42
   store i1 %34, i1* %7
   %35 = load i1, i1* %7
-  br i1 %35, label %36, label %38
+  br i1 %35, label %36, label %39
 36:
-  %37 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 42)
-  call void @_Bio__println(i8 addrspace(1)* %37)
+  %37 = load i64, i64* %x
+  store i64 %37, i64* %x.1
+  %38 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 42)
+  call void @_Bio__println(i8 addrspace(1)* %38)
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
-  br label %40
-38:
-  %39 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
-  call void @_Bio__println(i8 addrspace(1)* %39)
+  br label %42
+39:
+  %40 = load i64, i64* %x
+  store i64 %40, i64* %x.2
+  %41 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
+  call void @_Bio__println(i8 addrspace(1)* %41)
   store i8 addrspace(1)* null, i8 addrspace(1)** %9
-  br label %40
-40:
-  %41 = load i64, i64* %x
-  %42 = icmp ne i64 42, %41
-  store i1 %42, i1* %10
-  %43 = load i1, i1* %10
-  br i1 %43, label %44, label %46
-44:
-  %45 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
-  call void @_Bio__println(i8 addrspace(1)* %45)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %11
-  br label %48
+  br label %42
+42:
+  %43 = load i64, i64* %x
+  %44 = icmp ne i64 42, %43
+  store i1 %44, i1* %10
+  %45 = load i1, i1* %10
+  br i1 %45, label %46, label %49
 46:
-  %47 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 42)
-  call void @_Bio__println(i8 addrspace(1)* %47)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %12
-  br label %48
-48:
-  ret void
+  %47 = load i64, i64* %x
+  store i64 %47, i64* %x.3
+  %48 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
+  call void @_Bio__println(i8 addrspace(1)* %48)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %11
+  br label %52
 49:
+  %50 = load i64, i64* %x
+  store i64 %50, i64* %x.4
+  %51 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 42)
+  call void @_Bio__println(i8 addrspace(1)* %51)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12
+  br label %52
+52:
+  ret void
+53:
   call void @_bal_panic(i64 772)
   unreachable
 }

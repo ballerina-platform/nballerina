@@ -34,6 +34,8 @@ type ExprEffect record {|
     // of a variable to be narrowed when the expression is used as a condition.
     // We do not have `&&` and `||` yet, so only one variable is narrowed.
     Narrowing? narrowing = ();
+    // This is non-nil when the expression is a variable reference.
+    Binding? binding = ();
 |};
 
 type BooleanExprEffect record {|
@@ -479,8 +481,8 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 function codeGenNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Narrowing narrowing, boolean condition) returns Environment {
     // JBUG without parentheses this gets a parse error
     t:SemType narrowedType = condition == !narrowing.negated ? (narrowing.ifTrue) : narrowing.ifFalse;
-    bir:Register narrowed = cx.createRegister(narrowedType);
     Binding binding = narrowing.binding;
+    bir:Register narrowed = cx.createRegister(narrowedType, binding.name);
     bir:CondNarrowInsn insn = {
         result: narrowed,
         operand: binding.reg,
@@ -660,43 +662,10 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
             bb.insns.push(insn);
             return { result, block: nextBlock };
         }
-        var { bitwiseOp: op, left, right } => {
-            var { result: l, block: block1} = check codeGenExprForInt(cx, bb, env, left);
-            var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, right);
-            t:SemType lt = bitwiseOperandType(l);
-            t:SemType rt = bitwiseOperandType(l);
-            t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
-            bir:Register result = cx.createRegister(resultType);
-            bir:IntBitwiseBinaryInsn insn = { op, operands: [l, r], result };
-            bb.insns.push(insn);
-            return { result, block: nextBlock };
-        }
-        var { equalityOp: op, left, right } => {
-            bir:Register result = cx.createRegister(t:BOOLEAN);
-            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
-            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
-            // XXX Can we do all the checking in the verifier?
-            bir:EqualityInsn insn = { op, operands: [l, r], result };
-            bb.insns.push(insn);
-            return { result, block: nextBlock };
-        }
-        var { relationalOp: op, left, right } => {
-            bir:Register result = cx.createRegister(t:BOOLEAN);
-            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
-            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
-            TypedOperandPair? pair = typedOperandPair(l, r);
-            if pair is IntOperandPair|BooleanOperandPair|StringOperandPair {
-                bir:CompareInsn insn = { op, orderType: pair[0], operands: pair[1], result };
-                bb.insns.push(insn);
-                return { result, block: nextBlock };  
-            }
-            else {
-                return cx.semanticErr("operands of relational operator are not ordered");
-            }               
-        }
         { op: "!",  operand: var o } => {
             var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, env, o);
             bir:Register reg = cx.createRegister(t:BOOLEAN);
+            // XXX fix this
             if operand is boolean {
                 // Do it like this, because type of result is boolean not a singleton
                 bir:AssignInsn insn = { operand: !operand, result: reg };
@@ -712,6 +681,69 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
             return { result: reg, block: nextBlock, narrowing };
 
         }
+        var { bitwiseOp: op, left, right } => {
+            var { result: l, block: block1} = check codeGenExprForInt(cx, bb, env, left);
+            var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, right);
+            t:SemType lt = bitwiseOperandType(l);
+            t:SemType rt = bitwiseOperandType(l);
+            t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
+            bir:Register result = cx.createRegister(resultType);
+            bir:IntBitwiseBinaryInsn insn = { op, operands: [l, r], result };
+            bb.insns.push(insn);
+            return { result, block: nextBlock };
+        }
+        var { equalityOp: op, left, right } => {
+            bir:Register result = cx.createRegister(t:BOOLEAN);
+            var { result: l, block: block1, binding: lBinding } = check codeGenExpr(cx, bb, env, left);
+            var { result: r, block: nextBlock, binding: rBinding } = check codeGenExpr(cx, block1, env, right);
+            // Type checking is done in the verifier
+            bir:EqualityInsn insn = { op, operands: [l, r], result };
+            bb.insns.push(insn);
+            [Binding, SimpleConst]? narrowingCompare = ();
+            if op is ("=="|"!=") {
+                if lBinding is Binding && r is SimpleConst {
+                    narrowingCompare = [lBinding, r];
+                }
+                else if rBinding is Binding && l is SimpleConst {
+                    narrowingCompare = [rBinding, l];
+                }
+            }
+            if narrowingCompare is () {
+                return { result, block: nextBlock };
+            }
+            else {
+                var [binding, value] = narrowingCompare;
+                t:SemType ifTrue = t:singleton(value);
+                t:SemType ifFalse = t:diff(binding.reg.semType, ifTrue);
+                if (<string>op).startsWith("!") {
+                    [ifTrue, ifFalse] = [ifFalse, ifTrue];
+                }
+                Narrowing narrowing = {
+                    binding,
+                    ifTrue,
+                    ifFalse,
+                    testBlock: bb.label,
+                    testInsnIndex: bb.insns.length() - 1,
+                    negated: false
+                };
+                return { result, block: nextBlock, narrowing };
+            }
+        }
+        var { relationalOp: op, left, right } => {
+            bir:Register result = cx.createRegister(t:BOOLEAN);
+            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
+            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
+            TypedOperandPair? pair = typedOperandPair(l, r);
+            if pair is IntOperandPair|BooleanOperandPair|StringOperandPair {
+                bir:CompareInsn insn = { op, orderType: pair[0], operands: pair[1], result };
+                bb.insns.push(insn);
+                return { result, block: nextBlock };  
+            }
+            else {
+                return cx.semanticErr("operands of relational operator are not ordered");
+            }               
+        }
+    
         var { td, operand: o } => {
             var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
             // JBUG #31782 cast needed
@@ -737,28 +769,15 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
         }
         // Type test
         var { td, left, semType } => {
-            Binding? binding;
             bir:Register reg;
-            bir:BasicBlock nextBlock;
-            if left is VarRefExpr {
-                Binding b = check lookupVarRef(cx, left.varName, env);
-                reg = b.reg;
-                binding = b;
-                nextBlock = bb;
+            var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
+            if operand is bir:Register {
+                reg = operand;
             }
             else {
-                bir:Operand operand;
-                { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, left);
-                if operand is bir:Register {
-                    reg = operand;
-                }
-                else {
-                    // revisit when we revamp constants
-                    return { result: t:containsConst(semType, operand), block: bb };
-                }
-                binding = ();
-            }
-            
+                // XXX should not happen when we have completed constant folding
+                return { result: t:containsConst(semType, operand), block: bb };
+            }        
             t:SemType diff = t:diff(reg.semType, semType);
             if t:isEmpty(cx.mod.tc, diff) {
                 // always true
@@ -782,12 +801,12 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
                 };
             }
             bb.insns.push(insn);
-            return { result, block: nextBlock, narrowing };
-            
+            return { result, block: nextBlock, narrowing };   
         }
         // Variable reference
         var { varName } => {
-            return { result: (check lookupVarRef(cx, varName, env)).reg, block: bb };
+            Binding binding = check lookupVarRef(cx, varName, env);
+            return { result: binding.reg, block: bb, binding };
         }
         // Constant
         // JBUG does not work as match pattern `var { value, multiSemType }`
@@ -1069,17 +1088,17 @@ function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperand
 
 function typedOperand(bir:Operand operand) returns TypedOperand? {
     if operand is bir:Register {
-        if operand.semType === t:BOOLEAN {
+        if operand.semType === t:NIL {
+            return ["nil", operand];
+        }
+        else if t:isSubtypeSimple(operand.semType, t:BOOLEAN) {
             return ["boolean", operand];
         }
-        else if operand.semType === t:INT {
+        else if t:isSubtypeSimple(operand.semType, t:INT) {
             return ["int", operand];
         }
-        else if operand.semType === t:STRING {
+        else if t:isSubtypeSimple(operand.semType, t:STRING) {
             return ["string", operand];
-        }
-        else if operand.semType === t:NIL {
-            return ["nil", operand];
         }
         else if t:isSubtypeSimple(operand.semType, t:LIST) {
             return ["array", operand];

@@ -23,79 +23,79 @@ define internal void @_B_foo(i8 addrspace(1)* %0) {
   %v = alloca i8 addrspace(1)*
   %x = alloca i8 addrspace(1)*
   %2 = alloca i1
-  %3 = alloca i64
+  %x.1 = alloca i64
   %b = alloca i1
   %i = alloca i64
-  %4 = alloca i1
-  %5 = alloca i64
-  %6 = alloca i8 addrspace(1)*
-  %7 = alloca i64
-  %8 = alloca i8
-  %9 = load i8*, i8** @_bal_stack_guard
-  %10 = icmp ult i8* %8, %9
-  br i1 %10, label %41, label %11
-11:
+  %3 = alloca i1
+  %4 = alloca i64
+  %5 = alloca i8 addrspace(1)*
+  %6 = alloca i64
+  %7 = alloca i8
+  %8 = load i8*, i8** @_bal_stack_guard
+  %9 = icmp ult i8* %7, %8
+  br i1 %9, label %40, label %10
+10:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v
-  %12 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  store i8 addrspace(1)* %12, i8 addrspace(1)** %x
-  %13 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %14 = addrspacecast i8 addrspace(1)* %13 to i8*
-  %15 = ptrtoint i8* %14 to i64
-  %16 = and i64 %15, 2233785415175766016
-  %17 = icmp eq i64 %16, 504403158265495552
-  store i1 %17, i1* %2
-  %18 = load i1, i1* %2
-  br i1 %18, label %19, label %37
-19:
-  %20 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %21 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %20)
-  store i64 %21, i64* %3
+  %11 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  store i8 addrspace(1)* %11, i8 addrspace(1)** %x
+  %12 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %13 = addrspacecast i8 addrspace(1)* %12 to i8*
+  %14 = ptrtoint i8* %13 to i64
+  %15 = and i64 %14, 2233785415175766016
+  %16 = icmp eq i64 %15, 504403158265495552
+  store i1 %16, i1* %2
+  %17 = load i1, i1* %2
+  br i1 %17, label %18, label %36
+18:
+  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  %20 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %19)
+  store i64 %20, i64* %x.1
   store i1 1, i1* %b
   store i64 0, i64* %i
-  br label %22
-22:
-  %23 = load i64, i64* %i
-  %24 = icmp slt i64 %23, 2
-  store i1 %24, i1* %4
-  %25 = load i1, i1* %4
-  br i1 %25, label %27, label %26
+  br label %21
+21:
+  %22 = load i64, i64* %i
+  %23 = icmp slt i64 %22, 2
+  store i1 %23, i1* %3
+  %24 = load i1, i1* %3
+  br i1 %24, label %26, label %25
+25:
+  br label %36
 26:
-  br label %37
-27:
-  %28 = load i1, i1* %b
-  br i1 %28, label %29, label %33
-29:
-  %30 = load i64, i64* %3
-  %31 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %30, i64 1)
-  %32 = extractvalue {i64, i1} %31, 1
-  br i1 %32, label %46, label %42
+  %27 = load i1, i1* %b
+  br i1 %27, label %28, label %32
+28:
+  %29 = load i64, i64* %x.1
+  %30 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %29, i64 1)
+  %31 = extractvalue {i64, i1} %30, 1
+  br i1 %31, label %45, label %41
+32:
+  br label %33
 33:
-  br label %34
-34:
-  %35 = load i64, i64* %i
-  %36 = add nsw i64 %35, 1
-  store i64 %36, i64* %i
-  br label %22
-37:
-  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  call void @_Bio__println(i8 addrspace(1)* %38)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %34 = load i64, i64* %i
+  %35 = add nsw i64 %34, 1
+  store i64 %35, i64* %i
+  br label %21
+36:
+  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  call void @_Bio__println(i8 addrspace(1)* %37)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %5
   ret void
-39:
-  %40 = load i64, i64* %7
-  call void @_bal_panic(i64 %40)
+38:
+  %39 = load i64, i64* %6
+  call void @_bal_panic(i64 %39)
   unreachable
-41:
+40:
   call void @_bal_panic(i64 1796)
   unreachable
-42:
-  %43 = extractvalue {i64, i1} %31, 0
-  store i64 %43, i64* %5
-  %44 = load i64, i64* %5
-  %45 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %44)
-  store i8 addrspace(1)* %45, i8 addrspace(1)** %x
-  br label %26
-46:
-  store i64 3329, i64* %7
-  br label %39
+41:
+  %42 = extractvalue {i64, i1} %30, 0
+  store i64 %42, i64* %4
+  %43 = load i64, i64* %4
+  %44 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %43)
+  store i8 addrspace(1)* %44, i8 addrspace(1)** %x
+  br label %25
+45:
+  store i64 3329, i64* %6
+  br label %38
 }

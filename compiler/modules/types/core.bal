@@ -673,6 +673,21 @@ function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns
     }
 }
 
+public function singleton(string|int|boolean|() v) returns SemType {
+    if v is () {
+        return NIL;
+    }
+    else if v is int {
+        return intConst(v);
+    }
+    else if v is string {
+        return stringConst(v);
+    }
+    else {
+        return booleanConst(v);
+    }
+}
+
 public function isReadOnly(SemType t) returns boolean {
     UniformTypeBitSet bits;
     if t is UniformTypeBitSet {

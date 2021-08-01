@@ -76,112 +76,145 @@ define void @_B_main() {
 define internal i1 @_B_isKeyword(i8 addrspace(1)* %0) {
   %s = alloca i8 addrspace(1)*
   %2 = alloca i1
+  %s.1 = alloca i8 addrspace(1)*
   %3 = alloca i1
+  %s.2 = alloca i8 addrspace(1)*
   %4 = alloca i1
+  %s.3 = alloca i8 addrspace(1)*
   %5 = alloca i1
+  %s.4 = alloca i8 addrspace(1)*
   %6 = alloca i1
+  %s.5 = alloca i8 addrspace(1)*
   %7 = alloca i1
+  %s.6 = alloca i8 addrspace(1)*
   %8 = alloca i1
+  %s.7 = alloca i8 addrspace(1)*
   %9 = alloca i1
+  %s.8 = alloca i8 addrspace(1)*
   %10 = alloca i1
+  %s.9 = alloca i8 addrspace(1)*
   %11 = alloca i1
+  %s.10 = alloca i8 addrspace(1)*
   %12 = alloca i1
+  %s.11 = alloca i8 addrspace(1)*
   %13 = alloca i8
   %14 = load i8*, i8** @_bal_stack_guard
   %15 = icmp ult i8* %13, %14
-  br i1 %15, label %72, label %16
+  br i1 %15, label %83, label %16
 16:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %s
   %17 = load i8 addrspace(1)*, i8 addrspace(1)** %s
   %18 = call i1 @_bal_string_eq(i8 addrspace(1)* %17, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098316506530080114))
   store i1 %18, i1* %2
   %19 = load i1, i1* %2
-  br i1 %19, label %20, label %21
+  br i1 %19, label %20, label %22
 20:
+  %21 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  store i8 addrspace(1)* %21, i8 addrspace(1)** %s.1
   ret i1 1
-21:
-  %22 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %23 = call i1 @_bal_string_eq(i8 addrspace(1)* %22, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3057488285269978978))
-  store i1 %23, i1* %3
-  %24 = load i1, i1* %3
-  br i1 %24, label %25, label %26
-25:
-  ret i1 1
+22:
+  %23 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %24 = call i1 @_bal_string_eq(i8 addrspace(1)* %23, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3057488285269978978))
+  store i1 %24, i1* %3
+  %25 = load i1, i1* %3
+  br i1 %25, label %26, label %28
 26:
   %27 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %28 = call i1 @_bal_string_eq(i8 addrspace(1)* %27, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621754473))
-  store i1 %28, i1* %4
-  %29 = load i1, i1* %4
-  br i1 %29, label %30, label %31
-30:
+  store i8 addrspace(1)* %27, i8 addrspace(1)** %s.2
   ret i1 1
-31:
-  %32 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %33 = call i1 @_bal_string_eq(i8 addrspace(1)* %32, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098308792567362675))
-  store i1 %33, i1* %5
-  %34 = load i1, i1* %5
-  br i1 %34, label %35, label %36
-35:
+28:
+  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %30 = call i1 @_bal_string_eq(i8 addrspace(1)* %29, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621754473))
+  store i1 %30, i1* %4
+  %31 = load i1, i1* %4
+  br i1 %31, label %32, label %34
+32:
+  %33 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  store i8 addrspace(1)* %33, i8 addrspace(1)** %s.3
   ret i1 1
-36:
-  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %38 = call i1 @_bal_string_eq(i8 addrspace(1)* %37, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879729817719))
-  store i1 %38, i1* %6
-  %39 = load i1, i1* %6
-  br i1 %39, label %40, label %41
+34:
+  %35 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %36 = call i1 @_bal_string_eq(i8 addrspace(1)* %35, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098308792567362675))
+  store i1 %36, i1* %5
+  %37 = load i1, i1* %5
+  br i1 %37, label %38, label %40
+38:
+  %39 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  store i8 addrspace(1)* %39, i8 addrspace(1)** %s.4
+  ret i1 1
 40:
-  ret i1 1
-41:
-  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %43 = call i1 @_bal_string_eq(i8 addrspace(1)* %42, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3055801617135857510))
-  store i1 %43, i1* %7
-  %44 = load i1, i1* %7
-  br i1 %44, label %45, label %46
-45:
+  %41 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %42 = call i1 @_bal_string_eq(i8 addrspace(1)* %41, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879729817719))
+  store i1 %42, i1* %6
+  %43 = load i1, i1* %6
+  br i1 %43, label %44, label %46
+44:
+  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  store i8 addrspace(1)* %45, i8 addrspace(1)** %s.5
   ret i1 1
 46:
   %47 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %48 = call i1 @_bal_string_eq(i8 addrspace(1)* %47, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630861929))
-  store i1 %48, i1* %8
-  %49 = load i1, i1* %8
-  br i1 %49, label %50, label %51
+  %48 = call i1 @_bal_string_eq(i8 addrspace(1)* %47, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3055801617135857510))
+  store i1 %48, i1* %7
+  %49 = load i1, i1* %7
+  br i1 %49, label %50, label %52
 50:
+  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  store i8 addrspace(1)* %51, i8 addrspace(1)** %s.6
   ret i1 1
-51:
-  %52 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %53 = call i1 @_bal_string_eq(i8 addrspace(1)* %52, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541037997157))
-  store i1 %53, i1* %9
-  %54 = load i1, i1* %9
-  br i1 %54, label %55, label %56
-55:
-  ret i1 1
+52:
+  %53 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %54 = call i1 @_bal_string_eq(i8 addrspace(1)* %53, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630861929))
+  store i1 %54, i1* %8
+  %55 = load i1, i1* %8
+  br i1 %55, label %56, label %58
 56:
   %57 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %58 = call i1 @_bal_string_eq(i8 addrspace(1)* %57, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621489005))
-  store i1 %58, i1* %10
-  %59 = load i1, i1* %10
-  br i1 %59, label %60, label %61
-60:
+  store i8 addrspace(1)* %57, i8 addrspace(1)** %s.7
   ret i1 1
-61:
-  %62 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %63 = call i1 @_bal_string_eq(i8 addrspace(1)* %62, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541038129780))
-  store i1 %63, i1* %11
-  %64 = load i1, i1* %11
-  br i1 %64, label %65, label %66
-65:
+58:
+  %59 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %60 = call i1 @_bal_string_eq(i8 addrspace(1)* %59, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541037997157))
+  store i1 %60, i1* %9
+  %61 = load i1, i1* %9
+  br i1 %61, label %62, label %64
+62:
+  %63 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  store i8 addrspace(1)* %63, i8 addrspace(1)** %s.8
   ret i1 1
-66:
-  %67 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %68 = call i1 @_bal_string_eq(i8 addrspace(1)* %67, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879847453030))
-  store i1 %68, i1* %12
-  %69 = load i1, i1* %12
-  br i1 %69, label %70, label %71
+64:
+  %65 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %66 = call i1 @_bal_string_eq(i8 addrspace(1)* %65, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621489005))
+  store i1 %66, i1* %10
+  %67 = load i1, i1* %10
+  br i1 %67, label %68, label %70
+68:
+  %69 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  store i8 addrspace(1)* %69, i8 addrspace(1)** %s.9
+  ret i1 1
 70:
+  %71 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %72 = call i1 @_bal_string_eq(i8 addrspace(1)* %71, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541038129780))
+  store i1 %72, i1* %11
+  %73 = load i1, i1* %11
+  br i1 %73, label %74, label %76
+74:
+  %75 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  store i8 addrspace(1)* %75, i8 addrspace(1)** %s.10
   ret i1 1
-71:
+76:
+  %77 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %78 = call i1 @_bal_string_eq(i8 addrspace(1)* %77, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879847453030))
+  store i1 %78, i1* %12
+  %79 = load i1, i1* %12
+  br i1 %79, label %80, label %82
+80:
+  %81 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  store i8 addrspace(1)* %81, i8 addrspace(1)** %s.11
+  ret i1 1
+82:
   ret i1 0
-72:
+83:
   call void @_bal_panic(i64 3076)
   unreachable
 }
