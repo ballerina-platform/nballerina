@@ -27,9 +27,33 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, Expr expr) returns Ex
     else if expr is TypeCastExpr {
         return foldTypeCastExpr(cx, expectedType, expr);
     }
+    else if expr is TypeTestExpr {
+        return foldTypeTestExpr(cx, expectedType, expr);
+    }
+    else if expr is ListConstructorExpr {
+        return foldListConstructorExpr(cx, expectedType, expr);
+    }
+    else if expr is MappingConstructorExpr {
+        return foldMappingConstructorExpr(cx, expectedType, expr);
+    }
     else {
         return expr;
     } 
+}
+
+function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, ListConstructorExpr expr) returns Expr|err:Semantic {
+    Expr[] members = expr.members;
+    foreach int i in 0 ..< members.length() {
+        members[i] = check foldExpr(cx, t:ANY, members[i]);
+    }
+    return expr;
+}
+
+function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, MappingConstructorExpr expr) returns Expr|err:Semantic {
+    foreach Field f in expr.fields {
+        f.value = check foldExpr(cx, t:ANY, f.value);
+    }
+    return expr;
 }
 
 function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, BinaryArithmeticExpr expr) returns Expr|err:Semantic {
@@ -210,10 +234,6 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, UnaryExpr expr) 
     return expr;
 }
 
-function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, SimpleConstExpr subExpr) returns SimpleConstExpr {
-    return { value, multiSemType: subExpr.multiSemType === () ? () : basicType };
-}
-
 function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, TypeCastExpr expr) returns Expr|err:Semantic {
     t:SemType targetType = expr.semType;
     if !(expectedType is ()) {
@@ -229,6 +249,19 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, TypeCastExpr 
     }
     expr.operand = subExpr;
     return expr;
+}
+
+function foldTypeTestExpr(FoldContext cx, t:SemType? expectedType, TypeTestExpr expr) returns Expr|err:Semantic {
+    Expr subExpr = check foldExpr(cx, (), expr.left);
+    if subExpr is SimpleConstExpr {
+        return foldedUnaryConstExpr(t:containsConst(expr.semType, subExpr.value), t:BOOLEAN, subExpr);
+    }
+    expr.left = subExpr;
+    return expr;
+}
+
+function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, SimpleConstExpr subExpr) returns SimpleConstExpr {
+    return { value, multiSemType: subExpr.multiSemType === () ? () : basicType };
 }
 
 function intArithmeticEval(BinaryArithmeticOp op, int left, int right) returns int  {
