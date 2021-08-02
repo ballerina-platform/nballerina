@@ -200,9 +200,9 @@ class CodeGenFoldContext {
         self.env = env;
     }
 
-    function lookupConst(string varName) returns [SimpleConst]?|CodeGenError {
+    function lookupConst(string varName) returns t:Value?|CodeGenError {
         Binding binding = check lookupVarRef(self.cx, varName, self.env);
-        return t:singleValue(binding.reg.semType);
+        return t:singleShape(binding.reg.semType);
     }
 
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {

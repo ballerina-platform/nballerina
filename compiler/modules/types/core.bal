@@ -673,27 +673,33 @@ function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns
     }
 }
 
-public function singleValue(SemType t) returns [string|int|boolean|()]? {
+public type Value readonly & record {|
+    string|int|boolean|() value;
+|};
+
+// If the type contains exactly onr shape, return a value
+// having that shape.
+public function singleShape(SemType t) returns Value? {
     if t === NIL {
-        return [()];
+        return { value: () };
     }
     else if t is UniformTypeBitSet {
         return ();
     }
     else if isSubtypeSimple(t, INT) {
         SubtypeData sd = t.getSubtypeData(UT_INT);
-        int? n = intSubtypeSingleValue(sd);
-        return n == () ? () : [n];
+        int? value = intSubtypeSingleValue(sd);
+        return value == () ? () : { value };
     }
     else if isSubtypeSimple(t, STRING) {
         SubtypeData sd = t.getSubtypeData(UT_STRING);
-        string? s = stringSubtypeSingleValue(sd);
-        return s == () ? () : [s];
+        string? value = stringSubtypeSingleValue(sd);
+        return value == () ? () : { value };
     }
     else if isSubtypeSimple(t, BOOLEAN) {
         SubtypeData sd = t.getSubtypeData(UT_BOOLEAN);
-        boolean? b = booleanSubtypeSingleValue(sd);
-        return b == () ? () : [b];
+        boolean? value = booleanSubtypeSingleValue(sd);
+        return value == () ? () : { value };
     }
     return ();
 }

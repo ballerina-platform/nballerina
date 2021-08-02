@@ -1,12 +1,13 @@
 import ballerina/test;
 import wso2/nballerina.err;
+import wso2/nballerina.types as t;
 
 type ConstEvalTest [string,SimpleConst];
 
 class TestFoldContext {
     // JBUG error if next line uncommented
     // *FoldContext;
-    function lookupConst(string varName) returns [SimpleConst]?|CodeGenError {
+    function lookupConst(string varName) returns t:Value?|CodeGenError {
         return ();
     }
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {

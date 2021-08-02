@@ -8,7 +8,7 @@ type FoldError err:Semantic|err:Unimplemented;
 // This is for handling const definitions in the future
 type FoldContext object {
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic;
-    function lookupConst(string varName) returns [SimpleConst]?|FoldError;
+    function lookupConst(string varName) returns t:Value?|FoldError;
  };
 
 function foldExpr(FoldContext cx, t:SemType? expectedType, Expr expr) returns Expr|FoldError {
@@ -276,12 +276,12 @@ function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, 
 }
 
 function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, VarRefExpr expr) returns Expr|FoldError {
-    var constVal = check cx.lookupConst(expr.varName);
-    if constVal is () {
+    t:Value? constValue = check cx.lookupConst(expr.varName);
+    if constValue is () {
         return expr;
     }
     else {
-        SimpleConstExpr constExpr = { value: constVal[0] };
+        SimpleConstExpr constExpr = { value: constValue.value };
         return constExpr;
     }
 }
