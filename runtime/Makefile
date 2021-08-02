@@ -4,6 +4,7 @@ LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
 OBJS=alloc.o list.o main.o mapping.o panic.o print.o string.o int.o
+BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc
 INCLUDES=tag.h balrt.h
 AR=ar
 export LIB=balrt.a
@@ -18,20 +19,20 @@ test: all
 $(LIB): $(OBJS)
 	$(AR) r $@ $^
 
+$(BCLIB): $(BCS)
+	$(LLVM_LINK) -o - -S $^ | sed -e '/define .*@_[Bb][a-zA-Z]/s/^define /define linkonce_odr /' -e '/target datalayout/ s/"$$/-ni:1"/' | $(LLVM_AS) >$@
+
 %.o: %.c
 	$(CLANG) $(CFLAGS) -c -o $@ $<
 
-%.bc: %.ll
-	sed -e '/define .*@_[Bb][a-zA-Z]/s/^define /define linkonce_odr /' -e '/target datalayout/ s/"$$/-ni:1"/' $< | $(LLVM_AS) >$@
-
 # we have to use -O2 here, otherwise the function will get a noinline attribute
-%.ll: %.c
-	$(CLANG) $(CFLAGS) -O2 -S -emit-llvm -o $@ $<
+%.bc: %.c
+	$(CLANG) $(CFLAGS) -c -O2 -emit-llvm -o $@ $<
 
-$(OBJS) $(BCLIB): $(INCLUDES)
+$(OBJS) $(BCS): $(INCLUDES)
 
 clean:
-	-rm -f $(LIB) $(OBJS) $(BCLIB)
+	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
 	$(MAKE) -C tests clean
 
 .PHONY: test all
