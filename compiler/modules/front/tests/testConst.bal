@@ -21,6 +21,11 @@ function testConstExpr(string src, SimpleConst expected) {
 
 function validConstExprs() returns map<ConstEvalTest> {
     ConstEvalTest[] tests = [
+        ["0xFF", 255],
+        ["-0x10", -16],
+        ["0Xba1decaf", 0xba1decaf],
+        ["0x00000000000000000001", 1],
+        ["0x7fFfFfFfFfFfFfFf", 0x7fFfFfFfFfFfFfFf],
         ["1 + 2", 3],
         ["1 - 2", -1],
         ["2 * 3", 6],

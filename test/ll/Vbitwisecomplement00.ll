@@ -13,127 +13,81 @@ define void @_B_main() {
   %5 = alloca i64
   %6 = alloca i64
   %7 = alloca i8 addrspace(1)*
-  %8 = alloca i64
+  %8 = alloca i8 addrspace(1)*
   %9 = alloca i8 addrspace(1)*
   %10 = alloca i8 addrspace(1)*
   %11 = alloca i64
-  %12 = alloca i64
-  %13 = alloca i8 addrspace(1)*
-  %14 = alloca i64
-  %15 = alloca i8 addrspace(1)*
-  %16 = alloca i64
+  %12 = alloca i8 addrspace(1)*
+  %13 = alloca i64
+  %14 = alloca i8 addrspace(1)*
+  %15 = alloca i64
+  %16 = alloca i8 addrspace(1)*
   %17 = alloca i64
   %18 = alloca i8 addrspace(1)*
-  %19 = alloca i64
-  %20 = alloca i8 addrspace(1)*
-  %21 = alloca i64
-  %22 = alloca i64
-  %23 = alloca i8 addrspace(1)*
-  %24 = alloca i64
-  %25 = alloca i8
-  %26 = load i8*, i8** @_bal_stack_guard
-  %27 = icmp ult i8* %25, %26
-  br i1 %27, label %49, label %28
-28:
+  %19 = alloca i8
+  %20 = load i8*, i8** @_bal_stack_guard
+  %21 = icmp ult i8* %19, %20
+  br i1 %21, label %50, label %22
+22:
   store i64 0, i64* %i
-  %29 = load i64, i64* %i
-  %30 = xor i64 -1, %29
-  store i64 %30, i64* %1
-  %31 = load i64, i64* %1
-  %32 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %31)
-  call void @_Bio__println(i8 addrspace(1)* %32)
+  %23 = load i64, i64* %i
+  %24 = xor i64 -1, %23
+  store i64 %24, i64* %1
+  %25 = load i64, i64* %1
+  %26 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %25)
+  call void @_Bio__println(i8 addrspace(1)* %26)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %33 = call i64 @_B_twiddle(i64 1)
-  store i64 %33, i64* %3
-  %34 = load i64, i64* %3
-  %35 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %34)
-  call void @_Bio__println(i8 addrspace(1)* %35)
+  %27 = call i64 @_B_twiddle(i64 1)
+  store i64 %27, i64* %3
+  %28 = load i64, i64* %3
+  %29 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %28)
+  call void @_Bio__println(i8 addrspace(1)* %29)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  %36 = call i64 @_B_twiddle(i64 100)
-  store i64 %36, i64* %5
-  %37 = load i64, i64* %5
-  %38 = xor i64 -1, %37
-  store i64 %38, i64* %6
-  %39 = load i64, i64* %6
+  %30 = call i64 @_B_twiddle(i64 100)
+  store i64 %30, i64* %5
+  %31 = load i64, i64* %5
+  %32 = xor i64 -1, %31
+  store i64 %32, i64* %6
+  %33 = load i64, i64* %6
+  %34 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %33)
+  call void @_Bio__println(i8 addrspace(1)* %34)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %7
+  %35 = call i8 addrspace(1)* @_Bint__toHexString(i64 -9223372036854775808)
+  store i8 addrspace(1)* %35, i8 addrspace(1)** %8
+  %36 = load i8 addrspace(1)*, i8 addrspace(1)** %8
+  call void @_Bio__println(i8 addrspace(1)* %36)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %9
+  %37 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
+  call void @_Bio__println(i8 addrspace(1)* %37)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %10
+  %38 = call i64 @_B_minusTwo(i64 42)
+  store i64 %38, i64* %11
+  %39 = load i64, i64* %11
   %40 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %39)
   call void @_Bio__println(i8 addrspace(1)* %40)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %7
-  %41 = xor i64 -1, 9223372036854775807
-  store i64 %41, i64* %8
-  %42 = load i64, i64* %8
-  %43 = call i8 addrspace(1)* @_Bint__toHexString(i64 %42)
-  store i8 addrspace(1)* %43, i8 addrspace(1)** %9
-  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %9
-  call void @_Bio__println(i8 addrspace(1)* %44)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %10
-  %45 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
-  %46 = extractvalue {i64, i1} %45, 1
-  br i1 %46, label %61, label %50
-47:
-  %48 = load i64, i64* %24
-  call void @_bal_panic(i64 %48)
-  unreachable
-49:
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12
+  %41 = call i64 @_B_minusTwo(i64 -98)
+  store i64 %41, i64* %13
+  %42 = load i64, i64* %13
+  %43 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %42)
+  call void @_Bio__println(i8 addrspace(1)* %43)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %14
+  %44 = call i64 @_B_addTwo(i64 42)
+  store i64 %44, i64* %15
+  %45 = load i64, i64* %15
+  %46 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %45)
+  call void @_Bio__println(i8 addrspace(1)* %46)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %16
+  %47 = call i64 @_B_addTwo(i64 -98)
+  store i64 %47, i64* %17
+  %48 = load i64, i64* %17
+  %49 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %48)
+  call void @_Bio__println(i8 addrspace(1)* %49)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %18
+  ret void
+50:
   call void @_bal_panic(i64 516)
   unreachable
-50:
-  %51 = extractvalue {i64, i1} %45, 0
-  store i64 %51, i64* %11
-  %52 = load i64, i64* %11
-  %53 = xor i64 -1, %52
-  store i64 %53, i64* %12
-  %54 = load i64, i64* %12
-  %55 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %54)
-  call void @_Bio__println(i8 addrspace(1)* %55)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %13
-  %56 = call i64 @_B_minusTwo(i64 42)
-  store i64 %56, i64* %14
-  %57 = load i64, i64* %14
-  %58 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %57)
-  call void @_Bio__println(i8 addrspace(1)* %58)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %15
-  %59 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 98)
-  %60 = extractvalue {i64, i1} %59, 1
-  br i1 %60, label %73, label %62
-61:
-  store i64 2049, i64* %24
-  br label %47
-62:
-  %63 = extractvalue {i64, i1} %59, 0
-  store i64 %63, i64* %16
-  %64 = load i64, i64* %16
-  %65 = call i64 @_B_minusTwo(i64 %64)
-  store i64 %65, i64* %17
-  %66 = load i64, i64* %17
-  %67 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %66)
-  call void @_Bio__println(i8 addrspace(1)* %67)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %18
-  %68 = call i64 @_B_addTwo(i64 42)
-  store i64 %68, i64* %19
-  %69 = load i64, i64* %19
-  %70 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %69)
-  call void @_Bio__println(i8 addrspace(1)* %70)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %20
-  %71 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 98)
-  %72 = extractvalue {i64, i1} %71, 1
-  br i1 %72, label %80, label %74
-73:
-  store i64 2817, i64* %24
-  br label %47
-74:
-  %75 = extractvalue {i64, i1} %71, 0
-  store i64 %75, i64* %21
-  %76 = load i64, i64* %21
-  %77 = call i64 @_B_addTwo(i64 %76)
-  store i64 %77, i64* %22
-  %78 = load i64, i64* %22
-  %79 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %78)
-  call void @_Bio__println(i8 addrspace(1)* %79)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %23
-  ret void
-80:
-  store i64 3585, i64* %24
-  br label %47
 }
 define i64 @_B_twiddle(i64 %0) {
   %i = alloca i64

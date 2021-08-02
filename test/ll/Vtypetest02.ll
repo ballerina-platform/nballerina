@@ -2,7 +2,6 @@
 @.str1 = internal unnamed_addr constant {i16, i16, [28 x i8]} {i16 21, i16 21, [28 x i8] c"this is a long string\00\00\00\00\00\00\00"}, align 8
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_mapping_construct(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
@@ -13,87 +12,71 @@ define void @_B_main() {
   %3 = alloca i8 addrspace(1)*
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
-  %6 = alloca i64
+  %6 = alloca i8 addrspace(1)*
   %7 = alloca i8 addrspace(1)*
-  %8 = alloca i8 addrspace(1)*
   %list = alloca i8 addrspace(1)*
+  %8 = alloca i8 addrspace(1)*
   %9 = alloca i8 addrspace(1)*
-  %10 = alloca i8 addrspace(1)*
   %mapping = alloca i8 addrspace(1)*
-  %11 = alloca i8 addrspace(1)*
-  %12 = alloca i64
-  %13 = alloca i8
-  %14 = load i8*, i8** @_bal_stack_guard
-  %15 = icmp ult i8* %13, %14
-  br i1 %15, label %26, label %16
-16:
-  %17 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  call void @_B_p(i8 addrspace(1)* %17)
+  %10 = alloca i8 addrspace(1)*
+  %11 = alloca i8
+  %12 = load i8*, i8** @_bal_stack_guard
+  %13 = icmp ult i8* %11, %12
+  br i1 %13, label %39, label %14
+14:
+  %15 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
+  call void @_B_p(i8 addrspace(1)* %15)
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
-  %18 = zext i1 0 to i64
-  %19 = or i64 %18, 72057594037927936
-  %20 = getelementptr i8, i8 addrspace(1)* null, i64 %19
-  call void @_B_p(i8 addrspace(1)* %20)
+  %16 = zext i1 0 to i64
+  %17 = or i64 %16, 72057594037927936
+  %18 = getelementptr i8, i8 addrspace(1)* null, i64 %17
+  call void @_B_p(i8 addrspace(1)* %18)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   call void @_B_p(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504))
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
   call void @_B_p(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [28 x i8]}* @.str1 to i8*) to i8 addrspace(1)*), i64 720575940379279360))
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  %21 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 9223372036854775807)
-  call void @_B_p(i8 addrspace(1)* %21)
+  %19 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 9223372036854775807)
+  call void @_B_p(i8 addrspace(1)* %19)
   store i8 addrspace(1)* null, i8 addrspace(1)** %5
-  %22 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 9223372036854775807)
-  %23 = extractvalue {i64, i1} %22, 1
-  br i1 %23, label %49, label %27
-24:
-  %25 = load i64, i64* %12
-  call void @_bal_panic(i64 %25)
-  unreachable
-26:
+  %20 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 -9223372036854775807)
+  call void @_B_p(i8 addrspace(1)* %20)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %21 = call i8 addrspace(1)* @_bal_alloc(i64 16)
+  %22 = bitcast i8 addrspace(1)* %21 to [2 x i8 addrspace(1)*] addrspace(1)*
+  %23 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
+  %24 = getelementptr inbounds [2 x i8 addrspace(1)*], [2 x i8 addrspace(1)*] addrspace(1)* %22, i64 0, i64 0
+  store i8 addrspace(1)* %23, i8 addrspace(1)* addrspace(1)* %24
+  %25 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)
+  %26 = getelementptr inbounds [2 x i8 addrspace(1)*], [2 x i8 addrspace(1)*] addrspace(1)* %22, i64 0, i64 1
+  store i8 addrspace(1)* %25, i8 addrspace(1)* addrspace(1)* %26
+  %27 = bitcast [2 x i8 addrspace(1)*] addrspace(1)* %22 to [0 x i8 addrspace(1)*] addrspace(1)*
+  %28 = call i8 addrspace(1)* @_bal_alloc(i64 24)
+  %29 = bitcast i8 addrspace(1)* %28 to {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %30 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %29, i64 0, i32 0
+  store i64 2, i64 addrspace(1)* %30
+  %31 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %29, i64 0, i32 1
+  store i64 2, i64 addrspace(1)* %31
+  %32 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %29, i64 0, i32 2
+  store [0 x i8 addrspace(1)*] addrspace(1)* %27, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %32
+  %33 = getelementptr i8, i8 addrspace(1)* %28, i64 1297036692682702848
+  store i8 addrspace(1)* %33, i8 addrspace(1)** %7
+  %34 = load i8 addrspace(1)*, i8 addrspace(1)** %7
+  store i8 addrspace(1)* %34, i8 addrspace(1)** %list
+  %35 = load i8 addrspace(1)*, i8 addrspace(1)** %list
+  call void @_B_p(i8 addrspace(1)* %35)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8
+  %36 = call i8 addrspace(1)* @_bal_mapping_construct(i64 0)
+  store i8 addrspace(1)* %36, i8 addrspace(1)** %9
+  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %9
+  store i8 addrspace(1)* %37, i8 addrspace(1)** %mapping
+  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %mapping
+  call void @_B_p(i8 addrspace(1)* %38)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %10
+  ret void
+39:
   call void @_bal_panic(i64 772)
   unreachable
-27:
-  %28 = extractvalue {i64, i1} %22, 0
-  store i64 %28, i64* %6
-  %29 = load i64, i64* %6
-  %30 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %29)
-  call void @_B_p(i8 addrspace(1)* %30)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %7
-  %31 = call i8 addrspace(1)* @_bal_alloc(i64 16)
-  %32 = bitcast i8 addrspace(1)* %31 to [2 x i8 addrspace(1)*] addrspace(1)*
-  %33 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  %34 = getelementptr inbounds [2 x i8 addrspace(1)*], [2 x i8 addrspace(1)*] addrspace(1)* %32, i64 0, i64 0
-  store i8 addrspace(1)* %33, i8 addrspace(1)* addrspace(1)* %34
-  %35 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)
-  %36 = getelementptr inbounds [2 x i8 addrspace(1)*], [2 x i8 addrspace(1)*] addrspace(1)* %32, i64 0, i64 1
-  store i8 addrspace(1)* %35, i8 addrspace(1)* addrspace(1)* %36
-  %37 = bitcast [2 x i8 addrspace(1)*] addrspace(1)* %32 to [0 x i8 addrspace(1)*] addrspace(1)*
-  %38 = call i8 addrspace(1)* @_bal_alloc(i64 24)
-  %39 = bitcast i8 addrspace(1)* %38 to {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %40 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %39, i64 0, i32 0
-  store i64 2, i64 addrspace(1)* %40
-  %41 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %39, i64 0, i32 1
-  store i64 2, i64 addrspace(1)* %41
-  %42 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %39, i64 0, i32 2
-  store [0 x i8 addrspace(1)*] addrspace(1)* %37, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %42
-  %43 = getelementptr i8, i8 addrspace(1)* %38, i64 1297036692682702848
-  store i8 addrspace(1)* %43, i8 addrspace(1)** %8
-  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %8
-  store i8 addrspace(1)* %44, i8 addrspace(1)** %list
-  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %list
-  call void @_B_p(i8 addrspace(1)* %45)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %9
-  %46 = call i8 addrspace(1)* @_bal_mapping_construct(i64 0)
-  store i8 addrspace(1)* %46, i8 addrspace(1)** %10
-  %47 = load i8 addrspace(1)*, i8 addrspace(1)** %10
-  store i8 addrspace(1)* %47, i8 addrspace(1)** %mapping
-  %48 = load i8 addrspace(1)*, i8 addrspace(1)** %mapping
-  call void @_B_p(i8 addrspace(1)* %48)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %11
-  ret void
-49:
-  store i64 2305, i64* %12
-  br label %24
 }
 define internal void @_B_p(i8 addrspace(1)* %0) {
   %v = alloca i8 addrspace(1)*

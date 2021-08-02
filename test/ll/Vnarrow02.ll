@@ -4,7 +4,6 @@ declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 define void @_B_main() {
   %1 = alloca i64
   %2 = alloca i8 addrspace(1)*
@@ -60,88 +59,77 @@ define internal i64 @_B_add(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
   %5 = alloca i64
   %6 = alloca i64
   %7 = alloca i64
-  %8 = alloca i64
-  %9 = alloca i8
-  %10 = load i8*, i8** @_bal_stack_guard
-  %11 = icmp ult i8* %9, %10
-  br i1 %11, label %43, label %12
-12:
+  %8 = alloca i8
+  %9 = load i8*, i8** @_bal_stack_guard
+  %10 = icmp ult i8* %8, %9
+  br i1 %10, label %40, label %11
+11:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %x
   store i8 addrspace(1)* %1, i8 addrspace(1)** %y
-  %13 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  store i8 addrspace(1)* %13, i8 addrspace(1)** %n
-  %14 = load i8 addrspace(1)*, i8 addrspace(1)** %n
-  %15 = addrspacecast i8 addrspace(1)* %14 to i8*
-  %16 = ptrtoint i8* %15 to i64
-  %17 = and i64 %16, 2233785415175766016
-  %18 = icmp eq i64 %17, 504403158265495552
-  store i1 %18, i1* %3
-  %19 = load i1, i1* %3
-  br i1 %19, label %20, label %38
-20:
-  %21 = load i8 addrspace(1)*, i8 addrspace(1)** %n
-  %22 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %21)
-  store i64 %22, i64* %n.1
-  %23 = load i8 addrspace(1)*, i8 addrspace(1)** %y
-  %24 = addrspacecast i8 addrspace(1)* %23 to i8*
-  %25 = ptrtoint i8* %24 to i64
-  %26 = and i64 %25, 2233785415175766016
-  %27 = icmp eq i64 %26, 504403158265495552
-  store i1 %27, i1* %4
-  %28 = load i1, i1* %4
-  br i1 %28, label %29, label %36
-29:
-  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %y
-  %31 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %30)
-  store i64 %31, i64* %y.1
-  %32 = load i64, i64* %n.1
-  %33 = load i64, i64* %y.1
-  %34 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %32, i64 %33)
-  %35 = extractvalue {i64, i1} %34, 1
-  br i1 %35, label %53, label %44
-36:
-  %37 = load i64, i64* %n.1
-  ret i64 %37
+  %12 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  store i8 addrspace(1)* %12, i8 addrspace(1)** %n
+  %13 = load i8 addrspace(1)*, i8 addrspace(1)** %n
+  %14 = addrspacecast i8 addrspace(1)* %13 to i8*
+  %15 = ptrtoint i8* %14 to i64
+  %16 = and i64 %15, 2233785415175766016
+  %17 = icmp eq i64 %16, 504403158265495552
+  store i1 %17, i1* %3
+  %18 = load i1, i1* %3
+  br i1 %18, label %19, label %37
+19:
+  %20 = load i8 addrspace(1)*, i8 addrspace(1)** %n
+  %21 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %20)
+  store i64 %21, i64* %n.1
+  %22 = load i8 addrspace(1)*, i8 addrspace(1)** %y
+  %23 = addrspacecast i8 addrspace(1)* %22 to i8*
+  %24 = ptrtoint i8* %23 to i64
+  %25 = and i64 %24, 2233785415175766016
+  %26 = icmp eq i64 %25, 504403158265495552
+  store i1 %26, i1* %4
+  %27 = load i1, i1* %4
+  br i1 %27, label %28, label %35
+28:
+  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %y
+  %30 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %29)
+  store i64 %30, i64* %y.1
+  %31 = load i64, i64* %n.1
+  %32 = load i64, i64* %y.1
+  %33 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %31, i64 %32)
+  %34 = extractvalue {i64, i1} %33, 1
+  br i1 %34, label %50, label %41
+35:
+  %36 = load i64, i64* %n.1
+  ret i64 %36
+37:
+  ret i64 -1
 38:
-  %39 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
-  %40 = extractvalue {i64, i1} %39, 1
-  br i1 %40, label %61, label %58
-41:
-  %42 = load i64, i64* %8
-  call void @_bal_panic(i64 %42)
+  %39 = load i64, i64* %7
+  call void @_bal_panic(i64 %39)
   unreachable
-43:
+40:
   call void @_bal_panic(i64 2308)
   unreachable
-44:
-  %45 = extractvalue {i64, i1} %34, 0
-  store i64 %45, i64* %5
-  %46 = load i64, i64* %5
-  %47 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %46)
-  store i8 addrspace(1)* %47, i8 addrspace(1)** %n
-  %48 = load i8 addrspace(1)*, i8 addrspace(1)** %n
-  %49 = addrspacecast i8 addrspace(1)* %48 to i8*
-  %50 = ptrtoint i8* %49 to i64
-  %51 = and i64 %50, 2233785415175766016
-  %52 = icmp eq i64 %51, 504403158265495552
-  br i1 %52, label %54, label %57
-53:
-  store i64 3329, i64* %8
-  br label %41
+41:
+  %42 = extractvalue {i64, i1} %33, 0
+  store i64 %42, i64* %5
+  %43 = load i64, i64* %5
+  %44 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %43)
+  store i8 addrspace(1)* %44, i8 addrspace(1)** %n
+  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %n
+  %46 = addrspacecast i8 addrspace(1)* %45 to i8*
+  %47 = ptrtoint i8* %46 to i64
+  %48 = and i64 %47, 2233785415175766016
+  %49 = icmp eq i64 %48, 504403158265495552
+  br i1 %49, label %51, label %54
+50:
+  store i64 3329, i64* %7
+  br label %38
+51:
+  %52 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %45)
+  store i64 %52, i64* %6
+  %53 = load i64, i64* %6
+  ret i64 %53
 54:
-  %55 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %48)
-  store i64 %55, i64* %6
-  %56 = load i64, i64* %6
-  ret i64 %56
-57:
-  store i64 3587, i64* %8
-  br label %41
-58:
-  %59 = extractvalue {i64, i1} %39, 0
-  store i64 %59, i64* %7
-  %60 = load i64, i64* %7
-  ret i64 %60
-61:
-  store i64 4609, i64* %8
-  br label %41
+  store i64 3587, i64* %7
+  br label %38
 }

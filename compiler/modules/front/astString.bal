@@ -180,7 +180,15 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         else {
             w.push(val.toString());
         }
-    } 
+    }
+    else if expr is IntLiteralExpr {
+        if expr.base == 16 {
+            w.push("0x" + expr.digits.toUpperAscii());
+        }
+        else {
+            w.push(expr.digits);
+        }
+    }
     else if expr is UnaryExpr {
         if wrap {
             w.push("(");

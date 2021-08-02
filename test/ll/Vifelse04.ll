@@ -2,7 +2,6 @@
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 define void @_B_main() {
   %1 = alloca i64
   %2 = alloca i8 addrspace(1)*
@@ -47,63 +46,47 @@ define internal i64 @_B_foo(i64 %0, i64 %1) {
   %6 = alloca i1
   %7 = alloca i64
   %8 = alloca i64
-  %9 = alloca i64
-  %10 = alloca i64
-  %11 = alloca i8
-  %12 = load i8*, i8** @_bal_stack_guard
-  %13 = icmp ult i8* %11, %12
-  br i1 %13, label %39, label %14
-14:
+  %9 = alloca i8
+  %10 = load i8*, i8** @_bal_stack_guard
+  %11 = icmp ult i8* %9, %10
+  br i1 %11, label %33, label %12
+12:
   store i64 %0, i64* %x
   store i64 %1, i64* %y
-  %15 = load i64, i64* %x
-  %16 = call i64 @_B_bar(i64 %15)
-  store i64 %16, i64* %4
-  %17 = load i64, i64* %y
-  %18 = call i64 @_B_baz(i64 %17)
-  store i64 %18, i64* %5
-  %19 = load i64, i64* %4
-  %20 = load i64, i64* %5
-  %21 = icmp eq i64 %19, %20
-  store i1 %21, i1* %3
-  %22 = load i1, i1* %3
-  br i1 %22, label %23, label %24
-23:
+  %13 = load i64, i64* %x
+  %14 = call i64 @_B_bar(i64 %13)
+  store i64 %14, i64* %4
+  %15 = load i64, i64* %y
+  %16 = call i64 @_B_baz(i64 %15)
+  store i64 %16, i64* %5
+  %17 = load i64, i64* %4
+  %18 = load i64, i64* %5
+  %19 = icmp eq i64 %17, %18
+  store i1 %19, i1* %3
+  %20 = load i1, i1* %3
+  br i1 %20, label %21, label %22
+21:
   ret i64 0
-24:
-  %25 = load i64, i64* %x
-  %26 = call i64 @_B_bar(i64 %25)
-  store i64 %26, i64* %7
-  %27 = load i64, i64* %y
-  %28 = call i64 @_B_baz(i64 %27)
-  store i64 %28, i64* %8
-  %29 = load i64, i64* %7
-  %30 = load i64, i64* %8
-  %31 = icmp sgt i64 %29, %30
-  store i1 %31, i1* %6
-  %32 = load i1, i1* %6
-  br i1 %32, label %33, label %34
-33:
+22:
+  %23 = load i64, i64* %x
+  %24 = call i64 @_B_bar(i64 %23)
+  store i64 %24, i64* %7
+  %25 = load i64, i64* %y
+  %26 = call i64 @_B_baz(i64 %25)
+  store i64 %26, i64* %8
+  %27 = load i64, i64* %7
+  %28 = load i64, i64* %8
+  %29 = icmp sgt i64 %27, %28
+  store i1 %29, i1* %6
+  %30 = load i1, i1* %6
+  br i1 %30, label %31, label %32
+31:
   ret i64 1
-34:
-  %35 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
-  %36 = extractvalue {i64, i1} %35, 1
-  br i1 %36, label %43, label %40
-37:
-  %38 = load i64, i64* %10
-  call void @_bal_panic(i64 %38)
-  unreachable
-39:
+32:
+  ret i64 -1
+33:
   call void @_bal_panic(i64 2308)
   unreachable
-40:
-  %41 = extractvalue {i64, i1} %35, 0
-  store i64 %41, i64* %9
-  %42 = load i64, i64* %9
-  ret i64 %42
-43:
-  store i64 4097, i64* %10
-  br label %37
 }
 define internal i64 @_B_bar(i64 %0) {
   %x = alloca i64

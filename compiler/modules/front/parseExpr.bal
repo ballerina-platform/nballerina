@@ -217,11 +217,13 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         return expr;
     }
     else if t is [DECIMAL_NUMBER, string] {
-        SimpleConstExpr expr = { value: check parseDigits(tok, t[1]) };
+        IntLiteralExpr expr = { base: 10, digits: t[1], pos: tok.currentPos() };
+        check tok.advance();
         return expr;
     }
     else if t is [HEX_INT_LITERAL, string] {
-        SimpleConstExpr expr = { value: check parseHexDigits(tok, t[1]) };
+        IntLiteralExpr expr = { base: 16, digits: t[1], pos: tok.currentPos() };
+        check tok.advance();
         return expr;
     }
     else if t is [STRING_LITERAL, string] {
@@ -361,6 +363,8 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
     return err:syntax("expected field name");
 }
 
+// This is for parsing the rhs of const definitions
+// It will do away when const definitions are implemented properly
 function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
     check tok.expect("=");
     string sign = "";
@@ -372,6 +376,11 @@ function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
         [DECIMAL_NUMBER, var digits] => {
             SingletonTypeDesc td = { value: check parseDigits(tok, sign + digits) };
             return td;
+        }
+        [HEX_INT_LITERAL, var digits] => {
+            SingletonTypeDesc td = { value: check parseHexDigits(tok, sign + digits) };
+            return td;
+        }
         // JBUG this gets a bad sad #30738
         // NullPointerException in BIROptimizer$RHSTempVarOptimizer.visit
         // int n;
@@ -382,7 +391,6 @@ function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
         // }
         // check tok.advance();
         // return <SingletonTypeDesc>{ value: n };         
-        }
     }
     return parseError(tok);
 }

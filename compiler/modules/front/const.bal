@@ -36,6 +36,9 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, Expr expr) returns Ex
     else if expr is MappingConstructorExpr {
         return foldMappingConstructorExpr(cx, expectedType, expr);
     }
+    else if expr is IntLiteralExpr {
+        return foldIntLiteralExpr(cx, expectedType, expr);
+    }
     else {
         return expr;
     } 
@@ -46,6 +49,7 @@ function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, ListCo
     foreach int i in 0 ..< members.length() {
         members[i] = check foldExpr(cx, t:ANY, members[i]);
     }
+    // expr.expectedType = expectedType;
     return expr;
 }
 
@@ -53,6 +57,7 @@ function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, Map
     foreach Field f in expr.fields {
         f.value = check foldExpr(cx, t:ANY, f.value);
     }
+    // expr.expectedType = expectedType;
     return expr;
 }
 
@@ -264,6 +269,20 @@ function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, 
     return { value, multiSemType: subExpr.multiSemType === () ? () : basicType };
 }
 
+function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, IntLiteralExpr expr) returns SimpleConstExpr|err:Semantic {
+    int|error result = intFromIntLiteral(expr.base, expr.digits);
+    if result is int {
+        return { value: result };
+    }
+    else {
+        return cx.semanticErr(`invalid integer literal ${expr.digits}`, cause=result, pos=expr.pos);
+    }
+}
+
+function intFromIntLiteral(IntLiteralBase base, string digits) returns int|error {
+    return base == 10 ? int:fromString(digits) : int:fromHexString(digits);
+}
+
 function intArithmeticEval(BinaryArithmeticOp op, int left, int right) returns int  {
     match op {
         "+" => {
@@ -295,6 +314,15 @@ function bitwiseEval(BinaryBitwiseOp op, int left, int right) returns int  {
         }
         "&" => {
             return left & right;
+        }
+        ">>" => {
+            return left >> right;
+        }
+        ">>>" => {
+            return left >>> right;
+        }
+        "<<" => {
+            return left << right;
         }
     }
     panic err:impossible();

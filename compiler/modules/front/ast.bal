@@ -30,7 +30,7 @@ type FunctionDef record {|
 
 type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
 type CallStmt FunctionCallExpr|MethodCallExpr;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
+type Expr IntLiteralExpr|SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 
 type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
 
@@ -141,10 +141,13 @@ type MethodCallExpr record {|
 
 type ListConstructorExpr record {|
     Expr[] members;
+    // JBUG adding this field makes match statement in codeGenExpr fail 
+    // t:SemType? expectedType = ();
 |};
 
 type MappingConstructorExpr record {|
     Field[] fields;
+    // t:SemType? expectedType = ();
 |};
 
 type Field record {|
@@ -196,6 +199,18 @@ type SimpleConstExpr record {|
     // When it contains exactly one shape, then the shape is
     // the shape of the value.
     t:SemType? multiSemType = ();
+|};
+
+
+type IntLiteralBase 10|16;
+
+// The type of value represented by an int-literal
+// depends on the contextually expected type, which
+// we do not know at parse time.
+type IntLiteralExpr record {|
+    IntLiteralBase base;
+    string digits;
+    err:Position pos;
 |};
 
 // Types

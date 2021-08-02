@@ -85,13 +85,15 @@ class CodeGenContext {
     final Module mod;
     final bir:FunctionCode code;
     final string functionName;
+    final t:SemType returnType;
     LoopContext? loopContext = ();
     private final string?[] registerVarNames = [];
 
-    function init(Module mod, string functionName) {
+    function init(Module mod, string functionName, t:SemType returnType) {
         self.mod = mod;
         self.code = {};
         self.functionName = functionName;
+        self.returnType = returnType;
     }
 
     function createRegister(bir:SemType t, string? varName = ()) returns bir:Register {
@@ -197,7 +199,7 @@ function addAssignments(int[] dest, int[] src, int excludeStart) {
 }
 
 function codeGenFunction(Module mod, string functionName, bir:FunctionSignature signature, string[] paramNames, Stmt[] body) returns bir:FunctionCode|CodeGenError {
-    CodeGenContext cx = new(mod, functionName);
+    CodeGenContext cx = new(mod, functionName, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Binding? bindings = ();
     foreach int i in 0 ..< paramNames.length() {
@@ -303,8 +305,8 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
     RangeExpr range = stmt.range;
-    var { result: lower, block: evalUpper } = check codeGenExprForInt(cx, startBlock, env, range.lower);
-    var { result: upper, block: initLoopVar } = check codeGenExprForInt(cx, evalUpper, env, range.upper);
+    var { result: lower, block: evalUpper } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(range.lower, t:INT));
+    var { result: upper, block: initLoopVar } = check codeGenExprForInt(cx, evalUpper, env, check cx.foldExpr(range.upper, t:INT));
     bir:Register loopVar = cx.createRegister(t:INT, varName);
     bir:AssignInsn init = { result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
@@ -508,7 +510,7 @@ function unnarrowBinding(Binding binding) returns Binding {
 
 function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, ReturnStmt stmt) returns CodeGenError|StmtEffect {
     var { returnExpr } = stmt;
-    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, returnExpr);
+    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(returnExpr, cx.returnType));
     bir:RetInsn insn = { operand };
     nextBlock.insns.push(insn);
     return { block: () };
@@ -523,6 +525,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         panic error("type was not normalized");
     }
     else {
+        initExpr = check cx.foldExpr(initExpr, semType);
         var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
         bir:Register result = cx.createRegister(semType, varName);
         bir:AssignInsn insn = { result, operand };
@@ -546,7 +549,6 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     if binding.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`);
     }
-    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, expr);
     bir:Register unnarrowedReg;
     int[] assignments;
     Binding? unnarrowedBinding = binding.unnarrowed;
@@ -561,6 +563,9 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         unnarrowedReg = unnarrowedBinding.reg;
         assignments = [ unnarrowedReg.number ];
     }
+    Expr foldedExpr = check cx.foldExpr(expr, unnarrowedReg.semType);
+    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, foldedExpr);
+
     bir:AssignInsn assign = { result: unnarrowedReg, operand };
     nextBlock.insns.push(assign);
     return { block: nextBlock, assignments };
@@ -568,9 +573,11 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, MemberAccessLExpr lValue, Expr expr) returns CodeGenError|StmtEffect {
     bir:Register reg = (check lookupVarRef(cx, lValue.container.varName, env)).reg;
-    var { result: index, block: nextBlock } = check codeGenExpr(cx, startBlock, env, lValue.index);
+    Expr foldedIndexExpr = check cx.foldExpr(lValue.index, t:union(t:INT, t:STRING));
+    var { result: index, block: nextBlock } = check codeGenExpr(cx, startBlock, env, foldedIndexExpr);
+    Expr foldedExpr = check cx.foldExpr(expr, t:ANY); // XXX need to change when we have typed arrays
     bir:Operand operand;
-    { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, expr);
+    { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
     TypedOperand? t = typedOperand(index);
     bir:Insn insn;
     if t is ["int", bir:IntOperand] {
@@ -693,41 +700,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
             return { result, block: nextBlock };
         }
         var { equalityOp: op, left, right } => {
-            bir:Register result = cx.createRegister(t:BOOLEAN);
-            var { result: l, block: block1, binding: lBinding } = check codeGenExpr(cx, bb, env, left);
-            var { result: r, block: nextBlock, binding: rBinding } = check codeGenExpr(cx, block1, env, right);
-            // Type checking is done in the verifier
-            bir:EqualityInsn insn = { op, operands: [l, r], result };
-            bb.insns.push(insn);
-            [Binding, SimpleConst]? narrowingCompare = ();
-            if op is ("=="|"!=") {
-                if lBinding is Binding && r is SimpleConst {
-                    narrowingCompare = [lBinding, r];
-                }
-                else if rBinding is Binding && l is SimpleConst {
-                    narrowingCompare = [rBinding, l];
-                }
-            }
-            if narrowingCompare is () {
-                return { result, block: nextBlock };
-            }
-            else {
-                var [binding, value] = narrowingCompare;
-                t:SemType ifTrue = t:singleton(value);
-                t:SemType ifFalse = t:diff(binding.reg.semType, ifTrue);
-                if (<string>op).startsWith("!") {
-                    [ifTrue, ifFalse] = [ifFalse, ifTrue];
-                }
-                Narrowing narrowing = {
-                    binding,
-                    ifTrue,
-                    ifFalse,
-                    testBlock: bb.label,
-                    testInsnIndex: bb.insns.length() - 1,
-                    negated: false
-                };
-                return { result, block: nextBlock, narrowing };
-            }
+            return codeGenEquality(cx, bb, env, op, left, right);
         }
         var { relationalOp: op, left, right } => {
             bir:Register result = cx.createRegister(t:BOOLEAN);
@@ -743,7 +716,6 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
                 return cx.semanticErr("operands of relational operator are not ordered");
             }               
         }
-    
         var { td, operand: o } => {
             var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
             // JBUG #31782 cast needed
@@ -769,39 +741,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
         }
         // Type test
         var { td, left, semType } => {
-            bir:Register reg;
-            var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
-            if operand is bir:Register {
-                reg = operand;
-            }
-            else {
-                // XXX should not happen when we have completed constant folding
-                return { result: t:containsConst(semType, operand), block: bb };
-            }        
-            t:SemType diff = t:diff(reg.semType, semType);
-            if t:isEmpty(cx.mod.tc, diff) {
-                // always true
-                return { result: true, block: bb };
-            }
-            t:SemType intersect = t:intersect(reg.semType, semType);
-            if t:isEmpty(cx.mod.tc, intersect) {
-                // always false
-                return { result: true, block: bb };
-            }
-            bir:Register result = cx.createRegister(t:BOOLEAN);
-            bir:TypeTestInsn insn = { operand: reg, semType, result };
-            Narrowing? narrowing = ();
-            if !(binding is ()) {
-                narrowing = {
-                    binding,
-                    ifTrue: intersect,
-                    ifFalse: diff,
-                    testBlock: bb.label,
-                    testInsnIndex: bb.insns.length()
-                };
-            }
-            bb.insns.push(insn);
-            return { result, block: nextBlock, narrowing };   
+            return codeGenTypeTest(cx, bb, env, td, left, semType);
         }
         // Variable reference
         var { varName } => {
@@ -834,8 +774,9 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
         }
         // Member access E[i]
         var { container, index, pos } => {
-            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, container);
-            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, index);
+            // Do constant folding here since these expressions are not allowed in const definitions
+            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(container, ()));
+            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, check cx.foldExpr(index, t:union(t:INT, t:STRING)));
             if l is bir:Register {
                 bir:Register result = cx.createRegister(t:ANY);
                 TypedOperand? k = typedOperand(r);
@@ -896,8 +837,85 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
             nextBlock.insns.push(insn);
             return { result, block: nextBlock };
         }
+        var { digits } => {
+            panic err:impossible(`failed to fold int literal ${digits}`);
+        }
     }
     panic err:impossible();
+}
+
+function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, BinaryEqualityOp op, Expr left, Expr right) returns CodeGenError|ExprEffect {
+    bir:Register result = cx.createRegister(t:BOOLEAN);
+    var { result: l, block: block1, binding: lBinding } = check codeGenExpr(cx, bb, env, left);
+    var { result: r, block: nextBlock, binding: rBinding } = check codeGenExpr(cx, block1, env, right);
+    // Type checking is done in the verifier
+    bir:EqualityInsn insn = { op, operands: [l, r], result };
+    bb.insns.push(insn);
+    [Binding, SimpleConst]? narrowingCompare = ();
+    if op is ("=="|"!=") {
+        if lBinding is Binding && r is SimpleConst {
+            narrowingCompare = [lBinding, r];
+        }
+        else if rBinding is Binding && l is SimpleConst {
+            narrowingCompare = [rBinding, l];
+        }
+    }
+    if narrowingCompare is () {
+        return { result, block: nextBlock };
+    }
+    else {
+        var [binding, value] = narrowingCompare;
+        t:SemType ifTrue = t:singleton(value);
+        t:SemType ifFalse = t:diff(binding.reg.semType, ifTrue);
+        if (<string>op).startsWith("!") {
+            [ifTrue, ifFalse] = [ifFalse, ifTrue];
+        }
+        Narrowing narrowing = {
+            binding,
+            ifTrue,
+            ifFalse,
+            testBlock: bb.label,
+            testInsnIndex: bb.insns.length() - 1,
+            negated: false
+        };
+        return { result, block: nextBlock, narrowing };
+    }
+}
+
+function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, TypeDesc td, Expr left, t:SemType semType) returns CodeGenError|ExprEffect {
+    bir:Register reg;
+    var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
+    if operand is bir:Register {
+        reg = operand;
+    }
+    else {
+        // XXX should not happen when we have completed constant folding
+        return { result: t:containsConst(semType, operand), block: bb };
+    }        
+    t:SemType diff = t:diff(reg.semType, semType);
+    if t:isEmpty(cx.mod.tc, diff) {
+        // always true
+        return { result: true, block: bb };
+    }
+    t:SemType intersect = t:intersect(reg.semType, semType);
+    if t:isEmpty(cx.mod.tc, intersect) {
+        // always false
+        return { result: true, block: bb };
+    }
+    bir:Register result = cx.createRegister(t:BOOLEAN);
+    bir:TypeTestInsn insn = { operand: reg, semType, result };
+    Narrowing? narrowing = ();
+    if !(binding is ()) {
+        narrowing = {
+            binding,
+            ifTrue: intersect,
+            ifFalse: diff,
+            testBlock: bb.label,
+            testInsnIndex: bb.insns.length()
+        };
+    }
+    bb.insns.push(insn);
+    return { result, block: nextBlock, narrowing };   
 }
 
 function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, FunctionCallExpr expr) returns CodeGenError|RegExprEffect {
@@ -909,9 +927,12 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
     else {
         func = check genImportedFunctionRef(cx, env, prefix, expr.funcName);
     }
+    check validArgumentCount(cx, func, expr.args.length(), expr.pos);
+    t:SemType[] paramTypes = func.signature.paramTypes;
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
-    foreach var argExpr in expr.args {
+    foreach int i in 0 ..< expr.args.length() {
+        Expr argExpr = check cx.foldExpr(expr.args[i], paramTypes[i]);
         var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, env, argExpr);
         curBlock = nextBlock;
         args.push(arg);
@@ -925,6 +946,44 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };
+}
+
+function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, MethodCallExpr expr) returns CodeGenError|RegExprEffect {
+    var { result: target, block: curBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(expr.target, ()));
+    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName);
+    check validArgumentCount(cx, func, expr.args.length() + 1, expr.pos);
+
+    t:SemType[] paramTypes = func.signature.paramTypes;
+    bir:Operand[] args = [target];
+    foreach int i in 0 ..< expr.args.length() {
+        Expr argExpr = check cx.foldExpr(expr.args[i], paramTypes[i + 1]);
+        var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, env, argExpr);
+        curBlock = nextBlock;
+        args.push(arg);
+    }
+    bir:Register result = cx.createRegister(func.signature.returnType);
+    bir:CallInsn call = {
+        func,
+        result,
+        args: args.cloneReadOnly(),
+        position: expr.pos
+    };
+    curBlock.insns.push(call);
+    return { result, block: curBlock };
+}
+
+function validArgumentCount(CodeGenContext cx, bir:FunctionRef func, int nSuppliedArgs, err:Position pos) returns CodeGenError? {
+    int nExpectedArgs = func.signature.paramTypes.length();
+    if nSuppliedArgs == nExpectedArgs {
+        return ();
+    }
+    string name = bir:symbolToString(cx.mod, func.symbol);
+    if nSuppliedArgs < nExpectedArgs {
+        return cx.semanticErr(`too few arguments for call to function ${name}`);
+    }
+    else {
+        return cx.semanticErr(`too many arguments for call to function ${name}`);
+    }
 }
 
 function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifier) returns bir:FunctionRef|CodeGenError {
@@ -966,26 +1025,6 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
             return { symbol, signature };
         }
     }
-}
-
-function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, MethodCallExpr expr) returns CodeGenError|RegExprEffect {
-    var { result: target, block: curBlock } = check codeGenExpr(cx, bb, env, expr.target);
-    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName);
-    bir:Operand[] args = [target];
-    foreach var argExpr in expr.args {
-        var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, env, argExpr);
-        curBlock = nextBlock;
-        args.push(arg);
-    }
-    bir:Register result = cx.createRegister(func.signature.returnType);
-    bir:CallInsn call = {
-        func,
-        result,
-        args: args.cloneReadOnly(),
-        position: expr.pos
-    };
-    curBlock.insns.push(call);
-    return { result, block: curBlock };
 }
 
 type LangLibModuleName "int"|"boolean"|"string"|"array"|"map";
