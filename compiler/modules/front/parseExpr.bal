@@ -103,7 +103,7 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         InlineTypeDesc td = check parseInlineTypeDesc(tok);
         tok.setMode(MODE_NORMAL);
-        TypeTestExpr typeTest = { td, left: expr, semType: convertInlineTypeDesc(td) };
+        TypeTestExpr typeTest = { td, left: expr, semType: resolveInlineTypeDesc(td) };
         return typeTest;
     }
     else {
@@ -194,7 +194,7 @@ function parseTypeCastExpr(Tokenizer tok) returns Expr|err:Syntax {
     check tok.expect(">");
     tok.setMode(MODE_NORMAL);
     Expr operand = check parseUnaryExpr(tok);
-    TypeCastExpr expr = { pos, td, operand, semType: convertInlineTypeDesc(td) };
+    TypeCastExpr expr = { pos, td, operand, semType: resolveInlineTypeDesc(td) };
     return expr;
 }
 

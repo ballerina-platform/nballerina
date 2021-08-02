@@ -157,7 +157,7 @@ function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDec
         check tok.expect("=");
         Expr initExpr = check parseExpr(tok);
         check tok.expect(";");
-        return { td, varName: cur[1], initExpr, semType: convertInlineTypeDesc(td), isFinal };
+        return { td, varName: cur[1], initExpr, semType: resolveInlineTypeDesc(td), isFinal };
     }
     return parseError(tok, "invalid VarDeclStmt");
 }

@@ -26,7 +26,7 @@ class Module {
                 self.functionDefSource.push(def);
                 functionDefns.push({
                     symbol: <bir:InternalSymbol>{ identifier: def.name, isPublic: def.vis == "public" },
-                    // casting away nil here, because it was filled in by `convertTypes`
+                    // casting away nil here, because it was filled in by `resolveTypes`
                     signature: <bir:FunctionSignature>def.signature,
                     position: def.pos
                 });
@@ -65,7 +65,7 @@ public function loadModule(string filename, bir:ModuleId id) returns bir:Module|
     ModuleTable mod = table [];
     check addModulePart(mod, part);
     t:Env env = new;
-    check convertTypes(env, mod);
+    check resolveTypes(env, mod);
     // XXX Should have an option that controls whether we perform this check
     check validEntryPoint(mod);
     return new Module(id, imports(part), mod, t:typeCheckContext(env));
@@ -111,7 +111,7 @@ public function typesFromString(string contents) returns [t:Env, map<t:SemType>]
     ModuleTable mod = table [];
     check addModulePart(mod, part);
     t:Env env = new;
-    check convertTypes(env, mod);
+    check resolveTypes(env, mod);
     return [env, createTypeMap(mod)];
 }
 
