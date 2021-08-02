@@ -5,10 +5,10 @@ import wso2/nballerina.err;
 
 type ModulePart record {|
     ImportDecl? importDecl;
-    ModuleLevelDef[] defs;
+    ModuleLevelDefn[] defns;
 |};
 
-type ModuleLevelDef TypeDef|FunctionDef;
+type ModuleLevelDefn TypeDefn|FunctionDefn;
 
 type Visibility "public"?;
 
@@ -17,7 +17,7 @@ type ImportDecl record {|
     string module;
 |};
 
-type FunctionDef record {|
+type FunctionDefn record {|
     readonly string name;
     Visibility vis;
     FunctionTypeDesc typeDesc;
@@ -128,7 +128,7 @@ type FunctionCallExpr record {|
     string? prefix = ();
     string funcName;
     Expr[] args;
-    // We can get type/def mismatch errors here
+    // We can get type/defn mismatch errors here
     err:Position pos;
 |};
 
@@ -233,7 +233,7 @@ type InlineMapTypeDesc record {|
     "any" rest = "any";
 |};
 
-type TypeDef record {|
+type TypeDefn record {|
     readonly string name;
     Visibility vis;
     TypeDesc td;
@@ -249,7 +249,7 @@ type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorType
 type ListTypeDesc record {|
     TypeDesc[] members;
     TypeDesc rest;
-    t:ListDefinition? def = ();
+    t:ListDefinition? defn = ();
 |};
 
 type FieldDesc record {|
@@ -260,14 +260,14 @@ type FieldDesc record {|
 type MappingTypeDesc record {|
     FieldDesc[] fields;
     TypeDesc rest;
-    t:MappingDefinition? def = ();
+    t:MappingDefinition? defn = ();
 |};
 
 type FunctionTypeDesc record {|
     // XXX need to handle rest type
     TypeDesc[] args;
     TypeDesc ret;
-    t:FunctionDefinition? def = ();
+    t:FunctionDefinition? defn = ();
 |};
 
 type ErrorTypeDesc record {|

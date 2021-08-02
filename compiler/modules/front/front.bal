@@ -4,31 +4,31 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.err;
 
-type ModuleTable table<ModuleLevelDef> key(name);
+type ModuleTable table<ModuleLevelDefn> key(name);
 
 class Module {
     *bir:Module;
     final bir:ModuleId id;
     final map<bir:ModuleId> imports;
-    final ModuleTable defs;
+    final ModuleTable defns;
     final t:TypeCheckContext tc;
-    final FunctionDef[] functionDefSource = [];
+    final FunctionDefn[] functionDefnSource = [];
     final readonly & bir:FunctionDefn[] functionDefns;
 
-    function init(bir:ModuleId id, map<bir:ModuleId> imports, ModuleTable defs, t:TypeCheckContext tc) {
+    function init(bir:ModuleId id, map<bir:ModuleId> imports, ModuleTable defns, t:TypeCheckContext tc) {
         self.id = id;
         self.imports = imports;
-        self.defs = defs;
+        self.defns = defns;
         self.tc = tc;
         final bir:FunctionDefn[] functionDefns = [];
-        foreach var def in defs {
-            if def is FunctionDef {
-                self.functionDefSource.push(def);
+        foreach var defn in defns {
+            if defn is FunctionDefn {
+                self.functionDefnSource.push(defn);
                 functionDefns.push({
-                    symbol: <bir:InternalSymbol>{ identifier: def.name, isPublic: def.vis == "public" },
+                    symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`
-                    signature: <bir:FunctionSignature>def.signature,
-                    position: def.pos
+                    signature: <bir:FunctionSignature>defn.signature,
+                    position: defn.pos
                 });
             }
         }
@@ -40,7 +40,7 @@ class Module {
     public function getTypeCheckContext() returns t:TypeCheckContext => self.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        FunctionDef ast = self.functionDefSource[i];
+        FunctionDefn ast = self.functionDefnSource[i];
         return codeGenFunction(self, ast.name, self.functionDefns[i].signature, ast.paramNames, ast.body);
     }
    
@@ -82,26 +82,26 @@ function imports(ModulePart part) returns map<bir:ModuleId> {
 }
 
 function validEntryPoint(ModuleTable mod) returns err:Any? {
-    ModuleLevelDef? def = mod["main"];
-    if def is FunctionDef {
-        if def.vis != "public" {
-            return err:semantic(`${"main"} is not public`, pos=def.pos);
+    ModuleLevelDefn? defn = mod["main"];
+    if defn is FunctionDefn {
+        if defn.vis != "public" {
+            return err:semantic(`${"main"} is not public`, pos=defn.pos);
         }
-        if def.paramNames.length() > 0 {
-            return err:unimplemented(`parameters for ${"main"} not yet implemented`, pos=def.pos);
+        if defn.paramNames.length() > 0 {
+            return err:unimplemented(`parameters for ${"main"} not yet implemented`, pos=defn.pos);
         }
-        if (<bir:FunctionSignature>def.signature).returnType !== t:NIL {
-            return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, pos=def.pos);
+        if (<bir:FunctionSignature>defn.signature).returnType !== t:NIL {
+            return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, pos=defn.pos);
         }
     }
 }
 
 function addModulePart(ModuleTable mod, ModulePart part) returns err:Semantic? {
-    foreach ModuleLevelDef def in part.defs {
-        if mod.hasKey(def.name) {
-            return err:semantic(`duplicate definition if ${def.name}`);
+    foreach ModuleLevelDefn defn in part.defns {
+        if mod.hasKey(defn.name) {
+            return err:semantic(`duplicate definition if ${defn.name}`);
         }
-        mod.add(def); 
+        mod.add(defn); 
     }
 }
 

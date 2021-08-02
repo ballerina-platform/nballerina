@@ -17,17 +17,17 @@ function modulePartToWords(Word[] w, ModulePart mod) {
     if im != () {
         w.push("import", im.org, CLING, "/", CLING, im.module, ";");
     }
-    foreach var def in mod.defs {
-        if def is FunctionDef {
-            functionDefToWords(w, def);
+    foreach var defn in mod.defns {
+        if defn is FunctionDefn {
+            functionDefnToWords(w, defn);
         }
         else {
-            // XXX type defs are not part of the current subset
+            // XXX type defns are not part of the current subset
         }
     }
 }
 
-function functionDefToWords(Word[] w, FunctionDef func) {
+function functionDefnToWords(Word[] w, FunctionDefn func) {
     if func.vis != () {
         w.push(<Word>func.vis);
     }

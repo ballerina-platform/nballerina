@@ -998,16 +998,16 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
         return err:unimplemented("local variables cannot yet have function type");
     }
     bir:FunctionSignature signature;
-    ModuleLevelDef? def = cx.mod.defs[identifier];
-    if def is FunctionDef {
-        signature = <bir:FunctionSignature>def.signature;
-        boolean isPublic = def.vis == "public";
+    ModuleLevelDefn? defn = cx.mod.defns[identifier];
+    if defn is FunctionDefn {
+        signature = <bir:FunctionSignature>defn.signature;
+        boolean isPublic = defn.vis == "public";
         bir:InternalSymbol symbol = { identifier, isPublic };
         return { symbol, signature };
     }
     else {
         err:Message msg;
-        if def is () {
+        if defn is () {
             msg = `${identifier} is not defined`;
         }
         else {

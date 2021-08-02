@@ -3,29 +3,29 @@ import wso2/nballerina.bir;
 import wso2/nballerina.err;
 
 function createTypeMap(ModuleTable mod) returns map<t:SemType> {
-    map<t:SemType> defs = {};
-    foreach var def in mod {
-        if def is TypeDef {
-            t:SemType? s = def.semType;
+    map<t:SemType> defns = {};
+    foreach var defn in mod {
+        if defn is TypeDefn {
+            t:SemType? s = defn.semType;
             if s is () {
                 panic error("nil semtype");
             }
             else {
-                defs[def.name] = s;
+                defns[defn.name] = s;
             }
         }       
     }
-    return defs;
+    return defns;
 }
 
 function resolveTypes(t:Env env, ModuleTable mod) returns err:Semantic|err:Unimplemented? {
-    foreach var def in mod {
-        if def is TypeDef {
-            _ = check resolveTypeDef(env, mod, 0, def);
+    foreach var defn in mod {
+        if defn is TypeDefn {
+            _ = check resolveTypeDefn(env, mod, 0, defn);
         }
         else {
-            // it's a FunctionDef
-            def.signature = check resolveFunctionSignature(env, mod, def.typeDesc, def.pos);
+            // it's a FunctionDefn
+            defn.signature = check resolveFunctionSignature(env, mod, defn.typeDesc, defn.pos);
         }
     }
 }
@@ -56,18 +56,18 @@ function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, TypeDesc td, err:Posi
     return err:unimplemented("unimplemented type descriptor", pos=pos);
 }
 
-function resolveTypeDef(t:Env env, ModuleTable mod, int depth, TypeDef def) returns t:SemType|err:Semantic {
-    t:SemType? t = def.semType;
+function resolveTypeDefn(t:Env env, ModuleTable mod, int depth, TypeDefn defn) returns t:SemType|err:Semantic {
+    t:SemType? t = defn.semType;
     if t is () {
-        if depth == def.cycleDepth {
-            return err:semantic(`invalid cycle detected for ${def.name}`, def.pos);
+        if depth == defn.cycleDepth {
+            return err:semantic(`invalid cycle detected for ${defn.name}`, defn.pos);
         }
-        def.cycleDepth = depth;
-        t:SemType s = check resolveTypeDesc(env, mod, depth, def.td);
-        t = def.semType;
+        defn.cycleDepth = depth;
+        t:SemType s = check resolveTypeDesc(env, mod, depth, defn.td);
+        t = defn.semType;
         if t is () {
-            def.semType = s;
-            def.cycleDepth = -1;
+            defn.semType = s;
+            defn.cycleDepth = -1;
             return s;
         }
         else {
@@ -124,10 +124,10 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) ret
     }
     // JBUG would like to use match patterns here, but #30718 prevents it
     if td is ListTypeDesc {
-        t:ListDefinition? def = td.def;
-        if def is () {
+        t:ListDefinition? defn = td.defn;
+        if defn is () {
             t:ListDefinition d = new;
-            td.def = d;
+            td.defn = d;
             // JBUG temp variable `m` is to avoid compiler bug #30736
             TypeDesc[] m = td.members;
             t:SemType[] members = from var x in m select check resolveTypeDesc(env, mod, depth + 1, x);
@@ -135,14 +135,14 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) ret
             return d.define(env, members, rest);
         }
         else {
-            return def.getSemType(env);
+            return defn.getSemType(env);
         }   
     }
     if td is MappingTypeDesc {
-        t:MappingDefinition? def = td.def;
-        if def is () {
+        t:MappingDefinition? defn = td.defn;
+        if defn is () {
             t:MappingDefinition d = new;
-            td.def = d;
+            td.defn = d;
             // JBUG temp variable `f` is to avoid compiler bug #30736
             FieldDesc[] f = td.fields;
             t:Field[] fields = from var { name, typeDesc } in f select [name, check resolveTypeDesc(env, mod, depth + 1, typeDesc)];
@@ -150,30 +150,30 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) ret
             return d.define(env, fields, rest);
         }
         else {
-            return def.getSemType(env);
+            return defn.getSemType(env);
         }
     }
      if td is FunctionTypeDesc {
-        t:FunctionDefinition? def = td.def;
-        if def is () {
+        t:FunctionDefinition? defn = td.defn;
+        if defn is () {
             t:FunctionDefinition d = new(env);
-            td.def = d;
+            td.defn = d;
             TypeDesc[] a = td.args;
             t:SemType[] args = from var x in a select check resolveTypeDesc(env, mod, depth + 1, x);
             t:SemType ret = check resolveTypeDesc(env, mod, depth + 1, td.ret);
             return d.define(env, t:tuple(env, ...args), ret);
         }
         else {
-            return def.getSemType(env);
+            return defn.getSemType(env);
         }
     }
     if td is TypeDescRef {
-        ModuleLevelDef? def = mod[td.ref];
-        if def is () {
+        ModuleLevelDefn? defn = mod[td.ref];
+        if defn is () {
             return err:semantic(`reference to undefined type ${td.ref}`, pos=td.pos);
         }
-        else if def is TypeDef {
-            return check resolveTypeDef(env, mod, depth, def);
+        else if defn is TypeDefn {
+            return check resolveTypeDefn(env, mod, depth, defn);
         }
         else {
             return err:semantic(`reference to non-type ${td.ref} in type-descriptor`, pos=td.pos);

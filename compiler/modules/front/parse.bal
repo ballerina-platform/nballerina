@@ -6,11 +6,11 @@ function parseModulePart(string str) returns ModulePart|err:Syntax {
     Tokenizer tok = new (str);
     check tok.advance();
     ModulePart part = {
-        defs: [],
+        defns: [],
         importDecl: check parseImportDecl(tok)
     };
     while tok.current() != () {
-        part.defs.push(check parseModuleDecl(tok));
+        part.defns.push(check parseModuleDecl(tok));
     }
     return part;
 }
@@ -38,7 +38,7 @@ function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
 }
 
 
-function parseModuleDecl(Tokenizer tok) returns ModuleLevelDef|err:Syntax {
+function parseModuleDecl(Tokenizer tok) returns ModuleLevelDefn|err:Syntax {
     Token? t = tok.current();
     Visibility vis;
     if t == "public" {
@@ -63,7 +63,7 @@ function parseModuleDecl(Tokenizer tok) returns ModuleLevelDef|err:Syntax {
     return parseError(tok);
 }
 
-function parseTypeDefinition(Tokenizer tok, Visibility vis) returns TypeDef|err:Syntax {
+function parseTypeDefinition(Tokenizer tok, Visibility vis) returns TypeDefn|err:Syntax {
     check tok.advance();
     err:Position pos = tok.currentPos();
     Token? t = tok.current();
@@ -77,7 +77,7 @@ function parseTypeDefinition(Tokenizer tok, Visibility vis) returns TypeDef|err:
     return parseError(tok);
 }
 
-function parseConstDeclaration(Tokenizer tok, Visibility vis) returns TypeDef|err:Syntax {
+function parseConstDeclaration(Tokenizer tok, Visibility vis) returns TypeDefn|err:Syntax {
     check tok.advance();
     err:Position pos = tok.currentPos();
     Token? t = tok.current();
@@ -91,7 +91,7 @@ function parseConstDeclaration(Tokenizer tok, Visibility vis) returns TypeDef|er
     return parseError(tok);
 }
 
-function parseFunctionDefinition(Tokenizer tok, Visibility vis) returns FunctionDef|err:Syntax {
+function parseFunctionDefinition(Tokenizer tok, Visibility vis) returns FunctionDefn|err:Syntax {
     check tok.advance();
     err:Position pos = tok.currentPos();
     Token? t = tok.current();
@@ -101,8 +101,8 @@ function parseFunctionDefinition(Tokenizer tok, Visibility vis) returns Function
         string[] paramNames = [];
         FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
         Stmt[] body = check parseStmtBlock(tok);
-        FunctionDef def = { name, vis, paramNames, typeDesc, pos, body };
-        return def;
+        FunctionDefn defn = { name, vis, paramNames, typeDesc, pos, body };
+        return defn;
     }
     return parseError(tok);
 }
