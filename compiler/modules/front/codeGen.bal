@@ -671,22 +671,15 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
         }
         { op: "!",  operand: var o } => {
             var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, env, o);
-            bir:Register reg = cx.createRegister(t:BOOLEAN);
-            // XXX fix this
-            if operand is boolean {
-                // Do it like this, because type of result is boolean not a singleton
-                bir:AssignInsn insn = { operand: !operand, result: reg };
-                bb.insns.push(insn);
-            }
-            else {
-                bir:BooleanNotInsn insn = { operand, result: reg };
-                bb.insns.push(insn);
-            }
+            // Should have been resolved during constant folding
+            bir:Register reg = <bir:Register>operand;
+            bir:Register result = cx.createRegister(t:BOOLEAN);
+            bir:BooleanNotInsn insn = { operand: reg, result };
+            bb.insns.push(insn);
             if !(narrowing is ()) {
                 narrowing.negated = !narrowing.negated;
             }
-            return { result: reg, block: nextBlock, narrowing };
-
+            return { result, block: nextBlock, narrowing };
         }
         var { bitwiseOp: op, left, right } => {
             var { result: l, block: block1} = check codeGenExprForInt(cx, bb, env, left);
@@ -883,15 +876,9 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
 }
 
 function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, TypeDesc td, Expr left, t:SemType semType) returns CodeGenError|ExprEffect {
-    bir:Register reg;
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
-    if operand is bir:Register {
-        reg = operand;
-    }
-    else {
-        // XXX should not happen when we have completed constant folding
-        return { result: t:containsConst(semType, operand), block: bb };
-    }        
+    // Constants should be resolved during constant folding
+    bir:Register reg = <bir:Register>operand;        
     t:SemType diff = t:diff(reg.semType, semType);
     if t:isEmpty(cx.mod.tc, diff) {
         // always true
