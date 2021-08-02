@@ -265,5 +265,6 @@ The following restrictions apply to imported modules:
 
 * [#814](https://github.com/ballerina-platform/ballerina-spec/issues/814) - improved typing rules for `==` and `!=`
 * [#887](https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability
+* [#902](https://github.com/ballerina-platform/ballerina-spec/issues/902) - expression has a singleton type when its subexpressions have singleton type
 * [#904](https://github.com/ballerina-platform/ballerina-spec/issues/904) - restrict assignment to type-narrowed variables within loops
 
