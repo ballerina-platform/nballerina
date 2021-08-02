@@ -10,6 +10,21 @@ public function stringConst(string value) returns SemType {
     return uniformSubtype(UT_STRING, st);
 }
 
+function stringSubtypeSingleValue(SubtypeData d) returns string? {
+    if d is boolean {
+        return ();
+    }
+    StringSubtype s = <StringSubtype>d;
+    if !s.allowed {
+        return ();
+    }
+    string[] values = s.values;
+    if values.length() != 1 {
+        return ();
+    }
+    return values[0];
+}
+
 function stringSubtypeContains(SubtypeData d, string s) returns boolean {
     if d is boolean {
         return d;

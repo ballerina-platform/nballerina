@@ -4,6 +4,11 @@ import wso2/nballerina.err;
 type ConstEvalTest [string,SimpleConst];
 
 class TestFoldContext {
+    // JBUG error if next line uncommented
+    // *FoldContext;
+    function lookupConst(string varName) returns [SimpleConst]?|CodeGenError {
+        return ();
+    }
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
         return err:semantic(msg, pos=pos, cause=cause);
     }

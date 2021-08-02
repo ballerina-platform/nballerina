@@ -3,12 +3,15 @@ import wso2/nballerina.types as t;
 
 type SimpleConst string|int|boolean|();
 
+type FoldError err:Semantic|err:Unimplemented;
+
 // This is for handling const definitions in the future
 type FoldContext object {
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic;
+    function lookupConst(string varName) returns [SimpleConst]?|FoldError;
  };
 
-function foldExpr(FoldContext cx, t:SemType? expectedType, Expr expr) returns Expr|err:Semantic {
+function foldExpr(FoldContext cx, t:SemType? expectedType, Expr expr) returns Expr|FoldError {
     if expr is BinaryArithmeticExpr {
         return foldBinaryArithmeticExpr(cx, expectedType, expr);
     } 
@@ -36,6 +39,9 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, Expr expr) returns Ex
     else if expr is MappingConstructorExpr {
         return foldMappingConstructorExpr(cx, expectedType, expr);
     }
+    else if expr is VarRefExpr {
+        return foldVarRefExpr(cx, expectedType, expr);
+    }
     else if expr is IntLiteralExpr {
         return foldIntLiteralExpr(cx, expectedType, expr);
     }
@@ -44,7 +50,7 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, Expr expr) returns Ex
     } 
 }
 
-function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, ListConstructorExpr expr) returns Expr|err:Semantic {
+function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, ListConstructorExpr expr) returns Expr|FoldError {
     Expr[] members = expr.members;
     foreach int i in 0 ..< members.length() {
         members[i] = check foldExpr(cx, t:ANY, members[i]);
@@ -53,7 +59,7 @@ function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, ListCo
     return expr;
 }
 
-function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, MappingConstructorExpr expr) returns Expr|err:Semantic {
+function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, MappingConstructorExpr expr) returns Expr|FoldError {
     foreach Field f in expr.fields {
         f.value = check foldExpr(cx, t:ANY, f.value);
     }
@@ -61,7 +67,7 @@ function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, Map
     return expr;
 }
 
-function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, BinaryArithmeticExpr expr) returns Expr|err:Semantic {
+function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, BinaryArithmeticExpr expr) returns Expr|FoldError {
     Expr leftExpr = check foldExpr(cx, expectedType, expr.left);
     Expr rightExpr = check foldExpr(cx, expectedType, expr.right);
     if leftExpr is SimpleConstExpr && rightExpr is SimpleConstExpr {
@@ -88,7 +94,7 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, Binar
     return expr;
 }
 
-function foldBinaryBitwiseExpr(FoldContext cx, t:SemType? expectedType, BinaryBitwiseExpr expr) returns Expr|err:Semantic {
+function foldBinaryBitwiseExpr(FoldContext cx, t:SemType? expectedType, BinaryBitwiseExpr expr) returns Expr|FoldError {
     Expr leftExpr = check foldExpr(cx, t:INT, expr.left);
     Expr rightExpr = check foldExpr(cx, t:INT, expr.right);
     if leftExpr is SimpleConstExpr && rightExpr is SimpleConstExpr {
@@ -125,7 +131,7 @@ function bitwiseOperandWiden(SimpleConstExpr expr) returns t:SemType {
     return t:INT;
 }
 
-function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, BinaryEqualityExpr expr) returns Expr|err:Semantic {
+function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, BinaryEqualityExpr expr) returns Expr|FoldError {
     Expr leftExpr = check foldExpr(cx, (), expr.left);
     Expr rightExpr = check foldExpr(cx, (), expr.right);
     if leftExpr is SimpleConstExpr && rightExpr is SimpleConstExpr {
@@ -169,7 +175,7 @@ function simpleConstExprIntersectIsEmpty(SimpleConstExpr leftExpr, SimpleConstEx
     }
 }
 
-function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, BinaryRelationalExpr expr) returns Expr|err:Semantic {
+function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, BinaryRelationalExpr expr) returns Expr|FoldError {
     Expr leftExpr = check foldExpr(cx, (), expr.left);
     Expr rightExpr = check foldExpr(cx, (), expr.right);
     if leftExpr is SimpleConstExpr && rightExpr is SimpleConstExpr {
@@ -195,7 +201,7 @@ function foldedBinaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType,
     return { value, multiSemType: left.multiSemType === () && right.multiSemType === () ? () : basicType };
 }
 
-function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, UnaryExpr expr) returns Expr|err:Semantic {
+function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, UnaryExpr expr) returns Expr|FoldError {
     Expr subExpr = expr.operand;
     match expr.op {
         "!" => {
@@ -239,7 +245,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, UnaryExpr expr) 
     return expr;
 }
 
-function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, TypeCastExpr expr) returns Expr|err:Semantic {
+function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, TypeCastExpr expr) returns Expr|FoldError {
     t:SemType targetType = expr.semType;
     if !(expectedType is ()) {
         targetType = t:intersect(targetType, expectedType);
@@ -256,7 +262,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, TypeCastExpr 
     return expr;
 }
 
-function foldTypeTestExpr(FoldContext cx, t:SemType? expectedType, TypeTestExpr expr) returns Expr|err:Semantic {
+function foldTypeTestExpr(FoldContext cx, t:SemType? expectedType, TypeTestExpr expr) returns Expr|FoldError {
     Expr subExpr = check foldExpr(cx, (), expr.left);
     if subExpr is SimpleConstExpr {
         return foldedUnaryConstExpr(t:containsConst(expr.semType, subExpr.value), t:BOOLEAN, subExpr);
@@ -269,7 +275,18 @@ function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, 
     return { value, multiSemType: subExpr.multiSemType === () ? () : basicType };
 }
 
-function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, IntLiteralExpr expr) returns SimpleConstExpr|err:Semantic {
+function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, VarRefExpr expr) returns Expr|FoldError {
+    var constVal = check cx.lookupConst(expr.varName);
+    if constVal is () {
+        return expr;
+    }
+    else {
+        SimpleConstExpr constExpr = { value: constVal[0] };
+        return constExpr;
+    }
+}
+
+function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, IntLiteralExpr expr) returns SimpleConstExpr|FoldError {
     int|error result = intFromIntLiteral(expr.base, expr.digits);
     if result is int {
         return { value: result };
@@ -382,3 +399,4 @@ function booleanRelationalEval(BinaryRelationalOp op, boolean left, boolean righ
     }
     panic err:impossible();
 }
+

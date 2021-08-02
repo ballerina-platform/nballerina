@@ -673,6 +673,31 @@ function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns
     }
 }
 
+public function singleValue(SemType t) returns [string|int|boolean|()]? {
+    if t === NIL {
+        return [()];
+    }
+    else if t is UniformTypeBitSet {
+        return ();
+    }
+    else if isSubtypeSimple(t, INT) {
+        SubtypeData sd = t.getSubtypeData(UT_INT);
+        int? n = intSubtypeSingleValue(sd);
+        return n == () ? () : [n];
+    }
+    else if isSubtypeSimple(t, STRING) {
+        SubtypeData sd = t.getSubtypeData(UT_STRING);
+        string? s = stringSubtypeSingleValue(sd);
+        return s == () ? () : [s];
+    }
+    else if isSubtypeSimple(t, BOOLEAN) {
+        SubtypeData sd = t.getSubtypeData(UT_BOOLEAN);
+        boolean? b = booleanSubtypeSingleValue(sd);
+        return b == () ? () : [b];
+    }
+    return ();
+}
+
 public function singleton(string|int|boolean|() v) returns SemType {
     if v is () {
         return NIL;
