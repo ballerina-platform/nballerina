@@ -1,3 +1,5 @@
 /stringHash
 /stringCmp
 /stringConcat
+*.stamp
+
