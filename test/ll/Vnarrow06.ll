@@ -28,24 +28,23 @@ define internal i8 addrspace(1)* @_B_str(i8 addrspace(1)* %0) {
   %3 = alloca i8
   %4 = load i8*, i8** @_bal_stack_guard
   %5 = icmp ult i8* %3, %4
-  br i1 %5, label %15, label %6
+  br i1 %5, label %14, label %6
 6:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v
   %7 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   %8 = call i1 @_bal_eq(i8 addrspace(1)* %7, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112))
   store i1 %8, i1* %2
   %9 = load i1, i1* %2
-  br i1 %9, label %10, label %13
+  br i1 %9, label %10, label %12
 10:
   %11 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   store i8 addrspace(1)* %11, i8 addrspace(1)** %v.1
-  %12 = load i8 addrspace(1)*, i8 addrspace(1)** %v.1
-  ret i8 addrspace(1)* %12
-13:
-  %14 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  store i8 addrspace(1)* %14, i8 addrspace(1)** %v.2
+  ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112)
+12:
+  %13 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  store i8 addrspace(1)* %13, i8 addrspace(1)** %v.2
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901247)
-15:
+14:
   call void @_bal_panic(i64 1796)
   unreachable
 }
