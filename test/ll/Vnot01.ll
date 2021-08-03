@@ -18,16 +18,31 @@ define void @_B_main() {
 }
 define internal void @_B_printBoolean() {
   %1 = alloca i8 addrspace(1)*
-  %2 = alloca i8
-  %3 = load i8*, i8** @_bal_stack_guard
-  %4 = icmp ult i8* %2, %3
-  br i1 %4, label %7, label %5
-5:
-  %6 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  call void @_Bio__println(i8 addrspace(1)* %6)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %1
-  ret void
+  %b = alloca i1
+  %2 = alloca i1
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i8
+  %5 = load i8*, i8** @_bal_stack_guard
+  %6 = icmp ult i8* %4, %5
+  br i1 %6, label %15, label %7
 7:
-  call void @_bal_panic(i64 1796)
+  %8 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
+  call void @_Bio__println(i8 addrspace(1)* %8)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %1
+  store i1 0, i1* %b
+  %9 = load i1, i1* %b
+  %10 = xor i1 1, %9
+  store i1 %10, i1* %2
+  %11 = load i1, i1* %2
+  br i1 %11, label %12, label %14
+12:
+  %13 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)
+  call void @_Bio__println(i8 addrspace(1)* %13)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  br label %14
+14:
+  ret void
+15:
+  call void @_bal_panic(i64 2052)
   unreachable
 }

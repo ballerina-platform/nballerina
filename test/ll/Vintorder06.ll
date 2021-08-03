@@ -2,238 +2,108 @@
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 define void @_B_main() {
-  %1 = alloca i1
+  %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
-  %3 = alloca i1
-  %4 = alloca i8 addrspace(1)*
-  %5 = alloca i1
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i64
+  %5 = alloca i8 addrspace(1)*
   %6 = alloca i8 addrspace(1)*
-  %7 = alloca i1
+  %7 = alloca i64
   %8 = alloca i8 addrspace(1)*
-  %9 = alloca i1
-  %10 = alloca i8 addrspace(1)*
-  %11 = alloca i1
-  %12 = alloca i8 addrspace(1)*
-  %13 = alloca i1
-  %14 = alloca i8 addrspace(1)*
-  %15 = alloca i1
-  %16 = alloca i8 addrspace(1)*
-  %17 = alloca i1
-  %18 = alloca i8 addrspace(1)*
-  %19 = alloca i1
-  %20 = alloca i8 addrspace(1)*
-  %21 = alloca i1
-  %22 = alloca i8 addrspace(1)*
-  %23 = alloca i1
-  %24 = alloca i8 addrspace(1)*
-  %25 = alloca i1
-  %26 = alloca i8 addrspace(1)*
-  %27 = alloca i1
-  %28 = alloca i8 addrspace(1)*
-  %29 = alloca i1
-  %30 = alloca i8 addrspace(1)*
-  %31 = alloca i1
-  %32 = alloca i8 addrspace(1)*
-  %33 = alloca i1
-  %34 = alloca i8 addrspace(1)*
-  %35 = alloca i1
-  %36 = alloca i8 addrspace(1)*
-  %37 = alloca i1
-  %38 = alloca i8 addrspace(1)*
-  %39 = alloca i1
-  %40 = alloca i8 addrspace(1)*
-  %41 = alloca i1
-  %42 = alloca i8 addrspace(1)*
-  %43 = alloca i1
-  %44 = alloca i8 addrspace(1)*
-  %45 = alloca i1
-  %46 = alloca i8 addrspace(1)*
-  %47 = alloca i1
-  %48 = alloca i8 addrspace(1)*
-  %49 = alloca i1
-  %50 = alloca i8 addrspace(1)*
-  %51 = alloca i8
-  %52 = load i8*, i8** @_bal_stack_guard
-  %53 = icmp ult i8* %51, %52
-  br i1 %53, label %105, label %54
-54:
-  %55 = call i1 @_B_gt(i64 9223372036854775806, i64 9223372036854775806)
-  store i1 %55, i1* %1
-  %56 = load i1, i1* %1
-  call void @_B_printBoolean(i1 %56)
+  %9 = alloca i8
+  %10 = load i8*, i8** @_bal_stack_guard
+  %11 = icmp ult i8* %9, %10
+  br i1 %11, label %23, label %12
+12:
+  %13 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)
+  call void @_Bio__println(i8 addrspace(1)* %13)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %1
+  %14 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)
+  call void @_Bio__println(i8 addrspace(1)* %14)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %57 = call i1 @_B_gt(i64 9223372036854775806, i64 1)
-  store i1 %57, i1* %3
-  %58 = load i1, i1* %3
-  call void @_B_printBoolean(i1 %58)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  %59 = call i1 @_B_gt(i64 9223372036854775806, i64 0)
-  store i1 %59, i1* %5
-  %60 = load i1, i1* %5
-  call void @_B_printBoolean(i1 %60)
+  %15 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 12)
+  call void @_Bio__println(i8 addrspace(1)* %15)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  %16 = call i64 @_B_add(i64 3, i64 5, i64 -5, i64 9)
+  store i64 %16, i64* %4
+  %17 = load i64, i64* %4
+  %18 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %17)
+  call void @_Bio__println(i8 addrspace(1)* %18)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %5
+  %19 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 3)
+  call void @_Bio__println(i8 addrspace(1)* %19)
   store i8 addrspace(1)* null, i8 addrspace(1)** %6
-  %61 = call i1 @_B_gt(i64 9223372036854775806, i64 -1)
-  store i1 %61, i1* %7
-  %62 = load i1, i1* %7
-  call void @_B_printBoolean(i1 %62)
+  %20 = call i64 @_B_add(i64 3, i64 -5, i64 9, i64 -4)
+  store i64 %20, i64* %7
+  %21 = load i64, i64* %7
+  %22 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %21)
+  call void @_Bio__println(i8 addrspace(1)* %22)
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
-  %63 = call i1 @_B_gt(i64 9223372036854775806, i64 -9223372036854775806)
-  store i1 %63, i1* %9
-  %64 = load i1, i1* %9
-  call void @_B_printBoolean(i1 %64)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %10
-  %65 = call i1 @_B_gt(i64 1, i64 9223372036854775806)
-  store i1 %65, i1* %11
-  %66 = load i1, i1* %11
-  call void @_B_printBoolean(i1 %66)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %12
-  %67 = call i1 @_B_gt(i64 1, i64 1)
-  store i1 %67, i1* %13
-  %68 = load i1, i1* %13
-  call void @_B_printBoolean(i1 %68)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %14
-  %69 = call i1 @_B_gt(i64 1, i64 0)
-  store i1 %69, i1* %15
-  %70 = load i1, i1* %15
-  call void @_B_printBoolean(i1 %70)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %16
-  %71 = call i1 @_B_gt(i64 1, i64 -1)
-  store i1 %71, i1* %17
-  %72 = load i1, i1* %17
-  call void @_B_printBoolean(i1 %72)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %18
-  %73 = call i1 @_B_gt(i64 1, i64 -9223372036854775806)
-  store i1 %73, i1* %19
-  %74 = load i1, i1* %19
-  call void @_B_printBoolean(i1 %74)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %20
-  %75 = call i1 @_B_gt(i64 0, i64 9223372036854775806)
-  store i1 %75, i1* %21
-  %76 = load i1, i1* %21
-  call void @_B_printBoolean(i1 %76)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %22
-  %77 = call i1 @_B_gt(i64 0, i64 1)
-  store i1 %77, i1* %23
-  %78 = load i1, i1* %23
-  call void @_B_printBoolean(i1 %78)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %24
-  %79 = call i1 @_B_gt(i64 0, i64 0)
-  store i1 %79, i1* %25
-  %80 = load i1, i1* %25
-  call void @_B_printBoolean(i1 %80)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %26
-  %81 = call i1 @_B_gt(i64 0, i64 -1)
-  store i1 %81, i1* %27
-  %82 = load i1, i1* %27
-  call void @_B_printBoolean(i1 %82)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %28
-  %83 = call i1 @_B_gt(i64 0, i64 -9223372036854775806)
-  store i1 %83, i1* %29
-  %84 = load i1, i1* %29
-  call void @_B_printBoolean(i1 %84)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %30
-  %85 = call i1 @_B_gt(i64 -1, i64 9223372036854775806)
-  store i1 %85, i1* %31
-  %86 = load i1, i1* %31
-  call void @_B_printBoolean(i1 %86)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %32
-  %87 = call i1 @_B_gt(i64 -1, i64 1)
-  store i1 %87, i1* %33
-  %88 = load i1, i1* %33
-  call void @_B_printBoolean(i1 %88)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %34
-  %89 = call i1 @_B_gt(i64 -1, i64 0)
-  store i1 %89, i1* %35
-  %90 = load i1, i1* %35
-  call void @_B_printBoolean(i1 %90)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %36
-  %91 = call i1 @_B_gt(i64 -1, i64 -1)
-  store i1 %91, i1* %37
-  %92 = load i1, i1* %37
-  call void @_B_printBoolean(i1 %92)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %38
-  %93 = call i1 @_B_gt(i64 -1, i64 -9223372036854775806)
-  store i1 %93, i1* %39
-  %94 = load i1, i1* %39
-  call void @_B_printBoolean(i1 %94)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %40
-  %95 = call i1 @_B_gt(i64 -9223372036854775806, i64 9223372036854775806)
-  store i1 %95, i1* %41
-  %96 = load i1, i1* %41
-  call void @_B_printBoolean(i1 %96)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %42
-  %97 = call i1 @_B_gt(i64 -9223372036854775806, i64 1)
-  store i1 %97, i1* %43
-  %98 = load i1, i1* %43
-  call void @_B_printBoolean(i1 %98)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %44
-  %99 = call i1 @_B_gt(i64 -9223372036854775806, i64 0)
-  store i1 %99, i1* %45
-  %100 = load i1, i1* %45
-  call void @_B_printBoolean(i1 %100)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %46
-  %101 = call i1 @_B_gt(i64 -9223372036854775806, i64 -1)
-  store i1 %101, i1* %47
-  %102 = load i1, i1* %47
-  call void @_B_printBoolean(i1 %102)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %48
-  %103 = call i1 @_B_gt(i64 -9223372036854775806, i64 -9223372036854775806)
-  store i1 %103, i1* %49
-  %104 = load i1, i1* %49
-  call void @_B_printBoolean(i1 %104)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %50
   ret void
-105:
+23:
   call void @_bal_panic(i64 772)
   unreachable
 }
-define internal i1 @_B_gt(i64 %0, i64 %1) {
+define internal i64 @_B_add(i64 %0, i64 %1, i64 %2, i64 %3) {
   %a = alloca i64
   %b = alloca i64
-  %3 = alloca i1
-  %4 = alloca i8
-  %5 = load i8*, i8** @_bal_stack_guard
-  %6 = icmp ult i8* %4, %5
-  br i1 %6, label %12, label %7
-7:
+  %c = alloca i64
+  %d = alloca i64
+  %5 = alloca i64
+  %6 = alloca i64
+  %7 = alloca i64
+  %8 = alloca i64
+  %9 = alloca i8
+  %10 = load i8*, i8** @_bal_stack_guard
+  %11 = icmp ult i8* %9, %10
+  br i1 %11, label %19, label %12
+12:
   store i64 %0, i64* %a
   store i64 %1, i64* %b
-  %8 = load i64, i64* %a
-  %9 = load i64, i64* %b
-  %10 = icmp sgt i64 %8, %9
-  store i1 %10, i1* %3
-  %11 = load i1, i1* %3
-  ret i1 %11
-12:
-  call void @_bal_panic(i64 8964)
+  store i64 %2, i64* %c
+  store i64 %3, i64* %d
+  %13 = load i64, i64* %a
+  %14 = load i64, i64* %b
+  %15 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %13, i64 %14)
+  %16 = extractvalue {i64, i1} %15, 1
+  br i1 %16, label %26, label %20
+17:
+  %18 = load i64, i64* %8
+  call void @_bal_panic(i64 %18)
   unreachable
-}
-define internal void @_B_printBoolean(i1 %0) {
-  %b = alloca i1
-  %2 = alloca i8 addrspace(1)*
-  %3 = alloca i8 addrspace(1)*
-  %4 = alloca i8
-  %5 = load i8*, i8** @_bal_stack_guard
-  %6 = icmp ult i8* %4, %5
-  br i1 %6, label %14, label %7
-7:
-  store i1 %0, i1* %b
-  %8 = load i1, i1* %b
-  br i1 %8, label %9, label %11
-9:
-  %10 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  call void @_Bio__println(i8 addrspace(1)* %10)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  br label %13
-11:
-  %12 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
-  call void @_Bio__println(i8 addrspace(1)* %12)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3
-  br label %13
-13:
-  ret void
-14:
-  call void @_bal_panic(i64 9988)
+19:
+  call void @_bal_panic(i64 3076)
   unreachable
+20:
+  %21 = extractvalue {i64, i1} %15, 0
+  store i64 %21, i64* %5
+  %22 = load i64, i64* %5
+  %23 = load i64, i64* %c
+  %24 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %22, i64 %23)
+  %25 = extractvalue {i64, i1} %24, 1
+  br i1 %25, label %33, label %27
+26:
+  store i64 3329, i64* %8
+  br label %17
+27:
+  %28 = extractvalue {i64, i1} %24, 0
+  store i64 %28, i64* %6
+  %29 = load i64, i64* %6
+  %30 = load i64, i64* %d
+  %31 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %29, i64 %30)
+  %32 = extractvalue {i64, i1} %31, 1
+  br i1 %32, label %37, label %34
+33:
+  store i64 3329, i64* %8
+  br label %17
+34:
+  %35 = extractvalue {i64, i1} %31, 0
+  store i64 %35, i64* %7
+  %36 = load i64, i64* %7
+  ret i64 %36
+37:
+  store i64 3329, i64* %8
+  br label %17
 }
