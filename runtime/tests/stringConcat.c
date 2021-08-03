@@ -29,7 +29,7 @@ void testStringConcat() {
     TaggedPtr *strs = malloc(sizeof(TaggedPtr) * totalStrs);
     int i;
     for (i = 0; i < NTESTS; i++) {
-        strs[i] = randAsciiString(rand() & 0xFFFFF);
+        strs[i] = randAsciiString(rand() & 0xFFFF);
     }
     for (i = 0; i < handPickedCount; i++) {
         strs[NTESTS + i] = randAsciiString(handPickedLargeLen[i]);
