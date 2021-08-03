@@ -7,9 +7,12 @@ const DECIMAL_NUMBER = 1;
 const STRING_LITERAL = 2;
 const BOOLEAN_LITERAL = 3;
 const HEX_INT_LITERAL = 4;
+const DECIMAL_FP_NUMBER = 5;
+
+type FpTypeSuffix "f";
 
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
-type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string];
+type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string]|[DECIMAL_FP_NUMBER, string, FpTypeSuffix?];
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=" | "." | "~";
@@ -99,7 +102,7 @@ class Tokenizer {
     private final string str;
 
     private final StringIterator iter;
-    private Char? ungot = ();
+    private Char[] ungot = [];
     // Number of characters returned by `iter`
     private int nextCount = 0;
     private Mode mode = MODE_NORMAL;
@@ -196,6 +199,9 @@ class Tokenizer {
                 }
                 else if !(ch is ()) {
                     self.ungetc(ch);
+                    if DIGIT.includes(ch) {
+                        return self.nextDecimalFpNumber("");
+                    }
                 }
                 return ".";
             }
@@ -247,7 +253,16 @@ class Tokenizer {
                     }
                 }
                 else if !(ch is ()) {
-                    if DIGIT.includes(ch) {
+                    if ch == "." {
+                        return self.nextDecimalFpNumber("0");
+                    }
+                    else if ch == "e" || ch == "E" {
+                        return self.nextDecimalExpFPNumber("0", ch);
+                    }
+                    else if ch == "f" || ch == "F" {
+                        return [DECIMAL_FP_NUMBER, "0", "f"];
+                    }
+                    else if DIGIT.includes(ch) {
                         return self.err("leading zeros not allowed in integer literals");
                     }
                     else {
@@ -262,6 +277,15 @@ class Tokenizer {
                     ch = self.getc();
                     if ch is () {
                         break;
+                    }
+                    else if ch == "." {
+                        return self.nextDecimalFpNumber(digits);
+                    }
+                    else if ch == "e" || ch == "E" {
+                        return self.nextDecimalExpFPNumber(digits, ch);
+                    }
+                    else if ch == "f" || ch == "F" {
+                        return [DECIMAL_FP_NUMBER, digits, "f"];
                     }
                     else if !DIGIT.includes(ch) {
                         self.ungetc(ch);
@@ -281,6 +305,92 @@ class Tokenizer {
             }
         }
         return self.err("invalid token");
+    }
+
+    private function nextDecimalFpNumber(string preDot) returns Token|err:Syntax {
+        string digits = preDot + ".";
+        Char? ch = self.getc();
+        if ch is () { 
+            self.ungetc(".");
+            return [DECIMAL_NUMBER, preDot];
+        }
+        else if !DIGIT.includes(ch) {
+            self.ungetc(ch, ".");
+            return [DECIMAL_NUMBER, preDot];
+        } else {
+            digits += ch;
+        }
+
+        while true {
+            ch = self.getc();
+            if ch is () {
+                break;
+            }
+            else if DIGIT.includes(ch) {
+                digits += ch;
+            }
+            else if ch == "e" || ch == "E" {
+                return self.nextDecimalExpFPNumber(digits, ch);
+            }
+            else if ch == "f" || ch == "F" {
+                return [DECIMAL_FP_NUMBER, digits, "f"];
+            }
+            else {
+                self.ungetc(ch);
+                break;
+            }
+        }
+        return [DECIMAL_FP_NUMBER, digits];
+    }
+
+    private function nextDecimalExpFPNumber(string preExp, Char e) returns Token|err:Syntax {
+        Char? ch = self.getc();
+        string digits;
+        if ch == "-" {
+            digits = ch;
+            ch = self.getc();
+            if ch == () {
+                self.ungetc("-", e);
+                return [DECIMAL_FP_NUMBER, preExp];
+            }
+            else if !DIGIT.includes(ch) {
+                self.ungetc(ch, "-", e);
+                return [DECIMAL_FP_NUMBER, preExp];
+            } else {
+                digits += ch;
+            }
+        }
+        else {
+            if ch == () {
+                self.ungetc(e);
+                return [DECIMAL_FP_NUMBER, preExp];
+            }
+            else if !DIGIT.includes(ch) {
+                self.ungetc(ch, e);
+                return [DECIMAL_FP_NUMBER, preExp];
+            } else {
+                digits = ch;
+            }
+        }
+
+        while true {
+            ch = self.getc();
+            if ch is () {
+                break;
+            }
+            else if DIGIT.includes(ch) {
+                digits += ch;
+            }
+            else if ch == "f" || ch == "F" {
+                return [DECIMAL_FP_NUMBER, preExp + e + digits, "f"];
+            }
+            else {
+                self.ungetc(ch);
+                break;
+            }
+        }
+
+        return [DECIMAL_FP_NUMBER, preExp + e + digits];
     }
 
     private function nextSingleCharDelimPrefixed(SingleCharDelim ch) returns Token?|err:Syntax {
@@ -441,28 +551,20 @@ class Tokenizer {
 
     // number of characters returned by getc and not ungot
     private function getCount() returns int {
-        return self.ungot is Char ? self.nextCount - 1 : self.nextCount;
+        return self.nextCount - self.ungot.length();
     }
 
     private function getc() returns Char? {
-        Char? ch = self.ungot;
-        if ch is () {
+        if self.ungot.length() == 0 {
             return self.nextc();
         }
         else {
-            self.ungot = ();
-            return ch;
+            return self.ungot.pop();
         }
     }
 
-    private function ungetc(Char ch) {
-        // we could support arbitrary numbers of unget, by allowing
-        // the ungot string to be longer than 1
-        // but we don't need it (yet)
-        if self.ungot != () {
-            panic error("double ungetc");
-        }
-        self.ungot = ch;
+    private function ungetc(Char... ch) {
+        self.ungot.push(...ch);
     }
 
     private function nextc() returns string? {
