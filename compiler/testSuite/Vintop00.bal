@@ -13,4 +13,15 @@ public function main() {
   io:println(16 / 8 % 6); // @output 2
   io:println( 4 + -3); // @output 1
   io:println(-3 + 4); // @output 1
+
+  int i = 12;
+  int j = 6;
+  int k = 3;
+  int l = 4;
+  io:println(i + j / k); // @output 14
+  io:println(j / k + i); // @output 14
+  io:println(j * k - i); // @output 6
+  io:println(i - j * k ); // @output -6
+  io:println(l % k + j); // @output 7
+  io:println(j % l % k); // @output 2
 }
