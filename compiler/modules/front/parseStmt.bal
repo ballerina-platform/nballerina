@@ -165,7 +165,7 @@ function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDec
 function parseReturnStmt(Tokenizer tok) returns ReturnStmt|err:Syntax {
     Expr returnExpr;
     if tok.current() == ";" {
-        returnExpr = { value: () }; // SimpleConstExpr
+        returnExpr = { value: () }; // ConstValueExpr
         check tok.advance();
     }
     else {

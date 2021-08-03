@@ -76,7 +76,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
     else if stmt is ReturnStmt {
         w.push("return");
         Expr ret = stmt.returnExpr;
-        if !(ret is SimpleConstExpr) || ret.value != () {
+        if !(ret is ConstValueExpr) || ret.value != () {
             exprToWords(w, stmt.returnExpr);
         }
         w.push(";");
@@ -182,7 +182,7 @@ function exprsToWords(Word[] w, Expr[] exprs) {
 }
 
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
-    if expr is SimpleConstExpr {
+    if expr is ConstValueExpr {
         var val = expr.value;
         if val == () {
             w.push("(", ")");

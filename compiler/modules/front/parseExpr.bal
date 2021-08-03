@@ -227,7 +227,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         return expr;
     }
     else if t is [STRING_LITERAL, string] {
-        SimpleConstExpr expr = { value: t[1] };
+        ConstValueExpr expr = { value: t[1] };
         check tok.advance();
         return expr;
     }
@@ -235,7 +235,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         if tok.current() == ")" {
             check tok.advance();
-            SimpleConstExpr expr = { value: () };
+            ConstValueExpr expr = { value: () };
             return expr;
         }
         Expr expr = check parseInnerExpr(tok);
@@ -244,12 +244,12 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     }
     else if t is "true"|"false" {
         check tok.advance();
-        SimpleConstExpr expr = { value: t == "true" };
+        ConstValueExpr expr = { value: t == "true" };
         return expr;
     }
     else if t is "null" {
         check tok.advance();
-        SimpleConstExpr expr = { value: () };
+        ConstValueExpr expr = { value: () };
         return expr;
     }
     else {

@@ -39,7 +39,7 @@ type ConstDefn record {|
 
 type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
 type CallStmt FunctionCallExpr|MethodCallExpr;
-type Expr IntLiteralExpr|SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
+type Expr IntLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 
 type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
 
@@ -196,12 +196,12 @@ type TypeCastExpr record {|
 
 type TypeTestExpr record {|
     InlineTypeDesc td;
-    // Use `left` here so this is distinguishable from TypeCastExpr and SimpleConstExpr
+    // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
     t:SemType semType;
 |};
 
-type SimpleConstExpr record {|
+type ConstValueExpr record {|
     ()|boolean|int|string value;
     // This is non-nil when the static type of the expression
     // contains more than one shape.

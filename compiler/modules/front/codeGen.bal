@@ -782,7 +782,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
         }
         // Constant
         // JBUG does not work as match pattern `var { value, multiSemType }`
-        var simpleConstExpr if simpleConstExpr is SimpleConstExpr => {
+        var simpleConstExpr if simpleConstExpr is ConstValueExpr => {
             t:SemType? multiSemType = simpleConstExpr.multiSemType;
             SimpleConst value = simpleConstExpr.value;
             if multiSemType is () {

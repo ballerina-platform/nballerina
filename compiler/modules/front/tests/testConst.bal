@@ -22,7 +22,7 @@ function testConstExpr(string src, SimpleConst expected) {
     Expr parsed = checkpanic parseExpr(tok);
     TestFoldContext cx = new;
     var result = foldExpr(cx, (), parsed);
-    test:assertTrue(result is SimpleConstExpr && result.value == expected, "got: " + (result is SimpleConstExpr ? result.value.toString()  : "not constant"));
+    test:assertTrue(result is ConstValueExpr && result.value == expected, "got: " + (result is ConstValueExpr ? result.value.toString()  : "not constant"));
 }
 
 function validConstExprs() returns map<ConstEvalTest> {
