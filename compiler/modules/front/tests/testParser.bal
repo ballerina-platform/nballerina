@@ -411,7 +411,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "false.length()", "false.length()"],
          ["V", "expr", "-1.hexStr()", "-(1.hexStr())"],
          ["V", "expr", "-0xf.max()", "-(0xF.max())"],
-         // XXX Output  will need to change when we do floats/decimal, because "42." is a float literal
+         // XXX Output is illegal in 2021R1 but will be addressed in ballerina-spec#905
          ["V", "expr", "42 .length()", "42.length()"],
          ["V", "expr", "x.foo().bar()", "(x.foo()).bar()"],
          ["V", "expr", "x.foo()[n].bar()", "((x.foo())[n]).bar()"],
