@@ -1,12 +1,4 @@
-#include "../balrt.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include "../hash.h"
-
-#define NRANDOM 2
-#define NTESTS 2*1024
+#include "testUtils.h"
 
 static uint64_t handPickedLargeLen[] = {
     0xFFFFF - 4,
@@ -21,10 +13,6 @@ static uint64_t handPickedLargeLen[] = {
 
 // handPickedCount should be devisable by 3 for the associative test to work
 static int handPickedCount = sizeof(handPickedLargeLen) / sizeof(handPickedLargeLen[0]);
-
-static int min(int n1, int n2) {
-    return (n1 > n2 ) ? n2 : n1;
-}
 
 static TaggedPtr randAsciiString(int nBytes) {
     TaggedPtr tp;
@@ -76,10 +64,6 @@ static int64_t stringCmpRef(TaggedPtr tp1, TaggedPtr tp2) {
         return result;
     }
     return len1.nBytes - len2.nBytes;
-}
-
-static int sign(int64_t n) {
-    return n == 0 ? 0 : (n < 0 ? -1 : 1);
 }
 
 static void checkStringCmp(TaggedPtr tp1, TaggedPtr tp2, int expect) {
