@@ -53,17 +53,13 @@ void testTaggedToInt() {
     int64_t** addrs = malloc(sizeof(int64_t*) * NTESTS); 
     for(int64_t i=0; i <= NTESTS; i ++) {
         int64_t* val = malloc(sizeof(int64_t));
-        *val = rand();
-        //? taggedToInt doesn't deference address there for must store the value instead of address in pointer
-        // uint64_t addr = (uint64_t) val;
-        // addr |= FLAG_INT_ON_HEAP << TAG_SHIFT;
-        // TaggedPtr ptr = bitsToTaggedPtr(addr);
-        // uint64_t prtVal = taggedToInt(ptr); //? return the address
-
-        uint64_t bits = *val | ((uint64_t)FLAG_INT_ON_HEAP << TAG_SHIFT);
-        TaggedPtr ptr = bitsToTaggedPtr(bits);
+	int expectedValue = rand();
+        *val = expectedValue;
+        uint64_t addr = (uint64_t) val;
+        addr = addr | ((uint64_t)FLAG_INT_ON_HEAP << TAG_SHIFT);
+        TaggedPtr ptr = bitsToTaggedPtr(addr);
         uint64_t ptrVal = taggedToInt(ptr);
-        assert(ptrVal == *val);
+        assert(ptrVal == expectedValue);
         //to prevent reusing same address for each test delay deallocation
         addrs[i] = val;
     }
@@ -79,6 +75,6 @@ int main() {
     testGetTag();
     testTaggedToBoolean();
     testAddFlags();
-//     testTaggedToInt();
+    testTaggedToInt();
     return 0;
 }
