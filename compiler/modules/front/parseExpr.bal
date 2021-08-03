@@ -363,10 +363,10 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
     return err:syntax("expected field name");
 }
 
-// This is for parsing the rhs of const definitions
-// It will do away when const definitions are implemented properly
-function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
-    check tok.expect("=");
+// This is simple-const-expr in the spec
+// We will use this for match patterns
+// XXX add boolean and string
+function parseSimpleConstExpr(Tokenizer tok) returns SimpleConst|err:Syntax {
     string sign = "";
     if tok.current() == "-" {
         check tok.advance();
@@ -374,12 +374,10 @@ function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
     }
     match tok.current() {
         [DECIMAL_NUMBER, var digits] => {
-            SingletonTypeDesc td = { value: check parseDigits(tok, sign + digits) };
-            return td;
+            return check parseDigits(tok, sign + digits);
         }
         [HEX_INT_LITERAL, var digits] => {
-            SingletonTypeDesc td = { value: check parseHexDigits(tok, sign + digits) };
-            return td;
+            return check parseHexDigits(tok, sign + digits);
         }
         // JBUG this gets a bad sad #30738
         // NullPointerException in BIROptimizer$RHSTempVarOptimizer.visit

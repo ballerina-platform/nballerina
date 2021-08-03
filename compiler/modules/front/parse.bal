@@ -54,7 +54,7 @@ function parseModuleDecl(Tokenizer tok) returns ModuleLevelDefn|err:Syntax {
             return parseTypeDefinition(tok, vis);
         }
         "const" => {
-            return parseConstDeclaration(tok, vis);
+            return parseConstDefinition(tok, vis);
         }
         "function" => {
             return parseFunctionDefinition(tok, vis);
@@ -77,16 +77,17 @@ function parseTypeDefinition(Tokenizer tok, Visibility vis) returns TypeDefn|err
     return parseError(tok);
 }
 
-function parseConstDeclaration(Tokenizer tok, Visibility vis) returns TypeDefn|err:Syntax {
+function parseConstDefinition(Tokenizer tok, Visibility vis) returns ConstDefn|err:Syntax {
     check tok.advance();
     err:Position pos = tok.currentPos();
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
         string name = t[1];
         check tok.advance();
-        TypeDesc td = check parseConstExpr(tok);
+        check tok.expect("=");
+        Expr expr = check parseInnerExpr(tok);
         check tok.expect(";");
-        return { name, td, pos, vis };
+        return { name, expr, pos, vis };
     }
     return parseError(tok);
 }

@@ -9,7 +9,57 @@ type FoldError err:Semantic|err:Unimplemented;
 type FoldContext object {
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic;
     function lookupConst(string varName) returns t:Value?|FoldError;
- };
+};
+
+class ConstFoldContext {
+    final string defnName;
+    final ModuleTable mod;
+    function init(string defnName, ModuleTable mod) {
+        self.defnName = defnName;
+        self.mod = mod;
+    }
+    
+    function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, pos=pos, cause=cause, functionName=self.defnName);
+    }
+
+    function lookupConst(string varName) returns t:Value?|FoldError {
+        ModuleLevelDefn? defn = self.mod[varName];
+        if defn is ConstDefn {
+            var resolved = check resolveConstDefn(self.mod, defn);
+            return resolved[1];
+        }
+        else if defn is () {
+            return self.semanticErr(`${varName} is not defined`);
+        }
+        else {
+            return self.semanticErr(`reference to non-const ${varName}`);
+        }
+    }
+}
+
+function resolveConstDefn(ModuleTable mod, ConstDefn defn) returns ResolvedConst|FoldError {
+    var resolved = defn.resolved;
+    if resolved is false {
+        return err:semantic(`cycle in evaluating ${defn.name}`, defn.pos);
+    }
+    else if !(resolved is ()) {
+        return resolved;
+    }
+    else {
+        defn.resolved = false;
+        ConstFoldContext cx = new ConstFoldContext(defn.name, mod);
+        Expr expr = check foldExpr(cx, (), defn.expr);
+        if expr is SimpleConstExpr {
+            ResolvedConst r = [t:singleton(expr.value), { value: expr.value }];
+            defn.resolved = r;
+            return r;
+        }
+        else {
+            return err:semantic(`initializer of ${defn.name} is not constant`, defn.pos);
+        }
+    }
+}
 
 function foldExpr(FoldContext cx, t:SemType? expectedType, Expr expr) returns Expr|FoldError {
     if expr is BinaryArithmeticExpr {

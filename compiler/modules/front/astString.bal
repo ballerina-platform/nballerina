@@ -1,6 +1,5 @@
 import wso2/nballerina.err;
 
-
 // join words without space
 const CLING = ();
 // line feed
@@ -21,6 +20,9 @@ function modulePartToWords(Word[] w, ModulePart mod) {
         if defn is FunctionDefn {
             functionDefnToWords(w, defn);
         }
+        else if defn is ConstDefn {
+            constDefnToWords(w, defn);
+        }
         else {
             // XXX type defns are not part of the current subset
         }
@@ -34,7 +36,7 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
     w.push("function");
     w.push(func.name, CLING, "(");
     boolean firstArg = true;
-    foreach int i in 0..<func.typeDesc.args.length() {
+    foreach int i in 0 ..< func.typeDesc.args.length() {
         if i != 0 {
             w.push(",");
         }
@@ -48,6 +50,17 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
         typeDescToWords(w, func.typeDesc.ret);
     }
     blockToWords(w, func.body);
+}
+
+function constDefnToWords(Word[] w, ConstDefn defn) {
+    if defn.vis != () {
+        w.push(<Word>defn.vis);
+    }
+    w.push("const", defn.name, "=");
+    exprToWords(w, defn.expr);
+    w.push(";");
+    // JBUG cast
+    w.push(<Word>LF);
 }
 
 function stmtToWords(Word[] w, Stmt stmt) {
@@ -119,7 +132,7 @@ function blockToWords(Word[] w, Stmt[] body) {
         firstInBlock = false;
         stmtToWords(w, stmt);
     }
-    w.push(<Word>(firstInBlock ? LF :LF_OUTDENT), "}");
+    w.push(<Word>(firstInBlock ? LF : LF_OUTDENT), "}");
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean wrap = false) {

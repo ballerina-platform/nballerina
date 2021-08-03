@@ -116,6 +116,10 @@ class CodeGenContext {
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
         return err:semantic(msg, pos=pos, cause=cause, functionName=self.functionName);
     }
+
+     function unimplementedErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Unimplemented {
+        return err:unimplemented(msg, pos=pos, cause=cause, functionName=self.functionName);
+    }
     
     function pushLoopContext(bir:BasicBlock onBreak, bir:BasicBlock? onContinue) {
         LoopContext c = { onBreak, onContinue, enclosing: self.loopContext, startRegister: self.nextRegisterNumber()  };
@@ -185,7 +189,7 @@ class CodeGenContext {
         return  (<LoopContext>self.loopContext).onContinueAssignments;
     }
 
-    function foldExpr(Environment env, Expr expr, t:SemType? expectedType) returns Expr|CodeGenError {
+    function foldExpr(Environment env, Expr expr, t:SemType? expectedType) returns Expr|FoldError {
         return foldExpr(new CodeGenFoldContext(self, env), expectedType, expr);
     }
 
@@ -200,9 +204,14 @@ class CodeGenFoldContext {
         self.env = env;
     }
 
-    function lookupConst(string varName) returns t:Value?|CodeGenError {
-        Binding binding = check lookupVarRef(self.cx, varName, self.env);
-        return t:singleShape(binding.reg.semType);
+    function lookupConst(string varName) returns t:Value?|FoldError {
+        t:Value|Binding v = check lookupVarRef(self.cx, varName, self.env);
+        if v is Binding {
+            return t:singleShape(v.reg.semType);
+        }
+        else {
+            return v;
+        }
     }
 
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
@@ -565,7 +574,7 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 }
 
 function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, Expr expr) returns CodeGenError|StmtEffect {
-    Binding binding = check lookupVarRef(cx, varName, env);
+    Binding binding = check lookupVarRefBinding(cx, varName, env);
     if binding.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`);
     }
@@ -592,7 +601,7 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
 }
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, MemberAccessLExpr lValue, Expr expr) returns CodeGenError|StmtEffect {
-    bir:Register reg = (check lookupVarRef(cx, lValue.container.varName, env)).reg;
+    bir:Register reg = (check lookupVarRefBinding(cx, lValue.container.varName, env)).reg;
     Expr foldedIndexExpr = check cx.foldExpr(env, lValue.index, t:union(t:INT, t:STRING));
     var { result: index, block: nextBlock } = check codeGenExpr(cx, startBlock, env, foldedIndexExpr);
     Expr foldedExpr = check cx.foldExpr(env, expr, t:ANY); // XXX need to change when we have typed arrays
@@ -758,8 +767,18 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Expr
         }
         // Variable reference
         var { varName } => {
-            Binding binding = check lookupVarRef(cx, varName, env);
-            return { result: binding.reg, block: bb, binding };
+            var v = check lookupVarRef(cx, varName, env);
+            bir:Operand result;
+            Binding? binding;
+            if v is t:Value {
+                result = v.value;
+                binding = ();
+            }
+            else {
+                result = v.reg;
+                binding = v;
+            }
+            return { result, block: bb, binding };
         }
         // Constant
         // JBUG does not work as match pattern `var { value, multiSemType }`
@@ -1052,12 +1071,38 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
     return err:unimplemented(`cannot resolve ${methodName} to lang lib function`);
 }
 
-function lookupVarRef(CodeGenContext cx, string name, Environment env) returns Binding|CodeGenError {
-    Binding? binding = lookup(name, env);
-    if binding is () {
-        return cx.semanticErr(`variable ${name} not found`);
+function lookupVarRefBinding(CodeGenContext cx, string name, Environment env) returns Binding|CodeGenError {
+    var b = check lookupVarRef(cx, name, env);
+    if b is Binding {
+        return b;
     }
     else {
+        return cx.semanticErr(`cannot refer to a const definition in an lvalue`);
+    }
+}
+
+function lookupVarRef(CodeGenContext cx, string name, Environment env) returns t:Value|Binding|CodeGenError {
+    Binding? binding = lookupLocalVarRef(cx, name, env);
+    if binding is () {
+        ModuleLevelDefn? defn = cx.mod.defns[name];
+        if defn is () {
+            return cx.semanticErr(`variable ${name} not defined`);
+        }
+        else if defn is ConstDefn {
+            return (<ResolvedConst>defn.resolved)[1];
+        }
+        else {
+            return cx.unimplementedErr(`values of function type not yet implemented`);
+        }
+    }
+    else {
+        return binding;
+    }
+}
+
+function lookupLocalVarRef(CodeGenContext cx, string name, Environment env) returns Binding? {
+    Binding? binding = lookup(name, env);
+    if !(binding is ()) {
         Binding? unnarrowed = binding.unnarrowed;
         if !(unnarrowed is ()) {
             // This is a narrowed binding
@@ -1067,8 +1112,8 @@ function lookupVarRef(CodeGenContext cx, string name, Environment env) returns B
                 return unnarrowed;
             }
         }
-        return binding;
     }
+    return binding;
 }
 
 function lookup(string name, Environment env) returns Binding? {

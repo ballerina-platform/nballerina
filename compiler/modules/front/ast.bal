@@ -8,7 +8,7 @@ type ModulePart record {|
     ModuleLevelDefn[] defns;
 |};
 
-type ModuleLevelDefn TypeDefn|FunctionDefn;
+type ModuleLevelDefn FunctionDefn|ConstDefn|TypeDefn;
 
 type Visibility "public"?;
 
@@ -26,6 +26,15 @@ type FunctionDefn record {|
     err:Position pos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
+|};
+
+type ResolvedConst readonly & [t:SemType, t:Value];
+type ConstDefn record {|
+    readonly string name;
+    Visibility vis;
+    Expr expr;
+    err:Position pos;
+    ResolvedConst|false? resolved = ();    
 |};
 
 type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;

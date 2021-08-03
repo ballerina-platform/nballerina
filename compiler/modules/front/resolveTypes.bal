@@ -5,15 +5,17 @@ import wso2/nballerina.err;
 function createTypeMap(ModuleTable mod) returns map<t:SemType> {
     map<t:SemType> defns = {};
     foreach var defn in mod {
+        t:SemType t;
         if defn is TypeDefn {
-            t:SemType? s = defn.semType;
-            if s is () {
-                panic error("nil semtype");
-            }
-            else {
-                defns[defn.name] = s;
-            }
-        }       
+            t = <t:SemType>defn.semType;
+        }
+        else if defn is ConstDefn {
+            t = (<ResolvedConst>defn.resolved)[0];
+        }
+        else {
+            continue;
+        }
+        defns[defn.name] = t;
     }
     return defns;
 }
@@ -22,6 +24,9 @@ function resolveTypes(t:Env env, ModuleTable mod) returns err:Semantic|err:Unimp
     foreach var defn in mod {
         if defn is TypeDefn {
             _ = check resolveTypeDefn(env, mod, 0, defn);
+        }
+        else if defn is ConstDefn {
+            _ = check resolveConstDefn(mod, defn);
         }
         else {
             // it's a FunctionDefn
@@ -56,7 +61,7 @@ function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, TypeDesc td, err:Posi
     return err:unimplemented("unimplemented type descriptor", pos=pos);
 }
 
-function resolveTypeDefn(t:Env env, ModuleTable mod, int depth, TypeDefn defn) returns t:SemType|err:Semantic {
+function resolveTypeDefn(t:Env env, ModuleTable mod, int depth, TypeDefn defn) returns t:SemType|err:Semantic|err:Unimplemented {
     t:SemType? t = defn.semType;
     if t is () {
         if depth == defn.cycleDepth {
@@ -98,7 +103,7 @@ function resolveInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
     panic err:impossible("unreachable in resolveInlineTypeDesc");
 }
 
-function resolveTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) returns t:SemType|err:Semantic {
+function resolveTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) returns t:SemType|err:Semantic|err:Unimplemented {
     match td {
         // These are easy
         "any" => { return t:ANY; }
@@ -174,6 +179,10 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) ret
         }
         else if defn is TypeDefn {
             return check resolveTypeDefn(env, mod, depth, defn);
+        }
+        else if defn is ConstDefn {
+            var [t, _] = check resolveConstDefn(mod, defn);
+            return t;
         }
         else {
             return err:semantic(`reference to non-type ${td.ref} in type-descriptor`, pos=td.pos);
