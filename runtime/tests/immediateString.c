@@ -28,6 +28,7 @@ void testImmediateStringLength() {
 	validateImmediateStringLength(0x2AFF2A2625242C3F, 6, 6); // "?,$%&*"
 	validateImmediateStringLength(0x2A61626364656667, 7, 7); // "gfedcab"
 	// testUnicode 
+	validateImmediateStringLength(0x2AFFFFFFFFFFA2C2, 2, 1); // "¢"
 	validateImmediateStringLength(0x2AFFFFFFFF9E99E2, 3, 1); // "♞"
 	validateImmediateStringLength(0x2AFFFFFF97A49FF0, 4, 1); // "🤗"
 	validateImmediateStringLength(0x2AFFFFFF90A69FF0, 4, 1); // "🦀"
@@ -47,6 +48,10 @@ void testTaggedStringEquals() {
 	validateTaggedStringEquals(0x8FFFFFFFFF9E99E2, 0x2AFFFF6162606364, false); // NON-IMMEDIATE - ASCII
 	validateTaggedStringEquals(0x2AFFFFFFFF9E99E2, 0x8FFFFFFFFF9E99E2, false); // UNICODE - NON-IMMEDIATE
 	validateTaggedStringEquals(0x2AFFFF6162606364, 0x8FFFFFFFFF9E99E2, false); // ASCII - NON-IMMEDIATE
+
+	// neither immediate strings
+	assert(taggedStringEqual(makeString("123\xF0\x9F\xA4\x97"), makeString("123\xF0\x9F\xA4\x97")) == true);
+	assert(taggedStringEqual(makeString("123\xF0\x9F\xA4\x97"), makeString("123\xF0\x9F\xA4\x80")) == false);
 }
 
 int main() {

@@ -96,6 +96,8 @@ void testTaggedImmeidateStringLength() {
 	validateTaggedStringLength(bitsToTaggedPtr(0x2AFF2A2625242C3F), 6, 6); // "?,$%&*"
 	validateTaggedStringLength(bitsToTaggedPtr(0x2A61626364656667), 7, 7); // "gfedcab"
 	// testUnicode 
+
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFFFFFFA2C2), 2, 1); // "¢"
 	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFFFF9E99E2), 3, 1); // "♞"
 	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFF97A49FF0), 4, 1); // "🤗"
 	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFF90A69FF0), 4, 1); // "🦀"

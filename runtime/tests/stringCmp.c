@@ -29,7 +29,7 @@ void testStringEq() {
 
     checkStringEq(makeString("abce"), makeString("abce"), true);
     checkStringEq(makeString("abce"), makeString("abcd"), false);
-
+    checkStringEq(makeString("abce"), makeString("\xF0\x9F\xA4\x97\xE2\x99\x9E"), false);
 
     checkStringEq(makeString("\xF0\x9F\xA6\x80"), makeString("\xF0\x9F\xA6\x80"), true);
     checkStringEq(makeString("\xF0\x9F\xA6\x80"), makeString("\xF0\x9F\xA4\x97"), false);
