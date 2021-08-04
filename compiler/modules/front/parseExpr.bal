@@ -366,52 +366,45 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
 // This is simple-const-expr in the spec
 // We will use this for match patterns
 // XXX add boolean and string
-function parseSimpleConstExpr(Tokenizer tok) returns SimpleConst|err:Syntax {
+function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
     string sign = "";
     if tok.current() == "-" {
         check tok.advance();
         sign = "-";
     }
-    match tok.current() {
+    Token? t = tok.current();
+    match t {     
+        [IDENTIFIER, var varName] => {
+            VarRefExpr expr = { varName };
+            return expr;
+        }
         [DECIMAL_NUMBER, var digits] => {
-            return check parseDigits(tok, sign + digits);
+            IntLiteralExpr expr = { base: 10, digits, pos: tok.currentPos() };
+            check tok.advance();
+            return expr;
         }
         [HEX_INT_LITERAL, var digits] => {
-            return check parseHexDigits(tok, sign + digits);
+            IntLiteralExpr expr = { base: 16, digits, pos: tok.currentPos() };
+            check tok.advance();
+            return expr;
         }
-        // JBUG this gets a bad sad #30738
-        // NullPointerException in BIROptimizer$RHSTempVarOptimizer.visit
-        // int n;
-        // do {
-        //     n = check int:fromString(sign + digits);
-        // } on fail var cause {
-        //     return err:syntax("invalid number", cause, pos=tok.currentPos());
-        // }
-        // check tok.advance();
-        // return <SingletonTypeDesc>{ value: n };         
+        [STRING_LITERAL, var value] => {
+            ConstValueExpr expr = { value };
+            check tok.advance();
+            return expr;
+        }
+        "(" => {
+            check tok.advance();
+            check tok.expect(")");
+            ConstValueExpr expr = { value: () };
+            return expr;
+        }
+        "true"|"false" => {
+            check tok.advance();
+            ConstValueExpr expr = { value: t == "true" };
+            return expr;
+        }   
     }
     return parseError(tok);
-}
-
-function parseDigits(Tokenizer tok, string signDigits) returns int|err:Syntax {
-    error|int res = int:fromString(signDigits);
-    if res is error {
-        return err:syntax("invalid number", tok.currentPos(), cause=res);
-    } 
-    else {
-        check tok.advance();
-        return res;
-    }
-}
-
-function parseHexDigits(Tokenizer tok, string digits) returns int|err:Syntax {
-    error|int res = int:fromHexString(digits);
-    if res is error {
-        return err:syntax("invalid hex literal", tok.currentPos(), cause=res);
-    } 
-    else {
-        check tok.advance();
-        return res;
-    }
 }
 

@@ -15,8 +15,19 @@ type FpTypeSuffix "f";
 type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string]|[DECIMAL_FP_NUMBER, string, FpTypeSuffix?];
 
 // Some of these are not yet used by the grammar
-type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=" | "." | "~" | "_";
+
+type SingleCharDelim SingleCharDelimAllowEquals | ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "?" | "&" | "^" | "|" |  ":" | "," | "/" | "%" | "." | "~" | "_";
+// These can all be followed by an `=`
+type SingleCharDelimAllowEquals "=" | "!" | "<" | ">";
 type MultiCharDelim "{|" | "|}" | "..." | "..<" | "==" | "!=" | ">=" | "<=" | "===" | "!==" | "<<" | ">>" | ">>>" | "=>";
+
+final readonly & map<MultiCharDelim> WITH_EQUALS = {
+    "=": "==",
+    "!": "!=",
+    "<": "<=",
+    ">": ">="
+};
+
 type Keyword
     "any"
     | "boolean"
@@ -63,6 +74,8 @@ const string HEX_DIGIT = DIGIT + "abcdefABCDEF";
 const string ALPHA = LOWER + UPPER;
 const string IDENT = ALPHA + DIGIT + "_";
 
+type Digit "0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9";
+
 // JBUG cannot use string:Char #31668 #31660
 type Char string;
 
@@ -78,13 +91,6 @@ final readonly & map<Char> ESCAPES = {
     "n": "\n",
     "r": "\r",
     "t": "\t"
-};
-
-final readonly & map<MultiCharDelim> WITH_EQUALS = {
-    "=": "==",
-    "!": "!=",
-    "<": "<=",
-    ">": ">="
 };
 
 const MODE_NORMAL = 0;
@@ -144,17 +150,7 @@ class Tokenizer {
                 ch = self.getc();
                 if ch == "/" {
                     // Skip the comment and loop
-                    while true {
-                        ch = self.getc();
-                        if ch is () {
-                            break;
-                        }
-                        else if self.isLineTerminator(ch) {
-                            // handle line counting in startToken
-                            self.ungetc(ch);
-                            break;
-                        }
-                    }
+                    self.skipToEndOfLine();
                     continue;
                 }
                 else if !(ch is ()) {
@@ -162,7 +158,7 @@ class Tokenizer {
                 }
                 return "/";
             }
-            // Need to do mult-char delims before single-char delims.        
+            // Need to do multi-char delims before single-char delims.        
             else if ch == "{" {
                 ch = self.getc();
                 if ch == "|" {
@@ -183,226 +179,39 @@ class Tokenizer {
                 }
                 return "|";
             }
-            // JBUG
-            // method too large if this is uncommented
-            // else if ch == "=" {
-            //     ch = self.getc();
-            //     if ch == ">" {
-            //         return "=>";
-            //     }
-            //     else if !(ch is ()) {
-            //         self.ungetc(ch);
-            //     }
-            //     return "=";
-            // }
             else if ch == "." {
+                return self.nextAfterDot();
+            }
+            else if ch == "=" {
                 ch = self.getc();
-                if ch == "." {
-                    ch = self.getc();
-                    if ch == "." {
-                        return "...";
-                    }
-                    if ch == "<" {
-                        return "..<";
-                    }
-                    else {
-                        break;
-                    }
+                if ch == ">" {
+                    return "=>";
                 }
                 else if !(ch is ()) {
                     self.ungetc(ch);
-                    if DIGIT.includes(ch) {
-                        return self.nextDecimalFpNumber("");
-                    }
                 }
-                return ".";
+                return "=";
+            }
+            else if ch is SingleCharDelimAllowEquals {
+                return self.nextDelimAllowEquals(ch);
             }
             else if ch is SingleCharDelim {
-                return self.nextSingleCharDelimPrefixed(ch);
+                return ch;
             }
-            else if ALPHA.includes(ch) {
-                string ident = ch;
-                while true {
-                    ch = self.getc();
-                    if ch is () {
-                        break;
-                    }
-                    else if !IDENT.includes(ch) {
-                        self.ungetc(ch);
-                        break;
-                    }
-                    else {
-                        ident += ch;
-                    }
-                }
-                if ident is Keyword {
-                    return ident;
-                }
-                return [IDENTIFIER, ident];
-            }
-            else if ch == "0" {
-                ch = self.getc();
-                if ch == "x" || ch == "X" {
-                    string hex = "";
-                    while true {
-                        ch = self.getc();
-                        if ch is () {
-                            break;
-                        }
-                        else if !HEX_DIGIT.includes(ch) {
-                            self.ungetc(ch);
-                            break;
-                        }
-                        else {
-                            hex += ch;
-                        }
-                    }
-                    if hex.length() > 0 {
-                        return [HEX_INT_LITERAL, hex];
-                    }
-                    else {
-                        return self.err("missing digits in hex literal");
-                    }
-                }
-                else if !(ch is ()) {
-                    if ch == "." {
-                        return self.nextDecimalFpNumber("0");
-                    }
-                    else if ch == "e" || ch == "E" {
-                        return self.nextDecimalExpFPNumber("0", ch);
-                    }
-                    else if ch == "f" || ch == "F" {
-                        return [DECIMAL_FP_NUMBER, "0", "f"];
-                    }
-                    else if DIGIT.includes(ch) {
-                        return self.err("leading zeros not allowed in integer literals");
-                    }
-                    else {
-                        self.ungetc(ch);
-                    }
-                }
-                return [DECIMAL_NUMBER, "0"];
-            }
-            else if DIGIT.includes(ch) {
-                string digits = ch;
-                while true {
-                    ch = self.getc();
-                    if ch is () {
-                        break;
-                    }
-                    else if ch == "." {
-                        return self.nextDecimalFpNumber(digits);
-                    }
-                    else if ch == "e" || ch == "E" {
-                        return self.nextDecimalExpFPNumber(digits, ch);
-                    }
-                    else if ch == "f" || ch == "F" {
-                        return [DECIMAL_FP_NUMBER, digits, "f"];
-                    }
-                    else if !DIGIT.includes(ch) {
-                        self.ungetc(ch);
-                        break;
-                    }
-                    else {
-                        digits += ch;
-                    }
-                }
-                return [DECIMAL_NUMBER, digits];
+            else if ch is Digit {
+                return self.nextNumber(ch);
             }
             else if ch == "\"" {
                 return self.nextStr();
+            }
+            else if ALPHA.includes(ch) {
+                return self.nextIdent(ch);
             }
             else {
                break;
             }
         }
         return self.err("invalid token");
-    }
-
-    private function nextDecimalFpNumber(string preDot) returns Token|err:Syntax {
-        string digits = preDot + ".";
-        Char? ch = self.getc();
-        if ch is () { 
-            self.ungetc(".");
-            return [DECIMAL_NUMBER, preDot];
-        }
-        else if !DIGIT.includes(ch) {
-            self.ungetc(ch, ".");
-            return [DECIMAL_NUMBER, preDot];
-        } else {
-            digits += ch;
-        }
-
-        while true {
-            ch = self.getc();
-            if ch is () {
-                break;
-            }
-            else if DIGIT.includes(ch) {
-                digits += ch;
-            }
-            else if ch == "e" || ch == "E" {
-                return self.nextDecimalExpFPNumber(digits, ch);
-            }
-            else if ch == "f" || ch == "F" {
-                return [DECIMAL_FP_NUMBER, digits, "f"];
-            }
-            else {
-                self.ungetc(ch);
-                break;
-            }
-        }
-        return [DECIMAL_FP_NUMBER, digits];
-    }
-
-    private function nextDecimalExpFPNumber(string preExp, Char e) returns Token|err:Syntax {
-        Char? ch = self.getc();
-        string digits;
-        if ch == "-" {
-            digits = ch;
-            ch = self.getc();
-            if ch == () {
-                self.ungetc("-", e);
-                return [DECIMAL_FP_NUMBER, preExp];
-            }
-            else if !DIGIT.includes(ch) {
-                self.ungetc(ch, "-", e);
-                return [DECIMAL_FP_NUMBER, preExp];
-            } else {
-                digits += ch;
-            }
-        }
-        else {
-            if ch == () {
-                self.ungetc(e);
-                return [DECIMAL_FP_NUMBER, preExp];
-            }
-            else if !DIGIT.includes(ch) {
-                self.ungetc(ch, e);
-                return [DECIMAL_FP_NUMBER, preExp];
-            } else {
-                digits = ch;
-            }
-        }
-
-        while true {
-            ch = self.getc();
-            if ch is () {
-                break;
-            }
-            else if DIGIT.includes(ch) {
-                digits += ch;
-            }
-            else if ch == "f" || ch == "F" {
-                return [DECIMAL_FP_NUMBER, preExp + e + digits, "f"];
-            }
-            else {
-                self.ungetc(ch);
-                break;
-            }
-        }
-
-        return [DECIMAL_FP_NUMBER, preExp + e + digits];
     }
 
     private function nextSingleCharDelimPrefixed(SingleCharDelim ch) returns Token?|err:Syntax {
@@ -442,6 +251,268 @@ class Tokenizer {
         }
         else if ch == "<" {
             Char? peekCh = self.getc();
+            if peekCh == "<" {
+                return "<<";
+            }
+            else if !(peekCh is ()) {
+                self.ungetc(peekCh);
+            }
+        }
+        return ch;
+    }
+
+    private function skipToEndOfLine() {
+        while true {
+            Char? ch = self.getc();
+            if ch is () {
+                break;
+            }
+            else if self.isLineTerminator(ch) {
+                // handle line counting in startToken
+                self.ungetc(ch);
+                break;
+            }
+        }
+    }
+
+    private function nextAfterDot() returns Token|err:Syntax {
+        Char? ch = self.getc();
+        if ch == "." {
+            ch = self.getc();
+            if ch == "." {
+                return "...";
+            }
+            else if ch == "<" {
+                return "..<";
+            }
+            else {
+                return self.err(`invalid token after ${".."}`);
+            }
+        }
+        else if !(ch is ()) {
+            self.ungetc(ch);
+            if ch is Digit {
+                return self.nextDecimalFpNumber("");
+            }
+        }
+        return ".";
+    }
+
+    private function nextIdent(string initialChar) returns Token|err:Syntax {
+        string ident = initialChar;
+        while true {
+            Char? ch = self.getc();
+            if ch is () {
+                break;
+            }
+            else if !IDENT.includes(ch) {
+                self.ungetc(ch);
+                break;
+            }
+            else {
+                ident += ch;
+            }
+        }
+        if ident is Keyword {
+            return ident;
+        }
+        return [IDENTIFIER, ident];
+    }
+
+    private function nextNumber(Digit firstDigit) returns Token|err:Syntax {
+        if firstDigit == "0" {
+            Char? ch = self.getc();
+            if ch == "x" || ch == "X" {
+                string hex = "";
+                while true {
+                    ch = self.getc();
+                    if ch is () {
+                        break;
+                    }
+                    else if !HEX_DIGIT.includes(ch) {
+                        self.ungetc(ch);
+                        break;
+                    }
+                    else {
+                        hex += ch;
+                    }
+                }
+                if hex.length() > 0 {
+                    return [HEX_INT_LITERAL, hex];
+                }
+                else {
+                    return self.err("missing digits in hex literal");
+                }
+            }
+            else if !(ch is ()) {
+                if ch == "." {
+                    return self.nextDecimalFpNumber("0");
+                }
+                else if ch == "e" || ch == "E" {
+                    return self.nextDecimalExpFpNumber("0", ch);
+                }
+                else if ch == "f" || ch == "F" {
+                    return [DECIMAL_FP_NUMBER, "0", "f"];
+                }
+                else if ch is Digit {
+                    return self.err("leading zeros not allowed in integer literals");
+                }
+                else {
+                    self.ungetc(ch);
+                }
+            }
+            return [DECIMAL_NUMBER, "0"];
+        }
+        else {
+            string digits = firstDigit;
+            while true {
+                Char? ch = self.getc();
+                if ch is () {
+                    break;
+                }
+                else if ch == "." {
+                    return self.nextDecimalFpNumber(digits);
+                }
+                else if ch == "e" || ch == "E" {
+                    return self.nextDecimalExpFpNumber(digits, ch);
+                }
+                else if ch == "f" || ch == "F" {
+                    return [DECIMAL_FP_NUMBER, digits, "f"];
+                }
+                else if !(ch is Digit) {
+                    self.ungetc(ch);
+                    break;
+                }
+                else {
+                    digits += ch;
+                }
+            }
+            return [DECIMAL_NUMBER, digits];
+        }
+    }
+
+    private function nextDecimalFpNumber(string preDot) returns Token|err:Syntax {
+        string digits = preDot + ".";
+        Char? ch = self.getc();
+        if ch is () { 
+            self.ungetc(".");
+            return [DECIMAL_NUMBER, preDot];
+        }
+        else if !(ch is Digit) {
+            self.ungetc(ch, ".");
+            return [DECIMAL_NUMBER, preDot];
+        } else {
+            digits += ch;
+        }
+
+        while true {
+            ch = self.getc();
+            if ch is () {
+                break;
+            }
+            else if ch is Digit {
+                digits += ch;
+            }
+            else if ch == "e" || ch == "E" {
+                return self.nextDecimalExpFpNumber(digits, ch);
+            }
+            else if ch == "f" || ch == "F" {
+                return [DECIMAL_FP_NUMBER, digits, "f"];
+            }
+            else {
+                self.ungetc(ch);
+                break;
+            }
+        }
+        return [DECIMAL_FP_NUMBER, digits];
+    }
+
+    private function nextDecimalExpFpNumber(string preExp, Char e) returns Token|err:Syntax {
+        Char? ch = self.getc();
+        string digits;
+        if ch == "-" {
+            digits = ch;
+            ch = self.getc();
+            if ch == () {
+                self.ungetc("-", e);
+                return [DECIMAL_FP_NUMBER, preExp];
+            }
+            else if !(ch is Digit) {
+                self.ungetc(ch, "-", e);
+                return [DECIMAL_FP_NUMBER, preExp];
+            } else {
+                digits += ch;
+            }
+        }
+        else {
+            if ch == () {
+                self.ungetc(e);
+                return [DECIMAL_FP_NUMBER, preExp];
+            }
+            else if !(ch is Digit) {
+                self.ungetc(ch, e);
+                return [DECIMAL_FP_NUMBER, preExp];
+            }
+            else {
+                digits = ch;
+            }
+        }
+
+        while true {
+            ch = self.getc();
+            if ch is () {
+                break;
+            }
+            else if ch is Digit {
+                digits += ch;
+            }
+            else if ch == "f" || ch == "F" {
+                return [DECIMAL_FP_NUMBER, preExp + e + digits, "f"];
+            }
+            else {
+                self.ungetc(ch);
+                break;
+            }
+        }
+
+        return [DECIMAL_FP_NUMBER, preExp + e + digits];
+    }
+
+    private function nextDelimAllowEquals(SingleCharDelimAllowEquals ch) returns Token?|err:Syntax {
+        MultiCharDelim multi = <MultiCharDelim>WITH_EQUALS[ch];
+        Char? peekCh = self.getc();
+        if peekCh == "=" {
+            if multi == "==" || multi == "!=" {
+                peekCh = self.getc();
+                if peekCh == "=" {
+                    return multi == "==" ? "===" : "!==";
+                }
+                else if !(peekCh is ()) {
+                    self.ungetc(peekCh);
+                }
+            }
+            return multi;
+        }
+        else if !(peekCh is ()) {
+            self.ungetc(peekCh);
+        }
+        if ch == ">" && self.mode == MODE_NORMAL {
+            peekCh = self.getc();
+            if peekCh == ">" {
+                peekCh = self.getc();
+                if peekCh == ">" {
+                    return ">>>";
+                } else if !(peekCh is ()) {
+                    self.ungetc(peekCh);
+                }
+                return ">>";
+            }
+            else if !(peekCh is ()) {
+                self.ungetc(peekCh);
+            }
+        }
+        else if ch == "<" {
+            peekCh = self.getc();
             if peekCh == "<" {
                 return "<<";
             }

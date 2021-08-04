@@ -100,6 +100,39 @@ function stmtToWords(Word[] w, Stmt stmt) {
             blockToWords(w, stmt.ifFalse);
         }
     }
+    else if stmt is MatchStmt {
+        w.push("match");
+        exprToWords(w, stmt.expr);
+        w.push("{");
+        boolean firstClause = true;
+        foreach var clause in stmt.clauses {
+            if firstClause {
+                w.push(<Word>LF_INDENT);
+                firstClause = false;
+            }
+            else {
+                w.push(<Word>LF);
+            }
+            boolean firstPattern = true;
+            foreach var pattern in clause.patterns {
+                if firstPattern {
+                    firstPattern = false;
+                }
+                else {
+                    w.push("|");
+                }
+                if pattern is string {
+                    w.push(pattern);
+                }
+                else {
+                    exprToWords(w, pattern.expr);
+                }
+            }
+            w.push("=>");
+            blockToWords(w, clause.block);
+        }
+        w.push(<Word>(firstClause ? LF : LF_OUTDENT), "}");
+    }
     else if stmt is WhileStmt {
         w.push("while");
         exprToWords(w, stmt.condition);

@@ -280,6 +280,9 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
         else if stmt is IfElseStmt {
             effect = check codeGenIfElseStmt(cx, curBlock, env, stmt);
         }
+        else if stmt is MatchStmt {
+            return err:unimplemented("match statement is not implemented");
+        }
         else if stmt is WhileStmt {
             // JBUG #31327 cast
             effect = check codeGenWhileStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
@@ -322,7 +325,6 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
     addAssignments(assignments, env.assignments, startRegister);
     return { block: curBlock, assignments };
 }
-
 
 function environmentCopy(Environment env) returns Environment {
     return { bindings: env.bindings, assignments: env.assignments.clone() };

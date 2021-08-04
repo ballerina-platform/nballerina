@@ -37,11 +37,11 @@ type ConstDefn record {|
     ResolvedConst|false? resolved = ();    
 |};
 
-type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
+type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
 type CallStmt FunctionCallExpr|MethodCallExpr;
 type Expr IntLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
-
 type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
+type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr;
 
 type AssignStmt record {|
     LExpr lValue;
@@ -59,6 +59,25 @@ type IfElseStmt record {|
     Expr condition;
     Stmt[] ifTrue;
     Stmt[] ifFalse;
+|};
+
+type MatchStmt record {|
+    Expr expr;
+    MatchClause[] clauses;
+|};
+
+type MatchClause record {|
+    MatchPattern[] patterns;
+    Stmt[] block;
+|};
+
+type MatchPattern ConstPattern|WildcardMatchPattern;
+
+const WildcardMatchPattern = "_";
+
+type ConstPattern record {|
+    SimpleConstExpr expr;
+    err:Position pos;
 |};
 
 type WhileStmt record {|

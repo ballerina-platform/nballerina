@@ -221,3 +221,43 @@ function parseForeachStmt(Tokenizer tok) returns ForeachStmt|err:Syntax {
     }
     return parseError(tok, "invalid foreach statement");
 }
+
+function parseMatchStmt(Tokenizer tok) returns MatchStmt|err:Syntax {
+    Expr expr = check parseInnerExpr(tok);
+    check tok.expect("{");
+    MatchClause[] clauses = [];
+    clauses.push(check parseMatchClause(tok));
+    while tok.current() != "}" {
+        clauses.push(check parseMatchClause(tok));
+    }
+    check tok.advance();
+    return { expr, clauses };
+}
+
+function parseMatchClause(Tokenizer tok) returns MatchClause|err:Syntax {
+    MatchPattern[] patterns = check parseMatchPatternList(tok);
+    check tok.expect("=>");
+    Stmt[] block = check parseStmtBlock(tok);
+    return { patterns, block };
+}
+
+function parseMatchPatternList(Tokenizer tok) returns MatchPattern[]|err:Syntax {
+    MatchPattern[] patterns = [];
+    patterns.push(check parseMatchPattern(tok));
+    while tok.current() == "|" {
+        check tok.advance();
+        patterns.push(check parseMatchPattern(tok));
+    }
+    return patterns;
+}
+
+function parseMatchPattern(Tokenizer tok) returns MatchPattern|err:Syntax {
+    Token? cur = tok.current();
+    if cur is WildcardMatchPattern {
+        check tok.advance();
+        return cur;
+    }
+    err:Position pos = tok.currentPos();
+    SimpleConstExpr expr = check parseSimpleConstExpr(tok);
+    return { expr, pos};
+}
