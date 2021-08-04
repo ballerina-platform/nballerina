@@ -1,6 +1,6 @@
 #include "testUtils.h"
 
-void _validateBitsToTaggedPtrAndBack(uint64_t bits) {
+void validateBitsToTaggedPtrAndBack(uint64_t bits) {
     TaggedPtr ptr = bitsToTaggedPtr(bits);
     uint64_t currentBits = taggedPtrBits(ptr);
     assert((bits ^ currentBits) == 0);
@@ -8,10 +8,10 @@ void _validateBitsToTaggedPtrAndBack(uint64_t bits) {
 
 void testBitsToTaggedPtrAndBack() {
     for (int i = 0; i < NTESTS; i++) {
-        _validateBitsToTaggedPtrAndBack(rand());
+        validateBitsToTaggedPtrAndBack(rand());
     }
-    _validateBitsToTaggedPtrAndBack(0);
-    _validateBitsToTaggedPtrAndBack(UINT64_MAX);
+    validateBitsToTaggedPtrAndBack(0);
+    validateBitsToTaggedPtrAndBack(UINT64_MAX);
 }
 
 void testGetTag() {
