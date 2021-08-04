@@ -2,6 +2,7 @@ import wso2/nballerina.bir;
 import wso2/nballerina.front;
 import wso2/nballerina.nback;
 import wso2/nballerina.err;
+import wso2/nballerina.print.llvm;
 
 import ballerina/io;
 import ballerina/file;
@@ -55,8 +56,17 @@ function compileFile(string filename, string? outputFilename, *nback:Options nba
        names: [filename],
        organization: "dummy"
     };
-    bir:Module module = check front:loadModule(filename, id);
-    check nback:compileModule(module, outputFilename, nbackOptions);
+    bir:Module birMod = check front:loadModule(filename, id);
+    llvm:Context context = new;
+    llvm:Module llMod = check nback:buildModule(birMod, context, nbackOptions);
+
+    if nback:target != "" {
+        llMod.setTarget(nback:target);
+    }
+
+    if outputFilename != () {
+        return llMod.printModuleToFile(outputFilename);
+    }
 }
 
 function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error? {
