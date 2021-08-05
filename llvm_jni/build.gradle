@@ -36,6 +36,7 @@ task copyNbal(type: Copy) {
 
 task cleanNbackLLVM(type: Delete) {
         delete "${tmpBuildDir}/modules/print.llvm"
+        delete "${tmpBuildDir}/main.bal"
 }
 cleanNbackLLVM.dependsOn(copyNbal)
 
@@ -44,6 +45,13 @@ task copyJNILLVM(type: Copy) {
         into "${tmpBuildDir}/modules/jni.llvm"
 }
 copyJNILLVM.dependsOn(copyNbal, cleanNbackLLVM)
+
+task copyDriver(type: Copy) {
+        from 'main.bal'
+        into "${tmpBuildDir}/"
+}
+copyDriver.dependsOn(cleanNbackLLVM)
+copyDriver.mustRunAfter(copyNbal)
 
 task copyLLVMCommon(type: Copy) {
         from "${compilerDir}/modules/print.llvm/common.bal"
@@ -67,7 +75,7 @@ task testBuild(type: Exec) {
         workingDir tmpBuildDir
         commandLine 'bal', 'build'
 }
-testBuild.dependsOn(copyNbal, copyJNILLVM, copyLocalDependencies, copyBalConfig)
+testBuild.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyLocalDependencies, copyBalConfig)
 
 task buildNBalCompilerBase(type: Exec) {
         workingDir compilerDir
