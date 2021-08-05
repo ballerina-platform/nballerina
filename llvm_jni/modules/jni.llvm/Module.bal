@@ -7,7 +7,6 @@ function intrinsicNameToId(IntrinsicFunctionName name) returns int {
     return jLLVMLookupIntrinsicID(java:fromString(str_name), str_name.length());
 }
 
-// JBUG: #31447 make possible values for these strict
 public type LLVMCodeGenOptLevel string;
 public type LLVMRelocMode string;
 public type LLVMCodeModel string;

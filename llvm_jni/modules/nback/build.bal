@@ -1,3 +1,4 @@
+// Copy of build.bal from compiler with imports changed to jni.llvm. Not used in final build
 import wso2/nballerina.err;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
