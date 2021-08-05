@@ -12,9 +12,11 @@ public type LLVMCodeGenOptLevel string;
 public type LLVMRelocMode string;
 public type LLVMCodeModel string;
 
-configurable string optLevel = "Default";
-configurable string relocMode = "Default";
-configurable string codeModel = "Default";
+public type ObjectFileGenOptions record {|
+    string? optLevel = "Default";
+    string? relocMode = "Default";
+    string? codeModel = "Default";
+|};
 
 public distinct class Module {
     handle LLVMModule;
@@ -51,7 +53,10 @@ public distinct class Module {
         _ = jLLVMPrintModuleToFile(self.LLVMModule, java:fromString(fileName), err);
     }
 
-    public function printModuleToObjectFile(string fileName) returns io:Error? {
+    public function printModuleToObjectFile(string fileName, *ObjectFileGenOptions opts) returns io:Error? {
+        string optLevel = opts.optLevel ?: "Default";
+        string relocMode = opts.relocMode ?: "Default";
+        string codeModel = opts.codeModel ?: "Default";
         BytePointer file = new(jBytePointerFromString(java:fromString(fileName)));
         BytePointer targetTriple;
         if self.targetTriple is () {

@@ -79,7 +79,9 @@ function compileFile(string filename, string? gcName, *Options opts) returns Com
         check llMod.printModuleToFile(outputFileName);
     }
     if objectFileName != () {
-        check llMod.printModuleToObjectFile(objectFileName);
+        check llMod.printModuleToObjectFile(objectFileName, {
+            optLevel: opts.optLevel, relocMode: opts.relocMode, codeModel: opts.codeModel
+        });
     }
 }
 
