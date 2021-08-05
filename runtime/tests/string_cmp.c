@@ -1,4 +1,4 @@
-#include "stringUtils.h"
+#include "string_utils.h"
 
 void testStringCmp() {
     TaggedPtr *strs = malloc(sizeof(TaggedPtr) * NTESTS * 3);

@@ -1,4 +1,4 @@
-TESTPROGS=stringHash stringCmp stringConcat stringLen immediateString taggedPtr
+TESTPROGS=string_hash string_cmp string_concat string_len immediate_string tagged_ptr
 TESTPROG_STAMPS=$(addsuffix .stamp, $(TESTPROGS))
 TESTPROG_PROF_RAW=$(addsuffix .profraw, $(TESTPROGS))
 TESTPROG_PROF = test.profdata

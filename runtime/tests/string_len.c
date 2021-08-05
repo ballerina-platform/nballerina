@@ -1,4 +1,4 @@
-#include "stringUtils.h"
+#include "string_utils.h"
 
 void validateStringSizeInt64(const uint64_t stringSize, const uint64_t headerSize, const uint64_t lengthInBytes) {
     uint64_t size = lengthInBytes + headerSize;
