@@ -91,6 +91,11 @@ const MODE_NORMAL = 0;
 const MODE_TYPE_DESC = 1;
 type Mode MODE_NORMAL|MODE_TYPE_DESC;
 
+// JBUG this avoids bloat that causes `method is too large` errors
+function toToken(string t) returns Token {
+    return <Token>t;
+}
+
 class Tokenizer {
     Token? cur = ();
     // The index in `str` of the first character of `cur`
@@ -160,50 +165,38 @@ class Tokenizer {
                 else if !(ch is ()) {
                     self.ungetc(ch);
                 }
-                return "/";
+                return toToken("/");
             }
             // Need to do mult-char delims before single-char delims.        
             else if ch == "{" {
                 ch = self.getc();
                 if ch == "|" {
-                    return "{|";
+                    return toToken("{|");
                 }
                 else if !(ch is ()) {
                     self.ungetc(ch);
                 }
-                return "{";
+                return toToken("{");
             }
             else if ch == "|" {
                 ch = self.getc();
                 if ch == "}" {
-                    return "|}";
+                    return toToken("|}");
                 }
                 else if !(ch is ()) {
                     self.ungetc(ch);
                 }
-                return "|";
+                return toToken("|");
             }
-            // JBUG
-            // method too large if this is uncommented
-            // else if ch == "=" {
-            //     ch = self.getc();
-            //     if ch == ">" {
-            //         return "=>";
-            //     }
-            //     else if !(ch is ()) {
-            //         self.ungetc(ch);
-            //     }
-            //     return "=";
-            // }
             else if ch == "." {
                 ch = self.getc();
                 if ch == "." {
                     ch = self.getc();
                     if ch == "." {
-                        return "...";
+                        return toToken("...");
                     }
                     if ch == "<" {
-                        return "..<";
+                        return toToken("..<");
                     }
                     else {
                         break;
@@ -215,7 +208,7 @@ class Tokenizer {
                         return self.nextDecimalFpNumber("");
                     }
                 }
-                return ".";
+                return toToken(".");
             }
             else if ch is SingleCharDelim {
                 return self.nextSingleCharDelimPrefixed(ch);
@@ -413,7 +406,7 @@ class Tokenizer {
                 if multi == "==" || multi == "!=" {
                     peekCh = self.getc();
                     if peekCh == "=" {
-                        return multi == "==" ? "===" : "!==";
+                        return multi == "==" ? toToken("===") : toToken("!==");
                     }
                     else if !(peekCh is ()) {
                         self.ungetc(peekCh);
@@ -430,11 +423,11 @@ class Tokenizer {
             if peekCh == ">" {
                 peekCh = self.getc();
                 if peekCh == ">" {
-                    return ">>>";
+                    return toToken(">>>");
                 } else if !(peekCh is ()) {
                     self.ungetc(peekCh);
                 }
-                return ">>";
+                return toToken(">>");
             }
             else if !(peekCh is ()) {
                 self.ungetc(peekCh);
@@ -443,11 +436,21 @@ class Tokenizer {
         else if ch == "<" {
             Char? peekCh = self.getc();
             if peekCh == "<" {
-                return "<<";
+                return toToken("<<");
             }
             else if !(peekCh is ()) {
                 self.ungetc(peekCh);
             }
+        }
+        else if ch == "=" {
+            Char? peekCh = self.getc();
+            if peekCh == ">" {
+                return toToken("=>");
+            }
+            else if !(peekCh is ()) {
+                self.ungetc(peekCh);
+            }
+            return toToken("=");
         }
         return ch;
     }
