@@ -19,7 +19,8 @@ public type Options record {|
 const LOWER = "abcdefghijklmnopqrstuvwxyz";
 const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const string VALID_GC_NAME_CHARS = LOWER + UPPER + "-_";
-
+# The preferred output extension for the output filename.
+const OUTPUT_EXTENSION = ".ll";
 const SOURCE_EXTENSION = ".bal";
 public function main(string[] filenames, *Options opts) returns error? {
     string? gc = check validGcName(opts.gc);
@@ -32,7 +33,7 @@ public function main(string[] filenames, *Options opts) returns error? {
             check showTypes(filename);
             continue;
         }
-        check compileFile(filename, check chooseOutputFilename(filename, opts.outDir), { gcName: gc });
+        check compileFile(filename, gc, opts);
     }  
 }
 
@@ -51,25 +52,26 @@ function validGcName(string? gcName) returns string|error? {
 }
 
 //  outputFilename of () means don't output anything
-function compileFile(string filename, string? outputFilename, *nback:Options nbackOptions) returns CompileError {
+function compileFile(string filename, string? gcName, *Options opts) returns CompileError {
+    string? outputFileName = checkpanic chooseOutputFilename(filename, OUTPUT_EXTENSION, opts.outDir);
     bir:ModuleId id = {
        names: [filename],
        organization: "dummy"
     };
     bir:Module birMod = check front:loadModule(filename, id);
     llvm:Context context = new;
-    llvm:Module llMod = check nback:buildModule(birMod, context, nbackOptions);
+    llvm:Module llMod = check nback:buildModule(birMod, context, {gcName: gcName});
 
     if nback:target != "" {
         llMod.setTarget(nback:target);
     }
 
-    if outputFilename != () {
-        return llMod.printModuleToFile(outputFilename);
+    if outputFileName != () {
+        check llMod.printModuleToFile(outputFileName);
     }
 }
 
-function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error? {
+function chooseOutputFilename(string sourceFilename, string outputExtension, string? outDir) returns string|error? {
     string filename;
     if outDir == () {
         filename = sourceFilename;
@@ -81,7 +83,7 @@ function chooseOutputFilename(string sourceFilename, string? outDir) returns str
     if extension != SOURCE_EXTENSION {
         return error("filename must end with " + SOURCE_EXTENSION);
     }
-    return base + nback:OUTPUT_EXTENSION;
+    return base + outputExtension;
 }
 
 // Note that this converts extension to lower case

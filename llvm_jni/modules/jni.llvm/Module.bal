@@ -51,7 +51,7 @@ public distinct class Module {
         _ = jLLVMPrintModuleToFile(self.LLVMModule, java:fromString(fileName), err);
     }
 
-    public function printModuleToObjectFile(string fileName) {
+    public function printModuleToObjectFile(string fileName) returns io:Error? {
         BytePointer file = new(jBytePointerFromString(java:fromString(fileName)));
         BytePointer targetTriple;
         if self.targetTriple is () {
@@ -64,7 +64,7 @@ public distinct class Module {
         BytePointer lookupError = new(jBytePointer());
         int isLookUpError = jLLVMGetTargetFromTriple(targetTriple.jObject, jTargetRef, lookupError.jObject);
         if isLookUpError != 0 {
-            panic error(lookupError.toString());
+            return error(lookupError.toString());
         }
         BytePointer cpu = new(jBytePointerFromString(java:fromString("generic")));
         BytePointer features = new(jBytePointerFromString(java:fromString("")));
@@ -78,7 +78,7 @@ public distinct class Module {
         BytePointer emitError = new(jBytePointer());
         int isEmitError = jLLVMTargetMachineEmitToFile(jTargetMachineRef, self.LLVMModule, file.jObject, 1, emitError.jObject);
         if isEmitError != 0 {
-            panic error(emitError.toString());
+            return error(emitError.toString());
         }
     }
 

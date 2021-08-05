@@ -3,6 +3,12 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
+public configurable string target = "";
+
+public type Options record {|
+    string? gcName = ();
+|};
+
 type BuildError err:Semantic|err:Unimplemented;
 
 type Alignment 1|8;
