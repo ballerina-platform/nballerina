@@ -201,9 +201,17 @@ function funcTest4() {
 
 @test:Config{}
 function stringTest() {
-    test:assertEquals(stringListUnion(["a", "b", "d"], ["c"]), ["a", "b", "c", "d"]);
-    test:assertEquals(stringListIntersect(["a", "b", "d"], ["d"]), ["d"]);
-    test:assertEquals(stringListDiff(["a", "b", "c", "d"], ["a", "c"]), ["b", "d"]);
+    string [] result = [];
+    enumerableListUnion(["a", "b", "d"], ["c"], result);
+    test:assertEquals(result, ["a", "b", "c", "d"]);
+
+    result = [];
+    enumerableListIntersect(["a", "b", "d"], ["d"], result);
+    test:assertEquals(result, ["d"]);
+
+    result = [];
+    enumerableListDiff(["a", "b", "c", "d"], ["a", "c"], result);
+    test:assertEquals(result, ["b", "d"]);
 }
 
 @test:Config{}
