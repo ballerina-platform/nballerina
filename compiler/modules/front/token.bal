@@ -1,13 +1,17 @@
 import wso2/nballerina.err;
 
-type Token SingleCharDelim|MultiCharDelim|Keyword|VariableLengthToken;
+type Token FixedToken|VariableLengthToken;
+type FixedToken SingleCharDelim|MultiCharDelim|Keyword;
 
 const IDENTIFIER = 0;
 const DECIMAL_NUMBER = 1;
-const STRING_LITERAL = 2;
-const BOOLEAN_LITERAL = 3;
-const HEX_INT_LITERAL = 4;
-const DECIMAL_FP_NUMBER = 5;
+const HEX_INT_LITERAL = 2;
+const DECIMAL_FP_NUMBER = 3;
+const STRING_LITERAL = 4;
+
+const N_VARIABLE_TOKENS = 5;
+
+type VariableTokenCode IDENTIFIER|DECIMAL_NUMBER|STRING_LITERAL|HEX_INT_LITERAL|DECIMAL_FP_NUMBER;
 
 type FpTypeSuffix "f";
 
