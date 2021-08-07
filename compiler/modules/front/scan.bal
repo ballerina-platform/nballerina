@@ -3,12 +3,29 @@
 // _ can be followed by identifier
 
 //import ballerina/io;
+import wso2/nballerina.err;
 
 // This should be byte
 // But multiple runtime/compile-time JBUGs
 type FragCode int;
 
 type ScannedLine readonly & record {|
+    // In the future, we will need some more fields here.
+    // Does it contain code points > 0x7F?
+    // If not, then code point index = UTF-16 index = byte index.
+    // Does it contain code points > 0xFFFF?
+    // If not, UTF-16 index is the same as code point index.
+    // What is the "brace delta" i.e. difference between opening brace level and closing brace level?
+    // (A line with one left brace would have a brace delta of 1.)
+    // (This is counting brace tokens not brace characters.)
+    // What is minimum brace delta in the line?
+    // Consider a line `} {`? Brace delta is 0, but minimum delta is -1.
+    // We will also need stuff for backquotes.
+    // This scan is only valid if there are no open backquotes at the beginning of the line.
+    // What is the number of open backquotes at the end of the line?
+    // Does it contain backquotes at all?
+    // Does it contain any dollar signs?
+    // If no backquotes and no dollars, we can determine how it will scan when it's within a backquote string.
     FragCode[] fragCodes;
     string[] fragments;
 |};
@@ -31,13 +48,18 @@ const FRAG_DECIMAL_FP_NUMBER_F = 0x07; // with F or f suffix
 const FRAG_STRING_CHARS = 0x08;
 const FRAG_STRING_CONTROL_ESCAPE = 0x09; // \r \t \n
 const FRAG_STRING_CHAR_ESCAPE = 0x0A; // \" \\
-const FRAG_STRING_NUMERIC_ESCAPE = 0x0B; // \u{XXX}
+const FRAG_STRING_NUMERIC_ESCAPE = 0x0B; // \u{NNN}
 
 const VAR_FRAG_MAX = 0x0B;
 
-const FRAG_FIXED = 0x1A; // >= this correspon
+// each fragment codes >= always comes from the same string
+const FRAG_FIXED = 0x1D; // >= this corre
 
+// Comes from greater than
+const FRAG_GREATER_THAN = 0x1D; 
+// Comes from a double quote that starts a string
 const FRAG_STRING_OPEN = 0x1E;
+// Comes from a double quote that ends a string
 const FRAG_STRING_CLOSE = 0x1F;
 
 // fragment codes >= 0x21 correspond to fixed tokens
@@ -57,6 +79,7 @@ const FRAG_LESS_THAN_EQUAL = 0x49;
 const FRAG_GREATER_THAN_EQUAL = 0x4A;
 const FRAG_LESS_THAN_LESS_THAN = 0x4B;
 const FRAG_EQUAL_GREATER_THAN = 0x4C;
+
 
 const FRAG_KEYWORD = 0x80;
 
@@ -102,70 +125,189 @@ final readonly & Keyword[] keywords = [
 // JBUG if this comes before keywords it gets a NPE at module init time
 final readonly & FixedToken?[] fragTokens = createFragTokens();
 
-// For testing
-function scanTest(string line) returns Token[]|error {
-    var { fragCodes, fragments } = scanLine(line);
-    Token[] tokens = [];
-    int i = 0;
-    string s = "";
-    foreach FragCode code in fragCodes {
-        if code <= VAR_FRAG_MAX {
-            string fragment = fragments[i];
-            i += 1;
-            match code {
+class NTokenizer {
+    private final string[] lines;
+    // index of nextLine to be scanned
+    private int lineIndex = 0;
+    private readonly & FragCode[] fragCodes = [];
+    private readonly & string[] fragments = [];
+    private int fragCodeIndex = 0;
+    private int codePointIndex = 0;
+    private int fragmentIndex = 0;
+    private int tokenStartCodePointIndex = 0;
+    private Mode mode = MODE_NORMAL;
+    Token? curTok = ();
+
+    function init(string[] lines) {
+        self.lines = lines;
+    }
+    
+    function advance() returns err:Syntax? {
+        string str = "";
+        self.tokenStartCodePointIndex = self.codePointIndex;
+        while true {
+            int fragCodeIndex = self.fragCodeIndex;
+            FragCode[] fragCodes = self.fragCodes;
+            if fragCodeIndex >= fragCodes.length() {
+                if !self.advanceLine() {
+                    self.curTok = ();
+                    return;
+                }
+                continue;
+            }
+            FragCode fragCode = fragCodes[fragCodeIndex];
+            fragCodeIndex += 1;
+            self.fragCodeIndex = fragCodeIndex;                
+            match fragCode {
+                FRAG_STRING_OPEN => {
+                    self.codePointIndex += 1;
+                }
+                FRAG_STRING_CLOSE => {
+                    self.codePointIndex += 1;
+                    self.curTok = [STRING_LITERAL, str];
+                    return;
+                }
                 FRAG_STRING_CHARS => {
-                    s += fragment;
+                    str += self.getFragment();
                 }
                 FRAG_STRING_CHAR_ESCAPE => {
-                    s += fragment[1];
+                    str += self.getFragment()[1];
                 }
                 FRAG_STRING_CONTROL_ESCAPE => {
-                    s += ESCAPES.get(fragment[1]);
+                    str += ESCAPES.get(self.getFragment()[1]);
                 }
                 FRAG_STRING_NUMERIC_ESCAPE => {
-                    s += check unicodeEscapeValue(fragment);
+                    string fragment = self.getFragment();
+                    string|error ch = unicodeEscapeValue(self.getFragment());
+                    if ch is error {
+                        self.tokenStartCodePointIndex = self.codePointIndex - fragment.length();
+                        return self.err("invalid numeric escape");
+                    }
+                    else {
+                        str += ch;
+                    }
+                }
+                FRAG_GREATER_THAN => {
+                    if self.mode == MODE_NORMAL && fragCodeIndex < fragCodes.length() && fragCodes[fragCodeIndex] == FRAG_GREATER_THAN {
+                        if fragCodeIndex + 1 < fragCodes.length() && fragCodes[fragCodeIndex + 1] == FRAG_GREATER_THAN {
+                            self.fragCodeIndex += 2;
+                            self.codePointIndex += 3;
+                            self.curTok = ">>>";
+                        }
+                        else {
+                            self.fragCodeIndex += 1;
+                            self.codePointIndex += 2;
+                            self.curTok = ">>";
+                        }
+                    }
+                    else {
+                        self.codePointIndex += 1;
+                        self.curTok = ">";
+                    }
+                    return;
                 }
                 FRAG_INVALID => {
-                    return error("invalid token");
+                    // XXX position not right within string
+                    return self.err("invalid token");
                 }
                 FRAG_WHITESPACE => {
+                    _ = self.getFragment();
+                    self.tokenStartCodePointIndex = self.codePointIndex;
+                }
+                FRAG_COMMENT => {
                     // nothing to do
+                    // this must be last thing on the line
+                    // so we don't need to update all the counters
                 }
                 FRAG_DECIMAL_NUMBER => {
-                    tokens.push([DECIMAL_NUMBER, fragment]);
+                    self.curTok = [DECIMAL_NUMBER, self.getFragment()];
+                    return;
                 }
                 FRAG_IDENTIFIER => {
-                    tokens.push([IDENTIFIER, fragment]);
+                    self.curTok = [IDENTIFIER, self.getFragment()];
+                    return;
                 }
                 FRAG_HEX_NUMBER => {
                     // skip the 0x
-                    tokens.push([HEX_INT_LITERAL, fragment.substring(2)]);
+                    self.curTok = [HEX_INT_LITERAL, self.getFragment().substring(2)];
+                    return;
+                }
+                FRAG_DECIMAL_FP_NUMBER_F => {
+                    string number = self.getFragment();
+                    self.curTok = [DECIMAL_FP_NUMBER, number.substring(0, number.length() - 1), "f"];
+                    return;
                 }
                 FRAG_DECIMAL_FP_NUMBER => {
-                    // XXX
+                    self.curTok = [DECIMAL_FP_NUMBER, self.getFragment(), ()];
+                    return;
                 }
+                _ => {
+                    FixedToken? ft = fragTokens[fragCode];
+                    // if we've missed something above, we'll get a panic from the cast here
+                    self.codePointIndex += (<string>ft).length();          
+                    self.curTok = ft;
+                    return ();
+                } 
             }
-        }
-        else if code >= FRAG_FIXED_TOKEN {
-            // point of this to avoid a potentially expensive
-            // runtime type check of whether a string is a fixed token
-            FixedToken? t = fragTokens[code];
-            if t == () {
-                panic error("null frag token");
-            }
-            else {
-                tokens.push(t);
-            }
-        }
-        else if code == FRAG_STRING_OPEN {
-            // nothing to do
-        }
-        else if code == FRAG_STRING_CLOSE {
-            tokens.push([STRING_LITERAL, s]);
-            s = "";
         }
     }
-    return tokens;
+
+    function current() returns Token? {
+        return self.curTok;
+    }
+
+    function setMode(Mode m) {
+        self.mode = m;
+    }
+
+    function currentPos() returns err:Position {
+        return {
+            lineNumber: self.lineIndex,
+            indexInLine: self.tokenStartCodePointIndex
+        };
+    }
+
+    private function getFragment() returns string {
+        string fragment = self.fragments[self.fragmentIndex];
+        self.codePointIndex += fragment.length();
+        self.fragmentIndex += 1;
+        return fragment;
+    }
+
+    private function advanceLine() returns boolean {
+        if self.lineIndex >= self.lines.length() {
+            return false;
+        }
+        ScannedLine scannedLine = scanLine(self.lines[self.lineIndex]);
+        self.fragCodes = scannedLine.fragCodes;
+        self.fragments = scannedLine.fragments;
+        self.lineIndex += 1;
+        self.fragCodeIndex = 0;
+        self.fragmentIndex = 0;
+        self.codePointIndex = 0;
+        self.tokenStartCodePointIndex = 0;
+        return true;
+    }
+
+    function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns err:Syntax? {
+        if self.curTok != tok {
+            err:Template msg;
+            Token? t = self.curTok;
+            if t is string {
+                msg = `expected ${tok}; got ${t}`;
+            }
+            else {
+                msg = `expected ${tok}`;
+            }
+            return self.err(msg);
+        }
+        check self.advance();
+    }
+
+    function err(err:Message msg) returns err:Syntax {
+        return err:syntax(msg, self.currentPos());
+    }
+
 }
 
 function createFragTokens() returns readonly & FixedToken?[] {
@@ -289,16 +431,27 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                 endFragment(CP_VBAR, i, result);
             }
             CP_DOT => {
-                if i < len && codePoints[i] == CP_DOT {
-                    if i + 1 < len && codePoints[i + 1] == CP_DOT {
-                        i += 2;
-                        endFragment(FRAG_DOT_DOT_DOT, i, result);
-                        continue;
+                if i < len {
+                    int cp2 = codePoints[i];
+        
+                    if cp2 == CP_DOT {
+                        if i + 1 < len && codePoints[i + 1] == CP_DOT {
+                            i += 2;
+                            endFragment(FRAG_DOT_DOT_DOT, i, result);
+                            continue;
+                        }
+                        if i + 1 < len && codePoints[i + 1] == CP_LESS_THAN {
+                            i += 2;
+                            endFragment(FRAG_DOT_DOT_LESS_THAN, i, result);
+                            continue;
+                        }
                     }
-                    if i + 1 < len && codePoints[i + 1] == CP_LESS_THAN {
-                        i += 2;
-                        endFragment(FRAG_DOT_DOT_LESS_THAN, i, result);
-                        continue;
+                    else if isCodePointAsciiDigit(cp2) {
+                        int? endIndex = scanFractionExponent(codePoints, i);
+                        if endIndex != () {
+                            i = endDecimal(FRAG_DECIMAL_FP_NUMBER, codePoints, endIndex, result);
+                            continue;
+                        }
                     }
                 }
                 endFragment(CP_DOT, i, result);
@@ -356,8 +509,14 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                 endFragment(CP_LESS_THAN, i, result);
             }
             CP_GREATER_THAN => {
-                // XXX
-
+                if i < len && codePoints[i] == CP_EQUAL {
+                    i += 1;
+                    endFragment(FRAG_GREATER_THAN_EQUAL, i, result);
+                    continue;
+                }
+                // Tokenization of multiple `>`s depends on lexical mode
+                // so do it later
+                endFragment(FRAG_GREATER_THAN, i, result);
             }
             CP_DIGIT_0 => {
                 if i < len {
@@ -587,6 +746,9 @@ function scanDecimal(int[] codePoints, int startIndex, Scanned result) returns i
         int cp = codePoints[i];
         if cp == CP_DOT {
             int? endIndex = scanFractionExponent(codePoints, i + 1);
+            if endIndex != () {
+                return endDecimal(FRAG_DECIMAL_FP_NUMBER, codePoints, endIndex, result);
+            }
         }
         else if cp == CP_UPPER_E || cp == CP_LOWER_E {
             int? endIndex = scanExponent(codePoints, i + 1);
@@ -620,11 +782,46 @@ function scanOptDigits(int[] codePoints, int startIndex) returns int {
 }
 
 function scanFractionExponent(int[] codePoints, int startIndex) returns int? {
-    // XXX
+    int i = startIndex;
+    int len = codePoints.length();
+    if i >= len || !isCodePointAsciiDigit(codePoints[i]) {
+        return ();
+    }
+    if !isCodePointAsciiDigit(codePoints[i]) {
+        return ();
+    }
+    i = scanOptDigits(codePoints, i + 1);
+    if i >= len {
+        return i;
+    }
+    int cp = codePoints[i];
+    if  cp == CP_UPPER_E || cp == CP_LOWER_E {
+        int? endIndex = scanExponent(codePoints, i + 1);
+        if endIndex != () {
+            return endIndex;
+        }
+    }
+    return i;
 }
 
 function scanExponent(int[] codePoints, int startIndex) returns int? {
-    // XXX
+    int i = startIndex;
+    int len = codePoints.length();
+    if i >= len {
+        return ();
+    }
+    int cp = codePoints[i];
+    if cp == CP_MINUS || cp == CP_PLUS {
+        i += 1;
+        if i >= len {
+            return ();
+        }
+        cp = codePoints[i];
+    }
+    if isCodePointAsciiDigit(cp) {
+        return scanOptDigits(codePoints, i + 1);
+    }
+    return ();
 }
 
 function scanIdentifier(int[] codePoints, int startIndex, Scanned result) returns int {
