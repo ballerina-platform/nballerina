@@ -31,10 +31,18 @@ function test1() {
     test:assertEquals(tokenization("1.7e"), [[DECIMAL_FP_NUMBER, "1.7", ()], [IDENTIFIER, "e"]]);
     test:assertEquals(tokenization("1.8 e = 1.8; 1.8e=1.8;"), [[DECIMAL_FP_NUMBER, "1.8", ()], [IDENTIFIER, "e"], "=", [DECIMAL_FP_NUMBER, "1.8", ()], ";",
                                                                [DECIMAL_FP_NUMBER, "1.8", ()], [IDENTIFIER, "e"], "=", [DECIMAL_FP_NUMBER, "1.8", ()], ";"]);
+    test:assertEquals(tokenization("{||}"), ["{|", "|}"]);
+    test:assertEquals(tokenization("xyz17==true"), [[IDENTIFIER, "xyz17"], "==", "true"]);
+    test:assertEquals(tokenization("A _x =-0;"), [[IDENTIFIER, "A"], [IDENTIFIER, "_x"], "=", "-",  [DECIMAL_NUMBER, "0"], ";"]);
+}
+
+@test:Config{}
+function test2() {
+    test:assertEquals(scanLine("\""), { fragCodes: [FRAG_INVALID], fragments: ["\""]});
 }
 
 function tokenization(string str) returns Token[]|error {
-    Tokenizer tok = new(str);
+    Tokenizer tok = new([str]);
     Token[] tokens = [];
     while true {
         check tok.advance();

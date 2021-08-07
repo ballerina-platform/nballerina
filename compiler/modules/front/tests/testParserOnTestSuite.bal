@@ -10,26 +10,26 @@ const SOURCE_DIR = "testSuite";
 @test:Config{}
 function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
     foreach var f in check file:readDir(SOURCE_DIR) {
-        string src = check io:fileReadString(f.absPath);
-        ModulePart|err:Syntax part = parseModulePart(src);
+        string[] lines = check io:fileReadLines(f.absPath);
+        ModulePart|err:Syntax part = parseModulePart(lines);
         if part is error {
             continue;
         }
         else {
-            string canonSrc = partToString(part);
+            string[] canonSrc = partToLines(part);
             part = parseModulePart(canonSrc);
             if part is error {
-                test:assertEquals(src, canonSrc, "serialized ast can't be re-parsed");
+                test:assertEquals(lines, canonSrc, "serialized ast can't be re-parsed");
                 panic err:impossible("if src is equal to canonSrc second parse can't fail");
             }
-            string roundTripSrc = partToString(check part);
+            string[] roundTripSrc = partToLines(check part);
             test:assertEquals(canonSrc, roundTripSrc);
         }
     }
 }
 
-function partToString(ModulePart part) returns string {
+function partToLines(ModulePart part) returns string[] {
     Word[] w = [];
     modulePartToWords(w, part);
-    return wordsToString(w);
+    return wordsToLines(w);
 }

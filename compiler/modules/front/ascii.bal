@@ -1,6 +1,8 @@
 // JBUG without `int` getting `method is too large` error
 // `int` here should make no difference
 const int CP_TAB = 0x9;
+const int CP_LF = 0xA;
+const int CP_CR = 0xD;
 const int CP_SPACE = 0x20;
 
 const int CP_EXCLAM = 0x21;

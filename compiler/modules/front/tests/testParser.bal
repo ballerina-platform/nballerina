@@ -10,11 +10,12 @@ final int CASE_START_LENGTH = CASE_START.length();
 const CASE_END = "// @end";
 
 // JBUG #31673 can't specify the first type to be "V"|"E"|ect
-type ParserTestCase [string, string, string, string];
+type ParserTestCase [string, string, string[], string[]];
+type SingleStringParserTestCase [string, string, string, string];
 @test:Config {
     dataProvider: validTokenSourceFragments
 }
-function testParser(string k, string rule, string subject, string expected) returns err:Syntax|io:Error? {
+function testParser(string k, string rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
     if k.includes("U") {
         // XXX validate unimplemented error is being returned
         return;
@@ -33,48 +34,53 @@ function testParser(string k, string rule, string subject, string expected) retu
         panic err:impossible("kind must be FE or FV but was '" + k + "'");
     }
     if k.includes("E") {
-        test:assertTrue(parsed is err:Syntax, "expected a syntax error");
+        if !(parsed is error) {
+            test:assertFail("expected a syntax error but got " + "\n".'join(...wordsToLines(parsed)));
+        }
         return;
     }
-    var actual = wordsToString(check parsed);
+    string[] actual = wordsToLines(check parsed);
     test:assertEquals(actual, expected, "wrong ast");
 }
 
-type TokenizerTestCase [string, string];
+type TokenizerTestCase [string, string[]];
+type SingleStringTokenizerTestCase [string, string];
 @test:Config {
     dataProvider: sourceFragments
 }
-function testTokenizer(string k, string src) returns error? {
-    int[] lines = findLineStarts(src);
-    Tokenizer tok = new (src);
-
-    err:Syntax|Token? t = advance(tok, k, src);
-    while t is Token {
-        err:Position pos = tok.currentPos();
-        // XXX change below after making indexInLine 1-indexed
-        int tStart = lines[pos.lineNumber - 1] + pos.indexInLine;
-        string tStr = tokenToString(t);
-        string srcAtPos = src.substring(tStart, tStart + tStr.length());
-        if t is [HEX_INT_LITERAL, string] {
-            // need to normalize `0x` vs `0X`
-            srcAtPos = srcAtPos.toLowerAscii();
+function testTokenizer(string k, string[] lines) returns error? {
+    Tokenizer tok = new (lines);
+    while true {
+        err:Syntax|Token? t = advance(tok, k, lines);
+        if t is Token {
+            err:Position pos = tok.currentPos();
+            string src = lines[pos.lineNumber - 1];
+            int tStart = pos.indexInLine;
+            string tStr = tokenToString(t);
+            string srcAtPos = src.substring(tStart, tStart + tStr.length());
+            if t is [HEX_INT_LITERAL, string] {
+                // need to normalize `0x` vs `0X`
+                srcAtPos = srcAtPos.toLowerAscii();
+            }
+            test:assertEquals(srcAtPos, tStr, "token: '" + tStr + "' source: '" + srcAtPos + "'");
         }
-        test:assertEquals(srcAtPos, tStr, "token: '" + tStr + "' source: '" + srcAtPos + "'");
-        t = advance(tok, k, src);
-    }
-    if k.includes("E") {
-        test:assertTrue(t is err:Syntax, "expected a syntax error");
+        else {
+            if k.includes("E") {
+                test:assertTrue(t is err:Syntax, "expected a syntax error on: " + "\n".'join(...lines));
+            }
+            break;
+        } 
     }
 }
 
-function advance(Tokenizer tok, string k, string subject) returns err:Syntax|Token? {
+function advance(Tokenizer tok, string k, string[] lines) returns err:Syntax|Token? {
     err:Syntax? e = tok.advance();
     if e is err:Syntax {
         if k.includes("E") {
             return e;
         }
         else {
-            panic error("tokenizer error for '" + subject + "'", e);
+            panic error("tokenizer error for '" + "\n".'join(...lines) + "'", e);
         }
     }
     return tok.current();
@@ -97,75 +103,30 @@ function tokenToString(Token t) returns string {
     return <string>t;
 }
 
-function findLineStarts(string str) returns int[] {
-    int[] lineStarts = [0];
-    BiIterator itr = new(str);
-    var [first, second] = itr.next();
-    int i = 1;
-    while !(first == () && second == ()) {
-        if first == "\r" && second == "\n" {
-            i += 1;
-            _ = itr.next();
-            lineStarts.push(i);
-        }
-        else if first == "\r" || first == "\n" {
-            lineStarts.push(i);
-        }
-        i += 1;
-        [first, second] = itr.next();
-    }
-    return lineStarts;
-}
-
-class BiIterator {
-    StringIterator itr;
-    boolean unstarted = true;
-    Char? second = ();
-
-    function init(string str) {
-        self.itr = str.iterator();
-    }
-
-    function next() returns [string?, string?] {
-        if self.unstarted {
-            self.fillSecond();
-            self.unstarted = false;
-        }
-
-        Char? first = self.second;
-        self.fillSecond();
-        return [first, self.second];
-    }
-
-    function fillSecond() {
-        var next = self.itr.next();
-        self.second = next != () ? next.value : ();
-    }
-}
-
-function reduceToWords(string rule, string fragment) returns err:Syntax|Word[] {
+function reduceToWords(string rule, string[] fragment) returns err:Syntax|Word[] {
     Word[] w = [];
-    match rule {
-        "expr" => {
-            Tokenizer tok = new (fragment);
-            check tok.advance();
-            exprToWords(w, check parseExpr(tok));
+    if rule == "mod" {
+        modulePartToWords(w, check parseModulePart(fragment));
+    }
+    else {
+        Tokenizer tok = new (fragment);
+        check tok.advance();
+        match rule {
+            "expr" => {
+                exprToWords(w, check parseExpr(tok));
+            }
+            "stmt" => {
+                stmtToWords(w, check parseStmt(tok));
+            }
+            "td" => {
+                typeDescToWords(w, check parseTypeDesc(tok));
+            }
+            _ => {
+                panic err:impossible("unknown production rule " + rule);
+            }
         }
-        "stmt" => {
-            Tokenizer tok = new (fragment);
-            check tok.advance();
-            stmtToWords(w, check parseStmt(tok));
-        }
-        "td" => {
-            Tokenizer tok = new (fragment);
-            check tok.advance();
-            typeDescToWords(w, check parseTypeDesc(tok));
-        }
-        "mod" => {
-            modulePartToWords(w, check parseModulePart(fragment));
-        }
-        _ => {
-            panic err:impossible("unknown production rule " + rule);
+        if tok.current() != () {
+            return err:syntax("superfluous input at end");
         }
     }
     return w;
@@ -181,7 +142,7 @@ function sourceFragments() returns map<TokenizerTestCase>|error {
 }
 
 function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
-    TokenizerTestCase[] sources = [
+    SingleStringTokenizerTestCase[] sources = [
         ["OE", string`"`],
         ["OE", "'"],
         ["OE", "`"],
@@ -191,11 +152,6 @@ function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
         ["OE", "\\"],
         ["OE", "\"\n\""],
         ["OE", "\"\r\""],
-        ["E", "obj..x(args)"],
-        ["E", "00"],
-        ["E", "01"],
-        ["E", "-01"],
-        ["E", "0x"],
         ["E", "\"\n\""],
         ["E", "\"\r\""],
         ["E", "\"\\"],
@@ -213,15 +169,23 @@ function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
 
     map<TokenizerTestCase> tests = {};
     foreach var s in sources {
-        tests[s[1]] = s;
+        tests[s[1]] = [s[0], splitIntoLines(s[1])];
     }
     return tests;
 }
 
 function validTokenSourceFragments() returns map<ParserTestCase>|error {
-    ParserTestCase[] sources =
+    SingleStringParserTestCase[] sources =
         [["E", "expr", "", ""],
-        // literals
+         // not lexical errors
+         // "0" is valid token so tokenization will succeed
+         ["E", "expr", "00"],
+         ["E", "expr", "01"],
+         ["E", "expr", "-01"],
+         ["E", "expr", "0x"],
+         // tokenizes as two dots
+         ["E", "expr", "obj..x(args)"],
+         // literals
          ["V", "expr", "0", "0"],
          ["V", "expr", "1", "1"],
          ["V", "expr", "0x1", "0x1"],
@@ -501,7 +465,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "mod", "import x/y;", "import x/y;"]];
     map<ParserTestCase> tests = {};
     foreach var s in sources {
-        tests[s[2]] = s;
+        tests[s[2]] = [s[0], s[1], splitIntoLines(s[2]), [s[3]]];
     }
     var testFiles = check file:readDir("modules/front/tests/data");
     foreach var f in testFiles {
@@ -510,10 +474,10 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
         if !base.endsWith(SOURCE_EXTENSION) {
             continue;
         }
-        string src = check readCase(path);
+        string[] src = check readCase(path);
         string parentDir = check file:parentPath(path);
         string canonFile = check file:joinPath(parentDir, canonFileName(base));
-        string expected;
+        string[] expected;
         if check file:test(canonFile, file:EXISTS) {
             expected = check readCase(canonFile);
         } else {
@@ -542,7 +506,7 @@ function min(int a, int b) returns int {
     return b;
 }
 
-function readCase(string path) returns string|error {
+function readCase(string path) returns string[]|error {
     string[] lines = check io:fileReadLines(path);
     string[] caseLines = [];
     boolean inCase = false;
@@ -561,7 +525,7 @@ function readCase(string path) returns string|error {
             caseLines.push(line.substring(indented));
         }
     }
-    return  "\n".'join(...caseLines);
+    return caseLines;
 }
 
 function canonFileName(string base) returns string{

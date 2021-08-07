@@ -380,7 +380,8 @@ function stringLiteral(string str) returns string {
     return "".'join(...chunks);
 }
 
-function wordsToString(Word[] s) returns string {
+function wordsToLines(Word[] s) returns string[] {
+    string[] lines = [];
     string[] buf = [];
     int level = 0;
     boolean firstInLine = true;
@@ -404,13 +405,15 @@ function wordsToString(Word[] s) returns string {
         else {
             level += a;
             firstInLine = true;
-            buf.push("\n");
+            lines.push("".'join(...buf));
+            buf.setLength(0);
             foreach int i in 0..<level {
                 buf.push("    ");
             }
         }
     }
-    return "".'join(...buf);
+    lines.push("".'join(...buf));
+    return lines;
 }
 
 function alwaysClingAfter(string a) returns boolean {

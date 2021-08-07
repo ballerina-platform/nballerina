@@ -17,7 +17,7 @@ class TestFoldContext {
 
 @test:Config{ dataProvider: validConstExprs }
 function testConstExpr(string src, SimpleConst expected) {
-    Tokenizer tok = new (src);
+    Tokenizer tok = new ([src]);
     checkpanic tok.advance();
     Expr parsed = checkpanic parseExpr(tok);
     TestFoldContext cx = new;
