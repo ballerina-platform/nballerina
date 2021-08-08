@@ -1,4 +1,4 @@
-#include "stringUtils.h"
+#include "string_utils.h"
 
 void validateStringSizeInt64(const uint64_t stringSize, const uint64_t headerSize, const uint64_t lengthInBytes) {
     uint64_t size = lengthInBytes + headerSize;
@@ -86,6 +86,23 @@ void testTaggedMediumStringLength() {
     }
 }
 
+void testTaggedImmeidateStringLength() {
+	// test ASCII
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFFFFFFFFFF), 0, 0); // ""
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFFFFFF4142), 2, 2); // "BA"
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFFFF613223), 3, 3); // "#2a"
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFF256C6420), 4, 4); // " dl%"
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFF6162606364), 5, 5); // "cd`ba"
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFF2A2625242C3F), 6, 6); // "?,$%&*"
+	validateTaggedStringLength(bitsToTaggedPtr(0x2A61626364656667), 7, 7); // "gfedcab"
+	// testUnicode 
+
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFFFFFFA2C2), 2, 1); // "¢"
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFFFF9E99E2), 3, 1); // "♞"
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFF97A49FF0), 4, 1); // "🤗"
+	validateTaggedStringLength(bitsToTaggedPtr(0x2AFFFFFF90A69FF0), 4, 1); // "🦀"
+}
+
 HASH_DEFINE_KEY;
 
 int main() {
@@ -94,5 +111,6 @@ int main() {
     testMediumStringSize();
     testTaggedLargeStringLength();
     testTaggedMediumStringLength();
+    testTaggedImmeidateStringLength();
     return 0;
 }

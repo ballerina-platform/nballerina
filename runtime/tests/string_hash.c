@@ -1,4 +1,4 @@
-#include "stringUtils.h"
+#include "string_utils.h"
 
 void testStringHash() {
     for (int i = 0; i < NTESTS*NTESTS; i++)
