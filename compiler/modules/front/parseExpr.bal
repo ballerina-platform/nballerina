@@ -364,47 +364,56 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
 }
 
 // This is simple-const-expr in the spec
-// We will use this for match patterns
-// XXX add boolean and string
+// This is used for match patterns
+// Will also be used for type descriptors
 function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
-    string sign = "";
+    err:Position? signPos = ();
     if tok.current() == "-" {
+        signPos = tok.currentPos();
         check tok.advance();
-        sign = "-";
     }
     Token? t = tok.current();
-    match t {     
-        [IDENTIFIER, var varName] => {
+    match t {
+        // JBUG gets bad, sad if parentheses removed from around type guard
+        // (think it's parsing as an anonymous function)
+        [IDENTIFIER, var varName] if (signPos == ()) => {
             VarRefExpr expr = { varName };
             return expr;
         }
-        [DECIMAL_NUMBER, var digits] => {
-            IntLiteralExpr expr = { base: 10, digits, pos: tok.currentPos() };
-            check tok.advance();
-            return expr;
-        }
-        [HEX_INT_LITERAL, var digits] => {
-            IntLiteralExpr expr = { base: 16, digits, pos: tok.currentPos() };
-            check tok.advance();
-            return expr;
-        }
-        [STRING_LITERAL, var value] => {
+        [STRING_LITERAL, var value] if (signPos == ()) => {
             ConstValueExpr expr = { value };
             check tok.advance();
             return expr;
         }
-        "(" => {
+        "(" if (signPos == ()) => {
             check tok.advance();
             check tok.expect(")");
             ConstValueExpr expr = { value: () };
             return expr;
         }
-        "true"|"false" => {
+        "true"|"false" if (signPos == ()) => {
             check tok.advance();
             ConstValueExpr expr = { value: t == "true" };
             return expr;
-        }   
+        }  
+        [DECIMAL_NUMBER, var digits] => {
+            return finishIntLiteral(tok, signPos, 10, digits);
+        }
+        [HEX_INT_LITERAL, var digits] => {
+            return finishIntLiteral(tok, signPos, 16, digits);
+        }
     }
     return parseError(tok);
 }
 
+function finishIntLiteral(Tokenizer tok, err:Position? signPos, IntLiteralBase base, string digits) returns SimpleConstExpr|err:Syntax {
+    IntLiteralExpr intLiteral = { base, digits, pos: tok.currentPos() };
+    check tok.advance();
+    if signPos == () {
+        return intLiteral;
+    }
+    else {
+        SimpleConstNegateExpr expr = { operand: intLiteral, pos: signPos };
+        return expr;
+    }
+}

@@ -41,7 +41,7 @@ type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileS
 type CallStmt FunctionCallExpr|MethodCallExpr;
 type Expr IntLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
-type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr;
+type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
 type AssignStmt record {|
     LExpr lValue;
@@ -150,6 +150,12 @@ type UnaryExpr record {|
     UnaryExprOp op;
     Expr operand;
     err:Position pos;
+|};
+
+type SimpleConstNegateExpr record {|
+    *UnaryExpr;
+    "-" op = "-";
+    IntLiteralExpr|ConstValueExpr operand;
 |};
 
 type FunctionCallExpr record {|
