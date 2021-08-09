@@ -3,6 +3,12 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
+public configurable string target = "";
+
+public type Options record {|
+    string? gcName = ();
+|};
+
 type BuildError err:Semantic|err:Unimplemented;
 
 type Alignment 1|8;
@@ -337,7 +343,7 @@ class Scaffold {
     }
 }
 
-function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
+public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
     bir:ModuleId modId = birMod.getId();
     llvm:Module llMod = llContext.createModule();
     bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
