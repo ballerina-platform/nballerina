@@ -235,6 +235,7 @@ type ConstValueExpr record {|
     t:SemType? multiSemType = ();
 |};
 
+type NumericLiteralExpr IntLiteralExpr|FpLiteralExpr;
 
 type IntLiteralBase 10|16;
 
@@ -244,6 +245,15 @@ type IntLiteralBase 10|16;
 type IntLiteralExpr record {|
     IntLiteralBase base;
     string digits;
+    err:Position pos;
+|};
+
+const FLOAT_TYPE_SUFFIX = "f";
+
+type FpLiteralExpr record {|
+    // This is the literal without the type suffix
+    string untypedLiteral;
+    FLOAT_TYPE_SUFFIX? typeSuffix;
     err:Position pos;
 |};
 
@@ -322,7 +332,7 @@ type TypeDescRef record {|
 |};
 
 type SingletonTypeDesc record {|
-    (string|int|boolean) value;
+    (string|float|int|boolean) value;
 |};
 
 type BuiltinIntSubtypeDesc "sint8"|"uint8"|"sint16"|"uint16"|"sint32"|"uint32";

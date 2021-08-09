@@ -196,8 +196,11 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) ret
         else if value is boolean {
             return t:booleanConst(value);
         }
-        else {
+        else if value is int {
             return t:intConst(value);
+        }
+        else {
+            return err:unimplemented("floating point singleton types not yet implemented");
         }
     }
     if td is ErrorTypeDesc {

@@ -367,53 +367,74 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
 // This is used for match patterns
 // Will also be used for type descriptors
 function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
-    err:Position? signPos = ();
-    if tok.current() == "-" {
-        signPos = tok.currentPos();
-        check tok.advance();
-    }
     Token? t = tok.current();
+    if t == "-" {
+        err:Position pos = tok.currentPos();
+        check tok.advance();
+        IntLiteralExpr operand = check parseIntLiteralExpr(tok);
+        SimpleConstNegateExpr expr = { operand, pos };
+        return expr;
+    }
     match t {
-        // JBUG gets bad, sad if parentheses removed from around type guard
-        // (think it's parsing as an anonymous function)
-        [IDENTIFIER, var varName] if (signPos == ()) => {
+        [IDENTIFIER, var varName] => {
             VarRefExpr expr = { varName };
             return expr;
         }
-        [STRING_LITERAL, var value] if (signPos == ()) => {
+        [STRING_LITERAL, var value] => {
             ConstValueExpr expr = { value };
             check tok.advance();
             return expr;
         }
-        "(" if (signPos == ()) => {
+        "("  => {
             check tok.advance();
             check tok.expect(")");
             ConstValueExpr expr = { value: () };
             return expr;
         }
-        "true"|"false" if (signPos == ()) => {
+        "true"|"false"  => {
             check tok.advance();
             ConstValueExpr expr = { value: t == "true" };
             return expr;
         }  
-        [DECIMAL_NUMBER, var digits] => {
-            return finishIntLiteral(tok, signPos, 10, digits);
-        }
-        [HEX_INT_LITERAL, var digits] => {
-            return finishIntLiteral(tok, signPos, 16, digits);
+        [DECIMAL_NUMBER, _]
+        | [HEX_INT_LITERAL, _] => {
+            return parseIntLiteralExpr(tok);
         }
     }
     return parseError(tok);
 }
 
-function finishIntLiteral(Tokenizer tok, err:Position? signPos, IntLiteralBase base, string digits) returns SimpleConstExpr|err:Syntax {
-    IntLiteralExpr intLiteral = { base, digits, pos: tok.currentPos() };
-    check tok.advance();
-    if signPos == () {
-        return intLiteral;
+function parseNumericLiteralExpr(Tokenizer tok) returns NumericLiteralExpr|err:Syntax {
+    Token? t = tok.current();
+    err:Position pos = tok.currentPos();
+    match t {
+        [DECIMAL_NUMBER, _]
+        | [HEX_INT_LITERAL, _] => {
+            return parseIntLiteralExpr(tok);
+        }
+        [DECIMAL_FP_NUMBER, var untypedLiteral, var typeSuffix] => {
+            check tok.advance();
+            return { untypedLiteral, typeSuffix, pos };
+        }
     }
-    else {
-        SimpleConstNegateExpr expr = { operand: intLiteral, pos: signPos };
-        return expr;
-    }
+    return parseError(tok, "expected numeric literal");
 }
+
+// XXX This can merged into parseNumericLiteralExpr when we add float support
+// outside types
+function parseIntLiteralExpr(Tokenizer tok) returns IntLiteralExpr|err:Syntax {
+    Token? t = tok.current();
+    err:Position pos = tok.currentPos();
+    match t {
+        [DECIMAL_NUMBER, var digits] => {
+            check tok.advance();
+            return { base: 10, digits, pos };
+        }
+        [HEX_INT_LITERAL, var digits] => {
+            check tok.advance();
+            return { base: 16, digits, pos };
+        }
+    }
+    return parseError(tok, "expected integer literal");
+}
+
