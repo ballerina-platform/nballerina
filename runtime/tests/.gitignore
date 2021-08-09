@@ -1,5 +1,6 @@
-/stringHash
-/stringCmp
-/stringConcat
+/string-hash
+/string-cmp
+/string-concat
+/immediate-string
 *.stamp
 
