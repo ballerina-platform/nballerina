@@ -63,7 +63,7 @@ task copyLocalDependencies(type: Copy) {
         from platformLibs
         into "${tmpBuildDir}/target/platform-libs"
 }
-copyLocalDependencies.dependsOn(copyDependencies);
+copyLocalDependencies.dependsOn(copyDependencies)
 
 task copyBalConfig(type: Copy) {
         from 'Ballerina.toml'
@@ -73,7 +73,7 @@ copyBalConfig.dependsOn(copyLocalDependencies, copyNbal)
 
 task testBuild(type: Exec) {
         workingDir tmpBuildDir
-        commandLine 'bal', 'build'
+        commandLine 'bal', 'build', '--offline'
 }
 testBuild.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyLocalDependencies, copyBalConfig)
 

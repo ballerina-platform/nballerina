@@ -76,7 +76,7 @@ public distinct class Module {
                                                             targetTriple.jObject,
                                                             cpu.jObject,
                                                             features.jObject,
-                                                            getLLVMCodeGenOpLevel(optLevel),
+                                                            getLLVMCodeGenOptLevel(optLevel),
                                                             getLLVMRelocMode(relocMode),
                                                             getLLVMCodeModel(codeModel));
         BytePointer emitError = new(jBytePointer());
@@ -128,7 +128,7 @@ public distinct class Module {
 }
 
 
-function getLLVMCodeGenOpLevel(LLVMCodeGenOptLevel codeGenLevel) returns int {
+function getLLVMCodeGenOptLevel(LLVMCodeGenOptLevel codeGenLevel) returns int {
     match codeGenLevel {
         "None" => {
             return 0;
