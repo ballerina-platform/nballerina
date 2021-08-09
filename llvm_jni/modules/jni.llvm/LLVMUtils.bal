@@ -55,6 +55,16 @@ function jPointerPointer(int size) returns handle = @java:Constructor {
     paramTypes: ["long"]
 } external;
 
+function jBytePointer() returns handle = @java:Constructor {
+    'class: "org.bytedeco.javacpp.BytePointer",
+    paramTypes: []
+} external;
+
+function jBytePointerFromString(handle str) returns handle = @java:Constructor {
+    'class: "org.bytedeco.javacpp.BytePointer",
+    paramTypes: ["java.lang.String"]
+} external;
+
 function jPointerPointerPut(handle receiver, int arg0, handle arg1) returns handle = @java:Method {
     name: "put",
     'class: "org.bytedeco.javacpp.PointerPointer",
