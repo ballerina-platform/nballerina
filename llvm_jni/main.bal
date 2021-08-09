@@ -60,16 +60,11 @@ function validGcName(string? gcName) returns string|error? {
 
 //  outputFilename of () means don't output anything
 function compileFile(string filename, string? gcName, *Options opts) returns CompileError {
-    string? outputFileName = checkpanic chooseOutputFilename(filename, opts.outDir);
-    if outputFileName is string {
-        outputFileName += OUTPUT_EXTENSION;
-    }
+    string outputNameBase = checkpanic chooseOutputFilename(filename, opts.outDir);
+    string outputFileName = outputNameBase + OUTPUT_EXTENSION;
     string? objectFileName = ();
-    if opts.o {
-        objectFileName = checkpanic chooseOutputFilename(filename, opts.outDir);
-        if objectFileName is string{
-            objectFileName += OBJECT_FILE_EXTENSION;
-        }
+    if opts.o && outputNameBase is string {
+        objectFileName = outputNameBase + OBJECT_FILE_EXTENSION;
     }
     bir:ModuleId id = {
        names: [filename],
@@ -84,9 +79,7 @@ function compileFile(string filename, string? gcName, *Options opts) returns Com
     else if nback:target != "" {
         llMod.setTarget(nback:target);
     }
-    if outputFileName != () {
-        check llMod.printModuleToFile(outputFileName);
-    }
+    check llMod.printModuleToFile(outputFileName);
     if objectFileName != () {
         check llMod.printModuleToObjectFile(objectFileName, {
             optLevel: opts.optLevel, relocMode: opts.relocMode, codeModel: opts.codeModel
@@ -94,7 +87,7 @@ function compileFile(string filename, string? gcName, *Options opts) returns Com
     }
 }
 
-function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error? {
+function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error {
     string filename;
     if outDir == () {
         filename = sourceFilename;
