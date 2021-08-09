@@ -14,7 +14,8 @@ public type Options record {|
     boolean showTypes = false;
     string? outDir = ();
     string? gc = ();
-    boolean outputObjectFile = false;
+    boolean o = false;
+    string? targetTriple = ();
     string? optLevel = ();
     string? relocMode = ();
     string? codeModel = ();
@@ -64,7 +65,7 @@ function compileFile(string filename, string? gcName, *Options opts) returns Com
         outputFileName += OUTPUT_EXTENSION;
     }
     string? objectFileName = ();
-    if opts.outputObjectFile {
+    if opts.o {
         objectFileName = checkpanic chooseOutputFilename(filename, opts.outDir);
         if objectFileName is string{
             objectFileName += OBJECT_FILE_EXTENSION;
@@ -77,8 +78,10 @@ function compileFile(string filename, string? gcName, *Options opts) returns Com
     bir:Module birMod = check front:loadModule(filename, id);
     llvm:Context context = new;
     llvm:Module llMod = check nback:buildModule(birMod, context, {gcName: gcName});
-
-    if nback:target != "" {
+    if opts.targetTriple is string {
+        llMod.setTarget(<string>opts.targetTriple);
+    }
+    else if nback:target != "" {
         llMod.setTarget(nback:target);
     }
     if outputFileName != () {
