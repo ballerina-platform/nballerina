@@ -53,7 +53,7 @@ function validGcName(string? gcName) returns string|error? {
 
 //  outputFilename of () means don't output anything
 function compileFile(string filename, string? gcName, *Options opts) returns CompileError {
-    string? outputFileName = checkpanic chooseOutputFilename(filename, OUTPUT_EXTENSION, opts.outDir);
+    string? outputFileName = checkpanic chooseOutputFilename(filename, opts.outDir);
     bir:ModuleId id = {
        names: [filename],
        organization: "dummy"
@@ -71,7 +71,7 @@ function compileFile(string filename, string? gcName, *Options opts) returns Com
     }
 }
 
-function chooseOutputFilename(string sourceFilename, string outputExtension, string? outDir) returns string|error? {
+function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error? {
     string filename;
     if outDir == () {
         filename = sourceFilename;
@@ -83,7 +83,7 @@ function chooseOutputFilename(string sourceFilename, string outputExtension, str
     if extension != SOURCE_EXTENSION {
         return error("filename must end with " + SOURCE_EXTENSION);
     }
-    return base + outputExtension;
+    return base + OUTPUT_EXTENSION;
 }
 
 // Note that this converts extension to lower case
