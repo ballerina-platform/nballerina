@@ -113,6 +113,10 @@ type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
 type RangeOp  "..." | "..<";
 
+type CompAssnArithmeticOp "+=" | "-=" | "/=" | "*=";
+type CompAssnBitwiseOp "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=";
+type CompAssnOp  CompAssnArithmeticOp|CompAssnBitwiseOp;
+
 type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
 type UnaryExprOp "-" | "!" | "~";

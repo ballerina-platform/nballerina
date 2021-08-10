@@ -80,6 +80,10 @@ const FRAG_LESS_THAN_EQUAL = 0x49;
 const FRAG_GREATER_THAN_EQUAL = 0x4A;
 const FRAG_LESS_THAN_LESS_THAN = 0x4B;
 const FRAG_EQUAL_GREATER_THAN = 0x4C;
+const FRAG_PLUS_EQUAL = 0x4D;
+const FRAG_MINUS_EQUAL = 0x4E;
+const FRAG_DIV_EQUAL = 0x4F;
+const FRAG_MUL_EQUAL = 0x50;
 
 const FRAG_KEYWORD = 0x80;
 
@@ -144,6 +148,10 @@ function createFragTokens() returns readonly & FixedToken?[] {
     ft[<int>FRAG_GREATER_THAN_EQUAL] = ">=";
     ft[<int>FRAG_LESS_THAN_LESS_THAN] = "<<";
     ft[<int>FRAG_EQUAL_GREATER_THAN] = "=>";
+    ft[<int>FRAG_PLUS_EQUAL] = "+=";
+    ft[<int>FRAG_MINUS_EQUAL] = "-=";
+    ft[<int>FRAG_DIV_EQUAL] = "/=";
+    ft[<int>FRAG_MUL_EQUAL] = "*=";
     // JBUG error if hex used for 32 and 128
     foreach int cp in 32 ..< 128 {
         string s = checkpanic string:fromCodePointInt(cp);
@@ -255,6 +263,10 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     continue;
                 }
                 cp = codePoints[i];
+                if cp == CP_EQUAL {
+                   endFragment(FRAG_DIV_EQUAL, i, result);
+                   continue; 
+                }
                 if cp != CP_SLASH {
                     endFragment(CP_SLASH, i, result);
                     continue;
@@ -400,10 +412,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
             |CP_AMPERSAND
             |CP_LEFT_PAREN 
             |CP_RIGHT_PAREN
-            |CP_ASTERISK
-            |CP_PLUS
             |CP_COMMA
-            |CP_MINUS
             |CP_COLON
             |CP_SEMICOLON 
             |CP_QUESTION
@@ -414,6 +423,39 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
             |CP_TILDE => {
                 // JBUG when FragCode is byte, error without cast
                 endFragment(<FragCode>cp, i, result);
+            }
+            CP_PLUS => {
+                if i < len {
+                    int cp2 = codePoints[i];
+                    if cp2 == CP_EQUAL {
+                        i += 1;
+                        endFragment(FRAG_PLUS_EQUAL, i, result);
+                        continue;
+                    }
+                }
+                endFragment(CP_PLUS, i, result);
+            }
+            CP_MINUS => {
+                if i < len {
+                    int cp2 = codePoints[i];
+                    if cp2 == CP_EQUAL {
+                        i += 1;
+                        endFragment(FRAG_MINUS_EQUAL, i, result);
+                        continue;
+                    }
+                }
+                endFragment(CP_MINUS, i, result);
+            }
+            CP_ASTERISK => {
+                if i < len {
+                    int cp2 = codePoints[i];
+                    if cp2 == CP_EQUAL {
+                        i += 1;
+                        endFragment(FRAG_MUL_EQUAL, i, result);
+                        continue;
+                    }
+                }
+                endFragment(CP_ASTERISK, i, result);
             }
             CP_DOUBLE_QUOTE => {
                 i = scanString(codePoints, i, result);

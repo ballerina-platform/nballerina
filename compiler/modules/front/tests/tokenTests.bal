@@ -26,7 +26,7 @@ function test1() {
     test:assertEquals(tokenization(".e1"), [".", [IDENTIFIER, "e1"]]);
 
     test:assertEquals(tokenization("1.4e-"), [[DECIMAL_FP_NUMBER, "1.4", ()], [IDENTIFIER, "e"], "-"]);
-    test:assertEquals(tokenization("1.5e-=5;"), [[DECIMAL_FP_NUMBER, "1.5", ()], [IDENTIFIER, "e"], "-", "=", [DECIMAL_NUMBER, "5"], ";"]);
+    test:assertEquals(tokenization("1.5e-=5;"), [[DECIMAL_FP_NUMBER, "1.5", ()], [IDENTIFIER, "e"], "-=", [DECIMAL_NUMBER, "5"], ";"]);
     test:assertEquals(tokenization("1.6E"), [[DECIMAL_FP_NUMBER, "1.6", ()], [IDENTIFIER, "E"]]);
     test:assertEquals(tokenization("1.7e"), [[DECIMAL_FP_NUMBER, "1.7", ()], [IDENTIFIER, "e"]]);
     test:assertEquals(tokenization("1.8 e = 1.8; 1.8e=1.8;"), [[DECIMAL_FP_NUMBER, "1.8", ()], [IDENTIFIER, "e"], "=", [DECIMAL_FP_NUMBER, "1.8", ()], ";",
