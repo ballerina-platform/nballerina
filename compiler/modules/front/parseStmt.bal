@@ -74,6 +74,10 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
     else if cur is CompAssnArithmeticOp {
         VarRefExpr lValue = { varName: identifier };
         return parseArithmeticCompAssnStmt(tok, lValue, <BinaryArithmeticOp> cur[0]);
+    } else if cur is CompAssnBitwiseOp {
+        VarRefExpr lValue = {varName: identifier};
+        string curStr = cur.toString();
+        return parseBitwiseCompAssnStmt(tok, lValue, <BinaryBitwiseOp> curStr.substring(0, curStr.length()-1));
     }
     else if cur == "(" {
         check tok.advance();
@@ -154,8 +158,16 @@ function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Sy
 function parseArithmeticCompAssnStmt(Tokenizer tok, LExpr lValue, BinaryArithmeticOp op) returns AssignStmt|err:Syntax {
     check tok.advance();
     Expr rexpr = check parseExpr(tok);
-    Expr expr;
-    expr = {arithmeticOp: op, left: lValue, right: rexpr, pos: tok.currentPos()};
+    Expr expr = {arithmeticOp: op, left: lValue, right: rexpr, pos: tok.currentPos()};
+    AssignStmt stmt = { lValue, expr };
+    check tok.expect(";");
+    return stmt; 
+}
+
+function parseBitwiseCompAssnStmt(Tokenizer tok, LExpr lValue, BinaryBitwiseOp op) returns AssignStmt|err:Syntax {
+    check tok.advance();
+    Expr rexpr = check parseExpr(tok);
+    Expr expr = {bitwiseOp: op, left: lValue, right: rexpr};
     AssignStmt stmt = { lValue, expr };
     check tok.expect(";");
     return stmt; 
