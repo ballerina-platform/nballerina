@@ -42,6 +42,10 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parseIfElseStmt(tok);
         }
+        "match" => {
+            check tok.advance();
+            return parseMatchStmt(tok);
+        }
         "while" => {
             check tok.advance();
             return parseWhileStmt(tok);

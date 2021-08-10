@@ -378,6 +378,7 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     match t {
         [IDENTIFIER, var varName] => {
             VarRefExpr expr = { varName };
+            check tok.advance();
             return expr;
         }
         [STRING_LITERAL, var value] => {
