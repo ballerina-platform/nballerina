@@ -673,6 +673,52 @@ function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns
     }
 }
 
+public type Value readonly & record {|
+    string|int|boolean|() value;
+|};
+
+// If the type contains exactly onr shape, return a value
+// having that shape.
+public function singleShape(SemType t) returns Value? {
+    if t === NIL {
+        return { value: () };
+    }
+    else if t is UniformTypeBitSet {
+        return ();
+    }
+    else if isSubtypeSimple(t, INT) {
+        SubtypeData sd = t.getSubtypeData(UT_INT);
+        int? value = intSubtypeSingleValue(sd);
+        return value == () ? () : { value };
+    }
+    else if isSubtypeSimple(t, STRING) {
+        SubtypeData sd = t.getSubtypeData(UT_STRING);
+        string? value = stringSubtypeSingleValue(sd);
+        return value == () ? () : { value };
+    }
+    else if isSubtypeSimple(t, BOOLEAN) {
+        SubtypeData sd = t.getSubtypeData(UT_BOOLEAN);
+        boolean? value = booleanSubtypeSingleValue(sd);
+        return value == () ? () : { value };
+    }
+    return ();
+}
+
+public function singleton(string|int|boolean|() v) returns SemType {
+    if v is () {
+        return NIL;
+    }
+    else if v is int {
+        return intConst(v);
+    }
+    else if v is string {
+        return stringConst(v);
+    }
+    else {
+        return booleanConst(v);
+    }
+}
+
 public function isReadOnly(SemType t) returns boolean {
     UniformTypeBitSet bits;
     if t is UniformTypeBitSet {

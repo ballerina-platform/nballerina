@@ -7,12 +7,13 @@ define void @_B_main() {
   %1 = alloca i1
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i1
+  %i.1 = alloca i64
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard
   %8 = icmp ult i8* %6, %7
-  br i1 %8, label %32, label %9
+  br i1 %8, label %33, label %9
 9:
   store i64 6, i64* %i
   br label %10
@@ -38,22 +39,24 @@ define void @_B_main() {
   %22 = icmp eq i64 %21, 6
   store i1 %22, i1* %3
   %23 = load i1, i1* %3
-  br i1 %23, label %24, label %28
+  br i1 %23, label %24, label %29
 24:
-  br label %25
-25:
-  %26 = load i64, i64* %i
-  %27 = add nsw i64 %26, 1
-  store i64 %27, i64* %i
+  %25 = load i64, i64* %i
+  store i64 %25, i64* %i.1
+  br label %26
+26:
+  %27 = load i64, i64* %i
+  %28 = add nsw i64 %27, 1
+  store i64 %28, i64* %i
   br label %10
-28:
-  %29 = zext i1 1 to i64
-  %30 = or i64 %29, 72057594037927936
-  %31 = getelementptr i8, i8 addrspace(1)* null, i64 %30
-  call void @_Bio__println(i8 addrspace(1)* %31)
+29:
+  %30 = zext i1 1 to i64
+  %31 = or i64 %30, 72057594037927936
+  %32 = getelementptr i8, i8 addrspace(1)* null, i64 %31
+  call void @_Bio__println(i8 addrspace(1)* %32)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
-32:
+33:
   call void @_bal_panic(i64 772)
   unreachable
 }

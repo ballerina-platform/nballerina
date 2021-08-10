@@ -70,6 +70,21 @@ function intSubtypeWidenUnsigned(SubtypeData d) returns SubtypeData {
     return true;
 }
 
+function intSubtypeSingleValue(SubtypeData d) returns int? {
+    if d is boolean {
+        return ();
+    }
+    IntSubtype v = <IntSubtype>d;
+    if v.length() != 1 {
+        return ();
+    }
+    int min = v[0].min;
+    if min != v[0].max {
+        return ();
+    }
+    return min;
+}
+
 function intSubtypeContains(SubtypeData d, int n) returns boolean {
     if d is boolean {
         return d;

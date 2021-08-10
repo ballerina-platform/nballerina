@@ -1,6 +1,5 @@
 import wso2/nballerina.err;
 
-
 // join words without space
 const CLING = ();
 // line feed
@@ -17,24 +16,27 @@ function modulePartToWords(Word[] w, ModulePart mod) {
     if im != () {
         w.push("import", im.org, CLING, "/", CLING, im.module, ";");
     }
-    foreach var def in mod.defs {
-        if def is FunctionDef {
-            functionDefToWords(w, def);
+    foreach var defn in mod.defns {
+        if defn is FunctionDefn {
+            functionDefnToWords(w, defn);
+        }
+        else if defn is ConstDefn {
+            constDefnToWords(w, defn);
         }
         else {
-            // XXX type defs are not part of the current subset
+            // XXX type defns are not part of the current subset
         }
     }
 }
 
-function functionDefToWords(Word[] w, FunctionDef func) {
+function functionDefnToWords(Word[] w, FunctionDefn func) {
     if func.vis != () {
         w.push(<Word>func.vis);
     }
     w.push("function");
     w.push(func.name, CLING, "(");
     boolean firstArg = true;
-    foreach int i in 0..<func.typeDesc.args.length() {
+    foreach int i in 0 ..< func.typeDesc.args.length() {
         if i != 0 {
             w.push(",");
         }
@@ -50,6 +52,17 @@ function functionDefToWords(Word[] w, FunctionDef func) {
     blockToWords(w, func.body);
 }
 
+function constDefnToWords(Word[] w, ConstDefn defn) {
+    if defn.vis != () {
+        w.push(<Word>defn.vis);
+    }
+    w.push("const", defn.name, "=");
+    exprToWords(w, defn.expr);
+    w.push(";");
+    // JBUG cast
+    w.push(<Word>LF);
+}
+
 function stmtToWords(Word[] w, Stmt stmt) {
     if stmt is VarDeclStmt {
         if stmt.isFinal {
@@ -63,7 +76,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
     else if stmt is ReturnStmt {
         w.push("return");
         Expr ret = stmt.returnExpr;
-        if !(ret is SimpleConstExpr) || ret.value != () {
+        if !(ret is ConstValueExpr) || ret.value != () {
             exprToWords(w, stmt.returnExpr);
         }
         w.push(";");
@@ -86,6 +99,39 @@ function stmtToWords(Word[] w, Stmt stmt) {
             w.push(<Word>LF, "else");
             blockToWords(w, stmt.ifFalse);
         }
+    }
+    else if stmt is MatchStmt {
+        w.push("match");
+        exprToWords(w, stmt.expr);
+        w.push("{");
+        boolean firstClause = true;
+        foreach var clause in stmt.clauses {
+            if firstClause {
+                w.push(<Word>LF_INDENT);
+                firstClause = false;
+            }
+            else {
+                w.push(<Word>LF);
+            }
+            boolean firstPattern = true;
+            foreach var pattern in clause.patterns {
+                if firstPattern {
+                    firstPattern = false;
+                }
+                else {
+                    w.push("|");
+                }
+                if pattern is string {
+                    w.push(pattern);
+                }
+                else {
+                    exprToWords(w, pattern.expr);
+                }
+            }
+            w.push("=>");
+            blockToWords(w, clause.block);
+        }
+        w.push(<Word>(firstClause ? LF : LF_OUTDENT), "}");
     }
     else if stmt is WhileStmt {
         w.push("while");
@@ -119,7 +165,7 @@ function blockToWords(Word[] w, Stmt[] body) {
         firstInBlock = false;
         stmtToWords(w, stmt);
     }
-    w.push(<Word>(firstInBlock ? LF :LF_OUTDENT), "}");
+    w.push(<Word>(firstInBlock ? LF : LF_OUTDENT), "}");
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean wrap = false) {
@@ -169,7 +215,7 @@ function exprsToWords(Word[] w, Expr[] exprs) {
 }
 
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
-    if expr is SimpleConstExpr {
+    if expr is ConstValueExpr {
         var val = expr.value;
         if val == () {
             w.push("(", ")");
@@ -180,7 +226,15 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         else {
             w.push(val.toString());
         }
-    } 
+    }
+    else if expr is IntLiteralExpr {
+        if expr.base == 16 {
+            w.push("0x" + expr.digits.toUpperAscii());
+        }
+        else {
+            w.push(expr.digits);
+        }
+    }
     else if expr is UnaryExpr {
         if wrap {
             w.push("(");
@@ -219,6 +273,17 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         }
         w.push(op);
         exprToWords(w, expr.right, true);
+        if wrap {
+            w.push(")");
+        }
+    }
+    else if expr is TypeTestExpr {
+        if wrap {
+            w.push("(");
+        }
+        exprToWords(w, expr.left, true);
+        w.push("is");
+        typeDescToWords(w, expr.td);
         if wrap {
             w.push(")");
         }
@@ -315,7 +380,8 @@ function stringLiteral(string str) returns string {
     return "".'join(...chunks);
 }
 
-function wordsToString(Word[] s) returns string {
+function wordsToLines(Word[] s) returns string[] {
+    string[] lines = [];
     string[] buf = [];
     int level = 0;
     boolean firstInLine = true;
@@ -339,13 +405,15 @@ function wordsToString(Word[] s) returns string {
         else {
             level += a;
             firstInLine = true;
-            buf.push("\n");
+            lines.push("".'join(...buf));
+            buf.setLength(0);
             foreach int i in 0..<level {
                 buf.push("    ");
             }
         }
     }
-    return "".'join(...buf);
+    lines.push("".'join(...buf));
+    return lines;
 }
 
 function alwaysClingAfter(string a) returns boolean {

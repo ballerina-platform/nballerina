@@ -98,6 +98,14 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
         BinaryRelationalExpr bin = { relationalOp: t, left: expr, right };
         return bin;
     }
+    else if t == "is" {
+        tok.setMode(MODE_TYPE_DESC);
+        check tok.advance();
+        InlineTypeDesc td = check parseInlineTypeDesc(tok);
+        tok.setMode(MODE_NORMAL);
+        TypeTestExpr typeTest = { td, left: expr, semType: resolveInlineTypeDesc(td) };
+        return typeTest;
+    }
     else {
         return expr;
     }
@@ -165,7 +173,7 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
 
 function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
-    if t is "-"|"!" {
+    if t is "-"|"!"|"~" {
         err:Position pos = tok.currentPos();
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
@@ -186,7 +194,7 @@ function parseTypeCastExpr(Tokenizer tok) returns Expr|err:Syntax {
     check tok.expect(">");
     tok.setMode(MODE_NORMAL);
     Expr operand = check parseUnaryExpr(tok);
-    TypeCastExpr expr = { pos, td, operand, semType: convertInlineTypeDesc(td) };
+    TypeCastExpr expr = { pos, td, operand, semType: resolveInlineTypeDesc(td) };
     return expr;
 }
 
@@ -209,15 +217,17 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         return expr;
     }
     else if t is [DECIMAL_NUMBER, string] {
-        SimpleConstExpr expr = { value: check parseDigits(tok, t[1]) };
+        IntLiteralExpr expr = { base: 10, digits: t[1], pos: tok.currentPos() };
+        check tok.advance();
         return expr;
     }
     else if t is [HEX_INT_LITERAL, string] {
-        SimpleConstExpr expr = { value: check parseHexDigits(tok, t[1]) };
+        IntLiteralExpr expr = { base: 16, digits: t[1], pos: tok.currentPos() };
+        check tok.advance();
         return expr;
     }
     else if t is [STRING_LITERAL, string] {
-        SimpleConstExpr expr = { value: t[1] };
+        ConstValueExpr expr = { value: t[1] };
         check tok.advance();
         return expr;
     }
@@ -225,7 +235,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         if tok.current() == ")" {
             check tok.advance();
-            SimpleConstExpr expr = { value: () };
+            ConstValueExpr expr = { value: () };
             return expr;
         }
         Expr expr = check parseInnerExpr(tok);
@@ -234,12 +244,12 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     }
     else if t is "true"|"false" {
         check tok.advance();
-        SimpleConstExpr expr = { value: t == "true" };
+        ConstValueExpr expr = { value: t == "true" };
         return expr;
     }
     else if t is "null" {
         check tok.advance();
-        SimpleConstExpr expr = { value: () };
+        ConstValueExpr expr = { value: () };
         return expr;
     }
     else {
@@ -353,51 +363,78 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
     return err:syntax("expected field name");
 }
 
-function parseConstExpr(Tokenizer tok) returns TypeDesc|err:Syntax {
-    check tok.expect("=");
-    string sign = "";
-    if tok.current() == "-" {
+// This is simple-const-expr in the spec
+// This is used for match patterns
+// Will also be used for type descriptors
+function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
+    Token? t = tok.current();
+    if t == "-" {
+        err:Position pos = tok.currentPos();
         check tok.advance();
-        sign = "-";
+        IntLiteralExpr operand = check parseIntLiteralExpr(tok);
+        SimpleConstNegateExpr expr = { operand, pos };
+        return expr;
     }
-    match tok.current() {
-        [DECIMAL_NUMBER, var digits] => {
-            SingletonTypeDesc td = { value: check parseDigits(tok, sign + digits) };
-            return td;
-        // JBUG this gets a bad sad #30738
-        // NullPointerException in BIROptimizer$RHSTempVarOptimizer.visit
-        // int n;
-        // do {
-        //     n = check int:fromString(sign + digits);
-        // } on fail var cause {
-        //     return err:syntax("invalid number", cause, pos=tok.currentPos());
-        // }
-        // check tok.advance();
-        // return <SingletonTypeDesc>{ value: n };         
+    match t {
+        [IDENTIFIER, var varName] => {
+            VarRefExpr expr = { varName };
+            return expr;
+        }
+        [STRING_LITERAL, var value] => {
+            ConstValueExpr expr = { value };
+            check tok.advance();
+            return expr;
+        }
+        "("  => {
+            check tok.advance();
+            check tok.expect(")");
+            ConstValueExpr expr = { value: () };
+            return expr;
+        }
+        "true"|"false"  => {
+            check tok.advance();
+            ConstValueExpr expr = { value: t == "true" };
+            return expr;
+        }  
+        [DECIMAL_NUMBER, _]
+        | [HEX_INT_LITERAL, _] => {
+            return parseIntLiteralExpr(tok);
         }
     }
     return parseError(tok);
 }
 
-function parseDigits(Tokenizer tok, string signDigits) returns int|err:Syntax {
-    error|int res = int:fromString(signDigits);
-    if res is error {
-        return err:syntax("invalid number", tok.currentPos(), cause=res);
-    } 
-    else {
-        check tok.advance();
-        return res;
+function parseNumericLiteralExpr(Tokenizer tok) returns NumericLiteralExpr|err:Syntax {
+    Token? t = tok.current();
+    err:Position pos = tok.currentPos();
+    match t {
+        [DECIMAL_NUMBER, _]
+        | [HEX_INT_LITERAL, _] => {
+            return parseIntLiteralExpr(tok);
+        }
+        [DECIMAL_FP_NUMBER, var untypedLiteral, var typeSuffix] => {
+            check tok.advance();
+            return { untypedLiteral, typeSuffix, pos };
+        }
     }
+    return parseError(tok, "expected numeric literal");
 }
 
-function parseHexDigits(Tokenizer tok, string digits) returns int|err:Syntax {
-    error|int res = int:fromHexString(digits);
-    if res is error {
-        return err:syntax("invalid hex literal", tok.currentPos(), cause=res);
-    } 
-    else {
-        check tok.advance();
-        return res;
+// XXX This can merged into parseNumericLiteralExpr when we add float support
+// outside types
+function parseIntLiteralExpr(Tokenizer tok) returns IntLiteralExpr|err:Syntax {
+    Token? t = tok.current();
+    err:Position pos = tok.currentPos();
+    match t {
+        [DECIMAL_NUMBER, var digits] => {
+            check tok.advance();
+            return { base: 10, digits, pos };
+        }
+        [HEX_INT_LITERAL, var digits] => {
+            check tok.advance();
+            return { base: 16, digits, pos };
+        }
     }
+    return parseError(tok, "expected integer literal");
 }
 

@@ -1,0 +1,6 @@
+/string-hash
+/string-cmp
+/string-concat
+/immediate-string
+*.stamp
+

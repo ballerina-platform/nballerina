@@ -25,7 +25,7 @@
    * `match` statement with match patterns that are const
 * Expressions:
    * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`
-   * unary operators: `-`, `!`
+   * unary operators: `-`, `!`, `~`
    * type cast
    * type test `E is T`
    * function call
@@ -172,6 +172,7 @@ multiplicative-expr =
 unary-expr =
   primary-expr
   | "-" unary-expr
+  | "~" unary-expr
   | type-cast-expr
 
 type-cast-expr = "<" type-desc ">" unary-expr
@@ -257,9 +258,13 @@ The following restrictions apply to imported modules:
 
 * `match` statement
 * `const` declaration
-*  type test expressions `x is T`
+* type test expressions `x is T`
+* bitwise complement expressions `~x`
 
 ## Implemented spec changes since 2021R1
 
 * [#814](https://github.com/ballerina-platform/ballerina-spec/issues/814) - improved typing rules for `==` and `!=`
 * [#887](https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability
+* [#902](https://github.com/ballerina-platform/ballerina-spec/issues/902) - expression has a singleton type when its subexpressions have singleton type
+* [#904](https://github.com/ballerina-platform/ballerina-spec/issues/904) - restrict assignment to type-narrowed variables within loops
+

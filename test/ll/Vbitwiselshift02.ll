@@ -3,7 +3,6 @@ declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 define void @_B_main() {
   %i = alloca i64
   %j = alloca i64
@@ -14,78 +13,62 @@ define void @_B_main() {
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i64
   %7 = alloca i8 addrspace(1)*
-  %8 = alloca i64
+  %8 = alloca i8 addrspace(1)*
   %9 = alloca i64
-  %10 = alloca i8 addrspace(1)*
-  %11 = alloca i64
-  %12 = alloca i8
-  %13 = load i8*, i8** @_bal_stack_guard
-  %14 = icmp ult i8* %12, %13
-  br i1 %14, label %27, label %15
-15:
+  %10 = alloca i8
+  %11 = load i8*, i8** @_bal_stack_guard
+  %12 = icmp ult i8* %10, %11
+  br i1 %12, label %25, label %13
+13:
   store i64 7, i64* %i
   store i64 1, i64* %j
-  %16 = load i64, i64* %i
-  %17 = load i64, i64* %j
-  %18 = and i64 63, %17
-  %19 = lshr i64 %16, %18
-  store i64 %19, i64* %1
-  %20 = load i64, i64* %1
-  %21 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %20)
-  call void @_Bio__println(i8 addrspace(1)* %21)
+  %14 = load i64, i64* %i
+  %15 = load i64, i64* %j
+  %16 = and i64 63, %15
+  %17 = lshr i64 %14, %16
+  store i64 %17, i64* %1
+  %18 = load i64, i64* %1
+  %19 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %18)
+  call void @_Bio__println(i8 addrspace(1)* %19)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %22 = load i64, i64* %j
-  %23 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %22, i64 1)
-  %24 = extractvalue {i64, i1} %23, 1
-  br i1 %24, label %44, label %28
-25:
-  %26 = load i64, i64* %11
-  call void @_bal_panic(i64 %26)
+  %20 = load i64, i64* %j
+  %21 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %20, i64 1)
+  %22 = extractvalue {i64, i1} %21, 1
+  br i1 %22, label %41, label %26
+23:
+  %24 = load i64, i64* %9
+  call void @_bal_panic(i64 %24)
   unreachable
-27:
+25:
   call void @_bal_panic(i64 516)
   unreachable
-28:
-  %29 = extractvalue {i64, i1} %23, 0
-  store i64 %29, i64* %3
-  %30 = load i64, i64* %i
-  %31 = load i64, i64* %3
-  %32 = and i64 63, %31
-  %33 = lshr i64 %30, %32
-  store i64 %33, i64* %4
-  %34 = load i64, i64* %4
-  %35 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %34)
-  call void @_Bio__println(i8 addrspace(1)* %35)
+26:
+  %27 = extractvalue {i64, i1} %21, 0
+  store i64 %27, i64* %3
+  %28 = load i64, i64* %i
+  %29 = load i64, i64* %3
+  %30 = and i64 63, %29
+  %31 = lshr i64 %28, %30
+  store i64 %31, i64* %4
+  %32 = load i64, i64* %4
+  %33 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %32)
+  call void @_Bio__println(i8 addrspace(1)* %33)
   store i8 addrspace(1)* null, i8 addrspace(1)** %5
   store i64 65, i64* %j
-  %36 = load i64, i64* %i
-  %37 = load i64, i64* %j
-  %38 = and i64 63, %37
-  %39 = lshr i64 %36, %38
-  store i64 %39, i64* %6
-  %40 = load i64, i64* %6
-  %41 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %40)
-  call void @_Bio__println(i8 addrspace(1)* %41)
+  %34 = load i64, i64* %i
+  %35 = load i64, i64* %j
+  %36 = and i64 63, %35
+  %37 = lshr i64 %34, %36
+  store i64 %37, i64* %6
+  %38 = load i64, i64* %6
+  %39 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %38)
+  call void @_Bio__println(i8 addrspace(1)* %39)
   store i8 addrspace(1)* null, i8 addrspace(1)** %7
-  %42 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
-  %43 = extractvalue {i64, i1} %42, 1
-  br i1 %43, label %52, label %45
-44:
-  store i64 1537, i64* %11
-  br label %25
-45:
-  %46 = extractvalue {i64, i1} %42, 0
-  store i64 %46, i64* %8
-  %47 = load i64, i64* %8
-  %48 = and i64 63, 1
-  %49 = lshr i64 %47, %48
-  store i64 %49, i64* %9
-  %50 = load i64, i64* %9
-  %51 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %50)
-  call void @_Bio__println(i8 addrspace(1)* %51)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %10
+  %40 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 9223372036854775807)
+  call void @_Bio__println(i8 addrspace(1)* %40)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8
   ret void
-52:
-  store i64 3329, i64* %11
-  br label %25
+41:
+  store i64 1537, i64* %9
+  br label %23
 }

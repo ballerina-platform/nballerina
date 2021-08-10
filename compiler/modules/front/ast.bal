@@ -5,10 +5,10 @@ import wso2/nballerina.err;
 
 type ModulePart record {|
     ImportDecl? importDecl;
-    ModuleLevelDef[] defs;
+    ModuleLevelDefn[] defns;
 |};
 
-type ModuleLevelDef TypeDef|FunctionDef;
+type ModuleLevelDefn FunctionDefn|ConstDefn|TypeDefn;
 
 type Visibility "public"?;
 
@@ -17,7 +17,7 @@ type ImportDecl record {|
     string module;
 |};
 
-type FunctionDef record {|
+type FunctionDefn record {|
     readonly string name;
     Visibility vis;
     FunctionTypeDesc typeDesc;
@@ -28,11 +28,20 @@ type FunctionDef record {|
     bir:FunctionSignature? signature = ();
 |};
 
-type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
-type CallStmt FunctionCallExpr|MethodCallExpr;
-type Expr SimpleConstExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|ConstructorExpr|MemberAccessExpr;
+type ResolvedConst readonly & [t:SemType, t:Value];
+type ConstDefn record {|
+    readonly string name;
+    Visibility vis;
+    Expr expr;
+    err:Position pos;
+    ResolvedConst|false? resolved = ();    
+|};
 
+type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
+type CallStmt FunctionCallExpr|MethodCallExpr;
+type Expr IntLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
+type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
 type AssignStmt record {|
     LExpr lValue;
@@ -50,6 +59,25 @@ type IfElseStmt record {|
     Expr condition;
     Stmt[] ifTrue;
     Stmt[] ifFalse;
+|};
+
+type MatchStmt record {|
+    Expr expr;
+    MatchClause[] clauses;
+|};
+
+type MatchClause record {|
+    MatchPattern[] patterns;
+    Stmt[] block;
+|};
+
+type MatchPattern ConstPattern|WildcardMatchPattern;
+
+const WildcardMatchPattern = "_";
+
+type ConstPattern record {|
+    SimpleConstExpr expr;
+    err:Position pos;
 |};
 
 type WhileStmt record {|
@@ -87,7 +115,7 @@ type RangeOp  "..." | "..<";
 
 type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
-type UnaryExprOp "-" | "!";
+type UnaryExprOp "-" | "!" | "~";
 
 type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr;
 
@@ -124,11 +152,17 @@ type UnaryExpr record {|
     err:Position pos;
 |};
 
+type SimpleConstNegateExpr record {|
+    *UnaryExpr;
+    "-" op = "-";
+    IntLiteralExpr|ConstValueExpr operand;
+|};
+
 type FunctionCallExpr record {|
     string? prefix = ();
     string funcName;
     Expr[] args;
-    // We can get type/def mismatch errors here
+    // We can get type/defn mismatch errors here
     err:Position pos;
 |};
 
@@ -141,10 +175,13 @@ type MethodCallExpr record {|
 
 type ListConstructorExpr record {|
     Expr[] members;
+    // JBUG adding this field makes match statement in codeGenExpr fail 
+    // t:SemType? expectedType = ();
 |};
 
 type MappingConstructorExpr record {|
     Field[] fields;
+    // t:SemType? expectedType = ();
 |};
 
 type Field record {|
@@ -182,8 +219,42 @@ type TypeCastExpr record {|
     t:SemType semType;
 |};
 
-type SimpleConstExpr record {|
+type TypeTestExpr record {|
+    InlineTypeDesc td;
+    // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
+    Expr left;
+    t:SemType semType;
+|};
+
+type ConstValueExpr record {|
     ()|boolean|int|string value;
+    // This is non-nil when the static type of the expression
+    // contains more than one shape.
+    // When it contains exactly one shape, then the shape is
+    // the shape of the value.
+    t:SemType? multiSemType = ();
+|};
+
+type NumericLiteralExpr IntLiteralExpr|FpLiteralExpr;
+
+type IntLiteralBase 10|16;
+
+// The type of value represented by an int-literal
+// depends on the contextually expected type, which
+// we do not know at parse time.
+type IntLiteralExpr record {|
+    IntLiteralBase base;
+    string digits;
+    err:Position pos;
+|};
+
+const FLOAT_TYPE_SUFFIX = "f";
+
+type FpLiteralExpr record {|
+    // This is the literal without the type suffix
+    string untypedLiteral;
+    FLOAT_TYPE_SUFFIX? typeSuffix;
+    err:Position pos;
 |};
 
 // Types
@@ -206,7 +277,7 @@ type InlineMapTypeDesc record {|
     "any" rest = "any";
 |};
 
-type TypeDef record {|
+type TypeDefn record {|
     readonly string name;
     Visibility vis;
     TypeDesc td;
@@ -222,7 +293,7 @@ type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorType
 type ListTypeDesc record {|
     TypeDesc[] members;
     TypeDesc rest;
-    t:ListDefinition? def = ();
+    t:ListDefinition? defn = ();
 |};
 
 type FieldDesc record {|
@@ -233,14 +304,14 @@ type FieldDesc record {|
 type MappingTypeDesc record {|
     FieldDesc[] fields;
     TypeDesc rest;
-    t:MappingDefinition? def = ();
+    t:MappingDefinition? defn = ();
 |};
 
 type FunctionTypeDesc record {|
     // XXX need to handle rest type
     TypeDesc[] args;
     TypeDesc ret;
-    t:FunctionDefinition? def = ();
+    t:FunctionDefinition? defn = ();
 |};
 
 type ErrorTypeDesc record {|
@@ -261,7 +332,7 @@ type TypeDescRef record {|
 |};
 
 type SingletonTypeDesc record {|
-    (string|int|boolean) value;
+    (string|float|int|boolean) value;
 |};
 
 type BuiltinIntSubtypeDesc "sint8"|"uint8"|"sint16"|"uint16"|"sint32"|"uint32";

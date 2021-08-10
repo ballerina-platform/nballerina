@@ -245,3 +245,15 @@ function testArrayMemberTypeFail(Env env, SemType memberType) {
     UniformTypeBitSet? bits = simpleArrayMemberType(t, env.listDefs);
     test:assertTrue(bits == ());
 }
+
+@test:Config{}
+function testIntSubtypeWidenUnsigned() {
+    test:assertTrue(<boolean> intSubtypeWidenUnsigned(true));
+    test:assertTrue(<boolean> intSubtypeWidenUnsigned([{ min: -1, max: 10 }]));
+    IntSubtype intType1 = <IntSubtype> intSubtypeWidenUnsigned([{ min: 0, max: 0 }]);
+    test:assertEquals(intType1[0].min, 0);
+    test:assertEquals(intType1[0].max, 255);
+    IntSubtype intType2 = <IntSubtype> intSubtypeWidenUnsigned([{ min: 0, max: 257 }]);
+    test:assertEquals(intType2[0].min, 0);
+    test:assertEquals(intType2[0].max, 65535);
+}

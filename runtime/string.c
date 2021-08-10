@@ -238,20 +238,7 @@ char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, Tag
     }
 }
 
-
-bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
-    // With hash tables, a lot of the time you are comparing things that are equal
-    // so this is worth doing early on.
-    if (tp1 == tp2) {
-        return true;
-    }
-    uint64_t bits1 = taggedPtrBits(tp1);
-    uint64_t bits2 = taggedPtrBits(tp2);
-    if ((bits1 | bits2) & IMMEDIATE_FLAG) {
-        // one of them is immediate and the bits are not equal
-        // so they are not equal        
-        return false;
-    }
+bool READONLY _bal_string_heap_eq(TaggedPtr tp1, TaggedPtr tp2) {
     IntPtr p1 = taggedToPtr(tp1);
     IntPtr p2 = taggedToPtr(tp2);
     int64_t h1 = *p1;
@@ -259,6 +246,8 @@ bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2) {
     if (h1 != h2) {
         return 0;
     }
+    uint64_t bits1 = taggedPtrBits(tp1);
+    uint64_t bits2 = taggedPtrBits(tp2);
     // number of 64-bit units including the header
     int nInts;
     if (bits1 & STRING_LARGE_FLAG) {

@@ -3,45 +3,50 @@ import wso2/nballerina.bir;
 import wso2/nballerina.err;
 
 function createTypeMap(ModuleTable mod) returns map<t:SemType> {
-    map<t:SemType> defs = {};
-    foreach var def in mod {
-        if def is TypeDef {
-            t:SemType? s = def.semType;
-            if s is () {
-                panic error("nil semtype");
-            }
-            else {
-                defs[def.name] = s;
-            }
-        }       
-    }
-    return defs;
-}
-
-function convertTypes(t:Env env, ModuleTable mod) returns err:Semantic|err:Unimplemented? {
-    foreach var def in mod {
-        if def is TypeDef {
-            _ = check convertTypeDef(env, mod, 0, def);
+    map<t:SemType> defns = {};
+    foreach var defn in mod {
+        t:SemType t;
+        if defn is TypeDefn {
+            t = <t:SemType>defn.semType;
+        }
+        else if defn is ConstDefn {
+            t = (<ResolvedConst>defn.resolved)[0];
         }
         else {
-            // it's a FunctionDef
-            def.signature = check convertFunctionSignature(env, mod, def.typeDesc, def.pos);
+            continue;
+        }
+        defns[defn.name] = t;
+    }
+    return defns;
+}
+
+function resolveTypes(t:Env env, ModuleTable mod) returns err:Semantic|err:Unimplemented? {
+    foreach var defn in mod {
+        if defn is TypeDefn {
+            _ = check resolveTypeDefn(env, mod, 0, defn);
+        }
+        else if defn is ConstDefn {
+            _ = check resolveConstDefn(mod, defn);
+        }
+        else {
+            // it's a FunctionDefn
+            defn.signature = check resolveFunctionSignature(env, mod, defn.typeDesc, defn.pos);
         }
     }
 }
 
-function convertFunctionSignature(t:Env env, ModuleTable mod, FunctionTypeDesc td, err:Position pos) returns bir:FunctionSignature|err:Semantic|err:Unimplemented {
+function resolveFunctionSignature(t:Env env, ModuleTable mod, FunctionTypeDesc td, err:Position pos) returns bir:FunctionSignature|err:Semantic|err:Unimplemented {
     t:SemType[] params = [];
     // JBUG if this is done with a select, then it gets a bad, sad at runtime if the check gets an error
     foreach var x in td.args {
-        params.push(check convertSubsetTypeDesc(env, mod, x, pos));
+        params.push(check resolveSubsetTypeDesc(env, mod, x, pos));
     }
-    t:SemType ret = check convertSubsetTypeDesc(env, mod, td.ret, pos);
+    t:SemType ret = check resolveSubsetTypeDesc(env, mod, td.ret, pos);
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
 
-function convertSubsetTypeDesc(t:Env env, ModuleTable mod, TypeDesc td, err:Position pos) returns t:SemType|err:Semantic|err:Unimplemented {
-    t:SemType ty = check convertTypeDesc(env, mod, 0, td);
+function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, TypeDesc td, err:Position pos) returns t:SemType|err:Semantic|err:Unimplemented {
+    t:SemType ty = check resolveTypeDesc(env, mod, 0, td);
     if ty === t:STRING || ty === t:INT || ty === t:BOOLEAN || ty === t:NIL || ty === t:ANY {
         return ty;
     }
@@ -56,18 +61,18 @@ function convertSubsetTypeDesc(t:Env env, ModuleTable mod, TypeDesc td, err:Posi
     return err:unimplemented("unimplemented type descriptor", pos=pos);
 }
 
-function convertTypeDef(t:Env env, ModuleTable mod, int depth, TypeDef def) returns t:SemType|err:Semantic {
-    t:SemType? t = def.semType;
+function resolveTypeDefn(t:Env env, ModuleTable mod, int depth, TypeDefn defn) returns t:SemType|err:Semantic|err:Unimplemented {
+    t:SemType? t = defn.semType;
     if t is () {
-        if depth == def.cycleDepth {
-            return err:semantic(`invalid cycle detected for ${def.name}`, def.pos);
+        if depth == defn.cycleDepth {
+            return err:semantic(`invalid cycle detected for ${defn.name}`, defn.pos);
         }
-        def.cycleDepth = depth;
-        t:SemType s = check convertTypeDesc(env, mod, depth, def.td);
-        t = def.semType;
+        defn.cycleDepth = depth;
+        t:SemType s = check resolveTypeDesc(env, mod, depth, defn.td);
+        t = defn.semType;
         if t is () {
-            def.semType = s;
-            def.cycleDepth = -1;
+            defn.semType = s;
+            defn.cycleDepth = -1;
             return s;
         }
         else {
@@ -82,7 +87,7 @@ function convertTypeDef(t:Env env, ModuleTable mod, int depth, TypeDef def) retu
     }
 }
 
-function convertInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
+function resolveInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
     match td {
         "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }
@@ -95,10 +100,10 @@ function convertInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
     if td is InlineMapTypeDesc {
         return t:MAPPING;
     }
-    panic err:impossible("unreachable in convertInlineTypeDesc");
+    panic err:impossible("unreachable in resolveInlineTypeDesc");
 }
 
-function convertTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) returns t:SemType|err:Semantic {
+function resolveTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) returns t:SemType|err:Semantic|err:Unimplemented {
     match td {
         // These are easy
         "any" => { return t:ANY; }
@@ -124,56 +129,60 @@ function convertTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) ret
     }
     // JBUG would like to use match patterns here, but #30718 prevents it
     if td is ListTypeDesc {
-        t:ListDefinition? def = td.def;
-        if def is () {
+        t:ListDefinition? defn = td.defn;
+        if defn is () {
             t:ListDefinition d = new;
-            td.def = d;
+            td.defn = d;
             // JBUG temp variable `m` is to avoid compiler bug #30736
             TypeDesc[] m = td.members;
-            t:SemType[] members = from var x in m select check convertTypeDesc(env, mod, depth + 1, x);
-            t:SemType rest = check convertTypeDesc(env, mod, depth + 1, td.rest);
+            t:SemType[] members = from var x in m select check resolveTypeDesc(env, mod, depth + 1, x);
+            t:SemType rest = check resolveTypeDesc(env, mod, depth + 1, td.rest);
             return d.define(env, members, rest);
         }
         else {
-            return def.getSemType(env);
+            return defn.getSemType(env);
         }   
     }
     if td is MappingTypeDesc {
-        t:MappingDefinition? def = td.def;
-        if def is () {
+        t:MappingDefinition? defn = td.defn;
+        if defn is () {
             t:MappingDefinition d = new;
-            td.def = d;
+            td.defn = d;
             // JBUG temp variable `f` is to avoid compiler bug #30736
             FieldDesc[] f = td.fields;
-            t:Field[] fields = from var { name, typeDesc } in f select [name, check convertTypeDesc(env, mod, depth + 1, typeDesc)];
-            t:SemType rest = check convertTypeDesc(env, mod, depth + 1, td.rest);
+            t:Field[] fields = from var { name, typeDesc } in f select [name, check resolveTypeDesc(env, mod, depth + 1, typeDesc)];
+            t:SemType rest = check resolveTypeDesc(env, mod, depth + 1, td.rest);
             return d.define(env, fields, rest);
         }
         else {
-            return def.getSemType(env);
+            return defn.getSemType(env);
         }
     }
      if td is FunctionTypeDesc {
-        t:FunctionDefinition? def = td.def;
-        if def is () {
+        t:FunctionDefinition? defn = td.defn;
+        if defn is () {
             t:FunctionDefinition d = new(env);
-            td.def = d;
+            td.defn = d;
             TypeDesc[] a = td.args;
-            t:SemType[] args = from var x in a select check convertTypeDesc(env, mod, depth + 1, x);
-            t:SemType ret = check convertTypeDesc(env, mod, depth + 1, td.ret);
+            t:SemType[] args = from var x in a select check resolveTypeDesc(env, mod, depth + 1, x);
+            t:SemType ret = check resolveTypeDesc(env, mod, depth + 1, td.ret);
             return d.define(env, t:tuple(env, ...args), ret);
         }
         else {
-            return def.getSemType(env);
+            return defn.getSemType(env);
         }
     }
     if td is TypeDescRef {
-        ModuleLevelDef? def = mod[td.ref];
-        if def is () {
+        ModuleLevelDefn? defn = mod[td.ref];
+        if defn is () {
             return err:semantic(`reference to undefined type ${td.ref}`, pos=td.pos);
         }
-        else if def is TypeDef {
-            return check convertTypeDef(env, mod, depth, def);
+        else if defn is TypeDefn {
+            return check resolveTypeDefn(env, mod, depth, defn);
+        }
+        else if defn is ConstDefn {
+            var [t, _] = check resolveConstDefn(mod, defn);
+            return t;
         }
         else {
             return err:semantic(`reference to non-type ${td.ref} in type-descriptor`, pos=td.pos);
@@ -187,17 +196,20 @@ function convertTypeDesc(t:Env env, ModuleTable mod, int depth, TypeDesc td) ret
         else if value is boolean {
             return t:booleanConst(value);
         }
-        else {
+        else if value is int {
             return t:intConst(value);
+        }
+        else {
+            return err:unimplemented("floating point singleton types not yet implemented");
         }
     }
     if td is ErrorTypeDesc {
-        return t:errorDetail(check convertTypeDesc(env, mod, depth, td.detail));
+        return t:errorDetail(check resolveTypeDesc(env, mod, depth, td.detail));
     }
     if td is BinaryTypeDesc {
         // NB depth does not increase here
-        t:SemType l = check convertTypeDesc(env, mod, depth, td.left);
-        t:SemType r = check convertTypeDesc(env, mod, depth, td.right);
+        t:SemType l = check resolveTypeDesc(env, mod, depth, td.left);
+        t:SemType r = check resolveTypeDesc(env, mod, depth, td.right);
         if td.op == "|" {
             return t:union(l, r);
         }

@@ -3,6 +3,12 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
+public configurable string target = "";
+
+public type Options record {|
+    string? gcName = ();
+|};
+
 type BuildError err:Semantic|err:Unimplemented;
 
 type Alignment 1|8;
@@ -337,7 +343,7 @@ class Scaffold {
     }
 }
 
-function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
+public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
     bir:ModuleId modId = birMod.getId();
     llvm:Module llMod = llContext.createModule();
     bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
@@ -423,6 +429,12 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         }
         else if insn is bir:TypeCastInsn {
             check buildTypeCast(builder, scaffold, insn);
+        }
+        else if insn is bir:TypeTestInsn {
+            check buildTypeTest(builder, scaffold, insn);
+        }
+        else if insn is bir:CondNarrowInsn {
+            check buildCondNarrow(builder, scaffold, insn);
         }
         else if insn is bir:CallInsn {
             check buildCall(builder, scaffold, insn);
@@ -893,6 +905,36 @@ function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp
     buildStoreBoolean(builder, scaffold, b, result);
 }
 
+function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn insn) returns BuildError? {
+    var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
+    if repr.base != BASE_REPR_TAGGED {
+         // in subset 5 should be const true/false
+        return err:unimplemented("test of untagged value");
+    }
+    t:SemType semType = insn.semType;
+    llvm:PointerValue tagged = <llvm:PointerValue>val;
+    llvm:Value hasType;
+    if semType === t:BOOLEAN {
+        hasType = buildHasTag(builder, tagged, TAG_BOOLEAN);
+    }
+    else if semType === t:INT {
+        hasType = buildHasTag(builder, tagged, TAG_INT);
+    }
+    else if semType === t:STRING {
+        hasType = buildHasTag(builder, tagged, TAG_STRING);
+    }
+    else if semType === t:LIST {
+        hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+    }
+    else if semType === t:MAPPING {
+        hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+    }
+    else {
+        return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
+    }
+    buildStoreBoolean(builder, scaffold, hasType, insn.result);
+}
+
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
     var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
     if repr.base != BASE_REPR_TAGGED {
@@ -934,6 +976,31 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     builder.store(buildConstPanicError(PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
+}
+
+function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrowInsn insn) returns BuildError? {
+    var [sourceRepr, value] = check buildReprValue(builder, scaffold, insn.operand);
+    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));   
+    builder.store(narrowed, scaffold.address(insn.result));
+}
+
+function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value|BuildError {
+    BaseRepr sourceBaseRepr = sourceRepr.base;
+    BaseRepr targetBaseRepr = targetRepr.base;
+    llvm:Value narrowed;
+    if sourceBaseRepr == targetBaseRepr {
+        return value;
+    }
+    if sourceBaseRepr == BASE_REPR_TAGGED {
+        llvm:PointerValue tagged = <llvm:PointerValue>value;
+        if targetBaseRepr == BASE_REPR_INT {
+            return buildUntagInt(builder, scaffold, tagged);
+        }
+        else if targetBaseRepr == BASE_REPR_BOOLEAN {
+            return buildUntagBoolean(builder, tagged);
+        }
+    }
+    return err:unimplemented("unimplemented narrowing conversion required");
 }
 
 function buildConstPanicError(PanicIndex panicIndex, err:Position pos) returns llvm:Value {
