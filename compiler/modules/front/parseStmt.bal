@@ -71,6 +71,10 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
         VarRefExpr lValue = { varName: identifier };
         return finishAssignStmt(tok, lValue);
     }
+    else if cur is BinaryArithmeticOp {
+        VarRefExpr lValue = { varName: identifier };
+        return parseCompoundAssignStmt(tok, lValue, cur);
+    }
     else if cur == "(" {
         check tok.advance();
         FunctionCallExpr expr = check finishFunctionCallExpr(tok, (), identifier, pos);
@@ -143,6 +147,15 @@ function finishCallStmt(Tokenizer tok, CallStmt expr) returns Stmt|err:Syntax {
 function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Syntax {
     check tok.advance();
     Expr expr = check parseExpr(tok);
+    AssignStmt stmt = { lValue, expr };
+    check tok.expect(";");
+    return stmt; 
+}
+function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, BinaryArithmeticOp op) returns AssignStmt|err:Syntax {
+    check tok.advance();
+    check tok.expect("=");
+    Expr rexpr = check parseExpr(tok);
+    BinaryArithmeticExpr expr = {arithmeticOp: op, left: lValue, right: rexpr, pos: tok.currentPos()};
     AssignStmt stmt = { lValue, expr };
     check tok.expect(";");
     return stmt; 
