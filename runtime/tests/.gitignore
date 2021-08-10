@@ -1,6 +1,7 @@
-/string-hash
-/string-cmp
-/string-concat
-/immediate-string
+/string_hash
+/string_cmp
+/string_concat
+/immediate_string
+/string_len
+/tagged_ptr
 *.stamp
-
