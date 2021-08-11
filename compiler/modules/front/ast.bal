@@ -154,7 +154,8 @@ type UnaryExpr record {|
 
 type SimpleConstNegateExpr record {|
     *UnaryExpr;
-    "-" op = "-";
+    // JBUG #32099 should be "-" 
+    UnaryExprOp op = "-";
     IntLiteralExpr|ConstValueExpr operand;
 |};
 
