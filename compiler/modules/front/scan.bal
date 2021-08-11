@@ -139,6 +139,18 @@ function createFragTokens() returns readonly & FixedToken?[] {
         ft[FRAG_KEYWORD + i] = keywords[i];
     }
     // JBUG int casts needed
+    fillMultipleCharTokens(ft);
+    // JBUG error if hex used for 32 and 128
+    foreach int cp in 32 ..< 128 {
+        string s = checkpanic string:fromCodePointInt(cp);
+        if s is SingleCharDelim {
+            ft[cp] = s;
+        }
+    }
+    return ft.cloneReadOnly();
+}
+
+function fillMultipleCharTokens(FixedToken?[] ft) {
     ft[<int>FRAG_LEFT_CURLY_VBAR] = "{|";
     ft[<int>FRAG_VBAR_RIGHT_CURLY] = "|}";
     ft[<int>FRAG_DOT_DOT_DOT] = "...";
@@ -158,14 +170,6 @@ function createFragTokens() returns readonly & FixedToken?[] {
     ft[<int>FRAG_AMPERSAND_EQUAL] = "&=";
     ft[<int>FRAG_VBAR_EQUAL] = "|=";
     ft[<int>FRAG_CIRCUMFLEX_EQUAL] = "^=";
-    // JBUG error if hex used for 32 and 128
-    foreach int cp in 32 ..< 128 {
-        string s = checkpanic string:fromCodePointInt(cp);
-        if s is SingleCharDelim {
-            ft[cp] = s;
-        }
-    }
-    return ft.cloneReadOnly();
 }
 
 function unicodeEscapeValue(string fragment) returns string|error {
