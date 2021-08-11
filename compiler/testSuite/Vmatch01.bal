@@ -1,7 +1,7 @@
 import ballerina/io;
 
 public function main() {
-    io:println(foo(())); // @output nil
+    io:println(foo(0)); // @output zero
     io:println(foo(1)); // @output odd
     io:println(foo("hello")); // @output greeting
     io:println(foo(true)); // @output boolean
@@ -15,7 +15,7 @@ public function main() {
 function foo(any v) returns string {
     match v {
         0 => {
-            return "nil";
+            return "zero";
         }
         1|3|5|7|9 => {
             return "odd";
