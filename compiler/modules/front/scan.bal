@@ -274,6 +274,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                 }
                 cp = codePoints[i];
                 if cp == CP_EQUAL {
+                    i += 1;
                    endFragment(FRAG_SLASH_EQUAL, i, result);
                    continue; 
                 }
@@ -299,6 +300,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     continue;
                 }
                 if i < len && codePoints[i] == CP_EQUAL {
+                    i += 1;
                    endFragment(FRAG_VBAR_EQUAL, i, result);
                    continue; 
                 }

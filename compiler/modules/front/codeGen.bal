@@ -691,9 +691,9 @@ function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Env
             bb.insns.push(insn);
         }
         else if pair is StringOperandPair {
-        result2 = cx.createRegister(t:STRING);
-        bir:StringConcatInsn insn = { operands:  pair[1], result: result2 };
-        bb.insns.push(insn);
+            result2 = cx.createRegister(t:STRING);
+            bir:StringConcatInsn insn = { operands:  pair[1], result: result2 };
+            bb.insns.push(insn);
         }
         else {
             return cx.semanticErr("+ not supported for operand types");
