@@ -80,7 +80,6 @@ type LoopContext record {|
     int[] onContinueAssignments = [];
 |};
 
-
 class CodeGenContext {
     final Module mod;
     final bir:FunctionCode code;
@@ -109,8 +108,8 @@ class CodeGenContext {
         return self.registerVarNames[registerNumber];
     }
     
-    function createBasicBlock() returns bir:BasicBlock {
-        return bir:createBasicBlock(self.code);
+    function createBasicBlock(string? name = ()) returns bir:BasicBlock {
+        return bir:createBasicBlock(self.code, name);
     }
 
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
@@ -281,7 +280,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
             effect = check codeGenIfElseStmt(cx, curBlock, env, stmt);
         }
         else if stmt is MatchStmt {
-            return err:unimplemented("match statement is not implemented");
+            effect = check codeGenMatchStmt(cx, curBlock, env, stmt);
         }
         else if stmt is WhileStmt {
             // JBUG #31327 cast
@@ -371,6 +370,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         loopStep.insns.push(branchToLoopHead);
     }
     cx.popLoopContext();
+    // XXX shouldn't we be passing up assignments here
     return { block: exit };
 }
 
@@ -447,6 +447,120 @@ function codeGenContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, Envir
     startBlock.insns.push(branch);
     cx.addOnContinueAssignments(env.assignments);
     return { block: () };
+}
+
+type ConstMatchValue record {|
+    readonly SimpleConst value;
+    readonly int clauseIndex;
+|};
+
+function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, MatchStmt stmt) returns CodeGenError|StmtEffect {
+    final int startRegister = cx.nextRegisterNumber();
+    int[] assignments = [];
+    var { result: matched, block: testBlock, binding } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, stmt.expr, ()));
+    // JBUG need parentheses
+    t:SemType matchedType = matched is bir:Register ? (matched.semType) : t:singleton(matched);
+    // we enforce that the wildcardClauseIndex is either () or the index of the last clause
+    int? wildcardClauseIndex = ();
+    table<ConstMatchValue> key(value) constMatchValues = table[];
+    foreach int i in 0 ..< stmt.clauses.length() {
+        var clause = stmt.clauses[i];
+        foreach var pattern in clause.patterns {
+            if pattern is ConstPattern {
+                if wildcardClauseIndex != () && i > wildcardClauseIndex {
+                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.pos);
+                }
+                Expr patternExpr = pattern.expr;
+                // JBUG following line results in bad code
+                // ConstValueExpr cv = <ConstValueExpr> check cx.foldExpr(env, patternExpr, matchedType);
+                // Can see this on FVmatch03.bal
+                // Should give TypeCastError panic but instead reports "duplicate const match pattern"
+                // This longer former if a workaround
+                var foldResult = cx.foldExpr(env, patternExpr, matchedType);
+                ConstValueExpr cv;
+                if foldResult is CodeGenError {
+                    return foldResult;
+                }
+                else {
+                    cv = <ConstValueExpr>foldResult;
+                }
+              
+                ConstMatchValue mv = { value: cv.value, clauseIndex: i };
+                if constMatchValues.hasKey(mv.value) {
+                    return cx.semanticErr("duplicate const match pattern", pos=pattern.pos);
+                }
+                constMatchValues.add(mv);    
+                if !t:containsConst(matchedType, cv.value) {
+                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.pos);
+                }
+            }
+            else {
+                // `1|_ => {}` is pointless, but I'm not making it an error
+                // because a later pattern that overlaps an earlier one is not in general an error
+                if wildcardClauseIndex != () {
+                    return cx.semanticErr("duplicate wildcard match pattern");
+                }
+                wildcardClauseIndex = i;
+            }
+        }
+    }
+    bir:BasicBlock? contBlock = ();
+    bir:BasicBlock[] clauseBlocks = [];
+    foreach int clauseIndex in 0 ..< stmt.clauses.length() {
+        MatchClause clause = stmt.clauses[clauseIndex];
+        bir:BasicBlock stmtBlock = cx.createBasicBlock("clause." + clauseIndex.toString());
+        clauseBlocks.push(stmtBlock);
+        // XXX need to do type narrowing
+        var { block: stmtBlockEnd, assignments: blockAssignments } = check codeGenStmts(cx, stmtBlock, env, clause.block);
+        if stmtBlockEnd is () {
+            continue;
+        }
+        else {
+            bir:BasicBlock b = maybeCreateBasicBlock(cx, contBlock);
+            contBlock = b;
+            bir:BranchInsn branchToCont = { dest: b.label };
+            stmtBlockEnd.insns.push(branchToCont);
+            assignments.push(...blockAssignments);
+        }
+    }
+    int patternIndex = 0;
+    foreach var mv in constMatchValues {
+        if mv.clauseIndex == wildcardClauseIndex {
+            break;
+        }
+        bir:Register testResult = cx.createRegister(t:BOOLEAN);
+        bir:EqualityInsn eq = { op: "==", result: testResult, operands: [matched, mv.value] };
+        testBlock.insns.push(eq);
+        bir:BasicBlock nextBlock = cx.createBasicBlock("pattern." + patternIndex.toString());
+        patternIndex += 1;
+        bir:CondBranchInsn condBranch = { operand: testResult, ifTrue: clauseBlocks[mv.clauseIndex].label, ifFalse: nextBlock.label } ;
+        testBlock.insns.push(condBranch);
+        testBlock = nextBlock;
+    }
+    if wildcardClauseIndex != () {
+        bir:BranchInsn branch = { dest: clauseBlocks[wildcardClauseIndex].label };
+        testBlock.insns.push(branch);
+        if contBlock is () {
+            // all the clauses have a return or similar
+            return { block: () };
+        }
+    }
+    else {
+        bir:BasicBlock b = maybeCreateBasicBlock(cx, contBlock);
+        contBlock = b;
+        bir:BranchInsn branch = { dest: b.label };
+        testBlock.insns.push(branch);
+    }            
+    return { block: contBlock, assignments };
+}
+
+function maybeCreateBasicBlock(CodeGenContext cx, bir:BasicBlock? block) returns bir:BasicBlock {
+    if block is () {
+        return cx.createBasicBlock();
+    }
+    else {
+        return block;
+    }
 }
 
 function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, IfElseStmt stmt) returns CodeGenError|StmtEffect {
