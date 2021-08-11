@@ -13,13 +13,13 @@ public function floatConst(float value) returns SemType {
 function floatSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
     float[] values = [];
     boolean allowed = enumerableSubtypeUnion(<FloatSubtype>d1, <FloatSubtype>d2, values);
-    return { allowed, values: values.cloneReadOnly() };
+    return createFloatSubtype(allowed, values);
 }
 
 function floatSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns SubtypeData {
     float[] values = [];
     boolean allowed = enumerableSubtypeIntersect(<FloatSubtype>d1, <FloatSubtype>d2, values);
-    return { allowed, values: values.cloneReadOnly() };
+    return createFloatSubtype(allowed, values);
 }
 
 function floatSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {

@@ -36,13 +36,13 @@ function stringSubtypeContains(SubtypeData d, string s) returns boolean {
 function stringSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
     string[] values = [];
     boolean allowed = enumerableSubtypeUnion(<StringSubtype>d1, <StringSubtype>d2, values);
-    return { allowed, values: values.cloneReadOnly() };
+    return createStringSubtype(allowed, values);
 }
 
 function stringSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns SubtypeData {
     string[] values = [];
     boolean allowed = enumerableSubtypeIntersect(<StringSubtype>d1, <StringSubtype>d2, values);
-    return { allowed, values: values.cloneReadOnly() };
+    return createStringSubtype(allowed, values);
 }
 
 function stringSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
