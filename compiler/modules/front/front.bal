@@ -2,9 +2,10 @@ import ballerina/io;
 
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
+import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.err;
 
-type ModuleTable table<ModuleLevelDefn> key(name);
+type ModuleTable table<s:ModuleLevelDefn> key(name);
 
 class Module {
     *bir:Module;
@@ -12,7 +13,7 @@ class Module {
     final map<bir:ModuleId> imports;
     final ModuleTable defns;
     final t:TypeCheckContext tc;
-    final FunctionDefn[] functionDefnSource = [];
+    final s:FunctionDefn[] functionDefnSource = [];
     final readonly & bir:FunctionDefn[] functionDefns;
 
     function init(bir:ModuleId id, map<bir:ModuleId> imports, ModuleTable defns, t:TypeCheckContext tc) {
@@ -22,7 +23,7 @@ class Module {
         self.tc = tc;
         final bir:FunctionDefn[] functionDefns = [];
         foreach var defn in defns {
-            if defn is FunctionDefn {
+            if defn is s:FunctionDefn {
                 self.functionDefnSource.push(defn);
                 functionDefns.push({
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
@@ -40,7 +41,7 @@ class Module {
     public function getTypeCheckContext() returns t:TypeCheckContext => self.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        FunctionDefn ast = self.functionDefnSource[i];
+        s:FunctionDefn ast = self.functionDefnSource[i];
         return codeGenFunction(self, ast.name, self.functionDefns[i].signature, ast.paramNames, ast.body);
     }
    
@@ -61,7 +62,7 @@ class Module {
 
 public function loadModule(string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
     string[] lines = check io:fileReadLines(filename);
-    ModulePart part = check parseModulePart(lines);
+    s:ModulePart part = check s:parseModulePart(lines);
     ModuleTable mod = table [];
     check addModulePart(mod, part);
     t:Env env = new;
@@ -71,8 +72,8 @@ public function loadModule(string filename, bir:ModuleId id) returns bir:Module|
     return new Module(id, imports(part), mod, t:typeCheckContext(env));
 }
 
-function imports(ModulePart part) returns map<bir:ModuleId> {
-    ImportDecl? decl = part.importDecl;
+function imports(s:ModulePart part) returns map<bir:ModuleId> {
+    s:ImportDecl? decl = part.importDecl;
     if decl == () {
         return {};
     }
@@ -82,8 +83,8 @@ function imports(ModulePart part) returns map<bir:ModuleId> {
 }
 
 function validEntryPoint(ModuleTable mod) returns err:Any? {
-    ModuleLevelDefn? defn = mod["main"];
-    if defn is FunctionDefn {
+    s:ModuleLevelDefn? defn = mod["main"];
+    if defn is s:FunctionDefn {
         if defn.vis != "public" {
             return err:semantic(`${"main"} is not public`, pos=defn.pos);
         }
@@ -96,8 +97,8 @@ function validEntryPoint(ModuleTable mod) returns err:Any? {
     }
 }
 
-function addModulePart(ModuleTable mod, ModulePart part) returns err:Semantic? {
-    foreach ModuleLevelDefn defn in part.defns {
+function addModulePart(ModuleTable mod, s:ModulePart part) returns err:Semantic? {
+    foreach s:ModuleLevelDefn defn in part.defns {
         if mod.hasKey(defn.name) {
             return err:semantic(`duplicate definition if ${defn.name}`);
         }
@@ -107,7 +108,7 @@ function addModulePart(ModuleTable mod, ModulePart part) returns err:Semantic? {
 
 // This is old interface for showTypes
 public function typesFromString(string[] lines) returns [t:Env, map<t:SemType>]|err:Any {
-    ModulePart part = check parseModulePart(lines);
+    s:ModulePart part = check s:parseModulePart(lines);
     ModuleTable mod = table [];
     check addModulePart(mod, part);
     t:Env env = new;
