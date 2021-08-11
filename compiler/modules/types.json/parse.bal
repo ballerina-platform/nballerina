@@ -194,6 +194,26 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
             }
             return t:intConst(intValue);
         }
+        "float" => {
+            if jlist.length() != 2 {
+                return parseError("'float' must be followed by a value", parent, 0);
+            }
+            final json value = jlist[1];
+            final float floatValue;
+            if value is string {
+                var res = float:fromString(value);
+                if res is error {
+                    return parseError("not a float: " + value, parent, 1);
+                }
+                else {
+                    floatValue = res;
+                }
+            }
+            else {
+                return parseError("'float' must be followed by a string with digits", parent, 1);
+            }
+            return t:floatConst(floatValue);
+        }
         "rec" => {
             if jlist.length() == 1 {
                 return parseError("'rec' must be followed by a string and a type", parent, 0);
