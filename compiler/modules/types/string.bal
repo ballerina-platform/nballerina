@@ -33,8 +33,21 @@ function stringSubtypeContains(SubtypeData d, string s) returns boolean {
     return v.values.indexOf(s) != () ? v.allowed : !v.allowed;
 }
 
-function stringSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns SubtypeData =>
-    enumerableSubtypeIntersect(<StringSubtype>d1, <StringSubtype>d2);
+function stringSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
+    string[] values = [];
+    boolean allowed = enumerableSubtypeUnion(<StringSubtype>d1, <StringSubtype>d2, values);
+    return { allowed, values: values.cloneReadOnly() };
+}
+
+function stringSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns SubtypeData {
+    string[] values = [];
+    boolean allowed = enumerableSubtypeIntersect(<StringSubtype>d1, <StringSubtype>d2, values);
+    return { allowed, values: values.cloneReadOnly() };
+}
+
+function stringSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
+    return stringSubtypeIntersect(d1, stringSubtypeComplement(d2));
+}
 
 function stringSubtypeComplement(SubtypeData d) returns SubtypeData {
     StringSubtype s = <StringSubtype>d;
@@ -50,11 +63,9 @@ function createStringSubtype(boolean allowed, string[] values) returns SubtypeDa
 }
 
 final UniformTypeOps stringOps = {
-    union: function (SubtypeData d1, SubtypeData d2) returns SubtypeData =>
-            enumerableSubtypeUnion(<StringSubtype>d1, <StringSubtype>d2),
-    diff: function (SubtypeData d1, SubtypeData d2) returns SubtypeData =>
-            stringSubtypeIntersect(d1, stringSubtypeComplement(d2)),
+    union: stringSubtypeUnion,
     intersect: stringSubtypeIntersect,
+    diff: stringSubtypeDiff,
     complement: stringSubtypeComplement,
     // Empty string sets don't use subtype representation.
     isEmpty: notIsEmpty
