@@ -71,13 +71,9 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
         VarRefExpr lValue = { varName: identifier };
         return finishAssignStmt(tok, lValue);
     }
-    else if cur is CompAssnArithmeticOp {
+    else if cur is CompoundAssignOp {
         VarRefExpr lValue = { varName: identifier };
-        return parseArithmeticCompAssnStmt(tok, lValue, <BinaryArithmeticOp> cur[0]);
-    } else if cur is CompAssnBitwiseOp {
-        VarRefExpr lValue = {varName: identifier};
-        string curStr = cur.toString();
-        return parseBitwiseCompAssnStmt(tok, lValue, <BinaryBitwiseOp> curStr.substring(0, curStr.length()-1));
+        return parseCompoundAssignStmt(tok, lValue, cur);
     }
     else if cur == "(" {
         check tok.advance();
@@ -99,6 +95,10 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
         if cur == "=" {
             MemberAccessLExpr lValue = { container: varRef, index, pos: bracketPos };
             return finishAssignStmt(tok, lValue);
+        } 
+        else if cur is CompoundAssignOp {
+            MemberAccessLExpr lValue = { container: varRef, index, pos: bracketPos };
+            return parseCompoundAssignStmt(tok, lValue, cur);
         }
         MemberAccessExpr memberAccess = { container: varRef, index, pos: bracketPos };
         Expr expr = check finishPrimaryExpr(tok, memberAccess);
@@ -155,20 +155,10 @@ function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Sy
     check tok.expect(";");
     return stmt; 
 }
-function parseArithmeticCompAssnStmt(Tokenizer tok, LExpr lValue, BinaryArithmeticOp op) returns AssignStmt|err:Syntax {
+function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp op) returns CompoundAssignStmt|err:Syntax {
     check tok.advance();
     Expr rexpr = check parseExpr(tok);
-    Expr expr = {arithmeticOp: op, left: lValue, right: rexpr, pos: tok.currentPos()};
-    AssignStmt stmt = { lValue, expr };
-    check tok.expect(";");
-    return stmt; 
-}
-
-function parseBitwiseCompAssnStmt(Tokenizer tok, LExpr lValue, BinaryBitwiseOp op) returns AssignStmt|err:Syntax {
-    check tok.advance();
-    Expr rexpr = check parseExpr(tok);
-    Expr expr = {bitwiseOp: op, left: lValue, right: rexpr};
-    AssignStmt stmt = { lValue, expr };
+    CompoundAssignStmt stmt = { lValue, rexpr , op, pos: tok.currentPos()};
     check tok.expect(";");
     return stmt; 
 }

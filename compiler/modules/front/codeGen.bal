@@ -306,6 +306,9 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
         else if stmt is AssignStmt {
             effect = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
+        else if stmt is CompoundAssignStmt {
+            effect = check codeGenCompoundAssignStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+        }
         else {
             effect = check codeGenCallStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
@@ -575,6 +578,30 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     }
 }
 
+function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, CompoundAssignStmt stmt) returns CodeGenError|StmtEffect {
+    var { lValue, rexpr , op, pos} = stmt;
+    if lValue is VarRefExpr {
+        return codeGenCompoundAssignToVar(cx, startBlock, env, lValue, rexpr, op, pos);
+    }
+    else {
+        return codeGenCompoundAssignToMember(cx, startBlock, env, lValue, rexpr);
+    }
+}
+
+function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, VarRefExpr lValue, Expr rexpr, CompoundAssignOp op, err:Position pos) returns CodeGenError|StmtEffect {
+    Expr expr;
+    if op is CompoundAssignArithmeticOp {
+        BinaryArithmeticOp o = <BinaryArithmeticOp> op[0];
+        expr = {arithmeticOp: o, left: lValue, right: rexpr, pos: pos};
+    }
+    else {
+        string opStr = op.toString();
+        BinaryBitwiseOp o = <BinaryBitwiseOp> opStr.substring(0, opStr.length()-1);
+        expr = {bitwiseOp: o, left: lValue, right: rexpr};
+    }
+    return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
+}
+
 function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, Expr expr) returns CodeGenError|StmtEffect {
     Binding binding = check lookupVarRefBinding(cx, varName, env);
     if binding.isFinal {
@@ -603,6 +630,28 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
 }
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, MemberAccessLExpr lValue, Expr expr) returns CodeGenError|StmtEffect {
+    bir:Register reg = (check lookupVarRefBinding(cx, lValue.container.varName, env)).reg;
+    Expr foldedIndexExpr = check cx.foldExpr(env, lValue.index, t:union(t:INT, t:STRING));
+    var { result: index, block: nextBlock } = check codeGenExpr(cx, startBlock, env, foldedIndexExpr);
+    Expr foldedExpr = check cx.foldExpr(env, expr, t:ANY); // XXX need to change when we have typed arrays
+    bir:Operand operand;
+    { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
+    TypedOperand? t = typedOperand(index);
+    bir:Insn insn;
+    if t is ["int", bir:IntOperand] {
+        insn = <bir:ListSetInsn>{ list: reg, index: t[1], operand, position: lValue.pos };
+    }
+    else if t is ["string", bir:StringOperand] {
+        insn = <bir:MappingSetInsn> { operands: [ reg, t[1], operand], position: lValue.pos };
+    }
+    else {
+        return cx.semanticErr("key in assignment to member must be int or string");
+    }
+    nextBlock.insns.push(insn);
+    return { block: nextBlock };
+}
+
+function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, MemberAccessLExpr lValue, Expr expr) returns CodeGenError|StmtEffect {
     bir:Register reg = (check lookupVarRefBinding(cx, lValue.container.varName, env)).reg;
     Expr foldedIndexExpr = check cx.foldExpr(env, lValue.index, t:union(t:INT, t:STRING));
     var { result: index, block: nextBlock } = check codeGenExpr(cx, startBlock, env, foldedIndexExpr);

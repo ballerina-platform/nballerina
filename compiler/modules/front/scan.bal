@@ -82,9 +82,12 @@ const FRAG_LESS_THAN_LESS_THAN = 0x4B;
 const FRAG_EQUAL_GREATER_THAN = 0x4C;
 const FRAG_PLUS_EQUAL = 0x4D;
 const FRAG_MINUS_EQUAL = 0x4E;
-const FRAG_DIV_EQUAL = 0x4F;
-const FRAG_MUL_EQUAL = 0x50;
-
+const FRAG_SLASH_EQUAL = 0x4F;
+const FRAG_ASTERISK_EQUAL = 0x50;
+const FRAG_AMPERSAND_EQUAL = 0x51;
+const FRAG_VBAR_EQUAL = 0x52;
+const FRAG_CIRCUMFLEX_EQUAL =0x53;
+ 
 const FRAG_KEYWORD = 0x80;
 
 final readonly & Keyword[] keywords = [
@@ -150,8 +153,11 @@ function createFragTokens() returns readonly & FixedToken?[] {
     ft[<int>FRAG_EQUAL_GREATER_THAN] = "=>";
     ft[<int>FRAG_PLUS_EQUAL] = "+=";
     ft[<int>FRAG_MINUS_EQUAL] = "-=";
-    ft[<int>FRAG_DIV_EQUAL] = "/=";
-    ft[<int>FRAG_MUL_EQUAL] = "*=";
+    ft[<int>FRAG_SLASH_EQUAL] = "/=";
+    ft[<int>FRAG_ASTERISK_EQUAL] = "*=";
+    ft[<int>FRAG_AMPERSAND_EQUAL] = "&=";
+    ft[<int>FRAG_VBAR_EQUAL] = "|=";
+    ft[<int>FRAG_CIRCUMFLEX_EQUAL] = "^=";
     // JBUG error if hex used for 32 and 128
     foreach int cp in 32 ..< 128 {
         string s = checkpanic string:fromCodePointInt(cp);
@@ -264,7 +270,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                 }
                 cp = codePoints[i];
                 if cp == CP_EQUAL {
-                   endFragment(FRAG_DIV_EQUAL, i, result);
+                   endFragment(FRAG_SLASH_EQUAL, i, result);
                    continue; 
                 }
                 if cp != CP_SLASH {
@@ -287,6 +293,10 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     i += 1;
                     endFragment(FRAG_VBAR_RIGHT_CURLY, i, result);
                     continue;
+                }
+                if i < len && codePoints[i] == CP_EQUAL {
+                   endFragment(FRAG_VBAR_EQUAL, i, result);
+                   continue; 
                 }
                 endFragment(CP_VBAR, i, result);
             }
@@ -409,7 +419,6 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                 i = scanDecimal(codePoints, i, result);
             }
             CP_PERCENT
-            |CP_AMPERSAND
             |CP_LEFT_PAREN 
             |CP_RIGHT_PAREN
             |CP_COMMA
@@ -418,11 +427,21 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
             |CP_QUESTION
             |CP_LEFT_SQUARE
             |CP_RIGHT_SQUARE
-            |CP_CIRCUMFLEX
             |CP_RIGHT_CURLY
             |CP_TILDE => {
                 // JBUG when FragCode is byte, error without cast
                 endFragment(<FragCode>cp, i, result);
+            }
+            CP_CIRCUMFLEX => {
+                if i < len {
+                    int cp2 = codePoints[i];
+                    if cp2 == CP_EQUAL {
+                        i += 1;
+                        endFragment(FRAG_CIRCUMFLEX_EQUAL, i, result);
+                        continue;
+                    }
+                }
+                endFragment(CP_CIRCUMFLEX, i, result);
             }
             CP_PLUS => {
                 if i < len {
@@ -451,11 +470,22 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     int cp2 = codePoints[i];
                     if cp2 == CP_EQUAL {
                         i += 1;
-                        endFragment(FRAG_MUL_EQUAL, i, result);
+                        endFragment(FRAG_ASTERISK_EQUAL, i, result);
                         continue;
                     }
                 }
                 endFragment(CP_ASTERISK, i, result);
+            }
+            CP_AMPERSAND => {
+                if i < len {
+                    int cp2 = codePoints[i];
+                    if cp2 == CP_EQUAL {
+                        i += 1;
+                        endFragment(FRAG_AMPERSAND_EQUAL, i, result);
+                        continue;
+                    }
+                }
+                endFragment(CP_AMPERSAND, i, result);
             }
             CP_DOUBLE_QUOTE => {
                 i = scanString(codePoints, i, result);

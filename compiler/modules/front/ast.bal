@@ -37,7 +37,7 @@ type ConstDefn record {|
     ResolvedConst|false? resolved = ();    
 |};
 
-type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
+type Stmt VarDeclStmt|AssignStmt|CompoundAssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
 type CallStmt FunctionCallExpr|MethodCallExpr;
 type Expr IntLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
@@ -46,6 +46,13 @@ type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateE
 type AssignStmt record {|
     LExpr lValue;
     Expr expr;
+|};
+
+type CompoundAssignStmt record {|
+    LExpr lValue;
+    Expr rexpr;
+    CompoundAssignOp op; 
+    err:Position pos;
 |};
 
 // L-value expression
@@ -113,9 +120,9 @@ type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
 type RangeOp  "..." | "..<";
 
-type CompAssnArithmeticOp "+=" | "-=" | "/=" | "*=";
-type CompAssnBitwiseOp "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=";
-type CompAssnOp  CompAssnArithmeticOp|CompAssnBitwiseOp;
+type CompoundAssignArithmeticOp "+=" | "-=" | "/=" | "*=";
+type CompoundAssignBitwiseOp "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=";
+type CompoundAssignOp  CompoundAssignArithmeticOp|CompoundAssignBitwiseOp;
 
 type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
