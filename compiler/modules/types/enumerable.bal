@@ -1,11 +1,9 @@
-import wso2/nballerina.err;
-
 // EnumerableTypes are types in which each expressible subtype can be reasonably
 // represented by a list of values. counter-eg: `int` is not a EnumerableType since
 // uint32 can't be reasonably represented by listing all values.
 type EnumerableType float|string;
 
-type EnumerableSubType FloatSubtype|StringSubtype;
+type EnumerableSubtype FloatSubtype|StringSubtype;
 
 const LT = -1;
 const EQ = 0;
@@ -13,54 +11,52 @@ const GT = 1;
 
 type Order GT|EQ|LT;
 
-function enumerableSubtypeUnion(EnumerableSubType t1, EnumerableSubType t2) returns SubtypeData {
+function enumerableSubtypeUnion(EnumerableSubtype t1, EnumerableSubtype t2, EnumerableType[] result) returns boolean {
     boolean b1 = t1.allowed;
     boolean b2 = t2.allowed;
     boolean allowed;
-    EnumerableType[] values = arrayOfType(t1.values);
     if b1 && b2 {
-        enumerableListUnion(t1.values, t2.values, values);
+        enumerableListUnion(t1.values, t2.values, result);
         allowed = true;
     }
     else if !b1 && !b2 {
-        enumerableListIntersect(t1.values, t2.values, values);
+        enumerableListIntersect(t1.values, t2.values, result);
         allowed = false;
     }
     else if b1 && !b2 {
-        enumerableListDiff(t2.values, t1.values, values);
+        enumerableListDiff(t2.values, t1.values, result);
         allowed = false;
     }
     else {
          // !b1 && b2
-        enumerableListDiff(t1.values, t2.values, values);
+        enumerableListDiff(t1.values, t2.values, result);
         allowed = false;
     }
-    return createEnumerableSubtype(allowed, values);
+    return allowed;
 }
 
-function enumerableSubtypeIntersect(EnumerableSubType t1, EnumerableSubType t2) returns SubtypeData {
+function enumerableSubtypeIntersect(EnumerableSubtype t1, EnumerableSubtype t2, EnumerableType[] result) returns boolean {
     boolean b1 = t1.allowed;
     boolean b2 = t2.allowed;
     boolean allowed;
-    EnumerableType[] values = arrayOfType(t1.values);
     if b1 && b2 {
-        enumerableListIntersect(t1.values, t2.values, values);
+        enumerableListIntersect(t1.values, t2.values, result);
         allowed = true;
     }
     else if !b1 && !b2 {
-        enumerableListUnion(t1.values, t2.values, values);
+        enumerableListUnion(t1.values, t2.values, result);
         allowed = false;
     }
     else if b1 && !b2 {
-        enumerableListDiff(t1.values, t2.values, values);
+        enumerableListDiff(t1.values, t2.values, result);
         allowed = true;
     }
     else {
         // !b1 && b2
-        enumerableListDiff(t2.values, t1.values, values);
+        enumerableListDiff(t2.values, t1.values, result);
         allowed = true;
     }
-    return createEnumerableSubtype(allowed, values);
+    return allowed;
 }
 
 function enumerableListUnion(EnumerableType[] v1, EnumerableType[] v2, EnumerableType[] result) {
@@ -199,27 +195,4 @@ function floatEq(float f1, float f2) returns boolean {
         }
     }
     return f1 == f2;
-}
-
-function arrayOfType(EnumerableType[] arr) returns EnumerableType[] {
-    if arr is string[] {
-        string[] res =  [];
-        return res;
-    }
-    else if arr is float[] {
-        float[] res =  [];
-        return res;
-    }
-    panic err:impossible();
-}
-
-
-function createEnumerableSubtype(boolean allowed, EnumerableType[] values) returns SubtypeData {
-    if values is string[] {
-        return createStringSubtype(allowed, values);
-    }
-    else if values is float[] {
-        return createFloatSubtype(allowed, values);
-    }
-    panic err:impossible();
 }

@@ -10,9 +10,21 @@ public function floatConst(float value) returns SemType {
     return uniformSubtype(UT_FLOAT, st);
 }
 
-function floatSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns SubtypeData =>
-    enumerableSubtypeIntersect(<FloatSubtype>d1, <FloatSubtype>d2);
+function floatSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
+    float[] values = [];
+    boolean allowed = enumerableSubtypeUnion(<FloatSubtype>d1, <FloatSubtype>d2, values);
+    return createFloatSubtype(allowed, values);
+}
 
+function floatSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns SubtypeData {
+    float[] values = [];
+    boolean allowed = enumerableSubtypeIntersect(<FloatSubtype>d1, <FloatSubtype>d2, values);
+    return createFloatSubtype(allowed, values);
+}
+
+function floatSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
+    return floatSubtypeIntersect(d1, floatSubtypeComplement(d2));
+}
 
 function floatSubtypeComplement(SubtypeData d) returns SubtypeData {
     FloatSubtype s = <FloatSubtype>d;
@@ -28,11 +40,9 @@ function createFloatSubtype(boolean allowed, float[] values) returns SubtypeData
 }
 
 final UniformTypeOps floatOps = {
-    union: function (SubtypeData d1, SubtypeData d2) returns SubtypeData =>
-               enumerableSubtypeUnion(<FloatSubtype>d1, <FloatSubtype>d2),
-    diff: function (SubtypeData d1, SubtypeData d2) returns SubtypeData =>
-               floatSubtypeIntersect(d1, floatSubtypeComplement(d2)),
+    union: floatSubtypeUnion,
     intersect: floatSubtypeIntersect,
+    diff: floatSubtypeDiff,
     complement: floatSubtypeComplement,
     // Empty float sets don't use subtype representation.
     isEmpty: notIsEmpty
