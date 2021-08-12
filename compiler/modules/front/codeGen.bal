@@ -579,25 +579,22 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 }
 
 function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, CompoundAssignStmt stmt) returns CodeGenError|StmtEffect {
-    var { lValue, rexpr , op, pos} = stmt;
+    var { lValue, rexpr , op, pos } = stmt;
     if lValue is VarRefExpr {
         return codeGenCompoundAssignToVar(cx, startBlock, env, lValue, rexpr, op, pos);
     }
     else {
-        return codeGenCompoundAssignToMember(cx, startBlock, env, lValue, rexpr, op, pos);
+        return err:unimplemented("compound assignment to memebers not yet implemented");
     }
 }
 
-function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, VarRefExpr lValue, Expr rexpr, CompoundAssignOp op, err:Position pos) returns CodeGenError|StmtEffect {
+function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, VarRefExpr lValue, Expr rexpr, BinaryArithmeticOp|BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
     Expr expr;
-    if op is CompoundAssignArithmeticOp {
-        BinaryArithmeticOp o = <BinaryArithmeticOp> op[0];
-        expr = {arithmeticOp: o, left: lValue, right: rexpr, pos: pos};
+    if op is BinaryArithmeticOp {
+        expr = { arithmeticOp: op, left: lValue, right: rexpr, pos: pos };
     }
     else {
-        string opStr = op.toString();
-        BinaryBitwiseOp o = <BinaryBitwiseOp> opStr.substring(0, opStr.length()-1);
-        expr = {bitwiseOp: o, left: lValue, right: rexpr};
+        expr = { bitwiseOp: op, left: lValue, right: rexpr };
     }
     return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
 }
@@ -651,85 +648,6 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
     return { block: nextBlock };
 }
 
-function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Environment env, MemberAccessLExpr lValue, Expr rexpr, CompoundAssignOp op, err:Position pos) returns CodeGenError|StmtEffect{
-    //TODO Move to functions
-    bir:Register reg = (check lookupVarRefBinding(cx, lValue.container.varName, env)).reg;
-    Expr foldedIndexExpr = check cx.foldExpr(env, lValue.index, t:union(t:INT, t:STRING));
-    Expr foldedExpr = check cx.foldExpr(env, rexpr, t:ANY); 
-    var { result: l1, block: block1 } = check codeGenExpr(cx, bb, env, lValue.container);
-    var { result: l2, block: block2 } = check codeGenExpr(cx, block1, env, foldedIndexExpr);
-    bir:Register result;
-    TypedOperand? t;
-    if l1 is bir:Register {
-        result = cx.createRegister(t:ANY);
-        t = typedOperand(l2);
-        bir:Insn insn;
-        if t is ["int", bir:IntOperand] {
-            insn = <bir:ListGetInsn>{ result, list: l1, operand: t[1], position: pos };
-        }
-        else if t is ["string", bir:StringOperand] {
-            insn = <bir:MappingGetInsn>{ result, operands: [l1, t[1]] };
-        }
-        else {
-            return cx.semanticErr("member access key must be a string or an int");
-        }
-        bb.insns.push(insn);
-    }
-    else {
-        return cx.semanticErr("cannot apply member access to constant of simple type");
-    }
-    
-    var { result: r, block: block3 } = check codeGenExpr(cx, block2, env, foldedExpr);
-    
-    TypedOperandPair? pair = typedOperandPair(result, r);
-    bir:Register result2;
-    if op is CompoundAssignArithmeticOp {
-        BinaryArithmeticOp o = <BinaryArithmeticOp> op[0];
-        if pair is IntOperandPair {
-            result2 = cx.createRegister(t:INT);
-            bir:IntArithmeticBinaryInsn insn = { op: o, operands: pair[1], result: result2, position: pos };
-            bb.insns.push(insn);
-        }
-        else if pair is StringOperandPair {
-            result2 = cx.createRegister(t:STRING);
-            bir:StringConcatInsn insn = { operands:  pair[1], result: result2 };
-            bb.insns.push(insn);
-        }
-        else {
-            return cx.semanticErr("+ not supported for operand types");
-        }         
-    }
-    else {
-        string opStr = op.toString();
-        if pair is IntOperandPair{
-            BinaryBitwiseOp o = <BinaryBitwiseOp> opStr.substring(0, opStr.length()-1);
-            t:SemType lt = bitwiseOperandType(result);
-            t:SemType rt = bitwiseOperandType(<bir:IntOperand> r);
-            t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
-            result2 = cx.createRegister(resultType);
-            bir:IntBitwiseBinaryInsn insn = { op:o, operands: [result, <bir:IntOperand> r], result };
-            bb.insns.push(insn);
-        }
-        else {
-            return cx.semanticErr("bitwise operation not supported for operand types");
-        }
-    }
-            
-
-    bir:Insn insn;
-    if t is ["int", bir:IntOperand] {
-        insn = <bir:ListSetInsn>{ list: reg, index: t[1], operand: r, position: lValue.pos };
-    }
-    else if t is ["string", bir:StringOperand] {
-        insn = <bir:MappingSetInsn> { operands: [ reg, t[1], r], position: lValue.pos };
-    }
-    else {
-        return cx.semanticErr("key in assignment to member must be int or string");
-    }
-    block3.insns.push(insn);
-    
-    return { block: block3 };
-}
 
 function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, CallStmt stmt) returns CodeGenError|StmtEffect {
     // stmt is FunctionCallExpr or MethodCallExpr

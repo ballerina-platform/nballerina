@@ -51,7 +51,7 @@ type AssignStmt record {|
 type CompoundAssignStmt record {|
     LExpr lValue;
     Expr rexpr;
-    CompoundAssignOp op; 
+    BinaryArithmeticOp|BinaryBitwiseOp op; 
     err:Position pos;
 |};
 
