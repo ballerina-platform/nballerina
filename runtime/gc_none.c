@@ -10,3 +10,5 @@ UntypedPtr _bal_alloc(uint64_t nBytes) {
     fflush(stderr);
     abort();
 }
+
+void _bal_init_heap() {}
