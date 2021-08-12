@@ -2,7 +2,7 @@ import ballerina/io;
 
 public function main() {
     int n = 1;
-    io:println(foo(-n)); // @output hit
+    foo(-n); // @output hit
 }
 
 function foo(any v) {
