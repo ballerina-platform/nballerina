@@ -143,19 +143,29 @@ function createFragTokens() returns readonly & FixedToken?[] {
         ft[FRAG_KEYWORD + i] = keywords[i];
     }
     // JBUG int casts needed
-    // Temporarily moved to avoid method too large error
-    ft[<int>FRAG_LEFT_CURLY_VBAR] = "{|";
-    ft[<int>FRAG_VBAR_RIGHT_CURLY] = "|}";
-    ft[<int>FRAG_DOT_DOT_DOT] = "...";
-    ft[<int>FRAG_DOT_DOT_LESS_THAN] = "..<";
-    ft[<int>FRAG_EQUAL_EQUAL] = "==";
-    ft[<int>FRAG_NOT_EQUAL] = "!=";
-    ft[<int>FRAG_EQUAL_EQUAL_EQUAL] = "===";
-    ft[<int>FRAG_NOT_EQUAL_EQUAL] = "!==";
-    ft[<int>FRAG_LESS_THAN_EQUAL] = "<=";
-    ft[<int>FRAG_GREATER_THAN_EQUAL] = ">=";
-    ft[<int>FRAG_LESS_THAN_LESS_THAN] = "<<";
-    ft[<int>FRAG_EQUAL_GREATER_THAN] = "=>";
+    // Use toFixedToken to avoid method too large error
+    ft[<int>FRAG_LEFT_CURLY_VBAR] = toFixedToken("{|");
+    ft[<int>FRAG_VBAR_RIGHT_CURLY] = toFixedToken("|}");
+    ft[<int>FRAG_DOT_DOT_DOT] = toFixedToken("...");
+    ft[<int>FRAG_DOT_DOT_LESS_THAN] = toFixedToken("..<");
+    ft[<int>FRAG_EQUAL_EQUAL] = toFixedToken("==");
+    ft[<int>FRAG_NOT_EQUAL] = toFixedToken("!=");
+    ft[<int>FRAG_EQUAL_EQUAL_EQUAL] = toFixedToken("===");
+    ft[<int>FRAG_NOT_EQUAL_EQUAL] = toFixedToken("!==");
+    ft[<int>FRAG_LESS_THAN_EQUAL] = toFixedToken("<="); 
+    ft[<int>FRAG_GREATER_THAN_EQUAL] = toFixedToken(">=");
+    ft[<int>FRAG_LESS_THAN_LESS_THAN] = toFixedToken("<<");
+    ft[<int>FRAG_EQUAL_GREATER_THAN] = toFixedToken("=>");
+    ft[<int>FRAG_PLUS_EQUAL] = toFixedToken("+=");
+    ft[<int>FRAG_MINUS_EQUAL] = toFixedToken("-=");
+    ft[<int>FRAG_ASTERISK_EQUAL] = toFixedToken("*=");
+    ft[<int>FRAG_SLASH_EQUAL] = toFixedToken("/=");
+    ft[<int>FRAG_AMPERSAND_EQUAL] = toFixedToken("&=");
+    ft[<int>FRAG_VBAR_EQUAL] = toFixedToken("|=");
+    ft[<int>FRAG_CIRCUMFLEX_EQUAL] = toFixedToken("^=");
+    ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = toFixedToken("<<=");
+    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>=");
+    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>>=");
     // JBUG error if hex used for 32 and 128
     foreach int cp in 32 ..< 128 {
         string s = checkpanic string:fromCodePointInt(cp);
@@ -849,4 +859,9 @@ function isCodePointAsciiUpper(int cp) returns boolean {
 
 function isCodePointUnicodeIdentifier(int cp) returns boolean {
     return false;
+}
+
+// JBUG this avoids bloat that causes `method is too large` errors
+function toFixedToken(string t) returns FixedToken? {
+    return <FixedToken?>t;
 }
