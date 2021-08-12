@@ -52,7 +52,31 @@ public distinct class Module {
         _ = jLLVMPrintModuleToFile(self.LLVMModule, java:fromString(fileName), err);
     }
 
+    function linkInlineLibrary() {
+        LLVMMemoryBuffer runtimeMemBuffer = new;
+        runtimeMemBuffer.storeResource("balrt_inline.bc");
+        // _ = exec("jar -xf nballerina.jar balrt_inline.bc");
+        // checkpanic runtimeMemBuffer.storeFileInBuffer("./balrt_inline.bc");
+        // Module libModule = new("balrt_inline", self.context);
+        // libModule.parseBitCode(runtimeMemBuffer);
+        // int result = jLLVMLinkModules2(self.LLVMModule, libModule.LLVMModule);
+        // if result != 0 {
+        //     panic error("Failed to link the inline runtime");
+        // }
+        // TODO: clean the file
+    }
+
+    // Corresponds to LLVMParseBitcodeInContext2
+    function parseBitCode(LLVMMemoryBuffer memoryBuffer) {
+        int result = jLLVMParseBitcodeInContext2(self.context.LLVMContext, memoryBuffer.jObject, self.LLVMModule);
+        if result != 0 {
+            panic error("Failed to parse the memory buffer");
+        }
+    }
+
     public function printModuleToObjectFile(string fileName, *ObjectFileGenOptions opts) returns io:Error? {
+        self.linkInlineLibrary(); 
+
         string optLevel = opts.optLevel ?: "Default";
         string relocMode = opts.relocMode ?: "Default";
         string codeModel = opts.codeModel ?: "Default";
@@ -306,4 +330,16 @@ function jLLVMTargetMachineEmitToFile(handle targetMachineRef, handle moduleRef,
     name: "LLVMTargetMachineEmitToFile",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTargetMachineRef", "org.bytedeco.llvm.LLVM.LLVMModuleRef","org.bytedeco.javacpp.BytePointer", "int", "org.bytedeco.javacpp.BytePointer"]
+} external;
+
+function jLLVMParseBitcodeInContext2(handle contextRef, handle memoryBufferRef, handle moduleRef) returns int = @java:Method {
+    name: "LLVMParseBitcodeInContext2",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef", "org.bytedeco.llvm.LLVM.LLVMMemoryBufferRef", "org.bytedeco.llvm.LLVM.LLVMModuleRef"]
+} external;
+
+function jLLVMLinkModules2(handle dest, handle src) returns int = @java:Method {
+    name: "LLVMLinkModules2",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "org.bytedeco.llvm.LLVM.LLVMModuleRef"]
 } external;

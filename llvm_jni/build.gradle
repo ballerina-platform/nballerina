@@ -20,6 +20,7 @@ String platformLibs = 'target/platform-libs'
 String tmpBuildDir = '../testbuild'
 String compilerDir = '../compiler'
 String testDir = '../test'
+String runtimeDir = '../runtime'
 
 configurations.implementation.setCanBeResolved(true) 
 configurations.api.setCanBeResolved(true)
@@ -77,10 +78,35 @@ task testBuild(type: Exec) {
 }
 testBuild.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyLocalDependencies, copyBalConfig)
 
+task balCompile(type: Exec) {
+        workingDir tmpBuildDir
+        commandLine 'bal', 'build', '--offline' , '--skip-tests'
+}
+balCompile.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyLocalDependencies, copyBalConfig)
+
+// TODO: build runtime before this
+task copyRuntime(type:Copy) {
+        from "${runtimeDir}/balrt_inline.bc"
+        into "${tmpBuildDir}/target/bin"
+}
+copyRuntime.mustRunAfter(balCompile)
+
+task buildWithRuntime(type: Exec) {
+        workingDir "${tmpBuildDir}/target/bin"
+        commandLine 'jar', 'uf', 'nballerina.jar', 'balrt_inline.bc'
+}
+buildWithRuntime.dependsOn(copyNbal, copyJNILLVM, copyRuntime, copyDriver, copyLocalDependencies, copyBalConfig, balCompile)
+
+task cleanBuildArtificats(type: Delete) {
+        delete "${tmpBuildDir}/target/bin/balrt_inline.bc"
+}
+cleanBuildArtificats.mustRunAfter(buildWithRuntime)
+
 task buildNBalCompilerBase(type: Exec) {
         workingDir compilerDir
         commandLine 'bal', 'build', '--skip-tests'
 }
+
 
 task compileExpectedTestCases(type: Exec) {
         workingDir testDir

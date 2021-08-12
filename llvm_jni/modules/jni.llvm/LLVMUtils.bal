@@ -1,4 +1,5 @@
 import ballerina/jballerina.java;
+import ballerina/jballerina.java.arrays as jarrays;
 
 // The peer class to native pointers and arrays of void*
 // Used to represent arrays
@@ -50,6 +51,46 @@ distinct class BytePointer {
     }
 }
 
+// Corresponds to LLVMMemoryBufferRef
+distinct class LLVMMemoryBuffer {
+    handle jObject;
+
+    function init() {
+        self.jObject = jMemoryBuffer();
+    }
+
+    // Corresponds to LLVMCreateMemoryBufferWithContentsOfFile
+    function storeFileInBuffer(string filePath) returns error? {
+        BytePointer libPath = new(jBytePointerFromString(java:fromString(filePath)));
+        BytePointer fileLoadError = new(jBytePointer());
+        int loadResult = jLLVMCreateMemoryBufferWithContentsOfFile(libPath.jObject, self.jObject, fileLoadError.jObject);
+        if loadResult != 0 {
+            return error(fileLoadError.toString());
+        }
+    }
+
+    function storeResource(string resourcePath) {
+        // TODO: validate the input stream
+        // handle|error byteArray = jReadAllBytes(jGetResourceAsStream(jGetClassLoader(jGetClass(holder)),java:fromString(resourcePath)));
+        // if byteArray is error {
+        //     io:println("error:", byteArray);
+        // }
+        handle inputStream = jGetResourceAsStream(jGetClassLoader(jGetClass(self.jObject)),java:fromString(resourcePath));
+        byte[] buffer = [];
+        byte[] inputBytes = [];
+        buffer[32] = 0;
+        handle bufferHandle = checkpanic jarrays:toHandle(buffer, "byte");
+        int bytesRead = checkpanic jRead(inputStream, bufferHandle);
+        while bytesRead > 0 {
+            buffer = <byte[]> checkpanic jarrays:fromHandle(bufferHandle, "byte");
+            inputBytes.push(...buffer.slice(0, bytesRead));
+            bufferHandle = checkpanic jarrays:toHandle(buffer, "byte");
+            bytesRead = checkpanic jRead(inputStream, bufferHandle);
+        }
+    }
+}
+
+
 function jPointerPointer(int size) returns handle = @java:Constructor {
     'class: "org.bytedeco.javacpp.PointerPointer",
     paramTypes: ["long"]
@@ -57,6 +98,12 @@ function jPointerPointer(int size) returns handle = @java:Constructor {
 
 function jBytePointer() returns handle = @java:Constructor {
     'class: "org.bytedeco.javacpp.BytePointer",
+    paramTypes: []
+} external;
+
+
+function jMemoryBuffer() returns handle = @java:Constructor {
+    'class: "org.bytedeco.llvm.LLVM.LLVMMemoryBufferRef",
     paramTypes: []
 } external;
 
@@ -75,4 +122,10 @@ function jBytePointerGetString(handle receiver) returns handle = @java:Method {
     name: "getString",
     'class: "org.bytedeco.javacpp.BytePointer",
     paramTypes: []
+} external;
+
+function jLLVMCreateMemoryBufferWithContentsOfFile(handle path, handle outMemoryBuf, handle outMessage) returns int = @java:Method {
+    name: "LLVMCreateMemoryBufferWithContentsOfFile",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.javacpp.BytePointer", "org.bytedeco.llvm.LLVM.LLVMMemoryBufferRef", "org.bytedeco.javacpp.BytePointer"]
 } external;
