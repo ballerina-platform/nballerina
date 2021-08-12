@@ -55,7 +55,7 @@ public type TypeCheckContext record {|
     BddMemoTable functionMemo = table [];
 |};
 
-type ProperSubtypeData StringSubtype|IntSubtype|BooleanSubtype|bdd:Node;
+type ProperSubtypeData StringSubtype|FloatSubtype|IntSubtype|BooleanSubtype|bdd:Node;
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData ProperSubtypeData|boolean;
 
@@ -811,7 +811,7 @@ function init() {
         {}, // RO xml
         {}, // RO object
         intOps, // int
-        {}, // float
+        floatOps, // float
         {}, // decimal
         stringOps, // string
         errorOps, // error

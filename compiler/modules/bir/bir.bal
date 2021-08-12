@@ -115,11 +115,13 @@ public type BasicBlock record {|
     Insn[] insns = [];
     # non-nil if this contains any PPI
     Label? onPanic = ();
+    # Backend can use this to generate human-readable label
+    string? name = ();
 |};
 
-public function createBasicBlock(FunctionCode code) returns BasicBlock {
+public function createBasicBlock(FunctionCode code, string? name = ()) returns BasicBlock {
     int label = code.blocks.length();
-    BasicBlock bb = { label };
+    BasicBlock bb = { label, name };
     code.blocks.push(bb);
     return bb;
 }

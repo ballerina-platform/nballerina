@@ -114,6 +114,7 @@ final readonly & Keyword[] keywords = [
     "is",
     "json",
     "map",
+    "match",
     "never",
     "null",
     "public",
@@ -350,6 +351,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     if cp2 == CP_GREATER_THAN {
                         i += 1;
                         endFragment(FRAG_EQUAL_GREATER_THAN, i, result);
+                        continue;
                     }
                 }
                 endFragment(CP_EQUAL, i, result);

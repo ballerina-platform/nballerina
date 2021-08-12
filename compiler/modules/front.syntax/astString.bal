@@ -429,3 +429,10 @@ function alwaysClingAfter(string a) returns boolean {
 function alwaysClingBefore(string a) returns boolean {
     return a == ";" || a == ":" || a == "." || a == ")" || a == "," || a == "]";
 }
+
+// Useful for debugging
+function exprToString(Expr expr) returns string {
+    Word[] words = [];
+    exprToWords(words, expr);
+    return "\n".'join(...wordsToLines(words));
+}

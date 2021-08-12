@@ -2,7 +2,7 @@
 
 import wso2/nballerina.err;
 
-function parseModulePart(string[] lines) returns ModulePart|err:Syntax {
+public function parseModulePart(string[] lines) returns ModulePart|err:Syntax {
     Tokenizer tok = new (lines);
     check tok.advance();
     ModulePart part = {
@@ -15,6 +15,15 @@ function parseModulePart(string[] lines) returns ModulePart|err:Syntax {
     return part;
 }
 
+public function parseExpression(string[] lines) returns Expr|err:Syntax {
+    Tokenizer tok = new (lines);
+    check tok.advance();
+    Expr expr = check parseExpr(tok);
+    if tok.current() != () {
+        return parseError(tok, "unexpected input after expression");
+    }
+    return expr;
+}
 
 function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
     Token? t = tok.current();
@@ -36,7 +45,6 @@ function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
     }
     return parseError(tok, "import declaration");
 }
-
 
 function parseModuleDecl(Tokenizer tok) returns ModuleLevelDefn|err:Syntax {
     Token? t = tok.current();
