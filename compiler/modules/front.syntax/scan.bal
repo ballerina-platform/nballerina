@@ -451,59 +451,34 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                 endFragment(<FragCode>cp, i, result);
             }
             CP_CIRCUMFLEX => {
-                if i < len {
-                    int cp2 = codePoints[i];
-                    if cp2 == CP_EQUAL {
-                        i += 1;
-                        endFragment(FRAG_CIRCUMFLEX_EQUAL, i, result);
-                        continue;
-                    }
+                if endFragmentCompoundAssign(codePoints, i, CP_CIRCUMFLEX, FRAG_CIRCUMFLEX_EQUAL, result) {
+                    i += 1;
+                    continue;
                 }
-                endFragment(CP_CIRCUMFLEX, i, result);
             }
             CP_PLUS => {
-                if i < len {
-                    int cp2 = codePoints[i];
-                    if cp2 == CP_EQUAL {
-                        i += 1;
-                        endFragment(FRAG_PLUS_EQUAL, i, result);
-                        continue;
-                    }
+                if endFragmentCompoundAssign(codePoints, i, CP_PLUS, FRAG_PLUS_EQUAL, result) {
+                    i += 1;
+                    continue;
                 }
-                endFragment(CP_PLUS, i, result);
             }
             CP_MINUS => {
-                if i < len {
-                    int cp2 = codePoints[i];
-                    if cp2 == CP_EQUAL {
-                        i += 1;
-                        endFragment(FRAG_MINUS_EQUAL, i, result);
-                        continue;
-                    }
+                if endFragmentCompoundAssign(codePoints, i, CP_MINUS, FRAG_MINUS_EQUAL, result) {
+                    i += 1;
+                    continue;
                 }
-                endFragment(CP_MINUS, i, result);
             }
             CP_ASTERISK => {
-                if i < len {
-                    int cp2 = codePoints[i];
-                    if cp2 == CP_EQUAL {
-                        i += 1;
-                        endFragment(FRAG_ASTERISK_EQUAL, i, result);
-                        continue;
-                    }
+                if endFragmentCompoundAssign(codePoints, i, CP_ASTERISK, FRAG_ASTERISK_EQUAL, result) {
+                    i += 1;
+                    continue;
                 }
-                endFragment(CP_ASTERISK, i, result);
             }
             CP_AMPERSAND => {
-                if i < len {
-                    int cp2 = codePoints[i];
-                    if cp2 == CP_EQUAL {
-                        i += 1;
-                        endFragment(FRAG_AMPERSAND_EQUAL, i, result);
-                        continue;
-                    }
+                if endFragmentCompoundAssign(codePoints, i, CP_AMPERSAND, FRAG_AMPERSAND_EQUAL, result) {
+                    i += 1;
+                    continue;
                 }
-                endFragment(CP_AMPERSAND, i, result);
             }
             CP_DOUBLE_QUOTE => {
                 i = scanString(codePoints, i, result);
@@ -837,6 +812,19 @@ function endFragmentMerge(FragCode fragCode, int endIndex, Scanned result) {
         fc.push(fragCode);
         result.endIndex.push(endIndex);
     }
+}
+
+function endFragmentCompoundAssign(int[] codePoints, int i, int CP, int FCP, Scanned result) returns boolean{
+    int len = codePoints.length();
+    if i < len {
+        int cp = codePoints[i];
+        if cp == CP_EQUAL {
+            endFragment(FCP, i+1, result);
+            return true;
+        }
+    }
+    endFragment(CP, i, result);
+    return false;
 }
 
 function isCodePointIdentifierFollowing(int cp) returns boolean {
