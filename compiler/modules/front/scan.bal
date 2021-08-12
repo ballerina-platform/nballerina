@@ -86,7 +86,8 @@ const FRAG_SLASH_EQUAL = 0x4F;
 const FRAG_ASTERISK_EQUAL = 0x50;
 const FRAG_AMPERSAND_EQUAL = 0x51;
 const FRAG_VBAR_EQUAL = 0x52;
-const FRAG_CIRCUMFLEX_EQUAL =0x53;
+const FRAG_CIRCUMFLEX_EQUAL = 0x53;
+const FRAG_LESS_THAN_LESS_THAN_EQUAL = 0x54;
  
 const FRAG_KEYWORD = 0x80;
 
@@ -170,6 +171,7 @@ function fillMultipleCharTokens(FixedToken?[] ft) {
     ft[<int>FRAG_AMPERSAND_EQUAL] = "&=";
     ft[<int>FRAG_VBAR_EQUAL] = "|=";
     ft[<int>FRAG_CIRCUMFLEX_EQUAL] = "^=";
+    ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = "<<=";
 }
 
 function unicodeEscapeValue(string fragment) returns string|error {
@@ -373,6 +375,11 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     int cp2 = codePoints[i];
                     if cp2 == CP_LESS_THAN {
                         i += 1;
+                        if codePoints[i] == CP_EQUAL {
+                            i+=1;
+                            endFragment(FRAG_LESS_THAN_LESS_THAN_EQUAL, i, result);
+                            continue;
+                        }
                         endFragment(FRAG_LESS_THAN_LESS_THAN, i, result);
                         continue;
                     }

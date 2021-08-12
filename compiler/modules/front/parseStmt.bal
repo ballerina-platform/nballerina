@@ -161,10 +161,10 @@ function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp o
     string opStr = op.toString();
     BinaryArithmeticOp|BinaryBitwiseOp binOp;
     if op is CompoundAssignArithmeticOp {
-        binOp = <BinaryArithmeticOp> opStr.substring(0, opStr.length());
+        binOp = <BinaryArithmeticOp> op[0];
     }
     else {
-        binOp = <BinaryBitwiseOp> opStr.substring(0, opStr.length());
+        binOp = <BinaryBitwiseOp> opStr.substring(0, opStr.length()-1);
     }
     CompoundAssignStmt stmt = { lValue, rexpr , op: binOp, pos: tok.currentPos()};
     check tok.expect(";");
