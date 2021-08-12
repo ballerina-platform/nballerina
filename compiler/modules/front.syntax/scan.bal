@@ -88,6 +88,8 @@ const FRAG_AMPERSAND_EQUAL = 0x51;
 const FRAG_VBAR_EQUAL = 0x52;
 const FRAG_CIRCUMFLEX_EQUAL = 0x53;
 const FRAG_LESS_THAN_LESS_THAN_EQUAL = 0x54;
+const FRAG_GREATER_THAN_GREATER_THAN_EQUAL = 0x55;
+const FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL = 0x56;
  
 const FRAG_KEYWORD = 0x80;
 
@@ -141,7 +143,9 @@ function createFragTokens() returns readonly & FixedToken?[] {
         ft[FRAG_KEYWORD + i] = keywords[i];
     }
     // JBUG int casts needed
-    fillMultipleCharTokens(ft);
+    // Temporarily moved to avoid method too large error
+    fillMultipleCharTokens1(ft);
+    fillMultipleCharTokens2(ft);
     // JBUG error if hex used for 32 and 128
     foreach int cp in 32 ..< 128 {
         string s = checkpanic string:fromCodePointInt(cp);
@@ -152,7 +156,7 @@ function createFragTokens() returns readonly & FixedToken?[] {
     return ft.cloneReadOnly();
 }
 
-function fillMultipleCharTokens(FixedToken?[] ft) {
+function fillMultipleCharTokens1(FixedToken?[] ft) {
     ft[<int>FRAG_LEFT_CURLY_VBAR] = "{|";
     ft[<int>FRAG_VBAR_RIGHT_CURLY] = "|}";
     ft[<int>FRAG_DOT_DOT_DOT] = "...";
@@ -164,6 +168,9 @@ function fillMultipleCharTokens(FixedToken?[] ft) {
     ft[<int>FRAG_LESS_THAN_EQUAL] = "<=";
     ft[<int>FRAG_GREATER_THAN_EQUAL] = ">=";
     ft[<int>FRAG_LESS_THAN_LESS_THAN] = "<<";
+}
+
+function fillMultipleCharTokens2(FixedToken?[] ft) {
     ft[<int>FRAG_EQUAL_GREATER_THAN] = "=>";
     ft[<int>FRAG_PLUS_EQUAL] = "+=";
     ft[<int>FRAG_MINUS_EQUAL] = "-=";
@@ -173,6 +180,8 @@ function fillMultipleCharTokens(FixedToken?[] ft) {
     ft[<int>FRAG_VBAR_EQUAL] = "|=";
     ft[<int>FRAG_CIRCUMFLEX_EQUAL] = "^=";
     ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = "<<=";
+    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = ">>=";
+    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = ">>>=";
 }
 
 function unicodeEscapeValue(string fragment) returns string|error {
@@ -398,6 +407,18 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     i += 1;
                     endFragment(FRAG_GREATER_THAN_EQUAL, i, result);
                     continue;
+                }
+                if i < len && codePoints[i] == CP_GREATER_THAN {
+                    if i+2 < len && codePoints[i+1] == CP_GREATER_THAN && codePoints[i+2] == CP_EQUAL{
+                        i += 3;
+                        endFragment(FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL, i, result);
+                        continue;
+                    }
+                    else if i+1 < len && codePoints[i+1] == CP_EQUAL{
+                        i += 2;
+                        endFragment(FRAG_GREATER_THAN_GREATER_THAN_EQUAL, i, result);
+                        continue;
+                    }
                 }
                 // Tokenization of multiple `>`s depends on lexical mode
                 // so do it later
