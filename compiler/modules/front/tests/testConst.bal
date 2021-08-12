@@ -1,6 +1,8 @@
 import ballerina/test;
 import wso2/nballerina.err;
 import wso2/nballerina.types as t;
+import wso2/nballerina.front.syntax as s;
+
 
 type ConstEvalTest [string,SimpleConst];
 
@@ -17,12 +19,10 @@ class TestFoldContext {
 
 @test:Config{ dataProvider: validConstExprs }
 function testConstExpr(string src, SimpleConst expected) {
-    Tokenizer tok = new ([src]);
-    checkpanic tok.advance();
-    Expr parsed = checkpanic parseExpr(tok);
+    s:Expr parsed = checkpanic s:parseExpression([src]);
     TestFoldContext cx = new;
     var result = foldExpr(cx, (), parsed);
-    test:assertTrue(result is ConstValueExpr && result.value == expected, "got: " + (result is ConstValueExpr ? result.value.toString()  : "not constant"));
+    test:assertTrue(result is s:ConstValueExpr && result.value == expected, "got: " + (result is s:ConstValueExpr ? result.value.toString()  : "not constant"));
 }
 
 function validConstExprs() returns map<ConstEvalTest> {

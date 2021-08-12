@@ -42,6 +42,10 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parseIfElseStmt(tok);
         }
+        "match" => {
+            check tok.advance();
+            return parseMatchStmt(tok);
+        }
         "while" => {
             check tok.advance();
             return parseWhileStmt(tok);
@@ -95,10 +99,6 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
         if cur == "=" {
             MemberAccessLExpr lValue = { container: varRef, index, pos: bracketPos };
             return finishAssignStmt(tok, lValue);
-        } 
-        else if cur is CompoundAssignOp {
-            MemberAccessLExpr lValue = { container: varRef, index, pos: bracketPos };
-            return parseCompoundAssignStmt(tok, lValue, cur);
         }
         MemberAccessExpr memberAccess = { container: varRef, index, pos: bracketPos };
         Expr expr = check finishPrimaryExpr(tok, memberAccess);
@@ -155,7 +155,7 @@ function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Sy
     check tok.expect(";");
     return stmt; 
 }
-function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp op) returns CompoundAssignStmt|err:Syntax {
+function parseCompoundAssignStmt(Tokenizer tok, VarRefExpr lValue, CompoundAssignOp op) returns CompoundAssignStmt|err:Syntax {
     check tok.advance();
     Expr rexpr = check parseExpr(tok);
     string opStr = op.toString();

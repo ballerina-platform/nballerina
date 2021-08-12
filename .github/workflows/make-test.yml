@@ -35,3 +35,10 @@ jobs:
       - name: Test
         run: |
           make -j2 test
+      - name: Archive test ouput
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: test output
+          path: |
+            test/out

@@ -40,6 +40,7 @@ type Keyword
     | "int"
     | "json"
     | "map"
+    | "match"
     | "never"
     | "null"
     | "readonly"
