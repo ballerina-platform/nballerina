@@ -158,14 +158,8 @@ function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Sy
 function parseCompoundAssignStmt(Tokenizer tok, VarRefExpr lValue, CompoundAssignOp op) returns CompoundAssignStmt|err:Syntax {
     check tok.advance();
     Expr rexpr = check parseExpr(tok);
-    string opStr = op.toString();
-    BinaryArithmeticOp|BinaryBitwiseOp binOp;
-    if op is CompoundAssignArithmeticOp {
-        binOp = <BinaryArithmeticOp> op[0];
-    }
-    else {
-        binOp = <BinaryBitwiseOp> opStr.substring(0, opStr.length()-1);
-    }
+    string opStr = op;
+    BinaryArithmeticOp|BinaryBitwiseOp binOp = <BinaryArithmeticOp|BinaryBitwiseOp> opStr.substring(0, opStr.length()-1);
     CompoundAssignStmt stmt = { lValue, rexpr , op: binOp, pos: tok.currentPos()};
     check tok.expect(";");
     return stmt; 

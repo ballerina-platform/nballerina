@@ -205,6 +205,56 @@ class Tokenizer {
                     self.curTok = [DECIMAL_FP_NUMBER, self.getFragment(), ()];
                     return;
                 }
+                FRAG_PLUS_EQUAL => {
+                    self.codePointIndex += 1;
+                    self.curTok = toToken("+=");
+                    return;
+                }
+                FRAG_MINUS_EQUAL => {
+                    self.codePointIndex += 1;
+                    self.curTok = toToken("-=");
+                    return;
+                }
+                FRAG_SLASH_EQUAL => {
+                    self.codePointIndex += 1;
+                    self.curTok = toToken("/=");
+                    return;
+                }
+                FRAG_ASTERISK_EQUAL => {
+                    self.codePointIndex += 1;
+                    self.curTok = toToken("*=");
+                    return;
+                }
+                FRAG_AMPERSAND_EQUAL => {
+                    self.codePointIndex += 1;
+                    self.curTok = toToken("&=");
+                    return;
+                }
+                FRAG_VBAR_EQUAL => {
+                    self.codePointIndex += 1;
+                    self.curTok = toToken("|=");
+                    return;
+                }
+                FRAG_CIRCUMFLEX_EQUAL => {
+                    self.codePointIndex += 1;
+                    self.curTok = toToken("^=");
+                    return;
+                }
+                FRAG_LESS_THAN_LESS_THAN_EQUAL => {
+                    self.codePointIndex += 1;
+                    self.curTok = toToken("<<=");
+                    return;
+                }
+                FRAG_GREATER_THAN_GREATER_THAN_EQUAL => {
+                    self.codePointIndex += 1;
+                    self.curTok = toToken(">>=");
+                    return;
+                }
+                FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL => {
+                    self.codePointIndex += 1;
+                    self.curTok = toToken(">>>=");
+                    return;
+                }
                 _ => {
                     FixedToken? ft = fragTokens[fragCode];
                     // if we've missed something above, we'll get a panic from the cast here

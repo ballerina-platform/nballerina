@@ -144,19 +144,6 @@ function createFragTokens() returns readonly & FixedToken?[] {
     }
     // JBUG int casts needed
     // Temporarily moved to avoid method too large error
-    fillMultipleCharTokens1(ft);
-    fillMultipleCharTokens2(ft);
-    // JBUG error if hex used for 32 and 128
-    foreach int cp in 32 ..< 128 {
-        string s = checkpanic string:fromCodePointInt(cp);
-        if s is SingleCharDelim {
-            ft[cp] = s;
-        }
-    }
-    return ft.cloneReadOnly();
-}
-
-function fillMultipleCharTokens1(FixedToken?[] ft) {
     ft[<int>FRAG_LEFT_CURLY_VBAR] = "{|";
     ft[<int>FRAG_VBAR_RIGHT_CURLY] = "|}";
     ft[<int>FRAG_DOT_DOT_DOT] = "...";
@@ -168,20 +155,15 @@ function fillMultipleCharTokens1(FixedToken?[] ft) {
     ft[<int>FRAG_LESS_THAN_EQUAL] = "<=";
     ft[<int>FRAG_GREATER_THAN_EQUAL] = ">=";
     ft[<int>FRAG_LESS_THAN_LESS_THAN] = "<<";
-}
-
-function fillMultipleCharTokens2(FixedToken?[] ft) {
     ft[<int>FRAG_EQUAL_GREATER_THAN] = "=>";
-    ft[<int>FRAG_PLUS_EQUAL] = "+=";
-    ft[<int>FRAG_MINUS_EQUAL] = "-=";
-    ft[<int>FRAG_SLASH_EQUAL] = "/=";
-    ft[<int>FRAG_ASTERISK_EQUAL] = "*=";
-    ft[<int>FRAG_AMPERSAND_EQUAL] = "&=";
-    ft[<int>FRAG_VBAR_EQUAL] = "|=";
-    ft[<int>FRAG_CIRCUMFLEX_EQUAL] = "^=";
-    ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = "<<=";
-    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = ">>=";
-    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = ">>>=";
+    // JBUG error if hex used for 32 and 128
+    foreach int cp in 32 ..< 128 {
+        string s = checkpanic string:fromCodePointInt(cp);
+        if s is SingleCharDelim {
+            ft[cp] = s;
+        }
+    }
+    return ft.cloneReadOnly();
 }
 
 function unicodeEscapeValue(string fragment) returns string|error {

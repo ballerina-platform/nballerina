@@ -120,11 +120,7 @@ public type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 public type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
 public type RangeOp  "..." | "..<";
 
-type CompoundAssignArithmeticOp "+=" | "-=" | "/=" | "*=";
-
-type CompoundAssignBitwiseOp "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=";
-
-type CompoundAssignOp  CompoundAssignArithmeticOp|CompoundAssignBitwiseOp;
+type CompoundAssignOp  "+=" | "-=" | "/=" | "*="|"&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=";
 
 public type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
