@@ -113,7 +113,7 @@ define internal i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %0) {
   %10 = alloca i8
   %11 = load i8*, i8** @_bal_stack_guard
   %12 = icmp ult i8* %10, %11
-  br i1 %12, label %66, label %13
+  br i1 %12, label %53, label %13
 13:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v
   %14 = load i8 addrspace(1)*, i8 addrspace(1)** %v
@@ -121,136 +121,136 @@ define internal i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %0) {
   %16 = ptrtoint i8* %15 to i64
   %17 = and i64 %16, 2233785415175766016
   %18 = icmp eq i64 %17, 504403158265495552
-  br i1 %18, label %67, label %70
-19:
+  br i1 %18, label %54, label %57
+clause.0:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541205702010)
-20:
+clause.1:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620703343)
-21:
+clause.2:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3057488285269978978)
-22:
+clause.3:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str5 to i8*) to i8 addrspace(1)*), i64 720575940379279360)
-23:
+clause.4:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475935446889583)
-24:
-  %25 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %26 = addrspacecast i8 addrspace(1)* %25 to i8*
-  %27 = ptrtoint i8* %26 to i64
-  %28 = and i64 %27, 2233785415175766016
-  %29 = icmp eq i64 %28, 504403158265495552
-  br i1 %29, label %73, label %76
-30:
-  %31 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %32 = addrspacecast i8 addrspace(1)* %31 to i8*
-  %33 = ptrtoint i8* %32 to i64
-  %34 = and i64 %33, 2233785415175766016
-  %35 = icmp eq i64 %34, 504403158265495552
-  br i1 %35, label %79, label %82
-36:
-  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %38 = addrspacecast i8 addrspace(1)* %37 to i8*
-  %39 = ptrtoint i8* %38 to i64
-  %40 = and i64 %39, 2233785415175766016
-  %41 = icmp eq i64 %40, 504403158265495552
-  br i1 %41, label %85, label %88
-42:
-  %43 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %44 = addrspacecast i8 addrspace(1)* %43 to i8*
-  %45 = ptrtoint i8* %44 to i64
-  %46 = and i64 %45, 2233785415175766016
-  %47 = icmp eq i64 %46, 504403158265495552
-  br i1 %47, label %91, label %94
-48:
-  %49 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %50 = addrspacecast i8 addrspace(1)* %49 to i8*
-  %51 = ptrtoint i8* %50 to i64
-  %52 = and i64 %51, 2233785415175766016
-  %53 = icmp eq i64 %52, 504403158265495552
-  br i1 %53, label %97, label %100
-54:
-  %55 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %56 = zext i1 1 to i64
-  %57 = or i64 %56, 72057594037927936
-  %58 = getelementptr i8, i8 addrspace(1)* null, i64 %57
-  %59 = icmp eq i8 addrspace(1)* %55, %58
-  store i1 %59, i1* %8
-  %60 = load i1, i1* %8
-  br i1 %60, label %21, label %61
-61:
-  %62 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %63 = call i1 @_bal_eq(i8 addrspace(1)* %62, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504))
-  store i1 %63, i1* %9
-  %64 = load i1, i1* %9
-  br i1 %64, label %22, label %65
-65:
-  br label %23
-66:
+pattern.0:
+  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %20 = addrspacecast i8 addrspace(1)* %19 to i8*
+  %21 = ptrtoint i8* %20 to i64
+  %22 = and i64 %21, 2233785415175766016
+  %23 = icmp eq i64 %22, 504403158265495552
+  br i1 %23, label %60, label %63
+pattern.1:
+  %24 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %25 = addrspacecast i8 addrspace(1)* %24 to i8*
+  %26 = ptrtoint i8* %25 to i64
+  %27 = and i64 %26, 2233785415175766016
+  %28 = icmp eq i64 %27, 504403158265495552
+  br i1 %28, label %66, label %69
+pattern.2:
+  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %30 = addrspacecast i8 addrspace(1)* %29 to i8*
+  %31 = ptrtoint i8* %30 to i64
+  %32 = and i64 %31, 2233785415175766016
+  %33 = icmp eq i64 %32, 504403158265495552
+  br i1 %33, label %72, label %75
+pattern.3:
+  %34 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %35 = addrspacecast i8 addrspace(1)* %34 to i8*
+  %36 = ptrtoint i8* %35 to i64
+  %37 = and i64 %36, 2233785415175766016
+  %38 = icmp eq i64 %37, 504403158265495552
+  br i1 %38, label %78, label %81
+pattern.4:
+  %39 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %40 = addrspacecast i8 addrspace(1)* %39 to i8*
+  %41 = ptrtoint i8* %40 to i64
+  %42 = and i64 %41, 2233785415175766016
+  %43 = icmp eq i64 %42, 504403158265495552
+  br i1 %43, label %84, label %87
+pattern.5:
+  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %45 = zext i1 1 to i64
+  %46 = or i64 %45, 72057594037927936
+  %47 = getelementptr i8, i8 addrspace(1)* null, i64 %46
+  %48 = icmp eq i8 addrspace(1)* %44, %47
+  store i1 %48, i1* %8
+  %49 = load i1, i1* %8
+  br i1 %49, label %clause.2, label %pattern.6
+pattern.6:
+  %50 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %51 = call i1 @_bal_eq(i8 addrspace(1)* %50, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504))
+  store i1 %51, i1* %9
+  %52 = load i1, i1* %9
+  br i1 %52, label %clause.3, label %pattern.7
+pattern.7:
+  br label %clause.4
+53:
   call void @_bal_panic(i64 3844)
   unreachable
-67:
-  %68 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %14)
-  %69 = icmp eq i64 %68, 0
-  store i1 %69, i1* %2
-  br label %71
-70:
+54:
+  %55 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %14)
+  %56 = icmp eq i64 %55, 0
+  store i1 %56, i1* %2
+  br label %58
+57:
   store i1 0, i1* %2
-  br label %71
-71:
-  %72 = load i1, i1* %2
-  br i1 %72, label %19, label %24
-73:
-  %74 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %25)
-  %75 = icmp eq i64 %74, 1
-  store i1 %75, i1* %3
-  br label %77
-76:
+  br label %58
+58:
+  %59 = load i1, i1* %2
+  br i1 %59, label %clause.0, label %pattern.0
+60:
+  %61 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %19)
+  %62 = icmp eq i64 %61, 1
+  store i1 %62, i1* %3
+  br label %64
+63:
   store i1 0, i1* %3
-  br label %77
-77:
-  %78 = load i1, i1* %3
-  br i1 %78, label %20, label %30
-79:
-  %80 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %31)
-  %81 = icmp eq i64 %80, 3
-  store i1 %81, i1* %4
-  br label %83
-82:
+  br label %64
+64:
+  %65 = load i1, i1* %3
+  br i1 %65, label %clause.1, label %pattern.1
+66:
+  %67 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %24)
+  %68 = icmp eq i64 %67, 3
+  store i1 %68, i1* %4
+  br label %70
+69:
   store i1 0, i1* %4
-  br label %83
-83:
-  %84 = load i1, i1* %4
-  br i1 %84, label %20, label %36
-85:
-  %86 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %37)
-  %87 = icmp eq i64 %86, 5
-  store i1 %87, i1* %5
-  br label %89
-88:
+  br label %70
+70:
+  %71 = load i1, i1* %4
+  br i1 %71, label %clause.1, label %pattern.2
+72:
+  %73 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %29)
+  %74 = icmp eq i64 %73, 5
+  store i1 %74, i1* %5
+  br label %76
+75:
   store i1 0, i1* %5
-  br label %89
-89:
-  %90 = load i1, i1* %5
-  br i1 %90, label %20, label %42
-91:
-  %92 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %43)
-  %93 = icmp eq i64 %92, 7
-  store i1 %93, i1* %6
-  br label %95
-94:
+  br label %76
+76:
+  %77 = load i1, i1* %5
+  br i1 %77, label %clause.1, label %pattern.3
+78:
+  %79 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %34)
+  %80 = icmp eq i64 %79, 7
+  store i1 %80, i1* %6
+  br label %82
+81:
   store i1 0, i1* %6
-  br label %95
-95:
-  %96 = load i1, i1* %6
-  br i1 %96, label %20, label %48
-97:
-  %98 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %49)
-  %99 = icmp eq i64 %98, 9
-  store i1 %99, i1* %7
-  br label %101
-100:
+  br label %82
+82:
+  %83 = load i1, i1* %6
+  br i1 %83, label %clause.1, label %pattern.4
+84:
+  %85 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %39)
+  %86 = icmp eq i64 %85, 9
+  store i1 %86, i1* %7
+  br label %88
+87:
   store i1 0, i1* %7
-  br label %101
-101:
-  %102 = load i1, i1* %7
-  br i1 %102, label %20, label %54
+  br label %88
+88:
+  %89 = load i1, i1* %7
+  br i1 %89, label %clause.1, label %pattern.5
 }
