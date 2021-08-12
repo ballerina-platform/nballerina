@@ -1,0 +1,1 @@
+void _bal_init_heap() {}
