@@ -84,18 +84,22 @@ task balCompile(type: Exec) {
 }
 balCompile.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyLocalDependencies, copyBalConfig)
 
-// TODO: build runtime before this
+task compileRuntime(type: Exec) {
+        workingDir runtimeDir
+        commandLine 'make', 'all'
+}
+
 task copyRuntime(type:Copy) {
         from "${runtimeDir}/balrt_inline.bc"
         into "${tmpBuildDir}/target/bin"
 }
-copyRuntime.mustRunAfter(balCompile)
+copyRuntime.mustRunAfter(balCompile, compileRuntime)
 
 task buildWithRuntime(type: Exec) {
         workingDir "${tmpBuildDir}/target/bin"
         commandLine 'jar', 'uf', 'nballerina.jar', 'balrt_inline.bc'
 }
-buildWithRuntime.dependsOn(copyNbal, copyJNILLVM, copyRuntime, copyDriver, copyLocalDependencies, copyBalConfig, balCompile)
+buildWithRuntime.dependsOn(copyNbal, copyJNILLVM, copyRuntime, copyDriver, copyLocalDependencies, copyBalConfig, balCompile, compileRuntime)
 
 task cleanBuildArtificats(type: Delete) {
         delete "${tmpBuildDir}/target/bin/balrt_inline.bc"

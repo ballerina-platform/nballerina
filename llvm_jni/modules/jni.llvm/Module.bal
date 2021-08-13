@@ -55,15 +55,12 @@ public distinct class Module {
     function linkInlineLibrary() {
         LLVMMemoryBuffer runtimeMemBuffer = new;
         runtimeMemBuffer.storeResource("balrt_inline.bc");
-        // _ = exec("jar -xf nballerina.jar balrt_inline.bc");
-        // checkpanic runtimeMemBuffer.storeFileInBuffer("./balrt_inline.bc");
-        // Module libModule = new("balrt_inline", self.context);
-        // libModule.parseBitCode(runtimeMemBuffer);
-        // int result = jLLVMLinkModules2(self.LLVMModule, libModule.LLVMModule);
-        // if result != 0 {
-        //     panic error("Failed to link the inline runtime");
-        // }
-        // TODO: clean the file
+        Module libModule = new("balrt_inline", self.context);
+        libModule.parseBitCode(runtimeMemBuffer);
+        int result = jLLVMLinkModules2(self.LLVMModule, libModule.LLVMModule);
+        if result != 0 {
+            panic error("Failed to link the inline runtime");
+        }
     }
 
     // Corresponds to LLVMParseBitcodeInContext2
