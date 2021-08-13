@@ -185,7 +185,7 @@ primary-expr =
   | variable-reference-expr
   | "(" inner-expr ")"
 
-literal = nil-literal | boolean-literal | integer-literal | string-literal
+literal = nil-literal | boolean-literal | int-literal | string-literal
 nil-literal = "(" ")" | "null"
 boolean-literal = "true" | "false"
 
