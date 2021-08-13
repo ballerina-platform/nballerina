@@ -1,9 +1,9 @@
-# Language subset 5
+# Language subset 6
 
 ## Summary
 
-* Only values allowed are of basic type nil, boolean, int, string, list and mapping.
-* The only type descriptors allowed are `boolean`, `int`, `string`, `any`, `any[]` and `map<any>`.
+* Only values allowed are of basic type nil, boolean, int, float, string, list and mapping.
+* The only type descriptors allowed are `boolean`, `int`, `float`, `string`, `any`, `any[]` and `map<any>`.
 * At module level
    * function definitions
       * no default arguments
@@ -33,7 +33,7 @@
    * member access `E[i]` for both list and mapping
    * list constructor `[E1, E2, ..., En]`
    * mapping constructor `{ f1: E1, f2: E2,..., fn: En }`
-   * literals for nil, boolean, int and string
+   * literals for nil, boolean, int, float and string
 * Langlib functions:
   * `array:length`
   * `array:push`
@@ -59,7 +59,7 @@ const-decl = ["public"] "const" [basic-type-name] identifier "=" const-expr ";"
 
 type-desc = basic-type-name | "any" | array-type-desc | map-type-desc
 
-basic-type-name = "string" | "int" | "boolean"
+basic-type-name = "string" | "int" | "float" | "boolean"
 array-type-desc = "any" "[" "]"
 map-type-desc = "map" "<" "any" ">"
 
@@ -113,8 +113,12 @@ match-pattern-list :=
 
 match-pattern :=
    "_"
-   | literal
+   | simple-const-expr
+
+simple-const-expr :=
+   literal
    | "-" int-literal
+   | "-" floating-point-literal
    | const-reference-expr
 
 expression = inner-expr | list-constructor-expr | mapping-constructor-expr
@@ -185,7 +189,7 @@ primary-expr =
   | variable-reference-expr
   | "(" inner-expr ")"
 
-literal = nil-literal | boolean-literal | integer-literal | string-literal
+literal = nil-literal | boolean-literal | int-literal | floating-point-literal | string-literal
 nil-literal = "(" ")" | "null"
 boolean-literal = "true" | "false"
 
@@ -219,6 +223,7 @@ variable-reference-expr = identifier # can refer to parameter, local variable or
 
 // tokens
 int-literal = (as in Ballerina language spec)
+floating-point-literal = (as in Ballerina spec, except DecimalTypeSuffix is not allowed)
 string-literal = (as in Ballerina language spec)
 identifier = [A-Za-z][A-Za-z0-9_]*
 
@@ -227,6 +232,7 @@ identifier = [A-Za-z][A-Za-z0-9_]*
 
 Language spec syntax references:
 * [string-literal](https://ballerina.io/spec/lang/2021R1/#string-literal)
+* [floating-point-literal](https://ballerina.io/spec/lang/2021R1/#floating-point-literal)
 * [int-literal](https://ballerina.io/spec/lang/2021R1/#int-literal)
 * [const-expr](https://ballerina.io/spec/lang/2021R1/#const-expr)
 
@@ -254,12 +260,9 @@ The following restrictions apply to imported modules:
 
 * The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 
-## Additions from subset 4
+## Additions from subset 5
 
-* `match` statement
-* `const` declaration
-* type test expressions `x is T`
-* bitwise complement expressions `~x`
+* `float` type
 
 ## Implemented spec changes since 2021R1
 
@@ -268,4 +271,6 @@ The following restrictions apply to imported modules:
 * [#887](https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability
 * [#902](https://github.com/ballerina-platform/ballerina-spec/issues/902) - expression has a singleton type when its subexpressions have singleton type
 * [#904](https://github.com/ballerina-platform/ballerina-spec/issues/904) - restrict assignment to type-narrowed variables within loops
+* [#905](https://github.com/ballerina-platform/ballerina-spec/issues/905) - disallow trailing dot in floating-point literals
+
 
