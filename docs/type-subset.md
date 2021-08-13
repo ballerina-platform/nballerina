@@ -1,23 +1,11 @@
-Grammar for subset of Ballerina syntax that can describe types currently supported.
+Grammar for type definitions currently supported for semantic type checking.
 
-Unlike grammar in the spec, this makes precedence explicit.
+Unlike the grammar in the Ballerina language spec, this make precedence explicit.
+
+Undefined symbols as defined in the currently implemented subset.
 
 ```
-module := top-level-defn*
-top-level-defn := const-defn | type-defn
-
 type-defn := "type" identifier type-desc ";"
-const-defn := "const" identifier  ["-"] IntLiteral ";"
-
-boolean-literal := "true" | "false"
-
-IntLiteral := [0-9][0-9]+
-StringLiteral := ["] StringChar* ["]
-StringChar :=
-  <any ASCII character except CR, LF, \ and ">
-  | [\] [\"nrt]
-
-identifier := [A-Za-Z][A-Za-z0-9_]*
 
 type-desc := function-td 
 
@@ -47,7 +35,7 @@ primary-td :=
   | error-td
   | function-td
   | nil-td
-  | StringLiteral
+  | singleton-td
   | td-ref 
   | "(" type-desc ")"
     
@@ -57,7 +45,7 @@ map-td := "map" "<" type-desc ">"
 error-td := "error" ["<" type-desc ">"]
 // XXX handle "..."
 tuple-td := "[" type-desc-list "]"
-td-ref := identifier
+td-ref := identifier // can also refer to const definition
 
 predefined-td :=
     "boolean"
@@ -74,4 +62,6 @@ predefined-td :=
     | "readonly"
     | "true"
     | "false"
+
+singleton-td = simple-const-expr
 ```
