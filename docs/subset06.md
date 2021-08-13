@@ -17,6 +17,8 @@
    * assignment
       * to variable `v = E;`
       * to member of a list or mapping `v[E1] = E2;`
+   * compound assignment
+      * to variable `v op E;` where op : `+=`, `-=`, `*=`, `/=`, `&=`, `^=`, `|=`, `<<=`, `>>=`, `>>>=`
    * `return` statement
    * `if`/`else` statements
    * `while` statement
@@ -72,6 +74,7 @@ statement =
   local-var-decl-stmt
   | call-stmt
   | assign-stmt
+  | compound-assign-stmt
   | return-stmt
   | if-else-stmt
   | while-stmt
@@ -87,6 +90,8 @@ call-stmt =
    | method-call-expr ";"
 
 assign-stmt = lvexpr "=" expression ";"
+
+compound-assign-stmt = lvexpr compound-assign-op expression ";"
 
 lvexpr =
    identifier
@@ -188,6 +193,8 @@ primary-expr =
   | method-call-expr
   | variable-reference-expr
   | "(" inner-expr ")"
+
+compound-assign-op = "+=" | "-=" | "*=" | "/=" | "&=" | "^=" | "|=" | "<<=" | ">>=" | ">>>="
 
 literal = nil-literal | boolean-literal | int-literal | floating-point-literal | string-literal
 nil-literal = "(" ")" | "null"
