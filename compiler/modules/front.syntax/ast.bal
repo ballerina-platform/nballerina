@@ -50,7 +50,7 @@ public type AssignStmt record {|
 
 public type CompoundAssignStmt record {|
     VarRefExpr lValue;
-    Expr rexpr;
+    Expr expr;
     BinaryArithmeticOp|BinaryBitwiseOp op; 
     err:Position pos;
 |};
@@ -120,7 +120,7 @@ public type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 public type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
 public type RangeOp  "..." | "..<";
 
-type CompoundAssignOp  "+=" | "-=" | "/=" | "*="|"&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=";
+type CompoundAssignOp  "+=" | "-=" | "/=" | "*=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=";
 
 public type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 

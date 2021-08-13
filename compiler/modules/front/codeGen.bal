@@ -694,15 +694,15 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 }
 
 function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CompoundAssignStmt stmt) returns CodeGenError|StmtEffect {
-    var { lValue, rexpr , op, pos } = stmt;
-    s:Expr expr;
+    var { lValue, expr , op, pos } = stmt;
+    s:Expr binExpr;
     if op is s:BinaryArithmeticOp {
-        expr = { arithmeticOp: op, left: lValue, right: rexpr, pos: pos };
+        binExpr = { arithmeticOp: op, left: lValue, right: expr, pos: pos };
     }
     else {
-        expr = { bitwiseOp: op, left: lValue, right: rexpr };
+        binExpr = { bitwiseOp: op, left: lValue, right: expr };
     }
-    return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
+    return codeGenAssignToVar(cx, startBlock, env, lValue.varName, binExpr);
 }
 
 function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr) returns CodeGenError|StmtEffect {
