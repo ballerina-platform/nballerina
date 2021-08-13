@@ -37,7 +37,7 @@ public type ConstDefn record {|
     ResolvedConst|false? resolved = ();    
 |};
 
-public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt;
+public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr;
 public type Expr IntLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
@@ -46,6 +46,13 @@ public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConst
 public type AssignStmt record {|
     LExpr lValue;
     Expr expr;
+|};
+
+public type CompoundAssignStmt record {|
+    VarRefExpr lValue;
+    Expr expr;
+    BinaryArithmeticOp|BinaryBitwiseOp op; 
+    err:Position pos;
 |};
 
 // L-value expression
@@ -112,6 +119,8 @@ public type BinaryBitwiseOp "|" | "^" | "&" | "<<" | ">>" | ">>>";
 public type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 public type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
 public type RangeOp  "..." | "..<";
+
+type CompoundAssignOp  "+=" | "-=" | "/=" | "*=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=";
 
 public type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 

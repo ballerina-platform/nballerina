@@ -305,6 +305,9 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
         else if stmt is s:AssignStmt {
             effect = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
+        else if stmt is s:CompoundAssignStmt {
+            effect = check codeGenCompoundAssignStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+        }
         else {
             effect = check codeGenCallStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
@@ -731,6 +734,18 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     else {
         return codeGenAssignToMember(cx, startBlock, env, lValue, expr);
     }
+}
+
+function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CompoundAssignStmt stmt) returns CodeGenError|StmtEffect {
+    var { lValue, expr , op, pos } = stmt;
+    s:Expr binExpr;
+    if op is s:BinaryArithmeticOp {
+        binExpr = { arithmeticOp: op, left: lValue, right: expr, pos: pos };
+    }
+    else {
+        binExpr = { bitwiseOp: op, left: lValue, right: expr };
+    }
+    return codeGenAssignToVar(cx, startBlock, env, lValue.varName, binExpr);
 }
 
 function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr) returns CodeGenError|StmtEffect {

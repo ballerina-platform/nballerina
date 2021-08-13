@@ -87,6 +87,12 @@ function stmtToWords(Word[] w, Stmt stmt) {
         exprToWords(w, stmt.expr);
         w.push(";");
     }
+    else if stmt is CompoundAssignStmt {
+        exprToWords(w, stmt.lValue);
+        w.push(stmt.op + "=");
+        exprToWords(w, stmt.expr);
+        w.push(";");
+    }
     else if stmt is IfElseStmt {
         w.push("if");
         exprToWords(w, stmt.condition);
