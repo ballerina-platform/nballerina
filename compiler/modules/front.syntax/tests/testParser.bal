@@ -58,8 +58,8 @@ function testTokenizer(string k, string[] lines) returns error? {
             int tStart = pos.indexInLine;
             string tStr = tokenToString(t);
             string srcAtPos = src.substring(tStart, tStart + tStr.length());
-            if t is [HEX_INT_LITERAL, string] {
-                // need to normalize `0x` vs `0X`
+            if t is [HEX_INT_LITERAL, string] || t is [DECIMAL_FP_NUMBER, string, "f"?] {
+                // need to normalize `0x` vs `0X` and `f`
                 srcAtPos = srcAtPos.toLowerAscii();
             }
             test:assertEquals(srcAtPos, tStr, "token: '" + tStr + "' source: '" + srcAtPos + "'");
@@ -95,6 +95,15 @@ function tokenToString(Token t) returns string {
         }
         [HEX_INT_LITERAL, var num] => {
             return "0x" + num.toLowerAscii();
+        }
+        [DECIMAL_FP_NUMBER, var digits, var suffix] => {
+            // JBUG #31988 can't use `suffix ?: ""`
+            if suffix == () {
+                return digits.toLowerAscii();
+            }
+            else {
+                return digits.toLowerAscii() + suffix;
+            }
         }
         [_, var str] => {
             return str;
@@ -203,6 +212,10 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "\n0", "0"],
          ["V", "expr", "\r0", "0"],
          ["V", "expr", "\r\n0", "0"],
+         ["V", "expr", "1.0", "1.0"],
+         ["V", "expr", "100000000000000000000000000000.0", "100000000000000000000000000000.0"],
+         ["V", "expr", "10.0e10000000", "10.0e10000000"],
+         ["V", "expr", "-1E1F", "-1E1f"],
          // literals string
          ["V", "expr", string`"what"`, string`"what"`],
          ["V", "expr", string`"Say \"what\" again."`, string`"Say \"what\" again."`],

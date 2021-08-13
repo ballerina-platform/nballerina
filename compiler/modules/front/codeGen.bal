@@ -450,7 +450,8 @@ function codeGenContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, Envir
 }
 
 type ConstMatchValue record {|
-    readonly SimpleConst value;
+    // XXX replace with SimpleConst when float in match is implemented
+    readonly string|int|boolean|() value;
     readonly int clauseIndex;
 |};
 
@@ -493,16 +494,21 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
                 else {
                     cv = <s:ConstValueExpr>foldResult;
                 }
-              
-                ConstMatchValue mv = { value: cv.value, clauseIndex: i };
-                if constMatchValues.hasKey(mv.value) {
-                    return cx.semanticErr("duplicate const match pattern", pos=pattern.pos);
+                SimpleConst value = cv.value;
+                if value is float {
+                    return err:unimplemented(`float match pattern not supported yet`);
                 }
-                constMatchValues.add(mv);    
-                if !t:containsConst(matchedType, cv.value) {
-                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.pos);
+                else {
+                    ConstMatchValue mv = { value: value, clauseIndex: i };
+                    if constMatchValues.hasKey(mv.value) {
+                        return cx.semanticErr("duplicate const match pattern", pos=pattern.pos);
+                    }
+                    constMatchValues.add(mv);    
+                    if !t:containsConst(matchedType, cv.value) {
+                        return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.pos);
+                    }
+                    clausePatternUnion = t:union(clausePatternUnion, t:singleton(mv.value));
                 }
-                clausePatternUnion = t:union(clausePatternUnion, t:singleton(mv.value));
             }
             else {
                 // `1|_ => {}` is pointless, but I'm not making it an error
@@ -931,7 +937,12 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             bir:Operand result;
             Binding? binding;
             if v is t:Value {
-                result = v.value;
+                var val = v.value;
+                if val is float {
+                    return err:unimplemented(`float variable references are not supported yet`);
+                } else {
+                    result = val;
+                }
                 binding = ();
             }
             else {
@@ -944,15 +955,20 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         // JBUG does not work as match pattern `var { value, multiSemType }`
         var simpleConstExpr if simpleConstExpr is s:ConstValueExpr => {
             t:SemType? multiSemType = simpleConstExpr.multiSemType;
-            SimpleConst value = simpleConstExpr.value;
-            if multiSemType is () {
-                return { result: value, block: bb };
+            var value = simpleConstExpr.value;
+            if value is float {
+                return err:unimplemented(`float constants are not supported yet`);
             }
             else {
-                bir:Register reg = cx.createRegister(multiSemType);
-                bir:AssignInsn insn = { operand: value, result: reg };
-                bb.insns.push(insn);
-                return { result: reg, block: bb };
+                if multiSemType is () {
+                    return { result: value, block: bb };
+                }
+                else {
+                    bir:Register reg = cx.createRegister(multiSemType);
+                    bir:AssignInsn insn = { operand: value, result: reg };
+                    bb.insns.push(insn);
+                    return { result: reg, block: bb };
+                }
             }
         }
         // Function/method call
