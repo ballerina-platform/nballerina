@@ -18,7 +18,7 @@
       * to variable `v = E;`
       * to member of a list or mapping `v[E1] = E2;`
    * compound assignment
-      * to variable `v op E;` where op : `+=`, `-=`, `*=`, `/=`, `&=`, `^=`, `|=`, `<<=`, `>>=`, `>>>=`
+      * to variable `v op E;` where op : `+=` | `-=` | `*=` | `/=` | `&=` | `^=` | `|=` | `<<=` | `>>=` | `>>>=`
    * `return` statement
    * `if`/`else` statements
    * `while` statement
@@ -91,7 +91,7 @@ call-stmt =
 
 assign-stmt = lvexpr "=" expression ";"
 
-compound-assign-stmt = lvexpr compound-assign-op expression ";"
+compound-assign-stmt = identifier compound-assign-op expression ";"
 
 lvexpr =
    identifier
