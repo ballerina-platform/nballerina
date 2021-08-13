@@ -60,8 +60,7 @@ type Narrowing record {|
     Binding binding;
     t:SemType ifTrue;
     t:SemType ifFalse;
-    bir:Label testBlock;
-    int testInsnIndex;
+    bir:InsnRef testInsn;
     boolean negated = false;
 |};
 
@@ -464,8 +463,17 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     // we enforce that the wildcardClauseIndex is either () or the index of the last clause
     int? wildcardClauseIndex = ();
     table<ConstMatchValue> key(value) constMatchValues = table[];
+    t:SemType[] clauseLooksLike = [];
+    bir:InsnRef[][] clauseTestInsns = [];
+    // union of all clause patterns preceding this one
+    t:SemType precedingPatternsUnion = t:NEVER;
+    bir:BasicBlock[] clauseBlocks = [];
+
     foreach int i in 0 ..< stmt.clauses.length() {
         var clause = stmt.clauses[i];
+        clauseTestInsns[i] = [];
+        clauseBlocks[i] = cx.createBasicBlock("clause." + i.toString());
+        t:SemType clausePatternUnion = t:NEVER;
         foreach var pattern in clause.patterns {
             if pattern is s:ConstPattern {
                 if wildcardClauseIndex != () && i > wildcardClauseIndex {
@@ -494,6 +502,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
                 if !t:containsConst(matchedType, cv.value) {
                     return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.pos);
                 }
+                clausePatternUnion = t:union(clausePatternUnion, t:singleton(mv.value));
             }
             else {
                 // `1|_ => {}` is pointless, but I'm not making it an error
@@ -502,17 +511,63 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
                     return cx.semanticErr("duplicate wildcard match pattern");
                 }
                 wildcardClauseIndex = i;
+                clausePatternUnion = t:ANY;
             }
         }
+        clauseLooksLike[i] = t:diff(clausePatternUnion, precedingPatternsUnion);
+        precedingPatternsUnion = t:union(precedingPatternsUnion, clausePatternUnion);
+    }
+  
+    int patternIndex = 0;
+    foreach var mv in constMatchValues {
+        int clauseIndex = mv.clauseIndex;
+        if clauseIndex == wildcardClauseIndex {
+            break;
+        }
+        bir:Register testResult = cx.createRegister(t:BOOLEAN);
+        bir:EqualityInsn eq = { op: "==", result: testResult, operands: [matched, mv.value] };
+        testBlock.insns.push(eq);
+        clauseTestInsns[clauseIndex].push(bir:lastInsnRef(testBlock));
+        bir:BasicBlock nextBlock = cx.createBasicBlock("pattern." + patternIndex.toString());
+        patternIndex += 1;
+        bir:CondBranchInsn condBranch = { operand: testResult, ifTrue: clauseBlocks[clauseIndex].label, ifFalse: nextBlock.label } ;
+        testBlock.insns.push(condBranch);
+        testBlock = nextBlock;
     }
     bir:BasicBlock? contBlock = ();
-    bir:BasicBlock[] clauseBlocks = [];
     foreach int clauseIndex in 0 ..< stmt.clauses.length() {
         s:MatchClause clause = stmt.clauses[clauseIndex];
-        bir:BasicBlock stmtBlock = cx.createBasicBlock("clause." + clauseIndex.toString());
-        clauseBlocks.push(stmtBlock);
-        // XXX need to do type narrowing
-        var { block: stmtBlockEnd, assignments: blockAssignments } = check codeGenStmts(cx, stmtBlock, env, clause.block);
+        bir:BasicBlock stmtBlock = clauseBlocks[clauseIndex];
+        Environment clauseEnv = env;
+        // Do type narrowing
+        if !(binding is ()) {
+            bir:Result? basis = ();
+            if clauseIndex == wildcardClauseIndex {
+                bir:Result[] and = [];
+                foreach int i in 0 ..< clauseIndex {
+                    foreach var insn in clauseTestInsns[i] {
+                        and.push({ result: false, insn });
+                    }
+                }
+                // Degenerate case may have empty results
+                if and.length() > 0 {
+                    basis = { and: and.cloneReadOnly() };
+                }
+            }
+            else {
+                bir:Result[] or = [];
+                foreach var insn in clauseTestInsns[clauseIndex] {
+                    or.push({ result: true, insn });
+                }
+                basis = { or: or.cloneReadOnly() };
+            }
+            if basis != () {
+                // Will need readOnlyIntersect when we have proper match patterns
+                t:SemType narrowedType = t:intersect(matchedType, clauseLooksLike[clauseIndex]);
+                clauseEnv = codeGenNarrowing(cx, stmtBlock, env, binding, narrowedType, basis);
+            }
+        } 
+        var { block: stmtBlockEnd, assignments: blockAssignments } = check codeGenStmts(cx, stmtBlock, clauseEnv, clause.block);
         if stmtBlockEnd is () {
             continue;
         }
@@ -523,20 +578,6 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
             stmtBlockEnd.insns.push(branchToCont);
             assignments.push(...blockAssignments);
         }
-    }
-    int patternIndex = 0;
-    foreach var mv in constMatchValues {
-        if mv.clauseIndex == wildcardClauseIndex {
-            break;
-        }
-        bir:Register testResult = cx.createRegister(t:BOOLEAN);
-        bir:EqualityInsn eq = { op: "==", result: testResult, operands: [matched, mv.value] };
-        testBlock.insns.push(eq);
-        bir:BasicBlock nextBlock = cx.createBasicBlock("pattern." + patternIndex.toString());
-        patternIndex += 1;
-        bir:CondBranchInsn condBranch = { operand: testResult, ifTrue: clauseBlocks[mv.clauseIndex].label, ifFalse: nextBlock.label } ;
-        testBlock.insns.push(condBranch);
-        testBlock = nextBlock;
     }
     if wildcardClauseIndex != () {
         bir:BranchInsn branch = { dest: clauseBlocks[wildcardClauseIndex].label };
@@ -586,7 +627,7 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
-        Environment ifEnv = narrowing is () ? env : codeGenNarrowing(cx, ifBlock, env, narrowing, true);
+        Environment ifEnv = narrowing is () ? env : codeGenIfElseNarrowing(cx, ifBlock, env, narrowing, true);
         var { block: ifContBlock, assignments } = check codeGenStmts(cx, ifBlock, ifEnv, ifTrue);
         bir:BasicBlock contBlock;
         if ifFalse.length() == 0 {
@@ -603,7 +644,7 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
         else {
             // an if and an else
             bir:BasicBlock elseBlock = cx.createBasicBlock();
-            Environment elseEnv = narrowing is () ? env : codeGenNarrowing(cx, elseBlock, env, narrowing, false);
+            Environment elseEnv = narrowing is () ? env : codeGenIfElseNarrowing(cx, elseBlock, env, narrowing, false);
             var { block: elseContBlock, assignments: elseAssignments } = check codeGenStmts(cx, elseBlock, elseEnv, ifFalse);
             bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: elseBlock.label };
             branchBlock.insns.push(condBranch);
@@ -626,17 +667,19 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 }
 
 // JBUG changing `returns` to `return` makes the parse get a NPE during error recovery
-function codeGenNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Narrowing narrowing, boolean condition) returns Environment {
+function codeGenIfElseNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Narrowing narrowing, boolean condition) returns Environment {
+    boolean insnResult = condition == !narrowing.negated;
     // JBUG without parentheses this gets a parse error
-    t:SemType narrowedType = condition == !narrowing.negated ? (narrowing.ifTrue) : narrowing.ifFalse;
-    Binding binding = narrowing.binding;
+    t:SemType narrowedType = insnResult ? (narrowing.ifTrue) : narrowing.ifFalse;
+    return codeGenNarrowing(cx, bb, env, narrowing.binding, narrowedType, { insn: narrowing.testInsn, result: insnResult });
+}
+
+function codeGenNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Binding binding, t:SemType narrowedType, bir:Result basis) returns Environment {
     bir:Register narrowed = cx.createRegister(narrowedType, binding.name);
     bir:CondNarrowInsn insn = {
         result: narrowed,
         operand: binding.reg,
-        testBlock: narrowing.testBlock,
-        testInsnIndex: narrowing.testInsnIndex,
-        condResult: condition == !narrowing.negated
+        basis
     };
     bb.insns.push(insn);
     Binding bindings = {
@@ -1023,8 +1066,7 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
             binding,
             ifTrue,
             ifFalse,
-            testBlock: bb.label,
-            testInsnIndex: bb.insns.length() - 1,
+            testInsn: bir:lastInsnRef(bb),
             negated: false
         };
         return { result, block: nextBlock, narrowing };
@@ -1047,17 +1089,17 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     }
     bir:Register result = cx.createRegister(t:BOOLEAN);
     bir:TypeTestInsn insn = { operand: reg, semType, result };
+    bb.insns.push(insn);
+
     Narrowing? narrowing = ();
     if !(binding is ()) {
         narrowing = {
             binding,
             ifTrue: intersect,
             ifFalse: diff,
-            testBlock: bb.label,
-            testInsnIndex: bb.insns.length()
+            testInsn: bir:lastInsnRef(bb)
         };
     }
-    bb.insns.push(insn);
     return { result, block: nextBlock, narrowing };   
 }
 

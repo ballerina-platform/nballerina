@@ -40,14 +40,16 @@ define void @_B_main() {
 }
 define internal void @_B_foo(i8 addrspace(1)* %0) {
   %v = alloca i8 addrspace(1)*
-  %2 = alloca i8 addrspace(1)*
-  %3 = alloca i8 addrspace(1)*
-  %4 = alloca i1
-  %5 = alloca i1
+  %2 = alloca i1
+  %3 = alloca i1
+  %v.1 = alloca i64
+  %4 = alloca i8 addrspace(1)*
+  %v.2 = alloca i64
+  %5 = alloca i8 addrspace(1)*
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard
   %8 = icmp ult i8* %6, %7
-  br i1 %8, label %21, label %9
+  br i1 %8, label %25, label %9
 9:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v
   %10 = load i8 addrspace(1)*, i8 addrspace(1)** %v
@@ -55,49 +57,55 @@ define internal void @_B_foo(i8 addrspace(1)* %0) {
   %12 = ptrtoint i8* %11 to i64
   %13 = and i64 %12, 2233785415175766016
   %14 = icmp eq i64 %13, 504403158265495552
-  br i1 %14, label %22, label %25
+  br i1 %14, label %26, label %29
 clause.0:
+  %15 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %16 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %15)
+  store i64 %16, i64* %v.1
   call void @_Bio__println(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541272877421))
-  store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  br label %15
-15:
-  ret void
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  br label %24
 clause.1:
+  %17 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %18 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %17)
+  store i64 %18, i64* %v.2
   call void @_Bio__println(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621753192))
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3
-  br label %15
+  store i8 addrspace(1)* null, i8 addrspace(1)** %5
+  br label %24
 pattern.0:
-  %16 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %17 = addrspacecast i8 addrspace(1)* %16 to i8*
-  %18 = ptrtoint i8* %17 to i64
-  %19 = and i64 %18, 2233785415175766016
-  %20 = icmp eq i64 %19, 504403158265495552
-  br i1 %20, label %28, label %31
+  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %20 = addrspacecast i8 addrspace(1)* %19 to i8*
+  %21 = ptrtoint i8* %20 to i64
+  %22 = and i64 %21, 2233785415175766016
+  %23 = icmp eq i64 %22, 504403158265495552
+  br i1 %23, label %32, label %35
 pattern.1:
-  br label %15
-21:
+  br label %24
+24:
+  ret void
+25:
   call void @_bal_panic(i64 2052)
   unreachable
-22:
-  %23 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %10)
-  %24 = icmp eq i64 %23, 1
-  store i1 %24, i1* %4
-  br label %26
-25:
-  store i1 0, i1* %4
-  br label %26
 26:
-  %27 = load i1, i1* %4
-  br i1 %27, label %clause.0, label %pattern.0
-28:
-  %29 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %16)
-  %30 = icmp eq i64 %29, -1
-  store i1 %30, i1* %5
-  br label %32
-31:
-  store i1 0, i1* %5
-  br label %32
+  %27 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %10)
+  %28 = icmp eq i64 %27, 1
+  store i1 %28, i1* %2
+  br label %30
+29:
+  store i1 0, i1* %2
+  br label %30
+30:
+  %31 = load i1, i1* %2
+  br i1 %31, label %clause.0, label %pattern.0
 32:
-  %33 = load i1, i1* %5
-  br i1 %33, label %clause.1, label %pattern.1
+  %33 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %19)
+  %34 = icmp eq i64 %33, -1
+  store i1 %34, i1* %3
+  br label %36
+35:
+  store i1 0, i1* %3
+  br label %36
+36:
+  %37 = load i1, i1* %3
+  br i1 %37, label %clause.1, label %pattern.1
 }

@@ -63,15 +63,17 @@ define internal i64 @_B_foo(i8 addrspace(1)* %0) {
   %v = alloca i8 addrspace(1)*
   %2 = alloca i1
   %v.1 = alloca i64
-  %3 = alloca i64
+  %3 = alloca i1
   %4 = alloca i1
   %5 = alloca i1
-  %6 = alloca i1
+  %v.2 = alloca i64
+  %v.3 = alloca i64
+  %6 = alloca i64
   %7 = alloca i64
   %8 = alloca i8
   %9 = load i8*, i8** @_bal_stack_guard
   %10 = icmp ult i8* %8, %9
-  br i1 %10, label %37, label %11
+  br i1 %10, label %39, label %11
 11:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v
   %12 = load i8 addrspace(1)*, i8 addrspace(1)** %v
@@ -81,53 +83,57 @@ define internal i64 @_B_foo(i8 addrspace(1)* %0) {
   %16 = icmp eq i64 %15, 504403158265495552
   store i1 %16, i1* %2
   %17 = load i1, i1* %2
-  br i1 %17, label %18, label %34
+  br i1 %17, label %18, label %36
 18:
   %19 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   %20 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %19)
   store i64 %20, i64* %v.1
   %21 = load i64, i64* %v.1
   %22 = icmp eq i64 %21, 1
-  store i1 %22, i1* %4
-  %23 = load i1, i1* %4
+  store i1 %22, i1* %3
+  %23 = load i1, i1* %3
   br i1 %23, label %clause.0, label %pattern.0
 clause.0:
   %24 = load i64, i64* %v.1
-  ret i64 %24
+  store i64 %24, i64* %v.2
+  %25 = load i64, i64* %v.2
+  ret i64 %25
 clause.1:
-  %25 = load i64, i64* %v.1
-  %26 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 %25)
-  %27 = extractvalue {i64, i1} %26, 1
-  br i1 %27, label %41, label %38
+  %26 = load i64, i64* %v.1
+  store i64 %26, i64* %v.3
+  %27 = load i64, i64* %v.3
+  %28 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 %27)
+  %29 = extractvalue {i64, i1} %28, 1
+  br i1 %29, label %43, label %40
 pattern.0:
-  %28 = load i64, i64* %v.1
-  %29 = icmp eq i64 %28, 2
-  store i1 %29, i1* %5
-  %30 = load i1, i1* %5
-  br i1 %30, label %clause.0, label %pattern.1
+  %30 = load i64, i64* %v.1
+  %31 = icmp eq i64 %30, 2
+  store i1 %31, i1* %4
+  %32 = load i1, i1* %4
+  br i1 %32, label %clause.0, label %pattern.1
 pattern.1:
-  %31 = load i64, i64* %v.1
-  %32 = icmp eq i64 %31, 3
-  store i1 %32, i1* %6
-  %33 = load i1, i1* %6
-  br i1 %33, label %clause.0, label %pattern.2
+  %33 = load i64, i64* %v.1
+  %34 = icmp eq i64 %33, 3
+  store i1 %34, i1* %5
+  %35 = load i1, i1* %5
+  br i1 %35, label %clause.0, label %pattern.2
 pattern.2:
   br label %clause.1
-34:
+36:
   ret i64 0
-35:
-  %36 = load i64, i64* %7
-  call void @_bal_panic(i64 %36)
-  unreachable
 37:
+  %38 = load i64, i64* %7
+  call void @_bal_panic(i64 %38)
+  unreachable
+39:
   call void @_bal_panic(i64 2820)
   unreachable
-38:
-  %39 = extractvalue {i64, i1} %26, 0
-  store i64 %39, i64* %3
-  %40 = load i64, i64* %3
-  ret i64 %40
-41:
+40:
+  %41 = extractvalue {i64, i1} %28, 0
+  store i64 %41, i64* %6
+  %42 = load i64, i64* %6
+  ret i64 %42
+43:
   store i64 4609, i64* %7
-  br label %35
+  br label %37
 }
