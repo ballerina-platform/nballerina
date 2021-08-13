@@ -709,21 +709,17 @@ function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 }
 
 function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarDeclStmt stmt) returns CodeGenError|StmtEffect {
-    var { varName, initExpr, semType, isFinal } = stmt;
+    var { varName, initExpr, td, isFinal } = stmt;
     if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
-    if semType is () {
-        panic error("type was not normalized");
-    }
-    else {
-        initExpr = check cx.foldExpr(env, initExpr, semType);
-        var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
-        bir:Register result = cx.createRegister(semType, varName);
-        bir:AssignInsn insn = { result, operand };
-        nextBlock.insns.push(insn);
-        return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };
-    }   
+    t:SemType semType = s:resolveInlineTypeDesc(td);
+    initExpr = check cx.foldExpr(env, initExpr, semType);
+    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
+    bir:Register result = cx.createRegister(semType, varName);
+    bir:AssignInsn insn = { result, operand };
+    nextBlock.insns.push(insn);
+    return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
 }
 
 function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:AssignStmt stmt) returns CodeGenError|StmtEffect {

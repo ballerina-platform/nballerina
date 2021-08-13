@@ -1,7 +1,7 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.err;
 
-function resolveInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
+public function resolveInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBitSet {
     match td {
         "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }

@@ -106,11 +106,6 @@ public type VarDeclStmt record {|
     InlineTypeDesc td;
     string varName;
     Expr initExpr;
-    // For now this should be filled in during parse
-    // using a prebuilt Semtype such as `t:INT`.
-    // Later on will support references to public type definitions,
-    // and it will be filled in later.
-    t:SemType? semType = ();
     boolean isFinal;
 |};
 
