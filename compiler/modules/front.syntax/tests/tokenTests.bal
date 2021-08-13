@@ -34,6 +34,10 @@ function test1() {
     test:assertEquals(tokenization("{||}"), ["{|", "|}"]);
     test:assertEquals(tokenization("xyz17==true"), [[IDENTIFIER, "xyz17"], "==", "true"]);
     test:assertEquals(tokenization("A _x =-0;"), [[IDENTIFIER, "A"], [IDENTIFIER, "_x"], "=", "-",  [DECIMAL_NUMBER, "0"], ";"]);
+    test:assertEquals(tokenization("x+=3; x += 5;"), [[IDENTIFIER, "x"], "+=", [DECIMAL_NUMBER, "3"], ";", [IDENTIFIER, "x"], "+=", [DECIMAL_NUMBER, "5"], ";"]);
+    test:assertEquals(tokenization("x-=3; x =- 5;"), [[IDENTIFIER, "x"], "-=", [DECIMAL_NUMBER, "3"], ";", [IDENTIFIER, "x"], "=", "-", [DECIMAL_NUMBER, "5"], ";"]);
+    test:assertEquals(tokenization("x>>=1; y>>>=2; z>=3;"), [[IDENTIFIER, "x"], ">>=", [DECIMAL_NUMBER, "1"], ";", [IDENTIFIER, "y"], ">>>=", [DECIMAL_NUMBER, "2"], ";", [IDENTIFIER, "z"], ">=", [DECIMAL_NUMBER, "3"], ";"]);
+    test:assertEquals(tokenization("1 => {x>>=1}"), [[DECIMAL_NUMBER, "1"], "=>", "{", [IDENTIFIER, "x"], ">>=", [DECIMAL_NUMBER, "1"], "}"]);
 }
 
 @test:Config{}
