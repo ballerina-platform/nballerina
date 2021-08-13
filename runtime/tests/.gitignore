@@ -1,6 +1,7 @@
 /string_hash
 /string_cmp
 /string_concat
+/inlinert_float
 /immediate_string
 /string_len
 /tagged_ptr
