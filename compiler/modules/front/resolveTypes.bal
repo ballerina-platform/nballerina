@@ -185,7 +185,7 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, int depth, s:TypeDesc td) r
             return t:intConst(value);
         }
         else {
-            return err:unimplemented("floating point singleton types not yet implemented");
+            return t:floatConst(value);
         }
     }
     if td is s:ErrorTypeDesc {
