@@ -119,11 +119,22 @@ public type BasicBlock record {|
     string? name = ();
 |};
 
+public type InsnRef readonly & record {|
+    // Label of the block containing the insn
+    Label block;
+    // Index in the block of the insn
+    int index;
+|};
+
 public function createBasicBlock(FunctionCode code, string? name = ()) returns BasicBlock {
     int label = code.blocks.length();
     BasicBlock bb = { label, name };
     code.blocks.push(bb);
     return bb;
+}
+
+public function lastInsnRef(BasicBlock bb) returns InsnRef {
+    return { block: bb.label, index: bb.insns.length() - 1 };
 }
 
 public type Register readonly & record {|
@@ -394,37 +405,46 @@ public type TypeTestInsn readonly & record {|
 |};
 
 
-# A type narrowing that is justified by an earlier condition.
-# The condition must be a TypeTestInsn or an EqualInsn.
+# A type narrowing that is based on the result of one or more previous instructions.
+# The result in each case is a boolean and the instruction is a TypeTestInsn or an EqualInsn.
 # Usually this would require a TypeCastInsn, but the compiler emits this
 # to support Ballerina's type narrowing feature, when it knows the cast
 # would succeed.
-# The `testBlock` and `testInsnIndex` together refer to the instruction
-# that justifies the narrowing.
-# The justification divides into two parts.
-# First, the narrowing to the type of the result must be justified
-# if the referenced instruction evaluates to the specified `condResult`.
-# For example, if condResult is true, and the referenced insn is a TypeTestInsn,
-# then the operand of this insn must be the same as the operand of
-# the TypeTestInsn and the type of the result must be the intersection of the type of the operand
-# and the semType in the TypeTestInsn.
-# Second, the flow through the basic blocks must be such that this block is only
-# reached when the condition is true. In particular, the referenced block must end
+# The basis field describes the basis for the narrowing.
+# This can can be verified in two parts.
+# First, verify that the data flow through the basic blocks guarantees instructions
+# must have had the results describe in the basis field.
+# In particular, a block referenced in an InsnResult must end
 # with a CondBranchInsn whose operand comes from the result of the condition
-# (possibly via a BooleanNotInsn), and the block containing this insn must be
-# reachable only through the applicable branch of that CondBranchInsn.
+# (possibly via a BooleanNotInsn).
+# Second, verify that the results described in the basis field justify the
+# narrowing.
 public type CondNarrowInsn readonly & record {|
     *InsnBase;
     INSN_COND_NARROW name = INSN_COND_NARROW;
     Register result;
     Register operand;
-    // label of the block that contains the test that justifies the narrowing
-    Label testBlock;
-    // Index in testBlock of the insn that justifies the narrowing
-    int testInsnIndex;
-    // The type narrowing is justified by the result of the condition
-    // having this value.
-    boolean condResult;
+    Result basis;
+|};
+
+public type Result InsnResult|OrResult|AndResult;
+
+public type OrResult readonly & record {|
+    Result[] or;
+|};
+
+public type AndResult readonly & record {|
+    Result[] and;
+|};
+
+// An instruction that is the basis of a narrowing.
+// The execution of the instruction having the specified result
+// is the basis for the narrowing.
+public type InsnResult readonly & record {|
+    // Where the insn is
+    InsnRef insn;
+    // Result of the insn
+    boolean result;
 |};
 
 # Return normally from a function.
