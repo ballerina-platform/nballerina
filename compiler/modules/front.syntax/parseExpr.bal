@@ -378,6 +378,7 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     match t {
         [IDENTIFIER, var varName] => {
             VarRefExpr expr = { varName };
+            check tok.advance();
             return expr;
         }
         [STRING_LITERAL, var value] => {
@@ -438,3 +439,6 @@ function parseIntLiteralExpr(Tokenizer tok) returns IntLiteralExpr|err:Syntax {
     return parseError(tok, "expected integer literal");
 }
 
+public function intFromIntLiteral(IntLiteralBase base, string digits) returns int|error {
+    return base == 10 ? int:fromString(digits) : int:fromHexString(digits);
+}

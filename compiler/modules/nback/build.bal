@@ -273,7 +273,7 @@ class Scaffold {
         self.nParams = defn.signature.paramTypes.length();
         llvm:BasicBlock entry = llFunc.appendBasicBlock();
 
-        self.blocks = from var b in code.blocks select llFunc.appendBasicBlock();
+        self.blocks = from var b in code.blocks select llFunc.appendBasicBlock(b.name);
 
         builder.positionAtEnd(entry);
         self.addresses = [];

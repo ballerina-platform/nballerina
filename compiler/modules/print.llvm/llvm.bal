@@ -428,43 +428,50 @@ public class FunctionDefn {
 
     // Corresponds to LLVMAppendBasicBlock
     public function appendBasicBlock(string? name=()) returns BasicBlock {
-        BasicBlock tem = new (self.context, self.genLabel(), self);
-        self.basicBlocks.push(tem);
-        return tem;
+        string|Unnamed bbName = self.genName(name);
+        BasicBlock bb = new (self.context, bbName, self);
+        if bbName is Unnamed {
+            self.isBasicBlock[bbName] = true;
+        }
+        self.basicBlocks.push(bb);
+        return bb;
     }
 
-    function genLabel() returns Unnamed {
-        int label = self.unnamedLabelCount;
-        self.unnamedLabelCount += 1;
-        self.isBasicBlock[label] = true;
-        return label;
+
+    function genName(string? name = ()) returns string|Unnamed {
+        if name is string {
+            string varName = name;
+            if self.variableNames.hasKey(varName) {
+                int count = self.variableNames.get(varName);
+                self.variableNames[varName] = count + 1; // increment the count of the base name
+                string newName = varName + "." + count.toString();
+                while self.variableNames.hasKey(newName) {
+                    count += 1;
+                    newName = varName + "." + count.toString();
+                }
+                varName = newName;
+                self.variableNames[varName] = 1; // save the augmented name in case user use the same  
+            }
+            else {
+                self.variableNames[varName] = 1;
+            }
+            varName = escapeIdent(varName);
+            return varName;
+        } else {
+            int varName = self.unnamedLabelCount;
+            self.unnamedLabelCount += 1;
+            return varName;
+        }
     }
 
     function genReg(string? name = ()) returns string|Unnamed {
-        if name is string {
-            string regName = name;
-            if self.variableNames.hasKey(regName) {
-                int count = self.variableNames.get(regName);
-                self.variableNames[regName] = count + 1; // increment the count of the base name
-                string newName = regName + "." + count.toString();
-                while self.variableNames.hasKey(newName) {
-                    count += 1;
-                    newName = regName + "." + count.toString();
-                }
-                regName = newName;
-                self.variableNames[regName] = 1; // save the augmented name in case user use the same  
-            }
-            else {
-                self.variableNames[regName] = 1;
-            }
-            regName = escapeIdent(regName);
-            string reg = "%" + regName;
+        string|Unnamed reg = self.genName(name);
+        if reg is string {
+            return "%" + reg;
+        }
+        else {
+            self.isBasicBlock[reg] = false;
             return reg;
-        } else {
-            int regName = self.unnamedLabelCount;
-            self.unnamedLabelCount += 1;
-            self.isBasicBlock[regName] = false;
-            return regName;
         }
     }
 

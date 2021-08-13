@@ -26,7 +26,7 @@ function test1() {
     test:assertEquals(tokenization(".e1"), [".", [IDENTIFIER, "e1"]]);
 
     test:assertEquals(tokenization("1.4e-"), [[DECIMAL_FP_NUMBER, "1.4", ()], [IDENTIFIER, "e"], "-"]);
-    test:assertEquals(tokenization("1.5e-=5;"), [[DECIMAL_FP_NUMBER, "1.5", ()], [IDENTIFIER, "e"], "-", "=", [DECIMAL_NUMBER, "5"], ";"]);
+    test:assertEquals(tokenization("1.5e-=5;"), [[DECIMAL_FP_NUMBER, "1.5", ()], [IDENTIFIER, "e"], "-=", [DECIMAL_NUMBER, "5"], ";"]);
     test:assertEquals(tokenization("1.6E"), [[DECIMAL_FP_NUMBER, "1.6", ()], [IDENTIFIER, "E"]]);
     test:assertEquals(tokenization("1.7e"), [[DECIMAL_FP_NUMBER, "1.7", ()], [IDENTIFIER, "e"]]);
     test:assertEquals(tokenization("1.8 e = 1.8; 1.8e=1.8;"), [[DECIMAL_FP_NUMBER, "1.8", ()], [IDENTIFIER, "e"], "=", [DECIMAL_FP_NUMBER, "1.8", ()], ";",
@@ -34,6 +34,10 @@ function test1() {
     test:assertEquals(tokenization("{||}"), ["{|", "|}"]);
     test:assertEquals(tokenization("xyz17==true"), [[IDENTIFIER, "xyz17"], "==", "true"]);
     test:assertEquals(tokenization("A _x =-0;"), [[IDENTIFIER, "A"], [IDENTIFIER, "_x"], "=", "-",  [DECIMAL_NUMBER, "0"], ";"]);
+    test:assertEquals(tokenization("x+=3; x += 5;"), [[IDENTIFIER, "x"], "+=", [DECIMAL_NUMBER, "3"], ";", [IDENTIFIER, "x"], "+=", [DECIMAL_NUMBER, "5"], ";"]);
+    test:assertEquals(tokenization("x-=3; x =- 5;"), [[IDENTIFIER, "x"], "-=", [DECIMAL_NUMBER, "3"], ";", [IDENTIFIER, "x"], "=", "-", [DECIMAL_NUMBER, "5"], ";"]);
+    test:assertEquals(tokenization("x>>=1; y>>>=2; z>=3;"), [[IDENTIFIER, "x"], ">>=", [DECIMAL_NUMBER, "1"], ";", [IDENTIFIER, "y"], ">>>=", [DECIMAL_NUMBER, "2"], ";", [IDENTIFIER, "z"], ">=", [DECIMAL_NUMBER, "3"], ";"]);
+    test:assertEquals(tokenization("1 => {x>>=1}"), [[DECIMAL_NUMBER, "1"], "=>", "{", [IDENTIFIER, "x"], ">>=", [DECIMAL_NUMBER, "1"], "}"]);
 }
 
 @test:Config{}

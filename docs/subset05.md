@@ -185,7 +185,7 @@ primary-expr =
   | variable-reference-expr
   | "(" inner-expr ")"
 
-literal = nil-literal | boolean-literal | integer-literal | string-literal
+literal = nil-literal | boolean-literal | int-literal | string-literal
 nil-literal = "(" ")" | "null"
 boolean-literal = "true" | "false"
 
@@ -264,6 +264,7 @@ The following restrictions apply to imported modules:
 ## Implemented spec changes since 2021R1
 
 * [#814](https://github.com/ballerina-platform/ballerina-spec/issues/814) - improved typing rules for `==` and `!=`
+* [#827](https://github.com/ballerina-platform/ballerina-spec/issues/827#issuecomment-895601520) - improved type narrowing for `match` statement
 * [#887](https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability
 * [#902](https://github.com/ballerina-platform/ballerina-spec/issues/902) - expression has a singleton type when its subexpressions have singleton type
 * [#904](https://github.com/ballerina-platform/ballerina-spec/issues/904) - restrict assignment to type-narrowed variables within loops

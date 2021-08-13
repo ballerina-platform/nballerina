@@ -63,7 +63,7 @@ function compileFile(string filename, string? gcName, *Options opts) returns Com
     string outputNameBase = checkpanic chooseOutputFilename(filename, opts.outDir);
     string outputFileName = outputNameBase + OUTPUT_EXTENSION;
     string? objectFileName = ();
-    if opts.o && outputNameBase is string {
+    if opts.o {
         objectFileName = outputNameBase + OBJECT_FILE_EXTENSION;
     }
     bir:ModuleId id = {

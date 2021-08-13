@@ -80,7 +80,17 @@ const FRAG_LESS_THAN_EQUAL = 0x49;
 const FRAG_GREATER_THAN_EQUAL = 0x4A;
 const FRAG_LESS_THAN_LESS_THAN = 0x4B;
 const FRAG_EQUAL_GREATER_THAN = 0x4C;
-
+const FRAG_PLUS_EQUAL = 0x4D;
+const FRAG_MINUS_EQUAL = 0x4E;
+const FRAG_SLASH_EQUAL = 0x4F;
+const FRAG_ASTERISK_EQUAL = 0x50;
+const FRAG_AMPERSAND_EQUAL = 0x51;
+const FRAG_VBAR_EQUAL = 0x52;
+const FRAG_CIRCUMFLEX_EQUAL = 0x53;
+const FRAG_LESS_THAN_LESS_THAN_EQUAL = 0x54;
+const FRAG_GREATER_THAN_GREATER_THAN_EQUAL = 0x55;
+const FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL = 0x56;
+ 
 const FRAG_KEYWORD = 0x80;
 
 final readonly & Keyword[] keywords = [
@@ -106,6 +116,7 @@ final readonly & Keyword[] keywords = [
     "is",
     "json",
     "map",
+    "match",
     "never",
     "null",
     "public",
@@ -132,18 +143,29 @@ function createFragTokens() returns readonly & FixedToken?[] {
         ft[FRAG_KEYWORD + i] = keywords[i];
     }
     // JBUG int casts needed
-    ft[<int>FRAG_LEFT_CURLY_VBAR] = "{|";
-    ft[<int>FRAG_VBAR_RIGHT_CURLY] = "|}";
-    ft[<int>FRAG_DOT_DOT_DOT] = "...";
-    ft[<int>FRAG_DOT_DOT_LESS_THAN] = "..<";
-    ft[<int>FRAG_EQUAL_EQUAL] = "==";
-    ft[<int>FRAG_NOT_EQUAL] = "!=";
-    ft[<int>FRAG_EQUAL_EQUAL_EQUAL] = "===";
-    ft[<int>FRAG_NOT_EQUAL_EQUAL] = "!==";
-    ft[<int>FRAG_LESS_THAN_EQUAL] = "<=";
-    ft[<int>FRAG_GREATER_THAN_EQUAL] = ">=";
-    ft[<int>FRAG_LESS_THAN_LESS_THAN] = "<<";
-    ft[<int>FRAG_EQUAL_GREATER_THAN] = "=>";
+    // Use toFixedToken to avoid method too large error
+    ft[<int>FRAG_LEFT_CURLY_VBAR] = toFixedToken("{|");
+    ft[<int>FRAG_VBAR_RIGHT_CURLY] = toFixedToken("|}");
+    ft[<int>FRAG_DOT_DOT_DOT] = toFixedToken("...");
+    ft[<int>FRAG_DOT_DOT_LESS_THAN] = toFixedToken("..<");
+    ft[<int>FRAG_EQUAL_EQUAL] = toFixedToken("==");
+    ft[<int>FRAG_NOT_EQUAL] = toFixedToken("!=");
+    ft[<int>FRAG_EQUAL_EQUAL_EQUAL] = toFixedToken("===");
+    ft[<int>FRAG_NOT_EQUAL_EQUAL] = toFixedToken("!==");
+    ft[<int>FRAG_LESS_THAN_EQUAL] = toFixedToken("<="); 
+    ft[<int>FRAG_GREATER_THAN_EQUAL] = toFixedToken(">=");
+    ft[<int>FRAG_LESS_THAN_LESS_THAN] = toFixedToken("<<");
+    ft[<int>FRAG_EQUAL_GREATER_THAN] = toFixedToken("=>");
+    ft[<int>FRAG_PLUS_EQUAL] = toFixedToken("+=");
+    ft[<int>FRAG_MINUS_EQUAL] = toFixedToken("-=");
+    ft[<int>FRAG_ASTERISK_EQUAL] = toFixedToken("*=");
+    ft[<int>FRAG_SLASH_EQUAL] = toFixedToken("/=");
+    ft[<int>FRAG_AMPERSAND_EQUAL] = toFixedToken("&=");
+    ft[<int>FRAG_VBAR_EQUAL] = toFixedToken("|=");
+    ft[<int>FRAG_CIRCUMFLEX_EQUAL] = toFixedToken("^=");
+    ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = toFixedToken("<<=");
+    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>=");
+    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>>=");
     // JBUG error if hex used for 32 and 128
     foreach int cp in 32 ..< 128 {
         string s = checkpanic string:fromCodePointInt(cp);
@@ -255,6 +277,11 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     continue;
                 }
                 cp = codePoints[i];
+                if cp == CP_EQUAL {
+                    i += 1;
+                   endFragment(FRAG_SLASH_EQUAL, i, result);
+                   continue; 
+                }
                 if cp != CP_SLASH {
                     endFragment(CP_SLASH, i, result);
                     continue;
@@ -275,6 +302,11 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     i += 1;
                     endFragment(FRAG_VBAR_RIGHT_CURLY, i, result);
                     continue;
+                }
+                if i < len && codePoints[i] == CP_EQUAL {
+                    i += 1;
+                   endFragment(FRAG_VBAR_EQUAL, i, result);
+                   continue; 
                 }
                 endFragment(CP_VBAR, i, result);
             }
@@ -320,6 +352,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     if cp2 == CP_GREATER_THAN {
                         i += 1;
                         endFragment(FRAG_EQUAL_GREATER_THAN, i, result);
+                        continue;
                     }
                 }
                 endFragment(CP_EQUAL, i, result);
@@ -345,6 +378,11 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     int cp2 = codePoints[i];
                     if cp2 == CP_LESS_THAN {
                         i += 1;
+                        if codePoints[i] == CP_EQUAL {
+                            i+=1;
+                            endFragment(FRAG_LESS_THAN_LESS_THAN_EQUAL, i, result);
+                            continue;
+                        }
                         endFragment(FRAG_LESS_THAN_LESS_THAN, i, result);
                         continue;
                     }
@@ -361,6 +399,18 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     i += 1;
                     endFragment(FRAG_GREATER_THAN_EQUAL, i, result);
                     continue;
+                }
+                if i < len && codePoints[i] == CP_GREATER_THAN {
+                    if i+2 < len && codePoints[i+1] == CP_GREATER_THAN && codePoints[i+2] == CP_EQUAL{
+                        i += 3;
+                        endFragment(FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL, i, result);
+                        continue;
+                    }
+                    else if i+1 < len && codePoints[i+1] == CP_EQUAL{
+                        i += 2;
+                        endFragment(FRAG_GREATER_THAN_GREATER_THAN_EQUAL, i, result);
+                        continue;
+                    }
                 }
                 // Tokenization of multiple `>`s depends on lexical mode
                 // so do it later
@@ -397,23 +447,34 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                 i = scanDecimal(codePoints, i, result);
             }
             CP_PERCENT
-            |CP_AMPERSAND
             |CP_LEFT_PAREN 
             |CP_RIGHT_PAREN
-            |CP_ASTERISK
-            |CP_PLUS
             |CP_COMMA
-            |CP_MINUS
             |CP_COLON
             |CP_SEMICOLON 
             |CP_QUESTION
             |CP_LEFT_SQUARE
             |CP_RIGHT_SQUARE
-            |CP_CIRCUMFLEX
             |CP_RIGHT_CURLY
             |CP_TILDE => {
                 // JBUG when FragCode is byte, error without cast
                 endFragment(<FragCode>cp, i, result);
+            }
+            CP_CIRCUMFLEX => {
+                i = endFragmentCompoundAssign(codePoints, i, CP_CIRCUMFLEX, FRAG_CIRCUMFLEX_EQUAL, result);
+                
+            }
+            CP_PLUS => {
+                i = endFragmentCompoundAssign(codePoints, i, CP_PLUS, FRAG_PLUS_EQUAL, result);
+            }
+            CP_MINUS => {
+                i = endFragmentCompoundAssign(codePoints, i, CP_MINUS, FRAG_MINUS_EQUAL, result);
+            }
+            CP_ASTERISK => {
+                i = endFragmentCompoundAssign(codePoints, i, CP_ASTERISK, FRAG_ASTERISK_EQUAL, result);
+            }
+            CP_AMPERSAND => {
+                i = endFragmentCompoundAssign(codePoints, i, CP_AMPERSAND, FRAG_AMPERSAND_EQUAL, result);
             }
             CP_DOUBLE_QUOTE => {
                 i = scanString(codePoints, i, result);
@@ -749,6 +810,19 @@ function endFragmentMerge(FragCode fragCode, int endIndex, Scanned result) {
     }
 }
 
+function endFragmentCompoundAssign(int[] codePoints, int i, int CP, int FCP, Scanned result) returns int {
+    int len = codePoints.length();
+    if i < len {
+        int cp = codePoints[i];
+        if cp == CP_EQUAL {
+            endFragment(FCP, i + 1, result);
+            return i + 1;
+        }
+    }
+    endFragment(CP, i, result);
+    return i;
+}
+
 function isCodePointIdentifierFollowing(int cp) returns boolean {
    return isCodePointAsciiUpper(cp)
           || isCodePointAsciiLower(cp)
@@ -771,4 +845,9 @@ function isCodePointAsciiUpper(int cp) returns boolean {
 
 function isCodePointUnicodeIdentifier(int cp) returns boolean {
     return false;
+}
+
+// JBUG this avoids bloat that causes `method is too large` errors
+function toFixedToken(string t) returns FixedToken? {
+    return <FixedToken?>t;
 }

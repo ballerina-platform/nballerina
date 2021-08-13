@@ -87,6 +87,12 @@ function stmtToWords(Word[] w, Stmt stmt) {
         exprToWords(w, stmt.expr);
         w.push(";");
     }
+    else if stmt is CompoundAssignStmt {
+        exprToWords(w, stmt.lValue);
+        w.push(stmt.op + "=");
+        exprToWords(w, stmt.expr);
+        w.push(";");
+    }
     else if stmt is IfElseStmt {
         w.push("if");
         exprToWords(w, stmt.condition);
@@ -422,4 +428,11 @@ function alwaysClingAfter(string a) returns boolean {
 
 function alwaysClingBefore(string a) returns boolean {
     return a == ";" || a == ":" || a == "." || a == ")" || a == "," || a == "]";
+}
+
+// Useful for debugging
+function exprToString(Expr expr) returns string {
+    Word[] words = [];
+    exprToWords(words, expr);
+    return "\n".'join(...wordsToLines(words));
 }

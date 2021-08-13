@@ -467,7 +467,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
     foreach var s in sources {
         tests[s[2]] = [s[0], s[1], splitIntoLines(s[2]), [s[3]]];
     }
-    var testFiles = check file:readDir("modules/front/tests/data");
+    var testFiles = check file:readDir("modules/front.syntax/tests/data");
     foreach var f in testFiles {
         string path = f.absPath;
         string base = check file:basename(path);

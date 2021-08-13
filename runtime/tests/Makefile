@@ -1,5 +1,7 @@
 TESTPROGS=string_hash string_cmp string_concat string_len immediate_string tagged_ptr
-TESTPROG_STAMPS=$(addsuffix .stamp, $(TESTPROGS))
+# following will test balrt_inline, and must be named inlinert_*
+TESTINLINERTPROGS=inlinert_float
+TESTPROG_STAMPS=$(addsuffix .stamp, $(TESTPROGS) $(TESTINLINERTPROGS))
 TESTPROG_PROF_RAW=$(addsuffix .profraw, $(TESTPROGS))
 TESTPROG_PROF = test.profdata
 TESTPROG_EXE=$(addprefix -object ./, $(TESTPROGS))
@@ -22,6 +24,16 @@ $(TESTPROG_PROF): $(TESTPROG_PROF_RAW)
 
 %.profraw: %
 	LLVM_PROFILE_FILE="$@" ./$<
+
+# compiling directly (with -O1 or above) does not work due to linkonce_odr, llvm-link first and then compile
+inlinert_unlinked_%.bc: inlinert_%.c
+	$(CLANG) $(CFLAGS) -c -emit-llvm -o ./$@ $<
+
+inlinert_%.bc: inlinert_unlinked_%.bc
+	$(LLVM_LINK) -o ./$@ $< ../$(BCLIB)
+
+inlinert_%: inlinert_%.bc
+	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)
 
 %: %.c
 	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)
