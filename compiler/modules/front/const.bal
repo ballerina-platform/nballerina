@@ -353,25 +353,46 @@ function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr ex
 }
 
 function foldFloatLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError {
-    // XXX check expectedType for decimal
-    float|error result = checkpanic float:fromString(expr.untypedLiteral);
+    // This will need to change when we support decimal
+    float|error result = floatFromDecimalLiteral(expr.untypedLiteral);
     if result is float {
         return { value: result };
     }
     else {
-        return cx.semanticErr(`invalid float literal ${expr.untypedLiteral}${expr.typeSuffix ?: ""}`, cause=result, pos=expr.pos);
+        return cx.semanticErr("invalid float literal", cause=result, pos=expr.pos);
     }
 }
 
 function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLiteralExpr expr) returns s:ConstValueExpr|FoldError {
-    int|error result = s:intFromIntLiteral(expr.base, expr.digits);
-    // XXX check expectedType and return floating points
-    if result is int {
+    float|int|error result;
+    string ty;
+    if expr.base == 10 && expectsFloat(expectedType) {
+        result = floatFromDecimalLiteral(expr.digits);
+        ty = "float"; 
+    }
+    else {
+        result = s:intFromIntLiteral(expr.base, expr.digits);
+        ty = "int";
+    }
+    if result is int|float {
         return { value: result };
     }
     else {
-        return cx.semanticErr(`invalid integer literal ${expr.digits}`, cause=result, pos=expr.pos);
+        return cx.semanticErr("invalid " + ty + " literal", cause=result, pos=expr.pos);
     }
+}
+
+function expectsFloat(t:SemType? semType) returns boolean {
+    if semType is () {
+        return false;
+    }
+    else {
+        return t:isSubtypeSimple(t:intersect(semType, t:union(t:FLOAT, t:INT)), t:FLOAT);
+    }
+}
+
+function floatFromDecimalLiteral(string digits) returns float|error {
+    return float:fromString(digits);
 }
 
 function intArithmeticEval(s:BinaryArithmeticOp op, int left, int right) returns int  {
