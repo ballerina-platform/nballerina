@@ -39,7 +39,7 @@ public type ConstDefn record {|
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr;
-public type Expr IntLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
@@ -232,7 +232,7 @@ public type TypeTestExpr record {|
 |};
 
 public type ConstValueExpr record {|
-    ()|boolean|int|string value;
+    ()|boolean|int|float|string value;
     // This is non-nil when the static public type of the expression
     // contains more than one shape.
     // When it contains exactly one shape, then the shape is
@@ -270,7 +270,7 @@ public type InlineTypeDesc InlineLeafTypeDesc|InlineArrayTypeDesc|InlineMapTypeD
 
 public const ANY = "any";
 
-public type InlineLeafTypeDesc "boolean"|"int"|"string"|ANY;
+public type InlineLeafTypeDesc "boolean"|"int"|"float"|"string"|ANY;
 
 public type InlineArrayTypeDesc record {|
     *ListTypeDesc;

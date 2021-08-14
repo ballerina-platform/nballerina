@@ -69,6 +69,12 @@ public function constInt(IntType ty, int val) returns ConstValue {
     return new ConstValue(ty, val.toString());
 }
 
+// Corresponds to LLVMConstReal
+public function constReal(RealType ty, float val) returns ConstValue {
+    // XXX do hex conversion
+    return new ConstValue(ty, val.toString());
+}
+
 // Corresponds to LLVMConstNull
 public function constNull(PointerType ty) returns ConstPointerValue {
     return new ConstPointerValue(ty, "null");
@@ -557,7 +563,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildAlloca
-    public function alloca(IntegralType ty, Alignment? align=(), string? name=()) returns PointerValue {
+    public function alloca(SingleValueType ty, Alignment? align=(), string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         PointerType ptrTy = pointerType(ty);

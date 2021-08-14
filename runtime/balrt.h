@@ -222,6 +222,11 @@ static READONLY inline int64_t taggedToInt(TaggedPtr p) {
     }
 }
 
+static READONLY inline double taggedToFloat(TaggedPtr p) {
+    GC double *np = taggedToPtr(p);
+    return *np;
+}
+
 static READNONE inline StringLength immediateStringLength(uint64_t bits) {
     StringLength len;
     unsigned loByte = bits & 0xFF;
@@ -297,6 +302,14 @@ static READNONE inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {
     return (TaggedPtr)p0;
 }
 
+// We are trying to avoid doing inttoptr or ptrtoint in address space 1
+static inline TaggedPtr ptrAddShiftedTag(UntypedPtr tp, uint64_t shiftedTag) {
+    char *p = (char *)tp;
+    uint64_t bits = (uint64_t)p;
+    bits |= shiftedTag;
+    p = (char *)bits;
+    return (TaggedPtr)p;
+}
 
 
 

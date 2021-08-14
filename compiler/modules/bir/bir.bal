@@ -205,7 +205,7 @@ public type Insn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
 
 public type Operand ConstOperand|Register;
-public type SimpleConstOperand ()|boolean|int;
+public type SimpleConstOperand ()|boolean|int|float;
 public type ConstOperand SimpleConstOperand|string;
 public type StringOperand string|Register;
 public type IntOperand int|Register;

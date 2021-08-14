@@ -674,7 +674,7 @@ function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns
 }
 
 public type Value readonly & record {|
-    string|int|boolean|() value;
+    string|int|float|boolean|() value;
 |};
 
 // If the type contains exactly onr shape, return a value
@@ -704,12 +704,15 @@ public function singleShape(SemType t) returns Value? {
     return ();
 }
 
-public function singleton(string|int|boolean|() v) returns SemType {
+public function singleton(string|int|float|boolean|() v) returns SemType {
     if v is () {
         return NIL;
     }
     else if v is int {
         return intConst(v);
+    }
+    else if v is float {
+        return floatConst(v);
     }
     else if v is string {
         return stringConst(v);
@@ -730,12 +733,15 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
-public function containsConst(SemType t, string|int|boolean|() v) returns boolean {
+public function containsConst(SemType t, string|int|float|boolean|() v) returns boolean {
     if v is () {
         return containsNil(t);
     }
     else if v is int {
         return containsConstInt(t, v);
+    }
+    else if v is float {
+        return containsConstFloat(t, v);
     }
     else if v is string {
         return containsConstString(t, v);
@@ -770,6 +776,15 @@ public function containsConstInt(SemType t, int n) returns boolean {
     }
     else {
         return intSubtypeContains(t.getSubtypeData(UT_INT), n);
+    }
+}
+
+public function containsConstFloat(SemType t, float n) returns boolean {
+    if t is UniformTypeBitSet {
+        return (t & (1 << UT_FLOAT)) != 0;
+    }
+    else {
+        return floatSubtypeContains(t.getSubtypeData(UT_FLOAT), n);
     }
 }
 

@@ -6,6 +6,7 @@ public function resolveInlineTypeDesc(InlineTypeDesc td) returns t:UniformTypeBi
         "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }
         "int" => { return t:INT; }
+        "float" => { return t:FLOAT; }
         "string" => { return t:STRING; }
     }
     if td is InlineArrayTypeDesc {
