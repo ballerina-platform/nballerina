@@ -54,6 +54,10 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
         case TAG_INT:
             fprintf(fp, "%" PRId64, taggedToInt(p));
             break;
+        case TAG_FLOAT:
+            // XXX fix precision
+            fprintf(fp, "%g", taggedToFloat(p));
+            break;
         case TAG_LIST_RW:
             if (stackContains(stackPtr, p)) {
                 fputs("...", fp);

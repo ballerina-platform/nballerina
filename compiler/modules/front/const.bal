@@ -2,7 +2,7 @@ import wso2/nballerina.err;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.types as t;
 
-type SimpleConst string|int|boolean|();
+type SimpleConst string|int|float|boolean|();
 
 type FoldError err:Semantic|err:Unimplemented;
 
@@ -96,6 +96,9 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
     else if expr is s:IntLiteralExpr {
         return foldIntLiteralExpr(cx, expectedType, expr);
     }
+    else if expr is s:FpLiteralExpr {
+        return foldFloatLiteralExpr(cx, expectedType, expr);
+    }
     else {
         return expr;
     } 
@@ -130,11 +133,20 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
                 return foldedBinaryConstExpr(result, t:INT, leftExpr, rightExpr);
             }
             else {
-                return cx.semanticErr(`evaluation of constant ${expr.arithmeticOp} expression failed`, pos=expr.pos, cause=result);
+                return cx.semanticErr(`evaluation of int constant ${expr.arithmeticOp} expression failed`, pos=expr.pos, cause=result);
             }
         }
         else if left is string && right is string && expr.arithmeticOp == "+" {
             return foldedBinaryConstExpr(left + right, t:STRING, leftExpr, rightExpr);
+        }
+        else if left is float && right is float {
+            float|error result = trap floatArithmeticEval(expr.arithmeticOp, left, right);
+            if result is float {
+                return foldedBinaryConstExpr(result, t:FLOAT, leftExpr, rightExpr);
+            }
+            else {
+                return cx.semanticErr(`evaluation of float constant ${expr.arithmeticOp} expression failed`, pos=expr.pos, cause=result);
+            }
         }
         else {
             return cx.semanticErr(`invalid operand types for ${expr.arithmeticOp}`);
@@ -283,6 +295,9 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
                     }
                     return foldedUnaryConstExpr(-operand, t:INT, subExpr);
                 }
+                else if operand is float {
+                    return foldedUnaryConstExpr(-operand, t:FLOAT, subExpr);
+                }
             }
         }
         _ => {
@@ -337,8 +352,20 @@ function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr ex
     }
 }
 
+function foldFloatLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError {
+    // XXX check expectedType for decimal
+    float|error result = checkpanic float:fromString(expr.untypedLiteral);
+    if result is float {
+        return { value: result };
+    }
+    else {
+        return cx.semanticErr(`invalid float literal ${expr.untypedLiteral}${expr.typeSuffix ?: ""}`, cause=result, pos=expr.pos);
+    }
+}
+
 function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLiteralExpr expr) returns s:ConstValueExpr|FoldError {
     int|error result = s:intFromIntLiteral(expr.base, expr.digits);
+    // XXX check expectedType and return floating points
     if result is int {
         return { value: result };
     }
@@ -348,6 +375,28 @@ function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLitera
 }
 
 function intArithmeticEval(s:BinaryArithmeticOp op, int left, int right) returns int  {
+    match op {
+        "+" => {
+            return left + right;
+        }
+        "-" => {
+            return left - right;
+        }
+        "*" => {
+            return left * right;
+        }
+        "/" => {
+            return left / right;
+        }
+        "%" => {
+            return left % right;
+        }
+    }
+    panic err:impossible();
+}
+
+function floatArithmeticEval(s:BinaryArithmeticOp op, float left, float right) returns float  {
+    // xxx this will have to change to address #274
     match op {
         "+" => {
             return left + right;

@@ -37,6 +37,7 @@ const HEAP_ADDR_SPACE = 1;
 const ALIGN_HEAP = 8;
 
 const LLVM_INT = "i64";
+const LLVM_DOUBLE = "double";
 const LLVM_BOOLEAN = "i1";
 const LLVM_VOID = "void";
 
@@ -51,6 +52,7 @@ type ValueType llvm:IntegralType;
 
 enum UniformBaseRepr {
     BASE_REPR_INT,
+    BASE_REPR_FLOAT,
     BASE_REPR_BOOLEAN,
     BASE_REPR_ERROR
 }
@@ -62,7 +64,7 @@ type RetBaseRepr BaseRepr|BASE_REPR_VOID;
 
 type UniformRepr readonly & record {|
     UniformBaseRepr base;
-    llvm:IntegralType llvm;
+    llvm:SingleValueType llvm;
     t:UniformTypeBitSet subtype?;
 |};
 
@@ -91,7 +93,7 @@ const PANIC_LIST_TOO_LONG = 6;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"string_eq"|"string_cmp"|"string_concat"|"eq";
+type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"float_to_tagged"|"string_eq"|"string_cmp"|"string_concat"|"eq";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -167,6 +169,15 @@ final RuntimeFunction intToTaggedFunction = {
     ty: {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: ["i64"]
+    },
+    attrs: [] // NB not readonly because it allocates storage
+};
+
+final RuntimeFunction floatToTaggedFunction = {
+    name: "float_to_tagged",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: ["double"]
     },
     attrs: [] // NB not readonly because it allocates storage
 };
@@ -1043,6 +1054,9 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
         if sourceBaseRepr == BASE_REPR_INT {
             return buildTaggedInt(builder, scaffold, value);
         }
+        else if sourceBaseRepr == BASE_REPR_FLOAT {
+            return buildTaggedFloat(builder, scaffold, value);
+        }
         else if sourceBaseRepr == BASE_REPR_BOOLEAN {
             return buildTaggedBoolean(builder, value);
         }
@@ -1060,6 +1074,10 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
     return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, intToTaggedFunction), [value]);
+}
+
+function buildTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
+    return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, floatToTaggedFunction), [value]);
 }
 
 function buildTaggedPtr(llvm:Builder builder, llvm:PointerValue mem, int tag) returns llvm:PointerValue {
@@ -1204,6 +1222,9 @@ function buildSimpleConst(bir:SimpleConstOperand operand) returns [Repr, llvm:Va
     if operand is int {
         return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
     }
+    else if operand is float {
+        return [REPR_FLOAT, llvm:constReal(LLVM_DOUBLE, operand)];
+    }
     else if operand is () {
         return [REPR_NIL, buildConstNil()];
     }
@@ -1312,6 +1333,8 @@ function buildConstBoolean(boolean b) returns llvm:Value {
 
 // Maps int to i64
 final Repr REPR_INT = { base: BASE_REPR_INT, llvm: LLVM_INT };
+// Maps float to llvm double
+final Repr REPR_FLOAT = { base: BASE_REPR_FLOAT, llvm: LLVM_DOUBLE };
 // Maps int to i1
 final Repr REPR_BOOLEAN = { base: BASE_REPR_BOOLEAN, llvm: LLVM_BOOLEAN };
 // Maps error value to (for now) int (for panics)

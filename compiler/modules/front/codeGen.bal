@@ -1358,6 +1358,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         else if t:isSubtypeSimple(operand.semType, t:INT) {
             return ["int", operand];
         }
+        else if t:isSubtypeSimple(operand.semType, t:FLOAT) {
+            panic err:unimplemented("simple float operand");
+        }
         else if t:isSubtypeSimple(operand.semType, t:STRING) {
             return ["string", operand];
         }
@@ -1373,6 +1376,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
     }
     else if operand is int {
         return ["int", operand];
+    }
+    else if operand is float {
+        panic err:unimplemented("float operand");
     }
     else if operand is boolean {
         return ["boolean", operand];

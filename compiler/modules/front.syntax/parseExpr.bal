@@ -221,6 +221,11 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         return expr;
     }
+    else if t is [DECIMAL_FP_NUMBER, string, FLOAT_TYPE_SUFFIX|()] {
+        FpLiteralExpr expr = { untypedLiteral: t[1], typeSuffix: t[2], pos: tok.currentPos() };
+        check tok.advance();
+        return expr;
+    }
     else if t is [HEX_INT_LITERAL, string] {
         IntLiteralExpr expr = { base: 16, digits: t[1], pos: tok.currentPos() };
         check tok.advance();
@@ -396,7 +401,7 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             check tok.advance();
             ConstValueExpr expr = { value: t == "true" };
             return expr;
-        }  
+        }
         [DECIMAL_NUMBER, _]
         | [HEX_INT_LITERAL, _] => {
             return parseIntLiteralExpr(tok);
