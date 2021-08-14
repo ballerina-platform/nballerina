@@ -3,7 +3,7 @@ export CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
 export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
-OBJS=gc_cheney.o gc_none.o list.o main.o mapping.o panic.o print.o string.o int.o
+OBJS=gc_cheney.o list.o main.o mapping.o panic.o print.o string.o int.o
 BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_ir_inline.bc float_inline.bc
 
 INCLUDES=tag.h balrt.h
