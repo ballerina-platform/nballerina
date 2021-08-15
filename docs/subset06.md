@@ -17,8 +17,7 @@
    * assignment
       * to variable `v = E;`
       * to member of a list or mapping `v[E1] = E2;`
-   * compound assignment
-      * to variable `v op E;` where op : `+=` | `-=` | `*=` | `/=` | `&=` | `^=` | `|=` | `<<=` | `>>=` | `>>>=`
+      * compound assignment to a variable `v op= E`
    * `return` statement
    * `if`/`else` statements
    * `while` statement
@@ -91,7 +90,7 @@ call-stmt =
 
 assign-stmt = lvexpr "=" expression ";"
 
-compound-assign-stmt = identifier compound-assign-op expression ";"
+compound-assign-stmt = identifier CompoundAssignmentOperator expression ";"
 
 lvexpr =
    identifier
@@ -194,8 +193,6 @@ primary-expr =
   | variable-reference-expr
   | "(" inner-expr ")"
 
-compound-assign-op = "+=" | "-=" | "*=" | "/=" | "&=" | "^=" | "|=" | "<<=" | ">>=" | ">>>="
-
 literal = nil-literal | boolean-literal | int-literal | floating-point-literal | string-literal
 nil-literal = "(" ")" | "null"
 boolean-literal = "true" | "false"
@@ -233,6 +230,7 @@ int-literal = (as in Ballerina language spec)
 floating-point-literal = (as in Ballerina spec, except DecimalTypeSuffix is not allowed)
 string-literal = (as in Ballerina language spec)
 identifier = [A-Za-z][A-Za-z0-9_]*
+CompoundAssignmentOperator = (as in Ballerina language spec)
 
 // comments starting with // allowed as in Ballerina language spec
 ```
@@ -242,6 +240,7 @@ Language spec syntax references:
 * [floating-point-literal](https://ballerina.io/spec/lang/2021R1/#floating-point-literal)
 * [int-literal](https://ballerina.io/spec/lang/2021R1/#int-literal)
 * [const-expr](https://ballerina.io/spec/lang/2021R1/#const-expr)
+* [CompoundAssignmentOperator](https://ballerina.io/spec/lang/2021R1/#CompoundAssignmentOperator)
 
 ## Semantic restrictions
 
@@ -269,7 +268,8 @@ The following restrictions apply to imported modules:
 
 ## Additions from subset 5
 
-* `float` type
+* `float` type and associated operations
+* compound assignment statement
 
 ## Implemented spec changes since 2021R1
 
