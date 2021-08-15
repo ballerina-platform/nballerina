@@ -1124,7 +1124,6 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
 
 function codeGenTypeTestNot(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType) returns CodeGenError|ExprEffect {
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
-    // Constants should be resolved during constant folding
     bir:Register reg = <bir:Register>operand;        
     t:SemType diff = t:diff(reg.semType, semType);
     if t:isEmpty(cx.mod.tc, diff) {
@@ -1140,6 +1139,10 @@ function codeGenTypeTestNot(CodeGenContext cx, bir:BasicBlock bb, Environment en
     bir:TypeTestInsn insn = { operand: reg, semType, result };
     bb.insns.push(insn);
 
+    bir:Register result2 = cx.createRegister(t:BOOLEAN);
+    bir:BooleanNotInsn insn2 = { operand: result, result: result2 };
+    bb.insns.push(insn2);
+
     Narrowing? narrowing = ();
     if !(binding is ()) {
         narrowing = {
@@ -1149,7 +1152,8 @@ function codeGenTypeTestNot(CodeGenContext cx, bir:BasicBlock bb, Environment en
             testInsn: bir:lastInsnRef(bb)
         };
     }
-    return { result, block: nextBlock, narrowing };   
+    
+    return { result: result2, block: nextBlock, narrowing };   
 }
 
 function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:FunctionCallExpr expr) returns CodeGenError|RegExprEffect {
