@@ -21,6 +21,7 @@ testCoverage: $(LIB) $(BCLIB)
 	$(MAKE) -C tests testCoverage
 
 $(LIB): $(OBJS)
+	$(MAKE) -C gc-roots all
 	$(AR) r $@ $^
 
 $(BCLIB): $(BCS)
@@ -34,12 +35,13 @@ $(BCLIB): $(BCS)
 	$(CLANG) $(CFLAGS) -c -O2 -emit-llvm -o $@ $<
 
 %.bc: %.ll
-	$(LLVM_AS) --data-layout=$(shell clang -x c /dev/null -emit-llvm -S -o - | sed -n 's/target datalayout = \(".*"\)/\1/p') -o=$@ $<
+	$(LLVM_AS) --data-layout=$(shell clang-11 -x c /dev/null -emit-llvm -S -o - | sed -n 's/target datalayout = \(".*"\)/\1/p') -o=$@ $<
 
 $(OBJS) $(BCS): $(INCLUDES)
 
 clean:
 	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
 	$(MAKE) -C tests clean
+	$(MAKE) -C gc-roots clean
 
 .PHONY: test all

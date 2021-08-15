@@ -59,7 +59,7 @@ out/result/%.diff: out/result/%.exe out/expect/%.txt
 	-./runcheck.sh $^ >$@
 
 out/result/%.exe: out/result/%.bc $(RT)
-	$(CLANG) $(CFLAGS) $< -o $@ $(RT)
+	$(CLANG) $(CFLAGS) $< -o $@ $(RT) ../runtime/gc-roots/roots.a -lbacktrace
 
 out/result/%.bc: out/ll/%.ll $(RT_INLINE)
 	@mkdir -p out/result
@@ -76,3 +76,4 @@ update:
 	cd out/ll; for f in *.ll; do cmp -s $$f ../../ll/$$f || cp -p $$f ../../ll/; done
 
 .PHONY: all test clean compile testll update
+.PRECIOUS: out/result/%.bc 
