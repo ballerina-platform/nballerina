@@ -266,11 +266,21 @@ public type FpLiteralExpr record {|
 
 // This is the subtype of TypeDesc that we currently allow
 // within expressions and statements.
-public type InlineTypeDesc InlineLeafTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc;
+public type InlineTypeDesc InlineBasicTypeDesc|InlineUnionTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc|ANY;
 
 public const ANY = "any";
 
-public type InlineLeafTypeDesc "boolean"|"int"|"float"|"string"|ANY;
+public type InlineBasicTypeDesc "boolean"|"int"|"float"|"string";
+
+public type InlineAltTypeDesc InlineUnionTypeDesc|InlineBasicTypeDesc;
+
+public type InlineUnionTypeDesc record {|
+    *BinaryTypeDesc;
+    // actually always `|`
+    BinaryTypeOp op = "|";
+    InlineAltTypeDesc left;
+    InlineAltTypeDesc|"()" right;
+|};
 
 public type InlineArrayTypeDesc record {|
     *ListTypeDesc;
@@ -279,7 +289,6 @@ public type InlineArrayTypeDesc record {|
     // this gets an error about attempting to make a non-public symbol visible
     ANY rest = ANY;
 |};
-
 
 public type InlineMapTypeDesc record {|
     *MappingTypeDesc;

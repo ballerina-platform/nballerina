@@ -58,7 +58,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parseVarDeclStmt(tok, true);
         }
-        var td if td is InlineLeafTypeDesc|"map" => {
+        var td if td is InlineBasicTypeDesc|ANY|"map" => {
             return parseVarDeclStmt(tok);
         }
         "("|[DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {

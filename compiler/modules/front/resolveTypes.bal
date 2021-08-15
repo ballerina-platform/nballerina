@@ -48,7 +48,10 @@ function resolveFunctionSignature(t:Env env, ModuleTable mod, s:FunctionTypeDesc
 
 function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, s:TypeDesc td, err:Position pos) returns t:SemType|err:Semantic|err:Unimplemented {
     t:SemType ty = check resolveTypeDesc(env, mod, 0, td);
-    if ty === t:STRING || ty === t:FLOAT || ty === t:INT || ty === t:BOOLEAN || ty === t:NIL || ty === t:ANY {
+    if ty is t:UniformTypeBitSet && t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) {
+        return ty;
+    }
+    if ty === t:ANY {
         return ty;
     }
     t:UniformTypeBitSet? memberTy = env.simpleArrayMemberType(ty);
