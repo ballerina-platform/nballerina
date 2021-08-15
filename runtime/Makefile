@@ -29,6 +29,7 @@ testCoverage: $(LIB) $(BCLIB)
 	$(MAKE) -C tests testCoverage
 
 $(LIB): $(OBJS)
+	$(MAKE) -C gc-roots all
 	$(AR) r $@ $^
 
 $(BCLIB): $(BCS)
@@ -70,6 +71,7 @@ $(OBJS) $(BCS): $(INCLUDES)
 clean:
 	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
 	$(MAKE) -C tests clean
+	$(MAKE) -C gc-roots clean
 
 .PHONY: test all
 # Ensure bogus files get deleted when there's an error

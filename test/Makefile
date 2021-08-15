@@ -4,10 +4,50 @@ TDIRS= $(sort $(basename $(notdir $(wildcard ../compiler/testSuite/*))))
 
 $(TARGETS): $(TDIRS)
 
+<<<<<<< HEAD
 # The filter is so we can say e.g. make 07-error
 $(TDIRS):
 	mkdir -p out/$@
 	$(MAKE) -C out/$@ -f ../../sub.mk tdir=$@ $(filter-out $@, $(MAKECMDGOALS))
+=======
+compile: out/compile.stamp
+
+out/compile.stamp: $(bal_files)
+	-rm -fr out/llnew
+	mkdir -p out/llnew
+	$(JAVA) -jar $(COMPILER_JAR) --outDir out/llnew $?
+	mkdir -p out/ll
+	cd out/llnew; for f in *.ll; do cmp -s $$f ../ll/$$f || mv $$f ../ll/; done
+	rm -fr out/llnew
+	@touch $@
+
+# This compiles, runs and checks the output of out/ll/*.ll
+testll: out/result/fail.txt $(expect_files) $(exe_files)
+
+out/result/fail.txt: $(diff_files)
+	@>$@
+	@for f in $^; do \
+		if test -s $$f; then \
+			echo $$f failed | sed -e 's;out/result/;;' -e 's/.diff//' >>$@; \
+		fi \
+	done
+	@cat $@
+	@test ! -s $@
+
+out/result/%.diff: out/result/%.exe out/expect/%.txt
+	-./runcheck.sh $^ >$@
+
+out/result/%.exe: out/result/%.bc $(RT)
+	$(CLANG) $(CFLAGS) $< -o $@ $(RT) ../runtime/gc-roots/roots.a -lbacktrace
+
+out/result/%.bc: out/ll/%.ll $(RT_INLINE)
+	@mkdir -p out/result
+	$(LLVM_LINK) -o $@ $^
+
+out/expect/%.txt: ../compiler/testSuite/%.bal
+	@mkdir -p out/expect
+	./expect.sh $< >$@
+>>>>>>> Start to integrate root identifying
 
 clean:
 	-rm -fr out
