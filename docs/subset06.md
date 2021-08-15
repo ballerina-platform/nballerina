@@ -3,7 +3,13 @@
 ## Summary
 
 * Only values allowed are of basic type nil, boolean, int, float, string, list and mapping.
-* The only type descriptors allowed are `boolean`, `int`, `float`, `string`, `any`, `any[]` and `map<any>`.
+* Type descriptors:
+   * predefined basic type name: `boolean`, `float`, `int`, `string`
+   * optional type: `T?` where T is a predefined basic type name
+   * union of predefined basic type names and optional types e.g. `int|string?`
+   * `any` type
+   * `any[]`
+   * `map<any>`.
 * At module level
    * function definitions
       * no default arguments
@@ -27,7 +33,7 @@
 * Expressions:
    * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`
    * unary operators: `-`, `!`, `~`
-   * type cast
+   * type cast `<T>E`
    * type test `E is T`
    * function call
    * method call `v.f(args)` syntax for calling langlib functions
@@ -58,11 +64,19 @@ signature = "(" [param-list] ")" [ "returns" type-desc ]
 
 const-decl = ["public"] "const" [basic-type-name] identifier "=" const-expr ";"
 
-type-desc = basic-type-name | "any" | array-type-desc | map-type-desc
+type-desc = union-type-desc | array-type-desc | map-type-desc | any-type-desc
 
-basic-type-name = "string" | "int" | "float" | "boolean"
-array-type-desc = "any" "[" "]"
-map-type-desc = "map" "<" "any" ">"
+union-type-desc =
+  optional-type-desc
+  | union-type-desc "|" optional-type-desc
+
+optional-type-desc = basic-type-name ["?"]
+
+basic-type-name = "boolean" | "int" | "float" |  "string"
+
+array-type-desc = any-type-desc "[" "]"
+map-type-desc = "map" "<" any-type-desc ">"
+any-type-desc = "any"
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -269,6 +283,8 @@ The following restrictions apply to imported modules:
 ## Additions from subset 5
 
 * `float` type and associated operations
+* union type descriptor
+* optional type descriptor
 * compound assignment statement
 
 ## Implemented spec changes since 2021R1
