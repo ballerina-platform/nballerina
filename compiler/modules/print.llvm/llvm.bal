@@ -71,8 +71,9 @@ public function constInt(IntType ty, int val) returns ConstValue {
 
 // Corresponds to LLVMConstReal
 public function constReal(RealType ty, float val) returns ConstValue {
-    // XXX do hex conversion
-    return new ConstValue(ty, val.toString());
+    // XXX #307 use decimal for non-special floats 
+    return new ConstValue(ty, "0x" + int:toHexString(float:toBitsInt(val)));
+
 }
 
 // Corresponds to LLVMConstNull

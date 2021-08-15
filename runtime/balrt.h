@@ -48,6 +48,7 @@ extern char *_bal_stack_guard;
 typedef GC char NODEREF *TaggedPtr;
 typedef GC void *UntypedPtr;
 typedef GC int64_t *IntPtr;
+typedef GC double *FloatPtr;
 
 // An error is currently represented as int with the error code in the lo byte
 typedef uint64_t Error;
