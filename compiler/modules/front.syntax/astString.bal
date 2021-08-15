@@ -350,6 +350,17 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(")");
         }
     }
+    else if expr is TypeTestNotExpr {
+        if wrap {
+            w.push("(");
+        }
+        exprToWords(w, expr.left, true);
+        w.push("!is");
+        typeDescToWords(w, expr.notTd);
+        if wrap {
+            w.push(")");
+        }
+    }
     else {
         w.push(expr.varName);
     }

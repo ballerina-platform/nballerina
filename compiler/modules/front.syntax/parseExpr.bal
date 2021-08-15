@@ -106,6 +106,14 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
         TypeTestExpr typeTest = { td, left: expr, semType: resolveInlineTypeDesc(td) };
         return typeTest;
     }
+    else if t == "!is" {
+        tok.setMode(MODE_TYPE_DESC);
+        check tok.advance();
+        InlineTypeDesc notTd = check parseInlineTypeDesc(tok);
+        tok.setMode(MODE_NORMAL);
+        TypeTestNotExpr typeTest = { notTd, left: expr, semType: resolveInlineTypeDesc(notTd) };
+        return typeTest;
+    }
     else {
         return expr;
     }

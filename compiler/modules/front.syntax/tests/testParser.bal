@@ -253,6 +253,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "<map<any>>x", "<map<any>>x"],
          // type test
          ["V", "expr", "x is int", "x is int"],
+         ["V", "expr", "x !is int", "x !is int"],
          ["V", "expr", "x[1] is map<any>", "(x[1]) is map<any>"],
          ["V", "expr", "x is int == true", "(x is int) == true"],
          // binary op
