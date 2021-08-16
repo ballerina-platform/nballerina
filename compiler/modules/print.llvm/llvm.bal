@@ -627,7 +627,7 @@ public class Builder {
     public function iArithmeticNoWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        IntType ty = sameIntType(lhs, rhs);
+        IntType|RealType ty = sameNumberType(lhs, rhs);
         bb.addInsn(reg, "=", op, "nsw", ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
@@ -650,7 +650,7 @@ public class Builder {
     function binaryOpWrap(BinaryOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        IntType ty = sameIntType(lhs, rhs);
+        IntType|RealType ty = sameNumberType(lhs, rhs);
         bb.addInsn(reg, "=", op, ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
@@ -933,16 +933,16 @@ function sameIntegralType(Value v1, Value v2) returns IntegralType {
     panic err:illegalArgument("expected an integral type");
 }
 
-function sameIntType(Value v1, Value v2) returns IntType {
+function sameNumberType(Value v1, Value v2) returns IntType|RealType {
     Type ty1 = v1.ty;
     Type ty2 = v2.ty;
     if ty1 != ty2 {
         panic err:illegalArgument("expected same types");
     }
-    else if ty1 is IntType {
+    else if ty1 is IntType || ty1 is RealType {
         return ty1;
     }
-    panic err:illegalArgument("expected an int type");
+    panic err:illegalArgument("expected a number type");
 }
 
 function typeToString(RetType ty) returns string {

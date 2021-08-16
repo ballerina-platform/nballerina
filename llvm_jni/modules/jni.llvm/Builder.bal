@@ -100,6 +100,10 @@ public distinct class Builder {
         return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
+    public function fArithmetic(FloatArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
+        return self.binaryOpWrap(op, lhs, rhs, name);
+    }
+
     public function iArithmeticSigned(IntArithmeticSignedOp op, Value lhs, Value rhs, string? name=()) returns Value {
         return self.binaryOpWrap(op, lhs, rhs, name);
     }
@@ -108,7 +112,7 @@ public distinct class Builder {
         return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
-    function binaryOpWrap(IntOp op, Value lhs, Value rhs, string? name = ()) returns Value {
+    function binaryOpWrap(BinaryOp op, Value lhs, Value rhs, string? name = ()) returns Value {
         string regName = self.extractName(name);
         match op {
             "add" => {
