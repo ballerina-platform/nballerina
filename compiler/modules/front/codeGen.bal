@@ -951,11 +951,11 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
         // Type test
         var { td, left, semType } => {
-            return codeGenTypeTest(cx, bb, env, td, left, semType);
+            return codeGenTypeTest(cx, bb, env, td, left, semType, false);
         }
         //Type not test
         var { notTd, left, semType } => {
-            return codeGenTypeTestNot(cx, bb, env, notTd, left, semType);
+            return codeGenTypeTest(cx, bb, env, notTd, left, semType, true);
         }
         // Variable reference
         var { varName } => {
@@ -1109,22 +1109,20 @@ function codeGenVarRefExpr(CodeGenContext cx, string name, Environment env, bir:
             return { result, block: bb, binding };
 }
 
-function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType) returns CodeGenError|ExprEffect {
+function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType, boolean negated) returns CodeGenError|ExprEffect {
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
     // Constants should be resolved during constant folding
     bir:Register reg = <bir:Register>operand;        
     t:SemType diff = t:diff(reg.semType, semType);
     if t:isEmpty(cx.mod.tc, diff) {
-        // always true
-        return { result: true, block: bb };
+        return { result: !negated, block: bb };
     }
     t:SemType intersect = t:intersect(reg.semType, semType);
     if t:isEmpty(cx.mod.tc, intersect) {
-        // always false
-        return { result: true, block: bb };
+        return { result: negated, block: bb };
     }
     bir:Register result = cx.createRegister(t:BOOLEAN);
-    bir:TypeTestInsn insn = { operand: reg, semType, result };
+    bir:TypeTestInsn insn = { operand: reg, semType, result, negated};
     bb.insns.push(insn);
 
     Narrowing? narrowing = ();
@@ -1137,40 +1135,6 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
         };
     }
     return { result, block: nextBlock, narrowing };   
-}
-
-function codeGenTypeTestNot(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType) returns CodeGenError|ExprEffect {
-    var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
-    bir:Register reg = <bir:Register>operand;        
-    t:SemType diff = t:diff(reg.semType, semType);
-    if t:isEmpty(cx.mod.tc, diff) {
-        // always false
-        return { result: false, block: bb };
-    }
-    t:SemType intersect = t:intersect(reg.semType, semType);
-    if t:isEmpty(cx.mod.tc, intersect) {
-        // always true
-        return { result: true, block: bb };
-    }
-    bir:Register result = cx.createRegister(t:BOOLEAN);
-    bir:TypeTestInsn insn = { operand: reg, semType, result };
-    bb.insns.push(insn);
-
-    bir:Register result2 = cx.createRegister(t:BOOLEAN);
-    bir:BooleanNotInsn insn2 = { operand: result, result: result2 };
-    bb.insns.push(insn2);
-
-    Narrowing? narrowing = ();
-    if !(binding is ()) {
-        narrowing = {
-            binding,
-            ifTrue: intersect,
-            ifFalse: diff,
-            testInsn: bir:lastInsnRef(bb)
-        };
-    }
-    
-    return { result: result2, block: nextBlock, narrowing };   
 }
 
 function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:FunctionCallExpr expr) returns CodeGenError|RegExprEffect {

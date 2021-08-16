@@ -943,7 +943,14 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     else {
         return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
     }
-    buildStoreBoolean(builder, scaffold, hasType, insn.result);
+    if insn.negated {
+        buildStoreBoolean(builder, scaffold, 
+                    builder.iBitwise("xor", llvm:constInt(LLVM_BOOLEAN, 1), hasType), 
+                    insn.result);
+    }
+    else {
+        buildStoreBoolean(builder, scaffold, hasType, insn.result);
+    }
 }
 
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {

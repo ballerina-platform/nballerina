@@ -422,6 +422,7 @@ public type TypeTestInsn readonly & record {|
     # Holds value to be tested.
     Register operand;
     SemType semType;
+    boolean negated;
 |};
 
 
