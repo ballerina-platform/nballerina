@@ -117,7 +117,7 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
             TypeTestNotExpr typeTest = { notTd, left: expr, semType: resolveInlineTypeDesc(notTd) };
             return typeTest;
         }
-        return err:syntax("unknown operator");
+        return err:syntax("invalid operator");
     }
     else {
         return expr;
@@ -186,8 +186,8 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
 
 function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
-    err:Position pos = tok.currentPos();
     if t is "-"|"!"|"~" {
+        err:Position pos = tok.currentPos();
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
         UnaryExpr expr = { op: t, operand, pos };
