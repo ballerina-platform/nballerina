@@ -71,9 +71,41 @@ public function constInt(IntType ty, int val) returns ConstValue {
 
 // Corresponds to LLVMConstReal
 public function constReal(RealType ty, float val) returns ConstValue {
-    // XXX #307 use decimal for non-special floats 
-    return new ConstValue(ty, "0x" + int:toHexString(float:toBitsInt(val)));
-
+    string valRep;
+    if val.isInfinite() {
+        if val > 0.0 {
+            valRep = "0x7FF0000000000000";
+        }
+        else {
+            valRep = "0xFFF0000000000000";
+        }
+    }
+    else if val.isNaN() {
+        valRep = "0x7FF8000000000000";
+    }
+    else {
+        float exp = float:floor(float:log10(val));
+        float valBase = val / float:pow(10, exp);
+        string rep = valBase.toString();
+        if rep.length() > 7 {
+            int repInt = float:toBitsInt(val);
+            valRep = "0x" + int:toHexString(repInt).toUpperAscii();
+        }
+        else {
+            while rep.length() < 8 {
+                rep += "0";
+            }
+            rep += "e+";
+            if exp < 10.0 {
+                rep += "0" + (<int>exp).toString(); 
+            }
+            else {
+                rep += (<int>exp).toString();
+            }
+            valRep = rep;
+        }
+    }
+    return new ConstValue(ty, valRep);
 }
 
 // Corresponds to LLVMConstNull
