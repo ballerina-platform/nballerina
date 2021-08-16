@@ -221,7 +221,6 @@ function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:Binar
 function isEqual(SimpleConst c1, SimpleConst c2) returns boolean {
     if c1 is float {
         if c2 is float {
-            // JBUG #32173 can't use `==` even for non-NaN case, -0.0 == 0.0 is wrong when not casted to float.
             return float:isNaN(c1) && float:isNaN(c2) ? true : c1 == c2;
         }
         else {
