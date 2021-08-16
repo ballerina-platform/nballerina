@@ -13,8 +13,8 @@
 
 #include <sys/mman.h>
 
-static uint64_t DEFAULT_HEAP_HALF_SIZE = 1073741824; // 1GB
-static uint64_t HEAP_HEADER_SIZE = 8; // in bytes
+static uint64_t DEFAULT_HEAP_HALF_SIZE = 3221225472; // 1GB
+static uint64_t HEAP_HEADER_SIZE = 8;                // in bytes
 
 uint8_t *from_space_ptr;
 uint8_t *to_space_ptr;
@@ -26,10 +26,12 @@ extern void get_roots();
 
 void _bal_init_heap() {
     int page_size = getpagesize();
-    const char *heap_env = getenv("BAL_HEAP");
-    uint64_t heap_half_size = (heap_env != NULL) ? atoi(heap_env) : DEFAULT_HEAP_HALF_SIZE;
+    const char *heap_env_val = getenv("BAL_HEAP");
+    uint64_t heap_half_size = (heap_env_val != NULL) ? atoi(heap_env_val) : DEFAULT_HEAP_HALF_SIZE;
     // Make sure heap size is a multiple of page size
-    heap_half_size = (heap_half_size / page_size) * page_size;
+    if (heap_half_size % page_size != 0) {
+        heap_half_size = ((heap_half_size / page_size) + 1) * page_size;
+    }
 
     // Removing MAP_ANONYMOUS fails the mmap(), check this
     from_space_ptr = mmap(NULL, heap_half_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
@@ -56,6 +58,9 @@ void collect() {
 }
 
 UntypedPtr _bal_alloc(uint64_t nBytes) {
+    if (nBytes % 8 != 0) {
+        nBytes = ((nBytes / 8) + 1) * nBytes;
+    }
     nBytes = nBytes + HEAP_HEADER_SIZE;
     if (alloc_ptr + nBytes > heap_limit_ptr) {
         collect();
@@ -63,7 +68,7 @@ UntypedPtr _bal_alloc(uint64_t nBytes) {
     if (alloc_ptr + nBytes > heap_limit_ptr) {
         abort();
     }
-    UntypedPtr p = (UntypedPtr) (alloc_ptr + HEAP_HEADER_SIZE);
+    UntypedPtr p = (UntypedPtr)(alloc_ptr + HEAP_HEADER_SIZE);
     alloc_ptr = alloc_ptr + nBytes;
     return p;
 }
