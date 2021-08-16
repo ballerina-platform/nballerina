@@ -5,15 +5,6 @@
 #define IMMEDIATE_INT_MAX  ((1L << (TAG_SHIFT - 1)) - 1)
 #define IMMEDIATE_INT_TRUNCATE(n) (n & ((1L << TAG_SHIFT) - 1))
 
-// We are trying to avoid doing inttoptr or ptrtoint in address space 1
-
-static inline TaggedPtr ptrAddShiftedTag(UntypedPtr tp, uint64_t shiftedTag) {
-    char *p = (char *)tp;
-    uint64_t bits = (uint64_t)p;
-    bits |= shiftedTag;
-    p = (char *)bits;
-    return (TaggedPtr)p;
-}
 
 TaggedPtr _bal_int_to_tagged(int64_t n) {
     if (likely(n >= IMMEDIATE_INT_MIN & n <= IMMEDIATE_INT_MAX)) {

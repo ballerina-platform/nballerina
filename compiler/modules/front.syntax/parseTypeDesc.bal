@@ -15,9 +15,9 @@ function parseInlineTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
         }
         return "any";
     }
-    else if t is InlineLeafTypeDesc {
+    else if t is InlineBasicTypeDesc {
         check tok.advance();
-        return t;
+        return parseInlineUnionTypeDesc(tok, t);
     }
     else if t is "map" {
         check tok.advance();
@@ -28,6 +28,37 @@ function parseInlineTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
         return td;
     }
     return parseError(tok, "expected type descriptor");    
+}
+
+function parseInlineUnionTypeDesc(Tokenizer tok, InlineBasicTypeDesc td) returns InlineTypeDesc|err:Syntax {
+    InlineAltTypeDesc left = check parseInlineOptionalTypeDesc(tok, td);
+    while true {
+        Token? t = tok.current();
+        if t != "|" {
+            break;
+        }
+        check tok.advance();
+        t = tok.current();
+        if !(t is InlineBasicTypeDesc) {
+            return parseError(tok, "expected basic type name after |");
+        }
+        else {
+            check tok.advance();
+            var right = check parseInlineOptionalTypeDesc(tok, t);
+            InlineUnionTypeDesc u = { left, right };
+            left = u;
+        }
+    }
+    return left;
+}
+
+function parseInlineOptionalTypeDesc(Tokenizer tok, InlineBasicTypeDesc td) returns InlineAltTypeDesc|err:Syntax {
+    Token? t = tok.current();
+    if t == "?" {
+        check tok.advance();
+        return { left: td, right: "()" };
+    }
+    return td;
 }
 
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {

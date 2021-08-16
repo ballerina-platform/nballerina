@@ -39,7 +39,7 @@ public type ConstDefn record {|
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr;
-public type Expr IntLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
@@ -106,11 +106,6 @@ public type VarDeclStmt record {|
     InlineTypeDesc td;
     string varName;
     Expr initExpr;
-    // For now this should be filled in during parse
-    // using a prebuilt Semtype such as `t:INT`.
-    // Later on will support references to public type definitions,
-    // and it will be filled in later.
-    t:SemType? semType = ();
     boolean isFinal;
 |};
 
@@ -237,7 +232,7 @@ public type TypeTestExpr record {|
 |};
 
 public type ConstValueExpr record {|
-    ()|boolean|int|string value;
+    ()|boolean|int|float|string value;
     // This is non-nil when the static public type of the expression
     // contains more than one shape.
     // When it contains exactly one shape, then the shape is
@@ -271,11 +266,21 @@ public type FpLiteralExpr record {|
 
 // This is the subtype of TypeDesc that we currently allow
 // within expressions and statements.
-public type InlineTypeDesc InlineLeafTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc;
+public type InlineTypeDesc InlineBasicTypeDesc|InlineUnionTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc|ANY;
 
 public const ANY = "any";
 
-public type InlineLeafTypeDesc "boolean"|"int"|"string"|ANY;
+public type InlineBasicTypeDesc "boolean"|"int"|"float"|"string";
+
+public type InlineAltTypeDesc InlineUnionTypeDesc|InlineBasicTypeDesc;
+
+public type InlineUnionTypeDesc record {|
+    *BinaryTypeDesc;
+    // actually always `|`
+    BinaryTypeOp op = "|";
+    InlineAltTypeDesc left;
+    InlineAltTypeDesc|"()" right;
+|};
 
 public type InlineArrayTypeDesc record {|
     *ListTypeDesc;
@@ -284,7 +289,6 @@ public type InlineArrayTypeDesc record {|
     // this gets an error about attempting to make a non-public symbol visible
     ANY rest = ANY;
 |};
-
 
 public type InlineMapTypeDesc record {|
     *MappingTypeDesc;

@@ -4,6 +4,8 @@
 // "i8" corresponds to LLVMInt8Type
 // "i1" corresponds to LLVMInt1Type
 public type IntType "i64"|"i32"|"i16"|"i8"|"i1";
+public type RealType "double";
+
 
 // Used to constrain parameters that represent an alignment
 public type Alignment 1|2|4|8|16;
@@ -20,6 +22,10 @@ public type IntegralType IntType|PointerType;
 public function pointerType(Type ty, int addressSpace = 0) returns PointerType {
     return { pointsTo: ty, addressSpace };
 }
+
+# https://github.com/llvm/llvm-project/blob/ad4bb8280952c2cacf497e30560ee94c119b36e0/llvm/include/llvm/IR/Type.h#L259
+# Valid type for a register in codegen. This includes all first-class types except struct and array types.
+public type SingleValueType IntegralType|RealType|PointerType;
 
 // Corresponds to LLVMArrayType
 public type ArrayType readonly & record {|
@@ -44,7 +50,7 @@ function getTypeAtIndex(StructType ty, int index) returns Type {
     return ty.elementTypes[index];
 }
 
-public type Type IntType|PointerType|StructType|ArrayType;
+public type Type IntType|RealType|PointerType|StructType|ArrayType;
 
 // A RetType is valid only as the return type of a function
 public type RetType Type|"void";
