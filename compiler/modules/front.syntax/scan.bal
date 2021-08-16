@@ -90,7 +90,6 @@ const FRAG_CIRCUMFLEX_EQUAL = 0x53;
 const FRAG_LESS_THAN_LESS_THAN_EQUAL = 0x54;
 const FRAG_GREATER_THAN_GREATER_THAN_EQUAL = 0x55;
 const FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL = 0x56;
-const FRAG_EXCLAM_I_S = 0x57;
  
 const FRAG_KEYWORD = 0x80;
 
@@ -167,7 +166,6 @@ function createFragTokens() returns readonly & FixedToken?[] {
     ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = toFixedToken("<<=");
     ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>=");
     ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>>=");
-    ft[<int>FRAG_EXCLAM_I_S] = toFixedToken("!is");
     // JBUG error if hex used for 32 and 128
     foreach int cp in 32 ..< 128 {
         string s = checkpanic string:fromCodePointInt(cp);
@@ -371,13 +369,6 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                         i += 1;
                         endFragment(FRAG_NOT_EQUAL, i, result);
                         continue;
-                    }
-                    if cp2 == CP_LOWER_I {
-                        if i + 1 < len && codePoints[i + 1] == CP_LOWER_S {
-                            i += 2;
-                            endFragment(FRAG_EXCLAM_I_S, i, result);
-                            continue;
-                        }
                     }
                 }
                 endFragment(CP_EXCLAM, i, result);

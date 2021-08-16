@@ -106,13 +106,18 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
         TypeTestExpr typeTest = { td, left: expr, semType: resolveInlineTypeDesc(td) };
         return typeTest;
     }
-    else if t == "!is" {
-        tok.setMode(MODE_TYPE_DESC);
+    if t == "!" {
         check tok.advance();
-        InlineTypeDesc notTd = check parseInlineTypeDesc(tok);
-        tok.setMode(MODE_NORMAL);
-        TypeTestNotExpr typeTest = { notTd, left: expr, semType: resolveInlineTypeDesc(notTd) };
-        return typeTest;
+        Token? t2 = tok.current();
+        if t2 is "is" {
+            tok.setMode(MODE_TYPE_DESC);
+            check tok.advance();
+            InlineTypeDesc notTd = check parseInlineTypeDesc(tok);
+            tok.setMode(MODE_NORMAL);
+            TypeTestNotExpr typeTest = { notTd, left: expr, semType: resolveInlineTypeDesc(notTd) };
+            return typeTest;
+        }
+        return err:syntax("unknown operator");
     }
     else {
         return expr;
@@ -181,8 +186,13 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
 
 function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
-    if t is "-"|"!"|"~" {
-        err:Position pos = tok.currentPos();
+    err:Position pos = tok.currentPos();
+    if t is "-"|"~" {
+        check tok.advance();
+        Expr operand = check parseUnaryExpr(tok);
+        UnaryExpr expr = { op: t, operand, pos };
+        return expr;
+    } else if t is "!" {
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
         UnaryExpr expr = { op: t, operand, pos };
