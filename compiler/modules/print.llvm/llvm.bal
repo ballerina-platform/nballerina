@@ -83,8 +83,11 @@ public function constReal(RealType ty, float val) returns ConstValue {
     else if val.isNaN() {
         valRep = "0x7FF8000000000000";
     }
+    else if val == 0.0 {
+        valRep = "0.000000e+00";
+    }
     else {
-        float exp = float:floor(float:log10(val));
+        float exp = float:floor(float:log10(float:abs(val)));
         float valBase = val / float:pow(10, exp);
         string rep = valBase.toString();
         if rep.length() > 7 {
@@ -101,6 +104,9 @@ public function constReal(RealType ty, float val) returns ConstValue {
             }
             else {
                 rep += (<int>exp).toString();
+            }
+            if val < 0.0 {
+                rep = "-" + rep;
             }
             valRep = rep;
         }
