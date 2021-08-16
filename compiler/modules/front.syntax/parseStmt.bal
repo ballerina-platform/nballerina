@@ -58,7 +58,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parseVarDeclStmt(tok, true);
         }
-        var td if td is InlineLeafTypeDesc|"map" => {
+        var td if td is InlineBasicTypeDesc|ANY|"map" => {
             return parseVarDeclStmt(tok);
         }
         "("|[DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {
@@ -174,7 +174,7 @@ function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDec
         check tok.expect("=");
         Expr initExpr = check parseExpr(tok);
         check tok.expect(";");
-        return { td, varName: cur[1], initExpr, semType: resolveInlineTypeDesc(td), isFinal };
+        return { td, varName: cur[1], initExpr, isFinal };
     }
     return parseError(tok, "invalid VarDeclStmt");
 }

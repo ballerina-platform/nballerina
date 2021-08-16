@@ -162,6 +162,8 @@ public enum InsnName {
     INSN_INT_ARITHMETIC_BINARY,
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY,
     INSN_INT_BITWISE_BINARY,
+    INSN_FLOAT_ARITHMETIC_BINARY,
+    INSN_FLOAT_NEGATE,
     INSN_COMPARE,
     INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
@@ -197,6 +199,7 @@ public type InsnBase record {
 
 public type Insn 
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
+    |FloatArithmeticBinaryInsn|FloatNegateInsn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
@@ -205,10 +208,11 @@ public type Insn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
 
 public type Operand ConstOperand|Register;
-public type SimpleConstOperand ()|boolean|int;
+public type SimpleConstOperand ()|boolean|int|float;
 public type ConstOperand SimpleConstOperand|string;
 public type StringOperand string|Register;
 public type IntOperand int|Register;
+public type FloatOperand float|Register;
 public type BooleanOperand boolean|Register;
 public type FunctionOperand FunctionRef|Register;
 
@@ -258,7 +262,24 @@ public type BooleanNotInsn readonly & record {|
     Register operand;
 |};
 
-public type OrderType "int"|"boolean"|"string";
+// This is not a PPI
+public type FloatArithmeticBinaryInsn readonly & record {|
+    *InsnBase;
+    INSN_FLOAT_ARITHMETIC_BINARY name = INSN_FLOAT_ARITHMETIC_BINARY;
+    ArithmeticBinaryOp op;
+    Register result;
+    FloatOperand[2] operands;
+    err:Position position;
+|};
+
+public type FloatNegateInsn readonly & record {|
+    *InsnBase;
+    INSN_FLOAT_NEGATE name = INSN_FLOAT_NEGATE;
+    Register result;
+    Register operand;
+|};
+
+public type OrderType "float"|"int"|"boolean"|"string";
 # This does ordered comparision
 # Equality and inequality are done by equal
 public type CompareInsn readonly & record {|
@@ -269,7 +290,6 @@ public type CompareInsn readonly & record {|
     Register result;
     Operand[2] operands;
 |};
-
 
 # Constructs a new mutable list value.
 public type ListConstructInsn readonly & record {|
