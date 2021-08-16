@@ -709,21 +709,17 @@ function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 }
 
 function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarDeclStmt stmt) returns CodeGenError|StmtEffect {
-    var { varName, initExpr, semType, isFinal } = stmt;
+    var { varName, initExpr, td, isFinal } = stmt;
     if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
-    if semType is () {
-        panic error("type was not normalized");
-    }
-    else {
-        initExpr = check cx.foldExpr(env, initExpr, semType);
-        var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
-        bir:Register result = cx.createRegister(semType, varName);
-        bir:AssignInsn insn = { result, operand };
-        nextBlock.insns.push(insn);
-        return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };
-    }   
+    t:SemType semType = s:resolveInlineTypeDesc(td);
+    initExpr = check cx.foldExpr(env, initExpr, semType);
+    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
+    bir:Register result = cx.createRegister(semType, varName);
+    bir:AssignInsn insn = { result, operand };
+    nextBlock.insns.push(insn);
+    return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
 }
 
 function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:AssignStmt stmt) returns CodeGenError|StmtEffect {
@@ -847,21 +843,38 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 bir:IntArithmeticBinaryInsn insn = { op, operands: pair[1], result, position: pos };
                 bb.insns.push(insn);
             }
-            else if pair is StringOperandPair {
+            else if pair is FloatOperandPair {
+                result = cx.createRegister(t:FLOAT);
+                bir:FloatArithmeticBinaryInsn insn = { op, operands: pair[1], result, position: pos };
+                bb.insns.push(insn);
+            }
+            else if pair is StringOperandPair { // XXX a bug here
                 result = cx.createRegister(t:STRING);
-                bir:StringConcatInsn insn = { operands:  pair[1], result };
+                bir:StringConcatInsn insn = { operands: pair[1], result };
                 bb.insns.push(insn);
             }
             else {
-                return cx.semanticErr("+ not supported for operand types");
+                return cx.semanticErr(`${op} not supported for operand types`);
             }               
             return { result, block: nextBlock };
         }
         // Negation
         { op: "-",  operand: var o, pos: var pos } => {
-            var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, o);
-            bir:Register result = cx.createRegister(t:INT);
-            bir:IntArithmeticBinaryInsn insn = { op: "-", operands: [0, operand], result, position: pos };
+            var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
+            TypedOperand? typed = typedOperand(operand);
+            bir:Register result;
+            bir:Insn insn;
+            if typed is ["int", bir:IntOperand] {
+                result = cx.createRegister(t:INT);
+                insn = <bir:IntArithmeticBinaryInsn> { op: "-", operands: [0, typed[1]], result, position: pos };
+            }
+            else if typed is ["float", bir:FloatOperand] {
+                result = cx.createRegister(t:FLOAT);
+                insn = <bir:FloatNegateInsn> { operand: <bir:Register>typed[1], result };
+            }
+            else {
+                return cx.semanticErr(`operand of ${"-"} must be int or float`);
+            }
             bb.insns.push(insn);
             return { result, block: nextBlock };
         }
@@ -904,7 +917,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
             var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
             TypedOperandPair? pair = typedOperandPair(l, r);
-            if pair is IntOperandPair|BooleanOperandPair|StringOperandPair {
+            if pair is FloatOperandPair|IntOperandPair|BooleanOperandPair|StringOperandPair {
                 bir:CompareInsn insn = { op, orderType: pair[0], operands: pair[1], result };
                 bb.insns.push(insn);
                 return { result, block: nextBlock };  
@@ -1358,15 +1371,16 @@ function bitwiseOperandType(bir:IntOperand operand) returns t:SemType {
 type NilOperand ()|bir:Register;
 type BooleanOperandPair readonly & ["boolean", [bir:BooleanOperand, bir:BooleanOperand]];
 type IntOperandPair readonly & ["int", [bir:IntOperand, bir:IntOperand]];
+type FloatOperandPair readonly & ["float", [bir:FloatOperand, bir:FloatOperand]];
 type StringOperandPair readonly & ["string", [bir:StringOperand, bir:StringOperand]];
-
 type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 
-type TypedOperandPair BooleanOperandPair|IntOperandPair|StringOperandPair|NilOperandPair;
+type TypedOperandPair BooleanOperandPair|IntOperandPair|FloatOperandPair|StringOperandPair|NilOperandPair;
 
 type TypedOperand readonly & (["array", bir:Register]
                               |["map", bir:Register]
                               |["string", bir:StringOperand]
+                              |["float", bir:FloatOperand]
                               |["int", bir:IntOperand]
                               |["boolean", bir:BooleanOperand]
                               |["nil", NilOperand]);
@@ -1376,6 +1390,9 @@ function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperand
     TypedOperand? r = typedOperand(rhs);
     if l is ["int", bir:IntOperand] && r is ["int", bir:IntOperand] {
         return ["int", [l[1], r[1]]];
+    }
+    if l is ["float", bir:FloatOperand] && r is ["float", bir:FloatOperand] {
+        return ["float", [l[1], r[1]]];
     }
     if l is ["string", bir:StringOperand] && r is ["string", bir:StringOperand] {
         return ["string", [l[1], r[1]]];
@@ -1400,6 +1417,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         else if t:isSubtypeSimple(operand.semType, t:INT) {
             return ["int", operand];
         }
+        else if t:isSubtypeSimple(operand.semType, t:FLOAT) {
+            return ["float", operand];
+        }
         else if t:isSubtypeSimple(operand.semType, t:STRING) {
             return ["string", operand];
         }
@@ -1415,6 +1435,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
     }
     else if operand is int {
         return ["int", operand];
+    }
+    else if operand is float {
+        return ["float", operand];
     }
     else if operand is boolean {
         return ["boolean", operand];

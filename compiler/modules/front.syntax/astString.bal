@@ -174,8 +174,8 @@ function blockToWords(Word[] w, Stmt[] body) {
     w.push(<Word>(firstInBlock ? LF : LF_OUTDENT), "}");
 }
 
-function typeDescToWords(Word[] w, TypeDesc td, boolean wrap = false) {
-    if td is string {
+function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
+    if td is InlineBasicTypeDesc|ANY {
         w.push(td);
         return;
     }
@@ -183,30 +183,48 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean wrap = false) {
         w.push(td.ref);
         return;
     }
-    if wrap {
-        w.push("(");
-    }
-    if td is ListTypeDesc {
-        typeDescToWords(w, td.rest, true);
-        w.push(CLING);
-        w.push("[", "]");
-    }
     else if td is MappingTypeDesc {
         w.push("map", CLING, "<", CLING);
         typeDescToWords(w, td.rest);
         w.push(CLING, ">");
+        return;
+    }
+   
+    if td is ListTypeDesc {
+        if wrap != false {
+            w.push("(");
+        }
+        typeDescToWords(w, td.rest, true);
+        w.push(CLING);
+        w.push("[", "]");
+        if wrap != false {
+            w.push(")");
+        }
     }
     else if td is BinaryTypeDesc {
-        typeDescToWords(w, td.left, true);
-        w.push(td.op);
-        typeDescToWords(w, td.right, true);
+        // subset 6 does not allow parentheses
+        // so we need to take care not to add them unnecessarily
+        boolean noWrap = wrap == false || wrap == td.op;
+        if !noWrap {
+            w.push("(");
+        }
+        typeDescToWords(w, td.left, td.op);
+        // JBUG error if `===` used instead if `is`
+        if td.op === "|" && td.right is "()" {
+            w.push(CLING, "?");
+        }
+        else {
+            w.push(td.op);
+            typeDescToWords(w, td.right, td.op);
+        }
+        if !noWrap {
+            w.push(")");
+        }
     }
     else {
-        panic err:unimplemented(`typedesc not supported ${(typeof td).toString()}`);
+        panic err:unimplemented(`typedesc not supported ${td.toString()}`);
     }
-    if wrap {
-        w.push(")");
-    }
+   
 }
 
 function exprsToWords(Word[] w, Expr[] exprs) {
@@ -240,6 +258,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         else {
             w.push(expr.digits);
         }
+    }
+    else if expr is FpLiteralExpr {
+        w.push(expr.untypedLiteral, CLING, expr.typeSuffix);
     }
     else if expr is UnaryExpr {
         if wrap {
