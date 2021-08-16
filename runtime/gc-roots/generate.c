@@ -241,29 +241,24 @@ void insert_info_to(statepoint_table_t* table, stackmap_header_t* map) {
     }
 }
 
-statepoint_table_t* generate_table(void* bal_stackmap, void* rt_stackmap, float load_factor) {
-
-    uint8_t* version = (uint8_t*)bal_stackmap;
+statepoint_table_t* generate_table(void* stackmap, float load_factor) {
+    uint8_t* version = (uint8_t*)stackmap;
     if (*version != 3) {
         printf("error: only LLVM stackmap version 3 is supported.\n");
         assert(false && "see above");
         return NULL;
     }
 
-    stackmap_header_t* bal_header = (stackmap_header_t*)bal_stackmap;
-    stackmap_header_t* rt_header = (stackmap_header_t*)rt_stackmap;
+    stackmap_header_t* bal_header = (stackmap_header_t*)stackmap;
 
     assert(bal_header->reserved1 == 0 && "expected to be 0");
     assert(bal_header->reserved2 == 0 && "expected to be 0");
-    assert(rt_header->reserved1 == 0 && "expected to be 0");
-    assert(rt_header->reserved2 == 0 && "expected to be 0");
 
     uint64_t numCallsites = bal_header->numRecords;
 
-    statepoint_table_t* table = new_table(load_factor, bal_header->numRecords + rt_header->numRecords);
+    statepoint_table_t* table = new_table(load_factor, bal_header->numRecords);
 
-    insert_info_to(table, bal_stackmap);
-    insert_info_to(table, rt_stackmap);
+    insert_info_to(table, stackmap);
 
     return table;
 }

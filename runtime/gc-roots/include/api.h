@@ -92,7 +92,7 @@ frame_info_t* lookup_return_address(statepoint_table_t *table, uint64_t retAddr)
  * the size of the table.
  *
  */
-statepoint_table_t* generate_table(void* bal_stackmap, void* rt_stackmap, float load_factor);
+statepoint_table_t* generate_table(void* stackmap, float load_factor);
 
 
 /**
