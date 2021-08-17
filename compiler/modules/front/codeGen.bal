@@ -1131,8 +1131,7 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
             binding,
             ifTrue: intersect,
             ifFalse: diff,
-            testInsn: bir:lastInsnRef(bb),
-            negated: negated
+            testInsn: bir:lastInsnRef(bb)
         };
     }
     return { result, block: nextBlock, narrowing };   
