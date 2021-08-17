@@ -1,6 +1,6 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic(i64) noreturn cold
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare zeroext i1 @_bal_exact_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 define void @_B_main() {
@@ -27,7 +27,7 @@ define void @_B_main() {
   store i8 addrspace(1)* %18, i8 addrspace(1)** %3
   %19 = load i8 addrspace(1)*, i8 addrspace(1)** %2
   %20 = load i8 addrspace(1)*, i8 addrspace(1)** %3
-  %21 = call i1 @_bal_eq(i8 addrspace(1)* %19, i8 addrspace(1)* %20)
+  %21 = call i1 @_bal_exact_eq(i8 addrspace(1)* %19, i8 addrspace(1)* %20)
   store i1 %21, i1* %1
   %22 = load i1, i1* %1
   %23 = zext i1 %22 to i64
@@ -41,7 +41,7 @@ define void @_B_main() {
   store i8 addrspace(1)* %27, i8 addrspace(1)** %7
   %28 = load i8 addrspace(1)*, i8 addrspace(1)** %6
   %29 = load i8 addrspace(1)*, i8 addrspace(1)** %7
-  %30 = call i1 @_bal_eq(i8 addrspace(1)* %28, i8 addrspace(1)* %29)
+  %30 = call i1 @_bal_exact_eq(i8 addrspace(1)* %28, i8 addrspace(1)* %29)
   %31 = xor i1 %30, 1
   store i1 %31, i1* %5
   %32 = load i1, i1* %5
@@ -56,7 +56,7 @@ define void @_B_main() {
   store i8 addrspace(1)* %37, i8 addrspace(1)** %11
   %38 = load i8 addrspace(1)*, i8 addrspace(1)** %10
   %39 = load i8 addrspace(1)*, i8 addrspace(1)** %11
-  %40 = call i1 @_bal_eq(i8 addrspace(1)* %38, i8 addrspace(1)* %39)
+  %40 = call i1 @_bal_exact_eq(i8 addrspace(1)* %38, i8 addrspace(1)* %39)
   store i1 %40, i1* %9
   %41 = load i1, i1* %9
   %42 = zext i1 %41 to i64

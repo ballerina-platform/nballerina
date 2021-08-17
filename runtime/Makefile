@@ -34,7 +34,7 @@ $(BCLIB): $(BCS)
 	$(CLANG) $(CFLAGS) -c -O2 -emit-llvm -o $@ $<
 
 %.bc: %.ll
-	$(LLVM_AS) --data-layout=$(shell clang -x c /dev/null -emit-llvm -S -o - | sed -n 's/target datalayout = \(".*"\)/\1/p') -o=$@ $<
+	$(LLVM_AS) --data-layout=$(shell $(CLANG) -x c /dev/null -emit-llvm -S -o - | sed -n 's/target datalayout = \(".*"\)/\1/p') -o=$@ $<
 
 $(OBJS) $(BCS): $(INCLUDES)
 
