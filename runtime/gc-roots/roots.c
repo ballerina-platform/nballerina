@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define SKIP_FROM_END 2 // skip : print_backtrace, mark_roots, call_mark_roots, dummy_func
-#define SKIP_FROM_BEGINING 4 // skip : main, ...
+#define SKIP_FROM_END 3
+#define SKIP_FROM_BEGINING 4
 #define FRAME_MIN_SIZE SKIP_FROM_BEGINING + 5
 #define THREAD 0
 
@@ -54,19 +54,34 @@ void get_frames(FrameArray *frameArray) {
     backtrace_full(state, SKIP_FROM_END, on_frame, on_error, frameArray);
 }
 
-void get_roots() {
+typedef uint8_t *Root;
+
+void get_roots(void (*mark_roots)(Root *)) {
     FrameArray frameArray = {0, 0};
     get_frames(&frameArray);
 
     Frame *f = frameArray.frames;
     Frame *lastFrame = f + frameArray.length - SKIP_FROM_BEGINING;
 
+    // 2 is used to get the rbp of _bal_alloc
+    // 16 is the offset for function
+    uint8_t *rsp = (uint8_t*)__builtin_frame_address(2) + 16;
+
     // Find roots using stack map
     // 1. Iterate over frames and consider one frame_address here the frame corresponds to one call site
     // 2. Lookup the table for frame information for given frame address
     // 3. Interate over records of that frame and find heap references(roots)
     for (; f < lastFrame; f++) {
-        printf("%p\n", f->pc);
+        printf("f->pc : %p\n", f->pc);
+        frame_info_t* frame = lookup_return_address(table, f->pc);
+        for (size_t p = 0; p < frame->numSlots; p++) {
+            pointer_slot_t* psl = frame->slots + p;
+            Root* ptr = (Root*)(rsp + psl->offset);
+            printf("root taken from stack map : %p\n", *ptr);
+            mark_roots(ptr);
+        }
+        // TODO: check whether we remove libbacktrace
+        rsp = rsp + frame->frameSize + 8;
     }
     free(frameArray.frames);
 }

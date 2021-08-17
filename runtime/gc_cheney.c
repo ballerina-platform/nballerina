@@ -22,7 +22,9 @@ uint8_t *alloc_ptr;
 uint8_t *scan_ptr;
 uint8_t *heap_limit_ptr;
 
-extern void get_roots();
+typedef uint8_t *Root; // Denotes address of the heap
+typedef void (*mark_roots)(Root *);
+extern void get_roots(mark_roots);
 
 void _bal_init_heap() {
     int page_size = getpagesize();
@@ -49,9 +51,23 @@ void _bal_init_heap() {
     }
 }
 
+// argument should be the address of stack.
+// i.e. 0x7fffffffdb90
+// 0x7fffffffdb90 contains the address of the heap
+// This content should be pointed to new location
+void copy(Root* root) {
+    uint64_t *heap_header = (uint64_t *)(*root - HEAP_HEADER_SIZE);
+    if (*heap_header ^ 1) { // last bit is 0, no forward pointer
+        // set forward pointer
+    }
+    **root = heap_header;
+}
+
 void collect() {
     printf("%s\n", "Collect");
-    get_roots();
+    get_roots(copy);
+    // get_roots needs to take a function pointer that it will call for each root found
+
     // get_roots() -> calls function in gc-roots, should pass rsp as parameter
     // swap from_space <-> to_space
     // should update heap_limit_ptr
