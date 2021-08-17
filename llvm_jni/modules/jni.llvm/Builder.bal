@@ -248,6 +248,11 @@ public distinct class Builder {
         return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
+    public function sIToFP(Value val, RealType destTy, string? name=()) returns Value {
+        string reg = self.extractName(name);
+        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+    }
+
     function extractName(string? name) returns string {
         if name is () {
             return "";
@@ -497,6 +502,12 @@ function jLLVMBuildFNeg(handle builder, handle val, handle name) returns handle 
     name: "LLVMBuildFNeg",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildSIToFP(handle builder, handle val, handle destTy, handle name) returns handle = @java:Method {
+    name: "LLVMBuildSIToFP",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "java.lang.String"]
 } external;
 
 function jLLVMSetAlignment(handle valueRef, int bytes) = @java:Method {
