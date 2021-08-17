@@ -10,60 +10,44 @@ define void @_B_main() {
   %3 = alloca i64
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i64
-  %6 = alloca i64
-  %7 = alloca i8 addrspace(1)*
-  %8 = alloca i64
-  %9 = alloca i8 addrspace(1)*
-  %10 = alloca i64
-  %11 = alloca i8
-  %12 = load i8*, i8** @_bal_stack_guard
-  %13 = icmp ult i8* %11, %12
-  br i1 %13, label %26, label %14
-14:
-  %15 = call i64 @_B_neg(i64 17)
-  store i64 %15, i64* %1
-  %16 = load i64, i64* %1
-  store i64 %16, i64* %neg1
-  %17 = load i64, i64* %neg1
-  %18 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %17)
-  call void @_Bio__println(i8 addrspace(1)* %18)
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i64
+  %8 = alloca i8 addrspace(1)*
+  %9 = alloca i8
+  %10 = load i8*, i8** @_bal_stack_guard
+  %11 = icmp ult i8* %9, %10
+  br i1 %11, label %26, label %12
+12:
+  %13 = call i64 @_B_neg(i64 17)
+  store i64 %13, i64* %1
+  %14 = load i64, i64* %1
+  store i64 %14, i64* %neg1
+  %15 = load i64, i64* %neg1
+  %16 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %15)
+  call void @_Bio__println(i8 addrspace(1)* %16)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %19 = call i64 @_B_neg(i64 0)
-  store i64 %19, i64* %3
-  %20 = load i64, i64* %3
-  %21 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %20)
-  call void @_Bio__println(i8 addrspace(1)* %21)
+  %17 = call i64 @_B_neg(i64 0)
+  store i64 %17, i64* %3
+  %18 = load i64, i64* %3
+  %19 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %18)
+  call void @_Bio__println(i8 addrspace(1)* %19)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  %22 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 1)
-  %23 = extractvalue {i64, i1} %22, 1
-  br i1 %23, label %36, label %27
-24:
-  %25 = load i64, i64* %10
-  call void @_bal_panic(i64 %25)
-  unreachable
+  %20 = call i64 @_B_neg(i64 -1)
+  store i64 %20, i64* %5
+  %21 = load i64, i64* %5
+  %22 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %21)
+  call void @_Bio__println(i8 addrspace(1)* %22)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %23 = call i64 @_B_negneg(i64 1)
+  store i64 %23, i64* %7
+  %24 = load i64, i64* %7
+  %25 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %24)
+  call void @_Bio__println(i8 addrspace(1)* %25)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8
+  ret void
 26:
   call void @_bal_panic(i64 516)
   unreachable
-27:
-  %28 = extractvalue {i64, i1} %22, 0
-  store i64 %28, i64* %5
-  %29 = load i64, i64* %5
-  %30 = call i64 @_B_neg(i64 %29)
-  store i64 %30, i64* %6
-  %31 = load i64, i64* %6
-  %32 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %31)
-  call void @_Bio__println(i8 addrspace(1)* %32)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %7
-  %33 = call i64 @_B_negneg(i64 1)
-  store i64 %33, i64* %8
-  %34 = load i64, i64* %8
-  %35 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %34)
-  call void @_Bio__println(i8 addrspace(1)* %35)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %9
-  ret void
-36:
-  store i64 1537, i64* %10
-  br label %24
 }
 define internal i64 @_B_neg(i64 %0) {
   %x = alloca i64

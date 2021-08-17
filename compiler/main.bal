@@ -2,6 +2,7 @@ import wso2/nballerina.bir;
 import wso2/nballerina.front;
 import wso2/nballerina.nback;
 import wso2/nballerina.err;
+import wso2/nballerina.print.llvm;
 
 import ballerina/io;
 import ballerina/file;
@@ -18,7 +19,8 @@ public type Options record {|
 const LOWER = "abcdefghijklmnopqrstuvwxyz";
 const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const string VALID_GC_NAME_CHARS = LOWER + UPPER + "-_";
-
+# The preferred output extension for the output filename.
+const OUTPUT_EXTENSION = ".ll";
 const SOURCE_EXTENSION = ".bal";
 public function main(string[] filenames, *Options opts) returns error? {
     string? gc = check validGcName(opts.gc);
@@ -31,7 +33,7 @@ public function main(string[] filenames, *Options opts) returns error? {
             check showTypes(filename);
             continue;
         }
-        check compileFile(filename, check chooseOutputFilename(filename, opts.outDir), { gcName: gc });
+        check compileFile(filename, gc, opts);
     }  
 }
 
@@ -50,13 +52,23 @@ function validGcName(string? gcName) returns string|error? {
 }
 
 //  outputFilename of () means don't output anything
-function compileFile(string filename, string? outputFilename, *nback:Options nbackOptions) returns CompileError {
+function compileFile(string filename, string? gcName, *Options opts) returns CompileError {
+    string? outputFileName = checkpanic chooseOutputFilename(filename, opts.outDir);
     bir:ModuleId id = {
        names: [filename],
        organization: "dummy"
     };
-    bir:Module module = check front:loadModule(filename, id);
-    check nback:compileModule(module, outputFilename, nbackOptions);
+    bir:Module birMod = check front:loadModule(filename, id);
+    llvm:Context context = new;
+    llvm:Module llMod = check nback:buildModule(birMod, context, {gcName: gcName});
+
+    if nback:target != "" {
+        llMod.setTarget(nback:target);
+    }
+
+    if outputFileName != () {
+        check llMod.printModuleToFile(outputFileName);
+    }
 }
 
 function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error? {
@@ -71,7 +83,7 @@ function chooseOutputFilename(string sourceFilename, string? outDir) returns str
     if extension != SOURCE_EXTENSION {
         return error("filename must end with " + SOURCE_EXTENSION);
     }
-    return base + nback:OUTPUT_EXTENSION;
+    return base + OUTPUT_EXTENSION;
 }
 
 // Note that this converts extension to lower case

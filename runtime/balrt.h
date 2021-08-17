@@ -1,10 +1,18 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <inttypes.h>
 
 #include "tag.h"
 #define TAG_MASK 0xFF
 #define UT_MASK 0x1F
 #define TAG_SHIFT 56
+
+#define POINTER_MASK ((1L << TAG_SHIFT) - 1)
+
+#define FLAG_INT_ON_HEAP 0x20
+#define IMMEDIATE_FLAG (((uint64_t)0x20) << TAG_SHIFT)
+
+#define STRING_LARGE_FLAG 1
 
 #ifdef __clang__
 #define NODEREF __attribute__((noderef))
@@ -40,6 +48,7 @@ extern char *_bal_stack_guard;
 typedef GC char NODEREF *TaggedPtr;
 typedef GC void *UntypedPtr;
 typedef GC int64_t *IntPtr;
+typedef GC double *FloatPtr;
 
 // An error is currently represented as int with the error code in the lo byte
 typedef uint64_t Error;
@@ -99,27 +108,41 @@ typedef GC struct Mapping {
     uint8_t tableLengthShift;
 } *MappingPtr;
 
-#define STRING_MEDIUM_FLAG 1
-
 // Both of these are 8-byte aligned and zero-padded so the total size is a multiple of 8
-typedef GC struct SmallString {
-    uint8_t length;
-    char bytes[];
-} *SmallStringPtr;
 
 typedef GC struct MediumString {
-    int16_t lengthInBytes;
-    int16_t lengthInCodePoints;
+    uint16_t lengthInBytes;
+    uint16_t lengthInCodePoints;
     char bytes[];
 } *MediumStringPtr;
 
-static inline int smallStringSize(int lengthInBytes) {
-    return ((lengthInBytes + 7 + 1) >> 3) << 3;
+typedef GC struct LargeString {
+    int64_t lengthInBytes;
+    int64_t lengthInCodePoints;
+    char bytes[];
+} *LargeStringPtr;
+
+// Roundup to multiple of 8
+static inline int roundUpInt(int n) {
+    return (n + 7) & ~7;
 }
 
 static inline int mediumStringSize(int lengthInBytes) {
-    return ((lengthInBytes + 7 + 4) >> 3) << 3;
+    return roundUpInt(lengthInBytes + sizeof(struct MediumString));
 }
+
+static inline uint64_t roundUpUint64(uint64_t n) {
+    return (n + 7) & ~(uint64_t)7;
+}
+
+static inline uint64_t largeStringSize(int64_t lengthInBytes) {
+    return roundUpUint64(lengthInBytes + sizeof(struct LargeString));
+}
+
+typedef struct {
+    int64_t nBytes;
+    int64_t nCodePoints;
+} StringLength;
 
 typedef struct {
     int64_t lengthInBytes;
@@ -127,19 +150,50 @@ typedef struct {
     GC char *bytes;
 } StringData;
 
+
 // These should be shared with build.bal
 #define PANIC_INDEX_OUT_OF_BOUNDS 5
 #define PANIC_LIST_TOO_LONG 6
+// XXX Make this a separate panic
+#define PANIC_STRING_TOO_LONG 6
 
 #define ALIGN_HEAP 8
 
-extern UntypedPtr _bal_alloc(int64_t nBytes);
+// Don't declare functions here if they are balrt_inline.c
+
+extern UntypedPtr _bal_alloc(uint64_t nBytes);
 extern NORETURN void _bal_panic(Error err);
 
 extern void _Bio__println(TaggedPtr p);
 
+// precondition is that both strings are on the heap and the pointers are not ==
+extern READONLY bool _bal_string_heap_eq(TaggedPtr tp1, TaggedPtr tp2);
+
+extern READONLY int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
+extern READONLY TaggedPtr _bal_string_concat(TaggedPtr tp1, TaggedPtr tp2);
+extern READONLY uint64_t _bal_string_hash(TaggedPtr tp);
+extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, TaggedPtr *resultPtr);
+
+#define TAGGED_PTR_SHIFT 3
+
+extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
+extern Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
+
+#define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
+
+extern TaggedPtr _bal_mapping_construct(int64_t capacity);
+extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
+extern Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
+extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
+
+
 static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;
+}
+
+static inline TaggedPtr bitsToTaggedPtr(uint64_t bits) {
+    char *p = (char *)0 + bits;
+    return (TaggedPtr)p;
 }
 
 static READNONE inline int getTag(TaggedPtr p) {
@@ -154,34 +208,109 @@ static READNONE inline UntypedPtr taggedToPtr(TaggedPtr p) {
     return (UntypedPtr)(char *)(~((((uint64_t)TAG_MASK) << TAG_SHIFT) | 0x7) & taggedPtrBits(p));
 }
 
+static READONLY inline int64_t taggedToInt(TaggedPtr p) {
+    int t = getTag(p);
+    if (likely(t & FLAG_INT_ON_HEAP) == 0) {
+        uint64_t n = taggedPtrBits(p);
+        n &= POINTER_MASK;
+        // sign extend
+        n <<= 8;
+        return ((int64_t)n) >> 8;
+    }
+    else {
+        GC int64_t *np = taggedToPtr(p);
+        return *np;
+    }
+}
+
+static READONLY inline double taggedToFloat(TaggedPtr p) {
+    GC double *np = taggedToPtr(p);
+    return *np;
+}
+
+static READNONE inline StringLength immediateStringLength(uint64_t bits) {
+    StringLength len;
+    unsigned loByte = bits & 0xFF;
+    if (loByte == 0xFF) {
+        len.nBytes = 0;
+        len.nCodePoints = 0;
+    }
+    else if (loByte & 0x80) {
+        len.nBytes = __builtin_clz((uint8_t)~loByte) - (sizeof(unsigned) - 1)*8;
+        len.nCodePoints = 1;
+    }
+    else {
+        bits = ~bits;
+        bits &= ((uint64_t)1 << 56) - 1;
+        len.nBytes = len.nCodePoints =  8 - (__builtin_clzl(bits) >> 3);
+    }
+    return len;
+}
+
+static READONLY inline StringLength taggedStringLength(TaggedPtr p) {
+    uint64_t bits = taggedPtrBits(p);
+    if (bits & IMMEDIATE_FLAG) {
+        return immediateStringLength(bits);
+    }
+    if (likely((bits & STRING_LARGE_FLAG) == 0)) {
+        MediumStringPtr sp = taggedToPtr(p);
+        StringLength len = { sp->lengthInBytes, sp->lengthInCodePoints };
+        return len;
+    }
+    else {
+        LargeStringPtr sp = taggedToPtr(p);
+        StringLength len = { sp->lengthInBytes, sp->lengthInCodePoints };
+        return len;
+    }
+}
+
+static READONLY inline char *taggedStringBytes(TaggedPtr *p) {
+     uint64_t bits = taggedPtrBits(*p);
+    if (bits & IMMEDIATE_FLAG) {
+        return (char *)p;
+    }
+    if (likely((bits & STRING_LARGE_FLAG) == 0)) {
+        MediumStringPtr sp = taggedToPtr(*p);
+        // cast away address space
+        return (char *)sp->bytes;
+    }
+    else {
+        LargeStringPtr sp = taggedToPtr(*p);
+        return (char *)sp->bytes;
+    }
+}
+
+static READONLY inline bool taggedStringEqual(TaggedPtr tp1, TaggedPtr tp2) {    
+    uint64_t bits1 = taggedPtrBits(tp1);
+    uint64_t bits2 = taggedPtrBits(tp2);
+    if (bits1 == bits2) {
+        return true;
+    }
+    if (bits1 & IMMEDIATE_FLAG) {
+        return false;
+    }
+    if (bits2 & IMMEDIATE_FLAG) {
+        // one of them is immediate and the bits are not equal
+        // so they are not equal        
+        return false;
+    }
+    return _bal_string_heap_eq(tp1, tp2);
+}
+
 static READNONE inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {
     char *p0 = (void *)p;
     p0 = (char *)((uint64_t)p0 | flags);
     return (TaggedPtr)p0;
 }
 
-extern TaggedPtr _bal_int_to_tagged(int64_t n);
-extern READONLY int64_t _bal_tagged_to_int(TaggedPtr p);
-
-extern READONLY StringData _bal_tagged_to_string(TaggedPtr p);
-extern READONLY bool _bal_string_eq(TaggedPtr tp1, TaggedPtr tp2);
-extern READONLY bool _bal_eq(TaggedPtr tp1, TaggedPtr tp2);
-extern READONLY int64_t _bal_string_cmp(TaggedPtr tp1, TaggedPtr tp2);
-extern READONLY uint64_t _bal_string_hash(TaggedPtr tp);
-
-#define TAGGED_PTR_SHIFT 3
-
-extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
-extern Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
-
-#define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
-
-extern TaggedPtr _bal_mapping_construct(int64_t capacity);
-extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
-extern void _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
-extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
-
-
+// We are trying to avoid doing inttoptr or ptrtoint in address space 1
+static inline TaggedPtr ptrAddShiftedTag(UntypedPtr tp, uint64_t shiftedTag) {
+    char *p = (char *)tp;
+    uint64_t bits = (uint64_t)p;
+    bits |= shiftedTag;
+    p = (char *)bits;
+    return (TaggedPtr)p;
+}
 
 
 

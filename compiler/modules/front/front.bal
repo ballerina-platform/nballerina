@@ -2,33 +2,34 @@ import ballerina/io;
 
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
+import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.err;
 
-type ModuleTable table<ModuleLevelDef> key(name);
+type ModuleTable table<s:ModuleLevelDefn> key(name);
 
 class Module {
     *bir:Module;
     final bir:ModuleId id;
     final map<bir:ModuleId> imports;
-    final ModuleTable defs;
+    final ModuleTable defns;
     final t:TypeCheckContext tc;
-    final FunctionDef[] functionDefSource = [];
+    final s:FunctionDefn[] functionDefnSource = [];
     final readonly & bir:FunctionDefn[] functionDefns;
 
-    function init(bir:ModuleId id, map<bir:ModuleId> imports, ModuleTable defs, t:TypeCheckContext tc) {
+    function init(bir:ModuleId id, map<bir:ModuleId> imports, ModuleTable defns, t:TypeCheckContext tc) {
         self.id = id;
         self.imports = imports;
-        self.defs = defs;
+        self.defns = defns;
         self.tc = tc;
         final bir:FunctionDefn[] functionDefns = [];
-        foreach var def in defs {
-            if def is FunctionDef {
-                self.functionDefSource.push(def);
+        foreach var defn in defns {
+            if defn is s:FunctionDefn {
+                self.functionDefnSource.push(defn);
                 functionDefns.push({
-                    symbol: <bir:InternalSymbol>{ identifier: def.name, isPublic: def.vis == "public" },
-                    // casting away nil here, because it was filled in by `convertTypes`
-                    signature: <bir:FunctionSignature>def.signature,
-                    position: def.pos
+                    symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
+                    // casting away nil here, because it was filled in by `resolveTypes`
+                    signature: <bir:FunctionSignature>defn.signature,
+                    position: defn.pos
                 });
             }
         }
@@ -40,7 +41,7 @@ class Module {
     public function getTypeCheckContext() returns t:TypeCheckContext => self.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        FunctionDef ast = self.functionDefSource[i];
+        s:FunctionDefn ast = self.functionDefnSource[i];
         return codeGenFunction(self, ast.name, self.functionDefns[i].signature, ast.paramNames, ast.body);
     }
    
@@ -60,19 +61,19 @@ class Module {
 }
 
 public function loadModule(string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
-    string contents = check io:fileReadString(filename);
-    ModulePart part = check parseModulePart(contents);
+    string[] lines = check io:fileReadLines(filename);
+    s:ModulePart part = check s:parseModulePart(lines);
     ModuleTable mod = table [];
     check addModulePart(mod, part);
     t:Env env = new;
-    check convertTypes(env, mod);
+    check resolveTypes(env, mod);
     // XXX Should have an option that controls whether we perform this check
     check validEntryPoint(mod);
     return new Module(id, imports(part), mod, t:typeCheckContext(env));
 }
 
-function imports(ModulePart part) returns map<bir:ModuleId> {
-    ImportDecl? decl = part.importDecl;
+function imports(s:ModulePart part) returns map<bir:ModuleId> {
+    s:ImportDecl? decl = part.importDecl;
     if decl == () {
         return {};
     }
@@ -82,36 +83,36 @@ function imports(ModulePart part) returns map<bir:ModuleId> {
 }
 
 function validEntryPoint(ModuleTable mod) returns err:Any? {
-    ModuleLevelDef? def = mod["main"];
-    if def is FunctionDef {
-        if def.vis != "public" {
-            return err:semantic(`${"main"} is not public`, pos=def.pos);
+    s:ModuleLevelDefn? defn = mod["main"];
+    if defn is s:FunctionDefn {
+        if defn.vis != "public" {
+            return err:semantic(`${"main"} is not public`, pos=defn.pos);
         }
-        if def.paramNames.length() > 0 {
-            return err:unimplemented(`parameters for ${"main"} not yet implemented`, pos=def.pos);
+        if defn.paramNames.length() > 0 {
+            return err:unimplemented(`parameters for ${"main"} not yet implemented`, pos=defn.pos);
         }
-        if (<bir:FunctionSignature>def.signature).returnType !== t:NIL {
-            return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, pos=def.pos);
+        if (<bir:FunctionSignature>defn.signature).returnType !== t:NIL {
+            return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, pos=defn.pos);
         }
     }
 }
 
-function addModulePart(ModuleTable mod, ModulePart part) returns err:Semantic? {
-    foreach ModuleLevelDef def in part.defs {
-        if mod.hasKey(def.name) {
-            return err:semantic(`duplicate definition if ${def.name}`);
+function addModulePart(ModuleTable mod, s:ModulePart part) returns err:Semantic? {
+    foreach s:ModuleLevelDefn defn in part.defns {
+        if mod.hasKey(defn.name) {
+            return err:semantic(`duplicate definition if ${defn.name}`);
         }
-        mod.add(def); 
+        mod.add(defn); 
     }
 }
 
 // This is old interface for showTypes
-public function typesFromString(string contents) returns [t:Env, map<t:SemType>]|err:Any {
-    ModulePart part = check parseModulePart(contents);
+public function typesFromString(string[] lines) returns [t:Env, map<t:SemType>]|err:Any {
+    s:ModulePart part = check s:parseModulePart(lines);
     ModuleTable mod = table [];
     check addModulePart(mod, part);
     t:Env env = new;
-    check convertTypes(env, mod);
+    check resolveTypes(env, mod);
     return [env, createTypeMap(mod)];
 }
 

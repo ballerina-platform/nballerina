@@ -9,6 +9,14 @@ public function booleanConst(boolean value) returns SemType {
     return uniformSubtype(UT_BOOLEAN, t);
 }
 
+function booleanSubtypeSingleValue(SubtypeData d) returns boolean? {
+    if d is boolean {
+        return ();
+    }
+    BooleanSubtype b = <BooleanSubtype>d;
+    return b.value;
+}
+
 function booleanSubtypeContains(SubtypeData d, boolean b) returns boolean {
     if d is boolean {
         return d;

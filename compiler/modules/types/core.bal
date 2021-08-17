@@ -55,7 +55,7 @@ public type TypeCheckContext record {|
     BddMemoTable functionMemo = table [];
 |};
 
-type ProperSubtypeData StringSubtype|IntSubtype|BooleanSubtype|bdd:Node;
+type ProperSubtypeData StringSubtype|FloatSubtype|IntSubtype|BooleanSubtype|bdd:Node;
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData ProperSubtypeData|boolean;
 
@@ -673,6 +673,55 @@ function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns
     }
 }
 
+public type Value readonly & record {|
+    string|int|float|boolean|() value;
+|};
+
+// If the type contains exactly onr shape, return a value
+// having that shape.
+public function singleShape(SemType t) returns Value? {
+    if t === NIL {
+        return { value: () };
+    }
+    else if t is UniformTypeBitSet {
+        return ();
+    }
+    else if isSubtypeSimple(t, INT) {
+        SubtypeData sd = t.getSubtypeData(UT_INT);
+        int? value = intSubtypeSingleValue(sd);
+        return value == () ? () : { value };
+    }
+    else if isSubtypeSimple(t, STRING) {
+        SubtypeData sd = t.getSubtypeData(UT_STRING);
+        string? value = stringSubtypeSingleValue(sd);
+        return value == () ? () : { value };
+    }
+    else if isSubtypeSimple(t, BOOLEAN) {
+        SubtypeData sd = t.getSubtypeData(UT_BOOLEAN);
+        boolean? value = booleanSubtypeSingleValue(sd);
+        return value == () ? () : { value };
+    }
+    return ();
+}
+
+public function singleton(string|int|float|boolean|() v) returns SemType {
+    if v is () {
+        return NIL;
+    }
+    else if v is int {
+        return intConst(v);
+    }
+    else if v is float {
+        return floatConst(v);
+    }
+    else if v is string {
+        return stringConst(v);
+    }
+    else {
+        return booleanConst(v);
+    }
+}
+
 public function isReadOnly(SemType t) returns boolean {
     UniformTypeBitSet bits;
     if t is UniformTypeBitSet {
@@ -684,12 +733,15 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
-public function containsConst(SemType t, string|int|boolean|() v) returns boolean {
+public function containsConst(SemType t, string|int|float|boolean|() v) returns boolean {
     if v is () {
         return containsNil(t);
     }
     else if v is int {
         return containsConstInt(t, v);
+    }
+    else if v is float {
+        return containsConstFloat(t, v);
     }
     else if v is string {
         return containsConstString(t, v);
@@ -724,6 +776,15 @@ public function containsConstInt(SemType t, int n) returns boolean {
     }
     else {
         return intSubtypeContains(t.getSubtypeData(UT_INT), n);
+    }
+}
+
+public function containsConstFloat(SemType t, float n) returns boolean {
+    if t is UniformTypeBitSet {
+        return (t & (1 << UT_FLOAT)) != 0;
+    }
+    else {
+        return floatSubtypeContains(t.getSubtypeData(UT_FLOAT), n);
     }
 }
 
@@ -765,7 +826,7 @@ function init() {
         {}, // RO xml
         {}, // RO object
         intOps, // int
-        {}, // float
+        floatOps, // float
         {}, // decimal
         stringOps, // string
         errorOps, // error

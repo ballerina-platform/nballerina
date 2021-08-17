@@ -2,7 +2,7 @@
 #include <string.h>
 
 static READONLY inline bool matches(MappingPtr m, TaggedPtr key, int64_t mapIndex) {
-    return _bal_string_eq(m->fArray.members[mapIndex].key, key);
+    return taggedStringEqual(m->fArray.members[mapIndex].key, key);
 }
 
 // This part deals with table (and does not look at the fArray).
@@ -11,30 +11,27 @@ static READONLY inline bool matches(MappingPtr m, TaggedPtr key, int64_t mapInde
 // When fetch and replace are used in simple loops, LLVM is able to optimize
 // the loop into 4 separate loops, one for each size of int.
 static READONLY inline int64_t fetch(UntypedPtr table, int64_t i, int tableElementShift)  {
+#define FETCH_CASE(T) { \
+    GC T *p = (GC T *)table; \
+    if (p[i] == (T)-1) { \
+        return -1; \
+    } \
+    else { \
+        return p[i]; \
+    } \
+}
     switch (tableElementShift & 3) {
-        case 0:
-            {
-                uint8_t n = ((GC uint8_t *)table)[i];
-                return n == 0xFF ? -1 : n;
-            } 
-        case 1:
-            {
-                uint16_t n = ((GC uint16_t *)table)[i];
-                return n == 0xFFFF ? -1 : n;
-            }
-        case 2:
-            {
-                uint32_t n = ((GC uint32_t *)table)[i];
-                return n == 0xFFFFFFFFU ? -1 : n;
-            }
+        case 0: FETCH_CASE(uint8_t);
+        case 1: FETCH_CASE(uint16_t);
+        case 2: FETCH_CASE(uint32_t);
     }
-    return ((int64_t *)table)[i];
+    FETCH_CASE(int64_t);
 }
 
 // store if the current value is -1; return value before store
 static inline int64_t replace(UntypedPtr table, int64_t i, int64_t n, int tableElementShift)  {
 #define REPLACE_CASE(T) { \
-    T *p = (T *)table; \
+    GC T *p = (GC T *)table; \
     if (p[i] == (T)-1) { \
         p[i] = n; \
         return -1; \
@@ -206,7 +203,7 @@ void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr value)
     insert(mp, key, _bal_string_hash(key), len);
 }
 
-void _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
+Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
     int64_t len = mp->fArray.length;
    
@@ -215,7 +212,7 @@ void _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     // But it doesn't matter because in this case we will rebuild anyway
     bool inserted = insert(mp, key, _bal_string_hash(key), len);
     if (!inserted) {
-        return;
+        return 0;
     }
     if (unlikely(len >= mp->fArray.capacity)) {
         _bal_array_grow(&(mp->gArray), 0, MAP_FIELD_SHIFT);
@@ -228,4 +225,5 @@ void _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     if (len >= 1 << (mp->tableLengthShift - 1)) {
         mappingGrow(mp);
     }
+    return 0;
 }

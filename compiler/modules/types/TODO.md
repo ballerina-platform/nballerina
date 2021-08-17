@@ -20,7 +20,7 @@
 16. ~~boolean singleton type~~
 17. ~~integer singleton type~~
 18. ~~integer subtypes with specific width/signedness~~
-19. float singletons
+19. ~~float singletons~~
 20. decimal singletons
 21. objects (without member qualifiers or object qualifiers)
 22. typedesc subtypes

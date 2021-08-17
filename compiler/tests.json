@@ -102,6 +102,20 @@
     ["equivalent", ["&", "readonly", ["list", ["|", "any", "error"]]], ["&", "readonly", ["list", "readonly"]]],
     ["proper_subtype", ["&", "readonly", ["list", "readonly"]], ["list", ["|", "any", "error"]]],
     ["proper_subtype", ["&", "readonly", ["list", "readonly"]], ["|", "any", "error"]],
-    ["proper_subtype", ["list", "readonly"], ["|", "any", "error"]]
+    ["proper_subtype", ["list", "readonly"], ["|", "any", "error"]],
+    ["equivalent", ["|", ["&", "readonly", ["string", "a"]], ["&", "readonly", ["string", "b"]]],
+                   ["&", "readonly", ["|", ["string", "a"], ["string", "b"]]]],
+    ["proper_subtype", ["float", "0.0"], "float"],
+    ["proper_subtype", ["float", "NaN"], "float"],
+    ["proper_subtype", ["float", "Infinity"], "float"],
+    ["equivalent", ["float", "42.0"], ["float", "42.0"]],
+    ["equivalent", ["float", "0.0"], ["float", "-0.0"]],
+    ["equivalent", ["|", ["float", "0.0"], ["float", "-0.0"]], ["float", "0.0"]],
+    ["incomparable", ["float", "Infinity"], ["float", "-Infinity"]],
+    ["incomparable", ["float", "NaN"], ["float", "1"]],
+    ["equivalent", ["float", "NaN"], ["float", "NaN"]],
+    ["equivalent", ["float", "-NaN"], ["float", "NaN"]],
+    ["equivalent", ["&", ["float", "1.0"], "float"], ["float", "1.0"]],
+    ["equivalent", ["&", "readonly", ["float", "42.0"]], ["float", "42.0"]]
 ]
 

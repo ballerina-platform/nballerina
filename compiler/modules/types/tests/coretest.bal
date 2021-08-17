@@ -201,9 +201,17 @@ function funcTest4() {
 
 @test:Config{}
 function stringTest() {
-    test:assertEquals(stringListUnion(["a", "b", "d"], ["c"]), ["a", "b", "c", "d"]);
-    test:assertEquals(stringListIntersect(["a", "b", "d"], ["d"]), ["d"]);
-    test:assertEquals(stringListDiff(["a", "b", "c", "d"], ["a", "c"]), ["b", "d"]);
+    string [] result = [];
+    enumerableListUnion(["a", "b", "d"], ["c"], result);
+    test:assertEquals(result, ["a", "b", "c", "d"]);
+
+    result = [];
+    enumerableListIntersect(["a", "b", "d"], ["d"], result);
+    test:assertEquals(result, ["d"]);
+
+    result = [];
+    enumerableListDiff(["a", "b", "c", "d"], ["a", "c"], result);
+    test:assertEquals(result, ["b", "d"]);
 }
 
 @test:Config{}
@@ -244,4 +252,16 @@ function testArrayMemberTypeFail(Env env, SemType memberType) {
     SemType t = def.define(env, [], memberType);
     UniformTypeBitSet? bits = simpleArrayMemberType(t, env.listDefs);
     test:assertTrue(bits == ());
+}
+
+@test:Config{}
+function testIntSubtypeWidenUnsigned() {
+    test:assertTrue(<boolean> intSubtypeWidenUnsigned(true));
+    test:assertTrue(<boolean> intSubtypeWidenUnsigned([{ min: -1, max: 10 }]));
+    IntSubtype intType1 = <IntSubtype> intSubtypeWidenUnsigned([{ min: 0, max: 0 }]);
+    test:assertEquals(intType1[0].min, 0);
+    test:assertEquals(intType1[0].max, 255);
+    IntSubtype intType2 = <IntSubtype> intSubtypeWidenUnsigned([{ min: 0, max: 257 }]);
+    test:assertEquals(intType2[0].min, 0);
+    test:assertEquals(intType2[0].max, 65535);
 }

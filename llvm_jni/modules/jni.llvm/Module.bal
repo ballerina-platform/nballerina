@@ -7,9 +7,20 @@ function intrinsicNameToId(IntrinsicFunctionName name) returns int {
     return jLLVMLookupIntrinsicID(java:fromString(str_name), str_name.length());
 }
 
+public type LLVMCodeGenOptLevel string;
+public type LLVMRelocMode string;
+public type LLVMCodeModel string;
+
+public type ObjectFileGenOptions record {|
+    string? optLevel = "Default";
+    string? relocMode = "Default";
+    string? codeModel = "Default";
+|};
+
 public distinct class Module {
     handle LLVMModule;
     Context context;
+    TargetTriple? targetTriple=();
 
     function init(string moduleName, Context context) {
         self.context = context;
@@ -41,7 +52,62 @@ public distinct class Module {
         _ = jLLVMPrintModuleToFile(self.LLVMModule, java:fromString(fileName), err);
     }
 
-    public function addGlobal(Type ty, string name, *GlobalProperties props) returns PointerValue {
+    function linkInlineLibrary() {
+        LLVMMemoryBuffer runtimeMemBuffer = new;
+        runtimeMemBuffer.storeResource("balrt_inline.bc");
+        Module libModule = new("balrt_inline", self.context);
+        libModule.parseBitCode(runtimeMemBuffer);
+        int result = jLLVMLinkModules2(self.LLVMModule, libModule.LLVMModule);
+        if result != 0 {
+            panic error("Failed to link the inline runtime");
+        }
+    }
+
+    // Corresponds to LLVMParseBitcodeInContext2
+    function parseBitCode(LLVMMemoryBuffer memoryBuffer) {
+        int result = jLLVMParseBitcodeInContext2(self.context.LLVMContext, memoryBuffer.jObject, self.LLVMModule);
+        if result != 0 {
+            panic error("Failed to parse the memory buffer");
+        }
+    }
+
+    public function printModuleToObjectFile(string fileName, *ObjectFileGenOptions opts) returns io:Error? {
+        self.linkInlineLibrary(); 
+
+        string optLevel = opts.optLevel ?: "Default";
+        string relocMode = opts.relocMode ?: "Default";
+        string codeModel = opts.codeModel ?: "Default";
+        BytePointer file = new(jBytePointerFromString(java:fromString(fileName)));
+        BytePointer targetTriple;
+        if self.targetTriple is () {
+            targetTriple = new(jLLVMGetDefaultTargetTriple());
+        }
+        else {
+            targetTriple = new(jLLVMGetTarget(self.LLVMModule));
+        }
+        handle jTargetRef = jLLVMGetFirstTarget();
+        BytePointer lookupError = new(jBytePointer());
+        int isLookUpError = jLLVMGetTargetFromTriple(targetTriple.jObject, jTargetRef, lookupError.jObject);
+        if isLookUpError != 0 {
+            return error(lookupError.toString());
+        }
+        BytePointer cpu = new(jBytePointerFromString(java:fromString("generic")));
+        BytePointer features = new(jBytePointerFromString(java:fromString("")));
+        handle jTargetMachineRef = jLLVMCreateTargetMachine(jTargetRef,
+                                                            targetTriple.jObject,
+                                                            cpu.jObject,
+                                                            features.jObject,
+                                                            getLLVMCodeGenOptLevel(optLevel),
+                                                            getLLVMRelocMode(relocMode),
+                                                            getLLVMCodeModel(codeModel));
+        BytePointer emitError = new(jBytePointer());
+        int isEmitError = jLLVMTargetMachineEmitToFile(jTargetMachineRef, self.LLVMModule, file.jObject, 1, emitError.jObject);
+        if isEmitError != 0 {
+            return error(emitError.toString());
+        }
+    }
+
+    public function addGlobal(Type ty, string name, *GlobalProperties props) returns ConstPointerValue {
         PointerValue val =  new (jLLVMAddGlobalInAddressSpace(self.LLVMModule, typeToLLVMType(ty), java:fromString(name), props.addressSpace));
         if props.initializer is ConstValue {
             ConstValue initializer = <ConstValue>props.initializer;
@@ -77,7 +143,87 @@ public distinct class Module {
     }
 
     public function setTarget(TargetTriple targetTriple) {
+        self.targetTriple = targetTriple;
         jLLVMSetTarget(self.LLVMModule, java:fromString(targetTriple));
+    }
+}
+
+
+function getLLVMCodeGenOptLevel(LLVMCodeGenOptLevel codeGenLevel) returns int {
+    match codeGenLevel {
+        "None" => {
+            return 0;
+        }
+        "Less" => {
+            return 1;
+        }
+        "Default" => {
+            return 2;
+        }
+        "Aggressive" => {
+            return 3;
+        }
+        _ => {
+            panic error("Unknown code gen level");
+        }
+    }
+}
+
+function getLLVMRelocMode(LLVMRelocMode relocMode) returns int {
+    match relocMode {
+        "Default" => {
+            return 0;
+        }
+        "Static" => {
+            return 1;
+        }
+        "PIC" => {
+            return 2;
+        }
+        "DynamicNoPic" => {
+            return 3;
+        }
+        "ROPI" => {
+            return 4;
+        }
+        "RWPI" => {
+            return 5;
+        }
+        "ROPI_RWPI" => {
+            return 6;
+        }
+        _ => {
+            panic error("Unknown reloc mode");
+        }
+    }
+}
+
+function getLLVMCodeModel(LLVMCodeModel codeModel) returns int {
+    match codeModel {
+        "Default" => {
+            return 0;
+        }
+        "JITDefault" => {
+            return 1;
+        }
+        "Tiny" => {
+            return 2;
+        }
+        "Small" => {
+            return 3;
+        }
+        "Kernel" => {
+            return 4;
+        }
+        "Medium" => {
+            return 5;
+        }
+        "Large" => {
+            return 6;
+        }
+        _ => {
+            panic error("Unknown code model");
+        }
     }
 }
 
@@ -145,4 +291,52 @@ function jLLVMSetGlobalConstant(handle globalVar, int isConstant) = @java:Method
     name: "LLVMSetGlobalConstant",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "int"]
+} external;
+
+function jLLVMGetTarget(handle moduleRef) returns handle = @java:Method {
+    name: "LLVMGetTarget",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef"]
+} external;
+
+function jLLVMGetDefaultTargetTriple() returns handle = @java:Method {
+    name: "LLVMGetDefaultTargetTriple",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: []
+} external;
+
+function jLLVMGetTargetFromTriple(handle triple, handle targetRef, handle err) returns int = @java:Method {
+    name: "LLVMGetTargetFromTriple",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.javacpp.BytePointer", "org.bytedeco.llvm.LLVM.LLVMTargetRef", "org.bytedeco.javacpp.BytePointer"]
+} external;
+
+function jLLVMGetFirstTarget() returns handle = @java:Method {
+    name: "LLVMGetFirstTarget",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: []
+} external;
+
+function jLLVMCreateTargetMachine(handle targetRef, handle triple, handle cpu, handle features, int optLevel, int relocMode, int codeModel) returns handle = @java:Method {
+    name: "LLVMCreateTargetMachine",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTargetRef", "org.bytedeco.javacpp.BytePointer", "org.bytedeco.javacpp.BytePointer", "org.bytedeco.javacpp.BytePointer", "int", "int", "int"]
+} external;
+
+function jLLVMTargetMachineEmitToFile(handle targetMachineRef, handle moduleRef, handle fileName, int codeGen, handle err) returns int = @java:Method {
+    name: "LLVMTargetMachineEmitToFile",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTargetMachineRef", "org.bytedeco.llvm.LLVM.LLVMModuleRef","org.bytedeco.javacpp.BytePointer", "int", "org.bytedeco.javacpp.BytePointer"]
+} external;
+
+function jLLVMParseBitcodeInContext2(handle contextRef, handle memoryBufferRef, handle moduleRef) returns int = @java:Method {
+    name: "LLVMParseBitcodeInContext2",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef", "org.bytedeco.llvm.LLVM.LLVMMemoryBufferRef", "org.bytedeco.llvm.LLVM.LLVMModuleRef"]
+} external;
+
+function jLLVMLinkModules2(handle dest, handle src) returns int = @java:Method {
+    name: "LLVMLinkModules2",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "org.bytedeco.llvm.LLVM.LLVMModuleRef"]
 } external;

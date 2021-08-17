@@ -2,7 +2,7 @@
 declare void @_bal_panic(i64) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*)
+declare zeroext i1 @_bal_exact_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
@@ -186,7 +186,7 @@ define internal void @_B_printEq(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
   store i8 addrspace(1)* %1, i8 addrspace(1)** %y
   %11 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   %12 = load i8 addrspace(1)*, i8 addrspace(1)** %y
-  %13 = call i1 @_bal_eq(i8 addrspace(1)* %11, i8 addrspace(1)* %12)
+  %13 = call i1 @_bal_exact_eq(i8 addrspace(1)* %11, i8 addrspace(1)* %12)
   store i1 %13, i1* %3
   %14 = load i1, i1* %3
   %15 = zext i1 %14 to i64
@@ -196,7 +196,7 @@ define internal void @_B_printEq(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   %18 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   %19 = load i8 addrspace(1)*, i8 addrspace(1)** %y
-  %20 = call i1 @_bal_eq(i8 addrspace(1)* %18, i8 addrspace(1)* %19)
+  %20 = call i1 @_bal_exact_eq(i8 addrspace(1)* %18, i8 addrspace(1)* %19)
   %21 = xor i1 %20, 1
   store i1 %21, i1* %5
   %22 = load i1, i1* %5

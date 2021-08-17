@@ -50,15 +50,15 @@ define internal void @_B_printClosestSquareNum(i64 %0) {
   %14 = icmp sge i64 %13, 0
   store i1 %14, i1* %2
   %15 = load i1, i1* %2
-  br i1 %15, label %17, label %16
+  br i1 %15, label %16, label %20
 16:
+  %17 = load i64, i64* %i
+  %18 = call i1 @_B_isSquareNumber(i64 %17)
+  store i1 %18, i1* %3
+  %19 = load i1, i1* %3
+  br i1 %19, label %21, label %24
+20:
   ret void
-17:
-  %18 = load i64, i64* %i
-  %19 = call i1 @_B_isSquareNumber(i64 %18)
-  store i1 %19, i1* %3
-  %20 = load i1, i1* %3
-  br i1 %20, label %21, label %24
 21:
   %22 = load i64, i64* %i
   %23 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %22)
@@ -111,15 +111,15 @@ define internal i1 @_B_isSquareNumber(i64 %0) {
   %16 = icmp sle i64 %14, %15
   store i1 %16, i1* %2
   %17 = load i1, i1* %2
-  br i1 %17, label %19, label %18
+  br i1 %17, label %18, label %23
 18:
-  ret i1 0
-19:
+  %19 = load i64, i64* %i
   %20 = load i64, i64* %i
-  %21 = load i64, i64* %i
-  %22 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %20, i64 %21)
-  %23 = extractvalue {i64, i1} %22, 1
-  br i1 %23, label %45, label %39
+  %21 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %19, i64 %20)
+  %22 = extractvalue {i64, i1} %21, 1
+  br i1 %22, label %45, label %39
+23:
+  ret i1 0
 24:
   ret i1 1
 25:
@@ -145,7 +145,7 @@ define internal i1 @_B_isSquareNumber(i64 %0) {
   call void @_bal_panic(i64 5380)
   unreachable
 39:
-  %40 = extractvalue {i64, i1} %22, 0
+  %40 = extractvalue {i64, i1} %21, 0
   store i64 %40, i64* %4
   %41 = load i64, i64* %4
   %42 = load i64, i64* %x

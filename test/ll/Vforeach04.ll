@@ -7,10 +7,11 @@ define void @_B_main() {
   %1 = alloca i1
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i1
+  %i.1 = alloca i64
   %4 = alloca i8
   %5 = load i8*, i8** @_bal_stack_guard
   %6 = icmp ult i8* %4, %5
-  br i1 %6, label %24, label %7
+  br i1 %6, label %25, label %7
 7:
   store i64 6, i64* %i
   br label %8
@@ -31,17 +32,19 @@ define void @_B_main() {
   %17 = icmp eq i64 %16, 8
   store i1 %17, i1* %3
   %18 = load i1, i1* %3
-  br i1 %18, label %19, label %23
+  br i1 %18, label %19, label %24
 19:
-  br label %20
-20:
-  %21 = load i64, i64* %i
-  %22 = add nsw i64 %21, 1
-  store i64 %22, i64* %i
+  %20 = load i64, i64* %i
+  store i64 %20, i64* %i.1
+  br label %21
+21:
+  %22 = load i64, i64* %i
+  %23 = add nsw i64 %22, 1
+  store i64 %23, i64* %i
   br label %8
-23:
-  br label %20
 24:
+  br label %21
+25:
   call void @_bal_panic(i64 772)
   unreachable
 }

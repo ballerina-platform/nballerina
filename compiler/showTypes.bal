@@ -5,17 +5,17 @@ import wso2/nballerina.types as t;
 // import wso2/nballerina.types.bdd;
 
 public function showTypes(string filename) returns error? {
-    string contents = check io:fileReadString(filename);
-    string[] results = check subtypeRels(contents);
+    string[] lines = check io:fileReadLines(filename);
+    string[] results = check subtypeRels(lines);
     foreach var line in results {
         io:println(line);
     }
     // io:println("Total BDDs ", bdd:getCount());
 }
 
-function subtypeRels(string contents) returns string[]|error {
+function subtypeRels(string[] lines) returns string[]|error {
     
-    var [env, m] = check front:typesFromString(contents);
+    var [env, m] = check front:typesFromString(lines);
 
     var tc = t:typeCheckContext(env);
 
@@ -33,10 +33,10 @@ function subtypeRels(string contents) returns string[]|error {
             }
         }
     }
-    string[] lines = 
+    string[] rels = 
         from var [name1, name2] in results
         let string s = name1 + "<:" + name2
         order by s
         select s;
-    return lines;
+    return rels;
 }

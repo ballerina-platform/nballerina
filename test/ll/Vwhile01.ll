@@ -37,20 +37,20 @@ define internal void @_B_printInts(i64 %0) {
   %12 = icmp slt i64 %10, %11
   store i1 %12, i1* %2
   %13 = load i1, i1* %2
-  br i1 %13, label %15, label %14
+  br i1 %13, label %14, label %20
 14:
-  ret void
-15:
-  %16 = load i64, i64* %i
-  %17 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %16)
-  call void @_Bio__println(i8 addrspace(1)* %17)
+  %15 = load i64, i64* %i
+  %16 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %15)
+  call void @_Bio__println(i8 addrspace(1)* %16)
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
-  %18 = load i64, i64* %i
-  %19 = call i64 @_B_increase(i64 %18)
-  store i64 %19, i64* %4
-  %20 = load i64, i64* %4
-  store i64 %20, i64* %i
+  %17 = load i64, i64* %i
+  %18 = call i64 @_B_increase(i64 %17)
+  store i64 %18, i64* %4
+  %19 = load i64, i64* %4
+  store i64 %19, i64* %i
   br label %9
+20:
+  ret void
 21:
   call void @_bal_panic(i64 3076)
   unreachable

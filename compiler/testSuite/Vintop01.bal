@@ -1,14 +1,21 @@
 import ballerina/io;
 
 public function main() {
-  printBoolean(12 + 6 == 3 + 15); // @output 1
-  printBoolean(5 != 5 + 2); // @output 1
-  printBoolean(5 < 9 == 5 > 2); // @output 1
-  printBoolean(1 + 3 <= 2 + 4); // @output 1
-  printBoolean(1 >= 5 == 1 + 2 >= 3 != false); // @output 0
-  printBoolean(7 + 1 == 8 != false); // @output 1
-  printBoolean(!true == false); // @output 1
-  printBoolean(false == !true); // @output 1
+  int i6 = 6;
+  int i5 = 5;
+  int i3 = 3;
+  int i2 = 2;
+  int i1 = 1;
+  boolean t = true;
+  boolean f = false;
+  printBoolean(12 + i6 == i3 + 15); // @output 1
+  printBoolean(i5 != i5 + 2); // @output 1
+  printBoolean(i5 < 9 == i5 > 2); // @output 1
+  printBoolean(i1 + i3 <= i2 + 4); // @output 1
+  printBoolean(i1 >= i5 == 1 + i2 >= i3 != f); // @output 0
+  printBoolean(7 + i1 == 8 != f); // @output 1
+  printBoolean(!t == f); // @output 1
+  printBoolean(f == !t); // @output 1
 }
 
 

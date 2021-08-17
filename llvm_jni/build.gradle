@@ -20,6 +20,7 @@ String platformLibs = 'target/platform-libs'
 String tmpBuildDir = '../testbuild'
 String compilerDir = '../compiler'
 String testDir = '../test'
+String runtimeDir = '../runtime'
 
 configurations.implementation.setCanBeResolved(true) 
 configurations.api.setCanBeResolved(true)
@@ -36,6 +37,7 @@ task copyNbal(type: Copy) {
 
 task cleanNbackLLVM(type: Delete) {
         delete "${tmpBuildDir}/modules/print.llvm"
+        delete "${tmpBuildDir}/main.bal"
 }
 cleanNbackLLVM.dependsOn(copyNbal)
 
@@ -44,6 +46,13 @@ task copyJNILLVM(type: Copy) {
         into "${tmpBuildDir}/modules/jni.llvm"
 }
 copyJNILLVM.dependsOn(copyNbal, cleanNbackLLVM)
+
+task copyDriver(type: Copy) {
+        from 'main.bal'
+        into "${tmpBuildDir}/"
+}
+copyDriver.dependsOn(cleanNbackLLVM)
+copyDriver.mustRunAfter(copyNbal)
 
 task copyLLVMCommon(type: Copy) {
         from "${compilerDir}/modules/print.llvm/common.bal"
@@ -55,7 +64,7 @@ task copyLocalDependencies(type: Copy) {
         from platformLibs
         into "${tmpBuildDir}/target/platform-libs"
 }
-copyLocalDependencies.dependsOn(copyDependencies);
+copyLocalDependencies.dependsOn(copyDependencies)
 
 task copyBalConfig(type: Copy) {
         from 'Ballerina.toml'
@@ -65,14 +74,43 @@ copyBalConfig.dependsOn(copyLocalDependencies, copyNbal)
 
 task testBuild(type: Exec) {
         workingDir tmpBuildDir
-        commandLine 'bal', 'build'
+        commandLine 'bal', 'build', '--offline'
 }
-testBuild.dependsOn(copyNbal, copyJNILLVM, copyLocalDependencies, copyBalConfig)
+testBuild.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyLocalDependencies, copyBalConfig)
+
+task balCompile(type: Exec) {
+        workingDir tmpBuildDir
+        commandLine 'bal', 'build', '--offline' , '--skip-tests'
+}
+balCompile.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyLocalDependencies, copyBalConfig)
+
+task compileRuntime(type: Exec) {
+        workingDir runtimeDir
+        commandLine 'make', 'all'
+}
+
+task copyRuntime(type:Copy) {
+        from "${runtimeDir}/balrt_inline.bc"
+        into "${tmpBuildDir}/target/bin"
+}
+copyRuntime.mustRunAfter(balCompile, compileRuntime)
+
+task buildWithRuntime(type: Exec) {
+        workingDir "${tmpBuildDir}/target/bin"
+        commandLine 'jar', 'uf', 'nballerina.jar', 'balrt_inline.bc'
+}
+buildWithRuntime.dependsOn(copyNbal, copyJNILLVM, copyRuntime, copyDriver, copyLocalDependencies, copyBalConfig, balCompile, compileRuntime)
+
+task cleanBuildArtificats(type: Delete) {
+        delete "${tmpBuildDir}/target/bin/balrt_inline.bc"
+}
+cleanBuildArtificats.mustRunAfter(buildWithRuntime)
 
 task buildNBalCompilerBase(type: Exec) {
         workingDir compilerDir
         commandLine 'bal', 'build', '--skip-tests'
 }
+
 
 task compileExpectedTestCases(type: Exec) {
         workingDir testDir
