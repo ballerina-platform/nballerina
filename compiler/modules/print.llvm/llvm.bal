@@ -69,11 +69,39 @@ public function constInt(IntType ty, int val) returns ConstValue {
     return new ConstValue(ty, val.toString());
 }
 
+final string posInf = "0x" + (1.0/0.0).toBitsInt().toHexString().toUpperAscii();
+final string negInf = "0x" + (-1.0/0.0).toBitsInt().toHexString().toUpperAscii();
+final string NAN = "0x" + (0.0/0.0).toBitsInt().toHexString().toUpperAscii();
+
 // Corresponds to LLVMConstReal
 public function constReal(RealType ty, float val) returns ConstValue {
-    // XXX #307 use decimal for non-special floats 
-    return new ConstValue(ty, "0x" + int:toHexString(float:toBitsInt(val)));
-
+    string valRep;
+    // Special cases
+    if val.isInfinite() {
+        if val > 0.0 {
+            valRep = posInf;
+        }
+        else {
+            valRep = negInf;
+        }
+    }
+    else if val.isNaN() {
+        valRep = NAN;
+    }
+    else {
+        // General case
+        if float:abs(val).toString().length() > 7 {
+            // Resulting number has more than 7 digits so convert to hex format
+            int repInt = float:toBitsInt(val);
+            valRep = "0x" + int:toHexString(repInt).toUpperAscii();
+        }
+        else {
+            // Set number in decimal format
+            // Change to E notation once balspec:#770 is done
+            valRep = val.toString();
+        }
+    }
+    return new ConstValue(ty, valRep);
 }
 
 // Corresponds to LLVMConstNull

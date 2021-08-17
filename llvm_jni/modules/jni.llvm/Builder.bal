@@ -51,7 +51,7 @@ public distinct class Builder {
         jLLVMPositionBuilderAtEnd(self.LLVMBuilder, bb.LLVMBasicBlockRef);
     }
 
-    public function alloca(IntegralType ty, Alignment? align = (), string? name = ()) returns PointerValue {
+    public function alloca(SingleValueType ty, Alignment? align = (), string? name = ()) returns PointerValue {
         string regName = self.extractName(name);
         PointerValue val = new (jLLVMBuildAlloca(self.LLVMBuilder, typeToLLVMType(ty), java:fromString(regName)));
         if align != () {
