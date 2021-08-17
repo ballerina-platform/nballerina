@@ -69,51 +69,64 @@ public function constInt(IntType ty, int val) returns ConstValue {
     return new ConstValue(ty, val.toString());
 }
 
+final string pINF = (1.0/0.0).toBitsInt().toHexString().toUpperAscii();
+final string nINF = (-1.0/0.0).toBitsInt().toHexString().toUpperAscii();
+final string NAN = (0.0/0.0).toBitsInt().toHexString().toUpperAscii();
+
 // Corresponds to LLVMConstReal
 public function constReal(RealType ty, float val) returns ConstValue {
     string valRep;
+    // Special cases
     if val.isInfinite() {
         if val > 0.0 {
-            valRep = "0x7FF0000000000000";
+            valRep = "0x" + pINF;
         }
         else {
-            valRep = "0xFFF0000000000000";
+            valRep = "0x" + nINF;
         }
     }
     else if val.isNaN() {
-        valRep = "0x7FF8000000000000";
+        valRep = "0x" + NAN;
     }
     else {
-        float exp = float:floor(float:log10(float:abs(val)));
-        if exp.isInfinite() {
-            exp = 0.0;
-        }
-        float valBase = val / float:pow(10, exp);
-        string rep = valBase.toString();
-        if rep.length() > 7 {
+        // General case
+        if float:abs(val).toString().length() > 7 {
+            // Resulting number has more than 7 digits so convert to hex format
             int repInt = float:toBitsInt(val);
             valRep = "0x" + int:toHexString(repInt).toUpperAscii();
         }
         else {
+            // Convert the number to scientific notation
+            float exp = float:floor(float:log10(float:abs(val))); // Value of the exponent
+            if exp.isInfinite() {
+                // Value is 0
+                exp = 0.0;
+            }
+            float valBase = val / float:pow(10, exp); // value of mantissa
+            string rep = ""; // Scientific notation of the value
+            if val < 0.0 {
+                rep += "-";
+            }
+            rep += valBase.toString();
             while rep.length() < 8 {
+                // Pad the mantissa with 0s
                 rep += "0";
             }
+            // Build the exponent component
             rep += "e";
+            // Set the sign of exponent
             if exp < 0.0 {
                 rep += "-";
             }
             else {
                 rep += "+";
             }
+            // Set the value of exponent
             if exp < 10.0 {
-                rep += "0" + (<int>float:abs(exp)).toString(); 
+                // Pad the exponent value so it is two digits
+                rep += "0"; 
             }
-            else {
-                rep += (<int>exp).toString();
-            }
-            if val < 0.0 {
-                rep = "-" + rep;
-            }
+            rep += (<int>float:abs(exp)).toString();
             valRep = rep;
         }
     }
