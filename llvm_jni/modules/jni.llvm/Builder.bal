@@ -97,18 +97,22 @@ public distinct class Builder {
     }
 
     public function iArithmeticWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
+    }
+
+    public function fArithmetic(FloatArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     public function iArithmeticSigned(IntArithmeticSignedOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     public function iBitwise(IntBitwiseOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
-    function binaryIntNoWrap(IntOp op, Value lhs, Value rhs, string? name = ()) returns Value {
+    function binaryOpWrap(BinaryOp op, Value lhs, Value rhs, string? name = ()) returns Value {
         string regName = self.extractName(name);
         match op {
             "add" => {
@@ -143,6 +147,21 @@ public distinct class Builder {
             }
             "lshr" => {
                 return new (jLLVMBuildLShr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "fadd" => {
+                return new (jLLVMBuildFAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "fsub" => {
+                return new (jLLVMBuildFSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "fmul" => {
+                return new (jLLVMBuildFMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "fdiv" => {
+                return new (jLLVMBuildFDiv(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "frem" => {
+                return new (jLLVMBuildFRem(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
             }
         }
         panic error(string `op: ${<string>op} not implemented`);
@@ -283,6 +302,36 @@ function jLLVMBuildNSWSub(handle builder, handle lhs, handle rhs, handle name) r
 
 function jLLVMBuildAdd(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
     name: "LLVMBuildAdd",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFAdd(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFAdd",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFSub(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFSub",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFMul(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFMul",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFDiv(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFDiv",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFRem(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFRem",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;

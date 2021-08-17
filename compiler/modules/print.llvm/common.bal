@@ -73,11 +73,14 @@ public type EnumAttribute FunctionEnumAttribute | (readonly & [int, ParamEnumAtt
 
 public type IntArithmeticOp "add"|"sub"|"mul";
 
+public type FloatArithmeticOp "fadd"|"fsub"|"fmul"|"fdiv"|"frem";
+
 public type IntArithmeticSignedOp "sdiv"|"srem";
 
 public type IntBitwiseOp "xor"|"or"|"and"|"shl"|"ashr"|"lshr";
 
 type IntOp IntArithmeticOp|IntArithmeticSignedOp|IntBitwiseOp;
+type BinaryOp IntOp|FloatArithmeticOp;
 
 // Corresponds to LLVMIntPredicate
 public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sle";
