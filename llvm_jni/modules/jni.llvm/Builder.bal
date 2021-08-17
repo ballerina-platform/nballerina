@@ -1,6 +1,6 @@
 import ballerina/jballerina.java;
 
-function predicateToInt(IntPredicate predicate) returns int {
+function intPredicateToInt(IntPredicate predicate) returns int {
     match predicate {
         "eq" => {
             return 32;
@@ -34,6 +34,60 @@ function predicateToInt(IntPredicate predicate) returns int {
         }
     }
     panic error("Unknown predicate");
+}
+
+function realPredicateToInt(RealPredicate predicate) returns int {
+    match predicate {
+        "false" => { 
+            return 0;
+        }
+        "oeq" => {
+            return 1;
+        }   
+        "ogt" => {
+            return 2;
+        }
+        "oge" => {
+            return 3;    
+        }
+        "olt" => {
+            return 4;
+        }
+        "ole" => {
+            return 5;
+        }
+        "one" => {
+            return 6; 
+        }
+        "ord" => {
+            return 7;
+        }
+        "uno" => {
+            return 8;     
+        }
+        "ueq" => {
+            return 9;
+        }     
+        "ugt" => {
+            return 10;
+        }
+        "uge" => {
+            return 11;
+        }
+        "ult" => {
+            return 12;
+        }
+        "ule" => {
+            return 13;
+        }
+        "une" => {
+            return 14;
+        }
+        "true" => {
+            return 15;
+        }
+    }
+    panic error("unknown predicate");
 }
 
 public distinct class Builder {
@@ -169,7 +223,12 @@ public distinct class Builder {
 
     public function iCmp(IntPredicate op, Value lhs, Value rhs, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildICmp(self.LLVMBuilder, predicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
+        return new (jLLVMBuildICmp(self.LLVMBuilder, intPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
+    }
+
+    public function fCmp(RealPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
+        string reg = self.extractName(name);
+        return new (jLLVMBuildFCmp(self.LLVMBuilder, realPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
     }
 
     public function bitCast(PointerValue val, PointerType destTy, string? name = ()) returns PointerValue {
@@ -246,6 +305,11 @@ public distinct class Builder {
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         string reg = self.extractName(name);
         return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+    }
+
+    public function sIToFP(Value val, RealType destTy, string? name=()) returns Value {
+        string reg = self.extractName(name);
+        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
     function extractName(string? name) returns string {
@@ -408,6 +472,12 @@ function jLLVMBuildICmp(handle builder, int op, handle lhs, handle rhs, handle n
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "int", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;
 
+function jLLVMBuildFCmp(handle builder, int op, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFCmp",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "int", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
 function jLLVMBuildBitCast(handle builder, handle val, handle destTy, handle name) returns handle = @java:Method {
     name: "LLVMBuildBitCast",
     'class: "org.bytedeco.llvm.global.LLVM",
@@ -497,6 +567,12 @@ function jLLVMBuildFNeg(handle builder, handle val, handle name) returns handle 
     name: "LLVMBuildFNeg",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildSIToFP(handle builder, handle val, handle destTy, handle name) returns handle = @java:Method {
+    name: "LLVMBuildSIToFP",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "java.lang.String"]
 } external;
 
 function jLLVMSetAlignment(handle valueRef, int bytes) = @java:Method {

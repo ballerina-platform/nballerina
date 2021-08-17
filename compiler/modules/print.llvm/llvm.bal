@@ -664,6 +664,20 @@ public class Builder {
         return new Value("i1", reg);
     }
 
+    // Corresponds to LLVMBuildFCmp
+    public function fCmp(RealPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
+        BasicBlock bb = self.bb();
+        string|Unnamed reg = bb.func.genReg(name);
+        IntType|RealType ty = sameNumberType(lhs, rhs);
+        if ty is RealType {
+            bb.addInsn(reg, "=", "fcmp", op, typeToString(ty), lhs.operand, ",", rhs.operand);
+            return new Value("i1", reg);
+        }
+        else {
+            panic err:illegalArgument("values must be a real type");
+        }
+    }
+
     // Corresponds to LLVMBuildBitCast
     public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
@@ -737,6 +751,19 @@ public class Builder {
         }
         else {
             panic err:illegalArgument("value must be an real type");
+        }
+    }
+
+    // Corresponds to LLVMBuildSIToFP
+    public function sIToFP(Value val, RealType destTy, string? name=()) returns Value {
+        if val.ty is IntType {
+            BasicBlock bb = self.bb();
+            string|Unnamed reg = bb.func.genReg(name);
+            bb.addInsn(reg, "=", "sitofp", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+            return new Value(destTy, reg);
+        }
+        else {
+            panic err:illegalArgument("value must be int type");
         }
     }
 
