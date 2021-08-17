@@ -727,6 +727,19 @@ public class Builder {
         }
     }
 
+    // Corresponds to LLVMBuildFNeg
+    public function fNeg(Value val, string? name=()) returns Value {
+        if val.ty is RealType {
+            BasicBlock bb = self.bb();
+            string|Unnamed reg = bb.func.genReg(name);
+            bb.addInsn(reg, "=", "fneg", typeToString(val.ty), val.operand);
+            return new Value(val.ty, reg);
+        }
+        else {
+            panic err:illegalArgument("value must be an real type");
+        }
+    }
+
     public function unreachable() {
         BasicBlock bb = self.bb();
         bb.addInsn("unreachable");

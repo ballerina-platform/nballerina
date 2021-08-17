@@ -205,6 +205,11 @@ public distinct class Builder {
         return new (jLLVMBuildTrunc(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
+    public function fNeg(Value val, string? name=()) returns Value {
+        string reg = self.extractName(name);
+        return new (jLLVMBuildFNeg(self.LLVMBuilder, val.LLVMValueRef, java:fromString(reg)));
+    }
+
     public function unreachable() {
         _ = jLLVMBuildUnreachable(self.LLVMBuilder);
     }
@@ -485,6 +490,13 @@ function jLLVMBuildInBoundsGEP(handle builder, handle pointer, handle indices, i
     name: "LLVMBuildInBoundsGEP",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
+} external;
+
+
+function jLLVMBuildFNeg(handle builder, handle val, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFNeg",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;
 
 function jLLVMSetAlignment(handle valueRef, int bytes) = @java:Method {
