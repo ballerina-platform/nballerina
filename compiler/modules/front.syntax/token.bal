@@ -8,15 +8,16 @@ const DECIMAL_NUMBER = 1;
 const HEX_INT_LITERAL = 2;
 const DECIMAL_FP_NUMBER = 3;
 const STRING_LITERAL = 4;
+const HEX_FP_LITERAL = 5;
 
-const N_VARIABLE_TOKENS = 5;
+const N_VARIABLE_TOKENS = 6;
 
-type VariableTokenCode IDENTIFIER|DECIMAL_NUMBER|STRING_LITERAL|HEX_INT_LITERAL|DECIMAL_FP_NUMBER;
+type VariableTokenCode IDENTIFIER|DECIMAL_NUMBER|STRING_LITERAL|HEX_INT_LITERAL|DECIMAL_FP_NUMBER|HEX_FP_LITERAL;
 
 type FpTypeSuffix "f";
 
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
-type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string]|[DECIMAL_FP_NUMBER, string, FpTypeSuffix?];
+type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string]|[DECIMAL_FP_NUMBER, string, FpTypeSuffix?]|[HEX_FP_LITERAL, string];
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=" | "." | "~" | "_";
@@ -194,6 +195,11 @@ class Tokenizer {
                 FRAG_HEX_NUMBER => {
                     // skip the 0x
                     self.curTok = [HEX_INT_LITERAL, self.getFragment().substring(2)];
+                    return;
+                }
+                FRAG_HEX_FP_NUMBER => {
+                    // skip the 0x
+                    self.curTok = [HEX_FP_LITERAL, self.getFragment().substring(2)];
                     return;
                 }
                 FRAG_DECIMAL_FP_NUMBER_F => {
