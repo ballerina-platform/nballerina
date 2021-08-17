@@ -200,20 +200,47 @@ function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:Binar
     if leftExpr is s:ConstValueExpr && rightExpr is s:ConstValueExpr {
         SimpleConst left = leftExpr.value;
         SimpleConst right = rightExpr.value;
-        boolean equal = left == right;
+        boolean exact = (<string>expr.equalityOp).length() == 3; // either "===" or "!=="
+        boolean equal = exact ? isExactEqual(left, right) : isEqual(left, right);
+        boolean positive = expr.equalityOp[0] == "=";
+        boolean value = positive == equal;
+        if exact {
+            return <s:ConstValueExpr> { value, multiSemType: t:BOOLEAN };
+        }
         if !equal && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
             return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`);
         }
-        boolean positive = expr.equalityOp[0] == "=";
-        if (<string>expr.equalityOp).length() == 2 {
-            return foldedBinaryConstExpr(positive == equal, t:BOOLEAN, leftExpr, rightExpr);
-        }
-        // This is the === or !== case
-        return <s:ConstValueExpr> { value: positive == (left === right), multiSemType: t:BOOLEAN };
+        return foldedBinaryConstExpr(value, t:BOOLEAN, leftExpr, rightExpr);
     }
     expr.left = leftExpr;
     expr.right = rightExpr;
     return expr;
+}
+
+// Remove after JBUG #17977 is fixed
+function isEqual(SimpleConst c1, SimpleConst c2) returns boolean {
+    if c1 is float {
+        if c2 is float {
+            return float:isNaN(c1) && float:isNaN(c2) ? true : c1 == c2;
+        }
+        else {
+            return false;
+        }
+    }
+    return c1 == c2;
+}
+
+// Remove after JBUG #17977 is fixed
+function isExactEqual(SimpleConst c1, SimpleConst c2) returns boolean {
+    if c1 is float && float:isNaN(c1) {
+        if c2 is float && float:isNaN(c2) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    return c1 === c2;
 }
 
 // Precondition is that the values are !=

@@ -23,6 +23,7 @@ const int TAG_MASK     = 0x1f * TAG_FACTOR;
 const TAG_NIL      = 0;
 const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
 const int TAG_INT      = t:UT_INT * TAG_FACTOR;
+const int TAG_FLOAT      = t:UT_FLOAT * TAG_FACTOR;
 const int TAG_STRING   = t:UT_STRING * TAG_FACTOR;
 
 const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
@@ -93,7 +94,8 @@ const PANIC_LIST_TOO_LONG = 6;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"float_to_tagged"|"string_eq"|"string_cmp"|"string_concat"|"eq";
+type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
+                         "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -196,6 +198,42 @@ final RuntimeFunction eqFunction = {
     ty: {
         returnType: "i1",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: [["return", "zeroext"], "readonly"]
+};
+
+final RuntimeFunction exactEqFunction = {
+    name: "exact_eq",
+    ty: {
+        returnType: "i1",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: [["return", "zeroext"], "readonly"]
+};
+
+final RuntimeFunction taggedToFloatFunction = {
+    name: "tagged_to_float",
+    ty: {
+        returnType: "double",
+        paramTypes: [LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction floatEqFunction = {
+    name: "float_eq",
+    ty: {
+        returnType: "i1",
+        paramTypes:  ["double", "double"]
+    },
+    attrs: [["return", "zeroext"], "readonly"]
+};
+
+final RuntimeFunction floatExactEqFunction = {
+    name: "float_exact_eq",
+    ty: {
+        returnType: "i1",
+        paramTypes:  ["double", "double"]
     },
     attrs: [["return", "zeroext"], "readonly"]
 };
@@ -829,11 +867,12 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
 
 type CmpEqOp "ne"|"eq";
 
-// For subset 2, == and === are the same: they differ only in when they are allowed
 function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn insn) returns BuildError? {
     var [lhsRepr, lhsValue] = check buildReprValue(builder, scaffold, insn.operands[0]);
     var [rhsRepr, rhsValue] = check buildReprValue(builder, scaffold, insn.operands[1]);
     CmpEqOp op = insn.op[0] == "!" ?  "ne" : "eq"; 
+    // JBUG cast
+    boolean exact = (<string>insn.op).length() == 3; // either "===" or "!=="
     bir:Register result = insn.result;
     match [lhsRepr.base, rhsRepr.base] {
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
@@ -844,7 +883,7 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
                 return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
             else {
-                return buildEqualTaggedTagged(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
+                return buildEqualTaggedTagged(builder, scaffold, exact, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
         }
         [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
@@ -864,8 +903,43 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
              // no tags involved, same representation, boolean/int
             return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
         }
+        [BASE_REPR_TAGGED, BASE_REPR_FLOAT] => {
+            return buildEqualTaggedFloat(builder, scaffold, exact, op, <llvm:PointerValue>lhsValue, rhsValue, result);
+        }
+        [BASE_REPR_FLOAT, BASE_REPR_TAGGED] => {
+            return buildEqualTaggedFloat(builder, scaffold, exact, op, <llvm:PointerValue>rhsValue, lhsValue, result);
+        }
+        [BASE_REPR_FLOAT, BASE_REPR_FLOAT] => {
+            return buildEqualFloat(builder, scaffold, exact, op, lhsValue, rhsValue, result);
+        }
     }
     return err:unimplemented("equality with two different untagged representations");    
+}
+
+function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result) {
+    llvm:BasicBlock floatTagBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock otherTagBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
+    builder.condBr(buildHasTag(builder, tagged, TAG_FLOAT), floatTagBlock, otherTagBlock);
+    builder.positionAtEnd(otherTagBlock);
+    buildStoreBoolean(builder, scaffold,
+                      // result is false if op is "eq", true if op is "ne"
+                      buildConstBoolean(op == "ne"),
+                      result);
+    builder.br(joinBlock);
+    builder.positionAtEnd(floatTagBlock);
+    buildEqualFloat(builder, scaffold, exact, op, buildUntagFloat(builder, scaffold, tagged), untagged, result);
+    builder.br(joinBlock);
+    builder.positionAtEnd(joinBlock);
+}
+
+function buildEqualFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:Value lhsValue, llvm:Value rhsValue, bir:Register reg) {
+    RuntimeFunction eqFunc = exact ? floatExactEqFunction : floatEqFunction;
+    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, eqFunc), [lhsValue, rhsValue]);
+    if op == "ne" {
+        b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
+    }
+    return buildStoreBoolean(builder, scaffold, b, reg);
 }
 
 function reprIsNil(Repr repr) returns boolean {
@@ -900,8 +974,9 @@ function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op
     builder.positionAtEnd(joinBlock);
 }
 
-function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
-    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, eqFunction), [tagged1, tagged2]);
+function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
+    RuntimeFunction eqFunc = exact ? exactEqFunction : eqFunction;
+    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, eqFunc), [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
@@ -1133,6 +1208,10 @@ function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
     return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, taggedToIntFunction), [tagged]);
 }
 
+function buildUntagFloat(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
+    return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, taggedToFloatFunction), [tagged]);
+}
+
 function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
     return builder.trunc(buildTaggedPtrToInt(builder, tagged), LLVM_BOOLEAN);
 }
@@ -1354,6 +1433,7 @@ final readonly & record {|
 |}[] typeReprs = [
     // These are ordered from most to least specific
     { domain: t:INT, repr: REPR_INT },
+    { domain: t:FLOAT, repr: REPR_FLOAT },
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
     { domain: t:NIL, repr: REPR_NIL },
     { domain: t:STRING, repr: REPR_STRING },
