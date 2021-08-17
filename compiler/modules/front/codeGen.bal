@@ -1124,7 +1124,9 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     bir:Register result = cx.createRegister(t:BOOLEAN);
     bir:TypeTestInsn insn = { operand: reg, semType, result, negated};
     bb.insns.push(insn);
-
+    if negated {
+        [intersect, diff] = [diff, intersect];
+    }
     Narrowing? narrowing = ();
     if !(binding is ()) {
         narrowing = {
