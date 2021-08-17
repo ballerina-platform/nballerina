@@ -1,11 +1,11 @@
 define double @test() {
-  ret double 1.123450e+00
+  ret double 1.12345
 }
 define double @test2() {
   ret double 0x3FF1F9ACFFA7EB6C
 }
 define double @test3() {
-  ret double 1.123450e+01
+  ret double 11.2345
 }
 define double @testE() {
   ret double 0x4005BF0A8B145769

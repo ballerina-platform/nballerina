@@ -69,9 +69,9 @@ public function constInt(IntType ty, int val) returns ConstValue {
     return new ConstValue(ty, val.toString());
 }
 
-final string pINF = (1.0/0.0).toBitsInt().toHexString().toUpperAscii();
-final string nINF = (-1.0/0.0).toBitsInt().toHexString().toUpperAscii();
-final string NAN = (0.0/0.0).toBitsInt().toHexString().toUpperAscii();
+final string posInf = "0x" + (1.0/0.0).toBitsInt().toHexString().toUpperAscii();
+final string negInf = "0x" + (-1.0/0.0).toBitsInt().toHexString().toUpperAscii();
+final string NAN = "0x" + (0.0/0.0).toBitsInt().toHexString().toUpperAscii();
 
 // Corresponds to LLVMConstReal
 public function constReal(RealType ty, float val) returns ConstValue {
@@ -79,14 +79,14 @@ public function constReal(RealType ty, float val) returns ConstValue {
     // Special cases
     if val.isInfinite() {
         if val > 0.0 {
-            valRep = "0x" + pINF;
+            valRep = posInf;
         }
         else {
-            valRep = "0x" + nINF;
+            valRep = negInf;
         }
     }
     else if val.isNaN() {
-        valRep = "0x" + NAN;
+        valRep = NAN;
     }
     else {
         // General case
@@ -96,38 +96,9 @@ public function constReal(RealType ty, float val) returns ConstValue {
             valRep = "0x" + int:toHexString(repInt).toUpperAscii();
         }
         else {
-            // Convert the number to scientific notation
-            float exp = float:floor(float:log10(float:abs(val))); // Value of the exponent
-            if exp.isInfinite() {
-                // Value is 0
-                exp = 0.0;
-            }
-            float valBase = val / float:pow(10, exp); // value of mantissa
-            string rep = ""; // Scientific notation of the value
-            if val < 0.0 {
-                rep += "-";
-            }
-            rep += valBase.toString();
-            while rep.length() < 8 {
-                // Pad the mantissa with 0s
-                rep += "0";
-            }
-            // Build the exponent component
-            rep += "e";
-            // Set the sign of exponent
-            if exp < 0.0 {
-                rep += "-";
-            }
-            else {
-                rep += "+";
-            }
-            // Set the value of exponent
-            if exp < 10.0 {
-                // Pad the exponent value so it is two digits
-                rep += "0"; 
-            }
-            rep += (<int>float:abs(exp)).toString();
-            valRep = rep;
+            // Set number in decimal format
+            // Change to E notation once balspec:#770 is done
+            valRep = val.toString();
         }
     }
     return new ConstValue(ty, valRep);
