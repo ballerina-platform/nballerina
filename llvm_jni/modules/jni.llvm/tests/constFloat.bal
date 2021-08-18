@@ -7,7 +7,7 @@ function testConstFnBuilder(Module m, Builder builder, string fnName, float retV
     builder.ret(constReal("double",retVal));
 }
 
-function constRealT() returns Module {
+function constFloatT() returns Module {
     Context context = new;
     Builder builder = context.createBuilder();
     Module m = context.createModule();
@@ -24,5 +24,5 @@ function constRealT() returns Module {
 
 @test:Config {}
 function testConstReal() returns error? {
-    return runTest(constRealT, "const_real.ll");
+    return runTest(constFloatT, "const_float.ll");
 }
