@@ -754,19 +754,6 @@ public class Builder {
         }
     }
 
-    // Corresponds to LLVMBuildSIToFP
-    public function sIToFP(Value val, RealType destTy, string? name=()) returns Value {
-        if val.ty is IntType {
-            BasicBlock bb = self.bb();
-            string|Unnamed reg = bb.func.genReg(name);
-            bb.addInsn(reg, "=", "sitofp", typeToString(val.ty), val.operand, "to", typeToString(destTy));
-            return new Value(destTy, reg);
-        }
-        else {
-            panic err:illegalArgument("value must be int type");
-        }
-    }
-
     public function unreachable() {
         BasicBlock bb = self.bb();
         bb.addInsn("unreachable");
