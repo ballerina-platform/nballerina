@@ -525,6 +525,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:FloatArithmeticBinaryInsn {
             buildFloatArithmeticBinary(builder, scaffold, insn);
         }
+        else if insn is bir:FloatNegateInsn {
+            buildFloatNegate(builder, scaffold, insn);
+        }
         else {
             return err:unimplemented(`BIR insn ${insn.name} not implemented`);
         }
@@ -823,6 +826,12 @@ function buildFloatArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir
     llvm:FloatArithmeticOp op = floatArithmeticOps.get(insn.op);
     llvm:Value result = builder.fArithmetic(op, lhs, rhs);
     buildStoreFloat(builder, scaffold, result, insn.result);                                  
+}
+
+function buildFloatNegate(llvm:Builder builder, Scaffold scaffold, bir:FloatNegateInsn insn) {
+    llvm:Value operand = buildFloat(builder, scaffold, insn.operand);
+    llvm:Value result = builder.fNeg(operand);
+    buildStoreFloat(builder, scaffold, result, insn.result);
 }
 
 final readonly & map<llvm:IntBitwiseOp> binaryBitwiseOp = {
