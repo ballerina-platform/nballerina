@@ -665,7 +665,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildFCmp
-    public function fCmp(RealPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
+    public function fCmp(FloatPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         IntType|RealType ty = sameNumberType(lhs, rhs);

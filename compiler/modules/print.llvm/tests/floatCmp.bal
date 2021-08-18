@@ -1,6 +1,6 @@
 import ballerina/test;
 
-function buildCmpTestFn(RealPredicate predicate, string name, Module m, Builder builder) {
+function buildCmpTestFn(FloatPredicate predicate, string name, Module m, Builder builder) {
     FunctionDefn fn = m.addFunctionDefn(name, {returnType: "i1", paramTypes: ["double", "double"]});
     BasicBlock bb = fn.appendBasicBlock();
     builder.positionAtEnd(bb);

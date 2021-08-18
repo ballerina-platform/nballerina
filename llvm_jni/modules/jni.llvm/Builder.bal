@@ -36,7 +36,7 @@ function intPredicateToInt(IntPredicate predicate) returns int {
     panic error("Unknown predicate");
 }
 
-function realPredicateToInt(RealPredicate predicate) returns int {
+function floatPredicateToInt(FloatPredicate predicate) returns int {
     match predicate {
         "false" => { 
             return 0;
@@ -226,9 +226,9 @@ public distinct class Builder {
         return new (jLLVMBuildICmp(self.LLVMBuilder, intPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
     }
 
-    public function fCmp(RealPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
+    public function fCmp(FloatPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildFCmp(self.LLVMBuilder, realPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
+        return new (jLLVMBuildFCmp(self.LLVMBuilder, floatPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
     }
 
     public function bitCast(PointerValue val, PointerType destTy, string? name = ()) returns PointerValue {
