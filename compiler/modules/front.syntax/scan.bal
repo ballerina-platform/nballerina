@@ -50,8 +50,10 @@ const FRAG_STRING_CHARS = 0x08;
 const FRAG_STRING_CONTROL_ESCAPE = 0x09; // \r \t \n
 const FRAG_STRING_CHAR_ESCAPE = 0x0A; // \" \\
 const FRAG_STRING_NUMERIC_ESCAPE = 0x0B; // \u{NNN}
+// temperorily use as code for hexadecimal floating point 
+const FRAG_HEX_FP_NUMBER = 0x0C;
 
-const VAR_FRAG_MAX = 0x0B;
+const VAR_FRAG_MAX = 0x0C;
 
 // each fragment codes >= always comes from the same string
 const FRAG_FIXED = 0x1D; // >= this corre
@@ -66,9 +68,6 @@ const FRAG_STRING_CLOSE = 0x1F;
 // fragment codes >= 0x21 correspond to fixed tokens
 
 const FRAG_FIXED_TOKEN = 0x21;
-
-// temperorily use as code for hexadecimal floating point 
-const FRAG_HEX_FP_NUMBER = 0x22;
 
 // Multi char delims mapped into range used by upper case
 const FRAG_LEFT_CURLY_VBAR = 0x41;
@@ -216,7 +215,6 @@ function scanLine(string line) returns ScannedLine {
         }
     }
     //io:println("nVarFragments: ", nVarFragments);
-
     fragments.setLength(nVarFragments);
     return { fragCodes: fragCodes.cloneReadOnly(), fragments: fragments.cloneReadOnly() };
 }
@@ -721,6 +719,7 @@ function scanOptHex(int[] codePoints, int startIndex) returns int? {
     while i < len && isCodePointHexDigit(codePoints[i]) {
         i += 1;
     }
+
     return i == startIndex ? () : i;
 }
 
@@ -768,22 +767,25 @@ function scanExponent(int[] codePoints, int startIndex) returns int? {
 }
 
 function scanHexFractionExponent(int[] codePoints, int startIndex) returns int? {
-    int i = startIndex;
+    int? i;
     int len = codePoints.length();
-    if i >= len || !isCodePointHexDigit(codePoints[i]) {
+    if startIndex >= len || !isCodePointHexDigit(codePoints[startIndex]) {
         return ();
     }
-    i = <int> scanOptHex(codePoints, i + 1);
-    if i >= len {
-        return i;
-    }
-    int cp = codePoints[i];
-    if  cp == CP_UPPER_P || cp == CP_LOWER_P {
-        int? endIndex = scanExponent(codePoints, i + 1);
-        if endIndex != () {
-            return endIndex;
+    i = scanOptHex(codePoints, startIndex);
+    if i != () {
+        if i >= len {
+            return i;
         }
+        int cp = codePoints[i];
+        if  cp == CP_UPPER_P || cp == CP_LOWER_P {
+            int? endIndex = scanHexExponent(codePoints, i + 1);
+            if endIndex != () {
+                return endIndex;
+            }
+        }        
     }
+
     return i;
 }
 
@@ -802,7 +804,7 @@ function scanHexExponent(int[] codePoints, int startIndex) returns int? {
         cp = codePoints[i];
     }
     if isCodePointHexDigit(cp) {
-        return scanOptHex(codePoints, i + 1);
+        return scanOptHex(codePoints, i);
     }
     return ();
 }

@@ -201,7 +201,8 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         [DECIMAL_NUMBER, _]
         | [HEX_INT_LITERAL, _]
-        | [DECIMAL_FP_NUMBER, _, _] => {
+        | [DECIMAL_FP_NUMBER, _, _] 
+        | [HEX_FP_LITERAL, _]=> {
             return parseNumericLiteralTypeDesc(tok, ());
         }
         "-" => {
@@ -229,7 +230,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 function parseNumericLiteralTypeDesc(Tokenizer tok, err:Position? signPos = ()) returns SingletonTypeDesc|err:Syntax {
     NumericLiteralExpr expr = check parseNumericLiteralExpr(tok);
     if expr is FpLiteralExpr {
-        var f = float:fromString(expr.untypedLiteral);
+        var f = expr.base == 10 ? float:fromString(expr.untypedLiteral) : float:fromHexString(expr.untypedLiteral);
         if f is error {
             return tok.err(`invalid float literal ${expr.untypedLiteral}`); // don't think this should happen
         }

@@ -256,9 +256,10 @@ public type IntLiteralExpr record {|
 const FLOAT_TYPE_SUFFIX = "f";
 
 public type FpLiteralExpr record {|
+    IntLiteralBase base;
     // This is the literal without the public type suffix
     string untypedLiteral;
-    FLOAT_TYPE_SUFFIX? typeSuffix;
+    FLOAT_TYPE_SUFFIX? typeSuffix = ();
     err:Position pos;
 |};
 

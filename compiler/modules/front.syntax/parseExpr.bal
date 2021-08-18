@@ -222,12 +222,17 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         return expr;
     }
     else if t is [DECIMAL_FP_NUMBER, string, FLOAT_TYPE_SUFFIX|()] {
-        FpLiteralExpr expr = { untypedLiteral: t[1], typeSuffix: t[2], pos: tok.currentPos() };
+        FpLiteralExpr expr = { base: 10, untypedLiteral: t[1], typeSuffix: t[2], pos: tok.currentPos() };
         check tok.advance();
         return expr;
     }
     else if t is [HEX_INT_LITERAL, string] {
         IntLiteralExpr expr = { base: 16, digits: t[1], pos: tok.currentPos() };
+        check tok.advance();
+        return expr;
+    }
+    else if t is [HEX_FP_LITERAL, string] {
+        FpLiteralExpr expr = { base: 16, untypedLiteral: t[1], pos: tok.currentPos() };
         check tok.advance();
         return expr;
     }
@@ -420,7 +425,11 @@ function parseNumericLiteralExpr(Tokenizer tok) returns NumericLiteralExpr|err:S
         }
         [DECIMAL_FP_NUMBER, var untypedLiteral, var typeSuffix] => {
             check tok.advance();
-            return { untypedLiteral, typeSuffix, pos };
+            return { base: 10, untypedLiteral, typeSuffix, pos };
+        }
+        [HEX_FP_LITERAL, var untypedLiteral] => {
+            check tok.advance();
+            return { base: 16, untypedLiteral, pos };
         }
     }
     return parseError(tok, "expected numeric literal");
