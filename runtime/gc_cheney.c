@@ -39,7 +39,7 @@ void _bal_init_heap() {
         heap_half_size = ((heap_half_size / page_size) + 1) * page_size;
     }
 
-    heap_half_size = 108;
+    // heap_half_size = 112;
     // TODO: Removing MAP_ANONYMOUS fails the mmap(), check this
     from_space_ptr = mmap(NULL, heap_half_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
     // TODO: check order and alignemt.
@@ -82,14 +82,32 @@ void copy(Root *root_ptr) {
 }
 
 void collect() {
-    printf("%s\n", "Collect");
     alloc_ptr = to_space_ptr;
     scan_ptr = to_space_ptr;
 
     get_roots(copy);
-    
-    // TODO: scan objects in the to-space
 
+    // Fill the from-space from 0(not necessary)
+    memset(from_space_ptr, 0, heap_half_size);
+
+    // -- scan objects in the to-space (including objects added by this loop)
+    // While scanPtr < allocPtr
+        // ForEach reference r from o (pointed to by scanPtr)
+            // r = copy(r)
+        // EndForEach
+        // scanPtr = scanPtr  + o.size() -- points to the next object in the to-space, if any
+    // EndWhile
+    while (scan_ptr < alloc_ptr) {
+        uint64_t root_size = *(uint64_t*)scan_ptr;
+        scan_ptr = scan_ptr + ROOT_HEADER_SIZE;
+        Root root = scan_ptr;
+        // TODO: Iterate over each multiple of 8 bytes and extract the tag.
+        // If tag is zero, it can be a raw pointer or just an integer.
+        // So we have to check whether that value available with in 
+        // the from-space addresses.
+        scan_ptr = scan_ptr + root_size;
+    }
+    
     // swap from_space <-> to_space
     uint8_t* t = from_space_ptr;
     from_space_ptr = to_space_ptr;
@@ -100,7 +118,6 @@ void collect() {
 }
 
 UntypedPtr _bal_alloc(uint64_t nBytes) {
-    printf("nBytes : %d\n", nBytes);
     if (nBytes % 8 != 0) {
         nBytes = ((nBytes / 8) + 1) * nBytes;
     }

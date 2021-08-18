@@ -80,11 +80,11 @@ void get_roots(void (*mark_roots)(Root *)) {
             printf("root taken from stack map : %p\n", *ptr);
             Root root = *ptr;
             // For testing values
-            printf("actual val : %p\n", *(uint64_t *)(root - 16));
-            printf("actual val : %d\n", *(uint64_t *)(root - 8));
-            printf("actual val : %d\n", *(uint64_t *)root);
-            printf("actual val : %d\n", *(uint64_t *)(root + 8));
-            printf("actual val : %p\n", *(uint64_t *)(root + 16));
+            printf("actual val -16 : %p\n", *(uint64_t *)(root - 16));
+            printf("actual val -8: %d\n", *(uint64_t *)(root - 8));
+            printf("actual val 0 : %d\n", *(uint64_t *)root);
+            printf("actual val +8 : %d\n", *(uint64_t *)(root + 8));
+            printf("actual val +16 : %p\n", *(uint64_t *)(root + 16));
             mark_roots(ptr);
         }
         // TODO: check whether we remove libbacktrace
