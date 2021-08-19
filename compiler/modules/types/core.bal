@@ -691,6 +691,11 @@ public function singleShape(SemType t) returns Value? {
         int? value = intSubtypeSingleValue(sd);
         return value == () ? () : { value };
     }
+    else if isSubtypeSimple(t, FLOAT) {
+        SubtypeData sd = t.getSubtypeData(UT_FLOAT);
+        float? value = floatSubtypeSingleValue(sd);
+        return value == () ? () : { value };
+    }
     else if isSubtypeSimple(t, STRING) {
         SubtypeData sd = t.getSubtypeData(UT_STRING);
         string? value = stringSubtypeSingleValue(sd);

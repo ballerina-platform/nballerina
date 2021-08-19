@@ -10,6 +10,21 @@ public function floatConst(float value) returns SemType {
     return uniformSubtype(UT_FLOAT, st);
 }
 
+function floatSubtypeSingleValue(SubtypeData d) returns float? {
+    if d is boolean {
+        return ();
+    }
+    FloatSubtype f = <FloatSubtype>d;
+    if !f.allowed {
+        return ();
+    }
+    float[] values = f.values;
+    if values.length() != 1 {
+        return ();
+    }
+    return values[0];
+}
+
 // XXX should this be generified and moved to enumerable? 
 function floatSubtypeContains(SubtypeData d, float f) returns boolean {
     if d is boolean {
