@@ -72,19 +72,11 @@ void get_roots(void (*mark_roots)(Root *)) {
     // 2. Lookup the table for frame information for given frame address
     // 3. Interate over records of that frame and find heap references(roots)
     for (; f < lastFrame; f++) {
-        printf("f->pc : %p\n", f->pc);
         frame_info_t* frame = lookup_return_address(table, f->pc);
         for (size_t p = 0; p < frame->numSlots; p++) {
             pointer_slot_t* psl = frame->slots + p;
             Root* ptr = (Root*)(rsp + psl->offset);
-            printf("root taken from stack map : %p\n", *ptr);
             Root root = *ptr;
-            // For testing values
-            printf("actual val -16 : %p\n", *(uint64_t *)(root - 16));
-            printf("actual val -8: %d\n", *(uint64_t *)(root - 8));
-            printf("actual val 0 : %d\n", *(uint64_t *)root);
-            printf("actual val +8 : %d\n", *(uint64_t *)(root + 8));
-            printf("actual val +16 : %p\n", *(uint64_t *)(root + 16));
             mark_roots(ptr);
         }
         // TODO: check whether we remove libbacktrace

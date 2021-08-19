@@ -14,7 +14,7 @@
 
 #include <sys/mman.h>
 
-static uint64_t DEFAULT_HEAP_HALF_SIZE = 3221225472; // 1GB
+static uint64_t DEFAULT_HEAP_HALF_SIZE = 3221225473; // 3GB
 static uint64_t ROOT_HEADER_SIZE = 8;                // in bytes
 
 // TODO: Try to reduce these global vars
@@ -33,14 +33,25 @@ extern void get_roots(mark_roots);
 void _bal_init_heap() {
     int page_size = getpagesize();
     const char *heap_env_val = getenv("BAL_HEAP");
-    heap_half_size = (heap_env_val != NULL) ? atoi(heap_env_val) : DEFAULT_HEAP_HALF_SIZE;
+    // TODO: Abort if atol returns seg fault
+    heap_half_size = (heap_env_val != NULL) ? atol(heap_env_val) : DEFAULT_HEAP_HALF_SIZE;
     // Make sure heap size is a multiple of page size
     if (heap_half_size % page_size != 0) {
         heap_half_size = ((heap_half_size / page_size) + 1) * page_size;
     }
 
-    // heap_half_size = 112;
+    // This is done only for testing purposes
+    const char *small_heap = getenv("SMALL_HEAP");
+    if (getenv("SMALL_HEAP")) {
+        heap_half_size = atoi(small_heap);
+        if (heap_half_size % 8 != 0) {
+            printf("Small heap size should be a multiple of 8.\n");
+            abort();
+        }
+    }
+
     // TODO: Removing MAP_ANONYMOUS fails the mmap(), check this
+    // TODO: Use PROT_NONE
     from_space_ptr = mmap(NULL, heap_half_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
     // TODO: check order and alignemt.
     if (from_space_ptr == MAP_FAILED) {

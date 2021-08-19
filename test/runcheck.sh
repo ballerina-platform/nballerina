@@ -13,6 +13,14 @@ dir=`dirname "$1"`
 parent=`dirname $dir`
 out="$parent/actual/$b.txt"
 mkdir -p "$parent/actual"
+
+HEAP_SIZE=$(sed -ne 's;^.*// *@small_heap  *;;p' "$BAL_FILE")
+
+if [ ! -z "$HEAP_SIZE" ]
+then
+    export SMALL_HEAP=$HEAP_SIZE
+fi
+
 if test $kind == p; then
     balFile=`echo "$b" | sed -e 's/.exe/.bal/'`
     $("./$1" >/dev/null 2>"$out")
