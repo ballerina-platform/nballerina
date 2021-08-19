@@ -9,7 +9,8 @@ type FoldError err:Semantic|err:Unimplemented;
 // This is for handling const definitions in the future
 type FoldContext object {
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic;
-    function lookupConst(string varName) returns t:Value?|FoldError;
+    // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
+    function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
 };
 
 class ConstFoldContext {
@@ -24,7 +25,7 @@ class ConstFoldContext {
         return err:semantic(msg, pos=pos, cause=cause, functionName=self.defnName);
     }
 
-    function lookupConst(string varName) returns t:Value?|FoldError {
+    function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         s:ModuleLevelDefn? defn = self.mod[varName];
         if defn is s:ConstDefn {
             var resolved = check resolveConstDefn(self.mod, defn);
@@ -124,7 +125,7 @@ function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:M
 function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:BinaryArithmeticExpr expr) returns s:Expr|FoldError {
     s:Expr leftExpr = check foldExpr(cx, expectedType, expr.left);
     s:Expr rightExpr = check foldExpr(cx, expectedType, expr.right);
-    if leftExpr is s:ConstValueExpr && rightExpr is s:ConstValueExpr {
+    if leftExpr is s:ConstShapeExpr && rightExpr is s:ConstShapeExpr {
         SimpleConst left = leftExpr.value;
         SimpleConst right = rightExpr.value;
         if left is int && right is int {
@@ -140,13 +141,22 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
             return foldedBinaryConstExpr(left + right, t:STRING, leftExpr, rightExpr);
         }
         else if left is float && right is float {
-            float|error result = trap floatArithmeticEval(expr.arithmeticOp, left, right);
-            if result is float {
-                return foldedBinaryConstExpr(result, t:FLOAT, leftExpr, rightExpr);
+            if expr.arithmeticOp == "/" && rightExpr is s:FloatZeroExpr {
+                // type is float in this case
+                return expr;
             }
-            else {
-                return cx.semanticErr(`evaluation of float constant ${expr.arithmeticOp} expression failed`, pos=expr.pos, cause=result);
+            float f = floatArithmeticEval(expr.arithmeticOp, left, right);
+            if f == 0.0 && (leftExpr is s:FloatZeroExpr || rightExpr is s:FloatZeroExpr) {
+                if leftExpr is s:FloatZeroExpr {
+                    expr.left = leftExpr.expr;
+                }
+                if rightExpr is s:FloatZeroExpr {
+                    expr.right = rightExpr.expr;
+                }
+                s:FloatZeroExpr zeroExpr = { expr };
+                return zeroExpr;
             }
+            return foldedBinaryConstExpr(f, t:FLOAT, leftExpr, rightExpr);
         }
         else {
             return cx.semanticErr(`invalid operand types for ${expr.arithmeticOp}`);
@@ -187,7 +197,6 @@ function foldedBinaryBitwiseType(s:BinaryBitwiseOp op, int left, t:SemType? lt, 
 
 function bitwiseOperandWiden(s:ConstValueExpr expr) returns t:SemType {
     t:SemType? t = expr.multiSemType;
-
     if !(t is ()) {
         return t:widenUnsigned(t);
     }
@@ -197,20 +206,27 @@ function bitwiseOperandWiden(s:ConstValueExpr expr) returns t:SemType {
 function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:BinaryEqualityExpr expr) returns s:Expr|FoldError {
     s:Expr leftExpr = check foldExpr(cx, (), expr.left);
     s:Expr rightExpr = check foldExpr(cx, (), expr.right);
-    if leftExpr is s:ConstValueExpr && rightExpr is s:ConstValueExpr {
-        SimpleConst left = leftExpr.value;
-        SimpleConst right = rightExpr.value;
-        boolean exact = (<string>expr.equalityOp).length() == 3; // either "===" or "!=="
-        boolean equal = exact ? isExactEqual(left, right) : isEqual(left, right);
-        boolean positive = expr.equalityOp[0] == "=";
-        boolean value = positive == equal;
-        if exact {
+    boolean exact = (<string>expr.equalityOp).length() == 3; // either "===" or "!=="
+    boolean positive = expr.equalityOp[0] == "=";
+    if exact {
+        if leftExpr is s:ConstValueExpr && rightExpr is s:ConstValueExpr {
+            boolean equal = isExactEqual(leftExpr.value, rightExpr.value);
+            boolean value = positive == equal;
+            if !equal && !isEqual(leftExpr.value, rightExpr.value) && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
+                return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`);
+            }
             return <s:ConstValueExpr> { value, multiSemType: t:BOOLEAN };
         }
-        if !equal && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
-            return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`);
+    }
+    else {
+        if leftExpr is s:ConstShapeExpr && rightExpr is s:ConstShapeExpr {
+            boolean equal = isEqual(leftExpr.value, rightExpr.value);
+            boolean value = positive == equal;
+            if !equal && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
+                return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`);
+            }
+            return foldedBinaryConstExpr(value, t:BOOLEAN, leftExpr, rightExpr);
         }
-        return foldedBinaryConstExpr(value, t:BOOLEAN, leftExpr, rightExpr);
     }
     expr.left = leftExpr;
     expr.right = rightExpr;
@@ -244,7 +260,7 @@ function isExactEqual(SimpleConst c1, SimpleConst c2) returns boolean {
 }
 
 // Precondition is that the values are !=
-function simpleConstExprIntersectIsEmpty(s:ConstValueExpr leftExpr, s:ConstValueExpr rightExpr) returns boolean {
+function simpleConstExprIntersectIsEmpty(s:ConstShapeExpr leftExpr, s:ConstShapeExpr rightExpr) returns boolean {
     t:SemType? lt = leftExpr.multiSemType;
     t:SemType? rt = rightExpr.multiSemType;
     if lt is () {
@@ -268,11 +284,14 @@ function simpleConstExprIntersectIsEmpty(s:ConstValueExpr leftExpr, s:ConstValue
 function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:BinaryRelationalExpr expr) returns s:Expr|FoldError {
     s:Expr leftExpr = check foldExpr(cx, (), expr.left);
     s:Expr rightExpr = check foldExpr(cx, (), expr.right);
-    if leftExpr is s:ConstValueExpr && rightExpr is s:ConstValueExpr {
+    if leftExpr is s:ConstShapeExpr && rightExpr is s:ConstShapeExpr {
         SimpleConst left = leftExpr.value;
         SimpleConst right = rightExpr.value;
-         if left is int && right is int {
+        if left is int && right is int {
             return foldedBinaryConstExpr(intRelationalEval(expr.relationalOp, left, right), t:INT, leftExpr, rightExpr);
+        }
+        else if left is float && right is float {
+            return foldedBinaryConstExpr(floatRelationalEval(expr.relationalOp, left, right), t:INT, leftExpr, rightExpr);
         }
         else if left is string && right is string {
             return foldedBinaryConstExpr(stringRelationalEval(expr.relationalOp, left, right), t:INT, leftExpr, rightExpr);
@@ -287,7 +306,7 @@ function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:Bin
     return expr;
 }
 
-function foldedBinaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, s:ConstValueExpr left, s:ConstValueExpr right) returns s:ConstValueExpr {
+function foldedBinaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, s:ConstShapeExpr left, s:ConstShapeExpr right) returns s:ConstValueExpr {
     return { value, multiSemType: left.multiSemType === () && right.multiSemType === () ? () : basicType };
 }
 
@@ -326,6 +345,12 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
                     return foldedUnaryConstExpr(-operand, t:FLOAT, subExpr);
                 }
             }
+            else if subExpr is s:FloatZeroExpr {
+                // lift up the FloatZero
+                expr.operand = subExpr.expr;
+                subExpr.expr = expr;
+                return subExpr;
+            }
         }
         _ => {
             panic err:impossible();
@@ -344,7 +369,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
         targetType = t:intersect(targetType, expectedType);
     }
     s:Expr subExpr = check foldExpr(cx, targetType, expr.operand);
-    if subExpr is s:ConstValueExpr {
+    if subExpr is s:ConstShapeExpr {
         if !t:containsConst(expr.semType, subExpr.value) {
             return cx.semanticErr(`type cast will always fail`, pos=expr.pos);
         }
@@ -357,21 +382,25 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
 
 function foldTypeTestExpr(FoldContext cx, t:SemType? expectedType, s:TypeTestExpr expr) returns s:Expr|FoldError {
     s:Expr subExpr = check foldExpr(cx, (), expr.left);
-    if subExpr is s:ConstValueExpr {
+    if subExpr is s:ConstShapeExpr {
         return foldedUnaryConstExpr(t:containsConst(expr.semType, subExpr.value), t:BOOLEAN, subExpr);
     }
     expr.left = subExpr;
     return expr;
 }
 
-function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, s:ConstValueExpr subExpr) returns s:ConstValueExpr {
+function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, s:ConstShapeExpr subExpr) returns s:ConstValueExpr {
     return { value, multiSemType: subExpr.multiSemType === () ? () : basicType };
 }
 
 function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr expr) returns s:Expr|FoldError {
-    t:Value? constValue = check cx.lookupConst(expr.varName);
+    s:FLOAT_ZERO|t:Value? constValue = check cx.lookupConst(expr.varName);
     if constValue is () {
         return expr;
+    }
+    else if constValue is s:FLOAT_ZERO {
+        s:FloatZeroExpr zeroExpr = { expr };
+        return zeroExpr;
     }
     else {
         s:ConstValueExpr constExpr = { value: constValue.value };
@@ -444,7 +473,6 @@ function intArithmeticEval(s:BinaryArithmeticOp op, int left, int right) returns
 }
 
 function floatArithmeticEval(s:BinaryArithmeticOp op, float left, float right) returns float  {
-    // xxx this will have to change to address #274
     match op {
         "+" => {
             return left + right;
@@ -491,6 +519,24 @@ function bitwiseEval(s:BinaryBitwiseOp op, int left, int right) returns int  {
 
 
 function stringRelationalEval(s:BinaryRelationalOp op, string left, string right) returns boolean {
+    match op {
+        "<" => {
+            return left < right;
+        }
+        "<=" => {
+            return left <= right;
+        }
+        ">" => {
+            return left > right;
+        }
+        ">=" => {
+            return left >= right;
+        }
+    }
+    panic err:impossible();
+}
+
+function floatRelationalEval(s:BinaryRelationalOp op, float left, float right) returns boolean {
     match op {
         "<" => {
             return left < right;

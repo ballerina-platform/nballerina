@@ -1082,6 +1082,9 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
         if targetBaseRepr == BASE_REPR_INT {
             return buildUntagInt(builder, scaffold, tagged);
         }
+        else if targetBaseRepr == BASE_REPR_FLOAT {
+            return buildUntagFloat(builder, scaffold, tagged);
+        }
         else if targetBaseRepr == BASE_REPR_BOOLEAN {
             return buildUntagBoolean(builder, tagged);
         }
@@ -1451,6 +1454,9 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr|BuildError {
 
 // Return the representation for a SemType.
 function semTypeRepr(t:SemType ty) returns Repr|BuildError {
+    if ty === t:NEVER {
+        panic err:impossible("allocate register with never type");
+    }
     foreach var tr in typeReprs {
         if t:isSubtypeSimple(ty, tr.domain) {
             return tr.repr;
