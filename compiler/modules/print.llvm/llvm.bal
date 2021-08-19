@@ -664,6 +664,20 @@ public class Builder {
         return new Value("i1", reg);
     }
 
+    // Corresponds to LLVMBuildFCmp
+    public function fCmp(FloatPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
+        BasicBlock bb = self.bb();
+        string|Unnamed reg = bb.func.genReg(name);
+        IntType|RealType ty = sameNumberType(lhs, rhs);
+        if ty is RealType {
+            bb.addInsn(reg, "=", "fcmp", op, typeToString(ty), lhs.operand, ",", rhs.operand);
+            return new Value("i1", reg);
+        }
+        else {
+            panic err:illegalArgument("values must be a real type");
+        }
+    }
+
     // Corresponds to LLVMBuildBitCast
     public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
