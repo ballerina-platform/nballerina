@@ -58,27 +58,20 @@ void _bal_init_heap() {
     }
 }
 
-// If o has no forwarding address
-    // o' = allocPtr
-    // allocPtr = allocPtr + size(o)
-    // copy the contents of o to o'
-    // forwarding-address(o) = o'
-// EndIf
-// return forwarding-address(o)
-// argument should be the address of stack which points to a location on heap.
+// the argument should be the address of stack which points to a location on heap.
 void copy(Root *root_ptr) {
     Root old_root = *root_ptr - ROOT_HEADER_SIZE;
-    uint64_t *root_header = (uint64_t *)old_root;
-    uint64_t old_root_size = *root_header;
-    if (old_root_size ^ 1) { // last bit is 0, no forward pointer
+    uint64_t *root_header_ptr = (uint64_t *)old_root;
+    uint64_t old_root_header = *root_header_ptr;
+    if (old_root_header ^ 1) { // last bit is 0, no forward pointer
         Root new_root = alloc_ptr;
-        old_root_size = old_root_size + ROOT_HEADER_SIZE;
-        alloc_ptr = alloc_ptr + old_root_size; // heap header contains the size of object,
+        old_root_header = old_root_header + ROOT_HEADER_SIZE;
+        alloc_ptr = alloc_ptr + old_root_header; // heap header contains the size of object,
                                                // alloc_ptr points to next new root
-        memcpy(new_root, old_root, old_root_size);
-        *root_header = (uint64_t)(new_root + ROOT_HEADER_SIZE) | 1; // set header and mark it as forward pointer
+        memcpy(new_root, old_root, old_root_header);
+        *root_header_ptr = (uint64_t)(new_root + ROOT_HEADER_SIZE) | 1; // set header and mark it as forward pointer
     }
-    *root_ptr = (Root)(*root_header ^ 1);
+    *root_ptr = (Root)(*root_header_ptr ^ 1);
 }
 
 void collect() {
@@ -87,27 +80,39 @@ void collect() {
 
     get_roots(copy);
 
-    // Fill the from-space from 0(not necessary)
-    memset(from_space_ptr, 0, heap_half_size);
-
-    // -- scan objects in the to-space (including objects added by this loop)
-    // While scanPtr < allocPtr
-        // ForEach reference r from o (pointed to by scanPtr)
-            // r = copy(r)
-        // EndForEach
-        // scanPtr = scanPtr  + o.size() -- points to the next object in the to-space, if any
-    // EndWhile
     while (scan_ptr < alloc_ptr) {
-        uint64_t root_size = *(uint64_t*)scan_ptr;
+        uint64_t root_size = *(uint64_t *)scan_ptr;
         scan_ptr = scan_ptr + ROOT_HEADER_SIZE;
         Root root = scan_ptr;
-        // TODO: Iterate over each multiple of 8 bytes and extract the tag.
+
+        // Iterate over each multiple of 8 bytes and extract the tag.
         // If tag is zero, it can be a raw pointer or just an integer.
-        // So we have to check whether that value available with in 
+        // So we have to check whether that value available within 
         // the from-space addresses.
+        for (size_t i = 0; i < root_size / 8; i++) {
+            Root *root_ptr = root + i * 8;
+            uint64_t root = *(uint64_t*) root_ptr;
+            int tag = getTag(root);
+            switch (tag & UT_MASK) {
+                case 0: // Raw pointer or integer value
+                    if (root <= heap_limit_ptr && root >= from_space_ptr) {
+                        copy(root_ptr);
+                    }
+                    break;
+                case TAG_INT:
+                    // TODO: handle if integer is heap allocated
+                    break;
+                default:
+                    fprintf(stderr, "unknown tag %d\n", tag);
+                    abort();
+            }
+        }
+
         scan_ptr = scan_ptr + root_size;
     }
-    
+    // Fill the from-space from 0 (not necessary)
+    memset(from_space_ptr, 0, heap_half_size);
+
     // swap from_space <-> to_space
     uint8_t* t = from_space_ptr;
     from_space_ptr = to_space_ptr;
