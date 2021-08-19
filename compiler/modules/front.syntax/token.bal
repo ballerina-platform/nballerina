@@ -199,7 +199,7 @@ class Tokenizer {
                 }
                 FRAG_HEX_FP_NUMBER => {
                     // skip the 0x
-                    self.curTok = [HEX_FP_LITERAL, self.getFragment().substring(2)];
+                    self.curTok = [HEX_FP_LITERAL, self.getFragment()];
                     return;
                 }
                 FRAG_DECIMAL_FP_NUMBER_F => {

@@ -230,8 +230,9 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 function parseNumericLiteralTypeDesc(Tokenizer tok, err:Position? signPos = ()) returns SingletonTypeDesc|err:Syntax {
     NumericLiteralExpr expr = check parseNumericLiteralExpr(tok);
     if expr is FpLiteralExpr {
-        var f = expr.base == 10 ? float:fromString(expr.untypedLiteral) : float:fromHexString(expr.untypedLiteral);
+        var f = expr.base == 10 ? floatFromDecimalLiteral(expr.untypedLiteral) : floatFromHexLiteral(expr.untypedLiteral);
         if f is error {
+            //Will throw this for hex float literals since unimplemented
             return tok.err(`invalid float literal ${expr.untypedLiteral}`); // don't think this should happen
         }
         else {

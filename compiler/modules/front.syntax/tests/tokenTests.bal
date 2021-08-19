@@ -23,9 +23,9 @@ function test1() {
     test:assertEquals(tokenization("-10.0e-2 -10.0e-2f"), ["-", [DECIMAL_FP_NUMBER, "10.0e-2", ()], "-", [DECIMAL_FP_NUMBER, "10.0e-2", "f"]]);
 
     test:assertEquals(tokenization("3e1"), [[DECIMAL_FP_NUMBER, "3e1", ()]]);
-    test:assertEquals(tokenization("0x1.5"), [[HEX_FP_LITERAL, "1.5"]]);
-    test:assertEquals(tokenization("0x1p5"), [[HEX_FP_LITERAL, "1p5"]]);
-    test:assertEquals(tokenization("0x1.7p-5"), [[HEX_FP_LITERAL, "1.7p-5"]]);
+    test:assertEquals(tokenization("0xa.5"), [[HEX_FP_LITERAL, "0xa.5"]]);
+    test:assertEquals(tokenization("0x1pf"), [[HEX_FP_LITERAL, "0x1pf"]]);
+    test:assertEquals(tokenization("0x1.7bp-5"), [[HEX_FP_LITERAL, "0x1.7bp-5"]]);
     test:assertEquals(tokenization(".e1"), [".", [IDENTIFIER, "e1"]]);
 
     test:assertEquals(tokenization("1.4e-"), [[DECIMAL_FP_NUMBER, "1.4", ()], [IDENTIFIER, "e"], "-"]);

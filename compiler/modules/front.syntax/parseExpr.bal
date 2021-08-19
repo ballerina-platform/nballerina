@@ -456,3 +456,13 @@ function parseIntLiteralExpr(Tokenizer tok) returns IntLiteralExpr|err:Syntax {
 public function intFromIntLiteral(IntLiteralBase base, string digits) returns int|error {
     return base == 10 ? int:fromString(digits) : int:fromHexString(digits);
 }
+
+public function floatFromDecimalLiteral(string digits) returns float|error {
+    return float:fromString(digits);
+}
+
+public function floatFromHexLiteral(string digits) returns float|error {
+    //due to JBUG cannot call float:fromHexString
+    //return float:fromHexString(digits);
+    return err:unimplemented("cannot parse hex float yet");
+}

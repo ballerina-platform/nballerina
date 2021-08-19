@@ -381,7 +381,7 @@ function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr ex
 
 function foldFloatLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError {
     // This will need to change when we support decimal
-    var result = expr.base==10 ? floatFromDecimalLiteral(expr.untypedLiteral) : floatFromHexLiteral(expr.untypedLiteral);
+    var result = expr.base==10 ? s:floatFromDecimalLiteral(expr.untypedLiteral) : s:floatFromHexLiteral(expr.untypedLiteral);
     if result is float {
         return { value: result };
     }
@@ -394,7 +394,7 @@ function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLitera
     float|int|error result;
     string ty;
     if expr.base == 10 && expectsFloat(expectedType) {
-        result = floatFromDecimalLiteral(expr.digits);
+        result = s:floatFromDecimalLiteral(expr.digits);
         ty = "float"; 
     }
     else {
@@ -416,14 +416,6 @@ function expectsFloat(t:SemType? semType) returns boolean {
     else {
         return t:isSubtypeSimple(t:intersect(semType, t:union(t:FLOAT, t:INT)), t:FLOAT);
     }
-}
-
-function floatFromDecimalLiteral(string digits) returns float|error {
-    return float:fromString(digits);
-}
-
-function floatFromHexLiteral(string digits) returns float|error {
-    return float:fromHexString(digits);
 }
 
 function intArithmeticEval(s:BinaryArithmeticOp op, int left, int right) returns int  {
