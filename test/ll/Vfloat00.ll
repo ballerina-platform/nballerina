@@ -10,7 +10,7 @@ define void @_B_main() {
   %4 = icmp ult i8* %2, %3
   br i1 %4, label %8, label %5
 5:
-  store double 0x3fb999999999999a, double* %f
+  store double 0.1, double* %f
   %6 = load double, double* %f
   %7 = call i8 addrspace(1)* @_bal_float_to_tagged(double %6)
   call void @_Bio__println(i8 addrspace(1)* %7)

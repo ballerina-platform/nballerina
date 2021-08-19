@@ -47,26 +47,26 @@ define void @_B_main() {
   %33 = icmp ult i8* %31, %32
   br i1 %33, label %83, label %34
 34:
-  store double 0x7ff8000000000000, double* %nan0
-  store double 0x7ff8000000000000, double* %nan1
-  store double 0x7ff0000000000000, double* %pInf
-  store double 0xfff0000000000000, double* %nInf
-  %35 = call i8 addrspace(1)* @_B_eq(double 0x4045000000000000, double 0x4045000000000000)
+  store double 0x7FF8000000000000, double* %nan0
+  store double 0x7FF8000000000000, double* %nan1
+  store double 0x7FF0000000000000, double* %pInf
+  store double 0xFFF0000000000000, double* %nInf
+  %35 = call i8 addrspace(1)* @_B_eq(double 42.0, double 42.0)
   store i8 addrspace(1)* %35, i8 addrspace(1)** %1
   %36 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   call void @_Bio__println(i8 addrspace(1)* %36)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %37 = call i8 addrspace(1)* @_B_eq(double 0x3ff0000000000000, double 0x4000000000000000)
+  %37 = call i8 addrspace(1)* @_B_eq(double 1.0, double 2.0)
   store i8 addrspace(1)* %37, i8 addrspace(1)** %3
   %38 = load i8 addrspace(1)*, i8 addrspace(1)** %3
   call void @_Bio__println(i8 addrspace(1)* %38)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  %39 = call i8 addrspace(1)* @_B_eq(double 0x0, double 0x0)
+  %39 = call i8 addrspace(1)* @_B_eq(double 0.0, double 0.0)
   store i8 addrspace(1)* %39, i8 addrspace(1)** %5
   %40 = load i8 addrspace(1)*, i8 addrspace(1)** %5
   call void @_Bio__println(i8 addrspace(1)* %40)
   store i8 addrspace(1)* null, i8 addrspace(1)** %6
-  %41 = call i8 addrspace(1)* @_B_eq(double 0x0, double 0x8000000000000000)
+  %41 = call i8 addrspace(1)* @_B_eq(double 0.0, double -0.0)
   store i8 addrspace(1)* %41, i8 addrspace(1)** %7
   %42 = load i8 addrspace(1)*, i8 addrspace(1)** %7
   call void @_Bio__println(i8 addrspace(1)* %42)
@@ -79,7 +79,7 @@ define void @_B_main() {
   call void @_Bio__println(i8 addrspace(1)* %46)
   store i8 addrspace(1)* null, i8 addrspace(1)** %10
   %47 = load double, double* %nan0
-  %48 = call i8 addrspace(1)* @_B_eq(double %47, double 0x3ff0000000000000)
+  %48 = call i8 addrspace(1)* @_B_eq(double %47, double 1.0)
   store i8 addrspace(1)* %48, i8 addrspace(1)** %11
   %49 = load i8 addrspace(1)*, i8 addrspace(1)** %11
   call void @_Bio__println(i8 addrspace(1)* %49)
@@ -119,13 +119,13 @@ define void @_B_main() {
   %69 = load i8 addrspace(1)*, i8 addrspace(1)** %21
   call void @_Bio__println(i8 addrspace(1)* %69)
   store i8 addrspace(1)* null, i8 addrspace(1)** %22
-  %70 = call i8 addrspace(1)* @_B_eqAF(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), double 0x3ff0000000000000)
+  %70 = call i8 addrspace(1)* @_B_eqAF(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), double 1.0)
   store i8 addrspace(1)* %70, i8 addrspace(1)** %23
   %71 = load i8 addrspace(1)*, i8 addrspace(1)** %23
   call void @_Bio__println(i8 addrspace(1)* %71)
   store i8 addrspace(1)* null, i8 addrspace(1)** %24
   %72 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  %73 = call i8 addrspace(1)* @_B_eqAF(i8 addrspace(1)* %72, double 0x3ff0000000000000)
+  %73 = call i8 addrspace(1)* @_B_eqAF(i8 addrspace(1)* %72, double 1.0)
   store i8 addrspace(1)* %73, i8 addrspace(1)** %25
   %74 = load i8 addrspace(1)*, i8 addrspace(1)** %25
   call void @_Bio__println(i8 addrspace(1)* %74)
@@ -133,13 +133,13 @@ define void @_B_main() {
   %75 = zext i1 0 to i64
   %76 = or i64 %75, 72057594037927936
   %77 = getelementptr i8, i8 addrspace(1)* null, i64 %76
-  %78 = call i8 addrspace(1)* @_B_eqFA(double 0x0, i8 addrspace(1)* %77)
+  %78 = call i8 addrspace(1)* @_B_eqFA(double 0.0, i8 addrspace(1)* %77)
   store i8 addrspace(1)* %78, i8 addrspace(1)** %27
   %79 = load i8 addrspace(1)*, i8 addrspace(1)** %27
   call void @_Bio__println(i8 addrspace(1)* %79)
   store i8 addrspace(1)* null, i8 addrspace(1)** %28
-  %80 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0x4020000000000000)
-  %81 = call i8 addrspace(1)* @_B_eqFA(double 0x4020000000000000, i8 addrspace(1)* %80)
+  %80 = call i8 addrspace(1)* @_bal_float_to_tagged(double 8.0)
+  %81 = call i8 addrspace(1)* @_B_eqFA(double 8.0, i8 addrspace(1)* %80)
   store i8 addrspace(1)* %81, i8 addrspace(1)** %29
   %82 = load i8 addrspace(1)*, i8 addrspace(1)** %29
   call void @_Bio__println(i8 addrspace(1)* %82)
