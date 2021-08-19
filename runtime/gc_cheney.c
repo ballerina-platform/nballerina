@@ -14,6 +14,8 @@
 
 #include <sys/mman.h>
 
+#define HEAP_NOT_ENOUGH 7
+
 static uint64_t DEFAULT_HEAP_HALF_SIZE = 3221225473; // 3GB
 static uint64_t ROOT_HEADER_SIZE = 8;                // in bytes
 
@@ -72,17 +74,17 @@ void _bal_init_heap() {
 // the argument should be the address of stack which points to a location on heap.
 void copy(Root *root_ptr) {
     Root old_root = *root_ptr - ROOT_HEADER_SIZE;
-    uint64_t *root_header_ptr = (uint64_t *)old_root;
-    uint64_t old_root_header = *root_header_ptr;
+    uint64_t *old_root_header_ptr = (uint64_t *)old_root;
+    uint64_t old_root_header = *old_root_header_ptr;
     if (old_root_header ^ 1) { // last bit is 0, no forward pointer
         Root new_root = alloc_ptr;
         old_root_header = old_root_header + ROOT_HEADER_SIZE;
         alloc_ptr = alloc_ptr + old_root_header; // heap header contains the size of object,
                                                // alloc_ptr points to next new root
         memcpy(new_root, old_root, old_root_header);
-        *root_header_ptr = (uint64_t)(new_root + ROOT_HEADER_SIZE) | 1; // set header and mark it as forward pointer
+        *old_root_header_ptr = (uint64_t)(new_root + ROOT_HEADER_SIZE) | 1; // set header and mark it as forward pointer
     }
-    *root_ptr = (Root)(*root_header_ptr ^ 1);
+    *root_ptr = (Root)(*old_root_header_ptr ^ 1);
 }
 
 void collect() {
@@ -137,14 +139,14 @@ UntypedPtr _bal_alloc(uint64_t nBytes) {
     if (nBytes % 8 != 0) {
         nBytes = ((nBytes / 8) + 1) * nBytes;
     }
-    *((uint64_t *)alloc_ptr) = nBytes; // header contains the size of object with out header size
     nBytes = nBytes + ROOT_HEADER_SIZE;
     if (alloc_ptr + nBytes > heap_limit_ptr) {
         collect();
     }
     if (alloc_ptr + nBytes > heap_limit_ptr) {
-        abort();
+        _bal_panic(HEAP_NOT_ENOUGH);
     }
+    *((uint64_t *)alloc_ptr) = nBytes - ROOT_HEADER_SIZE; // header contains the size of object with out header size
     UntypedPtr p = (UntypedPtr)(alloc_ptr + ROOT_HEADER_SIZE);
     alloc_ptr = alloc_ptr + nBytes;
     return p;
