@@ -29,7 +29,7 @@ uint8_t *heap_limit_ptr;
 uint64_t heap_half_size;
 
 typedef uint8_t *Root; // Denotes address of the heap
-typedef void (*mark_roots)(Root *);
+typedef void (*mark_roots)(Root *, Root);
 extern void get_roots(mark_roots);
 
 void _bal_init_heap() {
@@ -72,17 +72,23 @@ void _bal_init_heap() {
 }
 
 // the argument should be the address of stack which points to a location on heap.
-void copy(Root *root_ptr) {
-    Root old_root = *root_ptr - ROOT_HEADER_SIZE;
+// TODO: check to reduce the number of args to one by extracting the ptr from tag,
+// inside this method.
+void copy(Root *root_ptr, Root root) {
+    if (root == NULL) {
+        root = *root_ptr;
+    }
+    Root old_root = root - ROOT_HEADER_SIZE;
     uint64_t *old_root_header_ptr = (uint64_t *)old_root;
     uint64_t old_root_header = *old_root_header_ptr;
-    if (old_root_header ^ 1) { // last bit is 0, no forward pointer
+    // TODO: present this check in more robust way
+    if (!(old_root_header & 1)) { // last bit is 0, no forward pointer
         Root new_root = alloc_ptr;
         old_root_header = old_root_header + ROOT_HEADER_SIZE;
         alloc_ptr = alloc_ptr + old_root_header; // heap header contains the size of object,
                                                // alloc_ptr points to next new root
         memcpy(new_root, old_root, old_root_header);
-        *old_root_header_ptr = (uint64_t)(new_root + ROOT_HEADER_SIZE) | 1; // set header and mark it as forward pointer
+        *old_root_header_ptr = (uint64_t)(new_root + ROOT_HEADER_SIZE) | 0x1; // set header and mark it as forward pointer
     }
     *root_ptr = (Root)(*old_root_header_ptr ^ 1);
 }
@@ -103,17 +109,21 @@ void collect() {
         // So we have to check whether that value available within 
         // the from-space addresses.
         for (size_t i = 0; i < root_size / 8; i++) {
-            Root *root_ptr = root + i * 8;
-            uint64_t root = *(uint64_t*) root_ptr;
-            int tag = getTag(root);
+            Root *root_ptr = (Root *)(scan_ptr + i * 8);
+            uint64_t root = *(uint64_t *)root_ptr;
+            int tag = getTag((TaggedPtr)root);
             switch (tag & UT_MASK) {
                 case 0: // Raw pointer or integer value
                     if (root <= heap_limit_ptr && root >= from_space_ptr) {
-                        copy(root_ptr);
+                        copy(root_ptr, NULL);
                     }
                     break;
                 case TAG_INT:
                     // TODO: handle if integer is heap allocated
+                    break;
+                case TAG_LIST_RW:
+                    copy(root_ptr, (Root) taggedToPtr((TaggedPtr) root));
+                    *root_ptr = (Root)ptrAddShiftedTag((UntypedPtr)*root_ptr, ((uint64_t)tag) << TAG_SHIFT);
                     break;
                 default:
                     fprintf(stderr, "unknown tag %d\n", tag);
@@ -135,11 +145,13 @@ void collect() {
     heap_limit_ptr = from_space_ptr + heap_half_size;
 }
 
+int tot_bytes = 0;
 UntypedPtr _bal_alloc(uint64_t nBytes) {
     if (nBytes % 8 != 0) {
         nBytes = ((nBytes / 8) + 1) * nBytes;
     }
     nBytes = nBytes + ROOT_HEADER_SIZE;
+    tot_bytes = tot_bytes + nBytes;
     if (alloc_ptr + nBytes > heap_limit_ptr) {
         collect();
     }

@@ -170,7 +170,8 @@ void print_frame(FILE *stream, frame_info_t* frame) {
         } else {
             fprintf(stream, "kind: ptr derived from slot #%" PRId32 ", ", kind);
         }
-
+        
+        fprintf(stream, "location size: %" PRId32  ", ", curSlot->slotSize);
         fprintf(stream, "frame offset: %" PRId32 " }\n", curSlot->offset);
     }
 }

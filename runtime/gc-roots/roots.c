@@ -1,5 +1,6 @@
 #include "third-party-lib/libbacktrace/backtrace.h"
 #include "include/api.h"
+#include "../balrt.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -56,7 +57,7 @@ void get_frames(FrameArray *frameArray) {
 
 typedef uint8_t *Root;
 
-void get_roots(void (*mark_roots)(Root *)) {
+void get_roots(void (*mark_roots)(Root *, Root)) {
     FrameArray frameArray = {0, 0};
     get_frames(&frameArray);
 
@@ -75,9 +76,31 @@ void get_roots(void (*mark_roots)(Root *)) {
         frame_info_t* frame = lookup_return_address(table, f->pc);
         for (size_t p = 0; p < frame->numSlots; p++) {
             pointer_slot_t* psl = frame->slots + p;
-            Root* ptr = (Root*)(rsp + psl->offset);
-            Root root = *ptr;
-            mark_roots(ptr);
+
+            // TODO: Check whether this loop can be arranged properly
+            // TODO: Assume slot size is multiple of 8 bytes
+            for (size_t i = 0; i < psl->slotSize / 8; i++) {
+                uint64_t offset = psl->offset + i*8;               
+                Root *root_ptr = (Root *)(rsp + offset);
+                Root root = *root_ptr;
+                int tag = getTag((TaggedPtr)root);
+                switch (tag & UT_MASK)
+                {
+                case 0: // Raw pointer
+                    mark_roots(root_ptr, NULL);
+                    break;
+                case TAG_INT:
+                    // TODO: handle if integer is heap allocated
+                    break;
+                case TAG_LIST_RW:
+                    mark_roots(root_ptr, (Root)taggedToPtr((TaggedPtr)root));
+                    *root_ptr = (Root)ptrAddShiftedTag((UntypedPtr)*root_ptr, ((uint64_t)tag) << TAG_SHIFT);
+                    break;
+                default:
+                    fprintf(stderr, "unknown tag %d\n", tag);
+                    abort();
+                }
+            }
         }
         // TODO: check whether we remove libbacktrace
         rsp = rsp + frame->frameSize + 8;

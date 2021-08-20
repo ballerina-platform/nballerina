@@ -12,6 +12,11 @@ typedef struct {
     // kind >= 0 means this is a pointer derived from base pointer in slot number "kind"
     int32_t kind;
 
+    // This the location size of each location
+    // It is assumed that the location is multiple of 8 bytes
+    // Should check whether it is correct
+    int32_t slotSize;
+
     // offsets are relative to the base of a frame.
     // See Figure 1 below for our defintion of "base"
     int32_t offset;

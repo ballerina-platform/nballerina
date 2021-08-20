@@ -129,6 +129,8 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         pointer_slot_t newSlot;
         newSlot.kind = -1;
         newSlot.offset = convert_offset(base, frameSize);
+        // TODO: Check this assignment with derived pointers
+        newSlot.slotSize = base->locSize;
         *currentSlot = newSlot;
 
         // get ready for next iteration
@@ -176,6 +178,7 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         pointer_slot_t newSlot;
         newSlot.kind = baseIdx;
         newSlot.offset = convert_offset(derived, frameSize);
+        newSlot.slotSize = base->locSize;
         *currentSlot = newSlot;
 
         // new iteration
