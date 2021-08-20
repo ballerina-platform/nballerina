@@ -1019,49 +1019,57 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
         // List construct
         var { members } => {
-            bir:BasicBlock nextBlock = bb;
-            bir:Operand[] operands = [];
-            foreach var member in members {
-                bir:Operand operand;
-                { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, member);
-                operands.push(operand);
-            }
-            // In subset 3, we have only mutable lists of any
-            // We will have to do more work in future subsets to determine the types here
-            bir:Register result = cx.createRegister(t:LIST_RW);
-            bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result };
-            nextBlock.insns.push(insn);
-            return { result, block: nextBlock };
+            return codeGenListConstructor(cx, bb, env, members);  
         }
         // Mapping construct
         var { fields } => {
-            bir:BasicBlock nextBlock = bb;
-            bir:Operand[] operands = [];
-            string[] fieldNames= [];
-            map<err:Position> fieldPos = {};
-            foreach var { pos, name, value } in fields {
-                err:Position? prevPos = fieldPos[name];
-                if prevPos == () {
-                    fieldPos[name] = pos;
-                }
-                else {
-                    return err:semantic(`duplicate field ${name}`, pos=pos);
-                }
-                bir:Operand operand;
-                { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, value);
-                operands.push(operand);
-                fieldNames.push(name);
-            }
-            bir:Register result = cx.createRegister(t:MAPPING_RW);
-            bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result };
-            nextBlock.insns.push(insn);
-            return { result, block: nextBlock };
+            return codeGenMappingConstructor(cx, bb, env, fields);  
         }
         var { digits } => {
             panic err:impossible(`failed to fold int literal ${digits}`);
         }
     }
     panic err:impossible("unrecognized expression type in code gen: " +  s:exprToString(expr));
+}
+
+function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr[] members) returns CodeGenError|ExprEffect {
+    bir:BasicBlock nextBlock = bb;
+    bir:Operand[] operands = [];
+    foreach var member in members {
+        bir:Operand operand;
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, member);
+        operands.push(operand);
+    }
+    // In subset 3, we have only mutable lists of any
+    // We will have to do more work in future subsets to determine the types here
+    bir:Register result = cx.createRegister(t:LIST_RW);
+    bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result };
+    nextBlock.insns.push(insn);
+    return { result, block: nextBlock };
+}
+
+function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Field[] fields) returns CodeGenError|ExprEffect {
+    bir:BasicBlock nextBlock = bb;
+    bir:Operand[] operands = [];
+    string[] fieldNames= [];
+    map<err:Position> fieldPos = {};
+    foreach var { pos, name, value } in fields {
+        err:Position? prevPos = fieldPos[name];
+        if prevPos == () {
+            fieldPos[name] = pos;
+        }
+        else {
+            return err:semantic(`duplicate field ${name}`, pos=pos);
+        }
+        bir:Operand operand;
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, value);
+        operands.push(operand);
+        fieldNames.push(name);
+    }
+    bir:Register result = cx.createRegister(t:MAPPING_RW);
+    bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result };
+    nextBlock.insns.push(insn);
+    return { result, block: nextBlock };
 }
 
 function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:ConstValueExpr cvExpr) returns CodeGenError|ExprEffect {
