@@ -34,6 +34,9 @@ function typeToLLVMType(RetType ty) returns handle {
         "i64" => {
             return jLLVMInt64Type();
         }
+        "double" => {
+            return jLLVMDoubleType();
+        }
         _ => {
             panic error(string `Type: ${<string>ty} is not implemented`);
         }
@@ -43,6 +46,11 @@ function typeToLLVMType(RetType ty) returns handle {
 public function constInt(Type ty, int value) returns ConstValue {
     Value val = new (jLLVMConstInt(typeToLLVMType(ty), value, 0));
     return val;
+}
+
+
+public function constReal(RealType ty, float val) returns ConstValue {
+   return new (jLLVMConstReal(typeToLLVMType(ty), val));
 }
 
 public function constNull(PointerType ty) returns PointerValue {
@@ -88,6 +96,12 @@ function jLLVMVoidType() returns handle = @java:Method {
     paramTypes: []
 } external;
 
+function jLLVMDoubleType() returns handle = @java:Method {
+    name: "LLVMDoubleType",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: []
+} external;
+
 function jLLVMInt64Type() returns handle = @java:Method {
     name: "LLVMInt64Type",
     'class: "org.bytedeco.llvm.global.LLVM",
@@ -122,6 +136,13 @@ function jLLVMConstInt(handle ty, int value, int signExtend) returns handle = @j
     name: "LLVMConstInt",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "long", "int"]
+} external;
+
+
+function jLLVMConstReal(handle ty, float value) returns handle = @java:Method {
+    name: "LLVMConstReal",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "double"]
 } external;
 
 function jLLVMConstPointerNull(handle ty) returns handle = @java:Method {

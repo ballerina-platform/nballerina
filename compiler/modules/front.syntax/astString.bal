@@ -251,6 +251,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(val.toString());
         }
     }
+    else if expr is FloatZeroExpr {
+        exprToWords(w, expr.expr, wrap);
+    }
     else if expr is IntLiteralExpr {
         if expr.base == 16 {
             w.push("0x" + expr.digits.toUpperAscii());

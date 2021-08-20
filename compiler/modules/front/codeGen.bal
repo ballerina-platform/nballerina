@@ -203,10 +203,14 @@ class CodeGenFoldContext {
         self.env = env;
     }
 
-    function lookupConst(string varName) returns t:Value?|FoldError {
+    function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         t:Value|Binding v = check lookupVarRef(self.cx, varName, self.env);
         if v is Binding {
-            return t:singleShape(v.reg.semType);
+            t:Value? shape = t:singleShape(v.reg.semType);
+            if !(shape is ()) && shape.value == s:FLOAT_ZERO {
+                return s:FLOAT_ZERO;
+            }
+            return shape;
         }
         else {
             return v;
@@ -674,6 +678,9 @@ function codeGenIfElseNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environmen
     boolean insnResult = condition == !narrowing.negated;
     // JBUG without parentheses this gets a parse error
     t:SemType narrowedType = insnResult ? (narrowing.ifTrue) : narrowing.ifFalse;
+    if narrowedType === t:NEVER {
+        panic err:impossible("narrowed to never type");
+    }
     return codeGenNarrowing(cx, bb, env, narrowing.binding, narrowedType, { insn: narrowing.testInsn, result: insnResult });
 }
 
@@ -963,18 +970,11 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
         // Constant
         // JBUG does not work as match pattern `var { value, multiSemType }`
-        var simpleConstExpr if simpleConstExpr is s:ConstValueExpr => {
-            t:SemType? multiSemType = simpleConstExpr.multiSemType;
-            SimpleConst value = simpleConstExpr.value;
-            if multiSemType is () {
-                return { result: value, block: bb };
-            }
-            else {
-                bir:Register reg = cx.createRegister(multiSemType);
-                bir:AssignInsn insn = { operand: value, result: reg };
-                bb.insns.push(insn);
-                return { result: reg, block: bb };
-            }
+        var cvExpr if cvExpr is s:ConstValueExpr => {
+            return codeGenConstValue(cx, bb, env, cvExpr);
+        }
+        var floatZeroExpr if floatZeroExpr is s:FloatZeroExpr => {
+            return codeGenExpr(cx, bb, env, floatZeroExpr.expr);
         }
         // Function/method call
         var callExpr if callExpr is (s:FunctionCallExpr|s:MethodCallExpr) => {
@@ -1055,6 +1055,20 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
     }
     panic err:impossible();
+}
+
+function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:ConstValueExpr cvExpr) returns CodeGenError|ExprEffect {
+    t:SemType? multiSemType = cvExpr.multiSemType;
+    SimpleConst value = cvExpr.value;
+    if multiSemType is () {
+        return { result: value, block: bb };
+    }
+    else {
+        bir:Register reg = cx.createRegister(multiSemType);
+        bir:AssignInsn insn = { operand: value, result: reg };
+        bb.insns.push(insn);
+        return { result: reg, block: bb };
+    }
 }
 
 function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryEqualityOp op, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
