@@ -229,10 +229,15 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
             return;
         }
     }
-    else if lhs == rhs {
+    else if isEqual(lhs, rhs) {
         return;
     }
     return vc.err(`intersection of operands of operator ${insn.op} is empty`);
+}
+
+// After JBUG #17977, #32245 is fixed, replace by ==
+function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
+    return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, err:Message msg) returns err:Semantic? {
