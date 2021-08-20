@@ -143,6 +143,8 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
         else if left is float && right is float {
             if expr.arithmeticOp == "/" && rightExpr is s:FloatZeroExpr {
                 // type is float in this case
+                expr.left = leftExpr;
+                expr.right = rightExpr;
                 return expr;
             }
             float f = floatArithmeticEval(expr.arithmeticOp, left, right);
@@ -233,30 +235,14 @@ function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:Binar
     return expr;
 }
 
-// Remove after JBUG #17977 is fixed
+// Remove after JBUG #17977, #32245 is fixed
 function isEqual(SimpleConst c1, SimpleConst c2) returns boolean {
-    if c1 is float {
-        if c2 is float {
-            return float:isNaN(c1) && float:isNaN(c2) ? true : c1 == c2;
-        }
-        else {
-            return false;
-        }
-    }
-    return c1 == c2;
+    return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
 }
 
-// Remove after JBUG #17977 is fixed
+// Remove after JBUG #17977, #32247 is fixed
 function isExactEqual(SimpleConst c1, SimpleConst c2) returns boolean {
-    if c1 is float && float:isNaN(c1) {
-        if c2 is float && float:isNaN(c2) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-    return c1 === c2;
+    return c1 === c2 || (c1 is float && c2 is float && float:isNaN(c1) && float:isNaN(c2));
 }
 
 // Precondition is that the values are !=
@@ -288,16 +274,16 @@ function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:Bin
         SimpleConst left = leftExpr.value;
         SimpleConst right = rightExpr.value;
         if left is int && right is int {
-            return foldedBinaryConstExpr(intRelationalEval(expr.relationalOp, left, right), t:INT, leftExpr, rightExpr);
+            return foldedBinaryConstExpr(intRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
         }
         else if left is float && right is float {
-            return foldedBinaryConstExpr(floatRelationalEval(expr.relationalOp, left, right), t:INT, leftExpr, rightExpr);
+            return foldedBinaryConstExpr(floatRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
         }
         else if left is string && right is string {
-            return foldedBinaryConstExpr(stringRelationalEval(expr.relationalOp, left, right), t:INT, leftExpr, rightExpr);
+            return foldedBinaryConstExpr(stringRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
         }
         else if left is boolean && right is boolean {
-            return foldedBinaryConstExpr(booleanRelationalEval(expr.relationalOp, left, right), t:INT, leftExpr, rightExpr);
+            return foldedBinaryConstExpr(booleanRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
         }
         return cx.semanticErr(`invalid operand types for ${expr.relationalOp}`);
     }
