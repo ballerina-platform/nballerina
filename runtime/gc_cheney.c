@@ -123,7 +123,7 @@ void collect() {
 
         scan_ptr = scan_ptr + root_size;
     }
-    // Fill the from-space from 0 (not necessary)
+    // Fill the from_space from 0 (not necessary)
     memset(from_space_ptr, 0, heap_half_size);
 
     // swap from_space <-> to_space
