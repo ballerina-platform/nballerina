@@ -1061,7 +1061,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             panic err:impossible(`failed to fold int literal ${digits}`);
         }
     }
-    panic err:impossible();
+    panic err:impossible("unrecognized expression type in code gen: " +  s:exprToString(expr));
 }
 
 function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:ConstValueExpr cvExpr) returns CodeGenError|ExprEffect {
