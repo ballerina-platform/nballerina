@@ -20,10 +20,10 @@ const TAG_FACTOR   = 0x0100000000000000;
 const POINTER_MASK = 0x00ffffffffffffff;
 
 const int TAG_MASK     = 0x1f * TAG_FACTOR;
-const TAG_NIL      = 0;
+const int TAG_NIL      = 0;
 const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
 const int TAG_INT      = t:UT_INT * TAG_FACTOR;
-const int TAG_FLOAT      = t:UT_FLOAT * TAG_FACTOR;
+const int TAG_FLOAT    = t:UT_FLOAT * TAG_FACTOR;
 const int TAG_STRING   = t:UT_STRING * TAG_FACTOR;
 
 const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
@@ -1005,6 +1005,9 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     }
     else if semType === t:INT {
         hasType = buildHasTag(builder, tagged, TAG_INT);
+    }
+    else if semType === t:FLOAT {
+        hasType = buildHasTag(builder, tagged, TAG_FLOAT);
     }
     else if semType === t:STRING {
         hasType = buildHasTag(builder, tagged, TAG_STRING);
