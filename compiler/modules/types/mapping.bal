@@ -73,7 +73,7 @@ public class MappingDefinition {
         else {
             rwBdd = bdd:atom(self.rw);
         }
-        SemType s = new SemType(0, [[UT_MAPPING_RO, roBdd], [UT_MAPPING_RW, rwBdd]]);
+        SemType s = createComplexSemType(0, [[UT_MAPPING_RO, roBdd], [UT_MAPPING_RW, rwBdd]]);
         self.semType = s; 
         return s;
     }       
