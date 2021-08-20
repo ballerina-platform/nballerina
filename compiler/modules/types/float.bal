@@ -31,7 +31,13 @@ function floatSubtypeContains(SubtypeData d, float f) returns boolean {
         return d;
     }
     FloatSubtype v = <FloatSubtype>d;
-    return v.values.indexOf(f) != () ? v.allowed : !v.allowed;
+    // JBUG indexOf does not work with -0 because of #32245
+    foreach float val in v.values {
+        if val == f {
+            return v.allowed;
+        }
+    }
+    return !v.allowed;
 }
 
 function floatSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {
