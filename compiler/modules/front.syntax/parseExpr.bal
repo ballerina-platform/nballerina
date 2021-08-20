@@ -99,10 +99,7 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
         return bin;
     }
     else if t == "is" {
-        tok.setMode(MODE_TYPE_DESC);
-        check tok.advance();
-        InlineTypeDesc td = check parseInlineTypeDesc(tok);
-        tok.setMode(MODE_NORMAL);
+        InlineTypeDesc td = check handleTypeDesc(tok);
         TypeTestExpr typeTest = { td, left: expr, semType: resolveInlineTypeDesc(td) };
         return typeTest;
     }
@@ -110,10 +107,7 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         Token? t2 = tok.current();
         if t2 is "is" {
-            tok.setMode(MODE_TYPE_DESC);
-            check tok.advance();
-            InlineTypeDesc notTd = check parseInlineTypeDesc(tok);
-            tok.setMode(MODE_NORMAL);
+            InlineTypeDesc notTd = check handleTypeDesc(tok);
             TypeTestNotExpr typeTest = { notTd, left: expr, semType: resolveInlineTypeDesc(notTd) };
             return typeTest;
         }
@@ -122,6 +116,14 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
     else {
         return expr;
     }
+}
+
+function handleTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
+    tok.setMode(MODE_TYPE_DESC);
+    check tok.advance();
+    InlineTypeDesc td = check parseInlineTypeDesc(tok);
+    tok.setMode(MODE_NORMAL);
+    return td;
 }
 
 function parseRangeExpr(Tokenizer tok) returns RangeExpr|err:Syntax {
