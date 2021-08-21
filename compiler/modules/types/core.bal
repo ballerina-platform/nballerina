@@ -23,10 +23,23 @@ public type UniformTypeCode
     |UT_XML_RW|UT_LIST_RW|UT_MAPPING_RW|UT_TABLE_RW|UT_OBJECT_RW
     |UT_STREAM|UT_FUTURE;
 
+type InternedListAtomicType readonly & record {|
+    ListAtomicType atom;
+    int index;
+|};
+
+type InternedMappingAtomicType readonly & record {|
+    MappingAtomicType atom;
+    int index;
+|};
+
 public class Env {
     final ListAtomicType[] listDefs;
     final MappingAtomicType[] mappingDefs;
     final FunctionAtomicType[] functionDefs = [];
+    final table<InternedListAtomicType> key(atom) internedListAtomicTypes = table [];
+    final table<InternedMappingAtomicType> key(atom) internedMappingAtomicTypes = table [];
+
     public function init() {
         self.mappingDefs = [ MAPPING_SUBTYPE_RO ];
         self.listDefs = [ LIST_SUBTYPE_RO ];

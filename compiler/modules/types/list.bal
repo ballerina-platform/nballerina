@@ -15,10 +15,10 @@ public class ListDefinition {
 
     // The SemType is created lazily so that we have the possibility
     // to share the Bdd between the RO and RW cases.
-    private SemType? semType = ();
+    private ComplexSemType? semType = ();
 
-    public function getSemType(Env env) returns SemType {
-        SemType? s = self.semType;
+    public function getSemType(Env env) returns ComplexSemType {
+        ComplexSemType? s = self.semType;
         if s is () {
             self.ro = dummyListDef(env);
             self.rw = dummyListDef(env);
@@ -29,12 +29,9 @@ public class ListDefinition {
         }
     }
 
-    public function define(Env env, SemType[] members, SemType rest) returns SemType {
+    public function define(Env env, SemType[] members, SemType rest) returns ComplexSemType {
         ListAtomicType rwType = { members: members.cloneReadOnly(), rest };
-        if self.rw < 0 {
-            self.rw = dummyListDef(env);
-        }
-        env.listDefs[self.rw] = rwType;
+        self.rw = internListAtomicType(env, rwType, self.rw);
         if typeListIsReadOnly(rwType.members) && isReadOnly(rwType.rest) {
             if self.ro < 0 {
                 // share the definitions
@@ -49,15 +46,12 @@ public class ListDefinition {
                 members: readOnlyTypeList(rwType.members),
                 rest: intersect(rwType.rest, READONLY)
             };
-            if self.ro < 0 {
-                self.ro = dummyListDef(env);
-            }
-            env.listDefs[self.ro] = roType;
+            self.ro = internListAtomicType(env, roType, self.ro);
         }
         return self.createSemType(env);
     }
     
-    private function createSemType(Env env) returns SemType {
+    private function createSemType(Env env) returns ComplexSemType {
         readonly & bdd:Node roBdd = bdd:atom(self.ro);
         readonly & bdd:Node rwBdd;
         if self.ro == self.rw {
@@ -67,15 +61,34 @@ public class ListDefinition {
         else {
             rwBdd = bdd:atom(self.rw);
         }
-        SemType s = createComplexSemType(0, [[UT_LIST_RO, roBdd], [UT_LIST_RW, rwBdd]]);
+        ComplexSemType s = createComplexSemType(0, [[UT_LIST_RO, roBdd], [UT_LIST_RW, rwBdd]]);
         self.semType = s;
         return s;
     }       
 }
 
-public function tuple(Env env, SemType... members) returns SemType {
-    ListDefinition def = new;
-    return def.define(env, members, NEVER);
+function internListAtomicType(Env env, ListAtomicType atom, int dummyIndex) returns int {
+    int index = dummyIndex;
+    InternedListAtomicType? interned = env.internedListAtomicTypes[atom];
+    boolean duplicate = false;
+    if index < 0 {
+        if interned != () {
+            index = interned.index;
+            duplicate = true;
+        }
+        else {
+            index = dummyListDef(env);
+        }
+    }
+    if !duplicate {
+        env.listDefs[index] = atom;
+        // probably edge cases where interned is non-nil
+        // when we had a recursive reference, but the reference got normalized out of the resulting semtype
+        if interned == () { 
+            env.internedListAtomicTypes.add({ atom, index });
+        }
+    }
+    return index;
 }
 
 function dummyListDef(Env env) returns int {
@@ -83,6 +96,11 @@ function dummyListDef(Env env) returns int {
     ListAtomicType dummy = { members: [], rest: NEVER };
     env.listDefs.push(dummy);
     return i;
+}
+
+public function tuple(Env env, SemType... members) returns SemType {
+    ListDefinition def = new;
+    return def.define(env, members, NEVER);
 }
 
 function listRoSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {

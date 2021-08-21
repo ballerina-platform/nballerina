@@ -38,10 +38,7 @@ public class MappingDefinition {
             types: types.cloneReadOnly(),
             rest
         };
-        if self.rw < 0 {
-            self.rw = dummyMappingDef(env);
-        }
-        env.mappingDefs[self.rw] = rwType;
+        self.rw = internMappingAtomicType(env, rwType, self.rw);
         if typeListIsReadOnly(rwType.types) && isReadOnly(rest) {
             if self.ro < 0 {
                 self.ro = self.rw;
@@ -56,10 +53,7 @@ public class MappingDefinition {
                 types: readOnlyTypeList(rwType.types),
                 rest: intersect(rest, READONLY)
             };
-            if self.ro < 0 {
-                self.ro = dummyMappingDef(env);
-            }
-            env.mappingDefs[self.ro] = roType;
+            self.ro = internMappingAtomicType(env, roType, self.ro);
         }
         return self.createSemType(env);
     }
@@ -77,6 +71,30 @@ public class MappingDefinition {
         self.semType = s; 
         return s;
     }       
+}
+
+function internMappingAtomicType(Env env, MappingAtomicType atom, int dummyIndex) returns int {
+    int index = dummyIndex;
+    InternedMappingAtomicType? interned = env.internedMappingAtomicTypes[atom];
+    boolean duplicate = false;
+    if index < 0 {
+        if interned != () {
+            index = interned.index;
+            duplicate = true;
+        }
+        else {
+            index = dummyMappingDef(env);
+        }
+    }
+    if !duplicate {
+        env.mappingDefs[index] = atom;
+        // probably edge cases where interned is non-nil
+        // when we had a recursive reference, but the reference got normalized out of the resulting semtype
+        if interned == () { 
+            env.internedMappingAtomicTypes.add({ atom, index });
+        }
+    }
+    return index;
 }
 
 function dummyMappingDef(Env env) returns int {
