@@ -85,8 +85,40 @@ void testFloatExactEq() {
     assert(!_bal_float_exact_eq(0.0, NAN));
 }
 
+void testFloatToIntNoOverflow(double d, long l) {
+    struct FloatToIntResult r = _bal_float_to_int(d);
+    assert(!r.overflowed);
+    assert(r.value == l);
+}
+
+void testFloatToIntOverflow(double d) {
+    struct FloatToIntResult r = _bal_float_to_int(d);
+    assert(r.overflowed);
+}
+
+void testFloatsToIntConvert() {
+    testFloatToIntNoOverflow(42.42, 42);
+    testFloatToIntNoOverflow(1.5, 2);
+    testFloatToIntNoOverflow(2.5, 2);
+    testFloatToIntNoOverflow(-1.5, -2);
+    testFloatToIntNoOverflow(-2.5, -2);
+    testFloatToIntNoOverflow(9223372036854774784.0, 9223372036854774784);
+    testFloatToIntNoOverflow(-9223372036854775808.0, 9223372036854775808);
+
+    testFloatToIntOverflow(9223372036854775808.0);
+    testFloatToIntOverflow(-9223372036854777856.0);
+    testFloatToIntOverflow(INF);
+    testFloatToIntOverflow(-INF);
+    testFloatToIntOverflow(NAN);
+
+    for (int i = 0; i < NTESTS / 8; i++) {
+        testFloatToIntOverflow(randDouble(true));
+    }
+}
+
 int main() {
     testFloatEq();
     testFloatExactEq();
+    testFloatsToIntConvert();
     return 0;
 }
