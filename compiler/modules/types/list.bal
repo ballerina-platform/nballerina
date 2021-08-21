@@ -1,5 +1,4 @@
 // Implementation specific to basic type list.
-import nballerina.types.bdd;
 
 public type ListAtomicType readonly & record {|
     SemType[] members;
@@ -52,14 +51,14 @@ public class ListDefinition {
     }
     
     private function createSemType(Env env) returns ComplexSemType {
-        readonly & bdd:Node roBdd = bdd:atom(self.ro);
-        readonly & bdd:Node rwBdd;
+        BddNode roBdd = bddAtom(self.ro);
+        BddNode rwBdd;
         if self.ro == self.rw {
             // share the BDD
             rwBdd = roBdd;
         }
         else {
-            rwBdd = bdd:atom(self.rw);
+            rwBdd = bddAtom(self.rw);
         }
         ComplexSemType s = createComplexSemType(0, [[UT_LIST_RO, roBdd], [UT_LIST_RW, rwBdd]]);
         self.semType = s;
@@ -104,11 +103,11 @@ public function tuple(Env env, SemType... members) returns SemType {
 }
 
 function listRoSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    return listSubtypeIsEmpty(tc, bddFixReadOnly(<bdd:Bdd>t));
+    return listSubtypeIsEmpty(tc, bddFixReadOnly(<Bdd>t));
 }
 
 function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    bdd:Bdd b = <bdd:Bdd>t;
+    Bdd b = <Bdd>t;
     BddMemo? mm = tc.listMemo[b];
     BddMemo m;
     if mm is () {

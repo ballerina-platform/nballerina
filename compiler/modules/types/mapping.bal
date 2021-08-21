@@ -1,6 +1,4 @@
 // Implementation specific to basic type list.
-import nballerina.types.bdd;
-//import ballerina/io;
 
 public type Field [string, SemType];
 
@@ -59,13 +57,13 @@ public class MappingDefinition {
     }
     
     private function createSemType(Env env) returns SemType {
-        readonly & bdd:Node roBdd = bdd:atom(self.ro);
-        readonly & bdd:Node rwBdd;
+        BddNode roBdd = bddAtom(self.ro);
+        BddNode rwBdd;
         if self.ro == self.rw {
             rwBdd = roBdd;
         }
         else {
-            rwBdd = bdd:atom(self.rw);
+            rwBdd = bddAtom(self.rw);
         }
         SemType s = createComplexSemType(0, [[UT_MAPPING_RO, roBdd], [UT_MAPPING_RW, rwBdd]]);
         self.semType = s; 
@@ -120,11 +118,11 @@ isolated function fieldName(Field f) returns string {
 }
 
 function mappingRoSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    return mappingSubtypeIsEmpty(tc, bddFixReadOnly(<bdd:Bdd>t));
+    return mappingSubtypeIsEmpty(tc, bddFixReadOnly(<Bdd>t));
 }
 
 function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    bdd:Bdd b = <bdd:Bdd>t;
+    Bdd b = <Bdd>t;
     BddMemo? mm = tc.mappingMemo[b];
     BddMemo m;
     if mm is () {
@@ -384,7 +382,6 @@ class MappingPairing {
                 self.i2 += 1;
             }
         }
-        //io:println("Name ", p.name, "; i1=", self.i1, "; i2 =", self.i2);
         return { value: p };
     }
     

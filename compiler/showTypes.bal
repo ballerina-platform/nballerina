@@ -10,7 +10,7 @@ public function showTypes(string filename) returns error? {
     foreach var line in results {
         io:println(line);
     }
-    // io:println("Total BDDs ", bdd:getCount());
+    // io:println("Total BDDs ", bddGetCount());
 }
 
 function subtypeRels(string[] lines) returns string[]|error {

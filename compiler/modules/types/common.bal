@@ -1,7 +1,5 @@
 // Code common to implementation of multiple basic types
 
-import nballerina.types.bdd;
-
 public type Definition object {
     public function getSemType(Env env) returns SemType;
 };
@@ -46,7 +44,7 @@ type BddPredicate function(TypeCheckContext tc, Conjunction? pos, Conjunction? n
 // negative (negated). Each path from the root to a leaf that is true represents one of the conjunctions
 // We walk the tree, accumulating the positive and negative conjunctions for a path as we go.
 // When we get to a leaf that is true, we apply the predicate to the accumulated conjunctions.
-function bddEvery(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate) returns boolean {
+function bddEvery(TypeCheckContext tc, Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate) returns boolean {
     if b is boolean {
         return !b || predicate(tc, pos, neg);
     }
@@ -57,7 +55,7 @@ function bddEvery(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conjunction?
     }
 }
 
-function bddEveryPositive(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate) returns boolean {
+function bddEveryPositive(TypeCheckContext tc, Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate) returns boolean {
     if b is boolean {
         return !b || predicate(tc, pos, neg);
     }
@@ -74,11 +72,11 @@ function bddEveryPositive(TypeCheckContext tc, bdd:Bdd b, Conjunction? pos, Conj
 // Similarly for listFormulaIsEmpty.
 // We want to share BDDs between the RW and RO case so we cannot change how the BDD is interpreted.
 // Instead we transform the BDD to avoid cases that would give the wrong answer.
-function bddFixReadOnly(bdd:Bdd b) returns bdd:Bdd {
-    return bddPosMaybeEmpty(b) ? bdd:intersect(b, bdd:atom(0)) : b;
+function bddFixReadOnly(Bdd b) returns Bdd {
+    return bddPosMaybeEmpty(b) ? bddIntersect(b, bddAtom(0)) : b;
 }
 
-function bddPosMaybeEmpty(bdd:Bdd b) returns boolean {
+function bddPosMaybeEmpty(Bdd b) returns boolean {
     if b is boolean {
         return b;
     }
@@ -95,19 +93,19 @@ function andIfPositive(int atom, Conjunction? next) returns Conjunction? {
 }
 
 function bddSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return bdd:union(<bdd:Bdd>t1, <bdd:Bdd>t2);
+    return bddUnion(<Bdd>t1, <Bdd>t2);
 }
 
 function bddSubtypeIntersect(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return bdd:intersect(<bdd:Bdd>t1, <bdd:Bdd>t2);
+    return bddIntersect(<Bdd>t1, <Bdd>t2);
 }
 
 function bddSubtypeDiff(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    return bdd:diff(<bdd:Bdd>t1, <bdd:Bdd>t2);
+    return bddDiff(<Bdd>t1, <Bdd>t2);
 }
 
 function bddSubtypeComplement(SubtypeData t) returns SubtypeData {
-    return bdd:complement(<bdd:Bdd>t);
+    return bddComplement(<Bdd>t);
 }
 
 

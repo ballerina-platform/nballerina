@@ -1,7 +1,6 @@
 // Implementation specific to basic type function.
 
 import ballerina/io;
-import nballerina.types.bdd;
 
 // Function subtype is [args, ret]
 // Represents args as tuple type
@@ -16,7 +15,7 @@ public class FunctionDefinition {
         FunctionAtomicType dummy = [NEVER, NEVER];
         self.index = env.functionDefs.length();
         env.functionDefs.push(dummy);
-        self.semType = uniformSubtype(UT_FUNCTION, bdd:atom(self.index));
+        self.semType = uniformSubtype(UT_FUNCTION, bddAtom(self.index));
     }
 
     public function getSemType(Env env) returns SemType {
@@ -31,7 +30,7 @@ public class FunctionDefinition {
 }
 
 function functionSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    bdd:Bdd b = <bdd:Bdd>t;
+    Bdd b = <Bdd>t;
     BddMemo? mm = tc.functionMemo[b];
     BddMemo m;
     if mm is () {
@@ -56,7 +55,7 @@ function functionSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns bool
     return isEmpty;    
 }
 
-function functionBddIsEmpty(TypeCheckContext tc, bdd:Bdd b, SemType s, Conjunction? pos, Conjunction? neg) returns boolean {
+function functionBddIsEmpty(TypeCheckContext tc, Bdd b, SemType s, Conjunction? pos, Conjunction? neg) returns boolean {
     if b is boolean {
         if b == false {
             return true;

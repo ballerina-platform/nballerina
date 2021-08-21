@@ -1,6 +1,3 @@
-
-import nballerina.types.bdd;
-
 // There is an integer for each uniform type.
 // Uniform types are like basic types except that each selectively immutable
 // basic type is split into two uniform types, one immutable and on mutable.
@@ -53,7 +50,7 @@ public class Env {
 }
 
 public type BddMemo record {|
-    readonly bdd:Bdd bdd;
+    readonly Bdd bdd;
     boolean? isEmpty = ();
 |};
 
@@ -68,7 +65,7 @@ public type TypeCheckContext record {|
     BddMemoTable functionMemo = table [];
 |};
 
-type ProperSubtypeData StringSubtype|FloatSubtype|IntSubtype|BooleanSubtype|bdd:Node;
+type ProperSubtypeData StringSubtype|FloatSubtype|IntSubtype|BooleanSubtype|BddNode;
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData ProperSubtypeData|boolean;
 
@@ -610,7 +607,7 @@ function simpleArrayMemberType(SemType t, ListAtomicType[] listDefs) returns Uni
         if !isSubtypeSimple(t, LIST) {
             return ();
         }
-        bdd:Bdd[] bdds = [<bdd:Bdd>getComplexSubtypeData(t, UT_LIST_RO), <bdd:Bdd>getComplexSubtypeData(t, UT_LIST_RW)];
+        Bdd[] bdds = [<Bdd>getComplexSubtypeData(t, UT_LIST_RO), <Bdd>getComplexSubtypeData(t, UT_LIST_RW)];
         UniformTypeBitSet[] memberTypes = [];
         foreach var bdd in bdds {
             if bdd is boolean {
@@ -655,7 +652,7 @@ function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns
         if !isSubtypeSimple(t, MAPPING) {
             return ();
         }
-        bdd:Bdd[] bdds = [<bdd:Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), <bdd:Bdd>getComplexSubtypeData(t, UT_MAPPING_RW)];
+        Bdd[] bdds = [<Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW)];
         UniformTypeBitSet[] memberTypes = [];
         foreach var bdd in bdds {
             if bdd is boolean {
