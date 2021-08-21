@@ -5,6 +5,8 @@ public type ListAtomicType readonly & record {|
     SemType rest;
 |};
 
+// This is atom index 0
+// Used by bddFixReadOnly
 final ListAtomicType LIST_SUBTYPE_RO = { members: [], rest: READONLY };
 
 public class ListDefinition {

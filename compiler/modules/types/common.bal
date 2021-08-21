@@ -72,6 +72,7 @@ function bddEveryPositive(TypeCheckContext tc, Bdd b, Conjunction? pos, Conjunct
 // Similarly for listFormulaIsEmpty.
 // We want to share BDDs between the RW and RO case so we cannot change how the BDD is interpreted.
 // Instead we transform the BDD to avoid cases that would give the wrong answer.
+// Atom index 0 is LIST_SUBTYPE_RO and MAPPING_SUBTYPE_RO
 function bddFixReadOnly(Bdd b) returns Bdd {
     return bddPosMaybeEmpty(b) ? bddIntersect(b, bddAtom(0)) : b;
 }

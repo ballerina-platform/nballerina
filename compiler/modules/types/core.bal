@@ -38,6 +38,7 @@ public class Env {
     final table<InternedMappingAtomicType> key(atom) internedMappingAtomicTypes = table [];
 
     public function init() {
+        // Set up index 0 for use by bddFixReadOnly
         self.mappingDefs = [ MAPPING_SUBTYPE_RO ];
         self.listDefs = [ LIST_SUBTYPE_RO ];
     }

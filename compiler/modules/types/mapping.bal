@@ -9,6 +9,8 @@ public type MappingAtomicType readonly & record {|
     SemType rest;
 |};
 
+// This is mapping index 0
+// Used by bddFixReadOnly
 final MappingAtomicType MAPPING_SUBTYPE_RO = { names: [], types: [], rest: READONLY };
 
 public class MappingDefinition {
