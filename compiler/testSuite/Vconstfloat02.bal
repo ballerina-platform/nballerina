@@ -10,9 +10,9 @@ const F = 0.0;
 public function main() {
     io:println(eq(A, B)); // @output true
     io:println(eq(C, D)); // @output true
-    io:println(E); // @output 0
-    io:println(F); // @output 0
     io:println(eq(E, F)); // @output true
+    io:println(eq(A, C)); // @output false
+    io:println(eq(B, D)); // @output false
 }
 
 function eq(float f1, float f2) returns any {
