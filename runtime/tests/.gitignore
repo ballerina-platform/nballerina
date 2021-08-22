@@ -5,4 +5,5 @@
 /immediate_string
 /string_len
 /tagged_ptr
+/float_print
 *.stamp

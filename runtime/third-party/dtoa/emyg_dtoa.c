@@ -30,6 +30,7 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdlib.h>
 
 #if defined(_MSC_VER)
 #include "msinttypes/stdint.h"
@@ -42,6 +43,7 @@
 
 #include "emyg_dtoa.h"
 
+#define unlikely(x) __builtin_expect((x), 0) 
 #define UINT64_C2(h, l) (((uint64_t )(h) << 32) | (uint64_t )(l))
 
 typedef struct DiyFp_s {
@@ -291,6 +293,8 @@ static inline void DigitGen(const DiyFp W, const DiyFp Mp, uint64_t delta, char*
 				__assume(0);
 #elif __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 5)
 				__builtin_unreachable();
+#elif __clang__
+				__builtin_unreachable();
 #else
 				d = 0;
 #endif
@@ -308,6 +312,9 @@ static inline void DigitGen(const DiyFp W, const DiyFp Mp, uint64_t delta, char*
 
 	// kappa = 0
 	for (;;) {
+		if (unlikely((*len) >= 19)) {
+			abort();
+		} 
 		p2 *= 10;
 		delta *= 10;
 		char d = (char )(p2 >> -one.e);
@@ -438,4 +445,15 @@ void emyg_dtoa (double value, char* buffer) {
 		Grisu2(value, buffer, &length, &K);
 		Prettify(buffer, length, K);
 	}
+}
+
+// appended for nballerina use
+void emyg_dtoa_non_special (double value, char* buffer) {
+	if (value < 0) {
+		*buffer++ = '-';
+		value = -value;
+	}
+	int length, K;
+	Grisu2(value, buffer, &length, &K);
+	Prettify(buffer, length, K);
 }
