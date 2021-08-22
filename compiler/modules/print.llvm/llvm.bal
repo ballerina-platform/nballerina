@@ -74,7 +74,7 @@ final string negInf = "0x" + (-1.0/0.0).toBitsInt().toHexString().toUpperAscii()
 final string NAN = "0x" + (0.0/0.0).toBitsInt().toHexString().toUpperAscii();
 
 // Corresponds to LLVMConstReal
-public function constReal(RealType ty, float val) returns ConstValue {
+public function constFloat(FloatType ty, float val) returns ConstValue {
     string valRep;
     // Special cases
     if val.isInfinite() {
@@ -627,7 +627,7 @@ public class Builder {
     public function iArithmeticNoWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        IntType|RealType ty = sameNumberType(lhs, rhs);
+        IntType|FloatType ty = sameNumberType(lhs, rhs);
         bb.addInsn(reg, "=", op, "nsw", ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
@@ -650,7 +650,7 @@ public class Builder {
     function binaryOpWrap(BinaryOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        IntType|RealType ty = sameNumberType(lhs, rhs);
+        IntType|FloatType ty = sameNumberType(lhs, rhs);
         bb.addInsn(reg, "=", op, ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
@@ -668,8 +668,8 @@ public class Builder {
     public function fCmp(FloatPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        IntType|RealType ty = sameNumberType(lhs, rhs);
-        if ty is RealType {
+        IntType|FloatType ty = sameNumberType(lhs, rhs);
+        if ty is FloatType {
             bb.addInsn(reg, "=", "fcmp", op, typeToString(ty), lhs.operand, ",", rhs.operand);
             return new Value("i1", reg);
         }
@@ -743,7 +743,7 @@ public class Builder {
 
     // Corresponds to LLVMBuildFNeg
     public function fNeg(Value val, string? name=()) returns Value {
-        if val.ty is RealType {
+        if val.ty is FloatType {
             BasicBlock bb = self.bb();
             string|Unnamed reg = bb.func.genReg(name);
             bb.addInsn(reg, "=", "fneg", typeToString(val.ty), val.operand);
@@ -755,7 +755,7 @@ public class Builder {
     }
 
     // Corresponds to LLVMBuildSIToFP
-    public function sIToFP(Value val, RealType destTy, string? name=()) returns Value {
+    public function sIToFP(Value val, FloatType destTy, string? name=()) returns Value {
         if val.ty is IntType {
             BasicBlock bb = self.bb();
             string|Unnamed reg = bb.func.genReg(name);
@@ -973,13 +973,13 @@ function sameIntegralType(Value v1, Value v2) returns IntegralType {
     panic err:illegalArgument("expected an integral type");
 }
 
-function sameNumberType(Value v1, Value v2) returns IntType|RealType {
+function sameNumberType(Value v1, Value v2) returns IntType|FloatType {
     Type ty1 = v1.ty;
     Type ty2 = v2.ty;
     if ty1 != ty2 {
         panic err:illegalArgument("expected same types");
     }
-    else if ty1 is IntType || ty1 is RealType {
+    else if ty1 is IntType || ty1 is FloatType {
         return ty1;
     }
     panic err:illegalArgument("expected a number type");

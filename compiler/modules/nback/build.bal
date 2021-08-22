@@ -522,6 +522,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:AbnormalRetInsn {
             buildAbnormalRet(builder, scaffold, insn);
         }
+        else if insn is bir:FloatArithmeticBinaryInsn {
+            buildFloatArithmeticBinary(builder, scaffold, insn);
+        }
         else {
             return err:unimplemented(`BIR insn ${insn.name} not implemented`);
         }
@@ -809,9 +812,17 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
 function buildNoPanicArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntNoPanicArithmeticBinaryInsn insn) {
     llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
-    llvm:IntArithmeticOp op = arithmeticOps.get(insn.op);
+    llvm:IntArithmeticOp op = intArithmeticOps.get(insn.op);
     llvm:Value result = builder.iArithmeticNoWrap(op, lhs, rhs);
     buildStoreInt(builder, scaffold, result, insn.result);                                  
+}
+
+function buildFloatArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:FloatArithmeticBinaryInsn insn) {
+    llvm:Value lhs = buildFloat(builder, scaffold, insn.operands[0]);
+    llvm:Value rhs = buildFloat(builder, scaffold, insn.operands[1]);
+    llvm:FloatArithmeticOp op = floatArithmeticOps.get(insn.op);
+    llvm:Value result = builder.fArithmetic(op, lhs, rhs);
+    buildStoreFloat(builder, scaffold, result, insn.result);                                  
 }
 
 final readonly & map<llvm:IntBitwiseOp> binaryBitwiseOp = {
@@ -1115,6 +1126,11 @@ function buildStoreInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value
                   scaffold.address(reg));
 }
 
+function buildStoreFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedFloat(builder, scaffold, value) : value,
+                  scaffold.address(reg));
+}
+
 function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
     builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedBoolean(builder, value) : value,
                   scaffold.address(reg));
@@ -1308,7 +1324,7 @@ function buildSimpleConst(bir:SimpleConstOperand operand) returns [Repr, llvm:Va
         return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
     }
     else if operand is float {
-        return [REPR_FLOAT, llvm:constReal(LLVM_DOUBLE, operand)];
+        return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, operand)];
     }
     else if operand is () {
         return [REPR_NIL, buildConstNil()];
@@ -1338,6 +1354,16 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
     }
 }
 
+// Build a value as REPR_FLOAT
+function buildFloat(llvm:Builder builder, Scaffold scaffold, bir:FloatOperand operand) returns llvm:Value {
+    if operand is float {
+        return llvm:constFloat(LLVM_DOUBLE, operand);
+    }
+    else {
+        return builder.load(scaffold.address(operand));
+    }
+}
+
 // Build a value as REPR_BOOLEAN
 function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperand operand) returns llvm:Value {
     if operand is boolean {
@@ -1354,10 +1380,18 @@ final readonly & map<llvm:IntrinsicFunctionName> binaryIntIntrinsics = {
     "*": "smul.with.overflow.i64"
 };
 
-final readonly & map<llvm:IntArithmeticOp> arithmeticOps = {
+final readonly & map<llvm:IntArithmeticOp> intArithmeticOps = {
     "+": "add",
     "-": "sub",
     "*": "mul"
+};
+
+final readonly & map<llvm:FloatArithmeticOp> floatArithmeticOps = {
+    "+": "fadd",
+    "-": "fsub",
+    "*": "fmul",
+    "/": "fdiv",
+    "%": "frem"
 };
 
 // final readonly & map<llvm:BinaryIntOp> binaryIntOps = {

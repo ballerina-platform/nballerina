@@ -1,9 +1,9 @@
 import ballerina/io;
 
 public function main() {
-    foo(0.0); // positive zero
-    foo(-0.0); // negative zero
-    foo(1.0); // non-zero
+    foo(0.0); // @output positive zero
+    foo(-0.0); // @output negative zero
+    foo(1.0); // @output non-zero
 }
 
 function foo(float f) {
