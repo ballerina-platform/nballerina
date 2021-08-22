@@ -69,10 +69,39 @@ public function constInt(IntType ty, int val) returns ConstValue {
     return new ConstValue(ty, val.toString());
 }
 
+final string posInf = "0x" + (1.0/0.0).toBitsInt().toHexString().toUpperAscii();
+final string negInf = "0x" + (-1.0/0.0).toBitsInt().toHexString().toUpperAscii();
+final string NAN = "0x" + (0.0/0.0).toBitsInt().toHexString().toUpperAscii();
+
 // Corresponds to LLVMConstReal
 public function constReal(RealType ty, float val) returns ConstValue {
-    // XXX do hex conversion
-    return new ConstValue(ty, val.toString());
+    string valRep;
+    // Special cases
+    if val.isInfinite() {
+        if val > 0.0 {
+            valRep = posInf;
+        }
+        else {
+            valRep = negInf;
+        }
+    }
+    else if val.isNaN() {
+        valRep = NAN;
+    }
+    else {
+        // General case
+        if float:abs(val).toString().length() > 7 {
+            // Resulting number has more than 7 digits so convert to hex format
+            int repInt = float:toBitsInt(val);
+            valRep = "0x" + int:toHexString(repInt).toUpperAscii();
+        }
+        else {
+            // Set number in decimal format
+            // Change to E notation once balspec:#770 is done
+            valRep = val.toString();
+        }
+    }
+    return new ConstValue(ty, valRep);
 }
 
 // Corresponds to LLVMConstNull
@@ -589,34 +618,39 @@ public class Builder {
         addInsnWithAlign(self.bb(), ["store", typeToString(ty), val.operand, ",", typeToString(ptr.ty), ptr.operand], align);
     }
 
+    // Corresponds to LLVMBuild{FAdd,FSub,FMul,FDiv,FRem}
+    public function fArithmetic(FloatArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
+        return self.binaryOpWrap(op, lhs, rhs, name);
+    }
+
     // Corresponds to LLVMBuildNSW{Add,Mul,Sub}
     public function iArithmeticNoWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        IntType ty = sameIntType(lhs, rhs);
+        IntType|RealType ty = sameNumberType(lhs, rhs);
         bb.addInsn(reg, "=", op, "nsw", ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
     // Corresponds to LLVMBuild{Add,Mul,Sub}
     public function iArithmeticWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     // Corresponds to LLVMBuild{SDiv,SRem}
     public function iArithmeticSigned(IntArithmeticSignedOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     // Corresponds to LLVMBuild{And, Or, Xor}
     public function iBitwise(IntBitwiseOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     // Internally handle binary int operations without wrapping
-    function binaryIntNoWrap(IntOp op, Value lhs, Value rhs, string? name=()) returns Value {
+    function binaryOpWrap(BinaryOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        IntType ty = sameIntType(lhs, rhs);
+        IntType|RealType ty = sameNumberType(lhs, rhs);
         bb.addInsn(reg, "=", op, ty, lhs.operand, ",", rhs.operand);
         return new Value(ty, reg);
     }
@@ -628,6 +662,20 @@ public class Builder {
         IntegralType ty = sameIntegralType(lhs, rhs);
         bb.addInsn(reg, "=", "icmp", op, typeToString(ty), lhs.operand, ",", rhs.operand);
         return new Value("i1", reg);
+    }
+
+    // Corresponds to LLVMBuildFCmp
+    public function fCmp(FloatPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
+        BasicBlock bb = self.bb();
+        string|Unnamed reg = bb.func.genReg(name);
+        IntType|RealType ty = sameNumberType(lhs, rhs);
+        if ty is RealType {
+            bb.addInsn(reg, "=", "fcmp", op, typeToString(ty), lhs.operand, ",", rhs.operand);
+            return new Value("i1", reg);
+        }
+        else {
+            panic err:illegalArgument("values must be a real type");
+        }
     }
 
     // Corresponds to LLVMBuildBitCast
@@ -690,6 +738,32 @@ public class Builder {
         } 
         else {
             panic err:illegalArgument("value must be an integer type");
+        }
+    }
+
+    // Corresponds to LLVMBuildFNeg
+    public function fNeg(Value val, string? name=()) returns Value {
+        if val.ty is RealType {
+            BasicBlock bb = self.bb();
+            string|Unnamed reg = bb.func.genReg(name);
+            bb.addInsn(reg, "=", "fneg", typeToString(val.ty), val.operand);
+            return new Value(val.ty, reg);
+        }
+        else {
+            panic err:illegalArgument("value must be an real type");
+        }
+    }
+
+    // Corresponds to LLVMBuildSIToFP
+    public function sIToFP(Value val, RealType destTy, string? name=()) returns Value {
+        if val.ty is IntType {
+            BasicBlock bb = self.bb();
+            string|Unnamed reg = bb.func.genReg(name);
+            bb.addInsn(reg, "=", "sitofp", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+            return new Value(destTy, reg);
+        }
+        else {
+            panic err:illegalArgument("value must be int type");
         }
     }
 
@@ -899,16 +973,16 @@ function sameIntegralType(Value v1, Value v2) returns IntegralType {
     panic err:illegalArgument("expected an integral type");
 }
 
-function sameIntType(Value v1, Value v2) returns IntType {
+function sameNumberType(Value v1, Value v2) returns IntType|RealType {
     Type ty1 = v1.ty;
     Type ty2 = v2.ty;
     if ty1 != ty2 {
         panic err:illegalArgument("expected same types");
     }
-    else if ty1 is IntType {
+    else if ty1 is IntType || ty1 is RealType {
         return ty1;
     }
-    panic err:illegalArgument("expected an int type");
+    panic err:illegalArgument("expected a number type");
 }
 
 function typeToString(RetType ty) returns string {
