@@ -854,6 +854,13 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
                                            buildInt(builder, scaffold, <bir:IntOperand>insn.operands[1])),
                               insn.result); 
         }
+        "float" => {
+            buildStoreBoolean(builder, scaffold,
+                              builder.fCmp(buildFloatCompareOp(insn.op),
+                                           buildFloat(builder, scaffold, <bir:FloatOperand>insn.operands[0]),
+                                           buildFloat(builder, scaffold, <bir:FloatOperand>insn.operands[1])),
+                              insn.result); 
+        }
         "boolean" => {
             buildStoreBoolean(builder, scaffold,
                               builder.iCmp(buildBooleanCompareOp(insn.op),
@@ -1424,8 +1431,19 @@ final readonly & map<llvm:IntPredicate> unsignedIntPredicateOps = {
     ">=": "uge"
 };
 
+final readonly & map<llvm:FloatPredicate> floatPredicateOps = {
+    "<": "olt",
+    "<=": "ole",
+    ">": "ogt",
+    ">=": "oge"
+};
+
 function buildIntCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
     return <llvm:IntPredicate>signedIntPredicateOps[op];
+}
+
+function buildFloatCompareOp(bir:OrderOp op) returns llvm:FloatPredicate {
+    return <llvm:FloatPredicate>floatPredicateOps[op];
 }
 
 function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
