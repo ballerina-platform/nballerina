@@ -309,6 +309,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push("(");
         }
         exprToWords(w, expr.left, true);
+        if expr.negated {
+            w.push("!");
+        }
         w.push("is");
         typeDescToWords(w, expr.td);
         if wrap {
@@ -367,18 +370,6 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         w.push(".", expr.methodName, CLING, "(");
         exprsToWords(w, expr.args);
         w.push(")");
-        if wrap {
-            w.push(")");
-        }
-    }
-    else if expr is TypeTestNotExpr {
-        if wrap {
-            w.push("(");
-        }
-        exprToWords(w, expr.left, true);
-        w.push("!");
-        w.push("is");
-        typeDescToWords(w, expr.notTd);
         if wrap {
             w.push(")");
         }

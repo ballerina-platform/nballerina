@@ -950,12 +950,8 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             }
         }
         // Type test
-        var { td, left, semType } => {
-            return codeGenTypeTest(cx, bb, env, td, left, semType, false);
-        }
-        //Type not test
-        var { notTd, left, semType } => {
-            return codeGenTypeTest(cx, bb, env, notTd, left, semType, true);
+        var { td, left, semType, negated} => {
+            return codeGenTypeTest(cx, bb, env, td, left, semType, negated);
         }
         // Variable reference
         var { varName } => {

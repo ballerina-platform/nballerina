@@ -39,7 +39,7 @@ public type ConstDefn record {|
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr;
-public type Expr NumericLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|TypeTestNotExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
@@ -229,12 +229,7 @@ public type TypeTestExpr record {|
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
     t:SemType semType;
-|};
-
-public type TypeTestNotExpr record {|
-    InlineTypeDesc notTd;
-    Expr left;
-    t:SemType semType;
+    boolean negated; 
 |};
 
 public type ConstValueExpr record {|

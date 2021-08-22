@@ -99,16 +99,16 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
         return bin;
     }
     else if t == "is" {
-        InlineTypeDesc td = check handleTypeDesc(tok);
-        TypeTestExpr typeTest = { td, left: expr, semType: resolveInlineTypeDesc(td) };
+        InlineTypeDesc td = check parseTestTypeDesc(tok);
+        TypeTestExpr typeTest = { td, left: expr, semType: resolveInlineTypeDesc(td), negated: false };
         return typeTest;
     }
     if t == "!" {
         check tok.advance();
         Token? t2 = tok.current();
         if t2 is "is" {
-            InlineTypeDesc notTd = check handleTypeDesc(tok);
-            TypeTestNotExpr typeTest = { notTd, left: expr, semType: resolveInlineTypeDesc(notTd) };
+            InlineTypeDesc td = check parseTestTypeDesc(tok);
+            TypeTestExpr typeTest = { td, left: expr, semType: resolveInlineTypeDesc(td), negated: true};
             return typeTest;
         }
         return err:syntax("invalid operator");
@@ -118,7 +118,7 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
     }
 }
 
-function handleTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
+function parseTestTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
     tok.setMode(MODE_TYPE_DESC);
     check tok.advance();
     InlineTypeDesc td = check parseInlineTypeDesc(tok);
