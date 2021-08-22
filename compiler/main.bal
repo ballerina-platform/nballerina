@@ -1,3 +1,4 @@
+import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.front;
 import wso2/nballerina.nback;
@@ -58,7 +59,8 @@ function compileFile(string filename, string? gcName, *Options opts) returns Com
        names: [filename],
        organization: "dummy"
     };
-    bir:Module birMod = check front:loadModule(filename, id);
+    t:Env env = new;
+    bir:Module birMod = check front:loadModule(env, filename, id);
     llvm:Context context = new;
     llvm:Module llMod = check nback:buildModule(birMod, context, {gcName: gcName});
 
