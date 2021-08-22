@@ -43,6 +43,9 @@ target
 # Default output from C compiler
 a.out
 
+# MacOS debug symbols file
+*.dSYM
+
 # Output from jni test build
 testbuild
 
