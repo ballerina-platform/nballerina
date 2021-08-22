@@ -9,7 +9,7 @@ const F = 0.0;
 
 public function main() {
     io:println(eq(A, B)); // @output true
-    io:println(eq(C, D)); // @output true
+    io:println(eq(C, D)); // @output false
     io:println(eq(E, F)); // @output true
     io:println(eq(A, C)); // @output false
     io:println(eq(B, D)); // @output false
@@ -17,5 +17,9 @@ public function main() {
 
 function eq(float f1, float f2) returns any {
     boolean eq = f1 == f2;
+    boolean neEq = f1 != f2;
+    if eq == neEq {
+        return ();
+    }
     return eq;
 }
