@@ -20,33 +20,113 @@ public type UniformTypeCode
     |UT_XML_RW|UT_LIST_RW|UT_MAPPING_RW|UT_TABLE_RW|UT_OBJECT_RW
     |UT_STREAM|UT_FUTURE;
 
-type InternedListAtomicType readonly & record {|
-    ListAtomicType atom;
+type Atom RecAtom|TypeAtom;
+
+type RecAtom int;
+
+type TypeAtom readonly & record {|
     int index;
+    AtomicType atomicType;
 |};
 
-type InternedMappingAtomicType readonly & record {|
-    MappingAtomicType atom;
-    int index;
-|};
+type AtomicType ListAtomicType|MappingAtomicType;
 
 public class Env {
-    final ListAtomicType[] listDefs;
-    final MappingAtomicType[] mappingDefs;
-    final FunctionAtomicType[] functionDefs = [];
-    final table<InternedListAtomicType> key(atom) internedListAtomicTypes = table [];
-    final table<InternedMappingAtomicType> key(atom) internedMappingAtomicTypes = table [];
+    private final table<TypeAtom> key(atomicType) atomTable = table [];
+    // Set up index 0 for use by bddFixReadOnly
+    private final ListAtomicType?[] recListAtoms = [ LIST_SUBTYPE_RO ];
+    private final MappingAtomicType?[] recMappingAtoms = [ MAPPING_SUBTYPE_RO ];
+    private final FunctionAtomicType?[] recFunctionAtoms = [];
 
     public function init() {
-        // Set up index 0 for use by bddFixReadOnly
-        self.mappingDefs = [ MAPPING_SUBTYPE_RO ];
-        self.listDefs = [ LIST_SUBTYPE_RO ];
     }
+
     public function simpleArrayMemberType(SemType t) returns UniformTypeBitSet? {
-        return simpleArrayMemberType(t, self.listDefs);
+        return simpleArrayMemberType(t, self);
     }
+
     public function simpleMapMemberType(SemType t) returns UniformTypeBitSet? {
-        return simpleMapMemberType(t, self.mappingDefs);
+        return simpleMapMemberType(t, self);
+    }
+
+    function listAtom(ListAtomicType atomicType) returns TypeAtom {
+        return self.typeAtom(atomicType);
+    }
+
+    function mappingAtom(MappingAtomicType atomicType) returns TypeAtom {
+        return self.typeAtom(atomicType);
+    }
+
+    private function typeAtom(AtomicType atomicType) returns TypeAtom {
+        TypeAtom? ta = self.atomTable[atomicType];
+        if ta != () {
+            return ta;
+        }
+        else {
+            TypeAtom result = { index: self.atomTable.length(), atomicType };
+            self.atomTable.add(result);
+            return result;
+        }
+    }
+
+    function listAtomType(Atom atom) returns ListAtomicType {
+        if atom is RecAtom {
+            return self.getRecListAtomType(atom);
+        }
+        else {
+            return <ListAtomicType>atom.atomicType;
+        }
+    }
+
+    function mappingAtomType(Atom atom) returns MappingAtomicType {
+        if atom is RecAtom {
+            return self.getRecMappingAtomType(atom);
+        }
+        else {
+            return <MappingAtomicType>atom.atomicType;
+        }
+    }
+
+    function recListAtom() returns RecAtom {
+        int result = self.recListAtoms.length();
+        self.recListAtoms.push(());
+        return result;
+    }
+
+    function recMappingAtom() returns RecAtom {
+        int result = self.recMappingAtoms.length();
+        self.recMappingAtoms.push(());
+        return result;
+    }
+
+    function recFunctionAtom() returns RecAtom {
+        int result = self.recFunctionAtoms.length();
+        self.recFunctionAtoms.push(());
+        return result;
+    }
+
+    function setRecListAtomType(RecAtom ra, ListAtomicType atomicType) {
+        self.recListAtoms[ra] = atomicType;
+    }
+
+    function setRecMappingAtomType(RecAtom ra, MappingAtomicType atomicType) {
+        self.recMappingAtoms[ra] = atomicType;
+    }
+
+    function setRecFunctionAtomType(RecAtom ra, FunctionAtomicType atomicType) {
+        self.recFunctionAtoms[ra] = atomicType;
+    }
+
+    function getRecListAtomType(RecAtom ra) returns ListAtomicType {
+        return <ListAtomicType>self.recListAtoms[ra];
+    }
+    
+    function getRecMappingAtomType(RecAtom ra) returns MappingAtomicType {
+        return <MappingAtomicType>self.recMappingAtoms[ra];
+    }
+
+    function getRecFunctionAtomType(RecAtom ra) returns FunctionAtomicType {
+        return <FunctionAtomicType>self.recFunctionAtoms[ra];
     }
 }
 
@@ -57,14 +137,37 @@ public type BddMemo record {|
 
 type BddMemoTable table<BddMemo> key(bdd);
 
-public type TypeCheckContext record {|
-    readonly ListAtomicType[] listDefs;
-    readonly MappingAtomicType[] mappingDefs;
-    readonly FunctionAtomicType[] functionDefs;
+public class TypeCheckContext {
+    private final Env env;
     BddMemoTable listMemo = table [];
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
-|};
+    function init(Env env) {
+        self.env = env;
+    }
+
+    function listAtomType(Atom atom) returns ListAtomicType {
+        if atom is RecAtom {
+            return self.env.getRecListAtomType(atom);
+        }
+        else {
+            return <ListAtomicType>atom.atomicType;
+        }
+    }
+
+    function mappingAtomType(Atom atom) returns MappingAtomicType {
+        if atom is RecAtom {
+            return self.env.getRecMappingAtomType(atom);
+        }
+        else {
+            return <MappingAtomicType>atom.atomicType;
+        }
+    }
+
+    function functionAtomType(Atom atom) returns FunctionAtomicType {
+        return self.env.getRecFunctionAtomType(<RecAtom>atom);
+    }
+}
 
 type ProperSubtypeData StringSubtype|FloatSubtype|IntSubtype|BooleanSubtype|BddNode;
 // true means everything and false means nothing (as with Bdd)
@@ -600,7 +703,7 @@ public function widenUnsigned(SemType t) returns SemType {
 
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
-function simpleArrayMemberType(SemType t, ListAtomicType[] listDefs) returns UniformTypeBitSet? {
+function simpleArrayMemberType(SemType t, Env env) returns UniformTypeBitSet? {
     if t is UniformTypeBitSet {
         return t == LIST ? TOP : ();
     }
@@ -623,7 +726,7 @@ function simpleArrayMemberType(SemType t, ListAtomicType[] listDefs) returns Uni
                 if bdd.left != true || bdd.right != false || bdd.right != false {
                     return ();
                 }
-                ListAtomicType atomic = listDefs[bdd.atom];
+                ListAtomicType atomic = env.listAtomType(bdd.atom);
                 if atomic.members.length() > 0 {
                     return ();
                 }
@@ -645,7 +748,7 @@ function simpleArrayMemberType(SemType t, ListAtomicType[] listDefs) returns Uni
 
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
-function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns UniformTypeBitSet? {
+function simpleMapMemberType(SemType t, Env env) returns UniformTypeBitSet? {
     if t is UniformTypeBitSet {
         return t == MAPPING ? TOP : ();
     }
@@ -668,7 +771,7 @@ function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns
                 if bdd.left != true || bdd.right != false || bdd.right != false {
                     return ();
                 }
-                MappingAtomicType atomic = mappingDefs[bdd.atom];
+                MappingAtomicType atomic = env.mappingAtomType(bdd.atom);
                 if atomic.names.length() > 0 {
                     return ();
                 }
@@ -818,11 +921,7 @@ public function containsConstBoolean(SemType t, boolean b) returns boolean {
 }
 
 public function typeCheckContext(Env env) returns TypeCheckContext {
-    return {
-        listDefs: env.listDefs.cloneReadOnly(),
-        mappingDefs: env.mappingDefs.cloneReadOnly(),
-        functionDefs: env.functionDefs.cloneReadOnly()
-    };
+    return new(env);
 }
 
 public function createJson(Env env) returns SemType {

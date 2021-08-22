@@ -2,9 +2,8 @@
 
 // These are BDDs as in CDuce, which are a bit different from e.g. Knuth.
 // A Bdd represents a disjunction of conjunctions of atoms, where each
-// atom may be positive (not negated) or negative (negated). An atom
-// is represented by an integer.  What that integer means is up to the
-// user of the Bdd: typically it's an index into an array of definitions.
+// atom may be positive (not negated) or negative (negated). There is
+// a total order defined on the atoms.
 // Each leaf of the tree is `true` or `false`. Each path from the
 // root to a `true` leaf represents a conjunction. When the path goes
 // left after passing through a node, then the node's atom is included
@@ -17,13 +16,13 @@
 public type Bdd BddNode|boolean;
 
 public type BddNode readonly & record {|
-    int atom;  // meaning is basic-type dependent
+    Atom atom;
     Bdd left;
     Bdd middle;
     Bdd right;
 |};
 
-isolated function bddAtom(int atom) returns BddNode {
+isolated function bddAtom(Atom atom) returns BddNode {
      return { atom, left: true, middle: false, right: false };
 }
 
@@ -38,7 +37,7 @@ isolated function bddUnion(Bdd b1, Bdd b2) returns Bdd {
         return b2 == true ? true : b1;
     }
     else {  
-        int cmp = b1.atom - b2.atom;
+        int cmp = atomCmp(b1.atom, b2.atom);
         if cmp < 0 {
             return bddCreate(b1.atom,
                           b1.left,
@@ -71,7 +70,7 @@ isolated function bddIntersect(Bdd b1, Bdd b2) returns Bdd {
         return b2 == true ? b1 : false;
     }
     else { 
-        int cmp = b1.atom - b2.atom;
+        int cmp = atomCmp(b1.atom, b2.atom);
         if cmp < 0 {
             return bddCreate(b1.atom,
                           bddIntersect(b1.left, b2),
@@ -103,7 +102,7 @@ isolated function bddDiff(Bdd b1, Bdd b2) returns Bdd {
         return b1 == true ? bddComplement(b2) : false;
     }
     else {  
-        int cmp = b1.atom - b2.atom;
+        int cmp = atomCmp(b1.atom, b2.atom);
         if cmp < 0 {
             return bddCreate(b1.atom,
                           bddDiff(bddUnion(b1.left, b1.middle), b2),
@@ -163,7 +162,7 @@ isolated function bddComplement(Bdd b) returns Bdd {
 // this is just for observing
 isolated int bddCount = 0;
 
-isolated function bddCreate(int atom, Bdd left, Bdd middle, Bdd right) returns Bdd {
+isolated function bddCreate(Atom atom, Bdd left, Bdd middle, Bdd right) returns Bdd {
     if middle == true {
         return true;
     }
@@ -180,4 +179,22 @@ public isolated function bddGetCount() returns int {
     lock {
         return bddCount;
     } 
+}
+
+// order RecAtom < TypeAtom
+isolated function atomCmp(Atom a1, Atom a2) returns int {
+    if a1 is RecAtom {
+        if a2 is RecAtom {
+            return a1 - a2;
+        }
+        else {
+            return -1;
+        }
+    }
+    else if a2 is RecAtom {
+        return 1;
+    }
+    else {
+        return a1.index - a2.index;
+    }
 }

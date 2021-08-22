@@ -29,14 +29,13 @@ function readOnlyTypeList(SemType[] mt) returns readonly & SemType[] {
 }
 
 type Conjunction record {
-    int atom;
+    Atom atom;
     Conjunction? next;
 };
 
-function and(int atom, Conjunction? next) returns Conjunction {
+function and(Atom atom, Conjunction? next) returns Conjunction {
     return { atom, next };
 }
-
 
 type BddPredicate function(TypeCheckContext tc, Conjunction? pos, Conjunction? neg) returns boolean;
 
@@ -86,8 +85,8 @@ function bddPosMaybeEmpty(Bdd b) returns boolean {
     }
 }
    
-function andIfPositive(int atom, Conjunction? next) returns Conjunction? {
-    if atom < 0 {
+function andIfPositive(Atom atom, Conjunction? next) returns Conjunction? {
+    if atom is int && atom < 0 {
         return next;
     }
     return { atom, next };

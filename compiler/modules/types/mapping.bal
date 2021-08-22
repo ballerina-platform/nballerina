@@ -15,16 +15,18 @@ final MappingAtomicType MAPPING_SUBTYPE_RO = { names: [], types: [], rest: READO
 
 public class MappingDefinition {
     *Definition;
-    private int ro = -1;
-    private int rw = -1;
+    private RecAtom? roRec = ();
+    private RecAtom? rwRec = ();
     private SemType? semType = ();
 
     public function getSemType(Env env) returns SemType {
         SemType? s = self.semType;
         if s is () {
-            self.ro = dummyMappingDef(env);
-            self.rw = dummyMappingDef(env);
-            return self.createSemType(env);
+            RecAtom ro = env.recMappingAtom();
+            RecAtom rw = env.recMappingAtom();
+            self.roRec = ro;
+            self.rwRec = rw;
+            return self.createSemType(env, ro, rw);
         }
         else {
             return s;
@@ -38,13 +40,25 @@ public class MappingDefinition {
             types: types.cloneReadOnly(),
             rest
         };
-        self.rw = internMappingAtomicType(env, rwType, self.rw);
+        Atom rw;
+        RecAtom? rwRec = self.rwRec;
+        if rwRec != () {
+            rw = rwRec;
+            env.setRecMappingAtomType(rwRec, rwType);
+        }
+        else {
+            rw = env.mappingAtom(rwType);
+        }
+        Atom ro;
         if typeListIsReadOnly(rwType.types) && isReadOnly(rest) {
-            if self.ro < 0 {
-                self.ro = self.rw;
+            RecAtom? roRec = self.roRec;
+            if roRec == () {
+                // share the definitions
+                ro = rw;
             }
             else {
-                env.mappingDefs[self.ro] = rwType;
+                ro = roRec;
+                env.setRecMappingAtomType(roRec, rwType);
             }
         }
         else {
@@ -53,55 +67,29 @@ public class MappingDefinition {
                 types: readOnlyTypeList(rwType.types),
                 rest: intersect(rest, READONLY)
             };
-            self.ro = internMappingAtomicType(env, roType, self.ro);
+            ro = env.mappingAtom(roType);
+            RecAtom? roRec = self.roRec;
+            if roRec != () {
+                env.setRecMappingAtomType(roRec, roType);
+            }
         }
-        return self.createSemType(env);
+        return self.createSemType(env, ro, rw);
     }
     
-    private function createSemType(Env env) returns SemType {
-        BddNode roBdd = bddAtom(self.ro);
+    private function createSemType(Env env, Atom ro, Atom rw) returns SemType {
+        BddNode roBdd = bddAtom(ro);
         BddNode rwBdd;
-        if self.ro == self.rw {
+        if atomCmp(ro, rw) == 0 {
+            // share the BDD
             rwBdd = roBdd;
         }
         else {
-            rwBdd = bddAtom(self.rw);
+            rwBdd = bddAtom(rw);
         }
         SemType s = createComplexSemType(0, [[UT_MAPPING_RO, roBdd], [UT_MAPPING_RW, rwBdd]]);
         self.semType = s; 
         return s;
     }       
-}
-
-function internMappingAtomicType(Env env, MappingAtomicType atom, int dummyIndex) returns int {
-    int index = dummyIndex;
-    InternedMappingAtomicType? interned = env.internedMappingAtomicTypes[atom];
-    boolean duplicate = false;
-    if index < 0 {
-        if interned != () {
-            index = interned.index;
-            duplicate = true;
-        }
-        else {
-            index = dummyMappingDef(env);
-        }
-    }
-    if !duplicate {
-        env.mappingDefs[index] = atom;
-        // probably edge cases where interned is non-nil
-        // when we had a recursive reference, but the reference got normalized out of the resulting semtype
-        if interned == () { 
-            env.internedMappingAtomicTypes.add({ atom, index });
-        }
-    }
-    return index;
-}
-
-function dummyMappingDef(Env env) returns int {
-    int i = env.mappingDefs.length();
-    MappingAtomicType dummy = { names: [], types: [], rest: NEVER };
-    env.mappingDefs.push(dummy);
-    return i;
 }
 
 function splitFields(Field[] fields) returns [string[], SemType[]] {
@@ -163,14 +151,14 @@ function mappingFormulaIsEmpty(TypeCheckContext tc, Conjunction? posList, Conjun
     }
     else {
         // combine all the positive atoms using intersection
-        combined = tc.mappingDefs[posList.atom];
+        combined = tc.mappingAtomType(posList.atom);
         Conjunction? p = posList.next;
         while true {
             if p is () {
                 break;
             }
             else {
-                var m = intersectMapping(combined, tc.mappingDefs[p.atom]);
+                var m = intersectMapping(combined, tc.mappingAtomType(p.atom));
                 if m is () {
                     return true;
                 }
@@ -195,7 +183,7 @@ function mappingInhabited(TypeCheckContext tc, TempMappingSubtype pos, Conjuncti
         return true;
     }
     else {
-        MappingAtomicType neg = tc.mappingDefs[negList.atom];
+        MappingAtomicType neg = tc.mappingAtomType(negList.atom);
 
         MappingPairing pairing;
 

@@ -11,8 +11,8 @@ final ListAtomicType LIST_SUBTYPE_RO = { members: [], rest: READONLY };
 
 public class ListDefinition {
     *Definition;
-    private int ro = -1;
-    private int rw = -1;
+    private RecAtom? roRec = ();
+    private RecAtom? rwRec = ();
 
     // The SemType is created lazily so that we have the possibility
     // to share the Bdd between the RO and RW cases.
@@ -21,9 +21,11 @@ public class ListDefinition {
     public function getSemType(Env env) returns ComplexSemType {
         ComplexSemType? s = self.semType;
         if s is () {
-            self.ro = dummyListDef(env);
-            self.rw = dummyListDef(env);
-            return self.createSemType(env);
+            RecAtom ro = env.recListAtom();
+            RecAtom rw = env.recListAtom();
+            self.roRec = ro;
+            self.rwRec = rw;
+            return self.createSemType(env, ro, rw);
         }
         else {
             return s;
@@ -32,14 +34,25 @@ public class ListDefinition {
 
     public function define(Env env, SemType[] members, SemType rest) returns ComplexSemType {
         ListAtomicType rwType = { members: members.cloneReadOnly(), rest };
-        self.rw = internListAtomicType(env, rwType, self.rw);
+        Atom rw;
+        RecAtom? rwRec = self.rwRec;
+        if rwRec != () {
+            rw = rwRec;
+            env.setRecListAtomType(rwRec, rwType);
+        }
+        else {
+            rw = env.listAtom(rwType);
+        }
+        Atom ro;
         if typeListIsReadOnly(rwType.members) && isReadOnly(rwType.rest) {
-            if self.ro < 0 {
+            RecAtom? roRec = self.roRec;
+            if roRec == () {
                 // share the definitions
-                self.ro = self.rw;
+                ro = rw;
             }
             else {
-                env.listDefs[self.ro] = rwType;
+                ro = roRec;
+                env.setRecListAtomType(roRec, rwType);
             }
         }
         else {
@@ -47,56 +60,29 @@ public class ListDefinition {
                 members: readOnlyTypeList(rwType.members),
                 rest: intersect(rwType.rest, READONLY)
             };
-            self.ro = internListAtomicType(env, roType, self.ro);
+            ro = env.listAtom(roType);
+            RecAtom? roRec = self.roRec;
+            if roRec != () {
+                env.setRecListAtomType(roRec, roType);
+            }
         }
-        return self.createSemType(env);
+        return self.createSemType(env, ro, rw);
     }
     
-    private function createSemType(Env env) returns ComplexSemType {
-        BddNode roBdd = bddAtom(self.ro);
+    private function createSemType(Env env, Atom ro, Atom rw) returns ComplexSemType {
+        BddNode roBdd = bddAtom(ro);
         BddNode rwBdd;
-        if self.ro == self.rw {
+        if atomCmp(ro, rw) == 0 {
             // share the BDD
             rwBdd = roBdd;
         }
         else {
-            rwBdd = bddAtom(self.rw);
+            rwBdd = bddAtom(rw);
         }
         ComplexSemType s = createComplexSemType(0, [[UT_LIST_RO, roBdd], [UT_LIST_RW, rwBdd]]);
         self.semType = s;
         return s;
     }       
-}
-
-function internListAtomicType(Env env, ListAtomicType atom, int dummyIndex) returns int {
-    int index = dummyIndex;
-    InternedListAtomicType? interned = env.internedListAtomicTypes[atom];
-    boolean duplicate = false;
-    if index < 0 {
-        if interned != () {
-            index = interned.index;
-            duplicate = true;
-        }
-        else {
-            index = dummyListDef(env);
-        }
-    }
-    if !duplicate {
-        env.listDefs[index] = atom;
-        // probably edge cases where interned is non-nil
-        // when we had a recursive reference, but the reference got normalized out of the resulting semtype
-        if interned == () { 
-            env.internedListAtomicTypes.add({ atom, index });
-        }
-    }
-    return index;
-}
-
-function dummyListDef(Env env) returns int {
-    int i = env.listDefs.length();
-    ListAtomicType dummy = { members: [], rest: NEVER };
-    env.listDefs.push(dummy);
-    return i;
 }
 
 public function tuple(Env env, SemType... members) returns SemType {
@@ -142,7 +128,7 @@ function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? 
     }
     else {
         // combine all the positive tuples using intersection
-        ListAtomicType lt = tc.listDefs[pos.atom];
+        ListAtomicType lt = tc.listAtomType(pos.atom);
         members = lt.members;
         rest = lt.rest;
         Conjunction? p = pos.next;
@@ -155,9 +141,9 @@ function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? 
                 break;
             }
             else {
-                int d = p.atom;
+                Atom d = p.atom;
                 p = p.next; 
-                lt = tc.listDefs[d];
+                lt = tc.listAtomType(d);
                 int newLen = int:max(members.length(), lt.members.length());
                 if members.length() < newLen {
                     if isNever(rest) {
@@ -203,7 +189,7 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Con
     }
     else {
         int len = members.length();
-        ListAtomicType nt = tc.listDefs[neg.atom];
+        ListAtomicType nt = tc.listAtomType(neg.atom);
         int negLen = nt.members.length();
         if len < negLen {
             if isNever(rest) {
