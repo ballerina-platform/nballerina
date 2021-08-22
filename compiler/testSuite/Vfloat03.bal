@@ -3,9 +3,9 @@ import ballerina/io;
 
 public function main() {
     float x = 17;
-    io:println(x); // @output 17
-    foo(42); // @output 42
-    io:println(bar()); // @output 21
+    io:println(x); // @output 17.0
+    foo(42); // @output 42.0
+    io:println(bar()); // @output 21.0
 }
 
 function foo(float x) {

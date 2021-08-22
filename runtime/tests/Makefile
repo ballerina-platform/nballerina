@@ -1,4 +1,4 @@
-TESTPROGS=string_hash string_cmp string_concat string_len immediate_string tagged_ptr
+TESTPROGS=string_hash string_cmp string_concat string_len immediate_string tagged_ptr float_print
 # following will test balrt_inline, and must be named inlinert_*
 TESTINLINERTPROGS=inlinert_float
 TESTPROG_STAMPS=$(addsuffix .stamp, $(TESTPROGS) $(TESTINLINERTPROGS))
