@@ -1,0 +1,3 @@
+[submodule "dtoa/dtoa-benchmark"]
+	path = dtoa/dtoa-benchmark
+	url = git@github.com:miloyip/dtoa-benchmark.git
