@@ -164,6 +164,8 @@ public enum InsnName {
     INSN_INT_BITWISE_BINARY,
     INSN_FLOAT_ARITHMETIC_BINARY,
     INSN_FLOAT_NEGATE,
+    INSN_CONVERT_TO_INT,
+    INSN_CONVERT_TO_FLOAT,
     INSN_COMPARE,
     INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
@@ -200,6 +202,7 @@ public type InsnBase record {
 public type Insn 
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |FloatArithmeticBinaryInsn|FloatNegateInsn
+    |ConvertToIntInsn|ConvertToFloatInsn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
@@ -275,6 +278,33 @@ public type FloatArithmeticBinaryInsn readonly & record {|
 public type FloatNegateInsn readonly & record {|
     *InsnBase;
     INSN_FLOAT_NEGATE name = INSN_FLOAT_NEGATE;
+    Register result;
+    Register operand;
+|};
+
+
+# If the operand is a float or decimal, then convert it to an int.
+# Otherwise leave the operand unchanged.
+# The intersection of the operand type with float|decimal must be non-empty.
+# The result type must be `(T - (float|decimal))|int`,
+# where T is the operand type.
+# This panics if the conversion cannot be performed, so is a PPI.
+public type ConvertToIntInsn readonly & record {|
+    *InsnBase;
+    INSN_CONVERT_TO_INT name = INSN_CONVERT_TO_INT;
+    Register result;
+    Register operand;
+|};
+
+# If the operand is an int or decimal, then convert it to a float.
+# Otherwise leave the operand unchanged.
+# The intersection of the operand type with int|decimal must be non-empty.
+# The result type must be `(T - (int|decimal))|float`,
+# where T is the operand type.
+# This is not a PPI.
+public type ConvertToFloatInsn readonly & record {|
+    *InsnBase;
+    INSN_CONVERT_TO_FLOAT name = INSN_CONVERT_TO_FLOAT;
     Register result;
     Register operand;
 |};
@@ -549,6 +579,7 @@ final readonly & map<true> PPI_INSNS = {
     // [INSN_CALL]: true,
     [INSN_PANIC]: true,
     [INSN_INT_ARITHMETIC_BINARY]: true,
+    [INSN_CONVERT_TO_INT]: true,
     [INSN_TYPE_CAST]: true,
     [INSN_LIST_GET]: true,
     [INSN_LIST_SET]: true,
