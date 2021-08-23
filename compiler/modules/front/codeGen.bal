@@ -1110,24 +1110,37 @@ function codeGenVarRefExpr(CodeGenContext cx, string name, Environment env, bir:
 
 function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, tcExpr.operand);
-    if operand is bir:Register {
-        if t:isSubtype(cx.mod.tc, operand.semType, tcExpr.semType) {
-            // it's redundant, so we can remove it
-            return { result: operand, block: nextBlock };
+    var reg = <bir:Register>operand; // const folding should have got rid of the const
+    t:SemType toType = tcExpr.semType;
+    t:UniformTypeBitSet? toNumType = t:singleNumericType(toType);
+    if toNumType != ()
+       // Remove the next line to enable conversion when support in backend is implemented
+       && toNumType == t:NEVER 
+       && !t:isSubtypeSimple(t:intersect(reg.semType, t:NUMBER), toNumType) {
+        toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
+        bir:Register result = cx.createRegister(t:intersect(reg.semType, toType));
+        if toNumType == t:INT {
+            bir:ConvertToIntInsn insn = { operand: reg, result, position: tcExpr.pos };
+            nextBlock.insns.push(insn);
         }
-        t:SemType resultType = t:intersect(operand.semType, tcExpr.semType);
-        bir:Register reg = cx.createRegister(resultType);
-        bir:TypeCastInsn insn = { operand, semType: tcExpr.semType, position: tcExpr.pos, result: reg };
-        bb.insns.push(insn);
+        else if toNumType == t:FLOAT {
+            bir:ConvertToFloatInsn insn = { operand: reg, result };
+            nextBlock.insns.push(insn);
+        }
+        else {
+            panic err:impossible("convert to decimal");
+        }
+        reg = result;
+    }
+    if t:isSubtype(cx.mod.tc, reg.semType, toType) {
+        // it's redundant, so we can remove it
         return { result: reg, block: nextBlock };
     }
-    else {
-        if !t:containsConst(tcExpr.semType, operand) {
-            // the verifier uses the same wording
-            return err:semantic("type cast cannot succeed", pos=tcExpr.pos);
-        }
-        return { result: operand, block: nextBlock };
-    }
+    t:SemType resultType = t:intersect(reg.semType, toType);
+    bir:Register result = cx.createRegister(resultType);
+    bir:TypeCastInsn insn = { operand: reg, semType: toType, position: tcExpr.pos, result };
+    nextBlock.insns.push(insn);
+    return { result, block: nextBlock };
 }
 
 function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType, boolean negated) returns CodeGenError|ExprEffect {

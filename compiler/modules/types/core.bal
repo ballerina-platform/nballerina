@@ -354,6 +354,7 @@ public final UniformTypeBitSet TOP = uniformTypeUnion(UT_MASK);
 public final UniformTypeBitSet ANY = uniformTypeUnion(UT_MASK & ~(1 << UT_ERROR));
 public final UniformTypeBitSet READONLY = uniformTypeUnion(UT_READONLY);
 public final UniformTypeBitSet SIMPLE_OR_STRING = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
+public final UniformTypeBitSet NUMBER = uniformTypeUnion((1 << UT_INT) | (1 << UT_FLOAT) | (1 << UT_DECIMAL));
 public final SemType BYTE = intWidthUnsigned(8);
 
 // Need this type to workaround slalpha4 bug.
@@ -930,6 +931,20 @@ public function containsConstBoolean(SemType t, boolean b) returns boolean {
     else {
         return booleanSubtypeContains(getComplexSubtypeData(t, UT_BOOLEAN), b);
     }
+}
+
+public function singleNumericType(SemType semType) returns UniformTypeBitSet? {
+    SemType numType = intersect(semType, NUMBER);
+    if isSubtypeSimple(numType, INT) {
+        return INT;
+    }
+    if isSubtypeSimple(numType, FLOAT) {
+        return FLOAT;
+    }
+    if isSubtypeSimple(numType, DECIMAL) {
+        return DECIMAL;
+    }
+    return ();
 }
 
 public function typeCheckContext(Env env) returns TypeCheckContext {
