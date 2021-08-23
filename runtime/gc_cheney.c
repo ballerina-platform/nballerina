@@ -63,7 +63,7 @@ void _bal_init_heap() {
     alloc_ptr = from_space_ptr;
     heap_limit_ptr = from_space_ptr + heap_half_size;
 
-    to_space_ptr = mmap(NULL, heap_half_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
+    to_space_ptr = mmap(NULL, heap_half_size, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, 0, 0);
     // TODO: check order and alignemt.
     if (to_space_ptr == MAP_FAILED) {
         printf("Heap initialization Failed\n");
@@ -94,6 +94,7 @@ void copy(Root *root_ptr, Root root) {
 }
 
 void collect() {
+    mprotect(to_space_ptr, heap_half_size, PROT_READ | PROT_WRITE);
     alloc_ptr = to_space_ptr;
     scan_ptr = to_space_ptr;
 
@@ -143,6 +144,7 @@ void collect() {
 
     // update end of the heap
     heap_limit_ptr = from_space_ptr + heap_half_size;
+    mprotect(to_space_ptr, heap_half_size, PROT_NONE);
 }
 
 int tot_bytes = 0;
