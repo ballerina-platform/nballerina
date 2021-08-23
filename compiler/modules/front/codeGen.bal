@@ -1106,17 +1106,17 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
 
 function codeGenVarRefExpr(CodeGenContext cx, string name, Environment env, bir:BasicBlock bb) returns CodeGenError|ExprEffect{
     var v = check lookupVarRef(cx, name, env);
-            bir:Operand result;
-            Binding? binding;
-            if v is t:Value {
-                result = v.value;
-                binding = ();
-            }
-            else {
-                result = v.reg;
-                binding = v;
-            }
-            return { result, block: bb, binding };
+    bir:Operand result;
+    Binding? binding;
+    if v is t:Value {
+        result = v.value;
+        binding = ();
+    }
+    else {
+        result = v.reg;
+        binding = v;
+    }
+    return { result, block: bb, binding };
 }
 
 function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType, boolean negated) returns CodeGenError|ExprEffect {
