@@ -77,7 +77,7 @@ void testFloatsToIntConvert() {
     testFloatToIntNoOverflow(-1.5, -2);
     testFloatToIntNoOverflow(-2.5, -2);
     testFloatToIntNoOverflow(9223372036854774784.0, 9223372036854774784);
-    testFloatToIntNoOverflow(-9223372036854775808.0, 9223372036854775808);
+    testFloatToIntNoOverflow(-9223372036854775808.0, -9223372036854775807 - 1);
 
     testFloatToIntOverflow(9223372036854775808.0);
     testFloatToIntOverflow(-9223372036854777856.0);
