@@ -933,28 +933,9 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 return cx.semanticErr("operands of relational operator are not ordered");
             }               
         }
-        var { td, operand: o } => {
-            var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
+        var { td, operand: _ } => {
             // JBUG #31782 cast needed
-            s:TypeCastExpr tcExpr = <s:TypeCastExpr>expr;
-            if operand is bir:Register {
-                if t:isSubtype(cx.mod.tc, operand.semType, tcExpr.semType) {
-                    // it's redundant, so we can remove it
-                    return { result: operand, block: nextBlock };
-                }
-                t:SemType resultType = t:intersect(operand.semType, tcExpr.semType);
-                bir:Register reg = cx.createRegister(resultType);
-                bir:TypeCastInsn insn = { operand, semType: tcExpr.semType, position: tcExpr.pos, result:reg };
-                bb.insns.push(insn);
-                return { result: reg, block: nextBlock };
-            }
-            else {
-                if !t:containsConst(tcExpr.semType, operand) {
-                    // the verifier uses the same wording
-                    return err:semantic("type cast cannot succeed", pos=tcExpr.pos);
-                }
-                return { result: operand, block: nextBlock };
-            }
+            return codeGenTypeCast(cx, bb, env, <s:TypeCastExpr>expr);
         }
         // Type test
         var { td, left, semType, negated} => {
@@ -1125,6 +1106,28 @@ function codeGenVarRefExpr(CodeGenContext cx, string name, Environment env, bir:
         binding = v;
     }
     return { result, block: bb, binding };
+}
+
+function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
+    var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, tcExpr.operand);
+    if operand is bir:Register {
+        if t:isSubtype(cx.mod.tc, operand.semType, tcExpr.semType) {
+            // it's redundant, so we can remove it
+            return { result: operand, block: nextBlock };
+        }
+        t:SemType resultType = t:intersect(operand.semType, tcExpr.semType);
+        bir:Register reg = cx.createRegister(resultType);
+        bir:TypeCastInsn insn = { operand, semType: tcExpr.semType, position: tcExpr.pos, result: reg };
+        bb.insns.push(insn);
+        return { result: reg, block: nextBlock };
+    }
+    else {
+        if !t:containsConst(tcExpr.semType, operand) {
+            // the verifier uses the same wording
+            return err:semantic("type cast cannot succeed", pos=tcExpr.pos);
+        }
+        return { result: operand, block: nextBlock };
+    }
 }
 
 function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType, boolean negated) returns CodeGenError|ExprEffect {
