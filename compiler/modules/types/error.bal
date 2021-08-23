@@ -1,5 +1,4 @@
 // Implementation specific to basic type error.
-import nballerina.types.bdd;
 
 public function errorDetail(SemType detail) returns SemType {
     SubtypeData sd = subtypeData(detail, UT_MAPPING_RO);
@@ -19,14 +18,14 @@ public function errorDetail(SemType detail) returns SemType {
 
 // distinctId must be >= 0
 public function errorDistinct(int distinctId) returns SemType {
-    bdd:Node bdd = bdd:atom(-distinctId - 1);
+    BddNode bdd = bddAtom(-distinctId - 1);
     return uniformSubtype(UT_ERROR, bdd);
 }
 
 // Similar to mappingSubtypeRoIsEmpty,
 // except that we use bddEveryPositive to ignore the distinct ids
 function errorSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    bdd:Bdd b = bddFixReadOnly(<bdd:Bdd>t);
+    Bdd b = bddFixReadOnly(<Bdd>t);
     BddMemo? mm = tc.mappingMemo[b];
     BddMemo m;
     if mm is () {

@@ -1,35 +1,9 @@
 #include "test_utils.h"
 #include "../balrt_inline.h"
-#include <math.h>
 
 HASH_DEFINE_KEY;
 
 #define INF (1.0l/0.0l)
-
-double randDouble(bool isNan) {
-    // assumeing two rands are enough to make mantissa and sign, ie: popcount(RAND_MAX) * 2 >= 52 + 1
-    uint64_t largeRand = ((uint64_t)rand() << __builtin_popcount(RAND_MAX)) + rand();
-    uint64_t mantissa = largeRand & ((1L << 52) - 1);
-    uint64_t sign = (largeRand & (1L << 52))  << (63 - 52);
-    uint64_t exp;
-    if (isNan) {
-        exp = (1L << 11) - 1;
-        if (mantissa == 0) {
-            mantissa = 1;
-        }
-    }
-    else {
-        exp = rand() & ((1L << 11) - 1);
-        if (exp == (1L << 11) - 1) {
-            exp = exp - 1;
-        }
-    }
-    uint64_t randNanBits = sign + (exp << 52) + mantissa;
-    double result = *((double*)&randNanBits);
-    assert(isnan(result) == isNan);
-    return result;
-}
-
 
 void testFloatEq() {
     for (int i = 0; i < NTESTS / 2; i++) {
@@ -85,8 +59,40 @@ void testFloatExactEq() {
     assert(!_bal_float_exact_eq(0.0, NAN));
 }
 
+void testFloatToIntNoOverflow(double d, long l) {
+    struct FloatToIntResult r = _bal_float_to_int(d);
+    assert(!r.overflowed);
+    assert(r.value == l);
+}
+
+void testFloatToIntOverflow(double d) {
+    struct FloatToIntResult r = _bal_float_to_int(d);
+    assert(r.overflowed);
+}
+
+void testFloatsToIntConvert() {
+    testFloatToIntNoOverflow(42.42, 42);
+    testFloatToIntNoOverflow(1.5, 2);
+    testFloatToIntNoOverflow(2.5, 2);
+    testFloatToIntNoOverflow(-1.5, -2);
+    testFloatToIntNoOverflow(-2.5, -2);
+    testFloatToIntNoOverflow(9223372036854774784.0, 9223372036854774784);
+    testFloatToIntNoOverflow(-9223372036854775808.0, -9223372036854775807 - 1);
+
+    testFloatToIntOverflow(9223372036854775808.0);
+    testFloatToIntOverflow(-9223372036854777856.0);
+    testFloatToIntOverflow(INF);
+    testFloatToIntOverflow(-INF);
+    testFloatToIntOverflow(NAN);
+
+    for (int i = 0; i < NTESTS / 8; i++) {
+        testFloatToIntOverflow(randDouble(true));
+    }
+}
+
 int main() {
     testFloatEq();
     testFloatExactEq();
+    testFloatsToIntConvert();
     return 0;
 }

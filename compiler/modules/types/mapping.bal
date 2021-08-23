@@ -1,6 +1,4 @@
 // Implementation specific to basic type list.
-import nballerina.types.bdd;
-//import ballerina/io;
 
 public type Field [string, SemType];
 
@@ -11,20 +9,24 @@ public type MappingAtomicType readonly & record {|
     SemType rest;
 |};
 
+// This is mapping index 0
+// Used by bddFixReadOnly
 final MappingAtomicType MAPPING_SUBTYPE_RO = { names: [], types: [], rest: READONLY };
 
 public class MappingDefinition {
     *Definition;
-    private int ro = -1;
-    private int rw = -1;
+    private RecAtom? roRec = ();
+    private RecAtom? rwRec = ();
     private SemType? semType = ();
 
     public function getSemType(Env env) returns SemType {
         SemType? s = self.semType;
         if s is () {
-            self.ro = dummyMappingDef(env);
-            self.rw = dummyMappingDef(env);
-            return self.createSemType(env);
+            RecAtom ro = env.recMappingAtom();
+            RecAtom rw = env.recMappingAtom();
+            self.roRec = ro;
+            self.rwRec = rw;
+            return self.createSemType(env, ro, rw);
         }
         else {
             return s;
@@ -38,16 +40,25 @@ public class MappingDefinition {
             types: types.cloneReadOnly(),
             rest
         };
-        if self.rw < 0 {
-            self.rw = dummyMappingDef(env);
+        Atom rw;
+        RecAtom? rwRec = self.rwRec;
+        if rwRec != () {
+            rw = rwRec;
+            env.setRecMappingAtomType(rwRec, rwType);
         }
-        env.mappingDefs[self.rw] = rwType;
+        else {
+            rw = env.mappingAtom(rwType);
+        }
+        Atom ro;
         if typeListIsReadOnly(rwType.types) && isReadOnly(rest) {
-            if self.ro < 0 {
-                self.ro = self.rw;
+            RecAtom? roRec = self.roRec;
+            if roRec == () {
+                // share the definitions
+                ro = rw;
             }
             else {
-                env.mappingDefs[self.ro] = rwType;
+                ro = roRec;
+                env.setRecMappingAtomType(roRec, rwType);
             }
         }
         else {
@@ -56,34 +67,29 @@ public class MappingDefinition {
                 types: readOnlyTypeList(rwType.types),
                 rest: intersect(rest, READONLY)
             };
-            if self.ro < 0 {
-                self.ro = dummyMappingDef(env);
+            ro = env.mappingAtom(roType);
+            RecAtom? roRec = self.roRec;
+            if roRec != () {
+                env.setRecMappingAtomType(roRec, roType);
             }
-            env.mappingDefs[self.ro] = roType;
         }
-        return self.createSemType(env);
+        return self.createSemType(env, ro, rw);
     }
     
-    private function createSemType(Env env) returns SemType {
-        readonly & bdd:Node roBdd = bdd:atom(self.ro);
-        readonly & bdd:Node rwBdd;
-        if self.ro == self.rw {
+    private function createSemType(Env env, Atom ro, Atom rw) returns SemType {
+        BddNode roBdd = bddAtom(ro);
+        BddNode rwBdd;
+        if atomCmp(ro, rw) == 0 {
+            // share the BDD
             rwBdd = roBdd;
         }
         else {
-            rwBdd = bdd:atom(self.rw);
+            rwBdd = bddAtom(rw);
         }
-        SemType s = new SemType(0, [[UT_MAPPING_RO, roBdd], [UT_MAPPING_RW, rwBdd]]);
+        SemType s = createComplexSemType(0, [[UT_MAPPING_RO, roBdd], [UT_MAPPING_RW, rwBdd]]);
         self.semType = s; 
         return s;
     }       
-}
-
-function dummyMappingDef(Env env) returns int {
-    int i = env.mappingDefs.length();
-    MappingAtomicType dummy = { names: [], types: [], rest: NEVER };
-    env.mappingDefs.push(dummy);
-    return i;
 }
 
 function splitFields(Field[] fields) returns [string[], SemType[]] {
@@ -102,11 +108,11 @@ isolated function fieldName(Field f) returns string {
 }
 
 function mappingRoSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    return mappingSubtypeIsEmpty(tc, bddFixReadOnly(<bdd:Bdd>t));
+    return mappingSubtypeIsEmpty(tc, bddFixReadOnly(<Bdd>t));
 }
 
 function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    bdd:Bdd b = <bdd:Bdd>t;
+    Bdd b = <Bdd>t;
     BddMemo? mm = tc.mappingMemo[b];
     BddMemo m;
     if mm is () {
@@ -145,14 +151,14 @@ function mappingFormulaIsEmpty(TypeCheckContext tc, Conjunction? posList, Conjun
     }
     else {
         // combine all the positive atoms using intersection
-        combined = tc.mappingDefs[posList.atom];
+        combined = tc.mappingAtomType(posList.atom);
         Conjunction? p = posList.next;
         while true {
             if p is () {
                 break;
             }
             else {
-                var m = intersectMapping(combined, tc.mappingDefs[p.atom]);
+                var m = intersectMapping(combined, tc.mappingAtomType(p.atom));
                 if m is () {
                     return true;
                 }
@@ -177,7 +183,7 @@ function mappingInhabited(TypeCheckContext tc, TempMappingSubtype pos, Conjuncti
         return true;
     }
     else {
-        MappingAtomicType neg = tc.mappingDefs[negList.atom];
+        MappingAtomicType neg = tc.mappingAtomType(negList.atom);
 
         MappingPairing pairing;
 
@@ -366,7 +372,6 @@ class MappingPairing {
                 self.i2 += 1;
             }
         }
-        //io:println("Name ", p.name, "; i1=", self.i1, "; i2 =", self.i2);
         return { value: p };
     }
     

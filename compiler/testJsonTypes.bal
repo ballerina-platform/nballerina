@@ -1,7 +1,6 @@
 import ballerina/io;
 
 import wso2/nballerina.types as t;
-import wso2/nballerina.types.bdd;
 import wso2/nballerina.types.'json as j;
 
 enum Relation {
@@ -26,7 +25,7 @@ public function testJsonTypes(string filename) returns error? {
         }
     }
     io:println("Passed ", testsPassed, "/", testNum);
-    io:println(" created ", bdd:getCount(), " BDDs in total");
+    io:println(" created ", t:bddGetCount(), " BDDs in total");
 }
 
 final var relationExpect = {
@@ -55,11 +54,11 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
 
 function expectSubtype(int testNum, json j1, json j2, t:Env env, t:SemType t1, t:SemType t2, boolean[] expect, int i) returns boolean {
     io:println("Test ", testNum, "/", i);
-    int tem = bdd:getCount();
+    int tem = t:bddGetCount();
     var tc = t:typeCheckContext(env);
     boolean b = t:isSubtype(tc, t1, t2);
     if b == expect[i] {
-        io:println("  created ", bdd:getCount() - tem, " BDDs");
+        io:println("  created ", t:bddGetCount() - tem, " BDDs");
         return true;
     }
     io:println("Fail test ", testNum, ". This type");

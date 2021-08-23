@@ -20,10 +20,10 @@ const TAG_FACTOR   = 0x0100000000000000;
 const POINTER_MASK = 0x00ffffffffffffff;
 
 const int TAG_MASK     = 0x1f * TAG_FACTOR;
-const TAG_NIL      = 0;
+const int TAG_NIL      = 0;
 const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
 const int TAG_INT      = t:UT_INT * TAG_FACTOR;
-const int TAG_FLOAT      = t:UT_FLOAT * TAG_FACTOR;
+const int TAG_FLOAT    = t:UT_FLOAT * TAG_FACTOR;
 const int TAG_STRING   = t:UT_STRING * TAG_FACTOR;
 
 const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
@@ -522,6 +522,12 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:AbnormalRetInsn {
             buildAbnormalRet(builder, scaffold, insn);
         }
+        else if insn is bir:FloatArithmeticBinaryInsn {
+            buildFloatArithmeticBinary(builder, scaffold, insn);
+        }
+        else if insn is bir:FloatNegateInsn {
+            buildFloatNegate(builder, scaffold, insn);
+        }
         else {
             return err:unimplemented(`BIR insn ${insn.name} not implemented`);
         }
@@ -809,9 +815,23 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
 function buildNoPanicArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntNoPanicArithmeticBinaryInsn insn) {
     llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
-    llvm:IntArithmeticOp op = arithmeticOps.get(insn.op);
+    llvm:IntArithmeticOp op = intArithmeticOps.get(insn.op);
     llvm:Value result = builder.iArithmeticNoWrap(op, lhs, rhs);
     buildStoreInt(builder, scaffold, result, insn.result);                                  
+}
+
+function buildFloatArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:FloatArithmeticBinaryInsn insn) {
+    llvm:Value lhs = buildFloat(builder, scaffold, insn.operands[0]);
+    llvm:Value rhs = buildFloat(builder, scaffold, insn.operands[1]);
+    llvm:FloatArithmeticOp op = floatArithmeticOps.get(insn.op);
+    llvm:Value result = builder.fArithmetic(op, lhs, rhs);
+    buildStoreFloat(builder, scaffold, result, insn.result);                                  
+}
+
+function buildFloatNegate(llvm:Builder builder, Scaffold scaffold, bir:FloatNegateInsn insn) {
+    llvm:Value operand = buildFloat(builder, scaffold, insn.operand);
+    llvm:Value result = builder.fNeg(operand);
+    buildStoreFloat(builder, scaffold, result, insn.result);
 }
 
 final readonly & map<llvm:IntBitwiseOp> binaryBitwiseOp = {
@@ -841,6 +861,13 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
                               builder.iCmp(buildIntCompareOp(insn.op),
                                            buildInt(builder, scaffold, <bir:IntOperand>insn.operands[0]),
                                            buildInt(builder, scaffold, <bir:IntOperand>insn.operands[1])),
+                              insn.result); 
+        }
+        "float" => {
+            buildStoreBoolean(builder, scaffold,
+                              builder.fCmp(buildFloatCompareOp(insn.op),
+                                           buildFloat(builder, scaffold, <bir:FloatOperand>insn.operands[0]),
+                                           buildFloat(builder, scaffold, <bir:FloatOperand>insn.operands[1])),
                               insn.result); 
         }
         "boolean" => {
@@ -1006,6 +1033,9 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     else if semType === t:INT {
         hasType = buildHasTag(builder, tagged, TAG_INT);
     }
+    else if semType === t:FLOAT {
+        hasType = buildHasTag(builder, tagged, TAG_FLOAT);
+    }
     else if semType === t:STRING {
         hasType = buildHasTag(builder, tagged, TAG_STRING);
     }
@@ -1018,7 +1048,14 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     else {
         return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
     }
-    buildStoreBoolean(builder, scaffold, hasType, insn.result);
+    if insn.negated {
+        buildStoreBoolean(builder, scaffold, 
+                    builder.iBitwise("xor", llvm:constInt(LLVM_BOOLEAN, 1), hasType), 
+                    insn.result);
+    }
+    else {
+        buildStoreBoolean(builder, scaffold, hasType, insn.result);
+    }
 }
 
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
@@ -1082,6 +1119,9 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
         if targetBaseRepr == BASE_REPR_INT {
             return buildUntagInt(builder, scaffold, tagged);
         }
+        else if targetBaseRepr == BASE_REPR_FLOAT {
+            return buildUntagFloat(builder, scaffold, tagged);
+        }
         else if targetBaseRepr == BASE_REPR_BOOLEAN {
             return buildUntagBoolean(builder, tagged);
         }
@@ -1106,6 +1146,11 @@ function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNot
 
 function buildStoreInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
     builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedInt(builder, scaffold, value) : value,
+                  scaffold.address(reg));
+}
+
+function buildStoreFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedFloat(builder, scaffold, value) : value,
                   scaffold.address(reg));
 }
 
@@ -1302,7 +1347,7 @@ function buildSimpleConst(bir:SimpleConstOperand operand) returns [Repr, llvm:Va
         return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
     }
     else if operand is float {
-        return [REPR_FLOAT, llvm:constReal(LLVM_DOUBLE, operand)];
+        return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, operand)];
     }
     else if operand is () {
         return [REPR_NIL, buildConstNil()];
@@ -1332,6 +1377,16 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
     }
 }
 
+// Build a value as REPR_FLOAT
+function buildFloat(llvm:Builder builder, Scaffold scaffold, bir:FloatOperand operand) returns llvm:Value {
+    if operand is float {
+        return llvm:constFloat(LLVM_DOUBLE, operand);
+    }
+    else {
+        return builder.load(scaffold.address(operand));
+    }
+}
+
 // Build a value as REPR_BOOLEAN
 function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperand operand) returns llvm:Value {
     if operand is boolean {
@@ -1348,10 +1403,18 @@ final readonly & map<llvm:IntrinsicFunctionName> binaryIntIntrinsics = {
     "*": "smul.with.overflow.i64"
 };
 
-final readonly & map<llvm:IntArithmeticOp> arithmeticOps = {
+final readonly & map<llvm:IntArithmeticOp> intArithmeticOps = {
     "+": "add",
     "-": "sub",
     "*": "mul"
+};
+
+final readonly & map<llvm:FloatArithmeticOp> floatArithmeticOps = {
+    "+": "fadd",
+    "-": "fsub",
+    "*": "fmul",
+    "/": "fdiv",
+    "%": "frem"
 };
 
 // final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
@@ -1384,8 +1447,19 @@ final readonly & map<llvm:IntPredicate> unsignedIntPredicateOps = {
     ">=": "uge"
 };
 
+final readonly & map<llvm:FloatPredicate> floatPredicateOps = {
+    "<": "olt",
+    "<=": "ole",
+    ">": "ogt",
+    ">=": "oge"
+};
+
 function buildIntCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
     return <llvm:IntPredicate>signedIntPredicateOps[op];
+}
+
+function buildFloatCompareOp(bir:OrderOp op) returns llvm:FloatPredicate {
+    return <llvm:FloatPredicate>floatPredicateOps[op];
 }
 
 function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
@@ -1451,6 +1525,9 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr|BuildError {
 
 // Return the representation for a SemType.
 function semTypeRepr(t:SemType ty) returns Repr|BuildError {
+    if ty === t:NEVER {
+        panic err:impossible("allocate register with never type");
+    }
     foreach var tr in typeReprs {
         if t:isSubtypeSimple(ty, tr.domain) {
             return tr.repr;

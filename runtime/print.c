@@ -1,6 +1,8 @@
 #include "balrt.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+#include "third-party/dtoa/emyg_dtoa.h"
 
 #define STYLE_DIRECT 0
 #define STYLE_INFORMAL 1
@@ -37,6 +39,7 @@ static void printStringLiteralChar(FILE *fp, int c) {
 }
 
 static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *stackPtr) {
+    double d;
     int tag = getTag(p);
     switch (tag & UT_MASK) {
         case 0:
@@ -55,8 +58,22 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
             fprintf(fp, "%" PRId64, taggedToInt(p));
             break;
         case TAG_FLOAT:
-            // XXX fix precision
-            fprintf(fp, "%g", taggedToFloat(p));
+            d = taggedToFloat(p);
+            if (isnan(d)) {
+                fprintf(fp, "NaN");
+                break;
+            }
+            if (isinf(d)) {
+                fprintf(fp, d < 0.0l ? "-Infinity" : "Infinity");
+                break;
+            }
+            if (d == 0.0) {
+                fprintf(fp, signbit(d) ? "-0.0" : "0.0");
+                break;
+            }
+            char buf[EMYG_DTOA_BUFFER_LEN];
+            emyg_dtoa_non_special(d, buf);
+            fprintf(fp, "%s", buf);
             break;
         case TAG_LIST_RW:
             if (stackContains(stackPtr, p)) {

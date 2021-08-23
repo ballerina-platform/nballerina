@@ -20,37 +20,37 @@ define void @_B_main() {
   %15 = icmp ult i8* %13, %14
   br i1 %15, label %35, label %16
 16:
-  %17 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0x3ff6000000000000)
-  %18 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0x3fd8000000000000)
+  %17 = call i8 addrspace(1)* @_bal_float_to_tagged(double 1.375)
+  %18 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0.375)
   %19 = call i8 addrspace(1)* @_B_aa(i1 1, i8 addrspace(1)* %17, i8 addrspace(1)* %18)
   store i8 addrspace(1)* %19, i8 addrspace(1)** %1
   %20 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   call void @_Bio__println(i8 addrspace(1)* %20)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %21 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0x3ff6000000000000)
-  %22 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0x3fd8000000000000)
+  %21 = call i8 addrspace(1)* @_bal_float_to_tagged(double 1.375)
+  %22 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0.375)
   %23 = call i8 addrspace(1)* @_B_aa(i1 0, i8 addrspace(1)* %21, i8 addrspace(1)* %22)
   store i8 addrspace(1)* %23, i8 addrspace(1)** %3
   %24 = load i8 addrspace(1)*, i8 addrspace(1)** %3
   call void @_Bio__println(i8 addrspace(1)* %24)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  %25 = call i8 addrspace(1)* @_B_fa(i1 1, double 0x4031c00000000000, double 0x4006000000000000)
+  %25 = call i8 addrspace(1)* @_B_fa(i1 1, double 17.75, double 2.75)
   store i8 addrspace(1)* %25, i8 addrspace(1)** %5
   %26 = load i8 addrspace(1)*, i8 addrspace(1)** %5
   call void @_Bio__println(i8 addrspace(1)* %26)
   store i8 addrspace(1)* null, i8 addrspace(1)** %6
-  %27 = call i8 addrspace(1)* @_B_fa(i1 0, double 0x4031c00000000000, double 0x4006000000000000)
+  %27 = call i8 addrspace(1)* @_B_fa(i1 0, double 17.75, double 2.75)
   store i8 addrspace(1)* %27, i8 addrspace(1)** %7
   %28 = load i8 addrspace(1)*, i8 addrspace(1)** %7
   call void @_Bio__println(i8 addrspace(1)* %28)
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
-  %29 = call double @_B_ff(i1 1, double 0x3ff8000000000000, double 0x3fe0000000000000)
+  %29 = call double @_B_ff(i1 1, double 1.5, double 0.5)
   store double %29, double* %9
   %30 = load double, double* %9
   %31 = call i8 addrspace(1)* @_bal_float_to_tagged(double %30)
   call void @_Bio__println(i8 addrspace(1)* %31)
   store i8 addrspace(1)* null, i8 addrspace(1)** %10
-  %32 = call double @_B_ff(i1 0, double 0x3ff8000000000000, double 0x3fe0000000000000)
+  %32 = call double @_B_ff(i1 0, double 1.5, double 0.5)
   store double %32, double* %11
   %33 = load double, double* %11
   %34 = call i8 addrspace(1)* @_bal_float_to_tagged(double %33)
