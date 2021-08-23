@@ -9,10 +9,10 @@ const F = 5f / 2f;
 const G = 1.5 * 2.5;
 
 public function main() {
-    io:println(A); // @output 3
-    io:println(B); // @output 2
-    io:println(C); // @output 4
-    io:println(D); // @output 8
+    io:println(A); // @output 3.0
+    io:println(B); // @output 2.0
+    io:println(C); // @output 4.0
+    io:println(D); // @output 8.0
     io:println(E); // @output 3.5
     io:println(F); // @output 2.5
     io:println(G); // @output 3.75
