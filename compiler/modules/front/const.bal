@@ -1,3 +1,14 @@
+// Constant folding is used for several purposes
+// 1. for evaluating the RHS of a const definition at compile time
+// 2. for determining whether the type of a conditional expression is singleton true/false (which affects reachability)
+// 3. for improving generated code quality, particularly for cases where LLVM cannot do folding (e.g. strings)
+// Complications arise when purpose 1 and 2 need things done differently. Specifically:
+// - when the type of variable has been narrowed to singleton float zero, we do not know whether its value is +0f or -0f
+// (i.e. must be folded for purpose 2 but does not allow folding for purpose 1)
+// (this applies even more in case of decimal precision)
+// - the type of an === expression is boolean, even if the operands have singleton type (i.e. foldable for purpose 
+// does not imply foldable for purpose 2)
+// These lead to cascading effects in expressions that contain them.
 import wso2/nballerina.err;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.types as t;
@@ -356,8 +367,31 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
     }
     s:Expr subExpr = check foldExpr(cx, targetType, expr.operand);
     if subExpr is s:ConstShapeExpr {
-        if !t:containsConst(expr.semType, subExpr.value) {
+        // Handle numeric conversions
+        t:UniformTypeBitSet? toNumType = t:singleNumericType(expr.semType);
+        var value = subExpr.value;
+        if toNumType == t:INT {
+            if value is float {
+                int|error converted = trap <int>value;
+                if converted is error {
+                    // JBUG toString should not be required
+                    return cx.semanticErr(`cannot convert ${value.toString()} to int`, pos = expr.pos);
+                }
+                else {
+                    value = converted;
+                }
+            }
+        }
+        else if toNumType == t:FLOAT {
+            if value is int {
+                value = <float>value;
+            }
+        }
+        if !t:containsConst(expr.semType, value) {
             return cx.semanticErr(`type cast will always fail`, pos=expr.pos);
+        }
+        if toNumType != () && value != subExpr.value {
+            return foldedUnaryConstExpr(value, toNumType, subExpr);
         }
         // XXX when we have unions of singletons, will need to adjust the type here
         return subExpr;
