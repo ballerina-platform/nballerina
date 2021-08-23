@@ -312,6 +312,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push("(");
         }
         exprToWords(w, expr.left, true);
+        if expr.negated {
+            w.push("!");
+        }
         w.push("is");
         typeDescToWords(w, expr.td);
         if wrap {

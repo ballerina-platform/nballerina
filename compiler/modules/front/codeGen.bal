@@ -957,23 +957,12 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             }
         }
         // Type test
-        var { td, left, semType } => {
-            return codeGenTypeTest(cx, bb, env, td, left, semType);
+        var { td, left, semType, negated} => {
+            return codeGenTypeTest(cx, bb, env, td, left, semType, negated);
         }
         // Variable reference
         var { varName } => {
-            var v = check lookupVarRef(cx, varName, env);
-            bir:Operand result;
-            Binding? binding;
-            if v is t:Value {
-                result = v.value;
-                binding = ();
-            }
-            else {
-                result = v.reg;
-                binding = v;
-            }
-            return { result, block: bb, binding };
+            return codeGenVarRefExpr(cx, varName, env, bb);
         }
         // Constant
         // JBUG does not work as match pattern `var { value, multiSemType }`
@@ -1123,24 +1112,39 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     }
 }
 
-function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType) returns CodeGenError|ExprEffect {
+function codeGenVarRefExpr(CodeGenContext cx, string name, Environment env, bir:BasicBlock bb) returns CodeGenError|ExprEffect{
+    var v = check lookupVarRef(cx, name, env);
+    bir:Operand result;
+    Binding? binding;
+    if v is t:Value {
+        result = v.value;
+        binding = ();
+    }
+    else {
+        result = v.reg;
+        binding = v;
+    }
+    return { result, block: bb, binding };
+}
+
+function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType, boolean negated) returns CodeGenError|ExprEffect {
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
     // Constants should be resolved during constant folding
     bir:Register reg = <bir:Register>operand;        
     t:SemType diff = t:diff(reg.semType, semType);
     if t:isEmpty(cx.mod.tc, diff) {
-        // always true
-        return { result: true, block: bb };
+        return { result: !negated, block: bb };
     }
     t:SemType intersect = t:intersect(reg.semType, semType);
     if t:isEmpty(cx.mod.tc, intersect) {
-        // always false
-        return { result: true, block: bb };
+        return { result: negated, block: bb };
     }
     bir:Register result = cx.createRegister(t:BOOLEAN);
-    bir:TypeTestInsn insn = { operand: reg, semType, result };
+    bir:TypeTestInsn insn = { operand: reg, semType, result, negated};
     bb.insns.push(insn);
-
+    if negated {
+        [intersect, diff] = [diff, intersect];
+    }
     Narrowing? narrowing = ();
     if !(binding is ()) {
         narrowing = {

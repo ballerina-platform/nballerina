@@ -229,6 +229,7 @@ public type TypeTestExpr record {|
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
     t:SemType semType;
+    boolean negated; 
 |};
 
 public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
