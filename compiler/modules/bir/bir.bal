@@ -294,6 +294,7 @@ public type ConvertToIntInsn readonly & record {|
     INSN_CONVERT_TO_INT name = INSN_CONVERT_TO_INT;
     Register result;
     Register operand;
+    err:Position position;
 |};
 
 # If the operand is an int or decimal, then convert it to a float.
