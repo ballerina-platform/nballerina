@@ -5,7 +5,7 @@ export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
 OBJS=alloc.o list.o main.o mapping.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o
 BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_ir_inline.bc float_inline.bc
-
+TAGGED_PTR_OBJ=tagged_ptr.o
 INCLUDES=tag.h balrt.h balrt_inline.h
 AR=ar
 export LIB=balrt.a
@@ -20,7 +20,7 @@ test: all
 testCoverage: $(LIB) $(BCLIB)
 	$(MAKE) -C tests testCoverage
 
-$(LIB): $(OBJS)
+$(LIB): $(TAGGED_PTR_OBJ) $(OBJS)
 	$(AR) r $@ $^
 
 $(BCLIB): $(BCS)
@@ -28,6 +28,9 @@ $(BCLIB): $(BCS)
 
 %.o: %.c
 	$(CLANG) $(CFLAGS) -c -o $@ $<
+
+%.o: %.ll
+	$(CLANG) -c -o $@ $<
 
 # we have to use -O2 here, otherwise the function will get a noinline attribute
 %.bc: %.c
@@ -39,7 +42,7 @@ $(BCLIB): $(BCS)
 $(OBJS) $(BCS): $(INCLUDES)
 
 clean:
-	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
+	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB) $(TAGGED_PTR_OBJ)
 	$(MAKE) -C tests clean
 
 .PHONY: test all
