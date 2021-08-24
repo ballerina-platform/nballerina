@@ -28,7 +28,7 @@ test: all
 testCoverage: $(LIB) $(BCLIB)
 	$(MAKE) -C tests testCoverage
 
-$(LIB): $(OBJS)
+$(LIB): $(OBJS) $(LIST_OBJ)
 	$(MAKE) -C gc-roots all
 	$(AR) r $@ $^
 
@@ -69,7 +69,7 @@ $(LL_BCS): %.bc: %.ll
 $(OBJS) $(BCS): $(INCLUDES)
 
 clean:
-	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
+	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB) $(LIST_OBJ) list.ll list_opt.ll
 	$(MAKE) -C tests clean
 	$(MAKE) -C gc-roots clean
 
