@@ -163,8 +163,14 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
                 if leftExpr is s:FloatZeroExpr {
                     expr.left = leftExpr.expr;
                 }
+                else {
+                    expr.left = leftExpr;
+                }
                 if rightExpr is s:FloatZeroExpr {
                     expr.right = rightExpr.expr;
+                }
+                else {
+                    expr.right = rightExpr;
                 }
                 s:FloatZeroExpr zeroExpr = { expr };
                 return zeroExpr;
