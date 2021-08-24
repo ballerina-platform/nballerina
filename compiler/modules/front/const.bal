@@ -62,11 +62,19 @@ function resolveConstDefn(ModuleTable mod, s:ConstDefn defn) returns s:ResolvedC
     else {
         defn.resolved = false;
         ConstFoldContext cx = new ConstFoldContext(defn.name, mod);
-        s:Expr expr = check foldExpr(cx, (), defn.expr);
+        s:InlineTypeDesc? td = defn.td;
+        // JBUG remove cast and use == after beta 3
+        t:SemType? expectedType = td === () ? () : s:resolveInlineTypeDesc(<s:InlineTypeDesc>td);
+        s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
         if expr is s:ConstValueExpr {
-            s:ResolvedConst r = [t:singleton(expr.value), { value: expr.value }];
-            defn.resolved = r;
-            return r;
+            if expectedType == () || t:containsConst(expectedType, expr.value) {
+                s:ResolvedConst r = [t:singleton(expr.value), { value: expr.value }];
+                defn.resolved = r;
+                return r;
+            }
+            else {
+                return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, defn.pos);
+            }
         }
         else {
             return err:semantic(`initializer of ${defn.name} is not constant`, defn.pos);
