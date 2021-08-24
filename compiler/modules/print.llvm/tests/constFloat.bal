@@ -4,10 +4,10 @@ function testConstFnBuilder(Module m, Builder builder, string fnName, float retV
     FunctionDefn fn = m.addFunctionDefn(fnName, {returnType: "double", paramTypes: []});
     BasicBlock initBlock = fn.appendBasicBlock();
     builder.positionAtEnd(initBlock);
-    builder.ret(constReal("double",retVal));
+    builder.ret(constFloat("double", retVal));
 }
 
-function constRealT() returns Module {
+function constFloatT() returns Module {
     Context context = new;
     Builder builder = context.createBuilder();
     Module m = context.createModule();
@@ -23,6 +23,6 @@ function constRealT() returns Module {
 }
 
 @test:Config {}
-function testConstReal() returns error? {
-    return runTest(constRealT, "const_real.ll");
+function testConstFloat() returns error? {
+    return runTest(constFloatT, "const_float.ll");
 }

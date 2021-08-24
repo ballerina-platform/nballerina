@@ -39,7 +39,7 @@ public type ConstDefn record {|
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr;
-public type Expr NumericLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
@@ -229,7 +229,10 @@ public type TypeTestExpr record {|
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
     t:SemType semType;
+    boolean negated; 
 |};
+
+public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
 
 public type ConstValueExpr record {|
     ()|boolean|int|float|string value;
@@ -238,6 +241,16 @@ public type ConstValueExpr record {|
     // When it contains exactly one shape, then the shape is
     // the shape of the value.
     t:SemType? multiSemType = ();
+|};
+
+public const float FLOAT_ZERO = 0f;
+
+// This is an expression where we know that the value is == 0f
+// but do not know whether it is +0f or -0f.
+public type FloatZeroExpr record {|
+    FLOAT_ZERO value = FLOAT_ZERO;
+    () multiSemType = ();
+    Expr expr;
 |};
 
 public type NumericLiteralExpr IntLiteralExpr|FpLiteralExpr;

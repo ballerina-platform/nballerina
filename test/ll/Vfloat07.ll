@@ -48,26 +48,26 @@ define void @_B_main() {
   %33 = icmp ult i8* %31, %32
   br i1 %33, label %82, label %34
 34:
-  store double 0x7ff8000000000000, double* %nan0
-  store double 0x7ff8000000000000, double* %nan1
-  store double 0x7ff0000000000000, double* %pInf
-  store double 0xfff0000000000000, double* %nInf
-  %35 = call i8 addrspace(1)* @_B_exactEq(double 0x4045000000000000, double 0x4045000000000000)
+  store double 0x7FF8000000000000, double* %nan0
+  store double 0x7FF8000000000000, double* %nan1
+  store double 0x7FF0000000000000, double* %pInf
+  store double 0xFFF0000000000000, double* %nInf
+  %35 = call i8 addrspace(1)* @_B_exactEq(double 42.0, double 42.0)
   store i8 addrspace(1)* %35, i8 addrspace(1)** %1
   %36 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   call void @_Bio__println(i8 addrspace(1)* %36)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %37 = call i8 addrspace(1)* @_B_exactEq(double 0x3ff0000000000000, double 0x4000000000000000)
+  %37 = call i8 addrspace(1)* @_B_exactEq(double 1.0, double 2.0)
   store i8 addrspace(1)* %37, i8 addrspace(1)** %3
   %38 = load i8 addrspace(1)*, i8 addrspace(1)** %3
   call void @_Bio__println(i8 addrspace(1)* %38)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  %39 = call i8 addrspace(1)* @_B_exactEq(double 0x0, double 0x0)
+  %39 = call i8 addrspace(1)* @_B_exactEq(double 0.0, double 0.0)
   store i8 addrspace(1)* %39, i8 addrspace(1)** %5
   %40 = load i8 addrspace(1)*, i8 addrspace(1)** %5
   call void @_Bio__println(i8 addrspace(1)* %40)
   store i8 addrspace(1)* null, i8 addrspace(1)** %6
-  %41 = call i8 addrspace(1)* @_B_exactEq(double 0x0, double 0x8000000000000000)
+  %41 = call i8 addrspace(1)* @_B_exactEq(double 0.0, double -0.0)
   store i8 addrspace(1)* %41, i8 addrspace(1)** %7
   %42 = load i8 addrspace(1)*, i8 addrspace(1)** %7
   call void @_Bio__println(i8 addrspace(1)* %42)
@@ -80,7 +80,7 @@ define void @_B_main() {
   call void @_Bio__println(i8 addrspace(1)* %46)
   store i8 addrspace(1)* null, i8 addrspace(1)** %10
   %47 = load double, double* %nan0
-  %48 = call i8 addrspace(1)* @_B_exactEq(double %47, double 0x3ff0000000000000)
+  %48 = call i8 addrspace(1)* @_B_exactEq(double %47, double 1.0)
   store i8 addrspace(1)* %48, i8 addrspace(1)** %11
   %49 = load i8 addrspace(1)*, i8 addrspace(1)** %11
   call void @_Bio__println(i8 addrspace(1)* %49)
@@ -127,19 +127,19 @@ define void @_B_main() {
   call void @_Bio__println(i8 addrspace(1)* %72)
   store i8 addrspace(1)* null, i8 addrspace(1)** %24
   %73 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  %74 = call i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* %73, double 0x3ff0000000000000)
+  %74 = call i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* %73, double 1.0)
   store i8 addrspace(1)* %74, i8 addrspace(1)** %25
   %75 = load i8 addrspace(1)*, i8 addrspace(1)** %25
   call void @_Bio__println(i8 addrspace(1)* %75)
   store i8 addrspace(1)* null, i8 addrspace(1)** %26
   %76 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  %77 = call i8 addrspace(1)* @_B_exactEqFA(double 0x3ff0000000000000, i8 addrspace(1)* %76)
+  %77 = call i8 addrspace(1)* @_B_exactEqFA(double 1.0, i8 addrspace(1)* %76)
   store i8 addrspace(1)* %77, i8 addrspace(1)** %27
   %78 = load i8 addrspace(1)*, i8 addrspace(1)** %27
   call void @_Bio__println(i8 addrspace(1)* %78)
   store i8 addrspace(1)* null, i8 addrspace(1)** %28
-  %79 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0x4020000000000000)
-  %80 = call i8 addrspace(1)* @_B_exactEqFA(double 0x4020000000000000, i8 addrspace(1)* %79)
+  %79 = call i8 addrspace(1)* @_bal_float_to_tagged(double 8.0)
+  %80 = call i8 addrspace(1)* @_B_exactEqFA(double 8.0, i8 addrspace(1)* %79)
   store i8 addrspace(1)* %80, i8 addrspace(1)** %29
   %81 = load i8 addrspace(1)*, i8 addrspace(1)** %29
   call void @_Bio__println(i8 addrspace(1)* %81)

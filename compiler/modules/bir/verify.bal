@@ -56,6 +56,13 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
         check verifyOperandInt(vc, name, insn.operands[0]);
         check verifyOperandInt(vc, name, insn.operands[1]);
     }
+    if insn is FloatArithmeticBinaryInsn {
+        check verifyOperandFloat(vc, name, insn.operands[0]);
+        check verifyOperandFloat(vc, name, insn.operands[1]);
+    }
+    if insn is FloatNegateInsn {
+        check verifyOperandFloat(vc, name, insn.operand);
+    }
     else if insn is BooleanNotInsn {
         check verifyOperandBoolean(vc, name, insn.operand);
     }
@@ -199,6 +206,10 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
             check verifyOperandInt(vc, name, <IntOperand>insn.operands[0]);
             check verifyOperandInt(vc, name, <IntOperand>insn.operands[1]);
         }
+        "float" => {
+            check verifyOperandFloat(vc, name, <FloatOperand>insn.operands[0]);
+            check verifyOperandFloat(vc, name, <FloatOperand>insn.operands[1]);
+        }
         "string" => {
             check verifyOperandString(vc, name, <StringOperand>insn.operands[0]);
             check verifyOperandString(vc, name, <StringOperand>insn.operands[1]);
@@ -229,10 +240,15 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
             return;
         }
     }
-    else if lhs == rhs {
+    else if isEqual(lhs, rhs) {
         return;
     }
     return vc.err(`intersection of operands of operator ${insn.op} is empty`);
+}
+
+// After JBUG #17977, #32245 is fixed, replace by ==
+function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
+    return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, err:Message msg) returns err:Semantic? {
@@ -255,6 +271,12 @@ function verifyOperandString(VerifyContext vc, string insnName, StringOperand op
 function verifyOperandInt(VerifyContext vc, string insnName, IntOperand operand) returns err:Semantic? {
     if operand is Register {
         return verifyRegisterSemType(vc, insnName, operand, t:INT, "int");
+    }
+}
+
+function verifyOperandFloat(VerifyContext vc, string insnName, FloatOperand operand) returns err:Semantic? {
+    if operand is Register {
+        return verifyRegisterSemType(vc, insnName, operand, t:FLOAT, "float");
     }
 }
 

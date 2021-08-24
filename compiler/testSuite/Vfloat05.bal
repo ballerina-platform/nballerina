@@ -25,7 +25,7 @@ public function main() {
     io:println(0.0 !== -0.0); // @output true
     io:println(nan0 === nan1); // @output true
     io:println(nan0 !== nan1); // @output false
-    io:println(pInf === nInf); // @output false
+    io:println(pInf !== nInf); // @output true
 }
 
 function exactEq(float f1, float f2) returns any {

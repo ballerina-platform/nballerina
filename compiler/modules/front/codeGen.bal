@@ -203,10 +203,14 @@ class CodeGenFoldContext {
         self.env = env;
     }
 
-    function lookupConst(string varName) returns t:Value?|FoldError {
+    function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         t:Value|Binding v = check lookupVarRef(self.cx, varName, self.env);
         if v is Binding {
-            return t:singleShape(v.reg.semType);
+            t:Value? shape = t:singleShape(v.reg.semType);
+            if !(shape is ()) && shape.value == s:FLOAT_ZERO {
+                return s:FLOAT_ZERO;
+            }
+            return shape;
         }
         else {
             return v;
@@ -674,6 +678,9 @@ function codeGenIfElseNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environmen
     boolean insnResult = condition == !narrowing.negated;
     // JBUG without parentheses this gets a parse error
     t:SemType narrowedType = insnResult ? (narrowing.ifTrue) : narrowing.ifFalse;
+    if narrowedType === t:NEVER {
+        panic err:impossible("narrowed to never type");
+    }
     return codeGenNarrowing(cx, bb, env, narrowing.binding, narrowedType, { insn: narrowing.testInsn, result: insnResult });
 }
 
@@ -926,62 +933,25 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 return cx.semanticErr("operands of relational operator are not ordered");
             }               
         }
-        var { td, operand: o } => {
-            var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
+        var { td, operand: _ } => {
             // JBUG #31782 cast needed
-            s:TypeCastExpr tcExpr = <s:TypeCastExpr>expr;
-            if operand is bir:Register {
-                if t:isSubtype(cx.mod.tc, operand.semType, tcExpr.semType) {
-                    // it's redundant, so we can remove it
-                    return { result: operand, block: nextBlock };
-                }
-                t:SemType resultType = t:intersect(operand.semType, tcExpr.semType);
-                bir:Register reg = cx.createRegister(resultType);
-                bir:TypeCastInsn insn = { operand, semType: tcExpr.semType, position: tcExpr.pos, result:reg };
-                bb.insns.push(insn);
-                return { result: reg, block: nextBlock };
-            }
-            else {
-                if !t:containsConst(tcExpr.semType, operand) {
-                    // the verifier uses the same wording
-                    return err:semantic("type cast cannot succeed", pos=tcExpr.pos);
-                }
-                return { result: operand, block: nextBlock };
-            }
+            return codeGenTypeCast(cx, bb, env, <s:TypeCastExpr>expr);
         }
         // Type test
-        var { td, left, semType } => {
-            return codeGenTypeTest(cx, bb, env, td, left, semType);
+        var { td, left, semType, negated} => {
+            return codeGenTypeTest(cx, bb, env, td, left, semType, negated);
         }
         // Variable reference
         var { varName } => {
-            var v = check lookupVarRef(cx, varName, env);
-            bir:Operand result;
-            Binding? binding;
-            if v is t:Value {
-                result = v.value;
-                binding = ();
-            }
-            else {
-                result = v.reg;
-                binding = v;
-            }
-            return { result, block: bb, binding };
+            return codeGenVarRefExpr(cx, varName, env, bb);
         }
         // Constant
         // JBUG does not work as match pattern `var { value, multiSemType }`
-        var simpleConstExpr if simpleConstExpr is s:ConstValueExpr => {
-            t:SemType? multiSemType = simpleConstExpr.multiSemType;
-            SimpleConst value = simpleConstExpr.value;
-            if multiSemType is () {
-                return { result: value, block: bb };
-            }
-            else {
-                bir:Register reg = cx.createRegister(multiSemType);
-                bir:AssignInsn insn = { operand: value, result: reg };
-                bb.insns.push(insn);
-                return { result: reg, block: bb };
-            }
+        var cvExpr if cvExpr is s:ConstValueExpr => {
+            return codeGenConstValue(cx, bb, env, cvExpr);
+        }
+        var floatZeroExpr if floatZeroExpr is s:FloatZeroExpr => {
+            return codeGenExpr(cx, bb, env, floatZeroExpr.expr);
         }
         // Function/method call
         var callExpr if callExpr is (s:FunctionCallExpr|s:MethodCallExpr) => {
@@ -1019,49 +989,71 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
         // List construct
         var { members } => {
-            bir:BasicBlock nextBlock = bb;
-            bir:Operand[] operands = [];
-            foreach var member in members {
-                bir:Operand operand;
-                { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, member);
-                operands.push(operand);
-            }
-            // In subset 3, we have only mutable lists of any
-            // We will have to do more work in future subsets to determine the types here
-            bir:Register result = cx.createRegister(t:LIST_RW);
-            bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result };
-            nextBlock.insns.push(insn);
-            return { result, block: nextBlock };
+            return codeGenListConstructor(cx, bb, env, members);  
         }
         // Mapping construct
         var { fields } => {
-            bir:BasicBlock nextBlock = bb;
-            bir:Operand[] operands = [];
-            string[] fieldNames= [];
-            map<err:Position> fieldPos = {};
-            foreach var { pos, name, value } in fields {
-                err:Position? prevPos = fieldPos[name];
-                if prevPos == () {
-                    fieldPos[name] = pos;
-                }
-                else {
-                    return err:semantic(`duplicate field ${name}`, pos=pos);
-                }
-                bir:Operand operand;
-                { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, value);
-                operands.push(operand);
-                fieldNames.push(name);
-            }
-            bir:Register result = cx.createRegister(t:MAPPING_RW);
-            bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result };
-            nextBlock.insns.push(insn);
-            return { result, block: nextBlock };
+            return codeGenMappingConstructor(cx, bb, env, fields);  
         }
         var { digits } => {
             panic err:impossible(`failed to fold int literal ${digits}`);
         }
     }
-    panic err:impossible();
+    panic err:impossible("unrecognized expression type in code gen: " +  s:exprToString(expr));
+}
+
+function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr[] members) returns CodeGenError|ExprEffect {
+    bir:BasicBlock nextBlock = bb;
+    bir:Operand[] operands = [];
+    foreach var member in members {
+        bir:Operand operand;
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, member);
+        operands.push(operand);
+    }
+    // In subset 3, we have only mutable lists of any
+    // We will have to do more work in future subsets to determine the types here
+    bir:Register result = cx.createRegister(t:LIST_RW);
+    bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result };
+    nextBlock.insns.push(insn);
+    return { result, block: nextBlock };
+}
+
+function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Field[] fields) returns CodeGenError|ExprEffect {
+    bir:BasicBlock nextBlock = bb;
+    bir:Operand[] operands = [];
+    string[] fieldNames= [];
+    map<err:Position> fieldPos = {};
+    foreach var { pos, name, value } in fields {
+        err:Position? prevPos = fieldPos[name];
+        if prevPos == () {
+            fieldPos[name] = pos;
+        }
+        else {
+            return err:semantic(`duplicate field ${name}`, pos=pos);
+        }
+        bir:Operand operand;
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, value);
+        operands.push(operand);
+        fieldNames.push(name);
+    }
+    bir:Register result = cx.createRegister(t:MAPPING_RW);
+    bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result };
+    nextBlock.insns.push(insn);
+    return { result, block: nextBlock };
+}
+
+function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:ConstValueExpr cvExpr) returns CodeGenError|ExprEffect {
+    t:SemType? multiSemType = cvExpr.multiSemType;
+    SimpleConst value = cvExpr.value;
+    if multiSemType is () {
+        return { result: value, block: bb };
+    }
+    else {
+        bir:Register reg = cx.createRegister(multiSemType);
+        bir:AssignInsn insn = { operand: value, result: reg };
+        bb.insns.push(insn);
+        return { result: reg, block: bb };
+    }
 }
 
 function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryEqualityOp op, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
@@ -1101,24 +1093,74 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     }
 }
 
-function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType) returns CodeGenError|ExprEffect {
+function codeGenVarRefExpr(CodeGenContext cx, string name, Environment env, bir:BasicBlock bb) returns CodeGenError|ExprEffect{
+    var v = check lookupVarRef(cx, name, env);
+    bir:Operand result;
+    Binding? binding;
+    if v is t:Value {
+        result = v.value;
+        binding = ();
+    }
+    else {
+        result = v.reg;
+        binding = v;
+    }
+    return { result, block: bb, binding };
+}
+
+function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
+    var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, tcExpr.operand);
+    var reg = <bir:Register>operand; // const folding should have got rid of the const
+    t:SemType toType = tcExpr.semType;
+    t:UniformTypeBitSet? toNumType = t:singleNumericType(toType);
+    if toNumType != ()
+       // Remove the next line to enable conversion when support in backend is implemented
+       && toNumType == t:NEVER 
+       && !t:isSubtypeSimple(t:intersect(reg.semType, t:NUMBER), toNumType) {
+        toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
+        bir:Register result = cx.createRegister(t:intersect(reg.semType, toType));
+        if toNumType == t:INT {
+            bir:ConvertToIntInsn insn = { operand: reg, result, position: tcExpr.pos };
+            nextBlock.insns.push(insn);
+        }
+        else if toNumType == t:FLOAT {
+            bir:ConvertToFloatInsn insn = { operand: reg, result };
+            nextBlock.insns.push(insn);
+        }
+        else {
+            panic err:impossible("convert to decimal");
+        }
+        reg = result;
+    }
+    if t:isSubtype(cx.mod.tc, reg.semType, toType) {
+        // it's redundant, so we can remove it
+        return { result: reg, block: nextBlock };
+    }
+    t:SemType resultType = t:intersect(reg.semType, toType);
+    bir:Register result = cx.createRegister(resultType);
+    bir:TypeCastInsn insn = { operand: reg, semType: toType, position: tcExpr.pos, result };
+    nextBlock.insns.push(insn);
+    return { result, block: nextBlock };
+}
+
+function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType, boolean negated) returns CodeGenError|ExprEffect {
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
     // Constants should be resolved during constant folding
     bir:Register reg = <bir:Register>operand;        
     t:SemType diff = t:diff(reg.semType, semType);
     if t:isEmpty(cx.mod.tc, diff) {
-        // always true
-        return { result: true, block: bb };
+        return { result: !negated, block: bb };
     }
     t:SemType intersect = t:intersect(reg.semType, semType);
     if t:isEmpty(cx.mod.tc, intersect) {
-        // always false
-        return { result: true, block: bb };
+        return { result: negated, block: bb };
     }
     bir:Register result = cx.createRegister(t:BOOLEAN);
-    bir:TypeTestInsn insn = { operand: reg, semType, result };
+    bir:TypeTestInsn insn = { operand: reg, semType, result, negated};
     bb.insns.push(insn);
-
+    if negated {
+        [intersect, diff] = [diff, intersect];
+    }
     Narrowing? narrowing = ();
     if !(binding is ()) {
         narrowing = {

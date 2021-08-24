@@ -99,16 +99,27 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
         return bin;
     }
     else if t == "is" {
-        tok.setMode(MODE_TYPE_DESC);
+        return finishTypeTestExpr(tok, expr, false);
+    }
+    if t == "!" {
         check tok.advance();
-        InlineTypeDesc td = check parseInlineTypeDesc(tok);
-        tok.setMode(MODE_NORMAL);
-        TypeTestExpr typeTest = { td, left: expr, semType: resolveInlineTypeDesc(td) };
-        return typeTest;
+        Token? t2 = tok.current();
+        if t2 is "is" {
+            return finishTypeTestExpr(tok, expr, true);
+        }
+        return err:syntax("invalid operator");
     }
     else {
         return expr;
     }
+}
+
+function finishTypeTestExpr(Tokenizer tok, Expr expr, boolean negated) returns TypeTestExpr|err:Syntax {
+    tok.setMode(MODE_TYPE_DESC);
+    check tok.advance();
+    InlineTypeDesc td = check parseInlineTypeDesc(tok);
+    tok.setMode(MODE_NORMAL);
+    return { td, left: expr, semType: resolveInlineTypeDesc(td), negated };
 }
 
 function parseRangeExpr(Tokenizer tok) returns RangeExpr|err:Syntax {

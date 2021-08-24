@@ -13,12 +13,12 @@ define void @_B_main() {
   %7 = icmp ult i8* %5, %6
   br i1 %7, label %14, label %8
 8:
-  store double 0x4031000000000000, double* %x
+  store double 17.0, double* %x
   %9 = load double, double* %x
   %10 = call i8 addrspace(1)* @_bal_float_to_tagged(double %9)
   call void @_Bio__println(i8 addrspace(1)* %10)
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
-  call void @_B_foo(double 0x4045000000000000)
+  call void @_B_foo(double 42.0)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   %11 = call double @_B_bar()
   store double %11, double* %3
@@ -55,7 +55,7 @@ define internal double @_B_bar() {
   %3 = icmp ult i8* %1, %2
   br i1 %3, label %5, label %4
 4:
-  ret double 0x4035000000000000
+  ret double 21.0
 5:
   call void @_bal_panic(i64 3844)
   unreachable
