@@ -46,7 +46,7 @@ class ConstFoldContext {
             return self.semanticErr(`${varName} is not defined`);
         }
         else {
-            return self.semanticErr(`reference to non-const ${varName}`);
+            return self.semanticErr(`reference to ${varName} not defined with const`);
         }
     }
 }
@@ -212,14 +212,6 @@ function foldedBinaryBitwiseType(s:BinaryBitwiseOp op, int left, t:SemType? lt, 
     t:SemType leftType = t:widenUnsigned(lt ?: t:intConst(left));
     t:SemType rightType = t:widenUnsigned(rt ?: t:intConst(right));
     return op == "&" ? t:intersect(leftType, rightType) : t:union(leftType, rightType);    
-}
-
-function bitwiseOperandWiden(s:ConstValueExpr expr) returns t:SemType {
-    t:SemType? t = expr.multiSemType;
-    if !(t is ()) {
-        return t:widenUnsigned(t);
-    }
-    return t:INT;
 }
 
 function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:BinaryEqualityExpr expr) returns s:Expr|FoldError {
