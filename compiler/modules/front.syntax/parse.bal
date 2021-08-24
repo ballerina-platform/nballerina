@@ -89,13 +89,19 @@ function parseConstDefinition(Tokenizer tok, Visibility vis) returns ConstDefn|e
     check tok.advance();
     err:Position pos = tok.currentPos();
     Token? t = tok.current();
+    InlineBasicTypeDesc? td = ();
+    if t is InlineBasicTypeDesc {
+        check tok.advance();
+        td = t;
+        t = tok.current();
+    }
     if t is [IDENTIFIER, string] {
         string name = t[1];
         check tok.advance();
         check tok.expect("=");
         Expr expr = check parseInnerExpr(tok);
         check tok.expect(";");
-        return { name, expr, pos, vis };
+        return { td, name, expr, pos, vis };
     }
     return parseError(tok);
 }

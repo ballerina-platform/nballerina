@@ -31,6 +31,7 @@ public type FunctionDefn record {|
 public type ResolvedConst readonly & [t:SemType, t:Value];
 public type ConstDefn record {|
     readonly string name;
+    InlineTypeDesc? td;
     Visibility vis;
     Expr expr;
     err:Position pos;
