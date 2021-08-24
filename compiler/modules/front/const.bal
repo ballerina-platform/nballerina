@@ -409,7 +409,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
 function foldTypeTestExpr(FoldContext cx, t:SemType? expectedType, s:TypeTestExpr expr) returns s:Expr|FoldError {
     s:Expr subExpr = check foldExpr(cx, (), expr.left);
     if subExpr is s:ConstShapeExpr {
-        return foldedUnaryConstExpr(t:containsConst(expr.semType, subExpr.value), t:BOOLEAN, subExpr);
+        return foldedUnaryConstExpr(t:containsConst(expr.semType, subExpr.value) == !expr.negated, t:BOOLEAN, subExpr);
     }
     expr.left = subExpr;
     return expr;
