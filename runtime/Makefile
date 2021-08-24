@@ -30,7 +30,7 @@ $(BCLIB): $(BCS)
 	$(LLVM_LINK) -o - -S $^ | sed -e '/define .*@_[Bb][a-zA-Z]/s/^define /define linkonce_odr /' -e '/target datalayout/ s/"$$/-ni:1"/' | $(LLVM_AS) >$@
 
 %.o: %_linked.bc
-	$(LLC) -O2 -o $@ $<
+	$(LLC) -O2 --filetype=obj -o $@ $<
 
 %_linked.bc: %.bc
 	$(LLVM_LINK) tagged_ptr.bc $< -o $@
