@@ -13,58 +13,62 @@ define void @_B_main() {
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i64
   %7 = alloca i8 addrspace(1)*
-  %8 = alloca i64
-  %9 = alloca i8
-  %10 = load i8*, i8** @_bal_stack_guard
-  %11 = icmp ult i8* %9, %10
-  br i1 %11, label %24, label %12
-12:
+  %8 = alloca i8 addrspace(1)*
+  %9 = alloca i64
+  %10 = alloca i8
+  %11 = load i8*, i8** @_bal_stack_guard
+  %12 = icmp ult i8* %10, %11
+  br i1 %12, label %25, label %13
+13:
   store i64 7, i64* %i
   store i64 2, i64* %j
-  %13 = load i64, i64* %i
-  %14 = load i64, i64* %j
-  %15 = and i64 63, %14
-  %16 = shl i64 %13, %15
-  store i64 %16, i64* %1
-  %17 = load i64, i64* %1
-  %18 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %17)
-  call void @_Bio__println(i8 addrspace(1)* %18)
+  %14 = load i64, i64* %i
+  %15 = load i64, i64* %j
+  %16 = and i64 63, %15
+  %17 = shl i64 %14, %16
+  store i64 %17, i64* %1
+  %18 = load i64, i64* %1
+  %19 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %18)
+  call void @_Bio__println(i8 addrspace(1)* %19)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %19 = load i64, i64* %j
-  %20 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %19, i64 1)
-  %21 = extractvalue {i64, i1} %20, 1
-  br i1 %21, label %39, label %25
-22:
-  %23 = load i64, i64* %8
-  call void @_bal_panic(i64 %23)
-  unreachable
-24:
-  call void @_bal_panic(i64 772)
+  %20 = load i64, i64* %j
+  %21 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %20, i64 1)
+  %22 = extractvalue {i64, i1} %21, 1
+  br i1 %22, label %41, label %26
+23:
+  %24 = load i64, i64* %9
+  call void @_bal_panic(i64 %24)
   unreachable
 25:
-  %26 = extractvalue {i64, i1} %20, 0
-  store i64 %26, i64* %3
-  %27 = load i64, i64* %i
-  %28 = load i64, i64* %3
-  %29 = and i64 63, %28
-  %30 = shl i64 %27, %29
-  store i64 %30, i64* %4
-  %31 = load i64, i64* %4
-  %32 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %31)
-  call void @_Bio__println(i8 addrspace(1)* %32)
+  call void @_bal_panic(i64 772)
+  unreachable
+26:
+  %27 = extractvalue {i64, i1} %21, 0
+  store i64 %27, i64* %3
+  %28 = load i64, i64* %i
+  %29 = load i64, i64* %3
+  %30 = and i64 63, %29
+  %31 = shl i64 %28, %30
+  store i64 %31, i64* %4
+  %32 = load i64, i64* %4
+  %33 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %32)
+  call void @_Bio__println(i8 addrspace(1)* %33)
   store i8 addrspace(1)* null, i8 addrspace(1)** %5
   store i64 67, i64* %j
-  %33 = load i64, i64* %i
-  %34 = load i64, i64* %j
-  %35 = and i64 63, %34
-  %36 = shl i64 %33, %35
-  store i64 %36, i64* %6
-  %37 = load i64, i64* %6
-  %38 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %37)
-  call void @_Bio__println(i8 addrspace(1)* %38)
+  %34 = load i64, i64* %i
+  %35 = load i64, i64* %j
+  %36 = and i64 63, %35
+  %37 = shl i64 %34, %36
+  store i64 %37, i64* %6
+  %38 = load i64, i64* %6
+  %39 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %38)
+  call void @_Bio__println(i8 addrspace(1)* %39)
   store i8 addrspace(1)* null, i8 addrspace(1)** %7
+  %40 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 8)
+  call void @_Bio__println(i8 addrspace(1)* %40)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8
   ret void
-39:
-  store i64 1793, i64* %8
-  br label %22
+41:
+  store i64 1793, i64* %9
+  br label %23
 }
