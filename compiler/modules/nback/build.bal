@@ -34,6 +34,8 @@ const int TAG_BASIC_TYPE_MAPPING = t:UT_MAPPING_RO * TAG_FACTOR;
 
 const int FLAG_IMMEDIATE = 0x20 * TAG_FACTOR;
 
+const TAG_SHIFT = 56;
+
 const HEAP_ADDR_SPACE = 1;
 const ALIGN_HEAP = 8;
 
@@ -1045,8 +1047,11 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     else if semType === t:MAPPING {
         hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
     }
+    else if semType is t:UniformTypeBitSet {
+        hasType = buildHasTagInSet(builder, tagged, semType);
+    }
     else {
-        return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
+        return err:unimplemented("unimplemented type cast"); // should not happen in subset 6
     }
     if insn.negated {
         buildStoreBoolean(builder, scaffold, 
@@ -1247,6 +1252,21 @@ function buildTestTag(llvm:Builder builder, llvm:PointerValue tagged, int tag, i
                                                        llvm:constInt(LLVM_INT, mask)),
                               llvm:constInt(LLVM_INT, tag));
 
+}
+
+function buildHasTagInSet(llvm:Builder builder, llvm:PointerValue tagged, t:UniformTypeBitSet bitSet) returns llvm:Value {
+    return builder.iCmp("ne",
+                        builder.iBitwise("and",
+                                         builder.iBitwise("shl",
+                                                          llvm:constInt(LLVM_INT, 1),
+                                                          builder.iBitwise("lshr",
+                                                                           // need to mask out the 0x20 bit
+                                                                           builder.iBitwise("and",
+                                                                                            buildTaggedPtrToInt(builder, tagged),
+                                                                                            llvm:constInt(LLVM_INT, TAG_MASK)),
+                                                                           llvm:constInt(LLVM_INT, TAG_SHIFT))),
+                                         llvm:constInt(LLVM_INT, bitSet)),
+                        llvm:constInt(LLVM_INT, 0));
 }
 
 function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
