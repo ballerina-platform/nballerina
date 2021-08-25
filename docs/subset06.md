@@ -258,9 +258,10 @@ Language spec syntax references:
 
 ## Semantic restrictions
 
-The implementation of `string` has the following additional restrictions:
+There are the following additional restrictions:
 
  * member access `s[i]` is not supported when `s` has type `string`
+ * relational operators are not supported when the static type of either of the operands includes nil
 
 Method call syntax can be used for calling the following langlib functions:
 
