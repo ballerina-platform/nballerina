@@ -1,0 +1,52 @@
+name: Validate on jBallerina nightly
+
+on:
+  schedule:
+    - cron: '0 */12 * * *'
+  workflow_dispatch:
+  
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install LLVM
+        run: |
+          sudo apt-get install llvm-11
+      - name: Get run ID
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo 'LATEST_RUN_ID<<EOF' >> $GITHUB_ENV
+          gh run list --workflow main.yml  --repo ballerina-platform/ballerina-distribution | grep success | head -n 1 | awk '{print $(NF-2)}' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Download jBallerina
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh run download ${{ env.LATEST_RUN_ID }} -D "$HOME" --name "Linux installer ZIP" --repo ballerina-platform/ballerina-distribution
+      - name: Set jBallerina name
+        run: |
+          echo 'JBALLERINA_NAME<<EOF' >> $GITHUB_ENV
+          ls $HOME/ballerina-*.zip | sed 's/.zip//g' >> $GITHUB_ENV
+          echo 'EOF' >> $GITHUB_ENV
+      - name: Extract jBallerina
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          unzip "${{ env.JBALLERINA_NAME }}.zip" -d "$HOME"
+          chmod +x "${{ env.JBALLERINA_NAME }}/bin/bal"  
+      - name: Install jBallerina
+        run: |
+          echo "${{ env.JBALLERINA_NAME }}/bin/" >> $GITHUB_PATH
+      - name: Test
+        run: |
+          make -j2 test
+      - name: Archive test ouput
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: test output
+          path: |
+            test/out
