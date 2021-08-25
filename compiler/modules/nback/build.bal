@@ -1051,7 +1051,7 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
         hasType = buildHasTagInSet(builder, tagged, semType);
     }
     else {
-        return err:unimplemented("unimplemented type cast"); // should not happen in subset 6
+        return err:unimplemented("unimplemented type test"); // should not happen in subset 6
     }
     if insn.negated {
         buildStoreBoolean(builder, scaffold, 
@@ -1093,8 +1093,11 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
         else if semType === t:MAPPING {
             hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
         }
+        else if semType is t:UniformTypeBitSet {
+            hasTag = buildHasTagInSet(builder, tagged, semType);
+        }
         else {
-            return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
+            return err:unimplemented("unimplemented type cast"); // should not happen in subset 6
         }
         builder.condBr(hasTag, continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
