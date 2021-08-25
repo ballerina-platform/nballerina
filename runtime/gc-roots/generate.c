@@ -215,7 +215,7 @@ callsite_header_t* next_callsite(callsite_header_t* callsite) {
     return (callsite_header_t*)ptr_val;
 }
 
-void insert_info_to(statepoint_table_t* table, stackmap_header_t* map) {
+void* insert_info_to(statepoint_table_t* table, stackmap_header_t* map) {
     stackmap_header_t* header = (stackmap_header_t*)map;
     function_info_t* functions = (function_info_t*)(header + 1);
 
@@ -242,6 +242,7 @@ void insert_info_to(statepoint_table_t* table, stackmap_header_t* map) {
         callsite = next_callsite(callsite);
         visited++;
     }
+    return (void*)callsite;
 }
 
 statepoint_table_t* generate_table(void* stackmap, float load_factor) {
@@ -259,9 +260,12 @@ statepoint_table_t* generate_table(void* stackmap, float load_factor) {
 
     uint64_t numCallsites = bal_header->numRecords;
 
-    statepoint_table_t* table = new_table(load_factor, bal_header->numRecords);
+    // TODO: check whether multiplying by 2 is correct or not
+    // This is done we have to parse two stackmaps now.
+    statepoint_table_t* table = new_table(load_factor, bal_header->numRecords*2);
 
-    insert_info_to(table, stackmap);
+    void* second_stackmap = insert_info_to(table, stackmap);
+    insert_info_to(table, second_stackmap);
 
     return table;
 }

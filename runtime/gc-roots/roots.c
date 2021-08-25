@@ -74,6 +74,9 @@ void get_roots(void (*mark_roots)(Root *, Root)) {
     // 3. Interate over records of that frame and find heap references(roots)
     for (; f < lastFrame; f++) {
         frame_info_t* frame = lookup_return_address(table, f->pc);
+        if (frame == NULL) {
+            fprintf(stderr, "frame cannot be null");
+        }
         for (size_t p = 0; p < frame->numSlots; p++) {
             pointer_slot_t* psl = frame->slots + p;
 
