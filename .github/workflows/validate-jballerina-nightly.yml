@@ -20,7 +20,7 @@ jobs:
         run: |
           echo "LATEST_RUN_ID = $(gh run list --workflow main.yml  --repo ballerina-platform/ballerina-distribution | grep success | head -n 1)" >> $GITHUB_ENV
           gh run download ${{ env.LATEST_RUN_ID }} -D "$HOME" --name "Linux installer ZIP" --repo ballerina-platform/ballerina-distribution
-          echo "JBALLERINA_NAME = $(ls $HOME/ballerina-*.zip | sed 's/.zip//g' | sed 's/^.*\//\//')"
+          echo "JBALLERINA_NAME = $(ls $HOME/ballerina-*.zip | sed 's/.zip//g' | sed 's/^.*ballerina/ballerina/')"
           unzip "$HOME/${{ env.JBALLERINA_NAME }}.zip" -d "$HOME"
           chmod +x "$HOME/${{ env.JBALLERINA_NAME }}/bin/bal"
       - name: Install jBallerina
