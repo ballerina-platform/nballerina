@@ -264,8 +264,12 @@ statepoint_table_t* generate_table(void* stackmap, float load_factor) {
     // This is done we have to parse two stackmaps now.
     statepoint_table_t* table = new_table(load_factor, bal_header->numRecords*2);
 
-    void* second_stackmap = insert_info_to(table, stackmap);
-    insert_info_to(table, second_stackmap);
-
+    // TODO: This may not the correct way to read runtime stackmap
+    stackmap = insert_info_to(table, stackmap);
+    version = (uint8_t*)stackmap;
+    if (version == NULL || *version != 3) {
+        return table;
+    }
+    insert_info_to(table, stackmap);
     return table;
 }
