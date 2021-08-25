@@ -302,6 +302,11 @@ function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:Bin
         else if left is boolean && right is boolean {
             return foldedBinaryConstExpr(booleanRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
         }
+        else if (left is () && right is int|float|string|boolean)
+                || (right is () && left is int|float|string|boolean) {
+            // () behaves like NaN
+            return foldedBinaryConstExpr(false, t:BOOLEAN, leftExpr, rightExpr);
+        }
         return cx.semanticErr(`invalid operand types for ${expr.relationalOp}`);
     }
     expr.left = leftExpr;

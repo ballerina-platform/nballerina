@@ -858,28 +858,28 @@ function buildBitwiseBinary(llvm:Builder builder, Scaffold scaffold, bir:IntBitw
 
 function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) returns BuildError? {
     match insn.orderType {
-        "int" => {
+        t:UT_INT => {
             buildStoreBoolean(builder, scaffold,
                               builder.iCmp(buildIntCompareOp(insn.op),
                                            buildInt(builder, scaffold, <bir:IntOperand>insn.operands[0]),
                                            buildInt(builder, scaffold, <bir:IntOperand>insn.operands[1])),
                               insn.result); 
         }
-        "float" => {
+        t:UT_FLOAT => {
             buildStoreBoolean(builder, scaffold,
                               builder.fCmp(buildFloatCompareOp(insn.op),
                                            buildFloat(builder, scaffold, <bir:FloatOperand>insn.operands[0]),
                                            buildFloat(builder, scaffold, <bir:FloatOperand>insn.operands[1])),
                               insn.result); 
         }
-        "boolean" => {
+        t:UT_BOOLEAN => {
             buildStoreBoolean(builder, scaffold,
                               builder.iCmp(buildBooleanCompareOp(insn.op),
                                            buildBoolean(builder, scaffold, <bir:BooleanOperand>insn.operands[0]),
                                            buildBoolean(builder, scaffold, <bir:BooleanOperand>insn.operands[1])),
                               insn.result);
         }
-        "string" => {
+        t:UT_STRING => {
             llvm:Value s1 = check buildString(builder, scaffold, <bir:StringOperand>insn.operands[0]);
             llvm:Value s2 = check buildString(builder, scaffold, <bir:StringOperand>insn.operands[1]);
             buildStoreBoolean(builder, scaffold,
@@ -889,7 +889,7 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
                               insn.result);
         }
         _ => {
-            panic err:impossible();
+            return err:unimplemented("compare with operands of optional type is not implemented");
         }
     }
 }

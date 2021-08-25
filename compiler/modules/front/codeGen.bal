@@ -352,7 +352,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
     initLoopVar.insns.push(branchToLoopHead);
     bir:Register condition = cx.createRegister(t:BOOLEAN);
-    bir:CompareInsn compare = { op: "<", orderType: "int", operands: [loopVar, upper], result: condition };
+    bir:CompareInsn compare = { op: "<", orderType: t:UT_INT, operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
     bir:BasicBlock loopBody = cx.createBasicBlock();
     bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: loopBody.label };
@@ -923,14 +923,14 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             bir:Register result = cx.createRegister(t:BOOLEAN);
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
             var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
-            TypedOperandPair? pair = typedOperandPair(l, r);
-            if pair is FloatOperandPair|IntOperandPair|BooleanOperandPair|StringOperandPair {
-                bir:CompareInsn insn = { op, orderType: pair[0], operands: pair[1], result };
+            bir:OrderType? ot = operandPairOrderType(l, r);
+            if ot != () {
+                bir:CompareInsn insn = { op, orderType: ot, operands: [l, r], result };
                 bb.insns.push(insn);
                 return { result, block: nextBlock };  
             }
             else {
-                return cx.semanticErr("operands of relational operator are not ordered");
+                return cx.semanticErr("operands of relational operator do not belong to an ordered type");
             }               
         }
         var { td, operand: _ } => {
@@ -1381,6 +1381,7 @@ type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 
 type TypedOperandPair BooleanOperandPair|IntOperandPair|FloatOperandPair|StringOperandPair|NilOperandPair;
 
+// XXX should use t:UT_* instead of strings here (like the ordering stuff)
 type TypedOperand readonly & (["array", bir:Register]
                               |["map", bir:Register]
                               |["string", bir:StringOperand]
@@ -1448,6 +1449,72 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
     }
     else {
         return ["nil", operand];
+    }
+    return ();
+}
+
+function operandPairOrderType(bir:Operand left, bir:Operand right) returns bir:OrderType? {
+    if operandIsNil(left) {
+        return promoteToOptOrderType(operandOrderType(right));
+    }
+    if operandIsNil(right) {
+        return promoteToOptOrderType(operandOrderType(left));
+    }
+    bir:OrderType? lot = operandOrderType(left);
+    bir:OrderType? rot = operandOrderType(right);
+    if lot == rot {
+        return lot;
+    }
+    lot = promoteToOptOrderType(lot);
+    rot = promoteToOptOrderType(rot);
+    if lot == rot {
+        return lot;
+    }
+    return ();
+}
+
+function promoteToOptOrderType(bir:OrderType? ot) returns bir:OrderType? {
+    if ot == () || ot is bir:OptOrderType {
+        return ot;
+    }
+    else {
+        return { opt: ot };
+    }
+}
+
+function operandIsNil(bir:Operand operand) returns boolean {
+    if operand is bir:Register {
+        return operand.semType === t:NIL;
+    }
+    else {
+        return operand is ();
+    }
+}
+
+final readonly & bir:UniformOrderType[] UNIFORM_ORDER_TYPES = [t:UT_BOOLEAN, t:UT_INT, t:UT_FLOAT, t:UT_STRING];
+
+function operandOrderType(bir:Operand operand) returns bir:OrderType? {
+    if operand is bir:Register {
+        t:SemType operandTy = operand.semType;
+        if operandTy === t:NIL {
+            return ();
+        }
+        foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
+            t:UniformTypeBitSet optBasicType = t:uniformTypeUnion((1 << tc) | (1 << t:UT_NIL));
+            if t:isSubtypeSimple(operandTy, optBasicType) {
+                t:UniformTypeBitSet basicType = t:uniformType(tc);
+                if t:isSubtypeSimple(operandTy, basicType) {
+                    return tc;
+                }
+                return <bir:OptOrderType> { opt: tc };
+            }
+        }
+    }
+    else {
+        var tc = t:constUniformTypeCode(operand);
+        if tc is bir:UniformOrderType {
+            return tc;
+        }
     }
     return ();
 }
