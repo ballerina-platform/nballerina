@@ -30,7 +30,7 @@ jobs:
       - name: Set jBallerina name
         run: |
           echo "JBALLERINA_NAME = $(echo ls $HOME/ballerina-*.zip | sed 's/.zip//g')"  >> $GITHUB_ENV
-        - name: Extract jBallerina
+      - name: Extract jBallerina
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
