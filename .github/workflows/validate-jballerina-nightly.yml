@@ -14,9 +14,9 @@ jobs:
           sudo apt-get install llvm-11
       - name: Download jBallerina
         env:
-          LATEST_RUN_ID: 1161479802
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          LATEST_RUN_ID = $(gh run list --workflow main.yml  --repo ballerina-platform/ballerina-distribution | grep success | head -n 1)
           gh run download $LATEST_RUN_ID -D "$HOME" --name "Linux installer ZIP" --repo ballerina-platform/ballerina-distribution
           unzip "$HOME/ballerina-linux-swan-lake-beta3-SNAPSHOT.zip" -d "$HOME"
           chmod +x "$HOME/ballerina-linux-swan-lake-beta3-SNAPSHOT/bin/bal"
