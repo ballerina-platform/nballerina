@@ -6,16 +6,13 @@ OPT ?= opt$(LLVM_SUFFIX)
 export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
 OBJS=alloc.o list.o main.o mapping.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o
-RT_OPT_BCS=alloc_opt.bc list_opt.bc main_opt.bc mapping_opt.bc panic_opt.bc print_opt.bc string_opt.bc int_opt.bc third-party/dtoa/emyg_dtoa_opt.bc
 BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_ir_inline.bc float_inline.bc
 INCLUDES=tag.h balrt.h balrt_inline.h
-TAGGED_PTR_BC=tagged_ptr.bc
-TAGGED_PTR_OBJ=tagged_ptr.o
 AR=ar
 export LIB=balrt.a
 export BCLIB=balrt_inline.bc
 
-all: $(TAGGED_PTR_BC) $(RT_OPT_BCS) $(LIB) $(BCLIB)
+all: $(LIB) $(BCLIB)
 	$(MAKE) -C tests all
 
 test: all
@@ -24,23 +21,18 @@ test: all
 testCoverage: $(LIB) $(BCLIB)
 	$(MAKE) -C tests testCoverage
 
-$(LIB): $(TAGGED_PTR_OBJ) $(OBJS)
+$(LIB): $(OBJS)
 	$(AR) r $@ $^
-
-$(TAGGED_PTR_OBJ):
-	$(CLANG) -c -o $@ $(TAGGED_PTR_BC)
 
 $(BCLIB): $(BCS)
 	$(LLVM_LINK) -o - -S $^ | sed -e '/define .*@_[Bb][a-zA-Z]/s/^define /define linkonce_odr /' -e '/target datalayout/ s/"$$/-ni:1"/' | $(LLVM_AS) >$@
 
-%.o: %_opt.bc
-	$(LLC) -O2 --filetype=obj -o $@ $<
-
-%_opt.bc: %_linked.bc
-	$(OPT) -O2 -o $@ $<
-
-%_linked.bc: %.bc
-	$(LLVM_LINK) $(TAGGED_PTR_BC) $< -o - -S | sed -e '/define .*@taggedToPtr/s/^define /define linkonce_odr /' | $(LLVM_AS) >$@
+%.o: %.c
+	$(CLANG) -c -O2 -emit-llvm -o - $< | \
+	$(LLVM_LINK) tagged_ptr.ll - -o - -S | \
+	$(OPT) -O2 - -o - -S | \
+	sed -e '/define .*@taggedToPtr/s/^define /define linkonce_odr /' | \
+	$(LLC) - -O2 --filetype=obj -o $@
 
 # we have to use -O2 here, otherwise the function will get a noinline attribute
 %.bc: %.c
@@ -52,7 +44,7 @@ $(BCLIB): $(BCS)
 $(OBJS) $(BCS): $(INCLUDES)
 
 clean:
-	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB) $(RT_OPT_BCS) $(TAGGED_PTR_OBJ) *.bc
+	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
 	$(MAKE) -C tests clean
 
 .PHONY: test all
