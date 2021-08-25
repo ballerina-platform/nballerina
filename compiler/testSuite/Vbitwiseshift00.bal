@@ -10,4 +10,5 @@ public function main() {
                         // 0b000111111 mask
                         // 0b000000011 shift by
     io:println(i << j); // @output 56
+    io:println(1 << 3); // @output 8
 }

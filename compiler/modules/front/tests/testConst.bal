@@ -9,7 +9,7 @@ type ConstEvalTest [string,SimpleConst];
 class TestFoldContext {
     // JBUG error if next line uncommented
     // *FoldContext;
-    function lookupConst(string varName) returns t:Value?|FoldError {
+    function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         return ();
     }
     function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {

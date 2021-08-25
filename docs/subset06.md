@@ -34,7 +34,7 @@
    * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`
    * unary operators: `-`, `!`, `~`
    * type cast `<T>E`
-   * type test `E is T`
+   * type test `E is T`, `E !is T`
    * function call
    * method call `v.f(args)` syntax for calling langlib functions
    * member access `E[i]` for both list and mapping
@@ -172,7 +172,7 @@ relational-expr =
   | shift-expr "<=" shift-expr
   | shift-expr ">" shift-expr
   | shift-expr ">=" shift-expr
-  | shift-expr "is" type-desc
+  | shift-expr ["!"] "is" type-desc
 
 shift-expr =
   additive-expr
@@ -289,6 +289,7 @@ The following restrictions apply to imported modules:
 
 ## Implemented spec changes since 2021R1
 
+* [#752](https://github.com/ballerina-platform/ballerina-spec/issues/752) - `!is` operator
 * [#814](https://github.com/ballerina-platform/ballerina-spec/issues/814) - improved typing rules for `==` and `!=`
 * [#827](https://github.com/ballerina-platform/ballerina-spec/issues/827#issuecomment-895601520) - improved type narrowing for `match` statement
 * [#887](https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability

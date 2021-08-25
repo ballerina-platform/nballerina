@@ -54,11 +54,11 @@ function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, s:TypeDesc td, err:Po
     if ty === t:ANY {
         return ty;
     }
-    t:UniformTypeBitSet? memberTy = env.simpleArrayMemberType(ty);
+    t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(env, ty);
     if memberTy == t:ANY {
         return t:LIST;
     }
-    memberTy = env.simpleMapMemberType(ty);
+    memberTy = t:simpleMapMemberType(env, ty);
     if memberTy == t:ANY {
         return t:MAPPING;
     }

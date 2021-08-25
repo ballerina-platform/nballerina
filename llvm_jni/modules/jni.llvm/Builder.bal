@@ -1,6 +1,6 @@
 import ballerina/jballerina.java;
 
-function predicateToInt(IntPredicate predicate) returns int {
+function intPredicateToInt(IntPredicate predicate) returns int {
     match predicate {
         "eq" => {
             return 32;
@@ -34,6 +34,60 @@ function predicateToInt(IntPredicate predicate) returns int {
         }
     }
     panic error("Unknown predicate");
+}
+
+function floatPredicateToInt(FloatPredicate predicate) returns int {
+    match predicate {
+        "false" => { 
+            return 0;
+        }
+        "oeq" => {
+            return 1;
+        }   
+        "ogt" => {
+            return 2;
+        }
+        "oge" => {
+            return 3;    
+        }
+        "olt" => {
+            return 4;
+        }
+        "ole" => {
+            return 5;
+        }
+        "one" => {
+            return 6; 
+        }
+        "ord" => {
+            return 7;
+        }
+        "uno" => {
+            return 8;     
+        }
+        "ueq" => {
+            return 9;
+        }     
+        "ugt" => {
+            return 10;
+        }
+        "uge" => {
+            return 11;
+        }
+        "ult" => {
+            return 12;
+        }
+        "ule" => {
+            return 13;
+        }
+        "une" => {
+            return 14;
+        }
+        "true" => {
+            return 15;
+        }
+    }
+    panic error("unknown predicate");
 }
 
 public distinct class Builder {
@@ -97,18 +151,22 @@ public distinct class Builder {
     }
 
     public function iArithmeticWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
+    }
+
+    public function fArithmetic(FloatArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     public function iArithmeticSigned(IntArithmeticSignedOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     public function iBitwise(IntBitwiseOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
-    function binaryIntNoWrap(IntOp op, Value lhs, Value rhs, string? name = ()) returns Value {
+    function binaryOpWrap(BinaryOp op, Value lhs, Value rhs, string? name = ()) returns Value {
         string regName = self.extractName(name);
         match op {
             "add" => {
@@ -144,13 +202,33 @@ public distinct class Builder {
             "lshr" => {
                 return new (jLLVMBuildLShr(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
             }
+            "fadd" => {
+                return new (jLLVMBuildFAdd(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "fsub" => {
+                return new (jLLVMBuildFSub(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "fmul" => {
+                return new (jLLVMBuildFMul(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "fdiv" => {
+                return new (jLLVMBuildFDiv(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
+            "frem" => {
+                return new (jLLVMBuildFRem(self.LLVMBuilder, lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(regName)));
+            }
         }
         panic error(string `op: ${<string>op} not implemented`);
     }
 
     public function iCmp(IntPredicate op, Value lhs, Value rhs, string? name = ()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildICmp(self.LLVMBuilder, predicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
+        return new (jLLVMBuildICmp(self.LLVMBuilder, intPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
+    }
+
+    public function fCmp(FloatPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
+        string reg = self.extractName(name);
+        return new (jLLVMBuildFCmp(self.LLVMBuilder, floatPredicateToInt(op), lhs.LLVMValueRef, rhs.LLVMValueRef, java:fromString(reg)));
     }
 
     public function bitCast(PointerValue val, PointerType destTy, string? name = ()) returns PointerValue {
@@ -184,6 +262,11 @@ public distinct class Builder {
     public function trunc(Value val, IntType destTy, string? name = ()) returns Value {
         string reg = self.extractName(name);
         return new (jLLVMBuildTrunc(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+    }
+
+    public function fNeg(Value val, string? name=()) returns Value {
+        string reg = self.extractName(name);
+        return new (jLLVMBuildFNeg(self.LLVMBuilder, val.LLVMValueRef, java:fromString(reg)));
     }
 
     public function unreachable() {
@@ -222,6 +305,11 @@ public distinct class Builder {
     public function addrSpaceCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         string reg = self.extractName(name);
         return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+    }
+
+    public function sIToFP(Value val, RealType destTy, string? name=()) returns Value {
+        string reg = self.extractName(name);
+        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
     function extractName(string? name) returns string {
@@ -283,6 +371,36 @@ function jLLVMBuildNSWSub(handle builder, handle lhs, handle rhs, handle name) r
 
 function jLLVMBuildAdd(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
     name: "LLVMBuildAdd",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFAdd(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFAdd",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFSub(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFSub",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFMul(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFMul",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFDiv(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFDiv",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFRem(handle builder, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFRem",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;
@@ -350,6 +468,12 @@ function jLLVMBuildShl(handle builder, handle lhs, handle rhs, handle name) retu
 
 function jLLVMBuildICmp(handle builder, int op, handle lhs, handle rhs, handle name) returns handle = @java:Method {
     name: "LLVMBuildICmp",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "int", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildFCmp(handle builder, int op, handle lhs, handle rhs, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFCmp",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "int", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;
@@ -436,6 +560,19 @@ function jLLVMBuildInBoundsGEP(handle builder, handle pointer, handle indices, i
     name: "LLVMBuildInBoundsGEP",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.javacpp.PointerPointer", "int", "java.lang.String"]
+} external;
+
+
+function jLLVMBuildFNeg(handle builder, handle val, handle name) returns handle = @java:Method {
+    name: "LLVMBuildFNeg",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMBuildSIToFP(handle builder, handle val, handle destTy, handle name) returns handle = @java:Method {
+    name: "LLVMBuildSIToFP",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "java.lang.String"]
 } external;
 
 function jLLVMSetAlignment(handle valueRef, int bytes) = @java:Method {

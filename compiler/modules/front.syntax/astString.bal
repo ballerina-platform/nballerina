@@ -251,6 +251,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(val.toString());
         }
     }
+    else if expr is FloatZeroExpr {
+        exprToWords(w, expr.expr, wrap);
+    }
     else if expr is IntLiteralExpr {
         if expr.base == 16 {
             w.push("0x" + expr.digits.toUpperAscii());
@@ -309,6 +312,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push("(");
         }
         exprToWords(w, expr.left, true);
+        if expr.negated {
+            w.push("!");
+        }
         w.push("is");
         typeDescToWords(w, expr.td);
         if wrap {
@@ -452,7 +458,7 @@ function alwaysClingBefore(string a) returns boolean {
 }
 
 // Useful for debugging
-function exprToString(Expr expr) returns string {
+public function exprToString(Expr expr) returns string {
     Word[] words = [];
     exprToWords(words, expr);
     return "\n".'join(...wordsToLines(words));

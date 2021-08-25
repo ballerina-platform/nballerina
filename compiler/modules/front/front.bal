@@ -60,12 +60,11 @@ class Module {
 
 }
 
-public function loadModule(string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
+public function loadModule(t:Env env, string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
     string[] lines = check io:fileReadLines(filename);
     s:ModulePart part = check s:parseModulePart(lines);
     ModuleTable mod = table [];
     check addModulePart(mod, part);
-    t:Env env = new;
     check resolveTypes(env, mod);
     // XXX Should have an option that controls whether we perform this check
     check validEntryPoint(mod);
