@@ -31,7 +31,6 @@
    * `foreach` statements that use  `<..`
    * `match` statement with match patterns that are const
    * `panic` statement
-   * `fail` statement
 * Expressions:
    * literals for nil, boolean, int, float and string
    * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`
@@ -100,10 +99,8 @@ statement =
   | continue-stmt
   | foreach-stmt
   | panic-stmt
-  | fail-stmt
   | match-stmt
  
-
 local-var-decl-stmt = ["final"] type-desc identifier "=" expression ";"
 
 call-stmt =
@@ -131,8 +128,6 @@ continue-stmt = "continue" ";"
 foreach-stmt = "foreach" "int" identifier "in" additive-expr "..<" additive-expr stmt-block
 
 panic-stmt = "panic" inner-expr ";"
-
-fail-stmt = "fail" inner-expr ";"
 
 match-stmt = "match" inner-expr { match-clause+ }
 
@@ -305,7 +300,7 @@ The following restrictions apply to imported modules:
    * `error` type descriptor
    * `error(msg)` expression
    * `check` and `checkpanic` expressions
-   * `panic` and `fail` statements
+   * `panic` statement
 
 ## Implemented spec changes since 2021R1
 
