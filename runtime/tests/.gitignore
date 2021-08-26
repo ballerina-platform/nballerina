@@ -6,4 +6,5 @@
 /string_len
 /tagged_ptr
 /float_print
+/error_print
 *.stamp
