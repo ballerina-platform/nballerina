@@ -2,5 +2,5 @@
 	path = dtoa/dtoa-benchmark
 	url = git@github.com:miloyip/dtoa-benchmark.git
 [submodule "trace/libbacktrace"]
-	path = trace/libbacktrace
+	path = libbacktrace/libbacktrace
 	url = https://github.com/ianlancetaylor/libbacktrace
