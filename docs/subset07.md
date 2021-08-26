@@ -51,6 +51,7 @@
   * `string:length`
   * `map:length`
   * `int:toHexString`
+  * `error:message`
 * The only imported function that can be called is `io:println` and it can only be called with a single argument.
 
 ## Grammar
@@ -283,6 +284,7 @@ Method call syntax can be used for calling the following langlib functions:
 * `string:length`
 * `map:length`
 * `int:toHexString`
+* `error:message`
 
 The following restrictions apply to imported modules:
 
@@ -301,6 +303,7 @@ The following restrictions apply to imported modules:
    * `error(msg)` expression
    * `check` and `checkpanic` expressions
    * `panic` statement
+   * `error:message` langlib function
 
 ## Implemented spec changes since 2021R1
 
