@@ -1140,40 +1140,22 @@ function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertT
     }
     // convert to int form tagged pointer
 
-    // number part of semType must be some *non-empty* combination of
-    // (some or all of) int, float and decimal
     t:SemType semType = insn.operand.semType;
     llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
-    llvm:BasicBlock? notMatchedBlock = ();
-    // in subset 6, it is all of int or none of int, later this needs to change to an !isEmpty check
-    if t:intersect(t:INT, semType) == t:INT {
-        llvm:Value hasType = buildHasTag(builder, tagged, TAG_INT);
-        llvm:BasicBlock matchedIntBlock = scaffold.addBasicBlock();
-        llvm:BasicBlock notMatchedIntBlock = scaffold.addBasicBlock();
-        builder.condBr(hasType, matchedIntBlock, notMatchedIntBlock);
-        notMatchedBlock = notMatchedIntBlock;
-        builder.positionAtEnd(matchedIntBlock);
-        buildStoreInt(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn.result);
-        builder.br(joinBlock);
-    }
-    // same as above, works for subset 6, needs to change later
-    if t:intersect(t:FLOAT, semType) == t:FLOAT {
-        if !(notMatchedBlock is ()) {
-            builder.positionAtEnd(notMatchedBlock);
-        }
-        llvm:Value hasType = buildHasTag(builder, tagged, TAG_FLOAT);
-        llvm:BasicBlock matchedFloatBlock = scaffold.addBasicBlock();
-        llvm:BasicBlock notMatchedFloatBlock = scaffold.addBasicBlock();
-        builder.condBr(hasType, matchedFloatBlock, notMatchedFloatBlock);
-        notMatchedBlock = notMatchedFloatBlock;
-        builder.positionAtEnd(matchedFloatBlock);
-        llvm:Value untagged = buildUntagFloat(builder, scaffold, tagged);
-        buildConvertFloatToInt(builder, scaffold, untagged, insn);
-        builder.br(joinBlock);
-    }
-    builder.positionAtEnd(<llvm:BasicBlock>notMatchedBlock);
-    if !t:isSubtypeSimple(semType, t:NUMBER) {
+
+    // semType must contain float or decimal. Since we don't have decimal yet in subset 6,
+    // it must contain float. In the future, below section is only needed conditionally.
+    llvm:Value hasType = buildHasTag(builder, tagged, TAG_FLOAT);
+    llvm:BasicBlock hasFloatBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock noFloatBlock = scaffold.addBasicBlock();
+    builder.condBr(hasType, hasFloatBlock, noFloatBlock);
+    builder.positionAtEnd(hasFloatBlock);
+    buildConvertFloatToInt(builder, scaffold, buildUntagFloat(builder, scaffold, tagged), insn);
+    builder.br(joinBlock);
+
+    builder.positionAtEnd(<llvm:BasicBlock>noFloatBlock);
+    if !t:isSubtypeSimple(semType, t:FLOAT) {
         builder.store(tagged, scaffold.address(insn.result));
     }
     builder.br(joinBlock);
@@ -1209,34 +1191,19 @@ function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:Conver
     t:SemType semType = insn.operand.semType;
     llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
-    llvm:BasicBlock? notMatchedBlock = ();
-    // in subset 6, it is all of float or none of float, later this needs to change to an !isEmpty check
-    if t:intersect(t:FLOAT, semType) == t:FLOAT {
-        llvm:Value hasType = buildHasTag(builder, tagged, TAG_FLOAT);
-        llvm:BasicBlock matchedFloatBlock = scaffold.addBasicBlock();
-        llvm:BasicBlock notMatchedFloatBlock = scaffold.addBasicBlock();
-        builder.condBr(hasType, matchedFloatBlock, notMatchedFloatBlock);
-        notMatchedBlock = notMatchedFloatBlock;
-        builder.positionAtEnd(matchedFloatBlock);
-        buildStoreFloat(builder, scaffold, buildUntagFloat(builder, scaffold, tagged), insn.result);
-        builder.br(joinBlock);
-    }
-    // same as above, works for subset 6, needs to change later
-    if t:intersect(t:INT, semType) == t:INT {
-        if !(notMatchedBlock is ()) {
-            builder.positionAtEnd(notMatchedBlock);
-        }
-        llvm:Value hasType = buildHasTag(builder, tagged, TAG_INT);
-        llvm:BasicBlock matchedIntBlock = scaffold.addBasicBlock();
-        llvm:BasicBlock notMatchedIntBlock = scaffold.addBasicBlock();
-        builder.condBr(hasType, matchedIntBlock, notMatchedIntBlock);
-        notMatchedBlock = notMatchedIntBlock;
-        builder.positionAtEnd(matchedIntBlock);
-        buildConvertIntToFloat(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn);
-        builder.br(joinBlock);
-    }
-    builder.positionAtEnd(<llvm:BasicBlock>notMatchedBlock);
-    if !t:isSubtypeSimple(semType, t:NUMBER) {
+
+    // semType must contain int or decimal. Since we don't have decimal yet in subset 6,
+    // it must contain int. In the future, below section is only needed conditionally.
+    llvm:Value hasType = buildHasTag(builder, tagged, TAG_INT);
+    llvm:BasicBlock hasIntBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock noIntBlock = scaffold.addBasicBlock();
+    builder.condBr(hasType, hasIntBlock, noIntBlock);
+    builder.positionAtEnd(hasIntBlock);
+    buildConvertIntToFloat(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn);
+    builder.br(joinBlock);
+
+    builder.positionAtEnd(<llvm:BasicBlock>noIntBlock);
+    if !t:isSubtypeSimple(semType, t:INT) {
         builder.store(tagged, scaffold.address(insn.result));
     }
     builder.br(joinBlock);
