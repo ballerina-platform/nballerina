@@ -185,7 +185,7 @@ extern TaggedPtr _bal_mapping_construct(int64_t capacity);
 extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
-extern READNONE UntypedPtr taggedToPtr(TaggedPtr p);
+extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 
 static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;
@@ -202,6 +202,10 @@ static READNONE inline int getTag(TaggedPtr p) {
 
 static READNONE inline int taggedToBoolean(TaggedPtr p) {
     return (int)(taggedPtrBits(p) & 1);
+}
+
+static READNONE inline UntypedPtr taggedToPtr(TaggedPtr p) {
+    return _bal_tagged_to_ptr(p);
 }
 
 static READONLY inline int64_t taggedToInt(TaggedPtr p) {

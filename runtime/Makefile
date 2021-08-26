@@ -5,10 +5,10 @@ LLC ?= llc$(LLVM_SUFFIX)
 OPT ?= opt$(LLVM_SUFFIX)
 export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
-RT_SRC=alloc list main mapping panic print string int third-party/dtoa/emyg_dtoa
-OBJS=$(addsuffix .o, $(RT_SRC)) tagged_ptr.o
-OPTIMIZED_BCS=$(addsuffix _opt.bc, $(RT_SRC))
-BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_ir_inline.bc float_inline.bc
+OBJS=alloc.o list.o main.o mapping.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o tagged_inline.o
+C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc
+LL_BCS=float_ir_inline.bc tagged_inline.bc
+BCS=$(C_BCS) $(LL_BCS)
 INCLUDES=tag.h balrt.h balrt_inline.h
 AR=ar
 # Need bash for -o pipefail
@@ -16,7 +16,7 @@ SHELL=/bin/bash
 export LIB=balrt.a
 export BCLIB=balrt_inline.bc
 
-all: $(OPTIMIZED_BCS) $(LIB) $(BCLIB)
+all: $(LIB) $(BCLIB)
 	$(MAKE) -C tests all
 
 test: all
@@ -32,34 +32,37 @@ $(BCLIB): $(BCS)
 	set -o pipefail; \
 	$(LLVM_LINK) -o - -S $^ | \
 	sed -e '/define .*@_[Bb][a-zA-Z]/s/^define /define linkonce_odr /' -e '/target datalayout/ s/"$$/-ni:1"/' | \
-	$(LLVM_AS) >$@
+	$(LLVM_AS) >$@ 
 
-%.o: %_opt.bc
+%.o: %.bc
 	$(CLANG) -O2 -c -o $@ $<
 
-%_opt.bc: %.c
+%.bc: %.c tagged_inline.bc
 	set -o pipefail; \
 	$(CLANG) -c -O2 -emit-llvm -o - $< | \
-	$(LLVM_LINK) tagged_ptr.ll - -o - -S | \
+	$(LLVM_LINK) tagged_inline.bc - -o - -S | \
+	sed -e '/define .*@_bal_tagged_to_ptr/s/^define /define linkonce_odr /' | \
 	$(OPT) -O2 - -o - -S | \
-	sed -e '/define .*@taggedToPtr/s/^define /define linkonce_odr /' | $(LLVM_AS) >$@
+	$(LLVM_AS) >$@
+
+# Remove existing pattern rule
+%.o: %.c
 
 %.o: %.ll
 	$(CLANG) -O2 -c -o $@ $<
 
 # we have to use -O2 here, otherwise the function will get a noinline attribute
-%.bc: %.c
+$(C_BCS): %.bc: %.c
 	$(CLANG) $(CFLAGS) -c -O2 -emit-llvm -o $@ $<
 
-%.bc: %.ll
+$(LL_BCS): %.bc: %.ll
 	set -o pipefail; \
-	$(LLVM_AS) --data-layout=$(shell $(CLANG) -x c /dev/null -emit-llvm -S -o - | \
-	sed -n 's/target datalayout = \(".*"\)/\1/p') -o=$@ $<
+	$(CLANG) -x c /dev/null -emit-llvm -S -o - | grep "^target" | cat - $< | $(LLVM_AS) - -o=$@
 
 $(OBJS) $(BCS): $(INCLUDES)
 
 clean:
-	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB) $(OPTIMIZED_BCS)
+	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
 	$(MAKE) -C tests clean
 
 .PHONY: test all
