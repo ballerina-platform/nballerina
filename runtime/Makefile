@@ -9,6 +9,7 @@ RT_SRC=alloc list main mapping panic print string int third-party/dtoa/emyg_dtoa
 OBJS=$(addsuffix .o, $(RT_SRC)) tagged_ptr.o
 OPTIMIZED_BCS=$(addsuffix _opt.bc, $(RT_SRC))
 BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_ir_inline.bc float_inline.bc
+TAGGED_PTR_BC=tagged_ptr.bc
 INCLUDES=tag.h balrt.h balrt_inline.h
 AR=ar
 # Need bash for -o pipefail
@@ -16,7 +17,7 @@ SHELL=/bin/bash
 export LIB=balrt.a
 export BCLIB=balrt_inline.bc
 
-all: $(OPTIMIZED_BCS) $(LIB) $(BCLIB)
+all: $(TAGGED_PTR_BC) $(OPTIMIZED_BCS) $(LIB) $(BCLIB)
 	$(MAKE) -C tests all
 
 test: all
@@ -40,31 +41,29 @@ $(BCLIB): $(BCS)
 %_opt.bc: %.c
 	set -o pipefail; \
 	$(CLANG) -c -O2 -emit-llvm -o - $< | \
-	$(LLVM_LINK) tagged_ptr.ll - -o - -S | \
+	$(LLVM_LINK) $(TAGGED_PTR_BC) - -o - -S | \
 	$(OPT) -O2 - -o - -S | \
 	sed -e '/define .*@taggedToPtr/s/^define /define linkonce_odr /' | $(LLVM_AS) >$@
 
-%.o: %.ll
-	sed -i '1s/^/target triple = $(shell $(CLANG) -x c /dev/null -emit-llvm -S -o - | sed -n 's/target triple = \(".*"\)/\1/p')\n/' $<
+%.o: %.bc
 	$(CLANG) -O2 -c -o $@ $<
-	sed -i '1d' $<
-	
+
 # we have to use -O2 here, otherwise the function will get a noinline attribute
 %.bc: %.c
 	$(CLANG) $(CFLAGS) -c -O2 -emit-llvm -o $@ $<
 
 %.bc: %.ll
 	set -o pipefail; \
+	sed -e '1s/^/target triple = $(shell $(CLANG) -x c /dev/null -emit-llvm -S -o - | sed -n 's/target triple = \(".*"\)/\1/p')\n/' $< | \
 	$(LLVM_AS) --data-layout=$(shell $(CLANG) -x c /dev/null -emit-llvm -S -o - | \
-	sed -n 's/target datalayout = \(".*"\)/\1/p') -o=$@ $<
+	sed -n 's/target datalayout = \(".*"\)/\1/p') - -o=$@
 
 $(OBJS) $(BCS): $(INCLUDES)
 
 clean:
-	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB) $(OPTIMIZED_BCS)
+	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB) $(OPTIMIZED_BCS) $(TAGGED_PTR_BC)
 	$(MAKE) -C tests clean
 
 .PHONY: test all
 # Ensure bogus files get deleted when there's an error
 .DELETE_ON_ERROR:
-
