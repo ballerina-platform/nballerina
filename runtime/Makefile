@@ -45,8 +45,10 @@ $(BCLIB): $(BCS)
 	sed -e '/define .*@taggedToPtr/s/^define /define linkonce_odr /' | $(LLVM_AS) >$@
 
 %.o: %.ll
+	sed -i '1s/^/target triple = $(shell $(CLANG) -x c /dev/null -emit-llvm -S -o - | sed -n 's/target triple = \(".*"\)/\1/p')\n/' $<
 	$(CLANG) -O2 -c -o $@ $<
-
+	sed -i '1d' $<
+	
 # we have to use -O2 here, otherwise the function will get a noinline attribute
 %.bc: %.c
 	$(CLANG) $(CFLAGS) -c -O2 -emit-llvm -o $@ $<
