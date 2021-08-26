@@ -241,7 +241,7 @@ variable-reference-expr = identifier # can refer to parameter, local variable or
 
 // tokens
 int-literal = (as in Ballerina language spec)
-floating-point-literal = (as in Ballerina spec, except DecimalTypeSuffix is not allowed)
+floating-point-literal = (as in Ballerina spec, except HexFloatingPointLiteral and DecimalTypeSuffix are not allowed)
 string-literal = (as in Ballerina language spec)
 identifier = [A-Za-z][A-Za-z0-9_]*
 CompoundAssignmentOperator = (as in Ballerina language spec)
