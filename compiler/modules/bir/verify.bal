@@ -202,26 +202,26 @@ function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semanti
 }
 
 function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns err:Semantic? {
-    if vc.isEmpty(t:intersect(insn.operand.semType, t:NUMBER)) {
-        return vc.err("bad BIR: operand type has no numeric component");
+    if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:INT), t:NUMBER)) {
+        return vc.err("bad BIR: operand type of ConvertToInt has no non-integral numeric component");
     }
-    if t:intersect(insn.result.semType, t:INT) != t:INT {
-        return vc.err("bad BIR: result type should contain all of int");
+    if !vc.isSubtype(t:union(t:diff(insn.operand.semType, t:NUMBER), t:INT), insn.result.semType) {
+        return vc.err("bad BIR: result type of ConvertToInt does not contain everything it should");
     }
     if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:INT), t:NUMBER)) {
-        return vc.err("bad BIR: result type contains non-int numeric type");
+        return vc.err("bad BIR: result type of ConvertToInt contains non-integral numeric type");
     }
 }
 
 function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) returns err:Semantic? {
-    if vc.isEmpty(t:intersect(insn.operand.semType, t:NUMBER)) {
-        return vc.err("bad BIR: operand type has no numeric component");
+    if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:FLOAT), t:NUMBER)) {
+        return vc.err("bad BIR: operand type of ConvertToFloat has no non-float numeric component");
     }
-    if t:intersect(insn.result.semType, t:FLOAT) != t:FLOAT {
-        return vc.err("bad BIR: result type should contain all of float");
+    if !vc.isSubtype(t:union(t:diff(insn.operand.semType, t:NUMBER), t:FLOAT), insn.result.semType) {
+        return vc.err("bad BIR: result type of ConvertToFloat does not contain everything it should");
     }
     if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:FLOAT), t:NUMBER)) {
-        return vc.err("bad BIR: result type contains non-float numeric type");
+        return vc.err("bad BIR: result type of ConvertToFloat contains non-float numeric type");
     }
 }
 
