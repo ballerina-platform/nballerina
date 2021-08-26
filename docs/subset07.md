@@ -1,10 +1,10 @@
-# Language subset 6
+# Language subset 7
 
 ## Summary
 
-* Only values allowed are of basic type nil, boolean, int, float, string, list and mapping.
+* Only values allowed are of basic type nil, boolean, int, float, string, list, mapping and error.
 * Type descriptors:
-   * predefined basic type name: `boolean`, `float`, `int`, `string`
+   * predefined basic type name: `boolean`, `float`, `int`, `string`, `error`
    * optional type: `T?` where T is a predefined basic type name
    * union of predefined basic type names and optional types e.g. `int|string?`
    * `any` type
@@ -30,7 +30,10 @@
    * `break` and `continue` statements
    * `foreach` statements that use  `<..`
    * `match` statement with match patterns that are const
+   * `panic` statement
+   * `fail` statement
 * Expressions:
+   * literals for nil, boolean, int, float and string
    * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`
    * unary operators: `-`, `!`, `~`
    * type cast `<T>E`
@@ -40,7 +43,9 @@
    * member access `E[i]` for both list and mapping
    * list constructor `[E1, E2, ..., En]`
    * mapping constructor `{ f1: E1, f2: E2,..., fn: En }`
-   * literals for nil, boolean, int, float and string
+   * error constructor `error(msg)`
+   * `check` expression
+   * `checkpanic` expression
 * Langlib functions:
   * `array:length`
   * `array:push`
@@ -72,7 +77,7 @@ union-type-desc =
 
 optional-type-desc = basic-type-name ["?"]
 
-basic-type-name = "boolean" | "int" | "float" |  "string"
+basic-type-name = "boolean" | "int" | "float" |  "string" | "error"
 
 array-type-desc = any-type-desc "[" "]"
 map-type-desc = "map" "<" any-type-desc ">"
@@ -94,7 +99,10 @@ statement =
   | break-stmt
   | continue-stmt
   | foreach-stmt
+  | panic-stmt
+  | fail-stmt
   | match-stmt
+ 
 
 local-var-decl-stmt = ["final"] type-desc identifier "=" expression ";"
 
@@ -122,7 +130,11 @@ continue-stmt = "continue" ";"
 
 foreach-stmt = "foreach" "int" identifier "in" additive-expr "..<" additive-expr stmt-block
 
-match-stmt = "match" innner-expr { match-clause+ }
+panic-stmt = "panic" inner-expr ";"
+
+fail-stmt = "fail" inner-expr ";"
+
+match-stmt = "match" inner-expr { match-clause+ }
 
 match-clause := match-pattern-list "=>" stmt-block
 match-pattern-list :=
@@ -196,11 +208,15 @@ unary-expr =
   | "-" unary-expr
   | "~" unary-expr
   | type-cast-expr
+  | checking-expr
 
 type-cast-expr = "<" type-desc ">" unary-expr
 
+checking-expr = ("check" | "checkpanic") unary-expr
+
 primary-expr =
   literal
+  | error-constructor-expr
   | member-access-expr
   | function-call-expr
   | method-call-expr
@@ -210,6 +226,8 @@ primary-expr =
 literal = nil-literal | boolean-literal | int-literal | floating-point-literal | string-literal
 nil-literal = "(" ")" | "null"
 boolean-literal = "true" | "false"
+
+error-constructor-expr = "error" "(" inner-expr ")"
 
 list-constructor-expr = "[" [expr-list] "]"
 
@@ -281,12 +299,13 @@ The following restrictions apply to imported modules:
 
 * The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 
-## Additions from subset 5
+## Additions from subset 6
 
-* `float` type and associated operations
-* union type descriptor
-* optional type descriptor
-* compound assignment statement
+* `error` type and associated operations
+   * `error` type descriptor
+   * `error(msg)` expression
+   * `check` and `checkpanic` expressions
+   * `panic` and `fail` statements
 
 ## Implemented spec changes since 2021R1
 
