@@ -122,7 +122,7 @@ continue-stmt = "continue" ";"
 
 foreach-stmt = "foreach" "int" identifier "in" additive-expr "..<" additive-expr stmt-block
 
-match-stmt = "match" innner-expr { match-clause+ }
+match-stmt = "match" inner-expr { match-clause+ }
 
 match-clause := match-pattern-list "=>" stmt-block
 match-pattern-list :=
