@@ -11,6 +11,8 @@ OPTIMIZED_BCS=$(addsuffix _opt.bc, $(RT_SRC))
 BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_ir_inline.bc float_inline.bc
 INCLUDES=tag.h balrt.h balrt_inline.h
 AR=ar
+# Need bash for -o pipefail
+SHELL=/bin/bash
 export LIB=balrt.a
 export BCLIB=balrt_inline.bc
 
@@ -27,12 +29,16 @@ $(LIB): $(OBJS)
 	$(AR) r $@ $^
 
 $(BCLIB): $(BCS)
-	$(LLVM_LINK) -o - -S $^ | sed -e '/define .*@_[Bb][a-zA-Z]/s/^define /define linkonce_odr /' -e '/target datalayout/ s/"$$/-ni:1"/' | $(LLVM_AS) >$@
+	set -o pipefail; \
+	$(LLVM_LINK) -o - -S $^ | \
+	sed -e '/define .*@_[Bb][a-zA-Z]/s/^define /define linkonce_odr /' -e '/target datalayout/ s/"$$/-ni:1"/' | \
+	$(LLVM_AS) >$@
 
 %.o: %_opt.bc
 	$(CLANG) -O2 -c -o $@ $<
 
 %_opt.bc: %.c
+	set -o pipefail; \
 	$(CLANG) -c -O2 -emit-llvm -o - $< | \
 	$(LLVM_LINK) tagged_ptr.ll - -o - -S | \
 	$(OPT) -O2 - -o - -S | \
@@ -46,7 +52,9 @@ $(BCLIB): $(BCS)
 	$(CLANG) $(CFLAGS) -c -O2 -emit-llvm -o $@ $<
 
 %.bc: %.ll
-	$(LLVM_AS) --data-layout=$(shell $(CLANG) -x c /dev/null -emit-llvm -S -o - | sed -n 's/target datalayout = \(".*"\)/\1/p') -o=$@ $<
+	set -o pipefail; \
+	$(LLVM_AS) --data-layout=$(shell $(CLANG) -x c /dev/null -emit-llvm -S -o - | \
+	sed -n 's/target datalayout = \(".*"\)/\1/p') -o=$@ $<
 
 $(OBJS) $(BCS): $(INCLUDES)
 
