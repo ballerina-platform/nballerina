@@ -176,6 +176,7 @@ public enum InsnName {
     INSN_MAPPING_GET,
     INSN_MAPPING_SET,
     INSN_STR_CONCAT,
+    INSN_ERROR_CONSTRUCT,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -379,6 +380,15 @@ public type MappingGetInsn readonly & record {|
 public type MappingSetInsn readonly & record {|
     INSN_MAPPING_SET name = INSN_MAPPING_SET;
     [Register, StringOperand, Operand] operands;
+    err:Position position;
+|};
+
+# Constructs an error value.
+# Operand must be of type string.
+public type ErrorConstructInsn readonly & record {|
+    INSN_ERROR_CONSTRUCT name = INSN_ERROR_CONSTRUCT;
+    Register result;
+    Operand operand;
     err:Position position;
 |};
 
