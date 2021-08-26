@@ -97,7 +97,7 @@ const PANIC_LIST_TOO_LONG = 6;
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
 type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
-                         "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float";
+                         "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float"|"float_to_int";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -184,6 +184,15 @@ final RuntimeFunction floatToTaggedFunction = {
         paramTypes: ["double"]
     },
     attrs: [] // NB not readonly because it allocates storage
+};
+
+final RuntimeFunction floatToIntFunction = {
+    name: "float_to_int",
+    ty: {
+        returnType: llvm:structType(["i64", "i1"]),
+        paramTypes: ["double"]
+    },
+    attrs: ["nounwind", "readnone", "speculatable", "willreturn"]
 };
 
 final RuntimeFunction taggedToIntFunction = {
@@ -480,6 +489,12 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         }
         else if insn is bir:TypeCastInsn {
             check buildTypeCast(builder, scaffold, insn);
+        }
+        else if insn is bir:ConvertToIntInsn {
+            check buildConvertToInt(builder, scaffold, insn);
+        }
+        else if insn is bir:ConvertToFloatInsn {
+            check buildConvertToFloat(builder, scaffold, insn);
         }
         else if insn is bir:TypeTestInsn {
             check buildTypeTest(builder, scaffold, insn);
@@ -1114,9 +1129,127 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     builder.positionAtEnd(continueBlock);
 }
 
+function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertToIntInsn insn) returns BuildError? {
+    var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
+    if repr.base == BASE_REPR_FLOAT {
+        buildConvertFloatToInt(builder, scaffold, val, insn);
+        return;
+    }
+    else if repr.base != BASE_REPR_TAGGED {
+        return err:unimplemented("convert form decimal to int");
+    }
+    // convert to int form tagged pointer
+
+    // number part of semType must be some *non-empty* combination of
+    // (some or all of) int, float and decimal
+    t:SemType semType = insn.operand.semType;
+    llvm:PointerValue tagged = <llvm:PointerValue>val;
+    llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock? notMatchedBlock = ();
+    // in subset 6, it is all of int or none of int, later this needs to change to an !isEmpty check
+    if t:intersect(t:INT, semType) == t:INT {
+        llvm:Value hasType = buildHasTag(builder, tagged, TAG_INT);
+        llvm:BasicBlock matchedIntBlock = scaffold.addBasicBlock();
+        llvm:BasicBlock notMatchedIntBlock = scaffold.addBasicBlock();
+        builder.condBr(hasType, matchedIntBlock, notMatchedIntBlock);
+        notMatchedBlock = notMatchedIntBlock;
+        builder.positionAtEnd(matchedIntBlock);
+        buildStoreInt(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn.result);
+        builder.br(joinBlock);
+    }
+    // same as above, works for subset 6, needs to change later
+    if t:intersect(t:FLOAT, semType) == t:FLOAT {
+        if !(notMatchedBlock is ()) {
+            builder.positionAtEnd(notMatchedBlock);
+        }
+        llvm:Value hasType = buildHasTag(builder, tagged, TAG_FLOAT);
+        llvm:BasicBlock matchedFloatBlock = scaffold.addBasicBlock();
+        llvm:BasicBlock notMatchedFloatBlock = scaffold.addBasicBlock();
+        builder.condBr(hasType, matchedFloatBlock, notMatchedFloatBlock);
+        notMatchedBlock = notMatchedFloatBlock;
+        builder.positionAtEnd(matchedFloatBlock);
+        llvm:Value untagged = buildUntagFloat(builder, scaffold, tagged);
+        buildConvertFloatToInt(builder, scaffold, untagged, insn);
+        builder.br(joinBlock);
+    }
+    builder.positionAtEnd(<llvm:BasicBlock>notMatchedBlock);
+    if !t:isSubtypeSimple(semType, t:NUMBER) {
+        builder.store(tagged, scaffold.address(insn.result));
+    }
+    builder.br(joinBlock);
+    builder.positionAtEnd(joinBlock);
+}
+
+function buildConvertFloatToInt(llvm:Builder builder, Scaffold scaffold, llvm:Value floatVal, bir:ConvertToIntInsn insn) {
+    llvm:Value resultWithErr = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, floatToIntFunction), [floatVal]);
+    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock errBlock = scaffold.addBasicBlock();
+    builder.condBr(builder.extractValue(resultWithErr, 1), errBlock, continueBlock);
+    builder.positionAtEnd(errBlock);
+    builder.store(buildConstPanicError(PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
+    builder.br(scaffold.getOnPanic());
+    builder.positionAtEnd(continueBlock);
+    llvm:Value result = builder.extractValue(resultWithErr, 0);
+    buildStoreInt(builder, scaffold, result, insn.result);
+}
+
+function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:ConvertToFloatInsn insn) returns BuildError? {
+    var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
+    if repr.base == BASE_REPR_INT {
+        buildConvertIntToFloat(builder, scaffold, val, insn);
+        return;
+    }
+    else if repr.base != BASE_REPR_TAGGED {
+        return err:unimplemented("convert form decimal to float");
+    }
+    // convert to float form tagged pointer
+
+    // number part of semType must be some *non-empty* combination of
+    // (some or all of) int, float and decimal
+    t:SemType semType = insn.operand.semType;
+    llvm:PointerValue tagged = <llvm:PointerValue>val;
+    llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock? notMatchedBlock = ();
+    // in subset 6, it is all of float or none of float, later this needs to change to an !isEmpty check
+    if t:intersect(t:FLOAT, semType) == t:FLOAT {
+        llvm:Value hasType = buildHasTag(builder, tagged, TAG_FLOAT);
+        llvm:BasicBlock matchedFloatBlock = scaffold.addBasicBlock();
+        llvm:BasicBlock notMatchedFloatBlock = scaffold.addBasicBlock();
+        builder.condBr(hasType, matchedFloatBlock, notMatchedFloatBlock);
+        notMatchedBlock = notMatchedFloatBlock;
+        builder.positionAtEnd(matchedFloatBlock);
+        buildStoreFloat(builder, scaffold, buildUntagFloat(builder, scaffold, tagged), insn.result);
+        builder.br(joinBlock);
+    }
+    // same as above, works for subset 6, needs to change later
+    if t:intersect(t:INT, semType) == t:INT {
+        if !(notMatchedBlock is ()) {
+            builder.positionAtEnd(notMatchedBlock);
+        }
+        llvm:Value hasType = buildHasTag(builder, tagged, TAG_INT);
+        llvm:BasicBlock matchedIntBlock = scaffold.addBasicBlock();
+        llvm:BasicBlock notMatchedIntBlock = scaffold.addBasicBlock();
+        builder.condBr(hasType, matchedIntBlock, notMatchedIntBlock);
+        notMatchedBlock = notMatchedIntBlock;
+        builder.positionAtEnd(matchedIntBlock);
+        buildConvertIntToFloat(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn);
+        builder.br(joinBlock);
+    }
+    builder.positionAtEnd(<llvm:BasicBlock>notMatchedBlock);
+    if !t:isSubtypeSimple(semType, t:NUMBER) {
+        builder.store(tagged, scaffold.address(insn.result));
+    }
+    builder.br(joinBlock);
+    builder.positionAtEnd(joinBlock);
+}
+
+function buildConvertIntToFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value intVal, bir:ConvertToFloatInsn insn) {
+    buildStoreFloat(builder, scaffold, builder.sIToFP(intVal, LLVM_DOUBLE), insn.result);
+}
+
 function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrowInsn insn) returns BuildError? {
     var [sourceRepr, value] = check buildReprValue(builder, scaffold, insn.operand);
-    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));   
+    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));
     builder.store(narrowed, scaffold.address(insn.result));
 }
 

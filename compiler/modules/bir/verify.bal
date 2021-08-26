@@ -87,6 +87,12 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is TypeCastInsn {
         check verifyTypeCast(vc, insn);
     }
+    else if insn is ConvertToIntInsn {
+        check verifyConvertToIntInsn(vc, insn);
+    }
+    else if insn is ConvertToFloatInsn {
+        check verifyConvertToFloatInsn(vc, insn);
+    }
     else if insn is ListConstructInsn {
         check verifyListConstruct(vc, insn);
     }
@@ -192,6 +198,30 @@ function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semanti
     }
     if !vc.isSubtype(insn.result.semType, insn.semType) {
         return vc.err("bad BIR: result of type cast is not subtype of cast to type");
+    }
+}
+
+function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns err:Semantic? {
+    if vc.isEmpty(t:intersect(insn.operand.semType, t:NUMBER)) {
+        return vc.err("bad BIR: operand type has no numeric component");
+    }
+    if t:intersect(insn.result.semType, t:INT) != t:INT {
+        return vc.err("bad BIR: result type should contain all of int");
+    }
+    if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:INT), t:NUMBER)) {
+        return vc.err("bad BIR: result type contains non-int numeric type");
+    }
+}
+
+function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) returns err:Semantic? {
+    if vc.isEmpty(t:intersect(insn.operand.semType, t:NUMBER)) {
+        return vc.err("bad BIR: operand type has no numeric component");
+    }
+    if t:intersect(insn.result.semType, t:FLOAT) != t:FLOAT {
+        return vc.err("bad BIR: result type should contain all of float");
+    }
+    if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:FLOAT), t:NUMBER)) {
+        return vc.err("bad BIR: result type contains non-float numeric type");
     }
 }
 

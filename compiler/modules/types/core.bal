@@ -957,6 +957,9 @@ public function containsConstBoolean(SemType t, boolean b) returns boolean {
 
 public function singleNumericType(SemType semType) returns UniformTypeBitSet? {
     SemType numType = intersect(semType, NUMBER);
+    if numType == NEVER {
+        return ();
+    }
     if isSubtypeSimple(numType, INT) {
         return INT;
     }

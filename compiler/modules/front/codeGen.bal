@@ -1113,12 +1113,10 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     var reg = <bir:Register>operand; // const folding should have got rid of the const
     t:SemType toType = tcExpr.semType;
     t:UniformTypeBitSet? toNumType = t:singleNumericType(toType);
-    if toNumType != ()
-       // Remove the next line to enable conversion when support in backend is implemented
-       && toNumType == t:NEVER 
-       && !t:isSubtypeSimple(t:intersect(reg.semType, t:NUMBER), toNumType) {
+    if toNumType != () && !t:isSubtypeSimple(t:intersect(reg.semType, t:NUMBER), toNumType) {
         toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
-        bir:Register result = cx.createRegister(t:intersect(reg.semType, toType));
+
+        bir:Register result = cx.createRegister(t:union(t:diff(reg.semType, t:NUMBER), toNumType));
         if toNumType == t:INT {
             bir:ConvertToIntInsn insn = { operand: reg, result, position: tcExpr.pos };
             nextBlock.insns.push(insn);
