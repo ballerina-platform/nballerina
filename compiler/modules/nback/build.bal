@@ -948,8 +948,209 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
                               insn.result);
         }
         _ => {
-            return err:unimplemented("compare with operands of optional type is not implemented");
+            bir:OrderType ot = insn.orderType;
+            if ot is bir:OptOrderType {
+                bir:Operand lhs = insn.operands[0];
+                bir:Operand rhs = insn.operands[1];
+                llvm:Value lhsVal = check loadOperandForOptionalComparison(builder, scaffold, insn, lhs);
+                llvm:Value rhsVal = check loadOperandForOptionalComparison(builder, scaffold, insn, rhs);
+                if (lhs is () || (lhs is bir:Register && t:containsNil(lhs.semType))) &&
+                    (rhs is () || (rhs is bir:Register && t:containsNil(rhs.semType))) {
+                    // Both operands can be null;
+                    llvm:Value lhsIsNull = builder.iCmp("eq", lhsVal, llvm:constNull(llvm:pointerType("i8", 1)));
+                    llvm:Value rhsIsNull = builder.iCmp("eq", rhsVal, llvm:constNull(llvm:pointerType("i8", 1)));
+                    llvm:Value eitherNull = builder.iBitwise("or", lhsIsNull, rhsIsNull);
+                    llvm:BasicBlock eitherNullBB = scaffold.addBasicBlock();
+                    llvm:BasicBlock neitherNullBB = scaffold.addBasicBlock();
+                    llvm:BasicBlock joinBB = scaffold.addBasicBlock();
+                    builder.condBr(eitherNull, eitherNullBB, neitherNullBB);
+
+                    builder.positionAtEnd(eitherNullBB);
+                    llvm:Value bothNull = builder.iBitwise("and", lhsIsNull, rhsIsNull);
+                    if insn.op is "<=" || insn.op is ">=" {
+                        buildStoreBoolean(builder, scaffold, bothNull, insn.result);
+                    }
+                    else {
+                        buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN,0), insn.result);
+                    }
+                    builder.br(joinBB);
+
+                    builder.positionAtEnd(neitherNullBB);
+                    if lhs is () || rhs is () {
+                        builder.unreachable();
+                    }
+                    else {
+                        untagAndCompare(builder, scaffold, insn);
+                        builder.br(joinBB);
+                    }
+                    
+                    builder.positionAtEnd(joinBB);
+                }
+                else {
+                    // Only one operand can be null 
+                    bir:Operand nullableOperand;
+                    llvm:Value nullableValue;
+                    bir:Operand other;
+                    llvm:Value otherValue;
+                    if lhs is () || (lhs is bir:Register && t:containsNil(lhs.semType)) {
+                        nullableOperand = lhs;
+                        nullableValue = lhsVal;
+                        other = rhs;
+                        otherValue = rhsVal;
+                    }
+                    else {
+                        nullableOperand = rhs;
+                        nullableValue = rhsVal;
+                        other = lhs;
+                        otherValue = lhsVal;
+                    }
+                    llvm:Value isNull = builder.iCmp("eq", nullableValue, llvm:constNull(llvm:pointerType("i8", 1)));
+                    llvm:BasicBlock isNullBB = scaffold.addBasicBlock();
+                    llvm:BasicBlock notNullBB = scaffold.addBasicBlock();
+                    llvm:BasicBlock joinBB = scaffold.addBasicBlock();
+                    builder.condBr(isNull, isNullBB, notNullBB);
+
+                    builder.positionAtEnd(isNullBB);
+                    buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN,0), insn.result);
+                    builder.br(joinBB);
+
+                    builder.positionAtEnd(notNullBB);
+                    if lhs is () || rhs is () {
+                        builder.unreachable();
+                    }
+                    else {
+                        untagAndCompare(builder, scaffold, insn);
+                        builder.br(joinBB);
+                    }
+                    
+                    builder.positionAtEnd(joinBB);
+                }
+            }
+            else {
+                return err:unimplemented("compare with operands of non-optional unimplemented type");
+            }
         }
+    }
+}
+
+function loadOperandForOptionalComparison(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, bir:Operand operand) returns llvm:Value|BuildError {
+    bir:OrderType ot = insn.orderType;
+    if ot is bir:OptOrderType {
+        if operand is () {
+            return llvm:constNull(llvm:pointerType("i8", 1));
+        }
+        else {
+            llvm:Value? val = ();
+            match ot.opt {
+                t:UT_INT => {
+                    val = buildInt(builder, scaffold, <bir:IntOperand> operand);
+                }
+                t:UT_FLOAT => {
+                    val = buildFloat(builder, scaffold, <bir:FloatOperand> operand);
+                }
+                t:UT_BOOLEAN => {
+                    val = buildBoolean(builder, scaffold, <bir:BooleanOperand> operand);
+                }
+                t:UT_STRING => {
+                    val = check buildString(builder, scaffold, <bir:StringOperand> operand);
+                }
+            }
+            if val is () {
+                panic error("Unknown comparison type");
+            }
+            else {
+                return val;
+            }
+        }
+    }
+    else {
+        panic error("Not an optional order type");
+    }
+}
+
+function untagAndCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) {
+    bir:Operand lhs = insn.operands[0];
+    bir:Operand rhs = insn.operands[1];
+    bir:OrderType ot = insn.orderType;
+    if ot is bir:OptOrderType {
+        match ot.opt {
+            t:UT_INT => {
+                buildStoreBoolean(builder, scaffold,
+                                    builder.iCmp(buildIntCompareOp(insn.op), 
+                                    untagOperandForComparison(builder, scaffold, lhs, insn), 
+                                    untagOperandForComparison(builder, scaffold, rhs, insn)),
+                                    insn.result); 
+            }
+            t:UT_FLOAT => {
+                buildStoreBoolean(builder, scaffold,
+                                    builder.fCmp(buildFloatCompareOp(insn.op), 
+                                    untagOperandForComparison(builder, scaffold, lhs, insn), 
+                                    untagOperandForComparison(builder, scaffold, rhs, insn)),
+                                    insn.result); 
+            }
+            t:UT_BOOLEAN => {
+                buildStoreBoolean(builder, scaffold,
+                                    builder.iCmp(buildBooleanCompareOp(insn.op), 
+                                    untagOperandForComparison(builder, scaffold, lhs, insn), 
+                                    untagOperandForComparison(builder, scaffold, rhs, insn)),
+                                    insn.result); 
+            }
+            t:UT_STRING => {
+                //TODO: deal with string
+                panic error("deal with string");
+            }
+        }
+    }
+    else {
+        panic error("Not an optional order type. Nothing to untag");
+    }
+}
+
+function untagOperandForComparison(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, bir:CompareInsn insn) returns llvm:Value {
+    bir:OrderType ot = insn.orderType;
+    if ot is bir:OptOrderType {
+        llvm:Value? val = ();
+        if operand is bir:Register {
+            if t:containsNil(operand.semType) {
+                match ot.opt {
+                    t:UT_INT => {
+                        val = buildUntagInt(builder, scaffold, <llvm:PointerValue>builder.load(scaffold.address(operand)));
+                    }
+                    t:UT_FLOAT => {
+                        val = buildUntagFloat(builder, scaffold, <llvm:PointerValue>builder.load(scaffold.address(operand)));
+                    }
+                    t:UT_BOOLEAN => {
+                        val = buildUntagBoolean(builder, <llvm:PointerValue>builder.load(scaffold.address(operand)));
+                    }
+                    t:UT_STRING => {
+                        //TODO: deal with string
+                        panic error("deal with string");
+                    }
+                }
+            }
+            else {
+                val = builder.load(scaffold.address(operand));
+            }
+        }
+        else if operand is int {
+            val = llvm:constInt(LLVM_INT, operand);
+        }
+        else if operand is float {
+            val = llvm:constFloat(LLVM_DOUBLE, operand);
+        }
+        else if operand is boolean {
+            val = llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0);
+        }
+        else {
+            panic error("Can't untag the operand");
+        }
+        if val is llvm:Value {
+            return val;
+        }
+        panic error("Unknown comparison type");
+    }
+    else {
+        panic error("Not an optional order type. Nothing to untag");
     }
 }
 
