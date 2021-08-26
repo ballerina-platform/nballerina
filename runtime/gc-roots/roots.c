@@ -57,6 +57,7 @@ void get_frames(FrameArray *frameArray) {
 
 typedef uint8_t *Root;
 
+// TODO: check the method name
 void get_roots(void (*mark_roots)(Root *, Root)) {
     FrameArray frameArray = {0, 0};
     get_frames(&frameArray);
@@ -64,26 +65,38 @@ void get_roots(void (*mark_roots)(Root *, Root)) {
     Frame *f = frameArray.frames;
     Frame *lastFrame = f + frameArray.length - SKIP_FROM_BEGINING;
 
-    // 2 is used to get the rbp of _bal_alloc
-    // 16 is the offset for function
+    // The value 2 is used to get the rbp of _bal_alloc,
+    // because we have to go through 2 function(get_roots, collect) to reach bal_alloc
+    // The value 16 is the offset for the rsp of previous function
+    // This offset depends on the calling convension
     uint8_t *rsp = (uint8_t*)__builtin_frame_address(2) + 16;
 
     // Find roots using stack map
-    // 1. Iterate over frames and consider one frame_address here the frame corresponds to one call site
-    // 2. Lookup the table for frame information for given frame address
-    // 3. Interate over records of that frame and find heap references(roots)
+    // Here the return address or program counter(pc) means the next address of caller's
+    // call instruction.
+    // If bar() calls foo(), 4011f1 is considered are return address or pc.
+    //
+    // 4011ec:	callq  401290 <foo>
+    // 4011f1:	mov    %rax,%rbx
+    //
+    // 1. Iterate over frames taken from backtrace
+    // 2. Lookup the table for frame information for given pc
+    // 3. Interate over locations of that frame and find heap references(roots)
     for (; f < lastFrame; f++) {
         frame_info_t* frame = lookup_return_address(table, f->pc);
         if (frame == NULL) {
+            // We have to make sure that all the functions in all possible calling paths to
+            // _bal_alloc() method, have statepoints.
+            // Otherwise we will loose the track of roots.
             fprintf(stderr, "frame cannot be null");
+            abort();
         }
         for (size_t p = 0; p < frame->numSlots; p++) {
             pointer_slot_t* psl = frame->slots + p;
 
             // TODO: Check whether this loop can be arranged properly
-            // TODO: Assume slot size is multiple of 8 bytes
-            for (size_t i = 0; i < psl->slotSize / 8; i++) {
-                uint64_t offset = psl->offset + i*8;               
+            for (size_t i = 0; i < psl->slotSize; i = i + sizeof(void *)) {
+                uint64_t offset = psl->offset + i;
                 Root *root_ptr = (Root *)(rsp + offset);
                 Root root = *root_ptr;
                 int tag = getTag((TaggedPtr)root);
