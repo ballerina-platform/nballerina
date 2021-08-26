@@ -1,9 +1,9 @@
 @_bal_stack_guard = external global i8*
 declare void @_bal_panic(i64) noreturn cold
-declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
-declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
 declare {i64, i1} @_bal_float_to_int(double) nounwind readnone speculatable willreturn
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
+declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
@@ -23,8 +23,8 @@ define void @_B_main() {
   %12 = addrspacecast i8 addrspace(1)* %11 to i8*
   %13 = ptrtoint i8* %12 to i64
   %14 = and i64 %13, 2233785415175766016
-  %15 = icmp eq i64 %14, 504403158265495552
-  br i1 %15, label %25, label %28
+  %15 = icmp eq i64 %14, 576460752303423488
+  br i1 %15, label %25, label %29
 16:
   %17 = load i64, i64* %5
   call void @_bal_panic(i64 %17)
@@ -38,45 +38,34 @@ define void @_B_main() {
   %22 = ptrtoint i8* %21 to i64
   %23 = and i64 %22, 2233785415175766016
   %24 = icmp eq i64 %23, 504403158265495552
-  br i1 %24, label %42, label %47
+  br i1 %24, label %34, label %39
 25:
-  %26 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %11)
-  %27 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %26)
-  store i8 addrspace(1)* %27, i8 addrspace(1)** %2
-  br label %19
-28:
-  %29 = addrspacecast i8 addrspace(1)* %11 to i8*
-  %30 = ptrtoint i8* %29 to i64
-  %31 = and i64 %30, 2233785415175766016
-  %32 = icmp eq i64 %31, 576460752303423488
-  br i1 %32, label %33, label %37
-33:
-  %34 = call double @_bal_tagged_to_float(i8 addrspace(1)* %11)
-  %35 = call {i64, i1} @_bal_float_to_int(double %34)
-  %36 = extractvalue {i64, i1} %35, 1
-  br i1 %36, label %41, label %38
-37:
+  %26 = call double @_bal_tagged_to_float(i8 addrspace(1)* %11)
+  %27 = call {i64, i1} @_bal_float_to_int(double %26)
+  %28 = extractvalue {i64, i1} %27, 1
+  br i1 %28, label %33, label %30
+29:
   store i8 addrspace(1)* %11, i8 addrspace(1)** %2
   br label %19
-38:
-  %39 = extractvalue {i64, i1} %35, 0
-  %40 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %39)
-  store i8 addrspace(1)* %40, i8 addrspace(1)** %2
+30:
+  %31 = extractvalue {i64, i1} %27, 0
+  %32 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %31)
+  store i8 addrspace(1)* %32, i8 addrspace(1)** %2
   br label %19
-41:
+33:
   store i64 1027, i64* %5
   br label %16
-42:
-  %43 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %20)
-  store i64 %43, i64* %3
-  %44 = load i64, i64* %3
-  store i64 %44, i64* %i
-  %45 = load i64, i64* %i
-  %46 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %45)
-  call void @_Bio__println(i8 addrspace(1)* %46)
+34:
+  %35 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %20)
+  store i64 %35, i64* %3
+  %36 = load i64, i64* %3
+  store i64 %36, i64* %i
+  %37 = load i64, i64* %i
+  %38 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %37)
+  call void @_Bio__println(i8 addrspace(1)* %38)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
-47:
+39:
   store i64 1027, i64* %5
   br label %16
 }

@@ -2,9 +2,11 @@
 declare void @_bal_panic(i64) noreturn cold
 declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
+declare {i64, i1} @_bal_float_to_int(double) nounwind readnone speculatable willreturn
+declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
-declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 define void @_B_main() {
   %two48 = alloca i64
   %1 = alloca i8 addrspace(1)*
@@ -163,48 +165,72 @@ define internal void @_B_roundTrip(i64 %0) {
   %n = alloca i64
   %2 = alloca i1
   %3 = alloca i8 addrspace(1)*
-  %4 = alloca i64
-  %5 = alloca i8 addrspace(1)*
-  %6 = alloca i64
-  %7 = alloca i8
-  %8 = load i8*, i8** @_bal_stack_guard
-  %9 = icmp ult i8* %7, %8
-  br i1 %9, label %20, label %10
-10:
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i64
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i64
+  %8 = alloca i8
+  %9 = load i8*, i8** @_bal_stack_guard
+  %10 = icmp ult i8* %8, %9
+  br i1 %10, label %21, label %11
+11:
   store i64 %0, i64* %n
-  %11 = load i64, i64* %n
-  %12 = call i8 addrspace(1)* @_B_toAny(i64 %11)
-  store i8 addrspace(1)* %12, i8 addrspace(1)** %3
-  %13 = load i8 addrspace(1)*, i8 addrspace(1)** %3
-  %14 = addrspacecast i8 addrspace(1)* %13 to i8*
-  %15 = ptrtoint i8* %14 to i64
-  %16 = and i64 %15, 2233785415175766016
-  %17 = icmp eq i64 %16, 504403158265495552
-  br i1 %17, label %21, label %30
-18:
-  %19 = load i64, i64* %6
-  call void @_bal_panic(i64 %19)
-  unreachable
-20:
-  call void @_bal_panic(i64 9476)
+  %12 = load i64, i64* %n
+  %13 = call i8 addrspace(1)* @_B_toAny(i64 %12)
+  store i8 addrspace(1)* %13, i8 addrspace(1)** %3
+  %14 = load i8 addrspace(1)*, i8 addrspace(1)** %3
+  %15 = addrspacecast i8 addrspace(1)* %14 to i8*
+  %16 = ptrtoint i8* %15 to i64
+  %17 = and i64 %16, 2233785415175766016
+  %18 = icmp eq i64 %17, 576460752303423488
+  br i1 %18, label %28, label %32
+19:
+  %20 = load i64, i64* %7
+  call void @_bal_panic(i64 %20)
   unreachable
 21:
-  %22 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %13)
-  store i64 %22, i64* %4
-  %23 = load i64, i64* %n
-  %24 = load i64, i64* %4
-  %25 = icmp eq i64 %23, %24
-  store i1 %25, i1* %2
-  %26 = load i1, i1* %2
-  %27 = zext i1 %26 to i64
-  %28 = or i64 %27, 72057594037927936
-  %29 = getelementptr i8, i8 addrspace(1)* null, i64 %28
-  call void @_Bio__println(i8 addrspace(1)* %29)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %5
+  call void @_bal_panic(i64 9476)
+  unreachable
+22:
+  %23 = load i8 addrspace(1)*, i8 addrspace(1)** %4
+  %24 = addrspacecast i8 addrspace(1)* %23 to i8*
+  %25 = ptrtoint i8* %24 to i64
+  %26 = and i64 %25, 2233785415175766016
+  %27 = icmp eq i64 %26, 504403158265495552
+  br i1 %27, label %37, label %46
+28:
+  %29 = call double @_bal_tagged_to_float(i8 addrspace(1)* %14)
+  %30 = call {i64, i1} @_bal_float_to_int(double %29)
+  %31 = extractvalue {i64, i1} %30, 1
+  br i1 %31, label %36, label %33
+32:
+  store i8 addrspace(1)* %14, i8 addrspace(1)** %4
+  br label %22
+33:
+  %34 = extractvalue {i64, i1} %30, 0
+  %35 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %34)
+  store i8 addrspace(1)* %35, i8 addrspace(1)** %4
+  br label %22
+36:
+  store i64 9731, i64* %7
+  br label %19
+37:
+  %38 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %23)
+  store i64 %38, i64* %5
+  %39 = load i64, i64* %n
+  %40 = load i64, i64* %5
+  %41 = icmp eq i64 %39, %40
+  store i1 %41, i1* %2
+  %42 = load i1, i1* %2
+  %43 = zext i1 %42 to i64
+  %44 = or i64 %43, 72057594037927936
+  %45 = getelementptr i8, i8 addrspace(1)* null, i64 %44
+  call void @_Bio__println(i8 addrspace(1)* %45)
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6
   ret void
-30:
-  store i64 9731, i64* %6
-  br label %18
+46:
+  store i64 9731, i64* %7
+  br label %19
 }
 define internal i8 addrspace(1)* @_B_toAny(i64 %0) {
   %n = alloca i64
