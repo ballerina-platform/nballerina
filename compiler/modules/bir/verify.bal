@@ -23,7 +23,7 @@ class VerifyContext {
     }
 
     function err(err:Message msg) returns err:Semantic {
-        return err:semantic(msg, functionName=self.defn.symbol.identifier);
+        return err:semantic(msg, loc=err:location(self.defn.file), functionName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;

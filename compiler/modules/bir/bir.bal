@@ -3,6 +3,7 @@ import wso2/nballerina.err;
 
 public type SemType t:SemType;
 public type Position err:Position;
+public type File err:File;
 
 public type Module object {
     public function getId() returns ModuleId;
@@ -40,6 +41,8 @@ public type FunctionDefn readonly & record {|
     InternalSymbol symbol;
     # The signature of the function
     FunctionSignature signature;
+    # File in which the definition occurs
+    File file;
     # The position of the definition
     Position position;
 |};
