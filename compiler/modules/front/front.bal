@@ -42,7 +42,7 @@ class Module {
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
         s:FunctionDefn ast = self.functionDefnSource[i];
-        return codeGenFunction(self, ast.name, self.functionDefns[i].signature, ast.paramNames, ast.body);
+        return codeGenFunction(self, ast.file, ast.name, self.functionDefns[i].signature, ast.paramNames, ast.body);
     }
    
     public function getFunctionDefns() returns readonly & bir:FunctionDefn[] {
@@ -62,7 +62,7 @@ class Module {
 
 public function loadModule(t:Env env, string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
     string[] lines = check io:fileReadLines(filename);
-    s:ModulePart part = check s:parseModulePart(lines);
+    s:ModulePart part = check s:parseModulePart(lines, filename);
     ModuleTable mod = table [];
     check addModulePart(mod, part);
     check resolveTypes(env, mod);
@@ -85,13 +85,13 @@ function validEntryPoint(ModuleTable mod) returns err:Any? {
     s:ModuleLevelDefn? defn = mod["main"];
     if defn is s:FunctionDefn {
         if defn.vis != "public" {
-            return err:semantic(`${"main"} is not public`, pos=defn.pos);
+            return err:semantic(`${"main"} is not public`, s:defnLocation(defn));
         }
         if defn.paramNames.length() > 0 {
-            return err:unimplemented(`parameters for ${"main"} not yet implemented`, pos=defn.pos);
+            return err:unimplemented(`parameters for ${"main"} not yet implemented`, s:defnLocation(defn));
         }
         if (<bir:FunctionSignature>defn.signature).returnType !== t:NIL {
-            return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, pos=defn.pos);
+            return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, s:defnLocation(defn));
         }
     }
 }
@@ -106,8 +106,8 @@ function addModulePart(ModuleTable mod, s:ModulePart part) returns err:Semantic?
 }
 
 // This is old interface for showTypes
-public function typesFromString(string[] lines) returns [t:Env, map<t:SemType>]|err:Any {
-    s:ModulePart part = check s:parseModulePart(lines);
+public function typesFromString(string[] lines, string filename) returns [t:Env, map<t:SemType>]|err:Any {
+    s:ModulePart part = check s:parseModulePart(lines, filename);
     ModuleTable mod = table [];
     check addModulePart(mod, part);
     t:Env env = new;

@@ -82,14 +82,16 @@ type LoopContext record {|
 
 class CodeGenContext {
     final Module mod;
+    final s:SourceFile file;
     final bir:FunctionCode code;
     final string functionName;
     final t:SemType returnType;
     LoopContext? loopContext = ();
     private final string?[] registerVarNames = [];
 
-    function init(Module mod, string functionName, t:SemType returnType) {
+    function init(Module mod, s:SourceFile file, string functionName, t:SemType returnType) {
         self.mod = mod;
+        self.file = file;
         self.code = {};
         self.functionName = functionName;
         self.returnType = returnType;
@@ -113,13 +115,17 @@ class CodeGenContext {
     }
 
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, pos=pos, cause=cause, functionName=self.functionName);
+        return err:semantic(msg, loc=self.location(pos), cause=cause, functionName=self.functionName);
     }
 
-     function unimplementedErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Unimplemented {
-        return err:unimplemented(msg, pos=pos, cause=cause, functionName=self.functionName);
+    function unimplementedErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Unimplemented {
+        return err:unimplemented(msg, loc=self.location(pos), cause=cause, functionName=self.functionName);
     }
     
+    private function location(s:Position? pos) returns err:Location {
+        return err:location(self.file, pos);
+    }
+
     function pushLoopContext(bir:BasicBlock onBreak, bir:BasicBlock? onContinue) {
         LoopContext c = { onBreak, onContinue, enclosing: self.loopContext, startRegister: self.nextRegisterNumber()  };
         self.loopContext = c;
@@ -230,8 +236,8 @@ function addAssignments(int[] dest, int[] src, int excludeStart) {
     }
 }
 
-function codeGenFunction(Module mod, string functionName, bir:FunctionSignature signature, string[] paramNames, s:Stmt[] body) returns bir:FunctionCode|CodeGenError {
-    CodeGenContext cx = new(mod, functionName, signature.returnType);
+function codeGenFunction(Module mod, s:SourceFile file, string functionName, bir:FunctionSignature signature, string[] paramNames, s:Stmt[] body) returns bir:FunctionCode|CodeGenError {
+    CodeGenContext cx = new(mod, file, functionName, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Binding? bindings = ();
     foreach int i in 0 ..< paramNames.length() {
@@ -1029,7 +1035,7 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
             fieldPos[name] = pos;
         }
         else {
-            return err:semantic(`duplicate field ${name}`, pos=pos);
+            return cx.semanticErr(`duplicate field ${name}`, pos=pos);
         }
         bir:Operand operand;
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, value);

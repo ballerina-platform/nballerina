@@ -8,7 +8,7 @@ import wso2/nballerina.print.llvm;
 import ballerina/io;
 import ballerina/file;
 
-type CompileError err:Any?|io:Error;
+type CompileError err:Any|io:Error;
 
 public type Options record {|
     boolean testJsonTypes = false;
@@ -53,7 +53,7 @@ function validGcName(string? gcName) returns string|error? {
 }
 
 //  outputFilename of () means don't output anything
-function compileFile(string filename, string? gcName, *Options opts) returns CompileError {
+function compileFile(string filename, string? gcName, *Options opts) returns CompileError? {
     string? outputFileName = checkpanic chooseOutputFilename(filename, opts.outDir);
     bir:ModuleId id = {
        names: [filename],

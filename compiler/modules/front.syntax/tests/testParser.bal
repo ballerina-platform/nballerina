@@ -21,7 +21,7 @@ function testParser(string k, string rule, string[] subject, string[] expected) 
         return;
     }
 
-    err:Syntax|Word[] parsed = reduceToWords(rule, subject);
+    err:Syntax|Word[] parsed = reduceToWords(k, rule, subject);
     if k.includes("F") {
         if k.includes("V") {
             test:assertTrue(parsed is err:Syntax, "test marked as failing but parsed");
@@ -49,7 +49,8 @@ type SingleStringTokenizerTestCase [string, string];
     dataProvider: sourceFragments
 }
 function testTokenizer(string k, string[] lines) returns error? {
-    Tokenizer tok = new (lines);
+    SourceFile file = new(k);
+    Tokenizer tok = new (lines, file);
     while true {
         err:Syntax|Token? t = advance(tok, k, lines);
         if t is Token {
@@ -112,13 +113,14 @@ function tokenToString(Token t) returns string {
     return <string>t;
 }
 
-function reduceToWords(string rule, string[] fragment) returns err:Syntax|Word[] {
+function reduceToWords(string k, string rule, string[] fragment) returns err:Syntax|Word[] {
     Word[] w = [];
     if rule == "mod" {
-        modulePartToWords(w, check parseModulePart(fragment));
+        modulePartToWords(w, check parseModulePart(fragment, k));
     }
     else {
-        Tokenizer tok = new (fragment);
+        SourceFile file = new(k);
+        Tokenizer tok = new (fragment, file);
         check tok.advance();
         match rule {
             "expr" => {

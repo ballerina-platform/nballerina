@@ -6,16 +6,16 @@ import wso2/nballerina.types as t;
 
 public function showTypes(string filename) returns error? {
     string[] lines = check io:fileReadLines(filename);
-    string[] results = check subtypeRels(lines);
+    string[] results = check subtypeRels(lines, filename);
     foreach var line in results {
         io:println(line);
     }
     // io:println("Total BDDs ", bddGetCount());
 }
 
-function subtypeRels(string[] lines) returns string[]|error {
+function subtypeRels(string[] lines, string filename) returns string[]|error {
     
-    var [env, m] = check front:typesFromString(lines);
+    var [env, m] = check front:typesFromString(lines, filename);
 
     var tc = t:typeCheckContext(env);
 

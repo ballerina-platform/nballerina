@@ -6,6 +6,7 @@ public type Position err:Position;
 
 public type ModulePart record {|
     ImportDecl? importDecl;
+    SourceFile file;
     ModuleLevelDefn[] defns;
 |};
 
@@ -24,6 +25,7 @@ public type FunctionDefn record {|
     FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
+    SourceFile file;
     Position pos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
@@ -35,6 +37,7 @@ public type ConstDefn record {|
     InlineTypeDesc? td;
     Visibility vis;
     Expr expr;
+    SourceFile file;
     Position pos;
     ResolvedConst|false? resolved = ();    
 |};
@@ -315,6 +318,7 @@ public type TypeDefn record {|
     readonly string name;
     Visibility vis;
     TypeDesc td;
+    SourceFile file;
     Position pos;
     t:SemType? semType = ();
     int cycleDepth = -1;

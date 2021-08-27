@@ -2,10 +2,21 @@
 
 import wso2/nballerina.err;
 
-public function parseModulePart(string[] lines) returns ModulePart|err:Syntax {
-    Tokenizer tok = new (lines);
+public readonly class SourceFile {
+    *err:File;
+    private string fn;
+    public function init(string fn) {
+        self.fn = fn;
+    }
+    public function filename() returns string => self.fn;
+}
+
+public function parseModulePart(string[] lines, string filename) returns ModulePart|err:Syntax {
+    SourceFile file = new(filename);
+    Tokenizer tok = new (lines, file);
     check tok.advance();
     ModulePart part = {
+        file,
         defns: [],
         importDecl: check parseImportDecl(tok)
     };
@@ -15,8 +26,9 @@ public function parseModulePart(string[] lines) returns ModulePart|err:Syntax {
     return part;
 }
 
-public function parseExpression(string[] lines) returns Expr|err:Syntax {
-    Tokenizer tok = new (lines);
+public function parseExpression(string[] lines, string filename) returns Expr|err:Syntax {
+    SourceFile file = new(filename);
+    Tokenizer tok = new (lines, file);
     check tok.advance();
     Expr expr = check parseExpr(tok);
     if tok.current() != () {
@@ -80,7 +92,7 @@ function parseTypeDefinition(Tokenizer tok, Visibility vis) returns TypeDefn|err
         check tok.advance();
         TypeDesc td = check parseTypeDesc(tok);
         check tok.expect(";");
-        return { name, td, pos, vis };
+        return { name, td, pos, vis, file: tok.file };
     }
     return parseError(tok);
 }
@@ -101,7 +113,7 @@ function parseConstDefinition(Tokenizer tok, Visibility vis) returns ConstDefn|e
         check tok.expect("=");
         Expr expr = check parseInnerExpr(tok);
         check tok.expect(";");
-        return { td, name, expr, pos, vis };
+        return { td, name, expr, pos, vis, file: tok.file };
     }
     return parseError(tok);
 }
@@ -116,7 +128,7 @@ function parseFunctionDefinition(Tokenizer tok, Visibility vis) returns Function
         string[] paramNames = [];
         FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
         Stmt[] body = check parseStmtBlock(tok);
-        FunctionDefn defn = { name, vis, paramNames, typeDesc, pos, body };
+        FunctionDefn defn = { name, vis, paramNames, typeDesc, pos, body, file: tok.file };
         return defn;
     }
     return parseError(tok);
@@ -134,4 +146,8 @@ function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
         message += ": " + detail;
     }
     return tok.err(message);
+}
+
+public function defnLocation(ModuleLevelDefn defn) returns err:Location {
+    return err:location(defn.file, defn.pos);
 }

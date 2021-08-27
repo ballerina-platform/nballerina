@@ -13,13 +13,13 @@ class TestFoldContext {
         return ();
     }
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, pos=pos, cause=cause);
+        return err:semantic(msg, cause=cause);
     }
 }
 
 @test:Config{ dataProvider: validConstExprs }
 function testConstExpr(string src, SimpleConst expected) {
-    s:Expr parsed = checkpanic s:parseExpression([src]);
+    s:Expr parsed = checkpanic s:parseExpression([src], "<internal>");
     TestFoldContext cx = new;
     var result = foldExpr(cx, (), parsed);
     test:assertTrue(result is s:ConstValueExpr && result.value == expected, "got: " + (result is s:ConstValueExpr ? result.value.toString()  : "not constant"));

@@ -100,10 +100,13 @@ class Tokenizer {
     private int fragmentIndex = 0;
     private int tokenStartCodePointIndex = 0;
     private Mode mode = MODE_NORMAL;
+    final SourceFile file;
+
     Token? curTok = ();
 
-    function init(string[] lines) {
+    function init(string[] lines, SourceFile file) {
         self.lines = lines;
+        self.file = file;
     }
     
     function advance() returns err:Syntax? {
@@ -269,7 +272,7 @@ class Tokenizer {
     }
 
     function err(err:Message msg) returns err:Syntax {
-        return err:syntax(msg, self.currentPos());
+        return err:syntax(msg, loc=err:location(self.file, self.currentPos()));
     }
 
 }

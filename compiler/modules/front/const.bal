@@ -25,15 +25,17 @@ type FoldContext object {
 };
 
 class ConstFoldContext {
+    final s:SourceFile file;
     final string defnName;
     final ModuleTable mod;
-    function init(string defnName, ModuleTable mod) {
+    function init(s:SourceFile file, string defnName, ModuleTable mod) {
+        self.file = file;
         self.defnName = defnName;
         self.mod = mod;
     }
     
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, pos=pos, cause=cause, functionName=self.defnName);
+        return err:semantic(msg, loc=err:location(self.file, pos), cause=cause, functionName=self.defnName);
     }
 
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
@@ -54,14 +56,14 @@ class ConstFoldContext {
 function resolveConstDefn(ModuleTable mod, s:ConstDefn defn) returns s:ResolvedConst|FoldError {
     var resolved = defn.resolved;
     if resolved is false {
-        return err:semantic(`cycle in evaluating ${defn.name}`, defn.pos);
+        return err:semantic(`cycle in evaluating ${defn.name}`, s:defnLocation(defn));
     }
     else if !(resolved is ()) {
         return resolved;
     }
     else {
         defn.resolved = false;
-        ConstFoldContext cx = new ConstFoldContext(defn.name, mod);
+        ConstFoldContext cx = new ConstFoldContext(defn.file, defn.name, mod);
         s:InlineTypeDesc? td = defn.td;
         // JBUG remove cast and use == after beta 3
         t:SemType? expectedType = td === () ? () : s:resolveInlineTypeDesc(<s:InlineTypeDesc>td);
@@ -73,11 +75,11 @@ function resolveConstDefn(ModuleTable mod, s:ConstDefn defn) returns s:ResolvedC
                 return r;
             }
             else {
-                return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, defn.pos);
+                return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
             }
         }
         else {
-            return err:semantic(`initializer of ${defn.name} is not constant`, defn.pos);
+            return err:semantic(`initializer of ${defn.name} is not constant`, s:defnLocation(defn));
         }
     }
 }
