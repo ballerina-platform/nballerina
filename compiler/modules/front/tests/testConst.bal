@@ -12,7 +12,7 @@ class TestFoldContext {
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         return ();
     }
-    function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
+    function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
         return err:semantic(msg, pos=pos, cause=cause);
     }
 }

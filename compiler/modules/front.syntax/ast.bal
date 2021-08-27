@@ -2,7 +2,7 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.err;
 
-type Position err:Position;
+public type Position err:Position;
 
 public type ModulePart record {|
     ImportDecl? importDecl;

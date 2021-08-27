@@ -442,7 +442,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
     return llMod;
 }
 
-function buildPrologue(llvm:Builder builder, Scaffold scaffold, err:Position pos) {
+function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) {
     llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
     llvm:BasicBlock firstBlock = scaffold.basicBlock(0);
     builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(scaffold.stackGuard())),
@@ -675,7 +675,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
    
 }
 
-function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, err:Position pos) {
+function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, bir:Position pos) {
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errorBlock = scaffold.addBasicBlock();
     builder.condBr(builder.iCmp("eq", err, llvm:constInt("i64", 0)),
@@ -1242,12 +1242,12 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
     return err:unimplemented("unimplemented narrowing conversion required");
 }
 
-function buildConstPanicError(PanicIndex panicIndex, err:Position pos) returns llvm:Value {
+function buildConstPanicError(PanicIndex panicIndex, bir:Position pos) returns llvm:Value {
     // JBUG #31753 cast
     return llvm:constInt(LLVM_INT, <int>panicIndex | (pos.lineNumber << 8));
 }
 
-function buildPanicError(llvm:Builder builder, llvm:Value panicIndex, err:Position pos) returns llvm:Value {
+function buildPanicError(llvm:Builder builder, llvm:Value panicIndex, bir:Position pos) returns llvm:Value {
     return builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, pos.lineNumber << 8));
 }
 

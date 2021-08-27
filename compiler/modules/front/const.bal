@@ -19,7 +19,7 @@ type FoldError err:Semantic|err:Unimplemented;
 
 // This is for handling const definitions in the future
 type FoldContext object {
-    function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic;
+    function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
 };
@@ -32,7 +32,7 @@ class ConstFoldContext {
         self.mod = mod;
     }
     
-    function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
+    function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
         return err:semantic(msg, pos=pos, cause=cause, functionName=self.defnName);
     }
 

@@ -112,11 +112,11 @@ class CodeGenContext {
         return bir:createBasicBlock(self.code, name);
     }
 
-    function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
+    function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
         return err:semantic(msg, pos=pos, cause=cause, functionName=self.functionName);
     }
 
-     function unimplementedErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Unimplemented {
+     function unimplementedErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Unimplemented {
         return err:unimplemented(msg, pos=pos, cause=cause, functionName=self.functionName);
     }
     
@@ -217,7 +217,7 @@ class CodeGenFoldContext {
         }
     }
 
-    function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
+    function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
         return self.cx.semanticErr(msg, pos=pos, cause=cause);
     }
 }
@@ -1022,9 +1022,9 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
     string[] fieldNames= [];
-    map<err:Position> fieldPos = {};
+    map<s:Position> fieldPos = {};
     foreach var { pos, name, value } in fields {
-        err:Position? prevPos = fieldPos[name];
+        s:Position? prevPos = fieldPos[name];
         if prevPos == () {
             fieldPos[name] = pos;
         }
@@ -1225,7 +1225,7 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env
     return { result, block: curBlock };
 }
 
-function validArgumentCount(CodeGenContext cx, bir:FunctionRef func, int nSuppliedArgs, err:Position pos) returns CodeGenError? {
+function validArgumentCount(CodeGenContext cx, bir:FunctionRef func, int nSuppliedArgs, s:Position pos) returns CodeGenError? {
     int nExpectedArgs = func.signature.paramTypes.length();
     if nSuppliedArgs == nExpectedArgs {
         return ();

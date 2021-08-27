@@ -36,7 +36,7 @@ function resolveTypes(t:Env env, ModuleTable mod) returns err:Semantic|err:Unimp
     }
 }
 
-function resolveFunctionSignature(t:Env env, ModuleTable mod, s:FunctionTypeDesc td, err:Position pos) returns bir:FunctionSignature|err:Semantic|err:Unimplemented {
+function resolveFunctionSignature(t:Env env, ModuleTable mod, s:FunctionTypeDesc td, s:Position pos) returns bir:FunctionSignature|err:Semantic|err:Unimplemented {
     t:SemType[] params = [];
     // JBUG if this is done with a select, then it gets a bad, sad at runtime if the check gets an error
     foreach var x in td.args {
@@ -46,7 +46,7 @@ function resolveFunctionSignature(t:Env env, ModuleTable mod, s:FunctionTypeDesc
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
 
-function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, s:TypeDesc td, err:Position pos) returns t:SemType|err:Semantic|err:Unimplemented {
+function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, s:TypeDesc td, s:Position pos) returns t:SemType|err:Semantic|err:Unimplemented {
     t:SemType ty = check resolveTypeDesc(env, mod, 0, td);
     if ty is t:UniformTypeBitSet && t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) {
         return ty;
