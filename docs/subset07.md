@@ -5,11 +5,11 @@
 * Only values allowed are of basic type nil, boolean, int, float, string, list, mapping and error.
 * Type descriptors:
    * predefined basic type name: `boolean`, `float`, `int`, `string`, `error`
-   * optional type: `T?` where T is a predefined basic type name
-   * union of predefined basic type names and optional types e.g. `int|string?`
    * `any` type
-   * `any[]`
-   * `map<any>`.
+   * optional type: `T?` where T is one of the above types
+   * union of the above types e.g. `int|string?`
+   * `map<M>` where M any of the above types
+   * `M[]` where `M` is either a type name `T` or `T?`, or a parenthesized union e.g. `(any|error)[]`
 * At module level
    * function definitions
       * no default arguments
@@ -23,7 +23,7 @@
    * assignment
       * to variable `v = E;`
       * to member of a list or mapping `v[E1] = E2;`
-      * compound assignment to a variable `v op= E`
+      * compound assignment `op=`
    * `return` statement
    * `if`/`else` statements
    * `while` statement
@@ -67,21 +67,29 @@ module-decl = function-defn | const-decl
 function-defn = ["public"] "function" identifier signature stmt-block
 signature = "(" [param-list] ")" [ "returns" type-desc ]
 
-const-decl = ["public"] "const" [basic-type-name] identifier "=" const-expr ";"
+const-decl = ["public"] "const" [builtin-type-name] identifier "=" const-expr ";"
 
-type-desc = union-type-desc | array-type-desc | map-type-desc | any-type-desc
+type-desc = union-type-desc | array-type-desc | map-type-desc 
 
 union-type-desc =
   optional-type-desc
   | union-type-desc "|" optional-type-desc
 
-optional-type-desc = basic-type-name ["?"]
+union-type-desc =
+  optional-type-desc
+  | union-type-desc "|" optional-type-desc
 
-basic-type-name = "boolean" | "int" | "float" |  "string" | "error"
+optional-type-desc = builtin-type-name [ "?" ]
 
-array-type-desc = any-type-desc "[" "]"
-map-type-desc = "map" "<" any-type-desc ">"
-any-type-desc = "any"
+builtin-type-name = "any" | "boolean" | "int" | "float" | "string" | "error"
+
+array-type-desc = array-member-type-desc "[" "]"
+
+array-member-type-desc =
+  optional-type-desc
+  | "(" union-type-desc ")"
+
+map-type-desc = "map" "<" union-type-desc ">"
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -110,7 +118,7 @@ call-stmt =
 
 assign-stmt = lvexpr "=" expression ";"
 
-compound-assign-stmt = identifier CompoundAssignmentOperator expression ";"
+compound-assign-stmt = lvexpr CompoundAssignmentOperator expression ";"
 
 lvexpr =
    identifier
@@ -304,6 +312,8 @@ The following restrictions apply to imported modules:
    * `check` and `checkpanic` expressions
    * `panic` statement
    * `error:message` langlib function
+* array and map types can specify the type of members
+   * LHS of compound assignment statement allows member access
 
 ## Implemented spec changes since 2021R1
 
