@@ -20,7 +20,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     match cur {
         [IDENTIFIER, var identifier] => {
-            err:Position pos = tok.currentPos();
+            Position pos = tok.currentPos();
             check tok.advance();
             return finishIdentifierStmt(tok, identifier, pos);
         }
@@ -69,7 +69,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 }
 
 
-function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos) returns Stmt|err:Syntax {
+function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     if cur == "=" {
         VarRefExpr lValue = { varName: identifier };
@@ -91,7 +91,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
     }
     else if cur == "[" {
         VarRefExpr varRef = { varName: identifier };
-        err:Position bracketPos = tok.currentPos();
+        Position bracketPos = tok.currentPos();
         check tok.advance();
         Expr index = check parseInnerExpr(tok);
         check tok.expect("]");
@@ -274,7 +274,7 @@ function parseMatchPattern(Tokenizer tok) returns MatchPattern|err:Syntax {
         check tok.advance();
         return cur;
     }
-    err:Position pos = tok.currentPos();
+    Position pos = tok.currentPos();
     SimpleConstExpr expr = check parseSimpleConstExpr(tok);
     return { expr, pos};
 }

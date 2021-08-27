@@ -73,7 +73,7 @@ function parseModuleDecl(Tokenizer tok) returns ModuleLevelDefn|err:Syntax {
 
 function parseTypeDefinition(Tokenizer tok, Visibility vis) returns TypeDefn|err:Syntax {
     check tok.advance();
-    err:Position pos = tok.currentPos();
+    Position pos = tok.currentPos();
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
         string name = t[1];
@@ -87,7 +87,7 @@ function parseTypeDefinition(Tokenizer tok, Visibility vis) returns TypeDefn|err
 
 function parseConstDefinition(Tokenizer tok, Visibility vis) returns ConstDefn|err:Syntax {
     check tok.advance();
-    err:Position pos = tok.currentPos();
+    Position pos = tok.currentPos();
     Token? t = tok.current();
     InlineBasicTypeDesc? td = ();
     if t is InlineBasicTypeDesc {
@@ -108,7 +108,7 @@ function parseConstDefinition(Tokenizer tok, Visibility vis) returns ConstDefn|e
 
 function parseFunctionDefinition(Tokenizer tok, Visibility vis) returns FunctionDefn|err:Syntax {
     check tok.advance();
-    err:Position pos = tok.currentPos();
+    Position pos = tok.currentPos();
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
         string name = t[1];

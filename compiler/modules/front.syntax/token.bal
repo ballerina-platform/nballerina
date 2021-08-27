@@ -224,7 +224,7 @@ class Tokenizer {
         self.mode = m;
     }
 
-    function currentPos() returns err:Position {
+    function currentPos() returns Position {
         return {
             lineNumber: self.lineIndex,
             indexInLine: self.tokenStartCodePointIndex

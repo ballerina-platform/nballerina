@@ -2,6 +2,7 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.err;
 
+type Position err:Position;
 
 public type ModulePart record {|
     ImportDecl? importDecl;
@@ -23,7 +24,7 @@ public type FunctionDefn record {|
     FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
-    err:Position pos;
+    Position pos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
 |};
@@ -34,7 +35,7 @@ public type ConstDefn record {|
     InlineTypeDesc? td;
     Visibility vis;
     Expr expr;
-    err:Position pos;
+    Position pos;
     ResolvedConst|false? resolved = ();    
 |};
 
@@ -53,7 +54,7 @@ public type CompoundAssignStmt record {|
     VarRefExpr lValue;
     Expr expr;
     BinaryArithmeticOp|BinaryBitwiseOp op; 
-    err:Position pos;
+    Position pos;
 |};
 
 // L-value expression
@@ -85,7 +86,7 @@ const WildcardMatchPattern = "_";
 
 public type ConstPattern record {|
     SimpleConstExpr expr;
-    err:Position pos;
+    Position pos;
 |};
 
 public type WhileStmt record {|
@@ -143,7 +144,7 @@ public type BinaryRelationalExpr record {|
 public type BinaryArithmeticExpr record {|
     *BinaryExprBase;
     BinaryArithmeticOp arithmeticOp;
-    err:Position pos;
+    Position pos;
 |};
 
 public type BinaryBitwiseExpr record {|
@@ -154,7 +155,7 @@ public type BinaryBitwiseExpr record {|
 public type UnaryExpr record {|
     UnaryExprOp op;
     Expr operand;
-    err:Position pos;
+    Position pos;
 |};
 
 public type SimpleConstNegateExpr record {|
@@ -169,14 +170,14 @@ public type FunctionCallExpr record {|
     string funcName;
     Expr[] args;
     // We can get public type/defn mismatch errors here
-    err:Position pos;
+    Position pos;
 |};
 
 public type MethodCallExpr record {|
     string methodName;
     Expr target;
     Expr[] args;
-    err:Position pos;
+    Position pos;
 |};
 
 public type ListConstructorExpr record {|
@@ -191,7 +192,7 @@ public type MappingConstructorExpr record {|
 |};
 
 public type Field record {|
-    err:Position pos; // position of name for now
+    Position pos; // position of name for now
     string name;
     Expr value;
 |};
@@ -199,14 +200,14 @@ public type Field record {|
 public type MemberAccessExpr record {|
     Expr container;
     Expr index;
-    err:Position pos;
+    Position pos;
 |};
 
 // JBUG gets a bad, sad if this uses *MemberAccessExpr and overrides container
 public type MemberAccessLExpr record {|
     VarRefExpr container;
     Expr index;
-    err:Position pos;
+    Position pos;
 |};
 
 public type RangeExpr record {|
@@ -221,7 +222,7 @@ public type VarRefExpr record {|
 public type TypeCastExpr record {|
     InlineTypeDesc td;
     Expr operand;
-    err:Position pos;
+    Position pos;
     t:SemType semType;
 |};
 
@@ -264,7 +265,7 @@ public type IntLiteralBase 10|16;
 public type IntLiteralExpr record {|
     IntLiteralBase base;
     string digits;
-    err:Position pos;
+    Position pos;
 |};
 
 const FLOAT_TYPE_SUFFIX = "f";
@@ -273,7 +274,7 @@ public type FpLiteralExpr record {|
     // This is the literal without the public type suffix
     string untypedLiteral;
     FLOAT_TYPE_SUFFIX? typeSuffix;
-    err:Position pos;
+    Position pos;
 |};
 
 // Types
@@ -314,7 +315,7 @@ public type TypeDefn record {|
     readonly string name;
     Visibility vis;
     TypeDesc td;
-    err:Position pos;
+    Position pos;
     t:SemType? semType = ();
     int cycleDepth = -1;
 |};
@@ -361,7 +362,7 @@ public type BinaryTypeDesc record {|
 
 public type TypeDescRef record {|
     string ref;
-    err:Position pos;
+    Position pos;
 |};
 
 public type SingletonTypeDesc record {|

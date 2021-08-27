@@ -205,7 +205,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             return parseNumericLiteralTypeDesc(tok, ());
         }
         "-" => {
-            err:Position signPos = tok.currentPos();
+            Position signPos = tok.currentPos();
             check tok.advance();
             return parseNumericLiteralTypeDesc(tok, signPos);
         }
@@ -226,7 +226,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 // we don't have what we need to create a context.
 // Another approach would be to have a kind of TypeDesc that refers to an NumericLiteralExpr and then convert in resolveTypes.
 // XXX Revisit when floats (and maybe decimals) are fully incorporated in the front-end.
-function parseNumericLiteralTypeDesc(Tokenizer tok, err:Position? signPos = ()) returns SingletonTypeDesc|err:Syntax {
+function parseNumericLiteralTypeDesc(Tokenizer tok, Position? signPos = ()) returns SingletonTypeDesc|err:Syntax {
     NumericLiteralExpr expr = check parseNumericLiteralExpr(tok);
     if expr is FpLiteralExpr {
         var f = float:fromString(expr.untypedLiteral);

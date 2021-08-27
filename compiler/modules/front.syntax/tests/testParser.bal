@@ -53,7 +53,7 @@ function testTokenizer(string k, string[] lines) returns error? {
     while true {
         err:Syntax|Token? t = advance(tok, k, lines);
         if t is Token {
-            err:Position pos = tok.currentPos();
+            Position pos = tok.currentPos();
             string src = lines[pos.lineNumber - 1];
             int tStart = pos.indexInLine;
             string tStr = tokenToString(t);
