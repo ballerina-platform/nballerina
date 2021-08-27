@@ -109,7 +109,7 @@ typedef GC struct Mapping {
 } *MappingPtr;
 
 typedef GC struct Error {
-    TaggedPtr msg;
+    TaggedPtr message;
     int64_t lineNumber;
 } *ErrorPtr;
 
@@ -170,6 +170,7 @@ extern UntypedPtr _bal_alloc(uint64_t nBytes);
 extern NORETURN void _bal_panic(Error err);
 
 extern void _Bio__println(TaggedPtr p);
+extern TaggedPtr _Berror__message(TaggedPtr p);
 
 // precondition is that both strings are on the heap and the pointers are not ==
 extern READONLY bool _bal_string_heap_eq(TaggedPtr tp1, TaggedPtr tp2);
@@ -191,8 +192,7 @@ extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr
 extern Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
-extern TaggedPtr _bal_error_construct(TaggedPtr msg, int64_t lineNumber);
-extern TaggedPtr _bal_get_error_msg(TaggedPtr error);
+extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
 
 static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;

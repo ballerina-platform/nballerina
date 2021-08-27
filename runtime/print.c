@@ -75,12 +75,13 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
             emyg_dtoa_non_special(d, buf);
             fprintf(fp, "%s", buf);
             break;
-        case TAG_ERROR:
+        case TAG_ERROR: {
             fputs("error(", fp);
             ErrorPtr ep = taggedToPtr(p);
-            printTagged(fp, ep->msg, STYLE_INFORMAL, NULL);
+            printTagged(fp, ep->message, STYLE_INFORMAL, NULL);
             fputs(")", fp);
             break;
+        }
         case TAG_LIST_RW:
             if (stackContains(stackPtr, p)) {
                 fputs("...", fp);
