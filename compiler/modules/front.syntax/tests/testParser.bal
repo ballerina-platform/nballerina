@@ -54,9 +54,9 @@ function testTokenizer(string k, string[] lines) returns error? {
     while true {
         err:Syntax|Token? t = advance(tok, k, lines);
         if t is Token {
-            Position pos = tok.currentPos();
-            string src = lines[pos.lineNumber - 1];
-            int tStart = pos.indexInLine;
+            err:LineColumn lc = file.lineColumn(tok.currentPos());
+            string src = lines[lc[0] - 1];
+            int tStart = lc[1];
             string tStr = tokenToString(t);
             string srcAtPos = src.substring(tStart, tStart + tStr.length());
             if t is [HEX_INT_LITERAL, string] || t is [DECIMAL_FP_NUMBER, string, "f"?] {

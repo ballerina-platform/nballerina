@@ -2,15 +2,6 @@
 
 import wso2/nballerina.err;
 
-public readonly class SourceFile {
-    *err:File;
-    private string fn;
-    public function init(string fn) {
-        self.fn = fn;
-    }
-    public function filename() returns string => self.fn;
-}
-
 public function parseModulePart(string[] lines, string filename) returns ModulePart|err:Syntax {
     SourceFile file = new(filename);
     Tokenizer tok = new (lines, file);

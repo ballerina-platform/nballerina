@@ -228,10 +228,7 @@ class Tokenizer {
     }
 
     function currentPos() returns Position {
-        return {
-            lineNumber: self.lineIndex,
-            indexInLine: self.tokenStartCodePointIndex
-        };
+        return createPosition(self.lineIndex, self.tokenStartCodePointIndex);
     }
 
     private function getFragment() returns string {
@@ -275,4 +272,21 @@ class Tokenizer {
         return err:syntax(msg, loc=err:location(self.file, self.currentPos()));
     }
 
+}
+
+function createPosition(int line, int column) returns Position {
+    return (line << 32) | column;
+}
+
+public readonly class SourceFile {
+    *err:File;
+    private string fn;
+    public function init(string fn) {
+        self.fn = fn;
+    }
+    public function filename() returns string => self.fn;
+
+    public function lineColumn(Position pos) returns err:LineColumn {
+        return [pos >> 32, pos & 0xFFFFFFFF];
+    }
 }

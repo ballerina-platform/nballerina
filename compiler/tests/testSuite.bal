@@ -64,7 +64,8 @@ function compileErrorLineNumber(CompileError err) returns int? {
     else {
         // JBUG #31334 cast needed
         err:Detail detail = <err:Detail>err.detail();
-        return detail.location?.startPos?.lineNumber;
+        err:LineColumn? lc = detail.location?.startPos;
+        return lc == () ? () : lc[0];
     }
 }
 

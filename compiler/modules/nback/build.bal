@@ -309,6 +309,7 @@ type Module record {|
 
 class Scaffold {
     private final Module mod;
+    private final bir:File file;
     private final llvm:FunctionDefn llFunc;
 
     // Representation for each BIR register
@@ -325,6 +326,7 @@ class Scaffold {
 
     function init(Module mod, llvm:FunctionDefn llFunc, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.mod = mod;
+        self.file = defn.file;
         self.llFunc = llFunc;
         self.birBlocks = code.blocks;
         final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType);
@@ -401,6 +403,10 @@ class Scaffold {
         bir:Insn catchInsn = self.birBlocks[<bir:Label>self.onPanicLabel].insns[0];
         return self.address((<bir:CatchInsn>catchInsn).result);
     }
+
+    function lineNumber(bir:Position pos) returns int {
+       return self.file.lineColumn(pos)[0];
+    }
 }
 
 public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
@@ -448,7 +454,7 @@ function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos
     builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(scaffold.stackGuard())),
                    overflowBlock, firstBlock);
     builder.positionAtEnd(overflowBlock);
-    buildPanic(builder, scaffold, buildConstPanicError(PANIC_STACK_OVERFLOW, pos));
+    buildPanic(builder, scaffold, buildConstPanicError(scaffold, PANIC_STACK_OVERFLOW, pos));
     builder.positionAtEnd(firstBlock);
     scaffold.saveParams(builder);
 }
@@ -653,7 +659,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
                    continueBlock,
                    outOfBoundsBlock);
     builder.positionAtEnd(outOfBoundsBlock);
-    builder.store(buildConstPanicError(PANIC_INDEX_OUT_OF_BOUNDS, insn.position), scaffold.panicAddress());
+    builder.store(buildConstPanicError(scaffold, PANIC_INDEX_OUT_OF_BOUNDS, insn.position), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
     // array is a pointer to the array
@@ -682,7 +688,7 @@ function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err
                    continueBlock,
                    errorBlock);
     builder.positionAtEnd(errorBlock);
-    builder.store(buildPanicError(builder, err, pos), scaffold.panicAddress());
+    builder.store(buildPanicError(builder, scaffold, err, pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
 }
@@ -785,7 +791,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
         builder.condBr(builder.extractValue(resultWithOverflow, 1), overflowBlock, continueBlock);
         builder.positionAtEnd(overflowBlock);
-        builder.store(buildConstPanicError(PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
+        builder.store(buildConstPanicError(scaffold, PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
         builder.br(scaffold.getOnPanic());
         builder.positionAtEnd(continueBlock);
         result = builder.extractValue(resultWithOverflow, 0);
@@ -795,7 +801,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
         builder.condBr(builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, 0)), zeroDivisorBlock, continueBlock);
         builder.positionAtEnd(zeroDivisorBlock);
-        builder.store(buildConstPanicError(PANIC_DIVIDE_BY_ZERO, insn.position), scaffold.panicAddress());
+        builder.store(buildConstPanicError(scaffold, PANIC_DIVIDE_BY_ZERO, insn.position), scaffold.panicAddress());
         builder.br(scaffold.getOnPanic());
         builder.positionAtEnd(continueBlock);
         continueBlock = scaffold.addBasicBlock();
@@ -809,7 +815,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:IntArithmeticSignedOp op;
         if insn.op == "/" {
             op = "sdiv";
-            builder.store(buildConstPanicError(PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
+            builder.store(buildConstPanicError(scaffold, PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
             builder.br(scaffold.getOnPanic());
         }
         else {
@@ -1124,7 +1130,7 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
         builder.store(tagged, scaffold.address(insn.result));
     }
     builder.positionAtEnd(castFailBlock);
-    builder.store(buildConstPanicError(PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
+    builder.store(buildConstPanicError(scaffold, PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
 }
@@ -1168,7 +1174,7 @@ function buildConvertFloatToInt(llvm:Builder builder, Scaffold scaffold, llvm:Va
     llvm:BasicBlock errBlock = scaffold.addBasicBlock();
     builder.condBr(builder.extractValue(resultWithErr, 1), errBlock, continueBlock);
     builder.positionAtEnd(errBlock);
-    builder.store(buildConstPanicError(PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
+    builder.store(buildConstPanicError(scaffold, PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
     llvm:Value result = builder.extractValue(resultWithErr, 0);
@@ -1242,13 +1248,13 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
     return err:unimplemented("unimplemented narrowing conversion required");
 }
 
-function buildConstPanicError(PanicIndex panicIndex, bir:Position pos) returns llvm:Value {
+function buildConstPanicError(Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:Value {
     // JBUG #31753 cast
-    return llvm:constInt(LLVM_INT, <int>panicIndex | (pos.lineNumber << 8));
+    return llvm:constInt(LLVM_INT, <int>panicIndex | (scaffold.lineNumber(pos) << 8));
 }
 
-function buildPanicError(llvm:Builder builder, llvm:Value panicIndex, bir:Position pos) returns llvm:Value {
-    return builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, pos.lineNumber << 8));
+function buildPanicError(llvm:Builder builder, Scaffold scaffold, llvm:Value panicIndex, bir:Position pos) returns llvm:Value {
+    return builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, scaffold.lineNumber(pos) << 8));
 }
 
 function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {
