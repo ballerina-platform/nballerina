@@ -39,7 +39,7 @@ $(BCLIB): $(BCS)
 
 %.bc: %.c tagged_inline.bc
 	set -o pipefail; \
-	$(CLANG) -c -O2 -emit-llvm -o - $< | \
+	$(CLANG) -c $(CFLAGS) -emit-llvm -o - $< | \
 	$(LLVM_LINK) tagged_inline.bc - -o - -S | \
 	sed -e '/define .*@_bal_tagged_to_ptr/s/^define /define linkonce_odr /' | \
 	$(OPT) -O2 - -o - -S | \

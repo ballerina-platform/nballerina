@@ -3,6 +3,7 @@
 #include <inttypes.h>
 
 #include "tag.h"
+#include "panic.h"
 #define TAG_MASK 0xFF
 #define UT_MASK 0x1F
 #define TAG_SHIFT 56
@@ -23,6 +24,7 @@
 #define READONLY __attribute__((pure))
 // LLVM readnone attribute corresponds to clang const
 #define READNONE __attribute__((const))
+#define ALIGNED(n) __attribute__((aligned(n)))
 #else
 #define NODEREF /* as nothing */
 #define NORETURN /* as nothing */
@@ -30,6 +32,7 @@
 #define COLD /* as nothing */
 #define READONLY /* as nothing */
 #define READNONE /* as nothing */
+#define ALIGNED(n) /* as nothing */
 #endif
 
 #define likely(x) __builtin_expect((x), 1)
@@ -50,8 +53,10 @@ typedef GC void *UntypedPtr;
 typedef GC int64_t *IntPtr;
 typedef GC double *FloatPtr;
 
-// An error is currently represented as int with the error code in the lo byte
-typedef uint64_t Error;
+typedef int PanicCode;
+// An internally-generated panic is currently represented as int with the error code in the lo byte
+// and line number right-shifted 8.
+typedef uint64_t PackedPanic;
 
 typedef struct {
     int64_t length;
@@ -167,7 +172,7 @@ typedef struct {
 // Don't declare functions here if they are balrt_inline.c
 
 extern UntypedPtr _bal_alloc(uint64_t nBytes);
-extern NORETURN void _bal_panic(Error err);
+extern NORETURN void _bal_panic(TaggedPtr tp);
 
 extern void _Bio__println(TaggedPtr p);
 extern TaggedPtr _Berror__message(TaggedPtr p);
@@ -183,16 +188,18 @@ extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoin
 #define TAGGED_PTR_SHIFT 3
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
-extern Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
+extern PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
 
 #define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
 
 extern TaggedPtr _bal_mapping_construct(int64_t capacity);
 extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
-extern Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
+extern PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
+// Returns an error value
+extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
 
 static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;
