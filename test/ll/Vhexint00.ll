@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
@@ -9,7 +10,7 @@ define void @_B_main() {
   %answers = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
-  %4 = alloca i64
+  %4 = alloca i8 addrspace(1)*
   %5 = alloca i8
   %6 = load i8*, i8** @_bal_stack_guard
   %7 = icmp ult i8* %5, %6
@@ -45,25 +46,27 @@ define void @_B_main() {
   %28 = getelementptr {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %27, i64 0, i32 0
   %29 = load i64, i64 addrspace(1)* %28, align 8
   %30 = icmp ult i64 1, %29
-  br i1 %30, label %34, label %40
+  br i1 %30, label %35, label %41
 31:
-  %32 = load i64, i64* %4
-  call void @_bal_panic(i64 %32)
+  %32 = load i8 addrspace(1)*, i8 addrspace(1)** %4
+  call void @_bal_panic(i8 addrspace(1)* %32)
   unreachable
 33:
-  call void @_bal_panic(i64 772)
+  %34 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %34)
   unreachable
-34:
-  %35 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %27, i64 0, i32 2
-  %36 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %35, align 8
-  %37 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %36, i64 0, i64 1
-  %38 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %37, align 8
-  store i8 addrspace(1)* %38, i8 addrspace(1)** %2
-  %39 = load i8 addrspace(1)*, i8 addrspace(1)** %2
-  call void @_Bio__println(i8 addrspace(1)* %39)
+35:
+  %36 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %27, i64 0, i32 2
+  %37 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %36, align 8
+  %38 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %37, i64 0, i64 1
+  %39 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %38, align 8
+  store i8 addrspace(1)* %39, i8 addrspace(1)** %2
+  %40 = load i8 addrspace(1)*, i8 addrspace(1)** %2
+  call void @_Bio__println(i8 addrspace(1)* %40)
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
   ret void
-40:
-  store i64 1285, i64* %4
+41:
+  %42 = call i8 addrspace(1)* @_bal_panic_construct(i64 1285)
+  store i8 addrspace(1)* %42, i8 addrspace(1)** %4
   br label %31
 }

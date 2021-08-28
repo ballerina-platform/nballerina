@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
@@ -56,7 +57,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %10
   ret void
 34:
-  call void @_bal_panic(i64 772)
+  %35 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %35)
   unreachable
 }
 define internal i64 @_B_foo(i8 addrspace(1)* %0) {
@@ -69,7 +71,7 @@ define internal i64 @_B_foo(i8 addrspace(1)* %0) {
   %v.2 = alloca i64
   %v.3 = alloca i64
   %6 = alloca i64
-  %7 = alloca i64
+  %7 = alloca i8 addrspace(1)*
   %8 = alloca i8
   %9 = load i8*, i8** @_bal_stack_guard
   %10 = icmp ult i8* %8, %9
@@ -104,7 +106,7 @@ clause.1:
   %27 = load i64, i64* %v.3
   %28 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 %27)
   %29 = extractvalue {i64, i1} %28, 1
-  br i1 %29, label %43, label %40
+  br i1 %29, label %44, label %41
 pattern.0:
   %30 = load i64, i64* %v.1
   %31 = icmp eq i64 %30, 2
@@ -122,18 +124,20 @@ pattern.2:
 36:
   ret i64 0
 37:
-  %38 = load i64, i64* %7
-  call void @_bal_panic(i64 %38)
+  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %7
+  call void @_bal_panic(i8 addrspace(1)* %38)
   unreachable
 39:
-  call void @_bal_panic(i64 2820)
+  %40 = call i8 addrspace(1)* @_bal_panic_construct(i64 2820)
+  call void @_bal_panic(i8 addrspace(1)* %40)
   unreachable
-40:
-  %41 = extractvalue {i64, i1} %28, 0
-  store i64 %41, i64* %6
-  %42 = load i64, i64* %6
-  ret i64 %42
-43:
-  store i64 4609, i64* %7
+41:
+  %42 = extractvalue {i64, i1} %28, 0
+  store i64 %42, i64* %6
+  %43 = load i64, i64* %6
+  ret i64 %43
+44:
+  %45 = call i8 addrspace(1)* @_bal_panic_construct(i64 4609)
+  store i8 addrspace(1)* %45, i8 addrspace(1)** %7
   br label %37
 }

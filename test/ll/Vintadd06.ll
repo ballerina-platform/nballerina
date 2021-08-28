@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
@@ -43,7 +44,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
   ret void
 23:
-  call void @_bal_panic(i64 772)
+  %24 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %24)
   unreachable
 }
 define internal i64 @_B_add(i64 %0, i64 %1, i64 %2, i64 %3) {
@@ -54,7 +56,7 @@ define internal i64 @_B_add(i64 %0, i64 %1, i64 %2, i64 %3) {
   %5 = alloca i64
   %6 = alloca i64
   %7 = alloca i64
-  %8 = alloca i64
+  %8 = alloca i8 addrspace(1)*
   %9 = alloca i8
   %10 = load i8*, i8** @_bal_stack_guard
   %11 = icmp ult i8* %9, %10
@@ -68,42 +70,46 @@ define internal i64 @_B_add(i64 %0, i64 %1, i64 %2, i64 %3) {
   %14 = load i64, i64* %b
   %15 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %13, i64 %14)
   %16 = extractvalue {i64, i1} %15, 1
-  br i1 %16, label %26, label %20
+  br i1 %16, label %27, label %21
 17:
-  %18 = load i64, i64* %8
-  call void @_bal_panic(i64 %18)
+  %18 = load i8 addrspace(1)*, i8 addrspace(1)** %8
+  call void @_bal_panic(i8 addrspace(1)* %18)
   unreachable
 19:
-  call void @_bal_panic(i64 3076)
+  %20 = call i8 addrspace(1)* @_bal_panic_construct(i64 3076)
+  call void @_bal_panic(i8 addrspace(1)* %20)
   unreachable
-20:
-  %21 = extractvalue {i64, i1} %15, 0
-  store i64 %21, i64* %5
-  %22 = load i64, i64* %5
-  %23 = load i64, i64* %c
-  %24 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %22, i64 %23)
-  %25 = extractvalue {i64, i1} %24, 1
-  br i1 %25, label %33, label %27
-26:
-  store i64 3329, i64* %8
-  br label %17
+21:
+  %22 = extractvalue {i64, i1} %15, 0
+  store i64 %22, i64* %5
+  %23 = load i64, i64* %5
+  %24 = load i64, i64* %c
+  %25 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %23, i64 %24)
+  %26 = extractvalue {i64, i1} %25, 1
+  br i1 %26, label %35, label %29
 27:
-  %28 = extractvalue {i64, i1} %24, 0
-  store i64 %28, i64* %6
-  %29 = load i64, i64* %6
-  %30 = load i64, i64* %d
-  %31 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %29, i64 %30)
-  %32 = extractvalue {i64, i1} %31, 1
-  br i1 %32, label %37, label %34
-33:
-  store i64 3329, i64* %8
+  %28 = call i8 addrspace(1)* @_bal_panic_construct(i64 3329)
+  store i8 addrspace(1)* %28, i8 addrspace(1)** %8
   br label %17
-34:
-  %35 = extractvalue {i64, i1} %31, 0
-  store i64 %35, i64* %7
-  %36 = load i64, i64* %7
-  ret i64 %36
+29:
+  %30 = extractvalue {i64, i1} %25, 0
+  store i64 %30, i64* %6
+  %31 = load i64, i64* %6
+  %32 = load i64, i64* %d
+  %33 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %31, i64 %32)
+  %34 = extractvalue {i64, i1} %33, 1
+  br i1 %34, label %40, label %37
+35:
+  %36 = call i8 addrspace(1)* @_bal_panic_construct(i64 3329)
+  store i8 addrspace(1)* %36, i8 addrspace(1)** %8
+  br label %17
 37:
-  store i64 3329, i64* %8
+  %38 = extractvalue {i64, i1} %33, 0
+  store i64 %38, i64* %7
+  %39 = load i64, i64* %7
+  ret i64 %39
+40:
+  %41 = call i8 addrspace(1)* @_bal_panic_construct(i64 3329)
+  store i8 addrspace(1)* %41, i8 addrspace(1)** %8
   br label %17
 }
