@@ -25,6 +25,7 @@ const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
 const int TAG_INT      = t:UT_INT * TAG_FACTOR;
 const int TAG_FLOAT    = t:UT_FLOAT * TAG_FACTOR;
 const int TAG_STRING   = t:UT_STRING * TAG_FACTOR;
+const int TAG_ERROR   = t:UT_ERROR * TAG_FACTOR;
 
 const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
 
@@ -1099,6 +1100,9 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     else if semType === t:STRING {
         hasType = buildHasTag(builder, tagged, TAG_STRING);
     }
+    else if semType === t:ERROR {
+        hasType = buildHasTag(builder, tagged, TAG_ERROR);
+    }
     else if semType === t:LIST {
         hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
     }
@@ -1149,6 +1153,9 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
         llvm:Value hasTag;
         if semType === t:STRING {
             hasTag = buildHasTag(builder, tagged, TAG_STRING);
+        }
+        else if semType === t:ERROR {
+            hasTag = buildHasTag(builder, tagged, TAG_ERROR);
         }
         else if semType === t:LIST {
             hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
