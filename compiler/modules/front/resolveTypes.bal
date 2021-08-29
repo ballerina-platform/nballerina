@@ -49,7 +49,7 @@ function resolveFunctionSignature(t:Env env, ModuleTable mod, s:FunctionDefn def
 
 function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, s:FunctionDefn defn, s:TypeDesc td) returns t:SemType|err:Semantic|err:Unimplemented {
     t:SemType ty = check resolveTypeDesc(env, mod, defn, 0, td);
-    if ty is t:UniformTypeBitSet && t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) {
+    if ty is t:UniformTypeBitSet && t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) {
         return ty;
     }
     if ty === t:ANY {

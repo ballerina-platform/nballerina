@@ -8,6 +8,7 @@ public function resolveInlineTypeDesc(InlineTypeDesc|"()" td) returns t:UniformT
         "int" => { return t:INT; }
         "float" => { return t:FLOAT; }
         "string" => { return t:STRING; }
+        "error" => { return t:ERROR; }
         "()" => { return t:NIL; }
     }
     if td is InlineUnionTypeDesc {
