@@ -980,7 +980,7 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
                         builder.unreachable();
                     }
                     else {
-                        untagAndCompare(builder, scaffold, insn);
+                        check untagAndCompare(builder, scaffold, insn);
                         builder.br(joinBB);
                     }
                     
@@ -1019,7 +1019,7 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
                         builder.unreachable();
                     }
                     else {
-                        untagAndCompare(builder, scaffold, insn);
+                        check untagAndCompare(builder, scaffold, insn);
                         builder.br(joinBB);
                     }
                     
@@ -1068,7 +1068,7 @@ function loadOperandForOptionalComparison(llvm:Builder builder, Scaffold scaffol
     }
 }
 
-function untagAndCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) {
+function untagAndCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn)returns BuildError? {
     bir:Operand lhs = insn.operands[0];
     bir:Operand rhs = insn.operands[1];
     bir:OrderType ot = insn.orderType;
@@ -1096,8 +1096,13 @@ function untagAndCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareIns
                                     insn.result); 
             }
             t:UT_STRING => {
-                //TODO: deal with string
-                panic error("deal with string");
+                llvm:Value s1 = check buildString(builder, scaffold, <bir:StringOperand>insn.operands[0]);
+                llvm:Value s2 = check buildString(builder, scaffold, <bir:StringOperand>insn.operands[1]);
+                buildStoreBoolean(builder, scaffold,
+                                builder.iCmp(buildIntCompareOp(insn.op),
+                                            <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringCmpFunction), [s1, s2]),
+                                            llvm:constInt(LLVM_INT, 0)),
+                                insn.result);
             }
         }
     }
@@ -1121,10 +1126,6 @@ function untagOperandForComparison(llvm:Builder builder, Scaffold scaffold, bir:
                     }
                     t:UT_BOOLEAN => {
                         val = buildUntagBoolean(builder, <llvm:PointerValue>builder.load(scaffold.address(operand)));
-                    }
-                    t:UT_STRING => {
-                        //TODO: deal with string
-                        panic error("deal with string");
                     }
                 }
             }
