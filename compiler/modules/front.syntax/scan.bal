@@ -119,6 +119,7 @@ final readonly & Keyword[] keywords = [
     "match",
     "never",
     "null",
+    "panic",
     "public",
     "readonly",
     "record",
@@ -135,7 +136,6 @@ final readonly & Keyword[] keywords = [
 // This maps a frag code to a string
 // JBUG if this comes before keywords it gets a NPE at module init time
 final readonly & FixedToken?[] fragTokens = createFragTokens();
-
 
 function createFragTokens() returns readonly & FixedToken?[] {
     FixedToken?[] ft = [];

@@ -42,10 +42,10 @@ public type ConstDefn record {|
     ResolvedConst|false? resolved = ();    
 |};
 
-public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt;
+public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr;
 public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
-public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
+public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
 public type AssignStmt record {|
@@ -65,6 +65,10 @@ public type LExpr VarRefExpr|MemberAccessLExpr;
 
 public type ReturnStmt record {|
     Expr returnExpr;
+|};
+
+public type PanicStmt record {|
+    Expr panicExpr;
 |};
 
 public type IfElseStmt record {|
@@ -166,6 +170,11 @@ public type SimpleConstNegateExpr record {|
     // JBUG #32099 should be "-" 
     UnaryExprOp op = "-";
     IntLiteralExpr|ConstValueExpr operand;
+|};
+
+public type ErrorConstructorExpr record {|
+    Expr message;
+    Position pos;
 |};
 
 public type FunctionCallExpr record {|
@@ -288,7 +297,7 @@ public type InlineTypeDesc InlineBasicTypeDesc|InlineUnionTypeDesc|InlineArrayTy
 
 public const ANY = "any";
 
-public type InlineBasicTypeDesc "boolean"|"int"|"float"|"string";
+public type InlineBasicTypeDesc "boolean"|"int"|"float"|"string"|"error";
 
 public type InlineAltTypeDesc InlineUnionTypeDesc|InlineBasicTypeDesc;
 

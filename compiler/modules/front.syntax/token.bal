@@ -43,6 +43,7 @@ type Keyword
     | "match"
     | "never"
     | "null"
+    | "panic"
     | "readonly"
     | "record"
     | "return"

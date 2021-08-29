@@ -213,7 +213,7 @@ public type Insn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
     |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
-    |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
+    |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
 public type SimpleConstOperand ()|boolean|int|float;
@@ -392,7 +392,7 @@ public type MappingSetInsn readonly & record {|
 public type ErrorConstructInsn readonly & record {|
     INSN_ERROR_CONSTRUCT name = INSN_ERROR_CONSTRUCT;
     Register result;
-    Operand operand;
+    StringOperand operand;
     Position position;
 |};
 

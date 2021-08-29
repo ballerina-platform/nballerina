@@ -49,6 +49,11 @@ type IntExprEffect record {|
     bir:IntOperand result;
 |};
 
+type StringExprEffect record {|
+    *ExprEffect;
+    bir:StringOperand result;
+|};
+
 type RegExprEffect record {|
     *ExprEffect;
     bir:Register result;
@@ -308,6 +313,9 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
         else if stmt is s:ReturnStmt {
             // JBUG #31327 cast
             effect = check codeGenReturnStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+        }
+        else if stmt is s:PanicStmt {
+            effect = check codeGenPanicStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
         else if stmt is s:VarDeclStmt {
             effect = check codeGenVarDeclStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
@@ -721,6 +729,20 @@ function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     return { block: () };
 }
 
+function codeGenPanicStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:PanicStmt stmt) returns CodeGenError|StmtEffect {
+    var { panicExpr } = stmt;
+    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, panicExpr, t:ERROR));
+    if operand is bir:Register {
+        bir:PanicInsn insn = { operand };
+        nextBlock.insns.push(insn);
+        return { block: () };
+    }
+    else {
+        return cx.semanticErr("argument to error must be a string");
+    }
+    
+}
+
 function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarDeclStmt stmt) returns CodeGenError|StmtEffect {
     var { varName, initExpr, td, isFinal } = stmt;
     if lookup(varName, env) !== () {
@@ -842,6 +864,15 @@ function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Environment env
         return { result, block };
     }
     return cx.semanticErr("expected integer operand");
+}
+
+function codeGenExprForString(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|StringExprEffect {
+    var { result, block } = check codeGenExpr(cx, bb, env, expr);
+    if result is bir:StringOperand {
+        // rest of the type checking is in the verifier
+        return { result, block };
+    }
+    return cx.semanticErr("expected string operand");
 }
 
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|ExprEffect {
@@ -1001,6 +1032,10 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         var { fields } => {
             return codeGenMappingConstructor(cx, bb, env, fields);  
         }
+        // Error construct
+        var { message, pos } => {
+            return codeGenErrorConstructor(cx, bb, env, message, pos);
+        }
         var { digits } => {
             panic err:impossible(`failed to fold int literal ${digits}`);
         }
@@ -1046,6 +1081,15 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
     bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
+}
+
+function codeGenErrorConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr message, s:Position position) returns CodeGenError|ExprEffect {
+    s:Expr folded = check cx.foldExpr(env, message, t:STRING);
+    var { result: operand, block } = check codeGenExprForString(cx, bb, env, folded);
+    bir:Register result = cx.createRegister(t:ERROR);
+    bir:ErrorConstructInsn insn = { result, operand, position };
+    block.insns.push(insn);
+    return { result, block };
 }
 
 function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:ConstValueExpr cvExpr) returns CodeGenError|ExprEffect {

@@ -268,6 +268,12 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         ConstValueExpr expr = { value: () };
         return expr;
     }
+    else if t is "error" {
+        Position pos = tok.currentPos();
+        check tok.advance();
+        check tok.expect("(");
+        return finishErrorConstructorExpr(tok, pos);
+    }
     else {
         return parseError(tok);
     }
@@ -290,6 +296,13 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr) returns Expr|err:Syntax {
     else {
         return expr;
     }
+}
+
+// Called after consuming `error(`
+function finishErrorConstructorExpr(Tokenizer tok, Position pos) returns ErrorConstructorExpr|err:Syntax {
+    Expr message  = check parseExpr(tok);
+    check tok.expect(")");
+    return { message, pos };
 }
 
 // Called with current token as "."

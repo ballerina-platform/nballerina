@@ -81,6 +81,9 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is RetInsn {
         check verifyOperandType(vc, insn.operand, vc.returnType(), "value is not a subtype of the return type");
     }
+    else if insn is PanicInsn {
+        check verifyOperandError(vc, name, insn.operand);
+    }
     else if insn is CallInsn {
         check verifyCall(vc, insn);
     }
@@ -110,6 +113,9 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     }
     else if insn is MappingSetInsn {
         check verifyMappingSet(vc, insn);
+    }
+    else if insn is ErrorConstructInsn {
+        check verifyOperandString(vc, name, insn.operand);
     }
 }
 
@@ -315,6 +321,10 @@ function verifyOperandBoolean(VerifyContext vc, string insnName, BooleanOperand 
     if operand is Register {
         return verifyRegisterSemType(vc,insnName, operand, t:BOOLEAN, "boolean");
     }
+}
+
+function verifyOperandError(VerifyContext vc, string insnName, Register operand) returns err:Semantic? {
+    return verifyRegisterSemType(vc, insnName, operand, t:ERROR, "error");
 }
 
 function verifyRegisterSemType(VerifyContext vc, string insnName, Register operand, t:SemType semType, string typeName) returns err:Semantic? {

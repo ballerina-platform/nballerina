@@ -96,7 +96,7 @@ const PANIC_LIST_TOO_LONG = 6;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"panic_construct"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
+type RuntimeFunctionName "panic"|"panic_construct"|"error_construct"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
                          "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float"|"float_to_int";
 
 type RuntimeFunction readonly & record {|
@@ -121,6 +121,15 @@ final RuntimeFunction panicConstructFunction = {
         paramTypes: ["i64"]
     },
     attrs: ["cold"]
+};
+
+final RuntimeFunction errorConstructFunction = {
+    name: "error_construct",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+    },
+    attrs: []
 };
 
 final RuntimeFunction allocFunction = {
@@ -463,7 +472,7 @@ function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos
     builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(scaffold.stackGuard())),
                    overflowBlock, firstBlock);
     builder.positionAtEnd(overflowBlock);
-    buildPanic(builder, scaffold, buildErrorForConstPanic(builder, scaffold, PANIC_STACK_OVERFLOW, pos));
+    buildCallPanic(builder, scaffold, buildErrorForConstPanic(builder, scaffold, PANIC_STACK_OVERFLOW, pos));
     builder.positionAtEnd(firstBlock);
     scaffold.saveParams(builder);
 }
@@ -547,12 +556,14 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:CondBranchInsn {
             check buildCondBranch(builder, scaffold, insn);
         }
-        else if insn is bir:CatchInsn {
-            // nothing to do
-            // scaffold.panicAddress uses this to figure out where to store the panic info
-        }
         else if insn is bir:AbnormalRetInsn {
             buildAbnormalRet(builder, scaffold, insn);
+        }
+        else if insn is bir:PanicInsn {
+            buildPanic(builder, scaffold, insn);
+        }
+        else if insn is bir:ErrorConstructInsn {
+            check buildErrorConstruct(builder, scaffold, insn);
         }
         else if insn is bir:FloatArithmeticBinaryInsn {
             buildFloatArithmeticBinary(builder, scaffold, insn);
@@ -561,7 +572,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             buildFloatNegate(builder, scaffold, insn);
         }
         else {
-            return err:unimplemented(`BIR insn ${insn.name} not implemented`);
+            bir:CatchInsn unused = insn;
+            // nothing to do
+            // scaffold.panicAddress uses this to figure out where to store the panic info
         }
     }
 }
@@ -582,10 +595,15 @@ function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) ret
 }
 
 function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) {
-    buildPanic(builder, scaffold, <llvm:PointerValue>builder.load(scaffold.address(insn.operand)));
+    buildCallPanic(builder, scaffold, <llvm:PointerValue>builder.load(scaffold.address(insn.operand)));
 }
 
-function buildPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue err) {
+function buildPanic(llvm:Builder builder, Scaffold scaffold, bir:PanicInsn insn) {
+    builder.store(builder.load(scaffold.address(insn.operand)), scaffold.panicAddress());
+    builder.br(scaffold.getOnPanic());
+}
+
+function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue err) {
     _ = builder.call(buildRuntimeFunctionDecl(scaffold, panicFunction), [err]);
     builder.unreachable();
 }
@@ -735,6 +753,16 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
                                    ]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
 }
+
+function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
+    llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, errorConstructFunction),
+                                                [
+                                                    check buildString(builder, scaffold, insn.operand),
+                                                    llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.position))
+                                                ]);
+    builder.store(value, scaffold.address(insn.result));
+}
+
 
 function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
     llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringConcatFunction),
