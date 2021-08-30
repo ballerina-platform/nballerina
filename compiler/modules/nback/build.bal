@@ -1022,13 +1022,12 @@ function buildCompareTaggedBasic(llvm:Builder builder, Scaffold scaffold, llvm:V
     builder.positionAtEnd(bbNill);
     buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN,0), result);
     builder.br(bbJoin);
+    builder.positionAtEnd(bbNotNill);
     return [bbNotNill, bbJoin];
 }
 
-
 function buildCompareTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, "lhs"|"rhs" tagged, bir:Register result) {
     var [bbNotNill, bbJoin] = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, tagged, result);
-    builder.positionAtEnd(bbNotNill);
     if tagged == "lhs" {
         llvm:Value lhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>lhs);
         buildCompareInt(builder, scaffold, op, lhsUntagged, rhs, result);
@@ -1043,7 +1042,6 @@ function buildCompareTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Int
 
 function buildCompareTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPredicate op, llvm:Value lhs, llvm:Value rhs, "lhs"|"rhs" tagged, bir:Register result) {
     var [bbNotNill, bbJoin] = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, tagged, result);
-    builder.positionAtEnd(bbNotNill);
     if tagged == "lhs" {
         llvm:Value lhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>lhs);
         buildCompareFloat(builder, scaffold, op, lhsUntagged, rhs, result);
@@ -1056,10 +1054,8 @@ function buildCompareTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:F
     builder.positionAtEnd(bbJoin);
 }
 
-
 function buildCompareTaggedBoolean(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, "lhs"|"rhs" tagged, bir:Register result) {
     var [bbNotNill, bbJoin] = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, tagged, result);
-    builder.positionAtEnd(bbNotNill);
     if tagged == "lhs" {
         llvm:Value lhsUntagged = buildUntagBoolean(builder, <llvm:PointerValue>lhs);
         buildCompareInt(builder, scaffold, op, lhsUntagged, rhs, result);
