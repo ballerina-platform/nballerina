@@ -118,9 +118,20 @@ typedef GC struct Mapping {
     uint8_t tableLengthShift;
 } *MappingPtr;
 
+typedef struct {
+    uintptr_t pc;
+    // Index into the second array of start of string
+    // string is terminated with zero
+    unsigned fileOffset;
+    unsigned functionOffset;
+    int lineno;
+} Frame;
+
 typedef GC struct Error {
     TaggedPtr message;
     int64_t lineNumber;
+    uint32_t nFrames;
+    Frame frames[];
 } *ErrorPtr;
 
 // Both of these are 8-byte aligned and zero-padded so the total size is a multiple of 8
