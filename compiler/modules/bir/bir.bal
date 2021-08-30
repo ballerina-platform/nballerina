@@ -42,7 +42,9 @@ public type FunctionDefn readonly & record {|
     # The signature of the function
     FunctionSignature signature;
     # File in which the definition occurs
-    File file;
+    // XXX provide access to this via FunctionCode or Module
+    // so that FunctionDefn is anydata
+    File file; 
     # The position of the definition
     Position position;
 |};
