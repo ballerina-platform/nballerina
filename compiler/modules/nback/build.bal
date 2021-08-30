@@ -1103,10 +1103,10 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     else if semType === t:ERROR {
         hasType = buildHasTag(builder, tagged, TAG_ERROR);
     }
-    else if semType === t:LIST {
+    else if t:isSubtypeSimple(semType, t:LIST) {
         hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
     }
-    else if semType === t:MAPPING {
+    else if t:isSubtypeSimple(semType, t:MAPPING) {
         hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
     }
     else if semType is t:UniformTypeBitSet {
@@ -1157,10 +1157,10 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
         else if semType === t:ERROR {
             hasTag = buildHasTag(builder, tagged, TAG_ERROR);
         }
-        else if semType === t:LIST {
+        else if t:isSubtypeSimple(semType, t:LIST) {
             hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
         }
-        else if semType === t:MAPPING {
+        else if t:isSubtypeSimple(semType, t:MAPPING) {
             hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
         }
         else if semType is t:UniformTypeBitSet {

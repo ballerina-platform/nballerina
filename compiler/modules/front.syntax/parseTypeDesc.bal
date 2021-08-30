@@ -4,34 +4,35 @@ import wso2/nballerina.err;
 // This is for the subset we currently support in the compiler
 function parseInlineTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
     Token? t = tok.current();
-    if t == "any" {
+    if t is InlineBuiltinTypeDesc {
         check tok.advance();
+        InlineAltTypeDesc td = check parseInlineOptionalTypeDesc(tok, t);
         t = tok.current();
         if t == "[" {
             check tok.advance();
             check tok.expect("]");
-            InlineArrayTypeDesc td = {};
-            return td;
+            InlineArrayTypeDesc arrayTypeDesc = { rest: td };
+            return arrayTypeDesc;
         }
-        return "any";
-    }
-    else if t is InlineBasicTypeDesc {
-        check tok.advance();
-        return parseInlineUnionTypeDesc(tok, t);
-    }
+        return finishInlineUnionTypeDesc(tok, td);
+    } 
     else if t is "map" {
         check tok.advance();
         check tok.expect("<");
-        check tok.expect("any");
-        check tok.expect(">");
-        InlineMapTypeDesc td = {};
-        return td;
+        t = tok.current();
+        if t is InlineBuiltinTypeDesc {
+            check tok.advance();
+            InlineAltTypeDesc td = check finishInlineUnionTypeDesc(tok, t);
+            check tok.expect(">");
+            InlineMapTypeDesc mapTypeDesc = { rest: td};
+            return mapTypeDesc;
+        }
     }
     return parseError(tok, "expected type descriptor");    
 }
 
-function parseInlineUnionTypeDesc(Tokenizer tok, InlineBasicTypeDesc td) returns InlineTypeDesc|err:Syntax {
-    InlineAltTypeDesc left = check parseInlineOptionalTypeDesc(tok, td);
+function finishInlineUnionTypeDesc(Tokenizer tok, InlineAltTypeDesc first) returns InlineAltTypeDesc|err:Syntax {
+    InlineAltTypeDesc left = first;
     while true {
         Token? t = tok.current();
         if t != "|" {
@@ -39,8 +40,8 @@ function parseInlineUnionTypeDesc(Tokenizer tok, InlineBasicTypeDesc td) returns
         }
         check tok.advance();
         t = tok.current();
-        if !(t is InlineBasicTypeDesc) {
-            return parseError(tok, "expected basic type name after |");
+        if !(t is InlineBuiltinTypeDesc) {
+            return parseError(tok, "expected built-in type name after |");
         }
         else {
             check tok.advance();
@@ -52,7 +53,7 @@ function parseInlineUnionTypeDesc(Tokenizer tok, InlineBasicTypeDesc td) returns
     return left;
 }
 
-function parseInlineOptionalTypeDesc(Tokenizer tok, InlineBasicTypeDesc td) returns InlineAltTypeDesc|err:Syntax {
+function parseInlineOptionalTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc td) returns InlineAltTypeDesc|err:Syntax {
     Token? t = tok.current();
     if t == "?" {
         check tok.advance();

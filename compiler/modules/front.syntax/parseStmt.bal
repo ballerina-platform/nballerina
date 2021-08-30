@@ -65,7 +65,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         "error" => {
             return parseErrorStmt(tok);
         }
-        var td if td is InlineBasicTypeDesc|ANY|"map" => {
+        var td if td is InlineBuiltinTypeDesc|"map" => {
             return parseVarDeclStmt(tok);
         }
         "("|[DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {
@@ -144,7 +144,8 @@ function parseErrorStmt(Tokenizer tok) returns Stmt|err:Syntax {
         return parseError(tok, "error constructor not allowed here");
     }
     else {
-        InlineTypeDesc td = check parseInlineUnionTypeDesc(tok, "error");
+        InlineAltTypeDesc td = check parseInlineOptionalTypeDesc(tok, "error");
+        InlineTypeDesc utd = check finishInlineUnionTypeDesc(tok, td);
         return finishVarDeclStmt(tok, td);
     }
 }

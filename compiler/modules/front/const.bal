@@ -22,15 +22,20 @@ type FoldContext object {
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
+    function typeEnv() returns t:Env;
 };
 
 class ConstFoldContext {
+    *FoldContext;
     final s:SourceFile file;
     final string defnName;
+    final t:Env env;
     final ModuleTable mod;
-    function init(s:SourceFile file, string defnName, ModuleTable mod) {
+
+    function init(s:SourceFile file, string defnName, t:Env env, ModuleTable mod) {
         self.file = file;
         self.defnName = defnName;
+        self.env = env;
         self.mod = mod;
     }
     
@@ -41,7 +46,7 @@ class ConstFoldContext {
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         s:ModuleLevelDefn? defn = self.mod[varName];
         if defn is s:ConstDefn {
-            var resolved = check resolveConstDefn(self.mod, defn);
+            var resolved = check resolveConstDefn(self.env, self.mod, defn);
             return resolved[1];
         }
         else if defn is () {
@@ -51,9 +56,13 @@ class ConstFoldContext {
             return self.semanticErr(`reference to ${varName} not defined with const`);
         }
     }
+
+    function typeEnv() returns t:Env {
+        return self.env;
+    }
 }
 
-function resolveConstDefn(ModuleTable mod, s:ConstDefn defn) returns s:ResolvedConst|FoldError {
+function resolveConstDefn(t:Env env, ModuleTable mod, s:ConstDefn defn) returns s:ResolvedConst|FoldError {
     var resolved = defn.resolved;
     if resolved is false {
         return err:semantic(`cycle in evaluating ${defn.name}`, s:defnLocation(defn));
@@ -63,10 +72,9 @@ function resolveConstDefn(ModuleTable mod, s:ConstDefn defn) returns s:ResolvedC
     }
     else {
         defn.resolved = false;
-        ConstFoldContext cx = new ConstFoldContext(defn.file, defn.name, mod);
-        s:InlineTypeDesc? td = defn.td;
-        // JBUG remove cast and use == after beta 3
-        t:SemType? expectedType = td === () ? () : s:resolveInlineTypeDesc(<s:InlineTypeDesc>td);
+        ConstFoldContext cx = new ConstFoldContext(defn.file, defn.name, env, mod);
+        s:InlineBuiltinTypeDesc? td = defn.td;
+        t:SemType? expectedType = td is () ? () : resolveInlineAltTypeDesc(td);
         s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
         if expr is s:ConstValueExpr {
             if expectedType == () || t:containsConst(expectedType, expr.value) {
@@ -127,19 +135,23 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
 }
 
 function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:ListConstructorExpr expr) returns s:Expr|FoldError {
+    // grammar of subset07 guarantees that expectedType is non-nil
+    t:SemType expectedListType = t:intersect(<t:SemType>expectedType, t:LIST_RW);
     s:Expr[] members = expr.members;
     foreach int i in 0 ..< members.length() {
         members[i] = check foldExpr(cx, t:ANY, members[i]);
     }
-    // expr.expectedType = expectedType;
+    expr.expectedType = expectedListType;
     return expr;
 }
 
 function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:MappingConstructorExpr expr) returns s:Expr|FoldError {
+    // grammar of subset07 guarantees that expectedType is non-nil
+    t:SemType? expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING_RW);
+    expr.expectedType = expectedMappingType;
     foreach s:Field f in expr.fields {
         f.value = check foldExpr(cx, t:ANY, f.value);
     }
-    // expr.expectedType = expectedType;
     return expr;
 }
 
@@ -374,14 +386,15 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
 }
 
 function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExpr expr) returns s:Expr|FoldError {
-    t:SemType targetType = expr.semType;
+    t:SemType semType = resolveInlineTypeDesc(cx.typeEnv(), expr.td);
+    t:SemType targetType = semType;
     if !(expectedType is ()) {
         targetType = t:intersect(targetType, expectedType);
     }
     s:Expr subExpr = check foldExpr(cx, targetType, expr.operand);
     if subExpr is s:ConstShapeExpr {
         // Handle numeric conversions
-        t:UniformTypeBitSet? toNumType = t:singleNumericType(expr.semType);
+        t:UniformTypeBitSet? toNumType = t:singleNumericType(semType);
         var value = subExpr.value;
         if toNumType == t:INT {
             if value is float {
@@ -400,7 +413,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
                 value = <float>value;
             }
         }
-        if !t:containsConst(expr.semType, value) {
+        if !t:containsConst(semType, value) {
             return cx.semanticErr(`type cast will always fail`, pos=expr.pos);
         }
         if toNumType != () && value != subExpr.value {
@@ -416,7 +429,8 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
 function foldTypeTestExpr(FoldContext cx, t:SemType? expectedType, s:TypeTestExpr expr) returns s:Expr|FoldError {
     s:Expr subExpr = check foldExpr(cx, (), expr.left);
     if subExpr is s:ConstShapeExpr {
-        return foldedUnaryConstExpr(t:containsConst(expr.semType, subExpr.value) == !expr.negated, t:BOOLEAN, subExpr);
+        t:SemType semType = resolveInlineTypeDesc(cx.typeEnv(), expr.td);
+        return foldedUnaryConstExpr(t:containsConst(semType, subExpr.value) == !expr.negated, t:BOOLEAN, subExpr);
     }
     expr.left = subExpr;
     return expr;

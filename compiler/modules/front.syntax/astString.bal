@@ -180,7 +180,7 @@ function blockToWords(Word[] w, Stmt[] body) {
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
-    if td is InlineBasicTypeDesc|ANY {
+    if td is InlineBuiltinTypeDesc {
         w.push(td);
         return;
     }

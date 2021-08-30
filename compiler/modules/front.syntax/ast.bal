@@ -34,7 +34,7 @@ public type FunctionDefn record {|
 public type ResolvedConst readonly & [t:SemType, t:Value];
 public type ConstDefn record {|
     readonly string name;
-    InlineTypeDesc? td;
+    InlineBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
     SourceFile file;
@@ -195,12 +195,12 @@ public type MethodCallExpr record {|
 public type ListConstructorExpr record {|
     Expr[] members;
     // JBUG adding this field makes match statement in codeGenExpr fail 
-    // t:SemType? expectedType = ();
+    t:SemType? expectedType = ();
 |};
 
 public type MappingConstructorExpr record {|
     Field[] fields;
-    // t:SemType? expectedType = ();
+    t:SemType? expectedType = ();
 |};
 
 public type Field record {|
@@ -235,14 +235,12 @@ public type TypeCastExpr record {|
     InlineTypeDesc td;
     Expr operand;
     Position pos;
-    t:SemType semType;
 |};
 
 public type TypeTestExpr record {|
     InlineTypeDesc td;
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
-    t:SemType semType;
     boolean negated; 
 |};
 
@@ -293,16 +291,15 @@ public type FpLiteralExpr record {|
 
 // This is the subtype of TypeDesc that we currently allow
 // within expressions and statements.
-public type InlineTypeDesc InlineBasicTypeDesc|InlineUnionTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc|ANY;
+public type InlineTypeDesc InlineAltTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc;
 
-public const ANY = "any";
+public type InlineAltTypeDesc InlineUnionTypeDesc|InlineBuiltinTypeDesc;
 
-public type InlineBasicTypeDesc "boolean"|"int"|"float"|"string"|"error";
-
-public type InlineAltTypeDesc InlineUnionTypeDesc|InlineBasicTypeDesc;
+public type InlineBuiltinTypeDesc "boolean"|"int"|"float"|"string"|"error"|"any";
 
 public type InlineUnionTypeDesc record {|
-    *BinaryTypeDesc;
+    // JBUG: if I uncomment `*BinaryTypeDesc`, there are lots of compile errors
+    // *BinaryTypeDesc;
     // actually always `|`
     BinaryTypeOp op = "|";
     InlineAltTypeDesc left;
@@ -314,13 +311,13 @@ public type InlineArrayTypeDesc record {|
     TypeDesc[0] members = [];
     // JBUG if we use a string literal instead of a reference to a const,
     // this gets an error about attempting to make a non-public symbol visible
-    ANY rest = ANY;
+    InlineAltTypeDesc rest;
 |};
 
 public type InlineMapTypeDesc record {|
     *MappingTypeDesc;
     FieldDesc[0] fields = [];
-    ANY rest = ANY;
+    InlineAltTypeDesc rest;
 |};
 
 public type TypeDefn record {|

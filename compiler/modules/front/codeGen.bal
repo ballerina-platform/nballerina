@@ -231,6 +231,10 @@ class CodeGenFoldContext {
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
         return self.cx.semanticErr(msg, pos=pos, cause=cause);
     }
+
+    function typeEnv() returns t:Env {
+        return self.cx.mod.env;
+    }
 }
 
 function addAssignments(int[] dest, int[] src, int excludeStart) {
@@ -748,7 +752,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
-    t:SemType semType = s:resolveInlineTypeDesc(td);
+    t:SemType semType = resolveInlineTypeDesc(cx.mod.env, td);
     initExpr = check cx.foldExpr(env, initExpr, semType);
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
     bir:Register result = cx.createRegister(semType, varName);
@@ -975,8 +979,8 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenTypeCast(cx, bb, env, <s:TypeCastExpr>expr);
         }
         // Type test
-        var { td, left, semType, negated} => {
-            return codeGenTypeTest(cx, bb, env, td, left, semType, negated);
+        var { td, left, negated} => {
+            return codeGenTypeTest(cx, bb, env, td, left, negated);
         }
         // Variable reference
         var { varName } => {
@@ -1025,12 +1029,13 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             }
         }
         // List construct
-        var { members } => {
-            return codeGenListConstructor(cx, bb, env, members);  
+        // JBUG should be able to use just `var { members }`
+        var listConstructorExpr if listConstructorExpr is s:ListConstructorExpr => {
+            return codeGenListConstructor(cx, bb, env, listConstructorExpr);  
         }
         // Mapping construct
-        var { fields } => {
-            return codeGenMappingConstructor(cx, bb, env, fields);  
+        var mappingConstructorExpr if mappingConstructorExpr is s:MappingConstructorExpr  => {
+            return codeGenMappingConstructor(cx, bb, env, mappingConstructorExpr);  
         }
         // Error construct
         var { message, pos } => {
@@ -1043,28 +1048,30 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
     panic err:impossible("unrecognized expression type in code gen: " +  s:exprToString(expr));
 }
 
-function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr[] members) returns CodeGenError|ExprEffect {
+function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:ListConstructorExpr expr) returns CodeGenError|ExprEffect {
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
-    foreach var member in members {
+    foreach var member in expr.members {
         bir:Operand operand;
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, member);
         operands.push(operand);
     }
-    // In subset 3, we have only mutable lists of any
-    // We will have to do more work in future subsets to determine the types here
-    bir:Register result = cx.createRegister(t:LIST_RW);
+    t:SemType resultType = <t:SemType>expr.expectedType;
+    if t:isEmpty(cx.mod.tc, resultType) {
+        return cx.semanticErr("list now allowed in this context");
+    }
+    bir:Register result = cx.createRegister(resultType);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
 }
 
-function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Field[] fields) returns CodeGenError|ExprEffect {
+function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MappingConstructorExpr expr) returns CodeGenError|ExprEffect {
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
     string[] fieldNames= [];
     map<s:Position> fieldPos = {};
-    foreach var { pos, name, value } in fields {
+    foreach var { pos, name, value } in expr.fields {
         s:Position? prevPos = fieldPos[name];
         if prevPos == () {
             fieldPos[name] = pos;
@@ -1077,7 +1084,11 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
         operands.push(operand);
         fieldNames.push(name);
     }
-    bir:Register result = cx.createRegister(t:MAPPING_RW);
+    t:SemType resultType = <t:SemType>expr.expectedType;
+    if t:isEmpty(cx.mod.tc, resultType) {
+        return cx.semanticErr("mapping not allowed in this context");
+    }
+    bir:Register result = cx.createRegister(resultType);
     bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
@@ -1161,7 +1172,7 @@ function codeGenVarRefExpr(CodeGenContext cx, string name, Environment env, bir:
 function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, tcExpr.operand);
     var reg = <bir:Register>operand; // const folding should have got rid of the const
-    t:SemType toType = tcExpr.semType;
+    t:SemType toType = resolveInlineTypeDesc(cx.mod.env, tcExpr.td);
     t:UniformTypeBitSet? toNumType = t:singleNumericType(toType);
     if toNumType != () && !t:isSubtypeSimple(t:intersect(reg.semType, t:NUMBER), toNumType) {
         toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
@@ -1191,7 +1202,8 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     return { result, block: nextBlock };
 }
 
-function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, t:SemType semType, boolean negated) returns CodeGenError|ExprEffect {
+function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:InlineTypeDesc td, s:Expr left, boolean negated) returns CodeGenError|ExprEffect {
+    t:SemType semType = resolveInlineTypeDesc(cx.mod.env, td);
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
     // Constants should be resolved during constant folding
     bir:Register reg = <bir:Register>operand;        

@@ -12,15 +12,17 @@ class Module {
     final bir:ModuleId id;
     final map<bir:ModuleId> imports;
     final ModuleTable defns;
+    final t:Env env;
     final t:TypeCheckContext tc;
     final s:FunctionDefn[] functionDefnSource = [];
     final readonly & bir:FunctionDefn[] functionDefns;
 
-    function init(bir:ModuleId id, map<bir:ModuleId> imports, ModuleTable defns, t:TypeCheckContext tc) {
+    function init(bir:ModuleId id, map<bir:ModuleId> imports, ModuleTable defns, t:Env env) {
         self.id = id;
         self.imports = imports;
         self.defns = defns;
-        self.tc = tc;
+        self.env = env;
+        self.tc = t:typeCheckContext(env);
         final bir:FunctionDefn[] functionDefns = [];
         foreach var defn in defns {
             if defn is s:FunctionDefn {
@@ -58,7 +60,6 @@ class Module {
         }
         return ();
     }
-
 }
 
 public function loadModule(t:Env env, string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
@@ -69,7 +70,7 @@ public function loadModule(t:Env env, string filename, bir:ModuleId id) returns 
     check resolveTypes(env, mod);
     // XXX Should have an option that controls whether we perform this check
     check validEntryPoint(mod);
-    return new Module(id, imports(part), mod, t:typeCheckContext(env));
+    return new Module(id, imports(part), mod, env);
 }
 
 function imports(s:ModulePart part) returns map<bir:ModuleId> {

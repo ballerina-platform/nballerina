@@ -27,7 +27,7 @@ function resolveTypes(t:Env env, ModuleTable mod) returns err:Semantic|err:Unimp
             _ = check resolveTypeDefn(env, mod, defn, 0);
         }
         else if defn is s:ConstDefn {
-            _ = check resolveConstDefn(mod, defn);
+            _ = check resolveConstDefn(env, mod, defn);
         }
         else {
             // it's a FunctionDefn
@@ -56,12 +56,12 @@ function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, s:FunctionDefn defn, 
         return ty;
     }
     t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(env, ty);
-    if memberTy == t:ANY {
-        return t:LIST;
+    if memberTy != () {
+        return ty;
     }
     memberTy = t:simpleMapMemberType(env, ty);
-    if memberTy == t:ANY {
-        return t:MAPPING;
+    if memberTy != () {
+        return ty;
     }
     return err:unimplemented("unimplemented type descriptor", s:defnLocation(defn));
 }
@@ -170,7 +170,7 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, 
             return check resolveTypeDefn(env, mod, defn, depth);
         }
         else if defn is s:ConstDefn {
-            var [t, _] = check resolveConstDefn(mod, defn);
+            var [t, _] = check resolveConstDefn(env, mod, defn);
             return t;
         }
         else {
@@ -206,6 +206,45 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, 
             return t:intersect(l, r);
         }
     }
-
     panic error("unimplemented type-descriptor");
+}
+
+function resolveInlineTypeDesc(t:Env env, s:InlineTypeDesc td) returns t:SemType {
+    if td is s:InlineArrayTypeDesc {
+        t:UniformTypeBitSet memberType = resolveInlineAltTypeDesc(td.rest);
+        if memberType == t:TOP {
+            return t:LIST;
+        }
+        t:ListDefinition d = new;
+        return d.define(env, [], memberType);
+    }
+    else if td is s:InlineMapTypeDesc {
+        t:UniformTypeBitSet memberType = resolveInlineAltTypeDesc(td.rest);
+        if memberType == t:TOP {
+            return t:MAPPING;
+        }
+        t:MappingDefinition d = new;
+        return d.define(env, [], memberType);
+    }
+    else {
+        return resolveInlineAltTypeDesc(td);
+    }
+}
+
+function resolveInlineAltTypeDesc(s:InlineAltTypeDesc|"()" td) returns t:UniformTypeBitSet {
+    match td {
+        "any" => { return t:ANY; }
+        "boolean" => { return t:BOOLEAN; }
+        "int" => { return t:INT; }
+        "float" => { return t:FLOAT; }
+        "string" => { return t:STRING; }
+        "error" => { return t:ERROR; }
+        "()" => { return t:NIL; }
+    }
+    if td is s:InlineUnionTypeDesc {
+        t:UniformTypeBitSet left = resolveInlineAltTypeDesc(td.left);
+        t:UniformTypeBitSet right = resolveInlineAltTypeDesc(td.right);
+        return left|right;
+    }
+    panic err:impossible("unreachable in resolveInlineBuiltinTypeDesc");
 }

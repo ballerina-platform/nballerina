@@ -92,8 +92,8 @@ function parseConstDefinition(Tokenizer tok, Visibility vis) returns ConstDefn|e
     check tok.advance();
     Position pos = tok.currentPos();
     Token? t = tok.current();
-    InlineBasicTypeDesc? td = ();
-    if t is InlineBasicTypeDesc {
+    InlineBuiltinTypeDesc? td = ();
+    if t is InlineBuiltinTypeDesc {
         check tok.advance();
         td = t;
         t = tok.current();

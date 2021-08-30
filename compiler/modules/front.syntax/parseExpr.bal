@@ -119,7 +119,7 @@ function finishTypeTestExpr(Tokenizer tok, Expr expr, boolean negated) returns T
     check tok.advance();
     InlineTypeDesc td = check parseInlineTypeDesc(tok);
     tok.setMode(MODE_NORMAL);
-    return { td, left: expr, semType: resolveInlineTypeDesc(td), negated };
+    return { td, left: expr, negated };
 }
 
 function parseRangeExpr(Tokenizer tok) returns RangeExpr|err:Syntax {
@@ -205,7 +205,7 @@ function parseTypeCastExpr(Tokenizer tok) returns Expr|err:Syntax {
     check tok.expect(">");
     tok.setMode(MODE_NORMAL);
     Expr operand = check parseUnaryExpr(tok);
-    TypeCastExpr expr = { pos, td, operand, semType: resolveInlineTypeDesc(td) };
+    TypeCastExpr expr = { pos, td, operand };
     return expr;
 }
 
