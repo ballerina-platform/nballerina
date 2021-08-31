@@ -925,28 +925,26 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
             buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
         }
         [BASE_REPR_INT, BASE_REPR_TAGGED] => {
-            buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(flipOrderOp(insn.op)), rhsValue, lhsValue, result);
+            buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
         }
         [BASE_REPR_TAGGED, BASE_REPR_FLOAT] => {
             buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
         }
         [BASE_REPR_FLOAT, BASE_REPR_TAGGED] => {
-            buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(flipOrderOp(insn.op)), rhsValue, lhsValue, result);
+            buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
         }
         [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
             buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
         }
         [BASE_REPR_BOOLEAN, BASE_REPR_TAGGED] => {
-            buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(flipOrderOp(insn.op)), rhsValue, lhsValue, result);
+            buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
         }
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
-            if insn.orderType is bir:OptOrderType {
-                // Both operands can be nil;
-                buildCompareTagged(builder, scaffold, insn, lhsValue, rhsValue, result);
+            if insn.orderType is t:UT_STRING {
+                buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
             }
             else {
-                // Both operand are (nil) strings
-                buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
+                buildCompareTagged(builder, scaffold, insn, lhsValue, rhsValue, result);
             }
         }
         [BASE_REPR_INT, BASE_REPR_INT] => {
@@ -960,26 +958,12 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
         }
     }
 }
-
-function flipOrderOp(bir:OrderOp op) returns bir:OrderOp {
-    match op {
-        ">=" => {
-            return "<=";
-        }
-        ">" => {
-            return "<";
-        }
-        "<=" => {
-            return ">=";
-        }
-        "<" => {
-            return ">";
-        }
-        _ => {
-            panic error("Unknown order op");
-        }
-    }
-}
+final readonly & map<bir:OrderOp> flippedOrderOps = {
+    ">=": "<=",
+    ">" : "<",
+    "<=": ">=",
+    "<" : ">"
+};
 
 function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     llvm:Value lhsIsNil = builder.iCmp("eq", lhs, llvm:constNull(llvm:pointerType("i8", 1)));
@@ -998,7 +982,7 @@ function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:Compare
         buildStoreBoolean(builder, scaffold, bothNil, insn.result);
     }
     else {
-        buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN,0), insn.result);
+        buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, 0), insn.result);
     }
     builder.br(joinBB);
 
@@ -1034,7 +1018,7 @@ function buildCompareTaggedBasic(llvm:Builder builder, Scaffold scaffold, llvm:V
     llvm:Value isNil = builder.iCmp("eq", lhs, llvm:constNull(llvm:pointerType("i8", 1)));
     builder.condBr(isNil, bbNil, bbNotNil);
     builder.positionAtEnd(bbNil);
-    buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN,0), result);
+    buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, 0), result);
     builder.br(bbJoin);
     builder.positionAtEnd(bbNotNil);
     return [bbNotNil, bbJoin];
