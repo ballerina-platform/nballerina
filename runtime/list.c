@@ -5,7 +5,7 @@
 #define ARRAY_LENGTH_MAX (INT64_MAX/sizeof(TaggedPtr))
 
 
-Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
+PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
     GC TaggedPtrArray *ap = &(lp->tpArray);
     if (likely((uint64_t)index < ap->length)) {
@@ -57,7 +57,7 @@ void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift) {
     else {
         new_capacity = ARRAY_LENGTH_MAX;
         if (new_capacity == old_capacity)
-            _bal_panic(PANIC_LIST_TOO_LONG);  // we won't get a line number, but this is very unlikely to be possible
+            _bal_panic(_bal_panic_construct(PANIC_LIST_TOO_LONG));  // we won't get a line number, but this is very unlikely to be possible
     }
     if (unlikely(new_capacity < min_capacity)) {
         new_capacity = min_capacity;

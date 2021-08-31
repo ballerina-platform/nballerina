@@ -1,6 +1,7 @@
 @_bal_stack_guard = external global i8*
 @.str0 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 9, i16 9, [12 x i8] c"not-float\00\00\00"}, align 8
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_float_to_tagged(double)
@@ -146,7 +147,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %30
   ret void
 82:
-  call void @_bal_panic(i64 1028)
+  %83 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
+  call void @_bal_panic(i8 addrspace(1)* %83)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_exactEq(double %0, double %1) {
@@ -212,7 +214,8 @@ define internal i8 addrspace(1)* @_B_exactEq(double %0, double %1) {
   %42 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
   ret i8 addrspace(1)* %42
 43:
-  call void @_bal_panic(i64 7172)
+  %44 = call i8 addrspace(1)* @_bal_panic_construct(i64 7172)
+  call void @_bal_panic(i8 addrspace(1)* %44)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* %0, double %1) {
@@ -236,7 +239,7 @@ define internal i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* %0, double %1) {
   %13 = ptrtoint i8* %12 to i64
   %14 = and i64 %13, 2233785415175766016
   %15 = icmp eq i64 %14, 576460752303423488
-  br i1 %15, label %23, label %26
+  br i1 %15, label %24, label %27
 16:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901090)
 17:
@@ -249,44 +252,45 @@ define internal i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* %0, double %1) {
 21:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879847453030)
 22:
-  call void @_bal_panic(i64 10500)
+  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 10500)
+  call void @_bal_panic(i8 addrspace(1)* %23)
   unreachable
-23:
-  %24 = call double @_bal_tagged_to_float(i8 addrspace(1)* %10)
-  %25 = call i1 @_bal_float_exact_eq(double %24, double %11)
-  store i1 %25, i1* %3
-  br label %27
-26:
-  store i1 0, i1* %3
-  br label %27
+24:
+  %25 = call double @_bal_tagged_to_float(i8 addrspace(1)* %10)
+  %26 = call i1 @_bal_float_exact_eq(double %25, double %11)
+  store i1 %26, i1* %3
+  br label %28
 27:
-  %28 = load i1, i1* %3
-  store i1 %28, i1* %eq
-  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %f1
-  %30 = load double, double* %f2
-  %31 = addrspacecast i8 addrspace(1)* %29 to i8*
-  %32 = ptrtoint i8* %31 to i64
-  %33 = and i64 %32, 2233785415175766016
-  %34 = icmp eq i64 %33, 576460752303423488
-  br i1 %34, label %35, label %39
-35:
-  %36 = call double @_bal_tagged_to_float(i8 addrspace(1)* %29)
-  %37 = call i1 @_bal_float_exact_eq(double %36, double %30)
-  %38 = xor i1 %37, 1
-  store i1 %38, i1* %4
-  br label %40
-39:
-  store i1 1, i1* %4
-  br label %40
+  store i1 0, i1* %3
+  br label %28
+28:
+  %29 = load i1, i1* %3
+  store i1 %29, i1* %eq
+  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %f1
+  %31 = load double, double* %f2
+  %32 = addrspacecast i8 addrspace(1)* %30 to i8*
+  %33 = ptrtoint i8* %32 to i64
+  %34 = and i64 %33, 2233785415175766016
+  %35 = icmp eq i64 %34, 576460752303423488
+  br i1 %35, label %36, label %40
+36:
+  %37 = call double @_bal_tagged_to_float(i8 addrspace(1)* %30)
+  %38 = call i1 @_bal_float_exact_eq(double %37, double %31)
+  %39 = xor i1 %38, 1
+  store i1 %39, i1* %4
+  br label %41
 40:
-  %41 = load i1, i1* %4
-  store i1 %41, i1* %neEq
-  %42 = load i1, i1* %eq
-  %43 = load i1, i1* %neEq
-  %44 = icmp eq i1 %42, %43
-  store i1 %44, i1* %5
-  %45 = load i1, i1* %5
-  br i1 %45, label %16, label %17
+  store i1 1, i1* %4
+  br label %41
+41:
+  %42 = load i1, i1* %4
+  store i1 %42, i1* %neEq
+  %43 = load i1, i1* %eq
+  %44 = load i1, i1* %neEq
+  %45 = icmp eq i1 %43, %44
+  store i1 %45, i1* %5
+  %46 = load i1, i1* %5
+  br i1 %46, label %16, label %17
 }
 define internal i8 addrspace(1)* @_B_exactEqFA(double %0, i8 addrspace(1)* %1) {
   %f1 = alloca double
@@ -309,7 +313,7 @@ define internal i8 addrspace(1)* @_B_exactEqFA(double %0, i8 addrspace(1)* %1) {
   %13 = ptrtoint i8* %12 to i64
   %14 = and i64 %13, 2233785415175766016
   %15 = icmp eq i64 %14, 576460752303423488
-  br i1 %15, label %23, label %26
+  br i1 %15, label %24, label %27
 16:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901091)
 17:
@@ -322,44 +326,45 @@ define internal i8 addrspace(1)* @_B_exactEqFA(double %0, i8 addrspace(1)* %1) {
 21:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879847453030)
 22:
-  call void @_bal_panic(i64 13572)
+  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 13572)
+  call void @_bal_panic(i8 addrspace(1)* %23)
   unreachable
-23:
-  %24 = call double @_bal_tagged_to_float(i8 addrspace(1)* %11)
-  %25 = call i1 @_bal_float_exact_eq(double %24, double %10)
-  store i1 %25, i1* %3
-  br label %27
-26:
-  store i1 0, i1* %3
-  br label %27
+24:
+  %25 = call double @_bal_tagged_to_float(i8 addrspace(1)* %11)
+  %26 = call i1 @_bal_float_exact_eq(double %25, double %10)
+  store i1 %26, i1* %3
+  br label %28
 27:
-  %28 = load i1, i1* %3
-  store i1 %28, i1* %eq
-  %29 = load double, double* %f1
-  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %f2
-  %31 = addrspacecast i8 addrspace(1)* %30 to i8*
-  %32 = ptrtoint i8* %31 to i64
-  %33 = and i64 %32, 2233785415175766016
-  %34 = icmp eq i64 %33, 576460752303423488
-  br i1 %34, label %35, label %39
-35:
-  %36 = call double @_bal_tagged_to_float(i8 addrspace(1)* %30)
-  %37 = call i1 @_bal_float_exact_eq(double %36, double %29)
-  %38 = xor i1 %37, 1
-  store i1 %38, i1* %4
-  br label %40
-39:
-  store i1 1, i1* %4
-  br label %40
+  store i1 0, i1* %3
+  br label %28
+28:
+  %29 = load i1, i1* %3
+  store i1 %29, i1* %eq
+  %30 = load double, double* %f1
+  %31 = load i8 addrspace(1)*, i8 addrspace(1)** %f2
+  %32 = addrspacecast i8 addrspace(1)* %31 to i8*
+  %33 = ptrtoint i8* %32 to i64
+  %34 = and i64 %33, 2233785415175766016
+  %35 = icmp eq i64 %34, 576460752303423488
+  br i1 %35, label %36, label %40
+36:
+  %37 = call double @_bal_tagged_to_float(i8 addrspace(1)* %31)
+  %38 = call i1 @_bal_float_exact_eq(double %37, double %30)
+  %39 = xor i1 %38, 1
+  store i1 %39, i1* %4
+  br label %41
 40:
-  %41 = load i1, i1* %4
-  store i1 %41, i1* %neEq
-  %42 = load i1, i1* %eq
-  %43 = load i1, i1* %neEq
-  %44 = icmp eq i1 %42, %43
-  store i1 %44, i1* %5
-  %45 = load i1, i1* %5
-  br i1 %45, label %16, label %17
+  store i1 1, i1* %4
+  br label %41
+41:
+  %42 = load i1, i1* %4
+  store i1 %42, i1* %neEq
+  %43 = load i1, i1* %eq
+  %44 = load i1, i1* %neEq
+  %45 = icmp eq i1 %43, %44
+  store i1 %45, i1* %5
+  %46 = load i1, i1* %5
+  br i1 %46, label %16, label %17
 }
 define internal i8 addrspace(1)* @_B_exactEqAA(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
   %f1 = alloca i8 addrspace(1)*
@@ -407,6 +412,7 @@ define internal i8 addrspace(1)* @_B_exactEqAA(i8 addrspace(1)* %0, i8 addrspace
 28:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879847453030)
 29:
-  call void @_bal_panic(i64 16644)
+  %30 = call i8 addrspace(1)* @_bal_panic_construct(i64 16644)
+  call void @_bal_panic(i8 addrspace(1)* %30)
   unreachable
 }

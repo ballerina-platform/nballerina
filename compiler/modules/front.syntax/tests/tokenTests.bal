@@ -47,7 +47,8 @@ function test2() {
 }
 
 function tokenization(string str) returns Token[]|error {
-    Tokenizer tok = new([str]);
+    SourceFile file = new("<internal>");
+    Tokenizer tok = new([str], file);
     Token[] tokens = [];
     while true {
         check tok.advance();

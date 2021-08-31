@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
@@ -14,7 +15,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
   ret void
 6:
-  call void @_bal_panic(i64 772)
+  %7 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %7)
   unreachable
 }
 define void @_B_foo(i8 addrspace(1)* %0) {
@@ -60,7 +62,7 @@ pattern.1:
   %26 = ptrtoint i8* %25 to i64
   %27 = and i64 %26, 2233785415175766016
   %28 = icmp eq i64 %27, 504403158265495552
-  br i1 %28, label %34, label %37
+  br i1 %28, label %35, label %38
 pattern.2:
   br label %32
 29:
@@ -74,17 +76,18 @@ pattern.2:
 32:
   ret void
 33:
-  call void @_bal_panic(i64 1796)
+  %34 = call i8 addrspace(1)* @_bal_panic_construct(i64 1796)
+  call void @_bal_panic(i8 addrspace(1)* %34)
   unreachable
-34:
-  %35 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %24)
-  %36 = icmp eq i64 %35, 42
-  store i1 %36, i1* %4
-  br label %38
-37:
-  store i1 0, i1* %4
-  br label %38
+35:
+  %36 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %24)
+  %37 = icmp eq i64 %36, 42
+  store i1 %37, i1* %4
+  br label %39
 38:
-  %39 = load i1, i1* %4
-  br i1 %39, label %clause.0, label %pattern.2
+  store i1 0, i1* %4
+  br label %39
+39:
+  %40 = load i1, i1* %4
+  br i1 %40, label %clause.0, label %pattern.2
 }

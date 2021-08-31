@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
@@ -27,7 +28,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
 15:
-  call void @_bal_panic(i64 772)
+  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %16)
   unreachable
 }
 define internal i64 @_B_foo(i64 %0, i1 %1) {
@@ -35,7 +37,7 @@ define internal i64 @_B_foo(i64 %0, i1 %1) {
   %b = alloca i1
   %3 = alloca i64
   %4 = alloca i64
-  %5 = alloca i64
+  %5 = alloca i8 addrspace(1)*
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard
   %8 = icmp ult i8* %6, %7
@@ -49,42 +51,45 @@ define internal i64 @_B_foo(i64 %0, i1 %1) {
   %12 = load i64, i64* %i
   %13 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %12, i64 1)
   %14 = extractvalue {i64, i1} %13, 1
-  br i1 %14, label %24, label %21
+  br i1 %14, label %25, label %22
 15:
   %16 = load i64, i64* %i
   %17 = icmp eq i64 5, 0
-  br i1 %17, label %25, label %26
+  br i1 %17, label %27, label %29
 18:
-  %19 = load i64, i64* %5
-  call void @_bal_panic(i64 %19)
+  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %5
+  call void @_bal_panic(i8 addrspace(1)* %19)
   unreachable
 20:
-  call void @_bal_panic(i64 2052)
+  %21 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052)
+  call void @_bal_panic(i8 addrspace(1)* %21)
   unreachable
-21:
-  %22 = extractvalue {i64, i1} %13, 0
-  store i64 %22, i64* %3
-  %23 = load i64, i64* %3
-  ret i64 %23
-24:
-  store i64 2561, i64* %5
-  br label %18
+22:
+  %23 = extractvalue {i64, i1} %13, 0
+  store i64 %23, i64* %3
+  %24 = load i64, i64* %3
+  ret i64 %24
 25:
-  store i64 3074, i64* %5
+  %26 = call i8 addrspace(1)* @_bal_panic_construct(i64 2561)
+  store i8 addrspace(1)* %26, i8 addrspace(1)** %5
   br label %18
-26:
-  %27 = icmp eq i64 %16, -9223372036854775808
-  %28 = icmp eq i64 5, -1
-  %29 = and i1 %27, %28
-  br i1 %29, label %32, label %30
-30:
-  %31 = srem i64 %16, 5
-  store i64 %31, i64* %4
-  br label %33
-32:
-  store i64 0, i64* %4
-  br label %33
+27:
+  %28 = call i8 addrspace(1)* @_bal_panic_construct(i64 3074)
+  store i8 addrspace(1)* %28, i8 addrspace(1)** %5
+  br label %18
+29:
+  %30 = icmp eq i64 %16, -9223372036854775808
+  %31 = icmp eq i64 5, -1
+  %32 = and i1 %30, %31
+  br i1 %32, label %35, label %33
 33:
-  %34 = load i64, i64* %4
-  ret i64 %34
+  %34 = srem i64 %16, 5
+  store i64 %34, i64* %4
+  br label %36
+35:
+  store i64 0, i64* %4
+  br label %36
+36:
+  %37 = load i64, i64* %4
+  ret i64 %37
 }

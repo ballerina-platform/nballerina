@@ -4,7 +4,7 @@ function testConstFnBuilder(Module m, Builder builder, string fnName, float retV
     FunctionDefn fn = m.addFunctionDefn(fnName, {returnType: "double", paramTypes: []});
     BasicBlock initBlock = fn.appendBasicBlock();
     builder.positionAtEnd(initBlock);
-    builder.ret(constReal("double",retVal));
+    builder.ret(constFloat("double",retVal));
 }
 
 function constFloatT() returns Module {

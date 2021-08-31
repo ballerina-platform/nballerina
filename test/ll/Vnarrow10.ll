@@ -2,7 +2,8 @@
 @.str0 = internal unnamed_addr constant {i16, i16, [20 x i8]} {i16 13, i16 13, [20 x i8] c"positive zero\00\00\00\00\00\00\00"}, align 8
 @.str1 = internal unnamed_addr constant {i16, i16, [20 x i8]} {i16 13, i16 13, [20 x i8] c"negative zero\00\00\00\00\00\00\00"}, align 8
 @.str2 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"non-zero\00\00\00\00"}, align 8
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare zeroext i1 @_bal_float_eq(double, double) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
@@ -22,7 +23,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
   ret void
 8:
-  call void @_bal_panic(i64 772)
+  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %9)
   unreachable
 }
 define internal void @_B_foo(double %0) {
@@ -89,6 +91,7 @@ define internal void @_B_foo(double %0) {
 36:
   ret void
 37:
-  call void @_bal_panic(i64 2308)
+  %38 = call i8 addrspace(1)* @_bal_panic_construct(i64 2308)
+  call void @_bal_panic(i8 addrspace(1)* %38)
   unreachable
 }

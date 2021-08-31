@@ -20,13 +20,17 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     match cur {
         [IDENTIFIER, var identifier] => {
-            err:Position pos = tok.currentPos();
+            Position pos = tok.currentPos();
             check tok.advance();
             return finishIdentifierStmt(tok, identifier, pos);
         }
         "return" => {
             check tok.advance();
             return parseReturnStmt(tok);
+        }
+        "panic" => {
+            check tok.advance();
+            return parsePanicStmt(tok);
         }
         "break" => {
             check tok.advance();
@@ -58,7 +62,10 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parseVarDeclStmt(tok, true);
         }
-        var td if td is InlineBasicTypeDesc|ANY|"map" => {
+        "error" => {
+            return parseErrorStmt(tok);
+        }
+        var td if td is InlineBuiltinTypeDesc|"map" => {
             return parseVarDeclStmt(tok);
         }
         "("|[DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {
@@ -69,7 +76,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 }
 
 
-function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos) returns Stmt|err:Syntax {
+function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     if cur == "=" {
         VarRefExpr lValue = { varName: identifier };
@@ -91,7 +98,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
     }
     else if cur == "[" {
         VarRefExpr varRef = { varName: identifier };
-        err:Position bracketPos = tok.currentPos();
+        Position bracketPos = tok.currentPos();
         check tok.advance();
         Expr index = check parseInnerExpr(tok);
         check tok.expect("]");
@@ -121,6 +128,26 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, err:Position pos
         }
     }
     return parseError(tok, "invalid statement");
+}
+
+// Parse a statement that starts with the keyword `error`
+function parseErrorStmt(Tokenizer tok) returns Stmt|err:Syntax {
+    Position pos = tok.currentPos();
+    check tok.advance();
+    if tok.current() == "(" {
+        check tok.advance();
+        ErrorConstructorExpr errExpr = check finishErrorConstructorExpr(tok, pos);
+        if tok.current() == "." {
+            MethodCallExpr expr = check finishMethodCallExpr(tok, errExpr);
+            return finishCallStmt(tok, expr);
+        }
+        return parseError(tok, "error constructor not allowed here");
+    }
+    else {
+        InlineAltTypeDesc td = check parseInlineOptionalTypeDesc(tok, "error");
+        InlineTypeDesc utd = check finishInlineUnionTypeDesc(tok, td);
+        return finishVarDeclStmt(tok, td);
+    }
 }
 
 function parseMethodCallStmt(Tokenizer tok) returns Stmt|err:Syntax {
@@ -155,6 +182,7 @@ function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Sy
     check tok.expect(";");
     return stmt; 
 }
+
 function parseCompoundAssignStmt(Tokenizer tok, VarRefExpr lValue, CompoundAssignOp op) returns CompoundAssignStmt|err:Syntax {
     check tok.advance();
     Expr expr = check parseExpr(tok);
@@ -167,6 +195,10 @@ function parseCompoundAssignStmt(Tokenizer tok, VarRefExpr lValue, CompoundAssig
 
 function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     InlineTypeDesc td = check parseInlineTypeDesc(tok);
+    return finishVarDeclStmt(tok, td, isFinal);
+}
+
+function finishVarDeclStmt(Tokenizer tok, InlineTypeDesc td, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     Token? cur = tok.current();
     if cur is [IDENTIFIER, string] {
         check tok.advance();
@@ -190,6 +222,12 @@ function parseReturnStmt(Tokenizer tok) returns ReturnStmt|err:Syntax {
         check tok.expect(";");
     }
     return { returnExpr };
+}
+
+function parsePanicStmt(Tokenizer tok) returns PanicStmt|err:Syntax {
+    Expr panicExpr = check parseExpr(tok);
+    check tok.expect(";");
+    return { panicExpr };
 }
 
 function parseIfElseStmt(Tokenizer tok) returns IfElseStmt|err:Syntax {
@@ -274,7 +312,7 @@ function parseMatchPattern(Tokenizer tok) returns MatchPattern|err:Syntax {
         check tok.advance();
         return cur;
     }
-    err:Position pos = tok.currentPos();
+    Position pos = tok.currentPos();
     SimpleConstExpr expr = check parseSimpleConstExpr(tok);
     return { expr, pos};
 }

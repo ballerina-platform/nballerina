@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
   %1 = alloca i1
@@ -70,7 +71,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %12
   ret void
 45:
-  call void @_bal_panic(i64 772)
+  %46 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %46)
   unreachable
 }
 define internal void @_B_makeNil() {
@@ -81,7 +83,8 @@ define internal void @_B_makeNil() {
 4:
   ret void
 5:
-  call void @_bal_panic(i64 3076)
+  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 3076)
+  call void @_bal_panic(i8 addrspace(1)* %6)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_makeNilAny() {
@@ -92,6 +95,7 @@ define internal i8 addrspace(1)* @_B_makeNilAny() {
 4:
   ret i8 addrspace(1)* null
 5:
-  call void @_bal_panic(i64 4100)
+  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 4100)
+  call void @_bal_panic(i8 addrspace(1)* %6)
   unreachable
 }

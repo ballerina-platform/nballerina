@@ -203,7 +203,7 @@ void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr value)
     insert(mp, key, _bal_string_hash(key), len);
 }
 
-Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
+PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
     int64_t len = mp->fArray.length;
    

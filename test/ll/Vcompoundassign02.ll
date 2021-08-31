@@ -1,6 +1,7 @@
 @_bal_stack_guard = external global i8*
 @.str2 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 11, i16 11, [12 x i8] c" nballerina\00"}, align 8
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)*, i8 addrspace(1)*)
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
@@ -55,6 +56,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %7
   ret void
 28:
-  call void @_bal_panic(i64 772)
+  %29 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %29)
   unreachable
 }

@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
@@ -16,7 +17,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
   ret void
 7:
-  call void @_bal_panic(i64 772)
+  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %8)
   unreachable
 }
 define internal void @_B_foo(i8 addrspace(1)* %0) {
@@ -27,7 +29,7 @@ define internal void @_B_foo(i8 addrspace(1)* %0) {
   %b = alloca i1
   %3 = alloca i64
   %4 = alloca i8 addrspace(1)*
-  %5 = alloca i64
+  %5 = alloca i8 addrspace(1)*
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard
   %8 = icmp ult i8* %6, %7
@@ -61,7 +63,7 @@ define internal void @_B_foo(i8 addrspace(1)* %0) {
   %25 = load i64, i64* %x.1
   %26 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %25, i64 1)
   %27 = extractvalue {i64, i1} %26, 1
-  br i1 %27, label %38, label %34
+  br i1 %27, label %39, label %35
 28:
   br label %20
 29:
@@ -70,20 +72,22 @@ define internal void @_B_foo(i8 addrspace(1)* %0) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
 31:
-  %32 = load i64, i64* %5
-  call void @_bal_panic(i64 %32)
+  %32 = load i8 addrspace(1)*, i8 addrspace(1)** %5
+  call void @_bal_panic(i8 addrspace(1)* %32)
   unreachable
 33:
-  call void @_bal_panic(i64 1796)
+  %34 = call i8 addrspace(1)* @_bal_panic_construct(i64 1796)
+  call void @_bal_panic(i8 addrspace(1)* %34)
   unreachable
-34:
-  %35 = extractvalue {i64, i1} %26, 0
-  store i64 %35, i64* %3
-  %36 = load i64, i64* %3
-  %37 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %36)
-  store i8 addrspace(1)* %37, i8 addrspace(1)** %x
+35:
+  %36 = extractvalue {i64, i1} %26, 0
+  store i64 %36, i64* %3
+  %37 = load i64, i64* %3
+  %38 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %37)
+  store i8 addrspace(1)* %38, i8 addrspace(1)** %x
   br label %23
-38:
-  store i64 3329, i64* %5
+39:
+  %40 = call i8 addrspace(1)* @_bal_panic_construct(i64 3329)
+  store i8 addrspace(1)* %40, i8 addrspace(1)** %5
   br label %31
 }

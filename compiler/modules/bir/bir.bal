@@ -2,6 +2,8 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.err;
 
 public type SemType t:SemType;
+public type Position err:Position;
+public type File err:File;
 
 public type Module object {
     public function getId() returns ModuleId;
@@ -39,8 +41,12 @@ public type FunctionDefn readonly & record {|
     InternalSymbol symbol;
     # The signature of the function
     FunctionSignature signature;
+    # File in which the definition occurs
+    // XXX provide access to this via FunctionCode or Module
+    // so that FunctionDefn is anydata
+    File file; 
     # The position of the definition
-    err:Position position;
+    Position position;
 |};
 
 public type InternalSymbol readonly & record {|
@@ -176,6 +182,7 @@ public enum InsnName {
     INSN_MAPPING_GET,
     INSN_MAPPING_SET,
     INSN_STR_CONCAT,
+    INSN_ERROR_CONSTRUCT,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -208,7 +215,7 @@ public type Insn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
     |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
-    |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
+    |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
 public type SimpleConstOperand ()|boolean|int|float;
@@ -227,7 +234,7 @@ public type IntArithmeticBinaryInsn readonly & record {|
     ArithmeticBinaryOp op;
     Register result;
     IntOperand[2] operands;
-    err:Position position;
+    Position position;
 |};
 
 # Concatenate strings, returns a new string
@@ -272,7 +279,7 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     ArithmeticBinaryOp op;
     Register result;
     FloatOperand[2] operands;
-    err:Position position;
+    Position position;
 |};
 
 public type FloatNegateInsn readonly & record {|
@@ -294,7 +301,7 @@ public type ConvertToIntInsn readonly & record {|
     INSN_CONVERT_TO_INT name = INSN_CONVERT_TO_INT;
     Register result;
     Register operand;
-    err:Position position;
+    Position position;
 |};
 
 # If the operand is an int or decimal, then convert it to a float.
@@ -310,7 +317,12 @@ public type ConvertToFloatInsn readonly & record {|
     Register operand;
 |};
 
-public type OrderType "float"|"int"|"boolean"|"string";
+public type OrderType UniformOrderType|OptOrderType;
+public type UniformOrderType t:UT_FLOAT|t:UT_INT|t:UT_BOOLEAN|t:UT_STRING;
+public type OptOrderType readonly & record {|
+    UniformOrderType opt;
+|};
+
 # This does ordered comparision
 # Equality and inequality are done by equal
 public type CompareInsn readonly & record {|
@@ -337,7 +349,7 @@ public type ListGetInsn readonly & record {|
     Register result;
     Register list;
     IntOperand operand;
-    err:Position position;
+    Position position;
 |};
 
 # Sets a member of a list at a specified index.
@@ -348,7 +360,7 @@ public type ListSetInsn readonly & record {|
     IntOperand index;
     // operand is the value to store in the list
     Operand operand;
-    err:Position position;
+    Position position;
 |};
 
 # Constructs a new mutable list value.
@@ -374,7 +386,16 @@ public type MappingGetInsn readonly & record {|
 public type MappingSetInsn readonly & record {|
     INSN_MAPPING_SET name = INSN_MAPPING_SET;
     [Register, StringOperand, Operand] operands;
-    err:Position position;
+    Position position;
+|};
+
+# Constructs an error value.
+# Operand must be of type string.
+public type ErrorConstructInsn readonly & record {|
+    INSN_ERROR_CONSTRUCT name = INSN_ERROR_CONSTRUCT;
+    Register result;
+    StringOperand operand;
+    Position position;
 |};
 
 # This does equality expressions.
@@ -402,7 +423,7 @@ public type EqualityInsn readonly & record {|
 public type CallInsn readonly & record {|
     *InsnBase;
     # Position in the source that resulted in the instruction
-    err:Position? position;
+    Position? position;
     INSN_CALL name = INSN_CALL;
     Register result;
     FunctionOperand func;
@@ -433,7 +454,7 @@ public type TypeCastInsn readonly & record {|
     Register result;
     Register operand;
     SemType semType;
-    err:Position position;
+    Position position;
 |};
 
 

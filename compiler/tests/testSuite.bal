@@ -46,15 +46,26 @@ function testCompileEU(string path) returns file:Error|io:Error? {
             else if !err.message().includes("'io:println'") {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
-            // JBUG #31334 cast needed
-            err:Position? pos = (<err:Detail>err.detail())?.position;
-            if (isE || base[1].toUpperAscii() == "E") && pos != () {
-                test:assertEquals(pos.lineNumber, check errorLine(path), "wrong line number in error " + path);
+            int? lineNumber = compileErrorLineNumber(err);
+            if lineNumber != () && (isE || base[1].toUpperAscii() == "E") {
+                test:assertEquals(lineNumber, check errorLine(path), "wrong line number in error " + path);
             }
         }
     }
     else {
         return err;
+    }
+}
+
+function compileErrorLineNumber(CompileError err) returns int? {
+    if err is io:Error {
+        return ();
+    }
+    else {
+        // JBUG #31334 cast needed
+        err:Detail detail = <err:Detail>err.detail();
+        err:LineColumn? lc = detail.location?.startPos;
+        return lc == () ? () : lc[0];
     }
 }
 

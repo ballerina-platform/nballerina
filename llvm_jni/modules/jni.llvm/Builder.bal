@@ -307,7 +307,7 @@ public distinct class Builder {
         return new (jLLVMBuildAddrSpaceCast(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
-    public function sIToFP(Value val, RealType destTy, string? name=()) returns Value {
+    public function sIToFP(Value val, FloatType destTy, string? name=()) returns Value {
         string reg = self.extractName(name);
         return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }

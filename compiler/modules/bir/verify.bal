@@ -23,7 +23,7 @@ class VerifyContext {
     }
 
     function err(err:Message msg) returns err:Semantic {
-        return err:semantic(msg, functionName=self.defn.symbol.identifier);
+        return err:semantic(msg, loc=err:location(self.defn.file), functionName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
@@ -81,11 +81,20 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     else if insn is RetInsn {
         check verifyOperandType(vc, insn.operand, vc.returnType(), "value is not a subtype of the return type");
     }
+    else if insn is PanicInsn {
+        check verifyOperandError(vc, name, insn.operand);
+    }
     else if insn is CallInsn {
         check verifyCall(vc, insn);
     }
     else if insn is TypeCastInsn {
         check verifyTypeCast(vc, insn);
+    }
+    else if insn is ConvertToIntInsn {
+        check verifyConvertToIntInsn(vc, insn);
+    }
+    else if insn is ConvertToFloatInsn {
+        check verifyConvertToFloatInsn(vc, insn);
     }
     else if insn is ListConstructInsn {
         check verifyListConstruct(vc, insn);
@@ -104,6 +113,9 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     }
     else if insn is MappingSetInsn {
         check verifyMappingSet(vc, insn);
+    }
+    else if insn is ErrorConstructInsn {
+        check verifyOperandString(vc, name, insn.operand);
     }
 }
 
@@ -195,24 +207,49 @@ function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semanti
     }
 }
 
+function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns err:Semantic? {
+    if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:INT), t:NUMBER)) {
+        return vc.err("bad BIR: operand type of ConvertToInt has no non-integral numeric component");
+    }
+    if !vc.isSubtype(t:union(t:diff(insn.operand.semType, t:NUMBER), t:INT), insn.result.semType) {
+        return vc.err("bad BIR: result type of ConvertToInt does not contain everything it should");
+    }
+    if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:INT), t:NUMBER)) {
+        return vc.err("bad BIR: result type of ConvertToInt contains non-integral numeric type");
+    }
+}
+
+function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) returns err:Semantic? {
+    if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:FLOAT), t:NUMBER)) {
+        return vc.err("bad BIR: operand type of ConvertToFloat has no non-float numeric component");
+    }
+    if !vc.isSubtype(t:union(t:diff(insn.operand.semType, t:NUMBER), t:FLOAT), insn.result.semType) {
+        return vc.err("bad BIR: result type of ConvertToFloat does not contain everything it should");
+    }
+    if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:FLOAT), t:NUMBER)) {
+        return vc.err("bad BIR: result type of ConvertToFloat contains non-float numeric type");
+    }
+}
+
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
-    string name = insn.name;
-    match insn.orderType {
-        "boolean" => {
-            check verifyOperandBoolean(vc, name, <BooleanOperand>insn.operands[0]);
-            check verifyOperandBoolean(vc, name, <BooleanOperand>insn.operands[1]);
+    t:UniformTypeBitSet expectType;
+    OrderType ot = insn.orderType;
+    if ot is OptOrderType {
+        expectType = t:uniformTypeUnion((1 << t:UT_NIL) | (1 << ot.opt ));
+    }
+    else {
+        expectType  = t:uniformType(ot);
+    }
+    foreach var operand in insn.operands {
+        t:SemType operandType;
+        if operand is Register {
+            operandType = operand.semType;
         }
-        "int" => {
-            check verifyOperandInt(vc, name, <IntOperand>insn.operands[0]);
-            check verifyOperandInt(vc, name, <IntOperand>insn.operands[1]);
+        else {
+            operandType = t:constBasicType(operand);
         }
-        "float" => {
-            check verifyOperandFloat(vc, name, <FloatOperand>insn.operands[0]);
-            check verifyOperandFloat(vc, name, <FloatOperand>insn.operands[1]);
-        }
-        "string" => {
-            check verifyOperandString(vc, name, <StringOperand>insn.operands[0]);
-            check verifyOperandString(vc, name, <StringOperand>insn.operands[1]);
+        if !t:isSubtypeSimple(operandType, expectType) {
+            return vc.err(`operand of ${insn.op} does not match order type`);
         }
     }
 }
@@ -284,6 +321,10 @@ function verifyOperandBoolean(VerifyContext vc, string insnName, BooleanOperand 
     if operand is Register {
         return verifyRegisterSemType(vc,insnName, operand, t:BOOLEAN, "boolean");
     }
+}
+
+function verifyOperandError(VerifyContext vc, string insnName, Register operand) returns err:Semantic? {
+    return verifyRegisterSemType(vc, insnName, operand, t:ERROR, "error");
 }
 
 function verifyRegisterSemType(VerifyContext vc, string insnName, Register operand, t:SemType semType, string typeName) returns err:Semantic? {

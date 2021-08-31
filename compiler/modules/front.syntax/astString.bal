@@ -75,10 +75,15 @@ function stmtToWords(Word[] w, Stmt stmt) {
     } 
     else if stmt is ReturnStmt {
         w.push("return");
-        Expr ret = stmt.returnExpr;
-        if !(ret is ConstValueExpr) || ret.value != () {
-            exprToWords(w, stmt.returnExpr);
+        Expr retExpr = stmt.returnExpr;
+        if !(retExpr is ConstValueExpr) || retExpr.value != () {
+            exprToWords(w, retExpr);
         }
+        w.push(";");
+    }
+    else if stmt is PanicStmt {
+        w.push("panic");
+        exprToWords(w, stmt.panicExpr);
         w.push(";");
     }
     else if stmt is AssignStmt {
@@ -175,7 +180,7 @@ function blockToWords(Word[] w, Stmt[] body) {
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
-    if td is InlineBasicTypeDesc|ANY {
+    if td is InlineBuiltinTypeDesc {
         w.push(td);
         return;
     }
@@ -281,6 +286,11 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         }
         w.push(expr.funcName, CLING, "(");
         exprsToWords(w, expr.args);
+        w.push(")");
+    }
+    else if expr is ErrorConstructorExpr {
+        w.push("error", CLING, "(");
+        exprToWords(w, expr.message);
         w.push(")");
     }
     else if expr is BinaryExpr {
