@@ -9,17 +9,21 @@ type ConstEvalTest [string,SimpleConst];
 class TestFoldContext {
     // JBUG error if next line uncommented
     // *FoldContext;
+    t:Env env = new;
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         return ();
     }
-    function semanticErr(err:Message msg, err:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, pos=pos, cause=cause);
+    function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, cause=cause);
+    }
+    function typeEnv() returns t:Env {
+        return self.env;
     }
 }
 
 @test:Config{ dataProvider: validConstExprs }
 function testConstExpr(string src, SimpleConst expected) {
-    s:Expr parsed = checkpanic s:parseExpression([src]);
+    s:Expr parsed = checkpanic s:parseExpression([src], "<internal>");
     TestFoldContext cx = new;
     var result = foldExpr(cx, (), parsed);
     test:assertTrue(result is s:ConstValueExpr && result.value == expected, "got: " + (result is s:ConstValueExpr ? result.value.toString()  : "not constant"));

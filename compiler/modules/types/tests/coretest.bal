@@ -10,6 +10,14 @@ function testSubtypeSimple() {
 }
 
 @test:Config{}
+function testSingleNumericType() {
+    test:assertEquals(singleNumericType(INT), INT);
+    test:assertEquals(singleNumericType(BOOLEAN), ());
+    test:assertEquals(singleNumericType(singleton(1)), INT);
+    test:assertEquals(singleNumericType(union(INT, FLOAT)), ());
+}
+
+@test:Config{}
 function testBitTwiddling() {
     test:assertEquals(numberOfTrailingZeros(0x10), 4);
     test:assertEquals(numberOfTrailingZeros(0x100), 8);

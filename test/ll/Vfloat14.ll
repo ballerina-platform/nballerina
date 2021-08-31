@@ -6,7 +6,8 @@
 @.str6 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"both nan\00\00\00\00"}, align 8
 @.str8 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 10, i16 10, [12 x i8] c"eq error 1\00\00"}, align 8
 @.str9 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 10, i16 10, [12 x i8] c"eq error 2\00\00"}, align 8
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare void @_Bio__println(i8 addrspace(1)*)
 declare zeroext i1 @_bal_float_eq(double, double) readonly
 define void @_B_main() {
@@ -94,7 +95,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %22
   ret void
 49:
-  call void @_bal_panic(i64 772)
+  %50 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %50)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_floatCmp(double %0, double %1) {
@@ -219,6 +221,7 @@ define internal i8 addrspace(1)* @_B_floatCmp(double %0, double %1) {
 82:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3057488322648960623)
 83:
-  call void @_bal_panic(i64 5380)
+  %84 = call i8 addrspace(1)* @_bal_panic_construct(i64 5380)
+  call void @_bal_panic(i8 addrspace(1)* %84)
   unreachable
 }

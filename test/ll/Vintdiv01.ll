@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
@@ -138,14 +139,15 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %32
   ret void
 94:
-  call void @_bal_panic(i64 772)
+  %95 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %95)
   unreachable
 }
 define internal i64 @_B_div(i64 %0, i64 %1) {
   %x = alloca i64
   %y = alloca i64
   %3 = alloca i64
-  %4 = alloca i64
+  %4 = alloca i8 addrspace(1)*
   %5 = alloca i8
   %6 = load i8*, i8** @_bal_stack_guard
   %7 = icmp ult i8* %5, %6
@@ -156,28 +158,31 @@ define internal i64 @_B_div(i64 %0, i64 %1) {
   %9 = load i64, i64* %x
   %10 = load i64, i64* %y
   %11 = icmp eq i64 %10, 0
-  br i1 %11, label %15, label %16
+  br i1 %11, label %16, label %18
 12:
-  %13 = load i64, i64* %4
-  call void @_bal_panic(i64 %13)
+  %13 = load i8 addrspace(1)*, i8 addrspace(1)** %4
+  call void @_bal_panic(i8 addrspace(1)* %13)
   unreachable
 14:
-  call void @_bal_panic(i64 3332)
+  %15 = call i8 addrspace(1)* @_bal_panic_construct(i64 3332)
+  call void @_bal_panic(i8 addrspace(1)* %15)
   unreachable
-15:
-  store i64 3586, i64* %4
-  br label %12
 16:
-  %17 = icmp eq i64 %9, -9223372036854775808
-  %18 = icmp eq i64 %10, -1
-  %19 = and i1 %17, %18
-  br i1 %19, label %23, label %20
-20:
-  %21 = sdiv i64 %9, %10
-  store i64 %21, i64* %3
-  %22 = load i64, i64* %3
-  ret i64 %22
-23:
-  store i64 3585, i64* %4
+  %17 = call i8 addrspace(1)* @_bal_panic_construct(i64 3586)
+  store i8 addrspace(1)* %17, i8 addrspace(1)** %4
+  br label %12
+18:
+  %19 = icmp eq i64 %9, -9223372036854775808
+  %20 = icmp eq i64 %10, -1
+  %21 = and i1 %19, %20
+  br i1 %21, label %25, label %22
+22:
+  %23 = sdiv i64 %9, %10
+  store i64 %23, i64* %3
+  %24 = load i64, i64* %3
+  ret i64 %24
+25:
+  %26 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585)
+  store i8 addrspace(1)* %26, i8 addrspace(1)** %4
   br label %12
 }

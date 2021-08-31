@@ -2,7 +2,8 @@
 @.str4 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"1234567\00\00\00\00\00"}, align 8
 @.str13 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 6, i16 5, [12 x i8] c"1234\C2\80\00\00\00\00\00\00"}, align 8
 @.str14 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 6, i16 5, [12 x i8] c"1234\C2\81\00\00\00\00\00\00"}, align 8
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i64 @_bal_string_cmp(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
 declare zeroext i1 @_bal_string_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
@@ -53,7 +54,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %13
   ret void
 18:
-  call void @_bal_panic(i64 772)
+  %19 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %19)
   unreachable
 }
 define internal void @_B_cmp(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
@@ -269,7 +271,8 @@ define internal void @_B_cmp(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
 141:
   ret void
 142:
-  call void @_bal_panic(i64 4868)
+  %143 = call i8 addrspace(1)* @_bal_panic_construct(i64 4868)
+  call void @_bal_panic(i8 addrspace(1)* %143)
   unreachable
 }
 define internal void @_B_checkLessThan(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
@@ -440,7 +443,8 @@ define internal void @_B_checkLessThan(i8 addrspace(1)* %0, i8 addrspace(1)* %1)
   store i8 addrspace(1)* null, i8 addrspace(1)** %34
   ret void
 115:
-  call void @_bal_panic(i64 12548)
+  %116 = call i8 addrspace(1)* @_bal_panic_construct(i64 12548)
+  call void @_bal_panic(i8 addrspace(1)* %116)
   unreachable
 }
 define internal void @_B_assert(i1 %0, i1 %1) {
@@ -468,6 +472,7 @@ define internal void @_B_assert(i1 %0, i1 %1) {
 14:
   ret void
 15:
-  call void @_bal_panic(i64 17412)
+  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 17412)
+  call void @_bal_panic(i8 addrspace(1)* %16)
   unreachable
 }

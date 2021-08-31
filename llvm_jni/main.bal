@@ -1,3 +1,4 @@
+import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.front;
 import wso2/nballerina.nback;
@@ -7,7 +8,7 @@ import wso2/nballerina.jni.llvm;
 import ballerina/io;
 import ballerina/file;
 
-type CompileError err:Any?|io:Error;
+type CompileError err:Any|io:Error;
 
 public type Options record {|
     boolean testJsonTypes = false;
@@ -59,7 +60,7 @@ function validGcName(string? gcName) returns string|error? {
 }
 
 //  outputFilename of () means don't output anything
-function compileFile(string filename, string? gcName, *Options opts) returns CompileError {
+function compileFile(string filename, string? gcName, *Options opts) returns CompileError? {
     string outputNameBase = checkpanic chooseOutputFilename(filename, opts.outDir);
     string outputFileName = outputNameBase + OUTPUT_EXTENSION;
     string? objectFileName = ();
@@ -70,7 +71,8 @@ function compileFile(string filename, string? gcName, *Options opts) returns Com
        names: [filename],
        organization: "dummy"
     };
-    bir:Module birMod = check front:loadModule(filename, id);
+    t:Env env = new;
+    bir:Module birMod = check front:loadModule(env, filename, id);
     llvm:Context context = new;
     llvm:Module llMod = check nback:buildModule(birMod, context, {gcName: gcName});
     if opts.targetTriple is string {

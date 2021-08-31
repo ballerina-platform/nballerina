@@ -302,7 +302,7 @@ function numberOfTrailingZeros(int bits) returns int {
     return n;
 }
 
-function uniformType(UniformTypeCode code) returns UniformTypeBitSet {
+public function uniformType(UniformTypeCode code) returns UniformTypeBitSet {
     return <UniformTypeBitSet>(1 << code);
 }
 
@@ -310,7 +310,7 @@ function uniformType(UniformTypeCode code) returns UniformTypeBitSet {
 // bits is bit vecor indexed by UniformTypeCode
 // I would like to make the arg int:Unsigned32
 // but are language/impl bugs that make this not work well
-function uniformTypeUnion(int bits) returns UniformTypeBitSet {
+public function uniformTypeUnion(int bits) returns UniformTypeBitSet {
     return <UniformTypeBitSet>bits;
 }
 
@@ -869,6 +869,28 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
+public function constUniformTypeCode(string|int|float|boolean|() v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL {
+    if v is () {
+        return UT_NIL;
+    }
+    else if v is int {
+        return UT_INT;
+    }
+    else if v is float {
+        return UT_FLOAT;
+    }
+    else if v is string {
+        return UT_STRING;
+    }
+    else {
+        return UT_BOOLEAN;
+    }
+}
+
+public function constBasicType(string|int|float|boolean|() v) returns UniformTypeBitSet {
+    return  uniformType(constUniformTypeCode(v));
+}
+
 public function containsConst(SemType t, string|int|float|boolean|() v) returns boolean {
     if v is () {
         return containsNil(t);
@@ -935,6 +957,9 @@ public function containsConstBoolean(SemType t, boolean b) returns boolean {
 
 public function singleNumericType(SemType semType) returns UniformTypeBitSet? {
     SemType numType = intersect(semType, NUMBER);
+    if numType == NEVER {
+        return ();
+    }
     if isSubtypeSimple(numType, INT) {
         return INT;
     }

@@ -2,7 +2,8 @@
 @.str2 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 9, i16 9, [12 x i8] c"Wednesday\00\00\00"}, align 8
 @.str3 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"Thursday\00\00\00\00"}, align 8
 @.str5 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"Saturday\00\00\00\00"}, align 8
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_mapping_construct(i64)
 declare i64 @_Barray__length(i8 addrspace(1)*)
@@ -25,7 +26,7 @@ define void @_B_main() {
   %7 = alloca i64
   %8 = alloca i8 addrspace(1)*
   %9 = alloca i8 addrspace(1)*
-  %10 = alloca i64
+  %10 = alloca i8 addrspace(1)*
   %11 = alloca i8
   %12 = load i8*, i8** @_bal_stack_guard
   %13 = icmp ult i8* %11, %12
@@ -92,60 +93,65 @@ define void @_B_main() {
   %50 = getelementptr {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %49, i64 0, i32 0
   %51 = load i64, i64 addrspace(1)* %50, align 8
   %52 = icmp ult i64 %46, %51
-  br i1 %52, label %59, label %69
+  br i1 %52, label %60, label %70
 53:
   %54 = load i64, i64* %i
   %55 = add nsw i64 %54, 1
   store i64 %55, i64* %i
   br label %36
 56:
-  %57 = load i64, i64* %10
-  call void @_bal_panic(i64 %57)
+  %57 = load i8 addrspace(1)*, i8 addrspace(1)** %10
+  call void @_bal_panic(i8 addrspace(1)* %57)
   unreachable
 58:
-  call void @_bal_panic(i64 772)
+  %59 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %59)
   unreachable
-59:
-  %60 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %49, i64 0, i32 2
-  %61 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %60, align 8
-  %62 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %61, i64 0, i64 %46
-  %63 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %62, align 8
-  store i8 addrspace(1)* %63, i8 addrspace(1)** %5
-  %64 = load i8 addrspace(1)*, i8 addrspace(1)** %5
-  %65 = addrspacecast i8 addrspace(1)* %64 to i8*
-  %66 = ptrtoint i8* %65 to i64
-  %67 = and i64 %66, 2233785415175766016
-  %68 = icmp eq i64 %67, 720575940379279360
-  br i1 %68, label %70, label %74
-69:
-  store i64 1797, i64* %10
-  br label %56
+60:
+  %61 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %49, i64 0, i32 2
+  %62 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %61, align 8
+  %63 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %62, i64 0, i64 %46
+  %64 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %63, align 8
+  store i8 addrspace(1)* %64, i8 addrspace(1)** %5
+  %65 = load i8 addrspace(1)*, i8 addrspace(1)** %5
+  %66 = addrspacecast i8 addrspace(1)* %65 to i8*
+  %67 = ptrtoint i8* %66 to i64
+  %68 = and i64 %67, 2233785415175766016
+  %69 = icmp eq i64 %68, 720575940379279360
+  br i1 %69, label %72, label %76
 70:
-  store i8 addrspace(1)* %64, i8 addrspace(1)** %6
-  %71 = load i64, i64* %i
-  %72 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %71, i64 1)
-  %73 = extractvalue {i64, i1} %72, 1
-  br i1 %73, label %83, label %75
-74:
-  store i64 1795, i64* %10
+  %71 = call i8 addrspace(1)* @_bal_panic_construct(i64 1797)
+  store i8 addrspace(1)* %71, i8 addrspace(1)** %10
   br label %56
-75:
-  %76 = extractvalue {i64, i1} %72, 0
-  store i64 %76, i64* %7
-  %77 = load i8 addrspace(1)*, i8 addrspace(1)** %dayNumber
-  %78 = load i8 addrspace(1)*, i8 addrspace(1)** %6
-  %79 = load i64, i64* %7
-  %80 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %79)
-  %81 = call i64 @_bal_mapping_set(i8 addrspace(1)* %77, i8 addrspace(1)* %78, i8 addrspace(1)* %80)
-  %82 = icmp eq i64 %81, 0
-  br i1 %82, label %84, label %85
-83:
-  store i64 1793, i64* %10
+72:
+  store i8 addrspace(1)* %65, i8 addrspace(1)** %6
+  %73 = load i64, i64* %i
+  %74 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %73, i64 1)
+  %75 = extractvalue {i64, i1} %74, 1
+  br i1 %75, label %86, label %78
+76:
+  %77 = call i8 addrspace(1)* @_bal_panic_construct(i64 1795)
+  store i8 addrspace(1)* %77, i8 addrspace(1)** %10
   br label %56
-84:
+78:
+  %79 = extractvalue {i64, i1} %74, 0
+  store i64 %79, i64* %7
+  %80 = load i8 addrspace(1)*, i8 addrspace(1)** %dayNumber
+  %81 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  %82 = load i64, i64* %7
+  %83 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %82)
+  %84 = call i64 @_bal_mapping_set(i8 addrspace(1)* %80, i8 addrspace(1)* %81, i8 addrspace(1)* %83)
+  %85 = icmp eq i64 %84, 0
+  br i1 %85, label %88, label %89
+86:
+  %87 = call i8 addrspace(1)* @_bal_panic_construct(i64 1793)
+  store i8 addrspace(1)* %87, i8 addrspace(1)** %10
+  br label %56
+88:
   br label %53
-85:
-  %86 = or i64 %81, 1792
-  store i64 %86, i64* %10
+89:
+  %90 = or i64 %84, 1792
+  %91 = call i8 addrspace(1)* @_bal_panic_construct(i64 %90)
+  store i8 addrspace(1)* %91, i8 addrspace(1)** %10
   br label %56
 }

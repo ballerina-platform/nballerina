@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i64 @_bal_list_set(i8 addrspace(1)*, i64, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
@@ -8,7 +9,7 @@ define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
   %v = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
-  %3 = alloca i64
+  %3 = alloca i8 addrspace(1)*
   %4 = alloca i8
   %5 = load i8*, i8** @_bal_stack_guard
   %6 = icmp ult i8* %4, %5
@@ -30,21 +31,23 @@ define void @_B_main() {
   %16 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)
   %17 = call i64 @_bal_list_set(i8 addrspace(1)* %15, i64 1, i8 addrspace(1)* %16)
   %18 = icmp eq i64 %17, 0
-  br i1 %18, label %22, label %24
+  br i1 %18, label %23, label %25
 19:
-  %20 = load i64, i64* %3
-  call void @_bal_panic(i64 %20)
+  %20 = load i8 addrspace(1)*, i8 addrspace(1)** %3
+  call void @_bal_panic(i8 addrspace(1)* %20)
   unreachable
 21:
-  call void @_bal_panic(i64 772)
+  %22 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %22)
   unreachable
-22:
-  %23 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  call void @_Bio__println(i8 addrspace(1)* %23)
+23:
+  %24 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  call void @_Bio__println(i8 addrspace(1)* %24)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   ret void
-24:
-  %25 = or i64 %17, 1280
-  store i64 %25, i64* %3
+25:
+  %26 = or i64 %17, 1280
+  %27 = call i8 addrspace(1)* @_bal_panic_construct(i64 %26)
+  store i8 addrspace(1)* %27, i8 addrspace(1)** %3
   br label %19
 }

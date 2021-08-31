@@ -2,7 +2,8 @@
 @.str6 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 9, i16 6, [12 x i8] c"smile\F0\9F\99\82\00\00\00"}, align 8
 @.str8 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 9, i16 6, [12 x i8] c"\F0\9F\99\82frown\00\00\00"}, align 8
 @.str10 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 2, [12 x i8] c"\F0\9F\99\81\F0\9F\99\82\00\00\00\00"}, align 8
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)*, i8 addrspace(1)*)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i64 @_Bstring__length(i8 addrspace(1)*)
@@ -31,7 +32,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %5
   ret void
 10:
-  call void @_bal_panic(i64 516)
+  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 516)
+  call void @_bal_panic(i8 addrspace(1)* %11)
   unreachable
 }
 define internal void @_B_concatTest(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i8 addrspace(1)* %2) {
@@ -81,6 +83,7 @@ define internal void @_B_concatTest(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i8
   store i8 addrspace(1)* null, i8 addrspace(1)** %9
   ret void
 30:
-  call void @_bal_panic(i64 6148)
+  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 6148)
+  call void @_bal_panic(i8 addrspace(1)* %31)
   unreachable
 }

@@ -74,7 +74,7 @@ copyBalConfig.dependsOn(copyLocalDependencies, copyNbal)
 
 task testBuild(type: Exec) {
         workingDir tmpBuildDir
-        commandLine 'bal', 'build', '--offline'
+        commandLine 'bal', 'test', '--offline', '--tests', 'nballerina:testCompileVPO'
 }
 testBuild.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyLocalDependencies, copyBalConfig)
 

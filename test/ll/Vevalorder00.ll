@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
@@ -18,7 +19,8 @@ define internal i64 @_B_one() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
   ret i64 1
 7:
-  call void @_bal_panic(i64 772)
+  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %8)
   unreachable
 }
 define internal i64 @_B_two() {
@@ -33,7 +35,8 @@ define internal i64 @_B_two() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %1
   ret i64 2
 7:
-  call void @_bal_panic(i64 2052)
+  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052)
+  call void @_bal_panic(i8 addrspace(1)* %8)
   unreachable
 }
 define void @_B_main() {
@@ -108,7 +111,7 @@ define void @_B_main() {
   %52 = alloca i64
   %53 = alloca i64
   %54 = alloca i8 addrspace(1)*
-  %55 = alloca i64
+  %55 = alloca i8 addrspace(1)*
   %56 = alloca i8
   %57 = load i8*, i8** @_bal_stack_guard
   %58 = icmp ult i8* %56, %57
@@ -122,251 +125,258 @@ define void @_B_main() {
   %63 = load i64, i64* %2
   %64 = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %62, i64 %63)
   %65 = extractvalue {i64, i1} %64, 1
-  br i1 %65, label %77, label %69
+  br i1 %65, label %78, label %70
 66:
-  %67 = load i64, i64* %55
-  call void @_bal_panic(i64 %67)
+  %67 = load i8 addrspace(1)*, i8 addrspace(1)** %55
+  call void @_bal_panic(i8 addrspace(1)* %67)
   unreachable
 68:
-  call void @_bal_panic(i64 3588)
+  %69 = call i8 addrspace(1)* @_bal_panic_construct(i64 3588)
+  call void @_bal_panic(i8 addrspace(1)* %69)
   unreachable
-69:
-  %70 = extractvalue {i64, i1} %64, 0
-  store i64 %70, i64* %3
-  %71 = load i64, i64* %3
-  store i64 %71, i64* %mul
-  %72 = call i64 @_B_one()
-  store i64 %72, i64* %4
-  %73 = call i64 @_B_two()
-  store i64 %73, i64* %5
-  %74 = load i64, i64* %4
-  %75 = load i64, i64* %5
-  %76 = icmp eq i64 %75, 0
-  br i1 %76, label %78, label %79
-77:
-  store i64 3841, i64* %55
-  br label %66
+70:
+  %71 = extractvalue {i64, i1} %64, 0
+  store i64 %71, i64* %3
+  %72 = load i64, i64* %3
+  store i64 %72, i64* %mul
+  %73 = call i64 @_B_one()
+  store i64 %73, i64* %4
+  %74 = call i64 @_B_two()
+  store i64 %74, i64* %5
+  %75 = load i64, i64* %4
+  %76 = load i64, i64* %5
+  %77 = icmp eq i64 %76, 0
+  br i1 %77, label %80, label %82
 78:
-  store i64 4610, i64* %55
+  %79 = call i8 addrspace(1)* @_bal_panic_construct(i64 3841)
+  store i8 addrspace(1)* %79, i8 addrspace(1)** %55
   br label %66
-79:
-  %80 = icmp eq i64 %74, -9223372036854775808
-  %81 = icmp eq i64 %75, -1
-  %82 = and i1 %80, %81
-  br i1 %82, label %91, label %83
-83:
-  %84 = sdiv i64 %74, %75
-  store i64 %84, i64* %6
-  %85 = load i64, i64* %6
-  store i64 %85, i64* %div
-  %86 = call i64 @_B_one()
-  store i64 %86, i64* %7
-  %87 = call i64 @_B_two()
-  store i64 %87, i64* %8
-  %88 = load i64, i64* %7
-  %89 = load i64, i64* %8
-  %90 = icmp eq i64 %89, 0
-  br i1 %90, label %92, label %93
-91:
-  store i64 4609, i64* %55
+80:
+  %81 = call i8 addrspace(1)* @_bal_panic_construct(i64 4610)
+  store i8 addrspace(1)* %81, i8 addrspace(1)** %55
   br label %66
-92:
-  store i64 5378, i64* %55
+82:
+  %83 = icmp eq i64 %75, -9223372036854775808
+  %84 = icmp eq i64 %76, -1
+  %85 = and i1 %83, %84
+  br i1 %85, label %94, label %86
+86:
+  %87 = sdiv i64 %75, %76
+  store i64 %87, i64* %6
+  %88 = load i64, i64* %6
+  store i64 %88, i64* %div
+  %89 = call i64 @_B_one()
+  store i64 %89, i64* %7
+  %90 = call i64 @_B_two()
+  store i64 %90, i64* %8
+  %91 = load i64, i64* %7
+  %92 = load i64, i64* %8
+  %93 = icmp eq i64 %92, 0
+  br i1 %93, label %96, label %98
+94:
+  %95 = call i8 addrspace(1)* @_bal_panic_construct(i64 4609)
+  store i8 addrspace(1)* %95, i8 addrspace(1)** %55
   br label %66
-93:
-  %94 = icmp eq i64 %88, -9223372036854775808
-  %95 = icmp eq i64 %89, -1
-  %96 = and i1 %94, %95
-  br i1 %96, label %99, label %97
-97:
-  %98 = srem i64 %88, %89
-  store i64 %98, i64* %9
-  br label %100
-99:
+96:
+  %97 = call i8 addrspace(1)* @_bal_panic_construct(i64 5378)
+  store i8 addrspace(1)* %97, i8 addrspace(1)** %55
+  br label %66
+98:
+  %99 = icmp eq i64 %91, -9223372036854775808
+  %100 = icmp eq i64 %92, -1
+  %101 = and i1 %99, %100
+  br i1 %101, label %104, label %102
+102:
+  %103 = srem i64 %91, %92
+  store i64 %103, i64* %9
+  br label %105
+104:
   store i64 0, i64* %9
-  br label %100
-100:
-  %101 = load i64, i64* %9
-  store i64 %101, i64* %rmd
-  %102 = call i64 @_B_one()
-  store i64 %102, i64* %10
-  %103 = call i64 @_B_two()
-  store i64 %103, i64* %11
-  %104 = load i64, i64* %10
-  %105 = load i64, i64* %11
-  %106 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %104, i64 %105)
-  %107 = extractvalue {i64, i1} %106, 1
-  br i1 %107, label %117, label %108
-108:
-  %109 = extractvalue {i64, i1} %106, 0
-  store i64 %109, i64* %12
-  %110 = load i64, i64* %12
-  store i64 %110, i64* %add
-  %111 = call i64 @_B_one()
-  store i64 %111, i64* %13
-  %112 = call i64 @_B_two()
-  store i64 %112, i64* %14
-  %113 = load i64, i64* %13
-  %114 = load i64, i64* %14
-  %115 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %113, i64 %114)
-  %116 = extractvalue {i64, i1} %115, 1
-  br i1 %116, label %209, label %118
-117:
-  store i64 6145, i64* %55
+  br label %105
+105:
+  %106 = load i64, i64* %9
+  store i64 %106, i64* %rmd
+  %107 = call i64 @_B_one()
+  store i64 %107, i64* %10
+  %108 = call i64 @_B_two()
+  store i64 %108, i64* %11
+  %109 = load i64, i64* %10
+  %110 = load i64, i64* %11
+  %111 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %109, i64 %110)
+  %112 = extractvalue {i64, i1} %111, 1
+  br i1 %112, label %122, label %113
+113:
+  %114 = extractvalue {i64, i1} %111, 0
+  store i64 %114, i64* %12
+  %115 = load i64, i64* %12
+  store i64 %115, i64* %add
+  %116 = call i64 @_B_one()
+  store i64 %116, i64* %13
+  %117 = call i64 @_B_two()
+  store i64 %117, i64* %14
+  %118 = load i64, i64* %13
+  %119 = load i64, i64* %14
+  %120 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %118, i64 %119)
+  %121 = extractvalue {i64, i1} %120, 1
+  br i1 %121, label %215, label %124
+122:
+  %123 = call i8 addrspace(1)* @_bal_panic_construct(i64 6145)
+  store i8 addrspace(1)* %123, i8 addrspace(1)** %55
   br label %66
-118:
-  %119 = extractvalue {i64, i1} %115, 0
-  store i64 %119, i64* %15
-  %120 = load i64, i64* %15
-  store i64 %120, i64* %sub
-  %121 = call i64 @_B_one()
-  store i64 %121, i64* %17
-  %122 = call i64 @_B_two()
-  store i64 %122, i64* %18
-  %123 = load i64, i64* %17
-  %124 = load i64, i64* %18
-  %125 = icmp slt i64 %123, %124
-  store i1 %125, i1* %16
-  %126 = load i1, i1* %16
-  store i1 %126, i1* %lt
+124:
+  %125 = extractvalue {i64, i1} %120, 0
+  store i64 %125, i64* %15
+  %126 = load i64, i64* %15
+  store i64 %126, i64* %sub
   %127 = call i64 @_B_one()
-  store i64 %127, i64* %20
+  store i64 %127, i64* %17
   %128 = call i64 @_B_two()
-  store i64 %128, i64* %21
-  %129 = load i64, i64* %20
-  %130 = load i64, i64* %21
-  %131 = icmp sle i64 %129, %130
-  store i1 %131, i1* %19
-  %132 = load i1, i1* %19
-  store i1 %132, i1* %lteq
+  store i64 %128, i64* %18
+  %129 = load i64, i64* %17
+  %130 = load i64, i64* %18
+  %131 = icmp slt i64 %129, %130
+  store i1 %131, i1* %16
+  %132 = load i1, i1* %16
+  store i1 %132, i1* %lt
   %133 = call i64 @_B_one()
-  store i64 %133, i64* %23
+  store i64 %133, i64* %20
   %134 = call i64 @_B_two()
-  store i64 %134, i64* %24
-  %135 = load i64, i64* %23
-  %136 = load i64, i64* %24
-  %137 = icmp sgt i64 %135, %136
-  store i1 %137, i1* %22
-  %138 = load i1, i1* %22
-  store i1 %138, i1* %gt
+  store i64 %134, i64* %21
+  %135 = load i64, i64* %20
+  %136 = load i64, i64* %21
+  %137 = icmp sle i64 %135, %136
+  store i1 %137, i1* %19
+  %138 = load i1, i1* %19
+  store i1 %138, i1* %lteq
   %139 = call i64 @_B_one()
-  store i64 %139, i64* %26
+  store i64 %139, i64* %23
   %140 = call i64 @_B_two()
-  store i64 %140, i64* %27
-  %141 = load i64, i64* %26
-  %142 = load i64, i64* %27
-  %143 = icmp sge i64 %141, %142
-  store i1 %143, i1* %25
-  %144 = load i1, i1* %25
-  store i1 %144, i1* %gteq
+  store i64 %140, i64* %24
+  %141 = load i64, i64* %23
+  %142 = load i64, i64* %24
+  %143 = icmp sgt i64 %141, %142
+  store i1 %143, i1* %22
+  %144 = load i1, i1* %22
+  store i1 %144, i1* %gt
   %145 = call i64 @_B_one()
-  store i64 %145, i64* %29
+  store i64 %145, i64* %26
   %146 = call i64 @_B_two()
-  store i64 %146, i64* %30
-  %147 = load i64, i64* %29
-  %148 = load i64, i64* %30
-  %149 = icmp eq i64 %147, %148
-  store i1 %149, i1* %28
-  %150 = load i1, i1* %28
-  store i1 %150, i1* %eq
+  store i64 %146, i64* %27
+  %147 = load i64, i64* %26
+  %148 = load i64, i64* %27
+  %149 = icmp sge i64 %147, %148
+  store i1 %149, i1* %25
+  %150 = load i1, i1* %25
+  store i1 %150, i1* %gteq
   %151 = call i64 @_B_one()
-  store i64 %151, i64* %32
+  store i64 %151, i64* %29
   %152 = call i64 @_B_two()
-  store i64 %152, i64* %33
-  %153 = load i64, i64* %32
-  %154 = load i64, i64* %33
-  %155 = icmp ne i64 %153, %154
-  store i1 %155, i1* %31
-  %156 = load i1, i1* %31
-  store i1 %156, i1* %neq
+  store i64 %152, i64* %30
+  %153 = load i64, i64* %29
+  %154 = load i64, i64* %30
+  %155 = icmp eq i64 %153, %154
+  store i1 %155, i1* %28
+  %156 = load i1, i1* %28
+  store i1 %156, i1* %eq
   %157 = call i64 @_B_one()
-  store i64 %157, i64* %35
+  store i64 %157, i64* %32
   %158 = call i64 @_B_two()
-  store i64 %158, i64* %36
-  %159 = load i64, i64* %35
-  %160 = load i64, i64* %36
-  %161 = icmp eq i64 %159, %160
-  store i1 %161, i1* %34
-  %162 = load i1, i1* %34
-  store i1 %162, i1* %eeq
+  store i64 %158, i64* %33
+  %159 = load i64, i64* %32
+  %160 = load i64, i64* %33
+  %161 = icmp ne i64 %159, %160
+  store i1 %161, i1* %31
+  %162 = load i1, i1* %31
+  store i1 %162, i1* %neq
   %163 = call i64 @_B_one()
-  store i64 %163, i64* %38
+  store i64 %163, i64* %35
   %164 = call i64 @_B_two()
-  store i64 %164, i64* %39
-  %165 = load i64, i64* %38
-  %166 = load i64, i64* %39
-  %167 = icmp ne i64 %165, %166
-  store i1 %167, i1* %37
-  %168 = load i1, i1* %37
-  store i1 %168, i1* %neeq
+  store i64 %164, i64* %36
+  %165 = load i64, i64* %35
+  %166 = load i64, i64* %36
+  %167 = icmp eq i64 %165, %166
+  store i1 %167, i1* %34
+  %168 = load i1, i1* %34
+  store i1 %168, i1* %eeq
   %169 = call i64 @_B_one()
-  store i64 %169, i64* %40
+  store i64 %169, i64* %38
   %170 = call i64 @_B_two()
-  store i64 %170, i64* %41
-  %171 = load i64, i64* %40
-  %172 = load i64, i64* %41
-  %173 = and i64 %171, %172
-  store i64 %173, i64* %42
-  %174 = load i64, i64* %42
-  store i64 %174, i64* %and
+  store i64 %170, i64* %39
+  %171 = load i64, i64* %38
+  %172 = load i64, i64* %39
+  %173 = icmp ne i64 %171, %172
+  store i1 %173, i1* %37
+  %174 = load i1, i1* %37
+  store i1 %174, i1* %neeq
   %175 = call i64 @_B_one()
-  store i64 %175, i64* %43
+  store i64 %175, i64* %40
   %176 = call i64 @_B_two()
-  store i64 %176, i64* %44
-  %177 = load i64, i64* %43
-  %178 = load i64, i64* %44
-  %179 = xor i64 %177, %178
-  store i64 %179, i64* %45
-  %180 = load i64, i64* %45
-  store i64 %180, i64* %xor
+  store i64 %176, i64* %41
+  %177 = load i64, i64* %40
+  %178 = load i64, i64* %41
+  %179 = and i64 %177, %178
+  store i64 %179, i64* %42
+  %180 = load i64, i64* %42
+  store i64 %180, i64* %and
   %181 = call i64 @_B_one()
-  store i64 %181, i64* %46
+  store i64 %181, i64* %43
   %182 = call i64 @_B_two()
-  store i64 %182, i64* %47
-  %183 = load i64, i64* %46
-  %184 = load i64, i64* %47
-  %185 = or i64 %183, %184
-  store i64 %185, i64* %48
-  %186 = load i64, i64* %48
-  store i64 %186, i64* %or
+  store i64 %182, i64* %44
+  %183 = load i64, i64* %43
+  %184 = load i64, i64* %44
+  %185 = xor i64 %183, %184
+  store i64 %185, i64* %45
+  %186 = load i64, i64* %45
+  store i64 %186, i64* %xor
   %187 = call i64 @_B_one()
-  store i64 %187, i64* %49
+  store i64 %187, i64* %46
   %188 = call i64 @_B_two()
-  store i64 %188, i64* %50
-  %189 = call i8 addrspace(1)* @_bal_alloc(i64 16)
-  %190 = bitcast i8 addrspace(1)* %189 to [2 x i8 addrspace(1)*] addrspace(1)*
-  %191 = load i64, i64* %49
-  %192 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %191)
-  %193 = getelementptr inbounds [2 x i8 addrspace(1)*], [2 x i8 addrspace(1)*] addrspace(1)* %190, i64 0, i64 0
-  store i8 addrspace(1)* %192, i8 addrspace(1)* addrspace(1)* %193
-  %194 = load i64, i64* %50
-  %195 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %194)
-  %196 = getelementptr inbounds [2 x i8 addrspace(1)*], [2 x i8 addrspace(1)*] addrspace(1)* %190, i64 0, i64 1
-  store i8 addrspace(1)* %195, i8 addrspace(1)* addrspace(1)* %196
-  %197 = bitcast [2 x i8 addrspace(1)*] addrspace(1)* %190 to [0 x i8 addrspace(1)*] addrspace(1)*
-  %198 = call i8 addrspace(1)* @_bal_alloc(i64 24)
-  %199 = bitcast i8 addrspace(1)* %198 to {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %200 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %199, i64 0, i32 0
-  store i64 2, i64 addrspace(1)* %200
-  %201 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %199, i64 0, i32 1
-  store i64 2, i64 addrspace(1)* %201
-  %202 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %199, i64 0, i32 2
-  store [0 x i8 addrspace(1)*] addrspace(1)* %197, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %202
-  %203 = getelementptr i8, i8 addrspace(1)* %198, i64 1297036692682702848
-  store i8 addrspace(1)* %203, i8 addrspace(1)** %51
-  %204 = load i8 addrspace(1)*, i8 addrspace(1)** %51
-  store i8 addrspace(1)* %204, i8 addrspace(1)** %arr
-  %205 = call i64 @_B_one()
-  store i64 %205, i64* %52
-  %206 = call i64 @_B_two()
-  store i64 %206, i64* %53
-  %207 = load i64, i64* %52
-  %208 = load i64, i64* %53
-  call void @_B_ignore(i64 %207, i64 %208)
+  store i64 %188, i64* %47
+  %189 = load i64, i64* %46
+  %190 = load i64, i64* %47
+  %191 = or i64 %189, %190
+  store i64 %191, i64* %48
+  %192 = load i64, i64* %48
+  store i64 %192, i64* %or
+  %193 = call i64 @_B_one()
+  store i64 %193, i64* %49
+  %194 = call i64 @_B_two()
+  store i64 %194, i64* %50
+  %195 = call i8 addrspace(1)* @_bal_alloc(i64 16)
+  %196 = bitcast i8 addrspace(1)* %195 to [2 x i8 addrspace(1)*] addrspace(1)*
+  %197 = load i64, i64* %49
+  %198 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %197)
+  %199 = getelementptr inbounds [2 x i8 addrspace(1)*], [2 x i8 addrspace(1)*] addrspace(1)* %196, i64 0, i64 0
+  store i8 addrspace(1)* %198, i8 addrspace(1)* addrspace(1)* %199
+  %200 = load i64, i64* %50
+  %201 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %200)
+  %202 = getelementptr inbounds [2 x i8 addrspace(1)*], [2 x i8 addrspace(1)*] addrspace(1)* %196, i64 0, i64 1
+  store i8 addrspace(1)* %201, i8 addrspace(1)* addrspace(1)* %202
+  %203 = bitcast [2 x i8 addrspace(1)*] addrspace(1)* %196 to [0 x i8 addrspace(1)*] addrspace(1)*
+  %204 = call i8 addrspace(1)* @_bal_alloc(i64 24)
+  %205 = bitcast i8 addrspace(1)* %204 to {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %206 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %205, i64 0, i32 0
+  store i64 2, i64 addrspace(1)* %206
+  %207 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %205, i64 0, i32 1
+  store i64 2, i64 addrspace(1)* %207
+  %208 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %205, i64 0, i32 2
+  store [0 x i8 addrspace(1)*] addrspace(1)* %203, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %208
+  %209 = getelementptr i8, i8 addrspace(1)* %204, i64 1297036692682702848
+  store i8 addrspace(1)* %209, i8 addrspace(1)** %51
+  %210 = load i8 addrspace(1)*, i8 addrspace(1)** %51
+  store i8 addrspace(1)* %210, i8 addrspace(1)** %arr
+  %211 = call i64 @_B_one()
+  store i64 %211, i64* %52
+  %212 = call i64 @_B_two()
+  store i64 %212, i64* %53
+  %213 = load i64, i64* %52
+  %214 = load i64, i64* %53
+  call void @_B_ignore(i64 %213, i64 %214)
   store i8 addrspace(1)* null, i8 addrspace(1)** %54
   ret void
-209:
-  store i64 6913, i64* %55
+215:
+  %216 = call i8 addrspace(1)* @_bal_panic_construct(i64 6913)
+  store i8 addrspace(1)* %216, i8 addrspace(1)** %55
   br label %66
 }
 define internal void @_B_ignore(i64 %0, i64 %1) {
@@ -381,6 +391,7 @@ define internal void @_B_ignore(i64 %0, i64 %1) {
   store i64 %1, i64* %b
   ret void
 7:
-  call void @_bal_panic(i64 17924)
+  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 17924)
+  call void @_bal_panic(i8 addrspace(1)* %8)
   unreachable
 }

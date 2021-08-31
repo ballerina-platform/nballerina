@@ -1,6 +1,7 @@
 @_bal_stack_guard = external global i8*
 @.str1 = internal unnamed_addr constant {i16, i16, [28 x i8]} {i16 21, i16 21, [28 x i8] c"this is a long string\00\00\00\00\00\00\00"}, align 8
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_mapping_construct(i64)
@@ -75,7 +76,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %10
   ret void
 39:
-  call void @_bal_panic(i64 772)
+  %40 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %40)
   unreachable
 }
 define internal void @_B_p(i8 addrspace(1)* %0) {
@@ -182,6 +184,7 @@ define internal void @_B_p(i8 addrspace(1)* %0) {
 64:
   ret void
 65:
-  call void @_bal_panic(i64 4100)
+  %66 = call i8 addrspace(1)* @_bal_panic_construct(i64 4100)
+  call void @_bal_panic(i8 addrspace(1)* %66)
   unreachable
 }

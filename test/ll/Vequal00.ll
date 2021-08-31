@@ -1,5 +1,6 @@
 @_bal_stack_guard = external global i8*
-declare void @_bal_panic(i64) noreturn cold
+declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
+declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare zeroext i1 @_bal_exact_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
@@ -66,7 +67,8 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %12
   ret void
 45:
-  call void @_bal_panic(i64 772)
+  %46 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %46)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_mkNil() {
@@ -77,7 +79,8 @@ define internal i8 addrspace(1)* @_B_mkNil() {
 4:
   ret i8 addrspace(1)* null
 5:
-  call void @_bal_panic(i64 2308)
+  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 2308)
+  call void @_bal_panic(i8 addrspace(1)* %6)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_mkInt(i64 %0) {
@@ -92,7 +95,8 @@ define internal i8 addrspace(1)* @_B_mkInt(i64 %0) {
   %7 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %6)
   ret i8 addrspace(1)* %7
 8:
-  call void @_bal_panic(i64 3332)
+  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 3332)
+  call void @_bal_panic(i8 addrspace(1)* %9)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_mkBoolean(i1 %0) {
@@ -109,6 +113,7 @@ define internal i8 addrspace(1)* @_B_mkBoolean(i1 %0) {
   %9 = getelementptr i8, i8 addrspace(1)* null, i64 %8
   ret i8 addrspace(1)* %9
 10:
-  call void @_bal_panic(i64 4356)
+  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 4356)
+  call void @_bal_panic(i8 addrspace(1)* %11)
   unreachable
 }

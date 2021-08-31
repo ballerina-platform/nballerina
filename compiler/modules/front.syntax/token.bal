@@ -43,6 +43,7 @@ type Keyword
     | "match"
     | "never"
     | "null"
+    | "panic"
     | "readonly"
     | "record"
     | "return"
@@ -100,10 +101,13 @@ class Tokenizer {
     private int fragmentIndex = 0;
     private int tokenStartCodePointIndex = 0;
     private Mode mode = MODE_NORMAL;
+    final SourceFile file;
+
     Token? curTok = ();
 
-    function init(string[] lines) {
+    function init(string[] lines, SourceFile file) {
         self.lines = lines;
+        self.file = file;
     }
     
     function advance() returns err:Syntax? {
@@ -224,11 +228,8 @@ class Tokenizer {
         self.mode = m;
     }
 
-    function currentPos() returns err:Position {
-        return {
-            lineNumber: self.lineIndex,
-            indexInLine: self.tokenStartCodePointIndex
-        };
+    function currentPos() returns Position {
+        return createPosition(self.lineIndex, self.tokenStartCodePointIndex);
     }
 
     private function getFragment() returns string {
@@ -269,7 +270,24 @@ class Tokenizer {
     }
 
     function err(err:Message msg) returns err:Syntax {
-        return err:syntax(msg, self.currentPos());
+        return err:syntax(msg, loc=err:location(self.file, self.currentPos()));
     }
 
+}
+
+function createPosition(int line, int column) returns Position {
+    return (line << 32) | column;
+}
+
+public readonly class SourceFile {
+    *err:File;
+    private string fn;
+    public function init(string fn) {
+        self.fn = fn;
+    }
+    public function filename() returns string => self.fn;
+
+    public function lineColumn(Position pos) returns err:LineColumn {
+        return [pos >> 32, pos & 0xFFFFFFFF];
+    }
 }

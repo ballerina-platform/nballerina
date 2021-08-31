@@ -21,7 +21,7 @@ function testParser(string k, string rule, string[] subject, string[] expected) 
         return;
     }
 
-    err:Syntax|Word[] parsed = reduceToWords(rule, subject);
+    err:Syntax|Word[] parsed = reduceToWords(k, rule, subject);
     if k.includes("F") {
         if k.includes("V") {
             test:assertTrue(parsed is err:Syntax, "test marked as failing but parsed");
@@ -49,13 +49,14 @@ type SingleStringTokenizerTestCase [string, string];
     dataProvider: sourceFragments
 }
 function testTokenizer(string k, string[] lines) returns error? {
-    Tokenizer tok = new (lines);
+    SourceFile file = new(k);
+    Tokenizer tok = new (lines, file);
     while true {
         err:Syntax|Token? t = advance(tok, k, lines);
         if t is Token {
-            err:Position pos = tok.currentPos();
-            string src = lines[pos.lineNumber - 1];
-            int tStart = pos.indexInLine;
+            err:LineColumn lc = file.lineColumn(tok.currentPos());
+            string src = lines[lc[0] - 1];
+            int tStart = lc[1];
             string tStr = tokenToString(t);
             string srcAtPos = src.substring(tStart, tStart + tStr.length());
             if t is [HEX_INT_LITERAL, string] || t is [DECIMAL_FP_NUMBER, string, "f"?] {
@@ -112,13 +113,14 @@ function tokenToString(Token t) returns string {
     return <string>t;
 }
 
-function reduceToWords(string rule, string[] fragment) returns err:Syntax|Word[] {
+function reduceToWords(string k, string rule, string[] fragment) returns err:Syntax|Word[] {
     Word[] w = [];
     if rule == "mod" {
-        modulePartToWords(w, check parseModulePart(fragment));
+        modulePartToWords(w, check parseModulePart(fragment, k));
     }
     else {
-        Tokenizer tok = new (fragment);
+        SourceFile file = new(k);
+        Tokenizer tok = new (fragment, file);
         check tok.advance();
         match rule {
             "expr" => {
