@@ -103,3 +103,44 @@ public type GlobalProperties record {|
     Linkage linkage = "external";
 |};
 
+// Corresponds to LLVMDWARFSourceLanguage
+public type DWARFSourceLanguage "C99";
+
+// Corresponds to LLVMDWARFEmissionKind
+public type EmissionKind "none"|"full"|"lineTablesOnly";
+//TODO: add the other options
+public type CompileUnitProperties record {|
+    DWARFSourceLanguage language = "C99";
+    Metadata? file;
+    string? producer = ();
+    boolean isOptimized = false;
+    string? flags = ();
+    int runtimeVersion = 0;
+    string? splitName = ();
+    EmissionKind kind = "full";
+    int? DWOId = ();
+    boolean? splitDebugInlining = ();
+    boolean? splitDebugInfoForProfiling = ();
+    string? sysRoot = ();
+    string? sdk = ();
+|};
+
+public type ModuleFlag ["Debug Info Version", int]|["Dwarf Version", int];
+// Corresponds to LLVMModuleFlagBehavior
+public type ModuleFlagBehavior "error"|"warning"|"require"|"override"|"append"|"appendUnique"|"max";
+
+// Corresponds to LLVMDIFlags
+public type DIFlag "zero";
+public type FunctionMetadataProperties record {|
+    Metadata? scope;
+    string? name;
+    string? linkageName;
+    Metadata? file;
+    int lineNo;
+    Metadata? ty;
+    boolean isLocalToUnit = true;
+    boolean isDefinition = true;
+    int scopeLine;
+    DIFlag flag = "zero";
+    boolean isOptimized = false;
+|};
