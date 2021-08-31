@@ -15,4 +15,10 @@ public function main() {
     io:println(n1 < n4); // @output true
     io:println(n1 >= n4); // @output false
     io:println(n1 > n4); // @output false
+
+
+    io:println(n4 <= n1); // @output false
+    io:println(n4 < n1); // @output false
+    io:println(n4 >= n1); // @output true
+    io:println(n4 > n1); // @output true
 }
