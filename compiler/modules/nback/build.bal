@@ -964,7 +964,7 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
     bir:Register result = insn.result;
     match [lhsRepr.base, rhsRepr.base] {
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
-            if reprIsNil(lhsRepr) || reprIsNil(rhsRepr) {
+            if !reprExactNeedsHeap(lhsRepr) || !reprExactNeedsHeap(rhsRepr) {
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
@@ -1038,6 +1038,11 @@ function reprIsString(Repr repr) returns boolean {
     return repr is TaggedRepr && repr.subtype == t:STRING;
 }
 
+// May we need to look at the heap in order to tell whether something with this representation
+// is exactly equal to something else?
+function reprExactNeedsHeap(Repr repr) returns boolean {
+    return repr is TaggedRepr && (repr.subtype & (t:FLOAT|t:INT|t:STRING)) != 0;
+}
 
 function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {
     buildStoreBoolean(builder, scaffold,
@@ -1675,6 +1680,10 @@ final Repr REPR_BOOLEAN = { base: BASE_REPR_BOOLEAN, llvm: LLVM_BOOLEAN };
 
 final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:NIL };
 final TaggedRepr REPR_STRING = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:STRING };
+final TaggedRepr REPR_LIST_RW = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:LIST_RW };
+final TaggedRepr REPR_LIST = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:LIST };
+final TaggedRepr REPR_MAPPING_RW = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:MAPPING_RW };
+final TaggedRepr REPR_MAPPING = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:MAPPING };
 final TaggedRepr REPR_ERROR = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ERROR };
 
 final TaggedRepr REPR_TOP = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:TOP };
@@ -1693,6 +1702,10 @@ final readonly & record {|
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
     { domain: t:NIL, repr: REPR_NIL },
     { domain: t:STRING, repr: REPR_STRING },
+    { domain: t:LIST_RW, repr: REPR_LIST_RW },
+    { domain: t:LIST, repr: REPR_LIST },
+    { domain: t:MAPPING_RW, repr: REPR_MAPPING_RW },
+    { domain: t:MAPPING, repr: REPR_MAPPING },
     { domain: t:ERROR, repr: REPR_ERROR },
     { domain: t:ANY, repr: REPR_ANY },
     { domain: t:TOP, repr: REPR_TOP }
@@ -1707,15 +1720,24 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr|BuildError {
 
 // Return the representation for a SemType.
 function semTypeRepr(t:SemType ty) returns Repr|BuildError {
-    if ty === t:NEVER {
-        panic err:impossible("allocate register with never type");
-    }
+    t:UniformTypeBitSet w = t:widenToUniformTypes(ty);    
     foreach var tr in typeReprs {
-        if t:isSubtypeSimple(ty, tr.domain) {
+        if w == tr.domain {
             return tr.repr;
         }
     }
-    return err:unimplemented("unimplemented type");
+    if w == t:NEVER {
+        panic err:impossible("allocate register with never type");
+    }
+    // subset07 does not allow unions of list/mapppings with other things
+    // apart from `any`
+    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:ERROR;
+    // DECIMAL is here for ConvertToInt or ConvertToFloat 
+    if (w | supported | t:DECIMAL) == t:TOP || (w & supported) == w {
+        TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };
+        return repr;
+    }
+    return err:unimplemented("unimplemented type (" + w.toHexString() + ")");
 }
 
 function heapPointerType(llvm:Type ty) returns llvm:PointerType {

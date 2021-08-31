@@ -694,6 +694,15 @@ public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolea
     return (bits & ~<int>t2) == 0;
 }
 
+public function widenToUniformTypes(SemType t) returns UniformTypeBitSet {
+    if t is UniformTypeBitSet {
+        return t;
+    }
+    else {
+        return <UniformTypeBitSet>(t.all | t.some);
+    }
+}
+
 // If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),
 // then return the smallest such subtype. Otherwise, return t.
 public function widenUnsigned(SemType t) returns SemType {
