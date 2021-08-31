@@ -1,4 +1,4 @@
-TESTPROGS=string_hash string_cmp string_concat string_len immediate_string tagged_ptr float_print error_print
+TESTPROGS=string_hash string_cmp string_concat string_len immediate_string tagged_ptr float_print error_print error_backtrace
 # following will test balrt_inline, and must be named inlinert_*
 TESTINLINERTPROGS=inlinert_float
 TESTPROG_STAMPS=$(addsuffix .stamp, $(TESTPROGS) $(TESTINLINERTPROGS))
@@ -35,8 +35,11 @@ inlinert_%.bc: inlinert_unlinked_%.bc
 inlinert_%: inlinert_%.bc
 	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)
 
-%: %.c
-	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)
+$(filter error%, $(TESTPROGS)): error%: error%.c
+	$(CLANG) -g $(CFLAGS) -o ./$@ $< ../$(LIB)
+
+$(filter-out error%, $(TESTPROGS)): %: %.c
+	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)	
 
 clean:
 	-rm -f $(TESTPROGS) $(TESTPROG_STAMPS) $(TESTPROG_PROF_RAW) $(TESTPROG_PROF)

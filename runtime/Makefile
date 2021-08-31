@@ -25,10 +25,16 @@ all: $(LIB) $(BCLIB)
 test: all
 	$(MAKE) -C tests test
 
+$(LIBBACKTRACE_OBJS): 
+	cd third-party/libbacktrace; \
+	./configure --enable-shared
+	$(MAKE) -C third-party/libbacktrace all
+	$(AR) x third-party/libbacktrace/.libs/libbacktrace.a
+
 testCoverage: $(LIB) $(BCLIB)
 	$(MAKE) -C tests testCoverage
 
-$(LIB): $(OBJS)
+$(LIB): $(LIBBACKTRACE_OBJS) $(OBJS) 
 	$(AR) r $@ $^
 
 $(BCLIB): $(BCS)
@@ -68,7 +74,7 @@ $(LL_BCS): %.bc: %.ll
 $(OBJS) $(BCS): $(INCLUDES)
 
 clean:
-	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
+	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB) $(LIBBACKTRACE_OBJS)
 	$(MAKE) -C tests clean
 
 .PHONY: test all
