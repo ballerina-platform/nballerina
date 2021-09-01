@@ -7,11 +7,14 @@ class VerifyContext {
     private final Module mod;
     private final t:TypeCheckContext tc;
     private final FunctionDefn defn;
+    private final t:SemType anydataType;
 
     function init(Module mod, FunctionDefn defn) {
         self.mod = mod;
-        self.tc = mod.getTypeCheckContext();
+        t:TypeCheckContext tc  = mod.getTypeCheckContext();
+        self.tc = tc;
         self.defn = defn;
+        self.anydataType = createAnydata(tc.env);
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
@@ -20,6 +23,10 @@ class VerifyContext {
 
     function isEmpty(t:SemType t) returns boolean {
         return t:isEmpty(self.tc, t);
+    }
+
+    function isAnydata(t:SemType t) returns boolean {
+        return t:isSubtype(self.tc, t, self.anydataType);
     }
 
     function typeEnv() returns t:Env {
@@ -35,6 +42,15 @@ class VerifyContext {
     function symbolToString(Symbol sym) returns string {
         return symbolToString(self.mod, sym);
     }
+}
+
+// approximation for subset07
+function createAnydata(t:Env env) returns t:SemType {
+    t:ListDefinition listDef = new;
+    t:SemType arrayType = listDef.define(env, [], t:SIMPLE_OR_STRING);
+    t:MappingDefinition mapDef = new;
+    t:SemType mapType = mapDef.define(env, [], t:SIMPLE_OR_STRING);
+    return t:union(t:SIMPLE_OR_STRING, t:union(arrayType, mapType));
 }
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns err:Semantic? {
@@ -280,7 +296,7 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
             t:SemType intersectType = t:intersect(lhs.semType, rhs.semType);
             if !vc.isEmpty(intersectType) {
                 // JBUG #31749 cast should not be needed
-                if (<string>insn.op).length() == 2 && !vc.isSubtype(lhs.semType, t:SIMPLE_OR_STRING) && !vc.isSubtype(rhs.semType, t:SIMPLE_OR_STRING) {
+                if (<string>insn.op).length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
                     return vc.err("at least one operand of an == or != expression must be a subtype of anydata");
                 }
                 return;

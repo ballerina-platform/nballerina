@@ -1075,7 +1075,8 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
     bir:Register result = insn.result;
     match [lhsRepr.base, rhsRepr.base] {
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
-            if !reprExactNeedsHeap(lhsRepr) || !reprExactNeedsHeap(rhsRepr) {
+            if reprIsImmediate(lhsRepr) || reprIsImmediate(rhsRepr)
+               || (exact && (!reprExactNeedsHeap(lhsRepr) || !reprExactNeedsHeap(rhsRepr))) {
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
@@ -1155,6 +1156,10 @@ function reprExactNeedsHeap(Repr repr) returns boolean {
     return repr is TaggedRepr && (repr.subtype & (t:FLOAT|t:INT|t:STRING)) != 0;
 }
 
+function reprIsImmediate(Repr repr) returns boolean {
+    return !(repr is TaggedRepr) || (repr.subtype & ~(t:NIL|t:BOOLEAN)) == 0;
+}
+
 function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {
     buildStoreBoolean(builder, scaffold,
                       builder.iCmp(op, tagged, buildTaggedBoolean(builder, untagged)),
@@ -1179,8 +1184,8 @@ function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op
 }
 
 function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
-    RuntimeFunction eqFunc = exact ? exactEqFunction : eqFunction;
-    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, eqFunc), [tagged1, tagged2]);
+    RuntimeFunction func = exact ? exactEqFunction : eqFunction;
+    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, func), [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
