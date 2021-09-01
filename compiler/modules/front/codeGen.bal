@@ -1007,26 +1007,28 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         var { container, index, pos } => {
             // Do constant folding here since these expressions are not allowed in const definitions
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
-            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, check cx.foldExpr(env, index, t:union(t:INT, t:STRING)));
             if l is bir:Register {
-                bir:Register result = cx.createRegister(t:ANY);
-                TypedOperand? k = typedOperand(r);
-                bir:Insn insn;
-                if k is ["int", bir:IntOperand] {
-                    insn = <bir:ListGetInsn>{ result, list: l, operand: k[1], position: pos };
+                if t:isSubtypeSimple(l.semType, t:LIST) {
+                    var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, index, t:INT));
+                    // subset07 list types are restricted to arrays
+                    bir:Register result = cx.createRegister(<t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.env, l.semType));
+                    bir:ListGetInsn insn = { result, list: l, operand: r, position: pos };
+                    bb.insns.push(insn);
+                    return { result, block: nextBlock };
                 }
-                else if k is ["string", bir:StringOperand] {
-                    insn = <bir:MappingGetInsn>{ result, operands: [l, k[1]] };
+                else if t:isSubtypeSimple(l.semType, t:MAPPING) {
+                    var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
+                    // subset07 list types are restricted to maps
+                    bir:Register result = cx.createRegister(t:union(<t:UniformTypeBitSet>t:simpleMapMemberType(cx.mod.env, l.semType), t:NIL));
+                    bir:MappingGetInsn insn = { result, operands: [l, r] };
+                    bb.insns.push(insn);
+                    return { result, block: nextBlock };
                 }
-                else {
-                    return cx.semanticErr("member access key must be a string or an int");
-                }
-                bb.insns.push(insn);
-                return { result, block: nextBlock };
+                else if t:isSubtypeSimple(l.semType, t:STRING) {
+                    return cx.unimplementedErr("not implemented: member access on string", pos=pos);
+                }             
             }
-            else {
-                return cx.semanticErr("cannot apply member access to constant of simple type");
-            }
+            return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
         }
         // List construct
         // JBUG should be able to use just `var { members }`

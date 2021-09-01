@@ -150,7 +150,7 @@ public type BddMemo record {|
 type BddMemoTable table<BddMemo> key(bdd);
 
 public class TypeCheckContext {
-    private final Env env;
+    public final Env env;
     BddMemoTable listMemo = table [];
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];

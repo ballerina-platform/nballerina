@@ -694,10 +694,11 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct,
                                                                                     [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 2)], "inbounds"),
                                                                                     ALIGN_HEAP);
-    builder.store(builder.load(builder.getElementPtr(array,
-                                                     [llvm:constInt(LLVM_INT, 0), index], "inbounds"),
-                                                     ALIGN_HEAP),
-                  scaffold.address(insn.result));
+    buildStoreTagged(builder, scaffold,
+                     builder.load(builder.getElementPtr(array,
+                                                        [llvm:constInt(LLVM_INT, 0), index], "inbounds"),
+                                  ALIGN_HEAP),
+                     insn.result);
 }
 
 function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
@@ -742,7 +743,7 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
                                                     builder.load(scaffold.address(insn.operands[0])),
                                                     check buildString(builder, scaffold, insn.operands[1])
                                                 ]);
-    builder.store(value, scaffold.address(insn.result));
+    buildStoreTagged(builder, scaffold, value, insn.result);
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
@@ -1393,16 +1394,7 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
         return value;
     }
     if sourceBaseRepr == BASE_REPR_TAGGED {
-        llvm:PointerValue tagged = <llvm:PointerValue>value;
-        if targetBaseRepr == BASE_REPR_INT {
-            return buildUntagInt(builder, scaffold, tagged);
-        }
-        else if targetBaseRepr == BASE_REPR_FLOAT {
-            return buildUntagFloat(builder, scaffold, tagged);
-        }
-        else if targetBaseRepr == BASE_REPR_BOOLEAN {
-            return buildUntagBoolean(builder, tagged);
-        }
+        return buildUntagged(builder, scaffold, <llvm:PointerValue>value, targetRepr);
     }
     return err:unimplemented("unimplemented narrowing conversion required");
 }
@@ -1439,6 +1431,28 @@ function buildStoreFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value val
 function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
     builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedBoolean(builder, value) : value,
                   scaffold.address(reg));
+}
+
+function buildStoreTagged(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    return builder.store(buildUntagged(builder, scaffold, <llvm:PointerValue>value, scaffold.getRepr(reg)), scaffold.address(reg));
+}
+
+function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue value, Repr targetRepr) returns llvm:Value {
+    match targetRepr.base {
+        BASE_REPR_INT => {
+            return buildUntagInt(builder, scaffold, value);
+        }
+        BASE_REPR_FLOAT => {
+            return buildUntagFloat(builder, scaffold, value);
+        }
+        BASE_REPR_BOOLEAN => {
+            return buildUntagBoolean(builder, value);
+        }
+        BASE_REPR_TAGGED => {
+            return value;
+        }
+    }
+    panic err:impossible("unreached in buildUntagged");
 }
 
 function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {

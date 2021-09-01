@@ -22,8 +22,12 @@ class VerifyContext {
         return t:isEmpty(self.tc, t);
     }
 
-    function err(err:Message msg) returns err:Semantic {
-        return err:semantic(msg, loc=err:location(self.defn.file), functionName=self.defn.symbol.identifier);
+    function typeEnv() returns t:Env {
+        return self.tc.env;
+    }
+
+    function err(err:Message msg, Position? pos = ()) returns err:Semantic {
+        return err:semantic(msg, loc=err:location(self.defn.file, pos), functionName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
@@ -161,10 +165,10 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
     if !vc.isSubtype(insn.list.semType, t:LIST) {
         return vc.err("list get applied to non-list");
     }
-    // XXX generalize this to array types other than `any[]`
-    if insn.result.semType !== t:ANY {
-        return vc.err("bad BIR: only any supported as list member type");
-    }  
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), insn.list.semType);
+    if memberType == () || !vc.isSubtype(memberType, insn.result.semType) {
+        return vc.err("bad BIR: unsafe type for result ListGet", pos=insn.position);
+    }
 }
 
 function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic? {
@@ -180,10 +184,10 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping get applied to non-mapping");
     }
-    // XXX generalize this to mapping types other than `map<any>`
-    if insn.result.semType !== t:ANY {
-        return vc.err("bad BIR: only any supported as mapping member type");
-    }  
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), insn.operands[0].semType);
+    if memberType == () || !vc.isSubtype(t:union(memberType, t:NIL), insn.result.semType) {
+        return vc.err("bad BIR: unsafe type for result MappingGet");
+    }
 }
 
 function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic? {
