@@ -6,6 +6,7 @@ OPT ?= opt$(LLVM_SUFFIX)
 export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
 OBJS=alloc.o error.o list.o main.o mapping.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o tagged_inline.o
+LIBBACKTRACE_OBJS=atomic.o dwarf.o fileline.o posix.o sort.o state.o backtrace.o simple.o elf.o mmapio.o mmap.o
 C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc
 LL_BCS=float_ir_inline.bc tagged_inline.bc
 BCS=$(C_BCS) $(LL_BCS)
@@ -25,8 +26,12 @@ test: all
 testCoverage: $(LIB) $(BCLIB)
 	$(MAKE) -C tests testCoverage
 
-$(LIB): $(OBJS)
+$(LIB): $(LIBBACKTRACE_OBJS) $(OBJS)
 	$(AR) r $@ $^
+
+$(LIBBACKTRACE_OBJS):
+	$(MAKE) -C third-party/libbacktrace all
+	$(AR) x third-party/libbacktrace/libbacktrace.a
 
 $(BCLIB): $(BCS)
 	set -o pipefail; \
@@ -62,8 +67,9 @@ $(LL_BCS): %.bc: %.ll
 $(OBJS) $(BCS): $(INCLUDES)
 
 clean:
-	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
+	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB) $(LIBBACKTRACE_OBJS)
 	$(MAKE) -C tests clean
+	$(MAKE) -C third-party/libbacktrace clean
 
 .PHONY: test all
 # Ensure bogus files get deleted when there's an error
