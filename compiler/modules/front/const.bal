@@ -136,10 +136,11 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
 
 function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:ListConstructorExpr expr) returns s:Expr|FoldError {
     // grammar of subset07 guarantees that expectedType is non-nil
-    t:SemType expectedListType = t:intersect(<t:SemType>expectedType, t:LIST_RW);
+    t:SemType expectedListType = t:intersect(<t:SemType>expectedType, t:LIST);
+    t:SemType? memberType = t:simpleArrayMemberType(cx.typeEnv(), expectedListType);
     s:Expr[] members = expr.members;
     foreach int i in 0 ..< members.length() {
-        members[i] = check foldExpr(cx, t:ANY, members[i]);
+        members[i] = check foldExpr(cx, memberType, members[i]);
     }
     expr.expectedType = expectedListType;
     return expr;
@@ -147,10 +148,11 @@ function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:List
 
 function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:MappingConstructorExpr expr) returns s:Expr|FoldError {
     // grammar of subset07 guarantees that expectedType is non-nil
-    t:SemType? expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING_RW);
+    t:SemType expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING);
+    t:SemType? memberType = t:simpleMapMemberType(cx.typeEnv(), expectedMappingType);
     expr.expectedType = expectedMappingType;
     foreach s:Field f in expr.fields {
-        f.value = check foldExpr(cx, t:ANY, f.value);
+        f.value = check foldExpr(cx, memberType, f.value);
     }
     return expr;
 }

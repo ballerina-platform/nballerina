@@ -144,20 +144,34 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
 
 function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic? {
     t:SemType ty = insn.result.semType;
-    if !vc.isSubtype(ty, t:LIST_RW) {
+    if !vc.isSubtype(ty, t:LIST) {
         return vc.err("bad BIR: inherent type of list construct is not a list");
     }
-    // XXX we should also check that ty is a single mutable list
-    // and that each argument has the right type
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), ty);
+    if memberType == () {
+        return vc.err("bad BIR: inherent type of list is of an unsupported type");
+    }
+    else {
+        foreach var operand in insn.operands {
+            check verifyOperandType(vc, operand, memberType, "list constructor member of not a subtype of array member type");
+        }
+    }
 }
 
 function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns err:Semantic? {
     t:SemType ty = insn.result.semType;
-    if !vc.isSubtype(ty, t:MAPPING_RW) {
+    if !vc.isSubtype(ty, t:MAPPING) {
         return vc.err("bad BIR: inherent type of list construct is not a list");
     }
-    // XXX we should also check that ty is a single mutable mapping
-    // and that each argument has the right type
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), ty);
+    if memberType == () {
+        return vc.err("bad BIR: inherent type of map is of an unsupported type");
+    }
+    else {
+        foreach var operand in insn.operands {
+            check verifyOperandType(vc, operand, memberType, "mapping constructor member of not a subtype of map member type");
+        }
+    }
 }
 
 function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic? {
