@@ -1,8 +1,7 @@
+import ballerina/io;
 public function main() {
-    map<int> mi = {};
-    map<any> ma = mi;
-    ma["x"] = (); // @panic bad mapping store
-    ignore(ma);
+    int[] vi = [];
+    any[] va = vi;
+    va[0] = (); // @panic bad list store
+    io:println(vi[0] + 1);
 }
-
-function ignore(any x) {}

@@ -651,7 +651,7 @@ const LLVM_INDEX = "i32";
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
     final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
     final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
-    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
+    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
     final int length = insn.operands.length();
     llvm:PointerValue array;
     if length > 0 {
@@ -670,12 +670,21 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     }
     final llvm:PointerValue structMem = buildUntypedAlloc(builder, scaffold, structType);
     final llvm:PointerValue struct = builder.bitCast(structMem, heapPointerType(structType));
-    foreach int i in 0 ..< 2 {
+    // Store the member bitset as the ListDesc
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(scaffold.typeCheckContext().env, insn.result.semType);
+    if memberType == () {
+        return err:unimplemented("unsupported member type for arrat");
+    }
+    else {
+        builder.store(llvm:constInt(LLVM_INT, memberType),
+                      builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)], "inbounds"));
+    }
+    foreach int i in 1 ..< 3 {
         builder.store(llvm:constInt(LLVM_INT, length),
                       builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, i)], "inbounds"));
     }
     builder.store(array,
-                  builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 2)], "inbounds"));
+                  builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)], "inbounds"));
     // Don't need to convert here
     builder.store(buildTaggedPtr(builder, structMem, TAG_LIST_RW), scaffold.address(insn.result));
 }
@@ -683,7 +692,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
     final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
     final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
-    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
+    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
 
     llvm:Value index = buildInt(builder, scaffold, insn.operand);
     // struct is the untagged pointer to the struct
@@ -694,7 +703,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
     builder.condBr(builder.iCmp("ult",
                                 index,
-                                builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP)),
+                                builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)]), ALIGN_HEAP)),
                    continueBlock,
                    outOfBoundsBlock);
     builder.positionAtEnd(outOfBoundsBlock);
@@ -703,7 +712,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     builder.positionAtEnd(continueBlock);
     // array is a pointer to the array
     llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct,
-                                                                                    [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 2)], "inbounds"),
+                                                                                    [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)], "inbounds"),
                                                                                     ALIGN_HEAP);
     buildStoreTagged(builder, scaffold,
                      builder.load(builder.getElementPtr(array,

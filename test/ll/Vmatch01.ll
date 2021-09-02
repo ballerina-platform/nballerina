@@ -28,7 +28,7 @@ define void @_B_main() {
   %18 = alloca i8
   %19 = load i8*, i8** @_bal_stack_guard
   %20 = icmp ult i8* %18, %19
-  br i1 %20, label %59, label %21
+  br i1 %20, label %60, label %21
 21:
   %22 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
   %23 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %22)
@@ -72,34 +72,36 @@ define void @_B_main() {
   %43 = getelementptr inbounds [1 x i8 addrspace(1)*], [1 x i8 addrspace(1)*] addrspace(1)* %41, i64 0, i64 0
   store i8 addrspace(1)* %42, i8 addrspace(1)* addrspace(1)* %43
   %44 = bitcast [1 x i8 addrspace(1)*] addrspace(1)* %41 to [0 x i8 addrspace(1)*] addrspace(1)*
-  %45 = call i8 addrspace(1)* @_bal_alloc(i64 24)
-  %46 = bitcast i8 addrspace(1)* %45 to {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %47 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 0
-  store i64 1, i64 addrspace(1)* %47
-  %48 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 1
+  %45 = call i8 addrspace(1)* @_bal_alloc(i64 32)
+  %46 = bitcast i8 addrspace(1)* %45 to {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %47 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 0
+  store i64 8388607, i64 addrspace(1)* %47
+  %48 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 1
   store i64 1, i64 addrspace(1)* %48
-  %49 = getelementptr inbounds {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 2
-  store [0 x i8 addrspace(1)*] addrspace(1)* %44, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %49
-  %50 = getelementptr i8, i8 addrspace(1)* %45, i64 1297036692682702848
-  store i8 addrspace(1)* %50, i8 addrspace(1)** %13
-  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %13
-  %52 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %51)
-  store i8 addrspace(1)* %52, i8 addrspace(1)** %14
-  %53 = load i8 addrspace(1)*, i8 addrspace(1)** %14
-  call void @_Bio__println(i8 addrspace(1)* %53)
+  %49 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 2
+  store i64 1, i64 addrspace(1)* %49
+  %50 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 3
+  store [0 x i8 addrspace(1)*] addrspace(1)* %44, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %50
+  %51 = getelementptr i8, i8 addrspace(1)* %45, i64 1297036692682702848
+  store i8 addrspace(1)* %51, i8 addrspace(1)** %13
+  %52 = load i8 addrspace(1)*, i8 addrspace(1)** %13
+  %53 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %52)
+  store i8 addrspace(1)* %53, i8 addrspace(1)** %14
+  %54 = load i8 addrspace(1)*, i8 addrspace(1)** %14
+  call void @_Bio__println(i8 addrspace(1)* %54)
   store i8 addrspace(1)* null, i8 addrspace(1)** %15
-  %54 = zext i1 0 to i64
-  %55 = or i64 %54, 72057594037927936
-  %56 = getelementptr i8, i8 addrspace(1)* null, i64 %55
-  %57 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %56)
-  store i8 addrspace(1)* %57, i8 addrspace(1)** %16
-  %58 = load i8 addrspace(1)*, i8 addrspace(1)** %16
-  call void @_Bio__println(i8 addrspace(1)* %58)
+  %55 = zext i1 0 to i64
+  %56 = or i64 %55, 72057594037927936
+  %57 = getelementptr i8, i8 addrspace(1)* null, i64 %56
+  %58 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %57)
+  store i8 addrspace(1)* %58, i8 addrspace(1)** %16
+  %59 = load i8 addrspace(1)*, i8 addrspace(1)** %16
+  call void @_Bio__println(i8 addrspace(1)* %59)
   store i8 addrspace(1)* null, i8 addrspace(1)** %17
   ret void
-59:
-  %60 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
-  call void @_bal_panic(i8 addrspace(1)* %60)
+60:
+  %61 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  call void @_bal_panic(i8 addrspace(1)* %61)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %0) {
