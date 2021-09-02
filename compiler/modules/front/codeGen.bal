@@ -812,24 +812,36 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
     bir:Register reg = (check lookupVarRefBinding(cx, lValue.container.varName, env)).reg;
-    s:Expr foldedIndexExpr = check cx.foldExpr(env, lValue.index, t:union(t:INT, t:STRING));
-    var { result: index, block: nextBlock } = check codeGenExpr(cx, startBlock, env, foldedIndexExpr);
-    s:Expr foldedExpr = check cx.foldExpr(env, expr, t:ANY); // XXX need to change when we have typed arrays
-    bir:Operand operand;
-    { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
-    TypedOperand? t = typedOperand(index);
-    bir:Insn insn;
-    if t is ["int", bir:IntOperand] {
-        insn = <bir:ListSetInsn>{ list: reg, index: t[1], operand, position: lValue.pos };
-    }
-    else if t is ["string", bir:StringOperand] {
-        insn = <bir:MappingSetInsn> { operands: [ reg, t[1], operand], position: lValue.pos };
+    t:UniformTypeBitSet indexType;
+    t:UniformTypeBitSet memberType;
+    if t:isSubtypeSimple(reg.semType, t:MAPPING) {
+        indexType = t:STRING;
+        memberType = <t:UniformTypeBitSet>t:simpleMapMemberType(cx.mod.env, reg.semType);
+    } 
+    else if t:isSubtypeSimple(reg.semType, t:LIST) {
+        indexType = t:INT;
+        memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.env, reg.semType);
     }
     else {
-        return cx.semanticErr("key in assignment to member must be int or string");
+        return cx.semanticErr("member access can only be applied to mapping or list", pos=lValue.pos);
     }
-    nextBlock.insns.push(insn);
-    return { block: nextBlock };
+    s:Expr foldedIndexExpr = check cx.foldExpr(env, lValue.index, indexType);
+    s:Expr foldedExpr = check cx.foldExpr(env, expr, memberType);
+    bir:Operand operand;
+    if indexType == t:INT {
+        var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, foldedIndexExpr);
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
+        bir:ListSetInsn insn = { list: reg, index: index, operand, position: lValue.pos };
+        nextBlock.insns.push(insn);
+        return { block: nextBlock };
+    }
+    else {
+        var { result: index, block: nextBlock } = check codeGenExprForString(cx, startBlock, env, foldedIndexExpr);
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
+        bir:MappingSetInsn insn =  { operands: [ reg, index, operand], position: lValue.pos };
+        nextBlock.insns.push(insn);
+        return { block: nextBlock };
+    }
 }
 
 function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CallStmt stmt) returns CodeGenError|StmtEffect {

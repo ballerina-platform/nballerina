@@ -206,7 +206,13 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic?
     if !vc.isSubtype(insn.list.semType, t:LIST) {
         return vc.err("list set applied to non-list");
     }
-    // XXX also check type compatibility of operand and list type
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), insn.list.semType);
+    if memberType == () {
+        return vc.err("ListSet on unsupported list type");
+    }
+    else {
+        return verifyOperandType(vc, insn.operand, memberType, "value assigned to member of list is not a subtype of array member type");
+    }
 }
 
 function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic? {
@@ -225,7 +231,13 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Sem
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping set applied to non-mapping");
     }
-    // XXX also check type compatibility of operand and mapping type
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), insn.operands[0].semType);
+    if memberType == () {
+        return vc.err("MappingSet on unsupported mapping type");
+    }
+    else {
+        return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type");
+    }
 }
 
 function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
