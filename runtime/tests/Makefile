@@ -41,4 +41,6 @@ inlinert_%: inlinert_%.bc
 clean:
 	-rm -f $(TESTPROGS) $(TESTPROG_STAMPS) $(TESTPROG_PROF_RAW) $(TESTPROG_PROF)
 
+$(TESTPROGS): ../balrt.h
+
 .PHONY: all test clean
