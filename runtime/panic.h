@@ -6,5 +6,6 @@
 #define PANIC_STACK_OVERFLOW 4
 #define PANIC_INDEX_OUT_OF_BOUNDS 5
 #define PANIC_LIST_TOO_LONG 6
-// XXX Make this a separate panic
-#define PANIC_STRING_TOO_LONG 6
+#define PANIC_STRING_TOO_LONG 7
+#define PANIC_LIST_STORE 8
+#define PANIC_MAPPING_STORE 9

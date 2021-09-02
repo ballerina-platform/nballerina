@@ -1,7 +1,7 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct(i64)
+declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
@@ -19,7 +19,7 @@ define void @_B_main() {
   br i1 %7, label %18, label %8
 8:
   store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504), i8 addrspace(1)** %s
-  %9 = call i8 addrspace(1)* @_bal_mapping_construct(i64 0)
+  %9 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8386559, i64 0)
   store i8 addrspace(1)* %9, i8 addrspace(1)** %1
   %10 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %10, i8 addrspace(1)** %m

@@ -4,7 +4,7 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_alloc(i64)
-declare i8 addrspace(1)* @_bal_mapping_construct(i64)
+declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 define void @_B_main() {
@@ -67,7 +67,7 @@ define void @_B_main() {
   %35 = load i8 addrspace(1)*, i8 addrspace(1)** %list
   call void @_B_p(i8 addrspace(1)* %35)
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
-  %36 = call i8 addrspace(1)* @_bal_mapping_construct(i64 0)
+  %36 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 0)
   store i8 addrspace(1)* %36, i8 addrspace(1)** %9
   %37 = load i8 addrspace(1)*, i8 addrspace(1)** %9
   store i8 addrspace(1)* %37, i8 addrspace(1)** %mapping

@@ -1,7 +1,7 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct(i64)
+declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
@@ -28,7 +28,7 @@ define void @_B_main() {
   %18 = icmp ult i8* %16, %17
   br i1 %18, label %30, label %19
 19:
-  %20 = call i8 addrspace(1)* @_bal_mapping_construct(i64 1)
+  %20 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 1)
   %21 = zext i1 1 to i64
   %22 = or i64 %21, 72057594037927936
   %23 = getelementptr i8, i8 addrspace(1)* null, i64 %22
@@ -82,7 +82,7 @@ define void @_B_main() {
   %55 = getelementptr i8, i8 addrspace(1)* null, i64 %54
   call void @_Bio__println(i8 addrspace(1)* %55)
   store i8 addrspace(1)* null, i8 addrspace(1)** %7
-  %56 = call i8 addrspace(1)* @_bal_mapping_construct(i64 0)
+  %56 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 0)
   store i8 addrspace(1)* %56, i8 addrspace(1)** %8
   %57 = load i8 addrspace(1)*, i8 addrspace(1)** %8
   store i8 addrspace(1)* %57, i8 addrspace(1)** %x
@@ -107,7 +107,7 @@ define void @_B_main() {
   %71 = getelementptr i8, i8 addrspace(1)* null, i64 %70
   call void @_Bio__println(i8 addrspace(1)* %71)
   store i8 addrspace(1)* null, i8 addrspace(1)** %10
-  %72 = call i8 addrspace(1)* @_bal_mapping_construct(i64 3)
+  %72 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 3)
   %73 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %72, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)* %73)
   %74 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)

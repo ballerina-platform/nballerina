@@ -1,7 +1,7 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct(i64)
+declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i64 @_Bmap__length(i8 addrspace(1)*)
@@ -16,7 +16,7 @@ define void @_B_main() {
   %6 = icmp ult i8* %4, %5
   br i1 %6, label %18, label %7
 7:
-  %8 = call i8 addrspace(1)* @_bal_mapping_construct(i64 3)
+  %8 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8386559, i64 3)
   %9 = zext i1 1 to i64
   %10 = or i64 %9, 72057594037927936
   %11 = getelementptr i8, i8 addrspace(1)* null, i64 %10

@@ -1,7 +1,7 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct(i64)
+declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bio__println(i8 addrspace(1)*)
@@ -13,7 +13,7 @@ define void @_B_main() {
   %5 = icmp ult i8* %3, %4
   br i1 %5, label %11, label %6
 6:
-  %7 = call i8 addrspace(1)* @_bal_mapping_construct(i64 2)
+  %7 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 2)
   %8 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %7, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)* %8)
   %9 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)

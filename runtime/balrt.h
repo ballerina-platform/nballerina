@@ -91,7 +91,10 @@ typedef struct {
     GC MapField *members;
 } MapFieldArray;
 
+typedef int64_t MappingDesc;
+
 typedef GC struct Mapping {
+    MappingDesc desc;
     // XXX will also have a typedescriptor here
     union {
         GenericArray gArray;
@@ -160,13 +163,6 @@ typedef struct {
     GC char *bytes;
 } StringData;
 
-
-// These should be shared with build.bal
-#define PANIC_INDEX_OUT_OF_BOUNDS 5
-#define PANIC_LIST_TOO_LONG 6
-// XXX Make this a separate panic
-#define PANIC_STRING_TOO_LONG 6
-
 #define ALIGN_HEAP 8
 
 // Don't declare functions here if they are balrt_inline.c
@@ -195,7 +191,7 @@ extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 
 #define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
 
-extern TaggedPtr _bal_mapping_construct(int64_t capacity);
+extern TaggedPtr _bal_mapping_construct(MappingDesc desc, int64_t capacity);
 extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);

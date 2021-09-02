@@ -94,6 +94,9 @@ const PANIC_TYPE_CAST = 3;
 const PANIC_STACK_OVERFLOW = 4;
 const PANIC_INDEX_OUT_OF_BOUNDS = 5;
 const PANIC_LIST_TOO_LONG = 6;
+const PANIC_STRING_TOO_LONG = 7;
+const PANIC_LIST_STORE = 8;
+const PANIC_MAPPING_STORE = 9;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
@@ -182,7 +185,7 @@ final RuntimeFunction mappingConstructFunction = {
     name: "mapping_construct",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: ["i64"]
+        paramTypes: ["i64", "i64"]
     },
     attrs: []
 };
@@ -324,6 +327,7 @@ type Module record {|
     ImportedFunctionTable importedFunctions = table [];
     llvm:PointerValue stackGuard;
     map<StringDefn> stringDefns = {};
+    t:TypeCheckContext typeCheckContext;
 |};
 
 class Scaffold {
@@ -426,6 +430,12 @@ class Scaffold {
     function lineNumber(bir:Position pos) returns int {
        return self.file.lineColumn(pos)[0];
     }
+
+    function typeCheckContext() returns t:TypeCheckContext => self.mod.typeCheckContext;
+
+    function location(bir:Position pos) returns err:Location {
+        return err:location(self.file, pos);
+    }
 }
 
 public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
@@ -453,6 +463,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
     Module mod = {
         llContext,
         llMod,
+        typeCheckContext: birMod.getTypeCheckContext(),
         functionDefns: llFuncMap,
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard"))
     };  
@@ -724,8 +735,16 @@ function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
     int length = insn.operands.length();
-    llvm:PointerValue m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
-                                                          [llvm:constInt(LLVM_INT, length)]);
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(scaffold.typeCheckContext().env, insn.result.semType);
+    llvm:PointerValue m;
+    if memberType == () {
+        return err:unimplemented("unsupported member type for mapping");
+    }
+    else {
+        m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
+                                            [llvm:constInt(LLVM_INT, memberType), llvm:constInt(LLVM_INT, length)]);
+    }
+    
     foreach int i in 0 ..< length {
         _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingInitMemberFunction),
                          [
