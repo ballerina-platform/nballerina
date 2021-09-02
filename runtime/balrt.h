@@ -91,7 +91,10 @@ typedef struct {
     GC MapField *members;
 } MapFieldArray;
 
+typedef int64_t MappingDesc;
+
 typedef GC struct Mapping {
+    MappingDesc desc;
     // XXX will also have a typedescriptor here
     union {
         GenericArray gArray;
@@ -160,13 +163,6 @@ typedef struct {
     GC char *bytes;
 } StringData;
 
-
-// These should be shared with build.bal
-#define PANIC_INDEX_OUT_OF_BOUNDS 5
-#define PANIC_LIST_TOO_LONG 6
-// XXX Make this a separate panic
-#define PANIC_STRING_TOO_LONG 6
-
 #define ALIGN_HEAP 8
 
 // Don't declare functions here if they are balrt_inline.c
@@ -176,6 +172,8 @@ extern NORETURN void _bal_panic(TaggedPtr tp);
 
 extern void _Bio__println(TaggedPtr p);
 extern TaggedPtr _Berror__message(TaggedPtr p);
+
+extern bool _bal_float_eq(double, double);
 
 // precondition is that both strings are on the heap and the pointers are not ==
 extern READONLY bool _bal_string_heap_eq(TaggedPtr tp1, TaggedPtr tp2);
@@ -189,13 +187,16 @@ extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoin
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
 extern PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
+extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 
 #define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
 
-extern TaggedPtr _bal_mapping_construct(int64_t capacity);
+extern TaggedPtr _bal_mapping_construct(MappingDesc desc, int64_t capacity);
 extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
+extern READONLY bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2);
+
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
 // Returns an error value
@@ -309,6 +310,38 @@ static READONLY inline bool taggedStringEqual(TaggedPtr tp1, TaggedPtr tp2) {
         return false;
     }
     return _bal_string_heap_eq(tp1, tp2);
+}
+
+static READONLY inline bool taggedPtrEqual(TaggedPtr tp1, TaggedPtr tp2) {
+    if (tp1 == tp2) {
+        return 1;
+    }
+    int tag1 = getTag(tp1);
+    int tag2 = getTag(tp2);
+    if (tag1 != tag2) {
+        return 0;
+    }
+    switch (tag1) {
+        case TAG_STRING:
+            return taggedStringEqual(tp1, tp2);
+        case (TAG_INT|FLAG_INT_ON_HEAP):
+            {
+                IntPtr p1 = taggedToPtr(tp1);
+                IntPtr p2 = taggedToPtr(tp2);
+                return *p1 == *p2;
+            }
+        case TAG_FLOAT:
+            {
+                FloatPtr p1 = taggedToPtr(tp1);
+                FloatPtr p2 = taggedToPtr(tp2);
+                return _bal_float_eq(*p1, *p2);
+            }
+        case TAG_LIST_RW:
+            return _bal_list_eq(tp1, tp2);
+        case TAG_MAPPING_RW:
+            return _bal_mapping_eq(tp1, tp2);
+    }
+    return 0;
 }
 
 static READNONE inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {

@@ -1,7 +1,7 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct(i64)
+declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @_Bint__toHexString(i64)
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
@@ -39,7 +39,7 @@ define void @_B_main() {
   %17 = icmp ult i8* %15, %16
   br i1 %17, label %51, label %18
 18:
-  %19 = call i8 addrspace(1)* @_bal_mapping_construct(i64 0)
+  %19 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8386559, i64 0)
   store i8 addrspace(1)* %19, i8 addrspace(1)** %1
   %20 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %20, i8 addrspace(1)** %m

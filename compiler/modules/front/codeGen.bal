@@ -812,24 +812,36 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
     bir:Register reg = (check lookupVarRefBinding(cx, lValue.container.varName, env)).reg;
-    s:Expr foldedIndexExpr = check cx.foldExpr(env, lValue.index, t:union(t:INT, t:STRING));
-    var { result: index, block: nextBlock } = check codeGenExpr(cx, startBlock, env, foldedIndexExpr);
-    s:Expr foldedExpr = check cx.foldExpr(env, expr, t:ANY); // XXX need to change when we have typed arrays
-    bir:Operand operand;
-    { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
-    TypedOperand? t = typedOperand(index);
-    bir:Insn insn;
-    if t is ["int", bir:IntOperand] {
-        insn = <bir:ListSetInsn>{ list: reg, index: t[1], operand, position: lValue.pos };
-    }
-    else if t is ["string", bir:StringOperand] {
-        insn = <bir:MappingSetInsn> { operands: [ reg, t[1], operand], position: lValue.pos };
+    t:UniformTypeBitSet indexType;
+    t:UniformTypeBitSet memberType;
+    if t:isSubtypeSimple(reg.semType, t:MAPPING) {
+        indexType = t:STRING;
+        memberType = <t:UniformTypeBitSet>t:simpleMapMemberType(cx.mod.env, reg.semType);
+    } 
+    else if t:isSubtypeSimple(reg.semType, t:LIST) {
+        indexType = t:INT;
+        memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.env, reg.semType);
     }
     else {
-        return cx.semanticErr("key in assignment to member must be int or string");
+        return cx.semanticErr("member access can only be applied to mapping or list", pos=lValue.pos);
     }
-    nextBlock.insns.push(insn);
-    return { block: nextBlock };
+    s:Expr foldedIndexExpr = check cx.foldExpr(env, lValue.index, indexType);
+    s:Expr foldedExpr = check cx.foldExpr(env, expr, memberType);
+    bir:Operand operand;
+    if indexType == t:INT {
+        var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, foldedIndexExpr);
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
+        bir:ListSetInsn insn = { list: reg, index: index, operand, position: lValue.pos };
+        nextBlock.insns.push(insn);
+        return { block: nextBlock };
+    }
+    else {
+        var { result: index, block: nextBlock } = check codeGenExprForString(cx, startBlock, env, foldedIndexExpr);
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
+        bir:MappingSetInsn insn =  { operands: [ reg, index, operand], position: lValue.pos };
+        nextBlock.insns.push(insn);
+        return { block: nextBlock };
+    }
 }
 
 function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CallStmt stmt) returns CodeGenError|StmtEffect {
@@ -1007,26 +1019,28 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         var { container, index, pos } => {
             // Do constant folding here since these expressions are not allowed in const definitions
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
-            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, check cx.foldExpr(env, index, t:union(t:INT, t:STRING)));
             if l is bir:Register {
-                bir:Register result = cx.createRegister(t:ANY);
-                TypedOperand? k = typedOperand(r);
-                bir:Insn insn;
-                if k is ["int", bir:IntOperand] {
-                    insn = <bir:ListGetInsn>{ result, list: l, operand: k[1], position: pos };
+                if t:isSubtypeSimple(l.semType, t:LIST) {
+                    var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, index, t:INT));
+                    // subset07 list types are restricted to arrays
+                    bir:Register result = cx.createRegister(<t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.env, l.semType));
+                    bir:ListGetInsn insn = { result, list: l, operand: r, position: pos };
+                    bb.insns.push(insn);
+                    return { result, block: nextBlock };
                 }
-                else if k is ["string", bir:StringOperand] {
-                    insn = <bir:MappingGetInsn>{ result, operands: [l, k[1]] };
+                else if t:isSubtypeSimple(l.semType, t:MAPPING) {
+                    var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
+                    // subset07 list types are restricted to maps
+                    bir:Register result = cx.createRegister(t:union(<t:UniformTypeBitSet>t:simpleMapMemberType(cx.mod.env, l.semType), t:NIL));
+                    bir:MappingGetInsn insn = { result, operands: [l, r] };
+                    bb.insns.push(insn);
+                    return { result, block: nextBlock };
                 }
-                else {
-                    return cx.semanticErr("member access key must be a string or an int");
-                }
-                bb.insns.push(insn);
-                return { result, block: nextBlock };
+                else if t:isSubtypeSimple(l.semType, t:STRING) {
+                    return cx.unimplementedErr("not implemented: member access on string", pos=pos);
+                }             
             }
-            else {
-                return cx.semanticErr("cannot apply member access to constant of simple type");
-            }
+            return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
         }
         // List construct
         // JBUG should be able to use just `var { members }`

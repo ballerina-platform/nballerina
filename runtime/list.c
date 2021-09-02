@@ -70,3 +70,20 @@ void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift) {
     ap->members = new_members;
     ap->capacity = new_capacity;
 }
+
+bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
+    ListPtr lp1 = taggedToPtr(p1);
+    GC TaggedPtrArray *ap1 = &(lp1->tpArray);
+    ListPtr lp2 = taggedToPtr(p2);
+    GC TaggedPtrArray *ap2 = &(lp2->tpArray);
+    int64_t len = ap1->length;
+    if (ap2->length != len) {
+        return false;
+    }
+    for (int64_t i = 0; i < len; i++) {
+        if (!taggedPtrEqual(ap1->members[i], ap2->members[i])) {
+            return false;
+        }
+    }
+    return true;
+}

@@ -5,7 +5,7 @@
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
-declare i8 addrspace(1)* @_bal_mapping_construct(i64)
+declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare i64 @_Barray__length(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bio__println(i8 addrspace(1)*)
@@ -61,7 +61,7 @@ define void @_B_main() {
   store i8 addrspace(1)* %30, i8 addrspace(1)** %1
   %31 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %31, i8 addrspace(1)** %days
-  %32 = call i8 addrspace(1)* @_bal_mapping_construct(i64 0)
+  %32 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8386559, i64 0)
   store i8 addrspace(1)* %32, i8 addrspace(1)** %2
   %33 = load i8 addrspace(1)*, i8 addrspace(1)** %2
   store i8 addrspace(1)* %33, i8 addrspace(1)** %dayNumber

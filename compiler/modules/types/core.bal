@@ -150,7 +150,7 @@ public type BddMemo record {|
 type BddMemoTable table<BddMemo> key(bdd);
 
 public class TypeCheckContext {
-    private final Env env;
+    public final Env env;
     BddMemoTable listMemo = table [];
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
@@ -692,6 +692,15 @@ public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolea
         bits = t1.all | t1.some;
     }
     return (bits & ~<int>t2) == 0;
+}
+
+public function widenToUniformTypes(SemType t) returns UniformTypeBitSet {
+    if t is UniformTypeBitSet {
+        return t;
+    }
+    else {
+        return <UniformTypeBitSet>(t.all | t.some);
+    }
 }
 
 // If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),

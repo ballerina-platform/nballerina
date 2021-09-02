@@ -7,11 +7,14 @@ class VerifyContext {
     private final Module mod;
     private final t:TypeCheckContext tc;
     private final FunctionDefn defn;
+    private final t:SemType anydataType;
 
     function init(Module mod, FunctionDefn defn) {
         self.mod = mod;
-        self.tc = mod.getTypeCheckContext();
+        t:TypeCheckContext tc  = mod.getTypeCheckContext();
+        self.tc = tc;
         self.defn = defn;
+        self.anydataType = createAnydata(tc.env);
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
@@ -22,8 +25,16 @@ class VerifyContext {
         return t:isEmpty(self.tc, t);
     }
 
-    function err(err:Message msg) returns err:Semantic {
-        return err:semantic(msg, loc=err:location(self.defn.file), functionName=self.defn.symbol.identifier);
+    function isAnydata(t:SemType t) returns boolean {
+        return t:isSubtype(self.tc, t, self.anydataType);
+    }
+
+    function typeEnv() returns t:Env {
+        return self.tc.env;
+    }
+
+    function err(err:Message msg, Position? pos = ()) returns err:Semantic {
+        return err:semantic(msg, loc=err:location(self.defn.file, pos), functionName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
@@ -31,6 +42,15 @@ class VerifyContext {
     function symbolToString(Symbol sym) returns string {
         return symbolToString(self.mod, sym);
     }
+}
+
+// approximation for subset07
+function createAnydata(t:Env env) returns t:SemType {
+    t:ListDefinition listDef = new;
+    t:SemType arrayType = listDef.define(env, [], t:SIMPLE_OR_STRING);
+    t:MappingDefinition mapDef = new;
+    t:SemType mapType = mapDef.define(env, [], t:SIMPLE_OR_STRING);
+    return t:union(t:SIMPLE_OR_STRING, t:union(arrayType, mapType));
 }
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns err:Semantic? {
@@ -140,20 +160,34 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
 
 function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic? {
     t:SemType ty = insn.result.semType;
-    if !vc.isSubtype(ty, t:LIST_RW) {
+    if !vc.isSubtype(ty, t:LIST) {
         return vc.err("bad BIR: inherent type of list construct is not a list");
     }
-    // XXX we should also check that ty is a single mutable list
-    // and that each argument has the right type
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), ty);
+    if memberType == () {
+        return vc.err("bad BIR: inherent type of list is of an unsupported type");
+    }
+    else {
+        foreach var operand in insn.operands {
+            check verifyOperandType(vc, operand, memberType, "list constructor member of not a subtype of array member type");
+        }
+    }
 }
 
 function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns err:Semantic? {
     t:SemType ty = insn.result.semType;
-    if !vc.isSubtype(ty, t:MAPPING_RW) {
+    if !vc.isSubtype(ty, t:MAPPING) {
         return vc.err("bad BIR: inherent type of list construct is not a list");
     }
-    // XXX we should also check that ty is a single mutable mapping
-    // and that each argument has the right type
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), ty);
+    if memberType == () {
+        return vc.err("bad BIR: inherent type of map is of an unsupported type");
+    }
+    else {
+        foreach var operand in insn.operands {
+            check verifyOperandType(vc, operand, memberType, "mapping constructor member of not a subtype of map member type");
+        }
+    }
 }
 
 function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic? {
@@ -161,10 +195,10 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
     if !vc.isSubtype(insn.list.semType, t:LIST) {
         return vc.err("list get applied to non-list");
     }
-    // XXX generalize this to array types other than `any[]`
-    if insn.result.semType !== t:ANY {
-        return vc.err("bad BIR: only any supported as list member type");
-    }  
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), insn.list.semType);
+    if memberType == () || !vc.isSubtype(memberType, insn.result.semType) {
+        return vc.err("bad BIR: unsafe type for result ListGet", pos=insn.position);
+    }
 }
 
 function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic? {
@@ -172,7 +206,13 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic?
     if !vc.isSubtype(insn.list.semType, t:LIST) {
         return vc.err("list set applied to non-list");
     }
-    // XXX also check type compatibility of operand and list type
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), insn.list.semType);
+    if memberType == () {
+        return vc.err("ListSet on unsupported list type");
+    }
+    else {
+        return verifyOperandType(vc, insn.operand, memberType, "value assigned to member of list is not a subtype of array member type");
+    }
 }
 
 function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic? {
@@ -180,10 +220,10 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping get applied to non-mapping");
     }
-    // XXX generalize this to mapping types other than `map<any>`
-    if insn.result.semType !== t:ANY {
-        return vc.err("bad BIR: only any supported as mapping member type");
-    }  
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), insn.operands[0].semType);
+    if memberType == () || !vc.isSubtype(t:union(memberType, t:NIL), insn.result.semType) {
+        return vc.err("bad BIR: unsafe type for result MappingGet");
+    }
 }
 
 function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic? {
@@ -191,7 +231,13 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Sem
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping set applied to non-mapping");
     }
-    // XXX also check type compatibility of operand and mapping type
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), insn.operands[0].semType);
+    if memberType == () {
+        return vc.err("MappingSet on unsupported mapping type");
+    }
+    else {
+        return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type");
+    }
 }
 
 function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
@@ -262,7 +308,7 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
             t:SemType intersectType = t:intersect(lhs.semType, rhs.semType);
             if !vc.isEmpty(intersectType) {
                 // JBUG #31749 cast should not be needed
-                if (<string>insn.op).length() == 2 && !vc.isSubtype(lhs.semType, t:SIMPLE_OR_STRING) && !vc.isSubtype(rhs.semType, t:SIMPLE_OR_STRING) {
+                if (<string>insn.op).length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
                     return vc.err("at least one operand of an == or != expression must be a subtype of anydata");
                 }
                 return;

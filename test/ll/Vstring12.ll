@@ -8,7 +8,7 @@ declare void @_Bio__println(i8 addrspace(1)*)
 declare zeroext i1 @_bal_string_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare i64 @_bal_string_cmp(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)*, i8 addrspace(1)*)
-declare i8 addrspace(1)* @_bal_mapping_construct(i64)
+declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 define void @_B_main() {
@@ -172,7 +172,7 @@ define void @_B_main() {
   %117 = getelementptr i8, i8 addrspace(1)* null, i64 %116
   call void @_Bio__println(i8 addrspace(1)* %117)
   store i8 addrspace(1)* null, i8 addrspace(1)** %25
-  %118 = call i8 addrspace(1)* @_bal_mapping_construct(i64 0)
+  %118 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8386559, i64 0)
   store i8 addrspace(1)* %118, i8 addrspace(1)** %26
   %119 = load i8 addrspace(1)*, i8 addrspace(1)** %26
   store i8 addrspace(1)* %119, i8 addrspace(1)** %m

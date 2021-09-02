@@ -3,7 +3,7 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare i8 addrspace(1)* @_bal_mapping_construct(i64)
+declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare void @_Bio__println(i8 addrspace(1)*)
 define void @_B_main() {
@@ -39,13 +39,13 @@ define void @_B_main() {
   store [0 x i8 addrspace(1)*] addrspace(1)* %17, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %22
   %23 = getelementptr i8, i8 addrspace(1)* %18, i64 1297036692682702848
   store i8 addrspace(1)* %23, i8 addrspace(1)** %1
-  %24 = call i8 addrspace(1)* @_bal_mapping_construct(i64 2)
+  %24 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 2)
   %25 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %24, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)* %25)
   %26 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %24, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901113), i8 addrspace(1)* %26)
   store i8 addrspace(1)* %24, i8 addrspace(1)** %2
-  %27 = call i8 addrspace(1)* @_bal_mapping_construct(i64 2)
+  %27 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8386559, i64 2)
   %28 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   call void @_bal_mapping_init_member(i8 addrspace(1)* %27, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541289654636), i8 addrspace(1)* %28)
   %29 = load i8 addrspace(1)*, i8 addrspace(1)** %2
