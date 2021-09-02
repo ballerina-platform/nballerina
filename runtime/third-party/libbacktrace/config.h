@@ -1,6 +1,18 @@
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+#ifndef __APPLE__
+#ifndef __linux__
+#error Unsupported platform: only Linux and OS X supported for now
+#endif
+#endif
+
+#ifdef __APPLE__
+#ifndef __MACH__
+#error Unsupported platform: APPLE but not MACH
+#endif
+#endif
+
 /* ELF size: 32 or 64 */
 #ifdef __linux__
 #define BACKTRACE_ELF_SIZE 64
