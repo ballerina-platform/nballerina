@@ -3,6 +3,7 @@ export CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
 LLC ?= llc$(LLVM_SUFFIX)
 OPT ?= opt$(LLVM_SUFFIX)
+CFLAGS ?= -O2
 export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
 BT_WARN_FLAGS=-W -Wall -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition -Wmissing-format-attribute -Wcast-qual
@@ -37,7 +38,7 @@ $(BCLIB): $(BCS)
 	$(LLVM_AS) >$@ 
 
 $(BT_OBJS): %.o: %.c
-	$(CLANG) -DHAVE_CONFIG_H -funwind-tables -frandom-seed=$< $(BT_WARN_FLAGS) -g -O2 -c -o $@ $<
+	$(CLANG) -DHAVE_CONFIG_H -funwind-tables -frandom-seed=$< $(BT_WARN_FLAGS) $(CFLAGS) -c -o $@ $<
 
 %.o: %.bc
 	$(CLANG) -O2 -c -o $@ $<
