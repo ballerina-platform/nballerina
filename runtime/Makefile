@@ -41,7 +41,8 @@ $(BCLIB): $(BCS)
 	set -o pipefail; \
 	$(CLANG) -c $(CFLAGS) -emit-llvm -o - $< | \
 	$(LLVM_LINK) $(LL_BCS) - -o - -S | \
-	sed -e '/define .*@_bal_\(tagged_to_ptr\|float_\)/s/^define /define linkonce_odr /' | \
+	sed -e '/define .*@_bal_float_/s/^define /define linkonce_odr /' | \
+	sed -e '/define .*@_bal_tagged_to_ptr/s/^define /define linkonce_odr /' | \
 	$(OPT) -O2 - -o - -S | \
 	$(LLVM_AS) >$@
 
