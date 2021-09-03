@@ -4,6 +4,33 @@
 
 #define ARRAY_LENGTH_MAX (INT64_MAX/sizeof(TaggedPtr))
 
+const double F0 = +0.0;
+
+static bool getFiller(ListDesc desc, TaggedPtr *valuePtr) {
+    uint64_t bits;
+    switch (desc) {
+        case (1 << TAG_BOOLEAN):
+            *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
+            return true;
+        case (1 << TAG_INT):
+            *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_INT) << TAG_SHIFT);
+            return true;
+        case (1 << TAG_FLOAT):
+            {
+                GC double *fp = (GC double *)&F0;
+                *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
+                return true;
+            }
+        case (1 << TAG_STRING):
+            _bal_string_alloc(0, 0, valuePtr);
+            return true;
+    }
+    if (desc & (1 << TAG_NIL)) {
+        *valuePtr = 0;
+        return true;
+    }
+    return false;
+}
 
 PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
@@ -25,7 +52,13 @@ PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     if (index > ap->length) {
         // we have a gap to fill
         // from length..<index
-        memset(ap->members + ap->length, 0, (index - ap->length) * sizeof(TaggedPtr));
+        TaggedPtr filler;
+        if (!getFiller(lp->desc, &filler)) {
+            return PANIC_NO_FILLER;
+        }
+        for (int64_t i = ap->length; i < index; i++) {
+            ap->members[i] = filler;
+        }        
     }
     ap->members[index] = val;
     ap->length = index + 1;
