@@ -43,9 +43,8 @@ void checkForSameStr(Frame *frame, uint32_t nFrames, const char *filename, const
             result->functionOffset = f->functionOffset;
             functionFound = true;
         }
-        if (filenameFound && functionFound) {
+        if (filenameFound && functionFound)
             return;
-        }
     }
 }
 
@@ -63,16 +62,14 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
     Trace *trace = (Trace *)data;
     uint32_t nFrames = trace->nFrames;
     uint32_t szFrames = trace->szFrames;
-    if (nFrames >= MAX_FRAME_COUNT) {
+    if (nFrames >= MAX_FRAME_COUNT)
         return 1;
-    }
-    else if (nFrames == szFrames) {
+    if (nFrames == szFrames) {
         szFrames = szFrames * 2;
         trace->szFrames = szFrames;
         void *p = realloc(trace->frames, sizeof(Frame) * szFrames);
-        if (p == 0) {
+        if (p == 0)
             return 1;
-        }
         trace->frames = (Frame *)p;
     }
 
@@ -81,16 +78,14 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
     uint64_t filenameLen = strlen(filename);
     uint64_t funcnameLen = strlen(function);
     uint32_t nBytesPerFrame = filenameLen + funcnameLen + 2;
-    if (nBytes + nBytesPerFrame >= MAX_BYTES_COUNT) {
+    if (nBytes + nBytesPerFrame >= MAX_BYTES_COUNT)
         return 1;
-    }
-    else if (nBytes + nBytesPerFrame > szBytes) {
+    if (nBytes + nBytesPerFrame > szBytes) {
         szBytes = szBytes * 2 + nBytesPerFrame;
         trace->szBytes = szBytes;
         void *p = realloc(trace->bytes, szBytes);   
-        if (p == 0) {
+        if (p == 0)
             return 1;
-        }
         trace->bytes = (char *)p;
     }
 

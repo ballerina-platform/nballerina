@@ -25,16 +25,10 @@ all: $(LIB) $(BCLIB)
 test: all
 	$(MAKE) -C tests test
 
-$(LIBBACKTRACE_OBJS): 
-	cd third-party/libbacktrace; \
-	./configure --enable-shared
-	$(MAKE) -C third-party/libbacktrace all
-	$(AR) x third-party/libbacktrace/.libs/libbacktrace.a
-
 testCoverage: $(LIB) $(BCLIB)
 	$(MAKE) -C tests testCoverage
 
-$(LIB): $(LIBBACKTRACE_OBJS) $(OBJS) 
+$(LIB): $(OBJS)
 	$(AR) r $@ $^
 
 $(BCLIB): $(BCS)
@@ -74,10 +68,9 @@ $(LL_BCS): %.bc: %.ll
 $(OBJS) $(BCS): $(INCLUDES)
 
 clean:
-	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB) $(LIBBACKTRACE_OBJS)
+	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
 	$(MAKE) -C tests clean
 
 .PHONY: test all
 # Ensure bogus files get deleted when there's an error
 .DELETE_ON_ERROR:
-
