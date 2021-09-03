@@ -312,6 +312,11 @@ public distinct class Builder {
         return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
     }
 
+    public function setCurrentDebugLocation(Metadata? dbLocation) {
+        handle dbLocationJObj = getMetadataProp(dbLocation);
+        jLLVMSetCurrentDebugLocation2(self.LLVMBuilder, dbLocationJObj);
+    }
+
     function extractName(string? name) returns string {
         if name is () {
             return "";
@@ -585,4 +590,10 @@ function jLLVMBuildAddrSpaceCast(handle builder, handle pointer, handle destTy, 
     name: "LLVMBuildAddrSpaceCast",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "java.lang.String"]
+} external;
+
+function jLLVMSetCurrentDebugLocation2(handle builder, handle loc) = @java:Method {
+    name: "LLVMSetCurrentDebugLocation2",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMBuilderRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef"]
 } external;

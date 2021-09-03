@@ -38,6 +38,14 @@ function PointerPointerFromTypes(Type[] values) returns PointerPointer {
     return arr;
 }
 
+function PointerPointerFromMetadata(Metadata[] values) returns PointerPointer {
+    PointerPointer arr = new (values.length());
+    foreach var val in values {
+        arr.put(val.llvmMetadata);
+    }
+    return arr;
+}
+
 distinct class BytePointer {
     handle jObject;
 
@@ -73,6 +81,36 @@ distinct class LLVMMemoryBuffer {
         }
         BytePointer resourcePointer = new(jBytePointerFromByteArray(checkpanic jarrays:toHandle(inputBytes, "byte")));
         self.jObject = jLLVMCreateMemoryBufferWithMemoryRange(resourcePointer.jObject, inputBytes.length(), jBytePointerFromString(java:fromString("libBuffer")), 1);
+    }
+}
+
+function getBooleanProp(boolean? prop) returns int {
+    if prop is boolean {
+        if prop {
+            return 1;
+        }
+    else {
+            return 0;
+        }
+    }
+    return 0;
+}
+
+function getMetadataProp(Metadata? metadata) returns handle {
+    if metadata is Metadata {
+        return metadata.llvmMetadata;
+    }
+    else {
+        return java:createNull();
+    }
+}
+
+function getStringProp(string? prop) returns [handle, int] {
+    if prop is string {
+        return [java:fromString(prop), prop.length()];
+    }
+    else {
+        return [java:fromString(""), 0];
     }
 }
 

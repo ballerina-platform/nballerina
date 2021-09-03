@@ -8,7 +8,7 @@ define i64 @main() {
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!2, !3}
 !0 = !DIFile(filename:"filename.bal", directory:"PATH_TO_BAL_SOURCE")
-!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !0, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+!1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !0, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !2 = !{i32 1, !"Debug Info Version", i32 3}
 !3 = !{i32 2, !"Dwarf Version", i32 2}
 !4 = !DISubroutineType(types: !5)

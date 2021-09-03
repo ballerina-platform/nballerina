@@ -192,7 +192,7 @@ public class Module {
     private [PointerValue, GlobalProperties][] globalVariables = [];
     private FunctionDecl[] functionDecls = [];
     private FunctionDefn[] functionDefns = [];
-    private DIBuilder? dIBuilder = ();
+    private DIBuilder[] dIBuilders = [];
 
     private final Context context;
     private TargetTriple? target = ();
@@ -204,18 +204,20 @@ public class Module {
     // Corresponds to LLVMCreateDIBuilder
     public function createDIBuilder() returns DIBuilder {
         DIBuilder dIBuilder = new(self);
-        self.dIBuilder = dIBuilder;
+        self.dIBuilders.push(dIBuilder);
         return dIBuilder;
     }
 
     // Corresponds to LLVMAddModuleFlag
     public function addModuleFlag(ModuleFlagBehavior behavior, ModuleFlag flag) {
-        DIBuilder? dIBuilder = self.dIBuilder;
-        if dIBuilder is () {
-            panic error("Please create a DIBuilder before adding flags");
-        } else {
-            dIBuilder.addModuleFlag(behavior, flag);
+        DIBuilder dIBuilder;
+        if self.dIBuilders.length() == 0 {
+            dIBuilder = self.createDIBuilder();
         }
+        else {
+            dIBuilder = self.dIBuilders[0];
+        }
+        dIBuilder.addModuleFlag(behavior, flag);
     }
 
     // Corresponds to LLVMAddFunction
@@ -321,8 +323,10 @@ public class Module {
         foreach var fn in self.functionDefns {
             fn.output(out);
         }
-        DIBuilder? dIBuilder = self.dIBuilder;
-        if dIBuilder is DIBuilder {
+        foreach var dIBuilder in self.dIBuilders {
+            dIBuilder.outputPreamble(out);
+        }
+        foreach var dIBuilder in self.dIBuilders {
             dIBuilder.output(out);
         }
     }
@@ -694,7 +698,6 @@ public class DIBuilder {
         self.metadata.push(metadata);
         return metadata;
     }
-// !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: null, producer: "CUProducer", isOptimized: false, flags: "CUFlags", runtimeVersion: 0, splitDebugFilename: "CUSplitName", emissionKind: FullDebug, enums: !1, sysroot: "CUSysRoot", sdk: "CUSdk")
 
     // Corresponds to LLVMDIBuilderCreateCompileUnit
     public function createCompileUnit(*CompileUnitProperties props) returns Metadata {
@@ -710,6 +713,7 @@ public class DIBuilder {
         words.push(",", "runtimeVersion", ":", props.runtimeVersion.toString());
         self.addStringToWords(words, props.splitName, "splitDebugFilename");
         words.push(",", "emissionKind", ":", emissionKindToString.get(props.kind));
+        self.addBooleanToWords(words, props.splitDebugInlining, "splitDebugInlining");
         words.push(")");
         metadata.addLine(...words);
 
@@ -838,12 +842,33 @@ public class DIBuilder {
         }
     }
 
-    function output(Output out) {
+    function addBooleanToWords(string[] words, boolean? data, string label, string? prefix=","){
+        if prefix is string {
+            words.push(prefix);
+        }
+        words.push(label, ":");
+        if data is boolean {
+            if data {
+                words.push("true");
+            }
+            else {
+                words.push("false");
+            }
+        }
+        else {
+            words.push("false");
+        }
+    }
+
+    function outputPreamble(Output out) {
         foreach var data in self.metadata {
             if data.hasPreamble() {
                 data.outputPreamble(out);
             }
         }
+    }
+
+    function output(Output out) {
         foreach var data in self.metadata {
             data.output(out);
         }

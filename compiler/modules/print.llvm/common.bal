@@ -108,7 +108,7 @@ public type DWARFSourceLanguage "C99";
 
 // Corresponds to LLVMDWARFEmissionKind
 public type EmissionKind "none"|"full"|"lineTablesOnly";
-//TODO: add the other options
+
 public type CompileUnitProperties record {|
     DWARFSourceLanguage language = "C99";
     Metadata? file;
@@ -119,7 +119,7 @@ public type CompileUnitProperties record {|
     string? splitName = ();
     EmissionKind kind = "full";
     int? DWOId = ();
-    boolean? splitDebugInlining = ();
+    boolean splitDebugInlining = false;
     boolean? splitDebugInfoForProfiling = ();
     string? sysRoot = ();
     string? sdk = ();
