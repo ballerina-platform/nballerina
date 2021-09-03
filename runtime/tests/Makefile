@@ -36,7 +36,7 @@ inlinert_%: inlinert_%.bc
 	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)
 
 $(filter error%, $(TESTPROGS)): error%: error%.c
-	$(CLANG) -g $(CFLAGS) -o ./$@ $< ../$(LIB)
+	$(CLANG) -g -o ./$@ $< ../$(LIB)
 
 $(filter-out error%, $(TESTPROGS)): %: %.c
 	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)	

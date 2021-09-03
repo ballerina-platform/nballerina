@@ -5,36 +5,41 @@
 
 HASH_DEFINE_KEY;
 
-int i = 0;
-void func2();
+void func2(int);
+void func1(int);
 
-void func1() {
-    func2();
+int decrement(int i) {
+    return --i;
 }
 
-void func2() {
-    if (i == 0) {
-        i++;
-        func1();
+void func1(int j) {
+    func2(decrement(j));
+}
+
+void func2(j) {
+    if (j >= 0) {
+        func1(decrement(j));
     } 
     else {
-        TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"), 6);
+        TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"), 24);
         ErrorPtr er = (ErrorPtr)taggedToPtr(taggedErr);
         Frame *frames = (Frame *)er->frames;
         uint32_t nFrames = er->nFrames;
-        assert(nFrames == 5);
+        char *act = (char *)(frames + nFrames);        
+        assert(nFrames == 7);
         char *actual = (char *)(frames + nFrames);
         char *expected = "tests/error_backtrace2.c\0func2\0func1\0main\0";
-        int lineNo[5] = {21, 12, 18, 12, 39};
-        for (size_t i = 0; i < nFrames; i++) {
-            Frame *f = frames + i;
-            assert(strstr(actual + f->fileOffset, expected + f->fileOffset));
-            assert(strcmp(actual + f->functionOffset, expected + f->functionOffset) == 0);
-            assert(f->lineno == lineNo[i]);
+        int exp_idx = 0;
+        int act_idx = 0;
+        assert(strstr(actual, expected));
+        for (size_t i = 0; i < 3; i++) {
+            exp_idx = nextStrLocationFrom(exp_idx, expected);
+            act_idx = nextStrLocationFrom(act_idx, actual);
+            assert(strstr(actual + act_idx, expected + exp_idx));
         }
     }
 }
 
 int main() {
-    func1();
+    func1(3);
 }

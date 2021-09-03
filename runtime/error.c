@@ -49,7 +49,7 @@ void checkForSameStr(Frame *frame, uint32_t nFrames, const char *filename, const
 }
 
 static void onError(void *data, const char *msg, int errnum) {
-    fprintf(stderr, "Error : %s\n", msg);
+    fprintf(stderr, "Error : libbacktrace : %s\n", msg);
     fflush(stderr);
     abort();
 }

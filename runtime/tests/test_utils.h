@@ -40,3 +40,10 @@ double randDouble(bool isNan) {
     assert(isnan(result) == isNan);
     return result;
 }
+
+int nextStrLocationFrom(int idx, char *str) {
+    while (*(str + idx) != 0) {
+        idx = idx + 1;
+    }
+    return idx + 1;
+}
