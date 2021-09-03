@@ -16,6 +16,7 @@
 struct backtrace_state *state;
 
 typedef struct {
+    bool err;
     uint32_t nFrames;
     uint32_t szFrames;
     uint32_t nBytes;
@@ -68,7 +69,7 @@ static void *memReAlloc(void *ptr, uint64_t nBytes) {
     abort();
 }
 
-static void onError(void *data, const char *msg, int errnum) { 
+static void onError(void *data, const char *msg, int errnum) {
     fprintf(stderr, "Error : %s\n", msg);
     fflush(stderr);
     abort();
@@ -83,14 +84,18 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
     uint32_t nFrames = trace->nFrames;
     uint32_t szFrames = trace->szFrames;
     if (nFrames >= MAX_FRAME_COUNT) {
-        fprintf(stderr, "reach maximum frame count\n");
-        fflush(stderr);
-        abort();
+        trace->err = true;
+        return 1;
     }
     else if (nFrames == szFrames) {
         szFrames = szFrames * 2;
         trace->szFrames = szFrames;
-        trace->frames = (void *)memReAlloc(trace->frames, sizeof(Frame) * szFrames);
+        void *p = realloc(trace->frames, sizeof(Frame) * szFrames);
+        if (p == 0) {
+            trace->err = true;
+            return 1;
+        }
+        trace->frames = (Frame *)p;
     }
 
     uint32_t nBytes = trace->nBytes;
@@ -99,14 +104,18 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
     uint64_t funcnameLen = strlen(function);
     uint32_t nBytesPerFrame = filenameLen + funcnameLen + 2;
     if (nBytes + nBytesPerFrame >= MAX_BYTES_COUNT) {
-        fprintf(stderr, "reach maximum character array length\n");
-        fflush(stderr);
-        abort();
+        trace->err = true;
+        return 1;
     }
     else if (nBytes + nBytesPerFrame > szBytes) {
         szBytes = szBytes * 2 + nBytesPerFrame;
         trace->szBytes = szBytes;
-        trace->bytes = (void *)memReAlloc(trace->bytes, szBytes);   
+        void *p = realloc(trace->bytes, szBytes);   
+        if (p == 0) {
+            trace->err = true;
+            return 1;
+        }
+        trace->bytes = (char *)p;
     }
 
     Frame *frame = trace->frames + nFrames;
@@ -119,7 +128,8 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
 
     if (offset.fileOffset >= 0) {
         frame->fileOffset = offset.fileOffset;
-    } else {
+    }
+    else {
         frame->fileOffset = nBytes;
         memcpy(bytes + nBytes, filename, filenameLen);
         nBytes = nBytes + filenameLen;
@@ -129,7 +139,8 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
 
     if (offset.functionOffset >= 0) {
         frame->functionOffset = offset.functionOffset;
-    } else {
+    } 
+    else {
         frame->functionOffset = nBytes;
         memcpy(bytes + nBytes, function, funcnameLen);
         nBytes = nBytes + funcnameLen;
@@ -146,15 +157,28 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
 static void getBackTrace(Trace* trace) {
     state = backtrace_create_state(NULL, THREAD, onError, NULL);
 
-    trace->frames = (Frame *)memAlloc(sizeof(Frame) * INITIAL_FRAME_COUNT);
-    trace->bytes = (char *)memAlloc(INITIAL_BYTES_COUNT);
+    void *p = malloc(sizeof(Frame) * INITIAL_FRAME_COUNT);
+    if (p == 0) {
+        trace->err = true;
+        return;
+    }
+    trace->frames = (Frame *)p;
+    p = malloc(INITIAL_BYTES_COUNT);
+    if (p == 0) {
+        return;
+    }
+    trace->bytes = (char *)p;
 
     backtrace_full(state, SKIP_FROM_END, onFrame, onError, trace);
 }
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
-    Trace trace = {0, INITIAL_FRAME_COUNT, 0, INITIAL_BYTES_COUNT};
+    Trace trace = {false, 0, INITIAL_FRAME_COUNT, 0, INITIAL_BYTES_COUNT};
     getBackTrace(&trace);
+    if (trace.err == true) {
+        fprintf(stderr, "Error : %s\n", "Error occured when generating backtrace for error value");
+        fflush(stderr);
+    }
     uint32_t nFrames = trace.nFrames;
     uint32_t nBytes = trace.nBytes;
 
