@@ -32,6 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.  */
 
 #include "config.h"
 
+#ifdef __linux__
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
@@ -4917,3 +4918,4 @@ backtrace_initialize (struct backtrace_state *state, const char *filename,
 
   return 1;
 }
+#endif /* __linux__ */

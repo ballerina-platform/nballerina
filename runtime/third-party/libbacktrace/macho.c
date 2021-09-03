@@ -32,6 +32,7 @@ POSSIBILITY OF SUCH DAMAGE.  */
 
 #include "config.h"
 
+#ifdef __APPLE__
 #include <sys/types.h>
 #include <dirent.h>
 #include <stdlib.h>
@@ -1353,3 +1354,4 @@ backtrace_initialize (struct backtrace_state *state, const char *filename,
 }
 
 #endif /* !defined (HAVE_MACH_O_DYLD_H) */
+#endif /* __APPLE__ */
