@@ -122,8 +122,8 @@ typedef struct {
     uintptr_t pc;
     // Index into the second array of start of string
     // string is terminated with zero
-    unsigned fileOffset;
-    unsigned functionOffset;
+    uint32_t fileOffset;
+    uint32_t functionOffset;
     int lineno;
 } Frame;
 

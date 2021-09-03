@@ -30,17 +30,17 @@ typedef struct {
 } Offset;
 
 void checkForSameStr(Frame *frame, uint32_t nFrames, const char *filename, const char *function, char *bytes, Offset* result) {
-    int i = 0;
+    int i = 1;
     bool filenameFound = false;
     bool functionFound = false;
-    while (i < nFrames && i < BACKWARD_FRAMES_COUNT) {
-        frame = frame - i++;
-        if (!filenameFound && strcmp(filename, bytes + frame->fileOffset) == 0) {
-            result->fileOffset = frame->fileOffset;
+    while (i <= nFrames && i <= BACKWARD_FRAMES_COUNT) {
+        Frame *f = frame - i++;
+        if (!filenameFound && strcmp(filename, bytes + f->fileOffset) == 0) {
+            result->fileOffset = f->fileOffset;
             filenameFound = true;
         }
-        if (!functionFound && strcmp(function, bytes + frame->functionOffset) == 0) {
-            result->functionOffset = frame->functionOffset;
+        if (!functionFound && strcmp(function, bytes + f->functionOffset) == 0) {
+            result->functionOffset = f->functionOffset;
             functionFound = true;
         }
         if (filenameFound && functionFound) {
@@ -115,7 +115,7 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
 
     Offset offset = {-1, -1};
     char *bytes = trace->bytes;
-    checkForSameStr(frame - 1, nFrames, filename, function, bytes, &offset);
+    checkForSameStr(frame, nFrames, filename, function, bytes, &offset);
 
     if (offset.fileOffset >= 0) {
         frame->fileOffset = offset.fileOffset;
