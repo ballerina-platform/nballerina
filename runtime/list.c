@@ -7,6 +7,9 @@
 
 PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
+     if ((lp->desc & (1 << (getTag(val) & UT_MASK))) == 0) {
+        return PANIC_LIST_STORE;
+    }
     GC TaggedPtrArray *ap = &(lp->tpArray);
     if (likely((uint64_t)index < ap->length)) {
         ap->members[index] = val;

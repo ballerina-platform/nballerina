@@ -70,8 +70,10 @@ typedef struct {
     GC TaggedPtr *members;
 } TaggedPtrArray;
 
+typedef int64_t ListDesc;
+
 typedef GC struct List {
-    // XXX will also have a typedescriptor here
+    ListDesc desc;
     // This isn't strictly portable because void* and TaggedPtr* might have different alignments/sizes
     // But we ain't writing portable code here
     union {
