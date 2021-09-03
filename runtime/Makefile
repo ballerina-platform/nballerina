@@ -5,7 +5,9 @@ LLC ?= llc$(LLVM_SUFFIX)
 OPT ?= opt$(LLVM_SUFFIX)
 export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
-OBJS=alloc.o error.o list.o main.o mapping.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o tagged_inline.o
+BT_WARN_FLAGS=-W -Wall -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition -Wmissing-format-attribute -Wcast-qual
+BT_OBJS=$(addprefix third-party/libbacktrace/, atomic.o dwarf.o fileline.o posix.o sort.o state.o backtrace.o simple.o elf.o mmapio.o mmap.o)
+OBJS=alloc.o error.o list.o main.o mapping.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o tagged_inline.o $(BT_OBJS)
 C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc
 LL_BCS=float_ir_inline.bc tagged_inline.bc
 BCS=$(C_BCS) $(LL_BCS)
@@ -33,6 +35,9 @@ $(BCLIB): $(BCS)
 	$(LLVM_LINK) -o - -S $^ | \
 	sed -e '/define .*@_[Bb][a-zA-Z]/s/^define /define linkonce_odr /' -e '/target datalayout/ s/"$$/-ni:1"/' | \
 	$(LLVM_AS) >$@ 
+
+$(BT_OBJS): %.o: %.c
+	$(CLANG) -DHAVE_CONFIG_H -funwind-tables -frandom-seed=$< $(BT_WARN_FLAGS) -g -O2 -c -o $@ $<
 
 %.o: %.bc
 	$(CLANG) -O2 -c -o $@ $<

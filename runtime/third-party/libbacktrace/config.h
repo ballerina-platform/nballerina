@@ -1,8 +1,24 @@
 /* config.h.  Generated from config.h.in by configure.  */
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+#ifndef __APPLE__
+#ifndef __linux__
+#error Unsupported platform: only Linux and OS X supported for now
+#endif
+#endif
+
+#ifdef __APPLE__
+#ifndef __MACH__
+#error Unsupported platform: APPLE but not MACH
+#endif
+#endif
+
 /* ELF size: 32 or 64 */
+#ifdef __linux__
 #define BACKTRACE_ELF_SIZE 64
+#elif __APPLE__
+#define BACKTRACE_ELF_SIZE unused
+#endif
 
 /* XCOFF size: 32 or 64 */
 #define BACKTRACE_XCOFF_SIZE unused
@@ -25,7 +41,9 @@
 #define HAVE_DLFCN_H 1
 
 /* Define if dl_iterate_phdr is available. */
+#ifdef __linux__
 #define HAVE_DL_ITERATE_PHDR 1
+#endif
 
 /* Define to 1 if you have the fcntl function */
 #define HAVE_FCNTL 1
@@ -51,7 +69,9 @@
 #define HAVE_LIBLZMA 1
 
 /* Define to 1 if you have the <link.h> header file. */
+#ifdef __linux__
 #define HAVE_LINK_H 1
+#endif
 
 /* Define if AIX loadquery is available. */
 /* #undef HAVE_LOADQUERY */
@@ -60,7 +80,9 @@
 #define HAVE_LSTAT 1
 
 /* Define to 1 if you have the <mach-o/dyld.h> header file. */
-/* #undef HAVE_MACH_O_DYLD_H */
+#ifdef __APPLE__
+#define HAVE_MACH_O_DYLD_H 1
+#endif
 
 /* Define to 1 if you have the <memory.h> header file. */
 #define HAVE_MEMORY_H 1
