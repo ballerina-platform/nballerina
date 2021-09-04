@@ -6,9 +6,9 @@
 #include "third-party/libbacktrace/backtrace.h"
 
 #define INITIAL_FRAME_COUNT 1
-#define MAX_FRAME_COUNT 200
-#define MAX_BYTES_COUNT INT32_MAX / 10
+#define MAX_FRAME_COUNT 256
 #define INITIAL_BYTES_COUNT 8
+#define MAX_BYTES_COUNT 1 << 16
 #define BACKWARD_FRAMES_COUNT 4
 #define SKIP_FROM_END 1 // This number counts from the last stack frame
 #define THREAD 0
@@ -29,7 +29,7 @@ typedef struct {
     int functionOffset;
 } Offset;
 
-void checkForSameStr(Frame *frame, uint32_t nFrames, const char *filename, const char *function, char *bytes, Offset* result) {
+static void checkForSameStr(Frame *frame, uint32_t nFrames, const char *filename, const char *function, char *bytes, Offset* result) {
     int i = 1;
     bool filenameFound = false;
     bool functionFound = false;
@@ -51,7 +51,6 @@ void checkForSameStr(Frame *frame, uint32_t nFrames, const char *filename, const
 static void onError(void *data, const char *msg, int errnum) {
     fprintf(stderr, "Error : libbacktrace : %s\n", msg);
     fflush(stderr);
-    abort();
 }
 
 static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, const char *function) {
@@ -62,10 +61,10 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
     Trace *trace = (Trace *)data;
     uint32_t nFrames = trace->nFrames;
     uint32_t szFrames = trace->szFrames;
-    if (nFrames >= MAX_FRAME_COUNT)
+    if (unlikely(nFrames > MAX_FRAME_COUNT))
         return 1;
     if (nFrames == szFrames) {
-        szFrames = szFrames * 2;
+        szFrames = szFrames << 1;
         trace->szFrames = szFrames;
         void *p = realloc(trace->frames, sizeof(Frame) * szFrames);
         if (p == 0)
@@ -77,11 +76,14 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
     uint32_t szBytes = trace->szBytes;
     uint64_t filenameLen = strlen(filename);
     uint64_t funcnameLen = strlen(function);
-    uint32_t nBytesPerFrame = filenameLen + funcnameLen + 2;
-    if (nBytes + nBytesPerFrame >= MAX_BYTES_COUNT)
+    uint32_t requiredBytes = nBytes + filenameLen + funcnameLen + 2;
+    if (unlikely(requiredBytes > MAX_BYTES_COUNT))
         return 1;
-    if (nBytes + nBytesPerFrame > szBytes) {
-        szBytes = szBytes * 2 + nBytesPerFrame;
+    if (requiredBytes > szBytes) {
+        szBytes = szBytes << 1;
+        while (requiredBytes > szBytes) {
+            szBytes = szBytes << 1;
+        }
         trace->szBytes = szBytes;
         void *p = realloc(trace->bytes, szBytes);   
         if (p == 0)
