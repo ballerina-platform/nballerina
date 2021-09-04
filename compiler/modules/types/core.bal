@@ -745,7 +745,7 @@ public function simpleArrayMemberType(Env env, SemType t) returns UniformTypeBit
                 }
             }
             else {
-                if bdd.left != true || bdd.right != false || bdd.right != false {
+                if bdd.left != true || bdd.middle != false || bdd.right != false {
                     return ();
                 }
                 ListAtomicType atomic = env.listAtomType(bdd.atom);
@@ -790,7 +790,7 @@ public function simpleMapMemberType(Env env, SemType t) returns UniformTypeBitSe
                 }
             }
             else {
-                if bdd.left != true || bdd.right != false || bdd.right != false {
+                if bdd.left != true || bdd.middle != false || bdd.right != false {
                     return ();
                 }
                 MappingAtomicType atomic = env.mappingAtomType(bdd.atom);
