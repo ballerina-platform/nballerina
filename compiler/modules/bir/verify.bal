@@ -34,13 +34,13 @@ class VerifyContext {
     }
 
     function err(err:Message msg, Position? pos = ()) returns err:Semantic {
-        return err:semantic(msg, loc=err:location(self.defn.file, pos), functionName=self.defn.symbol.identifier);
+        return err:semantic(msg, loc=err:location(self.mod.getPartFile(self.defn.partIndex), pos), functionName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
 
     function symbolToString(Symbol sym) returns string {
-        return symbolToString(self.mod, sym);
+        return symbolToString(self.mod, self.defn.partIndex, sym);
     }
 }
 

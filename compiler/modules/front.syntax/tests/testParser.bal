@@ -116,7 +116,7 @@ function tokenToString(Token t) returns string {
 function reduceToWords(string k, string rule, string[] fragment) returns err:Syntax|Word[] {
     Word[] w = [];
     if rule == "mod" {
-        modulePartToWords(w, check parseModulePart(fragment, k));
+        modulePartToWords(w, check parseModulePart(fragment, k, 0));
     }
     else {
         SourceFile file = new(k);

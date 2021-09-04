@@ -10,7 +10,7 @@ const SOURCE_DIR = "testSuite";
     dataProvider: listSourcesVPO
 }
 function testCompileVPO(string path) returns io:Error? {
-    CompileError? err = compileFile(path, ());
+    CompileError? err = compileFile(path);
     if err is io:Error {
         return err;
     }
@@ -31,7 +31,7 @@ function testCompileVPO(string path) returns io:Error? {
     dataProvider: listSourcesEU
 }
 function testCompileEU(string path) returns file:Error|io:Error? {
-    CompileError? err = compileFile(path, ());
+    CompileError? err = compileFile(path);
     if err is err:Any? {
         if err is () {
             test:assertNotExactEquals(err, (), "expected an error " + path);
@@ -105,4 +105,9 @@ function errorLine(string path) returns int|io:Error {
     test:assertFail("Test with 'E' prefix missing error annotation : " + path);
     // JBUG #31338 panic with function returning never here cases a bytecode error
     panic err:impossible();
+}
+
+// This outputs nothing
+function compileFile(string filename) returns CompileError? {
+    return compileModule(dummyModuleId(filename), [{ filename }], {}, {});
 }

@@ -88,17 +88,17 @@ type LoopContext record {|
 class CodeGenContext {
     final Module mod;
     final s:SourceFile file;
+    final s:FunctionDefn functionDefn;
     final bir:FunctionCode code;
-    final string functionName;
     final t:SemType returnType;
     LoopContext? loopContext = ();
     private final string?[] registerVarNames = [];
 
-    function init(Module mod, s:SourceFile file, string functionName, t:SemType returnType) {
+    function init(Module mod, s:FunctionDefn functionDefn, t:SemType returnType) {
         self.mod = mod;
-        self.file = file;
+        self.functionDefn = functionDefn;
+        self.file = functionDefn.part.file;
         self.code = {};
-        self.functionName = functionName;
         self.returnType = returnType;
     }
 
@@ -120,11 +120,11 @@ class CodeGenContext {
     }
 
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=self.location(pos), cause=cause, functionName=self.functionName);
+        return err:semantic(msg, loc=self.location(pos), cause=cause, functionName=self.functionDefn.name);
     }
 
     function unimplementedErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Unimplemented {
-        return err:unimplemented(msg, loc=self.location(pos), cause=cause, functionName=self.functionName);
+        return err:unimplemented(msg, loc=self.location(pos), cause=cause, functionName=self.functionDefn.name);
     }
     
     private function location(s:Position? pos) returns err:Location {
@@ -245,15 +245,16 @@ function addAssignments(int[] dest, int[] src, int excludeStart) {
     }
 }
 
-function codeGenFunction(Module mod, s:SourceFile file, string functionName, bir:FunctionSignature signature, string[] paramNames, s:Stmt[] body) returns bir:FunctionCode|CodeGenError {
-    CodeGenContext cx = new(mod, file, functionName, signature.returnType);
+function codeGenFunction(Module mod, s:FunctionDefn defn, bir:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
+    CodeGenContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Binding? bindings = ();
+    string[] paramNames = defn.paramNames;
     foreach int i in 0 ..< paramNames.length() {
         bir:Register reg = cx.createRegister(signature.paramTypes[i], paramNames[i]);
         bindings = { name: paramNames[i], reg, prev: bindings, isFinal: true };
     }
-    var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, body);
+    var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
     if !(endBlock is ()) {
         bir:RetInsn ret = { operand: () };
         endBlock.insns.push(ret);
@@ -1306,7 +1307,7 @@ function validArgumentCount(CodeGenContext cx, bir:FunctionRef func, int nSuppli
     if nSuppliedArgs == nExpectedArgs {
         return ();
     }
-    string name = bir:symbolToString(cx.mod, func.symbol);
+    string name = bir:symbolToString(cx.mod, cx.functionDefn.part.partIndex, func.symbol);
     if nSuppliedArgs < nExpectedArgs {
         return cx.semanticErr(`too few arguments for call to function ${name}`);
     }
@@ -1340,7 +1341,7 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
 }
 
 function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier) returns bir:FunctionRef|CodeGenError {
-    bir:ModuleId? moduleId = cx.mod.imports[prefix];
+    bir:ModuleId? moduleId = cx.mod.parts[cx.functionDefn.part.partIndex].imports[prefix];
     if moduleId is () {
         return cx.semanticErr(`no import declaration for prefix ${prefix}`);
     }

@@ -27,20 +27,20 @@ type FoldContext object {
 
 class ConstFoldContext {
     *FoldContext;
-    final s:SourceFile file;
+    final s:ModulePart part;
     final string defnName;
     final t:Env env;
     final ModuleTable mod;
 
-    function init(s:SourceFile file, string defnName, t:Env env, ModuleTable mod) {
-        self.file = file;
+    function init(s:ModulePart part, string defnName, t:Env env, ModuleTable mod) {
+        self.part = part;
         self.defnName = defnName;
         self.env = env;
         self.mod = mod;
     }
     
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=err:location(self.file, pos), cause=cause, functionName=self.defnName);
+        return err:semantic(msg, loc=err:location(self.part.file, pos), cause=cause, functionName=self.defnName);
     }
 
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
@@ -72,7 +72,7 @@ function resolveConstDefn(t:Env env, ModuleTable mod, s:ConstDefn defn) returns 
     }
     else {
         defn.resolved = false;
-        ConstFoldContext cx = new ConstFoldContext(defn.file, defn.name, env, mod);
+        ConstFoldContext cx = new ConstFoldContext(defn.part, defn.name, env, mod);
         s:InlineBuiltinTypeDesc? td = defn.td;
         t:SemType? expectedType = td is () ? () : resolveInlineAltTypeDesc(td);
         s:Expr expr = check foldExpr(cx, expectedType, defn.expr);

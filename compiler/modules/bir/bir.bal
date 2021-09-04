@@ -12,7 +12,9 @@ public type Module object {
     public function getTypeCheckContext() returns t:TypeCheckContext;
     public function getFunctionDefns() returns readonly & FunctionDefn[];
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
-    public function getPrefixForModuleId(ModuleId id) returns string?;
+    public function getPrefixForModuleId(ModuleId id, int partIndex) returns string?;
+    // Get the File for a give part index
+    public function getPartFile(int partIndex) returns File;
 };
 
 public type ModuleId readonly & record {|
@@ -41,10 +43,9 @@ public type FunctionDefn readonly & record {|
     InternalSymbol symbol;
     # The signature of the function
     FunctionSignature signature;
-    # File in which the definition occurs
-    // XXX provide access to this via FunctionCode or Module
-    // so that FunctionDefn is anydata
-    File file; 
+
+    # Index of source part in which the definition occurs
+    int partIndex;
     # The position of the definition
     Position position;
 |};
@@ -56,14 +57,14 @@ public type InternalSymbol readonly & record {|
 
 public type Symbol InternalSymbol|ExternalSymbol;
 
-public function symbolToString(Module mod, Symbol sym) returns string {
+public function symbolToString(Module mod, int partIndex, Symbol sym) returns string {
     string prefix;
     if sym is InternalSymbol {
         prefix = "";
     }
     else {
         ModuleId modId = sym.module;
-        string? importPrefix = mod.getPrefixForModuleId(modId);
+        string? importPrefix = mod.getPrefixForModuleId(modId, partIndex);
         if importPrefix == () {
             string? org = modId.organization;
             string orgString = org == () ? "" : org + "/";

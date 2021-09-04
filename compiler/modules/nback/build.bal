@@ -3,12 +3,6 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-public configurable string target = "";
-
-public type Options record {|
-    string? gcName = ();
-|};
-
 type BuildError err:Semantic|err:Unimplemented;
 
 type Alignment 1|8;
@@ -328,6 +322,7 @@ type Module record {|
     llvm:PointerValue stackGuard;
     map<StringDefn> stringDefns = {};
     t:TypeCheckContext typeCheckContext;
+    bir:Module bir;
 |};
 
 class Scaffold {
@@ -347,9 +342,9 @@ class Scaffold {
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
 
-    function init(Module mod, llvm:FunctionDefn llFunc, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
+    function init(Module mod, llvm:FunctionDefn llFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.mod = mod;
-        self.file = defn.file;
+        self.file = mod.bir.getPartFile(defn.partIndex);
         self.llFunc = llFunc;
         self.birBlocks = code.blocks;
         final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType);
@@ -461,6 +456,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
     }  
     llvm:Builder builder = llContext.createBuilder();
     Module mod = {
+        bir: birMod,
         llContext,
         llMod,
         typeCheckContext: birMod.getTypeCheckContext(),

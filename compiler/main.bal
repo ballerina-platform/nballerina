@@ -13,67 +13,84 @@ type CompileError err:Any|io:Error;
 public type Options record {|
     boolean testJsonTypes = false;
     boolean showTypes = false;
+    // outDir also implies treating each file as a separate module
     string? outDir = ();
     string? gc = ();
+    string? target = ();
 |};
 
-const LOWER = "abcdefghijklmnopqrstuvwxyz";
-const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const string VALID_GC_NAME_CHARS = LOWER + UPPER + "-_";
+
 # The preferred output extension for the output filename.
 const OUTPUT_EXTENSION = ".ll";
 const SOURCE_EXTENSION = ".bal";
 public function main(string[] filenames, *Options opts) returns error? {
-    string? gc = check validGcName(opts.gc);
-    foreach string filename in filenames {
-        if opts.testJsonTypes {
-            check testJsonTypes(filename);
-            continue;
+    if filenames.length() == 0 {
+        return error("no input files");
+    }
+    if opts.testJsonTypes {
+        if filenames.length() > 1 {
+            return error("multiple input files not supported with --testJsonTypes");
+        }
+        check testJsonTypes(filenames[0]);
+    }
+    nback:Options nbackOptions = { gcName: check nback:validGcName(opts.gc) };
+    string? outDir = opts.outDir;
+    if outDir == () {
+        front:SourcePart[] sources = [];
+        foreach string filename in filenames {
+            var [_, ext] = basenameExtension(filename);
+            if ext != SOURCE_EXTENSION {
+                return error("don't know what to do with: " + filename);
+            }
+            sources.push({filename});
         }
         if opts.showTypes {
-            check showTypes(filename);
-            continue;
+            check showTypes(sources);
         }
-        check compileFile(filename, gc, opts);
-    }  
-}
-
-function validGcName(string? gcName) returns string|error? {
-    if gcName is () {
-        return ();
-    } 
+        else {
+            OutputOptions outOptions = {
+                filename: check chooseOutputFilename(filenames[0]),
+                target: opts.target
+            };
+            check compileModule(dummyModuleId(filenames[0]), sources, nbackOptions, outOptions);
+        }
+    }
     else {
-        foreach var c in gcName {
-            if !VALID_GC_NAME_CHARS.includes(c) { 
-                return error("invalid gc name " + gcName); 
-            }
+        foreach string filename in filenames {
+            OutputOptions outOptions = {
+                filename: check chooseOutputFilename(filename, outDir),
+                target: opts.target
+            };
+            check compileModule(dummyModuleId(filename), [{ filename }], nbackOptions, outOptions);
         }
-        return gcName;
-    }
+    }       
 }
 
-//  outputFilename of () means don't output anything
-function compileFile(string filename, string? gcName, *Options opts) returns CompileError? {
-    string? outputFileName = checkpanic chooseOutputFilename(filename, opts.outDir);
-    bir:ModuleId id = {
-       names: [filename],
-       organization: "dummy"
-    };
+function dummyModuleId(string filename) returns bir:ModuleId {
+    return { names: [filename], organization: "dummy" };
+}
+
+type OutputOptions record {|
+    string? filename = ();
+    string? target = ();
+|};
+
+function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
     t:Env env = new;
-    bir:Module birMod = check front:loadModule(env, filename, id);
+    bir:Module birMod = check front:loadModule(env, sources, modId);
     llvm:Context context = new;
-    llvm:Module llMod = check nback:buildModule(birMod, context, {gcName: gcName});
-
-    if nback:target != "" {
-        llMod.setTarget(nback:target);
-    }
-
-    if outputFileName != () {
-        check llMod.printModuleToFile(outputFileName);
+    llvm:Module llMod = check nback:buildModule(birMod, context, nbackOptions);
+    string? outFilename = outOptions.filename;
+    if outFilename != () {
+        string? target = outOptions.target;
+        if target != () {
+            llMod.setTarget(target);
+        }
+        check llMod.printModuleToFile(outFilename);
     }
 }
 
-function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error? {
+function chooseOutputFilename(string sourceFilename, string? outDir = ()) returns string|error? {
     string filename;
     if outDir == () {
         filename = sourceFilename;

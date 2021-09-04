@@ -7,6 +7,7 @@ public type Position err:Position;
 public type ModulePart record {|
     ImportDecl? importDecl;
     SourceFile file;
+    int partIndex;
     ModuleLevelDefn[] defns;
 |};
 
@@ -21,11 +22,11 @@ public type ImportDecl record {|
 
 public type FunctionDefn record {|
     readonly string name;
+    ModulePart part;
     Visibility vis;
     FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
-    SourceFile file;
     Position pos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
@@ -34,10 +35,10 @@ public type FunctionDefn record {|
 public type ResolvedConst readonly & [t:SemType, t:Value];
 public type ConstDefn record {|
     readonly string name;
+    ModulePart part;
     InlineBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
-    SourceFile file;
     Position pos;
     ResolvedConst|false? resolved = ();    
 |};
@@ -322,9 +323,9 @@ public type InlineMapTypeDesc record {|
 
 public type TypeDefn record {|
     readonly string name;
+    ModulePart part;
     Visibility vis;
     TypeDesc td;
-    SourceFile file;
     Position pos;
     t:SemType? semType = ();
     int cycleDepth = -1;
