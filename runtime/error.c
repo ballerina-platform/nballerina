@@ -61,7 +61,7 @@ static int onFrame(void *data, uintptr_t pc, const char *filename, int lineno, c
     Trace *trace = (Trace *)data;
     uint32_t nFrames = trace->nFrames;
     uint32_t szFrames = trace->szFrames;
-    if (unlikely(nFrames > MAX_FRAME_COUNT))
+    if (unlikely(nFrames == MAX_FRAME_COUNT))
         return 1;
     if (nFrames == szFrames) {
         szFrames = szFrames << 1;
