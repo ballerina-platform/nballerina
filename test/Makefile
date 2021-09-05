@@ -34,6 +34,7 @@ all:
 compile: out/compile.stamp
 
 out/compile.stamp: $(bal_files)
+	$(MAKE) -f new.mk
 	-rm -fr out/llnew
 	mkdir -p out/llnew
 	$(JAVA) -jar $(COMPILER_JAR) --outDir out/llnew $?
