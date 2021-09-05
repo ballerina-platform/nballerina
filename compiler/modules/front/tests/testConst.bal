@@ -19,6 +19,12 @@ class TestFoldContext {
     function typeEnv() returns t:Env {
         return self.env;
     }
+    function resolveTypeDesc(s:InlineTypeDesc td) returns err:Semantic|t:SemType {
+        if td is s:InlineAltTypeDesc|"()" {
+            return resolveInlineAltTypeDesc(td);
+        }
+        return err:semantic("TestFoldContext cannot resolve TypeDesc");
+    }
 }
 
 @test:Config{ dataProvider: validConstExprs }

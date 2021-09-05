@@ -208,7 +208,7 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, 
     panic error("unimplemented type-descriptor");
 }
 
-function resolveInlineTypeDesc(t:Env env, s:InlineTypeDesc td) returns t:SemType {
+function resolveInlineTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, s:InlineTypeDesc td) returns t:SemType|err:Semantic {
     if td is s:InlineArrayTypeDesc {
         t:UniformTypeBitSet memberType = resolveInlineAltTypeDesc(td.rest);
         if memberType == t:TOP {

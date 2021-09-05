@@ -203,12 +203,16 @@ class CodeGenContext {
         return foldExpr(new CodeGenFoldContext(self, env), expectedType, expr);
     }
 
+    function resolveTypeDesc(s:InlineTypeDesc td) returns err:Semantic|t:SemType {
+        return resolveInlineTypeDesc(self.mod.env, self.mod.defns, self.functionDefn, td);
+    }
 }
 
 class CodeGenFoldContext {
     *FoldContext;
     final CodeGenContext cx;
     final Environment env;
+
     function init(CodeGenContext cx, Environment env) {
         self.cx = cx;
         self.env = env;
@@ -234,6 +238,10 @@ class CodeGenFoldContext {
 
     function typeEnv() returns t:Env {
         return self.cx.mod.env;
+    }
+
+    function resolveTypeDesc(s:InlineTypeDesc td) returns err:Semantic|t:SemType {
+        return self.cx.resolveTypeDesc(td);
     }
 }
 
@@ -753,7 +761,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
-    t:SemType semType = resolveInlineTypeDesc(cx.mod.env, td);
+    t:SemType semType = check cx.resolveTypeDesc(td);
     initExpr = check cx.foldExpr(env, initExpr, semType);
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
     bir:Register result = cx.createRegister(semType, varName);
@@ -1187,7 +1195,7 @@ function codeGenVarRefExpr(CodeGenContext cx, string name, Environment env, bir:
 function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, tcExpr.operand);
     var reg = <bir:Register>operand; // const folding should have got rid of the const
-    t:SemType toType = resolveInlineTypeDesc(cx.mod.env, tcExpr.td);
+    t:SemType toType = check cx.resolveTypeDesc(tcExpr.td);
     t:UniformTypeBitSet? toNumType = t:singleNumericType(toType);
     if toNumType != () && !t:isSubtypeSimple(t:intersect(reg.semType, t:NUMBER), toNumType) {
         toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
@@ -1218,7 +1226,7 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
 }
 
 function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:InlineTypeDesc td, s:Expr left, boolean negated) returns CodeGenError|ExprEffect {
-    t:SemType semType = resolveInlineTypeDesc(cx.mod.env, td);
+    t:SemType semType = check cx.resolveTypeDesc(td);
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
     // Constants should be resolved during constant folding
     bir:Register reg = <bir:Register>operand;        

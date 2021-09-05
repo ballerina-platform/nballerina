@@ -23,24 +23,23 @@ type FoldContext object {
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
     function typeEnv() returns t:Env;
+    function resolveTypeDesc(s:InlineTypeDesc td) returns err:Semantic|t:SemType;
 };
 
 class ConstFoldContext {
     *FoldContext;
-    final s:ModulePart part;
-    final string defnName;
+    final s:ModuleLevelDefn defn;
     final t:Env env;
     final ModuleTable mod;
 
-    function init(s:ModulePart part, string defnName, t:Env env, ModuleTable mod) {
-        self.part = part;
-        self.defnName = defnName;
+    function init(s:ModuleLevelDefn defn, t:Env env, ModuleTable mod) {
+        self.defn = defn;
         self.env = env;
         self.mod = mod;
     }
     
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=err:location(self.part.file, pos), cause=cause, functionName=self.defnName);
+        return err:semantic(msg, loc=err:location(self.defn.part.file, pos), cause=cause, functionName=self.defn.name);
     }
 
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
@@ -60,6 +59,10 @@ class ConstFoldContext {
     function typeEnv() returns t:Env {
         return self.env;
     }
+
+    function resolveTypeDesc(s:InlineTypeDesc td) returns err:Semantic|t:SemType {
+        return resolveInlineTypeDesc(self.env, self.mod, self.defn, td);
+    }
 }
 
 function resolveConstDefn(t:Env env, ModuleTable mod, s:ConstDefn defn) returns s:ResolvedConst|FoldError {
@@ -72,7 +75,7 @@ function resolveConstDefn(t:Env env, ModuleTable mod, s:ConstDefn defn) returns 
     }
     else {
         defn.resolved = false;
-        ConstFoldContext cx = new ConstFoldContext(defn.part, defn.name, env, mod);
+        ConstFoldContext cx = new ConstFoldContext(defn, env, mod);
         s:InlineBuiltinTypeDesc? td = defn.td;
         t:SemType? expectedType = td is () ? () : resolveInlineAltTypeDesc(td);
         s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
@@ -388,7 +391,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
 }
 
 function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExpr expr) returns s:Expr|FoldError {
-    t:SemType semType = resolveInlineTypeDesc(cx.typeEnv(), expr.td);
+    t:SemType semType = check cx.resolveTypeDesc(expr.td);
     t:SemType targetType = semType;
     if !(expectedType is ()) {
         targetType = t:intersect(targetType, expectedType);
@@ -431,7 +434,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
 function foldTypeTestExpr(FoldContext cx, t:SemType? expectedType, s:TypeTestExpr expr) returns s:Expr|FoldError {
     s:Expr subExpr = check foldExpr(cx, (), expr.left);
     if subExpr is s:ConstShapeExpr {
-        t:SemType semType = resolveInlineTypeDesc(cx.typeEnv(), expr.td);
+        t:SemType semType = check cx.resolveTypeDesc(expr.td);
         return foldedUnaryConstExpr(t:containsConst(semType, subExpr.value) == !expr.negated, t:BOOLEAN, subExpr);
     }
     expr.left = subExpr;
