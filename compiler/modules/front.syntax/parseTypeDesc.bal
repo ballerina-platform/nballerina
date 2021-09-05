@@ -2,37 +2,49 @@
 import wso2/nballerina.err;
 
 // This is for the subset we currently support in the compiler
-function parseInlineTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
+function parseInlineTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? t = tok.current();
-    if t is InlineBuiltinTypeDesc {
-        check tok.advance();
-        InlineAltTypeDesc td = check parseInlineOptionalTypeDesc(tok, t);
-        t = tok.current();
-        if t == "[" {
-            check tok.advance();
-            check tok.expect("]");
-            InlineArrayTypeDesc arrayTypeDesc = { rest: td };
-            return arrayTypeDesc;
-        }
-        return finishInlineUnionTypeDesc(tok, td);
-    } 
+    if t is [IDENTIFIER, string] {
+        TypeDescRef refTypeDesc = { ref: t[1], pos: tok.currentPos() };
+        return refTypeDesc;
+    }
     else if t is "map" {
         check tok.advance();
         check tok.expect("<");
-        t = tok.current();
-        if t is InlineBuiltinTypeDesc {
-            check tok.advance();
-            InlineAltTypeDesc td = check finishInlineUnionTypeDesc(tok, t);
-            check tok.expect(">");
-            InlineMapTypeDesc mapTypeDesc = { rest: td};
-            return mapTypeDesc;
-        }
+        MappingTypeDesc mapTypeDesc = { fields: [], rest: check parseInlineUnionTypeDesc(tok) };
+        check tok.expect(">");
+        return mapTypeDesc;
+    }
+    if t is InlineBuiltinTypeDesc {
+        check tok.advance();
+        return finishInlineTypeDesc(tok, t);
     }
     return parseError(tok, "expected type descriptor");    
 }
 
-function finishInlineUnionTypeDesc(Tokenizer tok, InlineAltTypeDesc first) returns InlineAltTypeDesc|err:Syntax {
-    InlineAltTypeDesc left = first;
+function parseInlineUnionTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
+    Token? t = tok.current();
+    if t is InlineBuiltinTypeDesc {
+        check tok.advance();
+        return finishInlineUnionTypeDesc(tok, check parseInlineOptionalTypeDesc(tok, t));
+    }
+    return parseError(tok, "expected built-in type name");
+}
+
+function finishInlineTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc first) returns TypeDesc|err:Syntax {
+    TypeDesc td = check parseInlineOptionalTypeDesc(tok, first);
+    Token? t = tok.current();
+    if t == "[" {
+        check tok.advance();
+        check tok.expect("]");
+        ListTypeDesc arrayTypeDesc = { members: [], rest: td };
+        return arrayTypeDesc;
+    }
+    return finishInlineUnionTypeDesc(tok, td);
+}
+
+function finishInlineUnionTypeDesc(Tokenizer tok, TypeDesc first) returns TypeDesc|err:Syntax {
+    TypeDesc left = first;
     while true {
         Token? t = tok.current();
         if t != "|" {
@@ -46,18 +58,19 @@ function finishInlineUnionTypeDesc(Tokenizer tok, InlineAltTypeDesc first) retur
         else {
             check tok.advance();
             var right = check parseInlineOptionalTypeDesc(tok, t);
-            InlineUnionTypeDesc u = { left, right };
+            BinaryTypeDesc u = { op: "|", left, right };
             left = u;
         }
     }
     return left;
 }
 
-function parseInlineOptionalTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc td) returns InlineAltTypeDesc|err:Syntax {
+function parseInlineOptionalTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc td) returns TypeDesc|err:Syntax {
     Token? t = tok.current();
     if t == "?" {
         check tok.advance();
-        return { left: td, right: "()" };
+        BinaryTypeDesc u = { op: "|", left: td, right: "()" };
+        return u;
     }
     return td;
 }

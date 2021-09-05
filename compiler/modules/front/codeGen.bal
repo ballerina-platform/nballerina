@@ -203,8 +203,8 @@ class CodeGenContext {
         return foldExpr(new CodeGenFoldContext(self, env), expectedType, expr);
     }
 
-    function resolveTypeDesc(s:InlineTypeDesc td) returns err:Semantic|t:SemType {
-        return resolveInlineTypeDesc(self.mod.env, self.mod.defns, self.functionDefn, td);
+    function resolveTypeDesc(s:TypeDesc td) returns t:SemType|ResolveTypeError {
+        return resolveSubsetTypeDesc(self.mod.env, self.mod.defns, self.functionDefn, td);
     }
 }
 
@@ -240,7 +240,7 @@ class CodeGenFoldContext {
         return self.cx.mod.env;
     }
 
-    function resolveTypeDesc(s:InlineTypeDesc td) returns err:Semantic|t:SemType {
+    function resolveTypeDesc(s:TypeDesc td) returns ResolveTypeError|t:SemType {
         return self.cx.resolveTypeDesc(td);
     }
 }
@@ -1225,7 +1225,7 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     return { result, block: nextBlock };
 }
 
-function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:InlineTypeDesc td, s:Expr left, boolean negated) returns CodeGenError|ExprEffect {
+function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, boolean negated) returns CodeGenError|ExprEffect {
     t:SemType semType = check cx.resolveTypeDesc(td);
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
     // Constants should be resolved during constant folding

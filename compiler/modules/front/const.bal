@@ -15,7 +15,7 @@ import wso2/nballerina.types as t;
 
 type SimpleConst string|int|float|boolean|();
 
-type FoldError err:Semantic|err:Unimplemented;
+type FoldError ResolveTypeError;
 
 // This is for handling const definitions in the future
 type FoldContext object {
@@ -23,7 +23,7 @@ type FoldContext object {
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
     function typeEnv() returns t:Env;
-    function resolveTypeDesc(s:InlineTypeDesc td) returns err:Semantic|t:SemType;
+    function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
 };
 
 class ConstFoldContext {
@@ -60,8 +60,8 @@ class ConstFoldContext {
         return self.env;
     }
 
-    function resolveTypeDesc(s:InlineTypeDesc td) returns err:Semantic|t:SemType {
-        return resolveInlineTypeDesc(self.env, self.mod, self.defn, td);
+    function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType {
+        return resolveSubsetTypeDesc(self.env, self.mod, self.defn, td);
     }
 }
 
@@ -77,7 +77,7 @@ function resolveConstDefn(t:Env env, ModuleTable mod, s:ConstDefn defn) returns 
         defn.resolved = false;
         ConstFoldContext cx = new ConstFoldContext(defn, env, mod);
         s:InlineBuiltinTypeDesc? td = defn.td;
-        t:SemType? expectedType = td is () ? () : resolveInlineAltTypeDesc(td);
+        t:SemType? expectedType = td is () ? () : resolveInlineBuiltinTypeDesc(td);
         s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
         if expr is s:ConstValueExpr {
             if expectedType == () || t:containsConst(expectedType, expr.value) {

@@ -127,6 +127,10 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) re
             return stmt;
         }
     }
+    else if cur is [IDENTIFIER, string] {
+        TypeDescRef ref = { ref: identifier, pos };
+        return finishVarDeclStmt(tok, ref);
+    }
     return parseError(tok, "invalid statement");
 }
 
@@ -144,9 +148,7 @@ function parseErrorStmt(Tokenizer tok) returns Stmt|err:Syntax {
         return parseError(tok, "error constructor not allowed here");
     }
     else {
-        InlineAltTypeDesc td = check parseInlineOptionalTypeDesc(tok, "error");
-        InlineTypeDesc utd = check finishInlineUnionTypeDesc(tok, td);
-        return finishVarDeclStmt(tok, td);
+        return finishVarDeclStmt(tok, check finishInlineTypeDesc(tok, "error"));
     }
 }
 
@@ -194,11 +196,11 @@ function parseCompoundAssignStmt(Tokenizer tok, VarRefExpr lValue, CompoundAssig
 }
 
 function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
-    InlineTypeDesc td = check parseInlineTypeDesc(tok);
+    TypeDesc td = check parseInlineTypeDesc(tok);
     return finishVarDeclStmt(tok, td, isFinal);
 }
 
-function finishVarDeclStmt(Tokenizer tok, InlineTypeDesc td, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
+function finishVarDeclStmt(Tokenizer tok, TypeDesc td, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     Token? cur = tok.current();
     if cur is [IDENTIFIER, string] {
         check tok.advance();

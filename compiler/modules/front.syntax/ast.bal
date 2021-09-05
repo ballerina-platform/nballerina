@@ -113,7 +113,7 @@ public type BreakStmt "break";
 public type ContinueStmt "continue";
 
 public type VarDeclStmt record {|
-    InlineTypeDesc td;
+    TypeDesc td;
     string varName;
     Expr initExpr;
     boolean isFinal;
@@ -233,13 +233,13 @@ public type VarRefExpr record {|
 |};
 
 public type TypeCastExpr record {|
-    InlineTypeDesc td;
+    TypeDesc td;
     Expr operand;
     Position pos;
 |};
 
 public type TypeTestExpr record {|
-    InlineTypeDesc td;
+    TypeDesc td;
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
     boolean negated; 
@@ -289,37 +289,6 @@ public type FpLiteralExpr record {|
 |};
 
 // Types
-
-// This is the subtype of TypeDesc that we currently allow
-// within expressions and statements.
-public type InlineTypeDesc InlineAltTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc;
-
-public type InlineAltTypeDesc InlineUnionTypeDesc|InlineBuiltinTypeDesc;
-
-public type InlineBuiltinTypeDesc "boolean"|"int"|"float"|"string"|"error"|"any";
-
-public type InlineUnionTypeDesc record {|
-    // JBUG: if I uncomment `*BinaryTypeDesc`, there are lots of compile errors
-    // *BinaryTypeDesc;
-    // actually always `|`
-    BinaryTypeOp op = "|";
-    InlineAltTypeDesc left;
-    InlineAltTypeDesc|"()" right;
-|};
-
-public type InlineArrayTypeDesc record {|
-    *ListTypeDesc;
-    TypeDesc[0] members = [];
-    // JBUG if we use a string literal instead of a reference to a const,
-    // this gets an error about attempting to make a non-public symbol visible
-    InlineAltTypeDesc rest;
-|};
-
-public type InlineMapTypeDesc record {|
-    *MappingTypeDesc;
-    FieldDesc[0] fields = [];
-    InlineAltTypeDesc rest;
-|};
 
 public type TypeDefn record {|
     readonly string name;
@@ -381,6 +350,9 @@ public type SingletonTypeDesc record {|
 |};
 
 public type BuiltinIntSubtypeDesc "sint8"|"uint8"|"sint16"|"uint16"|"sint32"|"uint32";
-public type BuiltInTypeDesc "any"|"boolean"|"decimal"|"error"|"float"|"handle"|"int"|"json"
-                  |"never"|"readonly"|"string"|"typedesc"|"xml"|"()";
-public type LeafTypeDesc BuiltInTypeDesc|BuiltinIntSubtypeDesc;
+
+// This is the subtype of BuiltinTypeDesc that we currently allow inline.
+public type InlineBuiltinTypeDesc "boolean"|"int"|"float"|"string"|"error"|"any";
+public type BuiltinTypeDesc InlineBuiltinTypeDesc|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
+
+public type LeafTypeDesc BuiltinTypeDesc|BuiltinIntSubtypeDesc;
