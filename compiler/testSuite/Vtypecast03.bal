@@ -1,6 +1,7 @@
 import ballerina/io;
 
 public function main() {
-    any x = [42];
-    io:println((<any[]>x)[0]); // @output 42
+    any[] x = [42];
+    any y = x;
+    io:println((<any[]>y)[0]); // @output 42
 }

@@ -7,6 +7,8 @@ declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare void @_Bio__println(i8 addrspace(1)*)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
+declare i1 @_bal_list_has_type(i8 addrspace(1)*, i64) readonly
+declare i1 @_bal_mapping_has_type(i8 addrspace(1)*, i64) readonly
 define void @_B_main() {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
@@ -55,7 +57,7 @@ define void @_B_main() {
   %28 = call i8 addrspace(1)* @_bal_alloc(i64 32)
   %29 = bitcast i8 addrspace(1)* %28 to {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
   %30 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %29, i64 0, i32 0
-  store i64 8388607, i64 addrspace(1)* %30
+  store i64 8386559, i64 addrspace(1)* %30
   %31 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %29, i64 0, i32 1
   store i64 2, i64 addrspace(1)* %31
   %32 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %29, i64 0, i32 2
@@ -69,7 +71,7 @@ define void @_B_main() {
   %36 = load i8 addrspace(1)*, i8 addrspace(1)** %list
   call void @_B_p(i8 addrspace(1)* %36)
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
-  %37 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 0)
+  %37 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8386559, i64 0)
   store i8 addrspace(1)* %37, i8 addrspace(1)** %9
   %38 = load i8 addrspace(1)*, i8 addrspace(1)** %9
   store i8 addrspace(1)* %38, i8 addrspace(1)** %mapping
@@ -102,7 +104,7 @@ define internal void @_B_p(i8 addrspace(1)* %0) {
   %12 = alloca i8
   %13 = load i8*, i8** @_bal_stack_guard
   %14 = icmp ult i8* %12, %13
-  br i1 %14, label %65, label %15
+  br i1 %14, label %59, label %15
 15:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v
   %16 = load i8 addrspace(1)*, i8 addrspace(1)** %v
@@ -155,38 +157,32 @@ define internal void @_B_p(i8 addrspace(1)* %0) {
   br label %46
 46:
   %47 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %48 = addrspacecast i8 addrspace(1)* %47 to i8*
-  %49 = ptrtoint i8* %48 to i64
-  %50 = and i64 %49, 1080863910568919040
-  %51 = icmp eq i64 %50, 144115188075855872
-  store i1 %51, i1* %8
-  %52 = load i1, i1* %8
-  br i1 %52, label %53, label %55
-53:
-  %54 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  store i8 addrspace(1)* %54, i8 addrspace(1)** %v.4
+  %48 = call i1 @_bal_list_has_type(i8 addrspace(1)* %47, i64 8386559)
+  store i1 %48, i1* %8
+  %49 = load i1, i1* %8
+  br i1 %49, label %50, label %52
+50:
+  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  store i8 addrspace(1)* %51, i8 addrspace(1)** %v.4
   call void @_Bio__println(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475965445206625))
   store i8 addrspace(1)* null, i8 addrspace(1)** %9
-  br label %55
-55:
-  %56 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %57 = addrspacecast i8 addrspace(1)* %56 to i8*
-  %58 = ptrtoint i8* %57 to i64
-  %59 = and i64 %58, 1080863910568919040
-  %60 = icmp eq i64 %59, 216172782113783808
-  store i1 %60, i1* %10
-  %61 = load i1, i1* %10
-  br i1 %61, label %62, label %64
-62:
-  %63 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  store i8 addrspace(1)* %63, i8 addrspace(1)** %v.5
+  br label %52
+52:
+  %53 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %54 = call i1 @_bal_mapping_has_type(i8 addrspace(1)* %53, i64 8386559)
+  store i1 %54, i1* %10
+  %55 = load i1, i1* %10
+  br i1 %55, label %56, label %58
+56:
+  %57 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  store i8 addrspace(1)* %57, i8 addrspace(1)** %v.5
   call void @_Bio__println(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621489005))
   store i8 addrspace(1)* null, i8 addrspace(1)** %11
-  br label %64
-64:
+  br label %58
+58:
   ret void
-65:
-  %66 = call i8 addrspace(1)* @_bal_panic_construct(i64 4100)
-  call void @_bal_panic(i8 addrspace(1)* %66)
+59:
+  %60 = call i8 addrspace(1)* @_bal_panic_construct(i64 4100)
+  call void @_bal_panic(i8 addrspace(1)* %60)
   unreachable
 }

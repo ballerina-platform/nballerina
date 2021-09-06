@@ -15,3 +15,11 @@ void _Barray__push(TaggedPtr p, TaggedPtr val) {
     lp->tpArray.members[len] = val;
     lp->tpArray.length = len + 1;
 }
+
+bool _bal_list_has_type(TaggedPtr p, ListDesc desc) {
+    if ((getTag(p) & UT_MASK) != TAG_LIST_RW) {
+        return false;
+    }
+    ListPtr lp = taggedToPtr(p);
+    return (lp->desc & ~desc) == 0;
+}

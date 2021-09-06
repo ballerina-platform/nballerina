@@ -7,9 +7,9 @@ public function main() {
     p("this is a long string"); // @output string
     p(0x7fffffffffffffff); // @output int
     p(-0x7fffffffffffffff); // @output int
-    any list = [1, 2];
+    any[] list = [1, 2];
     p(list); // @output array
-    any mapping = {};
+    map<any> mapping = {};
     p(mapping); // @output map
 }
 

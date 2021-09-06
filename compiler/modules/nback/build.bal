@@ -94,7 +94,10 @@ const PANIC_MAPPING_STORE = 9;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"panic_construct"|"error_construct"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
+type RuntimeFunctionName "panic"|"panic_construct"|"error_construct"|"alloc"|
+                         "list_set"|"list_has_type"|
+                         "mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"mapping_has_type"|
+                         "int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
                          "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float"|"float_to_int";
 
 type RuntimeFunction readonly & record {|
@@ -148,6 +151,15 @@ final RuntimeFunction listSetFunction = {
     attrs: []
 };
 
+final RuntimeFunction listHasTypeFunction = {
+    name: "list_has_type",
+    ty: {
+        returnType: "i1",
+        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+    },
+    attrs: ["readonly"]
+};
+
 final RuntimeFunction mappingSetFunction = {
     name: "mapping_set",
     ty: {
@@ -182,6 +194,15 @@ final RuntimeFunction mappingConstructFunction = {
         paramTypes: ["i64", "i64"]
     },
     attrs: []
+};
+
+final RuntimeFunction mappingHasTypeFunction = {
+    name: "mapping_has_type",
+    ty: {
+        returnType: "i1",
+        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+    },
+    attrs: ["readonly"]
 };
 
 final RuntimeFunction intToTaggedFunction = {
@@ -1249,10 +1270,10 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
         hasType = buildHasTag(builder, tagged, TAG_ERROR);
     }
     else if t:isSubtypeSimple(semType, t:LIST) {
-        hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+        hasType = buildHasListType(builder, scaffold, tagged, insn.operand.semType, semType);
     }
     else if t:isSubtypeSimple(semType, t:MAPPING) {
-        hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+        hasType = buildHasMappingType(builder, scaffold, tagged, insn.operand.semType, semType);
     }
     else if semType is t:UniformTypeBitSet {
         hasType = buildHasTagInSet(builder, tagged, semType);
@@ -1267,6 +1288,28 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     }
     else {
         buildStoreBoolean(builder, scaffold, hasType, insn.result);
+    }
+}
+
+function buildHasListType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType sourceType, t:SemType targetType) returns llvm:Value {
+    if t:intersect(sourceType, t:LIST) == targetType {
+        return buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+    }
+    else {
+        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeCheckContext().env, targetType);
+        return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, listHasTypeFunction),
+                                        [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
+    }
+}
+
+function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType sourceType, t:SemType targetType) returns llvm:Value {
+    if t:intersect(sourceType, t:MAPPING) == targetType {
+        return buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+    }
+    else {
+        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeCheckContext().env, targetType);
+        return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingHasTypeFunction),
+                                        [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
     }
 }
 
@@ -1303,10 +1346,10 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
             hasTag = buildHasTag(builder, tagged, TAG_ERROR);
         }
         else if t:isSubtypeSimple(semType, t:LIST) {
-            hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+            hasTag = buildHasListType(builder, scaffold, tagged, insn.operand.semType, semType);
         }
         else if t:isSubtypeSimple(semType, t:MAPPING) {
-            hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+            hasTag = buildHasMappingType(builder, scaffold, tagged, insn.operand.semType, semType);
         }
         else if semType is t:UniformTypeBitSet {
             hasTag = buildHasTagInSet(builder, tagged, semType);
