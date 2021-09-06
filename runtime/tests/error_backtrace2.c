@@ -26,7 +26,7 @@ void func2(j) {
         _bal_error_trace_print(ep);
         PC *pcs = (PC *)ep->pcs;
         uint32_t npcs = ep->npcs;
-        assert(npcs == 10);
+        assert(npcs >= 7);
     }
 }
 

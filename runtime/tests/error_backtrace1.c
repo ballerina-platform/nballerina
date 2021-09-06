@@ -9,7 +9,7 @@ void func3() {
     _bal_error_trace_print(ep);
     PC *pcs = (PC *)ep->pcs;
     uint32_t npcs = ep->npcs;
-    assert(npcs == 7);
+    assert(npcs >= 4);
 }
 
 void func2() {
@@ -18,7 +18,7 @@ void func2() {
     _bal_error_trace_print(ep);
     PC *pcs = (PC *)ep->pcs;
     uint32_t npcs = ep->npcs;
-    assert(npcs == 6);
+    assert(npcs >= 3);
     func3();
 }
 
@@ -28,7 +28,7 @@ void func1() {
     _bal_error_trace_print(ep);
     PC *pcs = (PC *)ep->pcs;
     uint32_t npcs = ep->npcs;
-    assert(npcs == 5);
+    assert(npcs >= 2);
     func2();
 }
 
