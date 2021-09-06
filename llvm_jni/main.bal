@@ -13,10 +13,12 @@ type CompileError err:Any|io:Error;
 public type Options record {|
     boolean testJsonTypes = false;
     boolean showTypes = false;
+    // outDir also implies treating each file as a separate module
     string? outDir = ();
+    string? expectOutDir = ();
     string? gc = ();
+    string? target = ();
     boolean o = false;
-    string? targetTriple = ();
     string? optLevel = ();
     string? relocMode = ();
     string? codeModel = ();
@@ -27,69 +29,153 @@ const UPPER = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const string VALID_GC_NAME_CHARS = LOWER + UPPER + "-_";
 # The preferred output extension for the output filename.
 const OUTPUT_EXTENSION = ".ll";
-const OBJECT_FILE_EXTENSION = ".o";
-
 const SOURCE_EXTENSION = ".bal";
+const TEST_EXTENSION = ".balt";
+const OBJECT_FILE_EXTENSION = ".o";
 public function main(string[] filenames, *Options opts) returns error? {
-    string? gc = check validGcName(opts.gc);
-    foreach string filename in filenames {
-        if opts.testJsonTypes {
-            check testJsonTypes(filename);
-            continue;
+    if filenames.length() == 0 {
+        return error("no input files");
+    }
+    if opts.testJsonTypes {
+        if filenames.length() > 1 {
+            return error("multiple input files not supported with --testJsonTypes");
+        }
+        check testJsonTypes(filenames[0]);
+    }
+    nback:Options nbackOptions = { gcName: check nback:validGcName(opts.gc) };
+    string? outDir = opts.outDir;
+    if outDir == () {
+        front:SourcePart[] sources = [];
+        foreach string filename in filenames {
+            var [_, ext] = basenameExtension(filename);
+            if ext != SOURCE_EXTENSION {
+                if ext == TEST_EXTENSION {
+                    return error("balt compilation requires `outDir` to be passed");
+                }
+                return error(unknownExtensionMessage(ext));
+            }
+            sources.push({filename});
         }
         if opts.showTypes {
-            check showTypes(filename);
-            continue;
+            check showTypes(sources);
         }
-        check compileFile(filename, gc, opts);
-    }  
-}
-
-function validGcName(string? gcName) returns string|error? {
-    if gcName is () {
-        return ();
-    } 
+        else {
+            ObjectFileOptions? objOpts = ();
+            if opts.o {
+                objOpts = {
+                    fileName: check chooseOutputFilename(filenames[0]) + OBJECT_FILE_EXTENSION,
+                    target: opts.target,
+                    optLevel:opts.optLevel,
+                    relocMode: opts.relocMode,
+                    codeModel: opts.codeModel
+                };
+            }
+            OutputOptions outOptions = {
+                filename: check chooseOutputFilename(filenames[0]) + OUTPUT_EXTENSION,
+                target: opts.target
+            };
+            check compileModule(dummyModuleId(filenames[0]), sources, nbackOptions, outOptions, objOpts);
+        }
+    }
     else {
-        foreach var c in gcName {
-            if !VALID_GC_NAME_CHARS.includes(c) { 
-                return error("invalid gc name " + gcName); 
+        foreach string filename in filenames {
+            var [_, ext] = basenameExtension(filename);
+            if ext == SOURCE_EXTENSION {
+                OutputOptions outOptions = {
+                    filename: check chooseOutputFilename(filename, outDir) + OUTPUT_EXTENSION,
+                    target: opts.target
+                };
+                ObjectFileOptions? objOpts = ();
+                if opts.o {
+                    objOpts = {
+                        fileName: check chooseOutputFilename(filename, outDir) + OBJECT_FILE_EXTENSION,
+                        target: opts.target,
+                        optLevel:opts.optLevel,
+                        relocMode: opts.relocMode,
+                        codeModel: opts.codeModel
+                    };
+                }
+                check compileModule(dummyModuleId(filename), [{ filename }], nbackOptions, outOptions, objOpts);
+            }
+            else if ext == TEST_EXTENSION {
+                check compileBalt(filename, opts.expectOutDir, outDir, opts.target, nbackOptions);
+            }
+            else {
+                return error(unknownExtensionMessage(ext));
             }
         }
-        return gcName;
     }
 }
 
-//  outputFilename of () means don't output anything
-function compileFile(string filename, string? gcName, *Options opts) returns CompileError? {
-    string outputNameBase = checkpanic chooseOutputFilename(filename, opts.outDir);
-    string outputFileName = outputNameBase + OUTPUT_EXTENSION;
-    string? objectFileName = ();
-    if opts.o {
-        objectFileName = outputNameBase + OBJECT_FILE_EXTENSION;
+function unknownExtensionMessage(string? ext) returns string {
+    if ext == () {
+        return "input filename must have a .bal or .balt extension";
     }
-    bir:ModuleId id = {
-       names: [filename],
-       organization: "dummy"
-    };
+    else {
+        return err:format(`unsupported extension ${ext}`);
+    }
+}
+
+function compileBalt(string filename, string? expectOutDir, string outDir, string? target, nback:Options nbackOptions) returns error? {
+    BaltTestCase[] tests = check parseBalt(filename);
+    foreach var [i, t] in tests.enumerate() {
+        if t.header.Test\-Case == "error" || t.header["Fail-Issue"] != () {
+            continue;
+        }
+        string outBasename = chooseBaltCaseOutputFilename(t, i);
+        OutputOptions outOptions = {
+            filename: check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION,
+            target: target
+        };
+        string[] lines = t.content;
+        check compileModule(dummyModuleId(filename), [{ lines }], nbackOptions, outOptions);
+        string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
+        check io:fileWriteLines(expectFilename, expect(t.content));
+    }
+}
+
+function dummyModuleId(string filename) returns bir:ModuleId {
+    return { names: [filename], organization: "dummy" };
+}
+
+type OutputOptions record {|
+    string? filename = ();
+    string? target = ();
+|};
+
+type ObjectFileOptions record {|
+    string fileName;
+    string? target = ();
+    string? optLevel = ();
+    string? relocMode = ();
+    string? codeModel = ();
+|};
+
+function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, ObjectFileOptions? objOptions =()) returns CompileError? {
     t:Env env = new;
-    bir:Module birMod = check front:loadModule(env, filename, id);
+    bir:Module birMod = check front:loadModule(env, sources, modId);
     llvm:Context context = new;
-    llvm:Module llMod = check nback:buildModule(birMod, context, {gcName: gcName});
-    if opts.targetTriple is string {
-        llMod.setTarget(<string>opts.targetTriple);
+    llvm:Module llMod = check nback:buildModule(birMod, context, nbackOptions);
+    string? outFilename = outOptions.filename;
+    if outFilename != () {
+        string? target = outOptions.target;
+        if target != () {
+            llMod.setTarget(target);
+        }
+        check llMod.printModuleToFile(outFilename);
     }
-    else if nback:target != "" {
-        llMod.setTarget(nback:target);
-    }
-    check llMod.printModuleToFile(outputFileName);
-    if objectFileName != () {
-        check llMod.printModuleToObjectFile(objectFileName, {
-            optLevel: opts.optLevel, relocMode: opts.relocMode, codeModel: opts.codeModel
+    if objOptions is ObjectFileOptions {
+        string? target = objOptions.target;
+        if target != () {
+            llMod.setTarget(target);
+        }
+        check llMod.printModuleToObjectFile(objOptions.fileName, {
+            optLevel: objOptions.optLevel, relocMode: objOptions.relocMode, codeModel: objOptions.codeModel
         });
     }
 }
 
-function chooseOutputFilename(string sourceFilename, string? outDir) returns string|error {
+function chooseOutputFilename(string sourceFilename, string? outDir = ()) returns string|error {
     string filename;
     if outDir == () {
         filename = sourceFilename;
