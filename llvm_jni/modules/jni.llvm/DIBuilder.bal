@@ -7,7 +7,6 @@ public distinct class Metadata {
     }
 }
 
-
 function intAsMetadata(int value) returns Metadata {
     Value val = constInt("i32", value);
     return new(jLLVMValueAsMetadata(val.LLVMValueRef));
@@ -51,7 +50,6 @@ public class DIBuilder {
         return new(jObj);
     }
 
-
     public function createFile(string filename, string directory) returns Metadata {
         var [filenameObj, filenameLen] = getStringProp(filename);
         var [dir, dirLen] = getStringProp(directory);
@@ -84,7 +82,6 @@ public class DIBuilder {
         return new(jObj);
     }
 
-
     public function createDebugLocation(Context context, int line, int column, Metadata? scope, Metadata? inlinedAt=()) returns Metadata {
         handle scopeJObj = getMetadataProp(scope);
         handle inlinedAtJObj = getMetadataProp(inlinedAt);
@@ -92,14 +89,12 @@ public class DIBuilder {
         return new(jObj);
     }
 
-
     function getIntProp(int? prop) returns int {
 	    if prop is int {
 		return prop;
 	    }
 	    return 0;
     }
-
 }
 
 function jLLVMCreateDIBuilder(handle module) returns handle = @java:Method {

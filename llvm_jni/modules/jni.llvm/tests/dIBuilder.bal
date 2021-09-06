@@ -32,5 +32,5 @@ function dIBuilder() returns Module {
 
 @test:Config {}
 function testDIBuilder() returns error? {
-    return runTest(dIBuilder, "dIBuilder.ll");
+    return runTest(dIBuilder, "dI_builder.ll");
 }

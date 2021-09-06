@@ -616,7 +616,6 @@ public class FunctionDefn {
     }
 }
 
-
 # Corresponds to LLVMMetadataRef
 public distinct class Metadata {
     string label;
