@@ -16,16 +16,23 @@ diff_files = $(addsuffix .diff, $(addprefix result/, $(basename $(notdir $(ll_fi
 test: all
 	$(MAKE) -f ../../sub.mk tdir=$(tdir) testll
 
-all: ../../../compiler/testSuite/$(tdir).balt
+all:
+	if test $(COMPILER_JAR) -nt compile.stamp; then rm -f compile.stamp; fi
+	$(MAKE) -f ../../sub.mk tdir=$(tdir) compile
+
+compile: compile.stamp
+
+compile.stamp: ../../../compiler/testSuite/$(tdir).balt
 	-rm -fr llnew
 	-rm -fr expectnew
-	$(JAVA) -jar $(COMPILER_JAR) --outDir llnew --expectOutDir expectnew $?
+	$(JAVA) -jar $(COMPILER_JAR) --outDir llnew --expectOutDir expectnew $^
 	mkdir -p ll
 	mkdir -p expect
 	-../../update.sh expectnew expect txt
 	-../../update.sh llnew ll ll
 	-rm -fr llnew
 	-rm -fr expectnew
+	@touch $@
 
 testll: fail.txt
 	@echo testll
