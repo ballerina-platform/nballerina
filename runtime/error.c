@@ -15,24 +15,24 @@ struct backtrace_state *state;
 typedef struct {
     uint32_t npcs;
     uint32_t szpcs;
-    PC* pcs;
+    PC *pcs;
 } Trace;
 
 static void onError(void *data, const char *msg, int errnum) {
-    fprintf(stderr, "Error : libbacktrace : %s\n", msg);
-    fflush(stderr);
+    fprintf(stdout, "Error : libbacktrace : %s\n", msg);
+    fflush(stdout);
 }
 
 static int onFrame(void *data, PC pc, const char *filename, int lineno, const char *function) {
-    if (function == NULL || filename == NULL) 
+    if (function == NULL || filename == NULL)
         return 0;
 
-    fprintf(stderr, "%s", function);
-    fprintf(stderr, " %s", filename);
-    fputs(":", stderr);
-    fprintf(stderr, "%" PRIi32, lineno);
-    putc('\n', stderr);
-    fflush(stderr);
+    fprintf(stdout, "%s", function);
+    fprintf(stdout, " %s", filename);
+    fputs(":", stdout);
+    fprintf(stdout, "%" PRIi32, lineno);
+    putc('\n', stdout);
+    fflush(stdout);
     return 0;
 }
 
@@ -47,8 +47,8 @@ static int onPC(void *data, PC pc) {
         trace->szpcs = szpcs;
         void *p = realloc(trace->pcs, sizeof(PC) * szpcs);
         if (p == 0)
-            return 1;    
-        trace->pcs = (PC*)p;
+            return 1;
+        trace->pcs = (PC *)p;
     }
 
     PC *pcs = trace->pcs;
@@ -58,7 +58,7 @@ static int onPC(void *data, PC pc) {
     return 0;
 }
 
-static int getPCs(Trace* trace) {
+static int getPCs(Trace *trace) {
     state = backtrace_create_state(NULL, THREAD, onError, NULL);
 
     void *p = malloc(sizeof(PC) * INITIAL_PC_COUNT);
@@ -72,8 +72,8 @@ TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     Trace trace = {0, INITIAL_PC_COUNT};
     int err = getPCs(&trace);
     if (err) {
-        fprintf(stderr, "Error : %s\n", "Error occured when generating backtrace for error value");
-        fflush(stderr);
+        fprintf(stdout, "%s\n", "Error occured when getting backtrace for error value");
+        fflush(stdout);
     }
     uint32_t npcs = trace.npcs;
 
