@@ -84,12 +84,19 @@ distinct class LLVMMemoryBuffer {
     }
 }
 
+function getIntProp(int? prop) returns int {
+    if prop is int {
+        return prop;
+    }
+    return 0;
+}
+
 function getBooleanProp(boolean? prop) returns int {
     if prop is boolean {
         if prop {
             return 1;
         }
-    else {
+        else {
             return 0;
         }
     }

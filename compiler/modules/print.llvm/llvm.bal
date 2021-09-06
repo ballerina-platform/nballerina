@@ -192,7 +192,8 @@ public class Module {
     private [PointerValue, GlobalProperties][] globalVariables = [];
     private FunctionDecl[] functionDecls = [];
     private FunctionDefn[] functionDefns = [];
-    private DIBuilder[] dIBuilders = [];
+    Metadata[] metadata = [];
+    Metadata[] moduleFlags = [];
 
     private final Context context;
     private TargetTriple? target = ();
@@ -204,20 +205,23 @@ public class Module {
     // Corresponds to LLVMCreateDIBuilder
     public function createDIBuilder() returns DIBuilder {
         DIBuilder dIBuilder = new(self);
-        self.dIBuilders.push(dIBuilder);
         return dIBuilder;
     }
 
     // Corresponds to LLVMAddModuleFlag
     public function addModuleFlag(ModuleFlagBehavior behavior, ModuleFlag flag) {
-        DIBuilder dIBuilder;
-        if self.dIBuilders.length() == 0 {
-            dIBuilder = self.createDIBuilder();
+        Metadata metadata = self.addMetadata();
+        metadata.addLine(metadata.ref(), "=", "!", "{", "i32", moduleFlagBehaviorToString.get(behavior),",",
+                         "!", "\"", flag[0], "\"", ",", "i32", flag[1].toString() ,"}");
+        string[] preambleWords  = [];
+        preambleWords.push("!", "llvm", ".", "module", ".", "flags", "=", "!", "{");
+        foreach var flagMetadata in self.moduleFlags {
+            preambleWords.push(flagMetadata.ref(), ",");
+            flagMetadata.resetPreamble();
         }
-        else {
-            dIBuilder = self.dIBuilders[0];
-        }
-        dIBuilder.addModuleFlag(behavior, flag);
+        preambleWords.push(metadata.ref(), "}");
+        metadata.addPreamble(...preambleWords);
+        self.moduleFlags.push(metadata);
     }
 
     // Corresponds to LLVMAddFunction
@@ -294,7 +298,7 @@ public class Module {
         }
         return varName;
     }
- 
+
     // Corresponds to LLVMPrintModuleToFile
     public function printModuleToFile(string path) returns io:Error? {
         Output out = new;
@@ -323,11 +327,13 @@ public class Module {
         foreach var fn in self.functionDefns {
             fn.output(out);
         }
-        foreach var dIBuilder in self.dIBuilders {
-            dIBuilder.outputPreamble(out);
+        foreach var data in self.metadata {
+            if data.hasPreamble() {
+                data.outputPreamble(out);
+            }
         }
-        foreach var dIBuilder in self.dIBuilders {
-            dIBuilder.output(out);
+        foreach var data in self.metadata {
+            data.output(out);
         }
     }
 
@@ -361,6 +367,16 @@ public class Module {
             words.push(",", "align", prop.align.toString());
         }
         out.push(createLine(words));
+    }
+
+    function genMetadataLabel() returns string {
+        return string `!${self.metadata.length()}`;
+    }
+
+    function addMetadata() returns Metadata {
+        Metadata metadata = new(self.genMetadataLabel());
+        self.metadata.push(metadata);
+        return metadata;
     }
 }
 
@@ -683,24 +699,15 @@ final readonly & map<string> moduleFlagBehaviorToString = {
 
 # Corresponds to LLVMDIBuilderRef
 public class DIBuilder {
-    Metadata[] metadata = [];
-    Metadata[] moduleFlags = [];
+    Module m;
     Metadata? compileUnit = ();
-    function init(Module module) {}
-
-    function genMetadataLabel() returns string {
-        return string `!${self.metadata.length()}`;
-    }
-
-    function addMetadata() returns Metadata {
-        Metadata metadata = new(self.genMetadataLabel());
-        self.metadata.push(metadata);
-        return metadata;
+    function init(Module m) {
+        self.m = m;
     }
 
     // Corresponds to LLVMDIBuilderCreateCompileUnit
     public function createCompileUnit(*CompileUnitProperties props) returns Metadata {
-        Metadata metadata = self.addMetadata();
+        Metadata metadata = self.m.addMetadata();
         Metadata? file = props.file;
         string[] words = [];
         words.push(metadata.ref(), "=", "distinct", "!", "DICompileUnit", "(", "language",
@@ -723,7 +730,7 @@ public class DIBuilder {
 
     // Corresponds to LLVMDIBuilderCreateFile
     public function createFile(string filename, string directory) returns Metadata {
-        Metadata metadata = self.addMetadata();
+        Metadata metadata = self.m.addMetadata();
         metadata.addLine(metadata.ref(), "=", "!", "DIFile", "(", "filename", ":", "\"", filename,
                          "\"", ",", "directory", ":", "\"", directory, "\"", ")");
         return metadata;
@@ -731,7 +738,7 @@ public class DIBuilder {
 
     // Corresponds to LLVMDIBuilderCreateFunction
     public function createFunction(*FunctionMetadataProperties props) returns Metadata {
-        Metadata metadata = self.addMetadata();
+        Metadata metadata = self.m.addMetadata();
         string[] words = [];
         words.push(metadata.ref(), "=");
         if props.isDefinition {
@@ -777,24 +784,24 @@ public class DIBuilder {
                 panic error("No compile unit is defined");
             }
         }
-        Metadata retainedNodes = self.addMetadata();
+        Metadata retainedNodes = self.m.addMetadata();
         words.push(",", "retainedNodes", ":", retainedNodes.ref(), ")");
         metadata.addLine(...words);
         return metadata;
     }
 
     public function createSubroutineType(Metadata? file, Metadata[] parameterTypes=[], DIFlag flag="zero") returns Metadata {
-        Metadata metadata = self.addMetadata();
+        Metadata metadata = self.m.addMetadata();
         if parameterTypes.length() != 0 {
             panic error("Parameter types not implemented");
         }
-        Metadata typeNode = self.addMetadata();
+        Metadata typeNode = self.m.addMetadata();
         metadata.addLine(metadata.ref(), "=", "!DISubroutineType", "(", "types", ":", typeNode.ref(), ")");
         return metadata;
     }
 
     public function createDebugLocation(Context context, int line, int column, Metadata? scope, Metadata? inlinedAt=()) returns Metadata {
-        Metadata metadata = self.addMetadata();
+        Metadata metadata = self.m.addMetadata();
         string[] words = [metadata.ref(), "=", "!", "DILocation", "("];
         words.push("line", ":", line.toString());
         words.push(",", "column", ":", column.toString());
@@ -802,21 +809,6 @@ public class DIBuilder {
         words.push(")");
         metadata.addLine(...words);
         return metadata;
-    }
-
-    function addModuleFlag(ModuleFlagBehavior behavior, ModuleFlag flag) {
-        Metadata metadata = self.addMetadata();
-        metadata.addLine(metadata.ref(), "=", "!", "{", "i32", moduleFlagBehaviorToString.get(behavior),",",
-                         "!", "\"", flag[0], "\"", ",", "i32", flag[1].toString() ,"}");
-        string[] preambleWords  = [];
-        preambleWords.push("!", "llvm", ".", "module", ".", "flags", "=", "!", "{");
-        foreach var flagMetadata in self.moduleFlags {
-            preambleWords.push(flagMetadata.ref(), ",");
-            flagMetadata.resetPreamble();
-        }
-        preambleWords.push(metadata.ref(), "}");
-        metadata.addPreamble(...preambleWords);
-        self.moduleFlags.push(metadata);
     }
 
     function addMetadataToWords(string[] words, Metadata? metadata, string label, string? prefix=",") {
@@ -858,21 +850,6 @@ public class DIBuilder {
             words.push("false");
         }
     }
-
-    function outputPreamble(Output out) {
-        foreach var data in self.metadata {
-            if data.hasPreamble() {
-                data.outputPreamble(out);
-            }
-        }
-    }
-
-    function output(Output out) {
-        foreach var data in self.metadata {
-            data.output(out);
-        }
-    }
-
 }
 
 # Corresponds to LLVMBuilderRef  

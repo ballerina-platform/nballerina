@@ -41,7 +41,7 @@ public class DIBuilder {
         var [flags, flagsLen] = getStringProp(props.flags);
         var [splitName, splitNameLen] = getStringProp(props.splitName);
         int kind = emissionKindToInt.get(props.kind);
-        int DWOId = self.getIntProp(props.DWOId);
+        int DWOId = getIntProp(props.DWOId);
         int splitDebugInlining = getBooleanProp(props.splitDebugInlining);
         int splitDebugInfoForProfiling = getBooleanProp(props.splitDebugInfoForProfiling);
         var [sysRoot, sysRootLen] = getStringProp(props.sysRoot);
@@ -87,13 +87,6 @@ public class DIBuilder {
         handle inlinedAtJObj = getMetadataProp(inlinedAt);
         handle jObj = jLLVMDIBuilderCreateDebugLocation(context.LLVMContext, line, column, scopeJObj, inlinedAtJObj);
         return new(jObj);
-    }
-
-    function getIntProp(int? prop) returns int {
-	    if prop is int {
-		return prop;
-	    }
-	    return 0;
     }
 }
 
