@@ -9,8 +9,10 @@ if test ! -f "$1"; then
 fi
 b=`basename "$1"` 
 kind=`echo "$b" | head -c 1`
-out="out/actual/$b.txt"
-mkdir -p out/actual
+dir=`dirname "$1"`
+parent=`dirname $dir`
+out="$parent/actual/$b.txt"
+mkdir -p "$parent/actual"
 if test $kind == P; then
     $("./$1" >/dev/null 2>"$out")
 else

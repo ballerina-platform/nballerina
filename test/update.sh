@@ -18,8 +18,8 @@ fi
 for f in *.$ext; do
     existing="$to/${f:0:6}*.$ext"
     if test -f $existing; then
-        cmp -s $f $existing || mv -v $f $existing
+        cmp -s $f $existing || mv $f $existing
     else
-        mv -v $f $to
+        mv $f $to
     fi
 done
