@@ -22,21 +22,11 @@ void func2(j) {
     } 
     else {
         TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"), 24);
-        ErrorPtr er = (ErrorPtr)taggedToPtr(taggedErr);
-        Frame *frames = (Frame *)er->frames;
-        uint32_t nFrames = er->nFrames;
-        char *act = (char *)(frames + nFrames);        
-        assert(nFrames == 7);
-        char *actual = (char *)(frames + nFrames);
-        char *expected = "tests/error_backtrace2.c\0func2\0func1\0main\0";
-        int exp_idx = 0;
-        int act_idx = 0;
-        assert(strstr(actual, expected));
-        for (size_t i = 0; i < 3; i++) {
-            exp_idx = nextStrLocationFrom(exp_idx, expected);
-            act_idx = nextStrLocationFrom(act_idx, actual);
-            assert(strstr(actual + act_idx, expected + exp_idx));
-        }
+        ErrorPtr ep = (ErrorPtr)taggedToPtr(taggedErr);
+        _bal_error_trace_print(ep);
+        PC *pcs = (PC *)ep->pcs;
+        uint32_t npcs = ep->npcs;
+        assert(npcs == 10);
     }
 }
 
