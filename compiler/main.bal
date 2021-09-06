@@ -41,11 +41,11 @@ public function main(string[] filenames, *Options opts) returns error? {
         front:SourcePart[] sources = [];
         foreach string filename in filenames {
             var [_, ext] = basenameExtension(filename);
-            if ext == TEST_EXTENSION {
-                return error("balt compilation requires `outDir` to be passed");
-            }
-            else if ext != SOURCE_EXTENSION {
-                return error("don't know what to do with: " + filename);
+            if ext != SOURCE_EXTENSION {
+                if ext == TEST_EXTENSION {
+                    return error("balt compilation requires `outDir` to be passed");
+                }
+                return error(unknownExtensionMessage(ext));
             }
             sources.push({filename});
         }
@@ -63,17 +63,31 @@ public function main(string[] filenames, *Options opts) returns error? {
     else {
         foreach string filename in filenames {
             var [_, ext] = basenameExtension(filename);
-            if ext == TEST_EXTENSION {
-                check compileBalt(filename, opts.expectOutDir, outDir, opts.target, nbackOptions);
-                continue;
+            if ext == SOURCE_EXTENSION {
+                OutputOptions outOptions = {
+                    filename: check chooseOutputFilename(filename, outDir),
+                    target: opts.target
+                };
+                check compileModule(dummyModuleId(filename), [{ filename }], nbackOptions, outOptions);
             }
-            OutputOptions outOptions = {
-                filename: check chooseOutputFilename(filename, outDir),
-                target: opts.target
-            };
-            check compileModule(dummyModuleId(filename), [{ filename }], nbackOptions, outOptions);
+            else if ext == TEST_EXTENSION {
+                check compileBalt(filename, opts.expectOutDir, outDir, opts.target, nbackOptions);
+            }
+            else {
+                return error(unknownExtensionMessage(ext));
+            }
+            
         }
-    }       
+    }
+}
+
+function unknownExtensionMessage(string? ext) returns string {
+    if ext == () {
+        return "input filename must have a .bal or .balt extension";
+    }
+    else {
+        return err:format(`unsupported extension ${ext}`);
+    }
 }
 
 function compileBalt(string filename, string? expectOutDir, string outDir, string? target, nback:Options nbackOptions) returns error? {
@@ -89,7 +103,6 @@ function compileBalt(string filename, string? expectOutDir, string outDir, strin
         };
         string[] lines = t.content;
         check compileModule(dummyModuleId(filename), [{ lines }], nbackOptions, outOptions);
-
         string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
         check io:fileWriteLines(expectFilename, expect(t.content));
     }
