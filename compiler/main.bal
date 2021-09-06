@@ -15,6 +15,7 @@ public type Options record {|
     boolean showTypes = false;
     // outDir also implies treating each file as a separate module
     string? outDir = ();
+    string? expectOutDir = ();
     string? gc = ();
     string? target = ();
 |};
@@ -23,6 +24,7 @@ public type Options record {|
 # The preferred output extension for the output filename.
 const OUTPUT_EXTENSION = ".ll";
 const SOURCE_EXTENSION = ".bal";
+const TEST_EXTENSION = ".balt";
 public function main(string[] filenames, *Options opts) returns error? {
     if filenames.length() == 0 {
         return error("no input files");
@@ -39,7 +41,10 @@ public function main(string[] filenames, *Options opts) returns error? {
         front:SourcePart[] sources = [];
         foreach string filename in filenames {
             var [_, ext] = basenameExtension(filename);
-            if ext != SOURCE_EXTENSION {
+            if ext == TEST_EXTENSION {
+                return error("balt compilation requires `outDir` to be passed");
+            }
+            else if ext != SOURCE_EXTENSION {
                 return error("don't know what to do with: " + filename);
             }
             sources.push({filename});
@@ -57,6 +62,11 @@ public function main(string[] filenames, *Options opts) returns error? {
     }
     else {
         foreach string filename in filenames {
+            var [_, ext] = basenameExtension(filename);
+            if ext == TEST_EXTENSION {
+                check compileBalt(filename, opts.expectOutDir, outDir, opts.target, nbackOptions);
+                continue;
+            }
             OutputOptions outOptions = {
                 filename: check chooseOutputFilename(filename, outDir),
                 target: opts.target
@@ -64,6 +74,25 @@ public function main(string[] filenames, *Options opts) returns error? {
             check compileModule(dummyModuleId(filename), [{ filename }], nbackOptions, outOptions);
         }
     }       
+}
+
+function compileBalt(string filename, string? expectOutDir, string outDir, string? target, nback:Options nbackOptions) returns error? {
+    BaltTestCase[] tests = check parseBalt(filename);
+    foreach var [i, t] in tests.enumerate() {
+        if t.header.Test\-Case == "error" || t.header["Fail-Issue"] != () {
+            continue;
+        }
+        string outBasename = chooseBaltCaseOutputFilename(t, i);
+        OutputOptions outOptions = {
+            filename: check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION,
+            target: target
+        };
+        string[] lines = t.content;
+        check compileModule(dummyModuleId(filename), [{ lines }], nbackOptions, outOptions);
+
+        string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
+        check io:fileWriteLines(expectFilename, expect(t.content));
+    }
 }
 
 function dummyModuleId(string filename) returns bir:ModuleId {
