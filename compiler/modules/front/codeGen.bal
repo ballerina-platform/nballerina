@@ -1162,7 +1162,7 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     else {
         var [binding, value] = narrowingCompare;
         t:SemType ifTrue = t:singleton(value);
-        t:SemType ifFalse = t:diff(binding.reg.semType, ifTrue);
+        t:SemType ifFalse = t:roDiff(cx.mod.tc, binding.reg.semType, ifTrue);
         if (<string>op).startsWith("!") {
             [ifTrue, ifFalse] = [ifFalse, ifTrue];
         }
@@ -1230,7 +1230,7 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
     // Constants should be resolved during constant folding
     bir:Register reg = <bir:Register>operand;        
-    t:SemType diff = t:diff(reg.semType, semType);
+    t:SemType diff = t:roDiff(cx.mod.tc, reg.semType, semType);
     if t:isEmpty(cx.mod.tc, diff) {
         return { result: !negated, block: bb };
     }

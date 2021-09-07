@@ -160,8 +160,8 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
 
 function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic? {
     t:SemType ty = insn.result.semType;
-    if !vc.isSubtype(ty, t:LIST) {
-        return vc.err("bad BIR: inherent type of list construct is not a list");
+    if !vc.isSubtype(ty, t:LIST_RW) {
+        return vc.err("bad BIR: inherent type of list construct is not a mutable list");
     }
     t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), ty);
     if memberType == () {
@@ -176,8 +176,8 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
 
 function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns err:Semantic? {
     t:SemType ty = insn.result.semType;
-    if !vc.isSubtype(ty, t:MAPPING) {
-        return vc.err("bad BIR: inherent type of list construct is not a list");
+    if !vc.isSubtype(ty, t:MAPPING_RW) {
+        return vc.err("bad BIR: inherent type of mapping construct is not a mutable mapping");
     }
     t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), ty);
     if memberType == () {
