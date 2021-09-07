@@ -990,15 +990,15 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             bir:Register result = cx.createRegister(t:BOOLEAN);
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
             var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
-            bir:OrderType? ot = operandPairOrderType(l, r);
+            bir:OrderType? ot = operandPairOrderType(cx, l, r);
             if ot != () {
                 bir:CompareInsn insn = { op, orderType: ot, operands: [l, r], result };
                 nextBlock.insns.push(insn);
-                return { result, block: nextBlock };  
+                return { result, block: nextBlock };
             }
             else {
                 return cx.semanticErr("operands of relational operator do not belong to an ordered type");
-            }               
+            }
         }
         var { td, operand: _ } => {
             // JBUG #31782 cast needed
@@ -1052,7 +1052,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 }
                 else if t:isSubtypeSimple(l.semType, t:STRING) {
                     return cx.unimplementedErr("not implemented: member access on string", pos=pos);
-                }             
+                }
             }
             return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
         }
@@ -1643,15 +1643,15 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
     return ();
 }
 
-function operandPairOrderType(bir:Operand left, bir:Operand right) returns bir:OrderType? {
+function operandPairOrderType(CodeGenContext cx, bir:Operand left, bir:Operand right) returns bir:OrderType? {
     if operandIsNil(left) {
-        return promoteToOptOrderType(operandOrderType(right));
+        return promoteToOptOrderType(operandOrderType(cx, right));
     }
     if operandIsNil(right) {
-        return promoteToOptOrderType(operandOrderType(left));
+        return promoteToOptOrderType(operandOrderType(cx, left));
     }
-    bir:OrderType? lot = operandOrderType(left);
-    bir:OrderType? rot = operandOrderType(right);
+    bir:OrderType? lot = operandOrderType(cx, left);
+    bir:OrderType? rot = operandOrderType(cx, right);
     if lot == rot {
         return lot;
     }
@@ -1666,6 +1666,10 @@ function operandPairOrderType(bir:Operand left, bir:Operand right) returns bir:O
 function promoteToOptOrderType(bir:OrderType? ot) returns bir:OrderType? {
     if ot is bir:UniformOrderType {
         return { opt: ot };
+    }
+    else if ot is bir:ArrayOrderType {
+        //TODO: handle opt array
+        panic error("Opt array  not implemented");
     }
     else {
         return ot;
@@ -1683,20 +1687,37 @@ function operandIsNil(bir:Operand operand) returns boolean {
 
 final readonly & bir:UniformOrderType[] UNIFORM_ORDER_TYPES = [t:UT_BOOLEAN, t:UT_INT, t:UT_FLOAT, t:UT_STRING];
 
-function operandOrderType(bir:Operand operand) returns bir:OrderType? {
+function operandOrderType(CodeGenContext cx, bir:Operand operand) returns bir:OrderType? {
     if operand is bir:Register {
         t:SemType operandTy = operand.semType;
         if operandTy === t:NIL {
             return ();
         }
-        foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
-            t:UniformTypeBitSet optBasicType = t:uniformTypeUnion((1 << tc) | (1 << t:UT_NIL));
-            if t:isSubtypeSimple(operandTy, optBasicType) {
-                t:UniformTypeBitSet basicType = t:uniformType(tc);
-                if t:isSubtypeSimple(operandTy, basicType) {
-                    return tc;
+        t:UniformTypeBitSet arrTy = t:uniformTypeUnion(( 1 << t:UT_LIST_RW) | (1 << t:UT_LIST_RO));
+        if t:isSubtypeSimple(operandTy, arrTy) {
+            t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(cx.mod.env, operandTy, true);
+            if memberTy is t:UniformTypeBitSet {
+                foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
+                    t:UniformTypeBitSet basicType = t:uniformType(tc);
+                    if (basicType & ~memberTy) == 0 {
+                        return <bir:ArrayOrderType> [{opt:tc}];
+                    }
                 }
-                return <bir:OptOrderType> { opt: tc };
+            }
+            else {
+                panic err:impossible("Failed to get array member type");
+            }
+        }
+        else {
+            foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
+                t:UniformTypeBitSet optBasicType = t:uniformTypeUnion((1 << tc) | (1 << t:UT_NIL));
+                if t:isSubtypeSimple(operandTy, optBasicType) {
+                    t:UniformTypeBitSet basicType = t:uniformType(tc);
+                    if t:isSubtypeSimple(operandTy, basicType) {
+                        return tc;
+                    }
+                    return <bir:OptOrderType> { opt: tc };
+                }
             }
         }
     }
