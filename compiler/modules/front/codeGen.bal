@@ -1365,7 +1365,7 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
     }
 }
 
-type LangLibModuleName "int"|"boolean"|"string"|"array"|"map";
+type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
 
 function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName) returns bir:FunctionRef|CodeGenError {
     TypedOperand? t = typedOperand(target);
@@ -1467,6 +1467,7 @@ type TypedOperandPair BooleanOperandPair|IntOperandPair|FloatOperandPair|StringO
 // XXX should use t:UT_* instead of strings here (like the ordering stuff)
 type TypedOperand readonly & (["array", bir:Register]
                               |["map", bir:Register]
+                              |["error", bir:Register]
                               |["string", bir:StringOperand]
                               |["float", bir:FloatOperand]
                               |["int", bir:IntOperand]
@@ -1516,6 +1517,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         }
         else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
             return ["map", operand];
+        }
+        else if t:isSubtypeSimple(operand.semType, t:ERROR) {
+            return ["error", operand];
         }
     }
     else if operand is string {
