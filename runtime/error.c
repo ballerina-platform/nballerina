@@ -9,93 +9,107 @@
 #define MAX_PC_COUNT 256
 #define SKIP_FROM_END 1 // This number counts from the last stack frame
 #define THREAD 0
+#define SUCCESS 0
+#define FAIL 1
 
-struct backtrace_state *state;
+struct backtrace_state *state = NULL;
 
 typedef struct {
-    uint32_t npcs;
-    uint32_t szpcs;
+    uint32_t nPCs;
+    uint32_t szPCs;
     PC *pcs;
-} Trace;
+} PCVector;
 
-static void onError(void *data, const char *msg, int errnum) {
-    fprintf(stdout, "Error : libbacktrace : %s\n", msg);
-    fflush(stdout);
-}
-
-static int onFrame(void *data, PC pc, const char *filename, int lineno, const char *function) {
-    if (function == NULL || filename == NULL)
-        return 0;
-
-    fprintf(stdout, "%s", function);
-    fprintf(stdout, " %s", filename);
-    fputs(":", stdout);
-    fprintf(stdout, "%" PRIi32, lineno);
-    putc('\n', stdout);
-    fflush(stdout);
-    return 0;
-}
-
-static int onPC(void *data, PC pc) {
-    Trace *trace = (Trace *)data;
-    uint32_t npcs = trace->npcs;
-    uint32_t szpcs = trace->szpcs;
-    if (unlikely(npcs == MAX_PC_COUNT))
-        return 1;
-    if (npcs == szpcs) {
-        szpcs = szpcs << 1;
-        trace->szpcs = szpcs;
-        void *p = realloc(trace->pcs, sizeof(PC) * szpcs);
-        if (p == 0)
-            return 1;
-        trace->pcs = (PC *)p;
-    }
-
-    PC *pcs = trace->pcs;
-    *(pcs + npcs) = pc;
-
-    trace->npcs = npcs + 1;
-    return 0;
-}
-
-static int getPCs(Trace *trace) {
-    state = backtrace_create_state(NULL, THREAD, onError, NULL);
-
-    void *p = malloc(sizeof(PC) * INITIAL_PC_COUNT);
-    if (p == 0)
-        return 1;
-    trace->pcs = (PC *)p;
-    return backtrace_simple(state, SKIP_FROM_END, onPC, onError, trace);
-}
+static void onError(void *data, const char *msg, int errnum);
+static int onFrame(void *data, PC pc, const char *filename, int lineno, const char *function);
+static int onPC(void *data, PC pc);
+static int getPCs(PCVector *trace);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
-    Trace trace = {0, INITIAL_PC_COUNT};
+    PCVector trace = {0, INITIAL_PC_COUNT};
     int err = getPCs(&trace);
     if (err) {
         fprintf(stdout, "%s\n", "Error occured when getting backtrace for error value");
         fflush(stdout);
     }
-    uint32_t npcs = trace.npcs;
+    uint32_t nPCs = trace.nPCs;
 
-    uint64_t errStructSize = sizeof(struct Error) + sizeof(PC) * npcs;
+    uint64_t errStructSize = sizeof(struct Error) + sizeof(PC) * nPCs;
     ErrorPtr ep = _bal_alloc(errStructSize);
     ep->message = message;
     ep->lineNumber = lineNumber;
-    ep->npcs = npcs;
+    ep->nPCs = nPCs;
 
     PC *pcs = trace.pcs;
-    memcpy(ep->pcs, pcs, sizeof(PC) * npcs);
+    memcpy(ep->pcs, pcs, sizeof(PC) * nPCs);
     free(pcs);
 
     return ptrAddFlags(ep, (uint64_t)TAG_ERROR << TAG_SHIFT);
 }
 
-void _bal_error_trace_print(ErrorPtr er) {
-    PC *pcs = (PC *)er->pcs;
-    uint32_t npcs = er->npcs;
-    for (size_t i = 0; i < npcs; i++) {
-        backtrace_pcinfo(state, *(pcs + i), onFrame, onError, NULL);
+static int getPCs(PCVector *pcVector) {
+    if (state == NULL) {
+        state = backtrace_create_state(NULL, THREAD, onError, NULL);
+        if (state == NULL) {
+            return FAIL;
+        }
     }
+
+    void *p = malloc(sizeof(PC) * INITIAL_PC_COUNT);
+    if (p == NULL) {
+        return FAIL;
+    }
+    pcVector->pcs = (PC *)p;
+    return backtrace_simple(state, SKIP_FROM_END, onPC, onError, pcVector);
+}
+
+static int onPC(void *data, PC pc) {
+    PCVector *pcVector = (PCVector *)data;
+    uint32_t nPCs = pcVector->nPCs;
+    uint32_t szPCs = pcVector->szPCs;
+    if (nPCs == szPCs) {
+        if (unlikely(szPCs == MAX_PC_COUNT)) {
+            return FAIL;
+        }
+        szPCs = szPCs << 1;
+        pcVector->szPCs = szPCs;
+        void *p = realloc(pcVector->pcs, sizeof(PC) * szPCs);
+        if (p == NULL) {
+            return FAIL;
+        }
+        pcVector->pcs = (PC *)p;
+    }
+
+    pcVector->pcs[nPCs] = pc;
+    pcVector->nPCs = nPCs + 1;
+    return SUCCESS;
+}
+
+void _bal_error_backtrace_print(ErrorPtr ep) {
+    PC *pcs = (PC *)ep->pcs;
+    uint32_t nPCs = ep->nPCs;
+    for (uint32_t i = 0; i < nPCs; i++) {
+        backtrace_pcinfo(state, pcs[i], onFrame, onError, NULL);
+    }
+}
+
+static int onFrame(void *data, PC pc, const char *filename, int lineno, const char *function) {
+    if (function == NULL || filename == NULL) {
+        return SUCCESS;
+    }
+
+    fprintf(stderr, "%s", function);
+    fprintf(stderr, " %s", filename);
+    fputs(":", stderr);
+    fprintf(stderr, "%" PRIi32, lineno);
+    putc('\n', stderr);
+    fflush(stderr);
+    return SUCCESS;
+}
+
+static void onError(void *data, const char *msg, int errnum) {
+    fprintf(stdout, "Error : libbacktrace : %s\n", msg);
+    fflush(stdout);
 }
 
 TaggedPtr _Berror__message(TaggedPtr error) {
