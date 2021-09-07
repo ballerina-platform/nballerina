@@ -318,11 +318,12 @@ public type ConvertToFloatInsn readonly & record {|
     Register operand;
 |};
 
-public type OrderType UniformOrderType|OptOrderType;
+public type OrderType UniformOrderType|OptOrderType|ArrayOrderType;
 public type UniformOrderType t:UT_FLOAT|t:UT_INT|t:UT_BOOLEAN|t:UT_STRING;
 public type OptOrderType readonly & record {|
     UniformOrderType opt;
 |};
+public type ArrayOrderType readonly & [OptOrderType];
 
 # This does ordered comparision
 # Equality and inequality are done by equal

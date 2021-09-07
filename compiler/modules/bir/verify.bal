@@ -283,8 +283,11 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
     if ot is OptOrderType {
         expectType = t:uniformTypeUnion((1 << t:UT_NIL) | (1 << ot.opt ));
     }
-    else {
+    else if ot is UniformOrderType {
         expectType  = t:uniformType(ot);
+    }
+    else {
+        panic err:impossible("array order type");
     }
     foreach var operand in insn.operands {
         t:SemType operandType;

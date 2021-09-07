@@ -1557,11 +1557,11 @@ function operandPairOrderType(bir:Operand left, bir:Operand right) returns bir:O
 }
 
 function promoteToOptOrderType(bir:OrderType? ot) returns bir:OrderType? {
-    if ot == () || ot is bir:OptOrderType {
-        return ot;
+    if ot is bir:UniformOrderType {
+        return { opt: ot };
     }
     else {
-        return { opt: ot };
+        return ot;
     }
 }
 
