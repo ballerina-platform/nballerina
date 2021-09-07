@@ -20,9 +20,9 @@ typedef struct {
     PC *pcs;
 } PCVector;
 
-static void onError(void *data, const char *msg, int errnum);
-static int onFrame(void *data, PC pc, const char *filename, int lineno, const char *function);
-static int onPC(void *data, PC pc);
+static void printBacktraceInternalError(void *data, const char *msg, int errnum);
+static int printBacktraceLine(void *data, PC pc, const char *filename, int lineno, const char *function);
+static int updatePCVector(void *data, PC pc);
 static int getPCs(PCVector *trace);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
@@ -49,7 +49,7 @@ TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
 
 static int getPCs(PCVector *pcVector) {
     if (state == NULL) {
-        state = backtrace_create_state(NULL, THREAD, onError, NULL);
+        state = backtrace_create_state(NULL, THREAD, printBacktraceInternalError, NULL);
         if (state == NULL) {
             return FAIL;
         }
@@ -60,10 +60,11 @@ static int getPCs(PCVector *pcVector) {
         return FAIL;
     }
     pcVector->pcs = (PC *)p;
-    return backtrace_simple(state, SKIP_FROM_END, onPC, onError, pcVector);
+    return backtrace_simple(state, SKIP_FROM_END, updatePCVector, printBacktraceInternalError, pcVector);
 }
 
-static int onPC(void *data, PC pc) {
+// Implementation of backtrace_simple_callback
+static int updatePCVector(void *data, PC pc) {
     PCVector *pcVector = (PCVector *)data;
     uint32_t nPCs = pcVector->nPCs;
     uint32_t szPCs = pcVector->szPCs;
@@ -89,25 +90,22 @@ void _bal_error_backtrace_print(ErrorPtr ep) {
     PC *pcs = (PC *)ep->pcs;
     uint32_t nPCs = ep->nPCs;
     for (uint32_t i = 0; i < nPCs; i++) {
-        backtrace_pcinfo(state, pcs[i], onFrame, onError, NULL);
+        backtrace_pcinfo(state, pcs[i], printBacktraceLine, printBacktraceInternalError, NULL);
     }
 }
 
-static int onFrame(void *data, PC pc, const char *filename, int lineno, const char *function) {
+// Implementation of backtrace_full_callback
+static int printBacktraceLine(void *data, PC pc, const char *filename, int lineno, const char *function) {
     if (function == NULL || filename == NULL) {
         return SUCCESS;
     }
-
-    fprintf(stderr, "%s", function);
-    fprintf(stderr, " %s", filename);
-    fputs(":", stderr);
-    fprintf(stderr, "%" PRIi32, lineno);
-    putc('\n', stderr);
+    fprintf(stderr, "%s %s:%" PRIi32 "\n", function, filename, lineno);
     fflush(stderr);
     return SUCCESS;
 }
 
-static void onError(void *data, const char *msg, int errnum) {
+// Implementation of backtrace_error_callback
+static void printBacktraceInternalError(void *data, const char *msg, int errnum) {
     fprintf(stdout, "Error : libbacktrace : %s\n", msg);
     fflush(stdout);
 }
