@@ -6,6 +6,6 @@ $(TARGETS): $(TDIRS)
 
 $(TDIRS):
 	mkdir -p out/$@
-	$(MAKE) -C out/$@ -f ../../sub.mk tdir=$@ $(MAKECMDGOALS)
+	$(MAKE) -C out/$@ -f ../../balt-sub.mk tdir=$@ $(MAKECMDGOALS)
 
 .PHONY: $(TARGETS) $(TDIRS)

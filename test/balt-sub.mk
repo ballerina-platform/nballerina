@@ -10,15 +10,13 @@ RT_INLINE=../../../runtime/balrt_inline.bc
 
 ll_files = $(wildcard ll/*.ll)
 diff_files = $(addsuffix .diff, $(addprefix result/, $(basename $(notdir $(ll_files)))))
-# var = $(diff_files)
-# $(info " [${var}] ")
 
 test: all
-	$(MAKE) -f ../../sub.mk tdir=$(tdir) testll
+	$(MAKE) -f ../../balt-sub.mk tdir=$(tdir) testll
 
 all:
 	if test $(COMPILER_JAR) -nt compile.stamp; then rm -f compile.stamp; fi
-	$(MAKE) -f ../../sub.mk tdir=$(tdir) compile
+	$(MAKE) -f ../../balt-sub.mk tdir=$(tdir) compile
 
 compile: compile.stamp
 
