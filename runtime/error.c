@@ -7,7 +7,6 @@
 
 #define INITIAL_PC_COUNT 1
 #define MAX_PC_COUNT 256
-#define SKIP_FROM_END 1 // This number counts from the last stack frame
 #define THREAD 0
 #define SUCCESS 0
 #define FAIL 1
@@ -29,20 +28,28 @@ static void getPCs(SimpleBacktrace *simpleBacktrace);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     SimpleBacktrace simpleBacktrace = {0, INITIAL_PC_COUNT, false};
-    getPCs(&simpleBacktrace);
+    void *p = malloc(sizeof(PC) * INITIAL_PC_COUNT);
+    if (p == NULL) {
+        simpleBacktrace.errorOccurred = true;
+    }
+    else {
+        simpleBacktrace.pcs = p;
+        getPCs(&simpleBacktrace);
+    }
 
     uint32_t nPCs = simpleBacktrace.nPCs;
-    uint64_t errStructSize = sizeof(struct Error) + sizeof(PC) * nPCs;
-    ErrorPtr ep = _bal_alloc(errStructSize);
+    uint64_t errorStructSize = sizeof(struct Error) + sizeof(PC) * nPCs;
+    ErrorPtr ep = _bal_alloc(errorStructSize);
     ep->message = message;
     ep->lineNumber = lineNumber;
     ep->internalErrorOccured = simpleBacktrace.errorOccurred;
     ep->nPCs = nPCs;
 
-    PC *pcs = simpleBacktrace.pcs;
-    memcpy(ep->pcs, pcs, sizeof(PC) * nPCs);
-    free(pcs);
-
+    if (p != NULL) {
+        PC *pcs = simpleBacktrace.pcs;
+        memcpy(ep->pcs, pcs, sizeof(PC) * nPCs);
+        free(pcs);
+    }
     return ptrAddFlags(ep, (uint64_t)TAG_ERROR << TAG_SHIFT);
 }
 
@@ -54,14 +61,7 @@ static void getPCs(SimpleBacktrace *simpleBacktrace) {
             return;
         }
     }
-
-    void *p = malloc(sizeof(PC) * INITIAL_PC_COUNT);
-    if (p == NULL) {
-        simpleBacktrace->errorOccurred = true;
-        return;
-    }
-    simpleBacktrace->pcs = p;
-    backtrace_simple(state, SKIP_FROM_END, setPC, setBacktraceSimpleInternalError, simpleBacktrace);
+    backtrace_simple(state, 0, setPC, setBacktraceSimpleInternalError, simpleBacktrace);
 }
 
 // Implementation of backtrace_simple_callback
