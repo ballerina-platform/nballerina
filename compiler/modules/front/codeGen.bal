@@ -1349,11 +1349,13 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
 }
 
 function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier) returns bir:FunctionRef|CodeGenError {
-    bir:ModuleId? moduleId = cx.mod.parts[cx.functionDefn.part.partIndex].imports[prefix];
-    if moduleId is () {
+    Import? mod = cx.mod.parts[cx.functionDefn.part.partIndex].imports[prefix];
+    if mod is () {
         return cx.semanticErr(`no import declaration for prefix ${prefix}`);
     }
     else {
+        mod.used = true;
+        bir:ModuleId moduleId = mod.moduleId;
         bir:FunctionSignature? signature = getLibFunction(moduleId, identifier);
         if signature is () {
             return err:unimplemented(`unsupported library function ${prefix}:${identifier}`);

@@ -39,6 +39,8 @@ function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
     if t != "import" {
         return;
     }
+    Position pos = tok.currentPos();
+
     check tok.advance();
     t = tok.current();
     if t is [IDENTIFIER, string] { 
@@ -49,7 +51,7 @@ function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
         if t is [IDENTIFIER, string] {
             check tok.advance();
             check tok.expect(";");
-            return { org, module: t[1] };
+            return { org, module: t[1], pos };
         }
     }
     return parseError(tok, "import declaration");

@@ -7,9 +7,15 @@ import wso2/nballerina.err;
 
 type ModuleTable table<s:ModuleLevelDefn> key(name);
 
+type Import record {|
+    s:ImportDecl decl;
+    bir:ModuleId moduleId;
+    boolean used = false;
+|};
+
 type ModulePart record {|
     bir:File file;
-    map<bir:ModuleId> imports;
+    map<Import> imports;
 |};
 
 class Module {
@@ -57,7 +63,7 @@ class Module {
     }
 
     public function getPrefixForModuleId(bir:ModuleId id, int partIndex) returns string? {
-        foreach var [prefix, moduleId] in self.parts[partIndex].imports.entries() {
+        foreach var [prefix, { moduleId }] in self.parts[partIndex].imports.entries() {
             if moduleId == id {
                 return  prefix;
             }
@@ -116,13 +122,18 @@ function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Erro
     panic err:illegalArgument("neither filename nor lines were specified");
 }
 
-function imports(s:ModulePart part) returns map<bir:ModuleId> {
+function imports(s:ModulePart part) returns map<Import> {
     s:ImportDecl? decl = part.importDecl;
     if decl == () {
         return {};
     }
     else {
-        return { [decl.module]: { organization: decl.org, names: [decl.module]} };
+        return {
+            [decl.module]: {
+                decl,
+                moduleId: { organization: decl.org, names: [decl.module]}
+            }
+        };
     }
 }
 

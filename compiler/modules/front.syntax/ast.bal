@@ -18,6 +18,7 @@ public type Visibility "public"?;
 public type ImportDecl record {|
     string org;
     string module;
+    Position pos;
 |};
 
 public type FunctionDefn record {|
