@@ -5,74 +5,78 @@
 # Phase 2 only updates .ll if they have changed.
 # Phases 2 and 3 use recursive invocations of make so dependencies are recalculated.
 # This is used in phases 1 and 2.
-# You can do `make compile` to compile all changed test cases from .bal to .ll
-# You can do `make testll` to test the ll files.
-# Failing tests are listed in out/result/fail.txt
-COMPILER_JAR=../compiler/target/bin/nballerina.jar
+# To run this, first navigate to out/<category> dir, then
+# You can do `make -f ../../sub.mk tdir=$(basename "$PWD") compile` to compile all changed test cases from .bal to .ll
+# You can do `make -f ../../sub.mk tdir=$(basename "$PWD") testll` to test the ll files.
+# Failing tests are listed in fail.txt
+COMPILER_JAR=../../../compiler/target/bin/nballerina.jar
 # This is used in phase 2
-JAVA ?= $(shell ./findJava.sh)
-bal_files = $(sort $(wildcard ../compiler/testSuite/[VPO]*.bal))
+JAVA ?= $(shell ../../findJava.sh)
+bal_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*-[vpo].bal)
 # These are usd in phase 3
 LLVM_SUFFIX ?=-11
 CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 CFLAGS ?= -O2
-ll_files = $(wildcard out/ll/*.ll)
-expect_files = $(addsuffix .txt, $(addprefix out/expect/, $(basename $(notdir $(ll_files)))))
-diff_files = $(addsuffix .diff, $(addprefix out/result/, $(basename $(notdir $(ll_files)))))
-exe_files = $(addsuffix .exe, $(addprefix out/result/, $(basename $(notdir $(ll_files)))))
-RT=../runtime/balrt.a
-RT_INLINE=../runtime/balrt_inline.bc
+ll_files = $(wildcard ll/*.ll)
+expect_files = $(addsuffix .txt, $(addprefix expect/, $(basename $(notdir $(ll_files)))))
+diff_files = $(addsuffix .diff, $(addprefix result/, $(basename $(notdir $(ll_files)))))
+exe_files = $(addsuffix .exe, $(addprefix result/, $(basename $(notdir $(ll_files)))))
+RT=../../../runtime/balrt.a
+RT_INLINE=../../../runtime/balrt_inline.bc
 
 test: all
-	$(MAKE) testll
+	$(MAKE) -f ../../sub.mk tdir=$(tdir) testll
 
 all:
-	if test $(COMPILER_JAR) -nt out/compile.stamp; then rm -f out/compile.stamp; fi
-	$(MAKE) compile
+	if test $(COMPILER_JAR) -nt compile.stamp; then rm -f compile.stamp; fi
+	$(MAKE) -f ../../sub.mk tdir=$(tdir) compile
 
-compile: out/compile.stamp
+compile: compile.stamp
 
-out/compile.stamp: $(bal_files)
-	-rm -fr out/llnew
-	mkdir -p out/llnew
-	$(JAVA) -jar $(COMPILER_JAR) --outDir out/llnew $?
-	mkdir -p out/ll
-	cd out/llnew; for f in *.ll; do cmp -s $$f ../ll/$$f || mv $$f ../ll/; done
-	rm -fr out/llnew
+ifeq ($(bal_files),)
+# sub dir only contains e cases
+compile.stamp:
 	@touch $@
+else
+compile.stamp: $(bal_files)
+	-rm -fr llnew
+	mkdir -p llnew
+	$(JAVA) -jar $(COMPILER_JAR) --outDir llnew $?
+	mkdir -p ll
+	cd llnew; for f in *.ll; do cmp -s $$f ../ll/$$f || mv $$f ../ll/; done
+	-rm -fr llnew
+	@touch $@
+endif
 
-# This compiles, runs and checks the output of out/ll/*.ll
-testll: out/result/fail.txt $(expect_files) $(exe_files)
+# This compiles, runs and checks the output of ll/*.ll
+testll: fail.txt $(expect_files) $(exe_files)
 
-out/result/fail.txt: $(diff_files)
+fail.txt: $(diff_files)
 	@>$@
 	@for f in $^; do \
 		if test -s $$f; then \
-			echo $$f failed | sed -e 's;out/result/;;' -e 's/.diff//' >>$@; \
+			echo $(tdir)/$$f failed | sed -e 's;/result/;/;' -e 's/.diff/.bal/' >>$@; \
 		fi \
 	done
 	@cat $@
 	@test ! -s $@
 
-out/result/%.diff: out/result/%.exe out/expect/%.txt
-	-./runcheck.sh $^ >$@
+result/%.diff: result/%.exe expect/%.txt
+	-../../runcheck.sh $^ >$@
 
-out/result/%.exe: out/result/%.bc $(RT)
+result/%.exe: result/%.bc $(RT)
 	$(CLANG) $(CFLAGS) $< -o $@ $(RT)
 
-out/result/%.bc: out/ll/%.ll $(RT_INLINE)
-	@mkdir -p out/result
+result/%.bc: ll/%.ll $(RT_INLINE)
+	@mkdir -p result
 	$(LLVM_LINK) -o $@ $^
 
-out/expect/%.txt: ../compiler/testSuite/%.bal
-	@mkdir -p out/expect
-	./expect.sh $< >$@
+expect/%.txt: ../../../compiler/testSuite/$(tdir)/%.bal
+	@mkdir -p expect
+	../../expect.sh $< >$@
 
 clean:
-	-rm -fr out
+	-rm -rf actual compile.stamp expect fail.txt ll result
 
-update:
-	cd out/ll; for f in *.ll; do cmp -s $$f ../../ll/$$f || cp -p $$f ../../ll/; done
-
-.PHONY: all test clean compile testll update
+.PHONY: all test clean compile testll
