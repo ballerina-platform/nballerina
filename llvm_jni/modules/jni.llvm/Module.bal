@@ -51,7 +51,7 @@ public distinct class Module {
         return dBuilder;
     }
 
-    function addModuleFlag(ModuleFlagBehavior behavior, ModuleFlag flag) {
+    public function addModuleFlag(ModuleFlagBehavior behavior, ModuleFlag flag) {
         var [keyObj, keyLen] = getStringProp(flag[0]);
         Metadata val = intAsMetadata(flag[1]);
         jLLVMAddModuleFlag(self.LLVMModule, moduleFlagBehaviorToInt.get(behavior), keyObj, keyLen, val.llvmMetadata);
