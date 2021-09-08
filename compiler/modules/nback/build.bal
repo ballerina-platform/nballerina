@@ -799,6 +799,33 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     builder.store(buildTaggedPtr(builder, structMem, TAG_LIST_RW), scaffold.address(insn.result));
 }
 
+function buildListGetLen(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue list) returns llvm:Value {
+    final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
+    final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
+    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
+    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
+                                                                               [list, llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                               heapPointerType(structType));
+    llvm:Value len = builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)]), ALIGN_HEAP);
+    return len;
+}
+
+// Used to directly access an element in array without bound checks
+function buildListGetSimple(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue list, llvm:Value index) returns llvm:Value {
+    final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
+    final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
+    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
+    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
+                                                                               [list, llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                               heapPointerType(structType));
+    llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct,
+                                                                                    [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)], "inbounds"),
+                                                                                    ALIGN_HEAP);
+    return builder.load(builder.getElementPtr(array,
+                                             [llvm:constInt(LLVM_INT, 0), index], "inbounds"),
+                                             ALIGN_HEAP);
+}
+
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
     final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
     final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
@@ -1127,27 +1154,89 @@ function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:Compare
     builder.br(joinBB);
 
     builder.positionAtEnd(neitherNilBB);
-    bir:OptOrderType orderTy = <bir:OptOrderType> insn.orderType;
-    match orderTy.opt {
+    bir:OrderType orderTy = insn.orderType;
+    if orderTy is bir:OptOrderType {
+        match orderTy.opt {
+            t:UT_INT => {
+                llvm:Value lhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>lhs);
+                llvm:Value rhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>rhs);
+                buildCompareInt(builder, scaffold, buildIntCompareOp(insn.op), lhsUntagged, rhsUntagged, result);
+            }
+            t:UT_FLOAT => {
+                llvm:Value lhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>lhs);
+                llvm:Value rhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>rhs);
+                buildCompareFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsUntagged, rhsUntagged, result);
+            }
+            t:UT_BOOLEAN => {
+                buildCompareInt(builder, scaffold, buildBooleanCompareOp(insn.op), lhs, rhs, result);
+            }
+            t:UT_STRING => {
+                buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhs, rhs, result);
+            }
+        }
+
+        builder.br(joinBB);
+    }
+    else if orderTy is bir:ArrayOrderType {
+        buildCompareArray(builder, scaffold, orderTy, insn, lhs, rhs, joinBB, result);
+    }
+    builder.positionAtEnd(joinBB);
+}
+
+function buildCompareArray(llvm:Builder builder, Scaffold scaffold, bir:ArrayOrderType orderTy, bir:CompareInsn insn,
+                           llvm:Value lhs, llvm:Value rhs, llvm:BasicBlock joinBB, bir:Register result) {
+    llvm:Value lhsLen = buildListGetLen(builder, scaffold,<llvm:PointerValue>lhs);
+    llvm:Value rhsLen = buildListGetLen(builder, scaffold,<llvm:PointerValue>rhs);
+    llvm:PointerValue index = builder.alloca(LLVM_INT);
+    builder.store(llvm:constInt(LLVM_INT, 0), index);
+    // TODO: handle different length arrays
+    llvm:Value canContinue = builder.iCmp(buildIntCompareOp("<"), builder.load(index), lhsLen);
+
+    llvm:BasicBlock continueBB = scaffold.addBasicBlock();
+    llvm:BasicBlock trueBB = scaffold.addBasicBlock();
+    llvm:BasicBlock falseBB = scaffold.addBasicBlock();
+    builder.condBr(canContinue, continueBB, trueBB);
+
+    builder.positionAtEnd(continueBB);
+    llvm:Value lhsVal = buildListGetSimple(builder, scaffold, <llvm:PointerValue> lhs, builder.load(index));
+    llvm:Value rhsVal = buildListGetSimple(builder, scaffold, <llvm:PointerValue> rhs, builder.load(index));
+    bir:OrderType cmpTy = orderTy[0].opt;
+    match orderTy[0].opt {
         t:UT_INT => {
-            llvm:Value lhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>lhs);
-            llvm:Value rhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>rhs);
-            buildCompareInt(builder, scaffold, buildIntCompareOp(insn.op), lhsUntagged, rhsUntagged, result);
+            buildCompareInt(builder, scaffold, buildIntCompareOp(insn.op), lhsVal, rhsVal, result);
         }
         t:UT_FLOAT => {
-            llvm:Value lhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>lhs);
-            llvm:Value rhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>rhs);
-            buildCompareFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsUntagged, rhsUntagged, result);
+            buildCompareFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsVal, rhsVal, result);
         }
         t:UT_BOOLEAN => {
-            buildCompareInt(builder, scaffold, buildBooleanCompareOp(insn.op), lhs, rhs, result);
+            buildCompareInt(builder, scaffold, buildBooleanCompareOp(insn.op), lhsVal, rhsVal, result);
         }
         t:UT_STRING => {
-            buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhs, rhs, result);
+            buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhsVal, rhsVal, result);
+        }
+        _=> {
+            // TODO: implement other types
+            panic error("array type not implemented");
         }
     }
+
+    llvm:BasicBlock checkSizeBB = scaffold.addBasicBlock();
+    llvm:Value isFalse = builder.load(scaffold.address(result));
+    isFalse = builder.iBitwise("xor", isFalse, llvm:constInt(LLVM_BOOLEAN, 1));
+    builder.condBr(isFalse, falseBB, checkSizeBB);
+    builder.positionAtEnd(checkSizeBB);
+    llvm:Value newIndex = builder.iArithmeticNoWrap("add", builder.load(index), llvm:constInt(LLVM_INT, 1));
+    builder.store(newIndex, index);
+    canContinue = builder.iCmp(buildIntCompareOp("<"), newIndex, lhsLen);
+    builder.condBr(canContinue, continueBB, trueBB);
+
+    builder.positionAtEnd(trueBB);
+    buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, 1), result);
     builder.br(joinBB);
-    builder.positionAtEnd(joinBB);
+
+    builder.positionAtEnd(falseBB);
+    buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, 0), result);
+    builder.br(joinBB);
 }
 
 function buildCompareTaggedBasic(llvm:Builder builder, Scaffold scaffold, llvm:Value lhs, llvm:Value rhs, bir:Register result)
