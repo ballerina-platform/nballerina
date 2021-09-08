@@ -29,7 +29,7 @@ class TestFoldContext {
 
 @test:Config{ dataProvider: validConstExprs }
 function testConstExpr(string src, SimpleConst expected) {
-    s:Expr parsed = checkpanic s:parseExpression([src], "<internal>");
+    s:Expr parsed = checkpanic s:parseExpression([src], { filename: "<internal>" });
     TestFoldContext cx = new;
     var result = foldExpr(cx, (), parsed);
     test:assertTrue(result is s:ConstValueExpr && result.value == expected, "got: " + (result is s:ConstValueExpr ? result.value.toString()  : "not constant"));

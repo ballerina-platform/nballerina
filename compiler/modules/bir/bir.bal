@@ -15,6 +15,7 @@ public type Module object {
     public function getPrefixForModuleId(ModuleId id, int partIndex) returns string?;
     // Get the File for a give part index
     public function getPartFile(int partIndex) returns File;
+    public function getPartFiles() returns File[];
 };
 
 public type ModuleId readonly & record {|
@@ -425,7 +426,7 @@ public type EqualityInsn readonly & record {|
 public type CallInsn readonly & record {|
     *InsnBase;
     # Position in the source that resulted in the instruction
-    Position? position;
+    Position position;
     INSN_CALL name = INSN_CALL;
     Register result;
     FunctionOperand func;

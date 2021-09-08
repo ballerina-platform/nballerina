@@ -2,8 +2,13 @@
 
 import wso2/nballerina.err;
 
-public function parseModulePart(string[] lines, string filename, int partIndex) returns ModulePart|err:Syntax {
-    SourceFile file = new(filename);
+public type FilePath record {|
+    string filename;
+    string? directory = ();
+|};
+
+public function parseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
+    SourceFile file = new(path);
     Tokenizer tok = new (lines, file);
     check tok.advance();
     ModulePart part = {
@@ -18,8 +23,8 @@ public function parseModulePart(string[] lines, string filename, int partIndex) 
     return part;
 }
 
-public function parseExpression(string[] lines, string filename) returns Expr|err:Syntax {
-    SourceFile file = new(filename);
+public function parseExpression(string[] lines, FilePath path) returns Expr|err:Syntax {
+    SourceFile file = new(path);
     Tokenizer tok = new (lines, file);
     check tok.advance();
     Expr expr = check parseExpr(tok);

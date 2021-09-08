@@ -13,6 +13,7 @@ type CompileError err:Any|io:Error;
 public type Options record {|
     boolean testJsonTypes = false;
     boolean showTypes = false;
+    boolean debug = false;
     // outDir also implies treating each file as a separate module
     string? outDir = ();
     string? expectOutDir = ();
@@ -35,7 +36,10 @@ public function main(string[] filenames, *Options opts) returns error? {
         }
         check testJsonTypes(filenames[0]);
     }
-    nback:Options nbackOptions = { gcName: check nback:validGcName(opts.gc) };
+    nback:Options nbackOptions = {
+        gcName: check nback:validGcName(opts.gc),
+        debugLevel: opts.debug ? nback:DEBUG_BACKTRACE : nback:DEBUG_NONE
+    };
     string? outDir = opts.outDir;
     if outDir == () {
         front:SourcePart[] sources = [];

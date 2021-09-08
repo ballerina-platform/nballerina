@@ -68,17 +68,21 @@ class Module {
     public function getPartFile(int partIndex) returns bir:File {
         return self.parts[partIndex].file;
     }
+
+    public function getPartFiles() returns bir:File[] {
+        return from var part in self.parts select part.file;
+    }
 }
 
 public type SourcePart record {|
-    // XXX probably allow a directory here as well
+    string directory?;
     string filename?;
     // XXX also allow the entire file as a string, not broken into lines
     string[] lines?;
 |};
 
 type LoadedSourcePart record {|
-    string filename;
+    s:FilePath path;
     string[] lines;
 |};
 
@@ -87,7 +91,7 @@ public function loadModule(t:Env env, SourcePart[] sourceParts, bir:ModuleId id)
     ModulePart[] parts = [];
     foreach int i in 0 ..< sourceParts.length() {
         var loaded = check loadSourcePart(sourceParts[i], i);
-        s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.filename, i);
+        s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.path, i);
         check addModulePart(mod, part);
         parts.push({ file: part.file, imports: imports(part) }); 
     }
@@ -100,13 +104,14 @@ public function loadModule(t:Env env, SourcePart[] sourceParts, bir:ModuleId id)
 }
 
 function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Error {
+    string? directory = part?.directory;
     string? filename = part?.filename;
     string[]? lines = part?.lines;
     if lines != () {
-        return { lines, filename: filename ?: "<part" + (i + 1).toString() + ">" };
+        return { lines, path: { filename: filename ?: "<part" + (i + 1).toString() + ">", directory } };
     }
     else if filename != () {
-        return { lines: check io:fileReadLines(filename), filename };
+        return { lines: check io:fileReadLines(filename), path: { filename, directory } };
     }
     panic err:illegalArgument("neither filename nor lines were specified");
 }
@@ -150,7 +155,7 @@ public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:
     ModuleTable mod = table [];
     foreach int i in 0 ..< sourceParts.length() {
         var loaded = check loadSourcePart(sourceParts[i], 0);
-        s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.filename, i);
+        s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.path, i);
         check addModulePart(mod, part);
     }
     t:Env env = new;

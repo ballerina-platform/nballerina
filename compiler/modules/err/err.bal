@@ -20,6 +20,7 @@ public type LineColumn readonly & [int, int];
 
 public type File readonly & object {
     public function filename() returns string;
+    public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
 };
 

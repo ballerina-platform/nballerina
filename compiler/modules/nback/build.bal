@@ -45,6 +45,13 @@ final llvm:PointerType LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8
 
 type ValueType llvm:IntegralType;
 
+type DIBuilder llvm:DIBuilder;
+type DISubprogram llvm:Metadata;
+type DILocation llvm:Metadata;
+type DIFile llvm:Metadata;
+type DICompileUnit llvm:Metadata;
+type DISubroutineType llvm:Metadata;
+
 // A Repr is way of representing values.
 // It's a mapping from a SemType to an LLVM type.
 
@@ -344,12 +351,23 @@ type Module record {|
     map<StringDefn> stringDefns = {};
     t:TypeCheckContext typeCheckContext;
     bir:Module bir;
+    bir:File[] partFiles;
+    ModuleDI? di;
 |};
+
+type ModuleDI record {|
+    DIBuilder builder;
+    DIFile[] files;
+    DICompileUnit compileUnit;
+    DISubroutineType funcType;
+|};
+
 
 class Scaffold {
     private final Module mod;
     private final bir:File file;
     private final llvm:FunctionDefn llFunc;
+    private final DISubprogram? diFunc;
 
     // Representation for each BIR register
     private final Repr[] reprs;
@@ -363,10 +381,11 @@ class Scaffold {
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
 
-    function init(Module mod, llvm:FunctionDefn llFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
+    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.mod = mod;
-        self.file = mod.bir.getPartFile(defn.partIndex);
+        self.file = mod.partFiles[defn.partIndex];
         self.llFunc = llFunc;
+        self.diFunc = diFunc;
         self.birBlocks = code.blocks;
         final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType);
         self.reprs = reprs;
@@ -452,20 +471,47 @@ class Scaffold {
     function location(bir:Position pos) returns err:Location {
         return err:location(self.file, pos);
     }
+
+    function setDebugLocation(llvm:Builder builder, bir:Position pos) {
+        DISubprogram? diFunc = self.diFunc;
+        if !(diFunc is ()) {           
+            var [line, column] = self.file.lineColumn(pos);
+            ModuleDI di = <ModuleDI>self.mod.di;
+            builder.setCurrentDebugLocation(di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc));
+        }
+    }
+
+    function clearDebugLocation(llvm:Builder builder) {
+        if !(self.diFunc is ()) {
+            builder.setCurrentDebugLocation(());
+        }
+    }
 }
 
 public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
     bir:ModuleId modId = birMod.getId();
     llvm:Module llMod = llContext.createModule();
+    bir:File[] partFiles = birMod.getPartFiles();
+    ModuleDI? di = ();
+    if options.debugLevel > 0 {
+        di = createModuleDI(llMod, partFiles);
+    } 
     bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
     llvm:FunctionDefn[] llFuncs = [];
+    DISubprogram[] diFuncs = [];
     llvm:FunctionType[] llFuncTypes = [];
     map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
         llvm:FunctionType ty = check buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
-        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangleInternalSymbol(modId, symbol), ty);
+        string mangledName = mangleInternalSymbol(modId, symbol);
+        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
+        if !(di is ()) {
+            DISubprogram diFunc = createFunctionDI(di, partFiles, defn, llFunc, mangledName);
+            diFuncs.push(diFunc);
+            llFunc.setSubprogram(diFunc);
+        }   
         if !(options.gcName is ()) {
             llFunc.setGC(options.gcName);
         }
@@ -474,12 +520,14 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         }
         llFuncs.push(llFunc);
         llFuncMap[defn.symbol.identifier] = llFunc;
-    }  
+    }
     llvm:Builder builder = llContext.createBuilder();
     Module mod = {
         bir: birMod,
         llContext,
         llMod,
+        partFiles,
+        di,
         typeCheckContext: birMod.getTypeCheckContext(),
         functionDefns: llFuncMap,
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard"))
@@ -488,11 +536,37 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         bir:FunctionDefn defn = functionDefns[i];
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
         check bir:verifyFunctionCode(birMod, defn, code);
-        Scaffold scaffold = check new(mod, llFuncs[i], builder, defn, code);
+        DISubprogram? diFunc = di is () ? () : diFuncs[i];
+        Scaffold scaffold = check new(mod, llFuncs[i], diFunc, builder, defn, code);
         buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code);
     }
     return llMod;
+}
+
+function createModuleDI(llvm:Module mod, bir:File[] partFiles) returns ModuleDI {
+    DIBuilder builder = mod.createDIBuilder();
+    mod.addModuleFlag("error", ["Debug Info Version", 3]);
+    DIFile[] files = from var f in partFiles select builder.createFile(f.filename(), f.directory() ?: "");
+    DICompileUnit compileUnit = builder.createCompileUnit(file=files[0]);
+    DISubroutineType funcType = builder.createSubroutineType(files[0]);
+    return { builder, files, compileUnit, funcType };
+}
+
+function createFunctionDI(ModuleDI mod, bir:File[] files, bir:FunctionDefn birFunc, llvm:FunctionDefn llFunc, string mangledName) returns DISubprogram {
+    int partIndex = birFunc.partIndex;
+    var [lineNo, _] = files[partIndex].lineColumn(birFunc.position); 
+    DIFile file = mod.files[partIndex];
+    return mod.builder.createFunction({
+        file,
+        scope: file, // XXX Should we use the compileUnit or the File here?
+        ty: mod.funcType,
+        linkageName: mangledName,
+        lineNo,
+        isDefinition: true,
+        name: birFunc.symbol.identifier,
+        scopeLine: lineNo // XXX should be line number of opening brace
+    });
 }
 
 function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) {
@@ -605,6 +679,7 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             // nothing to do
             // scaffold.panicAddress uses this to figure out where to store the panic info
         }
+        scaffold.clearDebugLocation(builder);
     }
 }
 
@@ -642,6 +717,7 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
+    scaffold.setDebugLocation(builder, insn.position);
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
     llvm:Value[] args = [];
