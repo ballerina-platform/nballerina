@@ -11,4 +11,10 @@ $(TDIRS):
 clean:
 	-rm -fr out
 
-.PHONY: $(TARGETS) $(TDIRS) clean
+update:
+	for f in out/*/ll/*.ll; do \
+		ll=`echo $$f | sed -e 's;/ll/;/;' -e 's;^out;ll;'`; \
+		cmp -s $$f $$ll || (mkdir -p `dirname $$ll` && cp -p $$f $$ll); \
+	done
+
+.PHONY: $(TARGETS) $(TDIRS) clean update
