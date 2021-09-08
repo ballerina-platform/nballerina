@@ -19,88 +19,88 @@ typedef struct {
     uint32_t szPCs;
     bool errorOccurred;
     PC *pcs;
-} PCVector;
+} SimpleBacktrace;
 
-static void setBackTraceSimpleInternalError(void *data, const char *msg, int errnum);
-static void setBackTracePCInfoInternalError(void *data, const char *msg, int errnum);
+static void setBacktraceSimpleInternalError(void *data, const char *msg, int errnum);
+static void setBacktracePCInfoInternalError(void *data, const char *msg, int errnum);
 static int printBacktraceLine(void *data, PC pc, const char *filename, int lineno, const char *function);
-static int updatePCVector(void *data, PC pc);
-static void getPCs(PCVector *pcVector);
+static int setPC(void *data, PC pc);
+static void getPCs(SimpleBacktrace *simpleBacktrace);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
-    PCVector pcVector = {0, INITIAL_PC_COUNT, false};
-    getPCs(&pcVector);
+    SimpleBacktrace simpleBacktrace = {0, INITIAL_PC_COUNT, false};
+    getPCs(&simpleBacktrace);
 
-    uint32_t nPCs = pcVector.nPCs;
+    uint32_t nPCs = simpleBacktrace.nPCs;
     uint64_t errStructSize = sizeof(struct Error) + sizeof(PC) * nPCs;
     ErrorPtr ep = _bal_alloc(errStructSize);
     ep->message = message;
     ep->lineNumber = lineNumber;
-    ep->internalErrorOccured = pcVector.errorOccurred;
+    ep->internalErrorOccured = simpleBacktrace.errorOccurred;
     ep->nPCs = nPCs;
 
-    PC *pcs = pcVector.pcs;
+    PC *pcs = simpleBacktrace.pcs;
     memcpy(ep->pcs, pcs, sizeof(PC) * nPCs);
     free(pcs);
 
     return ptrAddFlags(ep, (uint64_t)TAG_ERROR << TAG_SHIFT);
 }
 
-static void getPCs(PCVector *pcVector) {
+static void getPCs(SimpleBacktrace *simpleBacktrace) {
     if (state == NULL) {
         state = backtrace_create_state(NULL, THREAD, NULL, NULL);
         if (state == NULL) {
-            pcVector->errorOccurred = true;
+            simpleBacktrace->errorOccurred = true;
             return;
         }
     }
 
     void *p = malloc(sizeof(PC) * INITIAL_PC_COUNT);
     if (p == NULL) {
-        pcVector->errorOccurred = true;
+        simpleBacktrace->errorOccurred = true;
         return;
     }
-    pcVector->pcs = (PC *)p;
-    backtrace_simple(state, SKIP_FROM_END, updatePCVector, setBackTraceSimpleInternalError, pcVector);
+    simpleBacktrace->pcs = p;
+    backtrace_simple(state, SKIP_FROM_END, setPC, setBacktraceSimpleInternalError, simpleBacktrace);
 }
 
 // Implementation of backtrace_simple_callback
-static int updatePCVector(void *data, PC pc) {
-    PCVector *pcVector = (PCVector *)data;
-    uint32_t nPCs = pcVector->nPCs;
-    uint32_t szPCs = pcVector->szPCs;
+static int setPC(void *data, PC pc) {
+    SimpleBacktrace *simpleBacktrace = data;
+    uint32_t nPCs = simpleBacktrace->nPCs;
+    uint32_t szPCs = simpleBacktrace->szPCs;
     if (nPCs == szPCs) {
         if (unlikely(szPCs == MAX_PC_COUNT)) {
-            pcVector->errorOccurred = true;
+            simpleBacktrace->errorOccurred = true;
             return FAIL;
         }
         szPCs = szPCs << 1;
-        pcVector->szPCs = szPCs;
-        void *p = realloc(pcVector->pcs, sizeof(PC) * szPCs);
+        simpleBacktrace->szPCs = szPCs;
+        void *p = realloc(simpleBacktrace->pcs, sizeof(PC) * szPCs);
         if (p == NULL) {
-            pcVector->errorOccurred = true;
+            simpleBacktrace->errorOccurred = true;
             return FAIL;
         }
-        pcVector->pcs = (PC *)p;
+        simpleBacktrace->pcs = p;
     }
 
-    pcVector->pcs[nPCs] = pc;
-    pcVector->nPCs = nPCs + 1;
+    simpleBacktrace->pcs[nPCs] = pc;
+    simpleBacktrace->nPCs = nPCs + 1;
     return SUCCESS;
 }
 
 // Implementation of backtrace_error_callback
-static void setBackTraceSimpleInternalError(void *data, const char *msg, int errnum) {
-    PCVector *pcVector = (PCVector *)data;
-    pcVector->errorOccurred = true;
+static void setBacktraceSimpleInternalError(void *data, const char *msg, int errnum) {
+    SimpleBacktrace *simpleBacktrace = data;
+    simpleBacktrace->errorOccurred = true;
 }
 
 void _bal_error_backtrace_print(ErrorPtr ep) {
-    PC *pcs = (PC *)ep->pcs;
+    GC PC *pcs = ep->pcs;
     uint32_t nPCs = ep->nPCs;
     bool errorOccured = ep->internalErrorOccured;
     for (uint32_t i = 0; i < nPCs; i++) {
-        backtrace_pcinfo(state, pcs[i], printBacktraceLine, setBackTracePCInfoInternalError, &errorOccured);
+        backtrace_pcinfo(state, pcs[i], printBacktraceLine, setBacktracePCInfoInternalError, &errorOccured);
     }
     if (errorOccured) {
         fputs("...", stderr);
@@ -118,7 +118,7 @@ static int printBacktraceLine(void *data, PC pc, const char *filename, int linen
 }
 
 // Implementation of backtrace_error_callback
-static void setBackTracePCInfoInternalError(void *data, const char *msg, int errnum) {
+static void setBacktracePCInfoInternalError(void *data, const char *msg, int errnum) {
     bool *errorOccured = (bool *)data;
     *errorOccured = true;
 }
