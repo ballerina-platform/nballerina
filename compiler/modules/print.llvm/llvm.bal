@@ -752,7 +752,7 @@ public class DIBuilder {
         self.addMetadataToWords(words, scope, "scope");
         self.addMetadataToWords(words, file, "file");
         if props.lineNo != 0 {
-            words.push("line", ":", props.lineNo.toString());
+            words.push(",", "line", ":", props.lineNo.toString());
         }
         Metadata? ty = props.ty;
         self.addMetadataToWords(words, ty, "type");
