@@ -1,1 +1,4 @@
 test/ll/*.ll linguist-generated=true
+*.sh text eol=lf
+Makefile text eol=lf
+*.mk test eol=lf

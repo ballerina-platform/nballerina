@@ -245,20 +245,20 @@ function simpleArrayMemberTypeTest() {
     testArrayMemberTypeFail(env, createJson(env));
     testArrayMemberTypeFail(env, intWidthUnsigned(8));
     test:assertEquals(simpleArrayMemberType(new Env(), INT), ());
-    test:assertEquals(simpleArrayMemberType(new Env(), uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW))), TOP);
+    test:assertEquals(simpleArrayMemberType(new Env(), uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW)), true), TOP);
 }
 
 function testArrayMemberTypeOk(Env env, UniformTypeBitSet memberType) {
     ListDefinition def = new;
     SemType t = def.define(env, [], memberType);
-    UniformTypeBitSet? bits = simpleArrayMemberType(env, t);
+    UniformTypeBitSet? bits = simpleArrayMemberType(env, t, true);
     test:assertTrue(bits == memberType);
 }
 
 function testArrayMemberTypeFail(Env env, SemType memberType) {
     ListDefinition def = new;
     SemType t = def.define(env, [], memberType);
-    UniformTypeBitSet? bits = simpleArrayMemberType(env, t);
+    UniformTypeBitSet? bits = simpleArrayMemberType(env, t, true);
     test:assertTrue(bits == ());
 }
 

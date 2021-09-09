@@ -31,6 +31,7 @@ DECL_PANIC_MESSAGE(PANIC_LIST_TOO_LONG, "list too long");
 DECL_PANIC_MESSAGE(PANIC_STRING_TOO_LONG, "string too long");
 DECL_PANIC_MESSAGE(PANIC_LIST_STORE, "bad list store");
 DECL_PANIC_MESSAGE(PANIC_MAPPING_STORE, "bad mapping store");
+DECL_PANIC_MESSAGE(PANIC_NO_FILLER, "list has no filler");
 
 #define PANIC_MESSAGE_ENTRY(code) [code] = (struct MediumString *)&(panic_msg_##code)
 
@@ -44,7 +45,8 @@ const struct MediumString *panicMessageStrings[] = {
     PANIC_MESSAGE_ENTRY(PANIC_LIST_TOO_LONG),
     PANIC_MESSAGE_ENTRY(PANIC_STRING_TOO_LONG),
     PANIC_MESSAGE_ENTRY(PANIC_LIST_STORE),
-    PANIC_MESSAGE_ENTRY(PANIC_MAPPING_STORE)
+    PANIC_MESSAGE_ENTRY(PANIC_MAPPING_STORE),
+    PANIC_MESSAGE_ENTRY(PANIC_NO_FILLER)
 };
 
 TaggedPtr COLD _bal_panic_construct(PackedPanic err) {

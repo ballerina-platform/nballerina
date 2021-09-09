@@ -15,7 +15,7 @@ import wso2/nballerina.types as t;
 
 type SimpleConst string|int|float|boolean|();
 
-type FoldError err:Semantic|err:Unimplemented;
+type FoldError ResolveTypeError;
 
 // This is for handling const definitions in the future
 type FoldContext object {
@@ -23,24 +23,23 @@ type FoldContext object {
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
     function typeEnv() returns t:Env;
+    function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
 };
 
 class ConstFoldContext {
     *FoldContext;
-    final s:SourceFile file;
-    final string defnName;
+    final s:ModuleLevelDefn defn;
     final t:Env env;
     final ModuleTable mod;
 
-    function init(s:SourceFile file, string defnName, t:Env env, ModuleTable mod) {
-        self.file = file;
-        self.defnName = defnName;
+    function init(s:ModuleLevelDefn defn, t:Env env, ModuleTable mod) {
+        self.defn = defn;
         self.env = env;
         self.mod = mod;
     }
     
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=err:location(self.file, pos), cause=cause, functionName=self.defnName);
+        return err:semantic(msg, loc=err:location(self.defn.part.file, pos), cause=cause, functionName=self.defn.name);
     }
 
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
@@ -60,6 +59,10 @@ class ConstFoldContext {
     function typeEnv() returns t:Env {
         return self.env;
     }
+
+    function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType {
+        return resolveSubsetTypeDesc(self.env, self.mod, self.defn, td);
+    }
 }
 
 function resolveConstDefn(t:Env env, ModuleTable mod, s:ConstDefn defn) returns s:ResolvedConst|FoldError {
@@ -72,9 +75,9 @@ function resolveConstDefn(t:Env env, ModuleTable mod, s:ConstDefn defn) returns 
     }
     else {
         defn.resolved = false;
-        ConstFoldContext cx = new ConstFoldContext(defn.file, defn.name, env, mod);
+        ConstFoldContext cx = new ConstFoldContext(defn, env, mod);
         s:InlineBuiltinTypeDesc? td = defn.td;
-        t:SemType? expectedType = td is () ? () : resolveInlineAltTypeDesc(td);
+        t:SemType? expectedType = td is () ? () : resolveInlineBuiltinTypeDesc(td);
         s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
         if expr is s:ConstValueExpr {
             if expectedType == () || t:containsConst(expectedType, expr.value) {
@@ -136,7 +139,7 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
 
 function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:ListConstructorExpr expr) returns s:Expr|FoldError {
     // grammar of subset07 guarantees that expectedType is non-nil
-    t:SemType expectedListType = t:intersect(<t:SemType>expectedType, t:LIST);
+    t:SemType expectedListType = t:intersect(<t:SemType>expectedType, t:LIST_RW);
     t:SemType? memberType = t:simpleArrayMemberType(cx.typeEnv(), expectedListType);
     s:Expr[] members = expr.members;
     foreach int i in 0 ..< members.length() {
@@ -148,7 +151,7 @@ function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:List
 
 function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:MappingConstructorExpr expr) returns s:Expr|FoldError {
     // grammar of subset07 guarantees that expectedType is non-nil
-    t:SemType expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING);
+    t:SemType expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING_RW);
     t:SemType? memberType = t:simpleMapMemberType(cx.typeEnv(), expectedMappingType);
     expr.expectedType = expectedMappingType;
     foreach s:Field f in expr.fields {
@@ -388,7 +391,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
 }
 
 function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExpr expr) returns s:Expr|FoldError {
-    t:SemType semType = resolveInlineTypeDesc(cx.typeEnv(), expr.td);
+    t:SemType semType = check cx.resolveTypeDesc(expr.td);
     t:SemType targetType = semType;
     if !(expectedType is ()) {
         targetType = t:intersect(targetType, expectedType);
@@ -431,7 +434,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
 function foldTypeTestExpr(FoldContext cx, t:SemType? expectedType, s:TypeTestExpr expr) returns s:Expr|FoldError {
     s:Expr subExpr = check foldExpr(cx, (), expr.left);
     if subExpr is s:ConstShapeExpr {
-        t:SemType semType = resolveInlineTypeDesc(cx.typeEnv(), expr.td);
+        t:SemType semType = check cx.resolveTypeDesc(expr.td);
         return foldedUnaryConstExpr(t:containsConst(semType, subExpr.value) == !expr.negated, t:BOOLEAN, subExpr);
     }
     expr.left = subExpr;

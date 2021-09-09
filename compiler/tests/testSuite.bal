@@ -4,13 +4,13 @@ import ballerina/io;
 
 import wso2/nballerina.err;
 
-const SOURCE_DIR = "testSuite";
+type TestSuiteCases map<[string, string]>;
 
 @test:Config {
     dataProvider: listSourcesVPO
 }
-function testCompileVPO(string path) returns io:Error? {
-    CompileError? err = compileFile(path, ());
+function testCompileVPO(string path, string kind) returns io:Error? {
+    CompileError? err = compileFile(path);
     if err is io:Error {
         return err;
     }
@@ -30,15 +30,15 @@ function testCompileVPO(string path) returns io:Error? {
 @test:Config {
     dataProvider: listSourcesEU
 }
-function testCompileEU(string path) returns file:Error|io:Error? {
-    CompileError? err = compileFile(path, ());
+function testCompileEU(string path, string kind) returns file:Error|io:Error? {
+    CompileError? err = compileFile(path);
     if err is err:Any? {
         if err is () {
             test:assertNotExactEquals(err, (), "expected an error " + path);
         }
         else {
             string base = check file:basename(path);
-            boolean isE = base[0].toUpperAscii() == "E";
+            boolean isE = kind[0] == "e";
             if isE {
                 test:assertFalse(err is err:Unimplemented, "unimplemented error on E test" + path);
             }
@@ -47,7 +47,7 @@ function testCompileEU(string path) returns file:Error|io:Error? {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
             int? lineNumber = compileErrorLineNumber(err);
-            if lineNumber != () && (isE || base[1].toUpperAscii() == "E") {
+            if lineNumber != () && (isE || kind[1] == "e") {
                 test:assertEquals(lineNumber, check errorLine(path), "wrong line number in error " + path);
             }
         }
@@ -69,23 +69,39 @@ function compileErrorLineNumber(CompileError err) returns int? {
     }
 }
 
-function listSourcesVPO() returns map<[string]>|error => listSources("VPO");
+function listSourcesVPO() returns TestSuiteCases|error => listSources("vpo");
 
-function listSourcesEU() returns map<[string]>|error => listSources("EU");
+function listSourcesEU() returns TestSuiteCases|error => listSources("eu");
 
-function listSources(string initialChars) returns map<[string]>|io:Error|file:Error {
-    map<[string]> cases = {};
-    // JBUG #31681 `check from ...` doesn't work
-    var e = from var entry in check file:readDir(SOURCE_DIR)
-            let string path = entry.absPath
-            let string base = check file:basename(path)
-            // JBUG #31360 gets a bad, sad if includePath is inlined in the obvious way
-            where check includePath(path, initialChars)
-            do {
-              cases[base] = [path];
-            };
-    test:assertEquals(e, ());
+function listSources(string initialChars) returns TestSuiteCases|io:Error|file:Error {
+    TestSuiteCases cases = {};
+    // JBUG #32615 can't use from-in-from query syntax
+    foreach var dir in check file:readDir("./testSuite") {
+        if !check file:test(dir.absPath, file:IS_DIR) {
+            continue;
+        }
+        string category = check file:basename(dir.absPath);
+        foreach var test in check file:readDir(dir.absPath) {
+            string name = check file:basename(test.absPath);
+            var [base, ext] = basenameExtension(name);
+            if ext != ".bal" {
+                continue;
+            }
+            int? dash = base.lastIndexOf("-");
+            test:assertTrue(dash is int, "test file name must be in <name>-<kind>.bal format");
+            string testKind = base.substring(1 + <int>dash);
+            if initialChars.includes(testKind[0]) {
+                cases[category + "/" + name] = [test.absPath, testKind];
+            }
+        }
+    }
     return cases;
+}
+
+function testKind(string base) returns string:Char {
+    int? dash = base.lastIndexOf("-");
+    test:assertTrue(dash is int, "test file name must be in <name>-<kind>.bal format");
+    return <string:Char> base.substring(1 + <int>dash, 2 + <int>dash).toLowerAscii();
 }
 
 function includePath(string path, string initialChars) returns boolean|file:Error {
@@ -105,4 +121,9 @@ function errorLine(string path) returns int|io:Error {
     test:assertFail("Test with 'E' prefix missing error annotation : " + path);
     // JBUG #31338 panic with function returning never here cases a bytecode error
     panic err:impossible();
+}
+
+// This outputs nothing
+function compileFile(string filename) returns CompileError? {
+    return compileModule(dummyModuleId(filename), [{ filename }], {}, {});
 }

@@ -88,17 +88,17 @@ type LoopContext record {|
 class CodeGenContext {
     final Module mod;
     final s:SourceFile file;
+    final s:FunctionDefn functionDefn;
     final bir:FunctionCode code;
-    final string functionName;
     final t:SemType returnType;
     LoopContext? loopContext = ();
     private final string?[] registerVarNames = [];
 
-    function init(Module mod, s:SourceFile file, string functionName, t:SemType returnType) {
+    function init(Module mod, s:FunctionDefn functionDefn, t:SemType returnType) {
         self.mod = mod;
-        self.file = file;
+        self.functionDefn = functionDefn;
+        self.file = functionDefn.part.file;
         self.code = {};
-        self.functionName = functionName;
         self.returnType = returnType;
     }
 
@@ -120,11 +120,11 @@ class CodeGenContext {
     }
 
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=self.location(pos), cause=cause, functionName=self.functionName);
+        return err:semantic(msg, loc=self.location(pos), cause=cause, functionName=self.functionDefn.name);
     }
 
     function unimplementedErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Unimplemented {
-        return err:unimplemented(msg, loc=self.location(pos), cause=cause, functionName=self.functionName);
+        return err:unimplemented(msg, loc=self.location(pos), cause=cause, functionName=self.functionDefn.name);
     }
     
     private function location(s:Position? pos) returns err:Location {
@@ -203,12 +203,16 @@ class CodeGenContext {
         return foldExpr(new CodeGenFoldContext(self, env), expectedType, expr);
     }
 
+    function resolveTypeDesc(s:TypeDesc td) returns t:SemType|ResolveTypeError {
+        return resolveSubsetTypeDesc(self.mod.env, self.mod.defns, self.functionDefn, td);
+    }
 }
 
 class CodeGenFoldContext {
     *FoldContext;
     final CodeGenContext cx;
     final Environment env;
+
     function init(CodeGenContext cx, Environment env) {
         self.cx = cx;
         self.env = env;
@@ -235,6 +239,10 @@ class CodeGenFoldContext {
     function typeEnv() returns t:Env {
         return self.cx.mod.env;
     }
+
+    function resolveTypeDesc(s:TypeDesc td) returns ResolveTypeError|t:SemType {
+        return self.cx.resolveTypeDesc(td);
+    }
 }
 
 function addAssignments(int[] dest, int[] src, int excludeStart) {
@@ -245,15 +253,16 @@ function addAssignments(int[] dest, int[] src, int excludeStart) {
     }
 }
 
-function codeGenFunction(Module mod, s:SourceFile file, string functionName, bir:FunctionSignature signature, string[] paramNames, s:Stmt[] body) returns bir:FunctionCode|CodeGenError {
-    CodeGenContext cx = new(mod, file, functionName, signature.returnType);
+function codeGenFunction(Module mod, s:FunctionDefn defn, bir:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
+    CodeGenContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Binding? bindings = ();
+    string[] paramNames = defn.paramNames;
     foreach int i in 0 ..< paramNames.length() {
         bir:Register reg = cx.createRegister(signature.paramTypes[i], paramNames[i]);
         bindings = { name: paramNames[i], reg, prev: bindings, isFinal: true };
     }
-    var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, body);
+    var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
     if !(endBlock is ()) {
         bir:RetInsn ret = { operand: () };
         endBlock.insns.push(ret);
@@ -752,7 +761,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
-    t:SemType semType = resolveInlineTypeDesc(cx.mod.env, td);
+    t:SemType semType = check cx.resolveTypeDesc(td);
     initExpr = check cx.foldExpr(env, initExpr, semType);
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
     bir:Register result = cx.createRegister(semType, varName);
@@ -1153,7 +1162,7 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     else {
         var [binding, value] = narrowingCompare;
         t:SemType ifTrue = t:singleton(value);
-        t:SemType ifFalse = t:diff(binding.reg.semType, ifTrue);
+        t:SemType ifFalse = t:roDiff(cx.mod.tc, binding.reg.semType, ifTrue);
         if (<string>op).startsWith("!") {
             [ifTrue, ifFalse] = [ifFalse, ifTrue];
         }
@@ -1186,7 +1195,7 @@ function codeGenVarRefExpr(CodeGenContext cx, string name, Environment env, bir:
 function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, tcExpr.operand);
     var reg = <bir:Register>operand; // const folding should have got rid of the const
-    t:SemType toType = resolveInlineTypeDesc(cx.mod.env, tcExpr.td);
+    t:SemType toType = check cx.resolveTypeDesc(tcExpr.td);
     t:UniformTypeBitSet? toNumType = t:singleNumericType(toType);
     if toNumType != () && !t:isSubtypeSimple(t:intersect(reg.semType, t:NUMBER), toNumType) {
         toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
@@ -1216,12 +1225,12 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     return { result, block: nextBlock };
 }
 
-function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:InlineTypeDesc td, s:Expr left, boolean negated) returns CodeGenError|ExprEffect {
-    t:SemType semType = resolveInlineTypeDesc(cx.mod.env, td);
+function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, boolean negated) returns CodeGenError|ExprEffect {
+    t:SemType semType = check cx.resolveTypeDesc(td);
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
     // Constants should be resolved during constant folding
     bir:Register reg = <bir:Register>operand;        
-    t:SemType diff = t:diff(reg.semType, semType);
+    t:SemType diff = t:roDiff(cx.mod.tc, reg.semType, semType);
     if t:isEmpty(cx.mod.tc, diff) {
         return { result: !negated, block: bb };
     }
@@ -1306,7 +1315,7 @@ function validArgumentCount(CodeGenContext cx, bir:FunctionRef func, int nSuppli
     if nSuppliedArgs == nExpectedArgs {
         return ();
     }
-    string name = bir:symbolToString(cx.mod, func.symbol);
+    string name = bir:symbolToString(cx.mod, cx.functionDefn.part.partIndex, func.symbol);
     if nSuppliedArgs < nExpectedArgs {
         return cx.semanticErr(`too few arguments for call to function ${name}`);
     }
@@ -1340,11 +1349,13 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
 }
 
 function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier) returns bir:FunctionRef|CodeGenError {
-    bir:ModuleId? moduleId = cx.mod.imports[prefix];
-    if moduleId is () {
+    Import? mod = cx.mod.parts[cx.functionDefn.part.partIndex].imports[prefix];
+    if mod is () {
         return cx.semanticErr(`no import declaration for prefix ${prefix}`);
     }
     else {
+        mod.used = true;
+        bir:ModuleId moduleId = mod.moduleId;
         bir:FunctionSignature? signature = getLibFunction(moduleId, identifier);
         if signature is () {
             return err:unimplemented(`unsupported library function ${prefix}:${identifier}`);
@@ -1356,7 +1367,7 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
     }
 }
 
-type LangLibModuleName "int"|"boolean"|"string"|"array"|"map";
+type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
 
 function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName) returns bir:FunctionRef|CodeGenError {
     TypedOperand? t = typedOperand(target);
@@ -1458,6 +1469,7 @@ type TypedOperandPair BooleanOperandPair|IntOperandPair|FloatOperandPair|StringO
 // XXX should use t:UT_* instead of strings here (like the ordering stuff)
 type TypedOperand readonly & (["array", bir:Register]
                               |["map", bir:Register]
+                              |["error", bir:Register]
                               |["string", bir:StringOperand]
                               |["float", bir:FloatOperand]
                               |["int", bir:IntOperand]
@@ -1508,6 +1520,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
             return ["map", operand];
         }
+        else if t:isSubtypeSimple(operand.semType, t:ERROR) {
+            return ["error", operand];
+        }
     }
     else if operand is string {
         return ["string", operand];
@@ -1548,11 +1563,11 @@ function operandPairOrderType(bir:Operand left, bir:Operand right) returns bir:O
 }
 
 function promoteToOptOrderType(bir:OrderType? ot) returns bir:OrderType? {
-    if ot == () || ot is bir:OptOrderType {
-        return ot;
+    if ot is bir:UniformOrderType {
+        return { opt: ot };
     }
     else {
-        return { opt: ot };
+        return ot;
     }
 }
 

@@ -34,13 +34,13 @@ class VerifyContext {
     }
 
     function err(err:Message msg, Position? pos = ()) returns err:Semantic {
-        return err:semantic(msg, loc=err:location(self.defn.file, pos), functionName=self.defn.symbol.identifier);
+        return err:semantic(msg, loc=err:location(self.mod.getPartFile(self.defn.partIndex), pos), functionName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
 
     function symbolToString(Symbol sym) returns string {
-        return symbolToString(self.mod, sym);
+        return symbolToString(self.mod, self.defn.partIndex, sym);
     }
 }
 
@@ -160,8 +160,8 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
 
 function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic? {
     t:SemType ty = insn.result.semType;
-    if !vc.isSubtype(ty, t:LIST) {
-        return vc.err("bad BIR: inherent type of list construct is not a list");
+    if !vc.isSubtype(ty, t:LIST_RW) {
+        return vc.err("bad BIR: inherent type of list construct is not a mutable list");
     }
     t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), ty);
     if memberType == () {
@@ -176,8 +176,8 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
 
 function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns err:Semantic? {
     t:SemType ty = insn.result.semType;
-    if !vc.isSubtype(ty, t:MAPPING) {
-        return vc.err("bad BIR: inherent type of list construct is not a list");
+    if !vc.isSubtype(ty, t:MAPPING_RW) {
+        return vc.err("bad BIR: inherent type of mapping construct is not a mutable mapping");
     }
     t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), ty);
     if memberType == () {
@@ -283,8 +283,11 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
     if ot is OptOrderType {
         expectType = t:uniformTypeUnion((1 << t:UT_NIL) | (1 << ot.opt ));
     }
-    else {
+    else if ot is UniformOrderType {
         expectType  = t:uniformType(ot);
+    }
+    else {
+        panic err:impossible("array order type");
     }
     foreach var operand in insn.operands {
         t:SemType operandType;

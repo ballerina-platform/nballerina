@@ -3,12 +3,6 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-public configurable string target = "";
-
-public type Options record {|
-    string? gcName = ();
-|};
-
 type BuildError err:Semantic|err:Unimplemented;
 
 type Alignment 1|8;
@@ -50,6 +44,13 @@ final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
 final llvm:PointerType LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
 
 type ValueType llvm:IntegralType;
+
+type DIBuilder llvm:DIBuilder;
+type DISubprogram llvm:Metadata;
+type DILocation llvm:Metadata;
+type DIFile llvm:Metadata;
+type DICompileUnit llvm:Metadata;
+type DISubroutineType llvm:Metadata;
 
 // A Repr is way of representing values.
 // It's a mapping from a SemType to an LLVM type.
@@ -100,7 +101,10 @@ const PANIC_MAPPING_STORE = 9;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"panic_construct"|"error_construct"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
+type RuntimeFunctionName "panic"|"panic_construct"|"error_construct"|"alloc"|
+                         "list_set"|"list_has_type"|
+                         "mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"mapping_has_type"|
+                         "int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
                          "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float"|"float_to_int";
 
 type RuntimeFunction readonly & record {|
@@ -154,6 +158,15 @@ final RuntimeFunction listSetFunction = {
     attrs: []
 };
 
+final RuntimeFunction listHasTypeFunction = {
+    name: "list_has_type",
+    ty: {
+        returnType: "i1",
+        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+    },
+    attrs: ["readonly"]
+};
+
 final RuntimeFunction mappingSetFunction = {
     name: "mapping_set",
     ty: {
@@ -188,6 +201,15 @@ final RuntimeFunction mappingConstructFunction = {
         paramTypes: ["i64", "i64"]
     },
     attrs: []
+};
+
+final RuntimeFunction mappingHasTypeFunction = {
+    name: "mapping_has_type",
+    ty: {
+        returnType: "i1",
+        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+    },
+    attrs: ["readonly"]
 };
 
 final RuntimeFunction intToTaggedFunction = {
@@ -328,12 +350,24 @@ type Module record {|
     llvm:PointerValue stackGuard;
     map<StringDefn> stringDefns = {};
     t:TypeCheckContext typeCheckContext;
+    bir:Module bir;
+    bir:File[] partFiles;
+    ModuleDI? di;
 |};
+
+type ModuleDI record {|
+    DIBuilder builder;
+    DIFile[] files;
+    DICompileUnit compileUnit;
+    DISubroutineType funcType;
+|};
+
 
 class Scaffold {
     private final Module mod;
     private final bir:File file;
     private final llvm:FunctionDefn llFunc;
+    private final DISubprogram? diFunc;
 
     // Representation for each BIR register
     private final Repr[] reprs;
@@ -347,10 +381,11 @@ class Scaffold {
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
 
-    function init(Module mod, llvm:FunctionDefn llFunc, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
+    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.mod = mod;
-        self.file = defn.file;
+        self.file = mod.partFiles[defn.partIndex];
         self.llFunc = llFunc;
+        self.diFunc = diFunc;
         self.birBlocks = code.blocks;
         final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType);
         self.reprs = reprs;
@@ -436,20 +471,47 @@ class Scaffold {
     function location(bir:Position pos) returns err:Location {
         return err:location(self.file, pos);
     }
+
+    function setDebugLocation(llvm:Builder builder, bir:Position pos) {
+        DISubprogram? diFunc = self.diFunc;
+        if !(diFunc is ()) {           
+            var [line, column] = self.file.lineColumn(pos);
+            ModuleDI di = <ModuleDI>self.mod.di;
+            builder.setCurrentDebugLocation(di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc));
+        }
+    }
+
+    function clearDebugLocation(llvm:Builder builder) {
+        if !(self.diFunc is ()) {
+            builder.setCurrentDebugLocation(());
+        }
+    }
 }
 
 public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
     bir:ModuleId modId = birMod.getId();
     llvm:Module llMod = llContext.createModule();
+    bir:File[] partFiles = birMod.getPartFiles();
+    ModuleDI? di = ();
+    if options.debugLevel > 0 {
+        di = createModuleDI(llMod, partFiles);
+    } 
     bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
     llvm:FunctionDefn[] llFuncs = [];
+    DISubprogram[] diFuncs = [];
     llvm:FunctionType[] llFuncTypes = [];
     map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
         llvm:FunctionType ty = check buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
-        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangleInternalSymbol(modId, symbol), ty);
+        string mangledName = mangleInternalSymbol(modId, symbol);
+        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
+        if !(di is ()) {
+            DISubprogram diFunc = createFunctionDI(di, partFiles, defn, llFunc, mangledName);
+            diFuncs.push(diFunc);
+            llFunc.setSubprogram(diFunc);
+        }   
         if !(options.gcName is ()) {
             llFunc.setGC(options.gcName);
         }
@@ -458,11 +520,14 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         }
         llFuncs.push(llFunc);
         llFuncMap[defn.symbol.identifier] = llFunc;
-    }  
+    }
     llvm:Builder builder = llContext.createBuilder();
     Module mod = {
+        bir: birMod,
         llContext,
         llMod,
+        partFiles,
+        di,
         typeCheckContext: birMod.getTypeCheckContext(),
         functionDefns: llFuncMap,
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard"))
@@ -471,11 +536,38 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         bir:FunctionDefn defn = functionDefns[i];
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
         check bir:verifyFunctionCode(birMod, defn, code);
-        Scaffold scaffold = check new(mod, llFuncs[i], builder, defn, code);
+        DISubprogram? diFunc = di is () ? () : diFuncs[i];
+        Scaffold scaffold = check new(mod, llFuncs[i], diFunc, builder, defn, code);
         buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code);
     }
+    check birMod.finish();
     return llMod;
+}
+
+function createModuleDI(llvm:Module mod, bir:File[] partFiles) returns ModuleDI {
+    DIBuilder builder = mod.createDIBuilder();
+    mod.addModuleFlag("error", ["Debug Info Version", 3]);
+    DIFile[] files = from var f in partFiles select builder.createFile(f.filename(), f.directory() ?: "");
+    DICompileUnit compileUnit = builder.createCompileUnit(file=files[0]);
+    DISubroutineType funcType = builder.createSubroutineType(files[0]);
+    return { builder, files, compileUnit, funcType };
+}
+
+function createFunctionDI(ModuleDI mod, bir:File[] files, bir:FunctionDefn birFunc, llvm:FunctionDefn llFunc, string mangledName) returns DISubprogram {
+    int partIndex = birFunc.partIndex;
+    var [lineNo, _] = files[partIndex].lineColumn(birFunc.position); 
+    DIFile file = mod.files[partIndex];
+    return mod.builder.createFunction({
+        file,
+        scope: file, // XXX Should we use the compileUnit or the File here?
+        ty: mod.funcType,
+        linkageName: mangledName,
+        lineNo,
+        isDefinition: true,
+        name: birFunc.symbol.identifier,
+        scopeLine: lineNo // XXX should be line number of opening brace
+    });
 }
 
 function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) {
@@ -588,6 +680,7 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             // nothing to do
             // scaffold.panicAddress uses this to figure out where to store the panic info
         }
+        scaffold.clearDebugLocation(builder);
     }
 }
 
@@ -625,6 +718,7 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
+    scaffold.setDebugLocation(builder, insn.position);
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
     llvm:Value[] args = [];
@@ -1253,10 +1347,10 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
         hasType = buildHasTag(builder, tagged, TAG_ERROR);
     }
     else if t:isSubtypeSimple(semType, t:LIST) {
-        hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+        hasType = buildHasListType(builder, scaffold, tagged, insn.operand.semType, semType);
     }
     else if t:isSubtypeSimple(semType, t:MAPPING) {
-        hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+        hasType = buildHasMappingType(builder, scaffold, tagged, insn.operand.semType, semType);
     }
     else if semType is t:UniformTypeBitSet {
         hasType = buildHasTagInSet(builder, tagged, semType);
@@ -1271,6 +1365,28 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     }
     else {
         buildStoreBoolean(builder, scaffold, hasType, insn.result);
+    }
+}
+
+function buildHasListType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType sourceType, t:SemType targetType) returns llvm:Value {
+    if t:intersect(sourceType, t:LIST) == targetType {
+        return buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+    }
+    else {
+        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeCheckContext().env, targetType);
+        return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, listHasTypeFunction),
+                                        [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
+    }
+}
+
+function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType sourceType, t:SemType targetType) returns llvm:Value {
+    if t:intersect(sourceType, t:MAPPING) == targetType {
+        return buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+    }
+    else {
+        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeCheckContext().env, targetType);
+        return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingHasTypeFunction),
+                                        [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
     }
 }
 
@@ -1307,10 +1423,10 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
             hasTag = buildHasTag(builder, tagged, TAG_ERROR);
         }
         else if t:isSubtypeSimple(semType, t:LIST) {
-            hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+            hasTag = buildHasListType(builder, scaffold, tagged, insn.operand.semType, semType);
         }
         else if t:isSubtypeSimple(semType, t:MAPPING) {
-            hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+            hasTag = buildHasMappingType(builder, scaffold, tagged, insn.operand.semType, semType);
         }
         else if semType is t:UniformTypeBitSet {
             hasTag = buildHasTagInSet(builder, tagged, semType);

@@ -7,19 +7,30 @@ import wso2/nballerina.err;
 
 type ModuleTable table<s:ModuleLevelDefn> key(name);
 
+type Import record {|
+    s:ImportDecl decl;
+    bir:ModuleId moduleId;
+    boolean used = false;
+|};
+
+type ModulePart record {|
+    bir:File file;
+    map<Import> imports;
+|};
+
 class Module {
     *bir:Module;
     final bir:ModuleId id;
-    final map<bir:ModuleId> imports;
+    final ModulePart[] parts;
     final ModuleTable defns;
     final t:Env env;
     final t:TypeCheckContext tc;
     final s:FunctionDefn[] functionDefnSource = [];
     final readonly & bir:FunctionDefn[] functionDefns;
 
-    function init(bir:ModuleId id, map<bir:ModuleId> imports, ModuleTable defns, t:Env env) {
+    function init(bir:ModuleId id, ModulePart[] parts, ModuleTable defns, t:Env env) {
         self.id = id;
-        self.imports = imports;
+        self.parts = parts;
         self.defns = defns;
         self.env = env;
         self.tc = t:typeCheckContext(env);
@@ -31,8 +42,8 @@ class Module {
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`
                     signature: <bir:FunctionSignature>defn.signature,
-                    file: defn.file,
-                    position: defn.pos
+                    position: defn.pos,
+                    partIndex: defn.part.partIndex
                 });
             }
         }
@@ -44,42 +55,95 @@ class Module {
     public function getTypeCheckContext() returns t:TypeCheckContext => self.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        s:FunctionDefn ast = self.functionDefnSource[i];
-        return codeGenFunction(self, ast.file, ast.name, self.functionDefns[i].signature, ast.paramNames, ast.body);
+        return codeGenFunction(self, self.functionDefnSource[i], self.functionDefns[i].signature);
     }
    
+    public function finish() returns err:Semantic? {
+        foreach var part in self.parts {
+            foreach var [prefix, { decl, used }] in part.imports.entries() {
+                if !used {
+                    return err:semantic(`import ${prefix} unused`, loc=err:location(part.file, decl.pos));
+                }
+            }
+        }
+    }
+
     public function getFunctionDefns() returns readonly & bir:FunctionDefn[] {
         return self.functionDefns;
     }
 
-    public function getPrefixForModuleId(bir:ModuleId id) returns string? {
-        foreach var [prefix, moduleId] in self.imports.entries() {
+    public function getPrefixForModuleId(bir:ModuleId id, int partIndex) returns string? {
+        foreach var [prefix, { moduleId }] in self.parts[partIndex].imports.entries() {
             if moduleId == id {
-                return  prefix;
+                return prefix;
             }
         }
         return ();
     }
+
+    public function getPartFile(int partIndex) returns bir:File {
+        return self.parts[partIndex].file;
+    }
+
+    public function getPartFiles() returns bir:File[] {
+        return from var part in self.parts select part.file;
+    }
 }
 
-public function loadModule(t:Env env, string filename, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
-    string[] lines = check io:fileReadLines(filename);
-    s:ModulePart part = check s:parseModulePart(lines, filename);
+public type SourcePart record {|
+    string directory?;
+    string filename?;
+    // XXX also allow the entire file as a string, not broken into lines
+    string[] lines?;
+|};
+
+type LoadedSourcePart record {|
+    s:FilePath path;
+    string[] lines;
+|};
+
+public function loadModule(t:Env env, SourcePart[] sourceParts, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
     ModuleTable mod = table [];
-    check addModulePart(mod, part);
+    ModulePart[] parts = [];
+    foreach int i in 0 ..< sourceParts.length() {
+        var loaded = check loadSourcePart(sourceParts[i], i);
+        s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.path, i);
+        check addModulePart(mod, part);
+        parts.push({ file: part.file, imports: imports(part) }); 
+    }
+    
     check resolveTypes(env, mod);
     // XXX Should have an option that controls whether we perform this check
     check validEntryPoint(mod);
-    return new Module(id, imports(part), mod, env);
+    // XXX to support multiple source parts we need to deal with separate imports per part
+    return new Module(id, parts, mod, env);
 }
 
-function imports(s:ModulePart part) returns map<bir:ModuleId> {
+function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Error {
+    string? directory = part?.directory;
+    string? filename = part?.filename;
+    string[]? lines = part?.lines;
+    if lines != () {
+        return { lines, path: { filename: filename ?: "<part" + (i + 1).toString() + ">", directory } };
+    }
+    else if filename != () {
+        return { lines: check io:fileReadLines(filename), path: { filename, directory } };
+    }
+    panic err:illegalArgument("neither filename nor lines were specified");
+}
+
+function imports(s:ModulePart part) returns map<Import> {
     s:ImportDecl? decl = part.importDecl;
     if decl == () {
         return {};
     }
     else {
-        return { [decl.module]: { organization: decl.org, names: [decl.module]} };
+        return {
+            [decl.module]: {
+                decl,
+                moduleId: { organization: decl.org, names: [decl.module]}
+            }
+        };
     }
 }
 
@@ -108,10 +172,13 @@ function addModulePart(ModuleTable mod, s:ModulePart part) returns err:Semantic?
 }
 
 // This is old interface for showTypes
-public function typesFromString(string[] lines, string filename) returns [t:Env, map<t:SemType>]|err:Any {
-    s:ModulePart part = check s:parseModulePart(lines, filename);
+public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:SemType>]|err:Any|io:Error {
     ModuleTable mod = table [];
-    check addModulePart(mod, part);
+    foreach int i in 0 ..< sourceParts.length() {
+        var loaded = check loadSourcePart(sourceParts[i], 0);
+        s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.path, i);
+        check addModulePart(mod, part);
+    }
     t:Env env = new;
     check resolveTypes(env, mod);
     return [env, createTypeMap(mod)];

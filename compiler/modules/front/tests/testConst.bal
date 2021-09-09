@@ -19,11 +19,17 @@ class TestFoldContext {
     function typeEnv() returns t:Env {
         return self.env;
     }
+    function resolveTypeDesc(s:TypeDesc td) returns err:Semantic|t:SemType {
+        if td is s:InlineBuiltinTypeDesc {
+            return resolveInlineBuiltinTypeDesc(td);
+        }
+        return err:semantic("TestFoldContext cannot resolve TypeDesc");
+    }
 }
 
 @test:Config{ dataProvider: validConstExprs }
 function testConstExpr(string src, SimpleConst expected) {
-    s:Expr parsed = checkpanic s:parseExpression([src], "<internal>");
+    s:Expr parsed = checkpanic s:parseExpression([src], { filename: "<internal>" });
     TestFoldContext cx = new;
     var result = foldExpr(cx, (), parsed);
     test:assertTrue(result is s:ConstValueExpr && result.value == expected, "got: " + (result is s:ConstValueExpr ? result.value.toString()  : "not constant"));

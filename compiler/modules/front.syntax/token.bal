@@ -282,10 +282,16 @@ function createPosition(int line, int column) returns Position {
 public readonly class SourceFile {
     *err:File;
     private string fn;
-    public function init(string fn) {
-        self.fn = fn;
+    private string? dir;
+
+    public function init(FilePath path) {
+        self.fn = path.filename;
+        self.dir = path.directory;
     }
+
     public function filename() returns string => self.fn;
+
+    public function directory() returns string? => self.dir;
 
     public function lineColumn(Position pos) returns err:LineColumn {
         return [pos >> 32, pos & 0xFFFFFFFF];

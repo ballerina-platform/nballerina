@@ -7,7 +7,7 @@ type SubtypeTestCase [string, string[], string[]];
     dataProvider: subtypeCaseProvider
 }
 function testSubtype(string filename, string[] lines, string[] expected) returns error? {
-    string[] result = check subtypeRels(lines, filename);
+    string[] result = check subtypeRels([{ lines, filename }]);
     test:assertEquals(result, expected);
 }
 

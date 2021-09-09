@@ -24,7 +24,7 @@ function modulePartToWords(Word[] w, ModulePart mod) {
             constDefnToWords(w, defn);
         }
         else {
-            // XXX type defns are not part of the current subset
+            typeDefnToWords(w, defn);
         }
     }
 }
@@ -58,6 +58,17 @@ function constDefnToWords(Word[] w, ConstDefn defn) {
     }
     w.push("const", defn.name, "=");
     exprToWords(w, defn.expr);
+    w.push(";");
+    // JBUG cast
+    w.push(<Word>LF);
+}
+
+function typeDefnToWords(Word[] w, TypeDefn defn) {
+    if defn.vis != () {
+        w.push(<Word>defn.vis);
+    }
+    w.push("type", defn.name);
+    typeDescToWords(w, defn.td);
     w.push(";");
     // JBUG cast
     w.push(<Word>LF);
@@ -180,7 +191,7 @@ function blockToWords(Word[] w, Stmt[] body) {
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
-    if td is InlineBuiltinTypeDesc {
+    if td is BuiltinTypeDesc {
         w.push(td);
         return;
     }
@@ -194,8 +205,7 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         w.push(CLING, ">");
         return;
     }
-   
-    if td is ListTypeDesc {
+    else if td is ListTypeDesc {
         if wrap != false {
             w.push("(");
         }
@@ -227,7 +237,7 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         }
     }
     else {
-        panic err:unimplemented(`typedesc not supported ${td.toString()}`);
+        panic err:impossible(`typedesc not implemented in typeDescToWords: ${td.toString()}`);
     }
    
 }

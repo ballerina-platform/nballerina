@@ -88,6 +88,10 @@ public distinct class Function {
             jLLVMSetGC(self.LLVMFunction, java:fromString(""));
         }
     }
+
+    public function setSubprogram(Metadata metadata) {
+        jLLVMSetSubprogram(self.LLVMFunction, metadata.llvmMetadata);
+    }
 }
 
 public distinct class BasicBlock {
@@ -149,4 +153,10 @@ function jLLVMSetGC(handle fn, handle name) = @java:Method {
     name: "LLVMSetGC",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
+} external;
+
+function jLLVMSetSubprogram(handle fn, handle sp) = @java:Method {
+    name: "LLVMSetSubprogram",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMMetadataRef"]
 } external;

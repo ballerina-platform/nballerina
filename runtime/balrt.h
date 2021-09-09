@@ -58,6 +58,8 @@ typedef int PanicCode;
 // and line number right-shifted 8.
 typedef uint64_t PackedPanic;
 
+typedef uintptr_t PC;
+
 typedef struct {
     int64_t length;
     int64_t capacity;
@@ -121,6 +123,10 @@ typedef GC struct Mapping {
 typedef GC struct Error {
     TaggedPtr message;
     int64_t lineNumber;
+    int backtraceErrorCode;
+    char *backtraceErrorMessage;
+    uint32_t nPCs;
+    PC pcs[];
 } *ErrorPtr;
 
 // Both of these are 8-byte aligned and zero-padded so the total size is a multiple of 8
@@ -201,6 +207,7 @@ extern READONLY bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
+extern void _bal_error_backtrace_print(ErrorPtr ep);
 // Returns an error value
 extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
 

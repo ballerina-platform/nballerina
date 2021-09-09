@@ -3,6 +3,14 @@
 ## Summary
 
 * Only values allowed are of basic type nil, boolean, int, float, string, list, mapping and error.
+* At module level
+   * function definitions
+      * no default arguments
+      * no rest arguments
+      * may be declared public
+   * const definitions
+      * not of structured types
+   * type definitions
 * Type descriptors:
    * predefined basic type name: `boolean`, `float`, `int`, `string`, `error`
    * `any` type
@@ -10,16 +18,11 @@
    * union of the above types e.g. `int|string?`
    * `map<M>` where M any of the above types
    * `M[]` where `M` is either a type name `T` or `T?`, or a parenthesized union e.g. `(any|error)[]`
-* At module level
-   * function definitions
-      * no default arguments
-      * no rest arguments
-      * may be declared public
-   * const declarations
-      * not of structured types 
+   * a reference to a type defined by a type definition
 * Statements:
    * function/method call statement
-   * local variable declaration with explicit type and initializer
+   * local variable declaration with explicit type descriptor and initializer
+      * parentheses are not supported in the type descriptor; a type reference must be used instead
    * assignment
       * to variable `v = E;`
       * to member of a list or mapping `v[E1] = E2;`
@@ -59,21 +62,19 @@
 This deals explicitly with operator precedence and associativity.
 
 ```
-module-part = import-decl? module-decl*
+module-part = import-decl? module-defn*
 import-decl = "import" identifier "/" identifier ";"
 
-module-decl = function-defn | const-decl
+module-defn = function-defn | const-defn | type-defn
 
 function-defn = ["public"] "function" identifier signature stmt-block
 signature = "(" [param-list] ")" [ "returns" type-desc ]
 
-const-decl = ["public"] "const" [builtin-type-name] identifier "=" const-expr ";"
+const-defn = ["public"] "const" [builtin-type-name] identifier "=" const-expr ";"
 
-type-desc = union-type-desc | array-type-desc | map-type-desc 
+type-defn = ["public"] "type" identifier union-type-desc ";"
 
-union-type-desc =
-  optional-type-desc
-  | union-type-desc "|" optional-type-desc
+type-desc = union-type-desc | array-type-desc | map-type-desc | type-ref 
 
 union-type-desc =
   optional-type-desc
@@ -110,7 +111,15 @@ statement =
   | panic-stmt
   | match-stmt
  
-local-var-decl-stmt = ["final"] type-desc identifier "=" expression ";"
+local-var-decl-stmt = ["final"] inline-type-desc identifier "=" expression ";"
+
+# Same as type-desc except the parentheses are not allowed
+inline-type-desc = union-type-desc | inline-array-type-desc | map-type-desc | type-ref
+
+inline-array-type-desc = optional-type-desc "[" "]"
+
+# reference to a type definition
+type-ref = identifier
 
 call-stmt =
    function-call-expr ";"
@@ -314,6 +323,7 @@ The following restrictions apply to imported modules:
    * `error:message` langlib function
 * array and map types can specify the type of members
    * LHS of compound assignment statement allows member access
+* type definitions
 
 ## Implemented spec changes since 2021R1
 

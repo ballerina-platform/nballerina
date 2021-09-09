@@ -7,4 +7,6 @@
 /tagged_ptr
 /float_print
 /error_print
+/error_backtrace1
+/error_backtrace2
 *.stamp

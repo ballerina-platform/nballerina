@@ -3,6 +3,8 @@ import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.bir;
 import wso2/nballerina.err;
 
+type ResolveTypeError err:Semantic|err:Unimplemented;
+
 function createTypeMap(ModuleTable mod) returns map<t:SemType> {
     map<t:SemType> defns = {};
     foreach var defn in mod {
@@ -21,7 +23,7 @@ function createTypeMap(ModuleTable mod) returns map<t:SemType> {
     return defns;
 }
 
-function resolveTypes(t:Env env, ModuleTable mod) returns err:Semantic|err:Unimplemented? {
+function resolveTypes(t:Env env, ModuleTable mod) returns ResolveTypeError? {
     foreach var defn in mod {
         if defn is s:TypeDefn {
             _ = check resolveTypeDefn(env, mod, defn, 0);
@@ -36,7 +38,7 @@ function resolveTypes(t:Env env, ModuleTable mod) returns err:Semantic|err:Unimp
     }
 }
 
-function resolveFunctionSignature(t:Env env, ModuleTable mod, s:FunctionDefn defn) returns bir:FunctionSignature|err:Semantic|err:Unimplemented {
+function resolveFunctionSignature(t:Env env, ModuleTable mod, s:FunctionDefn defn) returns bir:FunctionSignature|ResolveTypeError {
     s:FunctionTypeDesc td = defn.typeDesc;  
     t:SemType[] params = [];
     // JBUG if this is done with a select, then it gets a bad, sad at runtime if the check gets an error
@@ -47,25 +49,25 @@ function resolveFunctionSignature(t:Env env, ModuleTable mod, s:FunctionDefn def
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
 
-function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, s:FunctionDefn defn, s:TypeDesc td) returns t:SemType|err:Semantic|err:Unimplemented {
+function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn defn, s:TypeDesc td) returns t:SemType|ResolveTypeError {
     t:SemType ty = check resolveTypeDesc(env, mod, defn, 0, td);
     if ty is t:UniformTypeBitSet
        && (t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL))
            || (ty == t:ANY || ty == t:TOP)) {
         return ty;
     }
-    t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(env, ty);
+    t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(env, ty, strict=true);
     if memberTy != () {
         return ty;
     }
-    memberTy = t:simpleMapMemberType(env, ty);
+    memberTy = t:simpleMapMemberType(env, ty, strict=true);
     if memberTy != () {
         return ty;
     }
     return err:unimplemented("unimplemented type descriptor", s:defnLocation(defn));
 }
 
-function resolveTypeDefn(t:Env env, ModuleTable mod, s:TypeDefn defn, int depth) returns t:SemType|err:Semantic|err:Unimplemented {
+function resolveTypeDefn(t:Env env, ModuleTable mod, s:TypeDefn defn, int depth) returns t:SemType|ResolveTypeError {
     t:SemType? t = defn.semType;
     if t is () {
         if depth == defn.cycleDepth {
@@ -91,7 +93,7 @@ function resolveTypeDefn(t:Env env, ModuleTable mod, s:TypeDefn defn, int depth)
     }
 }
 
-function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|err:Semantic|err:Unimplemented {
+function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
     match td {
         // These are easy
         "any" => { return t:ANY; }
@@ -163,7 +165,7 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, 
     if td is s:TypeDescRef {
         s:ModuleLevelDefn? defn = mod[td.ref];
         if defn is () {
-            return err:semantic(`reference to undefined type ${td.ref}`, err:location(modDefn.file, td.pos));
+            return err:semantic(`reference to undefined type ${td.ref}`, err:location(modDefn.part.file, td.pos));
         }
         else if defn is s:TypeDefn {
             return check resolveTypeDefn(env, mod, defn, depth);
@@ -173,7 +175,7 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, 
             return t;
         }
         else {
-            return err:semantic(`reference to non-type ${td.ref} in type-descriptor`, err:location(modDefn.file, td.pos));
+            return err:semantic(`reference to non-type ${td.ref} in type-descriptor`, err:location(modDefn.part.file, td.pos));
         }
     }
     if td is s:SingletonTypeDesc {
@@ -208,29 +210,7 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, 
     panic error("unimplemented type-descriptor");
 }
 
-function resolveInlineTypeDesc(t:Env env, s:InlineTypeDesc td) returns t:SemType {
-    if td is s:InlineArrayTypeDesc {
-        t:UniformTypeBitSet memberType = resolveInlineAltTypeDesc(td.rest);
-        if memberType == t:TOP {
-            return t:LIST;
-        }
-        t:ListDefinition d = new;
-        return d.define(env, [], memberType);
-    }
-    else if td is s:InlineMapTypeDesc {
-        t:UniformTypeBitSet memberType = resolveInlineAltTypeDesc(td.rest);
-        if memberType == t:TOP {
-            return t:MAPPING;
-        }
-        t:MappingDefinition d = new;
-        return d.define(env, [], memberType);
-    }
-    else {
-        return resolveInlineAltTypeDesc(td);
-    }
-}
-
-function resolveInlineAltTypeDesc(s:InlineAltTypeDesc|"()" td) returns t:UniformTypeBitSet {
+function resolveInlineBuiltinTypeDesc(s:InlineBuiltinTypeDesc td) returns t:UniformTypeBitSet {
     match td {
         "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }
@@ -238,12 +218,6 @@ function resolveInlineAltTypeDesc(s:InlineAltTypeDesc|"()" td) returns t:Uniform
         "float" => { return t:FLOAT; }
         "string" => { return t:STRING; }
         "error" => { return t:ERROR; }
-        "()" => { return t:NIL; }
-    }
-    if td is s:InlineUnionTypeDesc {
-        t:UniformTypeBitSet left = resolveInlineAltTypeDesc(td.left);
-        t:UniformTypeBitSet right = resolveInlineAltTypeDesc(td.right);
-        return left|right;
     }
     panic err:impossible("unreachable in resolveInlineBuiltinTypeDesc");
 }

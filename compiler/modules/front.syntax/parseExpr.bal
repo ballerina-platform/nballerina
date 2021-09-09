@@ -117,7 +117,7 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
 function finishTypeTestExpr(Tokenizer tok, Expr expr, boolean negated) returns TypeTestExpr|err:Syntax {
     tok.setMode(MODE_TYPE_DESC);
     check tok.advance();
-    InlineTypeDesc td = check parseInlineTypeDesc(tok);
+    TypeDesc td = check parseTypeDesc(tok);
     tok.setMode(MODE_NORMAL);
     return { td, left: expr, negated };
 }
@@ -201,7 +201,7 @@ function parseTypeCastExpr(Tokenizer tok) returns Expr|err:Syntax {
     tok.setMode(MODE_TYPE_DESC);
     Position pos = tok.currentPos();
     check tok.advance();
-    InlineTypeDesc td = check parseInlineTypeDesc(tok);
+    TypeDesc td = check parseTypeDesc(tok);
     check tok.expect(">");
     tok.setMode(MODE_NORMAL);
     Expr operand = check parseUnaryExpr(tok);
