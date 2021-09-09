@@ -123,8 +123,8 @@ typedef GC struct Mapping {
 typedef GC struct Error {
     TaggedPtr message;
     int64_t lineNumber;
-    int internalErrorCode;
-    char *internalErrorMessage;
+    int backtraceErrorCode;
+    char *backtraceErrorMessage;
     uint32_t nPCs;
     PC pcs[];
 } *ErrorPtr;
