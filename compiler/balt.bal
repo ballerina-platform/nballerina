@@ -139,20 +139,20 @@ function expect(string[] src) returns string[] {
 }
 
 function chooseBaltCaseOutputFilename(BaltTestCase t, int i) returns string {
-   return testKindToLetter(t.header.Test\-Case) + pad4(i.toString()) + "L" + pad4(t.offset.toString());
+   return pad4(i.toString()) + "L" + pad4(t.offset.toString()) + "-" + testKindToLetter(t.header.Test\-Case);
 }
 
 // JBUG: can't use Char gives "'string' value 'x' cannot be converted to 'lang.string:Char'
 function testKindToLetter(TestKind k) returns string {
     match k {
         "error" => {
-            return "E";
+            return "e";
         }
         "panic" => {
-            return "P";
+            return "p";
         }
         "output" => {
-            return "V";
+            return "v";
         }
         _ => {
             panic err:impossible();

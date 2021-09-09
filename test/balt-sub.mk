@@ -39,7 +39,7 @@ fail.txt: $(diff_files)
 	@>$@
 	@for f in $^; do \
 		if test -s $$f; then \
-			echo $(tdir)$$f failed | sed -e 's;result/.[0-9]*L;.balt:;'  -e 's;\.diff;;' >>$@; \
+			echo $(tdir)$$f failed | sed -e 's;result/[0-9]*L0*;.balt:;'  -e 's;-[vpe]\.diff;;' >>$@; \
 		fi \
 	done
 	@cat $@
