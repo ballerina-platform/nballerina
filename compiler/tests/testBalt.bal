@@ -6,12 +6,11 @@ import ballerina/file;
 // map of `BaltTestCase` as tuples. test framework needs each case presented as a tuple
 type TestCaseMap map<[string, int, BaltTestHeader, string[]]>;
 
-@test:Config {
-    dataProvider: parseBalts,
-    // disable because there are no .balt tests
-    // JBUG: #32575
-    enable: false
-}
+// disable because there are no .balt tests
+// JBUG: #32575
+// @test:Config {
+//     dataProvider: parseBalts
+// }
 function testBalt(string baltName, int offset, BaltTestHeader header, string[] lines) returns error? {
     string fakeFilename = baltName + ":" + offset.toString();
     CompileError? err =compileModule(dummyModuleId(fakeFilename), [{ lines }], {}, {});
