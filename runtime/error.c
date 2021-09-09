@@ -11,6 +11,7 @@
 #define SUCCESS 0
 #define FAIL 1
 
+#define NO_DEBUG_INFO -1
 // The reason to pick these negative numbers is that 
 // the libstacktrace already has error codes starting from -1
 #define NO_ERROR -2
@@ -24,6 +25,14 @@ typedef struct {
     char *message;
 } BacktraceError;
 
+// The lineNumver of the first entry of backtrace is passed
+// via _bal_panic. This lineNumber should be passed to the
+// callback function
+typedef struct {
+    BacktraceError error;
+    int64_t lineNumber;
+} BacktraceStartLine;
+
 typedef struct {
     // This must be first so we can use same error callback
     BacktraceError error;
@@ -34,6 +43,9 @@ typedef struct {
 
 static void storeBacktraceError(void *data, const char *msg, int errnum);
 static int printBacktraceLine(void *data, PC pc, const char *filename, int lineno, const char *function);
+static int printBacktraceStartLine(void *data, PC pc, const char *filename, int lineno, const char *function);
+static void printMissingSymbols(void *data, uintptr_t pc, const char *symname, uintptr_t symval, uintptr_t symsize);
+static void printLine(const char *filename, int64_t lineNumber, const char *function);
 static int storePC(void *data, PC pc);
 static void getSimpleBacktrace(SimpleBacktrace *p);
 static char *saveMessage(const char *msg);
@@ -116,13 +128,27 @@ static int storePC(void *data, PC pc) {
     return SUCCESS;
 }
 
-void _bal_error_backtrace_print(ErrorPtr ep) {
+void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start) {
     GC PC *pcs = ep->pcs;
     uint32_t nPCs = ep->nPCs;
     BacktraceError err = { ep->backtraceErrorCode, ep->backtraceErrorMessage };
-    for (uint32_t i = 0; i < nPCs; i++) {
-        backtrace_pcinfo(state, pcs[i], printBacktraceLine, storeBacktraceError, &err);
+    if (start <= nPCs) {
+        int64_t lineNumber = ep->lineNumber;
+        BacktraceStartLine backtraceStartLine = { err, ep->lineNumber };
+        backtrace_pcinfo(state, pcs[start], printBacktraceStartLine, storeBacktraceError, &backtraceStartLine);
+        err.code = backtraceStartLine.error.code;
+        err.message = backtraceStartLine.error.message;
+        if (err.code == NO_DEBUG_INFO) {
+            backtrace_syminfo(state, pcs[start], printMissingSymbols, storeBacktraceError, &err);
+        }
+        for (uint32_t i = start + 1; i < nPCs; i++) {
+            backtrace_pcinfo(state, pcs[i], printBacktraceLine, storeBacktraceError, &err);
+            if (err.code == NO_DEBUG_INFO) {
+                backtrace_syminfo(state, pcs[i], printMissingSymbols, storeBacktraceError, &err);
+            }
+        }
     }
+
     if (err.code == NO_ERROR) {
         return;
     }
@@ -150,11 +176,29 @@ void _bal_error_backtrace_print(ErrorPtr ep) {
 
 // Implementation of backtrace_full_callback
 static int printBacktraceLine(void *data, PC pc, const char *filename, int lineno, const char *function) {
-    if (function != NULL && filename != NULL) {
-        fprintf(stderr, "%s %s:%d\n", function, filename, lineno);
-        fflush(stderr);
-    }
+    printLine(filename, lineno, function);
     return SUCCESS;
+}
+
+// Implementation of backtrace_full_callback
+static int printBacktraceStartLine(void *data, PC pc, const char *filename, int lineno, const char *function) {
+    BacktraceStartLine* backtraceStart = data;
+    printLine(filename, backtraceStart->lineNumber, function);
+    return SUCCESS;
+}
+
+// Implementation of backtrace_syminfo_callback
+static void printMissingSymbols(void *data, uintptr_t pc, const char *symname, uintptr_t symval, uintptr_t symsize) {
+    printLine(NULL, 0, symname);
+}
+
+static void printLine(const char *filename, int64_t lineNumber, const char *function) {
+    if (function != NULL && filename != NULL) {
+        fprintf(stderr, "%s %s:%d\n", function, filename, lineNumber);
+    } else if (function != NULL) {
+        fprintf(stderr, "\t%s\n", function);
+    }
+    fflush(stderr);
 }
 
 // Implementation of backtrace_error_callback

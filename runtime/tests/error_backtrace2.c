@@ -23,7 +23,7 @@ void func2(j) {
     else {
         TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"), 24);
         ErrorPtr ep = (ErrorPtr)taggedToPtr(taggedErr);
-        _bal_error_backtrace_print(ep);
+        _bal_error_backtrace_print(ep, 1);
         PC *pcs = (PC *)ep->pcs;
         uint32_t nPCs = ep->nPCs;
         assert(nPCs >= 7);

@@ -49,6 +49,8 @@ const struct MediumString *panicMessageStrings[] = {
     PANIC_MESSAGE_ENTRY(PANIC_NO_FILLER)
 };
 
+#define BACKTRACE_START_INDEX 1
+
 TaggedPtr COLD _bal_panic_construct(PackedPanic err) {
     int code = err & 0xFF;
     int64_t lineNumber = err >> 8;
@@ -76,6 +78,7 @@ NORETURN COLD void _bal_panic(TaggedPtr error) {
     fwrite(bytes, 1, nBytes, stderr);
     putc('\n', stderr);
     fflush(stderr);
+    _bal_error_backtrace_print(ep, BACKTRACE_START_INDEX);
     abort();
 }
 
