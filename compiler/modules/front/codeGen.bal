@@ -1687,21 +1687,32 @@ function operandIsNil(bir:Operand operand) returns boolean {
 
 final readonly & bir:UniformOrderType[] UNIFORM_ORDER_TYPES = [t:UT_BOOLEAN, t:UT_INT, t:UT_FLOAT, t:UT_STRING];
 
+function operandUniformOrderType(t:SemType operandType) returns bir:OrderType? {
+    foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
+        t:UniformTypeBitSet optBasicType = t:uniformTypeUnion((1 << tc) | (1 << t:UT_NIL));
+        if t:isSubtypeSimple(operandType, optBasicType) {
+            t:UniformTypeBitSet basicType = t:uniformType(tc);
+            if t:isSubtypeSimple(operandType, basicType) {
+                return tc;
+            }
+            return <bir:OptOrderType> { opt: tc };
+        }
+    }
+}
+
 function operandOrderType(CodeGenContext cx, bir:Operand operand) returns bir:OrderType? {
     if operand is bir:Register {
         t:SemType operandTy = operand.semType;
         if operandTy === t:NIL {
             return ();
         }
-        t:UniformTypeBitSet arrTy = t:uniformTypeUnion(( 1 << t:UT_LIST_RW) | (1 << t:UT_LIST_RO));
+        t:UniformTypeBitSet arrTy = t:LIST;
         if t:isSubtypeSimple(operandTy, arrTy) {
             t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(cx.mod.env, operandTy, true);
             if memberTy is t:UniformTypeBitSet {
-                foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
-                    t:UniformTypeBitSet basicType = t:uniformType(tc);
-                    if (basicType & ~memberTy) == 0 {
-                        return <bir:ArrayOrderType> [{opt:tc}];
-                    }
+                bir:OrderType? ot = operandUniformOrderType(memberTy);
+                if ot is bir:UniformOrderType {
+                    return <bir:ArrayOrderType> [{opt:ot}];
                 }
             }
             else {
@@ -1709,16 +1720,7 @@ function operandOrderType(CodeGenContext cx, bir:Operand operand) returns bir:Or
             }
         }
         else {
-            foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
-                t:UniformTypeBitSet optBasicType = t:uniformTypeUnion((1 << tc) | (1 << t:UT_NIL));
-                if t:isSubtypeSimple(operandTy, optBasicType) {
-                    t:UniformTypeBitSet basicType = t:uniformType(tc);
-                    if t:isSubtypeSimple(operandTy, basicType) {
-                        return tc;
-                    }
-                    return <bir:OptOrderType> { opt: tc };
-                }
-            }
+            return operandUniformOrderType(operandTy);
         }
     }
     else {

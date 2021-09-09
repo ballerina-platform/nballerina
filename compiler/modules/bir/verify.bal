@@ -277,6 +277,34 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
     }
 }
 
+function verifyCompareOperandTypes(VerifyContext vc, t:UniformTypeBitSet expectType, CompareInsn insn, "memberType"?memberType=()) returns err:Semantic? {
+    foreach var operand in insn.operands {
+        t:SemType operandType;
+        if operand is Register {
+            operandType = operand.semType;
+        }
+        else {
+            operandType = t:constBasicType(operand);
+        }
+        if memberType is () {
+            if !t:isSubtypeSimple(operandType, expectType) {
+                return vc.err(`operand of ${insn.op} does not match order type`);
+            }
+        }
+        else {
+            t:UniformTypeBitSet? operandMemberTy = t:simpleArrayMemberType(vc.typeEnv(), operandType);
+            if operandMemberTy is t:UniformTypeBitSet {
+                if !t:isSubtypeSimple(operandMemberTy, expectType) {
+                    return vc.err(`operand of ${insn.op} are not same array type`);
+                }
+            }
+            else {
+                panic err:impossible("Failed to get array member type");
+            }
+        }
+    }
+}
+
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
     t:UniformTypeBitSet expectType;
     t:UniformTypeBitSet? memberType = ();
@@ -288,8 +316,12 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
         expectType  = t:uniformType(ot);
     }
     else {
-        expectType = t:uniformTypeUnion(( 1 << t:UT_LIST_RW) | (1 << t:UT_LIST_RO));
+        expectType = t:LIST;
         memberType = t:uniformType(ot[0].opt);
+    }
+    check verifyCompareOperandTypes(vc, expectType, insn);
+    if memberType is t:UniformTypeBitSet {
+        check verifyCompareOperandTypes(vc, memberType, insn, "memberType");
     }
     foreach var operand in insn.operands {
         t:SemType operandType;
