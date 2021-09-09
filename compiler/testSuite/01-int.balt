@@ -1,8 +1,0 @@
-Test-Case: output
-Labels: int-literal
-
-import ballerina/io;
-
-public function main() {
-    io:println(42); // @output 42
-}
