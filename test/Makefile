@@ -4,9 +4,10 @@ TDIRS= $(sort $(basename $(notdir $(wildcard ../compiler/testSuite/*))))
 
 $(TARGETS): $(TDIRS)
 
+# The filter is so we can say e.g. make 07-error
 $(TDIRS):
 	mkdir -p out/$@
-	$(MAKE) -C out/$@ -f ../../sub.mk tdir=$@ $(MAKECMDGOALS)
+	$(MAKE) -C out/$@ -f ../../sub.mk tdir=$@ $(filter-out $@, $(MAKECMDGOALS))
 
 clean:
 	-rm -fr out
