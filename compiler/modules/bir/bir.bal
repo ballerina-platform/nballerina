@@ -16,6 +16,7 @@ public type Module object {
     // Get the File for a give part index
     public function getPartFile(int partIndex) returns File;
     public function getPartFiles() returns File[];
+    public function finish() returns err:Semantic?;
 };
 
 public type ModuleId readonly & record {|

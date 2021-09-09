@@ -58,6 +58,16 @@ class Module {
         return codeGenFunction(self, self.functionDefnSource[i], self.functionDefns[i].signature);
     }
    
+    public function finish() returns err:Semantic? {
+        foreach var part in self.parts {
+            foreach var [prefix, { decl, used }] in part.imports.entries() {
+                if !used {
+                    return err:semantic(`import ${prefix} unused`, loc=err:location(part.file, decl.pos));
+                }
+            }
+        }
+    }
+
     public function getFunctionDefns() returns readonly & bir:FunctionDefn[] {
         return self.functionDefns;
     }
@@ -65,7 +75,7 @@ class Module {
     public function getPrefixForModuleId(bir:ModuleId id, int partIndex) returns string? {
         foreach var [prefix, { moduleId }] in self.parts[partIndex].imports.entries() {
             if moduleId == id {
-                return  prefix;
+                return prefix;
             }
         }
         return ();

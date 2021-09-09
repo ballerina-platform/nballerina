@@ -541,6 +541,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code);
     }
+    check birMod.finish();
     return llMod;
 }
 
