@@ -7,7 +7,10 @@ import ballerina/file;
 type TestCaseMap map<[string, int, BaltTestHeader, string[]]>;
 
 @test:Config {
-    dataProvider: parseBalts
+    dataProvider: parseBalts,
+    // disable because there are no .balt tests
+    // JBUG: #32575
+    enable: false
 }
 function testBalt(string baltName, int offset, BaltTestHeader header, string[] lines) returns error? {
     string fakeFilename = baltName + ":" + offset.toString();
