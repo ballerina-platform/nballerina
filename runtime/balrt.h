@@ -433,10 +433,55 @@ static inline TaggedPtr ptrAddShiftedTag(UntypedPtr tp, uint64_t shiftedTag) {
     return (TaggedPtr)p;
 }
 
+static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
+    bool isLhsNull = lhs == NULL;
+    bool isRhsNull = rhs == NULL;
+    if (isLhsNull && isRhsNull) {
+        return EQ;
+    }
+    else if (isLhsNull || isRhsNull) {
+        return UN;
+    }
+    ListPtr lhsListPtr = taggedToPtr(lhs);
+    ListPtr rhsListPtr = taggedToPtr(rhs);
+    int64_t lhsLen = lhsListPtr->tpArray.length;
+    int64_t rhsLen = rhsListPtr->tpArray.length;
+    int64_t length;
+    if (lhsLen <= rhsLen) {
+        length = lhsLen;
+    }
+    else {
+        length = rhsLen;
+    }
+    GC TaggedPtr* lhsArr = lhsListPtr->tpArray.members;
+    GC TaggedPtr* rhsArr = rhsListPtr->tpArray.members;
+    for (int64_t i = 0; i < length; i++)
+    {
+        int64_t result = (*comparator)(lhsArr[i], rhsArr[i]);
+        if (result != EQ) {
+            return result;
+        }
+    }
+    if (lhsLen == rhsLen) {
+        return EQ;
+    }
+    if (lhsLen < rhsLen) {
+        return LT;
+    }
+    return GT;
+}
 
+static READONLY inline int64_t intArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    int64_t(*comparator)(TaggedPtr, TaggedPtr) = &taggedIntCompare;
+    return arrayCompare(lhs, rhs, comparator);
+}
 
+static READONLY inline int64_t floatArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    int64_t(*comparator)(TaggedPtr, TaggedPtr) = &taggedFloatCompare;
+    return arrayCompare(lhs, rhs, comparator);
+}
 
-
-
-
-
+static READONLY inline int64_t stringArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    int64_t(*comparator)(TaggedPtr, TaggedPtr) = &taggedStringCompare;
+    return arrayCompare(lhs, rhs, comparator);
+}

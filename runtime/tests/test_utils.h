@@ -43,3 +43,8 @@ TaggedPtr getNil() {
     ptr = NULL;
     return ptr;
 }
+
+TaggedPtr getArr() {
+    GC ListPtr *ptr = _bal_alloc(sizeof(ListPtr));
+    return ptrAddShiftedTag(ptr, ((uint64_t)TAG_LIST_RO|TAG_LIST_RW) << TAG_SHIFT);
+}

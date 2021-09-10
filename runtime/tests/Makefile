@@ -1,7 +1,7 @@
 # Make sure these are in .gitignore
 TESTPROGS=string_hash string_cmp string_concat string_len immediate_string tagged_ptr float_print error_print error_backtrace1 error_backtrace2
 # following will test balrt_inline, and must be named inlinert_*
-TESTINLINERTPROGS=inlinert_float inlinert_int inlinert_string
+TESTINLINERTPROGS=inlinert_float inlinert_int inlinert_string inlinert_list
 TESTPROG_STAMPS=$(addsuffix .stamp, $(TESTPROGS) $(TESTINLINERTPROGS))
 TESTPROG_PROF_RAW=$(addsuffix .profraw, $(TESTPROGS))
 TESTPROG_PROF = test.profdata
