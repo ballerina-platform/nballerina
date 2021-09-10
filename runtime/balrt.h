@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include <inttypes.h>
 
@@ -7,6 +8,11 @@
 #define TAG_MASK 0xFF
 #define UT_MASK 0x1F
 #define TAG_SHIFT 56
+
+#define UN -1
+#define LT 0
+#define EQ 1
+#define GT 2
 
 #define POINTER_MASK ((1L << TAG_SHIFT) - 1)
 
@@ -247,9 +253,68 @@ static READONLY inline int64_t taggedToInt(TaggedPtr p) {
     }
 }
 
+static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    bool isLhsNull = lhs == NULL;
+    bool isRhsNull = rhs == NULL;
+    if (isLhsNull && isRhsNull) {
+        return EQ;
+    }
+    else if (isLhsNull || isRhsNull) {
+        return UN;
+    }
+    int64_t lhsVal = taggedToInt(lhs);
+    int64_t rhsVal = taggedToInt(rhs);
+    if (lhsVal == rhsVal) {
+        return EQ;
+    }
+    if (lhsVal < rhsVal) {
+        return LT;
+    }
+    if (lhsVal > rhsVal) {
+        return GT;
+    }
+    return UN;
+}
+
 static READONLY inline double taggedToFloat(TaggedPtr p) {
     GC double *np = taggedToPtr(p);
     return *np;
+}
+
+static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    bool isLhsNull = lhs == NULL;
+    bool isRhsNull = rhs == NULL;
+    if (isLhsNull && isRhsNull) {
+        return EQ;
+    }
+    else if (isLhsNull || isRhsNull) {
+        return UN;
+    }
+    double lhsVal = taggedToFloat(lhs);
+    double rhsVal = taggedToFloat(rhs);
+    if (lhsVal == rhsVal) {
+        return EQ;
+    }
+    if (lhsVal < rhsVal) {
+        return LT;
+    }
+    if (lhsVal > rhsVal) {
+        return GT;
+    }
+    return UN;
+}
+
+
+static READONLY inline int64_t taggedStringCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    bool isLhsNull = lhs == NULL;
+    bool isRhsNull = rhs == NULL;
+    if (isLhsNull && isRhsNull) {
+        return EQ;
+    }
+    else if (isLhsNull || isRhsNull) {
+        return UN;
+    }
+    return _bal_string_cmp(lhs, rhs) + 1;
 }
 
 static READNONE inline StringLength immediateStringLength(uint64_t bits) {

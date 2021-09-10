@@ -90,9 +90,51 @@ void testFloatsToIntConvert() {
     }
 }
 
+void testFloatNilCmp() {
+    TaggedPtr a = _bal_float_to_tagged(5.0);
+    TaggedPtr b = _bal_float_to_tagged(100000.0);
+    TaggedPtr c = _bal_float_to_tagged(-123455.2);
+    TaggedPtr nil = getNil();
+    assert(_bal_float_compare(a, nil) == UN);
+    assert(_bal_float_compare(b, nil) == UN);
+    assert(_bal_float_compare(c, nil) == UN);
+    assert(_bal_float_compare(nil, a) == UN);
+    assert(_bal_float_compare(nil, b) == UN);
+    assert(_bal_float_compare(nil, c) == UN);
+    assert(_bal_float_compare(nil, nil) == EQ);
+}
+
+void testFloatFloatCmp() {
+    TaggedPtr a = _bal_float_to_tagged(0.33);
+    TaggedPtr b = _bal_float_to_tagged(-0.33);
+    TaggedPtr c = _bal_float_to_tagged(50000.0);
+    TaggedPtr d = _bal_float_to_tagged(-50000.0);
+    assert(_bal_float_compare(a, a) == EQ);
+    assert(_bal_float_compare(a, b) == GT);
+    assert(_bal_float_compare(a, c) == LT);
+    assert(_bal_float_compare(a, d) == GT);
+
+    assert(_bal_float_compare(b, a) == LT);
+    assert(_bal_float_compare(b, b) == EQ);
+    assert(_bal_float_compare(b, c) == LT);
+    assert(_bal_float_compare(b, d) == GT);
+
+    assert(_bal_float_compare(c, a) == GT);
+    assert(_bal_float_compare(c, b) == GT);
+    assert(_bal_float_compare(c, c) == EQ);
+    assert(_bal_float_compare(c, d) == GT);
+
+    assert(_bal_float_compare(d, a) == LT);
+    assert(_bal_float_compare(d, b) == LT);
+    assert(_bal_float_compare(d, c) == LT);
+    assert(_bal_float_compare(d, d) == EQ);
+}
+
 int main() {
     testFloatEq();
     testFloatExactEq();
     testFloatsToIntConvert();
+    testFloatNilCmp();
+    testFloatFloatCmp();
     return 0;
 }
