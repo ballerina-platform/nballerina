@@ -14,7 +14,7 @@ parent=`dirname $dir`
 out="$parent/actual/$b.txt"
 mkdir -p "$parent/actual"
 if test $kind == p; then
-    $("./$1" >/dev/null 2>"$out")
+    $("./$1" >/dev/null 2> >(head -n 1 > "$out"))
 else
     "./$1" >"$out"
 fi

@@ -25,7 +25,7 @@ typedef struct {
     char *message;
 } BacktraceError;
 
-// The lineNumver of the first entry of backtrace is passed
+// The lineNumber of the first backtrace entry is passed
 // via _bal_panic. This lineNumber should be passed to the
 // callback function
 typedef struct {
@@ -45,10 +45,15 @@ static void storeBacktraceError(void *data, const char *msg, int errnum);
 static int printBacktraceLine(void *data, PC pc, const char *filename, int lineno, const char *function);
 static int printBacktraceStartLine(void *data, PC pc, const char *filename, int lineno, const char *function);
 static void printMissingSymbols(void *data, uintptr_t pc, const char *symname, uintptr_t symval, uintptr_t symsize);
+// We know the first lineNumber and that can be used to create the first backtrace entry
+// even in NO_DEBUG_INFO case. Therefore we need seperate callback, to pass the lineNumber
+static void printInitialMissingSymbols(void *data, uintptr_t pc, const char *symname, uintptr_t symval, uintptr_t symsize);
 static void printLine(const char *filename, int64_t lineNumber, const char *function);
 static int storePC(void *data, PC pc);
 static void getSimpleBacktrace(SimpleBacktrace *p);
 static char *saveMessage(const char *msg);
+static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNumber, BacktraceError *error);
+static void processInitialPC(PC pc, int64_t lineNumber, BacktraceError *error);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     SimpleBacktrace simpleBacktrace;
@@ -129,24 +134,10 @@ static int storePC(void *data, PC pc) {
 }
 
 void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start) {
-    GC PC *pcs = ep->pcs;
     uint32_t nPCs = ep->nPCs;
     BacktraceError err = { ep->backtraceErrorCode, ep->backtraceErrorMessage };
-    if (start <= nPCs) {
-        int64_t lineNumber = ep->lineNumber;
-        BacktraceStartLine backtraceStartLine = { err, ep->lineNumber };
-        backtrace_pcinfo(state, pcs[start], printBacktraceStartLine, storeBacktraceError, &backtraceStartLine);
-        err.code = backtraceStartLine.error.code;
-        err.message = backtraceStartLine.error.message;
-        if (err.code == NO_DEBUG_INFO) {
-            backtrace_syminfo(state, pcs[start], printMissingSymbols, storeBacktraceError, &err);
-        }
-        for (uint32_t i = start + 1; i < nPCs; i++) {
-            backtrace_pcinfo(state, pcs[i], printBacktraceLine, storeBacktraceError, &err);
-            if (err.code == NO_DEBUG_INFO) {
-                backtrace_syminfo(state, pcs[i], printMissingSymbols, storeBacktraceError, &err);
-            }
-        }
+    if (start < nPCs) {
+        processPCs(ep->pcs, nPCs, start, ep->lineNumber, &err);
     }
 
     if (err.code == NO_ERROR) {
@@ -174,6 +165,34 @@ void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start) {
     fflush(stderr);
 }
 
+static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNumber, BacktraceError *error) {
+    // Handle the starting pc seperately
+    processInitialPC(pcs[start], lineNumber, error);
+    if (error->code == NO_DEBUG_INFO) {
+        for (uint32_t i = start + 1; i < nPCs; i++) {
+            // We do not need to pass error_callback because, already we have an error.
+            // Also we do not need to pass data because we do not use it
+            backtrace_syminfo(state, pcs[i], printMissingSymbols, NULL, NULL);
+        }
+    }
+    else {
+        for (uint32_t i = start + 1; i < nPCs; i++) {
+            backtrace_pcinfo(state, pcs[i], printBacktraceLine, storeBacktraceError, error);
+        }
+    }
+}
+
+static void processInitialPC(PC pc, int64_t lineNumber, BacktraceError *error) {
+    BacktraceStartLine backtraceStartLine = { { error->code, error->message }, lineNumber };
+    backtrace_pcinfo(state, pc, printBacktraceStartLine, storeBacktraceError, &backtraceStartLine);
+    if (backtraceStartLine.error.code == NO_DEBUG_INFO) {
+        // We do not need to pass error_callback because, already we have an error
+        backtrace_syminfo(state, pc, printInitialMissingSymbols, NULL, &backtraceStartLine);
+    }
+    error->code = backtraceStartLine.error.code;
+    error->message = backtraceStartLine.error.message;
+}
+
 // Implementation of backtrace_full_callback
 static int printBacktraceLine(void *data, PC pc, const char *filename, int lineno, const char *function) {
     printLine(filename, lineno, function);
@@ -182,7 +201,7 @@ static int printBacktraceLine(void *data, PC pc, const char *filename, int linen
 
 // Implementation of backtrace_full_callback
 static int printBacktraceStartLine(void *data, PC pc, const char *filename, int lineno, const char *function) {
-    BacktraceStartLine* backtraceStart = data;
+    BacktraceStartLine *backtraceStart = data;
     printLine(filename, backtraceStart->lineNumber, function);
     return SUCCESS;
 }
@@ -192,10 +211,17 @@ static void printMissingSymbols(void *data, uintptr_t pc, const char *symname, u
     printLine(NULL, 0, symname);
 }
 
+// Implementation of backtrace_syminfo_callback
+static void printInitialMissingSymbols(void *data, uintptr_t pc, const char *symname, uintptr_t symval, uintptr_t symsize) {
+    BacktraceStartLine *backtraceStartLine = data;
+    printLine(NULL, backtraceStartLine->lineNumber, symname);
+}
+
 static void printLine(const char *filename, int64_t lineNumber, const char *function) {
     if (function != NULL && filename != NULL) {
         fprintf(stderr, "%s %s:%d\n", function, filename, lineNumber);
-    } else if (function != NULL) {
+    } 
+    else if (function != NULL) {
         fprintf(stderr, "\t%s\n", function);
     }
     fflush(stderr);

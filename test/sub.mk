@@ -45,7 +45,7 @@ else
 compile.stamp: $(bal_files)
 	-rm -fr llnew
 	mkdir -p llnew
-	$(JAVA) -jar $(COMPILER_JAR) --outDir llnew $?
+	$(JAVA) -jar $(COMPILER_JAR) --debug --outDir llnew $?
 	mkdir -p ll
 	cd llnew; for f in *.ll; do cmp -s $$f ../ll/$$f || mv $$f ../ll/; done
 	-rm -fr llnew
