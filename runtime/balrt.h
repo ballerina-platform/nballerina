@@ -210,7 +210,7 @@ extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
 extern void _bal_error_backtrace_print(ErrorPtr ep);
 // Returns an error value
 extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
-
+extern NORETURN COLD void _bal_panic_internal(PanicCode code);
 static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;
 }

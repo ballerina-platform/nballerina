@@ -7,6 +7,9 @@ int64_t _Barray__length(TaggedPtr p) {
 
 void _Barray__push(TaggedPtr p, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
+    if ((lp->desc & (1 << (getTag(val) & UT_MASK))) == 0) {
+        _bal_panic_internal(PANIC_LIST_STORE);
+    }
     int64_t len = lp->tpArray.length;
     if (unlikely(len >= lp->tpArray.capacity)) {
         _bal_array_grow(&(lp->gArray), 0, TAGGED_PTR_SHIFT);
