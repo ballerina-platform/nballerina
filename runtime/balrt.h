@@ -282,6 +282,11 @@ static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
     return taggedPrimitiveCompare(lhs, rhs, &taggedIntComparator);
 }
 
+static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    int64_t(*comparator)(TaggedPtr, TaggedPtr) = &taggedIntComparator;
+    return taggedPrimitiveCompare(lhs, rhs, comparator);
+}
+
 static READONLY inline double taggedToFloat(TaggedPtr p) {
     GC double *np = taggedToPtr(p);
     return *np;
@@ -305,6 +310,11 @@ static READONLY inline int64_t taggedFloatComparator(TaggedPtr lhs, TaggedPtr rh
 
 static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) {
     return taggedPrimitiveCompare(lhs, rhs, &taggedFloatComparator);
+}
+
+static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    int64_t(*comparator)(TaggedPtr, TaggedPtr) = &taggedFloatComparator;
+    return taggedPrimitiveCompare(lhs, rhs, comparator);
 }
 
 
