@@ -219,21 +219,23 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is BinaryTypeDesc {
         // subset 6 does not allow parentheses
         // so we need to take care not to add them unnecessarily
-        boolean noWrap = wrap == false || wrap == td.op;
-        if !noWrap {
-            w.push("(");
-        }
-        typeDescToWords(w, td.left, td.op);
         // JBUG error if `===` used instead if `is`
+
         if td.op === "|" && td.right is "()" {
+            typeDescToWords(w, td.left, wrap);
             w.push(CLING, "?");
         }
         else {
+            boolean noWrap = wrap == false || wrap == td.op;
+            if !noWrap {
+                w.push("(");
+            }
+            typeDescToWords(w, td.left, td.op);
             w.push(td.op);
             typeDescToWords(w, td.right, td.op);
-        }
-        if !noWrap {
-            w.push(")");
+            if !noWrap {
+                w.push(")");
+            }
         }
     }
     else {

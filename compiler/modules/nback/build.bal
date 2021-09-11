@@ -722,7 +722,8 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
     llvm:Value[] args = [];
-    t:SemType[] paramTypes = funcRef.signature.paramTypes;
+    bir:FunctionSignature signature = funcRef.erasedSignature;
+    t:SemType[] paramTypes = signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
         args.push(check buildRepr(builder, scaffold, insn.args[i], check semTypeRepr(paramTypes[i])));
     }
@@ -733,10 +734,10 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
         func = scaffold.getFunctionDefn(funcSymbol.identifier);
     }
     else {
-        func = check buildFunctionDecl(scaffold, funcSymbol, funcRef.signature);
+        func = check buildFunctionDecl(scaffold, funcSymbol, signature);
     }  
     llvm:Value? retValue = builder.call(func, args);
-    RetRepr retRepr = check semTypeRetRepr(funcRef.signature.returnType);
+    RetRepr retRepr = check semTypeRetRepr(signature.returnType);
     check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 

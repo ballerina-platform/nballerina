@@ -1334,7 +1334,7 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
         signature = <bir:FunctionSignature>defn.signature;
         boolean isPublic = defn.vis == "public";
         bir:InternalSymbol symbol = { identifier, isPublic };
-        return { symbol, signature };
+        return { symbol, signature, erasedSignature: signature };
     }
     else {
         err:Message msg;
@@ -1362,7 +1362,7 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
         }
         else {
             bir:ExternalSymbol symbol = { module: moduleId, identifier };
-            return { symbol, signature };
+            return { symbol, signature, erasedSignature: signature };
         }
     }
 }
@@ -1379,10 +1379,57 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
         }
         else {
             bir:ExternalSymbol symbol = { module: moduleId, identifier: methodName };
-            return { symbol, signature }; 
+            bir:FunctionSignature erasedSignature = signature;
+            if t[0] == "array" {
+                erasedSignature = signature;
+                signature = instantiateArrayFunctionSignature(cx.mod.env, signature, (<bir:Register>target).semType);
+            }
+            return { symbol, signature, erasedSignature }; 
         }
     }
     return err:unimplemented(`cannot resolve ${methodName} to lang lib function`);
+}
+
+type Counter record {|
+    int n = 0;
+|};
+
+function instantiateArrayFunctionSignature(t:Env env, bir:FunctionSignature sig, t:SemType arrayType) returns bir:FunctionSignature {
+    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(env, arrayType);
+    Counter counter = {};
+    bir:FunctionSignature inst = instantiateSignature(sig, memberType, arrayType, counter);
+    if counter.n > 1 {
+        return inst;
+    }
+    return sig;
+}
+
+function instantiateSignature(bir:FunctionSignature sig, t:UniformTypeBitSet memberType, t:SemType containerType, Counter counter) returns bir:FunctionSignature {
+    bir:SemType? restParamType = sig.restParamType;
+    bir:SemType[] paramTypes = from var ty in sig.paramTypes select instantiateType(ty, memberType, containerType, counter);
+    return {
+        returnType: instantiateType(sig.returnType, memberType, containerType, counter),
+        paramTypes: paramTypes.cloneReadOnly(),
+        restParamType: restParamType is () ? () : instantiateType(restParamType, memberType, containerType, counter)
+    };
+}
+
+function instantiateType(t:SemType ty, t:UniformTypeBitSet memberType, t:SemType containerType, Counter counter) returns t:SemType {
+    if ty == t:LIST {
+        counter.n += 1;
+        return containerType;
+    }
+    else if ty == t:MAPPING {
+        counter.n += 1;
+        return containerType;
+    }
+    else if ty == t:TOP {
+        counter.n += 1;
+        return memberType;
+    }
+    else {
+        return ty;
+    }
 }
 
 function lookupVarRefBinding(CodeGenContext cx, string name, Environment env) returns Binding|CodeGenError {
