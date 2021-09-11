@@ -68,9 +68,6 @@ NORETURN COLD void _bal_panic_internal(PanicCode code) {
 NORETURN COLD void _bal_panic(TaggedPtr error) {
     fputs("panic: ", stderr);
     ErrorPtr ep = taggedToPtr(error);
-    if (ep->lineNumber > 0) {
-        fprintf(stderr, "line %" PRId64 ": ", ep->lineNumber);
-    }
     TaggedPtr msg = ep->message;
     StringLength len = taggedStringLength(msg);
     int64_t nBytes = len.nBytes;
