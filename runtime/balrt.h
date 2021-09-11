@@ -53,10 +53,7 @@ typedef GC void *UntypedPtr;
 typedef GC int64_t *IntPtr;
 typedef GC double *FloatPtr;
 
-typedef int PanicCode;
-// An internally-generated panic is currently represented as int with the error code in the lo byte
-// and line number right-shifted 8.
-typedef uint64_t PackedPanic;
+typedef int64_t PanicCode;
 
 typedef uintptr_t PC;
 
@@ -122,7 +119,6 @@ typedef GC struct Mapping {
 
 typedef GC struct Error {
     TaggedPtr message;
-    int64_t lineNumber;
     int backtraceErrorCode;
     char *backtraceErrorMessage;
     uint32_t nPCs;
@@ -206,10 +202,10 @@ extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
 extern READONLY bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
-extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
+extern TaggedPtr _bal_error_construct(TaggedPtr message);
 extern void _bal_error_backtrace_print(ErrorPtr ep);
 // Returns an error value
-extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
+extern TaggedPtr COLD _bal_panic_construct(PanicCode panicCode);
 
 static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;

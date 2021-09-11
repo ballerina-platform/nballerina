@@ -135,7 +135,7 @@ final RuntimeFunction errorConstructFunction = {
     name: "error_construct",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+        paramTypes: [LLVM_TAGGED_PTR]
     },
     attrs: []
 };
@@ -547,7 +547,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
 
 function createModuleDI(llvm:Module mod, bir:File[] partFiles) returns ModuleDI {
     DIBuilder builder = mod.createDIBuilder();
-    mod.addModuleFlag("error", ["Debug Info Version", 3]);
+    mod.addModuleFlag("warning", ["Debug Info Version", 3]);
     DIFile[] files = from var f in partFiles select builder.createFile(f.filename(), f.directory() ?: "");
     DICompileUnit compileUnit = builder.createCompileUnit(file=files[0]);
     DISubroutineType funcType = builder.createSubroutineType(files[0]);
@@ -880,14 +880,11 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
 }
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
+    scaffold.setDebugLocation(builder, insn.position);
     llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, errorConstructFunction),
-                                                [
-                                                    check buildString(builder, scaffold, insn.operand),
-                                                    llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.position))
-                                                ]);
+                                                [ check buildString(builder, scaffold, insn.operand) ]);
     builder.store(value, scaffold.address(insn.result));
 }
-
 
 function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
     llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringConcatFunction),
@@ -1549,17 +1546,15 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
     return err:unimplemented("unimplemented narrowing conversion required");
 }
 
-function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
-    // JBUG #31753 cast
-    return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, <int>panicIndex | (scaffold.lineNumber(pos) << 8)));
+function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position position) returns llvm:PointerValue {
+    return buildErrorForPanic(builder, scaffold, llvm:constInt(LLVM_INT, panicIndex), position);
 }
 
-function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicIndex, bir:Position pos) returns llvm:PointerValue {
-    return buildErrorForPackedPanic(builder, scaffold, builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, scaffold.lineNumber(pos) << 8)));
-}
-
-function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic) returns llvm:PointerValue {
-    return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, panicConstructFunction), [packedPanic]);
+function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicIndex, bir:Position position) returns llvm:PointerValue {
+    scaffold.setDebugLocation(builder, position);
+    var result = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, panicConstructFunction), [panicIndex]);
+    scaffold.clearDebugLocation(builder);
+    return result;
 }
 
 function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {

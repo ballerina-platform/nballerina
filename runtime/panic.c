@@ -49,22 +49,17 @@ const struct MediumString *panicMessageStrings[] = {
     PANIC_MESSAGE_ENTRY(PANIC_NO_FILLER)
 };
 
-TaggedPtr COLD _bal_panic_construct(PackedPanic err) {
-    int code = err & 0xFF;
-    int64_t lineNumber = err >> 8;
+TaggedPtr COLD _bal_panic_construct(PanicCode code) {
     if (code <= 0 || code >= sizeof(panicMessageStrings)/sizeof(panicMessageStrings[0]))
         abort();
     MediumStringPtr sp = (MediumStringPtr)panicMessageStrings[code];
     TaggedPtr msg = ptrAddFlags(sp, (uint64_t)TAG_STRING << TAG_SHIFT);
-    return _bal_error_construct(msg, lineNumber);
+    return _bal_error_construct(msg);
 }
 
 NORETURN COLD void _bal_panic(TaggedPtr error) {
     fputs("panic: ", stderr);
     ErrorPtr ep = taggedToPtr(error);
-    if (ep->lineNumber > 0) {
-        fprintf(stderr, "line %" PRId64 ": ", ep->lineNumber);
-    }
     TaggedPtr msg = ep->message;
     StringLength len = taggedStringLength(msg);
     int64_t nBytes = len.nBytes;
@@ -72,6 +67,7 @@ NORETURN COLD void _bal_panic(TaggedPtr error) {
     fwrite(bytes, 1, nBytes, stderr);
     putc('\n', stderr);
     fflush(stderr);
+    _bal_error_backtrace_print(ep);
     abort();
 }
 

@@ -21,7 +21,7 @@ void func2(j) {
         func1(decrement(j));
     } 
     else {
-        TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"), 24);
+        TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"));
         ErrorPtr ep = (ErrorPtr)taggedToPtr(taggedErr);
         _bal_error_backtrace_print(ep);
         PC *pcs = (PC *)ep->pcs;

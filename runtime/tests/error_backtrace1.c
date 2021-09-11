@@ -4,7 +4,7 @@
 HASH_DEFINE_KEY;
 
 void func3() {
-    TaggedPtr taggedErr = _bal_error_construct(makeString("Func3 error"), 7);
+    TaggedPtr taggedErr = _bal_error_construct(makeString("Func3 error"));
     ErrorPtr ep = (ErrorPtr)taggedToPtr(taggedErr);
     _bal_error_backtrace_print(ep);
     PC *pcs = (PC *)ep->pcs;
@@ -13,7 +13,7 @@ void func3() {
 }
 
 void func2() {
-    TaggedPtr taggedErr = _bal_error_construct(makeString("Func2 error"), 16);
+    TaggedPtr taggedErr = _bal_error_construct(makeString("Func2 error"));
     ErrorPtr ep = (ErrorPtr)taggedToPtr(taggedErr);
     _bal_error_backtrace_print(ep);
     PC *pcs = (PC *)ep->pcs;
@@ -23,7 +23,7 @@ void func2() {
 }
 
 void func1() {
-    TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"), 26);
+    TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"));
     ErrorPtr ep = (ErrorPtr)taggedToPtr(taggedErr);
     _bal_error_backtrace_print(ep);
     PC *pcs = (PC *)ep->pcs;

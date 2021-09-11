@@ -38,7 +38,7 @@ static int storePC(void *data, PC pc);
 static void getSimpleBacktrace(SimpleBacktrace *p);
 static char *saveMessage(const char *msg);
 
-TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
+TaggedPtr _bal_error_construct(TaggedPtr message) {
     SimpleBacktrace simpleBacktrace;
     getSimpleBacktrace(&simpleBacktrace);
     uint32_t nPCs = simpleBacktrace.nPCs;
@@ -49,7 +49,6 @@ TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     }
     ErrorPtr ep = _bal_alloc(errorSize);
     ep->message = message;
-    ep->lineNumber = lineNumber;
     ep->nPCs = nPCs;
     PC *pcs = simpleBacktrace.pcs;
     if (pcs != NULL) {
@@ -150,10 +149,24 @@ void _bal_error_backtrace_print(ErrorPtr ep) {
 
 // Implementation of backtrace_full_callback
 static int printBacktraceLine(void *data, PC pc, const char *filename, int lineno, const char *function) {
-    if (function != NULL && filename != NULL) {
-        fprintf(stderr, "%s %s:%d\n", function, filename, lineno);
-        fflush(stderr);
+    // API docs say any of filename, lineno and function may be 0 meaning unavailable
+    const char *sep = "    ";
+    if (function != NULL) {
+        fprintf(stderr, "%s%s", sep, function);
+        sep = " ";
     }
+    if (filename != NULL) {
+        fprintf(stderr, "%s%s", sep, filename);
+        sep = ":";
+    }
+    if (lineno != 0) {
+        fprintf(stderr, "%s%d", sep, lineno);
+    }
+    else if (sep[1] != '\0') {
+        fprintf(stderr, "%s(no info about stack frame)", sep);
+    }
+    putc('\n', stderr);
+    fflush(stderr);
     return SUCCESS;
 }
 
