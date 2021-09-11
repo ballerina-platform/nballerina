@@ -35,5 +35,3 @@ int64_t _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs) {
 int64_t _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return stringArrayCompare(lhs, rhs);
 }
-
-//TODO: boolean array compare

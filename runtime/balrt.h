@@ -253,7 +253,7 @@ static READONLY inline int64_t taggedToInt(TaggedPtr p) {
     }
 }
 
-static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
+static READONLY inline int64_t taggedPrimitiveCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
     bool isLhsNull = lhs == NULL;
     bool isRhsNull = rhs == NULL;
     if (isLhsNull && isRhsNull) {
@@ -262,6 +262,10 @@ static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
     else if (isLhsNull || isRhsNull) {
         return UN;
     }
+    return (*comparator)(lhs, rhs);
+}
+
+static READONLY inline int64_t taggedIntComparator(TaggedPtr lhs, TaggedPtr rhs) {
     int64_t lhsVal = taggedToInt(lhs);
     int64_t rhsVal = taggedToInt(rhs);
     if (lhsVal == rhsVal) {
@@ -276,20 +280,18 @@ static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
     return UN;
 }
 
+static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    int64_t(*comparator)(TaggedPtr, TaggedPtr) = &taggedIntComparator;
+    return taggedPrimitiveCompare(lhs, rhs, comparator);
+}
+
 static READONLY inline double taggedToFloat(TaggedPtr p) {
     GC double *np = taggedToPtr(p);
     return *np;
 }
 
-static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    bool isLhsNull = lhs == NULL;
-    bool isRhsNull = rhs == NULL;
-    if (isLhsNull && isRhsNull) {
-        return EQ;
-    }
-    else if (isLhsNull || isRhsNull) {
-        return UN;
-    }
+
+static READONLY inline int64_t taggedFloatComparator(TaggedPtr lhs, TaggedPtr rhs) {
     double lhsVal = taggedToFloat(lhs);
     double rhsVal = taggedToFloat(rhs);
     if (lhsVal == rhsVal) {
@@ -302,6 +304,11 @@ static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) 
         return GT;
     }
     return UN;
+}
+
+static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    int64_t(*comparator)(TaggedPtr, TaggedPtr) = &taggedFloatComparator;
+    return taggedPrimitiveCompare(lhs, rhs, comparator);
 }
 
 
