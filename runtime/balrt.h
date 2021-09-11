@@ -462,8 +462,7 @@ static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_
     }
     GC TaggedPtr* lhsArr = lhsListPtr->tpArray.members;
     GC TaggedPtr* rhsArr = rhsListPtr->tpArray.members;
-    for (int64_t i = 0; i < length; i++)
-    {
+    for (int64_t i = 0; i < length; i++) {
         int64_t result = (*comparator)(lhsArr[i], rhsArr[i]);
         if (result != EQ) {
             return result;

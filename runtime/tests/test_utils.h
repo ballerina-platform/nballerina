@@ -42,12 +42,11 @@ double randDouble(bool isNan) {
 }
 
 TaggedPtr getNil() {
-    GC char* ptr = (GC char*)malloc(sizeof(int64_t));
-    ptr = NULL;
+    GC char* ptr = NULL;
     return ptr;
 }
 
 TaggedPtr getArr() {
-    GC ListPtr *ptr = _bal_alloc(sizeof(ListPtr));
+    GC ListPtr *ptr = _bal_alloc(sizeof(ListPtr) + 64);
     return ptrAddShiftedTag(ptr, ((uint64_t)TAG_LIST_RO|TAG_LIST_RW) << TAG_SHIFT);
 }
