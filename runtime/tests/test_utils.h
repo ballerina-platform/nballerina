@@ -42,6 +42,6 @@ double randDouble(bool isNan) {
 }
 
 TaggedPtr getNil() {
-    GC char* ptr = NULL;
+    GC char *ptr = NULL;
     return ptr;
 }
