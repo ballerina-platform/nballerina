@@ -283,8 +283,7 @@ static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
 }
 
 static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    int64_t(*comparator)(TaggedPtr, TaggedPtr) = &taggedIntComparator;
-    return taggedPrimitiveCompare(lhs, rhs, comparator);
+    return taggedPrimitiveCompare(lhs, rhs, &taggedIntComparator);
 }
 
 static READONLY inline double taggedToFloat(TaggedPtr p) {
@@ -313,8 +312,7 @@ static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) 
 }
 
 static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    int64_t(*comparator)(TaggedPtr, TaggedPtr) = &taggedFloatComparator;
-    return taggedPrimitiveCompare(lhs, rhs, comparator);
+    return taggedPrimitiveCompare(lhs, rhs, &taggedFloatComparator);
 }
 
 
