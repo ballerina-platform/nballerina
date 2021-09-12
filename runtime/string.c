@@ -225,7 +225,7 @@ char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoints, Tag
     }
     else {
         if (unlikely(lengthInBytes > INT64_MAX)) {
-            _bal_panic(PANIC_STRING_TOO_LONG);
+            _bal_panic(_bal_panic_construct(PANIC_STRING_TOO_LONG));
         }
         uint64_t size = largeStringSize(lengthInBytes);
         UntypedPtr p = _bal_alloc(size);

@@ -24,7 +24,7 @@ function modulePartToWords(Word[] w, ModulePart mod) {
             constDefnToWords(w, defn);
         }
         else {
-            // XXX type defns are not part of the current subset
+            typeDefnToWords(w, defn);
         }
     }
 }
@@ -63,6 +63,17 @@ function constDefnToWords(Word[] w, ConstDefn defn) {
     w.push(<Word>LF);
 }
 
+function typeDefnToWords(Word[] w, TypeDefn defn) {
+    if defn.vis != () {
+        w.push(<Word>defn.vis);
+    }
+    w.push("type", defn.name);
+    typeDescToWords(w, defn.td);
+    w.push(";");
+    // JBUG cast
+    w.push(<Word>LF);
+}
+
 function stmtToWords(Word[] w, Stmt stmt) {
     if stmt is VarDeclStmt {
         if stmt.isFinal {
@@ -75,10 +86,15 @@ function stmtToWords(Word[] w, Stmt stmt) {
     } 
     else if stmt is ReturnStmt {
         w.push("return");
-        Expr ret = stmt.returnExpr;
-        if !(ret is ConstValueExpr) || ret.value != () {
-            exprToWords(w, stmt.returnExpr);
+        Expr retExpr = stmt.returnExpr;
+        if !(retExpr is ConstValueExpr) || retExpr.value != () {
+            exprToWords(w, retExpr);
         }
+        w.push(";");
+    }
+    else if stmt is PanicStmt {
+        w.push("panic");
+        exprToWords(w, stmt.panicExpr);
         w.push(";");
     }
     else if stmt is AssignStmt {
@@ -175,7 +191,7 @@ function blockToWords(Word[] w, Stmt[] body) {
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
-    if td is InlineBasicTypeDesc|ANY {
+    if td is BuiltinTypeDesc {
         w.push(td);
         return;
     }
@@ -189,8 +205,7 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         w.push(CLING, ">");
         return;
     }
-   
-    if td is ListTypeDesc {
+    else if td is ListTypeDesc {
         if wrap != false {
             w.push("(");
         }
@@ -204,25 +219,27 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is BinaryTypeDesc {
         // subset 6 does not allow parentheses
         // so we need to take care not to add them unnecessarily
-        boolean noWrap = wrap == false || wrap == td.op;
-        if !noWrap {
-            w.push("(");
-        }
-        typeDescToWords(w, td.left, td.op);
         // JBUG error if `===` used instead if `is`
+
         if td.op === "|" && td.right is "()" {
+            typeDescToWords(w, td.left, wrap);
             w.push(CLING, "?");
         }
         else {
+            boolean noWrap = wrap == false || wrap == td.op;
+            if !noWrap {
+                w.push("(");
+            }
+            typeDescToWords(w, td.left, td.op);
             w.push(td.op);
             typeDescToWords(w, td.right, td.op);
-        }
-        if !noWrap {
-            w.push(")");
+            if !noWrap {
+                w.push(")");
+            }
         }
     }
     else {
-        panic err:unimplemented(`typedesc not supported ${td.toString()}`);
+        panic err:impossible(`typedesc not implemented in typeDescToWords: ${td.toString()}`);
     }
    
 }
@@ -251,6 +268,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(val.toString());
         }
     }
+    else if expr is FloatZeroExpr {
+        exprToWords(w, expr.expr, wrap);
+    }
     else if expr is IntLiteralExpr {
         if expr.base == 16 {
             w.push("0x" + expr.digits.toUpperAscii());
@@ -278,6 +298,11 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         }
         w.push(expr.funcName, CLING, "(");
         exprsToWords(w, expr.args);
+        w.push(")");
+    }
+    else if expr is ErrorConstructorExpr {
+        w.push("error", CLING, "(");
+        exprToWords(w, expr.message);
         w.push(")");
     }
     else if expr is BinaryExpr {
@@ -309,6 +334,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push("(");
         }
         exprToWords(w, expr.left, true);
+        if expr.negated {
+            w.push("!");
+        }
         w.push("is");
         typeDescToWords(w, expr.td);
         if wrap {
@@ -452,7 +480,7 @@ function alwaysClingBefore(string a) returns boolean {
 }
 
 // Useful for debugging
-function exprToString(Expr expr) returns string {
+public function exprToString(Expr expr) returns string {
     Word[] words = [];
     exprToWords(words, expr);
     return "\n".'join(...wordsToLines(words));

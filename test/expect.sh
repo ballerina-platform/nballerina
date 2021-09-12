@@ -8,8 +8,8 @@ if test ! -f "$1"; then
     echo usage: $0 foo.bal >&2
     exit 1
 fi
-kind=`basename "$1" .bal | head -c 1`
-if test $kind == P; then
+kind=`basename "$1" .bal | sed -e 's/^.*-//'`
+if test $kind == p; then
     grep -n '// *@panic' "$1"  | sed -e 's/^\([1-9][0-9]*\):.*@panic *\(.*\)/panic: line \1: \2/' 
 else
     sed -ne 's;^.* // *@output  *;;p' "$1" 

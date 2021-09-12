@@ -2,9 +2,12 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.err;
 
+public type Position err:Position;
 
 public type ModulePart record {|
     ImportDecl? importDecl;
+    SourceFile file;
+    int partIndex;
     ModuleLevelDefn[] defns;
 |};
 
@@ -15,15 +18,17 @@ public type Visibility "public"?;
 public type ImportDecl record {|
     string org;
     string module;
+    Position pos;
 |};
 
 public type FunctionDefn record {|
     readonly string name;
+    ModulePart part;
     Visibility vis;
     FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
-    err:Position pos;
+    Position pos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
 |};
@@ -31,16 +36,18 @@ public type FunctionDefn record {|
 public type ResolvedConst readonly & [t:SemType, t:Value];
 public type ConstDefn record {|
     readonly string name;
+    ModulePart part;
+    InlineBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
-    err:Position pos;
+    Position pos;
     ResolvedConst|false? resolved = ();    
 |};
 
-public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt;
+public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr;
-public type Expr NumericLiteralExpr|ConstValueExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
-public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
+public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
 public type AssignStmt record {|
@@ -52,7 +59,7 @@ public type CompoundAssignStmt record {|
     VarRefExpr lValue;
     Expr expr;
     BinaryArithmeticOp|BinaryBitwiseOp op; 
-    err:Position pos;
+    Position pos;
 |};
 
 // L-value expression
@@ -60,6 +67,10 @@ public type LExpr VarRefExpr|MemberAccessLExpr;
 
 public type ReturnStmt record {|
     Expr returnExpr;
+|};
+
+public type PanicStmt record {|
+    Expr panicExpr;
 |};
 
 public type IfElseStmt record {|
@@ -84,7 +95,7 @@ const WildcardMatchPattern = "_";
 
 public type ConstPattern record {|
     SimpleConstExpr expr;
-    err:Position pos;
+    Position pos;
 |};
 
 public type WhileStmt record {|
@@ -103,7 +114,7 @@ public type BreakStmt "break";
 public type ContinueStmt "continue";
 
 public type VarDeclStmt record {|
-    InlineTypeDesc td;
+    TypeDesc td;
     string varName;
     Expr initExpr;
     boolean isFinal;
@@ -142,7 +153,7 @@ public type BinaryRelationalExpr record {|
 public type BinaryArithmeticExpr record {|
     *BinaryExprBase;
     BinaryArithmeticOp arithmeticOp;
-    err:Position pos;
+    Position pos;
 |};
 
 public type BinaryBitwiseExpr record {|
@@ -153,7 +164,7 @@ public type BinaryBitwiseExpr record {|
 public type UnaryExpr record {|
     UnaryExprOp op;
     Expr operand;
-    err:Position pos;
+    Position pos;
 |};
 
 public type SimpleConstNegateExpr record {|
@@ -163,34 +174,39 @@ public type SimpleConstNegateExpr record {|
     IntLiteralExpr|ConstValueExpr operand;
 |};
 
+public type ErrorConstructorExpr record {|
+    Expr message;
+    Position pos;
+|};
+
 public type FunctionCallExpr record {|
     string? prefix = ();
     string funcName;
     Expr[] args;
     // We can get public type/defn mismatch errors here
-    err:Position pos;
+    Position pos;
 |};
 
 public type MethodCallExpr record {|
     string methodName;
     Expr target;
     Expr[] args;
-    err:Position pos;
+    Position pos;
 |};
 
 public type ListConstructorExpr record {|
     Expr[] members;
     // JBUG adding this field makes match statement in codeGenExpr fail 
-    // t:SemType? expectedType = ();
+    t:SemType? expectedType = ();
 |};
 
 public type MappingConstructorExpr record {|
     Field[] fields;
-    // t:SemType? expectedType = ();
+    t:SemType? expectedType = ();
 |};
 
 public type Field record {|
-    err:Position pos; // position of name for now
+    Position pos; // position of name for now
     string name;
     Expr value;
 |};
@@ -198,14 +214,14 @@ public type Field record {|
 public type MemberAccessExpr record {|
     Expr container;
     Expr index;
-    err:Position pos;
+    Position pos;
 |};
 
 // JBUG gets a bad, sad if this uses *MemberAccessExpr and overrides container
 public type MemberAccessLExpr record {|
     VarRefExpr container;
     Expr index;
-    err:Position pos;
+    Position pos;
 |};
 
 public type RangeExpr record {|
@@ -218,18 +234,19 @@ public type VarRefExpr record {|
 |};
 
 public type TypeCastExpr record {|
-    InlineTypeDesc td;
+    TypeDesc td;
     Expr operand;
-    err:Position pos;
-    t:SemType semType;
+    Position pos;
 |};
 
 public type TypeTestExpr record {|
-    InlineTypeDesc td;
+    TypeDesc td;
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
-    t:SemType semType;
+    boolean negated; 
 |};
+
+public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
 
 public type ConstValueExpr record {|
     ()|boolean|int|float|string value;
@@ -238,6 +255,16 @@ public type ConstValueExpr record {|
     // When it contains exactly one shape, then the shape is
     // the shape of the value.
     t:SemType? multiSemType = ();
+|};
+
+public const float FLOAT_ZERO = 0f;
+
+// This is an expression where we know that the value is == 0f
+// but do not know whether it is +0f or -0f.
+public type FloatZeroExpr record {|
+    FLOAT_ZERO value = FLOAT_ZERO;
+    () multiSemType = ();
+    Expr expr;
 |};
 
 public type NumericLiteralExpr IntLiteralExpr|FpLiteralExpr;
@@ -250,7 +277,7 @@ public type IntLiteralBase 10|16;
 public type IntLiteralExpr record {|
     IntLiteralBase base;
     string digits;
-    err:Position pos;
+    Position pos;
 |};
 
 const FLOAT_TYPE_SUFFIX = "f";
@@ -259,48 +286,17 @@ public type FpLiteralExpr record {|
     // This is the literal without the public type suffix
     string untypedLiteral;
     FLOAT_TYPE_SUFFIX? typeSuffix;
-    err:Position pos;
+    Position pos;
 |};
 
 // Types
 
-// This is the subtype of TypeDesc that we currently allow
-// within expressions and statements.
-public type InlineTypeDesc InlineBasicTypeDesc|InlineUnionTypeDesc|InlineArrayTypeDesc|InlineMapTypeDesc|ANY;
-
-public const ANY = "any";
-
-public type InlineBasicTypeDesc "boolean"|"int"|"float"|"string";
-
-public type InlineAltTypeDesc InlineUnionTypeDesc|InlineBasicTypeDesc;
-
-public type InlineUnionTypeDesc record {|
-    *BinaryTypeDesc;
-    // actually always `|`
-    BinaryTypeOp op = "|";
-    InlineAltTypeDesc left;
-    InlineAltTypeDesc|"()" right;
-|};
-
-public type InlineArrayTypeDesc record {|
-    *ListTypeDesc;
-    TypeDesc[0] members = [];
-    // JBUG if we use a string literal instead of a reference to a const,
-    // this gets an error about attempting to make a non-public symbol visible
-    ANY rest = ANY;
-|};
-
-public type InlineMapTypeDesc record {|
-    *MappingTypeDesc;
-    FieldDesc[0] fields = [];
-    ANY rest = ANY;
-|};
-
 public type TypeDefn record {|
     readonly string name;
+    ModulePart part;
     Visibility vis;
     TypeDesc td;
-    err:Position pos;
+    Position pos;
     t:SemType? semType = ();
     int cycleDepth = -1;
 |};
@@ -347,7 +343,7 @@ public type BinaryTypeDesc record {|
 
 public type TypeDescRef record {|
     string ref;
-    err:Position pos;
+    Position pos;
 |};
 
 public type SingletonTypeDesc record {|
@@ -355,6 +351,9 @@ public type SingletonTypeDesc record {|
 |};
 
 public type BuiltinIntSubtypeDesc "sint8"|"uint8"|"sint16"|"uint16"|"sint32"|"uint32";
-public type BuiltInTypeDesc "any"|"boolean"|"decimal"|"error"|"float"|"handle"|"int"|"json"
-                  |"never"|"readonly"|"string"|"typedesc"|"xml"|"()";
-public type LeafTypeDesc BuiltInTypeDesc|BuiltinIntSubtypeDesc;
+
+// This is the subtype of BuiltinTypeDesc that we currently allow inline.
+public type InlineBuiltinTypeDesc "boolean"|"int"|"float"|"string"|"error"|"any";
+public type BuiltinTypeDesc InlineBuiltinTypeDesc|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
+
+public type LeafTypeDesc BuiltinTypeDesc|BuiltinIntSubtypeDesc;

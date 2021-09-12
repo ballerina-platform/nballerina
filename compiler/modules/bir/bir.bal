@@ -2,6 +2,8 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.err;
 
 public type SemType t:SemType;
+public type Position err:Position;
+public type File err:File;
 
 public type Module object {
     public function getId() returns ModuleId;
@@ -10,7 +12,11 @@ public type Module object {
     public function getTypeCheckContext() returns t:TypeCheckContext;
     public function getFunctionDefns() returns readonly & FunctionDefn[];
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
-    public function getPrefixForModuleId(ModuleId id) returns string?;
+    public function getPrefixForModuleId(ModuleId id, int partIndex) returns string?;
+    // Get the File for a give part index
+    public function getPartFile(int partIndex) returns File;
+    public function getPartFiles() returns File[];
+    public function finish() returns err:Semantic?;
 };
 
 public type ModuleId readonly & record {|
@@ -39,8 +45,11 @@ public type FunctionDefn readonly & record {|
     InternalSymbol symbol;
     # The signature of the function
     FunctionSignature signature;
+
+    # Index of source part in which the definition occurs
+    int partIndex;
     # The position of the definition
-    err:Position position;
+    Position position;
 |};
 
 public type InternalSymbol readonly & record {|
@@ -50,14 +59,14 @@ public type InternalSymbol readonly & record {|
 
 public type Symbol InternalSymbol|ExternalSymbol;
 
-public function symbolToString(Module mod, Symbol sym) returns string {
+public function symbolToString(Module mod, int partIndex, Symbol sym) returns string {
     string prefix;
     if sym is InternalSymbol {
         prefix = "";
     }
     else {
         ModuleId modId = sym.module;
-        string? importPrefix = mod.getPrefixForModuleId(modId);
+        string? importPrefix = mod.getPrefixForModuleId(modId, partIndex);
         if importPrefix == () {
             string? org = modId.organization;
             string orgString = org == () ? "" : org + "/";
@@ -72,6 +81,7 @@ public function symbolToString(Module mod, Symbol sym) returns string {
 
 public type FunctionRef readonly & record {|
     Symbol symbol;
+    FunctionSignature erasedSignature;
     FunctionSignature signature;
 |};
 
@@ -164,6 +174,8 @@ public enum InsnName {
     INSN_INT_BITWISE_BINARY,
     INSN_FLOAT_ARITHMETIC_BINARY,
     INSN_FLOAT_NEGATE,
+    INSN_CONVERT_TO_INT,
+    INSN_CONVERT_TO_FLOAT,
     INSN_COMPARE,
     INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
@@ -174,6 +186,7 @@ public enum InsnName {
     INSN_MAPPING_GET,
     INSN_MAPPING_SET,
     INSN_STR_CONCAT,
+    INSN_ERROR_CONSTRUCT,
     INSN_RET,
     INSN_ABNORMAL_RET,
     INSN_CALL,
@@ -200,12 +213,13 @@ public type InsnBase record {
 public type Insn 
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |FloatArithmeticBinaryInsn|FloatNegateInsn
+    |ConvertToIntInsn|ConvertToFloatInsn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
     |StringConcatInsn|RetInsn|AbnormalRetInsn|CallInsn
     |AssignInsn|CondNarrowInsn|TypeCastInsn|TypeTestInsn
-    |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn;
+    |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
 public type SimpleConstOperand ()|boolean|int|float;
@@ -224,7 +238,7 @@ public type IntArithmeticBinaryInsn readonly & record {|
     ArithmeticBinaryOp op;
     Register result;
     IntOperand[2] operands;
-    err:Position position;
+    Position position;
 |};
 
 # Concatenate strings, returns a new string
@@ -269,7 +283,7 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     ArithmeticBinaryOp op;
     Register result;
     FloatOperand[2] operands;
-    err:Position position;
+    Position position;
 |};
 
 public type FloatNegateInsn readonly & record {|
@@ -279,7 +293,41 @@ public type FloatNegateInsn readonly & record {|
     Register operand;
 |};
 
-public type OrderType "float"|"int"|"boolean"|"string";
+
+# If the operand is a float or decimal, then convert it to an int.
+# Otherwise leave the operand unchanged.
+# The intersection of the operand type with float|decimal must be non-empty.
+# The result type must be `(T - (float|decimal))|int`,
+# where T is the operand type.
+# This panics if the conversion cannot be performed, so is a PPI.
+public type ConvertToIntInsn readonly & record {|
+    *InsnBase;
+    INSN_CONVERT_TO_INT name = INSN_CONVERT_TO_INT;
+    Register result;
+    Register operand;
+    Position position;
+|};
+
+# If the operand is an int or decimal, then convert it to a float.
+# Otherwise leave the operand unchanged.
+# The intersection of the operand type with int|decimal must be non-empty.
+# The result type must be `(T - (int|decimal))|float`,
+# where T is the operand type.
+# This is not a PPI.
+public type ConvertToFloatInsn readonly & record {|
+    *InsnBase;
+    INSN_CONVERT_TO_FLOAT name = INSN_CONVERT_TO_FLOAT;
+    Register result;
+    Register operand;
+|};
+
+public type OrderType UniformOrderType|OptOrderType|ArrayOrderType;
+public type UniformOrderType t:UT_FLOAT|t:UT_INT|t:UT_BOOLEAN|t:UT_STRING;
+public type OptOrderType readonly & record {|
+    UniformOrderType opt;
+|};
+public type ArrayOrderType readonly & [OptOrderType];
+
 # This does ordered comparision
 # Equality and inequality are done by equal
 public type CompareInsn readonly & record {|
@@ -306,7 +354,7 @@ public type ListGetInsn readonly & record {|
     Register result;
     Register list;
     IntOperand operand;
-    err:Position position;
+    Position position;
 |};
 
 # Sets a member of a list at a specified index.
@@ -317,7 +365,7 @@ public type ListSetInsn readonly & record {|
     IntOperand index;
     // operand is the value to store in the list
     Operand operand;
-    err:Position position;
+    Position position;
 |};
 
 # Constructs a new mutable list value.
@@ -343,7 +391,16 @@ public type MappingGetInsn readonly & record {|
 public type MappingSetInsn readonly & record {|
     INSN_MAPPING_SET name = INSN_MAPPING_SET;
     [Register, StringOperand, Operand] operands;
-    err:Position position;
+    Position position;
+|};
+
+# Constructs an error value.
+# Operand must be of type string.
+public type ErrorConstructInsn readonly & record {|
+    INSN_ERROR_CONSTRUCT name = INSN_ERROR_CONSTRUCT;
+    Register result;
+    StringOperand operand;
+    Position position;
 |};
 
 # This does equality expressions.
@@ -371,7 +428,7 @@ public type EqualityInsn readonly & record {|
 public type CallInsn readonly & record {|
     *InsnBase;
     # Position in the source that resulted in the instruction
-    err:Position? position;
+    Position position;
     INSN_CALL name = INSN_CALL;
     Register result;
     FunctionOperand func;
@@ -402,7 +459,7 @@ public type TypeCastInsn readonly & record {|
     Register result;
     Register operand;
     SemType semType;
-    err:Position position;
+    Position position;
 |};
 
 
@@ -422,6 +479,7 @@ public type TypeTestInsn readonly & record {|
     # Holds value to be tested.
     Register operand;
     SemType semType;
+    boolean negated;
 |};
 
 
@@ -549,6 +607,7 @@ final readonly & map<true> PPI_INSNS = {
     // [INSN_CALL]: true,
     [INSN_PANIC]: true,
     [INSN_INT_ARITHMETIC_BINARY]: true,
+    [INSN_CONVERT_TO_INT]: true,
     [INSN_TYPE_CAST]: true,
     [INSN_LIST_GET]: true,
     [INSN_LIST_SET]: true,

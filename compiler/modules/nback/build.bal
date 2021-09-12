@@ -3,12 +3,6 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-public configurable string target = "";
-
-public type Options record {|
-    string? gcName = ();
-|};
-
 type BuildError err:Semantic|err:Unimplemented;
 
 type Alignment 1|8;
@@ -20,11 +14,12 @@ const TAG_FACTOR   = 0x0100000000000000;
 const POINTER_MASK = 0x00ffffffffffffff;
 
 const int TAG_MASK     = 0x1f * TAG_FACTOR;
-const TAG_NIL      = 0;
+const int TAG_NIL      = 0;
 const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
 const int TAG_INT      = t:UT_INT * TAG_FACTOR;
-const int TAG_FLOAT      = t:UT_FLOAT * TAG_FACTOR;
+const int TAG_FLOAT    = t:UT_FLOAT * TAG_FACTOR;
 const int TAG_STRING   = t:UT_STRING * TAG_FACTOR;
+const int TAG_ERROR   = t:UT_ERROR * TAG_FACTOR;
 
 const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
 
@@ -33,6 +28,8 @@ const int TAG_BASIC_TYPE_LIST = t:UT_LIST_RO * TAG_FACTOR;
 const int TAG_BASIC_TYPE_MAPPING = t:UT_MAPPING_RO * TAG_FACTOR;
 
 const int FLAG_IMMEDIATE = 0x20 * TAG_FACTOR;
+
+const TAG_SHIFT = 56;
 
 const HEAP_ADDR_SPACE = 1;
 const ALIGN_HEAP = 8;
@@ -47,6 +44,13 @@ final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
 final llvm:PointerType LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
 
 type ValueType llvm:IntegralType;
+
+type DIBuilder llvm:DIBuilder;
+type DISubprogram llvm:Metadata;
+type DILocation llvm:Metadata;
+type DIFile llvm:Metadata;
+type DICompileUnit llvm:Metadata;
+type DISubroutineType llvm:Metadata;
 
 // A Repr is way of representing values.
 // It's a mapping from a SemType to an LLVM type.
@@ -91,11 +95,17 @@ const PANIC_TYPE_CAST = 3;
 const PANIC_STACK_OVERFLOW = 4;
 const PANIC_INDEX_OUT_OF_BOUNDS = 5;
 const PANIC_LIST_TOO_LONG = 6;
+const PANIC_STRING_TOO_LONG = 7;
+const PANIC_LIST_STORE = 8;
+const PANIC_MAPPING_STORE = 9;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"alloc"|"list_set"|"mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
-                         "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float";
+type RuntimeFunctionName "panic"|"panic_construct"|"error_construct"|"alloc"|
+                         "list_set"|"list_has_type"|
+                         "mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"mapping_has_type"|
+                         "int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
+                         "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float"|"float_to_int";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -107,9 +117,27 @@ final RuntimeFunction panicFunction = {
     name: "panic",
     ty: {
         returnType: "void",
-        paramTypes: ["i64"]
+        paramTypes: [LLVM_TAGGED_PTR]
     },
     attrs: ["noreturn", "cold"]
+};
+
+final RuntimeFunction panicConstructFunction = {
+    name: "panic_construct",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: ["i64"]
+    },
+    attrs: ["cold"]
+};
+
+final RuntimeFunction errorConstructFunction = {
+    name: "error_construct",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+    },
+    attrs: []
 };
 
 final RuntimeFunction allocFunction = {
@@ -124,16 +152,25 @@ final RuntimeFunction allocFunction = {
 final RuntimeFunction listSetFunction = {
     name: "list_set",
     ty: {
-        returnType: REPR_ERROR.llvm,
+        returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, "i64", LLVM_TAGGED_PTR]
     },
     attrs: []
 };
 
+final RuntimeFunction listHasTypeFunction = {
+    name: "list_has_type",
+    ty: {
+        returnType: "i1",
+        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+    },
+    attrs: ["readonly"]
+};
+
 final RuntimeFunction mappingSetFunction = {
     name: "mapping_set",
     ty: {
-        returnType: REPR_ERROR.llvm,
+        returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
     attrs: []
@@ -161,9 +198,18 @@ final RuntimeFunction mappingConstructFunction = {
     name: "mapping_construct",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: ["i64"]
+        paramTypes: ["i64", "i64"]
     },
     attrs: []
+};
+
+final RuntimeFunction mappingHasTypeFunction = {
+    name: "mapping_has_type",
+    ty: {
+        returnType: "i1",
+        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+    },
+    attrs: ["readonly"]
 };
 
 final RuntimeFunction intToTaggedFunction = {
@@ -182,6 +228,15 @@ final RuntimeFunction floatToTaggedFunction = {
         paramTypes: ["double"]
     },
     attrs: [] // NB not readonly because it allocates storage
+};
+
+final RuntimeFunction floatToIntFunction = {
+    name: "float_to_int",
+    ty: {
+        returnType: llvm:structType(["i64", "i1"]),
+        paramTypes: ["double"]
+    },
+    attrs: ["nounwind", "readnone", "speculatable", "willreturn"]
 };
 
 final RuntimeFunction taggedToIntFunction = {
@@ -294,11 +349,26 @@ type Module record {|
     ImportedFunctionTable importedFunctions = table [];
     llvm:PointerValue stackGuard;
     map<StringDefn> stringDefns = {};
+    t:TypeCheckContext typeCheckContext;
+    bir:Module bir;
+    bir:File[] partFiles;
+    ModuleDI? di;
 |};
+
+type ModuleDI record {|
+    DIBuilder builder;
+    DIFile[] files;
+    DICompileUnit compileUnit;
+    DISubroutineType funcType;
+|};
+
 
 class Scaffold {
     private final Module mod;
+    private final bir:File file;
     private final llvm:FunctionDefn llFunc;
+    private final DISubprogram? diFunc;
+    private DILocation? noLineLocation = ();
 
     // Representation for each BIR register
     private final Repr[] reprs;
@@ -312,9 +382,11 @@ class Scaffold {
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
 
-    function init(Module mod, llvm:FunctionDefn llFunc, llvm:Builder builder,  bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
+    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
         self.mod = mod;
+        self.file = mod.partFiles[defn.partIndex];
         self.llFunc = llFunc;
+        self.diFunc = diFunc;
         self.birBlocks = code.blocks;
         final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType);
         self.reprs = reprs;
@@ -390,20 +462,71 @@ class Scaffold {
         bir:Insn catchInsn = self.birBlocks[<bir:Label>self.onPanicLabel].insns[0];
         return self.address((<bir:CatchInsn>catchInsn).result);
     }
+
+    function lineNumber(bir:Position pos) returns int {
+       return self.file.lineColumn(pos)[0];
+    }
+
+    function typeCheckContext() returns t:TypeCheckContext => self.mod.typeCheckContext;
+
+    function location(bir:Position pos) returns err:Location {
+        return err:location(self.file, pos);
+    }
+
+    function setDebugLocation(llvm:Builder builder, bir:Position pos, "file"? fileOnly = ()) {
+        DISubprogram? diFunc = self.diFunc;
+        if !(diFunc is ()) {
+            ModuleDI di = <ModuleDI>self.mod.di;
+            DILocation loc;
+            if fileOnly == () {
+                var [line, column] = self.file.lineColumn(pos);
+                loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+            }
+            else {
+                DILocation? noLineLoc = self.noLineLocation;
+                if noLineLoc is () {
+                    loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
+                    self.noLineLocation = loc;
+                }
+                else {
+                    loc = noLineLoc;
+                }
+            }
+            builder.setCurrentDebugLocation(loc);
+        }
+    }
+
+    function clearDebugLocation(llvm:Builder builder) {
+        if !(self.diFunc is ()) {
+            builder.setCurrentDebugLocation(());
+        }
+    }
 }
 
 public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
     bir:ModuleId modId = birMod.getId();
     llvm:Module llMod = llContext.createModule();
+    bir:File[] partFiles = birMod.getPartFiles();
+    ModuleDI? di = ();
+    if options.debugLevel > 0 {
+        di = createModuleDI(llMod, partFiles);
+    } 
     bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
     llvm:FunctionDefn[] llFuncs = [];
+    DISubprogram[] diFuncs = [];
     llvm:FunctionType[] llFuncTypes = [];
     map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
         llvm:FunctionType ty = check buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
-        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangleInternalSymbol(modId, symbol), ty);
+        string mangledName = mangleInternalSymbol(modId, symbol);
+        llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
+        if !(di is ()) {
+            DISubprogram diFunc = createFunctionDI(di, partFiles, defn, llFunc, mangledName);
+            diFuncs.push(diFunc);
+            llFunc.setSubprogram(diFunc);
+        }   
         if !(options.gcName is ()) {
             llFunc.setGC(options.gcName);
         }
@@ -412,11 +535,15 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         }
         llFuncs.push(llFunc);
         llFuncMap[defn.symbol.identifier] = llFunc;
-    }  
+    }
     llvm:Builder builder = llContext.createBuilder();
     Module mod = {
+        bir: birMod,
         llContext,
         llMod,
+        partFiles,
+        di,
+        typeCheckContext: birMod.getTypeCheckContext(),
         functionDefns: llFuncMap,
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard"))
     };  
@@ -424,20 +551,47 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         bir:FunctionDefn defn = functionDefns[i];
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
         check bir:verifyFunctionCode(birMod, defn, code);
-        Scaffold scaffold = check new(mod, llFuncs[i], builder, defn, code);
+        DISubprogram? diFunc = di is () ? () : diFuncs[i];
+        Scaffold scaffold = check new(mod, llFuncs[i], diFunc, builder, defn, code);
         buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code);
     }
+    check birMod.finish();
     return llMod;
 }
 
-function buildPrologue(llvm:Builder builder, Scaffold scaffold, err:Position pos) {
+function createModuleDI(llvm:Module mod, bir:File[] partFiles) returns ModuleDI {
+    DIBuilder builder = mod.createDIBuilder();
+    mod.addModuleFlag("error", ["Debug Info Version", 3]);
+    DIFile[] files = from var f in partFiles select builder.createFile(f.filename(), f.directory() ?: "");
+    DICompileUnit compileUnit = builder.createCompileUnit(file=files[0]);
+    DISubroutineType funcType = builder.createSubroutineType(files[0]);
+    return { builder, files, compileUnit, funcType };
+}
+
+function createFunctionDI(ModuleDI mod, bir:File[] files, bir:FunctionDefn birFunc, llvm:FunctionDefn llFunc, string mangledName) returns DISubprogram {
+    int partIndex = birFunc.partIndex;
+    var [lineNo, _] = files[partIndex].lineColumn(birFunc.position); 
+    DIFile file = mod.files[partIndex];
+    return mod.builder.createFunction({
+        file,
+        scope: file, // XXX Should we use the compileUnit or the File here?
+        ty: mod.funcType,
+        linkageName: mangledName,
+        lineNo,
+        isDefinition: true,
+        name: birFunc.symbol.identifier,
+        scopeLine: lineNo // XXX should be line number of opening brace
+    });
+}
+
+function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) {
     llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
     llvm:BasicBlock firstBlock = scaffold.basicBlock(0);
     builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(scaffold.stackGuard())),
                    overflowBlock, firstBlock);
     builder.positionAtEnd(overflowBlock);
-    buildPanic(builder, scaffold, buildConstPanicError(PANIC_STACK_OVERFLOW, pos));
+    buildCallPanic(builder, scaffold, buildErrorForConstPanic(builder, scaffold, PANIC_STACK_OVERFLOW, pos));
     builder.positionAtEnd(firstBlock);
     scaffold.saveParams(builder);
 }
@@ -479,6 +633,12 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:TypeCastInsn {
             check buildTypeCast(builder, scaffold, insn);
         }
+        else if insn is bir:ConvertToIntInsn {
+            check buildConvertToInt(builder, scaffold, insn);
+        }
+        else if insn is bir:ConvertToFloatInsn {
+            check buildConvertToFloat(builder, scaffold, insn);
+        }
         else if insn is bir:TypeTestInsn {
             check buildTypeTest(builder, scaffold, insn);
         }
@@ -515,16 +675,27 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:CondBranchInsn {
             check buildCondBranch(builder, scaffold, insn);
         }
-        else if insn is bir:CatchInsn {
-            // nothing to do
-            // scaffold.panicAddress uses this to figure out where to store the panic info
-        }
         else if insn is bir:AbnormalRetInsn {
             buildAbnormalRet(builder, scaffold, insn);
         }
-        else {
-            return err:unimplemented(`BIR insn ${insn.name} not implemented`);
+        else if insn is bir:PanicInsn {
+            buildPanic(builder, scaffold, insn);
         }
+        else if insn is bir:ErrorConstructInsn {
+            check buildErrorConstruct(builder, scaffold, insn);
+        }
+        else if insn is bir:FloatArithmeticBinaryInsn {
+            buildFloatArithmeticBinary(builder, scaffold, insn);
+        }
+        else if insn is bir:FloatNegateInsn {
+            buildFloatNegate(builder, scaffold, insn);
+        }
+        else {
+            bir:CatchInsn unused = insn;
+            // nothing to do
+            // scaffold.panicAddress uses this to figure out where to store the panic info
+        }
+        scaffold.clearDebugLocation(builder);
     }
 }
 
@@ -544,11 +715,16 @@ function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) ret
 }
 
 function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) {
-    buildPanic(builder, scaffold, buildInt(builder, scaffold, insn.operand));
+    buildCallPanic(builder, scaffold, <llvm:PointerValue>builder.load(scaffold.address(insn.operand)));
 }
 
-function buildPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicCode) {
-    _ = builder.call(buildRuntimeFunctionDecl(scaffold, panicFunction), [panicCode]);
+function buildPanic(llvm:Builder builder, Scaffold scaffold, bir:PanicInsn insn) {
+    builder.store(builder.load(scaffold.address(insn.operand)), scaffold.panicAddress());
+    builder.br(scaffold.getOnPanic());
+}
+
+function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue err) {
+    _ = builder.call(buildRuntimeFunctionDecl(scaffold, panicFunction), [err]);
     builder.unreachable();
 }
 
@@ -557,10 +733,12 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
+    scaffold.setDebugLocation(builder, insn.position);
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
     llvm:Value[] args = [];
-    t:SemType[] paramTypes = funcRef.signature.paramTypes;
+    bir:FunctionSignature signature = funcRef.erasedSignature;
+    t:SemType[] paramTypes = signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
         args.push(check buildRepr(builder, scaffold, insn.args[i], check semTypeRepr(paramTypes[i])));
     }
@@ -571,10 +749,10 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
         func = scaffold.getFunctionDefn(funcSymbol.identifier);
     }
     else {
-        func = check buildFunctionDecl(scaffold, funcSymbol, funcRef.signature);
+        func = check buildFunctionDecl(scaffold, funcSymbol, signature);
     }  
     llvm:Value? retValue = builder.call(func, args);
-    RetRepr retRepr = check semTypeRetRepr(funcRef.signature.returnType);
+    RetRepr retRepr = check semTypeRetRepr(signature.returnType);
     check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
@@ -583,7 +761,7 @@ const LLVM_INDEX = "i32";
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
     final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
     final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
-    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
+    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
     final int length = insn.operands.length();
     llvm:PointerValue array;
     if length > 0 {
@@ -602,12 +780,21 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     }
     final llvm:PointerValue structMem = buildUntypedAlloc(builder, scaffold, structType);
     final llvm:PointerValue struct = builder.bitCast(structMem, heapPointerType(structType));
-    foreach int i in 0 ..< 2 {
+    // Store the member bitset as the ListDesc
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(scaffold.typeCheckContext().env, insn.result.semType);
+    if memberType == () {
+        return err:unimplemented("unsupported member type for arrat");
+    }
+    else {
+        builder.store(llvm:constInt(LLVM_INT, memberType),
+                      builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)], "inbounds"));
+    }
+    foreach int i in 1 ..< 3 {
         builder.store(llvm:constInt(LLVM_INT, length),
                       builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, i)], "inbounds"));
     }
     builder.store(array,
-                  builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 2)], "inbounds"));
+                  builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)], "inbounds"));
     // Don't need to convert here
     builder.store(buildTaggedPtr(builder, structMem, TAG_LIST_RW), scaffold.address(insn.result));
 }
@@ -615,7 +802,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
     final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
     final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
-    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
+    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
 
     llvm:Value index = buildInt(builder, scaffold, insn.operand);
     // struct is the untagged pointer to the struct
@@ -626,21 +813,22 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
     builder.condBr(builder.iCmp("ult",
                                 index,
-                                builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP)),
+                                builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)]), ALIGN_HEAP)),
                    continueBlock,
                    outOfBoundsBlock);
     builder.positionAtEnd(outOfBoundsBlock);
-    builder.store(buildConstPanicError(PANIC_INDEX_OUT_OF_BOUNDS, insn.position), scaffold.panicAddress());
+    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_INDEX_OUT_OF_BOUNDS, insn.position), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
     // array is a pointer to the array
     llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct,
-                                                                                    [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 2)], "inbounds"),
+                                                                                    [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)], "inbounds"),
                                                                                     ALIGN_HEAP);
-    builder.store(builder.load(builder.getElementPtr(array,
-                                                     [llvm:constInt(LLVM_INT, 0), index], "inbounds"),
-                                                     ALIGN_HEAP),
-                  scaffold.address(insn.result));
+    buildStoreTagged(builder, scaffold,
+                     builder.load(builder.getElementPtr(array,
+                                                        [llvm:constInt(LLVM_INT, 0), index], "inbounds"),
+                                  ALIGN_HEAP),
+                     insn.result);
 }
 
 function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
@@ -652,22 +840,30 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
    
 }
 
-function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, err:Position pos) {
+function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, bir:Position pos) {
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errorBlock = scaffold.addBasicBlock();
     builder.condBr(builder.iCmp("eq", err, llvm:constInt("i64", 0)),
                    continueBlock,
                    errorBlock);
     builder.positionAtEnd(errorBlock);
-    builder.store(buildPanicError(builder, err, pos), scaffold.panicAddress());
+    builder.store(buildErrorForPanic(builder, scaffold, err, pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
 }
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
     int length = insn.operands.length();
-    llvm:PointerValue m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
-                                                          [llvm:constInt(LLVM_INT, length)]);
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(scaffold.typeCheckContext().env, insn.result.semType);
+    llvm:PointerValue m;
+    if memberType == () {
+        return err:unimplemented("unsupported member type for mapping");
+    }
+    else {
+        m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
+                                            [llvm:constInt(LLVM_INT, memberType), llvm:constInt(LLVM_INT, length)]);
+    }
+    
     foreach int i in 0 ..< length {
         _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingInitMemberFunction),
                          [
@@ -685,7 +881,7 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
                                                     builder.load(scaffold.address(insn.operands[0])),
                                                     check buildString(builder, scaffold, insn.operands[1])
                                                 ]);
-    builder.store(value, scaffold.address(insn.result));
+    buildStoreTagged(builder, scaffold, value, insn.result);
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
@@ -697,6 +893,17 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
                                    ]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
 }
+
+function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
+    scaffold.setDebugLocation(builder, insn.position, "file");
+    llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, errorConstructFunction),
+                                                [
+                                                    check buildString(builder, scaffold, insn.operand),
+                                                    llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.position))
+                                                ]);
+    builder.store(value, scaffold.address(insn.result));
+}
+
 
 function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
     llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringConcatFunction),
@@ -762,7 +969,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
         builder.condBr(builder.extractValue(resultWithOverflow, 1), overflowBlock, continueBlock);
         builder.positionAtEnd(overflowBlock);
-        builder.store(buildConstPanicError(PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
+        builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
         builder.br(scaffold.getOnPanic());
         builder.positionAtEnd(continueBlock);
         result = builder.extractValue(resultWithOverflow, 0);
@@ -772,7 +979,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
         builder.condBr(builder.iCmp("eq", rhs, llvm:constInt(LLVM_INT, 0)), zeroDivisorBlock, continueBlock);
         builder.positionAtEnd(zeroDivisorBlock);
-        builder.store(buildConstPanicError(PANIC_DIVIDE_BY_ZERO, insn.position), scaffold.panicAddress());
+        builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_DIVIDE_BY_ZERO, insn.position), scaffold.panicAddress());
         builder.br(scaffold.getOnPanic());
         builder.positionAtEnd(continueBlock);
         continueBlock = scaffold.addBasicBlock();
@@ -786,7 +993,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         llvm:IntArithmeticSignedOp op;
         if insn.op == "/" {
             op = "sdiv";
-            builder.store(buildConstPanicError(PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
+            builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_ARITHMETIC_OVERFLOW, insn.position), scaffold.panicAddress());
             builder.br(scaffold.getOnPanic());
         }
         else {
@@ -809,9 +1016,23 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
 function buildNoPanicArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntNoPanicArithmeticBinaryInsn insn) {
     llvm:Value lhs = buildInt(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildInt(builder, scaffold, insn.operands[1]);
-    llvm:IntArithmeticOp op = arithmeticOps.get(insn.op);
+    llvm:IntArithmeticOp op = intArithmeticOps.get(insn.op);
     llvm:Value result = builder.iArithmeticNoWrap(op, lhs, rhs);
     buildStoreInt(builder, scaffold, result, insn.result);                                  
+}
+
+function buildFloatArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:FloatArithmeticBinaryInsn insn) {
+    llvm:Value lhs = buildFloat(builder, scaffold, insn.operands[0]);
+    llvm:Value rhs = buildFloat(builder, scaffold, insn.operands[1]);
+    llvm:FloatArithmeticOp op = floatArithmeticOps.get(insn.op);
+    llvm:Value result = builder.fArithmetic(op, lhs, rhs);
+    buildStoreFloat(builder, scaffold, result, insn.result);                                  
+}
+
+function buildFloatNegate(llvm:Builder builder, Scaffold scaffold, bir:FloatNegateInsn insn) {
+    llvm:Value operand = buildFloat(builder, scaffold, insn.operand);
+    llvm:Value result = builder.fNeg(operand);
+    buildStoreFloat(builder, scaffold, result, insn.result);
 }
 
 final readonly & map<llvm:IntBitwiseOp> binaryBitwiseOp = {
@@ -835,34 +1056,151 @@ function buildBitwiseBinary(llvm:Builder builder, Scaffold scaffold, bir:IntBitw
 }
 
 function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) returns BuildError? {
-    match insn.orderType {
-        "int" => {
-            buildStoreBoolean(builder, scaffold,
-                              builder.iCmp(buildIntCompareOp(insn.op),
-                                           buildInt(builder, scaffold, <bir:IntOperand>insn.operands[0]),
-                                           buildInt(builder, scaffold, <bir:IntOperand>insn.operands[1])),
-                              insn.result); 
+    var [lhsRepr, lhsValue] = check buildReprValue(builder, scaffold, insn.operands[0]);
+    var [rhsRepr, rhsValue] = check buildReprValue(builder, scaffold, insn.operands[1]);
+    bir:Register result = insn.result;
+
+    match [lhsRepr.base, rhsRepr.base] {
+        [BASE_REPR_TAGGED, BASE_REPR_INT] => {
+            buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
         }
-        "boolean" => {
-            buildStoreBoolean(builder, scaffold,
-                              builder.iCmp(buildBooleanCompareOp(insn.op),
-                                           buildBoolean(builder, scaffold, <bir:BooleanOperand>insn.operands[0]),
-                                           buildBoolean(builder, scaffold, <bir:BooleanOperand>insn.operands[1])),
-                              insn.result);
+        [BASE_REPR_INT, BASE_REPR_TAGGED] => {
+            buildCompareTaggedInt(builder, scaffold, buildIntCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
         }
-        "string" => {
-            llvm:Value s1 = check buildString(builder, scaffold, <bir:StringOperand>insn.operands[0]);
-            llvm:Value s2 = check buildString(builder, scaffold, <bir:StringOperand>insn.operands[1]);
-            buildStoreBoolean(builder, scaffold,
-                              builder.iCmp(buildIntCompareOp(insn.op),
-                                           <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringCmpFunction), [s1, s2]),
-                                           llvm:constInt(LLVM_INT, 0)),
-                              insn.result);
+        [BASE_REPR_TAGGED, BASE_REPR_FLOAT] => {
+            buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
         }
-        _ => {
-            panic err:impossible();
+        [BASE_REPR_FLOAT, BASE_REPR_TAGGED] => {
+            buildCompareTaggedFloat(builder, scaffold, buildFloatCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
+        }
+        [BASE_REPR_TAGGED, BASE_REPR_BOOLEAN] => {
+            buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
+        }
+        [BASE_REPR_BOOLEAN, BASE_REPR_TAGGED] => {
+            buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
+        }
+        [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
+            if insn.orderType is t:UT_STRING {
+                buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
+            }
+            else {
+                buildCompareTagged(builder, scaffold, insn, lhsValue, rhsValue, result);
+            }
+        }
+        [BASE_REPR_INT, BASE_REPR_INT] => {
+            buildCompareInt(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
+        }
+        [BASE_REPR_BOOLEAN, BASE_REPR_BOOLEAN] => {
+            buildCompareInt(builder, scaffold, buildBooleanCompareOp(insn.op), lhsValue, rhsValue, result);
+        }
+        [BASE_REPR_FLOAT, BASE_REPR_FLOAT] => {
+            buildCompareFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
         }
     }
+}
+final readonly & map<bir:OrderOp> flippedOrderOps = {
+    ">=": "<=",
+    ">" : "<",
+    "<=": ">=",
+    "<" : ">"
+};
+
+function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    llvm:Value lhsIsNil = builder.iCmp("eq", lhs, llvm:constNull(llvm:pointerType("i8", 1)));
+    llvm:Value rhsIsNil = builder.iCmp("eq", rhs, llvm:constNull(llvm:pointerType("i8", 1)));
+    llvm:Value eitherNil = builder.iBitwise("or", lhsIsNil, rhsIsNil);
+
+    llvm:BasicBlock eitherNilBB = scaffold.addBasicBlock();
+    llvm:BasicBlock neitherNilBB = scaffold.addBasicBlock();
+    llvm:BasicBlock joinBB = scaffold.addBasicBlock();
+    builder.condBr(eitherNil, eitherNilBB, neitherNilBB);
+
+    builder.positionAtEnd(eitherNilBB);
+    llvm:Value bothNil = builder.iBitwise("and", lhsIsNil, rhsIsNil);
+
+    if insn.op is "<=" || insn.op is ">=" {
+        buildStoreBoolean(builder, scaffold, bothNil, insn.result);
+    }
+    else {
+        buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, 0), insn.result);
+    }
+    builder.br(joinBB);
+
+    builder.positionAtEnd(neitherNilBB);
+    bir:OptOrderType orderTy = <bir:OptOrderType> insn.orderType;
+    match orderTy.opt {
+        t:UT_INT => {
+            llvm:Value lhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>lhs);
+            llvm:Value rhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>rhs);
+            buildCompareInt(builder, scaffold, buildIntCompareOp(insn.op), lhsUntagged, rhsUntagged, result);
+        }
+        t:UT_FLOAT => {
+            llvm:Value lhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>lhs);
+            llvm:Value rhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>rhs);
+            buildCompareFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsUntagged, rhsUntagged, result);
+        }
+        t:UT_BOOLEAN => {
+            buildCompareInt(builder, scaffold, buildBooleanCompareOp(insn.op), lhs, rhs, result);
+        }
+        t:UT_STRING => {
+            buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhs, rhs, result);
+        }
+    }
+    builder.br(joinBB);
+    builder.positionAtEnd(joinBB);
+}
+
+function buildCompareTaggedBasic(llvm:Builder builder, Scaffold scaffold, llvm:Value lhs, llvm:Value rhs, bir:Register result)
+    returns [llvm:BasicBlock, llvm:BasicBlock] {
+    llvm:BasicBlock bbNil = scaffold.addBasicBlock();
+    llvm:BasicBlock bbNotNil = scaffold.addBasicBlock();
+    llvm:BasicBlock bbJoin = scaffold.addBasicBlock();
+    llvm:Value isNil = builder.iCmp("eq", lhs, llvm:constNull(llvm:pointerType("i8", 1)));
+    builder.condBr(isNil, bbNil, bbNotNil);
+    builder.positionAtEnd(bbNil);
+    buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, 0), result);
+    builder.br(bbJoin);
+    builder.positionAtEnd(bbNotNil);
+    return [bbNotNil, bbJoin];
+}
+
+function buildCompareTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    var [bbNotNil, bbJoin] = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
+    llvm:Value lhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>lhs);
+    buildCompareInt(builder, scaffold, op, lhsUntagged, rhs, result);
+    builder.br(bbJoin);
+    builder.positionAtEnd(bbJoin);
+}
+
+function buildCompareTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    var [bbNotNil, bbJoin] = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
+    llvm:Value lhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>lhs);
+    buildCompareFloat(builder, scaffold, op, lhsUntagged, rhs, result);
+    builder.br(bbJoin);
+    builder.positionAtEnd(bbJoin);
+}
+
+function buildCompareTaggedBoolean(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    var [bbNotNil, bbJoin] = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
+    llvm:Value lhsUntagged = buildUntagBoolean(builder, <llvm:PointerValue>lhs);
+    buildCompareInt(builder, scaffold, op, lhsUntagged, rhs, result);
+    builder.br(bbJoin);
+    builder.positionAtEnd(bbJoin);
+}
+
+function buildCompareInt(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhs, rhs), result);
+}
+
+function buildCompareFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    buildStoreBoolean(builder, scaffold, builder.fCmp(op, lhs, rhs), result);
+}
+
+function buildCompareString(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    buildStoreBoolean(builder, scaffold,
+                      builder.iCmp(op, <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringCmpFunction), [lhs, rhs]),
+                                   llvm:constInt(LLVM_INT, 0)),
+                      result);
 }
 
 type CmpEqOp "ne"|"eq";
@@ -876,7 +1214,8 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
     bir:Register result = insn.result;
     match [lhsRepr.base, rhsRepr.base] {
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
-            if reprIsNil(lhsRepr) || reprIsNil(rhsRepr) {
+            if reprIsImmediate(lhsRepr) || reprIsImmediate(rhsRepr)
+               || (exact && (!reprExactNeedsHeap(lhsRepr) || !reprExactNeedsHeap(rhsRepr))) {
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
@@ -950,6 +1289,15 @@ function reprIsString(Repr repr) returns boolean {
     return repr is TaggedRepr && repr.subtype == t:STRING;
 }
 
+// May we need to look at the heap in order to tell whether something with this representation
+// is exactly equal to something else?
+function reprExactNeedsHeap(Repr repr) returns boolean {
+    return repr is TaggedRepr && (repr.subtype & (t:FLOAT|t:INT|t:STRING)) != 0;
+}
+
+function reprIsImmediate(Repr repr) returns boolean {
+    return !(repr is TaggedRepr) || (repr.subtype & ~(t:NIL|t:BOOLEAN)) == 0;
+}
 
 function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {
     buildStoreBoolean(builder, scaffold,
@@ -975,8 +1323,8 @@ function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op
 }
 
 function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
-    RuntimeFunction eqFunc = exact ? exactEqFunction : eqFunction;
-    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, eqFunc), [tagged1, tagged2]);
+    RuntimeFunction func = exact ? exactEqFunction : eqFunction;
+    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, func), [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
@@ -1006,19 +1354,57 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     else if semType === t:INT {
         hasType = buildHasTag(builder, tagged, TAG_INT);
     }
+    else if semType === t:FLOAT {
+        hasType = buildHasTag(builder, tagged, TAG_FLOAT);
+    }
     else if semType === t:STRING {
         hasType = buildHasTag(builder, tagged, TAG_STRING);
     }
-    else if semType === t:LIST {
-        hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+    else if semType === t:ERROR {
+        hasType = buildHasTag(builder, tagged, TAG_ERROR);
     }
-    else if semType === t:MAPPING {
-        hasType = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+    else if t:isSubtypeSimple(semType, t:LIST) {
+        hasType = buildHasListType(builder, scaffold, tagged, insn.operand.semType, semType);
+    }
+    else if t:isSubtypeSimple(semType, t:MAPPING) {
+        hasType = buildHasMappingType(builder, scaffold, tagged, insn.operand.semType, semType);
+    }
+    else if semType is t:UniformTypeBitSet {
+        hasType = buildHasTagInSet(builder, tagged, semType);
     }
     else {
-        return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
+        return err:unimplemented("unimplemented type test"); // should not happen in subset 6
     }
-    buildStoreBoolean(builder, scaffold, hasType, insn.result);
+    if insn.negated {
+        buildStoreBoolean(builder, scaffold, 
+                    builder.iBitwise("xor", llvm:constInt(LLVM_BOOLEAN, 1), hasType), 
+                    insn.result);
+    }
+    else {
+        buildStoreBoolean(builder, scaffold, hasType, insn.result);
+    }
+}
+
+function buildHasListType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType sourceType, t:SemType targetType) returns llvm:Value {
+    if t:intersect(sourceType, t:LIST) == targetType {
+        return buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+    }
+    else {
+        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeCheckContext().env, targetType);
+        return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, listHasTypeFunction),
+                                        [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
+    }
+}
+
+function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType sourceType, t:SemType targetType) returns llvm:Value {
+    if t:intersect(sourceType, t:MAPPING) == targetType {
+        return buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+    }
+    else {
+        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeCheckContext().env, targetType);
+        return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingHasTypeFunction),
+                                        [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
+    }
 }
 
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
@@ -1040,33 +1426,129 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
         builder.positionAtEnd(continueBlock);
         buildStoreInt(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn.result);
     }
+    else if semType === t:FLOAT {
+        builder.condBr(buildHasTag(builder, tagged, TAG_FLOAT), continueBlock, castFailBlock);
+        builder.positionAtEnd(continueBlock);
+        buildStoreFloat(builder, scaffold, buildUntagFloat(builder, scaffold, tagged), insn.result);
+    }
     else {
         llvm:Value hasTag;
         if semType === t:STRING {
             hasTag = buildHasTag(builder, tagged, TAG_STRING);
         }
-        else if semType === t:LIST {
-            hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
+        else if semType === t:ERROR {
+            hasTag = buildHasTag(builder, tagged, TAG_ERROR);
         }
-        else if semType === t:MAPPING {
-            hasTag = buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
+        else if t:isSubtypeSimple(semType, t:LIST) {
+            hasTag = buildHasListType(builder, scaffold, tagged, insn.operand.semType, semType);
+        }
+        else if t:isSubtypeSimple(semType, t:MAPPING) {
+            hasTag = buildHasMappingType(builder, scaffold, tagged, insn.operand.semType, semType);
+        }
+        else if semType is t:UniformTypeBitSet {
+            hasTag = buildHasTagInSet(builder, tagged, semType);
         }
         else {
-            return err:unimplemented("type cast other than to int or boolean"); // should not happen in subset 2
+            return err:unimplemented("unimplemented type cast"); // should not happen in subset 6
         }
         builder.condBr(hasTag, continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
         builder.store(tagged, scaffold.address(insn.result));
     }
     builder.positionAtEnd(castFailBlock);
-    builder.store(buildConstPanicError(PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
+    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
 }
 
+function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertToIntInsn insn) returns BuildError? {
+    var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
+    if repr.base == BASE_REPR_FLOAT {
+        buildConvertFloatToInt(builder, scaffold, val, insn);
+        return;
+    }
+    else if repr.base != BASE_REPR_TAGGED {
+        return err:unimplemented("convert form decimal to int");
+    }
+    // convert to int form tagged pointer
+
+    t:SemType semType = insn.operand.semType;
+    llvm:PointerValue tagged = <llvm:PointerValue>val;
+    llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
+
+    // semType must contain float or decimal. Since we don't have decimal yet in subset 6,
+    // it must contain float. In the future, below section is only needed conditionally.
+    llvm:Value hasType = buildHasTag(builder, tagged, TAG_FLOAT);
+    llvm:BasicBlock hasFloatBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock noFloatBlock = scaffold.addBasicBlock();
+    builder.condBr(hasType, hasFloatBlock, noFloatBlock);
+    builder.positionAtEnd(hasFloatBlock);
+    buildConvertFloatToInt(builder, scaffold, buildUntagFloat(builder, scaffold, tagged), insn);
+    builder.br(joinBlock);
+
+    builder.positionAtEnd(<llvm:BasicBlock>noFloatBlock);
+    if !t:isSubtypeSimple(semType, t:FLOAT) {
+        builder.store(tagged, scaffold.address(insn.result));
+    }
+    builder.br(joinBlock);
+    builder.positionAtEnd(joinBlock);
+}
+
+function buildConvertFloatToInt(llvm:Builder builder, Scaffold scaffold, llvm:Value floatVal, bir:ConvertToIntInsn insn) {
+    llvm:Value resultWithErr = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, floatToIntFunction), [floatVal]);
+    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock errBlock = scaffold.addBasicBlock();
+    builder.condBr(builder.extractValue(resultWithErr, 1), errBlock, continueBlock);
+    builder.positionAtEnd(errBlock);
+    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
+    builder.br(scaffold.getOnPanic());
+    builder.positionAtEnd(continueBlock);
+    llvm:Value result = builder.extractValue(resultWithErr, 0);
+    buildStoreInt(builder, scaffold, result, insn.result);
+}
+
+function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:ConvertToFloatInsn insn) returns BuildError? {
+    var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
+    if repr.base == BASE_REPR_INT {
+        buildConvertIntToFloat(builder, scaffold, val, insn);
+        return;
+    }
+    else if repr.base != BASE_REPR_TAGGED {
+        return err:unimplemented("convert form decimal to float");
+    }
+    // convert to float form tagged pointer
+
+    // number part of semType must be some *non-empty* combination of
+    // (some or all of) int, float and decimal
+    t:SemType semType = insn.operand.semType;
+    llvm:PointerValue tagged = <llvm:PointerValue>val;
+    llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
+
+    // semType must contain int or decimal. Since we don't have decimal yet in subset 6,
+    // it must contain int. In the future, below section is only needed conditionally.
+    llvm:Value hasType = buildHasTag(builder, tagged, TAG_INT);
+    llvm:BasicBlock hasIntBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock noIntBlock = scaffold.addBasicBlock();
+    builder.condBr(hasType, hasIntBlock, noIntBlock);
+    builder.positionAtEnd(hasIntBlock);
+    buildConvertIntToFloat(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn);
+    builder.br(joinBlock);
+
+    builder.positionAtEnd(<llvm:BasicBlock>noIntBlock);
+    if !t:isSubtypeSimple(semType, t:INT) {
+        builder.store(tagged, scaffold.address(insn.result));
+    }
+    builder.br(joinBlock);
+    builder.positionAtEnd(joinBlock);
+}
+
+function buildConvertIntToFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value intVal, bir:ConvertToFloatInsn insn) {
+    buildStoreFloat(builder, scaffold, builder.sIToFP(intVal, LLVM_DOUBLE), insn.result);
+}
+
 function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrowInsn insn) returns BuildError? {
     var [sourceRepr, value] = check buildReprValue(builder, scaffold, insn.operand);
-    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));   
+    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));
     builder.store(narrowed, scaffold.address(insn.result));
 }
 
@@ -1078,24 +1560,25 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
         return value;
     }
     if sourceBaseRepr == BASE_REPR_TAGGED {
-        llvm:PointerValue tagged = <llvm:PointerValue>value;
-        if targetBaseRepr == BASE_REPR_INT {
-            return buildUntagInt(builder, scaffold, tagged);
-        }
-        else if targetBaseRepr == BASE_REPR_BOOLEAN {
-            return buildUntagBoolean(builder, tagged);
-        }
+        return buildUntagged(builder, scaffold, <llvm:PointerValue>value, targetRepr);
     }
     return err:unimplemented("unimplemented narrowing conversion required");
 }
 
-function buildConstPanicError(PanicIndex panicIndex, err:Position pos) returns llvm:Value {
+function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
     // JBUG #31753 cast
-    return llvm:constInt(LLVM_INT, <int>panicIndex | (pos.lineNumber << 8));
+    return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, <int>panicIndex | (scaffold.lineNumber(pos) << 8)), pos);
 }
 
-function buildPanicError(llvm:Builder builder, llvm:Value panicIndex, err:Position pos) returns llvm:Value {
-    return builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, pos.lineNumber << 8));
+function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicIndex, bir:Position pos) returns llvm:PointerValue {
+    return buildErrorForPackedPanic(builder, scaffold, builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, scaffold.lineNumber(pos) << 8)), pos);
+}
+
+function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic, bir:Position pos) returns llvm:PointerValue {
+    scaffold.setDebugLocation(builder, pos, "file");
+    var err = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, panicConstructFunction), [packedPanic]);
+    scaffold.clearDebugLocation(builder);
+    return err;
 }
 
 function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {
@@ -1109,9 +1592,36 @@ function buildStoreInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value
                   scaffold.address(reg));
 }
 
+function buildStoreFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedFloat(builder, scaffold, value) : value,
+                  scaffold.address(reg));
+}
+
 function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
     builder.store(scaffold.getRepr(reg).base == BASE_REPR_TAGGED ? buildTaggedBoolean(builder, value) : value,
                   scaffold.address(reg));
+}
+
+function buildStoreTagged(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    return builder.store(buildUntagged(builder, scaffold, <llvm:PointerValue>value, scaffold.getRepr(reg)), scaffold.address(reg));
+}
+
+function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue value, Repr targetRepr) returns llvm:Value {
+    match targetRepr.base {
+        BASE_REPR_INT => {
+            return buildUntagInt(builder, scaffold, value);
+        }
+        BASE_REPR_FLOAT => {
+            return buildUntagFloat(builder, scaffold, value);
+        }
+        BASE_REPR_BOOLEAN => {
+            return buildUntagBoolean(builder, value);
+        }
+        BASE_REPR_TAGGED => {
+            return value;
+        }
+    }
+    panic err:impossible("unreached in buildUntagged");
 }
 
 function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
@@ -1202,6 +1712,21 @@ function buildTestTag(llvm:Builder builder, llvm:PointerValue tagged, int tag, i
                                                        llvm:constInt(LLVM_INT, mask)),
                               llvm:constInt(LLVM_INT, tag));
 
+}
+
+function buildHasTagInSet(llvm:Builder builder, llvm:PointerValue tagged, t:UniformTypeBitSet bitSet) returns llvm:Value {
+    return builder.iCmp("ne",
+                        builder.iBitwise("and",
+                                         builder.iBitwise("shl",
+                                                          llvm:constInt(LLVM_INT, 1),
+                                                          builder.iBitwise("lshr",
+                                                                           // need to mask out the 0x20 bit
+                                                                           builder.iBitwise("and",
+                                                                                            buildTaggedPtrToInt(builder, tagged),
+                                                                                            llvm:constInt(LLVM_INT, TAG_MASK)),
+                                                                           llvm:constInt(LLVM_INT, TAG_SHIFT))),
+                                         llvm:constInt(LLVM_INT, bitSet)),
+                        llvm:constInt(LLVM_INT, 0));
 }
 
 function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
@@ -1302,7 +1827,7 @@ function buildSimpleConst(bir:SimpleConstOperand operand) returns [Repr, llvm:Va
         return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
     }
     else if operand is float {
-        return [REPR_FLOAT, llvm:constReal(LLVM_DOUBLE, operand)];
+        return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, operand)];
     }
     else if operand is () {
         return [REPR_NIL, buildConstNil()];
@@ -1332,6 +1857,16 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
     }
 }
 
+// Build a value as REPR_FLOAT
+function buildFloat(llvm:Builder builder, Scaffold scaffold, bir:FloatOperand operand) returns llvm:Value {
+    if operand is float {
+        return llvm:constFloat(LLVM_DOUBLE, operand);
+    }
+    else {
+        return builder.load(scaffold.address(operand));
+    }
+}
+
 // Build a value as REPR_BOOLEAN
 function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperand operand) returns llvm:Value {
     if operand is boolean {
@@ -1348,10 +1883,18 @@ final readonly & map<llvm:IntrinsicFunctionName> binaryIntIntrinsics = {
     "*": "smul.with.overflow.i64"
 };
 
-final readonly & map<llvm:IntArithmeticOp> arithmeticOps = {
+final readonly & map<llvm:IntArithmeticOp> intArithmeticOps = {
     "+": "add",
     "-": "sub",
     "*": "mul"
+};
+
+final readonly & map<llvm:FloatArithmeticOp> floatArithmeticOps = {
+    "+": "fadd",
+    "-": "fsub",
+    "*": "fmul",
+    "/": "fdiv",
+    "%": "frem"
 };
 
 // final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
@@ -1384,8 +1927,19 @@ final readonly & map<llvm:IntPredicate> unsignedIntPredicateOps = {
     ">=": "uge"
 };
 
+final readonly & map<llvm:FloatPredicate> floatPredicateOps = {
+    "<": "olt",
+    "<=": "ole",
+    ">": "ogt",
+    ">=": "oge"
+};
+
 function buildIntCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
     return <llvm:IntPredicate>signedIntPredicateOps[op];
+}
+
+function buildFloatCompareOp(bir:OrderOp op) returns llvm:FloatPredicate {
+    return <llvm:FloatPredicate>floatPredicateOps[op];
 }
 
 function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
@@ -1416,11 +1970,15 @@ final Repr REPR_INT = { base: BASE_REPR_INT, llvm: LLVM_INT };
 final Repr REPR_FLOAT = { base: BASE_REPR_FLOAT, llvm: LLVM_DOUBLE };
 // Maps int to i1
 final Repr REPR_BOOLEAN = { base: BASE_REPR_BOOLEAN, llvm: LLVM_BOOLEAN };
-// Maps error value to (for now) int (for panics)
-final Repr REPR_ERROR = { base: BASE_REPR_ERROR, llvm: LLVM_INT };
 
 final TaggedRepr REPR_NIL = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:NIL };
 final TaggedRepr REPR_STRING = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:STRING };
+final TaggedRepr REPR_LIST_RW = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:LIST_RW };
+final TaggedRepr REPR_LIST = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:LIST };
+final TaggedRepr REPR_MAPPING_RW = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:MAPPING_RW };
+final TaggedRepr REPR_MAPPING = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:MAPPING };
+final TaggedRepr REPR_ERROR = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ERROR };
+
 final TaggedRepr REPR_TOP = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:TOP };
 final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ANY };
 // JBUG this goes wrong when you use REPR_VOID as a type as in buildRet
@@ -1437,6 +1995,10 @@ final readonly & record {|
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
     { domain: t:NIL, repr: REPR_NIL },
     { domain: t:STRING, repr: REPR_STRING },
+    { domain: t:LIST_RW, repr: REPR_LIST_RW },
+    { domain: t:LIST, repr: REPR_LIST },
+    { domain: t:MAPPING_RW, repr: REPR_MAPPING_RW },
+    { domain: t:MAPPING, repr: REPR_MAPPING },
     { domain: t:ERROR, repr: REPR_ERROR },
     { domain: t:ANY, repr: REPR_ANY },
     { domain: t:TOP, repr: REPR_TOP }
@@ -1451,12 +2013,24 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr|BuildError {
 
 // Return the representation for a SemType.
 function semTypeRepr(t:SemType ty) returns Repr|BuildError {
+    t:UniformTypeBitSet w = t:widenToUniformTypes(ty);    
     foreach var tr in typeReprs {
-        if t:isSubtypeSimple(ty, tr.domain) {
+        if w == tr.domain {
             return tr.repr;
         }
     }
-    return err:unimplemented("unimplemented type");
+    if w == t:NEVER {
+        panic err:impossible("allocate register with never type");
+    }
+    // subset07 does not allow unions of list/mapppings with other things
+    // apart from `any`
+    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:ERROR;
+    // DECIMAL is here for ConvertToInt or ConvertToFloat 
+    if (w | supported | t:DECIMAL) == t:TOP || (w & supported) == w {
+        TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };
+        return repr;
+    }
+    return err:unimplemented("unimplemented type (" + w.toHexString() + ")");
 }
 
 function heapPointerType(llvm:Type ty) returns llvm:PointerType {

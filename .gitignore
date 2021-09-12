@@ -43,8 +43,14 @@ target
 # Default output from C compiler
 a.out
 
+# MacOS debug symbols file
+*.dSYM
+
 # Output from jni test build
 testbuild
 
 # bal command seems to produce this
 heap-dump.hprof
+
+# Make an exception for gradle jar
+!llvm_jni/gradle/wrapper/gradle-wrapper.jar

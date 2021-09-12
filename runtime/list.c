@@ -4,9 +4,39 @@
 
 #define ARRAY_LENGTH_MAX (INT64_MAX/sizeof(TaggedPtr))
 
+const double F0 = +0.0;
 
-Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
+static bool getFiller(ListDesc desc, TaggedPtr *valuePtr) {
+    uint64_t bits;
+    switch (desc) {
+        case (1 << TAG_BOOLEAN):
+            *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
+            return true;
+        case (1 << TAG_INT):
+            *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_INT) << TAG_SHIFT);
+            return true;
+        case (1 << TAG_FLOAT):
+            {
+                GC double *fp = (GC double *)&F0;
+                *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
+                return true;
+            }
+        case (1 << TAG_STRING):
+            _bal_string_alloc(0, 0, valuePtr);
+            return true;
+    }
+    if (desc & (1 << TAG_NIL)) {
+        *valuePtr = 0;
+        return true;
+    }
+    return false;
+}
+
+PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
+    if ((lp->desc & (1 << (getTag(val) & UT_MASK))) == 0) {
+        return PANIC_LIST_STORE;
+    }
     GC TaggedPtrArray *ap = &(lp->tpArray);
     if (likely((uint64_t)index < ap->length)) {
         ap->members[index] = val;
@@ -22,7 +52,13 @@ Error _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     if (index > ap->length) {
         // we have a gap to fill
         // from length..<index
-        memset(ap->members + ap->length, 0, (index - ap->length) * sizeof(TaggedPtr));
+        TaggedPtr filler;
+        if (!getFiller(lp->desc, &filler)) {
+            return PANIC_NO_FILLER;
+        }
+        for (int64_t i = ap->length; i < index; i++) {
+            ap->members[i] = filler;
+        }        
     }
     ap->members[index] = val;
     ap->length = index + 1;
@@ -57,7 +93,7 @@ void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift) {
     else {
         new_capacity = ARRAY_LENGTH_MAX;
         if (new_capacity == old_capacity)
-            _bal_panic(PANIC_LIST_TOO_LONG);  // we won't get a line number, but this is very unlikely to be possible
+            _bal_panic(_bal_panic_construct(PANIC_LIST_TOO_LONG));  // we won't get a line number, but this is very unlikely to be possible
     }
     if (unlikely(new_capacity < min_capacity)) {
         new_capacity = min_capacity;
@@ -69,4 +105,21 @@ void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift) {
     memcpy(new_members, ap->members, ap->length << shift);
     ap->members = new_members;
     ap->capacity = new_capacity;
+}
+
+bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
+    ListPtr lp1 = taggedToPtr(p1);
+    GC TaggedPtrArray *ap1 = &(lp1->tpArray);
+    ListPtr lp2 = taggedToPtr(p2);
+    GC TaggedPtrArray *ap2 = &(lp2->tpArray);
+    int64_t len = ap1->length;
+    if (ap2->length != len) {
+        return false;
+    }
+    for (int64_t i = 0; i < len; i++) {
+        if (!taggedPtrEqual(ap1->members[i], ap2->members[i])) {
+            return false;
+        }
+    }
+    return true;
 }

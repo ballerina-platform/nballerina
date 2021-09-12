@@ -10,6 +10,14 @@ function testSubtypeSimple() {
 }
 
 @test:Config{}
+function testSingleNumericType() {
+    test:assertEquals(singleNumericType(INT), INT);
+    test:assertEquals(singleNumericType(BOOLEAN), ());
+    test:assertEquals(singleNumericType(singleton(1)), INT);
+    test:assertEquals(singleNumericType(union(INT, FLOAT)), ());
+}
+
+@test:Config{}
 function testBitTwiddling() {
     test:assertEquals(numberOfTrailingZeros(0x10), 4);
     test:assertEquals(numberOfTrailingZeros(0x100), 8);
@@ -236,21 +244,21 @@ function simpleArrayMemberTypeTest() {
     testArrayMemberTypeOk(env, BOOLEAN);
     testArrayMemberTypeFail(env, createJson(env));
     testArrayMemberTypeFail(env, intWidthUnsigned(8));
-    test:assertEquals(simpleArrayMemberType(INT, []), ());
-    test:assertEquals(simpleArrayMemberType(uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW)), []), TOP);
+    test:assertEquals(simpleArrayMemberType(new Env(), INT), ());
+    test:assertEquals(simpleArrayMemberType(new Env(), uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW)), true), TOP);
 }
 
 function testArrayMemberTypeOk(Env env, UniformTypeBitSet memberType) {
     ListDefinition def = new;
     SemType t = def.define(env, [], memberType);
-    UniformTypeBitSet? bits = simpleArrayMemberType(t, env.listDefs);
+    UniformTypeBitSet? bits = simpleArrayMemberType(env, t, true);
     test:assertTrue(bits == memberType);
 }
 
 function testArrayMemberTypeFail(Env env, SemType memberType) {
     ListDefinition def = new;
     SemType t = def.define(env, [], memberType);
-    UniformTypeBitSet? bits = simpleArrayMemberType(t, env.listDefs);
+    UniformTypeBitSet? bits = simpleArrayMemberType(env, t, true);
     test:assertTrue(bits == ());
 }
 

@@ -17,10 +17,22 @@ public type ObjectFileGenOptions record {|
     string? codeModel = "Default";
 |};
 
+
+final readonly & map<int> moduleFlagBehaviorToInt = {
+    "error": 0,
+    "warning": 1,
+    "require": 2,
+    "override": 3,
+    "append": 4,
+    "appendUnique": 5,
+    "max": 6
+};
+
 public distinct class Module {
     handle LLVMModule;
     Context context;
     TargetTriple? targetTriple=();
+    DIBuilder? diBuilder=();
 
     function init(string moduleName, Context context) {
         self.context = context;
@@ -33,6 +45,18 @@ public distinct class Module {
         return fn;
     }
 
+    public function createDIBuilder() returns DIBuilder {
+        DIBuilder dBuilder = new(self);
+        self.diBuilder = dBuilder;
+        return dBuilder;
+    }
+
+    public function addModuleFlag(ModuleFlagBehavior behavior, ModuleFlag flag) {
+        var [keyObj, keyLen] = getStringProp(flag[0]);
+        Metadata val = intAsMetadata(flag[1]);
+        jLLVMAddModuleFlag(self.LLVMModule, moduleFlagBehaviorToInt.get(behavior), keyObj, keyLen, val.llvmMetadata);
+    }
+
     public function addFunctionDefn(string name, FunctionType fnType) returns FunctionDefn {
         return self.addFunction(name, fnType);
     }
@@ -41,12 +65,21 @@ public distinct class Module {
         return self.addFunction(name, fnType);
     }
 
+    function finalizeDIBuilder() {
+        DIBuilder? dBuilder = self.diBuilder;
+        if dBuilder is DIBuilder {
+            jLLVMDIBuilderFinalize(dBuilder.LLVMDIBuilder);
+        }
+    }
+
     public function printModuleToString() returns string {
+        self.finalizeDIBuilder();
         BytePointer bytePointer = new (jLLVMPrintModuleToString(self.LLVMModule));
         return bytePointer.toString();
     }
 
     public function printModuleToFile(string fileName) returns io:Error? {
+        self.finalizeDIBuilder();
         byte[] e = [];
         handle err = checkpanic jarrays:toHandle(e, "byte");
         _ = jLLVMPrintModuleToFile(self.LLVMModule, java:fromString(fileName), err);
@@ -72,6 +105,7 @@ public distinct class Module {
     }
 
     public function printModuleToObjectFile(string fileName, *ObjectFileGenOptions opts) returns io:Error? {
+        self.finalizeDIBuilder();
         self.linkInlineLibrary(); 
 
         string optLevel = opts.optLevel ?: "Default";
@@ -339,4 +373,16 @@ function jLLVMLinkModules2(handle dest, handle src) returns int = @java:Method {
     name: "LLVMLinkModules2",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "org.bytedeco.llvm.LLVM.LLVMModuleRef"]
+} external;
+
+function jLLVMAddModuleFlag(handle m, int behavior, handle k, int kLen, handle val) = @java:Method {
+    name: "LLVMAddModuleFlag",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "int", "java.lang.String", "long", "org.bytedeco.llvm.LLVM.LLVMMetadataRef"]
+} external;
+
+function jLLVMDIBuilderFinalize(handle dBuilder) = @java:Method {
+    name: "LLVMDIBuilderFinalize",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMDIBuilderRef"]
 } external;

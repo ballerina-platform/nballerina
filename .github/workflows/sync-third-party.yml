@@ -1,0 +1,40 @@
+name: Sync third party
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout main branch
+      uses: actions/checkout@v2
+      with:
+        path: main
+        fetch-depth: 0
+    - name: Checkout third party branch
+      uses: actions/checkout@v2
+      with:
+        path: third-party
+        submodules: recursive
+        ref: third-party
+    - name: Patch, Commit and PR
+      run: |
+        cd $GITHUB_WORKSPACE/main
+        git reset --hard $(git log --author=github-actions@github.com -1 --pretty=format:"%H")
+        cd $GITHUB_WORKSPACE
+        for f in third-party/*/config.sh; do (cd `dirname $f`; sh config.sh); done
+        for f in third-party/*/mapping.txt; do cat $f | xargs -n2  sh -c 'mkdir -p "main/runtime/$1/$3" && cp -r $1/$2 "main/runtime/$1/$3"' sh `dirname $f`; done
+        cd $GITHUB_WORKSPACE/main
+        git config user.name github-actions
+        git config user.email github-actions@github.com
+        git checkout -B third-party-update-auto
+        git add runtime/third-party
+        git commit -m "[Auto] Update third party files"
+        git show HEAD
+        git push --set-upstream origin third-party-update-auto --force
+        gh pr create --repo $OWNER/nballerina --head third-party-update-auto --fill
+      env:
+        OWNER: ${{ github.repository_owner }}
+        GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+

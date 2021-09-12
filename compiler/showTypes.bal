@@ -1,21 +1,21 @@
 import ballerina/io;
 
 import wso2/nballerina.front;
+import wso2/nballerina.err;
 import wso2/nballerina.types as t;
 // import wso2/nballerina.types.bdd;
 
-public function showTypes(string filename) returns error? {
-    string[] lines = check io:fileReadLines(filename);
-    string[] results = check subtypeRels(lines);
+public function showTypes(front:SourcePart[] sources) returns err:Any|io:Error? {
+    string[] results = check subtypeRels(sources);
     foreach var line in results {
         io:println(line);
     }
-    // io:println("Total BDDs ", bdd:getCount());
+    // io:println("Total BDDs ", bddGetCount());
 }
 
-function subtypeRels(string[] lines) returns string[]|error {
+function subtypeRels(front:SourcePart[] sources) returns string[]|err:Any|io:Error {
     
-    var [env, m] = check front:typesFromString(lines);
+    var [env, m] = check front:typesFromString(sources);
 
     var tc = t:typeCheckContext(env);
 

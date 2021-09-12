@@ -9,31 +9,50 @@ on:
   
 jobs:
   test:
-    runs-on: ubuntu-latest
-
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        
     steps:
       - uses: actions/checkout@v2
-      - name: Install LLVM
+      - name: Cache brew for LLVM (macOS)
+        id: cache-llvm
+        if: runner.os == 'macOS'
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/Library/Caches/Homebrew/
+          key: brew-llvm-11
+      - name: Install LLVM (macOS)
+        if: runner.os == 'macOS'
         run: |
-          sudo apt-get install llvm-11
+          brew install llvm@11
+          echo "/usr/local/opt/llvm@11/bin" >> $GITHUB_PATH
+          echo "LLVM_SUFFIX=" >> $GITHUB_ENV
       - name: Cache jBallerina
         id: cache-jbal
         uses: actions/cache@v2
         with:
           path: |
-            ~/ballerina-linux-swan-lake-beta2
-          key: jbal-slbeta2
+            ~/ballerina-*-swan-lake-beta2
+          key: jbal-slbeta2-${{ runner.os }}
       - name: Download jBallerina
         if: steps.cache-jbal.outputs.cache-hit != 'true'
         run: |
-          curl -L https://github.com/ballerina-platform/ballerina-distribution/releases/download/vswan-lake-beta2/ballerina-linux-swan-lake-beta2.zip > $HOME/ballerina-linux-swan-lake-beta2.zip
-          unzip "$HOME/ballerina-linux-swan-lake-beta2.zip" -d "$HOME"
-          chmod +x "$HOME/ballerina-linux-swan-lake-beta2/bin/bal"
+          OS=$(echo $RUNNER_OS | tr '[:upper:]' '[:lower:]')
+          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/vswan-lake-beta2/ballerina-$OS-swan-lake-beta2.zip" > $HOME/ballerina-$OS-swan-lake-beta2.zip
+          unzip "$HOME/ballerina-$OS-swan-lake-beta2.zip" -d "$HOME"
+          chmod +x "$HOME/ballerina-$OS-swan-lake-beta2/bin/bal"
       - name: Install jBallerina
         run: |
-          echo "$HOME/ballerina-linux-swan-lake-beta2/bin/" >> $GITHUB_PATH
+          OS=$(echo $RUNNER_OS | tr '[:upper:]' '[:lower:]')
+          echo "$HOME/ballerina-$OS-swan-lake-beta2/bin" >> $GITHUB_PATH
+          echo "JAVA=$HOME/ballerina-$OS-swan-lake-beta2/dependencies/jdk-11.0.8+10-jre/bin/java" >> $GITHUB_ENV
       - name: Test
         run: |
+          echo "useing clang=`which clang` llvm-as=`which llvm-as` bal=`which bal`"
           make -j2 test
       - name: Archive test ouput
         if: ${{ failure() }}
@@ -42,3 +61,32 @@ jobs:
           name: test output
           path: |
             test/out
+
+  test-jni:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download jBallerina
+        if: steps.cache-jbal.outputs.cache-hit != 'true'
+        run: |
+          OS=$(echo $RUNNER_OS | tr '[:upper:]' '[:lower:]')
+          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/vswan-lake-beta2/ballerina-$OS-swan-lake-beta2.zip" > $HOME/ballerina-$OS-swan-lake-beta2.zip
+          unzip "$HOME/ballerina-$OS-swan-lake-beta2.zip" -d "$HOME"
+          chmod +x "$HOME/ballerina-$OS-swan-lake-beta2/bin/bal"
+      - name: Install jBallerina
+        run: |
+          OS=$(echo $RUNNER_OS | tr '[:upper:]' '[:lower:]')
+          echo "$HOME/ballerina-$OS-swan-lake-beta2/bin" >> $GITHUB_PATH
+          echo "JAVA_HOME=$HOME/ballerina-$OS-swan-lake-beta2/dependencies/jdk-11.0.8+10-jre" >> $GITHUB_ENV
+          echo "$JAVA_HOME/bin" >> $GITHUB_PATH
+      - name: Cache Gradle
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('llvm_jni/build.gradle', 'llvm_jni/settings.gradle', 'llvm_jni/gradle/wrapper/gradle-wrapper.properties') }}
+      - name: Test JNI
+        run: |
+          cd llvm_jni
+          ./gradlew testBuild

@@ -174,8 +174,9 @@ static void mappingGrow(MappingPtr m) {
     }
 }
 
-TaggedPtr _bal_mapping_construct(int64_t capacity) {
+TaggedPtr _bal_mapping_construct(MappingDesc desc, int64_t capacity) {
     MappingPtr mp = _bal_alloc(sizeof(struct Mapping));
+    mp->desc = desc;
     initArray(&(mp->gArray), capacity, MAP_FIELD_SHIFT);
     initTable(mp, capacity);
     return ptrAddFlags(mp, (uint64_t)TAG_MAPPING_RW << TAG_SHIFT);
@@ -203,8 +204,11 @@ void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr value)
     insert(mp, key, _bal_string_hash(key), len);
 }
 
-Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
+PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
+    if ((mp->desc & (1 << (getTag(value) & UT_MASK))) == 0) {
+        return PANIC_MAPPING_STORE;
+    }
     int64_t len = mp->fArray.length;
    
     uint64_t h = _bal_string_hash(key);
@@ -227,3 +231,21 @@ Error _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     }
     return 0;
 }
+
+bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2) {
+    MappingPtr mp1 = taggedToPtr(p1);
+    int64_t len = mp1->fArray.length;
+    MappingPtr mp2 = taggedToPtr(p2);
+    if (mp2->fArray.length != len) {
+        return false;
+    }
+    for (int64_t i = 0; i < len; i++) {
+        TaggedPtr key = mp1->fArray.members[i].key;
+        int64_t j = lookup(mp2, key, _bal_string_hash(key));
+        if (j < 0 || !taggedPtrEqual(mp1->fArray.members[i].value, mp2->fArray.members[j].value)) {
+            return false;
+        }
+    }
+    return true;
+}
+

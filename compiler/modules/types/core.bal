@@ -1,6 +1,3 @@
-
-import nballerina.types.bdd;
-
 // There is an integer for each uniform type.
 // Uniform types are like basic types except that each selectively immutable
 // basic type is split into two uniform types, one immutable and on mutable.
@@ -23,39 +20,168 @@ public type UniformTypeCode
     |UT_XML_RW|UT_LIST_RW|UT_MAPPING_RW|UT_TABLE_RW|UT_OBJECT_RW
     |UT_STREAM|UT_FUTURE;
 
-public class Env {
-    final ListAtomicType[] listDefs;
-    final MappingAtomicType[] mappingDefs;
-    final FunctionAtomicType[] functionDefs = [];
-    public function init() {
-        self.mappingDefs = [ MAPPING_SUBTYPE_RO ];
-        self.listDefs = [ LIST_SUBTYPE_RO ];
+type Atom RecAtom|TypeAtom;
+
+type RecAtom int;
+
+type TypeAtom readonly & record {|
+    int index;
+    AtomicType atomicType;
+|};
+
+type AtomicType ListAtomicType|MappingAtomicType;
+
+public isolated class Env {
+    private final table<TypeAtom> key(atomicType) atomTable = table [];
+    // Set up index 0 for use by bddFixReadOnly
+    private final ListAtomicType?[] recListAtoms = [ LIST_SUBTYPE_RO ];
+    private final MappingAtomicType?[] recMappingAtoms = [ MAPPING_SUBTYPE_RO ];
+    private final FunctionAtomicType?[] recFunctionAtoms = [];
+
+    public isolated function init() {
     }
-    public function simpleArrayMemberType(SemType t) returns UniformTypeBitSet? {
-        return simpleArrayMemberType(t, self.listDefs);
+
+    isolated function listAtom(ListAtomicType atomicType) returns TypeAtom {
+        return self.typeAtom(atomicType);
     }
-    public function simpleMapMemberType(SemType t) returns UniformTypeBitSet? {
-        return simpleMapMemberType(t, self.mappingDefs);
+
+    isolated function mappingAtom(MappingAtomicType atomicType) returns TypeAtom {
+        return self.typeAtom(atomicType);
+    }
+
+    private isolated function typeAtom(AtomicType atomicType) returns TypeAtom {
+        lock {
+            TypeAtom? ta = self.atomTable[atomicType];
+            if ta != () {
+                return ta;
+            }
+            else {
+                TypeAtom result = { index: self.atomTable.length(), atomicType };
+                self.atomTable.add(result);
+                return result;
+            }
+        }
+    }
+
+    isolated function listAtomType(Atom atom) returns ListAtomicType {
+        if atom is RecAtom {
+            return self.getRecListAtomType(atom);
+        }
+        else {
+            return <ListAtomicType>atom.atomicType;
+        }
+    }
+
+    isolated function mappingAtomType(Atom atom) returns MappingAtomicType {
+        if atom is RecAtom {
+            return self.getRecMappingAtomType(atom);
+        }
+        else {
+            return <MappingAtomicType>atom.atomicType;
+        }
+    }
+
+    isolated function recListAtom() returns RecAtom {
+        lock {
+            int result = self.recListAtoms.length();
+            self.recListAtoms.push(());
+            return result;
+        }
+    }
+
+    isolated function recMappingAtom() returns RecAtom {
+        lock {
+            int result = self.recMappingAtoms.length();
+            self.recMappingAtoms.push(());
+            return result;
+        }
+    }
+
+    isolated function recFunctionAtom() returns RecAtom {
+        lock {
+            int result = self.recFunctionAtoms.length();
+            self.recFunctionAtoms.push(());
+            return result;
+        }
+    }
+
+    isolated function setRecListAtomType(RecAtom ra, ListAtomicType atomicType) {
+        lock {
+            self.recListAtoms[ra] = atomicType;
+        }
+    }
+
+    isolated function setRecMappingAtomType(RecAtom ra, MappingAtomicType atomicType) {
+        lock {
+            self.recMappingAtoms[ra] = atomicType;
+        }
+    }
+
+    isolated function setRecFunctionAtomType(RecAtom ra, FunctionAtomicType atomicType) {
+        lock {
+            self.recFunctionAtoms[ra] = atomicType;
+        }
+    }
+
+    isolated function getRecListAtomType(RecAtom ra) returns ListAtomicType {
+        lock {
+            return <ListAtomicType>self.recListAtoms[ra];
+        }
+    }
+    
+    isolated function getRecMappingAtomType(RecAtom ra) returns MappingAtomicType {
+        lock {
+            return <MappingAtomicType>self.recMappingAtoms[ra];
+        }
+    }
+
+    isolated function getRecFunctionAtomType(RecAtom ra) returns FunctionAtomicType {
+        lock {
+            return <FunctionAtomicType>self.recFunctionAtoms[ra];
+        }
     }
 }
 
 public type BddMemo record {|
-    readonly bdd:Bdd bdd;
+    readonly Bdd bdd;
     boolean? isEmpty = ();
 |};
 
 type BddMemoTable table<BddMemo> key(bdd);
 
-public type TypeCheckContext record {|
-    readonly ListAtomicType[] listDefs;
-    readonly MappingAtomicType[] mappingDefs;
-    readonly FunctionAtomicType[] functionDefs;
+public class TypeCheckContext {
+    public final Env env;
     BddMemoTable listMemo = table [];
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
-|};
+    function init(Env env) {
+        self.env = env;
+    }
 
-type ProperSubtypeData StringSubtype|FloatSubtype|IntSubtype|BooleanSubtype|bdd:Node;
+    function listAtomType(Atom atom) returns ListAtomicType {
+        if atom is RecAtom {
+            return self.env.getRecListAtomType(atom);
+        }
+        else {
+            return <ListAtomicType>atom.atomicType;
+        }
+    }
+
+    function mappingAtomType(Atom atom) returns MappingAtomicType {
+        if atom is RecAtom {
+            return self.env.getRecMappingAtomType(atom);
+        }
+        else {
+            return <MappingAtomicType>atom.atomicType;
+        }
+    }
+
+    function functionAtomType(Atom atom) returns FunctionAtomicType {
+        return self.env.getRecFunctionAtomType(<RecAtom>atom);
+    }
+}
+
+type ProperSubtypeData StringSubtype|FloatSubtype|IntSubtype|BooleanSubtype|BddNode;
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData ProperSubtypeData|boolean;
 
@@ -90,7 +216,8 @@ final readonly & (UniformSubtype[]) EMPTY_SUBTYPES = [];
 public type UniformTypeBitSet int:Unsigned32;
 
 public type SemType UniformTypeBitSet|ComplexSemType;
-public readonly class ComplexSemType {
+
+public type ComplexSemType readonly & record {|
     // For a uniform type with code c,
     // all & (1 << c) is non-zero iff this type contains all of the uniform type
     // some & (1 << c) is non-zero iff this type contains some but not all of the uniform type
@@ -98,45 +225,48 @@ public readonly class ComplexSemType {
     UniformTypeBitSet some;
     // There is one member of subtypes for each bit set in some.
     // Ordered in increasing order of UniformTypeCode
-    private SubtypeData[] subtypeDataList;
-    // subtypeList must be ordered
-    function init(UniformTypeBitSet all, UniformSubtype[] subtypeList = []) {
-        self.all = all;
-        int some = 0;
-        SubtypeData[] dataList = [];
-        foreach var [code, data] in subtypeList {
-            dataList.push(data);
-            int c = code;
-            some |= 1 << c;
-        }
-        self.subtypeDataList = dataList.cloneReadOnly();
-        self.some = <UniformTypeBitSet>some;
-    }
-    
-    function unpack() returns UniformSubtype[] {
-        int some = self.some;
-        UniformSubtype[] subtypeList = [];
-        foreach var data in self.subtypeDataList {
-            var code = <UniformTypeCode>numberOfTrailingZeros(some);
-            subtypeList.push([code, data]);
-            int c = code;
-            some ^= (1 << c);
-        }
-        return subtypeList;
-    }
+    SubtypeData[] subtypeDataList;
+|};
 
-    function getSubtypeData(UniformTypeCode code) returns SubtypeData {
+// subtypeList must be ordered
+function createComplexSemType(UniformTypeBitSet all, UniformSubtype[] subtypeList = []) returns ComplexSemType {
+    int some = 0;
+    SubtypeData[] dataList = [];
+    foreach var [code, data] in subtypeList {
+        dataList.push(data);
         int c = code;
-        c = 1 << c;
-        if (self.all & c) != 0 {
-            return true;
-        }
-        if (self.some & c) == 0 {
-            return false;
-        }
-        int loBits = self.some & (c - 1);
-        return self.subtypeDataList[loBits == 0 ? 0 : bitCount(loBits)];
+        some |= 1 << c;
     }
+    return {
+        all,
+        some: <UniformTypeBitSet>some,
+        subtypeDataList: dataList.cloneReadOnly()
+    };
+}
+
+function unpackComplexSemType(ComplexSemType t) returns UniformSubtype[] {
+    int some = t.some;
+    UniformSubtype[] subtypeList = [];
+    foreach var data in t.subtypeDataList {
+        var code = <UniformTypeCode>numberOfTrailingZeros(some);
+        subtypeList.push([code, data]);
+        int c = code;
+        some ^= (1 << c);
+    }
+    return subtypeList;
+}
+
+function getComplexSubtypeData(ComplexSemType t, UniformTypeCode code) returns SubtypeData {
+    int c = code;
+    c = 1 << c;
+    if (t.all & c) != 0 {
+        return true;
+    }
+    if (t.some & c) == 0 {
+        return false;
+    }
+    int loBits = t.some & (c - 1);
+    return t.subtypeDataList[loBits == 0 ? 0 : bitCount(loBits)];
 }
 
 // Count number of bits set in bits.
@@ -172,7 +302,7 @@ function numberOfTrailingZeros(int bits) returns int {
     return n;
 }
 
-function uniformType(UniformTypeCode code) returns UniformTypeBitSet {
+public function uniformType(UniformTypeCode code) returns UniformTypeBitSet {
     return <UniformTypeBitSet>(1 << code);
 }
 
@@ -180,12 +310,12 @@ function uniformType(UniformTypeCode code) returns UniformTypeBitSet {
 // bits is bit vecor indexed by UniformTypeCode
 // I would like to make the arg int:Unsigned32
 // but are language/impl bugs that make this not work well
-function uniformTypeUnion(int bits) returns UniformTypeBitSet {
+public function uniformTypeUnion(int bits) returns UniformTypeBitSet {
     return <UniformTypeBitSet>bits;
 }
 
 function uniformSubtype(UniformTypeCode code, ProperSubtypeData data) returns SemType {
-    return new SemType(0, [[code,data]]);
+    return createComplexSemType(0, [[code,data]]);
 }
 
 function subtypeData(SemType s, UniformTypeCode code) returns SubtypeData {
@@ -193,7 +323,7 @@ function subtypeData(SemType s, UniformTypeCode code) returns SubtypeData {
         return (s & (1 << <int>code)) != 0;
     }
     else {
-        return s.getSubtypeData(code);
+        return getComplexSubtypeData(s, code);
     }
 }
 
@@ -224,6 +354,7 @@ public final UniformTypeBitSet TOP = uniformTypeUnion(UT_MASK);
 public final UniformTypeBitSet ANY = uniformTypeUnion(UT_MASK & ~(1 << UT_ERROR));
 public final UniformTypeBitSet READONLY = uniformTypeUnion(UT_READONLY);
 public final UniformTypeBitSet SIMPLE_OR_STRING = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
+public final UniformTypeBitSet NUMBER = uniformTypeUnion((1 << UT_INT) | (1 << UT_FLOAT) | (1 << UT_DECIMAL));
 public final SemType BYTE = intWidthUnsigned(8);
 
 // Need this type to workaround slalpha4 bug.
@@ -244,8 +375,8 @@ class SubtypePairIteratorImpl {
     function init(SemType t1, SemType t2, UniformTypeBitSet bits) {
         self.i1 = 0;
         self.i2 = 0;
-        self.t1 = (t1 is UniformTypeBitSet) ? [] : t1.unpack();
-        self.t2 = (t2 is UniformTypeBitSet) ? [] : t2.unpack();
+        self.t1 = (t1 is UniformTypeBitSet) ? [] : unpackComplexSemType(t1);
+        self.t2 = (t2 is UniformTypeBitSet) ? [] : unpackComplexSemType(t2);
         self.bits = bits;
     }
 
@@ -374,7 +505,7 @@ public function union(SemType t1, SemType t2) returns SemType {
     if subtypes.length() == 0 {
         return all;
     }
-    return new SemType(all, subtypes);
+    return createComplexSemType(all, subtypes);
 }
 
 public function intersect(SemType t1, SemType t2) returns SemType {
@@ -448,10 +579,18 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     if subtypes.length() == 0 {
         return all;
     }
-    return new SemType(all, subtypes);    
+    return createComplexSemType(all, subtypes);    
+}
+
+public function roDiff(TypeCheckContext tc, SemType t1, SemType t2) returns SemType {
+    return maybeRoDiff(t1, t2, tc);
 }
 
 public function diff(SemType t1, SemType t2) returns SemType {
+    return maybeRoDiff(t1, t2, ());
+}
+
+function maybeRoDiff(SemType t1, SemType t2, TypeCheckContext? tc) returns SemType {
     UniformTypeBitSet all1;
     UniformTypeBitSet all2;
     UniformTypeBitSet some1;
@@ -499,25 +638,53 @@ public function diff(SemType t1, SemType t2) returns SemType {
     UniformSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if data1 is () {
-            var complement = ops[code].complement;
-            data = complement(<SubtypeData>data2);
-        }
-        else if data2 is () {
-            data = data1;
+        if tc is () || code < UT_COUNT_RO {
+            // normal diff or read-only uniform type
+            if data1 is () {
+                var complement = ops[code].complement;
+                data = complement(<SubtypeData>data2);
+            }
+            else if data2 is () {
+                data = data1;
+            }
+            else {
+                var diff = ops[code].diff;
+                data = diff(data1, data2);
+            }
         }
         else {
-            var diff = ops[code].diff;
-            data = diff(data1, data2);
+            // read-only diff for mutable uniform type
+            if data1 is () {
+                // data1 was all
+                data = true;
+            }
+            else if data2 is () {
+                // data2 was none
+                data = data1;
+            }
+            else {
+                var diff = ops[code].diff;
+                var isEmpty = ops[code].isEmpty;
+                if isEmpty(tc, diff(data1, data2)) {
+                    data = false;
+                }
+                else {
+                    data = data1;
+                }
+            }
         }
-         if data != false {
+        if data == true {
+            int c = code;
+            all |= <UniformTypeBitSet>(1 << c);
+        }
+        else if data != false {
             subtypes.push([code, data]);
         }
     }
     if subtypes.length() == 0 {
         return all;
     }
-    return new SemType(all, subtypes);        
+    return createComplexSemType(all, subtypes);        
 }
 
 public function complement(SemType t) returns SemType {
@@ -537,7 +704,7 @@ public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
             // includes all of one or more uniform types
             return false;
         }
-        foreach var st in t.unpack() {
+        foreach var st in unpackComplexSemType(t) {
             var [code, data] = st;
             var isEmpty = ops[code].isEmpty;
             if !isEmpty(tc, data) {
@@ -563,6 +730,15 @@ public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolea
     return (bits & ~<int>t2) == 0;
 }
 
+public function widenToUniformTypes(SemType t) returns UniformTypeBitSet {
+    if t is UniformTypeBitSet {
+        return t;
+    }
+    else {
+        return <UniformTypeBitSet>(t.all | t.some);
+    }
+}
+
 // If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),
 // then return the smallest such subtype. Otherwise, return t.
 public function widenUnsigned(SemType t) returns SemType {
@@ -585,92 +761,85 @@ public function widenUnsigned(SemType t) returns SemType {
 
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
-function simpleArrayMemberType(SemType t, ListAtomicType[] listDefs) returns UniformTypeBitSet? {
+// When `strict`, require ro and rw to be consistent; otherwise just consider rw.
+public function simpleArrayMemberType(Env env, SemType t, boolean strict = false) returns UniformTypeBitSet? {
     if t is UniformTypeBitSet {
-        return t == LIST ? TOP : ();
+        return t == LIST || (t == LIST_RW && !strict) ? TOP : ();
     }
     else {
         if !isSubtypeSimple(t, LIST) {
             return ();
         }
-        bdd:Bdd[] bdds = [<bdd:Bdd>t.getSubtypeData(UT_LIST_RO), <bdd:Bdd>t.getSubtypeData(UT_LIST_RW)];
-        UniformTypeBitSet[] memberTypes = [];
-        foreach var bdd in bdds {
-            if bdd is boolean {
-                if bdd {
-                    memberTypes.push(TOP);
-                }
-                else {
-                    return ();
-                }
+        UniformTypeBitSet? rw = bddListSimpleMemberType(env, <Bdd>getComplexSubtypeData(t, UT_LIST_RW));
+        if rw != () && strict {
+            UniformTypeBitSet? ro = bddListSimpleMemberType(env, <Bdd>getComplexSubtypeData(t, UT_LIST_RO));
+            if ro == () || ro != (rw & UT_READONLY) {
+                return ();
             }
-            else {
-                if bdd.left != true || bdd.right != false || bdd.right != false {
-                    return ();
-                }
-                ListAtomicType atomic = listDefs[bdd.atom];
-                if atomic.members.length() > 0 {
-                    return ();
-                }
+        }
+        return rw;
+    }
+}
+
+function bddListSimpleMemberType(Env env, Bdd bdd) returns UniformTypeBitSet? {
+    if bdd is boolean { 
+        if bdd {
+            return TOP;
+        }
+    }
+    else {
+        if bdd.left == true && bdd.middle == false && bdd.right == false {
+            ListAtomicType atomic = env.listAtomType(bdd.atom);
+            if atomic.members.length() == 0 {
                 SemType memberType = atomic.rest;
                 if memberType is UniformTypeBitSet {
-                    memberTypes.push(memberType);
-                }
-                else {
-                    return ();
+                    return memberType;
                 }
             }
         }
-        if memberTypes[0] != (memberTypes[1] & UT_READONLY) {
-            return ();
-        }
-        return memberTypes[1];
     }
+    return ();
 }
 
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
-function simpleMapMemberType(SemType t, MappingAtomicType[] mappingDefs) returns UniformTypeBitSet? {
+public function simpleMapMemberType(Env env, SemType t, boolean strict = false) returns UniformTypeBitSet? {
     if t is UniformTypeBitSet {
-        return t == MAPPING ? TOP : ();
+        return t == MAPPING || (t == MAPPING_RW && !strict) ? TOP : ();
     }
     else {
         if !isSubtypeSimple(t, MAPPING) {
             return ();
         }
-        bdd:Bdd[] bdds = [<bdd:Bdd>t.getSubtypeData(UT_MAPPING_RO), <bdd:Bdd>t.getSubtypeData(UT_MAPPING_RW)];
-        UniformTypeBitSet[] memberTypes = [];
-        foreach var bdd in bdds {
-            if bdd is boolean {
-                if bdd {
-                    memberTypes.push(TOP);
-                }
-                else {
-                    return ();
-                }
+        UniformTypeBitSet? rw = bddMappingSimpleMemberType(env, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW));
+        if rw != () && strict {
+            UniformTypeBitSet? ro = bddMappingSimpleMemberType(env, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO));
+            if ro == () || ro != (rw & UT_READONLY) {
+                return ();
             }
-            else {
-                if bdd.left != true || bdd.right != false || bdd.right != false {
-                    return ();
-                }
-                MappingAtomicType atomic = mappingDefs[bdd.atom];
-                if atomic.names.length() > 0 {
-                    return ();
-                }
+        }
+        return rw;
+    }
+}
+
+function bddMappingSimpleMemberType(Env env, Bdd bdd) returns UniformTypeBitSet? {
+    if bdd is boolean { 
+        if bdd {
+            return TOP;
+        }
+    }
+    else {
+        if bdd.left == true && bdd.middle == false && bdd.right == false {
+            MappingAtomicType atomic = env.mappingAtomType(bdd.atom);
+            if atomic.names.length() == 0 {
                 SemType memberType = atomic.rest;
                 if memberType is UniformTypeBitSet {
-                    memberTypes.push(memberType);
-                }
-                else {
-                    return ();
+                    return memberType;
                 }
             }
         }
-        if memberTypes[0] != (memberTypes[1] & UT_READONLY) {
-            return ();
-        }
-        return memberTypes[1];
     }
+    return ();
 }
 
 public type Value readonly & record {|
@@ -687,17 +856,22 @@ public function singleShape(SemType t) returns Value? {
         return ();
     }
     else if isSubtypeSimple(t, INT) {
-        SubtypeData sd = t.getSubtypeData(UT_INT);
+        SubtypeData sd = getComplexSubtypeData(t, UT_INT);
         int? value = intSubtypeSingleValue(sd);
         return value == () ? () : { value };
     }
+    else if isSubtypeSimple(t, FLOAT) {
+        SubtypeData sd = getComplexSubtypeData(t, UT_FLOAT);
+        float? value = floatSubtypeSingleValue(sd);
+        return value == () ? () : { value };
+    }
     else if isSubtypeSimple(t, STRING) {
-        SubtypeData sd = t.getSubtypeData(UT_STRING);
+        SubtypeData sd = getComplexSubtypeData(t, UT_STRING);
         string? value = stringSubtypeSingleValue(sd);
         return value == () ? () : { value };
     }
     else if isSubtypeSimple(t, BOOLEAN) {
-        SubtypeData sd = t.getSubtypeData(UT_BOOLEAN);
+        SubtypeData sd = getComplexSubtypeData(t, UT_BOOLEAN);
         boolean? value = booleanSubtypeSingleValue(sd);
         return value == () ? () : { value };
     }
@@ -733,6 +907,28 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
+public function constUniformTypeCode(string|int|float|boolean|() v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL {
+    if v is () {
+        return UT_NIL;
+    }
+    else if v is int {
+        return UT_INT;
+    }
+    else if v is float {
+        return UT_FLOAT;
+    }
+    else if v is string {
+        return UT_STRING;
+    }
+    else {
+        return UT_BOOLEAN;
+    }
+}
+
+public function constBasicType(string|int|float|boolean|() v) returns UniformTypeBitSet {
+    return  uniformType(constUniformTypeCode(v));
+}
+
 public function containsConst(SemType t, string|int|float|boolean|() v) returns boolean {
     if v is () {
         return containsNil(t);
@@ -756,7 +952,7 @@ public function containsNil(SemType t) returns boolean {
         return (t & (1 << UT_NIL)) != 0;
     }
     else {
-        return <boolean>t.getSubtypeData(UT_NIL);
+        return <boolean>getComplexSubtypeData(t, UT_NIL);
     }
 }
 
@@ -766,7 +962,7 @@ public function containsConstString(SemType t, string s) returns boolean {
         return (t & (1 << UT_STRING)) != 0;
     }
     else {
-        return stringSubtypeContains(t.getSubtypeData(UT_STRING), s);
+        return stringSubtypeContains(getComplexSubtypeData(t, UT_STRING), s);
     }
 }
 
@@ -775,7 +971,7 @@ public function containsConstInt(SemType t, int n) returns boolean {
         return (t & (1 << UT_INT)) != 0;
     }
     else {
-        return intSubtypeContains(t.getSubtypeData(UT_INT), n);
+        return intSubtypeContains(getComplexSubtypeData(t, UT_INT), n);
     }
 }
 
@@ -784,7 +980,7 @@ public function containsConstFloat(SemType t, float n) returns boolean {
         return (t & (1 << UT_FLOAT)) != 0;
     }
     else {
-        return floatSubtypeContains(t.getSubtypeData(UT_FLOAT), n);
+        return floatSubtypeContains(getComplexSubtypeData(t, UT_FLOAT), n);
     }
 }
 
@@ -793,16 +989,29 @@ public function containsConstBoolean(SemType t, boolean b) returns boolean {
         return (t & (1 << UT_BOOLEAN)) != 0;
     }
     else {
-        return booleanSubtypeContains(t.getSubtypeData(UT_BOOLEAN), b);
+        return booleanSubtypeContains(getComplexSubtypeData(t, UT_BOOLEAN), b);
     }
 }
 
+public function singleNumericType(SemType semType) returns UniformTypeBitSet? {
+    SemType numType = intersect(semType, NUMBER);
+    if numType == NEVER {
+        return ();
+    }
+    if isSubtypeSimple(numType, INT) {
+        return INT;
+    }
+    if isSubtypeSimple(numType, FLOAT) {
+        return FLOAT;
+    }
+    if isSubtypeSimple(numType, DECIMAL) {
+        return DECIMAL;
+    }
+    return ();
+}
+
 public function typeCheckContext(Env env) returns TypeCheckContext {
-    return {
-        listDefs: env.listDefs.cloneReadOnly(),
-        mappingDefs: env.mappingDefs.cloneReadOnly(),
-        functionDefs: env.functionDefs.cloneReadOnly()
-    };
+    return new(env);
 }
 
 public function createJson(Env env) returns SemType {

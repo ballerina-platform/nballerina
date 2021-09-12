@@ -15,7 +15,7 @@ void testRandMapping(int len) {
         k[i] = randSmallString();
         v[i] = randSmallString();
     }
-    TaggedPtr m = _bal_mapping_construct(0);
+    TaggedPtr m = _bal_mapping_construct(1 << TAG_STRING, 0);
     for (int i = 0; i < len; i++) {
         bool dup = _bal_mapping_get(m, k[i]) != 0;
         _bal_mapping_set(m, k[i], v[i]);

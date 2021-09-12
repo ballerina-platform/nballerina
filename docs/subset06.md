@@ -34,7 +34,7 @@
    * binary operators: `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`, `&`, `^`, `|`, `<<`, `>>`, `>>>`
    * unary operators: `-`, `!`, `~`
    * type cast `<T>E`
-   * type test `E is T`
+   * type test `E is T`, `E !is T`
    * function call
    * method call `v.f(args)` syntax for calling langlib functions
    * member access `E[i]` for both list and mapping
@@ -122,7 +122,7 @@ continue-stmt = "continue" ";"
 
 foreach-stmt = "foreach" "int" identifier "in" additive-expr "..<" additive-expr stmt-block
 
-match-stmt = "match" innner-expr { match-clause+ }
+match-stmt = "match" inner-expr { match-clause+ }
 
 match-clause := match-pattern-list "=>" stmt-block
 match-pattern-list :=
@@ -172,7 +172,7 @@ relational-expr =
   | shift-expr "<=" shift-expr
   | shift-expr ">" shift-expr
   | shift-expr ">=" shift-expr
-  | shift-expr "is" type-desc
+  | shift-expr ["!"] "is" type-desc
 
 shift-expr =
   additive-expr
@@ -241,7 +241,7 @@ variable-reference-expr = identifier # can refer to parameter, local variable or
 
 // tokens
 int-literal = (as in Ballerina language spec)
-floating-point-literal = (as in Ballerina spec, except DecimalTypeSuffix is not allowed)
+floating-point-literal = (as in Ballerina spec, except HexFloatingPointLiteral and DecimalTypeSuffix are not allowed)
 string-literal = (as in Ballerina language spec)
 identifier = [A-Za-z][A-Za-z0-9_]*
 CompoundAssignmentOperator = (as in Ballerina language spec)
@@ -258,9 +258,10 @@ Language spec syntax references:
 
 ## Semantic restrictions
 
-The implementation of `string` has the following additional restrictions:
+There are the following additional restrictions:
 
  * member access `s[i]` is not supported when `s` has type `string`
+ * relational operators are not supported when the static type of either of the operands includes nil
 
 Method call syntax can be used for calling the following langlib functions:
 
@@ -289,6 +290,7 @@ The following restrictions apply to imported modules:
 
 ## Implemented spec changes since 2021R1
 
+* [#752](https://github.com/ballerina-platform/ballerina-spec/issues/752) - `!is` operator
 * [#814](https://github.com/ballerina-platform/ballerina-spec/issues/814) - improved typing rules for `==` and `!=`
 * [#827](https://github.com/ballerina-platform/ballerina-spec/issues/827#issuecomment-895601520) - improved type narrowing for `match` statement
 * [#887](https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability

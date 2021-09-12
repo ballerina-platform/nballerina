@@ -10,15 +10,28 @@ public type Template object {
 
 const QUOTE = "'";
 
-public type Position readonly & record {|
-    // 1-based
-    int lineNumber;
-    // 0-based index (in code points) in the line
-    int indexInLine;
+// A position is an int that represents a position within a File.
+// The File determines how the int is mapped onto a line/column.
+// All that is guaranteed is that the ordering of ints
+// is consistent with the ordering of positions.
+public type Position int;
+
+public type LineColumn readonly & [int, int];
+
+public type File readonly & object {
+    public function filename() returns string;
+    public function directory() returns string?;
+    public function lineColumn(Position pos) returns LineColumn;
+};
+
+public type Location readonly & record {|
+    string filename;
+    LineColumn? startPos;
+    LineColumn? endPos;  
 |};
 
 public type Detail record {
-    Position? position;
+    Location? location;
     string? functionName;
 };
 
@@ -32,16 +45,24 @@ public type Unimplemented distinct error<Detail>;
 
 public type Panic distinct error;
 
-public function syntax(Message m, Position? pos = (), string? functionName = (), error? cause = ()) returns Syntax {
-    return error Syntax(messageToString(m), cause, position=pos, functionName=functionName);
+public function location(File file, Position? startPos = (), Position? endPos = ()) returns Location {
+    return {
+        filename: file.filename(),
+        startPos: startPos == () ? () : file.lineColumn(startPos),
+        endPos: endPos == () ? () : file.lineColumn(endPos)
+    };
 }
 
-public function semantic(Message m, Position? pos = (), string? functionName = (), error? cause = ()) returns Semantic {
-    return error Semantic(messageToString(m), cause, position=pos, functionName=functionName);
+public function syntax(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Syntax {
+    return error Syntax(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
-public function unimplemented(Message m, Position? pos = (), string? functionName = (), error? cause = ()) returns Unimplemented {
-    return error Unimplemented(messageToString(m), cause, position=pos, functionName=functionName);
+public function semantic(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Semantic {
+    return error Semantic(messageToString(m), cause, location=loc, functionName=functionName);
+}
+
+public function unimplemented(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Unimplemented {
+    return error Unimplemented(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
 public function messageToString(Message m) returns string {

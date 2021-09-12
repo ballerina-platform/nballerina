@@ -10,13 +10,34 @@ public function floatConst(float value) returns SemType {
     return uniformSubtype(UT_FLOAT, st);
 }
 
+function floatSubtypeSingleValue(SubtypeData d) returns float? {
+    if d is boolean {
+        return ();
+    }
+    FloatSubtype f = <FloatSubtype>d;
+    if !f.allowed {
+        return ();
+    }
+    float[] values = f.values;
+    if values.length() != 1 {
+        return ();
+    }
+    return values[0];
+}
+
 // XXX should this be generified and moved to enumerable? 
 function floatSubtypeContains(SubtypeData d, float f) returns boolean {
     if d is boolean {
         return d;
     }
     FloatSubtype v = <FloatSubtype>d;
-    return v.values.indexOf(f) != () ? v.allowed : !v.allowed;
+    // JBUG indexOf does not work with -0 because of #32245
+    foreach float val in v.values {
+        if val == f {
+            return v.allowed;
+        }
+    }
+    return !v.allowed;
 }
 
 function floatSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {

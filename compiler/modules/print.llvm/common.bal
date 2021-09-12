@@ -4,7 +4,7 @@
 // "i8" corresponds to LLVMInt8Type
 // "i1" corresponds to LLVMInt1Type
 public type IntType "i64"|"i32"|"i16"|"i8"|"i1";
-public type RealType "double";
+public type FloatType "double";
 
 
 // Used to constrain parameters that represent an alignment
@@ -25,7 +25,7 @@ public function pointerType(Type ty, int addressSpace = 0) returns PointerType {
 
 # https://github.com/llvm/llvm-project/blob/ad4bb8280952c2cacf497e30560ee94c119b36e0/llvm/include/llvm/IR/Type.h#L259
 # Valid type for a register in codegen. This includes all first-class types except struct and array types.
-public type SingleValueType IntegralType|RealType|PointerType;
+public type SingleValueType IntegralType|FloatType|PointerType;
 
 // Corresponds to LLVMArrayType
 public type ArrayType readonly & record {|
@@ -50,7 +50,7 @@ function getTypeAtIndex(StructType ty, int index) returns Type {
     return ty.elementTypes[index];
 }
 
-public type Type IntType|RealType|PointerType|StructType|ArrayType;
+public type Type IntType|FloatType|PointerType|StructType|ArrayType;
 
 // A RetType is valid only as the return type of a function
 public type RetType Type|"void";
@@ -73,15 +73,20 @@ public type EnumAttribute FunctionEnumAttribute | (readonly & [int, ParamEnumAtt
 
 public type IntArithmeticOp "add"|"sub"|"mul";
 
+public type FloatArithmeticOp "fadd"|"fsub"|"fmul"|"fdiv"|"frem";
+
 public type IntArithmeticSignedOp "sdiv"|"srem";
 
 public type IntBitwiseOp "xor"|"or"|"and"|"shl"|"ashr"|"lshr";
 
 type IntOp IntArithmeticOp|IntArithmeticSignedOp|IntBitwiseOp;
+type BinaryOp IntOp|FloatArithmeticOp;
 
 // Corresponds to LLVMIntPredicate
 public type IntPredicate "eq"|"ne"|"ugt"|"uge"|"ult"|"ule"|"sgt"|"sge"|"slt"|"sle";
 
+// Corresponds to LLVMRealPredicate
+public type FloatPredicate "false"|"oeq"|"ogt"|"oge"|"olt"|"ole"|"one"|"ord"|"ueq"|"ugt"|"uge"|"ult"|"ule"|"une"|"uno"|"true";
 public type IntegerArithmeticIntrinsicName "sadd.with.overflow.i64"|"ssub.with.overflow.i64"|"smul.with.overflow.i64";
 public type GeneralIntrinsicName "ptrmask.p1i8.i64";
 
@@ -98,3 +103,44 @@ public type GlobalProperties record {|
     Linkage linkage = "external";
 |};
 
+// Corresponds to LLVMDWARFSourceLanguage
+public type DWARFSourceLanguage "C99";
+
+// Corresponds to LLVMDWARFEmissionKind
+public type EmissionKind "none"|"full"|"lineTablesOnly";
+
+public type CompileUnitProperties record {|
+    DWARFSourceLanguage language = "C99";
+    Metadata? file;
+    string? producer = ();
+    boolean isOptimized = false;
+    string? flags = ();
+    int runtimeVersion = 0;
+    string? splitName = ();
+    EmissionKind kind = "full";
+    int? DWOId = ();
+    boolean splitDebugInlining = false;
+    boolean? splitDebugInfoForProfiling = ();
+    string? sysRoot = ();
+    string? sdk = ();
+|};
+
+public type ModuleFlag ["Debug Info Version", int]|["Dwarf Version", int];
+// Corresponds to LLVMModuleFlagBehavior
+public type ModuleFlagBehavior "error"|"warning"|"require"|"override"|"append"|"appendUnique"|"max";
+
+// Corresponds to LLVMDIFlags
+public type DIFlag "zero";
+public type FunctionMetadataProperties record {|
+    Metadata? scope;
+    string? name;
+    string? linkageName;
+    Metadata? file;
+    int lineNo;
+    Metadata? ty;
+    boolean isLocalToUnit = true;
+    boolean isDefinition = true;
+    int scopeLine;
+    DIFlag flag = "zero";
+    boolean isOptimized = false;
+|};

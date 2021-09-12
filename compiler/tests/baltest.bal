@@ -2,12 +2,12 @@ import ballerina/test;
 import ballerina/io;
 import ballerina/file;
 
-type SubtypeTestCase [string[], string[]];
+type SubtypeTestCase [string, string[], string[]];
 @test:Config {
     dataProvider: subtypeCaseProvider
 }
-function testSubtype(string[] lines, string[] expected) returns error? {
-    string[] result = check subtypeRels(lines);
+function testSubtype(string filename, string[] lines, string[] expected) returns error? {
+    string[] result = check subtypeRels([{ lines, filename }]);
     test:assertEquals(result, expected);
 }
 
@@ -41,7 +41,7 @@ function readTestCase(string filename) returns SubtypeTestCase|error {
         let string result = line.substring(3).trim()
         order by result
         select result;
-    return [lines, expected];
+    return [filename, lines, expected];
 }
 
 // @test:Config{}

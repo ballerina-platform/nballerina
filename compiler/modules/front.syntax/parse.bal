@@ -2,21 +2,30 @@
 
 import wso2/nballerina.err;
 
-public function parseModulePart(string[] lines) returns ModulePart|err:Syntax {
-    Tokenizer tok = new (lines);
+public type FilePath record {|
+    string filename;
+    string? directory = ();
+|};
+
+public function parseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
+    SourceFile file = new(path);
+    Tokenizer tok = new (lines, file);
     check tok.advance();
     ModulePart part = {
+        file,
+        partIndex,
         defns: [],
         importDecl: check parseImportDecl(tok)
     };
     while tok.current() != () {
-        part.defns.push(check parseModuleDecl(tok));
+        part.defns.push(check parseModuleDecl(tok, part));
     }
     return part;
 }
 
-public function parseExpression(string[] lines) returns Expr|err:Syntax {
-    Tokenizer tok = new (lines);
+public function parseExpression(string[] lines, FilePath path) returns Expr|err:Syntax {
+    SourceFile file = new(path);
+    Tokenizer tok = new (lines, file);
     check tok.advance();
     Expr expr = check parseExpr(tok);
     if tok.current() != () {
@@ -30,6 +39,8 @@ function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
     if t != "import" {
         return;
     }
+    Position pos = tok.currentPos();
+
     check tok.advance();
     t = tok.current();
     if t is [IDENTIFIER, string] { 
@@ -40,13 +51,13 @@ function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
         if t is [IDENTIFIER, string] {
             check tok.advance();
             check tok.expect(";");
-            return { org, module: t[1] };
+            return { org, module: t[1], pos };
         }
     }
     return parseError(tok, "import declaration");
 }
 
-function parseModuleDecl(Tokenizer tok) returns ModuleLevelDefn|err:Syntax {
+function parseModuleDecl(Tokenizer tok, ModulePart part) returns ModuleLevelDefn|err:Syntax {
     Token? t = tok.current();
     Visibility vis;
     if t == "public" {
@@ -59,50 +70,56 @@ function parseModuleDecl(Tokenizer tok) returns ModuleLevelDefn|err:Syntax {
     }
     match t {
         "type" => {
-            return parseTypeDefinition(tok, vis);
+            return parseTypeDefinition(tok, part, vis);
         }
         "const" => {
-            return parseConstDefinition(tok, vis);
+            return parseConstDefinition(tok, part, vis);
         }
         "function" => {
-            return parseFunctionDefinition(tok, vis);
+            return parseFunctionDefinition(tok, part, vis);
         }
     }
     return parseError(tok);
 }
 
-function parseTypeDefinition(Tokenizer tok, Visibility vis) returns TypeDefn|err:Syntax {
+function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns TypeDefn|err:Syntax {
     check tok.advance();
-    err:Position pos = tok.currentPos();
+    Position pos = tok.currentPos();
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
         string name = t[1];
         check tok.advance();
         TypeDesc td = check parseTypeDesc(tok);
         check tok.expect(";");
-        return { name, td, pos, vis };
+        return { name, td, pos, vis, part };
     }
     return parseError(tok);
 }
 
-function parseConstDefinition(Tokenizer tok, Visibility vis) returns ConstDefn|err:Syntax {
+function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns ConstDefn|err:Syntax {
     check tok.advance();
-    err:Position pos = tok.currentPos();
+    Position pos = tok.currentPos();
     Token? t = tok.current();
+    InlineBuiltinTypeDesc? td = ();
+    if t is InlineBuiltinTypeDesc {
+        check tok.advance();
+        td = t;
+        t = tok.current();
+    }
     if t is [IDENTIFIER, string] {
         string name = t[1];
         check tok.advance();
         check tok.expect("=");
         Expr expr = check parseInnerExpr(tok);
         check tok.expect(";");
-        return { name, expr, pos, vis };
+        return { td, name, expr, pos, vis, part };
     }
     return parseError(tok);
 }
 
-function parseFunctionDefinition(Tokenizer tok, Visibility vis) returns FunctionDefn|err:Syntax {
+function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns FunctionDefn|err:Syntax {
     check tok.advance();
-    err:Position pos = tok.currentPos();
+    Position pos = tok.currentPos();
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
         string name = t[1];
@@ -110,7 +127,7 @@ function parseFunctionDefinition(Tokenizer tok, Visibility vis) returns Function
         string[] paramNames = [];
         FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
         Stmt[] body = check parseStmtBlock(tok);
-        FunctionDefn defn = { name, vis, paramNames, typeDesc, pos, body };
+        FunctionDefn defn = { name, vis, paramNames, typeDesc, pos, body, part };
         return defn;
     }
     return parseError(tok);
@@ -128,4 +145,8 @@ function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
         message += ": " + detail;
     }
     return tok.err(message);
+}
+
+public function defnLocation(ModuleLevelDefn defn) returns err:Location {
+    return err:location(defn.part.file, defn.pos);
 }

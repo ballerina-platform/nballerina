@@ -74,7 +74,7 @@ final string negInf = "0x" + (-1.0/0.0).toBitsInt().toHexString().toUpperAscii()
 final string NAN = "0x" + (0.0/0.0).toBitsInt().toHexString().toUpperAscii();
 
 // Corresponds to LLVMConstReal
-public function constReal(RealType ty, float val) returns ConstValue {
+public function constFloat(FloatType ty, float val) returns ConstValue {
     string valRep;
     // Special cases
     if val.isInfinite() {
@@ -192,12 +192,36 @@ public class Module {
     private [PointerValue, GlobalProperties][] globalVariables = [];
     private FunctionDecl[] functionDecls = [];
     private FunctionDefn[] functionDefns = [];
+    Metadata[] metadata = [];
+    Metadata[] moduleFlags = [];
 
     private final Context context;
     private TargetTriple? target = ();
 
     function init(Context context) {
         self.context = context;
+    }
+
+    // Corresponds to LLVMCreateDIBuilder
+    public function createDIBuilder() returns DIBuilder {
+        DIBuilder dIBuilder = new(self);
+        return dIBuilder;
+    }
+
+    // Corresponds to LLVMAddModuleFlag
+    public function addModuleFlag(ModuleFlagBehavior behavior, ModuleFlag flag) {
+        Metadata metadata = self.addMetadata();
+        metadata.addLine(metadata.ref(), "=", "!", "{", "i32", moduleFlagBehaviorToString.get(behavior),",",
+                         "!", "\"", flag[0], "\"", ",", "i32", flag[1].toString() ,"}");
+        string[] preambleWords  = [];
+        preambleWords.push("!", "llvm", ".", "module", ".", "flags", "=", "!", "{");
+        foreach var flagMetadata in self.moduleFlags {
+            preambleWords.push(flagMetadata.ref(), ",");
+            flagMetadata.resetPreamble();
+        }
+        preambleWords.push(metadata.ref(), "}");
+        metadata.addPreamble(...preambleWords);
+        self.moduleFlags.push(metadata);
     }
 
     // Corresponds to LLVMAddFunction
@@ -274,7 +298,7 @@ public class Module {
         }
         return varName;
     }
- 
+
     // Corresponds to LLVMPrintModuleToFile
     public function printModuleToFile(string path) returns io:Error? {
         Output out = new;
@@ -302,6 +326,14 @@ public class Module {
         }
         foreach var fn in self.functionDefns {
             fn.output(out);
+        }
+        foreach var data in self.metadata {
+            if data.hasPreamble() {
+                data.outputPreamble(out);
+            }
+        }
+        foreach var data in self.metadata {
+            data.output(out);
         }
     }
 
@@ -336,6 +368,16 @@ public class Module {
         }
         out.push(createLine(words));
     }
+
+    function genMetadataLabel() returns string {
+        return string `!${self.metadata.length()}`;
+    }
+
+    function addMetadata() returns Metadata {
+        Metadata metadata = new(self.genMetadataLabel());
+        self.metadata.push(metadata);
+        return metadata;
+    }
 }
 
 # Corresponds to an LLVMValueRef that corresponds to an llvm::Function
@@ -349,6 +391,7 @@ public class FunctionDecl {
     final FunctionEnumAttribute[] functionAttributes = [];
     final ReturnEnumAttribute[] returnAttributes = [];
     final ParamEnumAttribute[][] paramAttributes = [];
+    Metadata? metadata = ();
 
     function init(Context context, string functionName, FunctionType functionType) {
         self.functionName = functionName;
@@ -386,6 +429,10 @@ public class FunctionDecl {
         }
     }
 
+    // Corresponds to LLVMSetSubprogram
+    public function setSubprogram(Metadata metadata) {
+        self.metadata = metadata;
+    }
 
     // Corresponds to LLVMSetGC
     public function setGC(string? name) {
@@ -401,6 +448,7 @@ public class FunctionDefn {
     final ReturnEnumAttribute[] returnAttributes = [];
     final ParamEnumAttribute[][] paramAttributes = [];
     string? gcName = ();
+    Metadata? metadata = ();
 
     private BasicBlock[] basicBlocks = [];
     private map<int> variableNames = {};
@@ -577,11 +625,237 @@ public class FunctionDefn {
             return name;
         }
     }
+
+    // Corresponds to LLVMSetSubprogram
+    public function setSubprogram(Metadata metadata) {
+        self.metadata = metadata;
+    }
+}
+
+# Corresponds to LLVMMetadataRef
+public distinct class Metadata {
+    string label;
+    string[] lines = [];
+    string[] preamble = [];
+    function init(string ref) {
+        self.label = ref;
+    }
+
+    function addLine(string ...words) {
+        self.lines.push(concat(...words));
+    }
+
+    function addPreamble(string ...words) {
+        self.preamble.push(concat(...words));
+    }
+
+    function resetPreamble() {
+        self.preamble = [];
+    }
+
+    function hasPreamble() returns boolean {
+        return self.preamble.length() != 0;
+    }
+
+    function output(Output out) {
+        if self.lines.length() == 0 {
+            out.push(string `${self.ref()} = !{}`);
+        }
+        foreach var line in self.lines {
+           out.push(line);
+        }
+    }
+
+    function outputPreamble(Output out) {
+        foreach var line in self.preamble {
+           out.push(line);
+        }
+    }
+
+    function ref() returns string {
+        return self.label;
+    }
+}
+
+final readonly & map<string> sourceLangToString = {
+    "C99": "DW_LANG_C99"
+};
+
+final readonly & map<string> emissionKindToString = {
+    "none": "NoDebug",
+    "full": "FullDebug",
+    "lineTablesOnly": "LineTablesOnly"
+};
+
+final readonly & map<string> moduleFlagBehaviorToString = {
+    "error": "1",
+    "warning": "2",
+    "require": "3",
+    "override": "4",
+    "append": "5",
+    "appendUnique": "6",
+    "max": "7"
+};
+
+# Corresponds to LLVMDIBuilderRef
+public class DIBuilder {
+    Module m;
+    Metadata? compileUnit = ();
+    function init(Module m) {
+        self.m = m;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateCompileUnit
+    public function createCompileUnit(*CompileUnitProperties props) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        Metadata? file = props.file;
+        string[] words = [];
+        words.push(metadata.ref(), "=", "distinct", "!", "DICompileUnit", "(", "language",
+                   ":", sourceLangToString.get(props.language));
+        self.addMetadataToWords(words, props.file, "file");
+        self.addStringToWords(words, props.producer, "producer");
+        words.push(",", "isOptimized", ":", props.isOptimized.toString());
+        self.addStringToWords(words, props.flags, "flags");
+        words.push(",", "runtimeVersion", ":", props.runtimeVersion.toString());
+        self.addStringToWords(words, props.splitName, "splitDebugFilename");
+        words.push(",", "emissionKind", ":", emissionKindToString.get(props.kind));
+        self.addBooleanToWords(words, props.splitDebugInlining, "splitDebugInlining");
+        words.push(")");
+        metadata.addLine(...words);
+
+        metadata.addPreamble("!", "llvm", ".", "dbg", ".", "cu", "=", "!", "{", metadata.ref(), "}");
+        self.compileUnit = metadata;
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateFile
+    public function createFile(string filename, string directory) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        metadata.addLine(metadata.ref(), "=", "!", "DIFile", "(", "filename", ":", "\"", filename,
+                         "\"", ",", "directory", ":", "\"", directory, "\"", ")");
+        return metadata;
+    }
+
+    // Corresponds to LLVMDIBuilderCreateFunction
+    public function createFunction(*FunctionMetadataProperties props) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string[] words = [];
+        words.push(metadata.ref(), "=");
+        if props.isDefinition {
+            words.push("distinct");
+        }
+        words.push("!", "DISubprogram", "(");
+        self.addStringToWords(words, props.name, "name", ());
+        self.addStringToWords(words, props.linkageName, "linkageName");
+        Metadata? scope = props.scope;
+        Metadata? file = props.file;
+        self.addMetadataToWords(words, scope, "scope");
+        self.addMetadataToWords(words, file, "file");
+        if props.lineNo != 0 {
+            words.push(",", "line", ":", props.lineNo.toString());
+        }
+        Metadata? ty = props.ty;
+        self.addMetadataToWords(words, ty, "type");
+        string[] flags = [];
+        if props.isLocalToUnit {
+            flags.push("DISPFlagLocalToUnit");
+        }
+        if props.isDefinition {
+            flags.push("DISPFlagDefinition");
+        }
+        if props.isOptimized {
+            flags.push("DISPFlagOptimized");
+        }
+        words.push(",", "spFlags", ":");
+        if flags.length() > 0 {
+            foreach int i in 0 ..< flags.length() {
+                if i > 0 {
+                    words.push("|");
+                }
+                words.push(flags[i]);
+            }
+        }
+        else {
+            words.push("0");
+        }
+        if props.isDefinition {
+            self.addMetadataToWords(words, self.compileUnit, "unit");
+            if self.compileUnit is () {
+                panic error("No compile unit is defined");
+            }
+        }
+        Metadata retainedNodes = self.m.addMetadata();
+        words.push(",", "retainedNodes", ":", retainedNodes.ref(), ")");
+        metadata.addLine(...words);
+        return metadata;
+    }
+
+    public function createSubroutineType(Metadata? file, Metadata[] parameterTypes=[], DIFlag flag="zero") returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        if parameterTypes.length() != 0 {
+            panic error("Parameter types not implemented");
+        }
+        Metadata typeNode = self.m.addMetadata();
+        metadata.addLine(metadata.ref(), "=", "!DISubroutineType", "(", "types", ":", typeNode.ref(), ")");
+        return metadata;
+    }
+
+    public function createDebugLocation(Context context, int line, int column, Metadata? scope, Metadata? inlinedAt=()) returns Metadata {
+        Metadata metadata = self.m.addMetadata();
+        string[] words = [metadata.ref(), "=", "!", "DILocation", "("];
+        words.push("line", ":", line.toString());
+        words.push(",", "column", ":", column.toString());
+        self.addMetadataToWords(words, scope, "scope");
+        words.push(")");
+        metadata.addLine(...words);
+        return metadata;
+    }
+
+    function addMetadataToWords(string[] words, Metadata? metadata, string label, string? prefix=",") {
+        if prefix is string {
+            words.push(prefix);
+        }
+        words.push(label, ":");
+        if metadata is Metadata {
+            words.push(metadata.ref());
+        }
+        else {
+            words.push("null");
+        }
+    }
+
+    function addStringToWords(string[] words, string? data, string label, string? prefix=",") {
+        if data is string {
+            if prefix is string {
+                words.push(prefix);
+            }
+            words.push(label, ":", "\"", data, "\"");
+        }
+    }
+
+    function addBooleanToWords(string[] words, boolean? data, string label, string? prefix=","){
+        if prefix is string {
+            words.push(prefix);
+        }
+        words.push(label, ":");
+        if data is boolean {
+            if data {
+                words.push("true");
+            }
+            else {
+                words.push("false");
+            }
+        }
+        else {
+            words.push("false");
+        }
+    }
 }
 
 # Corresponds to LLVMBuilderRef  
 public class Builder {
     private BasicBlock? currentBlock = ();
+    private Metadata? dbLocation = ();
 
     // Corresponds to LLVMCreateBuilder
     public function init(Context context) { }
@@ -596,7 +870,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         PointerType ptrTy = pointerType(ty);
-        addInsnWithAlign(bb, [reg, "=", "alloca", typeToString(ty)], align);
+        addInsnWithAlign(bb, [reg, "=", "alloca", typeToString(ty)], align, self.dbLocation);
         return new PointerValue(ptrTy, reg);
     }
 
@@ -605,7 +879,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         Type ty = ptr.ty.pointsTo;
         string|Unnamed reg = bb.func.genReg(name);
-        addInsnWithAlign(bb, [reg, "=", "load", typeToString(ty), ",", typeToString(ptr.ty), ptr.operand], align);
+        addInsnWithAlign(bb, [reg, "=", "load", typeToString(ty), ",", typeToString(ptr.ty), ptr.operand], align, self.dbLocation);
         return new Value(ty, reg);
     }
 
@@ -615,38 +889,43 @@ public class Builder {
         if ty != val.ty {
             panic err:illegalArgument("store type mismatch: " + typeToString(val.ty) + ", " + typeToString(ptr.ty));
         }
-        addInsnWithAlign(self.bb(), ["store", typeToString(ty), val.operand, ",", typeToString(ptr.ty), ptr.operand], align);
+        addInsnWithAlign(self.bb(), ["store", typeToString(ty), val.operand, ",", typeToString(ptr.ty), ptr.operand], align, self.dbLocation);
+    }
+
+    // Corresponds to LLVMBuild{FAdd,FSub,FMul,FDiv,FRem}
+    public function fArithmetic(FloatArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     // Corresponds to LLVMBuildNSW{Add,Mul,Sub}
     public function iArithmeticNoWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        IntType ty = sameIntType(lhs, rhs);
-        bb.addInsn(reg, "=", op, "nsw", ty, lhs.operand, ",", rhs.operand);
+        IntType|FloatType ty = sameNumberType(lhs, rhs);
+        addInsnWithDbLocation(bb, [reg, "=", op, "nsw", ty, lhs.operand, ",", rhs.operand], self.dbLocation);
         return new Value(ty, reg);
     }
     // Corresponds to LLVMBuild{Add,Mul,Sub}
     public function iArithmeticWrap(IntArithmeticOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     // Corresponds to LLVMBuild{SDiv,SRem}
     public function iArithmeticSigned(IntArithmeticSignedOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     // Corresponds to LLVMBuild{And, Or, Xor}
     public function iBitwise(IntBitwiseOp op, Value lhs, Value rhs, string? name=()) returns Value {
-        return self.binaryIntNoWrap(op, lhs, rhs, name);
+        return self.binaryOpWrap(op, lhs, rhs, name);
     }
 
     // Internally handle binary int operations without wrapping
-    function binaryIntNoWrap(IntOp op, Value lhs, Value rhs, string? name=()) returns Value {
+    function binaryOpWrap(BinaryOp op, Value lhs, Value rhs, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        IntType ty = sameIntType(lhs, rhs);
-        bb.addInsn(reg, "=", op, ty, lhs.operand, ",", rhs.operand);
+        IntType|FloatType ty = sameNumberType(lhs, rhs);
+        addInsnWithDbLocation(bb, [reg, "=", op, ty, lhs.operand, ",", rhs.operand], self.dbLocation);
         return new Value(ty, reg);
     }
 
@@ -655,18 +934,32 @@ public class Builder {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         IntegralType ty = sameIntegralType(lhs, rhs);
-        bb.addInsn(reg, "=", "icmp", op, typeToString(ty), lhs.operand, ",", rhs.operand);
+        addInsnWithDbLocation(bb, [reg, "=", "icmp", op, typeToString(ty), lhs.operand, ",", rhs.operand], self.dbLocation);
         return new Value("i1", reg);
+    }
+
+    // Corresponds to LLVMBuildFCmp
+    public function fCmp(FloatPredicate op, Value lhs, Value rhs, string? name=()) returns Value {
+        BasicBlock bb = self.bb();
+        string|Unnamed reg = bb.func.genReg(name);
+        IntType|FloatType ty = sameNumberType(lhs, rhs);
+        if ty is FloatType {
+            addInsnWithDbLocation(bb, [reg, "=", "fcmp", op, typeToString(ty), lhs.operand, ",", rhs.operand], self.dbLocation);
+            return new Value("i1", reg);
+        }
+        else {
+            panic err:illegalArgument("values must be a real type");
+        }
     }
 
     // Corresponds to LLVMBuildBitCast
     public function bitCast(PointerValue val, PointerType destTy, string? name=()) returns PointerValue {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        (string|Unnamed)[] words = [];
+        (string|Unnamed)[] words = [reg, "="];
         words.push("bitcast");
         bitCastArgs(words, val, destTy);
-        bb.addInsn(reg, "=", ...words);
+        addInsnWithDbLocation(bb, words, self.dbLocation);
         return new (destTy, reg);
     }
 
@@ -675,10 +968,10 @@ public class Builder {
     public function ret(Value? value=()) {
         BasicBlock bb = self.bb();
         if value is () {
-            bb.addInsn("ret", "void");
+            addInsnWithDbLocation(bb, ["ret", "void"], self.dbLocation);
         }
         else {
-            bb.addInsn("ret", typeToString(value.ty), value.operand);
+            addInsnWithDbLocation(bb, ["ret", typeToString(value.ty), value.operand], self.dbLocation);
         }
     }
 
@@ -686,7 +979,7 @@ public class Builder {
     public function ptrToInt(PointerValue ptr, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        bb.addInsn(reg, "=", "ptrtoint", typeToString(ptr.ty), ptr.operand, "to", typeToString(destTy));
+        addInsnWithDbLocation(bb, [reg, "=", "ptrtoint", typeToString(ptr.ty), ptr.operand, "to", typeToString(destTy)], self.dbLocation);
         return new Value(destTy, reg);
     }
 
@@ -694,7 +987,7 @@ public class Builder {
     public function zExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        bb.addInsn(reg, "=", "zext", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        addInsnWithDbLocation(bb, [reg, "=", "zext", typeToString(val.ty), val.operand, "to", typeToString(destTy)], self.dbLocation);
         return new Value(destTy, reg);
     }
 
@@ -702,7 +995,7 @@ public class Builder {
     public function sExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        bb.addInsn(reg, "=", "sext", typeToString(val.ty), val.operand, "to", typeToString(destTy));
+        addInsnWithDbLocation(bb, [reg, "=", "sext", typeToString(val.ty), val.operand, "to", typeToString(destTy)], self.dbLocation);
         return new Value(destTy, reg);
     }
 
@@ -714,7 +1007,7 @@ public class Builder {
             }
             BasicBlock bb = self.bb();
             string|Unnamed reg = bb.func.genReg(name);
-            bb.addInsn(reg, "=", "trunc", typeToString(val.ty), val.operand, "to", typeToString(destinationType));
+            addInsnWithDbLocation(bb, [reg, "=", "trunc", typeToString(val.ty), val.operand, "to", typeToString(destinationType)], self.dbLocation);
             return new Value(destinationType, reg);
         } 
         else {
@@ -722,9 +1015,35 @@ public class Builder {
         }
     }
 
+    // Corresponds to LLVMBuildFNeg
+    public function fNeg(Value val, string? name=()) returns Value {
+        if val.ty is FloatType {
+            BasicBlock bb = self.bb();
+            string|Unnamed reg = bb.func.genReg(name);
+            addInsnWithDbLocation(bb, [reg, "=", "fneg", typeToString(val.ty), val.operand], self.dbLocation);
+            return new Value(val.ty, reg);
+        }
+        else {
+            panic err:illegalArgument("value must be an real type");
+        }
+    }
+
+    // Corresponds to LLVMBuildSIToFP
+    public function sIToFP(Value val, FloatType destTy, string? name=()) returns Value {
+        if val.ty is IntType {
+            BasicBlock bb = self.bb();
+            string|Unnamed reg = bb.func.genReg(name);
+            addInsnWithDbLocation(bb, [reg, "=", "sitofp", typeToString(val.ty), val.operand, "to", typeToString(destTy)], self.dbLocation);
+            return new Value(destTy, reg);
+        }
+        else {
+            panic err:illegalArgument("value must be int type");
+        }
+    }
+
     public function unreachable() {
         BasicBlock bb = self.bb();
-        bb.addInsn("unreachable");
+        addInsnWithDbLocation(bb, ["unreachable"], self.dbLocation);
     }
 
     // Corresponds to LLVMBuildCall
@@ -754,10 +1073,12 @@ public class Builder {
         insnWords.push(")");
         if retType != "void" {
             string|Unnamed reg = bb.func.genReg(name);
-            bb.addInsn(reg, ...insnWords);
+            (string|Unnamed)[] words = [reg];
+            words.push(...insnWords);
+            addInsnWithDbLocation(bb, words, self.dbLocation);
             return new Value(retType, reg);
         } else {
-            bb.addInsn(...insnWords);
+            addInsnWithDbLocation(bb, insnWords, self.dbLocation);
         }
     }
 
@@ -766,7 +1087,7 @@ public class Builder {
         if value.ty is StructType {
             BasicBlock bb = self.bb();
             string|Unnamed reg = bb.func.genReg(name);
-            bb.addInsn(reg, "=", "extractvalue", typeToString(value.ty), value.operand, ",", index.toString());
+            addInsnWithDbLocation(bb, [reg, "=", "extractvalue", typeToString(value.ty), value.operand, ",", index.toString()], self.dbLocation);
             Type elementType = getTypeAtIndex(<StructType>value.ty, index);
             return new Value(elementType, reg);
         }
@@ -778,14 +1099,14 @@ public class Builder {
     // Corresponds to LLVMBuildBr
     public function br(BasicBlock destination) {
         BasicBlock bb = self.bb();
-        bb.addInsn("br", "label", destination.ref());
+        addInsnWithDbLocation(bb, ["br", "label", destination.ref()], self.dbLocation);
     }
 
     // Corresponds to LLVMBuildCondBr
     public function condBr(Value condition, BasicBlock ifTrue, BasicBlock ifFalse) {
         if condition.ty is "i1" {
             BasicBlock bb = self.bb();
-            bb.addInsn("br", "i1", condition.operand, ",", "label", ifTrue.ref(), ",", "label", ifFalse.ref());
+            addInsnWithDbLocation(bb, ["br", "i1", condition.operand, ",", "label", ifTrue.ref(), ",", "label", ifFalse.ref()], self.dbLocation);
         } 
         else {
             panic err:illegalArgument("Condition must be a u1");
@@ -803,7 +1124,7 @@ public class Builder {
             words.push(inbounds);
         }
         PointerType destTy = gepArgs(words, ptr, indices, inbounds);
-        bb.addInsn(...words);
+        addInsnWithDbLocation(bb, words, self.dbLocation);
         return new PointerValue(destTy, reg);
     }
 
@@ -814,7 +1135,7 @@ public class Builder {
         (string|Unnamed)[] words = [];
         words.push(reg, "=", "addrspacecast");
         addrSpaceCastArgs(words, val, destTy);
-        bb.addInsn( ...words);
+        addInsnWithDbLocation(bb, words, self.dbLocation);
         return new PointerValue(destTy, reg);
     }
 
@@ -827,11 +1148,23 @@ public class Builder {
             return tem;
         }
     }
+
+    // Corresponds to LLVMSetCurrentDebugLocation2
+    public function setCurrentDebugLocation(Metadata? dbLocation) {
+        self.dbLocation = dbLocation;
+    }
 }
 
-function addInsnWithAlign(BasicBlock bb, (string|Unnamed)[] words, Alignment? align) {
+function addInsnWithAlign(BasicBlock bb, (string|Unnamed)[] words, Alignment? align, Metadata? dbLocation) {
     if !(align is ()) {
         words.push(",", "align", align.toString());
+    }
+    addInsnWithDbLocation(bb, words, dbLocation);
+}
+
+function addInsnWithDbLocation(BasicBlock bb, (string|Unnamed)[] words, Metadata? dbLocation) {
+    if dbLocation is Metadata {
+        words.push(",", "!dbg", dbLocation.ref());
     }
     bb.addInsn(...words);
 }
@@ -928,16 +1261,16 @@ function sameIntegralType(Value v1, Value v2) returns IntegralType {
     panic err:illegalArgument("expected an integral type");
 }
 
-function sameIntType(Value v1, Value v2) returns IntType {
+function sameNumberType(Value v1, Value v2) returns IntType|FloatType {
     Type ty1 = v1.ty;
     Type ty2 = v2.ty;
     if ty1 != ty2 {
         panic err:illegalArgument("expected same types");
     }
-    else if ty1 is IntType {
+    else if ty1 is IntType || ty1 is FloatType {
         return ty1;
     }
-    panic err:illegalArgument("expected an int type");
+    panic err:illegalArgument("expected a number type");
 }
 
 function typeToString(RetType ty) returns string {
@@ -995,6 +1328,7 @@ class Output {
 
 function functionHeader(Function fn) returns string {
     string[] words = [];
+    Metadata? metadata = fn.metadata;
     if fn is FunctionDefn {
         words.push("define");
         if fn.getLinkage() != "external" {
@@ -1003,6 +1337,9 @@ function functionHeader(Function fn) returns string {
     }
     else {
         words.push("declare");
+        if metadata is Metadata {
+            words.push("!dbg", metadata.ref());
+        }
     }
     foreach int i in 0 ..< fn.returnAttributes.length() {
         words.push(fn.returnAttributes[i]);
@@ -1031,6 +1368,9 @@ function functionHeader(Function fn) returns string {
         words.push("gc", string `"${<string>fn.gcName}"`);
     }
     if fn is FunctionDefn {
+        if metadata is Metadata {
+            words.push("!dbg", metadata.ref());
+        }
         words.push("{");
     }
     return concat(...words);
@@ -1215,9 +1555,9 @@ function isAlpha(string:Char ch) returns boolean {
 }
 
 function omitSpaceBefore(string word) returns boolean {
-    return word == "," || word == "(" || word == ")" || word == "}" || word == "\"" || word == "]" || word == "*";
+    return word == "," || word == "(" || word == ")" || word == "}" || word == "\"" || word == "]" || word == "*" || word == ":" || word == ".";
 }
 
 function omitSpaceAfter(string word) returns boolean {
-    return word == "(" || word == "{" || word == "\"" || word == "[";
+    return word == "(" || word == "{" || word == "\"" || word == "[" || word == "." || word == "!";
 }

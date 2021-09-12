@@ -2,36 +2,49 @@
 import wso2/nballerina.err;
 
 // This is for the subset we currently support in the compiler
-function parseInlineTypeDesc(Tokenizer tok) returns InlineTypeDesc|err:Syntax {
+function parseInlineTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? t = tok.current();
-    if t == "any" {
-        check tok.advance();
-        t = tok.current();
-        if t == "[" {
-            check tok.advance();
-            check tok.expect("]");
-            InlineArrayTypeDesc td = {};
-            return td;
-        }
-        return "any";
-    }
-    else if t is InlineBasicTypeDesc {
-        check tok.advance();
-        return parseInlineUnionTypeDesc(tok, t);
+    if t is [IDENTIFIER, string] {
+        TypeDescRef refTypeDesc = { ref: t[1], pos: tok.currentPos() };
+        return refTypeDesc;
     }
     else if t is "map" {
         check tok.advance();
         check tok.expect("<");
-        check tok.expect("any");
+        MappingTypeDesc mapTypeDesc = { fields: [], rest: check parseInlineUnionTypeDesc(tok) };
         check tok.expect(">");
-        InlineMapTypeDesc td = {};
-        return td;
+        return mapTypeDesc;
+    }
+    if t is InlineBuiltinTypeDesc {
+        check tok.advance();
+        return finishInlineTypeDesc(tok, t);
     }
     return parseError(tok, "expected type descriptor");    
 }
 
-function parseInlineUnionTypeDesc(Tokenizer tok, InlineBasicTypeDesc td) returns InlineTypeDesc|err:Syntax {
-    InlineAltTypeDesc left = check parseInlineOptionalTypeDesc(tok, td);
+function parseInlineUnionTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
+    Token? t = tok.current();
+    if t is InlineBuiltinTypeDesc {
+        check tok.advance();
+        return finishInlineUnionTypeDesc(tok, check parseInlineOptionalTypeDesc(tok, t));
+    }
+    return parseError(tok, "expected built-in type name");
+}
+
+function finishInlineTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc first) returns TypeDesc|err:Syntax {
+    TypeDesc td = check parseInlineOptionalTypeDesc(tok, first);
+    Token? t = tok.current();
+    if t == "[" {
+        check tok.advance();
+        check tok.expect("]");
+        ListTypeDesc arrayTypeDesc = { members: [], rest: td };
+        return arrayTypeDesc;
+    }
+    return finishInlineUnionTypeDesc(tok, td);
+}
+
+function finishInlineUnionTypeDesc(Tokenizer tok, TypeDesc first) returns TypeDesc|err:Syntax {
+    TypeDesc left = first;
     while true {
         Token? t = tok.current();
         if t != "|" {
@@ -39,24 +52,25 @@ function parseInlineUnionTypeDesc(Tokenizer tok, InlineBasicTypeDesc td) returns
         }
         check tok.advance();
         t = tok.current();
-        if !(t is InlineBasicTypeDesc) {
-            return parseError(tok, "expected basic type name after |");
+        if !(t is InlineBuiltinTypeDesc) {
+            return parseError(tok, "expected built-in type name after |");
         }
         else {
             check tok.advance();
             var right = check parseInlineOptionalTypeDesc(tok, t);
-            InlineUnionTypeDesc u = { left, right };
+            BinaryTypeDesc u = { op: "|", left, right };
             left = u;
         }
     }
     return left;
 }
 
-function parseInlineOptionalTypeDesc(Tokenizer tok, InlineBasicTypeDesc td) returns InlineAltTypeDesc|err:Syntax {
+function parseInlineOptionalTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc td) returns TypeDesc|err:Syntax {
     Token? t = tok.current();
     if t == "?" {
         check tok.advance();
-        return { left: td, right: "()" };
+        BinaryTypeDesc u = { op: "|", left: td, right: "()" };
+        return u;
     }
     return td;
 }
@@ -205,7 +219,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             return parseNumericLiteralTypeDesc(tok, ());
         }
         "-" => {
-            err:Position signPos = tok.currentPos();
+            Position signPos = tok.currentPos();
             check tok.advance();
             return parseNumericLiteralTypeDesc(tok, signPos);
         }
@@ -226,7 +240,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 // we don't have what we need to create a context.
 // Another approach would be to have a kind of TypeDesc that refers to an NumericLiteralExpr and then convert in resolveTypes.
 // XXX Revisit when floats (and maybe decimals) are fully incorporated in the front-end.
-function parseNumericLiteralTypeDesc(Tokenizer tok, err:Position? signPos = ()) returns SingletonTypeDesc|err:Syntax {
+function parseNumericLiteralTypeDesc(Tokenizer tok, Position? signPos = ()) returns SingletonTypeDesc|err:Syntax {
     NumericLiteralExpr expr = check parseNumericLiteralExpr(tok);
     if expr is FpLiteralExpr {
         var f = float:fromString(expr.untypedLiteral);
