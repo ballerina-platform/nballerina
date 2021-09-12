@@ -1,3 +1,4 @@
+// @productions is-not-expr is-expr string string-literal if-else-stmt local-var-decl-stmt
 import ballerina/io;
 
 public function main() {

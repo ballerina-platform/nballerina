@@ -1,3 +1,4 @@
+// @productions is-expr string-literal list-constructor-expr if-else-stmt any local-var-decl-stmt
 import ballerina/io;
 
 type AE (any|error)[];

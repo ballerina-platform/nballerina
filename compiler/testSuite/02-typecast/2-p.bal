@@ -1,3 +1,4 @@
+// @productions type-cast-expr boolean if-else-stmt boolean-literal return-stmt any function-call-expr local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

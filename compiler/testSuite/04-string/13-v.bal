@@ -1,3 +1,4 @@
+// @productions string-literal
 import ballerina/io;
 
 public function main() {

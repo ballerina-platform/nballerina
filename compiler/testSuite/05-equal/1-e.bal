@@ -1,3 +1,4 @@
+// @productions equality equality-expr boolean-literal unary-expr
 import ballerina/io;
 
 public function main() {

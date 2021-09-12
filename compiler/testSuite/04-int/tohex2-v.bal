@@ -1,3 +1,4 @@
+// @productions string-literal equality equality-expr unary-expr additive-expr local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

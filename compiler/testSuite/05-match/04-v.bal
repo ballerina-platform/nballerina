@@ -1,3 +1,4 @@
+// @productions match-stmt string string-literal list-constructor-expr boolean-literal return-stmt any function-call-expr int-literal
 import ballerina/io;
 
 public function main() {

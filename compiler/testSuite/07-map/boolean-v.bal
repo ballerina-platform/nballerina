@@ -1,3 +1,4 @@
+// @productions map-type-descriptor mapping-constructor-expr string-literal equality if-else-stmt equality-expr boolean-literal local-var-decl-stmt
 import ballerina/io;
 
 public function main() {

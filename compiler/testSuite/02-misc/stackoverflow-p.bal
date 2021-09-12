@@ -1,3 +1,4 @@
+// @productions function-call-expr
 
 public function main() {
     f();

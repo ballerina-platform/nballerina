@@ -1,3 +1,4 @@
+// @productions float string-literal equality if-else-stmt equality-expr floating-point-literal function-call-expr
 import ballerina/io;
 
 public function main() {

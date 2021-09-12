@@ -1,3 +1,4 @@
+// @productions string string-literal range-expr foreach-stmt return-stmt additive-expr function-call-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 public function main() {
     string str = "x";

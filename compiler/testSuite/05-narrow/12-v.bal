@@ -1,3 +1,4 @@
+// @productions is-expr range-expr foreach-stmt break-stmt if-else-stmt boolean-literal additive-expr any function-call-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

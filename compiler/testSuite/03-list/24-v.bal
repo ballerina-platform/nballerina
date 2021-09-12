@@ -1,3 +1,4 @@
+// @productions list-type-descriptor list-constructor-expr type-cast-expr while-stmt multiplicative-expr relational-expr additive-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

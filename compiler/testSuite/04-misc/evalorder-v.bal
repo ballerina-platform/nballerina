@@ -1,3 +1,4 @@
+// @productions list-type-descriptor list-constructor-expr bitwise-and-expr bitwise-xor-expr bitwise-or-expr exact-equality equality multiplicative-expr equality-expr relational-expr return-stmt additive-expr function-call-expr local-var-decl-stmt int-literal
 import ballerina/io;
 
 function one() returns int {

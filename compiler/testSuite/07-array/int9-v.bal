@@ -1,3 +1,4 @@
+// @productions is-expr string string-literal list-type-descriptor list-constructor-expr if-else-stmt any local-var-decl-stmt
 import ballerina/io;
 
 type ISA (int|string)[];

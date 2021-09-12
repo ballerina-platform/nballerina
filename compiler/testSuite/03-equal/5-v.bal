@@ -1,3 +1,4 @@
+// @productions list-constructor-expr exact-equality equality-expr boolean-literal local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

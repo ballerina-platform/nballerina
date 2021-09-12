@@ -1,3 +1,4 @@
+// @productions while-stmt break-stmt boolean-literal int-literal
 import ballerina/io;
 
 public function main() {

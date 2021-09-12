@@ -1,3 +1,4 @@
+// @productions error-constructor-expr string-literal list-constructor-expr any assign-stmt int-literal
 import ballerina/io;
 
 type List (any|error)[];

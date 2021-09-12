@@ -1,3 +1,4 @@
+// @productions shift-expr unary-expr additive-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 public function main() {
     int i = 7;

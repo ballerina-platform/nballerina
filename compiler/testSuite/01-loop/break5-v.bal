@@ -1,3 +1,4 @@
+// @productions while-stmt break-stmt equality if-else-stmt equality-expr relational-expr return-stmt unary-expr additive-expr function-call-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

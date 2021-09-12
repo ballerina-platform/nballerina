@@ -1,3 +1,4 @@
+// @productions floating-point-literal relational-expr local-var-decl-stmt
 import ballerina/io;
 
 public function main() {

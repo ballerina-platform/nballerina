@@ -1,3 +1,4 @@
+// @productions return-stmt
 import ballerina/io;
 
 public function main() returns int { // @error

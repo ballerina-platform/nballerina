@@ -1,3 +1,4 @@
+// @productions float type-cast-expr floating-point-literal local-var-decl-stmt
 import ballerina/io;
 
 public function main() {

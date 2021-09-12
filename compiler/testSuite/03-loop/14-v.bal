@@ -1,3 +1,4 @@
+// @productions range-expr foreach-stmt continue-stmt equality if-else-stmt equality-expr boolean-literal return-stmt int-literal
 import ballerina/io;
 
 public function main() {

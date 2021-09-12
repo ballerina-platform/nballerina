@@ -1,3 +1,4 @@
+// @productions is-expr while-stmt if-else-stmt relational-expr additive-expr any function-call-expr assign-stmt local-var-decl-stmt int-literal
 public function main() {
    foo(1);
 }

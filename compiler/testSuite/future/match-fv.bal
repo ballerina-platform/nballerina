@@ -1,3 +1,4 @@
+// @productions match-stmt string-literal any function-call-expr int-literal
 import ballerina/io;
 
 // This fails because of https://github.com/ballerina-platform/ballerina-lang/issues/32098

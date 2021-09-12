@@ -1,3 +1,4 @@
+// @productions module-const-decl return-stmt
 import ballerina/io;
 
 const X = foo(); // @error

@@ -1,3 +1,4 @@
+// @productions match-stmt string-literal local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

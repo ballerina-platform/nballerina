@@ -1,3 +1,4 @@
+// @productions equality if-else-stmt equality-expr boolean-literal assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

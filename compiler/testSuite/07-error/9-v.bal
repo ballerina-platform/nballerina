@@ -1,3 +1,4 @@
+// @productions error-constructor-expr string-literal exact-equality equality-expr assign-stmt local-var-decl-stmt
 import ballerina/io;
 
 public function main() {

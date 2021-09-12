@@ -1,3 +1,4 @@
+// @productions error-constructor-expr string-literal type-cast-expr
 import ballerina/io;
 
 public function main() {
