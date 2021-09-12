@@ -292,7 +292,17 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(")");
         }
     }
-     else if expr is FunctionCallExpr {
+    else if expr is CheckingExpr {
+        if wrap {
+            w.push("(");
+        }
+        w.push(expr.checkingKeyword);
+        exprToWords(w, expr.operand, true);
+        if wrap {
+            w.push(")");
+        }
+    }
+    else if expr is FunctionCallExpr {
         if expr.prefix != () {
             w.push(expr.prefix, ":", CLING);
         }

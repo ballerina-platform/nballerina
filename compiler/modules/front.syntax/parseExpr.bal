@@ -191,6 +191,12 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         UnaryExpr expr = { op: t, operand, pos };
         return expr;
     }
+    else if t is CheckingKeyword {
+        check tok.advance();
+        Expr operand = check parseUnaryExpr(tok);
+        CheckingExpr expr = { checkingKeyword: t, operand };
+        return expr;
+    }
     else if t is "<" {
         return parseTypeCastExpr(tok);
     }

@@ -25,6 +25,7 @@ class TestFoldContext {
         }
         return err:semantic("TestFoldContext cannot resolve TypeDesc");
     }
+    function isConstDefn() returns boolean => true;
 }
 
 @test:Config{ dataProvider: validConstExprs }
