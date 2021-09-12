@@ -95,13 +95,13 @@ void testFloatNilCmp() {
     TaggedPtr b = _bal_float_to_tagged(100000.0);
     TaggedPtr c = _bal_float_to_tagged(-123455.2);
     TaggedPtr nil = getNil();
-    assert(_bal_float_compare(a, nil) == UN);
-    assert(_bal_float_compare(b, nil) == UN);
-    assert(_bal_float_compare(c, nil) == UN);
-    assert(_bal_float_compare(nil, a) == UN);
-    assert(_bal_float_compare(nil, b) == UN);
-    assert(_bal_float_compare(nil, c) == UN);
-    assert(_bal_float_compare(nil, nil) == EQ);
+    assert(_bal_float_compare(a, nil) == COMPARE_UN);
+    assert(_bal_float_compare(b, nil) == COMPARE_UN);
+    assert(_bal_float_compare(c, nil) == COMPARE_UN);
+    assert(_bal_float_compare(nil, a) == COMPARE_UN);
+    assert(_bal_float_compare(nil, b) == COMPARE_UN);
+    assert(_bal_float_compare(nil, c) == COMPARE_UN);
+    assert(_bal_float_compare(nil, nil) == COMPARE_EQ);
 }
 
 void testFloatFloatCmp() {
@@ -109,25 +109,25 @@ void testFloatFloatCmp() {
     TaggedPtr b = _bal_float_to_tagged(-0.33);
     TaggedPtr c = _bal_float_to_tagged(50000.0);
     TaggedPtr d = _bal_float_to_tagged(-50000.0);
-    assert(_bal_float_compare(a, a) == EQ);
-    assert(_bal_float_compare(a, b) == GT);
-    assert(_bal_float_compare(a, c) == LT);
-    assert(_bal_float_compare(a, d) == GT);
+    assert(_bal_float_compare(a, a) == COMPARE_EQ);
+    assert(_bal_float_compare(a, b) == COMPARE_GT);
+    assert(_bal_float_compare(a, c) == COMPARE_LT);
+    assert(_bal_float_compare(a, d) == COMPARE_GT);
 
-    assert(_bal_float_compare(b, a) == LT);
-    assert(_bal_float_compare(b, b) == EQ);
-    assert(_bal_float_compare(b, c) == LT);
-    assert(_bal_float_compare(b, d) == GT);
+    assert(_bal_float_compare(b, a) == COMPARE_LT);
+    assert(_bal_float_compare(b, b) == COMPARE_EQ);
+    assert(_bal_float_compare(b, c) == COMPARE_LT);
+    assert(_bal_float_compare(b, d) == COMPARE_GT);
 
-    assert(_bal_float_compare(c, a) == GT);
-    assert(_bal_float_compare(c, b) == GT);
-    assert(_bal_float_compare(c, c) == EQ);
-    assert(_bal_float_compare(c, d) == GT);
+    assert(_bal_float_compare(c, a) == COMPARE_GT);
+    assert(_bal_float_compare(c, b) == COMPARE_GT);
+    assert(_bal_float_compare(c, c) == COMPARE_EQ);
+    assert(_bal_float_compare(c, d) == COMPARE_GT);
 
-    assert(_bal_float_compare(d, a) == LT);
-    assert(_bal_float_compare(d, b) == LT);
-    assert(_bal_float_compare(d, c) == LT);
-    assert(_bal_float_compare(d, d) == EQ);
+    assert(_bal_float_compare(d, a) == COMPARE_LT);
+    assert(_bal_float_compare(d, b) == COMPARE_LT);
+    assert(_bal_float_compare(d, c) == COMPARE_LT);
+    assert(_bal_float_compare(d, d) == COMPARE_EQ);
 }
 
 int main() {
