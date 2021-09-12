@@ -1667,10 +1667,6 @@ function promoteToOptOrderType(bir:OrderType? ot) returns bir:OrderType? {
     if ot is bir:UniformOrderType {
         return { opt: ot };
     }
-    else if ot is bir:ArrayOrderType {
-        //TODO: handle opt array
-        panic error("Opt array  not implemented");
-    }
     else {
         return ot;
     }

@@ -323,29 +323,6 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
     if memberType is t:UniformTypeBitSet {
         check verifyCompareOperandTypes(vc, memberType, insn, "memberType");
     }
-    foreach var operand in insn.operands {
-        t:SemType operandType;
-        if operand is Register {
-            operandType = operand.semType;
-        }
-        else {
-            operandType = t:constBasicType(operand);
-        }
-        if !t:isSubtypeSimple(operandType, expectType) {
-            if memberType is t:UniformTypeBitSet {
-                t:UniformTypeBitSet? operandMemberTy = t:simpleArrayMemberType(vc.typeEnv(), operandType, true);
-                if operandMemberTy is t:UniformTypeBitSet {
-                    if (operandMemberTy & ~memberType) != 0 {
-                        return vc.err(`operand of ${insn.op} are not same array type`);
-                    }
-                }
-                else {
-                    panic err:impossible("Failed to get array member type");
-                }
-            }
-            return vc.err(`operand of ${insn.op} does not match order type`);
-        }
-    }
 }
 
 function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semantic? {
