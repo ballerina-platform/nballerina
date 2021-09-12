@@ -217,7 +217,7 @@ static void printLine(const char *filename, int64_t lineNumber, const char *func
         sep = ":";
     }
     if (lineNumber != 0) {
-        fprintf(stderr, "%s%ld", sep, lineNumber);
+        fprintf(stderr, "%s%" PRId64, sep, lineNumber);
     }
     else if (sep[1] != '\0') {
         fprintf(stderr, "%s(no info about stack frame)", sep);
