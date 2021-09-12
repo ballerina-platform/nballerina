@@ -368,6 +368,7 @@ class Scaffold {
     private final bir:File file;
     private final llvm:FunctionDefn llFunc;
     private final DISubprogram? diFunc;
+    private DILocation? noLineLocation = ();
 
     // Representation for each BIR register
     private final Repr[] reprs;
@@ -472,12 +473,26 @@ class Scaffold {
         return err:location(self.file, pos);
     }
 
-    function setDebugLocation(llvm:Builder builder, bir:Position pos) {
+    function setDebugLocation(llvm:Builder builder, bir:Position pos, "file"? fileOnly = ()) {
         DISubprogram? diFunc = self.diFunc;
-        if !(diFunc is ()) {           
-            var [line, column] = self.file.lineColumn(pos);
+        if !(diFunc is ()) {
             ModuleDI di = <ModuleDI>self.mod.di;
-            builder.setCurrentDebugLocation(di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc));
+            DILocation loc;
+            if fileOnly == () {
+                var [line, column] = self.file.lineColumn(pos);
+                loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+            }
+            else {
+                DILocation? noLineLoc = self.noLineLocation;
+                if noLineLoc is () {
+                    loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
+                    self.noLineLocation = loc;
+                }
+                else {
+                    loc = noLineLoc;
+                }
+            }
+            builder.setCurrentDebugLocation(loc);
         }
     }
 
@@ -880,6 +895,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
 }
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
+    scaffold.setDebugLocation(builder, insn.position, "file");
     llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, errorConstructFunction),
                                                 [
                                                     check buildString(builder, scaffold, insn.operand),
@@ -1551,15 +1567,18 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
 
 function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
     // JBUG #31753 cast
-    return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, <int>panicIndex | (scaffold.lineNumber(pos) << 8)));
+    return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, <int>panicIndex | (scaffold.lineNumber(pos) << 8)), pos);
 }
 
 function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicIndex, bir:Position pos) returns llvm:PointerValue {
-    return buildErrorForPackedPanic(builder, scaffold, builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, scaffold.lineNumber(pos) << 8)));
+    return buildErrorForPackedPanic(builder, scaffold, builder.iBitwise("or", panicIndex, llvm:constInt(LLVM_INT, scaffold.lineNumber(pos) << 8)), pos);
 }
 
-function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic) returns llvm:PointerValue {
-    return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, panicConstructFunction), [packedPanic]);
+function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic, bir:Position pos) returns llvm:PointerValue {
+    scaffold.setDebugLocation(builder, pos, "file");
+    var err = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, panicConstructFunction), [packedPanic]);
+    scaffold.clearDebugLocation(builder);
+    return err;
 }
 
 function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {
