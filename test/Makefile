@@ -13,9 +13,20 @@ clean:
 	-rm -fr out
 
 update:
+	mkdir -p out
+	find out -path "*/ll/*.ll" | sed -e 's;/ll/;/;' -e 's;^out;ll;' | sort > out/ll_curr.txt
+	find ll -type f | sort > out/ll_prev.txt
+	comm -13 out/ll_curr.txt out/ll_prev.txt | xargs rm -fv
+	rm out/ll_curr.txt out/ll_prev.txt
 	for f in out/*/ll/*.ll; do \
 		ll=`echo $$f | sed -e 's;/ll/;/;' -e 's;^out;ll;'`; \
 		cmp -s $$f $$ll || (mkdir -p `dirname $$ll` && cp -p $$f $$ll); \
 	done
 
-.PHONY: $(TARGETS) $(TDIRS) clean update
+diff: out/cmpll/ll_curr.txt out/cmpll/ll_prev.txt
+	@for f in out/*/ll/*.ll; do \
+		ll=`echo $$f | sed -e 's;/ll/;/;' -e 's;^out;ll;'`; \
+		[ -e $$ll ] && cmp -s $$f $$ll || echo $$f; \
+	done
+
+.PHONY: $(TARGETS) $(TDIRS) clean update diff
