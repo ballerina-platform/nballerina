@@ -884,7 +884,10 @@ function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Env
         {result, block} = check codeGenArithmeticBinaryExpr(cx, block3, op, member, operand, pos);
     }
     else {
-        {result, block} = check codeGenBitwiseBinaryExpr(cx, block2, op, member, <bir:IntOperand> operand);  
+        if !(operand is bir:IntOperand) {
+           return cx.semanticErr("Operand for bitwise operation must be integer", pos=pos);  
+        }
+        {result, block} = check codeGenBitwiseBinaryExpr(cx, block2, op, member, <bir:IntOperand> operand); 
     }
     bir:ListSetInsn insn1 = { list: listReg, index, operand: result, position: lValue.pos };
     block.insns.push(insn1);
