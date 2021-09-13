@@ -873,7 +873,7 @@ function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Env
     }
     bir:Register listReg = <bir:Register> list;
     var { result: index, block: block2 } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, lValue.index, t:INT));
-    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.env, listReg.semType);
+    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet> t:simpleArrayMemberType(cx.mod.env, listReg.semType);
     bir:Register member = cx.createRegister(memberType);
     bir:ListGetInsn insn = { result: member, list: listReg, operand: index, position: pos };
     block2.insns.push(insn);
