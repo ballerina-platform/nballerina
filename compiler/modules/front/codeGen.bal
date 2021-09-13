@@ -878,33 +878,33 @@ function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Env
             { result: r1, block: block3 } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, lValue.index, t:INT));
             r3 = cx.createRegister(<t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.env, r0.semType));
             bir:ListGetInsn insn = { result: r3, list: r0, operand: <bir:IntOperand> r1, position: pos };
-            bb.insns.push(insn);
-            var { result: r2, block: block2 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, rexpr, t:ANY));
+            block3.insns.push(insn);
+            var { result: r2, block: block2 } = check codeGenExpr(cx, block3, env, check cx.foldExpr(env, rexpr, t:ANY));
             if op is s:BinaryArithmeticOp {
-                {result: r4, block} = check codeGenArithmeticBinaryExpr(cx, bb, r3, r2, op, pos);
+                {result: r4, block} = check codeGenArithmeticBinaryExpr(cx, block2, r3, r2, op, pos);
             }
             else {
-                {result: r4, block} = check codeGenBitwiseBinaryExpr(cx, bb, r3, <bir:IntOperand> r2, op);  
+                {result: r4, block} = check codeGenBitwiseBinaryExpr(cx, block2, r3, <bir:IntOperand> r2, op);  
             }
             bir:ListSetInsn insn1 = { list: <bir:Register> r0, index: <bir:IntOperand> r1, operand: r4, position: lValue.pos };
-            bb.insns.push(insn1);
+            block.insns.push(insn1);
             return { block };
         }
         else if t:isSubtypeSimple(r0.semType, t:MAPPING) {
             { result: r1, block: block3 } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, lValue.index, t:INT));
             r3 = cx.createRegister(<t:UniformTypeBitSet>t:simpleMapMemberType(cx.mod.env, r0.semType));
             bir:MappingGetInsn insn = { result: r3, operands: [r0,  <bir:StringOperand> r1] };
-            bb.insns.push(insn);
-            var { result: r2, block: block2 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, rexpr, t:ANY));
+            block3.insns.push(insn);
+            var { result: r2, block: block2 } = check codeGenExpr(cx, block3, env, check cx.foldExpr(env, rexpr, t:ANY));
             if op is s:BinaryArithmeticOp {
-                {result: r4, block} = check codeGenArithmeticBinaryExpr(cx, bb, r3, r2, op, pos);
+                {result: r4, block} = check codeGenArithmeticBinaryExpr(cx, block2, r3, r2, op, pos);
             }
             else {
-                {result: r4, block} = check codeGenBitwiseBinaryExpr(cx, bb, r3, <bir:IntOperand> r2, op);
+                {result: r4, block} = check codeGenBitwiseBinaryExpr(cx, block2, r3, <bir:IntOperand> r2, op);
                 
             }
             bir:MappingSetInsn insn1 = { operands: [r0, <bir:StringOperand> r1, r4], position: lValue.pos };
-            bb.insns.push(insn1);
+            block.insns.push(insn1);
             return { block };
         } else {
             return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
