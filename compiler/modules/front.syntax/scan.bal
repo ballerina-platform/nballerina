@@ -98,6 +98,8 @@ final readonly & Keyword[] keywords = [
     "boolean",
     "break",
     "byte",
+    "check",
+    "checkpanic",
     "const",
     "continue",
     "decimal",

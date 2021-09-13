@@ -151,7 +151,7 @@ void _bal_error_backtrace_print(ErrorPtr ep) {
 // Implementation of backtrace_full_callback
 static int printBacktraceLine(void *data, PC pc, const char *filename, int lineno, const char *function) {
     if (function != NULL && filename != NULL) {
-        fprintf(stderr, "%s %s:%" PRIi32 "\n", function, filename, lineno);
+        fprintf(stderr, "%s %s:%d\n", function, filename, lineno);
         fflush(stderr);
     }
     return SUCCESS;

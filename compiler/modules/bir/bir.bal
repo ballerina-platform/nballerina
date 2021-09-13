@@ -81,6 +81,7 @@ public function symbolToString(Module mod, int partIndex, Symbol sym) returns st
 
 public type FunctionRef readonly & record {|
     Symbol symbol;
+    FunctionSignature erasedSignature;
     FunctionSignature signature;
 |};
 

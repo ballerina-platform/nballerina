@@ -17,13 +17,13 @@ type SimpleConst string|int|float|boolean|();
 
 type FoldError ResolveTypeError;
 
-// This is for handling const definitions in the future
 type FoldContext object {
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
     function typeEnv() returns t:Env;
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
+    function isConstDefn() returns boolean;
 };
 
 class ConstFoldContext {
@@ -63,6 +63,8 @@ class ConstFoldContext {
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType {
         return resolveSubsetTypeDesc(self.env, self.mod, self.defn, td);
     }
+
+    function isConstDefn() returns boolean => true;
 }
 
 function resolveConstDefn(t:Env env, ModuleTable mod, s:ConstDefn defn) returns s:ResolvedConst|FoldError {
@@ -116,6 +118,9 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
     }
     else if expr is s:TypeTestExpr {
         return foldTypeTestExpr(cx, expectedType, expr);
+    }
+    else if expr is s:CheckingExpr {
+        return foldCheckingExpr(cx, expectedType, expr);
     }
     else if expr is s:ListConstructorExpr {
         return foldListConstructorExpr(cx, expectedType, expr);
@@ -424,7 +429,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
         if toNumType != () && value != subExpr.value {
             return foldedUnaryConstExpr(value, toNumType, subExpr);
         }
-        // XXX when we have unions of singletons, will need to adjust the type here
+        // SUBSET when we have unions of singletons, will need to adjust the type here
         return subExpr;
     }
     expr.operand = subExpr;
@@ -438,6 +443,16 @@ function foldTypeTestExpr(FoldContext cx, t:SemType? expectedType, s:TypeTestExp
         return foldedUnaryConstExpr(t:containsConst(semType, subExpr.value) == !expr.negated, t:BOOLEAN, subExpr);
     }
     expr.left = subExpr;
+    return expr;
+}
+
+function foldCheckingExpr(FoldContext cx, t:SemType? expectedType, s:CheckingExpr expr) returns s:Expr|FoldError {
+    t:SemType? ty = expectedType is () ? () : t:diff(expectedType, t:ERROR);
+    s:Expr subExpr = check foldExpr(cx, ty, expr.operand);
+    if subExpr is s:ConstShapeExpr && !cx.isConstDefn() {
+        return subExpr;
+    }
+    expr.operand = subExpr;
     return expr;
 }
 

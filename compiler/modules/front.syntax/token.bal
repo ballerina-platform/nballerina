@@ -26,6 +26,8 @@ type Keyword
     "any"
     | "boolean"
     | "byte"
+    | "check"
+    | "checkpanic"
     | "const"
     | "decimal"
     | "error"

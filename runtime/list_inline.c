@@ -7,6 +7,9 @@ int64_t _Barray__length(TaggedPtr p) {
 
 void _Barray__push(TaggedPtr p, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
+    if ((lp->desc & (1 << (getTag(val) & UT_MASK))) == 0) {
+        _bal_panic_internal(PANIC_LIST_STORE);
+    }
     int64_t len = lp->tpArray.length;
     if (unlikely(len >= lp->tpArray.capacity)) {
         _bal_array_grow(&(lp->gArray), 0, TAGGED_PTR_SHIFT);
@@ -22,4 +25,16 @@ bool _bal_list_has_type(TaggedPtr p, ListDesc desc) {
     }
     ListPtr lp = taggedToPtr(p);
     return (lp->desc & ~desc) == 0;
+}
+
+int64_t _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return intArrayCompare(lhs, rhs);
+}
+
+int64_t _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return floatArrayCompare(lhs, rhs);
+}
+
+int64_t _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return stringArrayCompare(lhs, rhs);
 }

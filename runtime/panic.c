@@ -59,6 +59,10 @@ TaggedPtr COLD _bal_panic_construct(PackedPanic err) {
     return _bal_error_construct(msg, lineNumber);
 }
 
+NORETURN COLD void _bal_panic_internal(PanicCode code) {
+    _bal_panic(_bal_panic_construct(code));
+}
+
 NORETURN COLD void _bal_panic(TaggedPtr error) {
     fputs("panic: ", stderr);
     ErrorPtr ep = taggedToPtr(error);
