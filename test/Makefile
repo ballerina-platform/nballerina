@@ -23,7 +23,7 @@ update:
 		cmp -s $$f $$ll || (mkdir -p `dirname $$ll` && cp -p $$f $$ll); \
 	done
 
-diff: out/cmpll/ll_curr.txt out/cmpll/ll_prev.txt
+diff:
 	@for f in out/*/ll/*.ll; do \
 		ll=`echo $$f | sed -e 's;/ll/;/;' -e 's;^out;ll;'`; \
 		[ -e $$ll ] && cmp -s $$f $$ll || echo $$f; \
