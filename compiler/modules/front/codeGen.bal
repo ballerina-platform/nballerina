@@ -1710,6 +1710,9 @@ function operandOrderType(CodeGenContext cx, bir:Operand operand) returns bir:Or
                 if ot is bir:UniformOrderType {
                     return <bir:ArrayOrderType> [{opt:ot}];
                 }
+                if ot is bir:OptOrderType {
+                    return <bir:ArrayOrderType> [ot];
+                }
             }
             else {
                 panic err:impossible("Failed to get array member type");
