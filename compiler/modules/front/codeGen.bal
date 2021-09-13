@@ -1427,15 +1427,14 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
     TypedOperand? t = typedOperand(target);
     if !(t is ()) && t[0] is LangLibModuleName {
         bir:ModuleId moduleId = { organization: "ballerina", names: ["lang", t[0]] };
-        bir:FunctionSignature? signature = getLibFunction(moduleId, methodName);
-        if signature is () {
+        bir:FunctionSignature? erasedSignature = getLibFunction(moduleId, methodName);
+        if erasedSignature is () {
             return err:unimplemented(`unrecognized lang library function ${t[0] + ":" + methodName}`);
         }
         else {
             bir:ExternalSymbol symbol = { module: moduleId, identifier: methodName };
-            bir:FunctionSignature erasedSignature = signature;
+            bir:FunctionSignature signature = erasedSignature;
             if t[0] == "array" {
-                erasedSignature = signature;
                 signature = instantiateArrayFunctionSignature(cx.mod.env, signature, (<bir:Register>target).semType);
             }
             return { symbol, signature, erasedSignature }; 
