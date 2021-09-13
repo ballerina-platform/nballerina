@@ -40,3 +40,8 @@ double randDouble(bool isNan) {
     assert(isnan(result) == isNan);
     return result;
 }
+
+TaggedPtr getNil() {
+    GC char *ptr = NULL;
+    return ptr;
+}
