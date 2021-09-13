@@ -1218,7 +1218,10 @@ function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:Compare
             }
         }
         if resultValue is llvm:Value {
-                buildStoreBoolean(builder, scaffold, resultValue, insn.result);
+            buildStoreBoolean(builder, scaffold, resultValue, insn.result);
+        }
+        else {
+            panic error("Unknown compare op");
         }
     }
 }
