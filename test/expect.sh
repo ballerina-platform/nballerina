@@ -10,8 +10,8 @@ if test ! -f "$1"; then
 fi
 kind=`basename "$1" .bal | sed -e 's/^.*-//'`
 if test $kind == p; then
-    baseFile=`basename "$1"`
-    grep -n '// *@panic' "$1"  | sed -e 's/^\([1-9][0-9]*\):.*@panic *\(.*\)/panic: \2\n'"$baseFile"':\1/'
+    balFile=`basename "$1"`
+    grep -n '// *@panic' "$1"  | sed -e 's/^\([1-9][0-9]*\):.*@panic *\(.*\)/panic: \2\'$'\n'"$balFile"':\1/'
 else
     sed -ne 's;^.* // *@output  *;;p' "$1" 
 fi | tr -d '\r' 

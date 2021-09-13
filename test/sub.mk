@@ -68,6 +68,8 @@ fail.txt: $(diff_files)
 result/%.diff: result/%.exe expect/%.txt
 	-../../runcheck.sh $^ >$@
 
+result/%.exe: result/%.bc $(RT)
+	$(CLANG) $(CFLAGS) -g $< -o $@ $(RT)
 
 result/%.bc: ll/%.ll $(RT_INLINE)
 	@mkdir -p result

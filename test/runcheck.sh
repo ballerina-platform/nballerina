@@ -14,7 +14,8 @@ parent=`dirname $dir`
 out="$parent/actual/$b.txt"
 mkdir -p "$parent/actual"
 if test $kind == p; then
-    $("./$1" >/dev/null 2> >(head -n 2 | sed -e 's/.*..\/..\/..\/compiler\/testSuite\/.*\///' > "$out"))
+    balFile=`echo "$b" | sed -e 's/.exe/.bal/'`
+    $("./$1" >/dev/null 2> >(head -n 2 | sed -e 's/.*bal:/'"$balFile"':/' > "$out"))
 else
     "./$1" >"$out"
 fi
