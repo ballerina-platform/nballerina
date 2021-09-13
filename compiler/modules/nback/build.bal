@@ -1162,19 +1162,18 @@ final readonly & map<bir:OrderOp> flippedOrderOps = {
     "<" : ">"
 };
 
-final readonly & map<llvm:IntPredicate> compareResultPredicate = {
-    ">=": "sge",
-    ">" : "eq",
-    "<=": "ule",
-    "<" : "eq"
+type TaggedCompareResultTransform record {
+    readonly bir:OrderOp op;
+    readonly llvm:IntPredicate predicate;
+    readonly llvm:ConstValue expectedValue;
 };
 
-final readonly & map<llvm:ConstValue> compareResultTargetValue = {
-    ">=": llvm:constInt("i64", 1),
-    ">" : llvm:constInt("i64", 2),
-    "<=": llvm:constInt("i64", 1),
-    "<" : llvm:constInt("i64", 0)
-};
+final table<TaggedCompareResultTransform> key(op) taggedCompareResultTransforms = table[
+    {op: ">=", predicate:"sge", expectedValue:llvm:constInt("i64", 1)},
+    {op: ">", predicate:"eq", expectedValue:llvm:constInt("i64", 2)},
+    {op: "<=", predicate:"ule", expectedValue:llvm:constInt("i64", 1)},
+    {op: "<", predicate:"eq", expectedValue:llvm:constInt("i64", 0)}
+];
 
 type TaggedCompareFunction record {
     readonly bir:UniformOrderType op;
@@ -1202,8 +1201,8 @@ function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:Compare
         panic error("Failed to find runtime compare function");
     }
     else {
-        llvm:Value resultValue = builder.iCmp(compareResultPredicate.get(insn.op), compareResult, compareResultTargetValue.get(insn.op));
-        buildStoreBoolean(builder, scaffold, resultValue, insn.result);
+        TaggedCompareResultTransform transform = taggedCompareResultTransforms.get(insn.op);
+        buildStoreBoolean(builder, scaffold, builder.iCmp(transform.predicate, compareResult, transform.expectedValue), insn.result);
     }
 }
 
