@@ -56,7 +56,7 @@ public type AssignStmt record {|
 |};
 
 public type CompoundAssignStmt record {|
-    VarRefExpr lValue;
+    LExpr lValue;
     Expr expr;
     BinaryArithmeticOp|BinaryBitwiseOp op; 
     Position pos;

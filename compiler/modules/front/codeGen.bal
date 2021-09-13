@@ -789,7 +789,12 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
     else {
         binExpr = { bitwiseOp: op, left: lValue, right: expr };
     }
-    return codeGenAssignToVar(cx, startBlock, env, lValue.varName, binExpr);
+    if lValue is s:VarRefExpr {
+        return codeGenAssignToVar(cx, startBlock, env, lValue.varName, binExpr);
+    }
+    else {
+        return codeGenAssignToMember(cx, startBlock, env, lValue, binExpr);
+    } 
 }
 
 function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr) returns CodeGenError|StmtEffect {
