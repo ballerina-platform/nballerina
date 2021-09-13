@@ -1683,19 +1683,6 @@ function operandIsNil(bir:Operand operand) returns boolean {
 
 final readonly & bir:UniformOrderType[] UNIFORM_ORDER_TYPES = [t:UT_BOOLEAN, t:UT_INT, t:UT_FLOAT, t:UT_STRING];
 
-function operandUniformOrderType(t:SemType operandType) returns bir:OrderType? {
-    foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
-        t:UniformTypeBitSet optBasicType = t:uniformTypeUnion((1 << tc) | (1 << t:UT_NIL));
-        if t:isSubtypeSimple(operandType, optBasicType) {
-            t:UniformTypeBitSet basicType = t:uniformType(tc);
-            if t:isSubtypeSimple(operandType, basicType) {
-                return tc;
-            }
-            return <bir:OptOrderType> { opt: tc };
-        }
-    }
-}
-
 function operandOrderType(CodeGenContext cx, bir:Operand operand) returns bir:OrderType? {
     if operand is bir:Register {
         t:SemType operandTy = operand.semType;
@@ -1729,4 +1716,17 @@ function operandOrderType(CodeGenContext cx, bir:Operand operand) returns bir:Or
         }
     }
     return ();
+}
+
+function operandUniformOrderType(t:SemType operandType) returns bir:OrderType? {
+    foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
+        t:UniformTypeBitSet optBasicType = t:uniformTypeUnion((1 << tc) | (1 << t:UT_NIL));
+        if t:isSubtypeSimple(operandType, optBasicType) {
+            t:UniformTypeBitSet basicType = t:uniformType(tc);
+            if t:isSubtypeSimple(operandType, basicType) {
+                return tc;
+            }
+            return <bir:OptOrderType> { opt: tc };
+        }
+    }
 }

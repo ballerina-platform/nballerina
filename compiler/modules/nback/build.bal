@@ -1162,67 +1162,48 @@ final readonly & map<bir:OrderOp> flippedOrderOps = {
     "<" : ">"
 };
 
+final readonly & map<llvm:IntPredicate> compareResultPredicate = {
+    ">=": "sge",
+    ">" : "eq",
+    "<=": "ule",
+    "<" : "eq"
+};
+
+final readonly & map<llvm:ConstValue> compareResultTargetValue = {
+    ">=": llvm:constInt("i64", 1),
+    ">" : llvm:constInt("i64", 2),
+    "<=": llvm:constInt("i64", 1),
+    "<" : llvm:constInt("i64", 0)
+};
+
+type TaggedCompareFunction record {
+    readonly bir:UniformOrderType op;
+    readonly RuntimeFunction compareFunction;
+    readonly RuntimeFunction arrayCompareFunction;
+};
+
+table<TaggedCompareFunction> key(op) compareFunctions = table[
+    {op: t:UT_INT, compareFunction:intCompareFunction, arrayCompareFunction: arrayIntCompareFunction},
+    {op: t:UT_FLOAT, compareFunction:floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction},
+    {op: t:UT_BOOLEAN, compareFunction:intCompareFunction, arrayCompareFunction: arrayIntCompareFunction},
+    {op: t:UT_STRING, compareFunction:stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction}
+];
+
 function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     bir:OrderType orderTy = insn.orderType;
     llvm:Value? compareResult = ();
     if orderTy is bir:OptOrderType {
-        match orderTy.opt {
-            t:UT_INT => {
-                compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, intCompareFunction), [lhs, rhs]);
-            }
-            t:UT_FLOAT => {
-                compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, floatCompareFunction), [lhs, rhs]);
-            }
-            t:UT_BOOLEAN => {
-                compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, intCompareFunction), [lhs, rhs]);
-            }
-            t:UT_STRING => {
-                compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, stringCompareFunction), [lhs, rhs]);
-            }
-        }
-
+        compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, compareFunctions.get(orderTy.opt).compareFunction), [lhs, rhs]);
     }
     else if orderTy is bir:ArrayOrderType {
-        match orderTy[0].opt {
-            t:UT_INT => {
-                compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, arrayIntCompareFunction), [lhs, rhs]);
-            }
-            t:UT_FLOAT => {
-                compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, arrayFloatCompareFunction), [lhs, rhs]);
-            }
-            t:UT_BOOLEAN => {
-                compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, arrayIntCompareFunction), [lhs, rhs]);
-            }
-            t:UT_STRING => {
-                compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, arrayStringCompareFunction), [lhs, rhs]);
-            }
-        }
+        compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, compareFunctions.get(orderTy[0].opt).arrayCompareFunction), [lhs, rhs]);
     }
     if compareResult is () {
         panic error("Failed to find runtime compare function");
     }
     else {
-        llvm:Value? resultValue = ();
-        match insn.op {
-            ">=" => {
-                resultValue = builder.iCmp("sge", compareResult, llvm:constInt("i64", 1));
-            }
-            ">" => {
-                resultValue = builder.iCmp("eq", compareResult, llvm:constInt("i64", 2));
-            }
-            "<=" => {
-                resultValue = builder.iCmp("ule", compareResult, llvm:constInt("i64", 1));
-            }
-            "<" => {
-                resultValue = builder.iCmp("eq", compareResult, llvm:constInt("i64", 0));
-            }
-        }
-        if resultValue is llvm:Value {
-            buildStoreBoolean(builder, scaffold, resultValue, insn.result);
-        }
-        else {
-            panic error("Unknown compare op");
-        }
+        llvm:Value resultValue = builder.iCmp(compareResultPredicate.get(insn.op), compareResult, compareResultTargetValue.get(insn.op));
+        buildStoreBoolean(builder, scaffold, resultValue, insn.result);
     }
 }
 
