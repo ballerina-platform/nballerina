@@ -1,4 +1,4 @@
 public function main() {
-    int[] x= [];
-    x[0] += 1; // @error
+    int[] x = [1];
+    x[0] += "1"; // @error
 }
