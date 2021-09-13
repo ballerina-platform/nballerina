@@ -1,3 +1,4 @@
+// @productions float module-const-decl equality multiplicative-expr if-else-stmt equality-expr floating-point-literal relational-expr return-stmt unary-expr additive-expr any function-call-expr local-var-decl-stmt
 import ballerina/io;
 
 const A = 0.0 / 0.0;

@@ -1,3 +1,4 @@
+// @productions string-literal list-constructor-expr
 import ballerina/io;
 
 public function main() {

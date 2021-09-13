@@ -1,3 +1,4 @@
+// @productions module-const-decl additive-expr int-literal
 import ballerina/io;
 
 const N = N1 + N2 + N3;

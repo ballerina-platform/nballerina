@@ -1,3 +1,4 @@
+// @productions module-const-decl relational-expr int-literal
 import ballerina/io;
 
 const B = () < 1;

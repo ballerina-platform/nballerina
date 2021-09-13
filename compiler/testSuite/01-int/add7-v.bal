@@ -1,3 +1,4 @@
+// @productions unary-expr additive-expr int-literal
 import ballerina/io;
 
 public function main() {

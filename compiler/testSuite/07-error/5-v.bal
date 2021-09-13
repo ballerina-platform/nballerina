@@ -1,3 +1,4 @@
+// @productions error-constructor-expr string string-literal return-stmt function-call-expr
 import ballerina/io;
 
 public function main() {

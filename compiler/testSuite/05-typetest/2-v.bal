@@ -1,3 +1,4 @@
+// @productions is-expr map-type-descriptor mapping-constructor-expr string string-literal list-type-descriptor list-constructor-expr boolean if-else-stmt boolean-literal unary-expr any function-call-expr local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

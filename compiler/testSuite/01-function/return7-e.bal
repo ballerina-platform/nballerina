@@ -1,3 +1,4 @@
+// @productions return-stmt function-call-expr local-var-decl-stmt
 public function main() {
     int x = foo();
     ignore(x);

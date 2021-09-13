@@ -1,3 +1,4 @@
+// @productions float module-const-decl type-cast-expr floating-point-literal
 import ballerina/io;
 
 const ONEi = <int>1.2;

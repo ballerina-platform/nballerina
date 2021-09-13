@@ -1,3 +1,4 @@
+// @productions multiplicative-expr return-stmt function-call-expr int-literal
 import ballerina/io;
 public function main() {
   io:println(mod(5, 3)); // @output 2

@@ -1,3 +1,4 @@
+// @productions foreach-stmt
 import ballerina/io;
 
 public function main() {

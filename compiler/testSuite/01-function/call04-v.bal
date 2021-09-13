@@ -1,3 +1,4 @@
+// @productions multiplicative-expr return-stmt additive-expr function-call-expr int-literal
 import ballerina/io;
 
 public function main() {

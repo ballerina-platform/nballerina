@@ -1,3 +1,4 @@
+// @productions boolean multiplicative-expr if-else-stmt relational-expr boolean-literal unary-expr additive-expr function-call-expr int-literal
 import ballerina/io;
 
 public function main() {

@@ -1,3 +1,4 @@
+// @productions function-call-expr assign-stmt int-literal
 public function main() {
     foo(17);
 }

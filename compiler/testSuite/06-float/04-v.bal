@@ -1,3 +1,4 @@
+// @productions floating-point-literal
 import ballerina/io;
 
 public function main() {

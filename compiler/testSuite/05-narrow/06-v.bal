@@ -1,3 +1,4 @@
+// @productions is-expr string-literal type-cast-expr if-else-stmt boolean-literal return-stmt unary-expr additive-expr any function-call-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

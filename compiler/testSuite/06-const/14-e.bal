@@ -1,3 +1,4 @@
+// @productions module-const-decl string-literal
 import ballerina/io;
 
 // Spec does not currently allow this, but it could

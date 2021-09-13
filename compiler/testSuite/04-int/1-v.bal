@@ -1,3 +1,4 @@
+// @productions type-cast-expr equality multiplicative-expr equality-expr return-stmt unary-expr additive-expr any function-call-expr local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

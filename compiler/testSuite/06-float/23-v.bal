@@ -1,3 +1,4 @@
+// @productions multiplicative-expr floating-point-literal unary-expr assign-stmt local-var-decl-stmt
 import ballerina/io;
 
 public function main() {

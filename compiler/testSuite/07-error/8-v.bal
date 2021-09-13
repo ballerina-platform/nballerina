@@ -1,3 +1,4 @@
+// @productions error-constructor-expr is-expr string-literal boolean if-else-stmt boolean-literal return-stmt any function-call-expr assign-stmt local-var-decl-stmt
 import ballerina/io;
 
 public function main() {

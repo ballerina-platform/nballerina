@@ -1,3 +1,4 @@
+// @productions bitwise-or-expr equality equality-expr int-literal
 import ballerina/io;
 
 public function main() {

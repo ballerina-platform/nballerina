@@ -1,3 +1,4 @@
+// @productions return-stmt function-call-expr local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {
