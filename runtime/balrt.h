@@ -16,7 +16,6 @@
 
 #define POINTER_MASK ((1L << TAG_SHIFT) - 1)
 
-#define FLAG_INT_ON_HEAP 0x20
 #define IMMEDIATE_FLAG (((uint64_t)0x20) << TAG_SHIFT)
 
 #define STRING_LARGE_FLAG 1
@@ -239,9 +238,8 @@ static READNONE inline UntypedPtr taggedToPtr(TaggedPtr p) {
 }
 
 static READONLY inline int64_t taggedToInt(TaggedPtr p) {
-    int t = getTag(p);
-    if (likely(t & FLAG_INT_ON_HEAP) == 0) {
-        uint64_t n = taggedPtrBits(p);
+    uint64_t n = taggedPtrBits(p);
+    if (likely((n & IMMEDIATE_FLAG) != 0)) {
         n &= POINTER_MASK;
         // sign extend
         n <<= 8;
@@ -399,7 +397,7 @@ static READONLY inline bool taggedPtrEqual(TaggedPtr tp1, TaggedPtr tp2) {
     switch (tag1) {
         case TAG_STRING:
             return taggedStringEqual(tp1, tp2);
-        case (TAG_INT|FLAG_INT_ON_HEAP):
+        case TAG_INT:
             {
                 IntPtr p1 = taggedToPtr(tp1);
                 IntPtr p2 = taggedToPtr(tp2);
