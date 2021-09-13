@@ -11,6 +11,4 @@ public function main() {
     string[] s = ["hello"];
     s[0] += " world";
     io:println(s[0]); // @output hello world
-    string n = " nballerina";
-    s[0] +=n;
 }
