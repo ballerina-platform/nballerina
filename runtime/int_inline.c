@@ -8,12 +8,12 @@
 
 TaggedPtr _bal_int_to_tagged(int64_t n) {
     if (likely(n >= IMMEDIATE_INT_MIN & n <= IMMEDIATE_INT_MAX)) {
-        return bitsToTaggedPtr(IMMEDIATE_INT_TRUNCATE(n) | (((uint64_t)TAG_INT) << TAG_SHIFT));
+        return bitsToTaggedPtr(IMMEDIATE_INT_TRUNCATE(n) | IMMEDIATE_FLAG | (((uint64_t)TAG_INT) << TAG_SHIFT));
     }
     else {
         GC int64_t *p = _bal_alloc(sizeof(int64_t));
         *p = n;
-        return ptrAddShiftedTag(p, ((uint64_t)TAG_INT|FLAG_INT_ON_HEAP) << TAG_SHIFT);
+        return ptrAddShiftedTag(p, ((uint64_t)TAG_INT) << TAG_SHIFT);
     }
 }
 

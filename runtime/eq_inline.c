@@ -17,7 +17,7 @@ bool READONLY _bal_exact_eq(TaggedPtr tp1, TaggedPtr tp2) {
     switch (tag1) {
         case TAG_STRING:
             return taggedStringEqual(tp1, tp2);
-        case (TAG_INT|FLAG_INT_ON_HEAP):
+        case TAG_INT:
             {
                 IntPtr p1 = taggedToPtr(tp1);
                 IntPtr p2 = taggedToPtr(tp2);

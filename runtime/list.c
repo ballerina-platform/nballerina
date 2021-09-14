@@ -13,7 +13,7 @@ static bool getFiller(ListDesc desc, TaggedPtr *valuePtr) {
             *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
             return true;
         case (1 << TAG_INT):
-            *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_INT) << TAG_SHIFT);
+            *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
             return true;
         case (1 << TAG_FLOAT):
             {
