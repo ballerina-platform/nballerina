@@ -314,10 +314,9 @@ static READONLY inline int64_t taggedBooleanComparator(TaggedPtr lhs, TaggedPtr 
     if (lhsVal < rhsVal) {
         return COMPARE_LT;
     }
-    if (lhsVal > rhsVal) {
+    else {
         return COMPARE_GT;
     }
-    return COMPARE_UN;
 }
 
 static READONLY inline int64_t taggedBooleanCompare(TaggedPtr lhs, TaggedPtr rhs) {
