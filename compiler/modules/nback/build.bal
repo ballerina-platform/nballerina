@@ -106,7 +106,8 @@ type RuntimeFunctionName "panic"|"panic_construct"|"error_construct"|"alloc"|
                          "mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"mapping_has_type"|
                          "int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
                          "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float"|"float_to_int"|
-                         "int_compare"|"float_compare"|"string_compare"|"array_int_compare"|"array_float_compare"|"array_string_compare";
+                         "int_compare"|"float_compare"|"string_compare"|"boolean_compare"|
+                         "array_int_compare"|"array_float_compare"|"array_string_compare"|"array_boolean_compare";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -340,6 +341,14 @@ final RuntimeFunction stringCompareFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction booleanCompareFunction = {
+    name: "boolean_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
 
 final RuntimeFunction arrayIntCompareFunction = {
     name: "array_int_compare",
@@ -368,6 +377,14 @@ final RuntimeFunction arrayStringCompareFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction arrayBooleanCompareFunction = {
+    name: "array_boolean_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
 final RuntimeFunction stringConcatFunction = {
     name: "string_concat",
     ty: {
@@ -1190,7 +1207,7 @@ type TaggedCompareFunction readonly & record {|
 final readonly & table<TaggedCompareFunction> key(op) compareFunctions = table [
     { op: t:UT_INT, compareFunction: intCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
     { op: t:UT_FLOAT, compareFunction: floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
-    { op: t:UT_BOOLEAN, compareFunction: intCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
+    { op: t:UT_BOOLEAN, compareFunction: booleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
     { op: t:UT_STRING, compareFunction: stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction }
 ];
 
@@ -1716,7 +1733,7 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
     return builder.getElementPtr(llvm:constNull(LLVM_TAGGED_PTR),
                                      [builder.iBitwise("or",
                                                        builder.zExt(value, LLVM_INT),
-                                                       llvm:constInt(LLVM_INT, TAG_BOOLEAN | FLAG_IMMEDIATE))]);
+                                                       llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {

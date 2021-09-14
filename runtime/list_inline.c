@@ -38,3 +38,7 @@ int64_t READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs) {
 int64_t READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return stringArrayCompare(lhs, rhs);
 }
+
+int64_t READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return booleanArrayCompare(lhs, rhs);
+}
