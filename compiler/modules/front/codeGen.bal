@@ -854,7 +854,6 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
     }
 }
 
-
 function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarRefExpr lValue, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp  op, err:Position pos) returns CodeGenError|StmtEffect {
     s:Expr expr;
     if op is s:BinaryArithmeticOp {
@@ -868,8 +867,8 @@ function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock
 
 function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MemberAccessLExpr lValue, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
     var { result: list, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, lValue.container, ()));
-    if !(list is bir:Register) ||  !(t:isSubtypeSimple(list.semType, t:LIST)) {
-        return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
+    if !(list is bir:Register) || !(t:isSubtypeSimple(list.semType, t:LIST)) {
+        return cx.semanticErr("can only apply member access in lvale to list", pos=pos);
     }
     bir:Register listReg = <bir:Register> list;
     var { result: index, block: block2 } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, lValue.index, t:INT));
@@ -881,51 +880,19 @@ function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Env
     bir:BasicBlock block;
     bir:Operand result;
     if op is s:BinaryArithmeticOp {
-        {result, block} = check codeGenArithmeticBinaryExpr(cx, block3, op, member, operand, pos);
+        { result, block } = check codeGenArithmeticBinaryExpr(cx, block3, op, member, operand, pos);
     }
     else {
         if !(operand is bir:IntOperand) {
-           return cx.semanticErr("Operand for bitwise operation must be integer", pos=pos);  
+           return cx.semanticErr("operand for bitwise operation must be integer", pos=pos);  
         }
-        {result, block} = check codeGenBitwiseBinaryExpr(cx, block2, op, member, <bir:IntOperand> operand); 
+        else {
+            { result, block } = check codeGenBitwiseBinaryExpr(cx, block2, op, member, operand); 
+        }
     }
     bir:ListSetInsn insn1 = { list: listReg, index, operand: result, position: lValue.pos };
     block.insns.push(insn1);
     return { block };
-}
-            
-function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, bir:Operand lhs, bir:Operand rhs, bir:Position pos) returns CodeGenError|ExprEffect {
-    TypedOperandPair? pair = typedOperandPair(lhs, rhs);
-    bir:Register result;
-    if pair is IntOperandPair {
-        result = cx.createRegister(t:INT);
-        bir:IntArithmeticBinaryInsn insn = { op, operands: pair[1], result, position: pos };
-        bb.insns.push(insn);
-    }
-    else if pair is FloatOperandPair {
-        result = cx.createRegister(t:FLOAT);
-        bir:FloatArithmeticBinaryInsn insn = { op, operands: pair[1], result, position: pos };
-        bb.insns.push(insn);
-    }
-    else if pair is StringOperandPair { // XXX a bug here
-        result = cx.createRegister(t:STRING);
-        bir:StringConcatInsn insn = { operands: pair[1], result };
-        bb.insns.push(insn);
-    }
-    else {
-        return cx.semanticErr(`${op} not supported for operand types`);
-    } 
-    return { result, block: bb };
-}
-
-function codeGenBitwiseBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, s:BinaryBitwiseOp op, bir:IntOperand lhs, bir:IntOperand rhs) returns CodeGenError|ExprEffect {
-    t:SemType lt = bitwiseOperandType(lhs);
-    t:SemType rt = bitwiseOperandType(rhs);
-    t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
-    bir:Register result = cx.createRegister(resultType);
-    bir:IntBitwiseBinaryInsn insn = { op, operands: [lhs, rhs], result };
-    bb.insns.push(insn);
-    return { result, block: bb };
 }
 
 function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CallStmt stmt) returns CodeGenError|StmtEffect {
@@ -980,6 +947,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         var { arithmeticOp: op, left, right, pos } => {
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
             var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
+            // We evaluate the operands here, so we can reuse the function for compound assignment.
             return codeGenArithmeticBinaryExpr(cx, nextBlock, op, l, r, pos);
         }
         // Negation
@@ -1028,6 +996,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         var { bitwiseOp: op, left, right } => {
             var { result: l, block: block1} = check codeGenExprForInt(cx, bb, env, left);
             var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, right);
+            // We evaluate the operands here, so we can reuse the function for compound assignment.
             return codeGenBitwiseBinaryExpr(cx, nextBlock, op, l, r);
         }
         var { equalityOp: op, left, right } => {
@@ -1121,6 +1090,40 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
     }
     panic err:impossible("unrecognized expression type in code gen: " +  s:exprToString(expr));
+}
+     
+function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, bir:Operand lhs, bir:Operand rhs, bir:Position pos) returns CodeGenError|ExprEffect {
+    TypedOperandPair? pair = typedOperandPair(lhs, rhs);
+    bir:Register result;
+    if pair is IntOperandPair {
+        result = cx.createRegister(t:INT);
+        bir:IntArithmeticBinaryInsn insn = { op, operands: pair[1], result, position: pos };
+        bb.insns.push(insn);
+    }
+    else if pair is FloatOperandPair {
+        result = cx.createRegister(t:FLOAT);
+        bir:FloatArithmeticBinaryInsn insn = { op, operands: pair[1], result, position: pos };
+        bb.insns.push(insn);
+    }
+    else if pair is StringOperandPair { // XXX a bug here
+        result = cx.createRegister(t:STRING);
+        bir:StringConcatInsn insn = { operands: pair[1], result };
+        bb.insns.push(insn);
+    }
+    else {
+        return cx.semanticErr(`${op} not supported for operand types`);
+    } 
+    return { result, block: bb };
+}
+
+function codeGenBitwiseBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, s:BinaryBitwiseOp op, bir:IntOperand lhs, bir:IntOperand rhs) returns CodeGenError|ExprEffect {
+    t:SemType lt = bitwiseOperandType(lhs);
+    t:SemType rt = bitwiseOperandType(rhs);
+    t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
+    bir:Register result = cx.createRegister(resultType);
+    bir:IntBitwiseBinaryInsn insn = { op, operands: [lhs, rhs], result };
+    bb.insns.push(insn);
+    return { result, block: bb };
 }
 
 function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:ListConstructorExpr expr) returns CodeGenError|ExprEffect {
