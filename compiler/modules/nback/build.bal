@@ -105,7 +105,8 @@ type RuntimeFunctionName "panic"|"panic_construct"|"error_construct"|"alloc"|
                          "list_set"|"list_has_type"|
                          "mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"mapping_has_type"|
                          "int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
-                         "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float"|"float_to_int";
+                         "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float"|"float_to_int"|
+                         "int_compare"|"float_compare"|"string_compare"|"array_int_compare"|"array_float_compare"|"array_string_compare";
 
 type RuntimeFunction readonly & record {|
     RuntimeFunctionName name;
@@ -302,8 +303,64 @@ final RuntimeFunction stringEqFunction = {
     attrs: [["return", "zeroext"], "readonly"]
 };
 
+
 final RuntimeFunction stringCmpFunction = {
     name: "string_cmp",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction intCompareFunction = {
+    name: "int_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction floatCompareFunction = {
+    name: "float_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction stringCompareFunction = {
+    name: "string_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+
+final RuntimeFunction arrayIntCompareFunction = {
+    name: "array_int_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction arrayFloatCompareFunction = {
+    name: "array_float_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction arrayStringCompareFunction = {
+    name: "array_string_compare",
     ty: {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
@@ -1105,49 +1162,48 @@ final readonly & map<bir:OrderOp> flippedOrderOps = {
     "<" : ">"
 };
 
+type TaggedCompareResultTransform record {
+    readonly bir:OrderOp op;
+    readonly llvm:IntPredicate predicate;
+    readonly llvm:ConstValue expectedValue;
+};
+
+final table<TaggedCompareResultTransform> key(op) taggedCompareResultTransforms = table[
+    {op: ">=", predicate:"sge", expectedValue:llvm:constInt("i64", 1)},
+    {op: ">", predicate:"eq", expectedValue:llvm:constInt("i64", 2)},
+    {op: "<=", predicate:"ule", expectedValue:llvm:constInt("i64", 1)},
+    {op: "<", predicate:"eq", expectedValue:llvm:constInt("i64", 0)}
+];
+
+type TaggedCompareFunction record {
+    readonly bir:UniformOrderType op;
+    readonly RuntimeFunction compareFunction;
+    readonly RuntimeFunction arrayCompareFunction;
+};
+
+table<TaggedCompareFunction> key(op) compareFunctions = table[
+    {op: t:UT_INT, compareFunction:intCompareFunction, arrayCompareFunction: arrayIntCompareFunction},
+    {op: t:UT_FLOAT, compareFunction:floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction},
+    {op: t:UT_BOOLEAN, compareFunction:intCompareFunction, arrayCompareFunction: arrayIntCompareFunction},
+    {op: t:UT_STRING, compareFunction:stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction}
+];
+
 function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
-    llvm:Value lhsIsNil = builder.iCmp("eq", lhs, llvm:constNull(llvm:pointerType("i8", 1)));
-    llvm:Value rhsIsNil = builder.iCmp("eq", rhs, llvm:constNull(llvm:pointerType("i8", 1)));
-    llvm:Value eitherNil = builder.iBitwise("or", lhsIsNil, rhsIsNil);
-
-    llvm:BasicBlock eitherNilBB = scaffold.addBasicBlock();
-    llvm:BasicBlock neitherNilBB = scaffold.addBasicBlock();
-    llvm:BasicBlock joinBB = scaffold.addBasicBlock();
-    builder.condBr(eitherNil, eitherNilBB, neitherNilBB);
-
-    builder.positionAtEnd(eitherNilBB);
-    llvm:Value bothNil = builder.iBitwise("and", lhsIsNil, rhsIsNil);
-
-    if insn.op is "<=" || insn.op is ">=" {
-        buildStoreBoolean(builder, scaffold, bothNil, insn.result);
+    bir:OrderType orderTy = insn.orderType;
+    llvm:Value? compareResult = ();
+    if orderTy is bir:OptOrderType {
+        compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, compareFunctions.get(orderTy.opt).compareFunction), [lhs, rhs]);
+    }
+    else if orderTy is bir:ArrayOrderType {
+        compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, compareFunctions.get(orderTy[0].opt).arrayCompareFunction), [lhs, rhs]);
+    }
+    if compareResult is () {
+        panic error("Failed to find runtime compare function");
     }
     else {
-        buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, 0), insn.result);
+        TaggedCompareResultTransform transform = taggedCompareResultTransforms.get(insn.op);
+        buildStoreBoolean(builder, scaffold, builder.iCmp(transform.predicate, compareResult, transform.expectedValue), insn.result);
     }
-    builder.br(joinBB);
-
-    builder.positionAtEnd(neitherNilBB);
-    bir:OptOrderType orderTy = <bir:OptOrderType> insn.orderType;
-    match orderTy.opt {
-        t:UT_INT => {
-            llvm:Value lhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>lhs);
-            llvm:Value rhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>rhs);
-            buildCompareInt(builder, scaffold, buildIntCompareOp(insn.op), lhsUntagged, rhsUntagged, result);
-        }
-        t:UT_FLOAT => {
-            llvm:Value lhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>lhs);
-            llvm:Value rhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>rhs);
-            buildCompareFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsUntagged, rhsUntagged, result);
-        }
-        t:UT_BOOLEAN => {
-            buildCompareInt(builder, scaffold, buildBooleanCompareOp(insn.op), lhs, rhs, result);
-        }
-        t:UT_STRING => {
-            buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhs, rhs, result);
-        }
-    }
-    builder.br(joinBB);
-    builder.positionAtEnd(joinBB);
 }
 
 function buildCompareTaggedBasic(llvm:Builder builder, Scaffold scaffold, llvm:Value lhs, llvm:Value rhs, bir:Register result)

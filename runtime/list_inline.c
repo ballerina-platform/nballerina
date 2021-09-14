@@ -27,14 +27,14 @@ bool _bal_list_has_type(TaggedPtr p, ListDesc desc) {
     return (lp->desc & ~desc) == 0;
 }
 
-int64_t _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
+int64_t READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return intArrayCompare(lhs, rhs);
 }
 
-int64_t _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs) {
+int64_t READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return floatArrayCompare(lhs, rhs);
 }
 
-int64_t _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
+int64_t READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return stringArrayCompare(lhs, rhs);
 }

@@ -279,6 +279,7 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
 
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
     t:UniformTypeBitSet expectType;
+    t:UniformTypeBitSet? memberType = ();
     OrderType ot = insn.orderType;
     if ot is OptOrderType {
         expectType = t:uniformTypeUnion((1 << t:UT_NIL) | (1 << ot.opt ));
@@ -287,7 +288,8 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
         expectType  = t:uniformType(ot);
     }
     else {
-        panic err:impossible("array order type");
+        expectType = t:LIST;
+        memberType = t:uniformType(ot[0].opt);
     }
     foreach var operand in insn.operands {
         t:SemType operandType;
@@ -297,9 +299,32 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
         else {
             operandType = t:constBasicType(operand);
         }
-        if !t:isSubtypeSimple(operandType, expectType) {
-            return vc.err(`operand of ${insn.op} does not match order type`);
+        if memberType is () {
+            check verifyCompareOperandTypeBase(vc, insn, operandType, expectType);
         }
+        else {
+            check verifyCompareOperandTypeArray(vc, insn, operandType, expectType, memberType);
+        }
+    }
+}
+
+function verifyCompareOperandTypeArray(VerifyContext vc, CompareInsn insn, t:SemType operandType,
+                                       t:UniformTypeBitSet expectType, t:UniformTypeBitSet expectMemberType) returns err:Semantic? {
+    check verifyCompareOperandTypeBase(vc, insn, operandType, expectType);
+    t:UniformTypeBitSet? operandMemberTy = t:simpleArrayMemberType(vc.typeEnv(), operandType);
+    if operandMemberTy is t:UniformTypeBitSet {
+        t:UniformTypeBitSet optExpectedType = t:uniformTypeUnion(expectType | (1 << t:UT_NIL));
+        check verifyCompareOperandTypeBase(vc, insn, operandType, optExpectedType);
+    }
+    else {
+        panic err:impossible("Failed to get array member type");
+    }
+}
+
+function verifyCompareOperandTypeBase(VerifyContext vc, CompareInsn insn, t:SemType operandType,
+                                      t:UniformTypeBitSet expectType) returns err:Semantic?{
+    if !t:isSubtypeSimple(operandType, expectType) {
+        return vc.err(`operand of ${insn.op} does not match order type`);
     }
 }
 
