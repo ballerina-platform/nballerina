@@ -189,6 +189,13 @@ function unicodeEscapeValue(string fragment) returns string|error {
     return ch;
 }
 
+function scanLines(string[] lines) returns readonly & ScannedLine[] {
+    //JBUG NPE from BIROptimizer.java:159 when inlined
+    ScannedLine[] result = from var l in lines select scanLine(l);
+    //JBUG shouldn't clone, query syntax should produce readonly arrays
+    return result.cloneReadOnly();
+}
+
 function scanLine(string line) returns ScannedLine {
     int[] codePoints = line.toCodePointInts();
     FragCode[] fragCodes = [];
