@@ -95,7 +95,7 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %50)
   unreachable
 51:
-  %52 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %52 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %52)
   unreachable
 53:
@@ -109,7 +109,7 @@ define void @_B_main() {
   %59 = extractvalue {i64, i1} %58, 1
   br i1 %59, label %73, label %62
 60:
-  %61 = call i8 addrspace(1)* @_bal_panic_construct(i64 2049)
+  %61 = call i8 addrspace(1)* @_bal_panic_construct(i64 2305)
   store i8 addrspace(1)* %61, i8 addrspace(1)** %14
   br label %49
 62:
@@ -128,13 +128,13 @@ define void @_B_main() {
   %72 = icmp eq i64 %71, 0
   br i1 %72, label %75, label %76
 73:
-  %74 = call i8 addrspace(1)* @_bal_panic_construct(i64 2305)
+  %74 = call i8 addrspace(1)* @_bal_panic_construct(i64 2561)
   store i8 addrspace(1)* %74, i8 addrspace(1)** %14
   br label %49
 75:
   br label %31
 76:
-  %77 = or i64 %71, 2560
+  %77 = or i64 %71, 2816
   %78 = call i8 addrspace(1)* @_bal_panic_construct(i64 %77)
   store i8 addrspace(1)* %78, i8 addrspace(1)** %14
   br label %49
@@ -157,7 +157,7 @@ define void @_B_main() {
   %91 = icmp eq i64 %90, 576460752303423488
   br i1 %91, label %100, label %104
 92:
-  %93 = call i8 addrspace(1)* @_bal_panic_construct(i64 3329)
+  %93 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585)
   store i8 addrspace(1)* %93, i8 addrspace(1)** %14
   br label %49
 94:
@@ -181,7 +181,7 @@ define void @_B_main() {
   store i8 addrspace(1)* %107, i8 addrspace(1)** %10
   br label %94
 108:
-  %109 = call i8 addrspace(1)* @_bal_panic_construct(i64 3587)
+  %109 = call i8 addrspace(1)* @_bal_panic_construct(i64 3843)
   store i8 addrspace(1)* %109, i8 addrspace(1)** %14
   br label %49
 110:
@@ -193,7 +193,7 @@ define void @_B_main() {
   %115 = extractvalue {i64, i1} %114, 1
   br i1 %115, label %121, label %118
 116:
-  %117 = call i8 addrspace(1)* @_bal_panic_construct(i64 3587)
+  %117 = call i8 addrspace(1)* @_bal_panic_construct(i64 3843)
   store i8 addrspace(1)* %117, i8 addrspace(1)** %14
   br label %49
 118:
@@ -203,7 +203,7 @@ define void @_B_main() {
   store i64 %120, i64* %sum
   br label %46
 121:
-  %122 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585)
+  %122 = call i8 addrspace(1)* @_bal_panic_construct(i64 3841)
   store i8 addrspace(1)* %122, i8 addrspace(1)** %14
   br label %49
 }

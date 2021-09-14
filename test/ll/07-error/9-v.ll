@@ -48,11 +48,11 @@ define void @_B_main() {
   %35 = icmp ult i8* %33, %34
   br i1 %35, label %147, label %36
 36:
-  %37 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696), i64 4)
+  %37 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696), i64 5)
   store i8 addrspace(1)* %37, i8 addrspace(1)** %1
   %38 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %38, i8 addrspace(1)** %e1
-  %39 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696), i64 5)
+  %39 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696), i64 6)
   store i8 addrspace(1)* %39, i8 addrspace(1)** %2
   %40 = load i8 addrspace(1)*, i8 addrspace(1)** %2
   store i8 addrspace(1)* %40, i8 addrspace(1)** %e2
@@ -197,9 +197,9 @@ define void @_B_main() {
   %137 = getelementptr i8, i8 addrspace(1)* null, i64 %136
   call void @_Bio__println(i8 addrspace(1)* %137)
   store i8 addrspace(1)* null, i8 addrspace(1)** %28
-  %138 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696), i64 24)
+  %138 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696), i64 25)
   store i8 addrspace(1)* %138, i8 addrspace(1)** %30
-  %139 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696), i64 24)
+  %139 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696), i64 25)
   store i8 addrspace(1)* %139, i8 addrspace(1)** %31
   %140 = load i8 addrspace(1)*, i8 addrspace(1)** %30
   %141 = load i8 addrspace(1)*, i8 addrspace(1)** %31
@@ -213,7 +213,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %32
   ret void
 147:
-  %148 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %148 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %148)
   unreachable
 }

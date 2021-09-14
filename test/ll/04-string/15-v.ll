@@ -32,7 +32,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %5
   ret void
 10:
-  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 516)
+  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
   call void @_bal_panic(i8 addrspace(1)* %11)
   unreachable
 }
@@ -83,7 +83,7 @@ define internal void @_B_concatTest(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i8
   store i8 addrspace(1)* null, i8 addrspace(1)** %9
   ret void
 30:
-  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 6148)
+  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 6404)
   call void @_bal_panic(i8 addrspace(1)* %31)
   unreachable
 }

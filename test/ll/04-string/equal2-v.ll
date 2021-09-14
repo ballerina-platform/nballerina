@@ -54,7 +54,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %13
   ret void
 18:
-  %19 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %19 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %19)
   unreachable
 }
@@ -271,7 +271,7 @@ define internal void @_B_cmp(i8 addrspace(1)* %0, i8 addrspace(1)* %1) {
 141:
   ret void
 142:
-  %143 = call i8 addrspace(1)* @_bal_panic_construct(i64 4868)
+  %143 = call i8 addrspace(1)* @_bal_panic_construct(i64 5124)
   call void @_bal_panic(i8 addrspace(1)* %143)
   unreachable
 }
@@ -443,7 +443,7 @@ define internal void @_B_checkLessThan(i8 addrspace(1)* %0, i8 addrspace(1)* %1)
   store i8 addrspace(1)* null, i8 addrspace(1)** %34
   ret void
 115:
-  %116 = call i8 addrspace(1)* @_bal_panic_construct(i64 12548)
+  %116 = call i8 addrspace(1)* @_bal_panic_construct(i64 12804)
   call void @_bal_panic(i8 addrspace(1)* %116)
   unreachable
 }
@@ -472,7 +472,7 @@ define internal void @_B_assert(i1 %0, i1 %1) {
 14:
   ret void
 15:
-  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 17412)
+  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 17668)
   call void @_bal_panic(i8 addrspace(1)* %16)
   unreachable
 }

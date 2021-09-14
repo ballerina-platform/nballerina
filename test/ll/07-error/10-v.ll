@@ -15,7 +15,7 @@ define void @_B_main() {
   %6 = icmp ult i8* %4, %5
   br i1 %6, label %14, label %7
 7:
-  %8 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504), i64 4)
+  %8 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504), i64 5)
   store i8 addrspace(1)* %8, i8 addrspace(1)** %1
   %9 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %9, i8 addrspace(1)** %err
@@ -29,7 +29,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
   ret void
 14:
-  %15 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %15 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %15)
   unreachable
 }

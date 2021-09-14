@@ -92,7 +92,7 @@ define void @_B_main() {
 48:
   ret void
 49:
-  %50 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %50 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %50)
   unreachable
 }
@@ -114,7 +114,7 @@ define internal i1 @_B_intEq(i64 %0, i64 %1) {
   %11 = load i1, i1* %3
   ret i1 %11
 12:
-  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 9476)
+  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 9732)
   call void @_bal_panic(i8 addrspace(1)* %13)
   unreachable
 }
@@ -136,7 +136,7 @@ define internal i1 @_B_intNotEq(i64 %0, i64 %1) {
   %11 = load i1, i1* %3
   ret i1 %11
 12:
-  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 10500)
+  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 10756)
   call void @_bal_panic(i8 addrspace(1)* %13)
   unreachable
 }

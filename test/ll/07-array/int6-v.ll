@@ -48,7 +48,7 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %28)
   unreachable
 29:
-  %30 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %30 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %30)
   unreachable
 31:
@@ -60,7 +60,7 @@ define void @_B_main() {
   %37 = icmp ult i64 0, %36
   br i1 %37, label %41, label %55
 38:
-  %39 = or i64 %25, 1280
+  %39 = or i64 %25, 1536
   %40 = call i8 addrspace(1)* @_bal_panic_construct(i64 %39)
   store i8 addrspace(1)* %40, i8 addrspace(1)** %10
   br label %27
@@ -83,7 +83,7 @@ define void @_B_main() {
   %54 = icmp ult i64 1, %53
   br i1 %54, label %57, label %69
 55:
-  %56 = call i8 addrspace(1)* @_bal_panic_construct(i64 1541)
+  %56 = call i8 addrspace(1)* @_bal_panic_construct(i64 1797)
   store i8 addrspace(1)* %56, i8 addrspace(1)** %10
   br label %27
 57:
@@ -103,7 +103,7 @@ define void @_B_main() {
   %68 = icmp eq i64 %67, 0
   br i1 %68, label %71, label %78
 69:
-  %70 = call i8 addrspace(1)* @_bal_panic_construct(i64 1797)
+  %70 = call i8 addrspace(1)* @_bal_panic_construct(i64 2053)
   store i8 addrspace(1)* %70, i8 addrspace(1)** %10
   br label %27
 71:
@@ -115,7 +115,7 @@ define void @_B_main() {
   %77 = icmp ult i64 2, %76
   br i1 %77, label %81, label %95
 78:
-  %79 = or i64 %67, 2048
+  %79 = or i64 %67, 2304
   %80 = call i8 addrspace(1)* @_bal_panic_construct(i64 %79)
   store i8 addrspace(1)* %80, i8 addrspace(1)** %10
   br label %27
@@ -138,7 +138,7 @@ define void @_B_main() {
   %94 = icmp ult i64 3, %93
   br i1 %94, label %97, label %105
 95:
-  %96 = call i8 addrspace(1)* @_bal_panic_construct(i64 2309)
+  %96 = call i8 addrspace(1)* @_bal_panic_construct(i64 2565)
   store i8 addrspace(1)* %96, i8 addrspace(1)** %10
   br label %27
 97:
@@ -154,7 +154,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %9
   ret void
 105:
-  %106 = call i8 addrspace(1)* @_bal_panic_construct(i64 2565)
+  %106 = call i8 addrspace(1)* @_bal_panic_construct(i64 2821)
   store i8 addrspace(1)* %106, i8 addrspace(1)** %10
   br label %27
 }

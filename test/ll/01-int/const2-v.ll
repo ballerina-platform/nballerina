@@ -31,7 +31,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %5
   ret void
 15:
-  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %16)
   unreachable
 }

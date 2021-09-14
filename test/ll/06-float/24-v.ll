@@ -95,7 +95,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %22
   ret void
 49:
-  %50 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %50 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %50)
   unreachable
 }
@@ -221,7 +221,7 @@ define internal i8 addrspace(1)* @_B_floatCmp(double %0, double %1) {
 82:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3057488322648960623)
 83:
-  %84 = call i8 addrspace(1)* @_bal_panic_construct(i64 5380)
+  %84 = call i8 addrspace(1)* @_bal_panic_construct(i64 5636)
   call void @_bal_panic(i8 addrspace(1)* %84)
   unreachable
 }

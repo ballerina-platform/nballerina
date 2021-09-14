@@ -18,14 +18,14 @@ define void @_B_main() {
   %10 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   call void @_Bio__println(i8 addrspace(1)* %10)
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %11 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620702562), i64 5)
+  %11 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620702562), i64 6)
   store i8 addrspace(1)* %11, i8 addrspace(1)** %3
   %12 = load i8 addrspace(1)*, i8 addrspace(1)** %3
   call void @_B_bar(i8 addrspace(1)* %12)
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
 13:
-  %14 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %14 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %14)
   unreachable
 }
@@ -39,12 +39,12 @@ define internal i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %0) {
 6:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %s
   %7 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %8 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* %7, i64 9)
+  %8 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* %7, i64 10)
   store i8 addrspace(1)* %8, i8 addrspace(1)** %2
   %9 = load i8 addrspace(1)*, i8 addrspace(1)** %2
   ret i8 addrspace(1)* %9
 10:
-  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052)
+  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 2308)
   call void @_bal_panic(i8 addrspace(1)* %11)
   unreachable
 }
@@ -62,7 +62,7 @@ define internal void @_B_bar(i8 addrspace(1)* %0) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   ret void
 8:
-  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 3076)
+  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 3332)
   call void @_bal_panic(i8 addrspace(1)* %9)
   unreachable
 }

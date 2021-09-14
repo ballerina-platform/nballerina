@@ -46,7 +46,7 @@ define void @_B_main() {
 24:
   br label %21
 25:
-  %26 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %26 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %26)
   unreachable
 }

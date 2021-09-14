@@ -67,7 +67,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %12
   ret void
 45:
-  %46 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %46 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %46)
   unreachable
 }
@@ -79,7 +79,7 @@ define internal i8 addrspace(1)* @_B_mkNil() {
 4:
   ret i8 addrspace(1)* null
 5:
-  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 2308)
+  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 2564)
   call void @_bal_panic(i8 addrspace(1)* %6)
   unreachable
 }
@@ -95,7 +95,7 @@ define internal i8 addrspace(1)* @_B_mkInt(i64 %0) {
   %7 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %6)
   ret i8 addrspace(1)* %7
 8:
-  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 3332)
+  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 3588)
   call void @_bal_panic(i8 addrspace(1)* %9)
   unreachable
 }
@@ -113,7 +113,7 @@ define internal i8 addrspace(1)* @_B_mkBoolean(i1 %0) {
   %9 = getelementptr i8, i8 addrspace(1)* null, i64 %8
   ret i8 addrspace(1)* %9
 10:
-  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 4356)
+  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 4612)
   call void @_bal_panic(i8 addrspace(1)* %11)
   unreachable
 }

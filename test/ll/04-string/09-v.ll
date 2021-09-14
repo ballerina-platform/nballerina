@@ -26,7 +26,7 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %16)
   unreachable
 17:
-  %18 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %18 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %18)
   unreachable
 19:
@@ -38,7 +38,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
   ret void
 22:
-  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 1027)
+  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 1283)
   store i8 addrspace(1)* %23, i8 addrspace(1)** %4
   br label %15
 }
@@ -53,7 +53,7 @@ define internal i8 addrspace(1)* @_B_toAny(i8 addrspace(1)* %0) {
   %6 = load i8 addrspace(1)*, i8 addrspace(1)** %s
   ret i8 addrspace(1)* %6
 7:
-  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052)
+  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 2308)
   call void @_bal_panic(i8 addrspace(1)* %8)
   unreachable
 }

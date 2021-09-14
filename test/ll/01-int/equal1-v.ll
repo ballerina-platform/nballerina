@@ -176,7 +176,7 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %115)
   unreachable
 116:
-  %117 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %117 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %117)
   unreachable
 118:
@@ -193,7 +193,7 @@ define void @_B_main() {
   %125 = extractvalue {i64, i1} %124, 1
   br i1 %125, label %136, label %128
 126:
-  %127 = call i8 addrspace(1)* @_bal_panic_construct(i64 6913)
+  %127 = call i8 addrspace(1)* @_bal_panic_construct(i64 7169)
   store i8 addrspace(1)* %127, i8 addrspace(1)** %61
   br label %114
 128:
@@ -210,7 +210,7 @@ define void @_B_main() {
   %135 = extractvalue {i64, i1} %134, 1
   br i1 %135, label %146, label %138
 136:
-  %137 = call i8 addrspace(1)* @_bal_panic_construct(i64 7169)
+  %137 = call i8 addrspace(1)* @_bal_panic_construct(i64 7425)
   store i8 addrspace(1)* %137, i8 addrspace(1)** %61
   br label %114
 138:
@@ -227,7 +227,7 @@ define void @_B_main() {
   %145 = extractvalue {i64, i1} %144, 1
   br i1 %145, label %156, label %148
 146:
-  %147 = call i8 addrspace(1)* @_bal_panic_construct(i64 7425)
+  %147 = call i8 addrspace(1)* @_bal_panic_construct(i64 7681)
   store i8 addrspace(1)* %147, i8 addrspace(1)** %61
   br label %114
 148:
@@ -244,7 +244,7 @@ define void @_B_main() {
   %155 = extractvalue {i64, i1} %154, 1
   br i1 %155, label %166, label %158
 156:
-  %157 = call i8 addrspace(1)* @_bal_panic_construct(i64 7681)
+  %157 = call i8 addrspace(1)* @_bal_panic_construct(i64 7937)
   store i8 addrspace(1)* %157, i8 addrspace(1)** %61
   br label %114
 158:
@@ -261,7 +261,7 @@ define void @_B_main() {
   %165 = extractvalue {i64, i1} %164, 1
   br i1 %165, label %176, label %168
 166:
-  %167 = call i8 addrspace(1)* @_bal_panic_construct(i64 7937)
+  %167 = call i8 addrspace(1)* @_bal_panic_construct(i64 8193)
   store i8 addrspace(1)* %167, i8 addrspace(1)** %61
   br label %114
 168:
@@ -278,7 +278,7 @@ define void @_B_main() {
   %175 = extractvalue {i64, i1} %174, 1
   br i1 %175, label %186, label %178
 176:
-  %177 = call i8 addrspace(1)* @_bal_panic_construct(i64 8449)
+  %177 = call i8 addrspace(1)* @_bal_panic_construct(i64 8705)
   store i8 addrspace(1)* %177, i8 addrspace(1)** %61
   br label %114
 178:
@@ -295,7 +295,7 @@ define void @_B_main() {
   %185 = extractvalue {i64, i1} %184, 1
   br i1 %185, label %196, label %188
 186:
-  %187 = call i8 addrspace(1)* @_bal_panic_construct(i64 8705)
+  %187 = call i8 addrspace(1)* @_bal_panic_construct(i64 8961)
   store i8 addrspace(1)* %187, i8 addrspace(1)** %61
   br label %114
 188:
@@ -312,7 +312,7 @@ define void @_B_main() {
   %195 = extractvalue {i64, i1} %194, 1
   br i1 %195, label %206, label %198
 196:
-  %197 = call i8 addrspace(1)* @_bal_panic_construct(i64 8961)
+  %197 = call i8 addrspace(1)* @_bal_panic_construct(i64 9217)
   store i8 addrspace(1)* %197, i8 addrspace(1)** %61
   br label %114
 198:
@@ -329,7 +329,7 @@ define void @_B_main() {
   %205 = extractvalue {i64, i1} %204, 1
   br i1 %205, label %213, label %208
 206:
-  %207 = call i8 addrspace(1)* @_bal_panic_construct(i64 9217)
+  %207 = call i8 addrspace(1)* @_bal_panic_construct(i64 9473)
   store i8 addrspace(1)* %207, i8 addrspace(1)** %61
   br label %114
 208:
@@ -343,7 +343,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %60
   ret void
 213:
-  %214 = call i8 addrspace(1)* @_bal_panic_construct(i64 9473)
+  %214 = call i8 addrspace(1)* @_bal_panic_construct(i64 9729)
   store i8 addrspace(1)* %214, i8 addrspace(1)** %61
   br label %114
 }
@@ -372,7 +372,7 @@ define internal void @_B_printBoolean(i1 %0) {
 13:
   ret void
 14:
-  %15 = call i8 addrspace(1)* @_bal_panic_construct(i64 10244)
+  %15 = call i8 addrspace(1)* @_bal_panic_construct(i64 10500)
   call void @_bal_panic(i8 addrspace(1)* %15)
   unreachable
 }

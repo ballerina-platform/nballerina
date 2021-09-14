@@ -36,7 +36,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %6
   ret void
 22:
-  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %23)
   unreachable
 }
@@ -51,7 +51,7 @@ define internal i64 @_B_foo(i64 %0) {
   %6 = load i64, i64* %x
   ret i64 %6
 7:
-  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 1796)
+  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052)
   call void @_bal_panic(i8 addrspace(1)* %8)
   unreachable
 }
@@ -66,7 +66,7 @@ define internal i64 @_B_bar(i64 %0) {
   %6 = load i64, i64* %x
   ret i64 %6
 7:
-  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 2820)
+  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 3076)
   call void @_bal_panic(i8 addrspace(1)* %8)
   unreachable
 }
@@ -81,7 +81,7 @@ define internal i64 @_B_baz(i64 %0) {
   %6 = load i64, i64* %x
   ret i64 %6
 7:
-  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 3844)
+  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 4100)
   call void @_bal_panic(i8 addrspace(1)* %8)
   unreachable
 }
@@ -93,7 +93,7 @@ define internal i64 @_B_foobar() {
 4:
   ret i64 12
 5:
-  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 4868)
+  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 5124)
   call void @_bal_panic(i8 addrspace(1)* %6)
   unreachable
 }
@@ -119,7 +119,7 @@ define internal i64 @_B_sum(i64 %0, i64 %1) {
   call void @_bal_panic(i8 addrspace(1)* %14)
   unreachable
 15:
-  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 5892)
+  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 6148)
   call void @_bal_panic(i8 addrspace(1)* %16)
   unreachable
 17:
@@ -128,7 +128,7 @@ define internal i64 @_B_sum(i64 %0, i64 %1) {
   %19 = load i64, i64* %3
   ret i64 %19
 20:
-  %21 = call i8 addrspace(1)* @_bal_panic_construct(i64 6145)
+  %21 = call i8 addrspace(1)* @_bal_panic_construct(i64 6401)
   store i8 addrspace(1)* %21, i8 addrspace(1)** %4
   br label %13
 }

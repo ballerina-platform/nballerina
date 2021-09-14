@@ -31,7 +31,7 @@ define void @_B_main() {
   %22 = icmp eq i64 %21, 504403158265495552
   br i1 %22, label %25, label %28
 23:
-  %24 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %24 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %24)
   unreachable
 25:
@@ -110,7 +110,7 @@ define internal i8 addrspace(1)* @_B_mkNil() {
 4:
   ret i8 addrspace(1)* null
 5:
-  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 2564)
+  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 2820)
   call void @_bal_panic(i8 addrspace(1)* %6)
   unreachable
 }
@@ -126,7 +126,7 @@ define internal i8 addrspace(1)* @_B_mkInt(i64 %0) {
   %7 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %6)
   ret i8 addrspace(1)* %7
 8:
-  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 3588)
+  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 3844)
   call void @_bal_panic(i8 addrspace(1)* %9)
   unreachable
 }
@@ -144,7 +144,7 @@ define internal i8 addrspace(1)* @_B_mkBoolean(i1 %0) {
   %9 = getelementptr i8, i8 addrspace(1)* null, i64 %8
   ret i8 addrspace(1)* %9
 10:
-  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 4612)
+  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 4868)
   call void @_bal_panic(i8 addrspace(1)* %11)
   unreachable
 }

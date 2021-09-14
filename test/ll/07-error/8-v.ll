@@ -30,7 +30,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
 15:
-  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %16)
   unreachable
 }
@@ -71,7 +71,7 @@ define internal void @_B_display(i8 addrspace(1)* %0) {
 20:
   ret void
 21:
-  %22 = call i8 addrspace(1)* @_bal_panic_construct(i64 2564)
+  %22 = call i8 addrspace(1)* @_bal_panic_construct(i64 2820)
   call void @_bal_panic(i8 addrspace(1)* %22)
   unreachable
 }
@@ -89,7 +89,7 @@ define internal void @_B_p(i8 addrspace(1)* %0) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   ret void
 8:
-  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 4868)
+  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 5124)
   call void @_bal_panic(i8 addrspace(1)* %9)
   unreachable
 }
@@ -107,12 +107,12 @@ define internal i8 addrspace(1)* @_B_err(i1 %0) {
 8:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630863215)
 9:
-  %10 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098313193684234094), i64 28)
+  %10 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098313193684234094), i64 29)
   store i8 addrspace(1)* %10, i8 addrspace(1)** %2
   %11 = load i8 addrspace(1)*, i8 addrspace(1)** %2
   ret i8 addrspace(1)* %11
 12:
-  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 5892)
+  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 6148)
   call void @_bal_panic(i8 addrspace(1)* %13)
   unreachable
 }

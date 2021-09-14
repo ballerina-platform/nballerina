@@ -34,7 +34,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
 15:
-  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %16 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %16)
   unreachable
 }
@@ -87,7 +87,7 @@ define internal void @_B_display(i8 addrspace(1)* %0) {
   call void @_bal_panic(i8 addrspace(1)* %30)
   unreachable
 31:
-  %32 = call i8 addrspace(1)* @_bal_panic_construct(i64 2564)
+  %32 = call i8 addrspace(1)* @_bal_panic_construct(i64 2820)
   call void @_bal_panic(i8 addrspace(1)* %32)
   unreachable
 33:
@@ -99,7 +99,7 @@ define internal void @_B_display(i8 addrspace(1)* %0) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   br label %28
 37:
-  %38 = call i8 addrspace(1)* @_bal_panic_construct(i64 3073)
+  %38 = call i8 addrspace(1)* @_bal_panic_construct(i64 3329)
   store i8 addrspace(1)* %38, i8 addrspace(1)** %6
   br label %29
 }
@@ -123,12 +123,12 @@ define internal i8 addrspace(1)* @_B_positive(i64 %0) {
   %13 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %12)
   ret i8 addrspace(1)* %13
 14:
-  %15 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i64 25)
+  %15 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i64 26)
   store i8 addrspace(1)* %15, i8 addrspace(1)** %3
   %16 = load i8 addrspace(1)*, i8 addrspace(1)** %3
   ret i8 addrspace(1)* %16
 17:
-  %18 = call i8 addrspace(1)* @_bal_panic_construct(i64 5124)
+  %18 = call i8 addrspace(1)* @_bal_panic_construct(i64 5380)
   call void @_bal_panic(i8 addrspace(1)* %18)
   unreachable
 }

@@ -21,7 +21,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   ret void
 10:
-  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 516)
+  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
   call void @_bal_panic(i8 addrspace(1)* %11)
   unreachable
 }
@@ -88,7 +88,7 @@ define internal i64 @_B_a(i64 %0, i64 %1) {
   call void @_bal_panic(i8 addrspace(1)* %41)
   unreachable
 42:
-  %43 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284)
+  %43 = call i8 addrspace(1)* @_bal_panic_construct(i64 1540)
   call void @_bal_panic(i8 addrspace(1)* %43)
   unreachable
 44:
@@ -97,7 +97,7 @@ define internal i64 @_B_a(i64 %0, i64 %1) {
   %46 = load i64, i64* %4
   ret i64 %46
 47:
-  %48 = call i8 addrspace(1)* @_bal_panic_construct(i64 1793)
+  %48 = call i8 addrspace(1)* @_bal_panic_construct(i64 2049)
   store i8 addrspace(1)* %48, i8 addrspace(1)** %12
   br label %40
 49:
@@ -109,7 +109,7 @@ define internal i64 @_B_a(i64 %0, i64 %1) {
   %53 = load i64, i64* %7
   ret i64 %53
 54:
-  %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 2561)
+  %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 2817)
   store i8 addrspace(1)* %55, i8 addrspace(1)** %12
   br label %40
 56:
@@ -120,7 +120,7 @@ define internal i64 @_B_a(i64 %0, i64 %1) {
   %60 = extractvalue {i64, i1} %59, 1
   br i1 %60, label %72, label %63
 61:
-  %62 = call i8 addrspace(1)* @_bal_panic_construct(i64 3329)
+  %62 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585)
   store i8 addrspace(1)* %62, i8 addrspace(1)** %12
   br label %40
 63:
@@ -137,7 +137,7 @@ define internal i64 @_B_a(i64 %0, i64 %1) {
   %71 = load i64, i64* %11
   ret i64 %71
 72:
-  %73 = call i8 addrspace(1)* @_bal_panic_construct(i64 3329)
+  %73 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585)
   store i8 addrspace(1)* %73, i8 addrspace(1)** %12
   br label %40
 }

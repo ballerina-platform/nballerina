@@ -147,7 +147,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %30
   ret void
 82:
-  %83 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
+  %83 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284)
   call void @_bal_panic(i8 addrspace(1)* %83)
   unreachable
 }
@@ -214,7 +214,7 @@ define internal i8 addrspace(1)* @_B_exactEq(double %0, double %1) {
   %42 = load i8 addrspace(1)*, i8 addrspace(1)** %b1
   ret i8 addrspace(1)* %42
 43:
-  %44 = call i8 addrspace(1)* @_bal_panic_construct(i64 7172)
+  %44 = call i8 addrspace(1)* @_bal_panic_construct(i64 7428)
   call void @_bal_panic(i8 addrspace(1)* %44)
   unreachable
 }
@@ -252,7 +252,7 @@ define internal i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* %0, double %1) {
 21:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879847453030)
 22:
-  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 10500)
+  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 10756)
   call void @_bal_panic(i8 addrspace(1)* %23)
   unreachable
 24:
@@ -326,7 +326,7 @@ define internal i8 addrspace(1)* @_B_exactEqFA(double %0, i8 addrspace(1)* %1) {
 21:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879847453030)
 22:
-  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 13572)
+  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 13828)
   call void @_bal_panic(i8 addrspace(1)* %23)
   unreachable
 24:
@@ -412,7 +412,7 @@ define internal i8 addrspace(1)* @_B_exactEqAA(i8 addrspace(1)* %0, i8 addrspace
 28:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879847453030)
 29:
-  %30 = call i8 addrspace(1)* @_bal_panic_construct(i64 16644)
+  %30 = call i8 addrspace(1)* @_bal_panic_construct(i64 16900)
   call void @_bal_panic(i8 addrspace(1)* %30)
   unreachable
 }

@@ -909,7 +909,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %198
   ret void
 579:
-  %580 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %580 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %580)
   unreachable
 }
@@ -931,7 +931,7 @@ define internal double @_B_floatRem(double %0, double %1) {
   %11 = load double, double* %3
   ret double %11
 12:
-  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 35844)
+  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 36100)
   call void @_bal_panic(i8 addrspace(1)* %13)
   unreachable
 }

@@ -31,7 +31,7 @@ define void @_B_main() {
 15:
   ret void
 16:
-  %17 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %17 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %17)
   unreachable
 }
@@ -43,7 +43,7 @@ define internal void @_B_makeNil() {
 4:
   ret void
 5:
-  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 2308)
+  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 2564)
   call void @_bal_panic(i8 addrspace(1)* %6)
   unreachable
 }

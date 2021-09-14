@@ -42,7 +42,7 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %23)
   unreachable
 24:
-  %25 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284)
+  %25 = call i8 addrspace(1)* @_bal_panic_construct(i64 1540)
   call void @_bal_panic(i8 addrspace(1)* %25)
   unreachable
 26:
@@ -64,12 +64,12 @@ define void @_B_main() {
   %37 = icmp eq i64 %36, 0
   br i1 %37, label %41, label %47
 38:
-  %39 = or i64 %20, 1792
+  %39 = or i64 %20, 2048
   %40 = call i8 addrspace(1)* @_bal_panic_construct(i64 %39)
   store i8 addrspace(1)* %40, i8 addrspace(1)** %5
   br label %22
 41:
-  %42 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098321995397294199), i64 9)
+  %42 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098321995397294199), i64 10)
   store i8 addrspace(1)* %42, i8 addrspace(1)** %3
   %43 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   %44 = load i8 addrspace(1)*, i8 addrspace(1)** %3
@@ -77,7 +77,7 @@ define void @_B_main() {
   %46 = icmp eq i64 %45, 0
   br i1 %46, label %50, label %52
 47:
-  %48 = or i64 %36, 2048
+  %48 = or i64 %36, 2304
   %49 = call i8 addrspace(1)* @_bal_panic_construct(i64 %48)
   store i8 addrspace(1)* %49, i8 addrspace(1)** %5
   br label %22
@@ -87,7 +87,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
 52:
-  %53 = or i64 %45, 2304
+  %53 = or i64 %45, 2560
   %54 = call i8 addrspace(1)* @_bal_panic_construct(i64 %53)
   store i8 addrspace(1)* %54, i8 addrspace(1)** %5
   br label %22

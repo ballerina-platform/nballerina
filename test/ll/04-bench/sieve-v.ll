@@ -25,7 +25,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   ret void
 9:
-  %10 = call i8 addrspace(1)* @_bal_panic_construct(i64 516)
+  %10 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
   call void @_bal_panic(i8 addrspace(1)* %10)
   unreachable
 }
@@ -136,14 +136,14 @@ define internal i8 addrspace(1)* @_B_findPrimes() {
   call void @_bal_panic(i8 addrspace(1)* %80)
   unreachable
 81:
-  %82 = call i8 addrspace(1)* @_bal_panic_construct(i64 1540)
+  %82 = call i8 addrspace(1)* @_bal_panic_construct(i64 1796)
   call void @_bal_panic(i8 addrspace(1)* %82)
   unreachable
 83:
   store i64 2, i64* %gap
   br label %39
 84:
-  %85 = or i64 %37, 2048
+  %85 = or i64 %37, 2304
   %86 = call i8 addrspace(1)* @_bal_panic_construct(i64 %85)
   store i8 addrspace(1)* %86, i8 addrspace(1)** %12
   br label %79
@@ -160,7 +160,7 @@ define internal i8 addrspace(1)* @_B_findPrimes() {
   %94 = load i1, i1* %2
   br i1 %94, label %44, label %52
 95:
-  %96 = call i8 addrspace(1)* @_bal_panic_construct(i64 2561)
+  %96 = call i8 addrspace(1)* @_bal_panic_construct(i64 2817)
   store i8 addrspace(1)* %96, i8 addrspace(1)** %12
   br label %79
 97:
@@ -175,7 +175,7 @@ define internal i8 addrspace(1)* @_B_findPrimes() {
   %104 = load i1, i1* %5
   br i1 %104, label %54, label %75
 105:
-  %106 = call i8 addrspace(1)* @_bal_panic_construct(i64 2821)
+  %106 = call i8 addrspace(1)* @_bal_panic_construct(i64 3077)
   store i8 addrspace(1)* %106, i8 addrspace(1)** %12
   br label %79
 107:
@@ -185,7 +185,7 @@ define internal i8 addrspace(1)* @_B_findPrimes() {
   store i64 %109, i64* %i
   br label %59
 110:
-  %111 = call i8 addrspace(1)* @_bal_panic_construct(i64 3073)
+  %111 = call i8 addrspace(1)* @_bal_panic_construct(i64 3329)
   store i8 addrspace(1)* %111, i8 addrspace(1)** %12
   br label %79
 112:
@@ -195,7 +195,7 @@ define internal i8 addrspace(1)* @_B_findPrimes() {
   %116 = extractvalue {i64, i1} %115, 1
   br i1 %116, label %123, label %120
 117:
-  %118 = or i64 %72, 3584
+  %118 = or i64 %72, 3840
   %119 = call i8 addrspace(1)* @_bal_panic_construct(i64 %118)
   store i8 addrspace(1)* %119, i8 addrspace(1)** %12
   br label %79
@@ -206,7 +206,7 @@ define internal i8 addrspace(1)* @_B_findPrimes() {
   store i64 %122, i64* %i
   br label %59
 123:
-  %124 = call i8 addrspace(1)* @_bal_panic_construct(i64 3841)
+  %124 = call i8 addrspace(1)* @_bal_panic_construct(i64 4097)
   store i8 addrspace(1)* %124, i8 addrspace(1)** %12
   br label %79
 125:
@@ -216,7 +216,7 @@ define internal i8 addrspace(1)* @_B_findPrimes() {
   store i64 %127, i64* %gap
   br label %39
 128:
-  %129 = call i8 addrspace(1)* @_bal_panic_construct(i64 4609)
+  %129 = call i8 addrspace(1)* @_bal_panic_construct(i64 4865)
   store i8 addrspace(1)* %129, i8 addrspace(1)** %12
   br label %79
 }
@@ -272,7 +272,7 @@ define internal void @_B_printMersenne(i8 addrspace(1)* %0) {
   call void @_bal_panic(i8 addrspace(1)* %36)
   unreachable
 37:
-  %38 = call i8 addrspace(1)* @_bal_panic_construct(i64 5892)
+  %38 = call i8 addrspace(1)* @_bal_panic_construct(i64 6148)
   call void @_bal_panic(i8 addrspace(1)* %38)
   unreachable
 39:
@@ -287,7 +287,7 @@ define internal void @_B_printMersenne(i8 addrspace(1)* %0) {
   %47 = icmp ult i64 %41, %46
   br i1 %47, label %50, label %58
 48:
-  %49 = call i8 addrspace(1)* @_bal_panic_construct(i64 6657)
+  %49 = call i8 addrspace(1)* @_bal_panic_construct(i64 6913)
   store i8 addrspace(1)* %49, i8 addrspace(1)** %10
   br label %35
 50:
@@ -302,7 +302,7 @@ define internal void @_B_printMersenne(i8 addrspace(1)* %0) {
   %57 = load i1, i1* %4
   br i1 %57, label %27, label %31
 58:
-  %59 = call i8 addrspace(1)* @_bal_panic_construct(i64 6661)
+  %59 = call i8 addrspace(1)* @_bal_panic_construct(i64 6917)
   store i8 addrspace(1)* %59, i8 addrspace(1)** %10
   br label %35
 60:
@@ -314,7 +314,7 @@ define internal void @_B_printMersenne(i8 addrspace(1)* %0) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %8
   br label %31
 64:
-  %65 = call i8 addrspace(1)* @_bal_panic_construct(i64 6913)
+  %65 = call i8 addrspace(1)* @_bal_panic_construct(i64 7169)
   store i8 addrspace(1)* %65, i8 addrspace(1)** %10
   br label %35
 66:
@@ -324,7 +324,7 @@ define internal void @_B_printMersenne(i8 addrspace(1)* %0) {
   store i64 %68, i64* %i
   br label %15
 69:
-  %70 = call i8 addrspace(1)* @_bal_panic_construct(i64 8961)
+  %70 = call i8 addrspace(1)* @_bal_panic_construct(i64 9217)
   store i8 addrspace(1)* %70, i8 addrspace(1)** %10
   br label %35
 }

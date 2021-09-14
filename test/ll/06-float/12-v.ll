@@ -183,7 +183,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %36
   ret void
 115:
-  %116 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
+  %116 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284)
   call void @_bal_panic(i8 addrspace(1)* %116)
   unreachable
 }
@@ -230,7 +230,7 @@ define internal i8 addrspace(1)* @_B_exactEq(double %0, double %1) {
   %28 = getelementptr i8, i8 addrspace(1)* null, i64 %27
   ret i8 addrspace(1)* %28
 29:
-  %30 = call i8 addrspace(1)* @_bal_panic_construct(i64 7940)
+  %30 = call i8 addrspace(1)* @_bal_panic_construct(i64 8196)
   call void @_bal_panic(i8 addrspace(1)* %30)
   unreachable
 }

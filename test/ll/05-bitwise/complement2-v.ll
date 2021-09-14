@@ -87,7 +87,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %18
   ret void
 50:
-  %51 = call i8 addrspace(1)* @_bal_panic_construct(i64 516)
+  %51 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
   call void @_bal_panic(i8 addrspace(1)* %51)
   unreachable
 }
@@ -106,7 +106,7 @@ define i64 @_B_twiddle(i64 %0) {
   %9 = load i64, i64* %2
   ret i64 %9
 10:
-  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 4612)
+  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 4868)
   call void @_bal_panic(i8 addrspace(1)* %11)
   unreachable
 }
@@ -132,7 +132,7 @@ define i64 @_B_minusTwo(i64 %0) {
   call void @_bal_panic(i8 addrspace(1)* %15)
   unreachable
 16:
-  %17 = call i8 addrspace(1)* @_bal_panic_construct(i64 5636)
+  %17 = call i8 addrspace(1)* @_bal_panic_construct(i64 5892)
   call void @_bal_panic(i8 addrspace(1)* %17)
   unreachable
 18:
@@ -146,7 +146,7 @@ define i64 @_B_minusTwo(i64 %0) {
   %24 = extractvalue {i64, i1} %23, 1
   br i1 %24, label %32, label %27
 25:
-  %26 = call i8 addrspace(1)* @_bal_panic_construct(i64 5889)
+  %26 = call i8 addrspace(1)* @_bal_panic_construct(i64 6145)
   store i8 addrspace(1)* %26, i8 addrspace(1)** %6
   br label %14
 27:
@@ -158,7 +158,7 @@ define i64 @_B_minusTwo(i64 %0) {
   %31 = load i64, i64* %5
   ret i64 %31
 32:
-  %33 = call i8 addrspace(1)* @_bal_panic_construct(i64 5889)
+  %33 = call i8 addrspace(1)* @_bal_panic_construct(i64 6145)
   store i8 addrspace(1)* %33, i8 addrspace(1)** %6
   br label %14
 }
@@ -187,7 +187,7 @@ define i64 @_B_addTwo(i64 %0) {
   call void @_bal_panic(i8 addrspace(1)* %17)
   unreachable
 18:
-  %19 = call i8 addrspace(1)* @_bal_panic_construct(i64 6404)
+  %19 = call i8 addrspace(1)* @_bal_panic_construct(i64 6660)
   call void @_bal_panic(i8 addrspace(1)* %19)
   unreachable
 20:
@@ -201,7 +201,7 @@ define i64 @_B_addTwo(i64 %0) {
   %26 = extractvalue {i64, i1} %25, 1
   br i1 %26, label %32, label %29
 27:
-  %28 = call i8 addrspace(1)* @_bal_panic_construct(i64 6657)
+  %28 = call i8 addrspace(1)* @_bal_panic_construct(i64 6913)
   store i8 addrspace(1)* %28, i8 addrspace(1)** %6
   br label %16
 29:
@@ -210,7 +210,7 @@ define i64 @_B_addTwo(i64 %0) {
   %31 = load i64, i64* %5
   ret i64 %31
 32:
-  %33 = call i8 addrspace(1)* @_bal_panic_construct(i64 6657)
+  %33 = call i8 addrspace(1)* @_bal_panic_construct(i64 6913)
   store i8 addrspace(1)* %33, i8 addrspace(1)** %6
   br label %16
 }

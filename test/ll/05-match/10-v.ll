@@ -30,7 +30,7 @@ clause.0.1:
 11:
   ret void
 12:
-  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %13)
   unreachable
 }

@@ -58,7 +58,7 @@ define void @_B_main() {
 29:
   ret void
 30:
-  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284)
+  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 1540)
   call void @_bal_panic(i8 addrspace(1)* %31)
   unreachable
 }

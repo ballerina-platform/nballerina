@@ -21,7 +21,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
   ret void
 8:
-  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %9)
   unreachable
 }
@@ -78,7 +78,7 @@ define internal void @_B_printIfBetween(i64 %0, i64 %1, i64 %2) {
   call void @_bal_panic(i8 addrspace(1)* %33)
   unreachable
 34:
-  %35 = call i8 addrspace(1)* @_bal_panic_construct(i64 2308)
+  %35 = call i8 addrspace(1)* @_bal_panic_construct(i64 2564)
   call void @_bal_panic(i8 addrspace(1)* %35)
   unreachable
 36:
@@ -88,7 +88,7 @@ define internal void @_B_printIfBetween(i64 %0, i64 %1, i64 %2) {
   store i64 %38, i64* %i
   br label %14
 39:
-  %40 = call i8 addrspace(1)* @_bal_panic_construct(i64 4097)
+  %40 = call i8 addrspace(1)* @_bal_panic_construct(i64 4353)
   store i8 addrspace(1)* %40, i8 addrspace(1)** %8
   br label %32
 }

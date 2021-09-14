@@ -26,7 +26,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
 9:
-  %10 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %10 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %10)
   unreachable
 }
@@ -77,7 +77,7 @@ define internal void @_B_printClosestSquareNum(i64 %0) {
   call void @_bal_panic(i8 addrspace(1)* %29)
   unreachable
 30:
-  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 2564)
+  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 2820)
   call void @_bal_panic(i8 addrspace(1)* %31)
   unreachable
 32:
@@ -87,7 +87,7 @@ define internal void @_B_printClosestSquareNum(i64 %0) {
   store i64 %34, i64* %i
   br label %12
 35:
-  %36 = call i8 addrspace(1)* @_bal_panic_construct(i64 4353)
+  %36 = call i8 addrspace(1)* @_bal_panic_construct(i64 4609)
   store i8 addrspace(1)* %36, i8 addrspace(1)** %6
   br label %28
 }
@@ -146,7 +146,7 @@ define internal i1 @_B_isSquareNumber(i64 %0) {
   call void @_bal_panic(i8 addrspace(1)* %37)
   unreachable
 38:
-  %39 = call i8 addrspace(1)* @_bal_panic_construct(i64 5380)
+  %39 = call i8 addrspace(1)* @_bal_panic_construct(i64 5636)
   call void @_bal_panic(i8 addrspace(1)* %39)
   unreachable
 40:
@@ -159,7 +159,7 @@ define internal i1 @_B_isSquareNumber(i64 %0) {
   %45 = load i1, i1* %3
   br i1 %45, label %24, label %25
 46:
-  %47 = call i8 addrspace(1)* @_bal_panic_construct(i64 6145)
+  %47 = call i8 addrspace(1)* @_bal_panic_construct(i64 6401)
   store i8 addrspace(1)* %47, i8 addrspace(1)** %8
   br label %36
 48:
@@ -172,7 +172,7 @@ define internal i1 @_B_isSquareNumber(i64 %0) {
   %53 = load i1, i1* %5
   br i1 %53, label %30, label %31
 54:
-  %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 6657)
+  %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 6913)
   store i8 addrspace(1)* %55, i8 addrspace(1)** %8
   br label %36
 56:
@@ -182,7 +182,7 @@ define internal i1 @_B_isSquareNumber(i64 %0) {
   store i64 %58, i64* %i
   br label %13
 59:
-  %60 = call i8 addrspace(1)* @_bal_panic_construct(i64 7425)
+  %60 = call i8 addrspace(1)* @_bal_panic_construct(i64 7681)
   store i8 addrspace(1)* %60, i8 addrspace(1)** %8
   br label %36
 }

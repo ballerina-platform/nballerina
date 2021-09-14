@@ -20,7 +20,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %3
   ret void
 10:
-  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %11 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %11)
   unreachable
 }
@@ -38,7 +38,7 @@ define internal void @_B_greet(i8 addrspace(1)* %0) {
   store i8 addrspace(1)* null, i8 addrspace(1)** %2
   ret void
 8:
-  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052)
+  %9 = call i8 addrspace(1)* @_bal_panic_construct(i64 2308)
   call void @_bal_panic(i8 addrspace(1)* %9)
   unreachable
 }
@@ -50,7 +50,7 @@ define internal i8 addrspace(1)* @_B_greeting() {
 4:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630862696)
 5:
-  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 3076)
+  %6 = call i8 addrspace(1)* @_bal_panic_construct(i64 3332)
   call void @_bal_panic(i8 addrspace(1)* %6)
   unreachable
 }

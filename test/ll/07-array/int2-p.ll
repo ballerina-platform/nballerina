@@ -49,7 +49,7 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %26)
   unreachable
 27:
-  %28 = call i8 addrspace(1)* @_bal_panic_construct(i64 516)
+  %28 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
   call void @_bal_panic(i8 addrspace(1)* %28)
   unreachable
 29:
@@ -61,7 +61,7 @@ define void @_B_main() {
   %35 = icmp ult i64 0, %34
   br i1 %35, label %39, label %48
 36:
-  %37 = or i64 %23, 1280
+  %37 = or i64 %23, 1536
   %38 = call i8 addrspace(1)* @_bal_panic_construct(i64 %37)
   store i8 addrspace(1)* %38, i8 addrspace(1)** %5
   br label %25
@@ -77,7 +77,7 @@ define void @_B_main() {
   %47 = extractvalue {i64, i1} %46, 1
   br i1 %47, label %54, label %50
 48:
-  %49 = call i8 addrspace(1)* @_bal_panic_construct(i64 1541)
+  %49 = call i8 addrspace(1)* @_bal_panic_construct(i64 1797)
   store i8 addrspace(1)* %49, i8 addrspace(1)** %5
   br label %25
 50:
@@ -89,7 +89,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4
   ret void
 54:
-  %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 1537)
+  %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 1793)
   store i8 addrspace(1)* %55, i8 addrspace(1)** %5
   br label %25
 }

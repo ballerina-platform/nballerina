@@ -100,7 +100,7 @@ define void @_B_main() {
   store i8 addrspace(1)* null, i8 addrspace(1)** %17
   ret void
 60:
-  %61 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %61 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %61)
   unreachable
 }
@@ -209,7 +209,7 @@ pattern.6:
 pattern.7:
   br label %clause.4
 63:
-  %64 = call i8 addrspace(1)* @_bal_panic_construct(i64 3844)
+  %64 = call i8 addrspace(1)* @_bal_panic_construct(i64 4100)
   call void @_bal_panic(i8 addrspace(1)* %64)
   unreachable
 65:

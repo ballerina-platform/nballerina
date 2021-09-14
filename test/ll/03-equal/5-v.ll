@@ -46,7 +46,7 @@ define void @_B_main() {
   %29 = icmp eq i64 %28, 504403158265495552
   br i1 %29, label %32, label %35
 30:
-  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
   call void @_bal_panic(i8 addrspace(1)* %31)
   unreachable
 32:
