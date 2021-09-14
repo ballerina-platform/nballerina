@@ -1155,6 +1155,7 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
         }
     }
 }
+
 final readonly & map<bir:OrderOp> flippedOrderOps = {
     ">=": "<=",
     ">" : "<",
@@ -1162,30 +1163,35 @@ final readonly & map<bir:OrderOp> flippedOrderOps = {
     "<" : ">"
 };
 
-type TaggedCompareResultTransform record {
-    readonly bir:OrderOp op;
-    readonly llvm:IntPredicate predicate;
-    readonly llvm:ConstValue expectedValue;
-};
+type TaggedCompareResultTransform readonly & record {|
+    bir:OrderOp op;
+    llvm:IntPredicate predicate;
+    int compareResult;
+|};
 
-final table<TaggedCompareResultTransform> key(op) taggedCompareResultTransforms = table[
-    {op: ">=", predicate:"sge", expectedValue:llvm:constInt("i64", 1)},
-    {op: ">", predicate:"eq", expectedValue:llvm:constInt("i64", 2)},
-    {op: "<=", predicate:"ule", expectedValue:llvm:constInt("i64", 1)},
-    {op: "<", predicate:"eq", expectedValue:llvm:constInt("i64", 0)}
+const COMPARE_UN = -1;
+const COMPARE_LT = 0;
+const COMPARE_EQ = 1;
+const COMPARE_GT = 2;
+
+final readonly & table<TaggedCompareResultTransform> key(op) taggedCompareResultTransforms = table [
+    { op: ">=", predicate: "sge", compareResult: COMPARE_EQ },
+    { op: ">", predicate: "eq", compareResult: COMPARE_GT },
+    { op: "<=", predicate: "ule", compareResult: COMPARE_EQ },
+    { op: "<", predicate: "eq", compareResult: COMPARE_LT }
 ];
 
-type TaggedCompareFunction record {
-    readonly bir:UniformOrderType op;
-    readonly RuntimeFunction compareFunction;
-    readonly RuntimeFunction arrayCompareFunction;
-};
+type TaggedCompareFunction readonly & record {|
+    bir:UniformOrderType op;
+    RuntimeFunction compareFunction;
+    RuntimeFunction arrayCompareFunction;
+|};
 
-table<TaggedCompareFunction> key(op) compareFunctions = table[
-    {op: t:UT_INT, compareFunction:intCompareFunction, arrayCompareFunction: arrayIntCompareFunction},
-    {op: t:UT_FLOAT, compareFunction:floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction},
-    {op: t:UT_BOOLEAN, compareFunction:intCompareFunction, arrayCompareFunction: arrayIntCompareFunction},
-    {op: t:UT_STRING, compareFunction:stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction}
+final readonly & table<TaggedCompareFunction> key(op) compareFunctions = table [
+    { op: t:UT_INT, compareFunction: intCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
+    { op: t:UT_FLOAT, compareFunction: floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
+    { op: t:UT_BOOLEAN, compareFunction: intCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
+    { op: t:UT_STRING, compareFunction: stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction }
 ];
 
 function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
@@ -1198,11 +1204,11 @@ function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:Compare
         compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, compareFunctions.get(orderTy[0].opt).arrayCompareFunction), [lhs, rhs]);
     }
     if compareResult is () {
-        panic error("Failed to find runtime compare function");
+        panic error("failed to find runtime compare function");
     }
     else {
         TaggedCompareResultTransform transform = taggedCompareResultTransforms.get(insn.op);
-        buildStoreBoolean(builder, scaffold, builder.iCmp(transform.predicate, compareResult, transform.expectedValue), insn.result);
+        buildStoreBoolean(builder, scaffold, builder.iCmp(transform.predicate, compareResult, llvm:constInt(LLVM_INT, transform.compareResult)), insn.result);
     }
 }
 

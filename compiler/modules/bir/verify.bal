@@ -317,7 +317,7 @@ function verifyCompareOperandTypeArray(VerifyContext vc, CompareInsn insn, t:Sem
         check verifyCompareOperandTypeBase(vc, insn, operandType, optExpectedType);
     }
     else {
-        panic err:impossible("Failed to get array member type");
+        panic err:impossible("failed to get array member type");
     }
 }
 
