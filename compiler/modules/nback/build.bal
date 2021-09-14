@@ -1716,7 +1716,7 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
     return builder.getElementPtr(llvm:constNull(LLVM_TAGGED_PTR),
                                      [builder.iBitwise("or",
                                                        builder.zExt(value, LLVM_INT),
-                                                       llvm:constInt(LLVM_INT, TAG_BOOLEAN))]);
+                                                       llvm:constInt(LLVM_INT, TAG_BOOLEAN | FLAG_IMMEDIATE))]);
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
