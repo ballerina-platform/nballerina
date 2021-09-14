@@ -13,7 +13,8 @@ type TestCaseMap map<[string, int, BaltTestHeader, string[]]>;
 // }
 function testBalt(string baltName, int offset, BaltTestHeader header, string[] lines) returns error? {
     string fakeFilename = baltName + ":" + offset.toString();
-    CompileError? err =compileModule(dummyModuleId(fakeFilename), [{ lines }], {}, {});
+    LlvmModule|CompileError compileResult = compileModule(dummyModuleId(fakeFilename), [{ lines }], {});
+    CompileError? err = compileResult is error ? compileResult : ();
 
     if header["Fail-Issue"] != () {
         return;
@@ -22,7 +23,8 @@ function testBalt(string baltName, int offset, BaltTestHeader header, string[] l
     if header.Test\-Case == "error" {
         // JBUG #32440 can't use assertNotEqual
         test:assertNotExactEquals(err, (), "expected an error");
-    } else {
+    }
+    else {
         string msg = "compilation error";
         if err is err:Any {
             // JBUG #31334 cast

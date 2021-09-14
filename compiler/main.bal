@@ -3,14 +3,13 @@ import wso2/nballerina.bir;
 import wso2/nballerina.front;
 import wso2/nballerina.nback;
 import wso2/nballerina.err;
-import wso2/nballerina.print.llvm;
 
 import ballerina/io;
 import ballerina/file;
 
 type CompileError err:Any|io:Error;
 
-public type Options record {|
+public type Options record {
     boolean testJsonTypes = false;
     boolean showTypes = false;
     boolean debug = false;
@@ -18,12 +17,10 @@ public type Options record {|
     string? outDir = ();
     string? expectOutDir = ();
     string? gc = ();
-    string? target = ();
-|};
+    *OutputOptions;
+};
 
 
-# The preferred output extension for the output filename.
-const OUTPUT_EXTENSION = ".ll";
 const SOURCE_EXTENSION = ".bal";
 const TEST_EXTENSION = ".balt";
 public function main(string[] filenames, *Options opts) returns error? {
@@ -57,25 +54,17 @@ public function main(string[] filenames, *Options opts) returns error? {
             check showTypes(sources);
         }
         else {
-            OutputOptions outOptions = {
-                filename: check chooseOutputFilename(filenames[0]),
-                target: opts.target
-            };
-            check compileModule(dummyModuleId(filenames[0]), sources, nbackOptions, outOptions);
+            check compileAndOutputModule(dummyModuleId(filenames[0]), sources, nbackOptions, opts, check chooseOutputFilename(filenames[0]));
         }
     }
     else {
         foreach string filename in filenames {
             var [_, ext] = basenameExtension(filename);
             if ext == SOURCE_EXTENSION {
-                OutputOptions outOptions = {
-                    filename: check chooseOutputFilename(filename, outDir),
-                    target: opts.target
-                };
-                check compileModule(dummyModuleId(filename), [{ filename }], nbackOptions, outOptions);
+                check compileAndOutputModule(dummyModuleId(filename), [{ filename }], nbackOptions, opts, check chooseOutputFilename(filename, outDir));
             }
             else if ext == TEST_EXTENSION {
-                check compileBalt(filename, opts.expectOutDir, outDir, opts.target, nbackOptions);
+                check compileBalt(filename, outDir, nbackOptions, opts);
             }
             else {
                 return error(unknownExtensionMessage(ext));
@@ -94,19 +83,17 @@ function unknownExtensionMessage(string? ext) returns string {
     }
 }
 
-function compileBalt(string filename, string? expectOutDir, string outDir, string? target, nback:Options nbackOptions) returns error? {
+function compileBalt(string filename, string outDir, nback:Options nbackOptions, Options options) returns error? {
     BaltTestCase[] tests = check parseBalt(filename);
     foreach var [i, t] in tests.enumerate() {
         if t.header.Test\-Case == "error" || t.header["Fail-Issue"] != () {
             continue;
         }
         string outBasename = chooseBaltCaseOutputFilename(t, i);
-        OutputOptions outOptions = {
-            filename: check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION,
-            target: target
-        };
+        string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
         string[] lines = t.content;
-        check compileModule(dummyModuleId(filename), [{ lines }], nbackOptions, outOptions);
+        check compileAndOutputModule(dummyModuleId(filename), [{ lines }], nbackOptions, options, outFilename);
+        string? expectOutDir = options.expectOutDir;
         string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
         check io:fileWriteLines(expectFilename, expect(t.content));
     }
@@ -116,23 +103,17 @@ function dummyModuleId(string filename) returns bir:ModuleId {
     return { names: [filename], organization: "dummy" };
 }
 
-type OutputOptions record {|
-    string? filename = ();
-    string? target = ();
-|};
-
-function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
+function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns LlvmModule|CompileError {
     t:Env env = new;
     bir:Module birMod = check front:loadModule(env, sources, modId);
-    llvm:Context context = new;
-    llvm:Module llMod = check nback:buildModule(birMod, context, nbackOptions);
-    string? outFilename = outOptions.filename;
+    LlvmContext context = new;
+    return nback:buildModule(birMod, context, nbackOptions);
+}
+
+function compileAndOutputModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename) returns CompileError? {
+    LlvmModule llMod = check compileModule(modId, sources, nbackOptions);
     if outFilename != () {
-        string? target = outOptions.target;
-        if target != () {
-            llMod.setTarget(target);
-        }
-        check llMod.printModuleToFile(outFilename);
+        check outputModule(llMod, outFilename, outOptions);
     }
 }
 
