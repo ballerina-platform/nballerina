@@ -103,6 +103,6 @@ For those test cases that are valid Ballerina programs, the Makefile in the [tes
 
 ## Status
 
-We have completed [subset 6](docs/subset06.md) and are working on [subset 7](docs/subset07.md).
+We have completed [subset 7](docs/subset07.md) and are working on [subset 8](docs/subset08.md).
 
 The semantic subtyping implementation is further along than the backend. It implements the subset of Ballerina's type syntax described by this [grammar](docs/type-subset.md).

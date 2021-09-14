@@ -1,4 +1,4 @@
-# Language subset 7
+# Language subset 8
 
 ## Summary
 
@@ -55,15 +55,23 @@
   * `map:length`
   * `int:toHexString`
   * `error:message`
-* The only imported function that can be called is `io:println` and it can only be called with a single argument.
+* Standard library functions:
+  * `io:println` (restricted to a single argument)
 
 ## Grammar
 
 This deals explicitly with operator precedence and associativity.
 
 ```
-module-part = import-decl? module-defn*
-import-decl = "import" identifier "/" identifier ";"
+module-part = import-decl* module-defn*
+import-decl = "import" [org-name "/"] module-name ["as" import-prefix] ";"
+
+org-name = identifier
+module-name =
+   identifier
+   | module-name "." identifier
+
+import-prefix = identifier
 
 module-defn = function-defn | const-defn | type-defn
 
@@ -303,7 +311,7 @@ Method call syntax can be used for calling the following langlib functions:
 * `int:toHexString`
 * `error:message`
 
-The following restrictions apply to imported modules:
+The following restrictions apply to imports with an organization of `ballerina`:
 
 * only `ballerina/io` can be imported
 * the only function from `ballerina/io` that can be called is `println`
@@ -313,17 +321,9 @@ The following restrictions apply to imported modules:
 
 * The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 
-## Additions from subset 6
+## Additions from subset 7
 
-* `error` type and associated operations
-   * `error` type descriptor
-   * `error(msg)` expression
-   * `check` and `checkpanic` expressions
-   * `panic` statement
-   * `error:message` langlib function
-* array and map types can specify the type of members
-   * LHS of compound assignment statement allows member access
-* type definitions
+* Multiple modules
 
 ## Implemented spec changes since 2021R1
 
