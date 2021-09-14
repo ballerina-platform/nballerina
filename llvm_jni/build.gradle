@@ -48,11 +48,17 @@ task copyJNILLVM(type: Copy) {
 copyJNILLVM.dependsOn(copyNbal, cleanNbackLLVM)
 
 task copyDriver(type: Copy) {
-        from 'main.bal'
+        from "${compilerDir}/main.bal"
         into "${tmpBuildDir}/"
 }
 copyDriver.dependsOn(cleanNbackLLVM)
 copyDriver.mustRunAfter(copyNbal)
+
+task copyDriverOutput(type: Copy) {
+        from 'output.bal'
+        into "${tmpBuildDir}/"
+}
+copyDriverOutput.dependsOn(copyDriver)
 
 task copyLLVMCommon(type: Copy) {
         from "${compilerDir}/modules/print.llvm/common.bal"
@@ -76,13 +82,13 @@ task testBuild(type: Exec) {
         workingDir tmpBuildDir
         commandLine 'bal', 'test', '--offline', '--tests', 'nballerina:testCompileVPO'
 }
-testBuild.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyLocalDependencies, copyBalConfig)
+testBuild.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyDriverOutput, copyLocalDependencies, copyBalConfig)
 
 task balCompile(type: Exec) {
         workingDir tmpBuildDir
         commandLine 'bal', 'build', '--offline' , '--skip-tests'
 }
-balCompile.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyLocalDependencies, copyBalConfig)
+balCompile.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyDriverOutput, copyLocalDependencies, copyBalConfig)
 
 task compileRuntime(type: Exec) {
         workingDir runtimeDir
@@ -99,7 +105,8 @@ task buildWithRuntime(type: Exec) {
         workingDir "${tmpBuildDir}/target/bin"
         commandLine 'jar', 'uf', 'nballerina.jar', 'balrt_inline.bc'
 }
-buildWithRuntime.dependsOn(copyNbal, copyJNILLVM, copyRuntime, copyDriver, copyLocalDependencies, copyBalConfig, balCompile, compileRuntime)
+buildWithRuntime.dependsOn(copyNbal, copyJNILLVM, copyRuntime, copyDriver,
+                        copyDriverOutput, copyLocalDependencies, copyBalConfig, balCompile, compileRuntime)
 
 task cleanBuildArtificats(type: Delete) {
         delete "${tmpBuildDir}/target/bin/balrt_inline.bc"
