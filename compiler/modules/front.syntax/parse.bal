@@ -1,7 +1,5 @@
 // Parse one file in a module
-
 import wso2/nballerina.err;
-
 public type FilePath record {|
     string filename;
     string? directory = ();
@@ -38,27 +36,71 @@ function createSourceFile(FilePath path, string[] lines) returns SourceFile {
     return new(path, scanLines(lines));
 }
 
-function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
+function parseImportDecl(Tokenizer tok) returns ImportDecl[]?|err:Syntax {
     Token? t = tok.current();
     if t != "import" {
         return;
     }
-    Position pos = tok.currentPos();
-
-    check tok.advance();
-    t = tok.current();
-    if t is [IDENTIFIER, string] { 
-        string org = t[1];
+    ImportDecl[] imports = [];
+    while t == "import" {
+        Position pos = tok.currentPos();
         check tok.advance();
-        check tok.expect("/");
         t = tok.current();
         if t is [IDENTIFIER, string] {
+            string? org = t[1];
+            string moduleName;
             check tok.advance();
+            t = tok.current();
+            if t == "/" {
+                check tok.advance();
+                t = tok.current();
+                if t is [IDENTIFIER, string] {
+                    moduleName = t[1];
+                    check tok.advance();
+                }
+                else {
+                    return parseError(tok, "import declaration");
+                }
+            }
+            else {
+                // empty org
+                moduleName = <string>org;
+                org = ();
+            }
+            [string, string...] names = [moduleName];
+            while tok.current() == "." {
+                check tok.advance();
+                t = tok.current();
+                if t is [IDENTIFIER, string] {
+                    names.push(t[1]);
+                }
+                else {
+                    return parseError(tok, "import declaration");
+                }
+                check tok.advance();
+            }
+            string? prefix = ();
+            t = tok.current();
+            if t is "as" {
+                check tok.advance();
+                t = tok.current();
+                if t is [IDENTIFIER, string] {
+                    prefix = t[1];
+                }
+                else {
+                    return parseError(tok, "import declaration");
+                }
+                check tok.advance();
+            }
             check tok.expect(";");
-            return { org, module: t[1], pos };
+            imports.push({org, module: moduleName, names: names.cloneReadOnly(), prefix, pos});
+            t = tok.current();
+        }
+        else {
+            return parseError(tok, "import declaration");
         }
     }
-    return parseError(tok, "import declaration");
+    return imports;
 }
 
 function parseModuleDecl(Tokenizer tok, ModulePart part) returns ModuleLevelDefn|err:Syntax {

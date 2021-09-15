@@ -62,6 +62,7 @@ type Keyword
     | "break"
     | "public"
     | "import"
+    | "as"
     ;
 
 

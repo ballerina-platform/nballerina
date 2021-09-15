@@ -132,7 +132,8 @@ final readonly & Keyword[] keywords = [
     "type",
     "typedesc",
     "while",
-    "xml"
+    "xml",
+    "as"
 ];
 
 // This maps a frag code to a string
