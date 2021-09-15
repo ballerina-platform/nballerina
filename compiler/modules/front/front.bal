@@ -18,8 +18,17 @@ type ModulePart record {|
     map<Import> imports;
 |};
 
-class Module {
+public type ExportedDefn bir:FunctionSignature|t:SemType|s:ResolvedConst;
+
+public type ModuleExports readonly & map<ExportedDefn>;
+
+public type ResolvedModule object {
     *bir:Module;
+    public function getExports() returns ModuleExports;
+};
+
+class Module {
+    *ResolvedModule;
     final bir:ModuleId id;
     final ModulePart[] parts;
     final ModuleTable defns;
@@ -88,6 +97,27 @@ class Module {
     public function getPartFiles() returns bir:File[] {
         return from var part in self.parts select part.file;
     }
+
+    public function getExports() returns ModuleExports {
+        map<ExportedDefn> exports = {};
+        foreach var defn in self.defns {
+            ExportedDefn|false? export;
+            if defn.vis != "public" {
+                continue;
+            }
+            if defn is s:FunctionDefn {
+                export = defn.signature;
+            }
+            else if defn is s:ConstDefn {
+                export = defn.resolved;
+            }
+            else {
+                export = defn.semType;
+            }
+            exports[defn.name] = <ExportedDefn>export;
+        }
+        return exports.cloneReadOnly();
+    }
 }
 
 public type SourcePart record {|
@@ -102,7 +132,7 @@ type LoadedSourcePart record {|
     string[] lines;
 |};
 
-public function loadModule(t:Env env, SourcePart[] sourceParts, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
+public function loadModule(t:Env env, SourcePart[] sourceParts, bir:ModuleId id) returns ResolvedModule|err:Any|io:Error {
     ModuleTable mod = table [];
     ModulePart[] parts = [];
     foreach int i in 0 ..< sourceParts.length() {
@@ -115,7 +145,6 @@ public function loadModule(t:Env env, SourcePart[] sourceParts, bir:ModuleId id)
     check resolveTypes(env, mod);
     // XXX Should have an option that controls whether we perform this check
     check validEntryPoint(mod);
-    // XXX to support multiple source parts we need to deal with separate imports per part
     return new Module(id, parts, mod, env);
 }
 
