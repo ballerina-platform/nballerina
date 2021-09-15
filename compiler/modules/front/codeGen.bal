@@ -1460,9 +1460,9 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
     else {
         mod.used = true;
         bir:ModuleId moduleId = mod.moduleId;
-        bir:FunctionSignature? signature = getLibFunction(moduleId, identifier);
+        bir:FunctionSignature? signature = <bir:FunctionSignature?>mod.defns[identifier];
         if signature is () {
-            return err:unimplemented(`unsupported library function ${prefix}:${identifier}`);
+            return err:unimplemented(`unsupported library function ${prefix + ":" + identifier}`);
         }
         else {
             bir:ExternalSymbol symbol = { module: moduleId, identifier };
@@ -1476,13 +1476,16 @@ type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
 function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName) returns bir:FunctionRef|CodeGenError {
     TypedOperand? t = typedOperand(target);
     if !(t is ()) && t[0] is LangLibModuleName {
-        bir:ModuleId moduleId = { organization: "ballerina", names: ["lang", t[0]] };
-        bir:FunctionSignature? erasedSignature = getLibFunction(moduleId, methodName);
+        string moduleName = t[0];
+        bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature is () {
-            return err:unimplemented(`unrecognized lang library function ${t[0] + ":" + methodName}`);
+            return err:unimplemented(`unrecognized lang library function ${moduleName + ":" + methodName}`);
         }
         else {
-            bir:ExternalSymbol symbol = { module: moduleId, identifier: methodName };
+            bir:ExternalSymbol symbol = {
+                module: { organization: "ballerina", names: ["lang", moduleName] },
+                identifier: methodName
+            };
             bir:FunctionSignature signature = erasedSignature;
             if t[0] == "array" {
                 signature = instantiateArrayFunctionSignature(cx.mod.env, signature, (<bir:Register>target).semType);

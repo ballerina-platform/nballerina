@@ -1,21 +1,27 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 
-final [string, string[], string, readonly & t:SemType[], t:SemType][] libFunctions = [
-    ["ballerina", ["io"], "println", [t:TOP], t:NIL],
-    ["ballerina", ["lang", "string"], "length", [t:STRING], t:INT],
-    ["ballerina", ["lang", "array"], "length", [t:LIST], t:INT],
-    ["ballerina", ["lang", "array"], "push", [t:LIST, t:TOP], t:NIL],
-    ["ballerina", ["lang", "map"], "length", [t:MAPPING], t:INT],
-    ["ballerina", ["lang", "int"], "toHexString", [t:INT], t:STRING],
-    ["ballerina", ["lang", "error"], "message", [t:ERROR], t:STRING]
+type LangLibFunction [string, string, readonly & t:SemType[], t:SemType];
+final readonly & LangLibFunction[] langLibFunctions = [
+    ["string", "length", [t:STRING], t:INT],
+    ["array", "length", [t:LIST], t:INT],
+    ["array", "push", [t:LIST, t:TOP], t:NIL],
+    ["map", "length", [t:MAPPING], t:INT],
+    ["int", "toHexString", [t:INT], t:STRING],
+    ["error", "message", [t:ERROR], t:STRING]
 ];
 
-function getLibFunction(bir:ModuleId id, string name) returns bir:FunctionSignature? {
-    foreach var [org, moduleNameParts, functionName, paramTypes, returnType] in libFunctions {
-        if id.organization == org && id.names == moduleNameParts && name == functionName {
+function getLangLibFunction(string mod, string func) returns bir:FunctionSignature? {
+    // JBUG temp variable
+    LangLibFunction[] functions = langLibFunctions;
+    foreach var [moduleName, functionName, paramTypes, returnType] in functions {
+        if moduleName == mod && functionName == func {
             return { returnType, paramTypes };
         }   
     }
     return ();
 }
+
+final readonly & map<bir:FunctionSignature> ioLibFunctions = {
+    println: { paramTypes: [t:TOP], returnType: t:NIL }
+};

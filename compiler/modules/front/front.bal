@@ -10,6 +10,7 @@ type ModuleTable table<s:ModuleLevelDefn> key(name);
 type Import record {|
     s:ImportDecl decl;
     bir:ModuleId moduleId;
+    ModuleExports defns;
     boolean used = false;
 |};
 
@@ -139,7 +140,7 @@ public function loadModule(t:Env env, SourcePart[] sourceParts, bir:ModuleId id)
         var loaded = check loadSourcePart(sourceParts[i], i);
         s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.path, i);
         check addModulePart(mod, part);
-        parts.push({ file: part.file, imports: imports(part) }); 
+        parts.push({ file: part.file, imports: check imports(part) }); 
     }
     
     check resolveTypes(env, mod);
@@ -161,18 +162,23 @@ function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Erro
     panic err:illegalArgument("neither filename nor lines were specified");
 }
 
-function imports(s:ModulePart part) returns map<Import> {
+function imports(s:ModulePart part) returns map<Import>|err:Unimplemented {
     s:ImportDecl? decl = part.importDecl;
     if decl == () {
         return {};
     }
-    else {
+    else if decl.org == "ballerina" && decl.module == "io" {
+        string prefix = decl.module;
         return {
-            [decl.module]: {
+            [prefix]: {
                 decl,
-                moduleId: { organization: decl.org, names: [decl.module]}
+                moduleId: { organization: decl.org, names: [decl.module] },
+                defns: ioLibFunctions
             }
         };
+    }
+    else {
+        return err:unimplemented(`unsupported module ${decl.org + "/" + decl.module}`, loc=err:location(part.file, decl.pos));
     }
 }
 
