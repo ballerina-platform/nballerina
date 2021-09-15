@@ -163,27 +163,22 @@ function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Erro
 }
 
 function imports(s:ModulePart part) returns map<Import>|err:Unimplemented {
-    s:ImportDecl[]? decl = part.importDecl;
-    if decl == () {
-        return {};
-    }
-    else {
-        map<Import> importMap = {};
-        foreach var im in decl {
-            ModuleExports defn;
-            if im.org == "ballerina" && im.module == "io" {
-                defn = ioLibFunctions;
-            }
-            else {
-                // TODO: fix this
-                return err:unimplemented(`unsupported module ${im.module}`, loc=err:location(part.file, im.pos));
-            }
+    s:ImportDecl[] decl = part.importDeclns;
+    map<Import> importMap = {};
+    foreach var im in decl {
+        ModuleExports defn;
+        if im.org == "ballerina" && im.module == "io" {
+            defn = ioLibFunctions;
             importMap[im.module] = {decl:im,
-                moduleId: { org: im.org, names: im.names.cloneReadOnly()},
+                moduleId: { org:<string>im.org, names: im.names.cloneReadOnly()},
                 defns: defn};
         }
-        return importMap;
+        else {
+            // TODO: fix this
+            return err:unimplemented(`unsupported module ${im.module}`, loc=err:location(part.file, im.pos));
+        }
     }
+    return importMap;
 }
 
 
@@ -223,4 +218,3 @@ public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:
     check resolveTypes(env, mod);
     return [env, createTypeMap(mod)];
 }
-

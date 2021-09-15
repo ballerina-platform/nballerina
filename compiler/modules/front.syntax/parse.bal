@@ -13,7 +13,7 @@ public function parseModulePart(string[] lines, FilePath path, int partIndex) re
         file,
         partIndex,
         defns: [],
-        importDecl: check parseImportDecl(tok)
+        importDeclns: check parseImportDecl(tok)
     };
     while tok.current() != () {
         part.defns.push(check parseModuleDecl(tok, part));
@@ -36,10 +36,10 @@ function createSourceFile(FilePath path, string[] lines) returns SourceFile {
     return new(path, scanLines(lines));
 }
 
-function parseImportDecl(Tokenizer tok) returns ImportDecl[]?|err:Syntax {
+function parseImportDecl(Tokenizer tok) returns ImportDecl[]|err:Syntax {
     Token? t = tok.current();
     if t != "import" {
-        return;
+        return [];
     }
     ImportDecl[] imports = [];
     while t == "import" {
