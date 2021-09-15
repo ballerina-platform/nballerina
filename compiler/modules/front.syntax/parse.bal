@@ -13,7 +13,7 @@ public function parseModulePart(string[] lines, FilePath path, int partIndex) re
         file,
         partIndex,
         defns: [],
-        importDeclns: check parseImportDecl(tok)
+        importDecls: check parseImportDecl(tok)
     };
     while tok.current() != () {
         part.defns.push(check parseModuleDecl(tok, part));

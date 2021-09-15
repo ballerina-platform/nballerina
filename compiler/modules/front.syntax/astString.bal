@@ -12,7 +12,7 @@ const LF_OUTDENT = -1;
 type Word string|LF_INDENT|LF_OUTDENT|LF|CLING;
 
 function modulePartToWords(Word[] w, ModulePart mod) {
-    ImportDecl[] importDecl = mod.importDeclns;
+    ImportDecl[] importDecl = mod.importDecls;
     foreach int i in 0 ..< importDecl.length() {
         ImportDecl im = importDecl[i];
         if i > 0 {

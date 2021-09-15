@@ -5,7 +5,7 @@ import wso2/nballerina.err;
 public type Position err:Position;
 
 public type ModulePart record {|
-    ImportDecl[] importDeclns;
+    ImportDecl[] importDecls;
     SourceFile file;
     int partIndex;
     ModuleLevelDefn[] defns;

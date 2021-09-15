@@ -163,7 +163,7 @@ function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Erro
 }
 
 function imports(s:ModulePart part) returns map<Import>|err:Unimplemented {
-    s:ImportDecl[] decl = part.importDeclns;
+    s:ImportDecl[] decl = part.importDecls;
     map<Import> importMap = {};
     foreach var im in decl {
         ModuleExports defn;
