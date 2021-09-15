@@ -93,7 +93,7 @@ function toToken(string t) returns Token {
 }
 
 class Tokenizer {
-    private final string[] lines;
+    private final ScannedLine[] lines;
     // index of nextLine to be scanned
     private int lineIndex = 0;
     private readonly & FragCode[] fragCodes = [];
@@ -107,8 +107,8 @@ class Tokenizer {
 
     Token? curTok = ();
 
-    function init(string[] lines, SourceFile file) {
-        self.lines = lines;
+    function init(SourceFile file) {
+        self.lines = file.scannedLines();
         self.file = file;
     }
     
@@ -245,7 +245,7 @@ class Tokenizer {
         if self.lineIndex >= self.lines.length() {
             return false;
         }
-        ScannedLine scannedLine = scanLine(self.lines[self.lineIndex]);
+        ScannedLine scannedLine = self.lines[self.lineIndex];
         self.fragCodes = scannedLine.fragCodes;
         self.fragments = scannedLine.fragments;
         self.lineIndex += 1;
@@ -285,10 +285,12 @@ public readonly class SourceFile {
     *err:File;
     private string fn;
     private string? dir;
+    private ScannedLine[] lines;
 
-    public function init(FilePath path) {
+    function init(FilePath path, readonly & ScannedLine[] lines) {
         self.fn = path.filename;
         self.dir = path.directory;
+        self.lines = lines;
     }
 
     public function filename() returns string => self.fn;
@@ -298,4 +300,6 @@ public readonly class SourceFile {
     public function lineColumn(Position pos) returns err:LineColumn {
         return [pos >> 32, pos & 0xFFFFFFFF];
     }
+
+    function scannedLines() returns readonly & ScannedLine[] => self.lines;
 }

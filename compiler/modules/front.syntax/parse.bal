@@ -8,8 +8,8 @@ public type FilePath record {|
 |};
 
 public function parseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
-    SourceFile file = new(path);
-    Tokenizer tok = new (lines, file);
+    SourceFile file = createSourceFile(path, lines);
+    Tokenizer tok = new (file);
     check tok.advance();
     ModulePart part = {
         file,
@@ -24,14 +24,18 @@ public function parseModulePart(string[] lines, FilePath path, int partIndex) re
 }
 
 public function parseExpression(string[] lines, FilePath path) returns Expr|err:Syntax {
-    SourceFile file = new(path);
-    Tokenizer tok = new (lines, file);
+    SourceFile file = createSourceFile(path, lines);
+    Tokenizer tok = new (file);
     check tok.advance();
     Expr expr = check parseExpr(tok);
     if tok.current() != () {
         return parseError(tok, "unexpected input after expression");
     }
     return expr;
+}
+
+function createSourceFile(FilePath path, string[] lines) returns SourceFile {
+    return new(path, scanLines(lines));
 }
 
 function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {

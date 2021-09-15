@@ -49,8 +49,8 @@ type SingleStringTokenizerTestCase [string, string];
     dataProvider: sourceFragments
 }
 function testTokenizer(string k, string[] lines) returns error? {
-    SourceFile file = new({ filename: k });
-    Tokenizer tok = new (lines, file);
+    SourceFile file = createSourceFile({ filename: k }, lines);
+    Tokenizer tok = new (file);
     while true {
         err:Syntax|Token? t = advance(tok, k, lines);
         if t is Token {
@@ -119,8 +119,8 @@ function reduceToWords(string k, string rule, string[] fragment) returns err:Syn
         modulePartToWords(w, check parseModulePart(fragment, { filename: k }, 0));
     }
     else {
-        SourceFile file = new({ filename: k });
-        Tokenizer tok = new (fragment, file);
+        SourceFile file = createSourceFile({ filename: k }, fragment);
+        Tokenizer tok = new (file);
         check tok.advance();
         match rule {
             "expr" => {
