@@ -1,6 +1,6 @@
 import wso2/nballerina.err;
 
-type Token FixedToken|VariableLengthToken;
+type Token FixedToken|readonly & VariableLengthToken;
 type FixedToken SingleCharDelim|MultiCharDelim|Keyword;
 
 const IDENTIFIER = 0;
@@ -92,6 +92,16 @@ type Mode MODE_NORMAL|MODE_TYPE_DESC;
 function toToken(string t) returns Token {
     return <Token>t;
 }
+
+type TokenizerState readonly & record {
+    int lineIndex;
+    int fragCodeIndex;
+    int codePointIndex;
+    int fragmentIndex;
+    int tokenStartCodePointIndex;
+    Mode mode;
+    Token? curTok;
+};
 
 class Tokenizer {
     private final ScannedLine[] lines;
@@ -276,13 +286,48 @@ class Tokenizer {
         return err:syntax(msg, loc=err:location(self.file, self.currentPos()));
     }
 
+    function save() returns TokenizerState {
+        return {
+            lineIndex : self.lineIndex,
+            fragCodeIndex : self.fragCodeIndex,
+            codePointIndex : self.codePointIndex,
+            fragmentIndex : self.fragmentIndex,
+            tokenStartCodePointIndex : self.tokenStartCodePointIndex,
+            mode : self.mode,
+            curTok : self.curTok
+        };
+    }
+
+    function restore(TokenizerState s) {
+        self.lineIndex = s.lineIndex;
+        self.fragCodeIndex = s.fragCodeIndex;
+        self.codePointIndex = s.codePointIndex;
+        self.fragmentIndex = s.fragmentIndex;
+        self.tokenStartCodePointIndex = s.tokenStartCodePointIndex;
+        self.mode = s.mode;
+        self.curTok = s.curTok;
+
+        ScannedLine scannedLine = self.lines[self.lineIndex - 1];
+        self.fragCodes = scannedLine.fragCodes;
+        self.fragments = scannedLine.fragments;
+    }
+
 }
 
 function createPosition(int line, int column) returns Position {
     return (line << 32) | column;
 }
 
-public readonly class SourceFile {
+// JBUG when SourceFile is replaced with the ScannedSourceFile, get `incompatible types`
+public type SourceFile readonly & object {
+    // JUBG should included *err:File here and include this in ScannedSourceFile
+    public function filename() returns string;
+    public function directory() returns string?;
+    public function lineColumn(Position pos) returns err:LineColumn;
+    function scannedLines() returns readonly & ScannedLine[];
+};
+
+readonly class ScannedSourceFile {
     *err:File;
     private string fn;
     private string? dir;
