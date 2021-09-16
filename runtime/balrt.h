@@ -218,7 +218,7 @@ extern NORETURN COLD void _bal_panic_internal(PanicCode code);
 #define BAL_ROOT_NAME(sym) _B04root ## sym
 #define BAL_LIB_IO_NAME(sym) _Bb02io ## sym
 #define BAL_LANG_INT_NAME(sym) _Bb0m4lang3int ## sym
-#define BAL_LANG_STRING_NAME(sym) _Bb0m4lang5string ## sym
+#define BAL_LANG_STRING_NAME(sym) _Bb0m4lang6string ## sym
 #define BAL_LANG_ARRAY_NAME(sym) _Bb0m4lang5array ## sym
 #define BAL_LANG_MAP_NAME(sym) _Bb0m4lang3map ## sym
 #define BAL_LANG_ERROR_NAME(sym) _Bb0m4lang5error ## sym
