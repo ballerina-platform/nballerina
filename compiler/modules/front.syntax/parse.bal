@@ -90,9 +90,7 @@ function parseImportOrgModule(Tokenizer tok) returns [string?, string]|err:Synta
         }
         return [org, moduleName];
     }
-    else {
-        return parseError(tok, "import declaration invalid org/module name");
-    }
+    return parseError(tok, "import declaration invalid org/module name");
 }
 
 function parseImportName(Tokenizer tok) returns string?|err:Syntax {
@@ -106,9 +104,7 @@ function parseImportName(Tokenizer tok) returns string?|err:Syntax {
         check tok.advance();
         return t[1];
     }
-    else {
-        return parseError(tok, "import declaration invalid name");
-    }
+    return parseError(tok, "import declaration invalid name");
 }
 
 function parseImportPrefix(Tokenizer tok) returns string?|err:Syntax {
@@ -122,9 +118,7 @@ function parseImportPrefix(Tokenizer tok) returns string?|err:Syntax {
         check tok.advance();
         return t[1];
     }
-    else {
-        return parseError(tok, "import declaration invalid import prefix");
-    }
+    return parseError(tok, "import declaration invalid import prefix");
 }
 
 function parseModuleDecl(Tokenizer tok, ModulePart part) returns ModuleLevelDefn|err:Syntax {
