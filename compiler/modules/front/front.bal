@@ -163,23 +163,23 @@ function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Erro
 }
 
 function imports(s:ModulePart part) returns map<Import>|err:Unimplemented {
-    s:ImportDecl? decl = part.importDecl;
-    if decl == () {
-        return {};
-    }
-    else if decl.org == "ballerina" && decl.module == "io" {
-        string prefix = decl.module;
-        return {
-            [prefix]: {
-                decl,
-                moduleId: { org: decl.org, names: [decl.module] },
+    s:ImportDecl[] decls = part.importDecls;
+    map<Import> importMap = {};
+    foreach var decl in decls {
+        ModuleExports defn;
+        if decl.org == "ballerina" && decl.names[0] == "io" {
+            importMap[decl.names[0]] = {
+                decl:decl,
+                moduleId: { org:<string>decl.org, names: decl.names.cloneReadOnly()},
                 defns: ioLibFunctions
-            }
-        };
+            };
+        }
+        else {
+            // TODO: fix this
+            return err:unimplemented(`unsupported module ${".".'join(...decl.names)}`, loc=err:location(part.file, decl.pos));
+        }
     }
-    else {
-        return err:unimplemented(`unsupported module ${decl.org + "/" + decl.module}`, loc=err:location(part.file, decl.pos));
-    }
+    return importMap;
 }
 
 function validEntryPoint(ModuleTable mod) returns err:Any? {
@@ -218,4 +218,3 @@ public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:
     check resolveTypes(env, mod);
     return [env, createTypeMap(mod)];
 }
-

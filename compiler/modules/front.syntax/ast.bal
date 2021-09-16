@@ -5,7 +5,7 @@ import wso2/nballerina.err;
 public type Position err:Position;
 
 public type ModulePart record {|
-    ImportDecl? importDecl;
+    ImportDecl[] importDecls;
     SourceFile file;
     int partIndex;
     ModuleLevelDefn[] defns;
@@ -15,9 +15,10 @@ public type ModuleLevelDefn FunctionDefn|ConstDefn|TypeDefn;
 
 public type Visibility "public"?;
 
-public type ImportDecl record {|
-    string org;
-    string module;
+public type ImportDecl readonly & record {|
+    string? org;
+    [string, string...] names;
+    string? prefix;
     Position pos;
 |};
 
