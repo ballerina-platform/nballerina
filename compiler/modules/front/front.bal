@@ -181,7 +181,6 @@ function imports(s:ModulePart part) returns map<Import>|err:Unimplemented {
     return importMap;
 }
 
-
 function validEntryPoint(ModuleTable mod) returns err:Any? {
     s:ModuleLevelDefn? defn = mod["main"];
     if defn is s:FunctionDefn {
