@@ -38,41 +38,27 @@ function createSourceFile(FilePath path, string[] lines) returns SourceFile {
 
 function parseImportDecls(Tokenizer tok) returns ImportDecl[]|err:Syntax {
     ImportDecl[] imports = [];
-    ImportDecl? im = check parseImportDecl(tok);
-    while im is ImportDecl {
+    Token? t = tok.current();
+    while t == "import" {
+        ImportDecl im = check parseImportDecl(tok);
         imports.push(im);
-        im = check parseImportDecl(tok);
+        t = tok.current();
     }
     return imports;
 }
 
-function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
-    Token? t = tok.current();
-    if t != "import" {
-        return ();
-    }
+function parseImportDecl(Tokenizer tok) returns ImportDecl|err:Syntax {
     Position pos = tok.currentPos();
     check tok.advance();
-    var [org, moduleName] = check parseImportOrgModule(tok);
-    [string, string...] names = [moduleName];
-    string? nextName = check parseImportName(tok);
-    while nextName is string {
-        names.push(nextName);
-        nextName = check parseImportName(tok);
-    }
-    string? prefix = check parseImportPrefix(tok);
-    check tok.expect(";");
-    return {org, names: names.cloneReadOnly(), prefix, pos};
-}
-
-function parseImportOrgModule(Tokenizer tok) returns [string?, string]|err:Syntax {
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
+        // we are guessing this is the org name
         string? org = t[1];
         string moduleName;
         check tok.advance();
         t = tok.current();
         if t == "/" {
+            // our guess is correct
             check tok.advance();
             t = tok.current();
             if t is [IDENTIFIER, string] {
@@ -84,27 +70,36 @@ function parseImportOrgModule(Tokenizer tok) returns [string?, string]|err:Synta
             }
         }
         else {
-            // empty org
+            // empty org, our guess is wrong
             moduleName = <string>org;
             org = ();
         }
-        return [org, moduleName];
+        [string, string...] names = [moduleName];
+        foreach string name in check parseImportNamesRest(tok) {
+            names.push(name);
+        }
+        string? prefix = check parseImportPrefix(tok);
+        check tok.expect(";");
+        return {org, names: names.cloneReadOnly(), prefix, pos};
     }
     return parseError(tok, "import declaration invalid org/module name");
 }
 
-function parseImportName(Tokenizer tok) returns string?|err:Syntax {
+function parseImportNamesRest(Tokenizer tok) returns string[]|err:Syntax {
     Token? t = tok.current();
-    if t != "." {
-        return ();
-    }
-    check tok.advance();
-    t = tok.current();
-    if t is [IDENTIFIER, string] {
+    string[] names = [];
+    while t == "." {
         check tok.advance();
-        return t[1];
+        t = tok.current();
+        if t is [IDENTIFIER, string] {
+            check tok.advance();
+            names.push(t[1]);
+        }
+        else {
+            return parseError(tok, "import declaration invalid name");
+        }
     }
-    return parseError(tok, "import declaration invalid name");
+    return names;
 }
 
 function parseImportPrefix(Tokenizer tok) returns string?|err:Syntax {
@@ -118,7 +113,7 @@ function parseImportPrefix(Tokenizer tok) returns string?|err:Syntax {
         check tok.advance();
         return t[1];
     }
-    return parseError(tok, "import declaration invalid import prefix");
+    return parseError(tok, "import declaration invalid prefix");
 }
 
 function parseModuleDecl(Tokenizer tok, ModulePart part) returns ModuleLevelDefn|err:Syntax {

@@ -163,19 +163,19 @@ function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Erro
 }
 
 function imports(s:ModulePart part) returns map<Import>|err:Unimplemented {
-    s:ImportDecl[] decl = part.importDecls;
+    s:ImportDecl[] decls = part.importDecls;
     map<Import> importMap = {};
-    foreach var im in decl {
+    foreach var decl in decls {
         ModuleExports defn;
-        if im.org == "ballerina" && im.names[0] == "io" {
+        if decl.org == "ballerina" && decl.names[0] == "io" {
             defn = ioLibFunctions;
-            importMap[im.names[0]] = {decl:im,
-                moduleId: { org:<string>im.org, names: im.names.cloneReadOnly()},
+            importMap[decl.names[0]] = {decl:decl,
+                moduleId: { org:<string>decl.org, names: decl.names.cloneReadOnly()},
                 defns: defn};
         }
         else {
             // TODO: fix this
-            return err:unimplemented(`unsupported module ${im.names[0]}`, loc=err:location(part.file, im.pos));
+            return err:unimplemented(`unsupported module ${".".'join(...decl.names)}`, loc=err:location(part.file, decl.pos));
         }
     }
     return importMap;
