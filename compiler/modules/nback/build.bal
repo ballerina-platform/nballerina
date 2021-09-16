@@ -1298,6 +1298,9 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
+                if isAnyOperandSmallString(insn.operands) {
+                    return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
+                }
                 return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
             else {
@@ -1358,6 +1361,19 @@ function buildEqualFloat(llvm:Builder builder, Scaffold scaffold, boolean exact,
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
     return buildStoreBoolean(builder, scaffold, b, reg);
+}
+
+function isAnyOperandSmallString(bir:Operand[] operands) returns boolean {
+    foreach var operand in operands {
+        if operand is string {
+            byte[] bytes = operand.toBytes();
+            int nBytes = operand.length();
+            if isSmallString(operand.length(), bytes, nBytes) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 function reprIsNil(Repr repr) returns boolean {
@@ -1848,7 +1864,7 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
     llvm:Type ty;
     llvm:ConstValue val;
     StringVariant variant;
-    if nCodePoints == 1 || (nBytes == nCodePoints && nBytes <= 7) {
+    if isSmallString(nCodePoints, bytes, nBytes) {
         int encoded = 0;
         foreach int i in 0 ..< 7 {
             // JBUG cast needed #31867
@@ -1885,6 +1901,10 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
                                                linkage = "internal");
     return context.constGetElementPtr(context.constAddrSpaceCast(context.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_TAGGED_PTR),
                                       [llvm:constInt(LLVM_INT, TAG_STRING | <int>variant)]);
+}
+
+function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolean {
+    return nCodePoints == 1 || (nBytes == nCodePoints && nBytes <= 7);
 }
 
 // Returns the new, padded length
