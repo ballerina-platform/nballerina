@@ -1281,7 +1281,10 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
-                return generateStringEquality(builder, scaffold, op, insn, lhsValue, rhsValue, result);
+                if isAnyOperandSmallString(insn.operands) {
+                    return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
+                }
+                return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
             else {
                 return buildEqualTaggedTagged(builder, scaffold, exact, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
@@ -1343,17 +1346,17 @@ function buildEqualFloat(llvm:Builder builder, Scaffold scaffold, boolean exact,
     return buildStoreBoolean(builder, scaffold, b, reg);
 }
 
-function generateStringEquality(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, bir:EqualityInsn insn, llvm:Value lhsValue, llvm:Value rhsValue, bir:Register result) {
-    foreach var operand in insn.operands {
-        if !(operand is string) {
-            continue;
-        }
-        string str = <string>operand;
-        if isSmallString(str.length(), str.toBytes(), str.toBytes().length()) {
-            return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
+function isAnyOperandSmallString(bir:Operand[] operands) returns boolean {
+    foreach var operand in operands {
+        if operand is string {
+            byte[] bytes = operand.toBytes();
+            int nBytes = operand.length();
+            if isSmallString(operand.length(), bytes, nBytes) {
+                return true;
+            }
         }
     }
-    return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
+    return false;
 }
 
 function reprIsNil(Repr repr) returns boolean {
@@ -1372,10 +1375,6 @@ function reprExactNeedsHeap(Repr repr) returns boolean {
 
 function reprIsImmediate(Repr repr) returns boolean {
     return !(repr is TaggedRepr) || (repr.subtype & ~(t:NIL|t:BOOLEAN)) == 0;
-}
-
-function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolean {
-    return nCodePoints == 1 || (nBytes == nCodePoints && nBytes <= 7);
 }
 
 function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {
@@ -1885,6 +1884,10 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
                                                linkage = "internal");
     return context.constGetElementPtr(context.constAddrSpaceCast(context.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_TAGGED_PTR),
                                       [llvm:constInt(LLVM_INT, TAG_STRING | <int>variant)]);
+}
+
+function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolean {
+    return nCodePoints == 1 || (nBytes == nCodePoints && nBytes <= 7);
 }
 
 // Returns the new, padded length
