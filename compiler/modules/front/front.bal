@@ -167,15 +167,15 @@ function imports(s:ModulePart part) returns map<Import>|err:Unimplemented {
     map<Import> importMap = {};
     foreach var im in decl {
         ModuleExports defn;
-        if im.org == "ballerina" && im.module == "io" {
+        if im.org == "ballerina" && im.names[0] == "io" {
             defn = ioLibFunctions;
-            importMap[im.module] = {decl:im,
+            importMap[im.names[0]] = {decl:im,
                 moduleId: { org:<string>im.org, names: im.names.cloneReadOnly()},
                 defns: defn};
         }
         else {
             // TODO: fix this
-            return err:unimplemented(`unsupported module ${im.module}`, loc=err:location(part.file, im.pos));
+            return err:unimplemented(`unsupported module ${im.names[0]}`, loc=err:location(part.file, im.pos));
         }
     }
     return importMap;

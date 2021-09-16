@@ -95,6 +95,7 @@ const FRAG_KEYWORD = 0x80;
 
 final readonly & Keyword[] keywords = [
     "any",
+    "as",
     "boolean",
     "break",
     "byte",
@@ -132,8 +133,7 @@ final readonly & Keyword[] keywords = [
     "type",
     "typedesc",
     "while",
-    "xml",
-    "as"
+    "xml"
 ];
 
 // This maps a frag code to a string

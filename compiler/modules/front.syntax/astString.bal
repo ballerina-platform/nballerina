@@ -25,7 +25,7 @@ function modulePartToWords(Word[] w, ModulePart mod) {
         }
         foreach int j in 0 ..< im.names.length() {
             if j > 0 {
-                w.push(CLING, ".");
+                w.push(".");
             }
             string name = im.names[j];
             w.push(name);

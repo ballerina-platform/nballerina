@@ -17,7 +17,6 @@ public type Visibility "public"?;
 
 public type ImportDecl readonly & record {|
     string? org;
-    string module;
     [string, string...] names;
     string? prefix;
     Position pos;

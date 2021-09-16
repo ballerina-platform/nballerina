@@ -24,6 +24,7 @@ type MultiCharDelim "{|" | "|}" | "..." | "..<" | "==" | "!=" | ">=" | "<=" | "=
 type CompoundAssignDelim "+=" | "-=" | "/=" | "*=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=";
 type Keyword
     "any"
+    | "as"
     | "boolean"
     | "byte"
     | "check"
@@ -62,7 +63,6 @@ type Keyword
     | "break"
     | "public"
     | "import"
-    | "as"
     ;
 
 
