@@ -133,20 +133,46 @@ type LoadedSourcePart record {|
     string[] lines;
 |};
 
-public function loadModule(t:Env env, SourcePart[] sourceParts, bir:ModuleId id) returns ResolvedModule|err:Any|io:Error {
-    ModuleTable mod = table [];
-    ModulePart[] parts = [];
+public function scanModule(SourcePart[] sourceParts, bir:ModuleId id) returns ScannedModule|err:Any|io:Error {
+    s:ImportDecl[] imports = [];
+    s:ScannedModulePart[] parts = [];
     foreach int i in 0 ..< sourceParts.length() {
         var loaded = check loadSourcePart(sourceParts[i], i);
-        s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.path, i);
-        check addModulePart(mod, part);
-        parts.push({ file: part.file, imports: check imports(part) }); 
+        s:ScannedModulePart p = check s:scanModulePart(loaded.lines, loaded.path, i);
+        parts.push(p);
+        imports.push(... check p.getImportDecls());
     }
-    
-    check resolveTypes(env, mod);
-    // XXX Should have an option that controls whether we perform this check
-    check validEntryPoint(mod);
-    return new Module(id, parts, mod, env);
+    ScannedModule mod = new(parts, imports, id);
+    return mod;
+}
+
+public class ScannedModule {
+    private s:ScannedModulePart[] scannedParts;
+    private s:ImportDecl[] imports;
+    private bir:ModuleId id;
+
+    function init(s:ScannedModulePart[] scannedParts, s:ImportDecl[] imports, bir:ModuleId id) {
+        self.scannedParts = scannedParts;
+        self.imports = imports;
+        self.id = id;
+    }
+
+    function getImports() returns s:ImportDecl[] => self.imports;
+
+    public function resolve(t:Env env) returns ResolvedModule|err:Any|io:Error {
+        ModuleTable mod = table [];
+        ModulePart[] parts = [];
+        foreach var p in self.scannedParts {
+            s:ModulePart part = check p.parse();
+            check addModulePart(mod, part);
+            parts.push({ file: part.file, imports: check imports(part) });
+        }
+
+        check resolveTypes(env, mod);
+        // XXX Should have an option that controls whether we perform this check
+        check validEntryPoint(mod);
+        return new Module(self.id, parts, mod, env);
+    }
 }
 
 function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Error {
@@ -211,8 +237,8 @@ public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:
     ModuleTable mod = table [];
     foreach int i in 0 ..< sourceParts.length() {
         var loaded = check loadSourcePart(sourceParts[i], 0);
-        s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.path, i);
-        check addModulePart(mod, part);
+        s:ScannedModulePart part = check s:scanModulePart(loaded.lines, loaded.path, i);
+        check addModulePart(mod, check part.parse());
     }
     t:Env env = new;
     check resolveTypes(env, mod);

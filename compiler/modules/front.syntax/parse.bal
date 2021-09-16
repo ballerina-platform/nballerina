@@ -6,20 +6,45 @@ public type FilePath record {|
     string? directory = ();
 |};
 
-public function parseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
+public function scanModulePart(string[] lines, FilePath path, int partIndex) returns ScannedModulePart|err:Syntax {
     SourceFile file = createSourceFile(path, lines);
     Tokenizer tok = new (file);
     check tok.advance();
-    ModulePart part = {
-        file,
-        partIndex,
-        defns: [],
-        importDecls: check parseImportDecls(tok)
-    };
-    while tok.current() != () {
-        part.defns.push(check parseModuleDecl(tok, part));
+    return new(file, check parseImportDecls(tok).cloneReadOnly(), tok.save(), partIndex);
+}
+
+public readonly class ScannedModulePart {
+    private TokenizerState tokState;
+    private ImportDecl[] imports;
+    private SourceFile file;
+    private int partIndex;
+
+    function init(SourceFile file, readonly & ImportDecl[] imports, TokenizerState tokState, int partIndex) {
+        self.file = file;
+        self.imports = imports;
+        self.tokState = tokState;
+        self.partIndex = partIndex;
     }
-    return part;
+
+    public function getImportDecls() returns ImportDecl[]|err:Syntax {
+        return self.imports;
+    }
+
+    public function parse() returns ModulePart|err:Syntax {
+        Tokenizer tok = new(self.file);
+        tok.restore(self.tokState);
+        ModuleLevelDefn[] defns = [];
+        ModulePart part = {
+            file: self.file,
+            partIndex: self.partIndex,
+            defns,
+            importDecls: self.imports
+        };
+        while tok.current() != () {
+            defns.push(check parseModuleDecl(tok, part));
+        }
+        return part;
+    }
 }
 
 public function parseExpression(string[] lines, FilePath path) returns Expr|err:Syntax {
@@ -34,7 +59,8 @@ public function parseExpression(string[] lines, FilePath path) returns Expr|err:
 }
 
 function createSourceFile(FilePath path, string[] lines) returns SourceFile {
-    return new(path, scanLines(lines));
+    ScannedSourceFile file = new(path, scanLines(lines));
+    return file;
 }
 
 function parseImportDecls(Tokenizer tok) returns ImportDecl[]|err:Syntax {

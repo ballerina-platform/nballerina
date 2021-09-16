@@ -143,6 +143,11 @@ function reduceToWords(string k, string rule, string[] fragment) returns err:Syn
     return w;
 }
 
+function parseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
+    ScannedModulePart part = check scanModulePart(lines, path, partIndex);
+    return check part.parse();
+}
+
 function sourceFragments() returns map<TokenizerTestCase>|error {
      map<TokenizerTestCase> all = check invalidTokenSourceFragments();
      map<ParserTestCase> valid = check validTokenSourceFragments();
