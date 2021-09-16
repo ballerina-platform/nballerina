@@ -34,44 +34,29 @@ public function main(string[] filenames, *Options opts) returns error? {
             return error("multiple input files not supported with --testJsonTypes");
         }
         check testJsonTypes(filenames[0]);
+        return;
+    }
+    if opts.showTypes {
+        if filenames.length() > 1 {
+            return error("multiple input files not supported with --showTypes");
+        }
+        check showTypes([{ filename: filenames[0] }]);
+        return;
     }
     nback:Options nbackOptions = {
         gcName: check nback:validGcName(opts.gc),
         debugLevel: opts.debug ? nback:DEBUG_BACKTRACE : nback:DEBUG_NONE
     };
-    string? outDir = opts.outDir;
-    if outDir == () {
-        front:SourcePart[] sources = [];
-        foreach string filename in filenames {
-            var [_, ext] = basenameExtension(filename);
-            if ext != SOURCE_EXTENSION {
-                if ext == TEST_EXTENSION {
-                    return error("balt compilation requires `outDir` to be passed");
-                }
-                return error(unknownExtensionMessage(ext));
-            }
-            sources.push({filename});
+    foreach string filename in filenames {
+        var [_, ext] = basenameExtension(filename);
+        if ext == SOURCE_EXTENSION {
+            check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, [{ filename }], nbackOptions, opts, check chooseOutputFilename(filename, opts.outDir));
         }
-        if opts.showTypes {
-            check showTypes(sources);
+        else if ext == TEST_EXTENSION {
+            check compileBalt(filename, opts.outDir ?: check file:parentPath(filename), nbackOptions, opts);
         }
         else {
-            check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, sources, nbackOptions, opts, check chooseOutputFilename(filenames[0]));
-        }
-    }
-    else {
-        foreach string filename in filenames {
-            var [_, ext] = basenameExtension(filename);
-            if ext == SOURCE_EXTENSION {
-                check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, [{ filename }], nbackOptions, opts, check chooseOutputFilename(filename, outDir));
-            }
-            else if ext == TEST_EXTENSION {
-                check compileBalt(filename, outDir, nbackOptions, opts);
-            }
-            else {
-                return error(unknownExtensionMessage(ext));
-            }
-            
+            return error(unknownExtensionMessage(ext));
         }
     }
 }
