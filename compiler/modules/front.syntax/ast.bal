@@ -15,7 +15,7 @@ public type ModuleLevelDefn FunctionDefn|ConstDefn|TypeDefn;
 
 public type Visibility "public"?;
 
-public type ImportDecl readonly & record {|
+public type ImportDecl record {|
     string? org;
     [string, string...] names;
     string? prefix;

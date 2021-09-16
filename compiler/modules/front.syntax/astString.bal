@@ -12,26 +12,26 @@ const LF_OUTDENT = -1;
 type Word string|LF_INDENT|LF_OUTDENT|LF|CLING;
 
 function modulePartToWords(Word[] w, ModulePart mod) {
-    ImportDecl[] importDecl = mod.importDecls;
-    foreach int i in 0 ..< importDecl.length() {
-        ImportDecl im = importDecl[i];
+    ImportDecl[] importDecls = mod.importDecls;
+    foreach int i in 0 ..< importDecls.length() {
+        ImportDecl decl = importDecls[i];
         if i > 0 {
             // JBUG cast
             w.push(<Word>LF);
         }
         w.push("import");
-        if im.org is string {
-            w.push(im.org, CLING, "/", CLING);
+        if decl.org is string {
+            w.push(decl.org, CLING, "/", CLING);
         }
-        foreach int j in 0 ..< im.names.length() {
+        foreach int j in 0 ..< decl.names.length() {
             if j > 0 {
                 w.push(".");
             }
-            string name = im.names[j];
+            string name = decl.names[j];
             w.push(name);
         }
-        if im.prefix is string {
-            w.push("as", im.prefix);
+        if decl.prefix is string {
+            w.push("as", decl.prefix);
         }
         w.push(";");
     }

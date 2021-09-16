@@ -53,35 +53,28 @@ function parseImportDecl(Tokenizer tok) returns ImportDecl|err:Syntax {
     check tok.advance();
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
-        // we are guessing this is the org name
-        string? org = t[1];
-        string moduleName;
+        string firstModuleName = t[1];
+        string? org = ();
         check tok.advance();
         t = tok.current();
         if t == "/" {
-            // our guess is correct
+            // we have an org
+            org = firstModuleName;
             check tok.advance();
             t = tok.current();
             if t is [IDENTIFIER, string] {
-                moduleName = t[1];
+                firstModuleName = t[1];
                 check tok.advance();
             }
             else {
                 return parseError(tok, "import declaration invalid module name");
             }
         }
-        else {
-            // empty org, our guess is wrong
-            moduleName = <string>org;
-            org = ();
-        }
-        [string, string...] names = [moduleName];
-        foreach string name in check parseImportNamesRest(tok) {
-            names.push(name);
-        }
+        [string, string...] names = [firstModuleName];
+        names.push(...check parseImportNamesRest(tok));
         string? prefix = check parseImportPrefix(tok);
         check tok.expect(";");
-        return {org, names: names.cloneReadOnly(), prefix, pos};
+        return { org, names, prefix, pos };
     }
     return parseError(tok, "import declaration invalid org/module name");
 }
