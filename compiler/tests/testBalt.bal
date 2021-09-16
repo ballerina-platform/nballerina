@@ -13,7 +13,7 @@ type TestCaseMap map<[string, int, BaltTestHeader, string[]]>;
 // }
 function testBalt(string baltName, int offset, BaltTestHeader header, string[] lines) returns error? {
     string fakeFilename = baltName + ":" + offset.toString();
-    LlvmModule|CompileError compileResult = compileModule(dummyModuleId(fakeFilename), [{ lines }], {});
+    LlvmModule|CompileError compileResult = compileModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], {});
     CompileError? err = compileResult is error ? compileResult : ();
 
     if header["Fail-Issue"] != () {

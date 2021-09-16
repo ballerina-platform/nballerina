@@ -125,5 +125,5 @@ function errorLine(string path) returns int|io:Error {
 
 // This outputs nothing
 function compileFile(string filename) returns CompileError? {
-    _ = check compileModule(dummyModuleId(filename), [{ filename }], {});
+    _ = check compileModule(DEFAULT_ROOT_MODULE_ID, [{ filename }], {});
 }

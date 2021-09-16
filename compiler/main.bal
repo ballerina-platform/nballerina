@@ -20,6 +20,8 @@ public type Options record {
     *OutputOptions;
 };
 
+const DEFAULT_ROOT_MODULE_NAME = "root";
+final bir:ModuleId DEFAULT_ROOT_MODULE_ID = { org: "", names: [DEFAULT_ROOT_MODULE_NAME] };
 
 const SOURCE_EXTENSION = ".bal";
 const TEST_EXTENSION = ".balt";
@@ -54,14 +56,14 @@ public function main(string[] filenames, *Options opts) returns error? {
             check showTypes(sources);
         }
         else {
-            check compileAndOutputModule(dummyModuleId(filenames[0]), sources, nbackOptions, opts, check chooseOutputFilename(filenames[0]));
+            check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, sources, nbackOptions, opts, check chooseOutputFilename(filenames[0]));
         }
     }
     else {
         foreach string filename in filenames {
             var [_, ext] = basenameExtension(filename);
             if ext == SOURCE_EXTENSION {
-                check compileAndOutputModule(dummyModuleId(filename), [{ filename }], nbackOptions, opts, check chooseOutputFilename(filename, outDir));
+                check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, [{ filename }], nbackOptions, opts, check chooseOutputFilename(filename, outDir));
             }
             else if ext == TEST_EXTENSION {
                 check compileBalt(filename, outDir, nbackOptions, opts);
@@ -92,15 +94,11 @@ function compileBalt(string filename, string outDir, nback:Options nbackOptions,
         string outBasename = chooseBaltCaseOutputFilename(t, i);
         string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
         string[] lines = t.content;
-        check compileAndOutputModule(dummyModuleId(filename), [{ lines }], nbackOptions, options, outFilename);
+        check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename);
         string? expectOutDir = options.expectOutDir;
         string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
         check io:fileWriteLines(expectFilename, expect(t.content));
     }
-}
-
-function dummyModuleId(string filename) returns bir:ModuleId {
-    return { names: [filename], organization: "dummy" };
 }
 
 function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns LlvmModule|CompileError {

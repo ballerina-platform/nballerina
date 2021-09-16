@@ -183,9 +183,6 @@ typedef struct {
 extern UntypedPtr _bal_alloc(uint64_t nBytes);
 extern NORETURN void _bal_panic(TaggedPtr tp);
 
-extern void _Bio__println(TaggedPtr p);
-extern TaggedPtr _Berror__message(TaggedPtr p);
-
 extern bool _bal_float_eq(double, double);
 
 // precondition is that both strings are on the heap and the pointers are not ==
@@ -216,6 +213,19 @@ extern void _bal_error_backtrace_print(ErrorPtr ep);
 // Returns an error value
 extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
 extern NORETURN COLD void _bal_panic_internal(PanicCode code);
+
+// Library mangling
+#define BAL_ROOT_NAME(sym) _B04root ## sym
+#define BAL_LIB_IO_NAME(sym) _Bb02io ## sym
+#define BAL_LANG_INT_NAME(sym) _Bb0m4lang3int ## sym
+#define BAL_LANG_STRING_NAME(sym) _Bb0m4lang5string ## sym
+#define BAL_LANG_ARRAY_NAME(sym) _Bb0m4lang5array ## sym
+#define BAL_LANG_MAP_NAME(sym) _Bb0m4lang3map ## sym
+#define BAL_LANG_ERROR_NAME(sym) _Bb0m4lang5error ## sym
+// Library functions
+extern TaggedPtr BAL_LANG_ERROR_NAME(message)(TaggedPtr p);
+extern void BAL_LIB_IO_NAME(println)(TaggedPtr p);
+
 static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;
 }

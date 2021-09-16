@@ -1,11 +1,11 @@
 #include "balrt.h"
 
-int64_t _Barray__length(TaggedPtr p) {
+int64_t BAL_LANG_ARRAY_NAME(length)(TaggedPtr p) {
     ListPtr lp = taggedToPtr(p);
     return lp->tpArray.length;
 }
 
-void _Barray__push(TaggedPtr p, TaggedPtr val) {
+void BAL_LANG_ARRAY_NAME(push)(TaggedPtr p, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
     if ((lp->desc & (1 << (getTag(val) & UT_MASK))) == 0) {
         _bal_panic_internal(PANIC_LIST_STORE);

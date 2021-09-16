@@ -177,7 +177,7 @@ static char *saveMessage(const char *msg) {
     return str;
 }
 
-TaggedPtr _Berror__message(TaggedPtr error) {
+TaggedPtr BAL_LANG_ERROR_NAME(message)(TaggedPtr error) {
     ErrorPtr ep = taggedToPtr(error);
     return ep->message;
 }

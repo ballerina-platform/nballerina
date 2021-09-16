@@ -1,6 +1,6 @@
 #include "balrt.h"
 
-int64_t _Bstring__length(TaggedPtr p) {
+int64_t BAL_LANG_STRING_NAME(length)(TaggedPtr p) {
     StringLength len = taggedStringLength(p);
     return len.nCodePoints;
 }

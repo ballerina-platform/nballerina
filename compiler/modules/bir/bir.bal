@@ -20,7 +20,7 @@ public type Module object {
 };
 
 public type ModuleId readonly & record {|
-    string? organization = ();
+    string org;
     [string, string...] names;
     // this omits the version, because programs cannot have two versions of the same module
 |};
@@ -68,7 +68,7 @@ public function symbolToString(Module mod, int partIndex, Symbol sym) returns st
         ModuleId modId = sym.module;
         string? importPrefix = mod.getPrefixForModuleId(modId, partIndex);
         if importPrefix == () {
-            string? org = modId.organization;
+            string? org = modId.org;
             string orgString = org == () ? "" : org + "/";
             prefix = "{" + orgString  + ".".'join(...sym.module.names) + "}";
         }

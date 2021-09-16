@@ -1483,7 +1483,7 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
         }
         else {
             bir:ExternalSymbol symbol = {
-                module: { organization: "ballerina", names: ["lang", moduleName] },
+                module: { org: "ballerina", names: ["lang", moduleName] },
                 identifier: methodName
             };
             bir:FunctionSignature signature = erasedSignature;

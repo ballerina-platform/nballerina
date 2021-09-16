@@ -172,7 +172,7 @@ function imports(s:ModulePart part) returns map<Import>|err:Unimplemented {
         return {
             [prefix]: {
                 decl,
-                moduleId: { organization: decl.org, names: [decl.module] },
+                moduleId: { org: decl.org, names: [decl.module] },
                 defns: ioLibFunctions
             }
         };

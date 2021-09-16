@@ -158,7 +158,7 @@ static int stackContains(struct PrintStack *stackPtr, TaggedPtr p) {
     return 0;
 }
 
-void _Bio__println(TaggedPtr p) {
+void BAL_LIB_IO_NAME(println)(TaggedPtr p) {
 #ifdef STACK_DEBUG
     fprintf(stderr, "Used stack %ld bytes\n", (long)((_bal_stack_guard + STACK_SIZE) - (char *)__builtin_frame_address(0)));
 #endif
