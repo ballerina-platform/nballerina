@@ -1,5 +1,6 @@
 // Parse one file in a module
 import wso2/nballerina.err;
+
 public type FilePath record {|
     string filename;
     string? directory = ();

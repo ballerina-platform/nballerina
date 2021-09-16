@@ -168,10 +168,11 @@ function imports(s:ModulePart part) returns map<Import>|err:Unimplemented {
     foreach var decl in decls {
         ModuleExports defn;
         if decl.org == "ballerina" && decl.names[0] == "io" {
-            defn = ioLibFunctions;
-            importMap[decl.names[0]] = {decl:decl,
+            importMap[decl.names[0]] = {
+                decl:decl,
                 moduleId: { org:<string>decl.org, names: decl.names.cloneReadOnly()},
-                defns: defn};
+                defns: ioLibFunctions
+            };
         }
         else {
             // TODO: fix this
