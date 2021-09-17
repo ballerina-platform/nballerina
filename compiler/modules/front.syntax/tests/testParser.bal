@@ -49,7 +49,7 @@ type SingleStringTokenizerTestCase [string, string];
     dataProvider: sourceFragments
 }
 function testTokenizer(string k, string[] lines) returns error? {
-    SourceFile file = createSourceFile({ filename: k }, lines);
+    SourceFile file = createSourceFile(lines, { filename: k });
     Tokenizer tok = new (file);
     while true {
         err:Syntax|Token? t = advance(tok, k, lines);
@@ -116,10 +116,10 @@ function tokenToString(Token t) returns string {
 function reduceToWords(string k, string rule, string[] fragment) returns err:Syntax|Word[] {
     Word[] w = [];
     if rule == "mod" {
-        modulePartToWords(w, check parseModulePart(fragment, { filename: k }, 0));
+        modulePartToWords(w, check scanAndParseModulePart(fragment, { filename: k }, 0));
     }
     else {
-        SourceFile file = createSourceFile({ filename: k }, fragment);
+        SourceFile file = createSourceFile(fragment, { filename: k });
         Tokenizer tok = new (file);
         check tok.advance();
         match rule {
@@ -143,10 +143,6 @@ function reduceToWords(string k, string rule, string[] fragment) returns err:Syn
     return w;
 }
 
-function parseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
-    ScannedModulePart part = check scanModulePart(lines, path, partIndex);
-    return check part.parse();
-}
 
 function sourceFragments() returns map<TokenizerTestCase>|error {
      map<TokenizerTestCase> all = check invalidTokenSourceFragments();

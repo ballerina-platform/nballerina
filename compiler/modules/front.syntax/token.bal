@@ -94,6 +94,7 @@ function toToken(string t) returns Token {
 }
 
 type TokenizerState readonly & record {
+    SourceFile file;
     int lineIndex;
     int fragCodeIndex;
     int codePointIndex;
@@ -288,17 +289,21 @@ class Tokenizer {
 
     function save() returns TokenizerState {
         return {
-            lineIndex : self.lineIndex,
-            fragCodeIndex : self.fragCodeIndex,
-            codePointIndex : self.codePointIndex,
-            fragmentIndex : self.fragmentIndex,
-            tokenStartCodePointIndex : self.tokenStartCodePointIndex,
-            mode : self.mode,
-            curTok : self.curTok
+            file: self.file,
+            lineIndex: self.lineIndex,
+            fragCodeIndex: self.fragCodeIndex,
+            codePointIndex: self.codePointIndex,
+            fragmentIndex: self.fragmentIndex,
+            tokenStartCodePointIndex: self.tokenStartCodePointIndex,
+            mode: self.mode,
+            curTok: self.curTok
         };
     }
 
     function restore(TokenizerState s) {
+        if s.file !== self.file {
+            panic err:illegalArgument("restore with different source file");
+        }
         self.lineIndex = s.lineIndex;
         self.fragCodeIndex = s.fragCodeIndex;
         self.codePointIndex = s.codePointIndex;
@@ -311,32 +316,22 @@ class Tokenizer {
         self.fragCodes = scannedLine.fragCodes;
         self.fragments = scannedLine.fragments;
     }
-
 }
 
 function createPosition(int line, int column) returns Position {
     return (line << 32) | column;
 }
 
-// JBUG when SourceFile is replaced with the ScannedSourceFile, get `incompatible types`
-public type SourceFile readonly & object {
-    // JUBG should included *err:File here and include this in ScannedSourceFile
-    public function filename() returns string;
-    public function directory() returns string?;
-    public function lineColumn(Position pos) returns err:LineColumn;
-    function scannedLines() returns readonly & ScannedLine[];
-};
-
-readonly class ScannedSourceFile {
+public readonly class SourceFile {
     *err:File;
+    private ScannedLine[] lines;
     private string fn;
     private string? dir;
-    private ScannedLine[] lines;
 
-    function init(FilePath path, readonly & ScannedLine[] lines) {
+    function init(readonly & ScannedLine[] lines, FilePath path) {
+        self.lines = lines;
         self.fn = path.filename;
         self.dir = path.directory;
-        self.lines = lines;
     }
 
     public function filename() returns string => self.fn;
@@ -348,4 +343,8 @@ readonly class ScannedSourceFile {
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
+}
+
+public function createSourceFile(string[] lines, FilePath path) returns SourceFile {
+    return new(scanLines(lines), path);
 }

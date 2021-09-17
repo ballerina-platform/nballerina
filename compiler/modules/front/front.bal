@@ -128,84 +128,121 @@ public type SourcePart record {|
     string[] lines?;
 |};
 
-type LoadedSourcePart record {|
-    s:FilePath path;
-    string[] lines;
+type ModuleIdImports record {|
+    readonly bir:ModuleId id;
+    s:ImportDecl[] imports;
 |};
 
+public readonly class ScannedModule {
+    s:ScannedModulePart[] parts;
+    bir:ModuleId id;
+    ModuleIdImports[] importsById;
+
+    function init(s:ScannedModulePart[] parts, bir:ModuleId id) {
+        self.parts = parts.cloneReadOnly();
+        self.id = id;
+        self.importsById = groupImports(parts, id).cloneReadOnly();
+    }
+
+    public function getImports() returns bir:ModuleId[] {
+        return from var mi in self.importsById select mi.id;
+    }
+}
+
+function groupImports(s:ScannedModulePart[] parts, bir:ModuleId modId) returns ModuleIdImports[] {
+    table<ModuleIdImports> key(id) miTable = table [];
+    foreach var part in parts {
+        foreach var decl in part.importDecls {
+            bir:ModuleId id = { org: decl.org ?: modId.org, names: decl.names };
+            if !miTable.hasKey(id) {
+                miTable.add({ id, imports: [decl] });
+            }
+            else {
+                miTable.get(id).imports.push(decl);
+            }
+        }
+    }
+    return from var mi in miTable select mi;
+}
+
+public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|error?)[] resolvedImports) returns ResolvedModule|err:Any|io:Error {
+    ModulePart[] parts = check importPartMaps(scanned, resolvedImports);
+
+    ModuleTable mod = table [];
+    foreach var scannedPart in scanned.parts {
+        s:ModulePart part = check s:parseModulePart(scannedPart);
+        check addModulePart(mod, part);
+    }
+    check resolveTypes(env, mod);
+    // XXX Should have an option that controls whether we perform this check
+    check validEntryPoint(mod);
+    return new Module(scanned.id, parts, mod, env);
+}
+
 public function scanModule(SourcePart[] sourceParts, bir:ModuleId id) returns ScannedModule|err:Any|io:Error {
-    s:ImportDecl[] imports = [];
     s:ScannedModulePart[] parts = [];
     foreach int i in 0 ..< sourceParts.length() {
-        var loaded = check loadSourcePart(sourceParts[i], i);
-        s:ScannedModulePart p = check s:scanModulePart(loaded.lines, loaded.path, i);
-        parts.push(p);
-        imports.push(... check p.getImportDecls());
+        s:SourceFile file = check loadSourcePart(sourceParts[i], i);
+        parts.push(check s:scanModulePart(file, i));
     }
-    ScannedModule mod = new(parts, imports, id);
-    return mod;
+    return new(parts, id);
 }
 
-public class ScannedModule {
-    private s:ScannedModulePart[] scannedParts;
-    private s:ImportDecl[] imports;
-    private bir:ModuleId id;
-
-    function init(s:ScannedModulePart[] scannedParts, s:ImportDecl[] imports, bir:ModuleId id) {
-        self.scannedParts = scannedParts;
-        self.imports = imports;
-        self.id = id;
-    }
-
-    function getImports() returns s:ImportDecl[] => self.imports;
-
-    public function resolve(t:Env env) returns ResolvedModule|err:Any|io:Error {
-        ModuleTable mod = table [];
-        ModulePart[] parts = [];
-        foreach var p in self.scannedParts {
-            s:ModulePart part = check p.parse();
-            check addModulePart(mod, part);
-            parts.push({ file: part.file, imports: check imports(part) });
-        }
-
-        check resolveTypes(env, mod);
-        // XXX Should have an option that controls whether we perform this check
-        check validEntryPoint(mod);
-        return new Module(self.id, parts, mod, env);
-    }
-}
-
-function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Error {
+function loadSourcePart(SourcePart part, int i) returns s:SourceFile|io:Error {
     string? directory = part?.directory;
     string? filename = part?.filename;
     string[]? lines = part?.lines;
     if lines != () {
-        return { lines, path: { filename: filename ?: "<part" + (i + 1).toString() + ">", directory } };
+        return s:createSourceFile(lines, { filename: filename ?: "<part" + (i + 1).toString() + ">", directory });
     }
     else if filename != () {
-        return { lines: check io:fileReadLines(filename), path: { filename, directory } };
+        return s:createSourceFile(check io:fileReadLines(filename), { filename, directory });
     }
     panic err:illegalArgument("neither filename nor lines were specified");
 }
 
-function imports(s:ModulePart part) returns map<Import>|err:Unimplemented {
-    s:ImportDecl[] decls = part.importDecls;
-    map<Import> importMap = {};
-    foreach var decl in decls {
-        ModuleExports defn;
-        if decl.org == "ballerina" && decl.names[0] == "io" {
-            importMap[decl.names[0]] = {
-                decl:decl,
-                moduleId: { org:<string>decl.org, names: decl.names.cloneReadOnly()},
-                defns: ioLibFunctions
-            };
+final bir:ModuleId BALLERINA_IO = { org: "ballerina", names: ["io"] };
+
+function importPartMaps(ScannedModule scanned, (ModuleExports|error?)[] resolvedImports) returns ModulePart[]|err:Any {
+    ModulePart[] parts = from var part in scanned.parts select { file: part.sourceFile(), imports: {} };
+    ModuleIdImports[] importsById = scanned.importsById;
+    foreach int i in 0 ..< importsById.length() {
+        var moduleId = importsById[i].id;
+        ModuleExports|error? resolved;
+        if moduleId == BALLERINA_IO {
+            resolved = ioLibFunctions;
         }
         else {
-            // TODO: fix this
-            return err:unimplemented(`unsupported module ${".".'join(...decl.names)}`, loc=err:location(part.file, decl.pos));
+            resolved = i < resolvedImports.length() ? resolvedImports[i] : ();
+        }
+        foreach var decl in importsById[i].imports {
+            if resolved is error? {
+                return err:unimplemented(`unsupported module ${moduleIdToString(moduleId)}`, loc=err:location(parts[decl.partIndex].file, decl.pos), cause=resolved);
+            }
+            else {
+                string? declPrefix = decl.prefix;
+                string prefix = declPrefix == () ? moduleIdDefaultPrefix(moduleId) : declPrefix;
+                parts[decl.partIndex].imports[prefix] = { decl, moduleId, defns: resolved };
+            }
         }
     }
-    return importMap;
+    return parts;
+}
+
+function moduleIdDefaultPrefix(bir:ModuleId id) returns string {
+    // JBUG Bad, sad without `names` variable
+    string[] names = id.names;
+    return names[names.length() - 1];
+}
+
+function moduleIdToString(bir:ModuleId id) returns string {
+    string m = ".".'join(...id.names);
+    if id.org != "" {
+        return id.org + "/"  + m;
+    }
+    else {
+        return m;
+    }
 }
 
 function validEntryPoint(ModuleTable mod) returns err:Any? {
@@ -237,8 +274,8 @@ public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:
     ModuleTable mod = table [];
     foreach int i in 0 ..< sourceParts.length() {
         var loaded = check loadSourcePart(sourceParts[i], 0);
-        s:ScannedModulePart part = check s:scanModulePart(loaded.lines, loaded.path, i);
-        check addModulePart(mod, check part.parse());
+        s:ScannedModulePart part = check s:scanModulePart(loaded, i);
+        check addModulePart(mod, check s:parseModulePart(part));
     }
     t:Env env = new;
     check resolveTypes(env, mod);

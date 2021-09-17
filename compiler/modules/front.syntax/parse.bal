@@ -6,49 +6,51 @@ public type FilePath record {|
     string? directory = ();
 |};
 
-public function scanModulePart(string[] lines, FilePath path, int partIndex) returns ScannedModulePart|err:Syntax {
-    SourceFile file = createSourceFile(path, lines);
-    Tokenizer tok = new (file);
-    check tok.advance();
-    return new(file, check parseImportDecls(tok).cloneReadOnly(), tok.save(), partIndex);
-}
-
 public readonly class ScannedModulePart {
     private TokenizerState tokState;
-    private ImportDecl[] imports;
-    private SourceFile file;
-    private int partIndex;
+    public ImportDecl[] importDecls;
+    int partIndex; 
 
-    function init(SourceFile file, readonly & ImportDecl[] imports, TokenizerState tokState, int partIndex) {
-        self.file = file;
-        self.imports = imports;
-        self.tokState = tokState;
+    function init(ImportDecl[] decls, Tokenizer tok, int partIndex) {
+        self.importDecls = decls.cloneReadOnly();
+        self.tokState = tok.save();
         self.partIndex = partIndex;
     }
 
-    public function getImportDecls() returns ImportDecl[]|err:Syntax {
-        return self.imports;
+    function tokenizer() returns Tokenizer {
+        Tokenizer tok = new(self.tokState.file);
+        tok.restore(self.tokState);
+        return tok;
     }
 
-    public function parse() returns ModulePart|err:Syntax {
-        Tokenizer tok = new(self.file);
-        tok.restore(self.tokState);
-        ModuleLevelDefn[] defns = [];
-        ModulePart part = {
-            file: self.file,
-            partIndex: self.partIndex,
-            defns,
-            importDecls: self.imports
-        };
-        while tok.current() != () {
-            defns.push(check parseModuleDecl(tok, part));
-        }
-        return part;
+    public function sourceFile() returns SourceFile {
+        return self.tokState.file;
     }
 }
 
+public function scanModulePart(SourceFile file, int partIndex) returns ScannedModulePart|err:Syntax {
+    Tokenizer tok = new (file);
+    check tok.advance();
+    return new(check parseImportDecls(tok, partIndex), tok, partIndex);
+}
+
+public function parseModulePart(ScannedModulePart scanned) returns ModulePart|err:Syntax {
+    Tokenizer tok = scanned.tokenizer();
+    ModuleLevelDefn[] defns = [];
+    ModulePart part = {
+        file: scanned.sourceFile(),
+        partIndex: scanned.partIndex,
+        defns,
+        importDecls: scanned.importDecls
+    };
+    while tok.current() != () {
+        defns.push(check parseModuleDecl(tok, part));
+    }
+    return part;
+}
+
 public function parseExpression(string[] lines, FilePath path) returns Expr|err:Syntax {
-    SourceFile file = createSourceFile(path, lines);
+    SourceFile file = createSourceFile(lines, path);
     Tokenizer tok = new (file);
     check tok.advance();
     Expr expr = check parseExpr(tok);
@@ -58,23 +60,18 @@ public function parseExpression(string[] lines, FilePath path) returns Expr|err:
     return expr;
 }
 
-function createSourceFile(FilePath path, string[] lines) returns SourceFile {
-    ScannedSourceFile file = new(path, scanLines(lines));
-    return file;
-}
-
-function parseImportDecls(Tokenizer tok) returns ImportDecl[]|err:Syntax {
+function parseImportDecls(Tokenizer tok, int partIndex) returns ImportDecl[]|err:Syntax {
     ImportDecl[] imports = [];
     Token? t = tok.current();
     while t == "import" {
-        ImportDecl im = check parseImportDecl(tok);
+        ImportDecl im = check parseImportDecl(tok, partIndex);
         imports.push(im);
         t = tok.current();
     }
     return imports;
 }
 
-function parseImportDecl(Tokenizer tok) returns ImportDecl|err:Syntax {
+function parseImportDecl(Tokenizer tok, int partIndex) returns ImportDecl|err:Syntax {
     Position pos = tok.currentPos();
     check tok.advance();
     Token? t = tok.current();
@@ -100,7 +97,7 @@ function parseImportDecl(Tokenizer tok) returns ImportDecl|err:Syntax {
         names.push(...check parseImportNamesRest(tok));
         string? prefix = check parseImportPrefix(tok);
         check tok.expect(";");
-        return { org, names, prefix, pos };
+        return { org, names, prefix, pos, partIndex };
     }
     return parseError(tok, "import declaration invalid org/module name");
 }

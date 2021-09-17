@@ -88,8 +88,8 @@ function compileBalt(string filename, string outDir, nback:Options nbackOptions,
 
 function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns LlvmModule|CompileError {
     t:Env env = new;
-    front:ScannedModule scannedMod = check front:scanModule(sources, modId);
-    bir:Module birMod = check scannedMod.resolve(env);
+    front:ScannedModule scanned = check front:scanModule(sources, modId);
+    bir:Module birMod = check front:resolveModule(scanned, env, []);
     LlvmContext context = new;
     return nback:buildModule(birMod, context, nbackOptions);
 }

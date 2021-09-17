@@ -20,6 +20,7 @@ public type ImportDecl record {|
     [string, string...] names;
     string? prefix;
     Position pos;
+    int partIndex;
 |};
 
 public type FunctionDefn record {|
