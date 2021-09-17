@@ -53,14 +53,6 @@ public function location(File file, Position? startPos = (), Position? endPos = 
     };
 }
 
-public function locationFromFilename(string filename, LineColumn? startPos = (), LineColumn? endPos = ()) returns Location {
-    return {
-        filename: filename,
-        startPos: startPos,
-        endPos: endPos
-    };
-}
-
 public function syntax(Message m, Location loc, string? functionName = (), error? cause = ()) returns Syntax {
     return error Syntax(messageToString(m), cause, location=loc, functionName=functionName);
 }

@@ -439,7 +439,7 @@ type ModuleDI record {|
 
 class Scaffold {
     private final Module mod;
-    final bir:File file;
+    private final bir:File file;
     private final llvm:FunctionDefn llFunc;
     private final DISubprogram? diFunc;
     private DILocation? noLineLocation = ();
@@ -576,7 +576,7 @@ class Scaffold {
         }
     }
 
-    function unimplementedError(err:Message message) returns err:Unimplemented {
+    function unimplementedErr(err:Message message) returns err:Unimplemented {
         err:Location loc = err:location(self.file);
         return err:unimplemented(message, loc);
     }
@@ -597,7 +597,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
     map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
         bir:File defnFile = partFiles[defn.partIndex];
-        llvm:FunctionType ty = check buildFunctionSignature(defn.signature, defnFile);
+        llvm:FunctionType ty = check buildFunctionSignature(defn.signature, err:location(defnFile, defn.position));
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
         string mangledName = mangleInternalSymbol(modId, symbol);
@@ -863,7 +863,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     // Store the member bitset as the ListDesc
     t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(scaffold.typeCheckContext().env, insn.result.semType);
     if memberType == () {
-        return scaffold.unimplementedError("unsupported member type for arrat");
+        return scaffold.unimplementedErr("unsupported member type for arrat");
     }
     else {
         builder.store(llvm:constInt(LLVM_INT, memberType),
@@ -937,7 +937,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     t:UniformTypeBitSet? memberType = t:simpleMapMemberType(scaffold.typeCheckContext().env, insn.result.semType);
     llvm:PointerValue m;
     if memberType == () {
-        return scaffold.unimplementedError("unsupported member type for mapping");
+        return scaffold.unimplementedErr("unsupported member type for mapping");
     }
     else {
         m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
@@ -1010,7 +1010,8 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
         return decl;
     }
     else {
-        llvm:FunctionType ty = check buildFunctionSignature(sig, scaffold.file);
+        // TODO: fix this: scaffold.location(0)
+        llvm:FunctionType ty = check buildFunctionSignature(sig, scaffold.location(0));
         llvm:Module mod = scaffold.getModule();
         llvm:FunctionDecl d = mod.addFunctionDecl(mangleExternalSymbol(symbol), ty);
         scaffold.addImportedFunction(symbol, d);
@@ -1340,7 +1341,7 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
             return buildEqualFloat(builder, scaffold, exact, op, lhsValue, rhsValue, result);
         }
     }
-    return scaffold.unimplementedError("equality with two different untagged representations");    
+    return scaffold.unimplementedErr("equality with two different untagged representations");
 }
 
 function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result) {
@@ -1444,7 +1445,7 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
     if repr.base != BASE_REPR_TAGGED {
          // in subset 5 should be const true/false
-        return scaffold.unimplementedError("test of untagged value");
+        return scaffold.unimplementedErr("test of untagged value");
     }
     t:SemType semType = insn.semType;
     llvm:PointerValue tagged = <llvm:PointerValue>val;
@@ -1474,7 +1475,7 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
         hasType = buildHasTagInSet(builder, tagged, semType);
     }
     else {
-        return scaffold.unimplementedError("unimplemented type test"); // should not happen in subset 6
+        return scaffold.unimplementedErr("unimplemented type test"); // should not happen in subset 6
     }
     if insn.negated {
         buildStoreBoolean(builder, scaffold, 
@@ -1511,7 +1512,7 @@ function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:Point
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
     var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
     if repr.base != BASE_REPR_TAGGED {
-        return scaffold.unimplementedError("cast from untagged value"); // should not happen in subset 2
+        return scaffold.unimplementedErr("cast from untagged value"); // should not happen in subset 2
     }
     llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
@@ -1550,7 +1551,7 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
             hasTag = buildHasTagInSet(builder, tagged, semType);
         }
         else {
-            return scaffold.unimplementedError("unimplemented type cast"); // should not happen in subset 6
+            return scaffold.unimplementedErr("unimplemented type cast"); // should not happen in subset 6
         }
         builder.condBr(hasTag, continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
@@ -1569,7 +1570,7 @@ function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertT
         return;
     }
     else if repr.base != BASE_REPR_TAGGED {
-        return scaffold.unimplementedError("convert form decimal to int");
+        return scaffold.unimplementedErr("convert form decimal to int");
     }
     // convert to int form tagged pointer
 
@@ -1615,7 +1616,7 @@ function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:Conver
         return;
     }
     else if repr.base != BASE_REPR_TAGGED {
-        return scaffold.unimplementedError("convert form decimal to float");
+        return scaffold.unimplementedErr("convert form decimal to float");
     }
     // convert to float form tagged pointer
 
@@ -1663,7 +1664,7 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
     if sourceBaseRepr == BASE_REPR_TAGGED {
         return buildUntagged(builder, scaffold, <llvm:PointerValue>value, targetRepr);
     }
-    return scaffold.unimplementedError("unimplemented narrowing conversion required");
+    return scaffold.unimplementedErr("unimplemented narrowing conversion required");
 }
 
 function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
@@ -1748,7 +1749,7 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
         }
     }
     // this shouldn't ever happen I think
-    return scaffold.unimplementedError("unimplemented conversion required");
+    return scaffold.unimplementedErr("unimplemented conversion required");
 }
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
@@ -2051,9 +2052,9 @@ function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
     return <llvm:IntPredicate>unsignedIntPredicateOps[op];
 }
 
-function buildFunctionSignature(bir:FunctionSignature signature, bir:File file) returns llvm:FunctionType|BuildError {
-    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (check semTypeRepr(ty, err:location(file))).llvm;
-    RetRepr repr = check semTypeRetRepr(signature.returnType, err:location(file));
+function buildFunctionSignature(bir:FunctionSignature signature, err:Location loc) returns llvm:FunctionType|BuildError {
+    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (check semTypeRepr(ty, loc)).llvm;
+    RetRepr repr = check semTypeRetRepr(signature.returnType, loc);
     llvm:FunctionType ty = {
         returnType: repr.llvm,
         paramTypes: paramTypes.cloneReadOnly()
