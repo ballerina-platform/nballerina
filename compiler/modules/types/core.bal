@@ -843,7 +843,7 @@ function bddMappingSimpleMemberType(Env env, Bdd bdd) returns UniformTypeBitSet?
 }
 
 public type Value readonly & record {|
-    string|int|float|boolean|() value;
+    string|int|float|boolean|decimal|() value;
 |};
 
 // If the type contains exactly onr shape, return a value
@@ -875,10 +875,15 @@ public function singleShape(SemType t) returns Value? {
         boolean? value = booleanSubtypeSingleValue(sd);
         return value == () ? () : { value };
     }
+    else if isSubtypeSimple(t, DECIMAL) {
+        SubtypeData sd = getComplexSubtypeData(t, UT_DECIMAL);
+        decimal? value = decimalSubtypeSingleValue(sd);
+        return value == () ? () : { value };
+    }
     return ();
 }
 
-public function singleton(string|int|float|boolean|() v) returns SemType {
+public function singleton(string|int|float|boolean|decimal|() v) returns SemType {
     if v is () {
         return NIL;
     }
@@ -890,6 +895,9 @@ public function singleton(string|int|float|boolean|() v) returns SemType {
     }
     else if v is string {
         return stringConst(v);
+    }
+    else if v is decimal {
+        return decimalConst(v);
     }
     else {
         return booleanConst(v);
@@ -907,7 +915,7 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
-public function constUniformTypeCode(string|int|float|boolean|() v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL {
+public function constUniformTypeCode(string|int|float|boolean|decimal|() v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL {
     if v is () {
         return UT_NIL;
     }
@@ -920,16 +928,19 @@ public function constUniformTypeCode(string|int|float|boolean|() v) returns UT_S
     else if v is string {
         return UT_STRING;
     }
+    else if v is decimal {
+        return UT_DECIMAL;
+    }
     else {
         return UT_BOOLEAN;
     }
 }
 
-public function constBasicType(string|int|float|boolean|() v) returns UniformTypeBitSet {
+public function constBasicType(string|int|float|boolean|decimal|() v) returns UniformTypeBitSet {
     return  uniformType(constUniformTypeCode(v));
 }
 
-public function containsConst(SemType t, string|int|float|boolean|() v) returns boolean {
+public function containsConst(SemType t, string|int|float|boolean|decimal|() v) returns boolean {
     if v is () {
         return containsNil(t);
     }
@@ -941,6 +952,9 @@ public function containsConst(SemType t, string|int|float|boolean|() v) returns 
     }
     else if v is string {
         return containsConstString(t, v);
+    }
+    else if v is decimal {
+        return containsConstDecimal(t, v);
     }
     else {
         return containsConstBoolean(t, v);
@@ -993,6 +1007,15 @@ public function containsConstBoolean(SemType t, boolean b) returns boolean {
     }
 }
 
+public function containsConstDecimal(SemType t, decimal d) returns boolean {
+    if t is UniformTypeBitSet {
+        return (t & (1 << UT_DECIMAL)) != 0;
+    }
+    else {
+        return decimalSubtypeContains(getComplexSubtypeData(t, UT_DECIMAL), d);
+    }
+}
+
 public function singleNumericType(SemType semType) returns UniformTypeBitSet? {
     SemType numType = intersect(semType, NUMBER);
     if numType == NEVER {
@@ -1036,7 +1059,7 @@ function init() {
         {}, // RO object
         intOps, // int
         floatOps, // float
-        {}, // decimal
+        decimalOps, // decimal
         stringOps, // string
         errorOps, // error
         functionOps,  // function
