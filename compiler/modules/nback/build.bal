@@ -462,9 +462,9 @@ class Scaffold {
         self.llFunc = llFunc;
         self.diFunc = diFunc;
         self.birBlocks = code.blocks;
-        final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType, mod.partFiles[defn.partIndex]);
+        final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType, err:location(mod.partFiles[defn.partIndex], defn.position));
         self.reprs = reprs;
-        self.retRepr = check semTypeRetRepr(defn.signature.returnType, mod.partFiles[defn.partIndex]);
+        self.retRepr = check semTypeRetRepr(defn.signature.returnType, err:location(mod.partFiles[defn.partIndex], defn.position));
         self.nParams = defn.signature.paramTypes.length();
         llvm:BasicBlock entry = llFunc.appendBasicBlock();
 
@@ -820,7 +820,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     bir:FunctionSignature signature = funcRef.erasedSignature;
     t:SemType[] paramTypes = signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildRepr(builder, scaffold, insn.args[i], check semTypeRepr(paramTypes[i], scaffold.file)));
+        args.push(check buildRepr(builder, scaffold, insn.args[i], check semTypeRepr(paramTypes[i], scaffold.location(insn.position))));
     }
 
     bir:Symbol funcSymbol = funcRef.symbol;
@@ -832,7 +832,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
         func = check buildFunctionDecl(scaffold, funcSymbol, signature);
     }  
     llvm:Value? retValue = builder.call(func, args);
-    RetRepr retRepr = check semTypeRetRepr(signature.returnType, scaffold.file);
+    RetRepr retRepr = check semTypeRetRepr(signature.returnType, scaffold.location(insn.position));
     check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
@@ -2052,8 +2052,8 @@ function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
 }
 
 function buildFunctionSignature(bir:FunctionSignature signature, bir:File file) returns llvm:FunctionType|BuildError {
-    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (check semTypeRepr(ty, file)).llvm;
-    RetRepr repr = check semTypeRetRepr(signature.returnType, file);
+    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (check semTypeRepr(ty, err:location(file))).llvm;
+    RetRepr repr = check semTypeRetRepr(signature.returnType, err:location(file));
     llvm:FunctionType ty = {
         returnType: repr.llvm,
         paramTypes: paramTypes.cloneReadOnly()
@@ -2109,15 +2109,15 @@ final readonly & record {|
     { domain: t:TOP, repr: REPR_TOP }
 ];
 
-function semTypeRetRepr(t:SemType ty, err:File file) returns RetRepr|BuildError {
+function semTypeRetRepr(t:SemType ty, err:Location loc) returns RetRepr|BuildError {
     if ty === t:NIL {
         return REPR_VOID;
     }
-    return semTypeRepr(ty, file);
+    return semTypeRepr(ty, loc);
 }
 
 // Return the representation for a SemType.
-function semTypeRepr(t:SemType ty, err:File file) returns Repr|BuildError {
+function semTypeRepr(t:SemType ty, err:Location loc) returns Repr|BuildError {
     t:UniformTypeBitSet w = t:widenToUniformTypes(ty);    
     foreach var tr in typeReprs {
         if w == tr.domain {
@@ -2135,7 +2135,6 @@ function semTypeRepr(t:SemType ty, err:File file) returns Repr|BuildError {
         TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };
         return repr;
     }
-    err:Location loc = err:location(file);
     return err:unimplemented("unimplemented type (" + w.toHexString() + ")", loc);
 }
 

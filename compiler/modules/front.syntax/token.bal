@@ -283,7 +283,7 @@ class Tokenizer {
         check self.advance();
     }
 
-    public function err(err:Message msg) returns err:Syntax {
+    function err(err:Message msg) returns err:Syntax {
         return err:syntax(msg, loc=err:location(self.file, self.currentPos()));
     }
 

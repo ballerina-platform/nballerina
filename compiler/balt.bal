@@ -30,7 +30,6 @@ const CONTINUATION_WS = " ";
 function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Any {
     BaltTestCase[] tests = [];
     string[] lines = check io:fileReadLines(path);
-    err:Location loc = {filename: path, endPos: (), startPos: ()};
 
     BaltTestHeader? maybeHeader = ();
     string? prevFiledBody  = ();
@@ -79,17 +78,17 @@ function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:
         }
         else if s == BOF {
             // xxx add file path
-            return err:syntax("file should start with 'Test-Case:' header field", loc);
+            return error("file should start with 'Test-Case:' header field");
         }
         else {
             panic err:impossible("balt parser illegal state");
         }
     }
     if s == HEADER {
-        return err:syntax("header without content at EOF ", loc);
+        return error("header without content at EOF ");
     }
     else if s == BOF {
-        return err:syntax("empty file", loc);
+        return error("empty file");
     }
     else {
         BaltTestHeader header = <BaltTestHeader>maybeHeader;

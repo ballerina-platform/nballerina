@@ -262,7 +262,7 @@ function validEntryPoint(ModuleTable mod) returns err:Any? {
 
 function addModulePart(ModuleTable mod, s:ModulePart part) returns err:Semantic? {
     foreach s:ModuleLevelDefn defn in part.defns {
-        err:Location loc = err:location(part.file);
+        err:Location loc = s:defnLocation(defn);
         if mod.hasKey(defn.name) {
             return err:semantic(`duplicate definition if ${defn.name}`, loc);
         }
