@@ -53,7 +53,7 @@ public function location(File file, Position? startPos = (), Position? endPos = 
     };
 }
 
-public function syntax(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Syntax {
+public function syntax(Message m, Location loc, string? functionName = (), error? cause = ()) returns Syntax {
     return error Syntax(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
