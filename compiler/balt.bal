@@ -30,7 +30,6 @@ const CONTINUATION_WS = " ";
 function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Any {
     BaltTestCase[] tests = [];
     string[] lines = check io:fileReadLines(path);
-    // TODO: correctly set endPos and startPos
     err:Location loc = {filename: path, endPos: (), startPos: ()};
 
     BaltTestHeader? maybeHeader = ();

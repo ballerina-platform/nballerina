@@ -61,7 +61,7 @@ public function semantic(Message m, Location loc, string? functionName = (), err
     return error Semantic(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
-public function unimplemented(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Unimplemented {
+public function unimplemented(Message m, Location loc, string? functionName = (), error? cause = ()) returns Unimplemented {
     return error Unimplemented(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
