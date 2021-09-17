@@ -57,7 +57,7 @@ public function syntax(Message m, Location loc, string? functionName = (), error
     return error Syntax(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
-public function semantic(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Semantic {
+public function semantic(Message m, Location loc, string? functionName = (), error? cause = ()) returns Semantic {
     return error Semantic(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
