@@ -51,6 +51,12 @@ static void getSimpleBacktrace(SimpleBacktrace *p);
 static char *saveMessage(const char *msg);
 static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNumber, BacktraceError *error);
 static void processInitialPC(PC pc, int64_t lineNumber, BacktraceStartLine *backtraceStartLine);
+static int getOrgNameOffset(const char *mangledName);
+static int getzQualifierOffset(const char *mangledName);
+static void printModuleName(const char *mangledName, bool *isFirstQualifier, FILE *fp);
+static void printLocalName(const char *mangledName, FILE *fp);
+static int printnQualifier(const char *mangledName, bool *isFirstQualifier, FILE *fp);
+static int getDecimalNumberLength(int n);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     SimpleBacktrace simpleBacktrace;
@@ -249,4 +255,84 @@ static char *saveMessage(const char *msg) {
 TaggedPtr BAL_LANG_ERROR_NAME(message)(TaggedPtr error) {
     ErrorPtr ep = taggedToPtr(error);
     return ep->message;
+}
+
+void _bal_print_mangled_name(const char *mangledName, FILE *fp) {
+    // If mangled name starts from _B_, the identifier is non-public
+    if (mangledName[2] == '_') {
+        fprintf(fp, "%s", mangledName + 3);
+        return;
+    }
+    // The org-name is not considered as a part of function name in backtrace.
+    int initialOffset = getOrgNameOffset(mangledName);
+
+    // Make sure parsing starts from the first character of
+    // nqual, local-name or mod-name
+    bool isFirstQualifier = true;
+    printModuleName(mangledName + initialOffset, &isFirstQualifier, fp);
+}
+
+static int getOrgNameOffset(const char *mangledName) {
+    // Offset starts from '_B'
+    int offset = 2;
+    if (mangledName[offset] == 'b') {
+        offset++;
+    }
+    return offset + getzQualifierOffset(mangledName + offset);
+}
+
+static int getzQualifierOffset(const char *mangledName) {
+    int offset = 0;
+    if (mangledName[offset] == '0') {
+        return ++offset;
+    }
+    int decimalNumber = atoi(mangledName + offset);
+    offset = offset + getDecimalNumberLength(decimalNumber);
+    if (mangledName[offset] == '_') {
+        offset++;
+    }
+    return offset + decimalNumber;
+}
+
+static void printModuleName(const char *mangledName, bool *isFirstQualifier, FILE *fp) {
+    if (mangledName[0] != 'm') {
+        int offset = printnQualifier(mangledName, isFirstQualifier, fp);
+        printLocalName(mangledName + offset, fp);
+        return;
+    }
+    // Adding '+ 1' because 'm' is available
+    int offset = printnQualifier(mangledName + 1, isFirstQualifier, fp) + 1;
+    printModuleName(mangledName + offset, isFirstQualifier, fp);
+}
+
+static void printLocalName(const char *mangledName, FILE *fp) {
+    fprintf(fp, ":%s", mangledName);
+}
+
+static int printnQualifier(const char *mangledName, bool *isFirstQualifier, FILE *fp) {
+    if (*isFirstQualifier == false) {
+        fputs(".", fp);
+    }
+    *isFirstQualifier = false;
+    int offset = 0;
+    int decimalNumber = atoi(mangledName);
+    offset = offset + getDecimalNumberLength(decimalNumber);
+    if (mangledName[offset] == '_') {
+        offset++;
+    }
+    fprintf(fp, "%.*s", decimalNumber, mangledName + offset);
+    offset = offset + decimalNumber;
+    return offset;
+}
+
+static int getDecimalNumberLength(int n) {
+    if (n == 0) {
+        return 1;
+    }
+    int res = 0;
+    while (n > 0) {
+        n = n / 10;
+        res++;
+    }
+    return res;
 }
