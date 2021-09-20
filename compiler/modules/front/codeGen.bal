@@ -896,14 +896,17 @@ function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Env
 }
 
 function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CallStmt stmt) returns CodeGenError|StmtEffect {
-    // stmt is FunctionCallExpr or s:MethodCallExpr
+    // stmt is FunctionCallExpr, s:MethodCallExpr or s:CheckingStmt
     bir:Register reg;
     bir:BasicBlock nextBlock;
     if stmt is s:FunctionCallExpr {
-        { result: reg, block: nextBlock } = check codeGenFunctionCall(cx, <bir:BasicBlock>startBlock, env, stmt);
+        { result: reg, block: nextBlock } = check codeGenFunctionCall(cx, startBlock, env, stmt);
+    }
+    else if stmt is s:MethodCallExpr {
+        { result: reg, block: nextBlock } = check codeGenMethodCall(cx, startBlock, env, stmt);
     }
     else {
-        { result: reg, block: nextBlock } = check codeGenMethodCall(cx, <bir:BasicBlock>startBlock, env, stmt);
+        return check codeGenCheckingStmt(cx, startBlock, env, stmt.checkingKeyword, stmt.operand);
     }
     if reg.semType !== t:NIL {
         return cx.semanticErr("return type of function or method in call statement must be nil");
@@ -1311,52 +1314,89 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     return { result, block: nextBlock, narrowing };   
 }
 
-function codeGenCheckingExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:CheckingKeyword checkingKeyword, s:Expr expr) returns CodeGenError|ExprEffect {
+function codeGenCheckingStmt(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:CheckingKeyword checkingKeyword, s:Expr expr) returns CodeGenError|StmtEffect {
+    // checking stmt falls into one of : 1) never err 2) always err 3) conditionally err
     var { result: o, block: nextBlock } = check codeGenExpr(cx, bb, env, expr);
     // Constants should be resolved during constant folding
-    bir:Register operand = <bir:Register>o; 
+    bir:Register operand = <bir:Register>o;
     t:SemType errorType =  t:intersect(operand.semType, t:ERROR);
+    bir:BasicBlock block;
+    t:SemType resultType;
+    if t:isNever(errorType) {
+        block = nextBlock;
+        resultType = operand.semType;
+    }
+    else {
+        resultType = t:diff(operand.semType, t:ERROR);
+        if t:isNever(resultType) {
+            codeGenCheckingTerminator(nextBlock, checkingKeyword, operand);
+            return { block: () };
+        }
+        // JBUG build fails when the order of binding pattern is reversed
+        { block, result: _ } = check codeGenCheckingCond(cx, nextBlock, operand, errorType, checkingKeyword, resultType);
+    }
+    // resultType === NEVER case is already handled
+    if resultType !== t:NIL {
+        return cx.semanticErr(`operand of ${checkingKeyword} statement must be a subtype of error?`);
+    }
+    return { block };
+}
+
+function codeGenCheckingExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:CheckingKeyword checkingKeyword, s:Expr expr) returns CodeGenError|RegExprEffect {
+    // Checking stmt falls into one of : 1) never err 2) conditionally err
+    var { result: o, block: nextBlock } = check codeGenExpr(cx, bb, env, expr);
+    // Constants should be resolved during constant folding
+    bir:Register operand = <bir:Register>o;
+    t:SemType errorType =  t:intersect(operand.semType, t:ERROR);
+    bir:BasicBlock block;
+    bir:Register result;
     if t:isNever(errorType) {
         return { result: operand, block: nextBlock };
     }
     else {
-        bir:Register isError = cx.createRegister(t:BOOLEAN);
-        bir:TypeTestInsn typeTest = { operand, semType: t:ERROR, result: isError, negated: false };
-        nextBlock.insns.push(typeTest);
-        bir:InsnRef testInsnRef = bir:lastInsnRef(nextBlock);
-        bir:BasicBlock okBlock = cx.createBasicBlock();
-        bir:BasicBlock errorBlock = cx.createBasicBlock();
-        bir:CondBranchInsn condBranch = { operand: isError, ifTrue: errorBlock.label, ifFalse: okBlock.label };
-        nextBlock.insns.push(condBranch);
-        bir:Register errorReg = cx.createRegister(errorType);
-        bir:CondNarrowInsn narrowToError = {
-            result: errorReg,
-            operand,
-            basis: { insn: testInsnRef, result: true }
-        };
-        errorBlock.insns.push(narrowToError);
-        if checkingKeyword == "check" {
-            bir:RetInsn insn = { operand: errorReg };
-            errorBlock.insns.push(insn);
-        }
-        else {
-            bir:PanicInsn insn = { operand: errorReg };
-            errorBlock.insns.push(insn);
-        }
-        t:SemType okType = t:diff(operand.semType, t:ERROR);
-        if t:isNever(okType) {
-            // this has to be an error because otherwise the register would be of type never
-            // SUBSET fix this if we allow checking keyword as a call statement
+        t:SemType resultType = t:diff(operand.semType, t:ERROR);
+        if t:isNever(resultType) {
             return cx.semanticErr(`operand of ${checkingKeyword} expression is always an error`);
         }
-        bir:Register result = cx.createRegister(okType);
-        bir:CondNarrowInsn narrowToOk = {
-            result,
-            operand,
-            basis: { insn: testInsnRef, result: false }
-        };
-        okBlock.insns.push(narrowToOk);
-        return { result, block: okBlock };
+        return check codeGenCheckingCond(cx, nextBlock, operand, errorType, checkingKeyword, resultType);
+    }
+}
+
+function codeGenCheckingCond(CodeGenContext cx, bir:BasicBlock bb, bir:Register operand, t:SemType errorType, s:CheckingKeyword checkingKeyword, t:SemType okType) returns CodeGenError|RegExprEffect {
+    bir:Register isError = cx.createRegister(t:BOOLEAN);
+    bir:TypeTestInsn typeTest = { operand, semType: t:ERROR, result: isError, negated: false };
+    bb.insns.push(typeTest);
+    bir:InsnRef testInsnRef = bir:lastInsnRef(bb);
+    bir:BasicBlock okBlock = cx.createBasicBlock();
+    bir:BasicBlock errorBlock = cx.createBasicBlock();
+    bir:CondBranchInsn condBranch = { operand: isError, ifTrue: errorBlock.label, ifFalse: okBlock.label };
+    bb.insns.push(condBranch);
+    bir:Register errorReg = cx.createRegister(errorType);
+    bir:CondNarrowInsn narrowToError = {
+        result: errorReg,
+        operand,
+        basis: { insn: testInsnRef, result: true }
+    };
+    errorBlock.insns.push(narrowToError);
+    codeGenCheckingTerminator(errorBlock, checkingKeyword, errorReg);
+    bir:Register result = cx.createRegister(okType);
+    bir:CondNarrowInsn narrowToOk = {
+        result,
+        operand,
+        basis: { insn: testInsnRef, result: false }
+    };
+    okBlock.insns.push(narrowToOk);
+    return { result, block: okBlock };
+}
+
+function codeGenCheckingTerminator(bir:BasicBlock bb, s:CheckingKeyword checkingKeyword, bir:Register operand) {
+    if checkingKeyword == "check" {
+        bir:RetInsn insn = { operand };
+        bb.insns.push(insn);
+    }
+    else {
+        bir:PanicInsn insn = { operand };
+        bb.insns.push(insn);
     }
 }
 

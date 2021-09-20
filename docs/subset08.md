@@ -129,9 +129,12 @@ inline-array-type-desc = optional-type-desc "[" "]"
 # reference to a type definition
 type-reference = identifier | qualfied-identifier
 
-call-stmt =
-   function-call-expr ";"
-   | method-call-expr ";"
+call-stmt = call-expr ";"
+
+call-expr =
+   function-call-expr
+   | method-call-expr
+   | checking-keyword call-expr
 
 assign-stmt = lvexpr "=" expression ";"
 
@@ -233,7 +236,9 @@ unary-expr =
 
 type-cast-expr = "<" type-desc ">" unary-expr
 
-checking-expr = ("check" | "checkpanic") unary-expr
+checking-expr = checking-keyword unary-expr
+
+checking-keyword = "check" | "checkpanic"
 
 primary-expr =
   literal
@@ -325,6 +330,7 @@ The following restrictions apply to imports with an organization of `ballerina`:
 
 * a qualified identifier in a function-reference can refer to a function definition defined in another module
 * a variable-reference or type-reference can be a qualified identifier referring to a constant or type defined in another module
+* Support `check` and `checkpanic` in call statements
 
 ## Implemented spec changes since 2021R1
 

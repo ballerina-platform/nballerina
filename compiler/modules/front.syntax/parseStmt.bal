@@ -65,6 +65,11 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         "error" => {
             return parseErrorStmt(tok);
         }
+        "check"|"checkpanic" => {
+            check tok.advance();
+            // JBUG cast
+            return finishCheckingCallStmt(tok, <CheckingKeyword>cur);
+        }
         var td if td is InlineBuiltinTypeDesc|"map" => {
             return parseVarDeclStmt(tok);
         }
@@ -152,7 +157,7 @@ function parseErrorStmt(Tokenizer tok) returns Stmt|err:Syntax {
     }
 }
 
-function parseMethodCallStmt(Tokenizer tok) returns Stmt|err:Syntax {
+function parseMethodCallStmt(Tokenizer tok) returns MethodCallExpr|err:Syntax {
     Expr expr = check parsePrimaryExpr(tok);
     if expr is MethodCallExpr {
         check tok.expect(";");
@@ -175,6 +180,23 @@ function finishCallStmt(Tokenizer tok, CallStmt expr) returns Stmt|err:Syntax {
     }
     check tok.expect(";");
     return stmt;
+}
+
+function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword) returns CallStmt|err:Syntax {
+    Token? t = tok.current();
+    if t is "check"|"checkpanic" {
+        check tok.advance();
+        return { checkingKeyword, operand: check finishCheckingCallStmt(tok, t) };
+    }
+    else if t == "(" {
+        return { checkingKeyword, operand: check parseMethodCallStmt(tok) };
+    }
+    Expr operand = check parsePrimaryExpr(tok);
+    if operand is FunctionCallExpr|MethodCallExpr {
+        check tok.expect(";");
+        return { checkingKeyword, operand };
+    }
+    return parseError(tok, "function call, method call or checking expression expected");
 }
 
 function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Syntax {

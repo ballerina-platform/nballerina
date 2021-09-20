@@ -475,6 +475,19 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "stmt", "if a noOp(1);", ""],
          ["E", "stmt", "if a {} else return;", ""],
          ["E", "stmt", "if a = b {}", ""],
+         // check
+         ["V", "stmt", "check a();", "check a();"],
+         ["V", "stmt", "check check a();", "check check a();"],
+         ["E", "stmt", "check (a());"],
+         ["E", "stmt", "check check (a());"],
+         ["V", "stmt", "check ().clone();", "check ().clone();"],
+         ["E", "stmt", "check a;"],
+         ["E", "stmt", "check a() + b();"],
+         ["E", "stmt", "check a[1];"],
+         ["V", "stmt", "check a.b();", "check a.b();"],
+         ["FE", "stmt", "check (a.b());"], // enable after #466
+         ["V", "stmt", "check ((a)).b();", "check a.b();"],
+         ["V", "stmt", "check a[1].b();", "check (a[1]).b();"],
          // module parts
          ["U", "mod", "type ER error<map<readonly>>;", ""],
          ["E", "mod", "import;", ""],
