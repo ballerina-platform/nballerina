@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define NAMES_COUNT 25
+#define NAMES_COUNT 28
 
 HASH_DEFINE_KEY;
 
@@ -32,35 +32,41 @@ const char input[NAMES_COUNT][60] = {
     "_Bb0m7foo_barm4_2bar2io_println",                      // ballerina/foo_bar.2bar.io:_println
     "_Bb0m7foo_barm4_2bar2io_3println",                     // ballerina/foo_bar.2bar.io:_println
     "_Bb0m7foo_barm4_2bar21new_nballerina_module_3println", // ballerina/foo_bar.2bar.new_nballerina_module:_3println
-    "_Bb0m7foo_barm4_2bar20new_ballerina_module_3println"   // ballerina/foo_bar.2bar.new_ballerina_module:_3println
+    "_Bb0m7foo_barm4_2bar20new_ballerina_module_3println",  // ballerina/foo_bar.2bar.new_ballerina_module:_3println
+    "foo",
+    "_bal_rt_func",
+    ""
 };
 
 const char expectedOutput[NAMES_COUNT][50] = {
-    "io:println\n",
-    "foo\n",
-    "foo_bar_baz\n",
-    "foo23\n",
-    "choreo:hello\n",
-    "lang.value:toString\n",
-    "nballerina.front.syntax:parse\n",
-    "foo_bar.baz:hello\n",
-    "io:println\n",
-    "io:println\n",
-    "io:println\n",
-    "io:println\n",
-    "nballerina.front.syntax:parse\n",
-    "nballerina.front.syntax:parse\n",
-    "nballerina.front.syntax:parse\n",
-    "_.io:println\n",
-    "2.io:println\n",
-    "foo_bar.io:println\n",
-    "foo_bar._bar.io:println\n",
-    "foo_bar.2bar.io:println\n",
-    "foo_bar.2bar._io:println\n",
-    "foo_bar.2bar.io:_println\n",
-    "foo_bar.2bar.io:_3println\n",
-    "foo_bar.2bar.new_nballerina_module:_3println\n",
-    "foo_bar.2bar.new_ballerina_module:_3println\n"
+    "io:println",
+    "foo",
+    "foo_bar_baz",
+    "foo23",
+    "choreo:hello",
+    "lang.value:toString",
+    "nballerina.front.syntax:parse",
+    "foo_bar.baz:hello",
+    "io:println",
+    "io:println",
+    "io:println",
+    "io:println",
+    "nballerina.front.syntax:parse",
+    "nballerina.front.syntax:parse",
+    "nballerina.front.syntax:parse",
+    "_.io:println",
+    "2.io:println",
+    "foo_bar.io:println",
+    "foo_bar._bar.io:println",
+    "foo_bar.2bar.io:println",
+    "foo_bar.2bar._io:println",
+    "foo_bar.2bar.io:_println",
+    "foo_bar.2bar.io:_3println",
+    "foo_bar.2bar.new_nballerina_module:_3println",
+    "foo_bar.2bar.new_ballerina_module:_3println",
+    "foo",
+    "_bal_rt_func",
+    ""
 };
 
 int main() {
@@ -81,12 +87,13 @@ int main() {
         if (c == EOF) {
             break;
         }
-        assert(expectedOutput[line][column] == c);
         if (c == '\n') {
+            assert(expectedOutput[line][column] == '\0');
             line++;
             column = 0;
             continue;
         }
+        assert(expectedOutput[line][column] == c);
         column++;
     }
     fclose(fp);

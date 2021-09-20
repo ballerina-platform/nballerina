@@ -18,6 +18,13 @@
 #define EXCEEDS_MAX_PC_COUNT -3
 #define OUT_OF_MEMORY -4
 
+#define NON_PUBLIC_SYMBOL_PREFIX "_B_"
+#define NON_PUBLIC_SYMBOL_PREFIX_LENGTH strlen(NON_PUBLIC_SYMBOL_PREFIX)
+#define PUBLIC_SYMBOL_PREFIX "_B"
+#define PUBLIC_SYMBOL_PREFIX_LENGTH strlen(PUBLIC_SYMBOL_PREFIX)
+#define MODULE_PREFIX "m"
+#define MODULE_PREFIX_LENGTH strlen(MODULE_PREFIX)
+
 struct backtrace_state *state = NULL;
 
 typedef struct {
@@ -258,81 +265,81 @@ TaggedPtr BAL_LANG_ERROR_NAME(message)(TaggedPtr error) {
 }
 
 void _bal_print_mangled_name(const char *mangledName, FILE *fp) {
-    // If mangled name starts from _B_, the identifier is non-public
-    if (mangledName[2] == '_') {
-        fprintf(fp, "%s", mangledName + 3);
+    if (strncmp(mangledName, NON_PUBLIC_SYMBOL_PREFIX, NON_PUBLIC_SYMBOL_PREFIX_LENGTH) == 0) {
+        fprintf(fp, "%s", mangledName + NON_PUBLIC_SYMBOL_PREFIX_LENGTH);
         return;
     }
-    // The org-name is not considered as a part of function name in backtrace.
-    int initialOffset = getOrgNameOffset(mangledName);
+    if (strncmp(mangledName, PUBLIC_SYMBOL_PREFIX, PUBLIC_SYMBOL_PREFIX_LENGTH) == 0) {
+        printPublicFunction(mangledName + PUBLIC_SYMBOL_PREFIX_LENGTH, fp);
+        return;
+    }
+    fprintf(fp, "%s", mangledName);
+}
 
-    // Make sure parsing starts from the first character of
-    // nqual, local-name or mod-name
+static void printPublicFunction(const char *mangledPublicFunction, FILE *fp) {
+    int orgNameLength = getOrgNameLength(mangledPublicFunction);
+
     bool isFirstQualifier = true;
-    printModuleName(mangledName + initialOffset, &isFirstQualifier, fp);
+    printModuleName(mangledPublicFunction + orgNameLength, &isFirstQualifier, fp);
 }
 
-static int getOrgNameOffset(const char *mangledName) {
-    // Offset starts from '_B'
-    int offset = 2;
-    if (mangledName[offset] == 'b') {
-        offset++;
+static int getOrgNameLength(const char *mangledOrgName) {
+    int length = 0;
+    // Organization name is ballerina
+    if (mangledOrgName[0] == 'b') {
+        length++;
     }
-    return offset + getzQualifierOffset(mangledName + offset);
+    return length + getZQualifierLength(mangledOrgName + length);
 }
 
-static int getzQualifierOffset(const char *mangledName) {
-    int offset = 0;
-    if (mangledName[offset] == '0') {
-        return ++offset;
+static int getZQualifierLength(const char *mangledQualifier) {
+    int length = 0;
+    if (mangledQualifier[0] == '0') {
+        return ++length;
     }
-    int decimalNumber = atoi(mangledName + offset);
-    offset = offset + getDecimalNumberLength(decimalNumber);
-    if (mangledName[offset] == '_') {
-        offset++;
+    int decimalNumber = atoi(mangledQualifier + length);
+    length = length + getDecimalNumberLength(decimalNumber);
+    if (mangledQualifier[length] == '_') {
+        length++;
     }
-    return offset + decimalNumber;
+    return length + decimalNumber;
 }
 
-static void printModuleName(const char *mangledName, bool *isFirstQualifier, FILE *fp) {
-    if (mangledName[0] != 'm') {
-        int offset = printnQualifier(mangledName, isFirstQualifier, fp);
-        printLocalName(mangledName + offset, fp);
+static void printModuleName(const char *mangledModuleName, bool *isFirstQualifier, FILE *fp) {
+    int nQualifierLength = 0;
+    if (strncmp(mangledModuleName, MODULE_PREFIX, MODULE_PREFIX_LENGTH) != 0) {
+        nQualifierLength = printNQualifier(mangledModuleName, isFirstQualifier, fp);
+        // Print local-name
+        fprintf(fp, ":%s", mangledModuleName + nQualifierLength);
         return;
     }
-    // Adding '+ 1' because 'm' is available
-    int offset = printnQualifier(mangledName + 1, isFirstQualifier, fp) + 1;
-    printModuleName(mangledName + offset, isFirstQualifier, fp);
+    nQualifierLength = printNQualifier(mangledModuleName + MODULE_PREFIX_LENGTH, isFirstQualifier, fp);
+    printModuleName(mangledModuleName + MODULE_PREFIX_LENGTH + nQualifierLength, isFirstQualifier, fp);
 }
 
-static void printLocalName(const char *mangledName, FILE *fp) {
-    fprintf(fp, ":%s", mangledName);
-}
-
-static int printnQualifier(const char *mangledName, bool *isFirstQualifier, FILE *fp) {
+static int printNQualifier(const char *mangledQualifier, bool *isFirstQualifier, FILE *fp) {
     if (*isFirstQualifier == false) {
         fputs(".", fp);
     }
     *isFirstQualifier = false;
-    int offset = 0;
-    int decimalNumber = atoi(mangledName);
-    offset = offset + getDecimalNumberLength(decimalNumber);
-    if (mangledName[offset] == '_') {
-        offset++;
+    int nQualifierLength = 0;
+    int decimalNumber = atoi(mangledQualifier);
+    nQualifierLength = nQualifierLength + getDecimalNumberLength(decimalNumber);
+    if (mangledQualifier[nQualifierLength] == '_') {
+        nQualifierLength++;
     }
-    fprintf(fp, "%.*s", decimalNumber, mangledName + offset);
-    offset = offset + decimalNumber;
-    return offset;
+    fprintf(fp, "%.*s", decimalNumber, mangledQualifier + nQualifierLength);
+    return nQualifierLength + decimalNumber;
 }
 
 static int getDecimalNumberLength(int n) {
     if (n == 0) {
         return 1;
     }
-    int res = 0;
+    int length = 0;
     while (n > 0) {
         n = n / 10;
-        res++;
+        length++;
     }
-    return res;
+    return length;
 }
