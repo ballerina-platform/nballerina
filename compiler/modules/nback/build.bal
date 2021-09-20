@@ -456,15 +456,15 @@ class Scaffold {
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
 
-    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
+    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
         self.mod = mod;
         self.file = mod.partFiles[defn.partIndex];
         self.llFunc = llFunc;
         self.diFunc = diFunc;
         self.birBlocks = code.blocks;
-        final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType, err:location(mod.partFiles[defn.partIndex], defn.position));
+        final Repr[] reprs = from var reg in code.registers select semTypeRepr(reg.semType);
         self.reprs = reprs;
-        self.retRepr = check semTypeRetRepr(defn.signature.returnType, err:location(mod.partFiles[defn.partIndex], defn.position));
+        self.retRepr = semTypeRetRepr(defn.signature.returnType);
         self.nParams = defn.signature.paramTypes.length();
         llvm:BasicBlock entry = llFunc.appendBasicBlock();
 
@@ -632,7 +632,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
         check bir:verifyFunctionCode(birMod, defn, code);
         DISubprogram? diFunc = di is () ? () : diFuncs[i];
-        Scaffold scaffold = check new(mod, llFuncs[i], diFunc, builder, defn, code);
+        Scaffold scaffold = new(mod, llFuncs[i], diFunc, builder, defn, code);
         buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code);
     }
@@ -820,7 +820,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     bir:FunctionSignature signature = funcRef.erasedSignature;
     t:SemType[] paramTypes = signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildRepr(builder, scaffold, insn.args[i], check semTypeRepr(paramTypes[i], scaffold.location(insn.position))));
+        args.push(check buildRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i])));
     }
 
     bir:Symbol funcSymbol = funcRef.symbol;
@@ -832,7 +832,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
         func = check buildFunctionDecl(scaffold, funcSymbol, signature);
     }  
     llvm:Value? retValue = builder.call(func, args);
-    RetRepr retRepr = check semTypeRetRepr(signature.returnType, scaffold.location(insn.position));
+    RetRepr retRepr = semTypeRetRepr(signature.returnType);
     check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
@@ -2053,8 +2053,8 @@ function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
 }
 
 function buildFunctionSignature(bir:FunctionSignature signature, err:Location loc) returns llvm:FunctionType|BuildError {
-    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (check semTypeRepr(ty, loc)).llvm;
-    RetRepr repr = check semTypeRetRepr(signature.returnType, loc);
+    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm;
+    RetRepr repr = semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {
         returnType: repr.llvm,
         paramTypes: paramTypes.cloneReadOnly()
@@ -2110,15 +2110,15 @@ final readonly & record {|
     { domain: t:TOP, repr: REPR_TOP }
 ];
 
-function semTypeRetRepr(t:SemType ty, err:Location loc) returns RetRepr|BuildError {
+function semTypeRetRepr(t:SemType ty) returns RetRepr {
     if ty === t:NIL {
         return REPR_VOID;
     }
-    return semTypeRepr(ty, loc);
+    return semTypeRepr(ty);
 }
 
 // Return the representation for a SemType.
-function semTypeRepr(t:SemType ty, err:Location loc) returns Repr|BuildError {
+function semTypeRepr(t:SemType ty) returns Repr {
     t:UniformTypeBitSet w = t:widenToUniformTypes(ty);    
     foreach var tr in typeReprs {
         if w == tr.domain {
@@ -2136,7 +2136,7 @@ function semTypeRepr(t:SemType ty, err:Location loc) returns Repr|BuildError {
         TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };
         return repr;
     }
-    return err:unimplemented("unimplemented type (" + w.toHexString() + ")", loc);
+    panic error("unimplemented type (" + w.toHexString() + ")");
 }
 
 function heapPointerType(llvm:Type ty) returns llvm:PointerType {
