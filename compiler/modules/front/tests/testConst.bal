@@ -14,7 +14,7 @@ class TestFoldContext {
         return ();
     }
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, locFromFilename("testConst.bal"), cause=cause);
+        return err:semantic(msg, location("testConst.bal"), cause=cause);
     }
     function typeEnv() returns t:Env {
         return self.env;
@@ -23,7 +23,7 @@ class TestFoldContext {
         if td is s:InlineBuiltinTypeDesc {
             return resolveInlineBuiltinTypeDesc(td);
         }
-        return err:semantic("TestFoldContext cannot resolve TypeDesc", locFromFilename("testConst.bal"));
+        return err:semantic("TestFoldContext cannot resolve TypeDesc", location("testConst.bal"));
     }
     function isConstDefn() returns boolean => true;
 }
@@ -65,7 +65,7 @@ function validConstExprs() returns map<ConstEvalTest> {
     return m;
 }
 
-function locFromFilename(string filename) returns err:Location {
+function location(string filename) returns err:Location {
     return {
         filename: filename,
         startPos: (),
