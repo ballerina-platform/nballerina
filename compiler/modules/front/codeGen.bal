@@ -1430,7 +1430,7 @@ function validArgumentCount(CodeGenContext cx, bir:FunctionRef func, int nSuppli
 
 function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifier) returns bir:FunctionRef|CodeGenError {
     if !(lookup(identifier, env) is ()) {
-        return err:unimplemented("local variables cannot yet have function type");
+        return cx.unimplementedErr("local variables cannot yet have function type");
     }
     bir:FunctionSignature signature;
     s:ModuleLevelDefn? defn = cx.mod.defns[identifier];
@@ -1462,7 +1462,7 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
         bir:ModuleId moduleId = mod.moduleId;
         bir:FunctionSignature? signature = <bir:FunctionSignature?>mod.defns[identifier];
         if signature is () {
-            return err:unimplemented(`unsupported library function ${prefix + ":" + identifier}`);
+            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`);
         }
         else {
             bir:ExternalSymbol symbol = { module: moduleId, identifier };
@@ -1479,7 +1479,7 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
         string moduleName = t[0];
         bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature is () {
-            return err:unimplemented(`unrecognized lang library function ${moduleName + ":" + methodName}`);
+            return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`);
         }
         else {
             bir:ExternalSymbol symbol = {
@@ -1493,7 +1493,7 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
             return { symbol, signature, erasedSignature }; 
         }
     }
-    return err:unimplemented(`cannot resolve ${methodName} to lang lib function`);
+    return cx.unimplementedErr(`cannot resolve ${methodName} to lang lib function`);
 }
 
 type Counter record {|

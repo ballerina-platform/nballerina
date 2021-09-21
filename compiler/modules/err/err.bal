@@ -53,15 +53,15 @@ public function location(File file, Position? startPos = (), Position? endPos = 
     };
 }
 
-public function syntax(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Syntax {
+public function syntax(Message m, Location loc, string? functionName = (), error? cause = ()) returns Syntax {
     return error Syntax(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
-public function semantic(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Semantic {
+public function semantic(Message m, Location loc, string? functionName = (), error? cause = ()) returns Semantic {
     return error Semantic(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
-public function unimplemented(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Unimplemented {
+public function unimplemented(Message m, Location loc, string? functionName = (), error? cause = ()) returns Unimplemented {
     return error Unimplemented(messageToString(m), cause, location=loc, functionName=functionName);
 }
 

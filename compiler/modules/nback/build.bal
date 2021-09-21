@@ -456,15 +456,15 @@ class Scaffold {
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
 
-    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) returns BuildError? {
+    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
         self.mod = mod;
         self.file = mod.partFiles[defn.partIndex];
         self.llFunc = llFunc;
         self.diFunc = diFunc;
         self.birBlocks = code.blocks;
-        final Repr[] reprs = from var reg in code.registers select check semTypeRepr(reg.semType);
+        final Repr[] reprs = from var reg in code.registers select semTypeRepr(reg.semType);
         self.reprs = reprs;
-        self.retRepr = check semTypeRetRepr(defn.signature.returnType);
+        self.retRepr = semTypeRetRepr(defn.signature.returnType);
         self.nParams = defn.signature.paramTypes.length();
         llvm:BasicBlock entry = llFunc.appendBasicBlock();
 
@@ -575,6 +575,11 @@ class Scaffold {
             builder.setCurrentDebugLocation(());
         }
     }
+
+    function unimplementedErr(err:Message message) returns err:Unimplemented {
+        err:Location loc = err:location(self.file);
+        return err:unimplemented(message, loc);
+    }
 }
 
 public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
@@ -591,7 +596,8 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
     llvm:FunctionType[] llFuncTypes = [];
     map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
-        llvm:FunctionType ty = check buildFunctionSignature(defn.signature);
+        bir:File defnFile = partFiles[defn.partIndex];
+        llvm:FunctionType ty = check buildFunctionSignature(defn.signature, err:location(defnFile, defn.position));
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
         string mangledName = mangleInternalSymbol(modId, symbol);
@@ -626,7 +632,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
         check bir:verifyFunctionCode(birMod, defn, code);
         DISubprogram? diFunc = di is () ? () : diFuncs[i];
-        Scaffold scaffold = check new(mod, llFuncs[i], diFunc, builder, defn, code);
+        Scaffold scaffold = new(mod, llFuncs[i], diFunc, builder, defn, code);
         buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code);
     }
@@ -814,7 +820,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     bir:FunctionSignature signature = funcRef.erasedSignature;
     t:SemType[] paramTypes = signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildRepr(builder, scaffold, insn.args[i], check semTypeRepr(paramTypes[i])));
+        args.push(check buildRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i])));
     }
 
     bir:Symbol funcSymbol = funcRef.symbol;
@@ -826,7 +832,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
         func = check buildFunctionDecl(scaffold, funcSymbol, signature);
     }  
     llvm:Value? retValue = builder.call(func, args);
-    RetRepr retRepr = check semTypeRetRepr(signature.returnType);
+    RetRepr retRepr = semTypeRetRepr(signature.returnType);
     check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
@@ -857,7 +863,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     // Store the member bitset as the ListDesc
     t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(scaffold.typeCheckContext().env, insn.result.semType);
     if memberType == () {
-        return err:unimplemented("unsupported member type for arrat");
+        return scaffold.unimplementedErr("unsupported member type for arrat");
     }
     else {
         builder.store(llvm:constInt(LLVM_INT, memberType),
@@ -931,7 +937,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     t:UniformTypeBitSet? memberType = t:simpleMapMemberType(scaffold.typeCheckContext().env, insn.result.semType);
     llvm:PointerValue m;
     if memberType == () {
-        return err:unimplemented("unsupported member type for mapping");
+        return scaffold.unimplementedErr("unsupported member type for mapping");
     }
     else {
         m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
@@ -1004,7 +1010,8 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
         return decl;
     }
     else {
-        llvm:FunctionType ty = check buildFunctionSignature(sig);
+        // TODO: fix this: scaffold.location(0)
+        llvm:FunctionType ty = check buildFunctionSignature(sig, scaffold.location(0));
         llvm:Module mod = scaffold.getModule();
         llvm:FunctionDecl d = mod.addFunctionDecl(mangleExternalSymbol(symbol), ty);
         scaffold.addImportedFunction(symbol, d);
@@ -1334,7 +1341,7 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
             return buildEqualFloat(builder, scaffold, exact, op, lhsValue, rhsValue, result);
         }
     }
-    return err:unimplemented("equality with two different untagged representations");    
+    return scaffold.unimplementedErr("equality with two different untagged representations");
 }
 
 function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result) {
@@ -1438,7 +1445,7 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
     if repr.base != BASE_REPR_TAGGED {
          // in subset 5 should be const true/false
-        return err:unimplemented("test of untagged value");
+        return scaffold.unimplementedErr("test of untagged value");
     }
     t:SemType semType = insn.semType;
     llvm:PointerValue tagged = <llvm:PointerValue>val;
@@ -1468,7 +1475,7 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
         hasType = buildHasTagInSet(builder, tagged, semType);
     }
     else {
-        return err:unimplemented("unimplemented type test"); // should not happen in subset 6
+        return scaffold.unimplementedErr("unimplemented type test"); // should not happen in subset 6
     }
     if insn.negated {
         buildStoreBoolean(builder, scaffold, 
@@ -1505,7 +1512,7 @@ function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:Point
 function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn insn) returns BuildError? {
     var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
     if repr.base != BASE_REPR_TAGGED {
-        return err:unimplemented("cast from untagged value"); // should not happen in subset 2
+        return scaffold.unimplementedErr("cast from untagged value"); // should not happen in subset 2
     }
     llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
@@ -1544,7 +1551,7 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
             hasTag = buildHasTagInSet(builder, tagged, semType);
         }
         else {
-            return err:unimplemented("unimplemented type cast"); // should not happen in subset 6
+            return scaffold.unimplementedErr("unimplemented type cast"); // should not happen in subset 6
         }
         builder.condBr(hasTag, continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
@@ -1563,7 +1570,7 @@ function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertT
         return;
     }
     else if repr.base != BASE_REPR_TAGGED {
-        return err:unimplemented("convert form decimal to int");
+        return scaffold.unimplementedErr("convert form decimal to int");
     }
     // convert to int form tagged pointer
 
@@ -1609,7 +1616,7 @@ function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:Conver
         return;
     }
     else if repr.base != BASE_REPR_TAGGED {
-        return err:unimplemented("convert form decimal to float");
+        return scaffold.unimplementedErr("convert form decimal to float");
     }
     // convert to float form tagged pointer
 
@@ -1657,7 +1664,7 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
     if sourceBaseRepr == BASE_REPR_TAGGED {
         return buildUntagged(builder, scaffold, <llvm:PointerValue>value, targetRepr);
     }
-    return err:unimplemented("unimplemented narrowing conversion required");
+    return scaffold.unimplementedErr("unimplemented narrowing conversion required");
 }
 
 function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
@@ -1742,7 +1749,7 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
         }
     }
     // this shouldn't ever happen I think
-    return err:unimplemented("unimplemented conversion required");
+    return scaffold.unimplementedErr("unimplemented conversion required");
 }
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
@@ -2045,9 +2052,9 @@ function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
     return <llvm:IntPredicate>unsignedIntPredicateOps[op];
 }
 
-function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:FunctionType|BuildError {
-    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (check semTypeRepr(ty)).llvm;
-    RetRepr repr = check semTypeRetRepr(signature.returnType);
+function buildFunctionSignature(bir:FunctionSignature signature, err:Location loc) returns llvm:FunctionType|BuildError {
+    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm;
+    RetRepr repr = semTypeRetRepr(signature.returnType);
     llvm:FunctionType ty = {
         returnType: repr.llvm,
         paramTypes: paramTypes.cloneReadOnly()
@@ -2103,7 +2110,7 @@ final readonly & record {|
     { domain: t:TOP, repr: REPR_TOP }
 ];
 
-function semTypeRetRepr(t:SemType ty) returns RetRepr|BuildError {
+function semTypeRetRepr(t:SemType ty) returns RetRepr {
     if ty === t:NIL {
         return REPR_VOID;
     }
@@ -2111,7 +2118,7 @@ function semTypeRetRepr(t:SemType ty) returns RetRepr|BuildError {
 }
 
 // Return the representation for a SemType.
-function semTypeRepr(t:SemType ty) returns Repr|BuildError {
+function semTypeRepr(t:SemType ty) returns Repr {
     t:UniformTypeBitSet w = t:widenToUniformTypes(ty);    
     foreach var tr in typeReprs {
         if w == tr.domain {
@@ -2129,7 +2136,7 @@ function semTypeRepr(t:SemType ty) returns Repr|BuildError {
         TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };
         return repr;
     }
-    return err:unimplemented("unimplemented type (" + w.toHexString() + ")");
+    panic error("unimplemented type (" + w.toHexString() + ")");
 }
 
 function heapPointerType(llvm:Type ty) returns llvm:PointerType {

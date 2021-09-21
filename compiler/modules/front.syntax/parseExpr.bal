@@ -107,7 +107,7 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
         if t2 is "is" {
             return finishTypeTestExpr(tok, expr, true);
         }
-        return err:syntax("invalid operator");
+        return tok.err("invalid operator");
     }
     else {
         return expr;
@@ -395,7 +395,7 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
             return f;
         }
     }
-    return err:syntax("expected field name");
+    return tok.err("expected field name");
 }
 
 // This is simple-const-expr in the spec
