@@ -17,6 +17,7 @@ function testCompileVPO(string path, string kind) returns io:Error? {
     else {
         string msg = "compilation error";
         if err is err:Any {
+            verifyErrorFileName(err);
             // JBUG #31334 cast
             string? functionName = (<err:Detail>err.detail()).functionName;
             if functionName is string {
@@ -25,6 +26,12 @@ function testCompileVPO(string path, string kind) returns io:Error? {
         }
         test:assertEquals(err, (), msg);
     }
+}
+
+function verifyErrorFileName(err:Any err) {
+    err:Detail detail = <err:Detail>err.detail();
+    test:assertTrue(detail.location is err:Location, "error without location");
+    test:assertNotEquals((<err:Location>detail.location).filename.length(), 0, "error with an empty filename");
 }
 
 @test:Config {
@@ -37,6 +44,9 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             test:assertNotExactEquals(err, (), "expected an error " + path);
         }
         else {
+
+            // JBUG #31334 cast needed
+            verifyErrorFileName(err);
             string base = check file:basename(path);
             boolean isE = kind[0] == "e";
             if isE {
