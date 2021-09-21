@@ -19,9 +19,12 @@ CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 CFLAGS ?= -O2
 ll_files = $(wildcard ll/*.ll)
-expect_files = $(addsuffix .txt, $(addprefix expect/, $(basename $(notdir $(ll_files)))))
-diff_files = $(addsuffix .diff, $(addprefix result/, $(basename $(notdir $(ll_files)))))
-exe_files = $(addsuffix .exe, $(addprefix result/, $(basename $(notdir $(ll_files)))))
+mod_ll_files = $(wildcard ll/*-[vpo].*.ll)
+mod_bc_files = $(addsuffix .bc, $(addprefix result/, $(basename $(notdir $(mod_ll_files)))))
+test_cases = $(basename $(notdir $(bal_files)))
+expect_files = $(addsuffix .txt, $(addprefix expect/, $(test_cases)))
+diff_files = $(addsuffix .diff, $(addprefix result/, $(test_cases)))
+exe_files = $(addsuffix .exe, $(addprefix result/, $(test_cases)))
 RT=../../../runtime/balrt.a
 RT_INLINE=../../../runtime/balrt_inline.bc
 
@@ -65,8 +68,6 @@ fail.txt: $(diff_files)
 result/%.diff: result/%.exe expect/%.txt
 	-../../runcheck.sh $^ >$@
 
-result/%.exe: result/%.bc $(RT)
-	$(CLANG) $(CFLAGS) $< -o $@ $(RT)
 
 result/%.bc: ll/%.ll $(RT_INLINE)
 	@mkdir -p result
@@ -80,3 +81,7 @@ clean:
 	-rm -rf actual compile.stamp expect fail.txt ll result
 
 .PHONY: all test clean compile testll
+
+.SECONDEXPANSION:
+$(exe_files): $$(patsubst %.exe,%.bc,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.bc, $(mod_bc_files)) $(RT)
+	$(CLANG) $(CFLAGS) -o $@ $^ 

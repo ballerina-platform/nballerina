@@ -10,7 +10,7 @@ type TestSuiteCases map<[string, string]>;
     dataProvider: listSourcesVPO
 }
 function testCompileVPO(string path, string kind) returns io:Error? {
-    CompileError? err = compileFile(path);
+    CompileError? err = testCompileFile(path);
     if err is io:Error {
         return err;
     }
@@ -31,7 +31,7 @@ function testCompileVPO(string path, string kind) returns io:Error? {
     dataProvider: listSourcesEU
 }
 function testCompileEU(string path, string kind) returns file:Error|io:Error? {
-    CompileError? err = compileFile(path);
+    CompileError? err = testCompileFile(path);
     if err is err:Any? {
         if err is () {
             test:assertNotExactEquals(err, (), "expected an error " + path);
@@ -124,6 +124,7 @@ function errorLine(string path) returns int|io:Error {
 }
 
 // This outputs nothing
-function compileFile(string filename) returns CompileError? {
-    _ = check compileModule(DEFAULT_ROOT_MODULE_ID, [{ filename }], {});
+function testCompileFile(string filename) returns CompileError? {
+    var [basename, _] = basenameExtension(filename);
+    return compileBalFile(filename, basename, (), {}, {});
 }

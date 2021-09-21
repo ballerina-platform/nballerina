@@ -7,7 +7,7 @@ import wso2/nballerina.err;
 import ballerina/io;
 import ballerina/file;
 
-type CompileError err:Any|io:Error;
+type CompileError err:Any|io:Error|file:Error;
 
 public type Options record {
     boolean testJsonTypes = false;
@@ -48,9 +48,9 @@ public function main(string[] filenames, *Options opts) returns error? {
         debugLevel: opts.debug ? nback:DEBUG_BACKTRACE : nback:DEBUG_NONE
     };
     foreach string filename in filenames {
-        var [_, ext] = basenameExtension(filename);
+        var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, [{ filename }], nbackOptions, opts, check chooseOutputFilename(filename, opts.outDir));
+            check compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
         }
         else if ext == TEST_EXTENSION {
             check compileBalt(filename, opts.outDir ?: check file:parentPath(filename), nbackOptions, opts);
@@ -101,6 +101,7 @@ function compileAndOutputModule(bir:ModuleId modId, front:SourcePart[] sources, 
     }
 }
 
+
 function chooseOutputFilename(string sourceFilename, string? outDir = ()) returns string|error? {
     string filename;
     if outDir == () {
@@ -114,6 +115,16 @@ function chooseOutputFilename(string sourceFilename, string? outDir = ()) return
         return error("filename must end with " + SOURCE_EXTENSION);
     }
     return base + OUTPUT_EXTENSION;
+}
+
+// Basename here means filename without extension
+function chooseOutputBasename(string sourceBasename, string? outDir = ()) returns string|error {
+    if outDir == () {
+        return sourceBasename;
+    }
+    else {
+        return check file:joinPath(outDir, check file:basename(sourceBasename));
+    }
 }
 
 // Note that this converts extension to lower case

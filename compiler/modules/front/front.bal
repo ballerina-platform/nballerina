@@ -165,7 +165,7 @@ function groupImports(s:ScannedModulePart[] parts, bir:ModuleId modId) returns M
     return from var mi in miTable select mi;
 }
 
-public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|error?)[] resolvedImports) returns ResolvedModule|err:Any|io:Error {
+public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|string?)[] resolvedImports) returns ResolvedModule|err:Any|io:Error {
     ModulePart[] parts = check importPartMaps(scanned, resolvedImports);
 
     ModuleTable mod = table [];
@@ -203,12 +203,12 @@ function loadSourcePart(SourcePart part, int i) returns s:SourceFile|io:Error {
 
 final bir:ModuleId BALLERINA_IO = { org: "ballerina", names: ["io"] };
 
-function importPartMaps(ScannedModule scanned, (ModuleExports|error?)[] resolvedImports) returns ModulePart[]|err:Any {
+function importPartMaps(ScannedModule scanned, (ModuleExports|string?)[] resolvedImports) returns ModulePart[]|err:Any {
     ModulePart[] parts = from var part in scanned.parts select { file: part.sourceFile(), imports: {} };
     ModuleIdImports[] importsById = scanned.importsById;
     foreach int i in 0 ..< importsById.length() {
         var moduleId = importsById[i].id;
-        ModuleExports|error? resolved;
+        ModuleExports|string? resolved;
         if moduleId == BALLERINA_IO {
             resolved = ioLibFunctions;
         }
@@ -216,8 +216,9 @@ function importPartMaps(ScannedModule scanned, (ModuleExports|error?)[] resolved
             resolved = i < resolvedImports.length() ? resolvedImports[i] : ();
         }
         foreach var decl in importsById[i].imports {
-            if resolved is error? {
-                return err:unimplemented(`unsupported module ${moduleIdToString(moduleId)}`, loc=err:location(parts[decl.partIndex].file, decl.pos), cause=resolved);
+            if resolved is string? {
+                err:Message msg = resolved == () ? `unsupported module ${moduleIdToString(moduleId)}` : resolved;
+                return err:unimplemented(msg, loc=err:location(parts[decl.partIndex].file, decl.pos));
             }
             else {
                 string? declPrefix = decl.prefix;

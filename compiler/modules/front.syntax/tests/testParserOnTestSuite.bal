@@ -12,6 +12,9 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
             continue;
         }
         foreach var test in check file:readDir(dir.absPath) {
+            if test.dir {
+                continue;
+            }
             string filename = test.absPath;
             string[] lines = check io:fileReadLines(filename);
             ModulePart|err:Syntax part = scanAndParseModulePart(lines, { filename }, 0);
