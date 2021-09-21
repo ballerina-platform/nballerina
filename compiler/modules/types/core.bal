@@ -843,7 +843,7 @@ function bddMappingSimpleMemberType(Env env, Bdd bdd) returns UniformTypeBitSet?
 }
 
 public type Value readonly & record {|
-    string|int|float|boolean|decimal|() value;
+    string|int|float|boolean|() value;
 |};
 
 // If the type contains exactly onr shape, return a value
@@ -873,11 +873,6 @@ public function singleShape(SemType t) returns Value? {
     else if isSubtypeSimple(t, BOOLEAN) {
         SubtypeData sd = getComplexSubtypeData(t, UT_BOOLEAN);
         boolean? value = booleanSubtypeSingleValue(sd);
-        return value == () ? () : { value };
-    }
-    else if isSubtypeSimple(t, DECIMAL) {
-        SubtypeData sd = getComplexSubtypeData(t, UT_DECIMAL);
-        decimal? value = decimalSubtypeSingleValue(sd);
         return value == () ? () : { value };
     }
     return ();
