@@ -2,6 +2,7 @@
 import wso2/nballerina.err;
 
 // This is for the subset we currently support in the compiler
+// xxx pr-todo: remove
 function parseInlineTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {

@@ -69,7 +69,8 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             return parseVarDeclStmt(tok);
         }
         "("|[DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {
-            return parseMethodCallStmt(tok);
+            // xxx pr-todo: find a shorter name
+            return parseMethodCallOrVarDeclStmt(tok);
         }
     }
     return parseError(tok, "unhandled statement");
@@ -135,6 +136,21 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) re
         TypeDescRef ref = { ref: identifier, pos };
         return finishVarDeclStmt(tok, ref);
     }
+    else if cur == "|" {
+        check tok.advance();
+
+        // xxx pr-todo: move to a func, maybe finishUnion
+        TypeDescRef ref = { ref: identifier, pos };
+        TypeDesc td = { op: "|", left: ref, right: check parseIntersection(tok) };
+        while tok.current() == "|" {
+            check tok.advance();
+            TypeDesc right = check parseIntersection(tok);
+            BinaryTypeDesc bin = { op: "|", left: td, right };
+            td = bin;
+        }
+
+        return finishVarDeclStmt(tok, td);
+    }
     return parseError(tok, "invalid statement");
 }
 
@@ -156,13 +172,16 @@ function parseErrorStmt(Tokenizer tok) returns Stmt|err:Syntax {
     }
 }
 
-function parseMethodCallStmt(Tokenizer tok) returns Stmt|err:Syntax {
+function parseMethodCallOrVarDeclStmt(Tokenizer tok) returns Stmt|err:Syntax {
+    TokenizerState preMethodState = tok.save();
     Expr expr = check parsePrimaryExpr(tok);
     if expr is MethodCallExpr {
         check tok.expect(";");
         return expr;
     }
-    return parseError(tok, "expression not allowed as a statement");
+    tok.restore(preMethodState);
+    TypeDesc td = check parseTypeDesc(tok);
+    return finishVarDeclStmt(tok, td);
 }
 
 function finishCallStmt(Tokenizer tok, CallStmt expr) returns Stmt|err:Syntax {
@@ -200,7 +219,7 @@ function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp o
 }
 
 function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
-    TypeDesc td = check parseInlineTypeDesc(tok);
+    TypeDesc td = check parseTypeDesc(tok);
     return finishVarDeclStmt(tok, td, isFinal);
 }
 

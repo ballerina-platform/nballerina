@@ -481,6 +481,12 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "stmt", "if a = b {}", ""],
          // module parts
          ["U", "mod", "type ER error<map<readonly>>;", ""],
+         ["V", "stmt", "1 x = 1;", "1 x = 1;"],
+         ["V", "stmt", "a b = c;", "a b = c;"],
+         ["V", "stmt", "x|y b = c;", "x | y b = c;"],
+         ["V", "stmt", "(1) x = (2 - 1);", "1 x = 2 - 1;"],
+         ["V", "stmt", "((1)) x = (3 - 2);", "1 x = 3 - 2;"],
+         ["E", "stmt", "a() + 3;", ""],
          ["E", "mod", "import;", ""],
          ["U", "mod", "import x;", "import x;"],
          ["V", "mod", "import x/y;", "import x/y;"]];

@@ -257,6 +257,9 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
             }
         }
     }
+    else if td is SingletonTypeDesc {
+        w.push(td.value.toString());
+    }
     else {
         panic err:impossible(`typedesc not implemented in typeDescToWords: ${td.toString()}`);
     }
