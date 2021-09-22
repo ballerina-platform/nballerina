@@ -762,7 +762,8 @@ public function widenUnsigned(SemType t) returns SemType {
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
 // When `strict`, require ro and rw to be consistent; otherwise just consider rw.
-public function simpleArrayMemberType(Env env, SemType t, boolean strict = false) returns UniformTypeBitSet? {
+public function simpleArrayMemberType(TypeCheckContext tc, SemType t, boolean strict = false) returns UniformTypeBitSet? {
+    Env env = tc.env;
     if t is UniformTypeBitSet {
         return t == LIST || (t == LIST_RW && !strict) ? TOP : ();
     }
@@ -803,7 +804,8 @@ function bddListSimpleMemberType(Env env, Bdd bdd) returns UniformTypeBitSet? {
 
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
-public function simpleMapMemberType(Env env, SemType t, boolean strict = false) returns UniformTypeBitSet? {
+public function simpleMapMemberType(TypeCheckContext tc, SemType t, boolean strict = false) returns UniformTypeBitSet? {
+    Env env = tc.env;
     if t is UniformTypeBitSet {
         return t == MAPPING || (t == MAPPING_RW && !strict) ? TOP : ();
     }

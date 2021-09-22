@@ -861,7 +861,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     final llvm:PointerValue structMem = buildUntypedAlloc(builder, scaffold, structType);
     final llvm:PointerValue struct = builder.bitCast(structMem, heapPointerType(structType));
     // Store the member bitset as the ListDesc
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(scaffold.typeCheckContext().env, insn.result.semType);
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(scaffold.typeCheckContext(), insn.result.semType);
     if memberType == () {
         return scaffold.unimplementedErr("unsupported member type for arrat");
     }
@@ -934,7 +934,7 @@ function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
     int length = insn.operands.length();
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(scaffold.typeCheckContext().env, insn.result.semType);
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(scaffold.typeCheckContext(), insn.result.semType);
     llvm:PointerValue m;
     if memberType == () {
         return scaffold.unimplementedErr("unsupported member type for mapping");
@@ -1492,7 +1492,7 @@ function buildHasListType(llvm:Builder builder, Scaffold scaffold, llvm:PointerV
         return buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
     }
     else {
-        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeCheckContext().env, targetType);
+        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeCheckContext(), targetType);
         return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, listHasTypeFunction),
                                         [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
     }
@@ -1503,7 +1503,7 @@ function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:Point
         return buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
     }
     else {
-        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeCheckContext().env, targetType);
+        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeCheckContext(), targetType);
         return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingHasTypeFunction),
                                         [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
     }

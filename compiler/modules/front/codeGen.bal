@@ -86,7 +86,7 @@ type LoopContext record {|
 |};
 
 class CodeGenContext {
-    final Module mod;
+    final ModuleSymbols mod;
     final s:SourceFile file;
     final s:FunctionDefn functionDefn;
     final bir:FunctionCode code;
@@ -94,7 +94,7 @@ class CodeGenContext {
     LoopContext? loopContext = ();
     private final string?[] registerVarNames = [];
 
-    function init(Module mod, s:FunctionDefn functionDefn, t:SemType returnType) {
+    function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
         self.mod = mod;
         self.functionDefn = functionDefn;
         self.file = functionDefn.part.file;
@@ -204,7 +204,7 @@ class CodeGenContext {
     }
 
     function resolveTypeDesc(s:TypeDesc td) returns t:SemType|ResolveTypeError {
-        return resolveSubsetTypeDesc(self.mod.env, self.mod.defns, self.functionDefn, td);
+        return resolveSubsetTypeDesc(self.mod, self.functionDefn, td);
     }
 }
 
@@ -236,8 +236,8 @@ class CodeGenFoldContext {
         return self.cx.semanticErr(msg, pos=pos, cause=cause);
     }
 
-    function typeEnv() returns t:Env {
-        return self.cx.mod.env;
+    function typeCheckContext() returns t:TypeCheckContext {
+        return self.cx.mod.tc;
     }
 
     function resolveTypeDesc(s:TypeDesc td) returns ResolveTypeError|t:SemType {
@@ -255,7 +255,7 @@ function addAssignments(int[] dest, int[] src, int excludeStart) {
     }
 }
 
-function codeGenFunction(Module mod, s:FunctionDefn defn, bir:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
+function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSignature signature) returns bir:FunctionCode|CodeGenError {
     CodeGenContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Binding? bindings = ();
@@ -815,11 +815,11 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
     t:UniformTypeBitSet memberType;
     if t:isSubtypeSimple(reg.semType, t:MAPPING) {
         indexType = t:STRING;
-        memberType = <t:UniformTypeBitSet>t:simpleMapMemberType(cx.mod.env, reg.semType);
+        memberType = <t:UniformTypeBitSet>t:simpleMapMemberType(cx.mod.tc, reg.semType);
     } 
     else if t:isSubtypeSimple(reg.semType, t:LIST) {
         indexType = t:INT;
-        memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.env, reg.semType);
+        memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.tc, reg.semType);
     }
     else {
         return cx.semanticErr("member access can only be applied to mapping or list", pos=lValue.pos);
@@ -872,7 +872,7 @@ function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Env
     }
     bir:Register listReg = <bir:Register> list;
     var { result: index, block: block2 } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, lValue.index, t:INT));
-    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet> t:simpleArrayMemberType(cx.mod.env, listReg.semType);
+    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet> t:simpleArrayMemberType(cx.mod.tc, listReg.semType);
     bir:Register member = cx.createRegister(memberType);
     bir:ListGetInsn insn = { result: member, list: listReg, operand: index, position: pos };
     block2.insns.push(insn);
@@ -1053,7 +1053,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 if t:isSubtypeSimple(l.semType, t:LIST) {
                     var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, index, t:INT));
                     // subset07 list types are restricted to arrays
-                    bir:Register result = cx.createRegister(<t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.env, l.semType));
+                    bir:Register result = cx.createRegister(<t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.tc, l.semType));
                     bir:ListGetInsn insn = { result, list: l, operand: r, position: pos };
                     nextBlock.insns.push(insn);
                     return { result, block: nextBlock };
@@ -1061,7 +1061,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 else if t:isSubtypeSimple(l.semType, t:MAPPING) {
                     var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
                     // subset07 list types are restricted to maps
-                    bir:Register result = cx.createRegister(t:union(<t:UniformTypeBitSet>t:simpleMapMemberType(cx.mod.env, l.semType), t:NIL));
+                    bir:Register result = cx.createRegister(t:union(<t:UniformTypeBitSet>t:simpleMapMemberType(cx.mod.tc, l.semType), t:NIL));
                     bir:MappingGetInsn insn = { result, operands: [l, r] };
                     nextBlock.insns.push(insn);
                     return { result, block: nextBlock };
@@ -1419,7 +1419,7 @@ function validArgumentCount(CodeGenContext cx, bir:FunctionRef func, int nSuppli
     if nSuppliedArgs == nExpectedArgs {
         return ();
     }
-    string name = bir:symbolToString(cx.mod, cx.functionDefn.part.partIndex, func.symbol);
+    string name = symbolToString(cx.mod, cx.functionDefn.part.partIndex, func.symbol);
     if nSuppliedArgs < nExpectedArgs {
         return cx.semanticErr(`too few arguments for call to function ${name}`);
     }
@@ -1453,7 +1453,7 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
 }
 
 function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier) returns bir:FunctionRef|CodeGenError {
-    Import? mod = cx.mod.parts[cx.functionDefn.part.partIndex].imports[prefix];
+    Import? mod = cx.mod.partPrefixes[cx.functionDefn.part.partIndex][prefix];
     if mod is () {
         return cx.semanticErr(`no import declaration for prefix ${prefix}`);
     }
@@ -1488,7 +1488,7 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
             };
             bir:FunctionSignature signature = erasedSignature;
             if t[0] == "array" {
-                signature = instantiateArrayFunctionSignature(cx.mod.env, signature, (<bir:Register>target).semType);
+                signature = instantiateArrayFunctionSignature(cx.mod.tc, signature, (<bir:Register>target).semType);
             }
             return { symbol, signature, erasedSignature }; 
         }
@@ -1500,8 +1500,8 @@ type Counter record {|
     int n = 0;
 |};
 
-function instantiateArrayFunctionSignature(t:Env env, bir:FunctionSignature sig, t:SemType arrayType) returns bir:FunctionSignature {
-    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(env, arrayType);
+function instantiateArrayFunctionSignature(t:TypeCheckContext tc, bir:FunctionSignature sig, t:SemType arrayType) returns bir:FunctionSignature {
+    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(tc, arrayType);
     Counter counter = {};
     bir:FunctionSignature inst = instantiateSignature(sig, memberType, arrayType, counter);
     if counter.n > 1 {
@@ -1743,7 +1743,7 @@ function operandOrderType(CodeGenContext cx, bir:Operand operand) returns bir:Or
         }
         t:UniformTypeBitSet arrTy = t:LIST;
         if t:isSubtypeSimple(operandTy, arrTy) {
-            t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(cx.mod.env, operandTy, true);
+            t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(cx.mod.tc, operandTy, true);
             if memberTy is t:UniformTypeBitSet {
                 bir:OrderType? ot = operandUniformOrderType(memberTy);
                 if ot is bir:UniformOrderType {

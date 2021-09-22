@@ -21,20 +21,18 @@ type FoldContext object {
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
-    function typeEnv() returns t:Env;
+    function typeCheckContext() returns t:TypeCheckContext;
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
     function isConstDefn() returns boolean;
 };
 
 class ConstFoldContext {
     *FoldContext;
+    final ModuleSymbols mod;
     final s:ModuleLevelDefn defn;
-    final t:Env env;
-    final ModuleTable mod;
 
-    function init(s:ModuleLevelDefn defn, t:Env env, ModuleTable mod) {
+    function init(s:ModuleLevelDefn defn, ModuleSymbols mod) {
         self.defn = defn;
-        self.env = env;
         self.mod = mod;
     }
     
@@ -43,9 +41,9 @@ class ConstFoldContext {
     }
 
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
-        s:ModuleLevelDefn? defn = self.mod[varName];
+        s:ModuleLevelDefn? defn = self.mod.defns[varName];
         if defn is s:ConstDefn {
-            var resolved = check resolveConstDefn(self.env, self.mod, defn);
+            var resolved = check resolveConstDefn(self.mod, defn);
             return resolved[1];
         }
         else if defn is () {
@@ -56,18 +54,18 @@ class ConstFoldContext {
         }
     }
 
-    function typeEnv() returns t:Env {
-        return self.env;
+    function typeCheckContext() returns t:TypeCheckContext {
+        return self.mod.tc;
     }
 
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType {
-        return resolveSubsetTypeDesc(self.env, self.mod, self.defn, td);
+        return resolveSubsetTypeDesc(self.mod, self.defn, td);
     }
 
     function isConstDefn() returns boolean => true;
 }
 
-function resolveConstDefn(t:Env env, ModuleTable mod, s:ConstDefn defn) returns s:ResolvedConst|FoldError {
+function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:ResolvedConst|FoldError {
     var resolved = defn.resolved;
     if resolved is false {
         return err:semantic(`cycle in evaluating ${defn.name}`, s:defnLocation(defn));
@@ -77,7 +75,7 @@ function resolveConstDefn(t:Env env, ModuleTable mod, s:ConstDefn defn) returns 
     }
     else {
         defn.resolved = false;
-        ConstFoldContext cx = new ConstFoldContext(defn, env, mod);
+        ConstFoldContext cx = new ConstFoldContext(defn, mod);
         s:InlineBuiltinTypeDesc? td = defn.td;
         t:SemType? expectedType = td is () ? () : resolveInlineBuiltinTypeDesc(td);
         s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
@@ -145,7 +143,7 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
 function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:ListConstructorExpr expr) returns s:Expr|FoldError {
     // grammar of subset07 guarantees that expectedType is non-nil
     t:SemType expectedListType = t:intersect(<t:SemType>expectedType, t:LIST_RW);
-    t:SemType? memberType = t:simpleArrayMemberType(cx.typeEnv(), expectedListType);
+    t:SemType? memberType = t:simpleArrayMemberType(cx.typeCheckContext(), expectedListType);
     s:Expr[] members = expr.members;
     foreach int i in 0 ..< members.length() {
         members[i] = check foldExpr(cx, memberType, members[i]);
@@ -157,7 +155,7 @@ function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:List
 function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:MappingConstructorExpr expr) returns s:Expr|FoldError {
     // grammar of subset07 guarantees that expectedType is non-nil
     t:SemType expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING_RW);
-    t:SemType? memberType = t:simpleMapMemberType(cx.typeEnv(), expectedMappingType);
+    t:SemType? memberType = t:simpleMapMemberType(cx.typeCheckContext(), expectedMappingType);
     expr.expectedType = expectedMappingType;
     foreach s:Field f in expr.fields {
         f.value = check foldExpr(cx, memberType, f.value);

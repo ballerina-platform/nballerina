@@ -5,18 +5,20 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.err;
 
-type ModuleTable table<s:ModuleLevelDefn> key(name);
+type ModuleDefns table<s:ModuleLevelDefn> key(name);
+
+// This is the module-level symbol table.
+type ModuleSymbols record {|
+    ModuleDefns defns = table [];
+    map<Import>[] partPrefixes = [];
+    t:TypeCheckContext tc;
+|};
 
 type Import record {|
     s:ImportDecl decl;
     bir:ModuleId moduleId;
     ModuleExports defns;
     boolean used = false;
-|};
-
-type ModulePart record {|
-    bir:File file;
-    map<Import> imports;
 |};
 
 public type ExportedDefn bir:FunctionSignature|t:SemType|s:ResolvedConst;
@@ -31,21 +33,17 @@ public type ResolvedModule object {
 class Module {
     *ResolvedModule;
     final bir:ModuleId id;
-    final ModulePart[] parts;
-    final ModuleTable defns;
-    final t:Env env;
-    final t:TypeCheckContext tc;
+    final s:SourceFile[] files;
+    final ModuleSymbols syms;
     final s:FunctionDefn[] functionDefnSource = [];
     final readonly & bir:FunctionDefn[] functionDefns;
 
-    function init(bir:ModuleId id, ModulePart[] parts, ModuleTable defns, t:Env env) {
+    function init(bir:ModuleId id, s:SourceFile[] files, ModuleSymbols syms) {
         self.id = id;
-        self.parts = parts;
-        self.defns = defns;
-        self.env = env;
-        self.tc = t:typeCheckContext(env);
+        self.files = files;
+        self.syms = syms;
         final bir:FunctionDefn[] functionDefns = [];
-        foreach var defn in defns {
+        foreach var defn in syms.defns {
             if defn is s:FunctionDefn {
                 self.functionDefnSource.push(defn);
                 functionDefns.push({
@@ -62,17 +60,18 @@ class Module {
 
     public function getId() returns bir:ModuleId => self.id;
 
-    public function getTypeCheckContext() returns t:TypeCheckContext => self.tc;
+    public function getTypeCheckContext() returns t:TypeCheckContext => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        return codeGenFunction(self, self.functionDefnSource[i], self.functionDefns[i].signature);
+        return codeGenFunction(self.syms, self.functionDefnSource[i], self.functionDefns[i].signature);
     }
    
     public function finish() returns err:Semantic? {
-        foreach var part in self.parts {
-            foreach var [prefix, { decl, used }] in part.imports.entries() {
+        map<Import>[] partPrefixes = self.syms.partPrefixes;
+        foreach int i in 0 ..< partPrefixes.length() {
+            foreach var [prefix, { decl, used }] in partPrefixes[i].entries() {
                 if !used {
-                    return err:semantic(`import ${prefix} unused`, loc=err:location(part.file, decl.pos));
+                    return err:semantic(`import ${prefix} unused`, loc=err:location(self.files[i], decl.pos));
                 }
             }
         }
@@ -82,42 +81,20 @@ class Module {
         return self.functionDefns;
     }
 
-    public function getPrefixForModuleId(bir:ModuleId id, int partIndex) returns string? {
-        foreach var [prefix, { moduleId }] in self.parts[partIndex].imports.entries() {
-            if moduleId == id {
-                return prefix;
-            }
-        }
-        return ();
-    }
-
     public function getPartFile(int partIndex) returns bir:File {
-        return self.parts[partIndex].file;
+        return self.files[partIndex];
     }
 
     public function getPartFiles() returns bir:File[] {
-        return from var part in self.parts select part.file;
+        return from var f in self.files select f;
+    }
+
+    public function symbolToString(int partIndex, bir:Symbol sym) returns string {
+        return symbolToString(self.syms, partIndex, sym);
     }
 
     public function getExports() returns ModuleExports {
-        map<ExportedDefn> exports = {};
-        foreach var defn in self.defns {
-            ExportedDefn|false? export;
-            if defn.vis != "public" {
-                continue;
-            }
-            if defn is s:FunctionDefn {
-                export = defn.signature;
-            }
-            else if defn is s:ConstDefn {
-                export = defn.resolved;
-            }
-            else {
-                export = defn.semType;
-            }
-            exports[defn.name] = <ExportedDefn>export;
-        }
-        return exports.cloneReadOnly();
+        return createExports(self.syms);
     }
 }
 
@@ -166,17 +143,18 @@ function groupImports(s:ScannedModulePart[] parts, bir:ModuleId modId) returns M
 }
 
 public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|string?)[] resolvedImports) returns ResolvedModule|err:Any|io:Error {
-    ModulePart[] parts = check importPartMaps(scanned, resolvedImports);
-
-    ModuleTable mod = table [];
+    ModuleSymbols syms = { tc: t:typeCheckContext(env) };
+    s:SourceFile[] files = from var p in scanned.parts select p.sourceFile();
+    syms.partPrefixes.setLength(scanned.parts.length());
+    check importPartPrefixes(scanned, resolvedImports, files, syms.partPrefixes);    
     foreach var scannedPart in scanned.parts {
         s:ModulePart part = check s:parseModulePart(scannedPart);
-        check addModulePart(mod, part);
+        check addModulePart(syms.defns, part);
     }
-    check resolveTypes(env, mod);
+    check resolveTypes(syms);
     // XXX Should have an option that controls whether we perform this check
-    check validEntryPoint(mod);
-    return new Module(scanned.id, parts, mod, env);
+    check validEntryPoint(syms.defns);
+    return new Module(scanned.id, files, syms);
 }
 
 public function scanModule(SourcePart[] sourceParts, bir:ModuleId id) returns ScannedModule|err:Any|io:Error {
@@ -203,8 +181,7 @@ function loadSourcePart(SourcePart part, int i) returns s:SourceFile|io:Error {
 
 final bir:ModuleId BALLERINA_IO = { org: "ballerina", names: ["io"] };
 
-function importPartMaps(ScannedModule scanned, (ModuleExports|string?)[] resolvedImports) returns ModulePart[]|err:Any {
-    ModulePart[] parts = from var part in scanned.parts select { file: part.sourceFile(), imports: {} };
+function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] resolvedImports, s:SourceFile[] files, map<Import>[] partPrefixes) returns err:Any? {
     ModuleIdImports[] importsById = scanned.importsById;
     foreach int i in 0 ..< importsById.length() {
         var moduleId = importsById[i].id;
@@ -218,16 +195,15 @@ function importPartMaps(ScannedModule scanned, (ModuleExports|string?)[] resolve
         foreach var decl in importsById[i].imports {
             if resolved is string? {
                 err:Message msg = resolved == () ? `unsupported module ${moduleIdToString(moduleId)}` : resolved;
-                return err:unimplemented(msg, loc=err:location(parts[decl.partIndex].file, decl.pos));
+                return err:unimplemented(msg, loc=err:location(files[decl.partIndex], decl.pos));
             }
             else {
                 string? declPrefix = decl.prefix;
                 string prefix = declPrefix == () ? moduleIdDefaultPrefix(moduleId) : declPrefix;
-                parts[decl.partIndex].imports[prefix] = { decl, moduleId, defns: resolved };
+                partPrefixes[decl.partIndex][prefix] = { decl, moduleId, defns: resolved };
             }
         }
     }
-    return parts;
 }
 
 function moduleIdDefaultPrefix(bir:ModuleId id) returns string {
@@ -246,7 +222,7 @@ function moduleIdToString(bir:ModuleId id) returns string {
     }
 }
 
-function validEntryPoint(ModuleTable mod) returns err:Any? {
+function validEntryPoint(ModuleDefns mod) returns err:Any? {
     s:ModuleLevelDefn? defn = mod["main"];
     if defn is s:FunctionDefn {
         if defn.vis != "public" {
@@ -261,7 +237,7 @@ function validEntryPoint(ModuleTable mod) returns err:Any? {
     }
 }
 
-function addModulePart(ModuleTable mod, s:ModulePart part) returns err:Semantic? {
+function addModulePart(ModuleDefns mod, s:ModulePart part) returns err:Semantic? {
     foreach s:ModuleLevelDefn defn in part.defns {
         if mod.hasKey(defn.name) {
             return err:semantic(`duplicate definition if ${defn.name}`, s:defnLocation(defn));
@@ -272,13 +248,63 @@ function addModulePart(ModuleTable mod, s:ModulePart part) returns err:Semantic?
 
 // This is old interface for showTypes
 public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:SemType>]|err:Any|io:Error {
-    ModuleTable mod = table [];
+    t:Env env = new;
+    ModuleSymbols syms = { tc: t:typeCheckContext(env) };
     foreach int i in 0 ..< sourceParts.length() {
         var loaded = check loadSourcePart(sourceParts[i], 0);
         s:ScannedModulePart part = check s:scanModulePart(loaded, i);
-        check addModulePart(mod, check s:parseModulePart(part));
+        check addModulePart(syms.defns, check s:parseModulePart(part));
     }
-    t:Env env = new;
-    check resolveTypes(env, mod);
-    return [env, createTypeMap(mod)];
+    check resolveTypes(syms);
+    return [env, createTypeMap(syms)];
+}
+
+function symbolToString(ModuleSymbols mod, int partIndex, bir:Symbol sym) returns string {
+    string prefix;
+    if sym is bir:InternalSymbol {
+        prefix = "";
+    }
+    else {
+        bir:ModuleId modId = sym.module;
+        string? importPrefix = getPrefixForModuleId(mod, partIndex, modId);
+        if importPrefix == () {
+            string? org = modId.org;
+            string orgString = org == () ? "" : org + "/";
+            prefix = "{" + orgString  + ".".'join(...sym.module.names) + "}";
+        }
+        else {
+            prefix = importPrefix + ":";
+        }
+    }
+    return prefix + sym.identifier;
+}
+
+function getPrefixForModuleId(ModuleSymbols mod, int partIndex, bir:ModuleId id) returns string? {
+    foreach var [prefix, { moduleId }] in mod.partPrefixes[partIndex].entries() {
+        if moduleId == id {
+            return prefix;
+        }
+    }
+    return ();
+}
+
+function createExports(ModuleSymbols mod) returns ModuleExports {
+    map<ExportedDefn> exports = {};
+    foreach var defn in mod.defns {
+        ExportedDefn|false? export;
+        if defn.vis != "public" {
+            continue;
+        }
+        if defn is s:FunctionDefn {
+            export = defn.signature;
+        }
+        else if defn is s:ConstDefn {
+            export = defn.resolved;
+        }
+        else {
+            export = defn.semType;
+        }
+        exports[defn.name] = <ExportedDefn>export;
+    }
+    return exports.cloneReadOnly();
 }

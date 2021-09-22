@@ -12,7 +12,7 @@ public type Module object {
     public function getTypeCheckContext() returns t:TypeCheckContext;
     public function getFunctionDefns() returns readonly & FunctionDefn[];
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
-    public function getPrefixForModuleId(ModuleId id, int partIndex) returns string?;
+    public function symbolToString(int partIndex, Symbol sym) returns string;
     // Get the File for a give part index
     public function getPartFile(int partIndex) returns File;
     public function getPartFiles() returns File[];
@@ -58,26 +58,6 @@ public type InternalSymbol readonly & record {|
 |};
 
 public type Symbol InternalSymbol|ExternalSymbol;
-
-public function symbolToString(Module mod, int partIndex, Symbol sym) returns string {
-    string prefix;
-    if sym is InternalSymbol {
-        prefix = "";
-    }
-    else {
-        ModuleId modId = sym.module;
-        string? importPrefix = mod.getPrefixForModuleId(modId, partIndex);
-        if importPrefix == () {
-            string? org = modId.org;
-            string orgString = org == () ? "" : org + "/";
-            prefix = "{" + orgString  + ".".'join(...sym.module.names) + "}";
-        }
-        else {
-            prefix = importPrefix + ":";
-        }
-    }
-    return prefix + sym.identifier;
-}
 
 public type FunctionRef readonly & record {|
     Symbol symbol;

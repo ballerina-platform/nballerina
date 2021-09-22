@@ -236,29 +236,29 @@ function roTest() {
 
 @test:Config{}
 function simpleArrayMemberTypeTest() {
-    Env env = new;
-    testArrayMemberTypeOk(env, ANY);
-    testArrayMemberTypeOk(env, STRING);
-    testArrayMemberTypeOk(env, INT);
-    testArrayMemberTypeOk(env, TOP);
-    testArrayMemberTypeOk(env, BOOLEAN);
-    testArrayMemberTypeFail(env, createJson(env));
-    testArrayMemberTypeFail(env, intWidthUnsigned(8));
-    test:assertEquals(simpleArrayMemberType(new Env(), INT), ());
-    test:assertEquals(simpleArrayMemberType(new Env(), uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW)), true), TOP);
+    TypeCheckContext tc = typeCheckContext(new);
+    testArrayMemberTypeOk(tc, ANY);
+    testArrayMemberTypeOk(tc, STRING);
+    testArrayMemberTypeOk(tc, INT);
+    testArrayMemberTypeOk(tc, TOP);
+    testArrayMemberTypeOk(tc, BOOLEAN);
+    testArrayMemberTypeFail(tc, createJson(tc.env));
+    testArrayMemberTypeFail(tc, intWidthUnsigned(8));
+    test:assertEquals(simpleArrayMemberType(typeCheckContext(new Env()), INT), ());
+    test:assertEquals(simpleArrayMemberType(typeCheckContext(new Env()), uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW)), true), TOP);
 }
 
-function testArrayMemberTypeOk(Env env, UniformTypeBitSet memberType) {
+function testArrayMemberTypeOk(TypeCheckContext tc, UniformTypeBitSet memberType) {
     ListDefinition def = new;
-    SemType t = def.define(env, [], memberType);
-    UniformTypeBitSet? bits = simpleArrayMemberType(env, t, true);
+    SemType t = def.define(tc.env, [], memberType);
+    UniformTypeBitSet? bits = simpleArrayMemberType(tc, t, true);
     test:assertTrue(bits == memberType);
 }
 
-function testArrayMemberTypeFail(Env env, SemType memberType) {
+function testArrayMemberTypeFail(TypeCheckContext tc, SemType memberType) {
     ListDefinition def = new;
-    SemType t = def.define(env, [], memberType);
-    UniformTypeBitSet? bits = simpleArrayMemberType(env, t, true);
+    SemType t = def.define(tc.env, [], memberType);
+    UniformTypeBitSet? bits = simpleArrayMemberType(tc, t, true);
     test:assertTrue(bits == ());
 }
 
