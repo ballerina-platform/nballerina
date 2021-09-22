@@ -93,6 +93,8 @@ const FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL = 0x56;
  
 const FRAG_KEYWORD = 0x80;
 
+const FRAG_DECIMAL_NUMBER_D = 0x81;
+
 final readonly & Keyword[] keywords = [
     "any",
     "as",
@@ -715,6 +717,10 @@ function endDecimal(FragCode fragCodeIfNoSuffix, int[] codePoints, int i, Scanne
         int cp = codePoints[i];
         if cp == CP_UPPER_F || cp == CP_LOWER_F {
             endFragment(FRAG_DECIMAL_FP_NUMBER_F, i + 1, result);
+            return i + 1;
+        } 
+        else if cp == CP_UPPER_D || cp == CP_LOWER_D {
+            endFragment(FRAG_DECIMAL_NUMBER_D, i + 1, result);
             return i + 1;
         }
     }

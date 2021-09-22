@@ -189,6 +189,9 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, 
         else if value is int {
             return t:intConst(value);
         }
+        else if value is decimal {
+            return t:decimalConst(value);
+        }
         else {
             return t:floatConst(value);
         }

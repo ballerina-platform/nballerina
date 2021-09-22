@@ -243,17 +243,32 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 function parseNumericLiteralTypeDesc(Tokenizer tok, Position? signPos = ()) returns SingletonTypeDesc|err:Syntax {
     NumericLiteralExpr expr = check parseNumericLiteralExpr(tok);
     if expr is FpLiteralExpr {
-        var f = float:fromString(expr.untypedLiteral);
-        if f is error {
-            return tok.err(`invalid float literal ${expr.untypedLiteral}`); // don't think this should happen
-        }
-        else {
-            float value = f;
-            if signPos != () {
-                value = -value;
+        if expr.typeSuffix == "d" {
+            var f = decimal:fromString(expr.untypedLiteral);
+            if f is error {
+                return tok.err(`invalid decimal literal ${expr.untypedLiteral}`);
             }
-            return { value };
-        }
+            else {
+                decimal value = f;
+                if signPos != () {
+                    value = -value;
+                }
+                return { value };
+            }
+        } 
+        else {
+            var f = float:fromString(expr.untypedLiteral);
+            if f is error {
+                return tok.err(`invalid float literal ${expr.untypedLiteral}`); // don't think this should happen
+            }
+            else {
+                float value = f;
+                if signPos != () {
+                    value = -value;
+                }
+                return { value };
+            }
+        }   
     }
     else {
         var n = intFromIntLiteral(expr.base, expr.digits);
