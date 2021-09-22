@@ -18,12 +18,12 @@
 #define EXCEEDS_MAX_PC_COUNT -3
 #define OUT_OF_MEMORY -4
 
-#define NON_PUBLIC_SYMBOL_PREFIX "_B_"
-#define NON_PUBLIC_SYMBOL_PREFIX_LENGTH strlen(NON_PUBLIC_SYMBOL_PREFIX)
-#define PUBLIC_SYMBOL_PREFIX "_B"
-#define PUBLIC_SYMBOL_PREFIX_LENGTH strlen(PUBLIC_SYMBOL_PREFIX)
-#define MODULE_PREFIX "m"
-#define MODULE_PREFIX_LENGTH strlen(MODULE_PREFIX)
+#define PUBLIC_BALLERINA_NAME 1
+#define NON_PUBLIC_BALLERINA_NAME 2
+#define NON_BALLERINA_NAME 3
+#define _B_NON_BALLERINA_NAME 4
+
+typedef int DemangleResult;
 
 struct backtrace_state *state = NULL;
 
@@ -58,12 +58,10 @@ static void getSimpleBacktrace(SimpleBacktrace *p);
 static char *saveMessage(const char *msg);
 static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNumber, BacktraceError *error);
 static void processInitialPC(PC pc, int64_t lineNumber, BacktraceStartLine *backtraceStartLine);
-static int getOrgNameOffset(const char *mangledName);
-static int getzQualifierOffset(const char *mangledName);
-static void printModuleName(const char *mangledName, bool *isFirstQualifier, FILE *fp);
-static void printLocalName(const char *mangledName, FILE *fp);
-static int printnQualifier(const char *mangledName, bool *isFirstQualifier, FILE *fp);
-static int getDecimalNumberLength(int n);
+static DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp);
+static bool demangleModules(const char **mangledModules, FILE *fp);
+static bool demangleCountedName(const char **pp, const char **name);
+static void printUpto(const char *end, const char *start, FILE *fp);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     SimpleBacktrace simpleBacktrace;
@@ -265,81 +263,111 @@ TaggedPtr BAL_LANG_ERROR_NAME(message)(TaggedPtr error) {
 }
 
 void _bal_print_mangled_name(const char *mangledName, FILE *fp) {
-    if (strncmp(mangledName, NON_PUBLIC_SYMBOL_PREFIX, NON_PUBLIC_SYMBOL_PREFIX_LENGTH) == 0) {
-        fprintf(fp, "%s", mangledName + NON_PUBLIC_SYMBOL_PREFIX_LENGTH);
-        return;
+    const char *localName;
+    DemangleResult res = demangle(mangledName, &localName, NULL);
+
+    if (res == NON_PUBLIC_BALLERINA_NAME) {
+        fprintf(fp, "%s", localName);
     }
-    if (strncmp(mangledName, PUBLIC_SYMBOL_PREFIX, PUBLIC_SYMBOL_PREFIX_LENGTH) == 0) {
-        printPublicFunction(mangledName + PUBLIC_SYMBOL_PREFIX_LENGTH, fp);
-        return;
+    else if (res == PUBLIC_BALLERINA_NAME) {
+        fprintf(fp, "%s (", localName);
+        demangle(mangledName, &localName, fp);
+        fputs(")", fp);
     }
-    fprintf(fp, "%s", mangledName);
+    else if (res == NON_BALLERINA_NAME || res == _B_NON_BALLERINA_NAME) {
+        fprintf(fp, "%s", mangledName);
+    }
 }
 
-static void printPublicFunction(const char *mangledPublicFunction, FILE *fp) {
-    int orgNameLength = getOrgNameLength(mangledPublicFunction);
+static DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp) {
+    if (mangledName[0] != '_' || mangledName[1] != 'B') {
+        return NON_BALLERINA_NAME;
+    }
+    mangledName += 2;
+    if (mangledName[0] == '_') {
+        *localName = mangledName + 1;
+        return NON_PUBLIC_BALLERINA_NAME;
+    }
 
-    bool isFirstQualifier = true;
-    printModuleName(mangledPublicFunction + orgNameLength, &isFirstQualifier, fp);
+    bool ballerinaOrg = false; 
+    if (mangledName[0] == 'b')  {
+        ballerinaOrg = true;
+        mangledName++;
+    }
+
+    const char *org;
+    if (mangledName[0] == '0') {
+        mangledName++;
+        org = NULL;
+    }
+    else {
+        if (!demangleCountedName(&mangledName, &org)) {
+            return _B_NON_BALLERINA_NAME;
+        }
+    }
+    if (fp != NULL) {
+        bool haveOrg = false;
+        if (ballerinaOrg) {
+            fputs("ballerina", fp);
+            haveOrg = true;
+        }
+        if (org != NULL) {
+            printUpto(mangledName, org, fp);
+            haveOrg = true;
+        }
+        if (haveOrg) {
+            putc('/', fp);
+        }
+    }
+
+    if (!demangleModules(&mangledName, fp)) {
+        return NON_BALLERINA_NAME;
+    }
+    const char *lastModule;
+    if (!demangleCountedName(&mangledName, &lastModule)) {
+        return NON_BALLERINA_NAME;
+    } 
+    *localName = mangledName;
+    if (fp != NULL) {
+        printUpto(mangledName, lastModule, fp);
+    }
+    return PUBLIC_BALLERINA_NAME;
 }
 
-static int getOrgNameLength(const char *mangledOrgName) {
-    int length = 0;
-    // Organization name is ballerina
-    if (mangledOrgName[0] == 'b') {
-        length++;
+static bool demangleModules(const char **mangledModules, FILE *fp) {
+    if (*mangledModules[0] != 'm') {
+        return true;
     }
-    return length + getZQualifierLength(mangledOrgName + length);
-}
-
-static int getZQualifierLength(const char *mangledQualifier) {
-    int length = 0;
-    if (mangledQualifier[0] == '0') {
-        return ++length;
+    *mangledModules = *mangledModules + 1;
+    const char *module;
+    if (!demangleCountedName(mangledModules, &module)) {
+        return false;
     }
-    int decimalNumber = atoi(mangledQualifier + length);
-    length = length + getDecimalNumberLength(decimalNumber);
-    if (mangledQualifier[length] == '_') {
-        length++;
-    }
-    return length + decimalNumber;
-}
-
-static void printModuleName(const char *mangledModuleName, bool *isFirstQualifier, FILE *fp) {
-    int nQualifierLength = 0;
-    if (strncmp(mangledModuleName, MODULE_PREFIX, MODULE_PREFIX_LENGTH) != 0) {
-        nQualifierLength = printNQualifier(mangledModuleName, isFirstQualifier, fp);
-        // Print local-name
-        fprintf(fp, ":%s", mangledModuleName + nQualifierLength);
-        return;
-    }
-    nQualifierLength = printNQualifier(mangledModuleName + MODULE_PREFIX_LENGTH, isFirstQualifier, fp);
-    printModuleName(mangledModuleName + MODULE_PREFIX_LENGTH + nQualifierLength, isFirstQualifier, fp);
-}
-
-static int printNQualifier(const char *mangledQualifier, bool *isFirstQualifier, FILE *fp) {
-    if (*isFirstQualifier == false) {
+    if (fp != NULL) {
+        printUpto(*mangledModules, module, fp);
         fputs(".", fp);
     }
-    *isFirstQualifier = false;
-    int nQualifierLength = 0;
-    int decimalNumber = atoi(mangledQualifier);
-    nQualifierLength = nQualifierLength + getDecimalNumberLength(decimalNumber);
-    if (mangledQualifier[nQualifierLength] == '_') {
-        nQualifierLength++;
-    }
-    fprintf(fp, "%.*s", decimalNumber, mangledQualifier + nQualifierLength);
-    return nQualifierLength + decimalNumber;
+    return demangleModules(mangledModules, fp);
 }
 
-static int getDecimalNumberLength(int n) {
-    if (n == 0) {
-        return 1;
+static bool demangleCountedName(const char **pp, const char **name) {
+    long nChars;
+    int nRead;
+    if (sscanf(*pp, "%ld%n", &nChars, &nRead) <= 0) {
+        return false;
     }
-    int length = 0;
-    while (n > 0) {
-        n = n / 10;
-        length++;
+    *name = *pp + nRead;
+    if (*name[0] == '_') {
+        *name = *name + 1;
+        nChars++;
     }
-    return length;
+    *pp = *pp + nRead + nChars;
+    return true;
+}
+
+static void printUpto(const char *end, const char *start, FILE *fp) {
+    while (start < end) {
+        fputc(*start, fp);
+        start++;
+    }
 }
