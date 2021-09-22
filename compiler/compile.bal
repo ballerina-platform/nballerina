@@ -76,8 +76,8 @@ function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] so
     // ResolvedImport[] resolvedImports = from var mod in scanned.getImports() select check resolveImport(cx, mod);
     ResolvedImport[] resolvedImports = [];
     foreach var mod in scanned.getImports() {
-        ResolvedImport im = check resolveImport(cx, mod);
-        resolvedImports.push(im);
+        ResolvedImport ri = check resolveImport(cx, mod);
+        resolvedImports.push(ri);
     }
     front:ResolvedModule mod = check front:resolveModule(scanned, cx.env, resolvedImports);
     LlvmModule llMod = check cx.buildModule(mod);
