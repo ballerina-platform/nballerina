@@ -75,7 +75,7 @@ NORETURN COLD void _bal_panic(TaggedPtr error) {
     fwrite(bytes, 1, nBytes, stderr);
     putc('\n', stderr);
     fflush(stderr);
-    _bal_error_backtrace_print(ep, BACKTRACE_START_INDEX);
+    _bal_error_backtrace_print(ep, BACKTRACE_START_INDEX, stderr);
     abort();
 }
 

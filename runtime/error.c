@@ -23,6 +23,7 @@ struct backtrace_state *state = NULL;
 typedef struct {
     int code;
     char *message;
+    FILE *fp;
 } BacktraceError;
 
 // The lineNumber of the first backtrace entry is passed
@@ -45,7 +46,7 @@ static void storeBacktraceErrorCB(void *data, const char *msg, int errnum);
 static int printBacktraceLineCB(void *data, PC pc, const char *filename, int lineno, const char *function);
 static void printMissingSymbolsCB(void *data, uintptr_t pc, const char *symname, uintptr_t symval, uintptr_t symsize);
 static int storePCCB(void *data, PC pc);
-static void printBacktraceLine(const char *filename, int64_t lineNumber, const char *function);
+static void printBacktraceLine(const char *filename, int64_t lineNumber, const char *function, FILE *fp);
 static void getSimpleBacktrace(SimpleBacktrace *p);
 static char *saveMessage(const char *msg);
 static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNumber, BacktraceError *error);
@@ -129,9 +130,9 @@ static int storePCCB(void *data, PC pc) {
     return SUCCESS;
 }
 
-void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start) {
+void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start, FILE *fp) {
     uint32_t nPCs = ep->nPCs;
-    BacktraceError err = { ep->backtraceErrorCode, ep->backtraceErrorMessage };
+    BacktraceError err = { ep->backtraceErrorCode, ep->backtraceErrorMessage, fp };
     if (start < nPCs) {
         processPCs(ep->pcs, nPCs, start, ep->lineNumber, &err);
     }
@@ -140,30 +141,30 @@ void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start) {
         return;
     }
     if (err.code == EXCEEDS_MAX_PC_COUNT) {
-        fputs("...\n", stderr);       
+        fputs("...\n", fp);       
     }
     else if (err.code == OUT_OF_MEMORY) {
-        fputs("out of memory to store backtrace\n", stderr);
+        fputs("out of memory to store backtrace\n", fp);
     }
     else {
-        fputs("libbacktrace", stderr);
+        fputs("libbacktrace", fp);
         if (err.message != NULL) {
-            fprintf(stderr, ": %s", err.message);
+            fprintf(fp, ": %s", err.message);
             if (err.message != ep->backtraceErrorMessage) {
                 free(err.message);
             }
         }
         if (err.code > 0) {
-            fprintf (stderr, ": %s", strerror(err.code));
+            fprintf (fp, ": %s", strerror(err.code));
         }
-        fputc('\n', stderr);
+        fputc('\n', fp);
     }
-    fflush(stderr);
+    fflush(fp);
 }
 
 static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNumber, BacktraceError *error) {
     // Handle the starting pc seperately
-    BacktraceStartLine backtraceStartLine = { { error->code, error->message }, lineNumber };
+    BacktraceStartLine backtraceStartLine = { { error->code, error->message, error->fp }, lineNumber };
     processInitialPC(pcs[start], lineNumber, &backtraceStartLine);
     backtraceStartLine.lineNumber = 0;
     if (backtraceStartLine.error.code == NO_DEBUG_INFO) {
@@ -195,35 +196,34 @@ static int printBacktraceLineCB(void *data, PC pc, const char *filename, int lin
     if (backtraceStartLine->lineNumber != 0) {
         lineno = backtraceStartLine->lineNumber;
     }
-    printBacktraceLine(filename, lineno, function);
+    printBacktraceLine(filename, lineno, function, backtraceStartLine->error.fp);
     return SUCCESS;
 }
 
 // Implementation of backtrace_syminfo_callback
 static void printMissingSymbolsCB(void *data, uintptr_t pc, const char *symname, uintptr_t symval, uintptr_t symsize) {
     BacktraceStartLine *backtraceStartLine = data;
-    printBacktraceLine(NULL, backtraceStartLine->lineNumber, symname);
+    printBacktraceLine(NULL, backtraceStartLine->lineNumber, symname, backtraceStartLine->error.fp);
 }
 
-static void printBacktraceLine(const char *filename, int64_t lineNumber, const char *function) {
+static void printBacktraceLine(const char *filename, int64_t lineNumber, const char *function, FILE *fp) {
     // API docs say any of filename, lineno and function may be 0 meaning unavailable
     const char *sep = "    ";
     if (function != NULL) {
-        fprintf(stderr, "%s%s", sep, function);
+        fprintf(fp, "%s%s", sep, function);
         sep = " ";
     }
     if (filename != NULL) {
-        fprintf(stderr, "%s%s", sep, filename);
+        fprintf(fp, "%s%s", sep, filename);
         sep = ":";
     }
     if (lineNumber != 0) {
-        fprintf(stderr, "%s%" PRId64, sep, lineNumber);
+        fprintf(fp, "%s%" PRId64 "\n", sep, lineNumber);
+    } 
+    else if (function != NULL || filename != NULL) {
+        putc('\n', fp);
     }
-    else if (sep[1] != '\0') {
-        fprintf(stderr, "%s(no info about stack frame)", sep);
-    }
-    putc('\n', stderr);
-    fflush(stderr);
+    fflush(fp);
 }
 
 // Implementation of backtrace_error_callback
