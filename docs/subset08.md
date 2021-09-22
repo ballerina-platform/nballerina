@@ -176,7 +176,7 @@ expression = inner-expr | list-constructor-expr | mapping-constructor-expr
 
 const-expr = inner-expr # must also satisfy restrictions of const-expr as in Ballerina language spec
 
-const-reference-expr = identifier  # must refer to something defined with a const-decl
+const-reference-expr = identifier | qualified-identifier # must refer to something defined with a const-decl
 
 inner-expr = bitwise-or-expr
 

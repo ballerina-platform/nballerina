@@ -86,16 +86,6 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) re
         VarRefExpr lValue = { varName: identifier };
         return parseCompoundAssignStmt(tok, lValue, cur);
     }
-    else if cur == "(" {
-        check tok.advance();
-        FunctionCallExpr expr = check finishFunctionCallExpr(tok, (), identifier, pos);
-        return finishCallStmt(tok, expr);
-    }
-    else if cur == "." {
-        VarRefExpr varRef = { varName: identifier };
-        MethodCallExpr expr = check finishMethodCallExpr(tok, varRef);
-        return finishCallStmt(tok, expr);
-    }
     else if cur == "[" {
         VarRefExpr varRef = { varName: identifier };
         Position bracketPos = tok.currentPos();
@@ -121,15 +111,26 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) re
     }
     else if cur == ":" {
         check tok.advance();
-        string name = check tok.expectIdentifier();
-        check tok.expect("(");
-        FunctionCallExpr stmt = check finishFunctionCallExpr(tok, identifier, name, pos);
-        check tok.expect(";");
-        return stmt;
+        return finishOptQualIdentifierStmt(tok, identifier, check tok.expectIdentifier(), pos);
     }
     else if cur is [IDENTIFIER, string] {
         TypeDescRef ref = { ref: identifier, pos };
         return finishVarDeclStmt(tok, ref);
+    }
+    return finishOptQualIdentifierStmt(tok, (), identifier, pos);
+}
+
+function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string identifier, Position pos) returns Stmt|err:Syntax {
+    Token? cur = tok.current();
+    if cur == "(" {
+        check tok.advance();
+        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, pos);
+        return finishCallStmt(tok, expr);
+    }
+    else if cur == "." {
+        VarRefExpr varRef = { varName: identifier, prefix };
+        MethodCallExpr expr = check finishMethodCallExpr(tok, varRef);
+        return finishCallStmt(tok, expr);
     }
     return parseError(tok, "invalid statement");
 }

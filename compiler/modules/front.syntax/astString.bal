@@ -124,7 +124,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
     }
     else if stmt is CompoundAssignStmt {
         exprToWords(w, stmt.lValue);
-        w.push(stmt.op + "=");
+        w.push(stmt.op, CLING, "=");
         exprToWords(w, stmt.expr);
         w.push(";");
     }
@@ -215,6 +215,10 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         return;
     }
     else if td is TypeDescRef {
+        string? prefix = td.prefix;
+        if prefix != () {
+            w.push(prefix, ":", CLING);
+        }
         w.push(td.ref);
         return;
     }
@@ -429,6 +433,11 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         }
     }
     else {
+        // VarRefExpr
+        string? prefix = expr.prefix;
+        if prefix != () {
+            w.push(prefix, ":", CLING);
+        }
         w.push(expr.varName);
     }
 }
