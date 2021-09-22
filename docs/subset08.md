@@ -82,7 +82,7 @@ const-defn = ["public"] "const" [builtin-type-name] identifier "=" const-expr ";
 
 type-defn = ["public"] "type" identifier union-type-desc ";"
 
-type-desc = union-type-desc | array-type-desc | map-type-desc | type-ref 
+type-desc = union-type-desc | array-type-desc | map-type-desc | type-reference 
 
 union-type-desc =
   optional-type-desc
@@ -122,12 +122,12 @@ statement =
 local-var-decl-stmt = ["final"] inline-type-desc identifier "=" expression ";"
 
 # Same as type-desc except the parentheses are not allowed
-inline-type-desc = union-type-desc | inline-array-type-desc | map-type-desc | type-ref
+inline-type-desc = union-type-desc | inline-array-type-desc | map-type-desc | type-reference
 
 inline-array-type-desc = optional-type-desc "[" "]"
 
 # reference to a type definition
-type-ref = identifier
+type-reference = identifier | qualfied-identifier
 
 call-stmt =
    function-call-expr ";"
@@ -276,7 +276,7 @@ qualified-identifier = module-prefix ":" identifier
 
 module-prefix = identifier
 
-variable-reference-expr = identifier # can refer to parameter, local variable or constant
+variable-reference-expr = identifier | qualified-identifier # can refer to parameter, local variable or constant
 
 // tokens
 int-literal = (as in Ballerina language spec)
@@ -323,7 +323,8 @@ The following restrictions apply to imports with an organization of `ballerina`:
 
 ## Additions from subset 7
 
-* Multiple modules
+* a qualified identifier in a function-reference can refer to a function definition defined in another module
+* a variable-reference or type-reference can be a qualified identifier referring to a constant or type defined in another module
 
 ## Implemented spec changes since 2021R1
 
