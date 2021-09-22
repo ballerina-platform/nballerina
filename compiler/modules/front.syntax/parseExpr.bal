@@ -315,17 +315,12 @@ function finishErrorConstructorExpr(Tokenizer tok, Position pos) returns ErrorCo
 function finishMethodCallExpr(Tokenizer tok, Expr target) returns MethodCallExpr|err:Syntax {
     Position pos = tok.currentPos();
     check tok.advance();
-    Token? t = tok.current();
-    if t is [IDENTIFIER, string] {
-        string name = t[1];
+    string name = check tok.expectIdentifier();
+    if tok.current() == "(" {
         check tok.advance();
-        t = tok.current();
-        if t == "(" {
-            check tok.advance();
-            Expr[] args = check parseExprList(tok, ")");
-            MethodCallExpr methodCallExpr = { methodName: name, target, pos, args };
-            return methodCallExpr;
-        }
+        Expr[] args = check parseExprList(tok, ")");
+        MethodCallExpr methodCallExpr = { methodName: name, target, pos, args };
+        return methodCallExpr;
     }
     return parseError(tok, "expected method call after dot");
 }
