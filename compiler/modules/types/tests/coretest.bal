@@ -32,23 +32,23 @@ function testBitTwiddling() {
 @test:Config{}
 function test1() {
     Env env = new;
-    disjoint(typeCheckContext(env), STRING, INT);
-    disjoint(typeCheckContext(env), INT, NIL);
+    disjoint(typeContext(env), STRING, INT);
+    disjoint(typeContext(env), INT, NIL);
     SemType t1 = tuple(env, INT, INT);
-    disjoint(typeCheckContext(env), t1, INT);
+    disjoint(typeContext(env), t1, INT);
     SemType t2 = tuple(env, STRING, STRING);
-    disjoint(typeCheckContext(env), NIL, t2);
+    disjoint(typeContext(env), NIL, t2);
 }
 
-function disjoint(TypeCheckContext tc, SemType t1, SemType t2) {
-    test:assertFalse(isSubtype(tc, t1, t2));
-    test:assertFalse(isSubtype(tc, t2, t1));
-    test:assertTrue(isEmpty(tc, intersect(t1, t2)));
+function disjoint(Context cx, SemType t1, SemType t2) {
+    test:assertFalse(isSubtype(cx, t1, t2));
+    test:assertFalse(isSubtype(cx, t2, t1));
+    test:assertTrue(isEmpty(cx, intersect(t1, t2)));
 }
 
 @test:Config{}
 function test2() {
-    test:assertTrue(isSubtype(typeCheckContext(new), INT, TOP));
+    test:assertTrue(isSubtype(typeContext(new), INT, TOP));
 }
 
 @test:Config{}
@@ -60,8 +60,8 @@ function test3() {
 }
 
 function equiv(Env env, SemType s, SemType t) {
-    test:assertTrue(isSubtype(typeCheckContext(env), s, t)); 
-    test:assertTrue(isSubtype(typeCheckContext(env), t, s));
+    test:assertTrue(isSubtype(typeContext(env), s, t)); 
+    test:assertTrue(isSubtype(typeContext(env), t, s));
 }
 
 @test:Config{}
@@ -72,10 +72,10 @@ function test4() {
     SemType tsT = tuple(env, TOP, STRING);
     SemType iiT = tuple(env, INT, INT);
     SemType ttT = tuple(env, TOP, TOP);
-    var tc = typeCheckContext(env);
-    test:assertTrue(isSubtype(tc, isT, itT));
-    test:assertTrue(isSubtype(tc, isT, tsT));
-    test:assertTrue(isSubtype(tc, iiT, ttT));
+    var cx = typeContext(env);
+    test:assertTrue(isSubtype(cx, isT, itT));
+    test:assertTrue(isSubtype(cx, isT, tsT));
+    test:assertTrue(isSubtype(cx, iiT, ttT));
 }
 
 @test:Config{}
@@ -98,8 +98,8 @@ function recTest() {
     Env env = new;
     SemType t1 = recursiveTuple(env, (e, t) => [INT, union(t, NIL)]);
     SemType t2 = recursiveTuple(env, (e, t) => [union(INT, STRING), union(t, NIL)]);
-    test:assertTrue(isSubtype(typeCheckContext(env), t1, t2));
-    test:assertFalse(isSubtype(typeCheckContext(env), t2, t1));
+    test:assertTrue(isSubtype(typeContext(env), t1, t2));
+    test:assertFalse(isSubtype(typeContext(env), t2, t1));
 }
 
 @test:Config{}
@@ -107,7 +107,7 @@ function recTest2() {
     Env env = new;
     SemType t1 = union(NIL, recursiveTuple(env, (e, t) => [INT, union(t, NIL)]));
     SemType t2 = recursiveTuple(env, (e, t) => [INT, union(t, NIL)]);
-    test:assertTrue(isSubtype(typeCheckContext(env), t2, t1));
+    test:assertTrue(isSubtype(typeContext(env), t2, t1));
 }
 
 @test:Config{}
@@ -126,8 +126,8 @@ function tupleTest1() {
     Env env = new;
     SemType s = tuple(env, INT, STRING, NIL);
     SemType t = tuple(env, TOP, TOP, TOP);
-    test:assertTrue(isSubtype(typeCheckContext(env), s, t));
-    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+    test:assertTrue(isSubtype(typeContext(env), s, t));
+    test:assertFalse(isSubtype(typeContext(env), t, s));
 }
 
 @test:Config{}
@@ -135,8 +135,8 @@ function tupleTest2() {
     Env env = new;
     SemType s = tuple(env, INT, STRING, NIL);
     SemType t = tuple(env, TOP, TOP);
-    test:assertFalse(isSubtype(typeCheckContext(env), s, t));
-    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+    test:assertFalse(isSubtype(typeContext(env), s, t));
+    test:assertFalse(isSubtype(typeContext(env), t, s));
 }
 
 @test:Config{}
@@ -145,11 +145,11 @@ function tupleTest3() {
     SemType z1 = tuple(env);
     SemType z2 = tuple(env);
     SemType t = tuple(env, INT);
-    test:assertTrue(!isEmpty(typeCheckContext(env), z1));
-    test:assertTrue(isSubtype(typeCheckContext(env), z1, z2));
-    test:assertTrue(isEmpty(typeCheckContext(env), diff(z1, z2)));
-    test:assertFalse(isEmpty(typeCheckContext(env), diff(z1, INT)));
-    test:assertFalse(isEmpty(typeCheckContext(env), diff(INT, z1)));
+    test:assertTrue(!isEmpty(typeContext(env), z1));
+    test:assertTrue(isSubtype(typeContext(env), z1, z2));
+    test:assertTrue(isEmpty(typeContext(env), diff(z1, z2)));
+    test:assertFalse(isEmpty(typeContext(env), diff(z1, INT)));
+    test:assertFalse(isEmpty(typeContext(env), diff(INT, z1)));
 }
 
 
@@ -158,11 +158,11 @@ function tupleTest4() {
     Env env = new;
     SemType s = tuple(env, INT, INT);
     SemType t = tuple(env, INT, INT, INT);
-    test:assertFalse(isEmpty(typeCheckContext(env), s));
-    test:assertFalse(isEmpty(typeCheckContext(env), t));
-    test:assertFalse(isSubtype(typeCheckContext(env), s, t));
-    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
-    test:assertTrue(isEmpty(typeCheckContext(env), intersect(s, t)));
+    test:assertFalse(isEmpty(typeContext(env), s));
+    test:assertFalse(isEmpty(typeContext(env), t));
+    test:assertFalse(isSubtype(typeContext(env), s, t));
+    test:assertFalse(isSubtype(typeContext(env), t, s));
+    test:assertTrue(isEmpty(typeContext(env), intersect(s, t)));
 }
 
 function func(Env env, SemType args, SemType ret) returns SemType {
@@ -175,8 +175,8 @@ function funcTest1() {
     Env env = new;
     SemType s = func(env, INT, INT);
     SemType t = func(env, INT, union(NIL, INT));
-    test:assertTrue(isSubtype(typeCheckContext(env), s, t));
-    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+    test:assertTrue(isSubtype(typeContext(env), s, t));
+    test:assertFalse(isSubtype(typeContext(env), t, s));
 }
 
 
@@ -185,8 +185,8 @@ function funcTest2() {
     Env env = new;
     SemType s = func(env, union(NIL, INT), INT);
     SemType t = func(env, INT, INT);
-    test:assertTrue(isSubtype(typeCheckContext(env), s, t));
-    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+    test:assertTrue(isSubtype(typeContext(env), s, t));
+    test:assertFalse(isSubtype(typeContext(env), t, s));
 }
 
 @test:Config{}
@@ -194,8 +194,8 @@ function funcTest3() {
     Env env = new;
     SemType s = func(env, tuple(env, union(NIL, INT)), INT);
     SemType t = func(env, tuple(env, INT), INT);
-    test:assertTrue(isSubtype(typeCheckContext(env), s, t));
-    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+    test:assertTrue(isSubtype(typeContext(env), s, t));
+    test:assertFalse(isSubtype(typeContext(env), t, s));
 }
 
 @test:Config{}
@@ -203,8 +203,8 @@ function funcTest4() {
     Env env = new;
     SemType s = func(env, tuple(env, union(NIL, INT)), INT);
     SemType t = func(env, tuple(env, INT), union(NIL, INT));
-    test:assertTrue(isSubtype(typeCheckContext(env), s, t));
-    test:assertFalse(isSubtype(typeCheckContext(env), t, s));
+    test:assertTrue(isSubtype(typeContext(env), s, t));
+    test:assertFalse(isSubtype(typeContext(env), t, s));
 }
 
 @test:Config{}
@@ -229,36 +229,36 @@ function roTest() {
     ListDefinition ld = new;
     SemType t2 = ld.define(env, [], TOP);
     SemType t = diff(t1, t2);
-    TypeCheckContext tc = typeCheckContext(env);
-    boolean b = isEmpty(tc, t);
+    Context cx = typeContext(env);
+    boolean b = isEmpty(cx, t);
     test:assertTrue(b);
 }
 
 @test:Config{}
 function simpleArrayMemberTypeTest() {
-    TypeCheckContext tc = typeCheckContext(new);
-    testArrayMemberTypeOk(tc, ANY);
-    testArrayMemberTypeOk(tc, STRING);
-    testArrayMemberTypeOk(tc, INT);
-    testArrayMemberTypeOk(tc, TOP);
-    testArrayMemberTypeOk(tc, BOOLEAN);
-    testArrayMemberTypeFail(tc, createJson(tc.env));
-    testArrayMemberTypeFail(tc, intWidthUnsigned(8));
-    test:assertEquals(simpleArrayMemberType(typeCheckContext(new Env()), INT), ());
-    test:assertEquals(simpleArrayMemberType(typeCheckContext(new Env()), uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW)), true), TOP);
+    Context cx = typeContext(new);
+    testArrayMemberTypeOk(cx, ANY);
+    testArrayMemberTypeOk(cx, STRING);
+    testArrayMemberTypeOk(cx, INT);
+    testArrayMemberTypeOk(cx, TOP);
+    testArrayMemberTypeOk(cx, BOOLEAN);
+    testArrayMemberTypeFail(cx, createJson(cx.env));
+    testArrayMemberTypeFail(cx, intWidthUnsigned(8));
+    test:assertEquals(simpleArrayMemberType(typeContext(new Env()), INT), ());
+    test:assertEquals(simpleArrayMemberType(typeContext(new Env()), uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW)), true), TOP);
 }
 
-function testArrayMemberTypeOk(TypeCheckContext tc, UniformTypeBitSet memberType) {
+function testArrayMemberTypeOk(Context cx, UniformTypeBitSet memberType) {
     ListDefinition def = new;
-    SemType t = def.define(tc.env, [], memberType);
-    UniformTypeBitSet? bits = simpleArrayMemberType(tc, t, true);
+    SemType t = def.define(cx.env, [], memberType);
+    UniformTypeBitSet? bits = simpleArrayMemberType(cx, t, true);
     test:assertTrue(bits == memberType);
 }
 
-function testArrayMemberTypeFail(TypeCheckContext tc, SemType memberType) {
+function testArrayMemberTypeFail(Context cx, SemType memberType) {
     ListDefinition def = new;
-    SemType t = def.define(tc.env, [], memberType);
-    UniformTypeBitSet? bits = simpleArrayMemberType(tc, t, true);
+    SemType t = def.define(cx.env, [], memberType);
+    UniformTypeBitSet? bits = simpleArrayMemberType(cx, t, true);
     test:assertTrue(bits == ());
 }
 

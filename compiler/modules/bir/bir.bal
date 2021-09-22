@@ -9,7 +9,7 @@ public type Module object {
     public function getId() returns ModuleId;
     // A SemType of a potentially recursive type uses integers to refer to definitions
     // which are in arrays in this.
-    public function getTypeCheckContext() returns t:TypeCheckContext;
+    public function getTypeContext() returns t:Context;
     public function getFunctionDefns() returns readonly & FunctionDefn[];
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
     public function symbolToString(int partIndex, Symbol sym) returns string;

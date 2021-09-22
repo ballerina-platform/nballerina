@@ -236,7 +236,7 @@ class CodeGenFoldContext {
         return self.cx.semanticErr(msg, pos=pos, cause=cause);
     }
 
-    function typeCheckContext() returns t:TypeCheckContext {
+    function typeContext() returns t:Context {
         return self.cx.mod.tc;
     }
 
@@ -1500,7 +1500,7 @@ type Counter record {|
     int n = 0;
 |};
 
-function instantiateArrayFunctionSignature(t:TypeCheckContext tc, bir:FunctionSignature sig, t:SemType arrayType) returns bir:FunctionSignature {
+function instantiateArrayFunctionSignature(t:Context tc, bir:FunctionSignature sig, t:SemType arrayType) returns bir:FunctionSignature {
     t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(tc, arrayType);
     Counter counter = {};
     bir:FunctionSignature inst = instantiateSignature(sig, memberType, arrayType, counter);

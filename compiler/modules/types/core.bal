@@ -31,6 +31,8 @@ type TypeAtom readonly & record {|
 
 type AtomicType ListAtomicType|MappingAtomicType;
 
+
+// All the SemTypes used in any type operation (e.g. isSubtype) must have been created using the Env.
 public isolated class Env {
     private final table<TypeAtom> key(atomicType) atomTable = table [];
     // Set up index 0 for use by bddFixReadOnly
@@ -149,7 +151,12 @@ public type BddMemo record {|
 
 type BddMemoTable table<BddMemo> key(bdd);
 
-public class TypeCheckContext {
+// Operations on types require a Context.
+// There can be multiple contexts for the same Env.
+// Whereas an Env is isolated, a Context is not isolated.
+// A Context can memoize expensive operations.
+// Each strand should create its own Context. 
+public class Context {
     public final Env env;
     BddMemoTable listMemo = table [];
     BddMemoTable mappingMemo = table [];
@@ -189,7 +196,7 @@ type UniformSubtype [UniformTypeCode, SubtypeData];
 
 type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
 type UnaryOp function(SubtypeData t) returns SubtypeData;
-type UnaryTypeCheckOp function(TypeCheckContext tc, SubtypeData t) returns boolean;
+type UnaryTypeCheckOp function(Context cx, SubtypeData t) returns boolean;
 
 function binOpPanic(SubtypeData t1, SubtypeData t2) returns SubtypeData {
     panic error("binary operation should not be called");
@@ -199,7 +206,7 @@ function unaryOpPanic(SubtypeData t) returns SubtypeData {
     panic error("unary operation should not be called");
 }
 
-function unaryTypeCheckOpPanic(TypeCheckContext tc, SubtypeData t) returns boolean {
+function unaryTypeCheckOpPanic(Context cx, SubtypeData t) returns boolean {
     panic error("unary boolean operation should not be called");
 }
 
@@ -582,15 +589,15 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     return createComplexSemType(all, subtypes);    
 }
 
-public function roDiff(TypeCheckContext tc, SemType t1, SemType t2) returns SemType {
-    return maybeRoDiff(t1, t2, tc);
+public function roDiff(Context cx, SemType t1, SemType t2) returns SemType {
+    return maybeRoDiff(t1, t2, cx);
 }
 
 public function diff(SemType t1, SemType t2) returns SemType {
     return maybeRoDiff(t1, t2, ());
 }
 
-function maybeRoDiff(SemType t1, SemType t2, TypeCheckContext? tc) returns SemType {
+function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     UniformTypeBitSet all1;
     UniformTypeBitSet all2;
     UniformTypeBitSet some1;
@@ -638,7 +645,7 @@ function maybeRoDiff(SemType t1, SemType t2, TypeCheckContext? tc) returns SemTy
     UniformSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if tc is () || code < UT_COUNT_RO {
+        if cx is () || code < UT_COUNT_RO {
             // normal diff or read-only uniform type
             if data1 is () {
                 var complement = ops[code].complement;
@@ -665,7 +672,7 @@ function maybeRoDiff(SemType t1, SemType t2, TypeCheckContext? tc) returns SemTy
             else {
                 var diff = ops[code].diff;
                 var isEmpty = ops[code].isEmpty;
-                if isEmpty(tc, diff(data1, data2)) {
+                if isEmpty(cx, diff(data1, data2)) {
                     data = false;
                 }
                 else {
@@ -695,7 +702,7 @@ public function isNever(SemType t) returns boolean {
     return t is UniformTypeBitSet && t == 0;
 }
 
-public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
+public function isEmpty(Context cx, SemType t) returns boolean {
     if t is UniformTypeBitSet {
         return t == 0;
     }
@@ -707,7 +714,7 @@ public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
         foreach var st in unpackComplexSemType(t) {
             var [code, data] = st;
             var isEmpty = ops[code].isEmpty;
-            if !isEmpty(tc, data) {
+            if !isEmpty(cx, data) {
                 return false;
             }
         }
@@ -715,8 +722,8 @@ public function isEmpty(TypeCheckContext tc, SemType t) returns boolean {
     }
 }
     
-public function isSubtype(TypeCheckContext tc, SemType t1, SemType t2) returns boolean { 
-    return isEmpty(tc, diff(t1, t2));
+public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean { 
+    return isEmpty(cx, diff(t1, t2));
 }
 
 public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolean {
@@ -762,8 +769,8 @@ public function widenUnsigned(SemType t) returns SemType {
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
 // When `strict`, require ro and rw to be consistent; otherwise just consider rw.
-public function simpleArrayMemberType(TypeCheckContext tc, SemType t, boolean strict = false) returns UniformTypeBitSet? {
-    Env env = tc.env;
+public function simpleArrayMemberType(Context cx, SemType t, boolean strict = false) returns UniformTypeBitSet? {
+    Env env = cx.env;
     if t is UniformTypeBitSet {
         return t == LIST || (t == LIST_RW && !strict) ? TOP : ();
     }
@@ -804,8 +811,8 @@ function bddListSimpleMemberType(Env env, Bdd bdd) returns UniformTypeBitSet? {
 
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
-public function simpleMapMemberType(TypeCheckContext tc, SemType t, boolean strict = false) returns UniformTypeBitSet? {
-    Env env = tc.env;
+public function simpleMapMemberType(Context cx, SemType t, boolean strict = false) returns UniformTypeBitSet? {
+    Env env = cx.env;
     if t is UniformTypeBitSet {
         return t == MAPPING || (t == MAPPING_RW && !strict) ? TOP : ();
     }
@@ -1012,7 +1019,7 @@ public function singleNumericType(SemType semType) returns UniformTypeBitSet? {
     return ();
 }
 
-public function typeCheckContext(Env env) returns TypeCheckContext {
+public function typeContext(Env env) returns Context {
     return new(env);
 }
 

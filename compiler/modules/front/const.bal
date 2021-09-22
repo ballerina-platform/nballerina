@@ -21,7 +21,7 @@ type FoldContext object {
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
-    function typeCheckContext() returns t:TypeCheckContext;
+    function typeContext() returns t:Context;
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
     function isConstDefn() returns boolean;
 };
@@ -54,7 +54,7 @@ class ConstFoldContext {
         }
     }
 
-    function typeCheckContext() returns t:TypeCheckContext {
+    function typeContext() returns t:Context {
         return self.mod.tc;
     }
 
@@ -143,7 +143,7 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
 function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:ListConstructorExpr expr) returns s:Expr|FoldError {
     // grammar of subset07 guarantees that expectedType is non-nil
     t:SemType expectedListType = t:intersect(<t:SemType>expectedType, t:LIST_RW);
-    t:SemType? memberType = t:simpleArrayMemberType(cx.typeCheckContext(), expectedListType);
+    t:SemType? memberType = t:simpleArrayMemberType(cx.typeContext(), expectedListType);
     s:Expr[] members = expr.members;
     foreach int i in 0 ..< members.length() {
         members[i] = check foldExpr(cx, memberType, members[i]);
@@ -155,7 +155,7 @@ function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:List
 function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:MappingConstructorExpr expr) returns s:Expr|FoldError {
     // grammar of subset07 guarantees that expectedType is non-nil
     t:SemType expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING_RW);
-    t:SemType? memberType = t:simpleMapMemberType(cx.typeCheckContext(), expectedMappingType);
+    t:SemType? memberType = t:simpleMapMemberType(cx.typeContext(), expectedMappingType);
     expr.expectedType = expectedMappingType;
     foreach s:Field f in expr.fields {
         f.value = check foldExpr(cx, memberType, f.value);

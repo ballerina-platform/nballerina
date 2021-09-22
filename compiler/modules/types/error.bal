@@ -24,13 +24,13 @@ public function errorDistinct(int distinctId) returns SemType {
 
 // Similar to mappingSubtypeRoIsEmpty,
 // except that we use bddEveryPositive to ignore the distinct ids
-function errorSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
+function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = bddFixReadOnly(<Bdd>t);
-    BddMemo? mm = tc.mappingMemo[b];
+    BddMemo? mm = cx.mappingMemo[b];
     BddMemo m;
     if mm is () {
         m = { bdd: b };
-        tc.mappingMemo.add(m);
+        cx.mappingMemo.add(m);
     }
     else {
         m = mm;
@@ -42,7 +42,7 @@ function errorSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean
             return res;
         }
     }
-    boolean isEmpty = bddEveryPositive(tc, b, (), (), mappingFormulaIsEmpty);
+    boolean isEmpty = bddEveryPositive(cx, b, (), (), mappingFormulaIsEmpty);
     m.isEmpty = isEmpty;
     return isEmpty;    
 }

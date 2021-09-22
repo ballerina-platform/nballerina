@@ -9,10 +9,10 @@ type ConstEvalTest [string,SimpleConst];
 class TestFoldContext {
     // JBUG error if next line uncommented
     // *FoldContext;
-    t:TypeCheckContext tc;
+    t:Context tc;
 
     function init() {
-        self.tc = t:typeCheckContext(new);
+        self.tc = t:typeContext(new);
     }
     function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         return ();
@@ -20,7 +20,7 @@ class TestFoldContext {
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
         return err:semantic(msg, location("testConst.bal"), cause=cause);
     }
-    function typeCheckContext() returns t:TypeCheckContext {
+    function typeContext() returns t:Context {
         return self.tc;
     }
     function resolveTypeDesc(s:TypeDesc td) returns err:Semantic|t:SemType {

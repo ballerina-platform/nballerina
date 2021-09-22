@@ -11,7 +11,7 @@ type ModuleDefns table<s:ModuleLevelDefn> key(name);
 type ModuleSymbols record {|
     ModuleDefns defns = table [];
     map<Import>[] partPrefixes = [];
-    t:TypeCheckContext tc;
+    t:Context tc;
 |};
 
 type Import record {|
@@ -60,7 +60,7 @@ class Module {
 
     public function getId() returns bir:ModuleId => self.id;
 
-    public function getTypeCheckContext() returns t:TypeCheckContext => self.syms.tc;
+    public function getTypeContext() returns t:Context => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
         return codeGenFunction(self.syms, self.functionDefnSource[i], self.functionDefns[i].signature);
@@ -143,7 +143,7 @@ function groupImports(s:ScannedModulePart[] parts, bir:ModuleId modId) returns M
 }
 
 public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|string?)[] resolvedImports) returns ResolvedModule|err:Any|io:Error {
-    ModuleSymbols syms = { tc: t:typeCheckContext(env) };
+    ModuleSymbols syms = { tc: t:typeContext(env) };
     s:SourceFile[] files = from var p in scanned.parts select p.sourceFile();
     syms.partPrefixes.setLength(scanned.parts.length());
     check importPartPrefixes(scanned, resolvedImports, files, syms.partPrefixes);    
@@ -249,7 +249,7 @@ function addModulePart(ModuleDefns mod, s:ModulePart part) returns err:Semantic?
 // This is old interface for showTypes
 public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:SemType>]|err:Any|io:Error {
     t:Env env = new;
-    ModuleSymbols syms = { tc: t:typeCheckContext(env) };
+    ModuleSymbols syms = { tc: t:typeContext(env) };
     foreach int i in 0 ..< sourceParts.length() {
         var loaded = check loadSourcePart(sourceParts[i], 0);
         s:ScannedModulePart part = check s:scanModulePart(loaded, i);

@@ -17,7 +17,7 @@ function subtypeRels(front:SourcePart[] sources) returns string[]|err:Any|io:Err
     
     var [env, m] = check front:typesFromString(sources);
 
-    var tc = t:typeCheckContext(env);
+    var tc = t:typeContext(env);
 
     var entries = from var [name, t] in m.entries() order by name select [name, t];
     [string, string][] results = [];
