@@ -121,15 +121,11 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) re
     }
     else if cur == ":" {
         check tok.advance();
-        cur = tok.current();
-        if cur is [IDENTIFIER, string] {
-            string name = cur[1];
-            check tok.advance();
-            check tok.expect("(");
-            FunctionCallExpr stmt = check finishFunctionCallExpr(tok, identifier, name, pos);
-            check tok.expect(";");
-            return stmt;
-        }
+        string name = check tok.expectIdentifier();
+        check tok.expect("(");
+        FunctionCallExpr stmt = check finishFunctionCallExpr(tok, identifier, name, pos);
+        check tok.expect(";");
+        return stmt;
     }
     else if cur is [IDENTIFIER, string] {
         TypeDescRef ref = { ref: identifier, pos };
@@ -206,15 +202,12 @@ function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDec
 
 function finishVarDeclStmt(Tokenizer tok, TypeDesc td, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     Token? cur = tok.current();
-    if cur is [IDENTIFIER, string] {
-        check tok.advance();
-        // initExpr is required in the subset
-        check tok.expect("=");
-        Expr initExpr = check parseExpr(tok);
-        check tok.expect(";");
-        return { td, varName: cur[1], initExpr, isFinal };
-    }
-    return parseError(tok, "invalid VarDeclStmt");
+    string varName = check tok.expectIdentifier();
+    // initExpr is required in the subset
+    check tok.expect("=");
+    Expr initExpr = check parseExpr(tok);
+    check tok.expect(";");
+    return { td, varName, initExpr, isFinal };
 }
 
 function parseReturnStmt(Tokenizer tok) returns ReturnStmt|err:Syntax {
@@ -273,14 +266,11 @@ function parseForeachStmt(Tokenizer tok) returns ForeachStmt|err:Syntax {
     }
     check tok.advance();
     Token? cur = tok.current();
-    if cur is [IDENTIFIER, string] {
-        check tok.advance();
-        check tok.expect("in");
-        RangeExpr range = check parseRangeExpr(tok);
-        Stmt[] body = check parseStmtBlock(tok);
-        return { varName: cur[1], range, body };
-    }
-    return parseError(tok, "invalid foreach statement");
+    string varName = check tok.expectIdentifier();
+    check tok.expect("in");
+    RangeExpr range = check parseRangeExpr(tok);
+    Stmt[] body = check parseStmtBlock(tok);
+    return { varName, range, body };
 }
 
 function parseMatchStmt(Tokenizer tok) returns MatchStmt|err:Syntax {

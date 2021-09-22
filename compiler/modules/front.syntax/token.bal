@@ -268,6 +268,24 @@ class Tokenizer {
         return true;
     }
 
+    function expectIdentifier() returns string|err:Syntax {
+        Token? t = self.curTok;
+        if t is [IDENTIFIER, string] {
+            check self.advance();
+            return t[1];
+        }
+        else {
+            err:Template msg;
+            if t is string {
+                msg = `expected an identifier; got ${t}`;
+            }
+            else {
+                msg = `expected an identifier`;
+            }
+            return self.err(msg);
+        }
+    }
+
     function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns err:Syntax? {
         if self.curTok != tok {
             err:Template msg;

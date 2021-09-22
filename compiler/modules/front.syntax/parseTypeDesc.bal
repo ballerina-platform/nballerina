@@ -192,17 +192,12 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 return "int";
             }
             check tok.advance();
-            Token? t = tok.current();
-            if t is [IDENTIFIER, string] {
-                var name = t[1];
-                BuiltinIntSubtypeDesc? desc = BUILTIN_INT_SUBTYPES[name];
-                if !(desc is ()) {
-                    check tok.advance();
-                    return desc;
-                }
-                return tok.err("unrecognized integer subtype '" + name + "'");
+            var name = check tok.expectIdentifier();
+            BuiltinIntSubtypeDesc? desc = BUILTIN_INT_SUBTYPES[name];
+            if !(desc is ()) {
+                return desc;
             }
-            // match falls through to parseError
+            return tok.err("unrecognized integer subtype '" + name + "'");
         }
         [IDENTIFIER, var ref] => {
             TypeDescRef r = { ref, pos: tok.currentPos() };
