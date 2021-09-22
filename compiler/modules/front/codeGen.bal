@@ -1025,8 +1025,9 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenTypeTest(cx, bb, env, td, left, negated);
         }
         // Variable reference
-        var { varName } => {
-            return codeGenVarRefExpr(cx, varName, env, bb);
+        // JBUG does not work as match pattern
+        var ref if ref is s:VarRefExpr => {
+            return codeGenVarRefExpr(cx, ref, env, bb);
         }
         // Constant
         // JBUG does not work as match pattern `var { value, multiSemType }`
@@ -1232,8 +1233,9 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     }
 }
 
-function codeGenVarRefExpr(CodeGenContext cx, string name, Environment env, bir:BasicBlock bb) returns CodeGenError|ExprEffect{
-    var v = check lookupVarRef(cx, name, env);
+function codeGenVarRefExpr(CodeGenContext cx, s:VarRefExpr ref, Environment env, bir:BasicBlock bb) returns CodeGenError|ExprEffect {
+    // xxx #471 should pass `ref`, not just the `varName`
+    var v = check lookupVarRef(cx, ref.varName, env);
     bir:Operand result;
     Binding? binding;
     if v is t:Value {

@@ -239,6 +239,7 @@ public type RangeExpr record {|
 |};
 
 public type VarRefExpr record {|
+    string? prefix = ();
     string varName;
 |};
 
@@ -351,6 +352,7 @@ public type BinaryTypeDesc record {|
 |};
 
 public type TypeDescRef record {|
+    string? prefix = ();
     string ref;
     Position pos;
 |};

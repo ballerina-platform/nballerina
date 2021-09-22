@@ -223,15 +223,13 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
         Position pos = tok.currentPos();
-        string identifier = t[1];
-        VarRefExpr expr = { varName: identifier };
         check tok.advance();
-        t = tok.current();
-        if t == "(" {
+        var [prefix, varName] = check parseOptQualIdentifier(tok, t[1]);
+        if tok.current() == "(" {
             check tok.advance();
-            return finishFunctionCallExpr(tok, (), identifier, pos);
+            return finishFunctionCallExpr(tok, prefix, varName, pos);
         }
-        return expr;
+        return { prefix, varName };
     }
     else if t is [DECIMAL_NUMBER, string] {
         IntLiteralExpr expr = { base: 10, digits: t[1], pos: tok.currentPos() };
@@ -406,10 +404,10 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
         return expr;
     }
     match t {
-        [IDENTIFIER, var varName] => {
-            VarRefExpr expr = { varName };
+        [IDENTIFIER, var identifier] => {
             check tok.advance();
-            return expr;
+            var [prefix, varName] = check parseOptQualIdentifier(tok, identifier);
+            return { prefix, varName };
         }
         [STRING_LITERAL, var value] => {
             ConstValueExpr expr = { value };
@@ -433,6 +431,16 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
         }
     }
     return parseError(tok);
+}
+
+function parseOptQualIdentifier(Tokenizer tok, string identifier) returns [string?, string]|err:Syntax {
+    if tok.current() == ":" {
+        check tok.advance();
+        return [identifier, check tok.expectIdentifier()];
+    }
+    else {
+        return [(), identifier];
+    }
 }
 
 function parseNumericLiteralExpr(Tokenizer tok) returns NumericLiteralExpr|err:Syntax {

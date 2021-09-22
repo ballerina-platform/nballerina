@@ -199,10 +199,11 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             }
             return tok.err("unrecognized integer subtype '" + name + "'");
         }
-        [IDENTIFIER, var ref] => {
-            TypeDescRef r = { ref, pos: tok.currentPos() };
+        [IDENTIFIER, var identifier] => {
+            Position pos = tok.currentPos();
             check tok.advance();
-            return r;
+            var [prefix, ref] = check parseOptQualIdentifier(tok, identifier);
+            return { prefix, ref, pos };
         }
         [STRING_LITERAL, var str] => {
             check tok.advance();
