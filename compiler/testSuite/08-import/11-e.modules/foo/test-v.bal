@@ -1,3 +1,3 @@
 public function foo(int a) returns string {
-   return a + "a"; // @error
+   return "a";
 }
