@@ -72,7 +72,13 @@ function compileBalFile(string filename, string basename, string? outputBasename
 
 function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, string? outFilename) returns front:ResolvedModule|CompileError {
     front:ScannedModule scanned = check front:scanModule(sourceParts, id);
-    ResolvedImport[] resolvedImports = from var mod in scanned.getImports() select check resolveImport(cx, mod);
+    // Fallowing doesn't properly pass the error back to the calling function if we get an error the import
+    // ResolvedImport[] resolvedImports = from var mod in scanned.getImports() select check resolveImport(cx, mod);
+    ResolvedImport[] resolvedImports = [];
+    foreach var mod in scanned.getImports() {
+        ResolvedImport im = check resolveImport(cx, mod);
+        resolvedImports.push(im);
+    }
     front:ResolvedModule mod = check front:resolveModule(scanned, cx.env, resolvedImports);
     LlvmModule llMod = check cx.buildModule(mod);
     if outFilename != () {

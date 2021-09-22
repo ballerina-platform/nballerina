@@ -44,7 +44,6 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             test:assertNotExactEquals(err, (), "expected an error " + path);
         }
         else {
-
             // JBUG #31334 cast needed
             verifyErrorFileName(err);
             string base = check file:basename(path);
@@ -79,14 +78,14 @@ function compileErrorLineNumber(CompileError err) returns int? {
     }
 }
 
-function listSourcesVPO() returns TestSuiteCases|error => listSources("vpo");
+function listSourcesVPO() returns TestSuiteCases|error => listSources("vpo", "./testSuite");
 
-function listSourcesEU() returns TestSuiteCases|error => listSources("eu");
+function listSourcesEU() returns TestSuiteCases|error => listSources("eu", "./testSuite");
 
-function listSources(string initialChars) returns TestSuiteCases|io:Error|file:Error {
+function listSources(string initialChars, string path) returns TestSuiteCases|io:Error|file:Error {
     TestSuiteCases cases = {};
     // JBUG #32615 can't use from-in-from query syntax
-    foreach var dir in check file:readDir("./testSuite") {
+    foreach var dir in check file:readDir(path) {
         if !check file:test(dir.absPath, file:IS_DIR) {
             continue;
         }
@@ -94,7 +93,14 @@ function listSources(string initialChars) returns TestSuiteCases|io:Error|file:E
         foreach var test in check file:readDir(dir.absPath) {
             string name = check file:basename(test.absPath);
             var [base, ext] = basenameExtension(name);
-            if ext != ".bal" {
+            if check file:test(test.absPath, file:IS_DIR) && ext == ".modules" {
+                TestSuiteCases subCases = check listSources(initialChars, test.absPath);
+                foreach var k in subCases.keys() {
+                    cases[k] = subCases.get(k);
+                }
+                continue;
+            }
+            else if ext != ".bal" {
                 continue;
             }
             int? dash = base.lastIndexOf("-");
