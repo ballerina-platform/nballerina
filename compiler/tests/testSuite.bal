@@ -17,7 +17,7 @@ function testCompileVPO(string path, string kind) returns io:Error? {
     else {
         string msg = "compilation error";
         if err is err:Any {
-            verifyErrorFileName(err);
+            _ = verifyErrorFilename(err, path);
             // JBUG #31334 cast
             string? functionName = (<err:Detail>err.detail()).functionName;
             if functionName is string {
@@ -28,10 +28,20 @@ function testCompileVPO(string path, string kind) returns io:Error? {
     }
 }
 
-function verifyErrorFileName(err:Any err) {
+function verifyErrorFilename(err:Any err, string path) returns string {
     err:Detail detail = <err:Detail>err.detail();
     test:assertTrue(detail.location is err:Location, "error without location");
-    test:assertNotEquals((<err:Location>detail.location).filename.length(), 0, "error with an empty filename");
+    string filename =(<err:Location>detail.location).filename;
+    test:assertNotEquals(filename.length(), 0, "error with an empty filename");
+    string? importName = importFilename(path, filename);
+    if importName is string {
+        test:assertEquals(filename, checkpanic file:basename(importName), "invalid error filename");
+        return importName;
+    }
+    else {
+        test:assertEquals(filename, path, "invalid error filename");
+        return path;
+    }
 }
 
 @test:Config {
@@ -45,7 +55,7 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
         }
         else {
             // JBUG #31334 cast needed
-            verifyErrorFileName(err);
+            string errorFilepath = verifyErrorFilename(err, path);
             string base = check file:basename(path);
             boolean isE = kind[0] == "e";
             if isE {
@@ -57,13 +67,33 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             }
             int? lineNumber = compileErrorLineNumber(err);
             if lineNumber != () && (isE || kind[1] == "e") {
-                test:assertEquals(lineNumber, check errorLine(path), "wrong line number in error " + path);
+                test:assertEquals(lineNumber, check errorLine(errorFilepath), "wrong line number in error " + path);
             }
         }
     }
     else {
         return err;
     }
+}
+
+function importFilename(string path, string errFilename) returns string? {
+    int? index = path.lastIndexOf(".bal");
+    if index is int {
+        string subModPath = path.substring(0, index) + ".modules";
+        if checkpanic file:test(subModPath, file:EXISTS) && checkpanic file:test(subModPath, file:IS_DIR) {
+            foreach var subMod in checkpanic file:readDir(subModPath) {
+                if !checkpanic file:test(subMod.absPath, file:IS_DIR) {
+                    continue;
+                }
+                foreach var test in checkpanic file:readDir(subMod.absPath) {
+                    if  checkpanic file:basename(test.absPath) == errFilename {
+                        return test.absPath;
+                    }
+                }
+            }
+        }
+    }
+    return ();
 }
 
 function compileErrorLineNumber(CompileError err) returns int? {
