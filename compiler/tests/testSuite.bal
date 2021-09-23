@@ -17,7 +17,6 @@ function testCompileVPO(string path, string kind) returns io:Error? {
     else {
         string msg = "compilation error";
         if err is err:Any {
-            _ = verifyErrorFilename(err, path);
             // JBUG #31334 cast
             string? functionName = (<err:Detail>err.detail()).functionName;
             if functionName is string {
@@ -25,22 +24,6 @@ function testCompileVPO(string path, string kind) returns io:Error? {
             }
         }
         test:assertEquals(err, (), msg);
-    }
-}
-
-function verifyErrorFilename(err:Any err, string path) returns string {
-    err:Detail detail = <err:Detail>err.detail();
-    test:assertTrue(detail.location is err:Location, "error without location");
-    string filename =(<err:Location>detail.location).filename;
-    test:assertNotEquals(filename.length(), 0, "error with an empty filename");
-    string? importName = importFilename(path, filename);
-    if importName is string {
-        test:assertEquals(filename, checkpanic file:basename(importName), "invalid error filename");
-        return importName;
-    }
-    else {
-        test:assertEquals(filename, path, "invalid error filename");
-        return path;
     }
 }
 
@@ -54,8 +37,7 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             test:assertNotExactEquals(err, (), "expected an error " + path);
         }
         else {
-            // JBUG #31334 cast needed
-            string errorFilepath = verifyErrorFilename(err, path);
+            string errorFilepath = verifyErrorFilename(<err:Detail>err.detail(), path);
             string base = check file:basename(path);
             boolean isE = kind[0] == "e";
             if isE {
@@ -76,24 +58,38 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
     }
 }
 
-function importFilename(string path, string errFilename) returns string? {
-    int? index = path.lastIndexOf(".bal");
-    if index is int {
-        string subModPath = path.substring(0, index) + ".modules";
-        if checkpanic file:test(subModPath, file:EXISTS) && checkpanic file:test(subModPath, file:IS_DIR) {
-            foreach var subMod in checkpanic file:readDir(subModPath) {
-                if !checkpanic file:test(subMod.absPath, file:IS_DIR) {
-                    continue;
-                }
-                foreach var test in checkpanic file:readDir(subMod.absPath) {
-                    if  checkpanic file:basename(test.absPath) == errFilename {
-                        return test.absPath;
-                    }
+function verifyErrorFilename(err:Detail detail, string path) returns string {
+    test:assertTrue(detail.location is err:Location, "error without location");
+    string filename =(<err:Location>detail.location).filename;
+    test:assertNotEquals(filename.length(), 0, "error with an empty filename");
+    string? importName = checkpanic importFilename(path, filename);
+    if importName is string {
+        test:assertEquals(filename, checkpanic file:basename(importName), "invalid error filename");
+        return importName;
+    }
+    else {
+        test:assertEquals(filename, path, "invalid error filename");
+        return path;
+    }
+}
+
+function importFilename(string path, string errFilename) returns string|file:Error? {
+    if !path.endsWith(".bal") {
+        return ();
+    }
+    string subModPath = path.substring(0, path.length()-4) + ".modules";
+    if check file:test(subModPath, file:IS_DIR) {
+        foreach var subMod in check file:readDir(subModPath) {
+            if !check file:test(subMod.absPath, file:IS_DIR) {
+                continue;
+            }
+            foreach var test in check file:readDir(subMod.absPath) {
+                if  check file:basename(test.absPath) == errFilename {
+                    return test.absPath;
                 }
             }
         }
     }
-    return ();
 }
 
 function compileErrorLineNumber(CompileError err) returns int? {
@@ -123,14 +119,7 @@ function listSources(string initialChars, string path) returns TestSuiteCases|io
         foreach var test in check file:readDir(dir.absPath) {
             string name = check file:basename(test.absPath);
             var [base, ext] = basenameExtension(name);
-            if check file:test(test.absPath, file:IS_DIR) && ext == ".modules" {
-                TestSuiteCases subCases = check listSources(initialChars, test.absPath);
-                foreach var k in subCases.keys() {
-                    cases[k] = subCases.get(k);
-                }
-                continue;
-            }
-            else if ext != ".bal" {
+            if ext != ".bal" {
                 continue;
             }
             int? dash = base.lastIndexOf("-");
