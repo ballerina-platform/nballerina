@@ -45,13 +45,14 @@ const FRAG_DECIMAL_NUMBER = 0x04;
 const FRAG_HEX_NUMBER = 0x05; // 0xDEADBEEF
 const FRAG_DECIMAL_FP_NUMBER = 0x06; // with `.` or exponent
 const FRAG_DECIMAL_FP_NUMBER_F = 0x07; // with F or f suffix
+const FRAG_DECIMAL_NUMBER_D = 0x8;
 
-const FRAG_STRING_CHARS = 0x08;
-const FRAG_STRING_CONTROL_ESCAPE = 0x09; // \r \t \n
-const FRAG_STRING_CHAR_ESCAPE = 0x0A; // \" \\
-const FRAG_STRING_NUMERIC_ESCAPE = 0x0B; // \u{NNN}
+const FRAG_STRING_CHARS = 0x09;
+const FRAG_STRING_CONTROL_ESCAPE = 0x0A; // \r \t \n
+const FRAG_STRING_CHAR_ESCAPE = 0x0B; // \" \\
+const FRAG_STRING_NUMERIC_ESCAPE = 0x0C; // \u{NNN}
 
-const VAR_FRAG_MAX = 0x0B;
+const VAR_FRAG_MAX = 0x0C;
 
 // each fragment codes >= always comes from the same string
 const FRAG_FIXED = 0x1D; // >= this corre
@@ -92,8 +93,6 @@ const FRAG_GREATER_THAN_GREATER_THAN_EQUAL = 0x55;
 const FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL = 0x56;
  
 const FRAG_KEYWORD = 0x80;
-
-const FRAG_DECIMAL_NUMBER_D = 0x81;
 
 final readonly & Keyword[] keywords = [
     "any",
