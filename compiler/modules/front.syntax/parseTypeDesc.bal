@@ -5,7 +5,8 @@ import wso2/nballerina.err;
 function parseInlineTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
-        TypeDescRef refTypeDesc = { typeName: t[1], pos: tok.currentPos() };
+        var [prefix, typeName] = check parseOptQualIdentifier(tok, t[1]);
+        TypeDescRef refTypeDesc = { prefix, typeName, pos: tok.currentPos() };
         return refTypeDesc;
     }
     else if t is "map" {
