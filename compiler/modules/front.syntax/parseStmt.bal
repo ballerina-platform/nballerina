@@ -137,6 +137,10 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
         MethodCallExpr expr = check finishMethodCallExpr(tok, varRef);
         return finishCallStmt(tok, expr);
     }
+    else if cur is [IDENTIFIER, string] {
+        TypeDescRef ref = { prefix, typeName: identifier, pos };
+        return finishVarDeclStmt(tok, ref);
+    }
     return parseError(tok, "invalid statement");
 }
 
