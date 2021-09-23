@@ -20,8 +20,10 @@
 
 #define PUBLIC_BALLERINA_NAME 1
 #define NON_PUBLIC_BALLERINA_NAME 2
-#define NON_BALLERINA_NAME 3
-#define _B_NON_BALLERINA_NAME 4
+#define NON_BALLERINA_NAME -1
+#define _B_NON_BALLERINA_NAME -2
+
+#define MAX_DEMANGLING_DECIMAL_LENGTH 4
 
 typedef int DemangleResult;
 
@@ -61,7 +63,6 @@ static void processInitialPC(PC pc, int64_t lineNumber, BacktraceStartLine *back
 static DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp);
 static bool demangleModules(const char **mangledModules, FILE *fp);
 static bool demangleCountedName(const char **pp, const char **name);
-static void printUpto(const char *end, const char *start, FILE *fp);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     SimpleBacktrace simpleBacktrace;
@@ -290,7 +291,7 @@ static DemangleResult demangle(const char *mangledName, const char **localName, 
     }
 
     bool ballerinaOrg = false; 
-    if (mangledName[0] == 'b')  {
+    if (mangledName[0] == 'b') {
         ballerinaOrg = true;
         mangledName++;
     }
@@ -312,7 +313,7 @@ static DemangleResult demangle(const char *mangledName, const char **localName, 
             haveOrg = true;
         }
         if (org != NULL) {
-            printUpto(mangledName, org, fp);
+            fwrite(org, 1, mangledName - org, fp);
             haveOrg = true;
         }
         if (haveOrg) {
@@ -329,7 +330,7 @@ static DemangleResult demangle(const char *mangledName, const char **localName, 
     } 
     *localName = mangledName;
     if (fp != NULL) {
-        printUpto(mangledName, lastModule, fp);
+        fwrite(lastModule, 1, mangledName - lastModule, fp);
     }
     return PUBLIC_BALLERINA_NAME;
 }
@@ -344,7 +345,7 @@ static bool demangleModules(const char **mangledModules, FILE *fp) {
         return false;
     }
     if (fp != NULL) {
-        printUpto(*mangledModules, module, fp);
+        fwrite(module, 1, *mangledModules - module, fp);
         fputs(".", fp);
     }
     return demangleModules(mangledModules, fp);
@@ -356,18 +357,20 @@ static bool demangleCountedName(const char **pp, const char **name) {
     if (sscanf(*pp, "%ld%n", &nChars, &nRead) <= 0) {
         return false;
     }
+    if (nRead > MAX_DEMANGLING_DECIMAL_LENGTH) {
+        return false;
+    }
     *name = *pp + nRead;
     if (*name[0] == '_') {
         *name = *name + 1;
         nChars++;
     }
-    *pp = *pp + nRead + nChars;
-    return true;
-}
-
-static void printUpto(const char *end, const char *start, FILE *fp) {
-    while (start < end) {
-        fputc(*start, fp);
-        start++;
+    for (int i = 0; i < nRead + nChars; i++) {
+        *pp = *pp + 1;
+        if (**pp == '\0') {
+            return false;
+        }
     }
+    
+    return true;
 }

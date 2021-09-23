@@ -46,7 +46,7 @@ static const DemangleTestCase tests[] = {
 };
 
 int main() {
-    FILE *fp = fopen("/tmp/demangle.txt", "w+");
+    FILE *fp = tmpfile();
     assert(fp != NULL);
 
     for (int i = 0; i < NAMES_COUNT; i++) {
