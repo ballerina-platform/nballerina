@@ -27,7 +27,7 @@ void func3() {
     TaggedPtr taggedErr = _bal_error_construct(makeString("Func3 error"), 27);
     ErrorPtr ep = (ErrorPtr)taggedToPtr(taggedErr);
 
-    FILE *fp = fopen("/tmp/backtrace.txt", "w+");
+    FILE *fp = tmpfile();
     assert(fp != NULL);
     _bal_error_backtrace_print(ep, 1, fp);
     rewind(fp);
@@ -39,7 +39,7 @@ void func2() {
     TaggedPtr taggedErr = _bal_error_construct(makeString("Func2 error"), 39);
     ErrorPtr ep = (ErrorPtr)taggedToPtr(taggedErr);
 
-    FILE *fp = fopen("/tmp/backtrace.txt", "w+");
+    FILE *fp = tmpfile();
     assert(fp != NULL);
     _bal_error_backtrace_print(ep, 1, fp);
     rewind(fp);
@@ -52,7 +52,7 @@ void func1() {
     TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"), 52);
     ErrorPtr ep = (ErrorPtr)taggedToPtr(taggedErr);
 
-    FILE *fp = fopen("/tmp/backtrace.txt", "w+");
+    FILE *fp = tmpfile();
     assert(fp != NULL);
     _bal_error_backtrace_print(ep, 1, fp);
     rewind(fp);

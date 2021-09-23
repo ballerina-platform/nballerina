@@ -40,7 +40,7 @@ void func2(int j, FILE *fp) {
 }
 
 int main() {
-    FILE *fp = fopen("/tmp/backtrace.txt", "w+");
+    FILE *fp = tmpfile();
     assert(fp != NULL);
     func1(3, fp);
     rewind(fp);
