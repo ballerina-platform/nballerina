@@ -89,13 +89,21 @@ function moduleIdToString(bir:ModuleId id) returns string {
     }
 }
 
-function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn defn, string prefix) returns Import|err:Semantic {
-    Import? imported = mod.partPrefixes[defn.part.partIndex][prefix];
+function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix) returns Import|err:Semantic {
+    Import? imported = mod.partPrefixes[modDefn.part.partIndex][prefix];
     if imported == () {
-        return err:semantic(`no import declaration for ${prefix}`, loc=s:locationInDefn(defn), functionName=defn.name);
+        return err:semantic(`no import declaration for ${prefix}`, loc=s:locationInDefn(modDefn), functionName=modDefn.name);
     }
     else {
         imported.used = true;
         return imported;
     }
+}
+
+function lookupImportedConst(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix, string varName) returns t:Value|err:Semantic {
+    ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix)).defns[varName];
+    if defn is s:ResolvedConst {
+        return defn[1];
+    }
+    return err:semantic(`${prefix + ":" + varName} is not defined as a const`, loc=s:locationInDefn(modDefn), functionName=modDefn.name);
 }

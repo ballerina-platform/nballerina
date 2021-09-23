@@ -14,7 +14,7 @@ class TestFoldContext {
     function init() {
         self.tc = t:typeContext(new);
     }
-    function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
+    function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         return ();
     }
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {

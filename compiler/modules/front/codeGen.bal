@@ -218,7 +218,10 @@ class CodeGenFoldContext {
         self.env = env;
     }
 
-    function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
+    function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
+        if prefix != () {
+            return lookupImportedConst(self.cx.mod, self.cx.functionDefn, prefix, varName);
+        }
         t:Value|Binding v = check lookupVarRef(self.cx, varName, self.env);
         if v is Binding {
             t:Value? shape = t:singleShape(v.reg.semType);
@@ -1237,7 +1240,10 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
 }
 
 function codeGenVarRefExpr(CodeGenContext cx, s:VarRefExpr ref, Environment env, bir:BasicBlock bb) returns CodeGenError|ExprEffect {
-    // xxx #471 should pass `ref`, not just the `varName`
+    if ref.prefix != () {
+        // This should be caught during const folding
+        panic err:impossible("prefix in var ref is non-nil");
+    }
     var v = check lookupVarRef(cx, ref.varName, env);
     bir:Operand result;
     Binding? binding;
