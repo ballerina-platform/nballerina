@@ -37,7 +37,7 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             test:assertNotExactEquals(err, (), "expected an error " + path);
         }
         else {
-            string errorFilepath = verifyErrorFilename(<err:Detail>err.detail(), path);
+            verifyErrorFilename(<err:Detail>err.detail(), path);
             string base = check file:basename(path);
             boolean isE = kind[0] == "e";
             if isE {
@@ -47,9 +47,8 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             else if !err.message().includes("'io:println'") {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
-            int? lineNumber = compileErrorLineNumber(err);
-            if lineNumber != () && (isE || kind[1] == "e") {
-                test:assertEquals(lineNumber, check errorLine(errorFilepath), "wrong line number in error " + path);
+            if isE || kind[1] == "e" {
+                checkpanic verifyErrorLineNumber(err, path);
             }
         }
     }
@@ -58,38 +57,64 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
     }
 }
 
-function verifyErrorFilename(err:Detail detail, string path) returns string {
-    test:assertTrue(detail.location is err:Location, "error without location");
-    string filename =(<err:Location>detail.location).filename;
-    test:assertNotEquals(filename.length(), 0, "error with an empty filename");
-    string? importName = checkpanic importFilename(path, filename);
-    if importName is string {
-        test:assertEquals(filename, checkpanic file:basename(importName), "invalid error filename");
-        return importName;
-    }
-    else {
-        test:assertEquals(filename, path, "invalid error filename");
-        return path;
+function moduleDir(string filePath) returns string|file:Error? {
+    string subModPath = filePath.substring(0, filePath.length()-4) + ".modules";
+    if check file:test(subModPath, file:IS_DIR) {
+        return check file:normalizePath(subModPath, file:CLEAN);
     }
 }
 
-function importFilename(string path, string errFilename) returns string|file:Error? {
-    if !path.endsWith(".bal") {
-        return ();
+function verifyErrorLineNumber(CompileError err, string path) returns file:Error? {
+    int? expectedLineNumber = compileErrorLineNumber(err);
+    if expectedLineNumber != () {
+        boolean foundErrorLine = false;
+        string? modulePath = check moduleDir(path);
+        if modulePath is string {
+            foreach var dir in check file:readDir(modulePath) {
+                if !check file:test(dir.absPath, file:IS_DIR) {
+                    continue;
+                }
+                foreach var file in check file:readDir(dir.absPath) {
+                    foundErrorLine = foundErrorLine || compareErrorLineNumber(file.absPath, expectedLineNumber);
+                }
+            }
+        }
+        foundErrorLine = foundErrorLine || compareErrorLineNumber(path, expectedLineNumber);
+        test:assertTrue(foundErrorLine, "failed to find error annotation");
     }
-    string subModPath = path.substring(0, path.length()-4) + ".modules";
-    if check file:test(subModPath, file:IS_DIR) {
-        foreach var subMod in check file:readDir(subModPath) {
-            if !check file:test(subMod.absPath, file:IS_DIR) {
+}
+
+function compareErrorLineNumber(string filePath, int expectedLineNumber) returns boolean {
+    int? errorLineNo = checkpanic errorLine(filePath);
+    if errorLineNo is int {
+        test:assertEquals(expectedLineNumber, errorLineNo, "wrong line number in error " + filePath);
+        return true;
+    }
+    return false;
+}
+
+function verifyErrorFilename(err:Detail detail, string path) {
+    test:assertTrue(detail.location is err:Location, "error without location");
+    string filename =(<err:Location>detail.location).filename;
+    test:assertNotEquals(filename.length(), 0, "error with an empty filename");
+    test:assertTrue(filename == path || checkpanic isImportFile(path, filename));
+}
+
+function isImportFile(string rootFilePath, string filePath) returns boolean|file:Error {
+    string? modulePath = check moduleDir(rootFilePath);
+    if modulePath is string {
+        foreach var dir in check file:readDir(modulePath) {
+            if !check file:test(dir.absPath, file:IS_DIR) {
                 continue;
             }
-            foreach var test in check file:readDir(subMod.absPath) {
-                if  check file:basename(test.absPath) == errFilename {
-                    return test.absPath;
+            foreach var file in check file:readDir(dir.absPath) {
+                if check file:basename(filePath) == check file:basename(file.absPath) {
+                    return true;
                 }
             }
         }
     }
+    return false;
 }
 
 function compileErrorLineNumber(CompileError err) returns int? {
@@ -146,16 +171,16 @@ function includePath(string path, string initialChars) returns boolean|file:Erro
     return extension == SOURCE_EXTENSION && initialChars.includes(base[0].toUpperAscii());
 }
 
-function errorLine(string path) returns int|io:Error {
+function errorLine(string path) returns int|io:Error? {
     string[] lines = check io:fileReadLines(path);
+    int? lineNo = ();
     foreach var i in 0 ..< lines.length() {
         if lines[i].indexOf("// @error") != () {
-            return i + 1;
+            test:assertTrue(lineNo is (), "Multiple error annotations in one file");
+            lineNo = i + 1;
         }
     }
-    test:assertFail("Test with 'E' prefix missing error annotation : " + path);
-    // JBUG #31338 panic with function returning never here cases a bytecode error
-    panic err:impossible();
+    return lineNo;
 }
 
 // This outputs nothing
