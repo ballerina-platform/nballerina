@@ -463,6 +463,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "stmt", "int x = a =! b;", ""],
          ["E", "stmt", "int i = 0xBABE1F1SH;", ""],
          ["V", "stmt", "int i = 10;", "int i = 10;"],
+         ["V", "stmt", "a:b i = 10;", "a:b i = 10;"],
          ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
          ["E", "stmt", "int i = a ... b ... c;", ""],
          ["V", "stmt", "final int i = 1;", "final int i = 1;"],
