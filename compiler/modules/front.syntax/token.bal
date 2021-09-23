@@ -220,7 +220,7 @@ class Tokenizer {
                     self.curTok = [DECIMAL_FP_NUMBER, self.getFragment(), ()];
                     return;
                 }
-                FRAG_DECIMAL_NUMBER_D => {
+                FRAG_DECIMAL_FP_NUMBER_D => {
                     string number = self.getFragment();
                     self.curTok = [DECIMAL_FP_NUMBER, number.substring(0, number.length() - 1), "d"];
                     return;
