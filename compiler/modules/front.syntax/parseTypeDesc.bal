@@ -5,7 +5,7 @@ import wso2/nballerina.err;
 function parseInlineTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
-        TypeDescRef refTypeDesc = { ref: t[1], pos: tok.currentPos() };
+        TypeDescRef refTypeDesc = { typeName: t[1], pos: tok.currentPos() };
         return refTypeDesc;
     }
     else if t is "map" {
@@ -202,8 +202,8 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         [IDENTIFIER, var identifier] => {
             Position pos = tok.currentPos();
             check tok.advance();
-            var [prefix, ref] = check parseOptQualIdentifier(tok, identifier);
-            return { prefix, ref, pos };
+            var [prefix, typeName] = check parseOptQualIdentifier(tok, identifier);
+            return { prefix, typeName, pos };
         }
         [STRING_LITERAL, var str] => {
             check tok.advance();

@@ -114,7 +114,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) re
         return finishOptQualIdentifierStmt(tok, identifier, check tok.expectIdentifier(), pos);
     }
     else if cur is [IDENTIFIER, string] {
-        TypeDescRef ref = { ref: identifier, pos };
+        TypeDescRef ref = { typeName: identifier, pos };
         return finishVarDeclStmt(tok, ref);
     }
     return finishOptQualIdentifierStmt(tok, (), identifier, pos);

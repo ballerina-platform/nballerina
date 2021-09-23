@@ -353,7 +353,7 @@ public type BinaryTypeDesc record {|
 
 public type TypeDescRef record {|
     string? prefix = ();
-    string ref;
+    string typeName;
     Position pos;
 |};
 

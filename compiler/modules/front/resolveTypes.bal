@@ -164,9 +164,9 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     if td is s:TypeDescRef {
-        s:ModuleLevelDefn? defn = mod.defns[td.ref];
+        s:ModuleLevelDefn? defn = mod.defns[td.typeName];
         if defn is () {
-            return err:semantic(`reference to undefined type ${td.ref}`, err:location(modDefn.part.file, td.pos));
+            return err:semantic(`reference to undefined type ${td.typeName}`, err:location(modDefn.part.file, td.pos));
         }
         else if defn is s:TypeDefn {
             return check resolveTypeDefn(mod, defn, depth);
@@ -176,7 +176,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return t;
         }
         else {
-            return err:semantic(`reference to non-type ${td.ref} in type-descriptor`, err:location(modDefn.part.file, td.pos));
+            return err:semantic(`reference to non-type ${td.typeName} in type-descriptor`, err:location(modDefn.part.file, td.pos));
         }
     }
     if td is s:SingletonTypeDesc {

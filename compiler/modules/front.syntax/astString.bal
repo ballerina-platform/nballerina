@@ -219,7 +219,7 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         if prefix != () {
             w.push(prefix, ":", CLING);
         }
-        w.push(td.ref);
+        w.push(td.typeName);
         return;
     }
     else if td is MappingTypeDesc {
