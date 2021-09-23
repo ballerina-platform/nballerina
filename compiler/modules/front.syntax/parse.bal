@@ -185,3 +185,7 @@ function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
 public function defnLocation(ModuleLevelDefn defn) returns err:Location {
     return err:location(defn.part.file, defn.pos);
 }
+
+public function locationInDefn(ModuleLevelDefn defn, Position? pos = ()) returns err:Location {
+    return err:location(defn.part.file, pos);
+}

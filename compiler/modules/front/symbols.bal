@@ -1,7 +1,7 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
-// import wso2/nballerina.err;
+import wso2/nballerina.err;
 
 type ModuleDefns table<s:ModuleLevelDefn> key(name);
 
@@ -86,5 +86,16 @@ function moduleIdToString(bir:ModuleId id) returns string {
     }
     else {
         return m;
+    }
+}
+
+function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn defn, string prefix) returns Import|err:Semantic {
+    Import? imported = mod.partPrefixes[defn.part.partIndex][prefix];
+    if imported == () {
+        return err:semantic(`no import declaration for ${prefix}`, loc=s:locationInDefn(defn), functionName=defn.name);
+    }
+    else {
+        imported.used = true;
+        return imported;
     }
 }

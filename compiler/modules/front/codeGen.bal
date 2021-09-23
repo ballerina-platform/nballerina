@@ -1455,21 +1455,20 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
 }
 
 function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier) returns bir:FunctionRef|CodeGenError {
-    Import? mod = cx.mod.partPrefixes[cx.functionDefn.part.partIndex][prefix];
-    if mod is () {
-        return cx.semanticErr(`no import declaration for prefix ${prefix}`);
+    Import mod = check lookupPrefix(cx.mod, cx.functionDefn, prefix);
+    var defn = mod.defns[identifier];
+    if defn is bir:FunctionSignature {
+        return {
+            symbol: { module: mod.moduleId, identifier },
+            signature: defn,
+            erasedSignature: defn
+        };
+    }
+    else if defn is () {
+        return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`);
     }
     else {
-        mod.used = true;
-        bir:ModuleId moduleId = mod.moduleId;
-        bir:FunctionSignature? signature = <bir:FunctionSignature?>mod.defns[identifier];
-        if signature is () {
-            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`);
-        }
-        else {
-            bir:ExternalSymbol symbol = { module: moduleId, identifier };
-            return { symbol, signature, erasedSignature: signature };
-        }
+        return cx.semanticErr("reference to non-function where function required");
     }
 }
 

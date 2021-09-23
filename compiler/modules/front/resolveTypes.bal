@@ -64,7 +64,7 @@ function resolveSubsetTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Type
     if memberTy != () {
         return ty;
     }
-    return err:unimplemented("unimplemented type descriptor", s:defnLocation(defn));
+    return err:unimplemented("unimplemented type descriptor", s:locationInDefn(defn), functionName=defn.name);
 }
 
 function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns t:SemType|ResolveTypeError {
@@ -164,19 +164,39 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     if td is s:TypeDescRef {
-        s:ModuleLevelDefn? defn = mod.defns[td.typeName];
-        if defn is () {
-            return err:semantic(`reference to undefined type ${td.typeName}`, err:location(modDefn.part.file, td.pos));
-        }
-        else if defn is s:TypeDefn {
-            return check resolveTypeDefn(mod, defn, depth);
-        }
-        else if defn is s:ConstDefn {
-            var [t, _] = check resolveConstDefn(mod, defn);
-            return t;
+        string? prefix = td.prefix;
+        if prefix == () {
+            s:ModuleLevelDefn? defn = mod.defns[td.typeName];
+            if defn is () {
+                return err:semantic(`reference to undefined type ${td.typeName}`, err:location(modDefn.part.file, td.pos));
+            }
+            else if defn is s:TypeDefn {
+                return check resolveTypeDefn(mod, defn, depth);
+            }
+            else if defn is s:ConstDefn {
+                var [t, _] = check resolveConstDefn(mod, defn);
+                return t;
+            }
+            return err:semantic(`reference to non-type ${td.typeName} in type-descriptor`, err:location(modDefn.part.file, td.pos));
         }
         else {
-            return err:semantic(`reference to non-type ${td.typeName} in type-descriptor`, err:location(modDefn.part.file, td.pos));
+            ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix)).defns[td.typeName];
+            if defn is t:SemType {
+                return defn;
+            }
+            else if defn is s:ResolvedConst {
+                return defn[0];
+            }
+            else {
+                string qName = prefix + ":" + td.typeName;
+                err:Location loc =  err:location(modDefn.part.file, td.pos);
+                if defn is () {
+                    return err:semantic(`no public definition of ${qName}`, loc=loc);
+                }
+                else {
+                    return err:semantic(`reference to a function ${qName} where a type is required`, loc=loc);
+                }
+            }
         }
     }
     if td is s:SingletonTypeDesc {
