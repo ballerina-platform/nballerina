@@ -288,8 +288,8 @@ public type IntLiteralExpr record {|
     Position pos;
 |};
 
-const FLOAT_TYPE_SUFFIX = "f";
-const DECIMAL_TYPE_SUFFIX = "d";
+public const FLOAT_TYPE_SUFFIX = "f";
+public const DECIMAL_TYPE_SUFFIX = "d";
 
 public type FpTypeSuffix FLOAT_TYPE_SUFFIX|DECIMAL_TYPE_SUFFIX;
 
