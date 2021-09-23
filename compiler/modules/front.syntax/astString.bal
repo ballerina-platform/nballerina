@@ -191,6 +191,11 @@ function stmtToWords(Word[] w, Stmt stmt) {
     else if stmt is BreakStmt || stmt is ContinueStmt {
         w.push(stmt, ";");
     }
+    else if stmt is CheckingStmt {
+        w.push(stmt.checkingKeyword);
+        exprToWords(w, stmt.operand);
+        w.push(";");
+    }
     else {
         // This deals with function call and method call
         exprToWords(w, stmt);

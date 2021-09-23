@@ -47,7 +47,7 @@ public type ConstDefn record {|
 |};
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt|PanicStmt;
-public type CallStmt FunctionCallExpr|MethodCallExpr;
+public type CallStmt FunctionCallExpr|MethodCallExpr|CheckingStmt;
 public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
@@ -201,6 +201,13 @@ public type CheckingKeyword "check"|"checkpanic";
 public type CheckingExpr record {|
     CheckingKeyword checkingKeyword;
     Expr operand;
+|};
+
+public type CheckingStmt record {|
+    // JBUG can't include CheckingExpr
+    // *CheckingExpr;
+    CheckingKeyword checkingKeyword;
+    CallStmt operand;
 |};
 
 public type ListConstructorExpr record {|
