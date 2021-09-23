@@ -66,7 +66,7 @@ function moduleDir(string filePath) returns string|file:Error? {
 
 function verifyErrorLineNumber(CompileError err, string path) returns file:Error? {
     int? expectedLineNumber = compileErrorLineNumber(err);
-    if expectedLineNumber != () {
+    if expectedLineNumber is int {
         boolean foundErrorLine = false;
         string? modulePath = check moduleDir(path);
         if modulePath is string {
@@ -97,7 +97,7 @@ function verifyErrorFilename(err:Detail detail, string path) {
     test:assertTrue(detail.location is err:Location, "error without location");
     string filename =(<err:Location>detail.location).filename;
     test:assertNotEquals(filename.length(), 0, "error with an empty filename");
-    test:assertTrue(filename == path || checkpanic isImportFile(path, filename));
+    test:assertTrue(filename == path || checkpanic isImportFile(path, filename), "no such file" + filename);
 }
 
 function isImportFile(string rootFilePath, string filePath) returns boolean|file:Error {
@@ -129,14 +129,14 @@ function compileErrorLineNumber(CompileError err) returns int? {
     }
 }
 
-function listSourcesVPO() returns TestSuiteCases|error => listSources("vpo", "./testSuite");
+function listSourcesVPO() returns TestSuiteCases|error => listSources("vpo");
 
-function listSourcesEU() returns TestSuiteCases|error => listSources("eu", "./testSuite");
+function listSourcesEU() returns TestSuiteCases|error => listSources("eu");
 
-function listSources(string initialChars, string path) returns TestSuiteCases|io:Error|file:Error {
+function listSources(string initialChars) returns TestSuiteCases|io:Error|file:Error {
     TestSuiteCases cases = {};
     // JBUG #32615 can't use from-in-from query syntax
-    foreach var dir in check file:readDir(path) {
+    foreach var dir in check file:readDir("./testSuite") {
         if !check file:test(dir.absPath, file:IS_DIR) {
             continue;
         }
@@ -176,7 +176,7 @@ function errorLine(string path) returns int|io:Error? {
     int? lineNo = ();
     foreach var i in 0 ..< lines.length() {
         if lines[i].indexOf("// @error") != () {
-            test:assertTrue(lineNo is (), "Multiple error annotations in one file");
+            test:assertTrue(lineNo is (), "multiple error annotations in file " + path);
             lineNo = i + 1;
         }
     }
