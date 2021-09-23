@@ -45,7 +45,7 @@ const FRAG_DECIMAL_NUMBER = 0x04;
 const FRAG_HEX_NUMBER = 0x05; // 0xDEADBEEF
 const FRAG_DECIMAL_FP_NUMBER = 0x06; // with `.` or exponent
 const FRAG_DECIMAL_FP_NUMBER_F = 0x07; // with F or f suffix
-const FRAG_DECIMAL_NUMBER_D = 0x8;
+const FRAG_DECIMAL_FP_NUMBER_D = 0x8; // with D or d suffix
 
 const FRAG_STRING_CHARS = 0x09;
 const FRAG_STRING_CONTROL_ESCAPE = 0x0A; // \r \t \n
@@ -719,7 +719,7 @@ function endDecimal(FragCode fragCodeIfNoSuffix, int[] codePoints, int i, Scanne
             return i + 1;
         } 
         else if cp == CP_UPPER_D || cp == CP_LOWER_D {
-            endFragment(FRAG_DECIMAL_NUMBER_D, i + 1, result);
+            endFragment(FRAG_DECIMAL_FP_NUMBER_D, i + 1, result);
             return i + 1;
         }
     }
