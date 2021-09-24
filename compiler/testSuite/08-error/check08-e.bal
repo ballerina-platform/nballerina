@@ -1,6 +1,6 @@
 import ballerina/io;
 public function main() {
-    checkpanic newError();
+    checkpanic newError(); // @error
     io:println("unreached");
 }
 
