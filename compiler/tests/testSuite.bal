@@ -49,7 +49,7 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             if kind == "e" || kind == "ue" {
                 var expectedErrorLocation = checkpanic expectedErrorLocation(err, path);
                 if !(expectedErrorLocation is ()) {
-                    var [expectedLineNo, expectedFilename] = expectedErrorLocation;
+                    var [expectedFilename, expectedLineNo] = expectedErrorLocation;
                     // JBUG #31334 cast needed
                     err:Detail detail = <err:Detail> err.detail();
                     test:assertTrue(detail.location is err:Location, "error without location");
@@ -68,6 +68,22 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
     }
 }
 
+function expectedErrorLocation(CompileError err, string path) returns [string, int]|file:Error|io:Error? {
+    string? modulePath = check moduleDir(path);
+    [string, int]? errorLocation = ();
+    if modulePath is string {
+        foreach var md in check file:readDir(modulePath) {
+            if md.dir {
+                foreach var file in check file:readDir(md.absPath) {
+                    errorLocation = check findErrorLine(file.absPath, errorLocation);
+                }
+            }
+        }
+    }
+    errorLocation = check findErrorLine(path, errorLocation);
+    return errorLocation;
+}
+
 function moduleDir(string filePath) returns string|file:Error? {
     string subModPath = filePath.substring(0, filePath.length()-4) + ".modules";
     if check file:test(subModPath, file:IS_DIR) {
@@ -75,34 +91,11 @@ function moduleDir(string filePath) returns string|file:Error? {
     }
 }
 
-function expectedErrorLocation(CompileError err, string path) returns [int, string]|file:Error|io:Error? {
-    string? modulePath = check moduleDir(path);
-    string? errorFileName = ();
-    int? errorLineNumber = ();
-    if modulePath is string {
-        foreach var dir in check file:readDir(modulePath) {
-            if !check file:test(dir.absPath, file:IS_DIR) {
-                continue;
-            }
-            foreach var file in check file:readDir(dir.absPath) {
-                [errorLineNumber, errorFileName] = findErrorLine(file.absPath, errorLineNumber);
-            }
-        }
-    }
-    [errorLineNumber, errorFileName] = findErrorLine(path, errorLineNumber);
-    if errorFileName is string && errorLineNumber is int {
-        return [errorLineNumber, errorFileName];
-    }
-}
-
-function findErrorLine(string filePath, int? currentErrorLine) returns [int?, string?] {
-    int? fileErrorLine = checkpanic errorLine(filePath);
+function findErrorLine(string filePath, any? currentErrorLocation) returns [string, int]|io:Error? {
+    int? fileErrorLine = check errorLine(filePath);
     if fileErrorLine is int {
-        test:assertTrue(currentErrorLine is (), "Multiple files with error annotations found");
-        return [fileErrorLine, filePath];
-    }
-    else {
-        return [(), ()];
+        test:assertTrue(currentErrorLocation is (), "Multiple files with error annotations found");
+        return [filePath, fileErrorLine];
     }
 }
 
