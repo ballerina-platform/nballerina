@@ -133,7 +133,8 @@ final readonly & Keyword[] keywords = [
     "type",
     "typedesc",
     "while",
-    "xml"
+    "xml",
+    "_"
 ];
 
 // This maps a frag code to a string
@@ -567,7 +568,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     i = scanIdentifier(codePoints, i + 1, result);
                 }
                 else {
-                    endFragment(CP_UNDERSCORE, i, result);
+                    endIdentifierOrKeyword(codePoints, i, result);
                 }
             }
             _ => {
