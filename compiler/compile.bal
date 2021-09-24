@@ -131,7 +131,7 @@ function subModuleSourceParts(string basename, bir:ModuleId id) returns front:So
             if ext == SOURCE_EXTENSION {
                 sourceParts.push({
                     lines: check io:fileReadLines(md.absPath),
-                    filename: check getPathRelativeToModuleDir(directory, md.absPath),
+                    filename: check file:normalizePath(check file:joinPath(directory, check file:basename(md.absPath)), file:CLEAN),
                     directory 
                 });
             }
@@ -139,11 +139,6 @@ function subModuleSourceParts(string basename, bir:ModuleId id) returns front:So
         }
     }
     return sourceParts;
-}
-
-function getPathRelativeToModuleDir(string modulesDirPath, string filePath) returns string|file:Error {
-    string root = check file:parentPath(check file:getAbsolutePath(modulesDirPath));
-    return check file:normalizePath("./" + check file:relativePath(root, filePath), file:CLEAN);
 }
 
 function subModuleSuffix(bir:ModuleId id) returns string {
