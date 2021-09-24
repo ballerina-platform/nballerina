@@ -1112,7 +1112,7 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
         bir:FloatArithmeticBinaryInsn insn = { op, operands: pair[1], result, position: pos };
         bb.insns.push(insn);
     }
-    else if pair is StringOperandPair { // XXX a bug here
+    else if pair is StringOperandPair && op == "+" {
         result = cx.createRegister(t:STRING);
         bir:StringConcatInsn insn = { operands: pair[1], result };
         bb.insns.push(insn);
