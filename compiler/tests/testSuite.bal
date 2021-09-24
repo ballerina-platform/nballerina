@@ -47,14 +47,14 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
             if kind == "e" || kind == "ue" {
-                var expectedErrorLocation = checkpanic expectedErrorLocation(err, path);
+                var expectedErrorLocation = check expectedErrorLocation(err, path);
                 if !(expectedErrorLocation is ()) {
                     var [expectedFilename, expectedLineNo] = expectedErrorLocation;
                     // JBUG #31334 cast needed
                     err:Detail detail = <err:Detail> err.detail();
                     test:assertTrue(detail.location is err:Location, "error without location");
                     string filename =(<err:Location>detail.location).filename;
-                    test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "Invalid error filename" + filename);
+                    test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
                     err:LineColumn? lc = detail.location?.startPos;
                     if lc is err:LineColumn {
                         test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
@@ -68,9 +68,11 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
     }
 }
 
-function expectedErrorLocation(CompileError err, string path) returns [string, int]|file:Error|io:Error? {
+type FilenameLine [string, int];
+
+function expectedErrorLocation(CompileError err, string path) returns FilenameLine|file:Error|io:Error? {
     string? modulePath = check moduleDir(path);
-    [string, int]? errorLocation = ();
+    FilenameLine? errorLocation = ();
     if modulePath is string {
         foreach var md in check file:readDir(modulePath) {
             if md.dir {
@@ -91,10 +93,10 @@ function moduleDir(string filePath) returns string|file:Error? {
     }
 }
 
-function findErrorLine(string filePath, any? currentErrorLocation) returns [string, int]|io:Error? {
+function findErrorLine(string filePath, FilenameLine? currentErrorLocation) returns FilenameLine|io:Error? {
     int? fileErrorLine = check errorLine(filePath);
     if fileErrorLine is int {
-        test:assertTrue(currentErrorLocation is (), "Multiple files with error annotations found");
+        test:assertTrue(currentErrorLocation is (), "multiple files with error annotations found");
         return [filePath, fileErrorLine];
     }
 }
