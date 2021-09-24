@@ -196,6 +196,11 @@ function stmtToWords(Word[] w, Stmt stmt) {
         exprToWords(w, stmt.operand);
         w.push(";");
     }
+    else if stmt is DestructuringAssignStmt {
+        w.push(stmt.pattern, "=");
+        exprToWords(w, stmt.expr);
+        w.push(";");
+    }
     else {
         // This deals with function call and method call
         exprToWords(w, stmt);

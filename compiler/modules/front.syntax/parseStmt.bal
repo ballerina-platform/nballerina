@@ -19,7 +19,7 @@ function parseStmtBlock(Tokenizer tok) returns Stmt[]|err:Syntax {
 function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     match cur {
-        [IDENTIFIER, var identifier] => {
+        [IDENTIFIER, var identifier] => { // xy = 12;
             Position pos = tok.currentPos();
             check tok.advance();
             return finishIdentifierStmt(tok, identifier, pos);
@@ -72,6 +72,9 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         }
         var td if td is InlineBuiltinTypeDesc|"map" => {
             return parseVarDeclStmt(tok);
+        }
+        "_" => {
+            return parseDestructuringAssignStmt(tok);
         }
         "("|[DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {
             return parseMethodCallStmt(tok);
@@ -222,6 +225,24 @@ function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp o
     return stmt; 
 }
 
+function parseDestructuringAssignStmt(Tokenizer tok) returns DestructuringAssignStmt|err:Syntax {
+    BindingPattern pattern = check parseBindingPattern(tok);
+    check tok.expect("=");
+    Expr expr = check parseExpr(tok);
+    DestructuringAssignStmt stmt = { pattern, expr };
+    check tok.expect(";");
+    return stmt;
+}
+
+function parseBindingPattern(Tokenizer tok) returns BindingPattern|err:Syntax {
+    Token? cur = tok.current();
+    check tok.advance();
+    if (cur == "_") {
+        return WildcardBindingPattern;
+    }
+    return parseError(tok, "unsupported binding pattern"); // TODO: check the message
+}
+
 function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     TypeDesc td = check parseInlineTypeDesc(tok);
     return finishVarDeclStmt(tok, td, isFinal);
@@ -229,7 +250,14 @@ function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDec
 
 function finishVarDeclStmt(Tokenizer tok, TypeDesc td, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     Token? cur = tok.current();
-    string varName = check tok.expectIdentifier();
+    string varName;
+    if cur == "_" {
+        varName = "_";
+        check tok.advance();
+    }
+    else {
+        varName = check tok.expectIdentifier();
+    }
     // initExpr is required in the subset
     check tok.expect("=");
     Expr initExpr = check parseExpr(tok);

@@ -341,6 +341,9 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
         else if stmt is s:CompoundAssignStmt {
             effect = check codeGenCompoundAssignStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
+        else if stmt is s:DestructuringAssignStmt {
+            effect = check codeGenDestructuringAssignStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+        }
         else {
             effect = check codeGenCallStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
@@ -780,6 +783,12 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     else {
         return codeGenAssignToMember(cx, startBlock, env, lValue, expr);
     }
+}
+
+function codeGenDestructuringAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:DestructuringAssignStmt stmt) returns CodeGenError|StmtEffect {
+    // This is not correct, just doing to compile without errors
+    var { pattern, expr } = stmt;
+    return codeGenAssignToVar(cx, startBlock, env, "_", expr);
 }
 
 function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr) returns CodeGenError|StmtEffect {
