@@ -47,18 +47,15 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
             if kind == "e" || kind == "ue" {
-                var expectedErrorLocation = check expectedErrorLocation(err, path);
-                if !(expectedErrorLocation is ()) {
-                    var [expectedFilename, expectedLineNo] = expectedErrorLocation;
-                    // JBUG #31334 cast needed
-                    err:Detail detail = <err:Detail> err.detail();
-                    test:assertTrue(detail.location is err:Location, "error without location");
-                    string filename =(<err:Location>detail.location).filename;
-                    test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
-                    err:LineColumn? lc = detail.location?.startPos;
-                    if lc is err:LineColumn {
-                        test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
-                    }
+                var [expectedFilename, expectedLineNo] = <FilenameLine> check expectedErrorLocation(err, path);
+                // JBUG #31334 cast needed
+                err:Detail detail = <err:Detail> err.detail();
+                test:assertTrue(detail.location is err:Location, "error without location");
+                string filename =(<err:Location>detail.location).filename;
+                test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
+                err:LineColumn? lc = detail.location?.startPos;
+                if lc is err:LineColumn {
+                    test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
                 }
             }
         }
@@ -83,6 +80,7 @@ function expectedErrorLocation(CompileError err, string path) returns FilenameLi
         }
     }
     errorLocation = check findErrorLine(path, errorLocation);
+    test:assertFalse(errorLocation is (), "failed to find any files with error annotation for " + path);
     return errorLocation;
 }
 
@@ -98,6 +96,9 @@ function findErrorLine(string filePath, FilenameLine? currentErrorLocation) retu
     if fileErrorLine is int {
         test:assertTrue(currentErrorLocation is (), "multiple files with error annotations found");
         return [filePath, fileErrorLine];
+    }
+    else {
+        return currentErrorLocation;
     }
 }
 
