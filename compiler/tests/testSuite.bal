@@ -50,6 +50,7 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
                 var expectedErrorLocation = checkpanic expectedErrorLocation(err, path);
                 if !(expectedErrorLocation is ()) {
                     var [expectedLineNo, expectedFilename] = expectedErrorLocation;
+                    // JBUG #31334 cast needed
                     err:Detail detail = <err:Detail> err.detail();
                     test:assertTrue(detail.location is err:Location, "error without location");
                     string filename =(<err:Location>detail.location).filename;
