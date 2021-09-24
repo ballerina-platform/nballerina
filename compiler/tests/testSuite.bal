@@ -46,9 +46,20 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             else if !err.message().includes("'io:println'") {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
-            int? lineNumber = compileErrorLineNumber(err);
-            if lineNumber != () && (isE || kind[1] == "e") {
-                test:assertEquals(lineNumber, check errorLine(path), "wrong line number in error " + path);
+            if kind == "e" || kind == "ue" {
+                var expectedErrorLocation = check expectedErrorLocation(err, path);
+                if !(expectedErrorLocation is ()) {
+                    var [expectedFilename, expectedLineNo] = expectedErrorLocation;
+                    // JBUG #31334 cast needed
+                    err:Detail detail = <err:Detail> err.detail();
+                    test:assertTrue(detail.location is err:Location, "error without location");
+                    string filename =(<err:Location>detail.location).filename;
+                    test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
+                    err:LineColumn? lc = detail.location?.startPos;
+                    if lc is err:LineColumn {
+                        test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
+                    }
+                }
             }
         }
     }
@@ -57,15 +68,36 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
     }
 }
 
-function compileErrorLineNumber(CompileError err) returns int? {
-    if err is io:Error {
-        return ();
+type FilenameLine [string, int];
+
+function expectedErrorLocation(CompileError err, string path) returns FilenameLine|file:Error|io:Error? {
+    string? modulePath = check moduleDir(path);
+    FilenameLine? errorLocation = ();
+    if modulePath is string {
+        foreach var md in check file:readDir(modulePath) {
+            if md.dir {
+                foreach var file in check file:readDir(md.absPath) {
+                    errorLocation = check findErrorLine(file.absPath, errorLocation);
+                }
+            }
+        }
     }
-    else {
-        // JBUG #31334 cast needed
-        err:Detail detail = <err:Detail>err.detail();
-        err:LineColumn? lc = detail.location?.startPos;
-        return lc == () ? () : lc[0];
+    errorLocation = check findErrorLine(path, errorLocation);
+    return errorLocation;
+}
+
+function moduleDir(string filePath) returns string|file:Error? {
+    string subModPath = filePath.substring(0, filePath.length()-4) + ".modules";
+    if check file:test(subModPath, file:IS_DIR) {
+        return check file:normalizePath(subModPath, file:CLEAN);
+    }
+}
+
+function findErrorLine(string filePath, FilenameLine? currentErrorLocation) returns FilenameLine|io:Error? {
+    int? fileErrorLine = check errorLine(filePath);
+    if fileErrorLine is int {
+        test:assertTrue(currentErrorLocation is (), "multiple files with error annotations found");
+        return [filePath, fileErrorLine];
     }
 }
 
@@ -111,16 +143,16 @@ function includePath(string path, string initialChars) returns boolean|file:Erro
     return extension == SOURCE_EXTENSION && initialChars.includes(base[0].toUpperAscii());
 }
 
-function errorLine(string path) returns int|io:Error {
+function errorLine(string path) returns int|io:Error? {
     string[] lines = check io:fileReadLines(path);
+    int? lineNo = ();
     foreach var i in 0 ..< lines.length() {
         if lines[i].indexOf("// @error") != () {
-            return i + 1;
+            test:assertTrue(lineNo is (), "multiple error annotations in file " + path);
+            lineNo = i + 1;
         }
     }
-    test:assertFail("Test with 'E' prefix missing error annotation : " + path);
-    // JBUG #31338 panic with function returning never here cases a bytecode error
-    panic err:impossible();
+    return lineNo;
 }
 
 // This outputs nothing

@@ -72,7 +72,13 @@ function compileBalFile(string filename, string basename, string? outputBasename
 
 function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, string? outFilename) returns front:ResolvedModule|CompileError {
     front:ScannedModule scanned = check front:scanModule(sourceParts, id);
-    ResolvedImport[] resolvedImports = from var mod in scanned.getImports() select check resolveImport(cx, mod);
+    // Fallowing doesn't properly pass the error back to the calling function if we get an error the import
+    // ResolvedImport[] resolvedImports = from var mod in scanned.getImports() select check resolveImport(cx, mod);
+    ResolvedImport[] resolvedImports = [];
+    foreach var mod in scanned.getImports() {
+        ResolvedImport ri = check resolveImport(cx, mod);
+        resolvedImports.push(ri);
+    }
     front:ResolvedModule mod = check front:resolveModule(scanned, cx.env, resolvedImports);
     LlvmModule llMod = check cx.buildModule(mod);
     if outFilename != () {
@@ -125,7 +131,7 @@ function subModuleSourceParts(string basename, bir:ModuleId id) returns front:So
             if ext == SOURCE_EXTENSION {
                 sourceParts.push({
                     lines: check io:fileReadLines(md.absPath),
-                    filename: check file:basename(md.absPath),
+                    filename: check file:normalizePath(check file:joinPath(directory, check file:basename(md.absPath)), file:CLEAN),
                     directory 
                 });
             }
