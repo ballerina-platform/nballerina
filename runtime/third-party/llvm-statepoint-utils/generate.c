@@ -95,10 +95,12 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
 
     assert((numLocations % 2) == 0 && "all of the pointer locations come in pairs!");
     uint16_t numSlots = numLocations / 2;
+    printf("numSlots : %d\n", numSlots);
     uint16_t numActualFrameSlots = numSlots;
 
     frame_info_t* frame = malloc(size_of_frame(numSlots));
     frame->retAddr = retAddr;
+    printf("frame->retAddr : %p\n", retAddr);
     frame->frameSize = frameSize;
 
     // now to initialize the slots, we need to make two passes in order to put
@@ -120,7 +122,7 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
             continue;
         }
 
-        if( ! isBasePointer(base, derived)) {
+        if( ! isBasePointer(base, derived) && (base->locSize != derived->locSize)) {
             continue;
         }
 
@@ -159,16 +161,22 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         // find the index in our frame corresponding to the base pointer.
         uint16_t baseIdx;
         bool found = false;
+        // printf("numBasePtrs : %d\n", numBasePtrs);
         for(uint16_t k = 0; k < numBasePtrs; k++) {
+            // printf("A\n");
             if(processedBase[k].offset == base->offset) {
+            // printf("B\n");
                 found = true;
                 baseIdx = k;
                 break;
             }
+            // printf("C\n");
         }
 
         // something's gone awry, let's bail!
         if (!found) {
+            printf("retAddr %p\n", retAddr);
+            printf("codeOffset %d\n", callsite->codeOffset);
             fprintf(stderr, "(statepoint-utils) error: \
                              \n\tcouldn't find base for derived ptr!\n");
             exit(1);
@@ -178,7 +186,7 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         pointer_slot_t newSlot;
         newSlot.kind = baseIdx;
         newSlot.offset = convert_offset(derived, frameSize);
-        newSlot.slotSize = base->locSize;
+        newSlot.slotSize = derived->locSize;
         *currentSlot = newSlot;
 
         // new iteration
