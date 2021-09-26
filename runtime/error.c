@@ -363,14 +363,15 @@ static bool demangleCountedName(const char **pp, const char **name) {
     *name = *pp + nRead;
     if (*name[0] == '_') {
         *name = *name + 1;
-        nChars++;
     }
-    for (int i = 0; i < nRead + nChars; i++) {
-        *pp = *pp + 1;
-        if (**pp == '\0') {
+    const char *p = *name;
+    while (nChars > 0) {
+        p++;
+        if (*p == '\0') {
             return false;
         }
+        nChars--;
     }
-    
+    *pp = p;
     return true;
 }
