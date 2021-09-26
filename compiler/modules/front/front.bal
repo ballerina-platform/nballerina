@@ -173,9 +173,12 @@ function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] res
             resolved = i < resolvedImports.length() ? resolvedImports[i] : ();
         }
         foreach var decl in importsById[i].imports {
-            if resolved is string? {
-                err:Message msg = resolved == () ? `unsupported module ${moduleIdToString(moduleId)}` : resolved;
+            if resolved == () {
+                err:Message msg = `unsupported module ${moduleIdToString(moduleId)}`;
                 return err:unimplemented(msg, loc=err:location(files[decl.partIndex], decl.pos));
+            }
+            else if resolved is string {
+                return err:semantic(resolved, loc=err:location(files[decl.partIndex], decl.pos));
             }
             else {
                 string? declPrefix = decl.prefix;
@@ -204,7 +207,7 @@ function validEntryPoint(ModuleDefns mod) returns err:Any? {
 function addModulePart(ModuleDefns mod, s:ModulePart part) returns err:Semantic? {
     foreach s:ModuleLevelDefn defn in part.defns {
         if mod.hasKey(defn.name) {
-            return err:semantic(`duplicate definition if ${defn.name}`, s:defnLocation(defn));
+            return err:semantic(`duplicate definition in ${defn.name}`, s:defnLocation(defn));
         }
         mod.add(defn);
     }

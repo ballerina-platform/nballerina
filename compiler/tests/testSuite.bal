@@ -40,6 +40,9 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             string base = check file:basename(path);
             boolean isE = kind[0] == "e";
             if isE {
+                if err is err:Unimplemented {
+                    io:println(err);
+                }
                 test:assertFalse(err is err:Unimplemented, "unimplemented error on E test" + path);
             }
             // io:println U errors are reported as semantic errors
