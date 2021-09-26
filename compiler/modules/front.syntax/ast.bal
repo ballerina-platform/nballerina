@@ -297,14 +297,18 @@ public type IntLiteralExpr record {|
     Position pos;
 |};
 
-const FLOAT_TYPE_SUFFIX = "f";
+public const FLOAT_TYPE_SUFFIX = "f";
+public const DECIMAL_TYPE_SUFFIX = "d";
+
+public type FpTypeSuffix FLOAT_TYPE_SUFFIX|DECIMAL_TYPE_SUFFIX;
 
 public type FpLiteralExpr record {|
     // This is the literal without the public type suffix
     string untypedLiteral;
-    FLOAT_TYPE_SUFFIX? typeSuffix;
+    FpTypeSuffix? typeSuffix;
     Position pos;
 |};
+
 
 // Types
 
@@ -365,7 +369,7 @@ public type TypeDescRef record {|
 |};
 
 public type SingletonTypeDesc record {|
-    (string|float|int|boolean) value;
+    (string|float|int|boolean|decimal) value;
 |};
 
 public type BuiltinIntSubtypeDesc "sint8"|"uint8"|"sint16"|"uint16"|"sint32"|"uint32";

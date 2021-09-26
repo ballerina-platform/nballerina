@@ -13,8 +13,6 @@ const N_VARIABLE_TOKENS = 5;
 
 type VariableTokenCode IDENTIFIER|DECIMAL_NUMBER|STRING_LITERAL|HEX_INT_LITERAL|DECIMAL_FP_NUMBER;
 
-type FpTypeSuffix "f";
-
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
 type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string]|[DECIMAL_FP_NUMBER, string, FpTypeSuffix?];
 
@@ -221,6 +219,11 @@ class Tokenizer {
                 }
                 FRAG_DECIMAL_FP_NUMBER => {
                     self.curTok = [DECIMAL_FP_NUMBER, self.getFragment(), ()];
+                    return;
+                }
+                FRAG_DECIMAL_FP_NUMBER_D => {
+                    string number = self.getFragment();
+                    self.curTok = [DECIMAL_FP_NUMBER, number.substring(0, number.length() - 1), "d"];
                     return;
                 }
                 _ => {

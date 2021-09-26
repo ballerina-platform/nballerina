@@ -210,6 +210,9 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         else if value is int {
             return t:intConst(value);
         }
+        else if value is decimal {
+            return t:decimalConst(value);
+        }
         else {
             return t:floatConst(value);
         }
