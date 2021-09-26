@@ -330,6 +330,12 @@ class Tokenizer {
         self.mode = s.mode;
         self.curTok = s.curTok;
 
+        if self.lineIndex == 0 {
+            // advance() hasn't been called or lines are empty
+            self.fragCodes = [];
+            self.fragments = [];
+            return;
+        }
         ScannedLine scannedLine = self.lines[self.lineIndex - 1];
         self.fragCodes = scannedLine.fragCodes;
         self.fragments = scannedLine.fragments;
