@@ -22,7 +22,7 @@ enum DemangleResult {
     PUBLIC_BALLERINA_NAME,
     NON_PUBLIC_BALLERINA_NAME,
     NON_BALLERINA_NAME,
-    _B_NON_BALLERINA_NAME
+    BAD_BALLERINA_NAME
 };
 
 struct backtrace_state *state = NULL;
@@ -274,7 +274,7 @@ void _bal_print_mangled_name(const char *mangledName, FILE *fp) {
         demangle(mangledName, &localName, fp);
         fputs(")", fp);
     }
-    else if (res == NON_BALLERINA_NAME || res == _B_NON_BALLERINA_NAME) {
+    else if (res == NON_BALLERINA_NAME || res == BAD_BALLERINA_NAME) {
         fprintf(fp, "%s", mangledName);
     }
 }
@@ -302,7 +302,7 @@ static enum DemangleResult demangle(const char *mangledName, const char **localN
     }
     else {
         if (!demangleCountedName(&mangledName, &org)) {
-            return _B_NON_BALLERINA_NAME;
+            return BAD_BALLERINA_NAME;
         }
     }
     if (fp != NULL) {
