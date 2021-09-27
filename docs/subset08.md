@@ -80,7 +80,7 @@ signature = "(" [param-list] ")" [ "returns" type-desc ]
 
 const-defn = ["public"] "const" [builtin-type-name] identifier "=" const-expr ";"
 
-type-defn = ["public"] "type" identifier union-type-desc ";"
+type-defn = ["public"] "type" identifier type-desc ";"
 
 type-desc = union-type-desc | array-type-desc | map-type-desc | type-reference 
 
