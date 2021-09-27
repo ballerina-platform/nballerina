@@ -222,7 +222,8 @@ static void printBacktraceLine(const char *filename, int64_t lineNumber, const c
     // API docs say any of filename, lineno and function may be 0 meaning unavailable
     const char *sep = "    ";
     if (function != NULL) {
-        fprintf(fp, "%s%s", sep, function);
+        fputs(sep, fp);
+        _bal_print_mangled_name(function, fp);
         sep = " ";
     }
     if (filename != NULL) {
