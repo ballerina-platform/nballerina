@@ -29,6 +29,12 @@ bool READONLY _bal_exact_eq(TaggedPtr tp1, TaggedPtr tp2) {
                 FloatPtr p2 = taggedToPtr(tp2);
                 return _bal_float_exact_eq(*p1, *p2);
             }
+        case TAG_LIST_RW:
+        case TAG_MAPPING_RW:
+            {
+                // This is needed to ignore the exact bit.
+                return taggedToPtr(tp1) == taggedToPtr(tp2);
+            }
     }   
     return 0;
 }

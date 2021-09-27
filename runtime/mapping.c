@@ -179,7 +179,7 @@ TaggedPtr _bal_mapping_construct(MappingDesc desc, int64_t capacity) {
     mp->desc = desc;
     initArray(&(mp->gArray), capacity, MAP_FIELD_SHIFT);
     initTable(mp, capacity);
-    return ptrAddFlags(mp, (uint64_t)TAG_MAPPING_RW << TAG_SHIFT);
+    return ptrAddFlags(mp, ((uint64_t)TAG_MAPPING_RW << TAG_SHIFT)|EXACT_FLAG);
 }
 
 READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key) {
@@ -207,7 +207,7 @@ void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr value)
 PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
     if ((mp->desc & (1 << (getTag(value) & UT_MASK))) == 0) {
-        return PANIC_MAPPING_STORE;
+        return storePanicCode(mapping, PANIC_MAPPING_STORE);
     }
     int64_t len = mp->fArray.length;
    

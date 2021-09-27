@@ -17,6 +17,7 @@
 #define POINTER_MASK ((1L << TAG_SHIFT) - 1)
 
 #define IMMEDIATE_FLAG (((uint64_t)0x20) << TAG_SHIFT)
+#define EXACT_FLAG 0x4
 
 #define STRING_LARGE_FLAG 1
 
@@ -208,6 +209,8 @@ extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
 extern READONLY bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
+extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
+
 extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
 extern void _bal_error_backtrace_print(ErrorPtr ep);
 // Returns an error value
@@ -245,6 +248,15 @@ static READNONE inline int taggedToBoolean(TaggedPtr p) {
 
 static READNONE inline UntypedPtr taggedToPtr(TaggedPtr p) {
     return _bal_tagged_to_ptr(p);
+}
+
+static READNONE inline UntypedPtr taggedToPtrExact(TaggedPtr p) {
+    return _bal_tagged_to_ptr_exact(p);
+}
+
+static READNONE inline PanicCode storePanicCode(TaggedPtr p, PanicCode code) {
+    // If the exact bit is set, then these will be unequal and the error should not occur.
+    return taggedToPtr(p) == taggedToPtrExact(p) ? code :  PANIC_INTERNAL_ERROR;
 }
 
 static READONLY inline int64_t taggedToInt(TaggedPtr p) {
@@ -294,7 +306,6 @@ static READONLY inline double taggedToFloat(TaggedPtr p) {
     GC double *np = taggedToPtr(p);
     return *np;
 }
-
 
 static READONLY inline int64_t taggedFloatComparator(TaggedPtr lhs, TaggedPtr rhs) {
     double lhsVal = taggedToFloat(lhs);
