@@ -1,6 +1,4 @@
-import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
-import wso2/nballerina.front;
 import wso2/nballerina.nback;
 import wso2/nballerina.err;
 
@@ -53,68 +51,15 @@ public function main(string[] filenames, *Options opts) returns error? {
             check compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
         }
         else if ext == TEST_EXTENSION {
-            check compileBalt(filename, opts.outDir ?: check file:parentPath(filename), nbackOptions, opts);
+            check compileBaltFile(filename, opts.outDir ?: check file:parentPath(filename), nbackOptions, opts);
+        }
+        else if ext == () {
+            return error("input filename must have a .bal or .balt extension");
         }
         else {
-            return error(unknownExtensionMessage(ext));
+            return error(err:format(`unsupported extension ${ext}`));
         }
     }
-}
-
-function unknownExtensionMessage(string? ext) returns string {
-    if ext == () {
-        return "input filename must have a .bal or .balt extension";
-    }
-    else {
-        return err:format(`unsupported extension ${ext}`);
-    }
-}
-
-function compileBalt(string filename, string outDir, nback:Options nbackOptions, Options options) returns error? {
-    BaltTestCase[] tests = check parseBalt(filename);
-    foreach var [i, t] in tests.enumerate() {
-        if t.header.Test\-Case == "error" || t.header["Fail-Issue"] != () {
-            continue;
-        }
-        string outBasename = chooseBaltCaseOutputFilename(t, i);
-        string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
-        string[] lines = t.content;
-        check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename);
-        string? expectOutDir = options.expectOutDir;
-        string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
-        check io:fileWriteLines(expectFilename, expect(t.content));
-    }
-}
-
-function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns LlvmModule|CompileError {
-    t:Env env = new;
-    front:ScannedModule scanned = check front:scanModule(sources, modId);
-    bir:Module birMod = check front:resolveModule(scanned, env, []);
-    LlvmContext context = new;
-    return nback:buildModule(birMod, context, nbackOptions);
-}
-
-function compileAndOutputModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename) returns CompileError? {
-    LlvmModule llMod = check compileModule(modId, sources, nbackOptions);
-    if outFilename != () {
-        check outputModule(llMod, outFilename, outOptions);
-    }
-}
-
-
-function chooseOutputFilename(string sourceFilename, string? outDir = ()) returns string|error? {
-    string filename;
-    if outDir == () {
-        filename = sourceFilename;
-    }
-    else {
-        filename = check file:joinPath(outDir, check file:basename(sourceFilename));
-    }
-    var [base, extension] = basenameExtension(filename);
-    if extension != SOURCE_EXTENSION {
-        return error("filename must end with " + SOURCE_EXTENSION);
-    }
-    return base + OUTPUT_EXTENSION;
 }
 
 // Basename here means filename without extension
