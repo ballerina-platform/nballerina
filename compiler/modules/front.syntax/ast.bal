@@ -46,22 +46,16 @@ public type ConstDefn record {|
     ResolvedConst|false? resolved = ();    
 |};
 
-public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt|PanicStmt|DestructuringAssignStmt;
+public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr|CheckingStmt;
 public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
+public const WILDCARD = "_";
+
 public type AssignStmt record {|
-    LExpr lValue;
-    Expr expr;
-|};
-
-const WildcardBindingPattern = "_";
-public type BindingPattern WildcardBindingPattern;
-
-public type DestructuringAssignStmt record {|
-    BindingPattern pattern;
+    LExpr|WILDCARD lValue;
     Expr expr;
 |};
 

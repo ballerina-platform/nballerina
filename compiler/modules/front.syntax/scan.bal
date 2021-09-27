@@ -94,6 +94,7 @@ const FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL = 0x56;
 const FRAG_KEYWORD = 0x80;
 
 final readonly & Keyword[] keywords = [
+    "_",
     "any",
     "as",
     "boolean",
@@ -133,8 +134,7 @@ final readonly & Keyword[] keywords = [
     "type",
     "typedesc",
     "while",
-    "xml",
-    "_"
+    "xml"
 ];
 
 // This maps a frag code to a string
@@ -568,7 +568,8 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     i = scanIdentifier(codePoints, i + 1, result);
                 }
                 else {
-                    endIdentifierOrKeyword(codePoints, i, result);
+                    // keywords index of '_' is 0
+                    endFragment(FRAG_KEYWORD, i, result);
                 }
             }
             _ => {

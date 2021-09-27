@@ -117,7 +117,12 @@ function stmtToWords(Word[] w, Stmt stmt) {
         w.push(";");
     }
     else if stmt is AssignStmt {
-        exprToWords(w, stmt.lValue);
+        LExpr|WILDCARD lValue = stmt.lValue;
+        if lValue is WILDCARD {
+            w.push(WILDCARD);
+        } else {
+            exprToWords(w, lValue);
+        }
         w.push("=");
         exprToWords(w, stmt.expr);
         w.push(";");
@@ -194,11 +199,6 @@ function stmtToWords(Word[] w, Stmt stmt) {
     else if stmt is CheckingStmt {
         w.push(stmt.checkingKeyword);
         exprToWords(w, stmt.operand);
-        w.push(";");
-    }
-    else if stmt is DestructuringAssignStmt {
-        w.push(stmt.pattern, "=");
-        exprToWords(w, stmt.expr);
         w.push(";");
     }
     else {

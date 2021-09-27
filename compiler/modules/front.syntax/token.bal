@@ -23,7 +23,8 @@ type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | 
 type MultiCharDelim "{|" | "|}" | "..." | "..<" | "==" | "!=" | ">=" | "<=" | "===" | "!==" | "<<" | ">>" | ">>>" | "=>" | CompoundAssignDelim;
 type CompoundAssignDelim "+=" | "-=" | "/=" | "*=" | "&=" | "|=" | "^=" | "<<=" | ">>=" | ">>>=";
 type Keyword
-    "any"
+    "_"
+    | "any"
     | "as"
     | "boolean"
     | "byte"
@@ -63,7 +64,6 @@ type Keyword
     | "break"
     | "public"
     | "import"
-    | "_"
     ;
 
 
