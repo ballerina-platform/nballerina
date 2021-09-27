@@ -89,6 +89,10 @@ function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] so
 }
 
 function resolveImport(CompileContext cx, bir:ModuleId id) returns CompileError|ResolvedImport {
+    if id == DEFAULT_ROOT_MODULE_ID {
+        // xxx update if & when sub-modules can be imported from other packages
+        return IMPORT_CYCLE_ERROR;
+    }
     if !isSubModule(id) {
         return ();
     }
