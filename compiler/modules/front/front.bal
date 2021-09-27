@@ -8,6 +8,7 @@ import wso2/nballerina.err;
 public type ResolvedModule object {
     *bir:Module;
     public function getExports() returns ModuleExports;
+    public function validMain() returns err:Any?;
 };
 
 class Module {
@@ -76,6 +77,11 @@ class Module {
     public function getExports() returns ModuleExports {
         return createExports(self.syms);
     }
+
+    public function validMain() returns err:Any? {
+        return validEntryPoint(self.syms.defns);
+    }
+
 }
 
 public type SourcePart record {|
@@ -132,8 +138,6 @@ public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|s
         check addModulePart(syms.defns, part);
     }
     check resolveTypes(syms);
-    // XXX Should have an option that controls whether we perform this check
-    check validEntryPoint(syms.defns);
     return new Module(scanned.id, files, syms);
 }
 
