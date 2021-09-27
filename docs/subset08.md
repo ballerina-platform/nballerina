@@ -316,11 +316,13 @@ Method call syntax can be used for calling the following langlib functions:
 * `int:toHexString`
 * `error:message`
 
-The following restrictions apply to imports with an organization of `ballerina`:
+Two kinds of `import` are supported.
 
-* only `ballerina/io` can be imported
-* the only function from `ballerina/io` that can be called is `println`
-* `println` only accepts a single argument (which is of type `any`)
+1. An import with an organization of `ballerina` is allowed with the following restrictions
+   * only `ballerina/io` can be imported
+   * the only function from `ballerina/io` that can be called is `println`
+   * `println` only accepts a single argument (which is of type `any`)
+2. An import with no organization and with a module name starting with `root`. An `import root.X;` in a file `F.bal` will read the module from the files `F.modules/X/*.bal`.
 
 ## Notes
 
@@ -328,9 +330,11 @@ The following restrictions apply to imports with an organization of `ballerina`:
 
 ## Additions from subset 7
 
-* a qualified identifier in a function-reference can refer to a function definition defined in another module
-* a variable-reference or type-reference can be a qualified identifier referring to a constant or type defined in another module
-* Support `check` and `checkpanic` in call statements
+* Multiple modules
+   * Full import declaration syntax is supported.
+   * A qualified identifier in a function-reference can refer to a function definition defined in another module.
+   * A variable-reference or type-reference can be a qualified identifier referring to a constant or type defined in another module.
+* `check` and `checkpanic` are supported in call statements
 
 ## Implemented spec changes since 2021R1
 
