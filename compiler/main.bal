@@ -12,7 +12,7 @@ type CompileError err:Any|io:Error|file:Error;
 public type Options record {
     boolean testJsonTypes = false;
     boolean showTypes = false;
-    boolean debug = false;
+    int debugLevel = nback:DEBUG_BACKTRACE;
     // outDir also implies treating each file as a separate module
     string? outDir = ();
     string? expectOutDir = ();
@@ -43,9 +43,10 @@ public function main(string[] filenames, *Options opts) returns error? {
         check showTypes([{ filename: filenames[0] }]);
         return;
     }
+    int debugLevel = opts.debugLevel;
     nback:Options nbackOptions = {
         gcName: check nback:validGcName(opts.gc),
-        debugLevel: opts.debug ? nback:DEBUG_BACKTRACE : nback:DEBUG_NONE
+        debugLevel: debugLevel < nback:DEBUG_NONE || debugLevel > nback:DEBUG_FULL ? nback:DEBUG_BACKTRACE : debugLevel
     };
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
