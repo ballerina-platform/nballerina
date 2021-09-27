@@ -105,5 +105,5 @@ function lookupImportedConst(ModuleSymbols mod, s:ModuleLevelDefn modDefn, strin
     if defn is s:ResolvedConst {
         return defn[1];
     }
-    return err:semantic(`${prefix + ":" + varName} is not defined as a const`, loc=s:locationInDefn(modDefn), functionName=modDefn.name);
+    return err:semantic(`${prefix + ":" + varName} is not defined as a public const`, loc=s:locationInDefn(modDefn), functionName=modDefn.name);
 }
