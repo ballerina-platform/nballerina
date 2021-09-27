@@ -121,6 +121,14 @@ function getStringProp(string? prop) returns [handle, int] {
     }
 }
 
+function extractName(string? name) returns string {
+    if name is () {
+        return "";
+    } else {
+        return name;
+    }
+}
+
 
 function jPointerPointer(int size) returns handle = @java:Constructor {
     'class: "org.bytedeco.javacpp.PointerPointer",
