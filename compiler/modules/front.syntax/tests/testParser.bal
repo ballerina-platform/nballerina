@@ -497,7 +497,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "stmt", "check a() + b();"],
          ["E", "stmt", "check a[1];"],
          ["V", "stmt", "check a.b();", "check a.b();"],
-         ["FE", "stmt", "check (a.b());"], // enable after #466
+         ["E", "stmt", "check (a.b());"],
          ["V", "stmt", "check ((a)).b();", "check a.b();"],
          ["V", "stmt", "check a[1].b();", "check (a[1]).b();"],
          // module parts

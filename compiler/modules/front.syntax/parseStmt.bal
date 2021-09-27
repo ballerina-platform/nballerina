@@ -163,10 +163,14 @@ function parseErrorStmt(Tokenizer tok) returns Stmt|err:Syntax {
 }
 
 function parseMethodCallStmt(Tokenizer tok) returns MethodCallExpr|err:Syntax {
-    Expr expr = check parsePrimaryExpr(tok);
-    if expr is MethodCallExpr {
-        check tok.expect(";");
-        return expr;
+    Expr expr = check startPrimaryExpr(tok);
+    Token? cur = tok.current();
+    if cur == "." || cur == "[" {
+        expr = check finishPrimaryExpr(tok, expr);
+        if expr is MethodCallExpr {
+            check tok.expect(";");
+            return expr;
+        }
     }
     return parseError(tok, "expression not allowed as a statement");
 }
