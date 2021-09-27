@@ -192,6 +192,7 @@ public class Module {
     private [PointerValue, GlobalProperties][] globalVariables = [];
     private FunctionDecl[] functionDecls = [];
     private FunctionDefn[] functionDefns = [];
+    private string[] aliasLines = [];
     Metadata[] metadata = [];
     Metadata[] moduleFlags = [];
 
@@ -313,6 +314,14 @@ public class Module {
         return out.toString();
     }
 
+    // Corresponds to LLVMAddAlias
+    public function addAlias(PointerType aliasTy, ConstValue aliasee, string? name=()) returns ConstPointerValue {
+        string aliasName = "@" + (name == () ? self.aliasLines.length().toString() : name);
+        self.aliasLines.push(concat(aliasName, "=", "alias", typeToString(aliasTy.pointsTo),
+                                    ",", typeToString(aliasee.ty), aliasee.operand));
+        return new (aliasTy, aliasName);
+    }
+
     function output(Output out) {
         if self.target is TargetTriple {
             string[] words = ["target", "triple", "=", "\"", <TargetTriple>self.target, "\""];
@@ -320,6 +329,9 @@ public class Module {
         }
         foreach var val in self.globalVariables {
             self.outputGlobalVar(val[0], val[1], out);
+        }
+        foreach var aliasLine in self.aliasLines {
+            out.push(aliasLine);
         }
         foreach var fn in self.functionDecls {
             fn.output(out);
