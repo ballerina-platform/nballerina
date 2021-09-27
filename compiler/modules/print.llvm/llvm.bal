@@ -189,7 +189,7 @@ public class Context {
         if self.namedStructTypes.hasKey(structName) {
             panic err:illegalArgument("This context already has a struct type by that name");
         }
-        StructType ty = {name:structName, elementTypes:elementTypes.cloneReadOnly()};
+        StructType ty = { name:structName, elementTypes:elementTypes.cloneReadOnly() };
         self.namedStructTypes[structName] = [ty, false];
         return ty;
     }
