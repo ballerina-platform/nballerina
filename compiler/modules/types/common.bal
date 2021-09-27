@@ -37,31 +37,31 @@ function and(Atom atom, Conjunction? next) returns Conjunction {
     return { atom, next };
 }
 
-type BddPredicate function(TypeCheckContext tc, Conjunction? pos, Conjunction? neg) returns boolean;
+type BddPredicate function(Context cx, Conjunction? pos, Conjunction? neg) returns boolean;
 
 // A Bdd represents a disjunction of conjunctions of atoms, where each atom is either positive or
 // negative (negated). Each path from the root to a leaf that is true represents one of the conjunctions
 // We walk the tree, accumulating the positive and negative conjunctions for a path as we go.
 // When we get to a leaf that is true, we apply the predicate to the accumulated conjunctions.
-function bddEvery(TypeCheckContext tc, Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate) returns boolean {
+function bddEvery(Context cx, Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate) returns boolean {
     if b is boolean {
-        return !b || predicate(tc, pos, neg);
+        return !b || predicate(cx, pos, neg);
     }
     else {
-        return bddEvery(tc, b.left, and(b.atom, pos), neg, predicate)
-          && bddEvery(tc, b.middle, pos, neg, predicate)
-          && bddEvery(tc, b.right, pos, and(b.atom, neg), predicate); 
+        return bddEvery(cx, b.left, and(b.atom, pos), neg, predicate)
+          && bddEvery(cx, b.middle, pos, neg, predicate)
+          && bddEvery(cx, b.right, pos, and(b.atom, neg), predicate); 
     }
 }
 
-function bddEveryPositive(TypeCheckContext tc, Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate) returns boolean {
+function bddEveryPositive(Context cx, Bdd b, Conjunction? pos, Conjunction? neg, BddPredicate predicate) returns boolean {
     if b is boolean {
-        return !b || predicate(tc, pos, neg);
+        return !b || predicate(cx, pos, neg);
     }
     else {
-        return bddEveryPositive(tc, b.left, andIfPositive(b.atom, pos), neg, predicate)
-          && bddEveryPositive(tc, b.middle, pos, neg, predicate)
-          && bddEveryPositive(tc, b.right, pos, andIfPositive(b.atom, neg), predicate); 
+        return bddEveryPositive(cx, b.left, andIfPositive(b.atom, pos), neg, predicate)
+          && bddEveryPositive(cx, b.middle, pos, neg, predicate)
+          && bddEveryPositive(cx, b.right, pos, andIfPositive(b.atom, neg), predicate); 
     }
 }
 
@@ -118,6 +118,6 @@ function shallowCopyStrings(string[] v) returns string[] {
     return from var x in v select x;
 }
 
-function notIsEmpty(TypeCheckContext tc, SubtypeData d) returns boolean {
+function notIsEmpty(Context cx, SubtypeData d) returns boolean {
     return false;
 }

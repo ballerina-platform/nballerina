@@ -22,7 +22,7 @@ The implementation currently handles a subset of Ballerina type system:
 * readonly
 * union
 * intersection
-* string, int, boolean singletons
+* string, decimal, float, int, boolean singletons
 * byte and other built-in int subtypes
 * error with detail record subtypes (but not distinct)
 * typedesc, xml (without type parameters)

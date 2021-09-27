@@ -5,7 +5,8 @@ import wso2/nballerina.err;
 function parseInlineTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
-        TypeDescRef refTypeDesc = { ref: t[1], pos: tok.currentPos() };
+        var [prefix, typeName] = check parseOptQualIdentifier(tok, t[1]);
+        TypeDescRef refTypeDesc = { prefix, typeName, pos: tok.currentPos() };
         return refTypeDesc;
     }
     else if t is "map" {
@@ -208,22 +209,18 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 return "int";
             }
             check tok.advance();
-            Token? t = tok.current();
-            if t is [IDENTIFIER, string] {
-                var name = t[1];
-                BuiltinIntSubtypeDesc? desc = BUILTIN_INT_SUBTYPES[name];
-                if !(desc is ()) {
-                    check tok.advance();
-                    return desc;
-                }
-                return tok.err("unrecognized integer subtype '" + name + "'");
+            var name = check tok.expectIdentifier();
+            BuiltinIntSubtypeDesc? desc = BUILTIN_INT_SUBTYPES[name];
+            if !(desc is ()) {
+                return desc;
             }
-            // match falls through to parseError
+            return tok.err("unrecognized integer subtype '" + name + "'");
         }
-        [IDENTIFIER, var ref] => {
-            TypeDescRef r = { ref, pos: tok.currentPos() };
+        [IDENTIFIER, var identifier] => {
+            Position pos = tok.currentPos();
             check tok.advance();
-            return r;
+            var [prefix, typeName] = check parseOptQualIdentifier(tok, identifier);
+            return { prefix, typeName, pos };
         }
         [STRING_LITERAL, var str] => {
             check tok.advance();
@@ -259,17 +256,32 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 function parseNumericLiteralTypeDesc(Tokenizer tok, Position? signPos = ()) returns SingletonTypeDesc|err:Syntax {
     NumericLiteralExpr expr = check parseNumericLiteralExpr(tok);
     if expr is FpLiteralExpr {
-        var f = float:fromString(expr.untypedLiteral);
-        if f is error {
-            return tok.err(`invalid float literal ${expr.untypedLiteral}`); // don't think this should happen
-        }
-        else {
-            float value = f;
-            if signPos != () {
-                value = -value;
+        if expr.typeSuffix == "d" {
+            var f = decimal:fromString(expr.untypedLiteral);
+            if f is error {
+                return tok.err(`invalid decimal literal ${expr.untypedLiteral}`);
             }
-            return { value };
-        }
+            else {
+                decimal value = f;
+                if signPos != () {
+                    value = -value;
+                }
+                return { value };
+            }
+        } 
+        else {
+            var f = float:fromString(expr.untypedLiteral);
+            if f is error {
+                return tok.err(`invalid float literal ${expr.untypedLiteral}`); // don't think this should happen
+            }
+            else {
+                float value = f;
+                if signPos != () {
+                    value = -value;
+                }
+                return { value };
+            }
+        }   
     }
     else {
         var n = intFromIntLiteral(expr.base, expr.digits);

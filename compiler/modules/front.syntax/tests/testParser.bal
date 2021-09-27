@@ -241,6 +241,9 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "\"\\" + "u{FFFF}\"", "\"\\" + "u{FFFF}\""],
          ["V", "expr", "\"\\" + "u{10FFFF}\"", "\"\\" + "u{10FFFF}\""],
          ["V", "expr", "\"\\\\" + "u{41}\"", "\"\\\\" + "u{41}\""],
+         // var ref
+         ["V", "expr", "a:b", "a:b"],
+         ["E", "expr", "a:1", ""],
          // unary op
          ["E", "expr", "!", ""],
          ["E", "expr", "!-", ""],
@@ -272,6 +275,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "x !is int", "x ! is int"],
          ["V", "expr", "x[1] is map<any>", "(x[1]) is map<any>"],
          ["V", "expr", "x is int == true", "(x is int) == true"],
+         ["V", "expr", "v is a:b", "v is a:b"],
          // binary op
          ["V", "expr", "1 + 1", "1 + 1"],
          ["V", "expr", "2 - a2", "2 - a2"],
@@ -367,6 +371,9 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "expr", "x(a,)", ""],
          ["E", "expr", "x(a b)", ""],
          ["V", "expr", "xxx(123, 12 + 2)", "xxx(123, 12 + 2)"],
+         ["V", "expr", "x:f()", "x:f()"],
+         ["V", "expr", "a:b().x()", "a:b().x()"],
+         ["V", "expr", "x:y.f()", "x:y.f()"],
          // list constructor
          ["V", "expr", "[ ]", "[]"],
          ["V", "expr", "[foo(42)]", "[foo(42)]"],
@@ -456,6 +463,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "stmt", "int x = a =! b;", ""],
          ["E", "stmt", "int i = 0xBABE1F1SH;", ""],
          ["V", "stmt", "int i = 10;", "int i = 10;"],
+         ["V", "stmt", "a:b i = 10;", "a:b i = 10;"],
          ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
          ["E", "stmt", "int i = a ... b ... c;", ""],
          ["V", "stmt", "final int i = 1;", "final int i = 1;"],
@@ -465,6 +473,10 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "stmt", "any [ ] v = [1];", "any[] v = [1];"],
          ["E", "stmt", "any [x ] v = [1];", ""],
          ["V", "stmt", "map<any> v = {x:1};", string`map<any> v = { "x": 1 };`],
+         ["V", "stmt", "a:b();", "a:b();"],
+         ["V", "stmt", "a:b().x();", "a:b().x();"],
+         ["V", "stmt", "a:b((j), k).x();", "a:b(j, k).x();"],
+         ["V", "stmt", "a:b.m();", "a:b.m();"],
          // statement assign
          ["E", "stmt", "a = b = d;", ""],
          ["V", "stmt", "a = 0;", "a = 0;"],
@@ -475,6 +487,19 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "stmt", "if a noOp(1);", ""],
          ["E", "stmt", "if a {} else return;", ""],
          ["E", "stmt", "if a = b {}", ""],
+         // check
+         ["V", "stmt", "check a();", "check a();"],
+         ["V", "stmt", "check check a();", "check check a();"],
+         ["E", "stmt", "check (a());"],
+         ["E", "stmt", "check check (a());"],
+         ["V", "stmt", "check ().clone();", "check ().clone();"],
+         ["E", "stmt", "check a;"],
+         ["E", "stmt", "check a() + b();"],
+         ["E", "stmt", "check a[1];"],
+         ["V", "stmt", "check a.b();", "check a.b();"],
+         ["E", "stmt", "check (a.b());"],
+         ["V", "stmt", "check ((a)).b();", "check a.b();"],
+         ["V", "stmt", "check a[1].b();", "check (a[1]).b();"],
          // module parts
          ["U", "mod", "type ER error<map<readonly>>;", ""],
          ["E", "mod", "import;", ""],

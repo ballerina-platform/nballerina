@@ -80,9 +80,9 @@ signature = "(" [param-list] ")" [ "returns" type-desc ]
 
 const-defn = ["public"] "const" [builtin-type-name] identifier "=" const-expr ";"
 
-type-defn = ["public"] "type" identifier union-type-desc ";"
+type-defn = ["public"] "type" identifier type-desc ";"
 
-type-desc = union-type-desc | array-type-desc | map-type-desc | type-ref 
+type-desc = union-type-desc | array-type-desc | map-type-desc | type-reference 
 
 union-type-desc =
   optional-type-desc
@@ -122,16 +122,19 @@ statement =
 local-var-decl-stmt = ["final"] inline-type-desc identifier "=" expression ";"
 
 # Same as type-desc except the parentheses are not allowed
-inline-type-desc = union-type-desc | inline-array-type-desc | map-type-desc | type-ref
+inline-type-desc = union-type-desc | inline-array-type-desc | map-type-desc | type-reference
 
 inline-array-type-desc = optional-type-desc "[" "]"
 
 # reference to a type definition
-type-ref = identifier
+type-reference = identifier | qualfied-identifier
 
-call-stmt =
-   function-call-expr ";"
-   | method-call-expr ";"
+call-stmt = call-expr ";"
+
+call-expr =
+   function-call-expr
+   | method-call-expr
+   | checking-keyword call-expr
 
 assign-stmt = lvexpr "=" expression ";"
 
@@ -176,7 +179,7 @@ expression = inner-expr | list-constructor-expr | mapping-constructor-expr
 
 const-expr = inner-expr # must also satisfy restrictions of const-expr as in Ballerina language spec
 
-const-reference-expr = identifier  # must refer to something defined with a const-decl
+const-reference-expr = identifier | qualified-identifier # must refer to something defined with a const-decl
 
 inner-expr = bitwise-or-expr
 
@@ -233,7 +236,9 @@ unary-expr =
 
 type-cast-expr = "<" type-desc ">" unary-expr
 
-checking-expr = ("check" | "checkpanic") unary-expr
+checking-expr = checking-keyword unary-expr
+
+checking-keyword = "check" | "checkpanic"
 
 primary-expr =
   literal
@@ -276,7 +281,7 @@ qualified-identifier = module-prefix ":" identifier
 
 module-prefix = identifier
 
-variable-reference-expr = identifier # can refer to parameter, local variable or constant
+variable-reference-expr = identifier | qualified-identifier # can refer to parameter, local variable or constant
 
 // tokens
 int-literal = (as in Ballerina language spec)
@@ -311,11 +316,13 @@ Method call syntax can be used for calling the following langlib functions:
 * `int:toHexString`
 * `error:message`
 
-The following restrictions apply to imports with an organization of `ballerina`:
+Two kinds of `import` are supported.
 
-* only `ballerina/io` can be imported
-* the only function from `ballerina/io` that can be called is `println`
-* `println` only accepts a single argument (which is of type `any`)
+1. An import with an organization of `ballerina` is allowed with the following restrictions
+   * only `ballerina/io` can be imported
+   * the only function from `ballerina/io` that can be called is `println`
+   * `println` only accepts a single argument (which is of type `any`)
+2. An import with no organization and with a module name starting with `root`. An `import root.X;` in a file `F.bal` will read the module from the files `F.modules/X/*.bal`.
 
 ## Notes
 
@@ -324,6 +331,10 @@ The following restrictions apply to imports with an organization of `ballerina`:
 ## Additions from subset 7
 
 * Multiple modules
+   * Full import declaration syntax is supported.
+   * A qualified identifier in a function-reference can refer to a function definition defined in another module.
+   * A variable-reference or type-reference can be a qualified identifier referring to a constant or type defined in another module.
+* `check` and `checkpanic` are supported in call statements
 
 ## Implemented spec changes since 2021R1
 

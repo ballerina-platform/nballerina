@@ -47,7 +47,7 @@ public type ConstDefn record {|
 |};
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt|PanicStmt;
-public type CallStmt FunctionCallExpr|MethodCallExpr;
+public type CallStmt FunctionCallExpr|MethodCallExpr|CheckingStmt;
 public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
@@ -203,6 +203,13 @@ public type CheckingExpr record {|
     Expr operand;
 |};
 
+public type CheckingStmt record {|
+    // JBUG can't include CheckingExpr
+    // *CheckingExpr;
+    CheckingKeyword checkingKeyword;
+    CallStmt operand;
+|};
+
 public type ListConstructorExpr record {|
     Expr[] members;
     // JBUG adding this field makes match statement in codeGenExpr fail 
@@ -239,6 +246,7 @@ public type RangeExpr record {|
 |};
 
 public type VarRefExpr record {|
+    string? prefix = ();
     string varName;
 |};
 
@@ -289,14 +297,18 @@ public type IntLiteralExpr record {|
     Position pos;
 |};
 
-const FLOAT_TYPE_SUFFIX = "f";
+public const FLOAT_TYPE_SUFFIX = "f";
+public const DECIMAL_TYPE_SUFFIX = "d";
+
+public type FpTypeSuffix FLOAT_TYPE_SUFFIX|DECIMAL_TYPE_SUFFIX;
 
 public type FpLiteralExpr record {|
     // This is the literal without the public type suffix
     string untypedLiteral;
-    FLOAT_TYPE_SUFFIX? typeSuffix;
+    FpTypeSuffix? typeSuffix;
     Position pos;
 |};
+
 
 // Types
 
@@ -351,12 +363,13 @@ public type BinaryTypeDesc record {|
 |};
 
 public type TypeDescRef record {|
-    string ref;
+    string? prefix = ();
+    string typeName;
     Position pos;
 |};
 
 public type SingletonTypeDesc record {|
-    (string|float|int|boolean) value;
+    (string|float|int|boolean|decimal) value;
 |};
 
 public type BuiltinIntSubtypeDesc "sint8"|"uint8"|"sint16"|"uint16"|"sint32"|"uint32";

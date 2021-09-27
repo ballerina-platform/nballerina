@@ -65,6 +65,11 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         "error" => {
             return parseErrorStmt(tok);
         }
+        "check"|"checkpanic" => {
+            check tok.advance();
+            // JBUG cast
+            return finishCheckingCallStmt(tok, <CheckingKeyword>cur);
+        }
         var td if td is InlineBuiltinTypeDesc|"map" => {
             return parseVarDeclStmt(tok);
         }
@@ -85,16 +90,6 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) re
     else if cur is CompoundAssignOp {
         VarRefExpr lValue = { varName: identifier };
         return parseCompoundAssignStmt(tok, lValue, cur);
-    }
-    else if cur == "(" {
-        check tok.advance();
-        FunctionCallExpr expr = check finishFunctionCallExpr(tok, (), identifier, pos);
-        return finishCallStmt(tok, expr);
-    }
-    else if cur == "." {
-        VarRefExpr varRef = { varName: identifier };
-        MethodCallExpr expr = check finishMethodCallExpr(tok, varRef);
-        return finishCallStmt(tok, expr);
     }
     else if cur == "[" {
         VarRefExpr varRef = { varName: identifier };
@@ -121,18 +116,29 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) re
     }
     else if cur == ":" {
         check tok.advance();
-        cur = tok.current();
-        if cur is [IDENTIFIER, string] {
-            string name = cur[1];
-            check tok.advance();
-            check tok.expect("(");
-            FunctionCallExpr stmt = check finishFunctionCallExpr(tok, identifier, name, pos);
-            check tok.expect(";");
-            return stmt;
-        }
+        return finishOptQualIdentifierStmt(tok, identifier, check tok.expectIdentifier(), pos);
     }
     else if cur is [IDENTIFIER, string] {
-        TypeDescRef ref = { ref: identifier, pos };
+        TypeDescRef ref = { typeName: identifier, pos };
+        return finishVarDeclStmt(tok, ref);
+    }
+    return finishOptQualIdentifierStmt(tok, (), identifier, pos);
+}
+
+function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string identifier, Position pos) returns Stmt|err:Syntax {
+    Token? cur = tok.current();
+    if cur == "(" {
+        check tok.advance();
+        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, pos);
+        return finishCallStmt(tok, expr);
+    }
+    else if cur == "." {
+        VarRefExpr varRef = { varName: identifier, prefix };
+        MethodCallExpr expr = check finishMethodCallExpr(tok, varRef);
+        return finishCallStmt(tok, expr);
+    }
+    else if cur is [IDENTIFIER, string] {
+        TypeDescRef ref = { prefix, typeName: identifier, pos };
         return finishVarDeclStmt(tok, ref);
     }
     return parseError(tok, "invalid statement");
@@ -156,11 +162,15 @@ function parseErrorStmt(Tokenizer tok) returns Stmt|err:Syntax {
     }
 }
 
-function parseMethodCallStmt(Tokenizer tok) returns Stmt|err:Syntax {
-    Expr expr = check parsePrimaryExpr(tok);
-    if expr is MethodCallExpr {
-        check tok.expect(";");
-        return expr;
+function parseMethodCallStmt(Tokenizer tok) returns MethodCallExpr|err:Syntax {
+    Expr expr = check startPrimaryExpr(tok);
+    Token? cur = tok.current();
+    if cur == "." || cur == "[" {
+        expr = check finishPrimaryExpr(tok, expr);
+        if expr is MethodCallExpr {
+            check tok.expect(";");
+            return expr;
+        }
     }
     return parseError(tok, "expression not allowed as a statement");
 }
@@ -179,6 +189,23 @@ function finishCallStmt(Tokenizer tok, CallStmt expr) returns Stmt|err:Syntax {
     }
     check tok.expect(";");
     return stmt;
+}
+
+function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword) returns CallStmt|err:Syntax {
+    Token? t = tok.current();
+    if t is "check"|"checkpanic" {
+        check tok.advance();
+        return { checkingKeyword, operand: check finishCheckingCallStmt(tok, t) };
+    }
+    else if t == "(" {
+        return { checkingKeyword, operand: check parseMethodCallStmt(tok) };
+    }
+    Expr operand = check parsePrimaryExpr(tok);
+    if operand is FunctionCallExpr|MethodCallExpr {
+        check tok.expect(";");
+        return { checkingKeyword, operand };
+    }
+    return parseError(tok, "function call, method call or checking expression expected");
 }
 
 function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Syntax {
@@ -206,15 +233,12 @@ function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDec
 
 function finishVarDeclStmt(Tokenizer tok, TypeDesc td, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     Token? cur = tok.current();
-    if cur is [IDENTIFIER, string] {
-        check tok.advance();
-        // initExpr is required in the subset
-        check tok.expect("=");
-        Expr initExpr = check parseExpr(tok);
-        check tok.expect(";");
-        return { td, varName: cur[1], initExpr, isFinal };
-    }
-    return parseError(tok, "invalid VarDeclStmt");
+    string varName = check tok.expectIdentifier();
+    // initExpr is required in the subset
+    check tok.expect("=");
+    Expr initExpr = check parseExpr(tok);
+    check tok.expect(";");
+    return { td, varName, initExpr, isFinal };
 }
 
 function parseReturnStmt(Tokenizer tok) returns ReturnStmt|err:Syntax {
@@ -273,14 +297,11 @@ function parseForeachStmt(Tokenizer tok) returns ForeachStmt|err:Syntax {
     }
     check tok.advance();
     Token? cur = tok.current();
-    if cur is [IDENTIFIER, string] {
-        check tok.advance();
-        check tok.expect("in");
-        RangeExpr range = check parseRangeExpr(tok);
-        Stmt[] body = check parseStmtBlock(tok);
-        return { varName: cur[1], range, body };
-    }
-    return parseError(tok, "invalid foreach statement");
+    string varName = check tok.expectIdentifier();
+    check tok.expect("in");
+    RangeExpr range = check parseRangeExpr(tok);
+    Stmt[] body = check parseStmtBlock(tok);
+    return { varName, range, body };
 }
 
 function parseMatchStmt(Tokenizer tok) returns MatchStmt|err:Syntax {

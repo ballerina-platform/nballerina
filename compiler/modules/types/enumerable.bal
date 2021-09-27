@@ -1,9 +1,9 @@
 // EnumerableTypes are types in which each expressible subtype can be reasonably
 // represented by a list of values. counter-eg: `int` is not a EnumerableType since
 // uint32 can't be reasonably represented by listing all values.
-type EnumerableType float|string;
+type EnumerableType float|string|decimal;
 
-type EnumerableSubtype FloatSubtype|CharStringSubtype|NonCharStringSubtype;
+type EnumerableSubtype FloatSubtype|DecimalSubtype|CharStringSubtype|NonCharStringSubtype;
 
 const LT = -1;
 const EQ = 0;
@@ -164,6 +164,10 @@ function compareEnumerable(EnumerableType v1, EnumerableType v2) returns Order {
     if v1 is string {
         string s2 = <string>v2;
         return v1 == s2 ? EQ : (v1 < s2 ? LT : GT);
+    }
+    else if v1 is decimal {
+        decimal d2 = <decimal>v2;
+        return v1 == d2 ? EQ : (v1 < d2 ? LT : GT);
     }
     else {
         float f2 = <float>v2;

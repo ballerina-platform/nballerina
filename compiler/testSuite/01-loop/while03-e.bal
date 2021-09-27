@@ -5,5 +5,5 @@ public function main() {
 
     }
     // This is unreachable
-    io:println(1);
+    io:println(1); // @error
 }

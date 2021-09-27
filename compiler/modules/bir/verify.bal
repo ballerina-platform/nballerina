@@ -5,13 +5,13 @@ import wso2/nballerina.err;
 
 class VerifyContext {
     private final Module mod;
-    private final t:TypeCheckContext tc;
+    private final t:Context tc;
     private final FunctionDefn defn;
     private final t:SemType anydataType;
 
     function init(Module mod, FunctionDefn defn) {
         self.mod = mod;
-        t:TypeCheckContext tc  = mod.getTypeCheckContext();
+        t:Context tc  = mod.getTypeContext();
         self.tc = tc;
         self.defn = defn;
         self.anydataType = createAnydata(tc.env);
@@ -29,8 +29,8 @@ class VerifyContext {
         return t:isSubtype(self.tc, t, self.anydataType);
     }
 
-    function typeEnv() returns t:Env {
-        return self.tc.env;
+    function typeContext() returns t:Context {
+        return self.tc;
     }
 
     function err(err:Message msg, Position? pos = ()) returns err:Semantic {
@@ -40,7 +40,7 @@ class VerifyContext {
     function returnType() returns t:SemType => self.defn.signature.returnType;
 
     function symbolToString(Symbol sym) returns string {
-        return symbolToString(self.mod, self.defn.partIndex, sym);
+        return self.mod.symbolToString(self.defn.partIndex, sym);
     }
 }
 
@@ -163,7 +163,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
     if !vc.isSubtype(ty, t:LIST_RW) {
         return vc.err("bad BIR: inherent type of list construct is not a mutable list");
     }
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), ty);
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeContext(), ty);
     if memberType == () {
         return vc.err("bad BIR: inherent type of list is of an unsupported type");
     }
@@ -179,7 +179,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     if !vc.isSubtype(ty, t:MAPPING_RW) {
         return vc.err("bad BIR: inherent type of mapping construct is not a mutable mapping");
     }
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), ty);
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeContext(), ty);
     if memberType == () {
         return vc.err("bad BIR: inherent type of map is of an unsupported type");
     }
@@ -195,7 +195,7 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
     if !vc.isSubtype(insn.list.semType, t:LIST) {
         return vc.err("list get applied to non-list");
     }
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), insn.list.semType);
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeContext(), insn.list.semType);
     if memberType == () || !vc.isSubtype(memberType, insn.result.semType) {
         return vc.err("bad BIR: unsafe type for result ListGet", pos=insn.position);
     }
@@ -206,7 +206,7 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic?
     if !vc.isSubtype(insn.list.semType, t:LIST) {
         return vc.err("list set applied to non-list");
     }
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), insn.list.semType);
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeContext(), insn.list.semType);
     if memberType == () {
         return vc.err("ListSet on unsupported list type");
     }
@@ -220,7 +220,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping get applied to non-mapping");
     }
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), insn.operands[0].semType);
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeContext(), insn.operands[0].semType);
     if memberType == () || !vc.isSubtype(t:union(memberType, t:NIL), insn.result.semType) {
         return vc.err("bad BIR: unsafe type for result MappingGet");
     }
@@ -231,7 +231,7 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Sem
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping set applied to non-mapping");
     }
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), insn.operands[0].semType);
+    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeContext(), insn.operands[0].semType);
     if memberType == () {
         return vc.err("MappingSet on unsupported mapping type");
     }
@@ -311,7 +311,7 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
 function verifyCompareOperandTypeArray(VerifyContext vc, CompareInsn insn, t:SemType operandType,
                                        t:UniformTypeBitSet expectType, t:UniformTypeBitSet expectMemberType) returns err:Semantic? {
     check verifyCompareOperandTypeBase(vc, insn, operandType, expectType);
-    t:UniformTypeBitSet? operandMemberTy = t:simpleArrayMemberType(vc.typeEnv(), operandType);
+    t:UniformTypeBitSet? operandMemberTy = t:simpleArrayMemberType(vc.typeContext(), operandType);
     if operandMemberTy is t:UniformTypeBitSet {
         t:UniformTypeBitSet optExpectedType = t:uniformTypeUnion(expectType | (1 << t:UT_NIL));
         check verifyCompareOperandTypeBase(vc, insn, operandType, optExpectedType);

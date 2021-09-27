@@ -8,7 +8,7 @@ int64_t BAL_LANG_ARRAY_NAME(length)(TaggedPtr p) {
 void BAL_LANG_ARRAY_NAME(push)(TaggedPtr p, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
     if ((lp->desc & (1 << (getTag(val) & UT_MASK))) == 0) {
-        _bal_panic_internal(PANIC_LIST_STORE);
+        _bal_panic_internal(storePanicCode(p, PANIC_LIST_STORE));
     }
     int64_t len = lp->tpArray.length;
     if (unlikely(len >= lp->tpArray.capacity)) {

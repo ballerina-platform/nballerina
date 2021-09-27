@@ -13,8 +13,6 @@ const N_VARIABLE_TOKENS = 5;
 
 type VariableTokenCode IDENTIFIER|DECIMAL_NUMBER|STRING_LITERAL|HEX_INT_LITERAL|DECIMAL_FP_NUMBER;
 
-type FpTypeSuffix "f";
-
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
 type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string]|[DECIMAL_FP_NUMBER, string, FpTypeSuffix?];
 
@@ -223,6 +221,11 @@ class Tokenizer {
                     self.curTok = [DECIMAL_FP_NUMBER, self.getFragment(), ()];
                     return;
                 }
+                FRAG_DECIMAL_FP_NUMBER_D => {
+                    string number = self.getFragment();
+                    self.curTok = [DECIMAL_FP_NUMBER, number.substring(0, number.length() - 1), "d"];
+                    return;
+                }
                 _ => {
                     FixedToken? ft = fragTokens[fragCode];
                     // if we've missed something above, we'll get a panic from the cast here
@@ -268,6 +271,24 @@ class Tokenizer {
         return true;
     }
 
+    function expectIdentifier() returns string|err:Syntax {
+        Token? t = self.curTok;
+        if t is [IDENTIFIER, string] {
+            check self.advance();
+            return t[1];
+        }
+        else {
+            err:Template msg;
+            if t is string {
+                msg = `expected an identifier; got ${t}`;
+            }
+            else {
+                msg = `expected an identifier`;
+            }
+            return self.err(msg);
+        }
+    }
+
     function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns err:Syntax? {
         if self.curTok != tok {
             err:Template msg;
@@ -311,10 +332,16 @@ class Tokenizer {
         self.tokenStartCodePointIndex = s.tokenStartCodePointIndex;
         self.mode = s.mode;
         self.curTok = s.curTok;
-
-        ScannedLine scannedLine = self.lines[self.lineIndex - 1];
-        self.fragCodes = scannedLine.fragCodes;
-        self.fragments = scannedLine.fragments;
+        if self.lineIndex == 0 {
+            // advance() hasn't been called or lines are empty
+            self.fragCodes = [];
+            self.fragments = [];
+        }
+        else {
+            ScannedLine scannedLine = self.lines[self.lineIndex - 1];
+            self.fragCodes = scannedLine.fragCodes;
+            self.fragments = scannedLine.fragments;
+        }
     }
 }
 

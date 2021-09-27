@@ -28,13 +28,13 @@ public class FunctionDefinition {
     }    
 }
 
-function functionSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
+function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
-    BddMemo? mm = tc.functionMemo[b];
+    BddMemo? mm = cx.functionMemo[b];
     BddMemo m;
     if mm is () {
         m = { bdd: b };
-        tc.functionMemo.add(m);
+        cx.functionMemo.add(m);
     }
     else {
         m = mm;
@@ -49,12 +49,12 @@ function functionSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns bool
             return res;
         }
     }
-    boolean isEmpty = functionBddIsEmpty(tc, b, NEVER, (), ());
+    boolean isEmpty = functionBddIsEmpty(cx, b, NEVER, (), ());
     m.isEmpty = isEmpty;
     return isEmpty;    
 }
 
-function functionBddIsEmpty(TypeCheckContext tc, Bdd b, SemType s, Conjunction? pos, Conjunction? neg) returns boolean {
+function functionBddIsEmpty(Context cx, Bdd b, SemType s, Conjunction? pos, Conjunction? neg) returns boolean {
     if b is boolean {
         if b == false {
             return true;
@@ -63,28 +63,28 @@ function functionBddIsEmpty(TypeCheckContext tc, Bdd b, SemType s, Conjunction? 
             return false;
         }
         else {
-            SemType[2] [t0, t1] = tc.functionAtomType(neg.atom);
-            return (isSubtype(tc, t0, s) && functionTheta(tc, t0, complement(t1), pos))
-                || functionBddIsEmpty(tc, true, s, pos, neg.next);
+            SemType[2] [t0, t1] = cx.functionAtomType(neg.atom);
+            return (isSubtype(cx, t0, s) && functionTheta(cx, t0, complement(t1), pos))
+                || functionBddIsEmpty(cx, true, s, pos, neg.next);
         }
     }
     else {
-        SemType[2] [sd, sr] = tc.functionAtomType(b.atom);
-        return functionBddIsEmpty(tc, b.left, union(s, sd), and(b.atom, pos), neg)
-            && functionBddIsEmpty(tc, b.middle, s, pos, neg)
-            && functionBddIsEmpty(tc, b.right, s, pos, and(b.atom, neg));
+        SemType[2] [sd, sr] = cx.functionAtomType(b.atom);
+        return functionBddIsEmpty(cx, b.left, union(s, sd), and(b.atom, pos), neg)
+            && functionBddIsEmpty(cx, b.middle, s, pos, neg)
+            && functionBddIsEmpty(cx, b.right, s, pos, and(b.atom, neg));
     }
 }
 
-function functionTheta(TypeCheckContext tc, SemType t0, SemType t1, Conjunction? pos) returns boolean {
+function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) returns boolean {
     if pos is () {
         // XXX can have function with return type of never
-        return isEmpty(tc, t0) || isEmpty(tc, t1);
+        return isEmpty(cx, t0) || isEmpty(cx, t1);
     }
     else {
-        SemType[2] [s0, s1] = tc.functionAtomType(pos.atom);
-        return (isSubtype(tc, t0, s0) || functionTheta(tc, diff(s0, t0), s1, pos.next))
-            && (isSubtype(tc, t1, complement(s1)) || functionTheta(tc, s0, intersect(s1, t1), pos.next));
+        SemType[2] [s0, s1] = cx.functionAtomType(pos.atom);
+        return (isSubtype(cx, t0, s0) || functionTheta(cx, diff(s0, t0), s1, pos.next))
+            && (isSubtype(cx, t1, complement(s1)) || functionTheta(cx, s0, intersect(s1, t1), pos.next));
     }
 }
 

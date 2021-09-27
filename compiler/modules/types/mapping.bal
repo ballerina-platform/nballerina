@@ -107,17 +107,17 @@ isolated function fieldName(Field f) returns string {
     return f[0];
 }
 
-function mappingRoSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    return mappingSubtypeIsEmpty(tc, bddFixReadOnly(<Bdd>t));
+function mappingRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
+    return mappingSubtypeIsEmpty(cx, bddFixReadOnly(<Bdd>t));
 }
 
-function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
+function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
-    BddMemo? mm = tc.mappingMemo[b];
+    BddMemo? mm = cx.mappingMemo[b];
     BddMemo m;
     if mm is () {
         m = { bdd: b };
-        tc.mappingMemo.add(m);
+        cx.mappingMemo.add(m);
     }
     else {
         m = mm;
@@ -131,14 +131,14 @@ function mappingSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boole
             return res;
         }
     }
-    boolean isEmpty = bddEvery(tc, b, (), (), mappingFormulaIsEmpty);
+    boolean isEmpty = bddEvery(cx, b, (), (), mappingFormulaIsEmpty);
     m.isEmpty = isEmpty;
     return isEmpty;    
 }
 
 // This works the same as the tuple case, except that instead of
 // just comparing the lengths of the tuples we compare the sorted list of field names
-function mappingFormulaIsEmpty(TypeCheckContext tc, Conjunction? posList, Conjunction? negList) returns boolean {
+function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
     TempMappingSubtype combined;
     if posList is () {
         combined = {
@@ -151,14 +151,14 @@ function mappingFormulaIsEmpty(TypeCheckContext tc, Conjunction? posList, Conjun
     }
     else {
         // combine all the positive atoms using intersection
-        combined = tc.mappingAtomType(posList.atom);
+        combined = cx.mappingAtomType(posList.atom);
         Conjunction? p = posList.next;
         while true {
             if p is () {
                 break;
             }
             else {
-                var m = intersectMapping(combined, tc.mappingAtomType(p.atom));
+                var m = intersectMapping(combined, cx.mappingAtomType(p.atom));
                 if m is () {
                     return true;
                 }
@@ -169,21 +169,21 @@ function mappingFormulaIsEmpty(TypeCheckContext tc, Conjunction? posList, Conjun
             }
         }
         foreach var t in combined.types {
-            if isEmpty(tc, t) {
+            if isEmpty(cx, t) {
                 return true;
             }
         }
        
     }
-    return !mappingInhabited(tc, combined, negList);
+    return !mappingInhabited(cx, combined, negList);
 }
 
-function mappingInhabited(TypeCheckContext tc, TempMappingSubtype pos, Conjunction? negList) returns boolean {
+function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negList) returns boolean {
     if negList is () {
         return true;
     }
     else {
-        MappingAtomicType neg = tc.mappingAtomType(negList.atom);
+        MappingAtomicType neg = cx.mappingAtomType(negList.atom);
 
         MappingPairing pairing;
 
@@ -194,12 +194,12 @@ function mappingInhabited(TypeCheckContext tc, TempMappingSubtype pos, Conjuncti
 
             // Deal the easy case of two closed records fast.
             if isNever(pos.rest) && isNever(neg.rest) {
-                return mappingInhabited(tc, pos, negList.next);
+                return mappingInhabited(cx, pos, negList.next);
             }
             pairing = new (pos, neg);
             foreach var {type1: posType, type2: negType} in pairing {
                 if isNever(posType) || isNever(negType) {
-                    return mappingInhabited(tc, pos, negList.next);
+                    return mappingInhabited(cx, pos, negList.next);
                 }
             }
             pairing.reset();
@@ -208,12 +208,12 @@ function mappingInhabited(TypeCheckContext tc, TempMappingSubtype pos, Conjuncti
             pairing = new (pos, neg);
         }
 
-        if !isEmpty(tc, diff(pos.rest, neg.rest)) {
+        if !isEmpty(cx, diff(pos.rest, neg.rest)) {
             return true;
         }
         foreach var {name, type1: posType, type2: negType} in pairing {
             SemType d = diff(posType, negType);
-            if !isEmpty(tc, d) {
+            if !isEmpty(cx, d) {
                 TempMappingSubtype mt;
                 int? i = pairing.index1(name);
                 if i is () {
@@ -225,7 +225,7 @@ function mappingInhabited(TypeCheckContext tc, TempMappingSubtype pos, Conjuncti
                     posTypes[i] = d;
                     mt = { types: posTypes, names: pos.names, rest: pos.rest };
                 }
-                if mappingInhabited(tc, mt, negList.next) {
+                if mappingInhabited(cx, mt, negList.next) {
                     return true;
                 }
             }          

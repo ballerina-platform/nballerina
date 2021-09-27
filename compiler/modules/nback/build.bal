@@ -11,7 +11,7 @@ type Alignment 1|8;
 // JBUG #31394 would be better to use shifts for these
                      //1234567812345678
 const TAG_FACTOR   = 0x0100000000000000;
-const POINTER_MASK = 0x00ffffffffffffff;
+const POINTER_MASK = 0x00fffffffffffff8;
 
 const int TAG_MASK     = 0x1f * TAG_FACTOR;
 const int TAG_NIL      = 0;
@@ -28,6 +28,7 @@ const int TAG_BASIC_TYPE_LIST = t:UT_LIST_RO * TAG_FACTOR;
 const int TAG_BASIC_TYPE_MAPPING = t:UT_MAPPING_RO * TAG_FACTOR;
 
 const int FLAG_IMMEDIATE = 0x20 * TAG_FACTOR;
+const int FLAG_EXACT = 0x4;
 
 const TAG_SHIFT = 56;
 
@@ -423,7 +424,7 @@ type Module record {|
     ImportedFunctionTable importedFunctions = table [];
     llvm:PointerValue stackGuard;
     map<StringDefn> stringDefns = {};
-    t:TypeCheckContext typeCheckContext;
+    t:Context typeContext;
     bir:Module bir;
     bir:File[] partFiles;
     ModuleDI? di;
@@ -455,6 +456,7 @@ class Scaffold {
     private bir:Label? onPanicLabel = ();
     private final bir:BasicBlock[] birBlocks;
     private final int nParams;
+    final t:SemType returnType;
 
     function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
         self.mod = mod;
@@ -464,7 +466,8 @@ class Scaffold {
         self.birBlocks = code.blocks;
         final Repr[] reprs = from var reg in code.registers select semTypeRepr(reg.semType);
         self.reprs = reprs;
-        self.retRepr = semTypeRetRepr(defn.signature.returnType);
+        self.returnType = defn.signature.returnType;
+        self.retRepr = semTypeRetRepr(self.returnType);
         self.nParams = defn.signature.paramTypes.length();
         llvm:BasicBlock entry = llFunc.appendBasicBlock();
 
@@ -541,7 +544,7 @@ class Scaffold {
        return self.file.lineColumn(pos)[0];
     }
 
-    function typeCheckContext() returns t:TypeCheckContext => self.mod.typeCheckContext;
+    function typeContext() returns t:Context => self.mod.typeContext;
 
     function location(bir:Position pos) returns err:Location {
         return err:location(self.file, pos);
@@ -623,7 +626,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         llMod,
         partFiles,
         di,
-        typeCheckContext: birMod.getTypeCheckContext(),
+        typeContext: birMod.getTypeContext(),
         functionDefns: llFuncMap,
         stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard"))
     };  
@@ -791,7 +794,7 @@ function buildCondBranch(llvm:Builder builder, Scaffold scaffold, bir:CondBranch
 
 function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) returns BuildError? {
     RetRepr repr = scaffold.getRetRepr();
-    builder.ret(repr is Repr ? check buildRepr(builder, scaffold, insn.operand, repr) : ());
+    builder.ret(repr is Repr ? check buildWideRepr(builder, scaffold, insn.operand, repr, scaffold.returnType) : ());
 }
 
 function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) {
@@ -809,7 +812,8 @@ function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerVal
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
-    builder.store(check buildRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result)), scaffold.address(insn.result));
+    builder.store(check buildWideRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType),
+                  scaffold.address(insn.result));
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
@@ -820,7 +824,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     bir:FunctionSignature signature = funcRef.erasedSignature;
     t:SemType[] paramTypes = signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i])));
+        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), paramTypes[i]));
     }
 
     bir:Symbol funcSymbol = funcRef.symbol;
@@ -842,6 +846,8 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
     final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
     final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
+    // Cases that are not UniformTypeBitSet should have been filtered out before
+    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), insn.result.semType);
     final int length = insn.operands.length();
     llvm:PointerValue array;
     if length > 0 {
@@ -850,7 +856,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 
         array = buildTypedAlloc(builder, scaffold, sizedArrayType);
         foreach int i in 0 ..< length {
-            builder.store(check buildRepr(builder, scaffold, insn.operands[i], REPR_ANY),
+            builder.store(check buildWideRepr(builder, scaffold, insn.operands[i], REPR_ANY, memberType),
                           builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));
         }
         array = builder.bitCast(array, ptrUnsizedArrayType);
@@ -861,14 +867,8 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     final llvm:PointerValue structMem = buildUntypedAlloc(builder, scaffold, structType);
     final llvm:PointerValue struct = builder.bitCast(structMem, heapPointerType(structType));
     // Store the member bitset as the ListDesc
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(scaffold.typeCheckContext().env, insn.result.semType);
-    if memberType == () {
-        return scaffold.unimplementedErr("unsupported member type for arrat");
-    }
-    else {
-        builder.store(llvm:constInt(LLVM_INT, memberType),
-                      builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)], "inbounds"));
-    }
+    builder.store(llvm:constInt(LLVM_INT, memberType),
+                  builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)], "inbounds"));
     foreach int i in 1 ..< 3 {
         builder.store(llvm:constInt(LLVM_INT, length),
                       builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, i)], "inbounds"));
@@ -876,7 +876,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     builder.store(array,
                   builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)], "inbounds"));
     // Don't need to convert here
-    builder.store(buildTaggedPtr(builder, structMem, TAG_LIST_RW), scaffold.address(insn.result));
+    builder.store(buildTaggedPtr(builder, structMem, TAG_LIST_RW|FLAG_EXACT), scaffold.address(insn.result));
 }
 
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
@@ -912,10 +912,12 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
 }
 
 function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
+    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), insn.list.semType);
+    // XXX listSetFunction must also clear the exact bit if the list is not exact?
     llvm:Value? err = builder.call(buildRuntimeFunctionDecl(scaffold, listSetFunction),
                                    [builder.load(scaffold.address(insn.list)),
                                     buildInt(builder, scaffold, insn.index),
-                                    check buildRepr(builder, scaffold, insn.operand, REPR_ANY)]);
+                                    check buildWideRepr(builder, scaffold, insn.operand, REPR_ANY, memberType)]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
    
 }
@@ -934,22 +936,15 @@ function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
     int length = insn.operands.length();
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(scaffold.typeCheckContext().env, insn.result.semType);
-    llvm:PointerValue m;
-    if memberType == () {
-        return scaffold.unimplementedErr("unsupported member type for mapping");
-    }
-    else {
-        m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
-                                            [llvm:constInt(LLVM_INT, memberType), llvm:constInt(LLVM_INT, length)]);
-    }
-    
+    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeContext(), insn.result.semType);
+    llvm:PointerValue m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
+                                                          [llvm:constInt(LLVM_INT, memberType), llvm:constInt(LLVM_INT, length)]);
     foreach int i in 0 ..< length {
         _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingInitMemberFunction),
                          [
                              m,
                              check buildConstString(builder, scaffold, insn.fieldNames[i]),
-                             check buildRepr(builder, scaffold, insn.operands[i], REPR_ANY)
+                             check buildWideRepr(builder, scaffold, insn.operands[i], REPR_ANY, memberType)
                          ]);
     }
     builder.store(m, scaffold.address(insn.result));
@@ -965,11 +960,12 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
+    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeContext(), insn.operands[0].semType);
     llvm:Value? err = builder.call(buildRuntimeFunctionDecl(scaffold, mappingSetFunction),
                                    [
                                        builder.load(scaffold.address(insn.operands[0])),
                                        check buildString(builder, scaffold, insn.operands[1]),
-                                       check buildRepr(builder, scaffold, insn.operands[2], REPR_ANY)
+                                       check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)
                                    ]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
 }
@@ -1300,8 +1296,7 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
     bir:Register result = insn.result;
     match [lhsRepr.base, rhsRepr.base] {
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
-            if reprIsImmediate(lhsRepr) || reprIsImmediate(rhsRepr)
-               || (exact && (!reprExactNeedsHeap(lhsRepr) || !reprExactNeedsHeap(rhsRepr))) {
+            if reprIsImmediate(lhsRepr) || reprIsImmediate(rhsRepr) {
                 return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
             }
             else if reprIsString(lhsRepr) && reprIsString(rhsRepr) {
@@ -1389,12 +1384,6 @@ function reprIsNil(Repr repr) returns boolean {
 
 function reprIsString(Repr repr) returns boolean {
     return repr is TaggedRepr && repr.subtype == t:STRING;
-}
-
-// May we need to look at the heap in order to tell whether something with this representation
-// is exactly equal to something else?
-function reprExactNeedsHeap(Repr repr) returns boolean {
-    return repr is TaggedRepr && (repr.subtype & (t:FLOAT|t:INT|t:STRING)) != 0;
 }
 
 function reprIsImmediate(Repr repr) returns boolean {
@@ -1492,7 +1481,7 @@ function buildHasListType(llvm:Builder builder, Scaffold scaffold, llvm:PointerV
         return buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_LIST);
     }
     else {
-        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeCheckContext().env, targetType);
+        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), targetType);
         return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, listHasTypeFunction),
                                         [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
     }
@@ -1503,7 +1492,7 @@ function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:Point
         return buildHasBasicTypeTag(builder, tagged, TAG_BASIC_TYPE_MAPPING);
     }
     else {
-        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeCheckContext().env, targetType);
+        t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeContext(), targetType);
         return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingHasTypeFunction),
                                         [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
     }
@@ -1724,6 +1713,28 @@ function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
         }
     }
     panic err:impossible("unreached in buildUntagged");
+}
+
+function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType) returns llvm:Value|BuildError {
+    llvm:Value value = check buildRepr(builder, scaffold, operand, targetRepr);
+    if targetRepr.base == BASE_REPR_TAGGED && operand is bir:Register {
+        t:SemType listOrMappingRw = t:union(t:LIST_RW, t:MAPPING_RW);
+        t:SemType targetStructType = t:intersect(targetType, listOrMappingRw);
+        t:SemType sourceStructType =  t:intersect(operand.semType, listOrMappingRw);
+        if !t:isNever(targetStructType) && !t:isNever(sourceStructType) {
+            // Is the sourceStructType a proper subtype of the targetStructType?
+            if sourceStructType != targetStructType && !t:isSubtype(scaffold.typeContext(), targetStructType, sourceStructType) {
+                value = buildClearExact(builder, scaffold, value, targetRepr);
+            }
+        }
+    }
+    return value;
+}
+
+function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value value, Repr targetRepr) returns llvm:Value {
+    // SUBSET need to use targetRepr to handle unions including mappings and lists
+    // JBUG <int> cast needed (otherwise result is or'd with 0xFF)
+    return <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [value, llvm:constInt(LLVM_INT, ~<int>FLAG_EXACT)]);
 }
 
 function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
