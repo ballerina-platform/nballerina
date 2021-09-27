@@ -108,6 +108,7 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, 
         "string" => { return t:STRING; }
         "typedesc" => { return t:TYPEDESC; }
         "xml" => { return t:XML; }
+        "char" => { return t:CHAR; }
         "sint8" => { return t:intWidthSigned(8); }
         "sint16" => { return t:intWidthSigned(16); }
         "sint32" => { return t:intWidthSigned(32); }

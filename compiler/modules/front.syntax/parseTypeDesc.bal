@@ -153,7 +153,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         "boolean"
         | "decimal"
         | "float"
-        | "string"
         | "xml"
         | "typedesc"
         | "handle"
@@ -164,6 +163,23 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             check tok.advance();
             // JBUG should not need cast #30191
             return <LeafTypeDesc>cur;
+        }
+        "string" => {
+            check tok.advance();
+            if tok.current() != ":" {
+                return "string";
+            }
+            check tok.advance();
+            Token? t = tok.current();
+            if t is [IDENTIFIER, string] {
+                var name = t[1];
+                if name == "Char" {
+                    check tok.advance();
+                    return "char";
+                }
+                return tok.err("unrecognized string subtype '" + name + "'");
+            }
+            // match falls through to parseError
         }
         "byte" => {
             check tok.advance();

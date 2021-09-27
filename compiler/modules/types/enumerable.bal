@@ -3,7 +3,7 @@
 // uint32 can't be reasonably represented by listing all values.
 type EnumerableType float|string;
 
-type EnumerableSubtype FloatSubtype|StringSubtype;
+type EnumerableSubtype FloatSubtype|CharStringSubtype|NonCharStringSubtype;
 
 const LT = -1;
 const EQ = 0;

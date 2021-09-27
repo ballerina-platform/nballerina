@@ -356,6 +356,7 @@ public final UniformTypeBitSet READONLY = uniformTypeUnion(UT_READONLY);
 public final UniformTypeBitSet SIMPLE_OR_STRING = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
 public final UniformTypeBitSet NUMBER = uniformTypeUnion((1 << UT_INT) | (1 << UT_FLOAT) | (1 << UT_DECIMAL));
 public final SemType BYTE = intWidthUnsigned(8);
+public final SemType CHAR = stringChar();
 
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
