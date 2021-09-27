@@ -311,7 +311,7 @@ public distinct class Builder {
 
     public function sIToFP(Value val, FloatType destTy, string? name=()) returns Value {
         string reg = self.extractName(name);
-        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy), java:fromString(reg)));
+        return new (jLLVMBuildSIToFP(self.LLVMBuilder, val.LLVMValueRef, typeToLLVMType(destTy, self.context), java:fromString(reg)));
     }
 
     public function setCurrentDebugLocation(Metadata? dbLocation) {

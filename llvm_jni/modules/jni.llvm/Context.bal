@@ -40,7 +40,7 @@ public distinct class Context {
         return new (jLLVMConstBitCast(ptr.LLVMValueRef, typeToLLVMType(destTy, self)));
     }
 
-    public function costAddrSpaceCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
+    public function constAddrSpaceCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
         return new (jLLVMConstAddrSpaceCast(ptr.LLVMValueRef, typeToLLVMType(destTy, self)));
     }
 
@@ -145,6 +145,8 @@ function jLLVMInitializeAllAsmParsers() = @java:Method {
     name: "LLVMInitializeAllAsmParsers",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: []
+} external;
+
 function jLLVMStructCreateNamed(handle context, handle name) returns handle = @java:Method {
     name: "LLVMStructCreateNamed",
     'class: "org.bytedeco.llvm.global.LLVM",
