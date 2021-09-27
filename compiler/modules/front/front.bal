@@ -138,6 +138,7 @@ public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|s
         check addModulePart(syms.defns, part);
     }
     check resolveTypes(syms);
+    check validInit(syms.defns);
     return new Module(scanned.id, files, syms);
 }
 
@@ -205,6 +206,26 @@ function validEntryPoint(ModuleDefns mod) returns err:Any? {
         if (<bir:FunctionSignature>defn.signature).returnType !== t:NIL {
             return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, s:defnLocation(defn));
         }
+    }
+}
+
+function validInit(ModuleDefns defns) returns err:Any? {
+    s:ModuleLevelDefn? defn = defns["init"];
+    if defn is s:FunctionDefn {
+        if defn.vis == "public" {
+            return err:semantic(`${"init"} function must not be public`, s:defnLocation(defn));
+        }
+        if defn.paramNames.length() > 0 {
+            return err:semantic(`${"init"} function must not have parameters`, s:defnLocation(defn));
+        }
+        t:SemType returnType = (<bir:FunctionSignature>defn.signature).returnType;
+        if t:intersect(returnType, t:NIL) != t:NIL {
+            return err:semantic(`return type of ${"init"} function must allow nil`, s:defnLocation(defn));
+        }
+        if !t:isSubtypeSimple(returnType, t:uniformTypeUnion((1 << t:NIL) | (1 << t:ERROR))) {
+            return err:semantic(`return type of ${"init"} function must be a subtype of ${"error?"}`, s:defnLocation(defn));
+        }
+        return err:unimplemented(`${"init"} function is not implemented`, s:defnLocation(defn));
     }
 }
 
