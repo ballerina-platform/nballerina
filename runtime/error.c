@@ -18,14 +18,12 @@
 #define EXCEEDS_MAX_PC_COUNT -3
 #define OUT_OF_MEMORY -4
 
-#define PUBLIC_BALLERINA_NAME 1
-#define NON_PUBLIC_BALLERINA_NAME 2
-#define NON_BALLERINA_NAME -1
-#define _B_NON_BALLERINA_NAME -2
-
-#define MAX_DEMANGLING_DECIMAL_LENGTH 4
-
-typedef int DemangleResult;
+enum DemangleResult {
+    PUBLIC_BALLERINA_NAME,
+    NON_PUBLIC_BALLERINA_NAME,
+    NON_BALLERINA_NAME,
+    _B_NON_BALLERINA_NAME
+};
 
 struct backtrace_state *state = NULL;
 
@@ -60,7 +58,7 @@ static void getSimpleBacktrace(SimpleBacktrace *p);
 static char *saveMessage(const char *msg);
 static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNumber, BacktraceError *error);
 static void processInitialPC(PC pc, int64_t lineNumber, BacktraceStartLine *backtraceStartLine);
-static DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp);
+static enum DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp);
 static bool demangleModules(const char **mangledModules, FILE *fp);
 static bool demangleCountedName(const char **pp, const char **name);
 
@@ -266,7 +264,7 @@ TaggedPtr BAL_LANG_ERROR_NAME(message)(TaggedPtr error) {
 
 void _bal_print_mangled_name(const char *mangledName, FILE *fp) {
     const char *localName;
-    DemangleResult res = demangle(mangledName, &localName, NULL);
+    enum DemangleResult res = demangle(mangledName, &localName, NULL);
 
     if (res == NON_PUBLIC_BALLERINA_NAME) {
         fprintf(fp, "%s", localName);
@@ -281,7 +279,7 @@ void _bal_print_mangled_name(const char *mangledName, FILE *fp) {
     }
 }
 
-static DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp) {
+static enum DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp) {
     if (mangledName[0] != '_' || mangledName[1] != 'B') {
         return NON_BALLERINA_NAME;
     }
@@ -356,9 +354,6 @@ static bool demangleCountedName(const char **pp, const char **name) {
     long nChars;
     int nRead;
     if (sscanf(*pp, "%ld%n", &nChars, &nRead) <= 0) {
-        return false;
-    }
-    if (nRead > MAX_DEMANGLING_DECIMAL_LENGTH) {
         return false;
     }
     *name = *pp + nRead;
