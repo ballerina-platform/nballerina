@@ -121,7 +121,6 @@ function getStringProp(string? prop) returns [handle, int] {
     }
 }
 
-
 function jPointerPointer(int size) returns handle = @java:Constructor {
     'class: "org.bytedeco.javacpp.PointerPointer",
     paramTypes: ["long"]

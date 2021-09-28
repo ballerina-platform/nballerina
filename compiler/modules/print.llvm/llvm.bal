@@ -192,6 +192,7 @@ public class Module {
     private [PointerValue, GlobalProperties][] globalVariables = [];
     private FunctionDecl[] functionDecls = [];
     private FunctionDefn[] functionDefns = [];
+    private [ConstPointerValue, ConstValue, GlobalSymbolProperties][] aliases = [];
     Metadata[] metadata = [];
     Metadata[] moduleFlags = [];
 
@@ -288,6 +289,16 @@ public class Module {
         return val;
     }
 
+    // Corresponds to LLVMAddAlias
+    public function addAlias(Type aliasTy, ConstValue aliasee, string name, *GlobalSymbolProperties props) returns ConstPointerValue {
+        string aliasName = self.escapeGlobalIdent(name);
+        ConstPointerValue alias = new (pointerType(aliasTy, props.addressSpace), "@" + aliasName);
+        self.globals[aliasName] = alias;
+        self.aliases.push([alias, aliasee, props]);
+        return alias;
+    }
+
+
     private function escapeGlobalIdent(string name) returns string {
         string varName = escapeIdent(name);
         if varName is IntrinsicFunctionName {
@@ -321,6 +332,9 @@ public class Module {
         foreach var val in self.globalVariables {
             self.outputGlobalVar(val[0], val[1], out);
         }
+        foreach var val in self.aliases {
+            self.outputAlias(val[0], val[1], val[2], out);
+        }
         foreach var fn in self.functionDecls {
             fn.output(out);
         }
@@ -335,6 +349,18 @@ public class Module {
         foreach var data in self.metadata {
             data.output(out);
         }
+    }
+
+    private function outputAlias(ConstPointerValue alias, ConstValue aliasee, GlobalSymbolProperties props, Output out) {
+        string[] line = [alias.operand, "="];
+        if props.linkage == "internal" {
+            line.push("internal");
+        }
+        if props.unnamedAddr {
+            line.push("unnamed_addr");
+        }
+        line.push("alias", typeToString(alias.ty.pointsTo), ",", typeToString(aliasee.ty), aliasee.operand);
+        out.push(concat(...line));
     }
 
     function outputGlobalVar(PointerValue val, GlobalProperties prop, Output out){

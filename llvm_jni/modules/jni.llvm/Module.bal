@@ -147,10 +147,7 @@ public distinct class Module {
             ConstValue initializer = <ConstValue>props.initializer;
             jLLVMSetInitializer(val.LLVMValueRef, initializer.LLVMValueRef);
         }
-        if props.unnamedAddr {
-            jLLVMSetUnnamedAddr(val.LLVMValueRef, 1);
-        }
-        jLLVMSetLinkage(val.LLVMValueRef, linkageToInt(props.linkage));
+        self.setGlobalSymbolProperties(val, props);
         if props.isConstant {
             jLLVMSetGlobalConstant(val.LLVMValueRef, 1);
         }
@@ -158,6 +155,20 @@ public distinct class Module {
             jLLVMSetAlignment(val.LLVMValueRef, <int>props.align);
         }
         return val;
+    }
+
+    public function addAlias(Type aliasTy, ConstValue aliasee, string name, *GlobalSymbolProperties props) returns ConstPointerValue {
+        Type aliasInternalType = pointerType(aliasTy, props.addressSpace);
+        ConstPointerValue val = new(jLLVMAddAlias(self.LLVMModule, typeToLLVMType(aliasInternalType), aliasee.LLVMValueRef, java:fromString(name)));
+        self.setGlobalSymbolProperties(val, props);
+        return val;
+    }
+
+    private function setGlobalSymbolProperties(PointerValue symbol, GlobalSymbolProperties|GlobalProperties props) {
+        if props.unnamedAddr {
+            jLLVMSetUnnamedAddr(symbol.LLVMValueRef, 1);
+        }
+        jLLVMSetLinkage(symbol.LLVMValueRef, linkageToInt(props.linkage));
     }
 
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
@@ -180,6 +191,7 @@ public distinct class Module {
         self.targetTriple = targetTriple;
         jLLVMSetTarget(self.LLVMModule, java:fromString(targetTriple));
     }
+
 }
 
 
@@ -379,6 +391,12 @@ function jLLVMAddModuleFlag(handle m, int behavior, handle k, int kLen, handle v
     name: "LLVMAddModuleFlag",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "int", "java.lang.String", "long", "org.bytedeco.llvm.LLVM.LLVMMetadataRef"]
+} external;
+
+function jLLVMAddAlias(handle m, handle ty, handle aliasee, handle name) returns handle = @java:Method {
+    name: "LLVMAddAlias",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMModuleRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef", "org.bytedeco.llvm.LLVM.LLVMValueRef", "java.lang.String"]
 } external;
 
 function jLLVMDIBuilderFinalize(handle dBuilder) = @java:Method {
