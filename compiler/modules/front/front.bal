@@ -200,11 +200,12 @@ function validEntryPoint(ModuleDefns mod) returns err:Any? {
         if defn.vis != "public" {
             return err:semantic(`${"main"} is not public`, s:defnLocation(defn));
         }
+        check validInitReturnType(defn);
         if defn.paramNames.length() > 0 {
             return err:unimplemented(`parameters for ${"main"} not yet implemented`, s:defnLocation(defn));
         }
-        if (<bir:FunctionSignature>defn.signature).returnType !== t:NIL {
-            return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, s:defnLocation(defn));
+        if !t:isNever(t:intersect((<bir:FunctionSignature>defn.signature).returnType, t:ERROR)) {
+            return err:unimplemented(`returning an error from ${"main"} function is not implemented`, s:defnLocation(defn));
         }
     }
 }
@@ -218,14 +219,18 @@ function validInit(ModuleDefns defns) returns err:Any? {
         if defn.paramNames.length() > 0 {
             return err:semantic(`${"init"} function must not have parameters`, s:defnLocation(defn));
         }
-        t:SemType returnType = (<bir:FunctionSignature>defn.signature).returnType;
-        if t:intersect(returnType, t:NIL) != t:NIL {
-            return err:semantic(`return type of ${"init"} function must allow nil`, s:defnLocation(defn));
-        }
-        if !t:isSubtypeSimple(returnType, t:uniformTypeUnion((1 << t:NIL) | (1 << t:ERROR))) {
-            return err:semantic(`return type of ${"init"} function must be a subtype of ${"error?"}`, s:defnLocation(defn));
-        }
+        check validInitReturnType(defn);
         return err:unimplemented(`${"init"} function is not implemented`, s:defnLocation(defn));
+    }
+}
+
+function validInitReturnType(s:FunctionDefn defn) returns err:Semantic? {
+    t:SemType returnType = (<bir:FunctionSignature>defn.signature).returnType;
+    if t:intersect(returnType, t:NIL) != t:NIL {
+        return err:semantic(`return type of ${defn.name} function must allow nil`, s:defnLocation(defn));
+    }
+    if !t:isSubtypeSimple(returnType, t:uniformTypeUnion((1 << t:UT_NIL) | (1 << t:UT_ERROR))) {
+        return err:semantic(`return type of ${defn.name} function must be a subtype of ${"error?"}`, s:defnLocation(defn));
     }
 }
 
