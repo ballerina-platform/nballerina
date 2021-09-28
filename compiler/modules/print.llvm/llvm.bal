@@ -187,9 +187,9 @@ public class Context {
     public function structCreateNamed(string name, Type[] elementTypes) returns StructType {
         string structName = "%" + escapeIdent(name);
         if self.namedStructTypes.hasKey(structName) {
-            panic err:illegalArgument("This context already has a struct type by that name");
+            panic err:illegalArgument("this context already has a struct type by that name");
         }
-        StructType ty = { name:structName, elementTypes:elementTypes.cloneReadOnly() };
+        StructType ty = { elementTypes: elementTypes.cloneReadOnly() };
         self.namedStructTypes[structName] = [ty, false];
         return ty;
     }
@@ -198,20 +198,24 @@ public class Context {
         foreach var each in self.namedStructTypes {
             if each[1] {
                 StructType ty = each[0];
-                string[] words = [<string>ty.name, "=", "type", typeToString(ty, self, "forceInline")];
+            }
+        }
+        foreach var entry in self.namedStructTypes.entries() {
+            var data = entry[1];
+            if data[1] {
+                string[] words = [entry[0], "=", "type", typeToString(data[0], self, "forceInline")];
                 out.push(concat(...words));
             }
-        } 
+        }
     }
 
-    function refStruct(string name) {
-        var data = self.namedStructTypes[name];
-        if data is () {
-            panic err:illegalArgument("Referred unknown struct type");
-        }
-        else {
-            StructType ty = data[0];
-            self.namedStructTypes[name] = [ty, true];
+    function getStructName(StructType ty) returns string? {
+        foreach var entry in self.namedStructTypes.entries() {
+            var data = entry[1];
+            if data[0] === ty {
+                data[1] = true;
+                return entry[0];
+            }
         }
     }
 }
@@ -1353,7 +1357,7 @@ function typeToString(RetType ty, Context context, "forceInline"?forceInline=())
         }
     }
     else if ty is StructType {
-        string? name = ty.name;
+        string? name = context.getStructName(ty);
         if name is () || forceInline != () {
             string[] typeStringBody = [];
             typeStringBody.push("{");
@@ -1367,7 +1371,6 @@ function typeToString(RetType ty, Context context, "forceInline"?forceInline=())
             typeStringBody.push("}");
             typeTag = createLine(typeStringBody, "");
         } else {
-            context.refStruct(name);
             return name;
         }
     }
