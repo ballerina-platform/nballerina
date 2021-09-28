@@ -9,4 +9,5 @@
 /error_print
 /error_backtrace1
 /error_backtrace2
+/demangle
 *.stamp
