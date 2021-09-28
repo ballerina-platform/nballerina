@@ -94,13 +94,17 @@ public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsi
 
 public type TargetTriple string;
 
-public type GlobalProperties record {|
-    boolean isConstant = false;
-    int? align = ();
+public type GlobalSymbolProperties record {|
     boolean unnamedAddr = false;
     int addressSpace = 0;
-    ConstValue? initializer = ();
     Linkage linkage = "external";
+|};
+
+public type GlobalProperties record {|
+    *GlobalSymbolProperties;
+    boolean isConstant = false;
+    int? align = ();
+    ConstValue? initializer = ();
 |};
 
 // Corresponds to LLVMDWARFSourceLanguage
