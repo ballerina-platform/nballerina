@@ -171,11 +171,14 @@ function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] res
     foreach int i in 0 ..< importsById.length() {
         var moduleId = importsById[i].id;
         ModuleExports|string? resolved;
+        boolean partial;
         if moduleId == BALLERINA_IO {
             resolved = ioLibFunctions;
+            partial = true;
         }
         else {
             resolved = i < resolvedImports.length() ? resolvedImports[i] : ();
+            partial = false;
         }
         foreach var decl in importsById[i].imports {
             if resolved == () {
@@ -188,7 +191,7 @@ function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] res
             else {
                 string? declPrefix = decl.prefix;
                 string prefix = declPrefix == () ? moduleIdDefaultPrefix(moduleId) : declPrefix;
-                partPrefixes[decl.partIndex][prefix] = { decl, moduleId, defns: resolved };
+                partPrefixes[decl.partIndex][prefix] = { decl, moduleId, defns: resolved, partial };
             }
         }
     }

@@ -1511,7 +1511,12 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
         };
     }
     else if defn is () {
-        return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`);
+        if mod.partial {
+            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`);
+        }
+        else {
+            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`);
+        }
     }
     else {
         return cx.semanticErr("reference to non-function where function required");
