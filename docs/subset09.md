@@ -1,4 +1,4 @@
-# Language subset 8
+# Language subset 9
 
 ## Summary
 
@@ -18,6 +18,7 @@
    * union of the above types e.g. `int|string?`
    * `map<M>` where M any of the above types
    * `M[]` where `M` is either a type name `T` or `T?`, or a parenthesized union e.g. `(any|error)[]`
+   * closed record type descriptor
    * a reference to a type defined by a type definition
 * Statements:
    * function/method call statement
@@ -82,7 +83,7 @@ const-defn = ["public"] "const" [builtin-type-name] identifier "=" const-expr ";
 
 type-defn = ["public"] "type" identifier type-desc ";"
 
-type-desc = union-type-desc | array-type-desc | map-type-desc | type-reference 
+type-desc = union-type-desc | array-type-desc | map-type-desc | record-type-desc | type-reference 
 
 union-type-desc =
   optional-type-desc
@@ -99,6 +100,9 @@ array-member-type-desc =
   | "(" union-type-desc ")"
 
 map-type-desc = "map" "<" union-type-desc ">"
+
+record-type-desc := "record" "{|" field-desc* "|}"
+field-desc := type-desc identifier ";"
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -329,13 +333,9 @@ Two kinds of `import` are supported.
 * The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
 
-## Additions from subset 7
+## Additions from subset 8
 
-* Multiple modules
-   * Full import declaration syntax is supported.
-   * A qualified identifier in a function-reference can refer to a function definition defined in another module.
-   * A variable-reference or type-reference can be a qualified identifier referring to a constant or type defined in another module.
-* `check` and `checkpanic` are supported in call statements
+* Record types
 
 ## Implemented spec changes since 2021R1
 
