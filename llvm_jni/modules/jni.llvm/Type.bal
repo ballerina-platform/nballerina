@@ -1,5 +1,4 @@
 import ballerina/jballerina.java;
-import nballerina.err;
 
 function typeToLLVMType(RetType ty, Context? context) returns handle {
     if ty is PointerType {
@@ -7,20 +6,15 @@ function typeToLLVMType(RetType ty, Context? context) returns handle {
         return jLLVMPointerType(baseType, ty.addressSpace);
     }
     if ty is StructType {
-        if ty.name is () {
-            PointerPointer typeArr = PointerPointerFromTypes(ty.elementTypes);
-            int elementCount = ty.elementTypes.length();
-            return jLLVMStructType(typeArr.jObject, elementCount, 0);
-        }
-        else {
-            if context is Context {
-                string name = <string>ty.name;
-                return context.namedStructTypeToLLVMType(name);
-            }
-            else {
-                panic err:illegalArgument("can't convert named struct type without context");
+        if context is Context {
+            handle? namedTy = context.namedStructTypeToLLVMType(ty);
+            if namedTy is handle {
+                return namedTy;
             }
         }
+        PointerPointer typeArr = PointerPointerFromTypes(ty.elementTypes);
+        int elementCount = ty.elementTypes.length();
+        return jLLVMStructType(typeArr.jObject, elementCount, 0);
     }
     if ty is ArrayType {
         handle elementType = typeToLLVMType(ty.elementType, context);

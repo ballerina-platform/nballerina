@@ -3,7 +3,7 @@ import nballerina.err;
 
 public distinct class Context {
     handle LLVMContext;
-    private final map<handle> namedStructTypes = {};
+    private final map<[handle, StructType]> namedStructTypes = {};
     public function init() {
         self.LLVMContext = jLLVMContextCreate();
         self.initializeLLVMTargets();
@@ -49,21 +49,20 @@ public distinct class Context {
         if self.namedStructTypes.hasKey(name) {
             panic err:illegalArgument("type by that name already exists");
         }
-        StructType balType = {name: name, elementTypes: elementTypes.cloneReadOnly()};
+        StructType balType = { elementTypes: elementTypes.cloneReadOnly() };
         handle jType = jLLVMStructCreateNamed(self.LLVMContext, java:fromString(name));
         PointerPointer elements = PointerPointerFromTypes(elementTypes);
         jLLVMStructSetBody(jType, elements.jObject, elementTypes.length(), 0);
-        self.namedStructTypes[name] = jType;
+        self.namedStructTypes[name] = [jType, balType];
         return balType;
     }
 
-    function namedStructTypeToLLVMType(string name) returns handle {
-        handle? jType = self.namedStructTypes[name];
-        if jType is handle {
-            return jType;
-        }
-        else {
-            panic err:illegalArgument("type by that name is unknown");
+    function namedStructTypeToLLVMType(StructType ty) returns handle? {
+        foreach var entry in self.namedStructTypes.entries() {
+            var data = entry[1];
+            if data[1] === ty {
+                return data[0];
+            }
         }
     }
 
