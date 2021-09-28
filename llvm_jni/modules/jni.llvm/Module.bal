@@ -147,10 +147,7 @@ public distinct class Module {
             ConstValue initializer = <ConstValue>props.initializer;
             jLLVMSetInitializer(val.LLVMValueRef, initializer.LLVMValueRef);
         }
-        if props.unnamedAddr {
-            jLLVMSetUnnamedAddr(val.LLVMValueRef, 1);
-        }
-        jLLVMSetLinkage(val.LLVMValueRef, linkageToInt(props.linkage));
+        self.setGlobalSymbolProperties(val, props);
         if props.isConstant {
             jLLVMSetGlobalConstant(val.LLVMValueRef, 1);
         }
@@ -158,6 +155,20 @@ public distinct class Module {
             jLLVMSetAlignment(val.LLVMValueRef, <int>props.align);
         }
         return val;
+    }
+
+    public function addAlias(Type aliasTy, ConstValue aliasee, string name, *GlobalSymbolProperties props) returns ConstPointerValue {
+        Type aliasInternalType = pointerType(aliasTy, props.addressSpace);
+        ConstPointerValue val = new(jLLVMAddAlias(self.LLVMModule, typeToLLVMType(aliasInternalType), aliasee.LLVMValueRef, java:fromString(name)));
+        self.setGlobalSymbolProperties(val, props);
+        return val;
+    }
+
+    private function setGlobalSymbolProperties(PointerValue symbol, GlobalSymbolProperties|GlobalProperties props) {
+        if props.unnamedAddr {
+            jLLVMSetUnnamedAddr(symbol.LLVMValueRef, 1);
+        }
+        jLLVMSetLinkage(symbol.LLVMValueRef, linkageToInt(props.linkage));
     }
 
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
@@ -181,10 +192,6 @@ public distinct class Module {
         jLLVMSetTarget(self.LLVMModule, java:fromString(targetTriple));
     }
 
-    public function addAlias(PointerType aliasTy, ConstValue aliasee, string? name=()) returns ConstPointerValue {
-        string aliasName = extractName(name);
-        return new(jLLVMAddAlias(self.LLVMModule, typeToLLVMType(aliasTy), aliasee.LLVMValueRef, java:fromString(aliasName)));
-    }
 }
 
 
