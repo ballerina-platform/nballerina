@@ -7,9 +7,9 @@ declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare void @_Bio__println(i8 addrspace(1)*)
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)*, i64)
-define void @_B_main() {
+define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %m = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
@@ -34,9 +34,9 @@ define void @_B_main() {
   %17 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %18 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %17, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112))
   store i8 addrspace(1)* %18, i8 addrspace(1)** %2
-  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %2
-  %20 = call i8 addrspace(1)* @_B_nonNil(i8 addrspace(1)* %19)
-  store i8 addrspace(1)* %20, i8 addrspace(1)** %3
+  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %2, !dbg !10
+  %20 = call i8 addrspace(1)* @_B_nonNil(i8 addrspace(1)* %19), !dbg !10
+  store i8 addrspace(1)* %20, i8 addrspace(1)** %3, !dbg !10
   %21 = load i8 addrspace(1)*, i8 addrspace(1)** %3
   %22 = addrspacecast i8 addrspace(1)* %21 to i8*
   %23 = ptrtoint i8* %22 to i64
@@ -64,23 +64,23 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %37)
   unreachable
 38:
-  %39 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %39 = call i8 addrspace(1)* @_bal_panic_construct(i64 772), !dbg !9
   call void @_bal_panic(i8 addrspace(1)* %39)
   unreachable
 40:
   %41 = extractvalue {i64, i1} %31, 0
   store i64 %41, i64* %7
-  %42 = load i64, i64* %7
-  %43 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %42)
-  call void @_Bio__println(i8 addrspace(1)* %43)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %8
+  %42 = load i64, i64* %7, !dbg !11
+  %43 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %42), !dbg !11
+  call void @_Bb02ioprintln(i8 addrspace(1)* %43), !dbg !11
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !11
   ret void
 44:
-  %45 = call i8 addrspace(1)* @_bal_panic_construct(i64 1281)
+  %45 = call i8 addrspace(1)* @_bal_panic_construct(i64 1281), !dbg !9
   store i8 addrspace(1)* %45, i8 addrspace(1)** %9
   br label %36
 }
-define internal i8 addrspace(1)* @_B_nonNil(i8 addrspace(1)* %0) {
+define internal i8 addrspace(1)* @_B_nonNil(i8 addrspace(1)* %0) !dbg !7 {
   %n = alloca i8 addrspace(1)*
   %2 = alloca i1
   %n.1 = alloca i8 addrspace(1)*
@@ -100,8 +100,8 @@ define internal i8 addrspace(1)* @_B_nonNil(i8 addrspace(1)* %0) {
 11:
   %12 = load i8 addrspace(1)*, i8 addrspace(1)** %n
   store i8 addrspace(1)* %12, i8 addrspace(1)** %n.1
-  %13 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621228910), i64 10)
-  store i8 addrspace(1)* %13, i8 addrspace(1)** %3
+  %13 = call i8 addrspace(1)* @_bal_error_construct(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621228910), i64 10), !dbg !12
+  store i8 addrspace(1)* %13, i8 addrspace(1)** %3, !dbg !12
   %14 = load i8 addrspace(1)*, i8 addrspace(1)** %3
   ret i8 addrspace(1)* %14
 15:
@@ -112,7 +112,22 @@ define internal i8 addrspace(1)* @_B_nonNil(i8 addrspace(1)* %0) {
   %19 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %18)
   ret i8 addrspace(1)* %19
 20:
-  %21 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052)
+  %21 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052), !dbg !12
   call void @_bal_panic(i8 addrspace(1)* %21)
   unreachable
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/07-error/check5-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 3, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = distinct !DISubprogram(name:"nonNil", linkageName:"_B_nonNil", scope: !1, file: !1, line: 8, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
+!8 = !{}
+!9 = !DILocation(line: 0, column: 0, scope: !5)
+!10 = !DILocation(line: 5, column: 27, scope: !5)
+!11 = !DILocation(line: 5, column: 4, scope: !5)
+!12 = !DILocation(line: 0, column: 0, scope: !7)

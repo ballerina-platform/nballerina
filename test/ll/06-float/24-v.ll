@@ -8,9 +8,9 @@
 @.str9 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 10, i16 10, [12 x i8] c"eq error 2\00\00"}, align 8
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare void @_Bio__println(i8 addrspace(1)*)
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare zeroext i1 @_bal_float_eq(double, double) readonly
-define void @_B_main() {
+define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
@@ -38,68 +38,68 @@ define void @_B_main() {
   %25 = icmp ult i8* %23, %24
   br i1 %25, label %49, label %26
 26:
-  %27 = call i8 addrspace(1)* @_B_floatCmp(double 1.0, double 1.0)
-  store i8 addrspace(1)* %27, i8 addrspace(1)** %1
-  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %1
-  call void @_Bio__println(i8 addrspace(1)* %28)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %29 = call i8 addrspace(1)* @_B_floatCmp(double 1.0, double 2.0)
-  store i8 addrspace(1)* %29, i8 addrspace(1)** %3
-  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %3
-  call void @_Bio__println(i8 addrspace(1)* %30)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  %31 = call i8 addrspace(1)* @_B_floatCmp(double 2.0, double 1.0)
-  store i8 addrspace(1)* %31, i8 addrspace(1)** %5
-  %32 = load i8 addrspace(1)*, i8 addrspace(1)** %5
-  call void @_Bio__println(i8 addrspace(1)* %32)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %6
-  %33 = call i8 addrspace(1)* @_B_floatCmp(double -1.0, double 1.0)
-  store i8 addrspace(1)* %33, i8 addrspace(1)** %7
-  %34 = load i8 addrspace(1)*, i8 addrspace(1)** %7
-  call void @_Bio__println(i8 addrspace(1)* %34)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %8
-  %35 = call i8 addrspace(1)* @_B_floatCmp(double -0.5, double -1.0)
-  store i8 addrspace(1)* %35, i8 addrspace(1)** %9
-  %36 = load i8 addrspace(1)*, i8 addrspace(1)** %9
-  call void @_Bio__println(i8 addrspace(1)* %36)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %10
-  %37 = call i8 addrspace(1)* @_B_floatCmp(double -0.5, double 0x7FF0000000000000)
-  store i8 addrspace(1)* %37, i8 addrspace(1)** %11
-  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %11
-  call void @_Bio__println(i8 addrspace(1)* %38)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %12
-  %39 = call i8 addrspace(1)* @_B_floatCmp(double -0.5, double 0xFFF0000000000000)
-  store i8 addrspace(1)* %39, i8 addrspace(1)** %13
-  %40 = load i8 addrspace(1)*, i8 addrspace(1)** %13
-  call void @_Bio__println(i8 addrspace(1)* %40)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %14
-  %41 = call i8 addrspace(1)* @_B_floatCmp(double -0.0, double 0.0)
-  store i8 addrspace(1)* %41, i8 addrspace(1)** %15
-  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %15
-  call void @_Bio__println(i8 addrspace(1)* %42)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %16
-  %43 = call i8 addrspace(1)* @_B_floatCmp(double 0.0, double 0x7FF8000000000000)
-  store i8 addrspace(1)* %43, i8 addrspace(1)** %17
-  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %17
-  call void @_Bio__println(i8 addrspace(1)* %44)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %18
-  %45 = call i8 addrspace(1)* @_B_floatCmp(double 0x7FF8000000000000, double 0.0)
-  store i8 addrspace(1)* %45, i8 addrspace(1)** %19
-  %46 = load i8 addrspace(1)*, i8 addrspace(1)** %19
-  call void @_Bio__println(i8 addrspace(1)* %46)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %20
-  %47 = call i8 addrspace(1)* @_B_floatCmp(double 0x7FF8000000000000, double 0x7FF8000000000000)
-  store i8 addrspace(1)* %47, i8 addrspace(1)** %21
-  %48 = load i8 addrspace(1)*, i8 addrspace(1)** %21
-  call void @_Bio__println(i8 addrspace(1)* %48)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %22
+  %27 = call i8 addrspace(1)* @_B_floatCmp(double 1.0, double 1.0), !dbg !10
+  store i8 addrspace(1)* %27, i8 addrspace(1)** %1, !dbg !10
+  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %1, !dbg !11
+  call void @_Bb02ioprintln(i8 addrspace(1)* %28), !dbg !11
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !11
+  %29 = call i8 addrspace(1)* @_B_floatCmp(double 1.0, double 2.0), !dbg !12
+  store i8 addrspace(1)* %29, i8 addrspace(1)** %3, !dbg !12
+  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %3, !dbg !13
+  call void @_Bb02ioprintln(i8 addrspace(1)* %30), !dbg !13
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !13
+  %31 = call i8 addrspace(1)* @_B_floatCmp(double 2.0, double 1.0), !dbg !14
+  store i8 addrspace(1)* %31, i8 addrspace(1)** %5, !dbg !14
+  %32 = load i8 addrspace(1)*, i8 addrspace(1)** %5, !dbg !15
+  call void @_Bb02ioprintln(i8 addrspace(1)* %32), !dbg !15
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !15
+  %33 = call i8 addrspace(1)* @_B_floatCmp(double -1.0, double 1.0), !dbg !16
+  store i8 addrspace(1)* %33, i8 addrspace(1)** %7, !dbg !16
+  %34 = load i8 addrspace(1)*, i8 addrspace(1)** %7, !dbg !17
+  call void @_Bb02ioprintln(i8 addrspace(1)* %34), !dbg !17
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !17
+  %35 = call i8 addrspace(1)* @_B_floatCmp(double -0.5, double -1.0), !dbg !18
+  store i8 addrspace(1)* %35, i8 addrspace(1)** %9, !dbg !18
+  %36 = load i8 addrspace(1)*, i8 addrspace(1)** %9, !dbg !19
+  call void @_Bb02ioprintln(i8 addrspace(1)* %36), !dbg !19
+  store i8 addrspace(1)* null, i8 addrspace(1)** %10, !dbg !19
+  %37 = call i8 addrspace(1)* @_B_floatCmp(double -0.5, double 0x7FF0000000000000), !dbg !20
+  store i8 addrspace(1)* %37, i8 addrspace(1)** %11, !dbg !20
+  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %11, !dbg !21
+  call void @_Bb02ioprintln(i8 addrspace(1)* %38), !dbg !21
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !21
+  %39 = call i8 addrspace(1)* @_B_floatCmp(double -0.5, double 0xFFF0000000000000), !dbg !22
+  store i8 addrspace(1)* %39, i8 addrspace(1)** %13, !dbg !22
+  %40 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !23
+  call void @_Bb02ioprintln(i8 addrspace(1)* %40), !dbg !23
+  store i8 addrspace(1)* null, i8 addrspace(1)** %14, !dbg !23
+  %41 = call i8 addrspace(1)* @_B_floatCmp(double -0.0, double 0.0), !dbg !24
+  store i8 addrspace(1)* %41, i8 addrspace(1)** %15, !dbg !24
+  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !25
+  call void @_Bb02ioprintln(i8 addrspace(1)* %42), !dbg !25
+  store i8 addrspace(1)* null, i8 addrspace(1)** %16, !dbg !25
+  %43 = call i8 addrspace(1)* @_B_floatCmp(double 0.0, double 0x7FF8000000000000), !dbg !26
+  store i8 addrspace(1)* %43, i8 addrspace(1)** %17, !dbg !26
+  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %17, !dbg !27
+  call void @_Bb02ioprintln(i8 addrspace(1)* %44), !dbg !27
+  store i8 addrspace(1)* null, i8 addrspace(1)** %18, !dbg !27
+  %45 = call i8 addrspace(1)* @_B_floatCmp(double 0x7FF8000000000000, double 0.0), !dbg !28
+  store i8 addrspace(1)* %45, i8 addrspace(1)** %19, !dbg !28
+  %46 = load i8 addrspace(1)*, i8 addrspace(1)** %19, !dbg !29
+  call void @_Bb02ioprintln(i8 addrspace(1)* %46), !dbg !29
+  store i8 addrspace(1)* null, i8 addrspace(1)** %20, !dbg !29
+  %47 = call i8 addrspace(1)* @_B_floatCmp(double 0x7FF8000000000000, double 0x7FF8000000000000), !dbg !30
+  store i8 addrspace(1)* %47, i8 addrspace(1)** %21, !dbg !30
+  %48 = load i8 addrspace(1)*, i8 addrspace(1)** %21, !dbg !31
+  call void @_Bb02ioprintln(i8 addrspace(1)* %48), !dbg !31
+  store i8 addrspace(1)* null, i8 addrspace(1)** %22, !dbg !31
   ret void
 49:
-  %50 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
+  %50 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
   call void @_bal_panic(i8 addrspace(1)* %50)
   unreachable
 }
-define internal i8 addrspace(1)* @_B_floatCmp(double %0, double %1) {
+define internal i8 addrspace(1)* @_B_floatCmp(double %0, double %1) !dbg !7 {
   %f1 = alloca double
   %f2 = alloca double
   %3 = alloca i1
@@ -221,7 +221,42 @@ define internal i8 addrspace(1)* @_B_floatCmp(double %0, double %1) {
 82:
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3057488322648960623)
 83:
-  %84 = call i8 addrspace(1)* @_bal_panic_construct(i64 5636)
+  %84 = call i8 addrspace(1)* @_bal_panic_construct(i64 5636), !dbg !32
   call void @_bal_panic(i8 addrspace(1)* %84)
   unreachable
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/06-float/24-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = distinct !DISubprogram(name:"floatCmp", linkageName:"_B_floatCmp", scope: !1, file: !1, line: 22, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
+!8 = !{}
+!9 = !DILocation(line: 0, column: 0, scope: !5)
+!10 = !DILocation(line: 5, column: 15, scope: !5)
+!11 = !DILocation(line: 5, column: 4, scope: !5)
+!12 = !DILocation(line: 7, column: 15, scope: !5)
+!13 = !DILocation(line: 7, column: 4, scope: !5)
+!14 = !DILocation(line: 8, column: 15, scope: !5)
+!15 = !DILocation(line: 8, column: 4, scope: !5)
+!16 = !DILocation(line: 9, column: 15, scope: !5)
+!17 = !DILocation(line: 9, column: 4, scope: !5)
+!18 = !DILocation(line: 10, column: 15, scope: !5)
+!19 = !DILocation(line: 10, column: 4, scope: !5)
+!20 = !DILocation(line: 12, column: 15, scope: !5)
+!21 = !DILocation(line: 12, column: 4, scope: !5)
+!22 = !DILocation(line: 13, column: 15, scope: !5)
+!23 = !DILocation(line: 13, column: 4, scope: !5)
+!24 = !DILocation(line: 15, column: 15, scope: !5)
+!25 = !DILocation(line: 15, column: 4, scope: !5)
+!26 = !DILocation(line: 17, column: 15, scope: !5)
+!27 = !DILocation(line: 17, column: 4, scope: !5)
+!28 = !DILocation(line: 18, column: 15, scope: !5)
+!29 = !DILocation(line: 18, column: 4, scope: !5)
+!30 = !DILocation(line: 19, column: 15, scope: !5)
+!31 = !DILocation(line: 19, column: 4, scope: !5)
+!32 = !DILocation(line: 0, column: 0, scope: !7)
