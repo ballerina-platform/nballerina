@@ -195,15 +195,10 @@ public class Context {
     }
 
     function output(Output out){
-        foreach var each in self.namedStructTypes {
-            if each[1] {
-                StructType ty = each[0];
-            }
-        }
         foreach var entry in self.namedStructTypes.entries() {
             var data = entry[1];
             if data[1] {
-                string[] words = [entry[0], "=", "type", typeToString(data[0], self, "forceInline")];
+                string[] words = [entry[0], "=", "type", typeToString(data[0], self, true)];
                 out.push(concat(...words));
             }
         }
@@ -395,7 +390,7 @@ public class Module {
         if props.unnamedAddr {
             line.push("unnamed_addr");
         }
-        line.push("alias", typeToString(alias.ty.pointsTo), ",", typeToString(aliasee.ty), aliasee.operand);
+        line.push("alias", typeToString(alias.ty.pointsTo, self.context), ",", typeToString(aliasee.ty, self.context), aliasee.operand);
         out.push(concat(...line));
     }
 
@@ -1347,32 +1342,32 @@ function sameNumberType(Value v1, Value v2) returns IntType|FloatType {
     panic err:illegalArgument("expected a number type");
 }
 
-function typeToString(RetType ty, Context context, "forceInline"?forceInline=()) returns string {
-    string typeTag;
+function typeToString(RetType ty, Context context, boolean forceInline=false) returns string {
     if ty is PointerType {
         if ty.addressSpace == 0 {
-            typeTag = typeToString(ty.pointsTo, context) + "*";
+            return typeToString(ty.pointsTo, context) + "*";
         } else {
-            typeTag = createLine([typeToString(ty.pointsTo, context), "addrspace", "(", ty.addressSpace.toString(), ")", "*"]);
+            return createLine([typeToString(ty.pointsTo, context), "addrspace", "(", ty.addressSpace.toString(), ")", "*"]);
         }
     }
     else if ty is StructType {
-        string? name = context.getStructName(ty);
-        if name is () || forceInline != () {
-            string[] typeStringBody = [];
-            typeStringBody.push("{");
-            foreach int i in 0 ..< ty.elementTypes.length() {
-                final Type elementType = ty.elementTypes[i];
-                if i > 0 {
-                    typeStringBody.push(",");
-                }
-                typeStringBody.push(typeToString(elementType, context));
+        if !forceInline {
+            string? name = context.getStructName(ty);
+            if name is string {
+                return name;
             }
-            typeStringBody.push("}");
-            typeTag = createLine(typeStringBody, "");
-        } else {
-            return name;
         }
+        string[] typeStringBody = [];
+        typeStringBody.push("{");
+        foreach int i in 0 ..< ty.elementTypes.length() {
+            final Type elementType = ty.elementTypes[i];
+            if i > 0 {
+                typeStringBody.push(",");
+            }
+            typeStringBody.push(typeToString(elementType, context));
+        }
+        typeStringBody.push("}");
+        return createLine(typeStringBody, "");
     }
     else if ty is ArrayType {
         string[] typeStringBody = [];
@@ -1381,12 +1376,11 @@ function typeToString(RetType ty, Context context, "forceInline"?forceInline=())
         typeStringBody.push("x");
         typeStringBody.push(typeToString(ty.elementType, context));
         typeStringBody.push("]");
-        typeTag = createLine(typeStringBody, "");
+        return createLine(typeStringBody, "");
     }
     else {
-        typeTag = ty;
+        return ty;
     }
-    return typeTag;
 }
 
 class Output {
