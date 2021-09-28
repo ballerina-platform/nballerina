@@ -1,5 +1,5 @@
 import ballerina/jballerina.java;
-
+import nballerina.err;
 
 function typeToLLVMType(RetType ty, Context? context) returns handle {
     if ty is PointerType {
@@ -18,7 +18,7 @@ function typeToLLVMType(RetType ty, Context? context) returns handle {
                 return context.namedStructTypeToLLVMType(name);
             }
             else {
-                panic error("Can't convert named struct type without context");
+                panic err:illegalArgument("can't convert named struct type without context");
             }
         }
     }

@@ -1,4 +1,5 @@
 import ballerina/jballerina.java;
+import nballerina.err;
 
 public distinct class Context {
     handle LLVMContext;
@@ -46,7 +47,7 @@ public distinct class Context {
 
     public function structCreateNamed(string name, Type[] elementTypes) returns StructType {
         if self.namedStructTypes.hasKey(name) {
-            panic error("Type by that name already exists");
+            panic err:illegalArgument("type by that name already exists");
         }
         StructType balType = {name: name, elementTypes: elementTypes.cloneReadOnly()};
         handle jType = jLLVMStructCreateNamed(self.LLVMContext, java:fromString(name));
@@ -62,7 +63,7 @@ public distinct class Context {
             return jType;
         }
         else {
-            panic error("Type by that name is unknown");
+            panic err:illegalArgument("type by that name is unknown");
         }
     }
 
