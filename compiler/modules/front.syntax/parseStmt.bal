@@ -24,7 +24,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return finishIdentifierStmt(tok, identifier, pos);
         }
-        WILDCARD => {
+        "_" => {
             check tok.advance();
             return finishAssignStmt(tok, WILDCARD);
         }
