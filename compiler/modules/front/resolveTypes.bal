@@ -52,7 +52,7 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
 function resolveSubsetTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn defn, s:TypeDesc td) returns t:SemType|ResolveTypeError {
     t:SemType ty = check resolveTypeDesc(mod, defn, 0, td);
     if ty is t:UniformTypeBitSet
-       && (t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL))
+       && ((t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) && ty != t:NEVER)
            || (ty == t:ANY || ty == t:TOP)) {
         return ty;
     }
