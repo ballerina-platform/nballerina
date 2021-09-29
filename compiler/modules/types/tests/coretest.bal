@@ -292,7 +292,7 @@ function testStringNonCharSubtype() {
     test:assertEquals(st.subtypeDataList.length(), 1);
     StringSubtype subType = <StringSubtype> st.subtypeDataList[0];
     test:assertEquals(subType.char.values.length(), 0);
-    test:assertEquals(subType.char.allowed, false);
+    test:assertEquals(subType.char.allowed, true);
     test:assertEquals(subType.nonChar.values.length(), 1);
     test:assertEquals(subType.nonChar.values[0], "abc");
     test:assertEquals(subType.nonChar.allowed, true);
