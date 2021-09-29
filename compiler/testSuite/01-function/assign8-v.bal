@@ -1,3 +1,4 @@
+// @productions assign-stmt local-var-decl-stmt string-literal function-call-expr
 import ballerina/io;
 
 function foo(int[] arr, int i) returns int[] {
