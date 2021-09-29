@@ -120,7 +120,8 @@ function stmtToWords(Word[] w, Stmt stmt) {
         LExpr|WILDCARD lValue = stmt.lValue;
         if lValue is WILDCARD {
             w.push(WILDCARD);
-        } else {
+        }
+        else {
             exprToWords(w, lValue);
         }
         w.push("=");

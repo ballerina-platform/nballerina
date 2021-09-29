@@ -759,17 +759,11 @@ function codeGenPanicStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
 }
 
 function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarDeclStmt stmt) returns CodeGenError|StmtEffect {
-    var { varName, initExpr, td, isFinal } = stmt;
-    if varName != s:WILDCARD && lookup(varName, env) !== () {
+    string varName = stmt.varName;
+    if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
-    t:SemType semType = check cx.resolveTypeDesc(td);
-    initExpr = check cx.foldExpr(env, initExpr, semType);
-    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
-    bir:Register result = cx.createRegister(semType, varName);
-    bir:AssignInsn insn = { result, operand };
-    nextBlock.insns.push(insn);
-    return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
+    return codeGenVarDeclStmtAfterLookup(cx, startBlock, env, stmt);
 }
 
 function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:AssignStmt stmt) returns CodeGenError|StmtEffect {
@@ -777,23 +771,27 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     if lValue is s:VarRefExpr {
         return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
     }
-    else if lValue is s:MemberAccessExpr {
-        return codeGenAssignToMember(cx, startBlock, env, lValue, expr);
+    else if lValue is s:WILDCARD {
+        return codeGenAssignToWildcard(cx, startBlock, env, stmt);
     }
     else {
-        return codeGenDestructuringAssignStmt(cx, startBlock, env, stmt);
+        return codeGenAssignToMember(cx, startBlock, env, lValue, expr);
     }
 }
 
-function codeGenDestructuringAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:AssignStmt stmt) returns CodeGenError|StmtEffect {
-    var { lValue, expr } = stmt;
-    if (lValue is s:WILDCARD) {
-        s:VarDeclStmt declStmt = {td: "any", varName: s:WILDCARD, initExpr: stmt.expr, isFinal: false};
-        return codeGenVarDeclStmt(cx, startBlock, env, declStmt);
-    }
-    else {
-        return cx.unimplementedErr("Unsupported binding-pattern in destructuring-assignment-stmt");
-    }
+function codeGenAssignToWildcard(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:AssignStmt stmt) returns CodeGenError|StmtEffect {
+    return codeGenVarDeclStmtAfterLookup(cx, startBlock, env, { td: "any", varName: s:WILDCARD, initExpr: stmt.expr, isFinal: false });
+}
+
+function codeGenVarDeclStmtAfterLookup(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarDeclStmt stmt) returns CodeGenError|StmtEffect {
+    var { varName, initExpr, td, isFinal } = stmt;
+    t:SemType semType = check cx.resolveTypeDesc(td);
+    initExpr = check cx.foldExpr(env, initExpr, semType);
+    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, initExpr);
+    bir:Register result = cx.createRegister(semType, varName);
+    bir:AssignInsn insn = { result, operand };
+    nextBlock.insns.push(insn);
+    return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };
 }
 
 function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr) returns CodeGenError|StmtEffect {
