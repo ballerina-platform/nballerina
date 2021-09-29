@@ -277,26 +277,6 @@ function buildRuntimeFunctionDecl(Scaffold scaffold, RuntimeFunction rf) returns
     } 
 }
 
-
-function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrowInsn insn) returns BuildError? {
-    var [sourceRepr, value] = check buildReprValue(builder, scaffold, insn.operand);
-    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));
-    builder.store(narrowed, scaffold.address(insn.result));
-}
-
-function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value|BuildError {
-    BaseRepr sourceBaseRepr = sourceRepr.base;
-    BaseRepr targetBaseRepr = targetRepr.base;
-    llvm:Value narrowed;
-    if sourceBaseRepr == targetBaseRepr {
-        return value;
-    }
-    if sourceBaseRepr == BASE_REPR_TAGGED {
-        return buildUntagged(builder, scaffold, <llvm:PointerValue>value, targetRepr);
-    }
-    return scaffold.unimplementedErr("unimplemented narrowing conversion required");
-}
-
 function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
     // JBUG #31753 cast
     return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, <int>panicIndex | (scaffold.lineNumber(pos) << 8)), pos);

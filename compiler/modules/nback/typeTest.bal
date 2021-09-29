@@ -142,6 +142,25 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     builder.positionAtEnd(continueBlock);
 }
 
+function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrowInsn insn) returns BuildError? {
+    var [sourceRepr, value] = check buildReprValue(builder, scaffold, insn.operand);
+    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));
+    builder.store(narrowed, scaffold.address(insn.result));
+}
+
+function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value|BuildError {
+    BaseRepr sourceBaseRepr = sourceRepr.base;
+    BaseRepr targetBaseRepr = targetRepr.base;
+    llvm:Value narrowed;
+    if sourceBaseRepr == targetBaseRepr {
+        return value;
+    }
+    if sourceBaseRepr == BASE_REPR_TAGGED {
+        return buildUntagged(builder, scaffold, <llvm:PointerValue>value, targetRepr);
+    }
+    return scaffold.unimplementedErr("unimplemented narrowing conversion required");
+}
+
 function buildHasBasicTypeTag(llvm:Builder builder, llvm:PointerValue tagged, int basicTypeTag) returns llvm:Value {
     return buildTestTag(builder, tagged, basicTypeTag, TAG_BASIC_TYPE_MASK);    
 }
