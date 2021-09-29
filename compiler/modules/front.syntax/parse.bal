@@ -134,37 +134,37 @@ function parseModuleDecl(Tokenizer tok, ModulePart part) returns ModuleLevelDefn
 
 function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns TypeDefn|err:Syntax {
     check tok.advance();
-    Position pos = tok.currentPos();
+    Position namePos = tok.currentPos();
     string name = check tok.expectIdentifier();
     TypeDesc td = check parseTypeDesc(tok);
     check tok.expect(";");
-    return { name, td, pos, vis, part };
+    return { name, td, namePos, vis, part };
 }
 
 function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns ConstDefn|err:Syntax {
     check tok.advance();
-    Position pos = tok.currentPos();
     Token? t = tok.current();
     InlineBuiltinTypeDesc? td = ();
     if t is InlineBuiltinTypeDesc {
         check tok.advance();
         td = t;
     }
+    Position namePos = tok.currentPos();
     string name = check tok.expectIdentifier();
     check tok.expect("=");
     Expr expr = check parseInnerExpr(tok);
     check tok.expect(";");
-    return { td, name, expr, pos, vis, part };
+    return { td, name, expr, namePos, vis, part };
 }
 
 function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns FunctionDefn|err:Syntax {
     check tok.advance();
-    Position pos = tok.currentPos();
+    Position namePos = tok.currentPos();
     string name = check tok.expectIdentifier();
     string[] paramNames = [];
     FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
     Stmt[] body = check parseStmtBlock(tok);
-    FunctionDefn defn = { name, vis, paramNames, typeDesc, pos, body, part };
+    FunctionDefn defn = { name, vis, paramNames, typeDesc, namePos, body, part };
     return defn;
 }
 
@@ -183,7 +183,7 @@ function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
 }
 
 public function defnLocation(ModuleLevelDefn defn) returns err:Location {
-    return err:location(defn.part.file, defn.pos);
+    return err:location(defn.part.file, defn.namePos);
 }
 
 public function locationInDefn(ModuleLevelDefn defn, Position? pos = ()) returns err:Location {

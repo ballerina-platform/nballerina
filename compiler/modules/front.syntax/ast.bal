@@ -4,6 +4,11 @@ import wso2/nballerina.err;
 
 public type Position err:Position;
 
+type PositionFields record {|
+   Position startPos;
+   Position endPos;
+|};
+
 public type ModulePart record {|
     ImportDecl[] importDecls;
     SourceFile file;
@@ -30,7 +35,7 @@ public type FunctionDefn record {|
     FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
-    Position pos;
+    Position namePos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
 |};
@@ -42,7 +47,7 @@ public type ConstDefn record {|
     InlineBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
-    Position pos;
+    Position namePos;
     ResolvedConst|false? resolved = ();    
 |};
 
@@ -317,7 +322,7 @@ public type TypeDefn record {|
     ModulePart part;
     Visibility vis;
     TypeDesc td;
-    Position pos;
+    Position namePos;
     t:SemType? semType = ();
     int cycleDepth = -1;
 |};
