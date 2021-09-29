@@ -171,14 +171,12 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 return "string";
             }
             check tok.advance();
-            Token? t = tok.current();
-            if t is [IDENTIFIER, string] {
-                var name = t[1];
-                if name == "Char" {
-                    check tok.advance();
-                    return "char";
-                }
-                return tok.err("unrecognized string subtype '" + name + "'");
+            var name = check tok.expectIdentifier();
+            if name == "Char" {
+                return "char";
+            }
+            else {
+                return tok.err(`unrecognized string subtype ${name}`);
             }
             // match falls through to parseError
         }

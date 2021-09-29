@@ -40,29 +40,30 @@ public function stringChar() returns SemType {
     return uniformSubtype(UT_STRING, st);
 }
 
-function isAllChar(StringSubtype st) returns boolean {
-    return !st.char.allowed && st.char.values.length() == 0;
-}
-
 function stringSubtypeSingleValue(SubtypeData d) returns string? {
     if d is boolean {
         return ();
     }
-    var st =  <StringSubtype>d;
-    if isAllChar(st) {
-        return ();
-    }
-    var { char, nonChar } = st;
-    if !nonChar.allowed {
-        return ();
-    }
+    var { char, nonChar } = <StringSubtype>d;
+    int charCount = char.values.length();
+    int nonCharCount = nonChar.values.length();
     if char.allowed {
-        if char.values.length() == 1 && nonChar.values.length() == 0 {
-            return char.values[0];
+        if nonChar.allowed {
+            if charCount == 1 && nonCharCount == 0 {
+                return char.values[0];
+            }
+            if charCount == 0 && nonCharCount == 1 {
+                return nonChar.values[0];
+            }
+        }
+        else {
+            if charCount == 1 && nonCharCount != 0 {
+                return char.values[0];
+            }
         }
     } 
     else {
-        if nonChar.values.length() == 1 {
+        if  nonChar.allowed && nonCharCount == 1 && charCount != 0 {
             return nonChar.values[0];
         }
     }

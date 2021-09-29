@@ -297,3 +297,26 @@ function testStringNonCharSubtype() {
     test:assertEquals(subType.nonChar.values[0], "abc");
     test:assertEquals(subType.nonChar.allowed, true);
 }
+
+@test:Config{}
+function testStringSubtypeSingleValue() {
+    ComplexSemType abc = <ComplexSemType> stringConst("abc");
+    StringSubtype abcSD = <StringSubtype>abc.subtypeDataList[0];
+    test:assertEquals(stringSubtypeSingleValue(abcSD), "abc");
+
+    ComplexSemType a = <ComplexSemType> stringConst("a");
+    StringSubtype aSD = <StringSubtype>a.subtypeDataList[0];
+    test:assertEquals(stringSubtypeSingleValue(aSD), "a");
+
+    ComplexSemType aAndAbc = <ComplexSemType>union(a, abc);
+    test:assertEquals(stringSubtypeSingleValue(<StringSubtype>aAndAbc.subtypeDataList[0]), ());
+
+    ComplexSemType intersect1 = <ComplexSemType>intersect(aAndAbc, a);
+    test:assertEquals(stringSubtypeSingleValue(<StringSubtype>intersect1.subtypeDataList[0]), "a");    
+    ComplexSemType intersect2 = <ComplexSemType>intersect(aAndAbc, abc);
+    test:assertEquals(stringSubtypeSingleValue(<StringSubtype>intersect2.subtypeDataList[0]), "abc");
+    SemType intersect3 = intersect(a, abc);
+    test:assertEquals(intersect3, NEVER);  
+    SemType intersect4 = intersect(a, STRING);  
+    test:assertEquals(intersect4, a);
+}
