@@ -393,3 +393,13 @@ function buildConstBoolean(boolean b) returns llvm:Value {
 function heapPointerType(llvm:Type ty) returns llvm:PointerType {
     return llvm:pointerType(ty, HEAP_ADDR_SPACE);
 }
+
+function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:FunctionType {
+    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm;
+    RetRepr repr = semTypeRetRepr(signature.returnType);
+    llvm:FunctionType ty = {
+        returnType: repr.llvm,
+        paramTypes: paramTypes.cloneReadOnly()
+    };
+    return ty;
+}

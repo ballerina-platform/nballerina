@@ -1,4 +1,3 @@
-import wso2/nballerina.err;
 import wso2/nballerina.bir;
 import wso2/nballerina.print.llvm;
 
@@ -17,7 +16,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
     map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
         bir:File defnFile = partFiles[defn.partIndex];
-        llvm:FunctionType ty = check buildFunctionSignature(defn.signature, err:location(defnFile, defn.position));
+        llvm:FunctionType ty = buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
         string mangledName = mangleInternalSymbol(modId, symbol);

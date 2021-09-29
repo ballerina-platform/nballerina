@@ -1,4 +1,3 @@
-import wso2/nballerina.err;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
@@ -213,23 +212,12 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
         return decl;
     }
     else {
-        // TODO: fix this: scaffold.location(0)
-        llvm:FunctionType ty = check buildFunctionSignature(sig, scaffold.location(0));
+        llvm:FunctionType ty = buildFunctionSignature(sig);
         llvm:Module mod = scaffold.getModule();
         llvm:FunctionDecl d = mod.addFunctionDecl(mangleExternalSymbol(symbol), ty);
         scaffold.addImportedFunction(symbol, d);
         return d;
     }
-}
-
-function buildFunctionSignature(bir:FunctionSignature signature, err:Location loc) returns llvm:FunctionType|BuildError {
-    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm;
-    RetRepr repr = semTypeRetRepr(signature.returnType);
-    llvm:FunctionType ty = {
-        returnType: repr.llvm,
-        paramTypes: paramTypes.cloneReadOnly()
-    };
-    return ty;
 }
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
