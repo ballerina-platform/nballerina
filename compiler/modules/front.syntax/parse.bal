@@ -109,6 +109,7 @@ function parseImportPrefix(Tokenizer tok) returns string?|err:Syntax {
 
 function parseModuleDecl(Tokenizer tok, ModulePart part) returns ModuleLevelDefn|err:Syntax {
     Token? t = tok.current();
+    Position startPos = tok.currentPos();
     Visibility vis;
     if t == "public" {
         vis = t;
@@ -120,28 +121,29 @@ function parseModuleDecl(Tokenizer tok, ModulePart part) returns ModuleLevelDefn
     }
     match t {
         "type" => {
-            return parseTypeDefinition(tok, part, vis);
+            return parseTypeDefinition(tok, part, vis, startPos);
         }
         "const" => {
-            return parseConstDefinition(tok, part, vis);
+            return parseConstDefinition(tok, part, vis, startPos);
         }
         "function" => {
-            return parseFunctionDefinition(tok, part, vis);
+            return parseFunctionDefinition(tok, part, vis, startPos);
         }
     }
     return parseError(tok);
 }
 
-function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns TypeDefn|err:Syntax {
+function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis, Position startPos) returns TypeDefn|err:Syntax {
     check tok.advance();
     Position namePos = tok.currentPos();
     string name = check tok.expectIdentifier();
     TypeDesc td = check parseTypeDesc(tok);
     check tok.expect(";");
-    return { name, td, namePos, vis, part };
+    Position endPos = tok.currentPos();
+    return { startPos, endPos, name, td, namePos, vis, part };
 }
 
-function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns ConstDefn|err:Syntax {
+function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis, Position startPos) returns ConstDefn|err:Syntax {
     check tok.advance();
     Token? t = tok.current();
     InlineBuiltinTypeDesc? td = ();
@@ -154,17 +156,19 @@ function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis) re
     check tok.expect("=");
     Expr expr = check parseInnerExpr(tok);
     check tok.expect(";");
-    return { td, name, expr, namePos, vis, part };
+    Position endPos = tok.currentPos();
+    return { startPos, endPos, td, name, expr, namePos, vis, part };
 }
 
-function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns FunctionDefn|err:Syntax {
+function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis, Position startPos) returns FunctionDefn|err:Syntax {
     check tok.advance();
     Position namePos = tok.currentPos();
     string name = check tok.expectIdentifier();
     string[] paramNames = [];
     FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
     Stmt[] body = check parseStmtBlock(tok);
-    FunctionDefn defn = { name, vis, paramNames, typeDesc, namePos, body, part };
+    Position endPos = tok.currentPos();
+    FunctionDefn defn = { startPos, endPos, name, vis, paramNames, typeDesc, namePos, body, part };
     return defn;
 }
 

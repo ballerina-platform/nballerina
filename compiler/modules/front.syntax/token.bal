@@ -121,7 +121,7 @@ class Tokenizer {
         self.lines = file.scannedLines();
         self.file = file;
     }
-    
+
     function advance() returns err:Syntax? {
         string str = "";
         self.tokenStartCodePointIndex = self.codePointIndex;
@@ -137,7 +137,7 @@ class Tokenizer {
             }
             FragCode fragCode = fragCodes[fragCodeIndex];
             fragCodeIndex += 1;
-            self.fragCodeIndex = fragCodeIndex;                
+            self.fragCodeIndex = fragCodeIndex;
             match fragCode {
                 FRAG_STRING_OPEN => {
                     self.codePointIndex += 1;
@@ -229,10 +229,10 @@ class Tokenizer {
                 _ => {
                     FixedToken? ft = fragTokens[fragCode];
                     // if we've missed something above, we'll get a panic from the cast here
-                    self.codePointIndex += (<string>ft).length();          
+                    self.codePointIndex += (<string>ft).length();
                     self.curTok = ft;
                     return ();
-                } 
+                }
             }
         }
     }

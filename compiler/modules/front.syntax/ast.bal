@@ -29,6 +29,7 @@ public type ImportDecl record {|
 |};
 
 public type FunctionDefn record {|
+    *PositionFields;
     readonly string name;
     ModulePart part;
     Visibility vis;
@@ -42,6 +43,7 @@ public type FunctionDefn record {|
 
 public type ResolvedConst readonly & [t:SemType, t:Value];
 public type ConstDefn record {|
+    *PositionFields;
     readonly string name;
     ModulePart part;
     InlineBuiltinTypeDesc? td;
@@ -318,6 +320,7 @@ public type FpLiteralExpr record {|
 // Types
 
 public type TypeDefn record {|
+    *PositionFields;
     readonly string name;
     ModulePart part;
     Visibility vis;
