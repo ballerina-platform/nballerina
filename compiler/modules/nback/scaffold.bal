@@ -3,6 +3,8 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
+type BuildError err:Semantic|err:Unimplemented;
+
 type DIBuilder llvm:DIBuilder;
 type DISubprogram llvm:Metadata;
 type DILocation llvm:Metadata;

@@ -427,3 +427,36 @@ function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp
     }
     buildStoreBoolean(builder, scaffold, b, result);
 }
+
+final readonly & map<llvm:IntPredicate> signedIntPredicateOps = {
+    "<": "slt",
+    "<=": "sle",
+    ">": "sgt",
+    ">=": "sge"
+};
+
+final readonly & map<llvm:IntPredicate> unsignedIntPredicateOps = {
+    "<": "ult",
+    "<=": "ule",
+    ">": "ugt",
+    ">=": "uge"
+};
+
+final readonly & map<llvm:FloatPredicate> floatPredicateOps = {
+    "<": "olt",
+    "<=": "ole",
+    ">": "ogt",
+    ">=": "oge"
+};
+
+function buildIntCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
+    return <llvm:IntPredicate>signedIntPredicateOps[op];
+}
+
+function buildFloatCompareOp(bir:OrderOp op) returns llvm:FloatPredicate {
+    return <llvm:FloatPredicate>floatPredicateOps[op];
+}
+
+function buildBooleanCompareOp(bir:OrderOp op) returns llvm:IntPredicate {
+    return <llvm:IntPredicate>unsignedIntPredicateOps[op];
+}
