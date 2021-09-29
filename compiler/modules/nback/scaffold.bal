@@ -232,6 +232,67 @@ class Scaffold {
     }
 }
 
+function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue|BuildError {
+    int nCodePoints = str.length();
+    byte[] bytes = str.toBytes();
+    int nBytes = bytes.length();
+
+    llvm:Type ty;
+    llvm:ConstValue val;
+    StringVariant variant;
+    if isSmallString(nCodePoints, bytes, nBytes) {
+        int encoded = 0;
+        foreach int i in 0 ..< 7 {
+            // JBUG cast needed #31867
+            encoded |= <int>(i < nBytes ? bytes[i] : 0xFF) << i*8;
+        }
+        encoded |= FLAG_IMMEDIATE|TAG_STRING;
+        return context.constGetElementPtr(llvm:constNull(LLVM_TAGGED_PTR), [llvm:constInt(LLVM_INT, encoded)]);
+    }
+    // if nBytes == nCodePoints && nBytes <= 0xFF {
+    //     // We want the total size including the header to be a multiple of 8
+    //     int nBytesPadded = padBytes(bytes, 1);
+    //     val = context.constStruct([llvm:constInt("i8", nBytes), context.constString(bytes)]);
+    //     ty = llvm:structType(["i8", llvm:arrayType("i8", nBytesPadded)]);
+    //     variant = STRING_VARIANT_SMALL;
+    // }
+    else if nBytes <= 0xFFFF {
+        int nBytesPadded = padBytes(bytes, 4);
+        val = context.constStruct([llvm:constInt("i16", nBytes), llvm:constInt("i16", nCodePoints), context.constString(bytes)]);
+        ty = llvm:structType(["i16", "i16", llvm:arrayType("i8", nBytesPadded)]);
+        variant = STRING_VARIANT_MEDIUM;
+    }
+    else {
+        int nBytesPadded = padBytes(bytes, 16);
+        val = context.constStruct([llvm:constInt("i64", nBytes), llvm:constInt("i64", nCodePoints), context.constString(bytes)]);
+        ty = llvm:structType(["i64", "i64", llvm:arrayType("i8", nBytesPadded)]);
+        variant = STRING_VARIANT_LARGE;
+    }
+    llvm:ConstPointerValue ptr = mod.addGlobal(ty,
+                                               stringDefnSymbol(defnIndex),
+                                               initializer = val,
+                                               align = 8,
+                                               isConstant = true,
+                                               unnamedAddr = true,
+                                               linkage = "internal");
+    return context.constGetElementPtr(context.constAddrSpaceCast(context.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE), LLVM_TAGGED_PTR),
+                                      [llvm:constInt(LLVM_INT, TAG_STRING | <int>variant)]);
+}
+
+function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolean {
+    return nCodePoints == 1 || (nBytes == nCodePoints && nBytes <= 7);
+}
+
+// Returns the new, padded length
+function padBytes(byte[] bytes, int headerSize) returns int {
+    int nBytes = bytes.length();
+    int nBytesPadded = (((nBytes + headerSize + 7) >> 3) << 3) - headerSize;
+    foreach int i in 0 ..< nBytesPadded - nBytes {
+        bytes.push(0);
+    }
+    return nBytesPadded;
+}
+
 // Maps int to i64
 final Repr REPR_INT = { base: BASE_REPR_INT, llvm: LLVM_INT };
 // Maps float to llvm double

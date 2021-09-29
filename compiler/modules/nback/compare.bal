@@ -112,6 +112,24 @@ final RuntimeFunction arrayBooleanCompareFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction eqFunction = {
+    name: "eq",
+    ty: {
+        returnType: "i1",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: [["return", "zeroext"], "readonly"]
+};
+
+final RuntimeFunction exactEqFunction = {
+    name: "exact_eq",
+    ty: {
+        returnType: "i1",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: [["return", "zeroext"], "readonly"]
+};
+
 function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) returns BuildError? {
     var [lhsRepr, lhsValue] = check buildReprValue(builder, scaffold, insn.operands[0]);
     var [rhsRepr, rhsValue] = check buildReprValue(builder, scaffold, insn.operands[1]);
