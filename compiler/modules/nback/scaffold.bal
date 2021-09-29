@@ -12,6 +12,15 @@ type DIFile llvm:Metadata;
 type DICompileUnit llvm:Metadata;
 type DISubroutineType llvm:Metadata;
 
+const LLVM_INT = "i64";
+const LLVM_DOUBLE = "double";
+const LLVM_BOOLEAN = "i1";
+const LLVM_VOID = "void";
+
+final llvm:PointerType LLVM_TAGGED_PTR = heapPointerType("i8");
+final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
+final llvm:PointerType LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
+
 // A Repr is way of representing values.
 // It's a mapping from a SemType to an LLVM type.
 

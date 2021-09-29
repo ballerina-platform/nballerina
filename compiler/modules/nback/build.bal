@@ -33,15 +33,6 @@ const TAG_SHIFT = 56;
 const HEAP_ADDR_SPACE = 1;
 const ALIGN_HEAP = 8;
 
-const LLVM_INT = "i64";
-const LLVM_DOUBLE = "double";
-const LLVM_BOOLEAN = "i1";
-const LLVM_VOID = "void";
-
-final llvm:PointerType LLVM_TAGGED_PTR = heapPointerType("i8");
-final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
-final llvm:PointerType LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
-
 type ValueType llvm:IntegralType;
 
 const PANIC_ARITHMETIC_OVERFLOW = 1;
