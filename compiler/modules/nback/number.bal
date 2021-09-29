@@ -233,3 +233,13 @@ final readonly & map<llvm:FloatArithmeticOp> floatArithmeticOps = {
 function buildBinaryIntIntrinsic(bir:ArithmeticBinaryOp op) returns llvm:IntrinsicFunctionName? {
     return binaryIntIntrinsics[op];
 }
+
+// Build a value as REPR_FLOAT
+function buildFloat(llvm:Builder builder, Scaffold scaffold, bir:FloatOperand operand) returns llvm:Value {
+    if operand is float {
+        return llvm:constFloat(LLVM_DOUBLE, operand);
+    }
+    else {
+        return builder.load(scaffold.address(operand));
+    }
+}

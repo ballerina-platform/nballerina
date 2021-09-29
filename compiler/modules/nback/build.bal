@@ -70,14 +70,6 @@ type RuntimeFunction readonly & record {|
     llvm:EnumAttribute[] attrs;
 |};
 
-final RuntimeFunction panicFunction = {
-    name: "panic",
-    ty: {
-        returnType: "void",
-        paramTypes: [LLVM_TAGGED_PTR]
-    },
-    attrs: ["noreturn", "cold"]
-};
 
 final RuntimeFunction panicConstructFunction = {
     name: "panic_construct",
@@ -86,15 +78,6 @@ final RuntimeFunction panicConstructFunction = {
         paramTypes: ["i64"]
     },
     attrs: ["cold"]
-};
-
-final RuntimeFunction errorConstructFunction = {
-    name: "error_construct",
-    ty: {
-        returnType: LLVM_TAGGED_PTR,
-        paramTypes: [LLVM_TAGGED_PTR, "i64"]
-    },
-    attrs: []
 };
 
 final RuntimeFunction allocFunction = {
@@ -124,7 +107,6 @@ final RuntimeFunction floatToTaggedFunction = {
     attrs: [] // NB not readonly because it allocates storage
 };
 
-
 final RuntimeFunction taggedToIntFunction = {
     name: "tagged_to_int",
     ty: {
@@ -143,122 +125,10 @@ final RuntimeFunction taggedToFloatFunction = {
     attrs: ["readonly"]
 };
 
-final RuntimeFunction stringConcatFunction = {
-    name: "string_concat",
-    ty: {
-        returnType: LLVM_TAGGED_PTR,
-        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
-    },
-    attrs: []
-};
-
 final bir:ModuleId runtimeModule = {
     org: "ballerinai",
     names: ["runtime"]
 };
-
-function buildBranch(llvm:Builder builder, Scaffold scaffold, bir:BranchInsn insn) returns BuildError? {
-    builder.br(scaffold.basicBlock(insn.dest));
-}
-
-function buildCondBranch(llvm:Builder builder, Scaffold scaffold, bir:CondBranchInsn insn) returns BuildError? {
-    builder.condBr(builder.load(scaffold.address(insn.operand)),
-                   scaffold.basicBlock(insn.ifTrue),
-                   scaffold.basicBlock(insn.ifFalse));
-}
-
-function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) returns BuildError? {
-    RetRepr repr = scaffold.getRetRepr();
-    builder.ret(repr is Repr ? check buildWideRepr(builder, scaffold, insn.operand, repr, scaffold.returnType) : ());
-}
-
-function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) {
-    buildCallPanic(builder, scaffold, <llvm:PointerValue>builder.load(scaffold.address(insn.operand)));
-}
-
-function buildPanic(llvm:Builder builder, Scaffold scaffold, bir:PanicInsn insn) {
-    builder.store(builder.load(scaffold.address(insn.operand)), scaffold.panicAddress());
-    builder.br(scaffold.getOnPanic());
-}
-
-function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue err) {
-    _ = builder.call(buildRuntimeFunctionDecl(scaffold, panicFunction), [err]);
-    builder.unreachable();
-}
-
-function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
-    builder.store(check buildWideRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType),
-                  scaffold.address(insn.result));
-}
-
-function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.position);
-    // Handler indirect calls later
-    bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
-    llvm:Value[] args = [];
-    bir:FunctionSignature signature = funcRef.erasedSignature;
-    t:SemType[] paramTypes = signature.paramTypes;
-    foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), paramTypes[i]));
-    }
-
-    bir:Symbol funcSymbol = funcRef.symbol;
-    llvm:Function func;
-    if funcSymbol is bir:InternalSymbol {
-        func = scaffold.getFunctionDefn(funcSymbol.identifier);
-    }
-    else {
-        func = check buildFunctionDecl(scaffold, funcSymbol, signature);
-    }  
-    llvm:Value? retValue = builder.call(func, args);
-    RetRepr retRepr = semTypeRetRepr(signature.returnType);
-    check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
-}
-
-function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.position, "file");
-    llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, errorConstructFunction),
-                                                [
-                                                    check buildString(builder, scaffold, insn.operand),
-                                                    llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.position))
-                                                ]);
-    builder.store(value, scaffold.address(insn.result));
-}
-
-
-function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
-    llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringConcatFunction),
-                                                [
-                                                    check buildString(builder, scaffold, insn.operands[0]),
-                                                    check buildString(builder, scaffold, insn.operands[1])
-                                                ]);
-    builder.store(value, scaffold.address(insn.result));
-}
-
-function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
-    if retRepr is Repr {
-        builder.store(check buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
-                      scaffold.address(reg));
-    }
-    else {
-         builder.store(buildConstNil(), scaffold.address(reg));
-    }
-}
-
-function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:FunctionSignature sig) returns llvm:FunctionDecl|BuildError {
-    llvm:FunctionDecl? decl = scaffold.getImportedFunction(symbol);
-    if !(decl is ()) {
-        return decl;
-    }
-    else {
-        // TODO: fix this: scaffold.location(0)
-        llvm:FunctionType ty = check buildFunctionSignature(sig, scaffold.location(0));
-        llvm:Module mod = scaffold.getModule();
-        llvm:FunctionDecl d = mod.addFunctionDecl(mangleExternalSymbol(symbol), ty);
-        scaffold.addImportedFunction(symbol, d);
-        return d;
-    }
-}
 
 function buildRuntimeFunctionDecl(Scaffold scaffold, RuntimeFunction rf) returns llvm:FunctionDecl {
     bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: rf.name };
@@ -291,12 +161,6 @@ function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:
     var err = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, panicConstructFunction), [packedPanic]);
     scaffold.clearDebugLocation(builder);
     return err;
-}
-
-function buildBooleanNot(llvm:Builder builder, Scaffold scaffold, bir:BooleanNotInsn insn) {
-    buildStoreBoolean(builder, scaffold,
-                      builder.iBitwise("xor", llvm:constInt(LLVM_BOOLEAN, 1), builder.load(scaffold.address(insn.operand))),
-                      insn.result);
 }
 
 function buildStoreInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
@@ -516,16 +380,6 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
     }
 }
 
-// Build a value as REPR_FLOAT
-function buildFloat(llvm:Builder builder, Scaffold scaffold, bir:FloatOperand operand) returns llvm:Value {
-    if operand is float {
-        return llvm:constFloat(LLVM_DOUBLE, operand);
-    }
-    else {
-        return builder.load(scaffold.address(operand));
-    }
-}
-
 // Build a value as REPR_BOOLEAN
 function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperand operand) returns llvm:Value {
     if operand is boolean {
@@ -534,16 +388,6 @@ function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperan
     else {
         return builder.load(scaffold.address(operand));
     }
-}
-
-function buildFunctionSignature(bir:FunctionSignature signature, err:Location loc) returns llvm:FunctionType|BuildError {
-    llvm:Type[] paramTypes = from var ty in signature.paramTypes select (semTypeRepr(ty)).llvm;
-    RetRepr repr = semTypeRetRepr(signature.returnType);
-    llvm:FunctionType ty = {
-        returnType: repr.llvm,
-        paramTypes: paramTypes.cloneReadOnly()
-    };
-    return ty;
 }
 
 function buildConstNil() returns llvm:Value {
