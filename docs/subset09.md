@@ -101,8 +101,8 @@ array-member-type-desc =
 
 map-type-desc = "map" "<" union-type-desc ">"
 
-record-type-desc := "record" "{|" field-desc* "|}"
-field-desc := type-desc identifier ";"
+record-type-desc = "record" "{|" field-desc* "|}"
+field-desc = type-desc identifier ";"
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -131,7 +131,7 @@ inline-type-desc = union-type-desc | inline-array-type-desc | map-type-desc | ty
 inline-array-type-desc = optional-type-desc "[" "]"
 
 # reference to a type definition
-type-reference = identifier | qualfied-identifier
+type-reference = identifier | qualified-identifier
 
 call-stmt = call-expr ";"
 
@@ -162,18 +162,18 @@ foreach-stmt = "foreach" "int" identifier "in" additive-expr "..<" additive-expr
 
 panic-stmt = "panic" inner-expr ";"
 
-match-stmt = "match" inner-expr { match-clause+ }
+match-stmt = "match" inner-expr "{" match-clause+ "}"
 
-match-clause := match-pattern-list "=>" stmt-block
-match-pattern-list :=
+match-clause = match-pattern-list "=>" stmt-block
+match-pattern-list =
    match-pattern
    | match-pattern-list "|" match-pattern
 
-match-pattern :=
+match-pattern =
    "_"
    | simple-const-expr
 
-simple-const-expr :=
+simple-const-expr =
    literal
    | "-" int-literal
    | "-" floating-point-literal
