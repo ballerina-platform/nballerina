@@ -1,7 +1,9 @@
 import ballerina/jballerina.java;
+import nballerina.err;
 
 public distinct class Context {
     handle LLVMContext;
+    private final map<[handle, StructType]> namedStructTypes = {};
     public function init() {
         self.LLVMContext = jLLVMContextCreate();
         self.initializeLLVMTargets();
@@ -22,7 +24,7 @@ public distinct class Context {
 
     public function constStruct(Value[] elements) returns ConstValue {
         PointerPointer elementArray = PointerPointerFromValues(elements);
-        return new(jLLVMConstStructInContext(self.LLVMContext, elementArray.jObject, elements.length(), 0));
+        return new (jLLVMConstStructInContext(self.LLVMContext, elementArray.jObject, elements.length(), 0));
     }
 
     public function constGetElementPtr(ConstPointerValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstPointerValue {
@@ -36,11 +38,32 @@ public distinct class Context {
     }
 
     public function constBitCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
-        return new (jLLVMConstBitCast(ptr.LLVMValueRef, typeToLLVMType(destTy)));
+        return new (jLLVMConstBitCast(ptr.LLVMValueRef, typeToLLVMType(destTy, self)));
     }
 
     public function constAddrSpaceCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
-        return new (jLLVMConstAddrSpaceCast(ptr.LLVMValueRef, typeToLLVMType(destTy)));
+        return new (jLLVMConstAddrSpaceCast(ptr.LLVMValueRef, typeToLLVMType(destTy, self)));
+    }
+
+    public function structCreateNamed(string name, Type[] elementTypes) returns StructType {
+        if self.namedStructTypes.hasKey(name) {
+            panic err:illegalArgument("type by that name already exists");
+        }
+        StructType balType = { elementTypes: elementTypes.cloneReadOnly() };
+        handle jType = jLLVMStructCreateNamed(self.LLVMContext, java:fromString(name));
+        PointerPointer elements = PointerPointerFromTypes(elementTypes);
+        jLLVMStructSetBody(jType, elements.jObject, elementTypes.length(), 0);
+        self.namedStructTypes[name] = [jType, balType];
+        return balType;
+    }
+
+    function namedStructTypeToLLVMType(StructType ty) returns handle? {
+        foreach var entry in self.namedStructTypes.entries() {
+            var data = entry[1];
+            if data[1] === ty {
+                return data[0];
+            }
+        }
     }
 
     // Use to initialize target information to help compiling directly to object file
@@ -122,4 +145,16 @@ function jLLVMInitializeAllAsmParsers() = @java:Method {
     name: "LLVMInitializeAllAsmParsers",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: []
+} external;
+
+function jLLVMStructCreateNamed(handle context, handle name) returns handle = @java:Method {
+    name: "LLVMStructCreateNamed",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef", "java.lang.String"]
+} external;
+
+function jLLVMStructSetBody(handle ty, handle elements, int elementCount, int packed) = @java:Method {
+    name: "LLVMStructSetBody",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "org.bytedeco.javacpp.PointerPointer", "int", "int"]
 } external;

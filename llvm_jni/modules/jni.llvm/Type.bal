@@ -1,18 +1,23 @@
 import ballerina/jballerina.java;
 
-
-function typeToLLVMType(RetType ty) returns handle {
+function typeToLLVMType(RetType ty, Context? context) returns handle {
     if ty is PointerType {
-        handle baseType = typeToLLVMType(ty.pointsTo);
+        handle baseType = typeToLLVMType(ty.pointsTo, context);
         return jLLVMPointerType(baseType, ty.addressSpace);
     }
     if ty is StructType {
+        if context is Context {
+            handle? namedTy = context.namedStructTypeToLLVMType(ty);
+            if namedTy is handle {
+                return namedTy;
+            }
+        }
         PointerPointer typeArr = PointerPointerFromTypes(ty.elementTypes);
         int elementCount = ty.elementTypes.length();
         return jLLVMStructType(typeArr.jObject, elementCount, 0);
     }
     if ty is ArrayType {
-        handle elementType = typeToLLVMType(ty.elementType);
+        handle elementType = typeToLLVMType(ty.elementType, context);
         return jLLVMArrayType(elementType, ty.elementCount);
     }
     match ty {
@@ -44,17 +49,17 @@ function typeToLLVMType(RetType ty) returns handle {
 }
 
 public function constInt(Type ty, int value) returns ConstValue {
-    Value val = new (jLLVMConstInt(typeToLLVMType(ty), value, 0));
+    Value val = new (jLLVMConstInt(typeToLLVMType(ty, ()), value, 0));
     return val;
 }
 
 
 public function constFloat(FloatType ty, float val) returns ConstValue {
-   return new (jLLVMConstReal(typeToLLVMType(ty), val));
+   return new (jLLVMConstReal(typeToLLVMType(ty, ()), val));
 }
 
 public function constNull(PointerType ty) returns PointerValue {
-    return new (jLLVMConstPointerNull(typeToLLVMType(ty)));
+    return new (jLLVMConstPointerNull(typeToLLVMType(ty, ())));
 }
 
 public readonly distinct class Value {
@@ -82,8 +87,8 @@ public readonly class ConstValue {
 }
 
 public readonly class ConstPointerValue {
+    *Value;
     *PointerValue;
-    *ConstValue;
     handle LLVMValueRef;
     function init(handle valueRef) {
         self.LLVMValueRef = valueRef;
