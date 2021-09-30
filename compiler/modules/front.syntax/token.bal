@@ -113,6 +113,7 @@ class Tokenizer {
     private int fragmentIndex = 0;
     private int tokenStartCodePointIndex = 0;
     private Mode mode = MODE_NORMAL;
+    private Position? previousPosition = ();
     final SourceFile file;
 
     Token? curTok = ();
@@ -123,6 +124,7 @@ class Tokenizer {
     }
 
     function advance() returns err:Syntax? {
+        self.previousPosition = self.currentPos();
         string str = "";
         self.tokenStartCodePointIndex = self.codePointIndex;
         while true {
@@ -247,6 +249,17 @@ class Tokenizer {
 
     function currentPos() returns Position {
         return createPosition(self.lineIndex, self.tokenStartCodePointIndex);
+    }
+
+    // TODO: remove this and turn every thing the [start, end)
+    function previousPos() returns Position {
+        Position? pos = self.previousPosition;
+        if pos is Position {
+            return pos;
+        }
+        else {
+            panic error("no previous position");
+        }
     }
 
     private function getFragment() returns string {

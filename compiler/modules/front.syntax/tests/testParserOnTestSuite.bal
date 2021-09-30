@@ -76,17 +76,6 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
     return false; // start == end
 }
 
-function inclusiveBound(err:LineColumn bound, ScannedLine) returns err:LineColumn {
-    int line = bound[0];
-    int column = bound[1];
-    if column > 0 {
-        return [line, column-1];
-    }
-    if line > 0 {
-
-    }
-}
-
 function fragIndex(err:LineColumn lineColumn, ScannedLine line) returns int {
     int codePoint = lineColumn[1];
     int fragIndex = 0;
