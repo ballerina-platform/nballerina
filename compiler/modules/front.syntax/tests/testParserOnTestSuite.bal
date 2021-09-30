@@ -22,6 +22,10 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 continue;
             }
             else {
+                foreach ModuleLevelDefn defn in part.defns {
+                    string errorBody = string `${part.file.filename()} name:${defn.name} start: ${defn.startPos} end: ${defn.endPos}`;
+                    test:assertTrue(testIsWhitespace(part.file, defn.startPos, defn.endPos), "white spaces in ModuleLevelDefn "+ errorBody);
+                }
                 string[] canonSrc = partToLines(part);
                 part = scanAndParseModulePart(canonSrc, { filename }, 0);
                 if part is error {
@@ -43,4 +47,54 @@ function partToLines(ModulePart part) returns string[] {
 
 function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
     return parseModulePart(check scanModulePart(createSourceFile(lines, path), partIndex));
+}
+
+function testIsWhitespace(SourceFile file, Position startPos, Position endPos) returns boolean {
+    err:LineColumn st = file.lineColumn(startPos);
+    err:LineColumn end = file.lineColumn(endPos);
+    ScannedLine[] lines = file.scannedLines();
+    int startLineIndex = st[0];
+    int endLineIndex = end[0];
+    int startFragIndex = fragIndex(st, lines[startLineIndex]);
+    int endFragIndex = fragIndex(end, lines[endLineIndex]);
+    int lineIndex = startLineIndex;
+    while lineIndex <= endLineIndex {
+        int i = 0;
+        ScannedLine line = lines[lineIndex];
+        while i < line.fragments.length() {
+            if lineIndex >= endLineIndex && i >= endFragIndex {
+                return true;
+            }
+            FragCode frag = line.fragCodes[i];
+            if frag == FRAG_WHITESPACE || frag == FRAG_COMMENT {
+                return false;
+            }
+            i += 1;
+        }
+        lineIndex += 1;
+    }
+    return false; // start == end
+}
+
+function inclusiveBound(err:LineColumn bound, ScannedLine) returns err:LineColumn {
+    int line = bound[0];
+    int column = bound[1];
+    if column > 0 {
+        return [line, column-1];
+    }
+    if line > 0 {
+
+    }
+}
+
+function fragIndex(err:LineColumn lineColumn, ScannedLine line) returns int {
+    int codePoint = lineColumn[1];
+    int fragIndex = 0;
+    int i = line.fragments[0].length();
+    while (i < codePoint) {
+        fragIndex += 1;
+        string fragment = line.fragments[fragIndex];
+        i += fragment.length();
+    }
+    return fragIndex;
 }
