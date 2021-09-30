@@ -27,6 +27,15 @@ bool _bal_list_has_type(TaggedPtr p, ListDesc desc) {
     return (lp->desc & ~desc) == 0;
 }
 
+TaggedPtr _bal_list_exactify(TaggedPtr p, MappingDesc desc) {
+    ListPtr lp = taggedToPtr(p);
+    if (lp == taggedToPtrExact(p) && (lp->desc == desc)) {
+        // exact bit is not set, but should be
+        return p + EXACT_FLAG;
+    }
+    return p;
+}
+
 int64_t READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return intArrayCompare(lhs, rhs);
 }
