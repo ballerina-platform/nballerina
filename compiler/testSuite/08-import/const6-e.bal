@@ -1,5 +1,5 @@
-import root.dupdef;
+import root.cycle;
 
+const X = cycle:Y;
 public function main() {
-    int i = dupdef:CONST;
 }

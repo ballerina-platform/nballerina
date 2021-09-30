@@ -18,6 +18,13 @@
 #define EXCEEDS_MAX_PC_COUNT -3
 #define OUT_OF_MEMORY -4
 
+enum DemangleResult {
+    PUBLIC_BALLERINA_NAME,
+    NON_PUBLIC_BALLERINA_NAME,
+    NON_BALLERINA_NAME,
+    BAD_BALLERINA_NAME
+};
+
 struct backtrace_state *state = NULL;
 
 typedef struct {
@@ -51,6 +58,9 @@ static void getSimpleBacktrace(SimpleBacktrace *p);
 static char *saveMessage(const char *msg);
 static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNumber, BacktraceError *error);
 static void processInitialPC(PC pc, int64_t lineNumber, BacktraceStartLine *backtraceStartLine);
+static enum DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp);
+static bool demangleModules(const char **mangledModules, FILE *fp);
+static bool demangleCountedName(const char **pp, const char **name);
 
 TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber) {
     SimpleBacktrace simpleBacktrace;
@@ -210,7 +220,8 @@ static void printBacktraceLine(const char *filename, int64_t lineNumber, const c
     // API docs say any of filename, lineno and function may be 0 meaning unavailable
     const char *sep = "    ";
     if (function != NULL) {
-        fprintf(fp, "%s%s", sep, function);
+        fputs(sep, fp);
+        _bal_print_mangled_name(function, fp);
         sep = " ";
     }
     if (filename != NULL) {
@@ -249,4 +260,114 @@ static char *saveMessage(const char *msg) {
 TaggedPtr BAL_LANG_ERROR_NAME(message)(TaggedPtr error) {
     ErrorPtr ep = taggedToPtr(error);
     return ep->message;
+}
+
+void _bal_print_mangled_name(const char *mangledName, FILE *fp) {
+    const char *localName;
+    enum DemangleResult res = demangle(mangledName, &localName, NULL);
+
+    if (res == NON_PUBLIC_BALLERINA_NAME) {
+        fprintf(fp, "%s", localName);
+    }
+    else if (res == PUBLIC_BALLERINA_NAME) {
+        fprintf(fp, "%s (", localName);
+        demangle(mangledName, &localName, fp);
+        fputs(")", fp);
+    }
+    else if (res == NON_BALLERINA_NAME || res == BAD_BALLERINA_NAME) {
+        fprintf(fp, "%s", mangledName);
+    }
+}
+
+static enum DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp) {
+    if (mangledName[0] != '_' || mangledName[1] != 'B') {
+        return NON_BALLERINA_NAME;
+    }
+    mangledName += 2;
+    if (mangledName[0] == '_') {
+        *localName = mangledName + 1;
+        return NON_PUBLIC_BALLERINA_NAME;
+    }
+
+    bool ballerinaOrg = false; 
+    if (mangledName[0] == 'b') {
+        ballerinaOrg = true;
+        mangledName++;
+    }
+
+    const char *org;
+    if (mangledName[0] == '0') {
+        mangledName++;
+        org = NULL;
+    }
+    else {
+        if (!demangleCountedName(&mangledName, &org)) {
+            return BAD_BALLERINA_NAME;
+        }
+    }
+    if (fp != NULL) {
+        bool haveOrg = false;
+        if (ballerinaOrg) {
+            fputs("ballerina", fp);
+            haveOrg = true;
+        }
+        if (org != NULL) {
+            fwrite(org, 1, mangledName - org, fp);
+            haveOrg = true;
+        }
+        if (haveOrg) {
+            putc('/', fp);
+        }
+    }
+
+    if (!demangleModules(&mangledName, fp)) {
+        return NON_BALLERINA_NAME;
+    }
+    const char *lastModule;
+    if (!demangleCountedName(&mangledName, &lastModule)) {
+        return NON_BALLERINA_NAME;
+    } 
+    *localName = mangledName;
+    if (fp != NULL) {
+        fwrite(lastModule, 1, mangledName - lastModule, fp);
+    }
+    return PUBLIC_BALLERINA_NAME;
+}
+
+static bool demangleModules(const char **mangledModules, FILE *fp) {
+    if (*mangledModules[0] != 'm') {
+        return true;
+    }
+    *mangledModules = *mangledModules + 1;
+    const char *module;
+    if (!demangleCountedName(mangledModules, &module)) {
+        return false;
+    }
+    if (fp != NULL) {
+        fwrite(module, 1, *mangledModules - module, fp);
+        fputs(".", fp);
+    }
+    return demangleModules(mangledModules, fp);
+}
+
+static bool demangleCountedName(const char **pp, const char **name) {
+    long nChars;
+    int nRead;
+    if (sscanf(*pp, "%ld%n", &nChars, &nRead) <= 0) {
+        return false;
+    }
+    *name = *pp + nRead;
+    if (*name[0] == '_') {
+        *name = *name + 1;
+    }
+    const char *p = *name;
+    while (nChars > 0) {
+        p++;
+        if (*p == '\0') {
+            return false;
+        }
+        nChars--;
+    }
+    *pp = p;
+    return true;
 }

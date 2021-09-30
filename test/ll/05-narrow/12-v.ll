@@ -4,24 +4,24 @@ declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare void @_Bio__println(i8 addrspace(1)*)
-define void @_B_main() {
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
+define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8
   %3 = load i8*, i8** @_bal_stack_guard
   %4 = icmp ult i8* %2, %3
   br i1 %4, label %7, label %5
 5:
-  %6 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  call void @_B_foo(i8 addrspace(1)* %6)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %1
+  %6 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1), !dbg !10
+  call void @_B_foo(i8 addrspace(1)* %6), !dbg !10
+  store i8 addrspace(1)* null, i8 addrspace(1)** %1, !dbg !10
   ret void
 7:
-  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
+  %8 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
   call void @_bal_panic(i8 addrspace(1)* %8)
   unreachable
 }
-define internal void @_B_foo(i8 addrspace(1)* %0) {
+define internal void @_B_foo(i8 addrspace(1)* %0) !dbg !7 {
   %v = alloca i8 addrspace(1)*
   %x = alloca i8 addrspace(1)*
   %2 = alloca i1
@@ -79,16 +79,16 @@ define internal void @_B_foo(i8 addrspace(1)* %0) {
   store i64 %35, i64* %i
   br label %21
 36:
-  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  call void @_Bio__println(i8 addrspace(1)* %37)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %5
+  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %x, !dbg !12
+  call void @_Bb02ioprintln(i8 addrspace(1)* %37), !dbg !12
+  store i8 addrspace(1)* null, i8 addrspace(1)** %5, !dbg !12
   ret void
 38:
   %39 = load i8 addrspace(1)*, i8 addrspace(1)** %6
   call void @_bal_panic(i8 addrspace(1)* %39)
   unreachable
 40:
-  %41 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052)
+  %41 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052), !dbg !11
   call void @_bal_panic(i8 addrspace(1)* %41)
   unreachable
 42:
@@ -99,7 +99,22 @@ define internal void @_B_foo(i8 addrspace(1)* %0) {
   store i8 addrspace(1)* %45, i8 addrspace(1)** %x
   br label %25
 46:
-  %47 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585)
+  %47 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585), !dbg !11
   store i8 addrspace(1)* %47, i8 addrspace(1)** %6
   br label %38
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/05-narrow/12-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = distinct !DISubprogram(name:"foo", linkageName:"_B_foo", scope: !1, file: !1, line: 8, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
+!8 = !{}
+!9 = !DILocation(line: 0, column: 0, scope: !5)
+!10 = !DILocation(line: 5, column: 3, scope: !5)
+!11 = !DILocation(line: 0, column: 0, scope: !7)
+!12 = !DILocation(line: 19, column: 4, scope: !7)

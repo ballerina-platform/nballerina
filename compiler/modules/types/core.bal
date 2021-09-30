@@ -8,7 +8,7 @@ public const UT_COUNT = 0x17;
 const int UT_MASK = (1 << UT_COUNT) - 1;
 
 const int UT_COUNT_RO = 0x10;
-const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
+public const int UT_READONLY = (1 << UT_COUNT_RO) - 1;
 
 const int UT_RW_MASK = UT_MASK & ~UT_READONLY;
 
@@ -745,6 +745,13 @@ public function widenToUniformTypes(SemType t) returns UniformTypeBitSet {
     else {
         return <UniformTypeBitSet>(t.all | t.some);
     }
+}
+
+public function uniformTypeCode(UniformTypeBitSet bitSet) returns UniformTypeCode? {
+    if bitCount(bitSet) != 1 {
+        return ();
+    }
+    return <UniformTypeCode>numberOfTrailingZeros(bitSet);
 }
 
 // If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),

@@ -3,23 +3,23 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
-declare void @_Bio__println(i8 addrspace(1)*)
-define void @_B_main() {
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
+define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8
   %3 = load i8*, i8** @_bal_stack_guard
   %4 = icmp ult i8* %2, %3
   br i1 %4, label %6, label %5
 5:
-  call void @_B_foo(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621427046))
-  store i8 addrspace(1)* null, i8 addrspace(1)** %1
+  call void @_B04rootfoo(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621427046)), !dbg !10
+  store i8 addrspace(1)* null, i8 addrspace(1)** %1, !dbg !10
   ret void
 6:
-  %7 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
+  %7 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
   call void @_bal_panic(i8 addrspace(1)* %7)
   unreachable
 }
-define void @_B_foo(i8 addrspace(1)* %0) {
+define void @_B04rootfoo(i8 addrspace(1)* %0) !dbg !7 {
   %x = alloca i8 addrspace(1)*
   %2 = alloca i1
   %3 = alloca i1
@@ -68,15 +68,15 @@ pattern.2:
 29:
   %30 = load i8 addrspace(1)*, i8 addrspace(1)** %x.1
   store i8 addrspace(1)* %30, i8 addrspace(1)** %x.2
-  call void @_Bio__println(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476539896885094))
-  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476539896885094)), !dbg !12
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !12
   br label %31
 31:
   br label %32
 32:
   ret void
 33:
-  %34 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052)
+  %34 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052), !dbg !11
   call void @_bal_panic(i8 addrspace(1)* %34)
   unreachable
 35:
@@ -91,3 +91,18 @@ pattern.2:
   %40 = load i1, i1* %4
   br i1 %40, label %clause.0, label %pattern.2
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/05-match/18-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = distinct !DISubprogram(name:"foo", linkageName:"_B04rootfoo", scope: !1, file: !1, line: 8, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
+!8 = !{}
+!9 = !DILocation(line: 0, column: 0, scope: !5)
+!10 = !DILocation(line: 5, column: 4, scope: !5)
+!11 = !DILocation(line: 0, column: 0, scope: !7)
+!12 = !DILocation(line: 12, column: 16, scope: !7)

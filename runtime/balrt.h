@@ -214,6 +214,7 @@ extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
 
 extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
 extern void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start, FILE *fp);
+extern void _bal_print_mangled_name(const char *mangledName, FILE *fp);
 // Returns an error value
 extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
 extern NORETURN COLD void _bal_panic_internal(PanicCode code);

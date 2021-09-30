@@ -5,8 +5,9 @@ declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
-declare void @_Bio__println(i8 addrspace(1)*)
-define void @_B_main() {
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
+declare zeroext i1 @_bal_exact_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %v1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
@@ -80,75 +81,92 @@ define void @_B_main() {
   %45 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
   %46 = call i1 @_bal_eq(i8 addrspace(1)* %44, i8 addrspace(1)* %45)
   store i1 %46, i1* %5
-  %47 = load i1, i1* %5
-  %48 = zext i1 %47 to i64
-  %49 = or i64 %48, 72057594037927936
-  %50 = getelementptr i8, i8 addrspace(1)* null, i64 %49
-  call void @_Bio__println(i8 addrspace(1)* %50)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %6
+  %47 = load i1, i1* %5, !dbg !8
+  %48 = zext i1 %47 to i64, !dbg !8
+  %49 = or i64 %48, 72057594037927936, !dbg !8
+  %50 = getelementptr i8, i8 addrspace(1)* null, i64 %49, !dbg !8
+  call void @_Bb02ioprintln(i8 addrspace(1)* %50), !dbg !8
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !8
   %51 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
   %52 = load i8 addrspace(1)*, i8 addrspace(1)** %v2
   %53 = call i1 @_bal_eq(i8 addrspace(1)* %51, i8 addrspace(1)* %52)
   store i1 %53, i1* %7
-  %54 = load i1, i1* %7
-  %55 = zext i1 %54 to i64
-  %56 = or i64 %55, 72057594037927936
-  %57 = getelementptr i8, i8 addrspace(1)* null, i64 %56
-  call void @_Bio__println(i8 addrspace(1)* %57)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %8
+  %54 = load i1, i1* %7, !dbg !9
+  %55 = zext i1 %54 to i64, !dbg !9
+  %56 = or i64 %55, 72057594037927936, !dbg !9
+  %57 = getelementptr i8, i8 addrspace(1)* null, i64 %56, !dbg !9
+  call void @_Bb02ioprintln(i8 addrspace(1)* %57), !dbg !9
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !9
   %58 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
   %59 = load i8 addrspace(1)*, i8 addrspace(1)** %v3
   %60 = call i1 @_bal_eq(i8 addrspace(1)* %58, i8 addrspace(1)* %59)
   store i1 %60, i1* %9
-  %61 = load i1, i1* %9
-  %62 = zext i1 %61 to i64
-  %63 = or i64 %62, 72057594037927936
-  %64 = getelementptr i8, i8 addrspace(1)* null, i64 %63
-  call void @_Bio__println(i8 addrspace(1)* %64)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %10
+  %61 = load i1, i1* %9, !dbg !10
+  %62 = zext i1 %61 to i64, !dbg !10
+  %63 = or i64 %62, 72057594037927936, !dbg !10
+  %64 = getelementptr i8, i8 addrspace(1)* null, i64 %63, !dbg !10
+  call void @_Bb02ioprintln(i8 addrspace(1)* %64), !dbg !10
+  store i8 addrspace(1)* null, i8 addrspace(1)** %10, !dbg !10
   %65 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
   %66 = load i8 addrspace(1)*, i8 addrspace(1)** %v4
   %67 = call i1 @_bal_eq(i8 addrspace(1)* %65, i8 addrspace(1)* %66)
   store i1 %67, i1* %11
-  %68 = load i1, i1* %11
-  %69 = zext i1 %68 to i64
-  %70 = or i64 %69, 72057594037927936
-  %71 = getelementptr i8, i8 addrspace(1)* null, i64 %70
-  call void @_Bio__println(i8 addrspace(1)* %71)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %12
+  %68 = load i1, i1* %11, !dbg !11
+  %69 = zext i1 %68 to i64, !dbg !11
+  %70 = or i64 %69, 72057594037927936, !dbg !11
+  %71 = getelementptr i8, i8 addrspace(1)* null, i64 %70, !dbg !11
+  call void @_Bb02ioprintln(i8 addrspace(1)* %71), !dbg !11
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !11
   %72 = load i8 addrspace(1)*, i8 addrspace(1)** %v4
   %73 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
   %74 = call i1 @_bal_eq(i8 addrspace(1)* %72, i8 addrspace(1)* %73)
   store i1 %74, i1* %13
-  %75 = load i1, i1* %13
-  %76 = zext i1 %75 to i64
-  %77 = or i64 %76, 72057594037927936
-  %78 = getelementptr i8, i8 addrspace(1)* null, i64 %77
-  call void @_Bio__println(i8 addrspace(1)* %78)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %14
+  %75 = load i1, i1* %13, !dbg !12
+  %76 = zext i1 %75 to i64, !dbg !12
+  %77 = or i64 %76, 72057594037927936, !dbg !12
+  %78 = getelementptr i8, i8 addrspace(1)* null, i64 %77, !dbg !12
+  call void @_Bb02ioprintln(i8 addrspace(1)* %78), !dbg !12
+  store i8 addrspace(1)* null, i8 addrspace(1)** %14, !dbg !12
   %79 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
   %80 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
-  %81 = icmp eq i8 addrspace(1)* %79, %80
+  %81 = call i1 @_bal_exact_eq(i8 addrspace(1)* %79, i8 addrspace(1)* %80)
   store i1 %81, i1* %15
-  %82 = load i1, i1* %15
-  %83 = zext i1 %82 to i64
-  %84 = or i64 %83, 72057594037927936
-  %85 = getelementptr i8, i8 addrspace(1)* null, i64 %84
-  call void @_Bio__println(i8 addrspace(1)* %85)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %16
+  %82 = load i1, i1* %15, !dbg !13
+  %83 = zext i1 %82 to i64, !dbg !13
+  %84 = or i64 %83, 72057594037927936, !dbg !13
+  %85 = getelementptr i8, i8 addrspace(1)* null, i64 %84, !dbg !13
+  call void @_Bb02ioprintln(i8 addrspace(1)* %85), !dbg !13
+  store i8 addrspace(1)* null, i8 addrspace(1)** %16, !dbg !13
   %86 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
   %87 = load i8 addrspace(1)*, i8 addrspace(1)** %v2
-  %88 = icmp eq i8 addrspace(1)* %86, %87
+  %88 = call i1 @_bal_exact_eq(i8 addrspace(1)* %86, i8 addrspace(1)* %87)
   store i1 %88, i1* %17
-  %89 = load i1, i1* %17
-  %90 = zext i1 %89 to i64
-  %91 = or i64 %90, 72057594037927936
-  %92 = getelementptr i8, i8 addrspace(1)* null, i64 %91
-  call void @_Bio__println(i8 addrspace(1)* %92)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %18
+  %89 = load i1, i1* %17, !dbg !14
+  %90 = zext i1 %89 to i64, !dbg !14
+  %91 = or i64 %90, 72057594037927936, !dbg !14
+  %92 = getelementptr i8, i8 addrspace(1)* null, i64 %91, !dbg !14
+  call void @_Bb02ioprintln(i8 addrspace(1)* %92), !dbg !14
+  store i8 addrspace(1)* null, i8 addrspace(1)** %18, !dbg !14
   ret void
 93:
-  %94 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
+  %94 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
   call void @_bal_panic(i8 addrspace(1)* %94)
   unreachable
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/07-map/equal-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = !DILocation(line: 0, column: 0, scope: !5)
+!8 = !DILocation(line: 10, column: 4, scope: !5)
+!9 = !DILocation(line: 11, column: 4, scope: !5)
+!10 = !DILocation(line: 12, column: 4, scope: !5)
+!11 = !DILocation(line: 13, column: 4, scope: !5)
+!12 = !DILocation(line: 14, column: 4, scope: !5)
+!13 = !DILocation(line: 15, column: 4, scope: !5)
+!14 = !DILocation(line: 16, column: 4, scope: !5)

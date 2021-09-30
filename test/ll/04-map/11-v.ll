@@ -5,8 +5,8 @@ declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
-declare void @_Bio__println(i8 addrspace(1)*)
-define void @_B_main() {
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
+define void @_B04rootmain() !dbg !5 {
   %s = alloca i8 addrspace(1)*
   %1 = alloca i8 addrspace(1)*
   %m = alloca i8 addrspace(1)*
@@ -34,7 +34,7 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %17)
   unreachable
 18:
-  %19 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
+  %19 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
   call void @_bal_panic(i8 addrspace(1)* %19)
   unreachable
 20:
@@ -42,13 +42,24 @@ define void @_B_main() {
   %22 = load i8 addrspace(1)*, i8 addrspace(1)** %s
   %23 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %21, i8 addrspace(1)* %22)
   store i8 addrspace(1)* %23, i8 addrspace(1)** %2
-  %24 = load i8 addrspace(1)*, i8 addrspace(1)** %2
-  call void @_Bio__println(i8 addrspace(1)* %24)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  %24 = load i8 addrspace(1)*, i8 addrspace(1)** %2, !dbg !8
+  call void @_Bb02ioprintln(i8 addrspace(1)* %24), !dbg !8
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !8
   ret void
 25:
   %26 = or i64 %14, 1792
-  %27 = call i8 addrspace(1)* @_bal_panic_construct(i64 %26)
+  %27 = call i8 addrspace(1)* @_bal_panic_construct(i64 %26), !dbg !7
   store i8 addrspace(1)* %27, i8 addrspace(1)** %4
   br label %16
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/04-map/11-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = !DILocation(line: 0, column: 0, scope: !5)
+!8 = !DILocation(line: 8, column: 4, scope: !5)

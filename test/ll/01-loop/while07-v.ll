@@ -2,11 +2,11 @@
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare void @_Bio__println(i8 addrspace(1)*)
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-define void @_B_main() {
+define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
@@ -16,21 +16,21 @@ define void @_B_main() {
   %7 = icmp ult i8* %5, %6
   br i1 %7, label %9, label %8
 8:
-  call void @_B_printClosestSquareNum(i64 1)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %1
-  call void @_B_printClosestSquareNum(i64 0)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  call void @_B_printClosestSquareNum(i64 5)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3
-  call void @_B_printClosestSquareNum(i64 17)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  call void @_B_printClosestSquareNum(i64 1), !dbg !12
+  store i8 addrspace(1)* null, i8 addrspace(1)** %1, !dbg !12
+  call void @_B_printClosestSquareNum(i64 0), !dbg !13
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !13
+  call void @_B_printClosestSquareNum(i64 5), !dbg !14
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !14
+  call void @_B_printClosestSquareNum(i64 17), !dbg !15
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !15
   ret void
 9:
-  %10 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028)
+  %10 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !11
   call void @_bal_panic(i8 addrspace(1)* %10)
   unreachable
 }
-define internal void @_B_printClosestSquareNum(i64 %0) {
+define internal void @_B_printClosestSquareNum(i64 %0) !dbg !7 {
   %x = alloca i64
   %i = alloca i64
   %2 = alloca i1
@@ -54,18 +54,18 @@ define internal void @_B_printClosestSquareNum(i64 %0) {
   %15 = load i1, i1* %2
   br i1 %15, label %16, label %20
 16:
-  %17 = load i64, i64* %i
-  %18 = call i1 @_B_isSquareNumber(i64 %17)
-  store i1 %18, i1* %3
+  %17 = load i64, i64* %i, !dbg !17
+  %18 = call i1 @_B_isSquareNumber(i64 %17), !dbg !17
+  store i1 %18, i1* %3, !dbg !17
   %19 = load i1, i1* %3
   br i1 %19, label %21, label %24
 20:
   ret void
 21:
-  %22 = load i64, i64* %i
-  %23 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %22)
-  call void @_Bio__println(i8 addrspace(1)* %23)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  %22 = load i64, i64* %i, !dbg !18
+  %23 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %22), !dbg !18
+  call void @_Bb02ioprintln(i8 addrspace(1)* %23), !dbg !18
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !18
   ret void
 24:
   %25 = load i64, i64* %i
@@ -77,7 +77,7 @@ define internal void @_B_printClosestSquareNum(i64 %0) {
   call void @_bal_panic(i8 addrspace(1)* %29)
   unreachable
 30:
-  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 2820)
+  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 2820), !dbg !16
   call void @_bal_panic(i8 addrspace(1)* %31)
   unreachable
 32:
@@ -87,11 +87,11 @@ define internal void @_B_printClosestSquareNum(i64 %0) {
   store i64 %34, i64* %i
   br label %12
 35:
-  %36 = call i8 addrspace(1)* @_bal_panic_construct(i64 4609)
+  %36 = call i8 addrspace(1)* @_bal_panic_construct(i64 4609), !dbg !16
   store i8 addrspace(1)* %36, i8 addrspace(1)** %6
   br label %28
 }
-define internal i1 @_B_isSquareNumber(i64 %0) {
+define internal i1 @_B_isSquareNumber(i64 %0) !dbg !9 {
   %x = alloca i64
   %i = alloca i64
   %2 = alloca i1
@@ -146,7 +146,7 @@ define internal i1 @_B_isSquareNumber(i64 %0) {
   call void @_bal_panic(i8 addrspace(1)* %37)
   unreachable
 38:
-  %39 = call i8 addrspace(1)* @_bal_panic_construct(i64 5636)
+  %39 = call i8 addrspace(1)* @_bal_panic_construct(i64 5636), !dbg !19
   call void @_bal_panic(i8 addrspace(1)* %39)
   unreachable
 40:
@@ -159,7 +159,7 @@ define internal i1 @_B_isSquareNumber(i64 %0) {
   %45 = load i1, i1* %3
   br i1 %45, label %24, label %25
 46:
-  %47 = call i8 addrspace(1)* @_bal_panic_construct(i64 6401)
+  %47 = call i8 addrspace(1)* @_bal_panic_construct(i64 6401), !dbg !19
   store i8 addrspace(1)* %47, i8 addrspace(1)** %8
   br label %36
 48:
@@ -172,7 +172,7 @@ define internal i1 @_B_isSquareNumber(i64 %0) {
   %53 = load i1, i1* %5
   br i1 %53, label %30, label %31
 54:
-  %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 6913)
+  %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 6913), !dbg !19
   store i8 addrspace(1)* %55, i8 addrspace(1)** %8
   br label %36
 56:
@@ -182,7 +182,29 @@ define internal i1 @_B_isSquareNumber(i64 %0) {
   store i64 %58, i64* %i
   br label %13
 59:
-  %60 = call i8 addrspace(1)* @_bal_panic_construct(i64 7681)
+  %60 = call i8 addrspace(1)* @_bal_panic_construct(i64 7681), !dbg !19
   store i8 addrspace(1)* %60, i8 addrspace(1)** %8
   br label %36
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/01-loop/while07-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = distinct !DISubprogram(name:"printClosestSquareNum", linkageName:"_B_printClosestSquareNum", scope: !1, file: !1, line: 11, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
+!8 = !{}
+!9 = distinct !DISubprogram(name:"isSquareNumber", linkageName:"_B_isSquareNumber", scope: !1, file: !1, line: 22, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !10)
+!10 = !{}
+!11 = !DILocation(line: 0, column: 0, scope: !5)
+!12 = !DILocation(line: 5, column: 4, scope: !5)
+!13 = !DILocation(line: 6, column: 4, scope: !5)
+!14 = !DILocation(line: 7, column: 4, scope: !5)
+!15 = !DILocation(line: 8, column: 4, scope: !5)
+!16 = !DILocation(line: 0, column: 0, scope: !7)
+!17 = !DILocation(line: 14, column: 12, scope: !7)
+!18 = !DILocation(line: 15, column: 12, scope: !7)
+!19 = !DILocation(line: 0, column: 0, scope: !9)

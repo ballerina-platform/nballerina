@@ -11,7 +11,7 @@ type-desc := function-td
 
 function-td =
     union-td
-    | "function" identifier "(" type-desc-list ")" ["returns" function-td]
+    | "function" identifier "(" opt-td-list ")" ["returns" function-td]
 
 union-td :=
     intersection-td
@@ -43,8 +43,17 @@ nil-td := "(" ")"
 int-td := "int" [ ":" identifier ]
 map-td := "map" "<" type-desc ">"
 error-td := "error" ["<" type-desc ">"]
-// XXX handle "..."
-tuple-td := "[" type-desc-list "]"
+// XXX handle "..." in tuple-td and record-td
+tuple-td := "[" opt-td-list "]"
+
+opt-td-list := [ td-list ]
+td-list :=
+  type-desc
+  | td-list "," type-desc
+
+record-td := "record" "{|" field-desc* "|}"
+field-desc := type-desc identifier ";"
+
 td-ref := identifier // can also refer to const definition
 
 predefined-td :=
