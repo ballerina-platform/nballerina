@@ -45,20 +45,11 @@ const PANIC_MAPPING_STORE = 9;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
-type RuntimeFunctionName "panic"|"panic_construct"|"error_construct"|"alloc"|
-                         "list_set"|"list_has_type"|
-                         "mapping_set"|"mapping_get"|"mapping_init_member"|"mapping_construct"|"mapping_has_type"|
-                         "int_to_tagged"|"tagged_to_int"|"float_to_tagged"|
-                         "string_eq"|"string_cmp"|"string_concat"|"eq"|"exact_eq"|"float_eq"|"float_exact_eq"|"tagged_to_float"|"float_to_int"|
-                         "int_compare"|"float_compare"|"string_compare"|"boolean_compare"|
-                         "array_int_compare"|"array_float_compare"|"array_string_compare"|"array_boolean_compare";
-
 type RuntimeFunction readonly & record {|
-    RuntimeFunctionName name;
+    string name;
     llvm:FunctionType ty;
     llvm:EnumAttribute[] attrs;
 |};
-
 
 final RuntimeFunction panicConstructFunction = {
     name: "panic_construct",
