@@ -78,12 +78,55 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
 
 function fragIndex(err:LineColumn lineColumn, ScannedLine line) returns int {
     int codePoint = lineColumn[1];
-    int fragIndex = 0;
-    int i = line.fragments[0].length();
+    int fragCodeIndex = 0;
+    int fragmentIndex = 0;
+    int i = 0;
+    Mode mode = MODE_NORMAL;
+    FragCode[] fragCodes = line.fragCodes;
     while (i < codePoint) {
-        fragIndex += 1;
-        string fragment = line.fragments[fragIndex];
-        i += fragment.length();
+        FragCode fragCode = fragCodes[fragCodeIndex];
+        match fragCode {
+            FRAG_STRING_OPEN |
+            FRAG_STRING_CLOSE => {
+                i += 1;
+            }
+            FRAG_STRING_CHARS |
+            FRAG_STRING_CHAR_ESCAPE |
+            FRAG_STRING_CONTROL_ESCAPE |
+            FRAG_STRING_NUMERIC_ESCAPE |
+            FRAG_WHITESPACE |
+            FRAG_DECIMAL_NUMBER |
+            FRAG_IDENTIFIER |
+            FRAG_HEX_NUMBER |
+            FRAG_DECIMAL_FP_NUMBER_F |
+            FRAG_DECIMAL_FP_NUMBER |
+            FRAG_DECIMAL_FP_NUMBER_D=> {
+                string fragment = line.fragments[fragmentIndex];
+                fragmentIndex += 1;
+                i += fragment.length();
+            }
+            FRAG_GREATER_THAN => {
+                if mode == MODE_NORMAL && fragCodeIndex < fragCodes.length() && fragCodes[fragCodeIndex] == FRAG_GREATER_THAN {
+                    if fragCodeIndex + 1 < fragCodes.length() && fragCodes[fragCodeIndex + 1] == FRAG_GREATER_THAN {
+                        fragCodeIndex += 2;
+                        i += 3;
+                    }
+                    else {
+                        fragCodeIndex += 1;
+                        i += 2;
+                    }
+                }
+                else {
+                    i += 1;
+                }
+            }
+            _ => {
+                FixedToken? ft = fragTokens[fragCode];
+                // if we've missed something above, we'll get a panic from the cast here
+                i += (<string>ft).length();
+            }
+        }
+        fragmentIndex += 1;
     }
-    return fragIndex;
+    return fragmentIndex - 1;
 }
