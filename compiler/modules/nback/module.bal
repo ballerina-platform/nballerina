@@ -1,7 +1,13 @@
 import wso2/nballerina.bir;
+import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
+public type TypeUsage readonly & record {|
+    t:UniformTypeBitSet[] mapMemberTypes;
+    t:UniformTypeBitSet[] arrayMemberTypes;
+|};
+
+public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
     bir:ModuleId modId = birMod.getId();
     llvm:Module llMod = llContext.createModule();
     bir:File[] partFiles = birMod.getPartFiles();
@@ -56,7 +62,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         check buildFunctionBody(builder, scaffold, code);
     }
     check birMod.finish();
-    return llMod;
+    return [llMod, { mapMemberTypes: [], arrayMemberTypes: [] }];
 }
 
 

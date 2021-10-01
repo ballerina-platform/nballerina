@@ -22,6 +22,7 @@ class CompileContext {
     private final LlvmContext llContext = new;
     private final nback:Options nbackOptions;
     private final string? outputBasename;
+    private final nback:ProgramModule[] programModules = [];
 
 
     final t:Env env = new;
@@ -37,12 +38,14 @@ class CompileContext {
         self.nbackOptions = nbackOptions;
     }
 
-    function buildModule(bir:Module birMod) returns LlvmModule|CompileError {
-        return nback:buildModule(birMod, self.llContext, self.nbackOptions);
+    function buildModule(bir:ModuleId id, bir:Module birMod) returns LlvmModule|CompileError {
+        var [llMod, typeUsage] = check nback:buildModule(birMod, self.llContext, self.nbackOptions);
+        self.programModules.push({ id, typeUsage });
+        return llMod;
     }
 
-    function buildInitModule(bir:ModuleId entryModId, map<bir:FunctionSignature> publicFuncs) returns LlvmModule|CompileError {
-        return nback:buildInitModule(entryModId, publicFuncs, self.llContext);
+    function buildInitModule(map<bir:FunctionSignature> publicFuncs) returns LlvmModule|CompileError {
+        return nback:buildInitModule(self.programModules.reverse(), publicFuncs, self.llContext);
     }
 
     function job(bir:ModuleId id) returns Job {
@@ -86,7 +89,7 @@ function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] so
         resolvedImports.push(ri);
     }
     front:ResolvedModule mod = check front:resolveModule(scanned, cx.env, resolvedImports);
-    LlvmModule llMod = check cx.buildModule(mod);
+    LlvmModule llMod = check cx.buildModule(id, mod);
     if outFilename != () {
         check outputModule(llMod, outFilename, cx.outputOptions);
     }
@@ -156,8 +159,8 @@ function subModuleSuffix(bir:ModuleId id) returns string {
 }
 
 function generateInitModule(CompileContext cx, front:ResolvedModule entryMod) returns CompileError? {
-    LlvmModule initMod = check cx.buildInitModule(entryMod.getId(), filterFuncs(entryMod.getExports()));
-    string? initOutFilename = cx.outputFilename(".init");
+    LlvmModule initMod = check cx.buildInitModule(filterFuncs(entryMod.getExports()));
+    string? initOutFilename = cx.outputFilename("._init");
     if initOutFilename != () {
         check outputModule(initMod, initOutFilename, cx.outputOptions);
     }

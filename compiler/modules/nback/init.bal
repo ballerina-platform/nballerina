@@ -3,10 +3,15 @@ import wso2/nballerina.print.llvm;
 
 const USER_MAIN_NAME = "main";
 
-public function buildInitModule(bir:ModuleId entryModId, map<bir:FunctionSignature> publicFuncs, llvm:Context llContext) returns llvm:Module|BuildError {
+public type ProgramModule readonly & record {|
+    bir:ModuleId id;
+    TypeUsage typeUsage;
+|};
+
+public function buildInitModule(ProgramModule[] modules, map<bir:FunctionSignature> publicFuncs, llvm:Context llContext) returns llvm:Module|BuildError {
     llvm:Module llMod = llContext.createModule();
     llvm:Builder builder = llContext.createBuilder();
-    check buildMain(entryModId, USER_MAIN_NAME, publicFuncs[USER_MAIN_NAME], llMod, builder);
+    check buildMain(modules[0].id, USER_MAIN_NAME, publicFuncs[USER_MAIN_NAME], llMod, builder);
     return llMod;
 }
 

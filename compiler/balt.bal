@@ -57,7 +57,8 @@ function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Opt
     front:ScannedModule scanned = check front:scanModule(sources, modId);
     bir:Module birMod = check front:resolveModule(scanned, env, []);
     LlvmContext context = new;
-    return nback:buildModule(birMod, context, nbackOptions);
+    var [llMod, _] = check nback:buildModule(birMod, context, nbackOptions);
+    return llMod;
 }
 
 function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Any {
