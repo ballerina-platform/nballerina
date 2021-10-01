@@ -365,7 +365,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
     check unusedLocalVariables(cx, env);
     int[] assignments = [];
     addAssignments(assignments, env.assignments, startRegister);
-    return { block: curBlock, bindings: env.bindings, assignments };
+    return { block: curBlock, assignments };
 }
 
 function unusedLocalVariables(CodeGenContext cx, Environment env) returns CodeGenError? {
