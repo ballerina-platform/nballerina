@@ -124,19 +124,23 @@ function parseModuleDecl(Tokenizer tok, ModulePart part) returns ModuleLevelDefn
     }
     match t {
         "type" => {
-            return parseTypeDefinition(tok, part, vis, startPos);
+            return parseTypeDefinition(tok, part, vis);
         }
         "const" => {
-            return parseConstDefinition(tok, part, vis, startPos);
+            return parseConstDefinition(tok, part, vis);
         }
         "function" => {
-            return parseFunctionDefinition(tok, part, vis, startPos);
+            return parseFunctionDefinition(tok, part, vis);
         }
     }
     return parseError(tok);
 }
 
-function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis, Position startPos) returns TypeDefn|err:Syntax {
+function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns TypeDefn|err:Syntax {
+    Position startPos = tok.currentPos();
+    if vis != () {
+        startPos = tok.previousPos();
+    }
     check tok.advance();
     Position namePos = tok.currentPos();
     string name = check tok.expectIdentifier();
@@ -146,7 +150,11 @@ function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis, Pos
     return { startPos, endPos, name, td, namePos, vis, part };
 }
 
-function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis, Position startPos) returns ConstDefn|err:Syntax {
+function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns ConstDefn|err:Syntax {
+    Position startPos = tok.currentPos();
+    if vis != () {
+        startPos = tok.previousPos();
+    }
     check tok.advance();
     Token? t = tok.current();
     InlineBuiltinTypeDesc? td = ();
@@ -163,7 +171,11 @@ function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis, Po
     return { startPos, endPos, td, name, expr, namePos, vis, part };
 }
 
-function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis, Position startPos) returns FunctionDefn|err:Syntax {
+function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns FunctionDefn|err:Syntax {
+    Position startPos = tok.currentPos();
+    if vis != () {
+        startPos = tok.previousPos();
+    }
     check tok.advance();
     Position namePos = tok.currentPos();
     string name = check tok.expectIdentifier();

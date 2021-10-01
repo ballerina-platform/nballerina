@@ -251,7 +251,6 @@ class Tokenizer {
         return createPosition(self.lineIndex, self.tokenStartCodePointIndex);
     }
 
-    // TODO: remove this and turn every thing the [start, end)
     function previousPos() returns Position {
         Position? pos = self.previousPosition;
         if pos is Position {

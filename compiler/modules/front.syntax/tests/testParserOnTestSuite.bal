@@ -41,8 +41,6 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                     test:assertTrue(testIsWhitespace(part.file, lastEnd, startPos), "none white space tokens between top level definition" + errorBody);
                     lastEnd = endPos;
                 }
-
-                    // test:assertTrue(testIsWhitespace(part.file, defn.startPos, defn.endPos), "white spaces in ModuleLevelDefn "+ errorBody);
                 string[] canonSrc = partToLines(part);
                 part = scanAndParseModulePart(canonSrc, { filename }, 0);
                 if part is error {
@@ -67,9 +65,6 @@ function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) re
 }
 
 function testIsWhitespace(SourceFile file, Position startPos, Position endPos) returns boolean {
-    // if startPos == endPos {
-    //     return false;
-    // }
     err:LineColumn st = file.lineColumn(startPos);
     err:LineColumn end = file.lineColumn(endPos);
     int startLineIndex = st[0];
