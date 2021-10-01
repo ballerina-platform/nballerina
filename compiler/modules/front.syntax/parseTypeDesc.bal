@@ -6,7 +6,7 @@ function parseInlineTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? t = tok.current();
     if t is [IDENTIFIER, string] {
         var [prefix, typeName] = check parseOptQualIdentifier(tok, t[1]);
-        TypeDescRef refTypeDesc = { prefix, typeName, pos: tok.currentPos() };
+        TypeDescRef refTypeDesc = { prefix, typeName, pos: tok.currentStartPos() };
         return refTypeDesc;
     }
     else if t is "map" {
@@ -201,7 +201,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             return tok.err("unrecognized integer subtype '" + name + "'");
         }
         [IDENTIFIER, var identifier] => {
-            Position pos = tok.currentPos();
+            Position pos = tok.currentStartPos();
             check tok.advance();
             var [prefix, typeName] = check parseOptQualIdentifier(tok, identifier);
             return { prefix, typeName, pos };
@@ -216,7 +216,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             return parseNumericLiteralTypeDesc(tok, ());
         }
         "-" => {
-            Position signPos = tok.currentPos();
+            Position signPos = tok.currentStartPos();
             check tok.advance();
             return parseNumericLiteralTypeDesc(tok, signPos);
         }

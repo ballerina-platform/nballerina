@@ -124,7 +124,7 @@ class Tokenizer {
     }
 
     function advance() returns err:Syntax? {
-        self.previousPosition = self.currentPos();
+        self.previousPosition = self.currentStartPos();
         string str = "";
         self.tokenStartCodePointIndex = self.codePointIndex;
         while true {
@@ -247,8 +247,23 @@ class Tokenizer {
         self.mode = m;
     }
 
-    function currentPos() returns Position {
+    function currentStartPos() returns Position {
         return createPosition(self.lineIndex, self.tokenStartCodePointIndex);
+    }
+
+    function currentEndPos() returns Position {
+        Token? tok = self.current();
+        if tok is Token {
+            int tokLen;
+            if tok is FixedToken {
+                tokLen = (<string>tok).length();
+            }
+            else {
+                tokLen = tok[1].length();
+            }
+            return createPosition(self.lineIndex, self.tokenStartCodePointIndex + tokLen);
+        }
+        panic error("no current token");
     }
 
     function previousPos() returns Position {
@@ -317,7 +332,7 @@ class Tokenizer {
     }
 
     function err(err:Message msg) returns err:Syntax {
-        return err:syntax(msg, loc=err:location(self.file, self.currentPos()));
+        return err:syntax(msg, loc=err:location(self.file, self.currentStartPos()));
     }
 
     function save() returns TokenizerState {
