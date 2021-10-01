@@ -765,7 +765,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     }
     t:SemType semType = check cx.resolveTypeDesc(td);
     bir:Register result = cx.createRegister(semType, varName);
-    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, result, startBlock, initExpr, semType);
+    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType);
     return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
 }
 
@@ -775,7 +775,8 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
         return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
     }
     else if lValue is s:WILDCARD {
-        return { block: check codeGenAssign(cx, env, cx.createRegister(t:ANY, "_"), startBlock, expr, t:ANY) };
+        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(t:ANY, "_"), expr, t:ANY);
+        return { block: nextBlock };
     }
     else {
         return codeGenAssignToMember(cx, startBlock, env, lValue, expr);
@@ -801,10 +802,11 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         unnarrowedReg = unnarrowedBinding.reg;
         assignments = [ unnarrowedReg.number ];
     }
-    return { block: check codeGenAssign(cx, env, unnarrowedReg, startBlock, expr, unnarrowedReg.semType), assignments };
+    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, unnarrowedReg, expr, unnarrowedReg.semType);
+    return { block: nextBlock, assignments };
 }
 
-function codeGenAssign(CodeGenContext cx, Environment env, bir:Register result, bir:BasicBlock block, s:Expr expr, t:SemType semType) returns CodeGenError|bir:BasicBlock {
+function codeGenAssign(CodeGenContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType) returns CodeGenError|bir:BasicBlock {
     s:Expr foldedExpr = check cx.foldExpr(env, expr, semType);
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, block, env, foldedExpr);
     bir:AssignInsn insn = { result, operand };
