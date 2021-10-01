@@ -72,21 +72,24 @@ function parseImportDecls(Tokenizer tok, int partIndex) returns ImportDecl[]|err
 }
 
 function parseImportDecl(Tokenizer tok, int partIndex) returns ImportDecl|err:Syntax {
-    Position pos = tok.currentPos();
+    Position startPos = tok.currentPos();
     check tok.advance();
+    Position namePos = tok.currentPos();
     string firstModuleName = check tok.expectIdentifier();
     string? org = ();
     if tok.current() == "/" {
         // we have an org
         org = firstModuleName;
         check tok.advance();
+        namePos = tok.currentPos();
         firstModuleName = check tok.expectIdentifier();
     }
     [string, string...] names = [firstModuleName];
     names.push(...check parseImportNamesRest(tok));
     string? prefix = check parseImportPrefix(tok);
     check tok.expect(";");
-    return { org, names, prefix, pos, partIndex };
+    Position endPos = tok.previousPos();
+    return { startPos, endPos, org, names, prefix, namePos, partIndex };
 }
 
 function parseImportNamesRest(Tokenizer tok) returns string[]|err:Syntax {

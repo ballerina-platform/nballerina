@@ -21,10 +21,11 @@ public type ModuleLevelDefn FunctionDefn|ConstDefn|TypeDefn;
 public type Visibility "public"?;
 
 public type ImportDecl record {|
+    *PositionFields;
     string? org;
     [string, string...] names;
     string? prefix;
-    Position pos;
+    Position namePos;
     int partIndex;
 |};
 

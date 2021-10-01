@@ -22,10 +22,27 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 continue;
             }
             else {
-                foreach ModuleLevelDefn defn in part.defns {
-                    string errorBody = string `${part.file.filename()} name:${defn.name} start: ${defn.startPos} end: ${defn.endPos}`;
-                    test:assertTrue(testIsWhitespace(part.file, defn.startPos, defn.endPos), "white spaces in ModuleLevelDefn "+ errorBody);
+                [err:Position, err:Position][] topLevelDefnPos = [];
+                foreach ImportDecl decl in part.importDecls {
+                    topLevelDefnPos.push([decl.startPos, decl.endPos]);
                 }
+                foreach ModuleLevelDefn defn in part.defns {
+                    topLevelDefnPos.push([defn.startPos, defn.endPos]);
+                }
+                topLevelDefnPos = topLevelDefnPos.sort();
+                err:Position lastEnd = 1<<32;
+                foreach var [startPos, endPos] in topLevelDefnPos {
+                    test:assertTrue(startPos >= lastEnd, "overlapping top level definitions");
+                    test:assertTrue(startPos <= endPos, "invalid start and end positions");
+                    SourceFile file = part.file;
+                    var [stLine, stCol] = file.lineColumn(startPos);
+                    var [endLine, endCol] = file.lineColumn(lastEnd);
+                    string errorBody = string ` filename: ${file.filename()} between (${endLine}, ${endCol})  and (${stLine}, ${stCol})`;
+                    test:assertTrue(testIsWhitespace(part.file, lastEnd, startPos), "none white space tokens between top level definition" + errorBody);
+                    lastEnd = endPos;
+                }
+
+                    // test:assertTrue(testIsWhitespace(part.file, defn.startPos, defn.endPos), "white spaces in ModuleLevelDefn "+ errorBody);
                 string[] canonSrc = partToLines(part);
                 part = scanAndParseModulePart(canonSrc, { filename }, 0);
                 if part is error {
@@ -50,30 +67,33 @@ function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) re
 }
 
 function testIsWhitespace(SourceFile file, Position startPos, Position endPos) returns boolean {
+    // if startPos == endPos {
+    //     return false;
+    // }
     err:LineColumn st = file.lineColumn(startPos);
     err:LineColumn end = file.lineColumn(endPos);
-    ScannedLine[] lines = file.scannedLines();
     int startLineIndex = st[0];
     int endLineIndex = end[0];
-    int startFragIndex = fragIndex(st, lines[startLineIndex]);
-    int endFragIndex = fragIndex(end, lines[endLineIndex]);
+    int startFragIndex = fragIndex(st, file.line(startLineIndex));
+    int endFragIndex = fragIndex(end, file.line(endLineIndex));
     int lineIndex = startLineIndex;
+    int i = st[1];
     while lineIndex <= endLineIndex {
-        int i = 0;
-        ScannedLine line = lines[lineIndex];
+        ScannedLine line = file.line(lineIndex);
         while i < line.fragments.length() {
             if lineIndex >= endLineIndex && i >= endFragIndex {
                 return true;
             }
             FragCode frag = line.fragCodes[i];
-            if frag == FRAG_WHITESPACE || frag == FRAG_COMMENT {
+            if frag != FRAG_WHITESPACE && frag != FRAG_COMMENT {
                 return false;
             }
             i += 1;
         }
+        i = 0;
         lineIndex += 1;
     }
-    return false; // start == end
+    return true; // start == end
 }
 
 function fragIndex(err:LineColumn lineColumn, ScannedLine line) returns int {

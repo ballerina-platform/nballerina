@@ -383,6 +383,10 @@ public readonly class SourceFile {
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
+    
+    function line(int index) returns readonly & ScannedLine {
+        return self.lines[index - 1];
+    }
 }
 
 public function createSourceFile(string[] lines, FilePath path) returns SourceFile {
