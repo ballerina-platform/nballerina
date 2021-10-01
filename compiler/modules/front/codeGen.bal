@@ -8,12 +8,15 @@ type Environment record {|
     // A list of registers that were narrowed but have been assigned to
     // Holds the number of the original, unnarrowed register
     int[] assignments = [];
+    // A list of local variable names created for given environment
+    string[] localVarNames = [];
 |};
 
 type Binding record {|
     string name;
     bir:Register reg;
     boolean isFinal;
+    boolean used = false;
     Binding? prev;
     // When this binding represents a narrowing, this refers to the
     // original binding that was not narrowed.
@@ -359,9 +362,40 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
             env.assignments.push(...effect.assignments);
         }
     }                
+    check unusedLocalVariables(cx, env);
     int[] assignments = [];
     addAssignments(assignments, env.assignments, startRegister);
-    return { block: curBlock, assignments };
+    return { block: curBlock, bindings: env.bindings, assignments };
+}
+
+function unusedLocalVariables(CodeGenContext cx, Environment env) returns CodeGenError? {
+    Binding? bindings = env.bindings;
+    foreach var varName in env.localVarNames {
+        if isUnused(varName, bindings) {
+            return cx.semanticErr(`unused local variable ${varName}`);
+        }
+    }
+    return ();
+}
+
+function isUnused(string varName, Binding? bindings) returns boolean {
+    Binding? tem = bindings;
+    while true {
+        if tem is () {
+            break;
+        }
+        else {
+            Binding? narrowed = tem.unnarrowed;
+            if !(narrowed is ()) {
+                tem = narrowed;
+            }
+            if tem.name == varName && !tem.used {
+                return true;
+            }
+            tem = tem.prev;
+        }
+    }
+    return false;   
 }
 
 function environmentCopy(Environment env) returns Environment {
@@ -1635,12 +1669,16 @@ function lookupLocalVarRef(CodeGenContext cx, string name, Environment env) retu
     if !(binding is ()) {
         Binding? unnarrowed = binding.unnarrowed;
         if !(unnarrowed is ()) {
+            unnarrowed.used = true;
             // This is a narrowed binding
             int num = unnarrowed.reg.number;
             if env.assignments.indexOf(num) != () {
                 // This binding has been invalidated by an assignment
                 return unnarrowed;
             }
+        }
+        else {
+            binding.used = true;
         }
     }
     return binding;
