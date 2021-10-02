@@ -65,6 +65,7 @@ type ImportedFunction record {|
 
 type ImportedFunctionTable table<ImportedFunction> key(symbol);
 
+
 //const STRING_VARIANT_SMALL = 0;
 const STRING_VARIANT_MEDIUM = 0;
 const STRING_VARIANT_LARGE = 1;
@@ -84,8 +85,17 @@ type Module record {|
     map<StringDefn> stringDefns = {};
     t:Context typeContext;
     bir:Module bir;
+    bir:ModuleId modId;
     bir:File[] partFiles;
     ModuleDI? di;
+    table<UsedSemType> key(semType) usedSemTypes = table [];
+|};
+
+type UsedSemType record {|
+    readonly t:SemType semType;
+    readonly int index;
+    llvm:ConstPointerValue? inherentType = ();
+    llvm:ConstPointerValue? typeTest = ();
 |};
 
 type ModuleDI record {|
@@ -240,6 +250,36 @@ class Scaffold {
     function unimplementedErr(err:Message message) returns err:Unimplemented {
         err:Location loc = err:location(self.file);
         return err:unimplemented(message, loc);
+    }
+
+    function getInherentType(t:SemType ty) returns llvm:ConstPointerValue {
+        UsedSemType used = self.getUsedSemType(ty);
+        llvm:ConstPointerValue? value = used.inherentType;
+        if value is () {
+            Module m = self.mod;
+            string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llInherentType, symbol, isConstant = true);
+            used.inherentType = v;
+            return v;
+        }
+        else {
+            return value;
+        }
+    }
+
+    private function getUsedSemType(t:SemType ty) returns UsedSemType {
+        UsedSemType? used  = self.mod.usedSemTypes[ty];
+        if used is () {
+            UsedSemType t = {
+                index: self.mod.usedSemTypes.length(),
+                semType: ty
+            };
+            self.mod.usedSemTypes.add(t);
+            return t;
+        }
+        else {
+            return used;
+        }
     }
 }
 

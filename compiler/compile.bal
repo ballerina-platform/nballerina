@@ -45,7 +45,7 @@ class CompileContext {
     }
 
     function buildInitModule(map<bir:FunctionSignature> publicFuncs) returns LlvmModule|CompileError {
-        return nback:buildInitModule(self.programModules.reverse(), publicFuncs, self.llContext);
+        return nback:buildInitModule(self.llContext, self.env, self.programModules.reverse(), publicFuncs);
     }
 
     function job(bir:ModuleId id) returns Job {

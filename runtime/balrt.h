@@ -102,11 +102,12 @@ typedef struct {
     GC MapField *members;
 } MapFieldArray;
 
-typedef int64_t MappingDesc;
+typedef struct {
+    uint32_t bitSet;
+} MappingDesc, *MappingDescPtr;
 
 typedef GC struct Mapping {
-    MappingDesc desc;
-    // XXX will also have a typedescriptor here
+    MappingDescPtr desc;
     union {
         GenericArray gArray;
         MapFieldArray fArray;
@@ -203,7 +204,7 @@ extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 
 #define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
 
-extern TaggedPtr _bal_mapping_construct(MappingDesc desc, int64_t capacity);
+extern TaggedPtr _bal_mapping_construct(MappingDescPtr desc, int64_t capacity);
 extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);

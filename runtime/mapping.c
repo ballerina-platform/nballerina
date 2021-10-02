@@ -174,7 +174,7 @@ static void mappingGrow(MappingPtr m) {
     }
 }
 
-TaggedPtr _bal_mapping_construct(MappingDesc desc, int64_t capacity) {
+TaggedPtr _bal_mapping_construct(MappingDescPtr desc, int64_t capacity) {
     MappingPtr mp = _bal_alloc(sizeof(struct Mapping));
     mp->desc = desc;
     initArray(&(mp->gArray), capacity, MAP_FIELD_SHIFT);
@@ -206,7 +206,7 @@ void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr value)
 
 PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
-    if ((mp->desc & (1 << (getTag(value) & UT_MASK))) == 0) {
+    if ((mp->desc->bitSet & (1 << (getTag(value) & UT_MASK))) == 0) {
         return storePanicCode(mapping, PANIC_MAPPING_STORE);
     }
     int64_t len = mp->fArray.length;

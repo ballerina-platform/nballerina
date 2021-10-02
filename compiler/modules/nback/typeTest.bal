@@ -33,7 +33,7 @@ final RuntimeFunction mappingExactifyFunction = {
     name: "mapping_exactify",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+        paramTypes: [LLVM_TAGGED_PTR, llvm:pointerType(llInherentType)]
     },
     attrs: ["readonly"]
 };
@@ -150,7 +150,8 @@ function buildMappingExactify(llvm:Builder builder, Scaffold scaffold, llvm:Poin
     }
     else {
         return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingExactifyFunction),
-                                               [tagged, llvm:constInt(LLVM_INT, bitSet)]); 
+                                               // XXX what we want here is just an index
+                                               [tagged, scaffold.getInherentType(t:intersect(targetType, t:MAPPING_RW))]); 
     }
 }
 

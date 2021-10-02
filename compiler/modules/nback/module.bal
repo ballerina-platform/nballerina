@@ -1,11 +1,7 @@
 import wso2/nballerina.bir;
-import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
+import wso2/nballerina.types as t;
 
-public type TypeUsage readonly & record {|
-    t:UniformTypeBitSet[] mapMemberTypes;
-    t:UniformTypeBitSet[] arrayMemberTypes;
-|};
 
 public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
     bir:ModuleId modId = birMod.getId();
@@ -44,6 +40,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
     llvm:Builder builder = llContext.createBuilder();
     Module mod = {
         bir: birMod,
+        modId,
         llContext,
         llMod,
         partFiles,
@@ -62,9 +59,25 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         check buildFunctionBody(builder, scaffold, code);
     }
     check birMod.finish();
-    return [llMod, { mapMemberTypes: [], arrayMemberTypes: [] }];
+    return [llMod, createTypeUsage(mod.usedSemTypes)];
 }
 
+function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
+    byte[] uses = [];
+    t:SemType[] types = [];
+    foreach var used in usedSemTypes {
+        types.push(used.semType);
+        byte use = 0;
+        if !(used.inherentType is ()) {
+            use = USED_INHERENT_TYPE;
+        }
+        if !(used.typeTest is ()) {
+            use |= USED_TYPE_TEST;
+        }
+        uses.push(use);
+    }
+    return { types: types.cloneReadOnly(), uses: uses.cloneReadOnly() };
+}
 
 function createModuleDI(llvm:Module mod, bir:File[] partFiles) returns ModuleDI {
     DIBuilder builder = mod.createDIBuilder();
