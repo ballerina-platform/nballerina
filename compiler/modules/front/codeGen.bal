@@ -1300,12 +1300,18 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     if t:isEmpty(cx.mod.tc, diff) {
         return { result: !negated, block: bb };
     }
-    t:SemType intersect = t:intersect(reg.semType, semType);
+    t:SemType intersect;
+    if t:isSubtype(cx.mod.tc, semType, reg.semType) {
+        intersect = semType;
+    }
+    else {
+        intersect = t:intersect(reg.semType, semType);
+    }
     if t:isEmpty(cx.mod.tc, intersect) {
         return { result: negated, block: bb };
     }
     bir:Register result = cx.createRegister(t:BOOLEAN);
-    bir:TypeTestInsn insn = { operand: reg, semType, result, negated};
+    bir:TypeTestInsn insn = { operand: reg, semType, result, negated };
     nextBlock.insns.push(insn);
     if negated {
         [intersect, diff] = [diff, intersect];
