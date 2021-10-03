@@ -87,8 +87,8 @@ function parseImportDecl(Tokenizer tok, int partIndex) returns ImportDecl|err:Sy
     [string, string...] names = [firstModuleName];
     names.push(...check parseImportNamesRest(tok));
     string? prefix = check parseImportPrefix(tok);
+    Position endPos = tok.currentEndPos();
     check tok.expect(";");
-    Position endPos = tok.previousPos();
     return { startPos, endPos, org, names, prefix, namePos, partIndex };
 }
 
@@ -170,7 +170,7 @@ function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis,
     string[] paramNames = [];
     FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
     Stmt[] body = check parseStmtBlock(tok);
-    Position endPos = tok.previousPos();
+    Position endPos = tok.currentStartPos();
     FunctionDefn defn = { startPos, endPos, name, vis, paramNames, typeDesc, namePos, body, part };
     return defn;
 }
