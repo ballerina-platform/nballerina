@@ -8,8 +8,6 @@ type Environment record {|
     // A list of registers that were narrowed but have been assigned to
     // Holds the number of the original, unnarrowed register
     int[] assignments = [];
-    // A list of local variable names created for given environment
-    string[] localVarNames = [];
 |};
 
 type Binding record {|
@@ -362,40 +360,52 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
             env.assignments.push(...effect.assignments);
         }
     }                
-    check unusedLocalVariables(cx, env);
+    check unusedLocalVariables(cx, env, initialEnv.bindings);
     int[] assignments = [];
     addAssignments(assignments, env.assignments, startRegister);
     return { block: curBlock, assignments };
 }
 
-function unusedLocalVariables(CodeGenContext cx, Environment env) returns CodeGenError? {
-    Binding? bindings = env.bindings;
-    foreach var varName in env.localVarNames {
-        if isUnused(varName, bindings) {
-            return cx.semanticErr(`unused local variable ${varName}`);
+function unusedLocalVariables(CodeGenContext cx, Environment env, Binding? bindingLimit) returns CodeGenError? {
+    Binding? tem = env.bindings;
+    while true {
+        if bindingLimit is () {
+            if tem is () {
+                break;
+            }
+            else {
+                if isUnused(tem) {
+                    return cx.semanticErr(`unused local variable ${tem.name}`);
+                }
+                tem = tem.prev;
+            }
+        }
+        else {
+            if tem is () {
+                break;
+            }
+            else if tem.name == bindingLimit.name {
+                break;
+            }
+            else {
+                if isUnused(tem) {
+                    return cx.semanticErr(`unused local variable ${tem.name}`);
+                }              
+                tem = tem.prev;
+            }
         }
     }
     return ();
 }
 
-function isUnused(string varName, Binding? bindings) returns boolean {
-    Binding? tem = bindings;
-    while true {
-        if tem is () {
-            break;
-        }
-        else {
-            Binding? narrowed = tem.unnarrowed;
-            if !(narrowed is ()) {
-                tem = narrowed;
-            }
-            if tem.name == varName && !tem.used {
-                return true;
-            }
-            tem = tem.prev;
-        }
+function isUnused(Binding binding) returns boolean {
+    Binding? unnarrowed = binding.unnarrowed;
+    if unnarrowed is () {
+        return !binding.used;
     }
-    return false;   
+    else {
+        return !unnarrowed.used;
+    }
 }
 
 function environmentCopy(Environment env) returns Environment {
