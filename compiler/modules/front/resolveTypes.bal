@@ -108,13 +108,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         "string" => { return t:STRING; }
         "typedesc" => { return t:TYPEDESC; }
         "xml" => { return t:XML; }
-        "char" => { return t:CHAR; }
-        "sint8" => { return t:intWidthSigned(8); }
-        "sint16" => { return t:intWidthSigned(16); }
-        "sint32" => { return t:intWidthSigned(32); }
-        "uint8" => { return t:BYTE; }
-        "uint16" => { return t:intWidthUnsigned(16); }
-        "uint32" => { return t:intWidthUnsigned(32); }
+        "byte" => { return t:BYTE; }
         "json" => { return t:createJson(mod.tc.env); }
         "()" => { return t:NIL; }
     }

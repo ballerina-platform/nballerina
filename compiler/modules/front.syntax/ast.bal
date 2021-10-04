@@ -372,12 +372,8 @@ public type SingletonTypeDesc record {|
     (string|float|int|boolean|decimal) value;
 |};
 
-public type BuiltinIntSubtypeDesc "sint8"|"uint8"|"sint16"|"uint16"|"sint32"|"uint32";
-
-public type BuiltinStringSubtypeDesc "char";
-
 // This is the subtype of BuiltinTypeDesc that we currently allow inline.
 public type InlineBuiltinTypeDesc "boolean"|"int"|"float"|"string"|"error"|"any";
-public type BuiltinTypeDesc InlineBuiltinTypeDesc|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
+public type BuiltinTypeDesc InlineBuiltinTypeDesc|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
 
-public type LeafTypeDesc BuiltinTypeDesc|BuiltinIntSubtypeDesc|BuiltinStringSubtypeDesc;
+public type LeafTypeDesc BuiltinTypeDesc;

@@ -127,15 +127,6 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     return td;
 }
 
-final map<BuiltinIntSubtypeDesc> BUILTIN_INT_SUBTYPES = {
-    Signed8: "sint8",
-    Signed16: "sint16",
-    Signed32: "sint32",
-    Unsigned8: "uint8",
-    Unsigned16: "uint16",
-    Unsigned32: "uint32"
-};
-
 // Tokenizer is on first token of the type descriptor
 // Afterwards it is on the token immediately following the type descriptor
 function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
@@ -176,7 +167,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         "byte" => {
             check tok.advance();
-            return "uint8";
+            return "byte";
         }
         "[" => {
             return parseTupleTypeDesc(tok);
