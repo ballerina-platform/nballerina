@@ -1378,6 +1378,19 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
         typeStringBody.push("]");
         return createLine(typeStringBody, "");
     }
+    else if ty is FunctionType {
+        string[] typeStringBody = [];
+        typeStringBody.push(typeToString(ty.returnType, context), "(");
+        foreach int i in 0 ..< ty.paramTypes.length() {
+            final Type paramType = ty.paramTypes[i];
+            if i > 0 {
+                typeStringBody.push(",");
+            }
+            typeStringBody.push(typeToString(paramType, context));
+        }
+        typeStringBody.push(")");
+        return createLine(typeStringBody, "");
+    }
     else {
         return ty;
     }
