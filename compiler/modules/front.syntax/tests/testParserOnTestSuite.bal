@@ -100,48 +100,21 @@ function fragIndex(err:LineColumn lineColumn, ScannedLine line) returns int {
     FragCode[] fragCodes = line.fragCodes;
     while (i < codePoint) {
         FragCode fragCode = fragCodes[fragCodeIndex];
-        match fragCode {
-            FRAG_STRING_OPEN |
-            FRAG_STRING_CLOSE => {
-                i += 1;
-            }
-            FRAG_STRING_CHARS |
-            FRAG_STRING_CHAR_ESCAPE |
-            FRAG_STRING_CONTROL_ESCAPE |
-            FRAG_STRING_NUMERIC_ESCAPE |
-            FRAG_WHITESPACE |
-            FRAG_DECIMAL_NUMBER |
-            FRAG_IDENTIFIER |
-            FRAG_HEX_NUMBER |
-            FRAG_DECIMAL_FP_NUMBER_F |
-            FRAG_DECIMAL_FP_NUMBER |
-            FRAG_DECIMAL_FP_NUMBER_D=> {
-                string fragment = line.fragments[fragmentIndex];
-                fragmentIndex += 1;
-                i += fragment.length();
-            }
-            FRAG_GREATER_THAN => {
-                if mode == MODE_NORMAL && fragCodeIndex < fragCodes.length() && fragCodes[fragCodeIndex] == FRAG_GREATER_THAN {
-                    if fragCodeIndex + 1 < fragCodes.length() && fragCodes[fragCodeIndex + 1] == FRAG_GREATER_THAN {
-                        fragCodeIndex += 2;
-                        i += 3;
-                    }
-                    else {
-                        fragCodeIndex += 1;
-                        i += 2;
-                    }
-                }
-                else {
-                    i += 1;
-                }
-            }
-            _ => {
-                FixedToken? ft = fragTokens[fragCode];
-                // if we've missed something above, we'll get a panic from the cast here
-                i += (<string>ft).length();
-            }
+        fragCodeIndex += 1;
+        if fragCode <= VAR_FRAG_MAX {
+            string fragment = line.fragments[fragmentIndex];
+            fragmentIndex += 1;
+            i += fragment.length();
         }
-        fragmentIndex += 1;
+        else if fragCode >= FRAG_FIXED_TOKEN {
+            FixedToken? ft = fragTokens[fragCode];
+            i += (<string>ft).length();
+
+        }
+        else {
+            i += 1;
+        }
+
     }
     return fragmentIndex - 1;
 }
