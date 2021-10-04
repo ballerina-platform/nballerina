@@ -1,6 +1,6 @@
 import ballerina/io;
 
-// @small_heap 624
+// @small_heap 712
 public function main() {
     any[] x = [110, [400, [401]]];
     any[] a = [111, [112, [200, 201, [300, 301, 302]]], [113, [150, [151, [152]]]]];  

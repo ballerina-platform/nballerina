@@ -1,9 +1,11 @@
 import ballerina/io;
 
-// @small_heap 304
+// @small_heap 280
 public function foo() {
     any[] a = [111, 112, 113];
-    any[] b = [114, [115, [116, 126]], [117, 118, 119]]; 
+    int[] ia1 = [115, 116];
+    int[] ia2 = [117, 118, 119];
+    any[] b = [114, ia1, ia2]; 
     any[] c = [120, 121, 122]; // Collection should happen here
     any[] ii = <any[]>b[2];
     any[] jj = <any[]>b[1];

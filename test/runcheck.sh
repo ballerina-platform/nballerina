@@ -13,7 +13,10 @@ dir=`dirname "$1"`
 parent=`dirname $dir`
 out="$parent/actual/$b.txt"
 mkdir -p "$parent/actual"
+echo $dir
+echo $parent
 
+BAL_FILE=$(echo "$1" | sed -e s/"out\/result"/"..\/compiler\/testSuite"/ -e s/exe/bal/)
 HEAP_SIZE=$(sed -ne 's;^.*// *@small_heap  *;;p' "$BAL_FILE")
 
 if [ ! -z "$HEAP_SIZE" ]

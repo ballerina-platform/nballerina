@@ -95,12 +95,11 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
 
     assert((numLocations % 2) == 0 && "all of the pointer locations come in pairs!");
     uint16_t numSlots = numLocations / 2;
-    printf("numSlots : %d\n", numSlots);
     uint16_t numActualFrameSlots = numSlots;
 
-    frame_info_t* frame = malloc(size_of_frame(numSlots));
+    // TODO: Check output
+    frame_info_t* frame = malloc(size_of_frame(numSlots)); 
     frame->retAddr = retAddr;
-    printf("frame->retAddr : %p\n", retAddr);
     frame->frameSize = frameSize;
 
     // now to initialize the slots, we need to make two passes in order to put
@@ -122,9 +121,10 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
             continue;
         }
 
-        if( ! isBasePointer(base, derived) && (base->locSize != derived->locSize)) {
-            continue;
-        }
+        // Save the first location
+        // if( ! isBasePointer(base, derived) && (base->locSize != derived->locSize)) {
+        //     continue;
+        // }
 
         // it's a base pointer, aka base is equivalent to derived.
         // save the info.
@@ -139,9 +139,6 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         numBasePtrs++;
         currentSlot++;
     }
-
-    // once we've filtered out locations that are not within the frame, we can set this.
-    frame->numSlots = numActualFrameSlots;
 
     // now we do the derived pointers. we already know all locations are indirects now.
     locations = start;
@@ -163,14 +160,11 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         bool found = false;
         // printf("numBasePtrs : %d\n", numBasePtrs);
         for(uint16_t k = 0; k < numBasePtrs; k++) {
-            // printf("A\n");
             if(processedBase[k].offset == base->offset) {
-            // printf("B\n");
                 found = true;
                 baseIdx = k;
                 break;
             }
-            // printf("C\n");
         }
 
         // something's gone awry, let's bail!
@@ -180,6 +174,13 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
             fprintf(stderr, "(statepoint-utils) error: \
                              \n\tcouldn't find base for derived ptr!\n");
             exit(1);
+        }
+        numActualFrameSlots++;
+        if (numActualFrameSlots > numSlots) {
+            // TODO: Check output i.e. frame == NULL
+            frame = realloc(frame, size_of_frame(numActualFrameSlots));
+            currentSlot = frame->slots + numSlots;
+            numSlots++;
         }
 
         // save the derived pointer's info
@@ -192,6 +193,9 @@ frame_info_t* generate_frame_info(callsite_header_t* callsite, function_info_t* 
         // new iteration
         currentSlot++;
     }
+
+    // once we've filtered out locations that are not within the frame, we can set this.
+    frame->numSlots = numActualFrameSlots;
 
     // there is no liveout information emitted for statepoints, and we place faith in
     // the input on that being the case

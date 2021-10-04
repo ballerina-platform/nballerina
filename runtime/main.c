@@ -2,7 +2,7 @@
 
 #include "balrt.h"
 #include "hash.h"
-#include "gc-roots/include/api.h"
+#include "third-party/llvm-statepoint-utils/include/api.h"
 
 char *_bal_stack_guard;
 extern void _bal_main();

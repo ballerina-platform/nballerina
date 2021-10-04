@@ -45,7 +45,7 @@ else
 compile.stamp: $(bal_files)
 	-rm -fr llnew
 	mkdir -p llnew
-	$(JAVA) -jar $(COMPILER_JAR) --outDir llnew $?
+	$(JAVA) -jar $(COMPILER_JAR) --gc statepoint-example --outDir llnew $?
 	mkdir -p ll
 	cd llnew; for f in *.ll; do cmp -s $$f ../ll/$$f || mv $$f ../ll/; done
 	-rm -fr llnew
@@ -73,6 +73,11 @@ result/%.bc: ll/%.ll $(RT_INLINE)
 	@mkdir -p result
 	$(LLVM_LINK) -o $@ $^
 
+result/%.s: result/%.bc
+	opt-11 -O2 --rewrite-statepoints-for-gc $^ -o $^ 
+	clang-11 -O2 -S $^ -o $@
+	sed -i -e "s/__LLVM_StackMaps:/.globl __LLVM_StackMaps\n__LLVM_StackMaps:/" $@
+
 expect/%.txt: ../../../compiler/testSuite/$(tdir)/%.bal
 	@mkdir -p expect
 	../../expect.sh $< >$@
@@ -83,5 +88,37 @@ clean:
 .PHONY: all test clean compile testll
 
 .SECONDEXPANSION:
-$(exe_files): $$(patsubst %.exe,%.bc,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.bc, $(mod_bc_files)) $(RT)
-	$(CLANG) $(CFLAGS) -g -o $@ $^ 
+$(exe_files): $$(patsubst %.exe,%.s,$$@) $$(filter $$(patsubst %.exe,%,$$@).%.bc, $(mod_bc_files)) $(RT)
+	$(CLANG) $(CFLAGS) -g -o $@ $^ -lm
+
+# clang-11 -O2 -g -o result/list8-p.exe result/list8-p.bc result/list8-p._init.bc ../../../runtime/balrt.a -lm
+# /usr/lib/ballerina/dependencies/jdk-11.0.8+10-jre/bin/java -jar ../compiler/target/bin/nballerina.jar --gc statepoint-example -- test.bal && 
+# llvm-link-11 -o test_linked.ll -S test.ll ../runtime/balrt_inline.bc && 
+# opt-11 -O2 --rewrite-statepoints-for-gc -S -o test_opt.ll test_linked.ll && 
+# clang-11 test_opt.ll -O2 -S -o test.s && 
+# sed -i -e "s/__LLVM_StackMaps:/.globl __LLVM_StackMaps\n__LLVM_StackMaps:/" test.s && 
+# clang-11 test.s ../runtime/balrt.a -lm && 
+# ./a.out
+
+# /usr/lib/ballerina/dependencies/jdk-11.0.8+10-jre/bin/java -jar ../compiler/target/bin/nballerina.jar --gc statepoint-example -- test.bal && 
+# llvm-link-11 -o test_linked_init.ll -S test._init.ll ../runtime/balrt_inline.bc && 
+# opt-11 -O2 --rewrite-statepoints-for-gc -S -o test_opt.ll test_linked.ll && 
+# clang-11 test_opt.ll -O2 -S -o test.s && 
+# llvm-link-11 -o test_linked.ll -S test.ll ../runtime/balrt_inline.bc && 
+# sed -i -e "s/__LLVM_StackMaps:/.globl __LLVM_StackMaps\n__LLVM_StackMaps:/" test.s && 
+# clang-11 test.s test_linked_init.ll ../runtime/balrt.a -lm && ./a.out
+
+# /usr/lib/ballerina/dependencies/jdk-11.0.8+10-jre/bin/java -jar ../compiler/target/bin/nballerina.jar --gc statepoint-example -- test.bal &&
+# llvm-link-11 -o test_linked_init.bc test._init.ll ../runtime/balrt_inline.bc &&
+# llvm-link-11 -o test_linked.bc test.ll ../runtime/balrt_inline.bc && 
+# opt-11 -O2 --rewrite-statepoints-for-gc -o test_opt.bc test_linked.bc && 
+# clang-11 test_opt.bc -O2 -o test.s && 
+# sed -i -e "s/__LLVM_StackMaps:/.globl __LLVM_StackMaps\n__LLVM_StackMaps:/" test.s && 
+# clang-11 test.s test_linked_init.bc ../runtime/balrt.a -lm && 
+# ./a.out
+
+# ../../expect.sh ../../../compiler/testSuite/09-nil/local1-v.bal >expect/local1-v.txt
+# ../../runcheck.sh result/local1-v.exe expect/local1-v.txt >result/local1-v.diff
+# llvm-link-11 -o result/cast1-v.bc ll/cast1-v.ll ../../../runtime/balrt_inline.bc
+# llvm-link-11 -o result/cast1-v._init.bc ll/cast1-v._init.ll ../../../runtime/balrt_inline.bc
+# clang-11 -O2 -g -o result/cast1-v.exe result/cast1-v.bc result/cast1-v._init.bc ../../../runtime/balrt.a 

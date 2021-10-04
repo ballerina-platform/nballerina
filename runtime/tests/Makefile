@@ -34,13 +34,13 @@ inlinert_%.bc: inlinert_unlinked_%.bc
 	$(LLVM_LINK) -o ./$@ $< ../$(BCLIB)
 
 inlinert_%: inlinert_%.bc
-	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB) ../gc-roots/roots.a -lbacktrace -lm
+	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)
 
 $(filter error%, $(TESTPROGS)): error%: error%.c
-	$(CLANG) -g -o ./$@ $< ../$(LIB)
+	$(CLANG) -g -o ./$@ $< ../$(LIB) -lm
 
 $(filter-out error%, $(TESTPROGS)): %: %.c
-	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)	
+	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)	-lm
 
 clean:
 	-rm -f $(TESTPROGS) $(TESTPROG_STAMPS) $(TESTPROG_PROF_RAW) $(TESTPROG_PROF)

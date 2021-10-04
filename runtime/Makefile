@@ -8,7 +8,8 @@ export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
 BT_WARN_FLAGS=-W -Wall -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition -Wmissing-format-attribute -Wcast-qual
 BT_OBJS=$(addprefix third-party/libbacktrace/, atomic.o dwarf.o fileline.o posix.o sort.o state.o backtrace.o simple.o obj.o mmapio.o mmap.o)
-OBJS=gc_cheney.o gc_none.o error.o list.o main.o mapping.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o tagged_inline.o $(BT_OBJS)
+LLVM_SP_UTILS_OBJS=$(addprefix third-party/llvm-statepoint-utils/, generate.o hash_table.o)
+OBJS=gc_cheney.o error.o list.o main.o mapping.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o tagged_inline.o $(BT_OBJS) $(LLVM_SP_UTILS_OBJS) roots.o
 C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc
 LL_BCS=float_ir_inline.bc tagged_inline.bc
 BCS=$(C_BCS) $(LL_BCS)
@@ -28,10 +29,10 @@ test: all
 testCoverage: $(LIB) $(BCLIB)
 	$(MAKE) -C tests testCoverage
 
-$(LIB): $(OBJS) $(LIST_OBJ)
-	$(MAKE) -C gc-roots all
+$(LIB): $(OBJS)
 	$(AR) r $@ $^
 
+# This is the place where inline.c files are converted to .bc
 $(BCLIB): $(BCS)
 	set -o pipefail; \
 	$(LLVM_LINK) -o - -S $^ | \
@@ -44,6 +45,7 @@ $(BT_OBJS): %.o: %.c
 %.o: %.bc
 	$(CLANG) -O2 -c -o $@ $<
 
+# This is the place where objs.c files are converted to .bc
 %.bc: %.c $(LL_BCS)
 	set -o pipefail; \
 	$(CLANG) -c $(CFLAGS) -emit-llvm -o - $< | \
@@ -60,18 +62,29 @@ $(BT_OBJS): %.o: %.c
 
 # we have to use -O2 here, otherwise the function will get a noinline attribute
 $(C_BCS): %.bc: %.c
-	$(CLANG) $(CFLAGS) -c -O2 -emit-llvm -o $@ $<
+	$(CLANG) $(CFLAGS) -S -c -O2 -emit-llvm -o - $< | \
+	sed -e '/define .* @_bal_eq/s/{/"gc-leaf-function" {/' \
+	-e '/define .* @_bal_exact_eq/s/{/"gc-leaf-function" {/' \
+	-e '/define .* @_bal_tagged_to_float/s/{/"gc-leaf-function" {/' \
+	-e '/define .* @_bal_int_to_tagged/s/{/"gc-leaf-function" {/' \
+	-e '/define .* @_bal_tagged_to_int/s/{/"gc-leaf-function" {/' \
+	-e '/define .* @_Barray__length/s/{/"gc-leaf-function" {/' \
+	-e '/define .* @_bal_list_has_type/s/{/"gc-leaf-function" {/' \
+	-e '/define .* @_Bmap__length/s/{/"gc-leaf-function" {/' \
+	-e '/define .* @_bal_mapping_has_type/s/{/"gc-leaf-function" {/' \
+	-e '/define .* @_Bstring__length/s/{/"gc-leaf-function" {/' \
+	-e '/define .* @_bal_string_eq/s/{/"gc-leaf-function" {/' | \
+	$(LLVM_AS) >$@
 
-$(LL_BCS): %.bc: %.ll
+$(LL_BCS): %.bc: %.ll # 1
 	set -o pipefail; \
 	$(CLANG) -x c /dev/null -emit-llvm -S -o - | grep "^target" | cat - $< | $(LLVM_AS) - -o=$@
 
 $(OBJS) $(BCS): $(INCLUDES)
 
 clean:
-	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB) $(LIST_OBJ) list.ll list_opt.ll
+	-rm -f $(OBJS) $(BCS) $(LIB) $(BCLIB)
 	$(MAKE) -C tests clean
-	$(MAKE) -C gc-roots clean
 
 .PHONY: test all
 # Ensure bogus files get deleted when there's an error

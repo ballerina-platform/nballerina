@@ -1,6 +1,6 @@
 declare i64 @llvm.lrint.i64.f64(double %Val)
 
-define zeroext i1 @_bal_float_eq(double %0, double %1) {
+define zeroext i1 @_bal_float_eq(double %0, double %1) "gc-leaf-function" {
   %3 = fcmp oeq double %0, %1
   %4 = fcmp uno double %0, 0.000000e+00
   %5 = fcmp uno double %1, 0.000000e+00
@@ -9,7 +9,7 @@ define zeroext i1 @_bal_float_eq(double %0, double %1) {
   ret i1 %7
 }
 
-define zeroext i1 @_bal_float_exact_eq(double %0, double %1) {
+define zeroext i1 @_bal_float_exact_eq(double %0, double %1) "gc-leaf-function" {
   %3 = bitcast double %0 to i64
   %4 = bitcast double %1 to i64
   %5 = fcmp uno double %0, 0.000000e+00
@@ -20,7 +20,7 @@ define zeroext i1 @_bal_float_exact_eq(double %0, double %1) {
   ret i1 %9
 }
 
-define { i64, i1 } @_bal_float_to_int(double %0) {
+define { i64, i1 } @_bal_float_to_int(double %0) "gc-leaf-function" {
   %2 = fcmp ult double %0, 0xC3E0000000000000
   %3 = fcmp ugt double %0, 0x43DFFFFFFFFFFFFF
   %4 = or i1 %2, %3
