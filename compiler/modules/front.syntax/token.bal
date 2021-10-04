@@ -250,18 +250,7 @@ class Tokenizer {
     }
 
     function currentEndPos() returns Position {
-        Token? tok = self.current();
-        if tok is Token {
-            int tokLen;
-            if tok is FixedToken {
-                tokLen = (<string>tok).length();
-            }
-            else {
-                tokLen = tok[1].length();
-            }
-            return createPosition(self.lineIndex, self.tokenStartCodePointIndex + tokLen);
-        }
-        panic error("no current token");
+        return createPosition(self.lineIndex, self.codePointIndex);
     }
 
     private function getFragment() returns string {
