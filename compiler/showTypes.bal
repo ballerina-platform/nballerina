@@ -42,7 +42,6 @@ function subtypeRels(front:SourcePart[] sources) returns string[]|err:Any|io:Err
 }
 
 function testSubtypes(front:SourcePart[] sources, string[] expected) returns boolean|err:Any|io:Error {
-    
     var [env, m] = check front:typesFromString(sources);
     var tc = t:typeContext(env);
     foreach var item in expected {
