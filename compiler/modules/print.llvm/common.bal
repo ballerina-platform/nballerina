@@ -62,7 +62,7 @@ public type FunctionType readonly & record {|
 |};
 
 public function functionType(RetType returnType, Type[] paramTypes) returns FunctionType {
-    return { returnType, paramTypes: paramTypes.cloneReadOnly()};
+    return { returnType, paramTypes: paramTypes.cloneReadOnly() };
 }
 
 // Corresponds to LLVMLinkage enum
