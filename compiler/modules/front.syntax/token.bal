@@ -379,8 +379,36 @@ public readonly class SourceFile {
         return [pos >> 32, pos & 0xFFFFFFFF];
     }
 
+    public function fragIndex(Position pos) returns int {
+        var [lineIndex, codePoint] = self.lineColumn(pos);
+        ScannedLine line = self.line(lineIndex);
+        int fragCodeIndex = 0;
+        int fragmentIndex = 0;
+        int i = 0;
+        FragCode[] fragCodes = line.fragCodes;
+        while (i < codePoint) {
+            FragCode fragCode = fragCodes[fragCodeIndex];
+            fragCodeIndex += 1;
+            if fragCode <= VAR_FRAG_MAX {
+                string fragment = line.fragments[fragmentIndex];
+                fragmentIndex += 1;
+                i += fragment.length();
+            }
+            else if fragCode >= FRAG_FIXED_TOKEN {
+                FixedToken? ft = fragTokens[fragCode];
+                i += (<string>ft).length();
+
+            }
+            else {
+                i += 1;
+            }
+
+        }
+        return fragmentIndex - 1;
+    }
+
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
-    
+
     function line(int index) returns readonly & ScannedLine {
         return self.lines[index - 1];
     }

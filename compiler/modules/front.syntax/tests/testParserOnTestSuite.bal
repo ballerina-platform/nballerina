@@ -32,8 +32,8 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 topLevelDefnPos = topLevelDefnPos.sort();
                 err:Position lastEnd = 1<<32;
                 foreach var [startPos, endPos] in topLevelDefnPos {
-                    test:assertTrue(startPos >= lastEnd, "overlapping top level definitions");
-                    test:assertTrue(startPos <= endPos, "invalid start and end positions");
+                    test:assertTrue((startPos == (1<<32)) || (startPos >= lastEnd), "overlapping top level definitions");
+                    test:assertTrue(startPos < endPos, "invalid start and end positions");
                     SourceFile file = part.file;
                     var [stLine, stCol] = file.lineColumn(startPos);
                     var [endLine, endCol] = file.lineColumn(lastEnd);
@@ -69,8 +69,8 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
     err:LineColumn end = file.lineColumn(endPos);
     int startLineIndex = st[0];
     int endLineIndex = end[0];
-    int startFragIndex = fragIndex(st, file.line(startLineIndex));
-    int endFragIndex = fragIndex(end, file.line(endLineIndex));
+    int startFragIndex = file.fragIndex(startPos);
+    int endFragIndex = file.fragIndex(endPos);
     int lineIndex = startLineIndex;
     int i = st[1];
     while lineIndex <= endLineIndex {
@@ -89,32 +89,4 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
         lineIndex += 1;
     }
     return true; // start == end
-}
-
-function fragIndex(err:LineColumn lineColumn, ScannedLine line) returns int {
-    int codePoint = lineColumn[1];
-    int fragCodeIndex = 0;
-    int fragmentIndex = 0;
-    int i = 0;
-    Mode mode = MODE_NORMAL;
-    FragCode[] fragCodes = line.fragCodes;
-    while (i < codePoint) {
-        FragCode fragCode = fragCodes[fragCodeIndex];
-        fragCodeIndex += 1;
-        if fragCode <= VAR_FRAG_MAX {
-            string fragment = line.fragments[fragmentIndex];
-            fragmentIndex += 1;
-            i += fragment.length();
-        }
-        else if fragCode >= FRAG_FIXED_TOKEN {
-            FixedToken? ft = fragTokens[fragCode];
-            i += (<string>ft).length();
-
-        }
-        else {
-            i += 1;
-        }
-
-    }
-    return fragmentIndex - 1;
 }
