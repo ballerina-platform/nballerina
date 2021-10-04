@@ -397,7 +397,7 @@ public class Module {
     function outputGlobalVar(PointerValue val, GlobalProperties prop, Output out){
         string[] words = [];
         words.push(<string> val.operand, "=");
-        if prop.initializer is Value {
+        if !(prop.initializer is ()) {
             if prop.linkage == "internal"{
                 words.push(prop.linkage);
             }
@@ -416,9 +416,12 @@ public class Module {
             words.push("global");
         }
         words.push(typeToString(val.ty.pointsTo, self.context));
-        ConstValue? initializer = prop.initializer;
+        var initializer = prop.initializer;
         if initializer is ConstValue {
             words.push(<string>initializer.operand);
+        }
+        else if initializer is Function {
+            words.push("@" + initializer.functionName);
         }
         if prop.align is int {
             words.push(",", "align", prop.align.toString());
@@ -1376,6 +1379,19 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
         typeStringBody.push("x");
         typeStringBody.push(typeToString(ty.elementType, context));
         typeStringBody.push("]");
+        return createLine(typeStringBody, "");
+    }
+    else if ty is FunctionType {
+        string[] typeStringBody = [];
+        typeStringBody.push(typeToString(ty.returnType, context), "(");
+        foreach int i in 0 ..< ty.paramTypes.length() {
+            final Type paramType = ty.paramTypes[i];
+            if i > 0 {
+                typeStringBody.push(",");
+            }
+            typeStringBody.push(typeToString(paramType, context));
+        }
+        typeStringBody.push(")");
         return createLine(typeStringBody, "");
     }
     else {
