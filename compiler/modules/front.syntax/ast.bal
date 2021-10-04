@@ -52,8 +52,10 @@ public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|BinaryExpr|Unar
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
+public const WILDCARD = "_";
+
 public type AssignStmt record {|
-    LExpr lValue;
+    LExpr|WILDCARD lValue;
     Expr expr;
 |};
 
