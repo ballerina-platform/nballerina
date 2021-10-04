@@ -165,20 +165,14 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             // JBUG should not need cast #30191
             return <LeafTypeDesc>cur;
         }
-        "string" => {
+        var prefix if prefix == "string" || prefix == "int" => {
+            Position pos = tok.currentPos();
             check tok.advance();
             if tok.current() != ":" {
-                return "string";
+                return prefix;
             }
             check tok.advance();
-            var name = check tok.expectIdentifier();
-            if name == "Char" {
-                return "char";
-            }
-            else {
-                return tok.err(`unrecognized string subtype ${name}`);
-            }
-            // match falls through to parseError
+            return { prefix, typeName: check tok.expectIdentifier(), pos };
         }
         "byte" => {
             check tok.advance();
@@ -200,19 +194,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }        
         "record" => {
             return parseRecordTypeDesc(tok);         
-        }
-        "int" => {
-            check tok.advance();
-            if tok.current() != ":" {
-                return "int";
-            }
-            check tok.advance();
-            var name = check tok.expectIdentifier();
-            BuiltinIntSubtypeDesc? desc = BUILTIN_INT_SUBTYPES[name];
-            if !(desc is ()) {
-                return desc;
-            }
-            return tok.err("unrecognized integer subtype '" + name + "'");
         }
         [IDENTIFIER, var identifier] => {
             Position pos = tok.currentPos();
