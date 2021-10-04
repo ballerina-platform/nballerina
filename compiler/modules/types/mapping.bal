@@ -384,6 +384,33 @@ class MappingPairing {
     private function curName2() returns string => self.names2[self.i2];
 }
 
+function bddMappingMemberType(Context cx, Bdd b, string? key, SemType accum) returns SemType {
+    if b is boolean {
+        return b ? accum : NEVER;
+    }
+    else {
+        return union(bddMappingMemberType(cx, b.left, key,
+                                          intersect(mappingAtomicMemberType(cx.mappingAtomType(b.atom), key),
+                                                    accum)),
+                     union(bddMappingMemberType(cx, b.middle, key, accum),
+                           bddMappingMemberType(cx, b.right, key, accum)));
+    }
+}
+
+function mappingAtomicMemberType(MappingAtomicType atomic, string? key) returns SemType {
+    if key != () {
+        int? i = atomic.names.indexOf(key);
+        if i != () {
+            return atomic.types[i];
+        }
+        return atomic.rest;
+    }
+    SemType m = atomic.rest;
+    foreach var ty in atomic.types {
+        m = union(m, ty);
+    }
+    return m;
+}
 
 final UniformTypeOps mappingRoOps = {
     union: bddSubtypeUnion,

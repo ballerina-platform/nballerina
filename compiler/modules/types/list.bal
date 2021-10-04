@@ -173,6 +173,10 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             }
         }
     }
+    // Ensure that we can use isNever on rest in listInhabited
+    if rest !== NEVER && isEmpty(cx, rest) {
+        rest = NEVER;
+    }
     return !listInhabited(cx, members, rest, neg);
 }
 
@@ -241,6 +245,85 @@ function listInhabited(Context cx, SemType[] members, SemType rest, Conjunction?
         // This is correct for length 0, because we know that the length of the
         // negative is 0, and [] - [] is empty.
         return false;
+    }
+}
+
+function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns SemType {
+    if b is boolean {
+        return b ? accum : NEVER;
+    }
+    else {
+        ListAtomicType atomic = cx.listAtomType(b.atom);
+        SemType m = atomic.rest;
+        foreach var ty in atomic.members {
+            m = union(m, ty);
+        }
+        return union(bddListMemberType(cx, b.left, key,
+                                       intersect(listAtomicMemberType(cx.listAtomType(b.atom), key),
+                                                 accum)),
+                     union(bddListMemberType(cx, b.middle, key, accum),
+                           bddListMemberType(cx, b.right, key, accum)));
+    }
+}
+
+function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
+    if key != () {
+        if key < 0 {
+            return NEVER;
+        }
+        else if key < atomic.members.length() {
+            return atomic.members[key];
+        }
+        return atomic.rest;
+    }
+    SemType m = atomic.rest;
+    foreach var ty in atomic.members {
+        m = union(m, ty);
+    }
+    return m;
+}
+
+// Untested code for phi^x in AMK tutorial generalized for list types.
+// Precondition k >= 0 and members[i] not empty for all i
+// This finds the projection of e[k], excluding the list of atoms in neg
+// when the type of e is given by members and rest.
+// This is based on listInhabited
+function listProjExclude(Context cx, int k, SemType[] members, SemType rest, Conjunction? neg) returns SemType {
+    if neg is () {
+        return k < members.length() ? members[k] : rest;
+    }
+    else {
+        int len = members.length();
+        ListAtomicType nt = cx.listAtomType(neg.atom);
+        int negLen = nt.members.length();
+        if len < negLen {
+            if isNever(rest) {
+                return listProjExclude(cx, k, members, rest, neg.next);
+            }            
+            foreach int i in len ..< negLen {
+                members.push(rest);
+            }
+            len = negLen;
+        }
+        else if negLen < len && isNever(nt.rest) {
+            return listProjExclude(cx, k, members, rest, neg.next);
+        }
+        // now we have nt.members.length() <= len
+        SemType p = NEVER;
+        foreach int i in 0 ..< len {
+            SemType ntm = i < negLen ? nt.members[i] : nt.rest;
+            SemType d = diff(members[i], ntm);
+            if !isEmpty(cx, d) {
+                SemType[] s = shallowCopyTypes(members);
+                s[i] = d;
+                p = union(p, listProjExclude(cx, k, s, rest, neg.next));
+            }     
+        }
+        SemType rd = diff(rest, nt.rest);
+        if !isEmpty(cx, rd) {
+            p = union(p, listProjExclude(cx, k, members, rd, neg.next));
+        }
+        return p;
     }
 }
 

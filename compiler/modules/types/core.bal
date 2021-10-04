@@ -463,6 +463,9 @@ public function union(SemType t1, SemType t2) returns SemType {
         if t2 is UniformTypeBitSet {
             return t1|t2;
         }
+        else if t1 == 0 {
+            return t2;
+        }
         else {
             all2 = t2.all;
             some2 = t2.some;
@@ -474,6 +477,9 @@ public function union(SemType t1, SemType t2) returns SemType {
         all1 = t1.all;
         some1 = t1.some;
         if t2 is UniformTypeBitSet {
+            if t2 == 0 {
+                return t1;
+            }
             all2 = t2;
             some2 = 0;
         }
@@ -816,6 +822,20 @@ function bddListSimpleMemberType(Env env, Bdd bdd) returns UniformTypeBitSet? {
     return ();
 }
 
+// This computes the spec operation called "member type of K in T",
+// for the case when T is a subtype of list, and K is either `int` or a singleton int.
+// This is what Castagna calls projection.
+// We will extend this to allow `key` to be a SemType, which will turn into an IntSubtype.
+public function listMemberType(Context cx, SemType t, int? key = ()) returns SemType {
+    if t is UniformTypeBitSet {
+        return (t & LIST) != 0 ? TOP : NEVER;
+    }
+    else {
+        return union(bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), key, TOP),
+                     bddListMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), key, TOP));
+    }
+}
+
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
 public function simpleMapMemberType(Context cx, SemType t, boolean strict = false) returns UniformTypeBitSet? {
@@ -856,6 +876,20 @@ function bddMappingSimpleMemberType(Env env, Bdd bdd) returns UniformTypeBitSet?
         }
     }
     return ();
+}
+
+// This computes the spec operation called "member type of K in T",
+// for when T is a subtype of mapping, and K is either `string` or a singleton string.
+// This is what Castagna calls projection.
+// We will extend this to allow `key` to be a SemType, which will turn into a StringSubtype.
+public function mappingMemberType(Context cx, SemType t, string? key = ()) returns SemType {
+    if t is UniformTypeBitSet {
+        return (t & MAPPING) != 0 ? TOP : NEVER;
+    }
+    else {
+        return union(bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), key, TOP),
+                     bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), key, TOP));
+    }
 }
 
 public type Value readonly & record {|
