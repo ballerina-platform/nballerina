@@ -24,6 +24,10 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return finishIdentifierStmt(tok, identifier, pos);
         }
+        "_" => {
+            check tok.advance();
+            return finishAssignStmt(tok, WILDCARD);
+        }
         "return" => {
             check tok.advance();
             return parseReturnStmt(tok);
@@ -208,7 +212,7 @@ function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword) 
     return parseError(tok, "function call, method call or checking expression expected");
 }
 
-function finishAssignStmt(Tokenizer tok, LExpr lValue) returns AssignStmt|err:Syntax {
+function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue) returns AssignStmt|err:Syntax {
     check tok.advance();
     Expr expr = check parseExpr(tok);
     AssignStmt stmt = { lValue, expr };
