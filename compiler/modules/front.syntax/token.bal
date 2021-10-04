@@ -304,6 +304,12 @@ class Tokenizer {
         }
     }
 
+    function expectLast(SingleCharDelim|MultiCharDelim|Keyword tok) returns Position|err:Syntax {
+        Position pos = self.currentEndPos();
+        check self.expect(tok);
+        return pos;
+    }
+
     function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns err:Syntax? {
         if self.curTok != tok {
             err:Template msg;

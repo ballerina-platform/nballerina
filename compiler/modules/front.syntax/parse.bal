@@ -141,8 +141,7 @@ function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis, Pos
     Position namePos = tok.currentStartPos();
     string name = check tok.expectIdentifier();
     TypeDesc td = check parseTypeDesc(tok);
-    Position endPos = tok.currentEndPos();
-    check tok.expect(";");
+    Position endPos = check tok.expectLast(";");
     return { startPos, endPos, name, td, namePos, vis, part };
 }
 
@@ -158,8 +157,7 @@ function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis, Po
     string name = check tok.expectIdentifier();
     check tok.expect("=");
     Expr expr = check parseInnerExpr(tok);
-    Position endPos = tok.currentEndPos();
-    check tok.expect(";");
+    Position endPos = check tok.expectLast(";");
     return { startPos, endPos, td, name, expr, namePos, vis, part };
 }
 
