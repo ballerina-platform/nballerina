@@ -76,7 +76,7 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
     while lineIndex <= endLineIndex {
         ScannedLine line = file.line(lineIndex);
         while i < line.fragments.length() {
-            if lineIndex >= endLineIndex && i >= endFragIndex {
+            if lineIndex >= endLineIndex && i > endFragIndex {
                 return true;
             }
             FragCode frag = line.fragCodes[i];
