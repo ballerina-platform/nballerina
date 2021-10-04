@@ -156,14 +156,15 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             // JBUG should not need cast #30191
             return <LeafTypeDesc>cur;
         }
-        var prefix if prefix == "string" || prefix == "int" => {
+        "string"
+        |"int" => {
             Position pos = tok.currentPos();
             check tok.advance();
             if tok.current() != ":" {
-                return prefix;
+                return <LeafTypeDesc> cur;
             }
             check tok.advance();
-            return { prefix, typeName: check tok.expectIdentifier(), pos };
+            return { prefix: <LeafTypeDesc> cur, typeName: check tok.expectIdentifier(), pos };
         }
         "byte" => {
             check tok.advance();

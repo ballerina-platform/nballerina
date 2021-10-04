@@ -32,7 +32,7 @@ public function stringConst(string value) returns SemType {
     return uniformSubtype(UT_STRING, { char, nonChar });
 }
 
-public function stringChar() returns SemType {
+function stringChar() returns SemType {
     StringSubtype st = {
         char: { allowed: false, values: [] }, 
         nonChar: { allowed: true, values: [] }
@@ -75,11 +75,9 @@ function stringSubtypeContains(SubtypeData d, string s) returns boolean {
     }
     StringSubtype st = <StringSubtype>d;
     var { char, nonChar } = st;
-
     if s.length() == 1 {
         return char.values.indexOf(<string:Char>s) != () ? char.allowed : !char.allowed;
     }
-
     return nonChar.values.indexOf(s) != () ? nonChar.allowed : !nonChar.allowed;
 }
 
@@ -133,8 +131,8 @@ function stringSubtypeComplement(SubtypeData d) returns SubtypeData {
         }
     }
     return createStringSubtype(
-        { allowed: !char.allowed, values: char.values.cloneReadOnly() },
-        { allowed: !nonChar.allowed, values: nonChar.values.cloneReadOnly() }
+        { allowed: !char.allowed, values: char.values },
+        { allowed: !nonChar.allowed, values: nonChar.values }
     );
 }
 

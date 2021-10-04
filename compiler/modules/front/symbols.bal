@@ -13,7 +13,7 @@ type ModuleSymbols record {|
 |};
 
 type Import record {|
-    s:ImportDecl decl;
+    s:ImportDecl decl?;
     bir:ModuleId moduleId;
     ModuleExports defns;
     // This is when we haven't implemented everything in the module.
@@ -24,8 +24,6 @@ type Import record {|
 public type ExportedDefn bir:FunctionSignature|t:SemType|s:ResolvedConst;
 
 public type ModuleExports readonly & map<ExportedDefn>;
-
-final map<Import> implicitImports = {};
 
 function symbolToString(ModuleSymbols mod, int partIndex, bir:Symbol sym) returns string {
     string prefix;
@@ -94,7 +92,7 @@ function moduleIdToString(bir:ModuleId id) returns string {
 }
 
 function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix) returns Import|err:Semantic {
-    Import? implicitImport = lookupImplicitImport(prefix);
+    Import? implicitImport = autoImportPrefixes[prefix];
     if implicitImport != () {
         return  implicitImport;
     }
@@ -114,23 +112,4 @@ function lookupImportedConst(ModuleSymbols mod, s:ModuleLevelDefn modDefn, strin
         return defn[1];
     }
     return err:semantic(`${prefix + ":" + varName} is not defined as a public const`, loc=s:locationInDefn(modDefn), functionName=modDefn.name);
-}
-
-function lookupImplicitImport(string prefix) returns Import? {
-    Import? 'import = implicitImports[prefix];
-    if 'import == () {
-        ModuleExportSemtypes? defns = predefinedSubtypes[prefix];
-        if defns != () {
-            bir:ModuleId moduleId = { org: "ballerina", names: ["lang", prefix] };
-            Import im = {
-                decl: { ...moduleId, prefix, pos: 0, partIndex: 0 },
-                moduleId,
-                defns,
-                partial: true
-            };
-            implicitImports[prefix] = im;
-            'import = im;
-        }
-    }
-    return 'import;
 }

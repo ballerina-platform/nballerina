@@ -165,8 +165,6 @@ function loadSourcePart(SourcePart part, int i) returns s:SourceFile|io:Error {
 }
 
 final bir:ModuleId BALLERINA_IO = { org: "ballerina", names: ["io"] };
-final bir:ModuleId BALLERINA_LANG_INT = { org: "ballerina", names: ["lang", "int"] };
-final bir:ModuleId BALLERINA_LANG_STRING = { org: "ballerina", names: ["lang", "string"] };
 
 function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] resolvedImports, s:SourceFile[] files, map<Import>[] partPrefixes) returns err:Any? {
     ModuleIdImports[] importsById = scanned.importsById;
@@ -176,14 +174,6 @@ function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] res
         boolean partial;
         if moduleId == BALLERINA_IO {
             resolved = ioLibFunctions;
-            partial = true;
-        }
-        else if moduleId == BALLERINA_LANG_INT {
-            resolved = predefinedSubtypes["int"];
-            partial = true;
-        }
-        else if moduleId == BALLERINA_LANG_STRING {
-            resolved = predefinedSubtypes["string"];
             partial = true;
         }
         else {

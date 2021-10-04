@@ -28,16 +28,24 @@ final readonly & map<bir:FunctionSignature> ioLibFunctions = {
 
 type ModuleExportSemtypes readonly & map<t:SemType>;
 
-final readonly & map<ModuleExportSemtypes> predefinedSubtypes = {
-    'int: {
-        Signed8: t:intWidthSigned(8),
-        Signed16: t:intWidthSigned(16),
-        Signed32: t:intWidthSigned(32),
-        Unsigned8:  t:BYTE,
-        Unsigned16: t:intWidthUnsigned(16),
-        Unsigned32: t:intWidthUnsigned(32)
+final readonly & map<Import> autoImportPrefixes = {
+    "int": {
+        moduleId: {org: "ballerina", names: ["lang", "int"]},
+        defns: {
+            Signed8: t:intWidthSigned(8),
+            Signed16: t:intWidthSigned(16),
+            Signed32: t:intWidthSigned(32),
+            Unsigned8: t:BYTE,
+            Unsigned16: t:intWidthUnsigned(16),
+            Unsigned32: t:intWidthUnsigned(32)
+        },
+        partial: true
     },
-    'string: {
-        Char: t:CHAR
+    "string": {
+        moduleId: {org: "ballerina", names: ["lang", "string"]},
+        defns: {
+            Char: t:STRING_CHAR
+        },
+        partial: true
     }
 };
