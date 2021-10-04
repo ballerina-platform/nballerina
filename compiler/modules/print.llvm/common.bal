@@ -108,7 +108,7 @@ public type GlobalProperties record {|
     *GlobalSymbolProperties;
     boolean isConstant = false;
     int? align = ();
-    ConstValue? initializer = ();
+    ConstValue|Function? initializer = ();
 |};
 
 // Corresponds to LLVMDWARFSourceLanguage
