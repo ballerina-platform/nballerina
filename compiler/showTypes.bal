@@ -47,10 +47,7 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns boo
     foreach var item in expected {
         int? i1 = item.indexOf(" < ");
         if i1 is int {
-            string n1 = item.substring(0, i1);
-            string n2 = item.substring(i1 + 3);
-            t:SemType t1 = m.entries().get(n1)[1];
-            t:SemType t2 = m.entries().get(n2)[1];
+            var [t1, t2] = extractSemtypes(item, i1, 0, m);
             if !t:isSubtype(tc, t1, t2) || t:isSubtype(tc, t2, t1) {
                 return false;
             }
@@ -58,10 +55,7 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns boo
         }
         int? i2 = item.indexOf(" <> ");
         if i2 is int {
-            string n1 = item.substring(0, i2);
-            string n2 = item.substring(i2 + 4);
-            t:SemType t1 = m.entries().get(n1)[1];
-            t:SemType t2 = m.entries().get(n2)[1];
+            var [t1, t2] = extractSemtypes(item, i2, 1, m);
             if t:isSubtype(tc, t1, t2) || t:isSubtype(tc, t2, t1) {
                 return false;
             }
@@ -69,10 +63,7 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns boo
         }
         int? i3 = item.indexOf(" = ");
         if i3 is int {
-            string n1 = item.substring(0, i3);
-            string n2 = item.substring(i3 + 3);
-            t:SemType t1 = m.entries().get(n1)[1];
-            t:SemType t2 = m.entries().get(n2)[1];
+            var [t1, t2] = extractSemtypes(item, i3, 0, m);
             if !t:isSubtype(tc, t1, t2) || !t:isSubtype(tc, t2, t1) {
                 return false;
             }
@@ -80,4 +71,12 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns boo
         }
     }
     return true;
+}
+
+function extractSemtypes(string item, int i, int skip, map<t:SemType> m) returns t:SemType[2] {
+    string n1 = item.substring(0, i);
+    string n2 = item.substring(i + 3 + skip);
+    t:SemType t1 = m.entries().get(n1)[1];
+    t:SemType t2 = m.entries().get(n2)[1];
+    return [t1, t2];
 }
