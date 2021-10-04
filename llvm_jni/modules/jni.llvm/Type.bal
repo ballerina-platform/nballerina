@@ -20,6 +20,12 @@ function typeToLLVMType(RetType ty, Context? context) returns handle {
         handle elementType = typeToLLVMType(ty.elementType, context);
         return jLLVMArrayType(elementType, ty.elementCount);
     }
+    if ty is FunctionType {
+        handle returnType = typeToLLVMType(ty.returnType, context);
+        PointerPointer paramTypeArr = PointerPointerFromTypes(ty.paramTypes, context);
+        int paramTypeLen = ty.paramTypes.length();
+        return jLLVMFunctionType(returnType, paramTypeArr.jObject, paramTypeLen, 0);
+    }
     match ty {
         "void" => {
             return jLLVMVoidType();

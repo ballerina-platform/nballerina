@@ -40,7 +40,7 @@ public distinct class Module {
     }
 
     function addFunction(string fnName, FunctionType fnType) returns Function {
-        handle llvmFunction = jLLVMAddFunction(self.LLVMModule, java:fromString(fnName), toLLVmFunctionType(fnType, self.context));
+        handle llvmFunction = jLLVMAddFunction(self.LLVMModule, java:fromString(fnName), typeToLLVMType(fnType, self.context));
         Function fn = new (llvmFunction, fnType, self.context);
         return fn;
     }

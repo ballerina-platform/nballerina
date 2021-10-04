@@ -1,14 +1,5 @@
 import ballerina/jballerina.java;
 
-function toLLVmFunctionType(FunctionType fnType, Context context) returns handle {
-    int paramCount = fnType.paramTypes.length();
-    PointerPointer paramType = new (paramCount);
-    foreach var ty in fnType.paramTypes {
-        paramType.put(typeToLLVMType(ty, context));
-    }
-    return jLLVMFunctionType(typeToLLVMType(fnType.returnType, context), paramType.jObject, paramCount, 0);
-}
-
 // LLVM C-API don't differentiate between function declarations and definitions
 public type FunctionDefn Function;
 
