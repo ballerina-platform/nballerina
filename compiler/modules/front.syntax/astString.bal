@@ -117,7 +117,13 @@ function stmtToWords(Word[] w, Stmt stmt) {
         w.push(";");
     }
     else if stmt is AssignStmt {
-        exprToWords(w, stmt.lValue);
+        LExpr|WILDCARD lValue = stmt.lValue;
+        if lValue is WILDCARD {
+            w.push(WILDCARD);
+        }
+        else {
+            exprToWords(w, lValue);
+        }
         w.push("=");
         exprToWords(w, stmt.expr);
         w.push(";");

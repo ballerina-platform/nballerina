@@ -50,7 +50,7 @@ function getTypeAtIndex(StructType ty, int index) returns Type {
     return ty.elementTypes[index];
 }
 
-public type Type IntType|FloatType|PointerType|StructType|ArrayType;
+public type Type IntType|FloatType|PointerType|StructType|ArrayType|FunctionType;
 
 // A RetType is valid only as the return type of a function
 public type RetType Type|"void";
@@ -60,6 +60,10 @@ public type FunctionType readonly & record {|
     RetType returnType;
     Type[] paramTypes;
 |};
+
+public function functionType(RetType returnType, Type[] paramTypes) returns FunctionType {
+    return { returnType, paramTypes: paramTypes.cloneReadOnly() };
+}
 
 // Corresponds to LLVMLinkage enum
 public type Linkage "internal"|"external";
@@ -104,7 +108,7 @@ public type GlobalProperties record {|
     *GlobalSymbolProperties;
     boolean isConstant = false;
     int? align = ();
-    ConstValue? initializer = ();
+    ConstValue|Function? initializer = ();
 |};
 
 // Corresponds to LLVMDWARFSourceLanguage

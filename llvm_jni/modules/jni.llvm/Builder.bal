@@ -278,7 +278,7 @@ public distinct class Builder {
     public function call(Function fn, Value[] args, string? name = ()) returns Value? {
         string reg = self.extractName(name);
         PointerPointer arr = PointerPointerFromValues(args);
-        return new (jLLVMBuildCall(self.LLVMBuilder, fn.LLVMFunction, arr.jObject, args.length(), java:fromString(reg)));
+        return new (jLLVMBuildCall(self.LLVMBuilder, fn.LLVMValueRef, arr.jObject, args.length(), java:fromString(reg)));
     }
 
     public function extractValue(Value value, int index, string? name = ()) returns Value {

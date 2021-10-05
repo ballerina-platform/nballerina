@@ -195,8 +195,8 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
     if !vc.isSubtype(insn.list.semType, t:LIST) {
         return vc.err("list get applied to non-list");
     }
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeContext(), insn.list.semType);
-    if memberType == () || !vc.isSubtype(memberType, insn.result.semType) {
+    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.list.semType);
+    if !vc.isSubtype(memberType, insn.result.semType) {
         return vc.err("bad BIR: unsafe type for result ListGet", pos=insn.position);
     }
 }
@@ -220,8 +220,8 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping get applied to non-mapping");
     }
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeContext(), insn.operands[0].semType);
-    if memberType == () || !vc.isSubtype(t:union(memberType, t:NIL), insn.result.semType) {
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType);
+    if !vc.isSubtype(t:union(memberType, t:NIL), insn.result.semType) {
         return vc.err("bad BIR: unsafe type for result MappingGet");
     }
 }

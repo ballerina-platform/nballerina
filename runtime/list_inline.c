@@ -27,7 +27,7 @@ bool _bal_list_has_type(TaggedPtr p, ListDesc desc) {
     return (lp->desc & ~desc) == 0;
 }
 
-TaggedPtr _bal_list_exactify(TaggedPtr p, MappingDesc desc) {
+TaggedPtr _bal_list_exactify(TaggedPtr p, ListDesc desc) {
     ListPtr lp = taggedToPtr(p);
     if (lp == taggedToPtrExact(p) && (lp->desc == desc)) {
         // exact bit is not set, but should be

@@ -22,6 +22,7 @@ class CompileContext {
     private final LlvmContext llContext = new;
     private final nback:Options nbackOptions;
     private final string? outputBasename;
+    private final nback:ProgramModule[] programModules = [];
 
 
     final t:Env env = new;
@@ -37,8 +38,14 @@ class CompileContext {
         self.nbackOptions = nbackOptions;
     }
 
-    function buildModule(bir:Module birMod) returns LlvmModule|CompileError {
-        return nback:buildModule(birMod, self.llContext, self.nbackOptions);
+    function buildModule(bir:ModuleId id, bir:Module birMod) returns LlvmModule|CompileError {
+        var [llMod, typeUsage] = check nback:buildModule(birMod, self.llContext, self.nbackOptions);
+        self.programModules.push({ id, typeUsage });
+        return llMod;
+    }
+
+    function buildInitModule(map<bir:FunctionSignature> publicFuncs) returns LlvmModule|CompileError {
+        return nback:buildInitModule(self.llContext, self.env, self.programModules.reverse(), publicFuncs);
     }
 
     function job(bir:ModuleId id) returns Job {
@@ -69,6 +76,7 @@ function compileBalFile(string filename, string basename, string? outputBasename
     CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions);
     front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename());
     check mod.validMain();
+    check generateInitModule(cx, mod);
 }
 
 function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] sourceParts, string? outFilename) returns front:ResolvedModule|CompileError {
@@ -81,7 +89,7 @@ function processModule(CompileContext cx, bir:ModuleId id, front:SourcePart[] so
         resolvedImports.push(ri);
     }
     front:ResolvedModule mod = check front:resolveModule(scanned, cx.env, resolvedImports);
-    LlvmModule llMod = check cx.buildModule(mod);
+    LlvmModule llMod = check cx.buildModule(id, mod);
     if outFilename != () {
         check outputModule(llMod, outFilename, cx.outputOptions);
     }
@@ -148,4 +156,22 @@ function subModuleSourceParts(string basename, bir:ModuleId id) returns front:So
 
 function subModuleSuffix(bir:ModuleId id) returns string {
     return ".".'join(...id.names.slice(1));
+}
+
+function generateInitModule(CompileContext cx, front:ResolvedModule entryMod) returns CompileError? {
+    LlvmModule initMod = check cx.buildInitModule(filterFuncs(entryMod.getExports()));
+    string? initOutFilename = cx.outputFilename("._init");
+    if initOutFilename != () {
+        check outputModule(initMod, initOutFilename, cx.outputOptions);
+    }
+}
+
+function filterFuncs(front:ModuleExports defns) returns map<bir:FunctionSignature> {
+    map<bir:FunctionSignature> result = {};
+    foreach var [name, defn] in defns.entries() {
+        if defn is bir:FunctionSignature {
+            result[name] = defn;
+        }
+    }
+    return result;
 }

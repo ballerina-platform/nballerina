@@ -1,8 +1,9 @@
-import wso2/nballerina.err;
 import wso2/nballerina.bir;
 import wso2/nballerina.print.llvm;
+import wso2/nballerina.types as t;
 
-public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns llvm:Module|BuildError {
+
+public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
     bir:ModuleId modId = birMod.getId();
     llvm:Module llMod = llContext.createModule();
     bir:File[] partFiles = birMod.getPartFiles();
@@ -17,7 +18,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
     map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
         bir:File defnFile = partFiles[defn.partIndex];
-        llvm:FunctionType ty = check buildFunctionSignature(defn.signature, err:location(defnFile, defn.position));
+        llvm:FunctionType ty = buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
         string mangledName = mangleInternalSymbol(modId, symbol);
@@ -39,6 +40,7 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
     llvm:Builder builder = llContext.createBuilder();
     Module mod = {
         bir: birMod,
+        modId,
         llContext,
         llMod,
         partFiles,
@@ -57,9 +59,25 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         check buildFunctionBody(builder, scaffold, code);
     }
     check birMod.finish();
-    return llMod;
+    return [llMod, createTypeUsage(mod.usedSemTypes)];
 }
 
+function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
+    byte[] uses = [];
+    t:SemType[] types = [];
+    foreach var used in usedSemTypes {
+        types.push(used.semType);
+        byte use = 0;
+        if !(used.inherentType is ()) {
+            use = USED_INHERENT_TYPE;
+        }
+        if !(used.typeTest is ()) {
+            use |= USED_TYPE_TEST;
+        }
+        uses.push(use);
+    }
+    return { types: types.cloneReadOnly(), uses: uses.cloneReadOnly() };
+}
 
 function createModuleDI(llvm:Module mod, bir:File[] partFiles) returns ModuleDI {
     DIBuilder builder = mod.createDIBuilder();

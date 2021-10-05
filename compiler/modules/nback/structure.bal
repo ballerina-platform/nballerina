@@ -42,7 +42,7 @@ final RuntimeFunction mappingConstructFunction = {
     name: "mapping_construct",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: ["i64", "i64"]
+        paramTypes: [llvm:pointerType(llInherentType), "i64"]
     },
     attrs: []
 };
@@ -133,8 +133,9 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
     int length = insn.operands.length();
     t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeContext(), insn.result.semType);
+    llvm:ConstPointerValue inherentType = scaffold.getInherentType(insn.result.semType);
     llvm:PointerValue m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
-                                                          [llvm:constInt(LLVM_INT, memberType), llvm:constInt(LLVM_INT, length)]);
+                                                          [inherentType, llvm:constInt(LLVM_INT, length)]);
     foreach int i in 0 ..< length {
         _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingInitMemberFunction),
                          [

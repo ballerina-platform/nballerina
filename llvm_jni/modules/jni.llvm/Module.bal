@@ -40,7 +40,7 @@ public distinct class Module {
     }
 
     function addFunction(string fnName, FunctionType fnType) returns Function {
-        handle llvmFunction = jLLVMAddFunction(self.LLVMModule, java:fromString(fnName), toLLVmFunctionType(fnType, self.context));
+        handle llvmFunction = jLLVMAddFunction(self.LLVMModule, java:fromString(fnName), typeToLLVMType(fnType, self.context));
         Function fn = new (llvmFunction, fnType, self.context);
         return fn;
     }
@@ -143,8 +143,8 @@ public distinct class Module {
 
     public function addGlobal(Type ty, string name, *GlobalProperties props) returns ConstPointerValue {
         PointerValue val =  new (jLLVMAddGlobalInAddressSpace(self.LLVMModule, typeToLLVMType(ty, self.context), java:fromString(name), props.addressSpace));
-        if props.initializer is ConstValue {
-            ConstValue initializer = <ConstValue>props.initializer;
+        var initializer = props.initializer;
+        if !(initializer is ()) {
             jLLVMSetInitializer(val.LLVMValueRef, initializer.LLVMValueRef);
         }
         self.setGlobalSymbolProperties(val, props);

@@ -172,6 +172,10 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 return true;
             }
         }
+        // Ensure that we can use isNever on rest in listInhabited
+        if rest !== NEVER && isEmpty(cx, rest) {
+            rest = NEVER;
+        }
     }
     return !listInhabited(cx, members, rest, neg);
 }
@@ -242,6 +246,41 @@ function listInhabited(Context cx, SemType[] members, SemType rest, Conjunction?
         // negative is 0, and [] - [] is empty.
         return false;
     }
+}
+
+function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns SemType {
+    if b is boolean {
+        return b ? accum : NEVER;
+    }
+    else {
+        ListAtomicType atomic = cx.listAtomType(b.atom);
+        SemType m = atomic.rest;
+        foreach var ty in atomic.members {
+            m = union(m, ty);
+        }
+        return union(bddListMemberType(cx, b.left, key,
+                                       intersect(listAtomicMemberType(cx.listAtomType(b.atom), key),
+                                                 accum)),
+                     union(bddListMemberType(cx, b.middle, key, accum),
+                           bddListMemberType(cx, b.right, key, accum)));
+    }
+}
+
+function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
+    if key != () {
+        if key < 0 {
+            return NEVER;
+        }
+        else if key < atomic.members.length() {
+            return atomic.members[key];
+        }
+        return atomic.rest;
+    }
+    SemType m = atomic.rest;
+    foreach var ty in atomic.members {
+        m = union(m, ty);
+    }
+    return m;
 }
 
 final UniformTypeOps listRoOps = {
