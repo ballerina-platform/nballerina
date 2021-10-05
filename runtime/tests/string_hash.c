@@ -20,11 +20,11 @@ void testRandMapping(int len) {
     TaggedPtr m = _bal_mapping_construct(&inherentType, 0);
     for (int i = 0; i < len; i++) {
         bool dup = _bal_mapping_get(m, k[i]) != 0;
-        _bal_mapping_set(m, k[i], v[i]);
         if (dup) {
             k[i] = 0;
         }
         else {
+            _bal_mapping_set(m, k[i], v[i]);
             k[i] = copyString(k[i]);
         }
     }
