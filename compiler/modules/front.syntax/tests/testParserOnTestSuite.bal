@@ -32,7 +32,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 topLevelDefnPos = topLevelDefnPos.sort();
                 err:Position lastEnd = 1<<32;
                 foreach var [startPos, endPos] in topLevelDefnPos {
-                    test:assertTrue((startPos == (1<<32)) || (startPos >= lastEnd), "overlapping top level definitions");
+                    test:assertTrue((startPos == (1<<32)) || (startPos > lastEnd), "overlapping top level definitions");
                     test:assertTrue(startPos < endPos, "invalid start and end positions");
                     SourceFile file = part.file;
                     var [stLine, stCol] = file.lineColumn(startPos);
@@ -71,16 +71,18 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
     int endLineIndex = end[0];
     int startFragIndex = file.fragIndex(startPos);
     int endFragIndex = file.fragIndex(endPos);
+    // io:println(file.filename(), ":", file.line(endLineIndeVx).fragCodes[endFragIndex]);
     int lineIndex = startLineIndex;
     int i = st[1];
     while lineIndex <= endLineIndex {
         ScannedLine line = file.line(lineIndex);
         while i < line.fragments.length() {
-            if lineIndex >= endLineIndex && i > endFragIndex {
+            if lineIndex >= endLineIndex && i >= endFragIndex {
                 return true;
             }
             FragCode frag = line.fragCodes[i];
             if frag != FRAG_WHITESPACE && frag != FRAG_COMMENT {
+                io:println(frag, ",", i, "->", line);
                 return false;
             }
             i += 1;

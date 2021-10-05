@@ -168,7 +168,7 @@ function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis,
     string[] paramNames = [];
     FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
     Stmt[] body = check parseStmtBlock(tok);
-    Position endPos = tok.currentStartPos();
+    Position endPos = tok.prevEndPos();
     FunctionDefn defn = { startPos, endPos, name, vis, paramNames, typeDesc, namePos, body, part };
     return defn;
 }

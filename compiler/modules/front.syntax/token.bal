@@ -98,6 +98,8 @@ type TokenizerState readonly & record {
     int codePointIndex;
     int fragmentIndex;
     int tokenStartCodePointIndex;
+    int prevTokenEndCodePointIndex;
+    int prevTokenEndLineIndex;
     Mode mode;
     Token? curTok;
 };
@@ -112,6 +114,8 @@ class Tokenizer {
     private int codePointIndex = 0;
     private int fragmentIndex = 0;
     private int tokenStartCodePointIndex = 0;
+    private int prevTokenEndCodePointIndex = 0;
+    private int prevTokenEndLineIndex = 0;
     private Mode mode = MODE_NORMAL;
     final SourceFile file;
 
@@ -125,6 +129,8 @@ class Tokenizer {
     function advance() returns err:Syntax? {
         string str = "";
         self.tokenStartCodePointIndex = self.codePointIndex;
+        self.prevTokenEndCodePointIndex = self.codePointIndex;
+        self.prevTokenEndLineIndex = self.lineIndex;
         while true {
             int fragCodeIndex = self.fragCodeIndex;
             FragCode[] fragCodes = self.fragCodes;
@@ -253,6 +259,10 @@ class Tokenizer {
         return createPosition(self.lineIndex, self.codePointIndex);
     }
 
+    function prevEndPos() returns Position {
+        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex);
+    }
+
     private function getFragment() returns string {
         string fragment = self.fragments[self.fragmentIndex];
         self.codePointIndex += fragment.length();
@@ -326,6 +336,8 @@ class Tokenizer {
             codePointIndex: self.codePointIndex,
             fragmentIndex: self.fragmentIndex,
             tokenStartCodePointIndex: self.tokenStartCodePointIndex,
+            prevTokenEndCodePointIndex: self.prevTokenEndCodePointIndex,
+            prevTokenEndLineIndex: self.prevTokenEndLineIndex,
             mode: self.mode,
             curTok: self.curTok
         };
@@ -340,6 +352,8 @@ class Tokenizer {
         self.codePointIndex = s.codePointIndex;
         self.fragmentIndex = s.fragmentIndex;
         self.tokenStartCodePointIndex = s.tokenStartCodePointIndex;
+        self.prevTokenEndCodePointIndex = s.prevTokenEndCodePointIndex;
+        self.prevTokenEndLineIndex = s.prevTokenEndLineIndex;
         self.mode = s.mode;
         self.curTok = s.curTok;
         if self.lineIndex == 0 {
@@ -381,6 +395,9 @@ public readonly class SourceFile {
 
     public function fragIndex(Position pos) returns int {
         var [lineIndex, codePoint] = self.lineColumn(pos);
+        if codePoint == 0 {
+            return 0;
+        }
         ScannedLine line = self.line(lineIndex);
         int fragCodeIndex = 0;
         int fragmentIndex = 0;
