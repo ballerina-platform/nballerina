@@ -195,7 +195,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
         blockToWords(w, stmt.body);
     }
     else if stmt is BreakStmt || stmt is ContinueStmt {
-        w.push(stmt, ";");
+        w.push(stmt.body, ";");
     }
     else if stmt is CheckingStmt {
         w.push(stmt.checkingKeyword);

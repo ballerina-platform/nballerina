@@ -48,7 +48,7 @@ function testPreparse(string src, PreparseTestResult expected, int minLookahead,
         return;
     }
     else if actual {
-        err = parseVarDeclStmt(tok);
+        err = parseVarDeclStmt(tok, tok.currentStartPos());
     }
     else {
         // actual == false
