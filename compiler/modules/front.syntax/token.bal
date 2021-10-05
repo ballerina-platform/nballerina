@@ -398,44 +398,10 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
-    function fragLine(Position pos) returns [readonly & ScannedLine, int] {
-        var [lineIndex, fragIndex] = self.fragIndex(pos);
-        return [self.line(lineIndex), fragIndex];
-    }
-
-    function fragIndex(Position pos) returns [int, int] {
-        var [lineIndex, codePoint] = self.lineColumn(pos);
-        ScannedLine line = self.line(lineIndex);
-        if codePoint == 0 {
-            return [lineIndex, 0];
-        }
-        int fragCodeIndex = 0;
-        int fragmentIndex = 0;
-        int i = 0;
-        while (i < codePoint) {
-            FragCode code = fragCode(line, fragCodeIndex);
-            fragCodeIndex += 1;
-            if code <= VAR_FRAG_MAX {
-                i += fragment(line, fragmentIndex).length();
-                fragmentIndex += 1;
-            }
-            else if code >= FRAG_FIXED_TOKEN {
-                FixedToken? ft = fragTokens[code];
-                i += (<string>ft).length();
-
-            }
-            else {
-                i += 1;
-            }
-
-        }
-        return [lineIndex, fragmentIndex - 1];
-    }
-
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
 
-    function line(int index) returns readonly & ScannedLine {
-        return self.lines[index - 1];
+    function scannedLine(int lineNumber) returns ScannedLine {
+        return self.lines[lineNumber - 1];
     }
 }
 

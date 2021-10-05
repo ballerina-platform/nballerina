@@ -65,12 +65,12 @@ function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) re
 }
 
 function testIsWhitespace(SourceFile file, Position startPos, Position endPos) returns boolean {
-    var [startLineIndex, startFragIndex] = file.fragIndex(startPos);
-    var [endLineIndex, endFragIndex] = file.fragIndex(endPos);
+    var [startLineIndex, startFragIndex] = sourceFileFragIndex(file, startPos);
+    var [endLineIndex, endFragIndex] = sourceFileFragIndex(file, endPos);
     int lineIndex = startLineIndex;
-    int i = file.lineColumn(startPos)[1];
+    int i = unpackPosition(startPos)[1];
     while lineIndex <= endLineIndex {
-        ScannedLine line = file.line(lineIndex);
+        ScannedLine line = file.scannedLine(lineIndex);
         while i < line.fragments.length() {
             if lineIndex >= endLineIndex && i >= endFragIndex {
                 return true;
@@ -85,4 +85,10 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
         lineIndex += 1;
     }
     return true; // start == end
+}
+
+function sourceFileFragIndex(SourceFile file, Position pos) returns [int, int] {
+    var [lineNumber, codePointIndex] = unpackPosition(pos);
+    ScannedLine line = file.scannedLine(lineNumber);
+    return [lineNumber, scanLineFragIndex(line, codePointIndex)];
 }
