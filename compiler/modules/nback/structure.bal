@@ -119,7 +119,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
 }
 
 function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
-    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), insn.list.semType);
+    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.list.semType);
     // XXX listSetFunction must also clear the exact bit if the list is not exact?
     llvm:Value? err = builder.call(buildRuntimeFunctionDecl(scaffold, listSetFunction),
                                    [builder.load(scaffold.address(insn.list)),
@@ -128,7 +128,6 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
    
 }
-
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
     int length = insn.operands.length();
@@ -157,7 +156,8 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
-    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeContext(), insn.operands[0].semType);
+    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), insn.operands[0].semType);
+    // SUBSET different field types can lead to inexact projection
     llvm:Value? err = builder.call(buildRuntimeFunctionDecl(scaffold, mappingSetFunction),
                                    [
                                        builder.load(scaffold.address(insn.operands[0])),

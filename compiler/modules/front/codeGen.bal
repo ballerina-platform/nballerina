@@ -820,14 +820,14 @@ function codeGenAssign(CodeGenContext cx, Environment env, bir:BasicBlock block,
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
     bir:Register reg = (check lookupVarRefBinding(cx, lValue.container.varName, env)).reg;
     t:UniformTypeBitSet indexType;
-    t:UniformTypeBitSet memberType;
+    t:SemType memberType;
     if t:isSubtypeSimple(reg.semType, t:MAPPING) {
         indexType = t:STRING;
-        memberType = <t:UniformTypeBitSet>t:simpleMapMemberType(cx.mod.tc, reg.semType);
+        memberType = t:mappingMemberType(cx.mod.tc, reg.semType);
     } 
     else if t:isSubtypeSimple(reg.semType, t:LIST) {
         indexType = t:INT;
-        memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.mod.tc, reg.semType);
+        memberType = t:listMemberType(cx.mod.tc, reg.semType);
     }
     else {
         return cx.semanticErr("member access can only be applied to mapping or list", pos=lValue.pos);
