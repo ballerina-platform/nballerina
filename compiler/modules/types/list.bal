@@ -172,10 +172,10 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 return true;
             }
         }
-    }
-    // Ensure that we can use isNever on rest in listInhabited
-    if rest !== NEVER && isEmpty(cx, rest) {
-        rest = NEVER;
+        // Ensure that we can use isNever on rest in listInhabited
+        if rest !== NEVER && isEmpty(cx, rest) {
+            rest = NEVER;
+        }
     }
     return !listInhabited(cx, members, rest, neg);
 }
