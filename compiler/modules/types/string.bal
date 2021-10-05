@@ -45,27 +45,10 @@ function stringSubtypeSingleValue(SubtypeData d) returns string? {
         return ();
     }
     var { char, nonChar } = <StringSubtype>d;
-    int charCount = char.values.length();
-    int nonCharCount = nonChar.values.length();
-    if char.allowed {
-        if nonChar.allowed {
-            if charCount == 1 && nonCharCount == 0 {
-                return char.values[0];
-            }
-            if charCount == 0 && nonCharCount == 1 {
-                return nonChar.values[0];
-            }
-        }
-        else {
-            if charCount == 1 && nonCharCount != 0 {
-                return char.values[0];
-            }
-        }
-    } 
-    else {
-        if  nonChar.allowed && nonCharCount == 1 && charCount != 0 {
-            return nonChar.values[0];
-        }
+    int charCount = char.allowed ? char.values.length() : 2;
+    int nonCharCount = nonChar.allowed ? nonChar.values.length() : 2;
+    if charCount + nonCharCount == 1 {
+        return charCount != 0 ? char.values[0] : nonChar.values[0];
     }
 }
 
