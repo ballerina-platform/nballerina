@@ -44,7 +44,8 @@ public class ListDefinition {
             rw = env.listAtom(rwType);
         }
         Atom ro;
-        if typeListIsReadOnly(rwType.members) && isReadOnly(rwType.rest) {
+        ListAtomicType roType = readOnlyListAtomicType(rwType);
+        if roType === rwType {
             RecAtom? roRec = self.roRec;
             if roRec == () {
                 // share the definitions
@@ -56,10 +57,6 @@ public class ListDefinition {
             }
         }
         else {
-            ListAtomicType roType = {
-                members: readOnlyTypeList(rwType.members),
-                rest: intersect(rwType.rest, READONLY)
-            };
             ro = env.listAtom(roType);
             RecAtom? roRec = self.roRec;
             if roRec != () {
@@ -83,6 +80,16 @@ public class ListDefinition {
         self.semType = s;
         return s;
     }       
+}
+
+function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
+    if typeListIsReadOnly(ty.members) && isReadOnly(ty.rest) {
+        return ty;
+    }
+    return {
+        members: readOnlyTypeList(ty.members),
+        rest: intersect(ty.rest, READONLY)
+    };   
 }
 
 public function tuple(Env env, SemType... members) returns SemType {
@@ -253,11 +260,6 @@ function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns S
         return b ? accum : NEVER;
     }
     else {
-        ListAtomicType atomic = cx.listAtomType(b.atom);
-        SemType m = atomic.rest;
-        foreach var ty in atomic.members {
-            m = union(m, ty);
-        }
         return union(bddListMemberType(cx, b.left, key,
                                        intersect(listAtomicMemberType(cx.listAtomType(b.atom), key),
                                                  accum)),
