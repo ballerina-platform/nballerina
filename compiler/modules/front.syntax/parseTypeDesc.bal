@@ -158,7 +158,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         "string"
         |"int" => {
-            Position pos = tok.currentPos();
+            Position pos = tok.currentStartPos();
             check tok.advance();
             if tok.current() != ":" {
                 return <LeafTypeDesc> cur;
