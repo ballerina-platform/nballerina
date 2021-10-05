@@ -283,50 +283,6 @@ function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
     return m;
 }
 
-// Untested code for phi^x in AMK tutorial generalized for list types.
-// Precondition k >= 0 and members[i] not empty for all i
-// This finds the projection of e[k], excluding the list of atoms in neg
-// when the type of e is given by members and rest.
-// This is based on listInhabited
-function listProjExclude(Context cx, int k, SemType[] members, SemType rest, Conjunction? neg) returns SemType {
-    if neg is () {
-        return k < members.length() ? members[k] : rest;
-    }
-    else {
-        int len = members.length();
-        ListAtomicType nt = cx.listAtomType(neg.atom);
-        int negLen = nt.members.length();
-        if len < negLen {
-            if isNever(rest) {
-                return listProjExclude(cx, k, members, rest, neg.next);
-            }            
-            foreach int i in len ..< negLen {
-                members.push(rest);
-            }
-            len = negLen;
-        }
-        else if negLen < len && isNever(nt.rest) {
-            return listProjExclude(cx, k, members, rest, neg.next);
-        }
-        // now we have nt.members.length() <= len
-        SemType p = NEVER;
-        foreach int i in 0 ..< len {
-            SemType ntm = i < negLen ? nt.members[i] : nt.rest;
-            SemType d = diff(members[i], ntm);
-            if !isEmpty(cx, d) {
-                SemType[] s = shallowCopyTypes(members);
-                s[i] = d;
-                p = union(p, listProjExclude(cx, k, s, rest, neg.next));
-            }     
-        }
-        SemType rd = diff(rest, nt.rest);
-        if !isEmpty(cx, rd) {
-            p = union(p, listProjExclude(cx, k, members, rd, neg.next));
-        }
-        return p;
-    }
-}
-
 final UniformTypeOps listRoOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
