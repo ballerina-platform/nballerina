@@ -127,15 +127,6 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     return td;
 }
 
-final map<BuiltinIntSubtypeDesc> BUILTIN_INT_SUBTYPES = {
-    Signed8: "sint8",
-    Signed16: "sint16",
-    Signed32: "sint32",
-    Unsigned8: "uint8",
-    Unsigned16: "uint16",
-    Unsigned32: "uint32"
-};
-
 // Tokenizer is on first token of the type descriptor
 // Afterwards it is on the token immediately following the type descriptor
 function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
@@ -154,7 +145,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         "boolean"
         | "decimal"
         | "float"
-        | "string"
         | "xml"
         | "typedesc"
         | "handle"
@@ -166,9 +156,19 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             // JBUG should not need cast #30191
             return <LeafTypeDesc>cur;
         }
+        "string"
+        |"int" => {
+            Position pos = tok.currentPos();
+            check tok.advance();
+            if tok.current() != ":" {
+                return <LeafTypeDesc> cur;
+            }
+            check tok.advance();
+            return { prefix: <LeafTypeDesc> cur, typeName: check tok.expectIdentifier(), pos };
+        }
         "byte" => {
             check tok.advance();
-            return "uint8";
+            return "byte";
         }
         "[" => {
             return parseTupleTypeDesc(tok);
@@ -186,19 +186,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }        
         "record" => {
             return parseRecordTypeDesc(tok);         
-        }
-        "int" => {
-            check tok.advance();
-            if tok.current() != ":" {
-                return "int";
-            }
-            check tok.advance();
-            var name = check tok.expectIdentifier();
-            BuiltinIntSubtypeDesc? desc = BUILTIN_INT_SUBTYPES[name];
-            if !(desc is ()) {
-                return desc;
-            }
-            return tok.err("unrecognized integer subtype '" + name + "'");
         }
         [IDENTIFIER, var identifier] => {
             Position pos = tok.currentPos();

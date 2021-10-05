@@ -13,7 +13,7 @@ type ModuleSymbols record {|
 |};
 
 type Import record {|
-    s:ImportDecl decl;
+    s:ImportDecl decl?;
     bir:ModuleId moduleId;
     ModuleExports defns;
     // This is when we haven't implemented everything in the module.
@@ -92,6 +92,10 @@ function moduleIdToString(bir:ModuleId id) returns string {
 }
 
 function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix) returns Import|err:Semantic {
+    Import? implicitImport = autoImportPrefixes[prefix];
+    if implicitImport != () {
+        return  implicitImport;
+    }
     Import? imported = mod.partPrefixes[modDefn.part.partIndex][prefix];
     if imported == () {
         return err:semantic(`no import declaration for ${prefix}`, loc=s:locationInDefn(modDefn), functionName=modDefn.name);

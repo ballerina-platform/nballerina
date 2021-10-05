@@ -25,3 +25,27 @@ function getLangLibFunction(string mod, string func) returns bir:FunctionSignatu
 final readonly & map<bir:FunctionSignature> ioLibFunctions = {
     println: { paramTypes: [t:TOP], returnType: t:NIL }
 };
+
+type ModuleExportSemtypes readonly & map<t:SemType>;
+
+final readonly & map<Import> autoImportPrefixes = {
+    "int": {
+        moduleId: {org: "ballerina", names: ["lang", "int"]},
+        defns: {
+            Signed8: t:intWidthSigned(8),
+            Signed16: t:intWidthSigned(16),
+            Signed32: t:intWidthSigned(32),
+            Unsigned8: t:BYTE,
+            Unsigned16: t:intWidthUnsigned(16),
+            Unsigned32: t:intWidthUnsigned(32)
+        },
+        partial: true
+    },
+    "string": {
+        moduleId: {org: "ballerina", names: ["lang", "string"]},
+        defns: {
+            Char: t:STRING_CHAR
+        },
+        partial: true
+    }
+};
