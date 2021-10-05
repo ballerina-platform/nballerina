@@ -20,7 +20,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     match cur {
         [IDENTIFIER, var identifier] => {
-            Position pos = tok.currentPos();
+            Position pos = tok.currentStartPos();
             check tok.advance();
             return finishIdentifierStmt(tok, identifier, pos);
         }
@@ -97,7 +97,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos) re
     }
     else if cur == "[" {
         VarRefExpr varRef = { varName: identifier };
-        Position bracketPos = tok.currentPos();
+        Position bracketPos = tok.currentStartPos();
         check tok.advance();
         Expr index = check parseInnerExpr(tok);
         check tok.expect("]");
@@ -150,7 +150,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
 
 // Parse a statement that starts with the keyword `error`
 function parseErrorStmt(Tokenizer tok) returns Stmt|err:Syntax {
-    Position pos = tok.currentPos();
+    Position pos = tok.currentStartPos();
     check tok.advance();
     if tok.current() == "(" {
         check tok.advance();
@@ -225,7 +225,7 @@ function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp o
     Expr expr = check parseExpr(tok);
     string opStr = op;
     BinaryArithmeticOp|BinaryBitwiseOp binOp = <BinaryArithmeticOp|BinaryBitwiseOp> opStr.substring(0, opStr.length() - 1);
-    CompoundAssignStmt stmt = { lValue, expr , op: binOp, pos: tok.currentPos() };
+    CompoundAssignStmt stmt = { lValue, expr , op: binOp, pos: tok.currentStartPos() };
     check tok.expect(";");
     return stmt; 
 }
@@ -343,7 +343,7 @@ function parseMatchPattern(Tokenizer tok) returns MatchPattern|err:Syntax {
         check tok.advance();
         return cur;
     }
-    Position pos = tok.currentPos();
+    Position pos = tok.currentStartPos();
     SimpleConstExpr expr = check parseSimpleConstExpr(tok);
     return { expr, pos};
 }

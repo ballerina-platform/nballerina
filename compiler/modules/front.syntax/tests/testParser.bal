@@ -54,7 +54,7 @@ function testTokenizer(string k, string[] lines) returns error? {
     while true {
         err:Syntax|Token? t = advance(tok, k, lines);
         if t is Token {
-            err:LineColumn lc = file.lineColumn(tok.currentPos());
+            err:LineColumn lc = file.lineColumn(tok.currentStartPos());
             string src = lines[lc[0] - 1];
             int tStart = lc[1];
             string tStr = tokenToString(t);
