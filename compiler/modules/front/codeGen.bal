@@ -368,30 +368,15 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
 
 function unusedLocalVariables(CodeGenContext cx, Environment env, Binding? bindingLimit) returns CodeGenError? {
     Binding? binding = env.bindings;
-    while true {
-        if binding === bindingLimit {
-            break;
+    while binding !== bindingLimit {
+        // binding is non-nil
+        Binding tem = <Binding>binding;
+        if tem.unnarrowed == () && !tem.used {
+            return cx.semanticErr(`unused local variable ${tem.name}`);
         }
-        else {
-            // binding is non-nil
-            Binding tem = <Binding>binding;
-            if isUnused(tem) {
-                return cx.semanticErr(`unused local variable ${tem.name}`);
-            }
-            binding = tem.prev;
-        }
+        binding = tem.prev;
     }
     return ();
-}
-
-function isUnused(Binding binding) returns boolean {
-    Binding? unnarrowed = binding.unnarrowed;
-    if unnarrowed is () {
-        return !binding.used;
-    }
-    else {
-        return !unnarrowed.used;
-    }
 }
 
 function environmentCopy(Environment env) returns Environment {
