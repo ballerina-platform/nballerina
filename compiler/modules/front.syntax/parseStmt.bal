@@ -236,7 +236,14 @@ function parseVarDeclStmt(Tokenizer tok, Position startPos, boolean isFinal = fa
 
 function finishVarDeclStmt(Tokenizer tok, TypeDesc td, Position startPos, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     Token? cur = tok.current();
-    string varName = check tok.expectIdentifier();
+    string varName;
+    if cur == "_" {
+        varName = "_";
+        check tok.advance();
+    }
+    else {
+        varName = check tok.expectIdentifier();
+    }
     // initExpr is required in the subset
     check tok.expect("=");
     Expr initExpr = check parseExpr(tok);
