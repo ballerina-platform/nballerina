@@ -259,7 +259,7 @@ class Tokenizer {
         return createPosition(self.lineIndex, self.codePointIndex);
     }
 
-    function prevEndPos() returns Position {
+    function previousEndPos() returns Position {
         return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex);
     }
 
@@ -373,6 +373,10 @@ function createPosition(int line, int column) returns Position {
     return (line << 32) | column;
 }
 
+function unpackPosition(Position pos) returns [int, int] & readonly {
+    return [pos >> 32, pos & 0xFFFFFFFF];
+}
+
 public readonly class SourceFile {
     *err:File;
     private ScannedLine[] lines;
@@ -390,29 +394,32 @@ public readonly class SourceFile {
     public function directory() returns string? => self.dir;
 
     public function lineColumn(Position pos) returns err:LineColumn {
-        return [pos >> 32, pos & 0xFFFFFFFF];
+        return unpackPosition(pos);
     }
 
-    public function fragIndex(Position pos) returns int {
+    function fragLine(Position pos) returns [readonly & ScannedLine, int] {
+        var [lineIndex, fragIndex] = self.fragIndex(pos);
+        return [self.line(lineIndex), fragIndex];
+    }
+
+    function fragIndex(Position pos) returns [int, int] {
         var [lineIndex, codePoint] = self.lineColumn(pos);
-        if codePoint == 0 {
-            return 0;
-        }
         ScannedLine line = self.line(lineIndex);
+        if codePoint == 0 {
+            return [lineIndex, 0];
+        }
         int fragCodeIndex = 0;
         int fragmentIndex = 0;
         int i = 0;
-        FragCode[] fragCodes = line.fragCodes;
         while (i < codePoint) {
-            FragCode fragCode = fragCodes[fragCodeIndex];
+            FragCode code = fragCode(line, fragCodeIndex);
             fragCodeIndex += 1;
-            if fragCode <= VAR_FRAG_MAX {
-                string fragment = line.fragments[fragmentIndex];
+            if code <= VAR_FRAG_MAX {
+                i += fragment(line, fragmentIndex).length();
                 fragmentIndex += 1;
-                i += fragment.length();
             }
-            else if fragCode >= FRAG_FIXED_TOKEN {
-                FixedToken? ft = fragTokens[fragCode];
+            else if code >= FRAG_FIXED_TOKEN {
+                FixedToken? ft = fragTokens[code];
                 i += (<string>ft).length();
 
             }
@@ -421,7 +428,7 @@ public readonly class SourceFile {
             }
 
         }
-        return fragmentIndex - 1;
+        return [lineIndex, fragmentIndex - 1];
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;

@@ -65,15 +65,10 @@ function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) re
 }
 
 function testIsWhitespace(SourceFile file, Position startPos, Position endPos) returns boolean {
-    err:LineColumn st = file.lineColumn(startPos);
-    err:LineColumn end = file.lineColumn(endPos);
-    int startLineIndex = st[0];
-    int endLineIndex = end[0];
-    int startFragIndex = file.fragIndex(startPos);
-    int endFragIndex = file.fragIndex(endPos);
-    // io:println(file.filename(), ":", file.line(endLineIndeVx).fragCodes[endFragIndex]);
+    var [startLineIndex, startFragIndex] = file.fragIndex(startPos);
+    var [endLineIndex, endFragIndex] = file.fragIndex(endPos);
     int lineIndex = startLineIndex;
-    int i = st[1];
+    int i = file.lineColumn(startPos)[1];
     while lineIndex <= endLineIndex {
         ScannedLine line = file.line(lineIndex);
         while i < line.fragments.length() {
@@ -82,7 +77,6 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
             }
             FragCode frag = line.fragCodes[i];
             if frag != FRAG_WHITESPACE && frag != FRAG_COMMENT {
-                io:println(frag, ",", i, "->", line);
                 return false;
             }
             i += 1;

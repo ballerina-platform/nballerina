@@ -31,6 +31,14 @@ type ScannedLine readonly & record {|
     string[] fragments;
 |};
 
+function fragCode(ScannedLine line, int index) returns FragCode {
+    return line.fragCodes[index];
+}
+
+function fragment(ScannedLine line, int index) returns string {
+    return line.fragments[index];
+}
+
 type Scanned record {|
     FragCode[] fragCodes;
     int[] endIndex;
