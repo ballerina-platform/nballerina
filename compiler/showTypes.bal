@@ -3,6 +3,8 @@ import ballerina/io;
 import wso2/nballerina.front;
 import wso2/nballerina.err;
 import wso2/nballerina.types as t;
+import wso2/nballerina.front.syntax as s;
+
 // import wso2/nballerina.types.bdd;
 
 public function showTypes(front:SourcePart[] sources) returns err:Any|io:Error? {
@@ -39,4 +41,38 @@ function subtypeRels(front:SourcePart[] sources) returns string[]|err:Any|io:Err
         order by s
         select s;
     return rels;
+}
+
+function testSubtypes(front:SourcePart[] sources, string[] expected) returns boolean|err:Syntax|err:Any|io:Error {
+    var [env, m] = check front:typesFromString(sources);
+    var tc = t:typeContext(env);
+    foreach var item in expected {
+        s:SubtypeTest test = check s:parseTypeTest(item);
+        var [t1, t2] = extractSemtypes(test.typename1, test.typename2, m);        
+        if test.op is "<" {
+            if !t:isSubtype(tc, t1, t2) || t:isSubtype(tc, t2, t1) {
+                return false;
+            }
+            continue;
+        }
+        if test.op is "<>" {
+            if t:isSubtype(tc, t1, t2) || t:isSubtype(tc, t2, t1) {
+                return false;
+            }
+            continue;
+        }
+        if test.op is "=" {
+            if !t:isSubtype(tc, t1, t2) || !t:isSubtype(tc, t2, t1) {
+                return false;
+            }
+            continue;
+        }
+    }
+    return true;
+}
+
+function extractSemtypes(string n1, string n2, map<t:SemType> m) returns t:SemType[2] {
+    t:SemType t1 = m.entries().get(n1)[1];
+    t:SemType t2 = m.entries().get(n2)[1];
+    return [t1, t2];
 }

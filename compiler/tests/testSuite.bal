@@ -28,6 +28,15 @@ function testCompileVPO(string path, string kind) returns io:Error? {
 }
 
 @test:Config {
+    dataProvider: listSourcesT
+}
+function testSemTypeT(string path, string kind) returns error? {
+    SubtypeTestCase res = check readSubtypeTests(path);
+    boolean result = check testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
+    test:assertTrue(result);
+}
+
+@test:Config {
     dataProvider: listSourcesEU
 }
 function testCompileEU(string path, string kind) returns file:Error|io:Error? {
@@ -108,6 +117,8 @@ function findErrorLine(string filePath, FilenameLine? currentErrorLocation) retu
 function listSourcesVPO() returns TestSuiteCases|error => listSources("vpo");
 
 function listSourcesEU() returns TestSuiteCases|error => listSources("eu");
+
+function listSourcesT() returns TestSuiteCases|error => listSources("t");
 
 function listSources(string initialChars) returns TestSuiteCases|io:Error|file:Error {
     TestSuiteCases cases = {};
