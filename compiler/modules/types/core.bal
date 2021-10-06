@@ -188,7 +188,7 @@ public class Context {
     }
 }
 
-type ProperSubtypeData StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype|BddNode;
+type ProperSubtypeData StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype|XmlSubtype|BddNode;
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData ProperSubtypeData|boolean;
 
@@ -1101,7 +1101,7 @@ function init() {
         listRoOps, // RO list
         mappingRoOps, // RO mapping
         {}, // RO table
-        {}, // RO xml
+        xmlRoOps, // RO xml
         {}, // RO object
         intOps, // int
         floatOps, // float
@@ -1117,7 +1117,7 @@ function init() {
         listRwOps, // RW list
         mappingRwOps, // RW mapping
         {}, // RW table
-        {}, // RW xml
+        xmlRwOps, // RW xml
         {} // RW object
    ];
 }
