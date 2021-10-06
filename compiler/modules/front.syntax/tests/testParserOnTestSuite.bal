@@ -22,9 +22,14 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 continue;
             }
             else {
+                SourceFile file = part.file;
+                Tokenizer tok = new(file);
                 [err:Position, err:Position][] topLevelDefnPos = [];
                 foreach ImportDecl decl in part.importDecls {
                     topLevelDefnPos.push([decl.startPos, decl.endPos]);
+                    check tok.moveToPos(decl.startPos, MODE_NORMAL);
+                    _ = check parseImportDecl(tok, decl.partIndex);
+                    test:assertEquals(decl.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
                 }
                 foreach ModuleLevelDefn defn in part.defns {
                     topLevelDefnPos.push([defn.startPos, defn.endPos]);
@@ -34,7 +39,6 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 foreach var [startPos, endPos] in topLevelDefnPos {
                     test:assertTrue((startPos == (1<<32)) || (startPos > lastEnd), "overlapping top level definitions");
                     test:assertTrue(startPos < endPos, "invalid start and end positions");
-                    SourceFile file = part.file;
                     var [stLine, stCol] = file.lineColumn(startPos);
                     var [endLine, endCol] = file.lineColumn(lastEnd);
                     string errorBody = string ` filename: ${file.filename()} between (${endLine}, ${endCol})  and (${stLine}, ${stCol})`;
@@ -52,6 +56,23 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
             }
         }
     }
+}
+
+function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns err:Syntax? {
+    check tok.moveToPos(defn.startPos, MODE_NORMAL);
+    if defn.vis == "public" {
+        check tok.advance();
+    }
+    if defn is FunctionDefn {
+        _ = check parseFunctionDefinition(tok, defn.part, defn.vis, defn.startPos);
+    }
+    else if defn is ConstDefn {
+        _ = check parseConstDefinition(tok, defn.part, defn.vis, defn.startPos);
+    }
+    else {
+        _= check parseTypeDefinition(tok, defn.part, defn.vis, defn.startPos);
+    }
+    test:assertEquals(defn.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
 }
 
 function partToLines(ModulePart part) returns string[] {

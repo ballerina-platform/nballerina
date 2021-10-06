@@ -87,8 +87,7 @@ function parseImportDecl(Tokenizer tok, int partIndex) returns ImportDecl|err:Sy
     [string, string...] names = [firstModuleName];
     names.push(...check parseImportNamesRest(tok));
     string? prefix = check parseImportPrefix(tok);
-    Position endPos = tok.currentEndPos();
-    check tok.expect(";");
+    Position endPos = check tok.expectLast(";");
     return { startPos, endPos, org, names, prefix, namePos, partIndex };
 }
 

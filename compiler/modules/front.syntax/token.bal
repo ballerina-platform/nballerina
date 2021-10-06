@@ -105,6 +105,13 @@ type TokenizerState readonly & record {
     Token? curTok;
 };
 
+type TokenizerInternalState readonly & record {|
+    int lineIndex;
+    int codePointIndex;
+    int fragCodeIndex;
+    Mode mode;
+|};
+
 class Tokenizer {
     private final ScannedLine[] lines;
     // index of nextLine to be scanned
@@ -318,10 +325,16 @@ class Tokenizer {
         self.mode = m;
     }
 
-    function moveToPos(Position pos) {
+    function moveToPos(Position pos, Mode mode) returns err:Syntax? {
         var [lineIndex, codePointIndex] = unpackPosition(pos);
         var [fragIndex, fragmentIndex] = scanLineFragIndex(self.file.scannedLine(lineIndex), codePointIndex);
-
+        self.lineIndex = lineIndex - 1;
+        _ = self.advanceLine(); // This will advance tokenizer to line given by lineIndex and set the line related states
+        self.codePointIndex = codePointIndex;
+        self.fragCodeIndex = fragIndex;
+        self.fragmentIndex = fragmentIndex;
+        self.mode = mode;
+        check self.advance();
     }
 
     function currentStartPos() returns Position {
