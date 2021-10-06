@@ -77,7 +77,20 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         var td if td is InlineBuiltinTypeDesc|"map" => {
             return parseVarDeclStmt(tok);
         }
-        "("|[DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {
+        "(" => {
+            TokenizerState state = tok.save();
+            check tok.advance();
+            boolean isTypeDesc = check preparseParenTypeDesc(tok);
+            tok.restore(state);
+
+            if isTypeDesc {
+                return parseVarDeclStmt(tok);
+            }
+            else {
+                return parseMethodCallStmt(tok);
+            }
+        }
+        [DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {
             return parseMethodCallStmt(tok);
         }
     }
