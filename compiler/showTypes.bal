@@ -2,6 +2,7 @@ import ballerina/io;
 
 import wso2/nballerina.front;
 import wso2/nballerina.err;
+import ballerina/test;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 
@@ -43,35 +44,24 @@ function subtypeRels(front:SourcePart[] sources) returns string[]|err:Any|io:Err
     return rels;
 }
 
-function testSubtypes(front:SourcePart[] sources, string[] expected) returns boolean|err:Syntax|err:Any|io:Error {
+function testSubtypes(front:SourcePart[] sources, string[] expected) returns err:Syntax|err:Any|io:Error? {
     var [env, m] = check front:typesFromString(sources);
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:SubtypeTest test = check s:parseTypeTest(item);
-        var [t1, t2] = extractSemtypes(test.left, test.right, m);
+        t:SemType t1 = m.entries().get(test.left)[1];
+        t:SemType t2 = m.entries().get(test.right)[1];
         match test.op { 
             "<" => {
-                if !t:isSubtype(tc, t1, t2) || t:isSubtype(tc, t2, t1) {
-                    return false;
-                }
+                test:assertTrue(t:isSubtype(tc, t1, t2) && !t:isSubtype(tc, t2, t1), "Types are not proper subtypes");
             }
             "<>" => {
-                if t:isSubtype(tc, t1, t2) || t:isSubtype(tc, t2, t1) {
-                    return false;
-                }
+                test:assertTrue(!t:isSubtype(tc, t1, t2) && !t:isSubtype(tc, t2, t1), "Types are subtypes of another");
             }
             "=" => {
-                if !t:isSubtype(tc, t1, t2) || !t:isSubtype(tc, t2, t1) {
-                    return false;
-                }
+                test:assertTrue(t:isSubtype(tc, t1, t2) && t:isSubtype(tc, t2, t1), "Types are not equivalent");
             }
         }
     }
-    return true;
-}
-
-function extractSemtypes(string n1, string n2, map<t:SemType> m) returns t:SemType[2] {
-    t:SemType t1 = m.entries().get(n1)[1];
-    t:SemType t2 = m.entries().get(n2)[1];
-    return [t1, t2];
+    return;
 }

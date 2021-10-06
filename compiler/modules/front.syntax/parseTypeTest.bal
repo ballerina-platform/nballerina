@@ -10,13 +10,14 @@ public function parseTypeTest(string str) returns SubtypeTest|err:Syntax {
     string left = check tok.expectIdentifier();
     t = tok.current();
     if t is "<"|"=" {
-        SubtypeTestOp op = t;
         check tok.advance();
-        t = tok.current();
-        if t is ">" {
-            op = "<>";
+        SubtypeTestOp op;
+        if tok.current() is ">" {
             check tok.advance();
-            t = tok.current();
+            op = "<>";
+        }
+        else {
+            op = t;
         }
         string right = check tok.expectIdentifier();
         return { op, left, right };
