@@ -145,7 +145,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         "boolean"
         | "decimal"
         | "float"
-        | "xml"
         | "typedesc"
         | "handle"
         | "any"
@@ -157,7 +156,8 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             return <LeafTypeDesc>cur;
         }
         "string"
-        |"int" => {
+        |"int"
+        |"xml" => {
             Position pos = tok.currentStartPos();
             check tok.advance();
             if tok.current() != ":" {
