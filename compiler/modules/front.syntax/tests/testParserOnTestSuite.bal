@@ -90,5 +90,5 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
 function sourceFileFragIndex(SourceFile file, Position pos) returns [int, int] {
     var [lineNumber, codePointIndex] = unpackPosition(pos);
     ScannedLine line = file.scannedLine(lineNumber);
-    return [lineNumber, scanLineFragIndex(line, codePointIndex)];
+    return [lineNumber, scanLineFragIndex(line, codePointIndex)[0]];
 }

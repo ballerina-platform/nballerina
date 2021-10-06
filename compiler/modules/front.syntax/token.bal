@@ -318,6 +318,12 @@ class Tokenizer {
         self.mode = m;
     }
 
+    function moveToPos(Position pos) {
+        var [lineIndex, codePointIndex] = unpackPosition(pos);
+        var [fragIndex, fragmentIndex] = scanLineFragIndex(self.file.scannedLine(lineIndex), codePointIndex);
+
+    }
+
     function currentStartPos() returns Position {
         return createPosition(self.lineIndex, self.tokenStartCodePointIndex);
     }

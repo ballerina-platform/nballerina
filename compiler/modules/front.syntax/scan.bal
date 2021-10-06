@@ -31,19 +31,21 @@ type ScannedLine readonly & record {|
     string[] fragments;
 |};
 
-function scanLineFragIndex(ScannedLine line, int codePointIndex) returns int {
+function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, int] {
     if codePointIndex == 0 {
-        return  0;
+        return  [0, 0];
     }
     readonly & FragCode[] fragCodes = line.fragCodes;
     readonly & string[] fragments = line.fragments;
     int fragCodeIndex = 0;
     int fragmentIndex = 0;
+    int currentFragmentIndex = fragmentIndex;
     int i = 0;
     while i < codePointIndex {
         FragCode code = fragCodes[fragCodeIndex];
         fragCodeIndex += 1;
         if code <= VAR_FRAG_MAX {
+            currentFragmentIndex = fragmentIndex;
             i += fragments[fragmentIndex].length();
             fragmentIndex += 1;
         }
@@ -55,7 +57,7 @@ function scanLineFragIndex(ScannedLine line, int codePointIndex) returns int {
             i += 1;
         }
     }
-    return fragmentIndex - 1;
+    return [fragCodeIndex - 1, currentFragmentIndex];
 }
 
 type Scanned record {|
