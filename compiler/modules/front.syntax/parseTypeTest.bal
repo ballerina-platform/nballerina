@@ -4,11 +4,8 @@ public function parseTypeTest(string str) returns SubtypeTest|err:Syntax {
     SourceFile file = createSourceFile([str], { filename: "<internal>" });
     Tokenizer tok = new(file);
     check tok.advance();
-    Token? t = tok.current();
-    // TODO move to different parse functions
-
     string left = check tok.expectIdentifier();
-    t = tok.current();
+    Token? t = tok.current();
     if t is "<"|"=" {
         check tok.advance();
         SubtypeTestOp op;
