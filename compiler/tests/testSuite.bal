@@ -32,8 +32,7 @@ function testCompileVPO(string path, string kind) returns io:Error? {
 }
 function testSemTypeT(string path, string kind) returns error? {
     SubtypeTestCase res = check readSubtypeTests(path);
-    boolean result = check testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
-    test:assertTrue(result);
+    check testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
 }
 
 @test:Config {
