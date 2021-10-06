@@ -179,14 +179,12 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     if !vc.isSubtype(ty, t:MAPPING_RW) {
         return vc.err("bad BIR: inherent type of mapping construct is not a mutable mapping");
     }
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeContext(), ty);
-    if memberType == () {
+    if t:mappingAtomicTypeRw(vc.typeContext(), ty) === () {
         return vc.err("bad BIR: inherent type of map is of an unsupported type");
     }
-    else {
-        foreach var operand in insn.operands {
-            check verifyOperandType(vc, operand, memberType, "mapping constructor member of not a subtype of map member type");
-        }
+    foreach int i in 0 ..< insn.operands.length() {
+        check verifyOperandType(vc, insn.operands[i], t:mappingMemberType(vc.typeContext(), ty, insn.fieldNames[i]),
+                                "type of mapping constructor member of not a subtype of mapping member type");
     }
 }
 
@@ -211,22 +209,27 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic?
 }
 
 function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic? {
-    check verifyOperandString(vc, insn.name, insn.operands[1]);
+    StringOperand k = insn.operands[1];
+    check verifyOperandString(vc, insn.name, k);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping get applied to non-mapping");
     }
-    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType);
-    if !vc.isSubtype(t:union(memberType, t:NIL), insn.result.semType) {
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
+    if !(k is string) || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k) {
+        memberType = t:union(memberType, t:NIL);
+    }
+    if !vc.isSubtype(memberType, insn.result.semType) {
         return vc.err("bad BIR: unsafe type for result MappingGet");
     }
 }
 
 function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic? {
-    check verifyOperandString(vc, insn.name, insn.operands[1]);
+    StringOperand k = insn.operands[1];
+    check verifyOperandString(vc, insn.name, k);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping set applied to non-mapping");
     }
-    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType);
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type");
 }
 

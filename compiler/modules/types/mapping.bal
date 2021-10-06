@@ -404,6 +404,7 @@ function bddMappingMemberType(Context cx, Bdd b, string? key, SemType accum) ret
     }
 }
 
+
 function mappingAtomicMemberType(MappingAtomicType atomic, string? key) returns SemType {
     if key != () {
         int? i = atomic.names.indexOf(key);
@@ -418,6 +419,19 @@ function mappingAtomicMemberType(MappingAtomicType atomic, string? key) returns 
     }
     return m;
 }
+
+function bddMappingMemberRequired(Context cx, Bdd b, string k, boolean requiredOnPath) returns boolean {
+    if b is boolean {
+        return b ? requiredOnPath : true;
+    }
+    else {
+        return bddMappingMemberRequired(cx, b.left, k,
+                                        requiredOnPath || cx.mappingAtomType(b.atom).names.indexOf(k) != ())
+               && bddMappingMemberRequired(cx, b.middle, k, requiredOnPath)
+               && bddMappingMemberRequired(cx, b.right, k, requiredOnPath);
+    }
+}
+
 
 final UniformTypeOps mappingRoOps = {
     union: bddSubtypeUnion,

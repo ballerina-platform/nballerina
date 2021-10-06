@@ -131,8 +131,9 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
     int length = insn.operands.length();
-    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeContext(), insn.result.semType);
-    llvm:ConstPointerValue inherentType = scaffold.getInherentType(insn.result.semType);
+    t:Context tc = scaffold.typeContext();
+    t:SemType mappingType = insn.result.semType;
+    llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
     llvm:PointerValue m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
                                                           [inherentType, llvm:constInt(LLVM_INT, length)]);
     foreach int i in 0 ..< length {
@@ -140,13 +141,15 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
                          [
                              m,
                              check buildConstString(builder, scaffold, insn.fieldNames[i]),
-                             check buildWideRepr(builder, scaffold, insn.operands[i], REPR_ANY, memberType)
+                             check buildWideRepr(builder, scaffold, insn.operands[i], REPR_ANY,
+                                                 t:mappingMemberType(tc, mappingType, insn.fieldNames[i]))
                          ]);
     }
     builder.store(m, scaffold.address(insn.result));
 }
 
 function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGetInsn insn) returns BuildError? {
+    // XXX this can get inexact
     llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingGetFunction),
                                                 [
                                                     builder.load(scaffold.address(insn.operands[0])),

@@ -1064,8 +1064,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             if l is bir:Register {
                 if t:isSubtypeSimple(l.semType, t:LIST) {
                     var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, index, t:INT));
-                    // subset07 list types are restricted to arrays, , so we do not need to consider key type
-                    t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType);
+                    t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r is int ? r : ());
                     if t:isEmpty(cx.mod.tc, memberType) {
                         return cx.semanticErr("type of member access is never");
                     }
@@ -1076,8 +1075,11 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 }
                 else if t:isSubtypeSimple(l.semType, t:MAPPING) {
                     var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
-                    // subset07 mapping types are restricted to maps, so we do not need to consider key type
-                    bir:Register result = cx.createRegister(t:union(t:mappingMemberType(cx.mod.tc, l.semType), t:NIL));
+                    t:SemType memberType = t:mappingMemberType(cx.mod.tc, l.semType, r is string ? r : ());
+                    if !(r is string) || !t:mappingMemberRequired(cx.mod.tc, l.semType, r) {
+                        memberType = t:union(memberType, t:NIL);
+                    }
+                    bir:Register result = cx.createRegister(memberType);
                     bir:MappingGetInsn insn = { result, operands: [l, r] };
                     nextBlock.insns.push(insn);
                     return { result, block: nextBlock };

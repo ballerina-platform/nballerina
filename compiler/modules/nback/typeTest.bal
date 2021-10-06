@@ -55,7 +55,7 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
         hasType = buildHasListType(builder, scaffold, tagged, semType);
     }
     else if t:isSubtypeSimple(semType, t:MAPPING) {
-        hasType = buildHasMappingType(builder, scaffold, tagged, semType);
+        hasType = check buildHasMappingType(builder, scaffold, tagged, semType);
     }
     else {
         return scaffold.unimplementedErr("unimplemented type test"); // should not happen in subset 6
@@ -93,7 +93,7 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
             tagged = buildListExactify(builder, scaffold, tagged, insn.result.semType);
         }
         else if t:isSubtypeSimple(semType, t:MAPPING) {
-            builder.condBr(buildHasMappingType(builder, scaffold, tagged, semType), continueBlock, castFailBlock);
+            builder.condBr(check buildHasMappingType(builder, scaffold, tagged, semType), continueBlock, castFailBlock);
             builder.positionAtEnd(continueBlock);
             tagged = buildMappingExactify(builder, scaffold, tagged, insn.result.semType);
         }
@@ -136,16 +136,22 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
     return scaffold.unimplementedErr("unimplemented narrowing conversion required");
 }
 
-function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:Value {
-    t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleMapMemberType(scaffold.typeContext(), targetType);
-    return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingHasTypeFunction),
-                                    [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
+function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:Value|BuildError {
+    t:UniformTypeBitSet? bitSet = t:simpleMapMemberType(scaffold.typeContext(), targetType);
+    if bitSet is () {
+        return scaffold.unimplementedErr("cast to record type not implemented yet");
+    }
+    else {
+        return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingHasTypeFunction),
+                                        [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
+    }
 }
 
 function buildMappingExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {
     t:UniformTypeBitSet? bitSet = t:simpleMapMemberType(scaffold.typeContext(), targetType);
     if bitSet == () {
         // This can happen when a narrowing creates a empty record type (e.g. `map<int> & map<string>`)
+        // XXX also with closed records
         return tagged;
     }
     else {

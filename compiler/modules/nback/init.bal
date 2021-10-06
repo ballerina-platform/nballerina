@@ -87,7 +87,13 @@ function buildInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType ty
         [llType, ptr] = buildMemberTypeDefn(cx, symbol, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, ty));
     }
     else if  t:isSubtypeSimple(ty, t:MAPPING_RW) {
-        [llType, ptr] = buildMemberTypeDefn(cx, symbol, <t:UniformTypeBitSet>t:simpleMapMemberType(cx.tc, ty));
+        t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, ty);
+        // XXX this is just an approximation for now
+        t:UniformTypeBitSet memberType = t:widenToUniformTypes(mat.rest);
+        foreach var t in mat.types {
+            memberType = t:uniformTypeUnion(memberType | t:widenToUniformTypes(t));
+        }
+        [llType, ptr] = buildMemberTypeDefn(cx, symbol, memberType);
     }
     else {
         panic err:impossible("unexpected SemType building inherent type definition in init module");
