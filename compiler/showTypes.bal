@@ -63,5 +63,4 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
             }
         }
     }
-    return;
 }
