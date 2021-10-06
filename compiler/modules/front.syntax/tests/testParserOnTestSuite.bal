@@ -22,6 +22,25 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 continue;
             }
             else {
+                [err:Position, err:Position][] topLevelDefnPos = [];
+                foreach ImportDecl decl in part.importDecls {
+                    topLevelDefnPos.push([decl.startPos, decl.endPos]);
+                }
+                foreach ModuleLevelDefn defn in part.defns {
+                    topLevelDefnPos.push([defn.startPos, defn.endPos]);
+                }
+                topLevelDefnPos = topLevelDefnPos.sort();
+                err:Position lastEnd = 1<<32;
+                foreach var [startPos, endPos] in topLevelDefnPos {
+                    test:assertTrue((startPos == (1<<32)) || (startPos > lastEnd), "overlapping top level definitions");
+                    test:assertTrue(startPos < endPos, "invalid start and end positions");
+                    SourceFile file = part.file;
+                    var [stLine, stCol] = file.lineColumn(startPos);
+                    var [endLine, endCol] = file.lineColumn(lastEnd);
+                    string errorBody = string ` filename: ${file.filename()} between (${endLine}, ${endCol})  and (${stLine}, ${stCol})`;
+                    test:assertTrue(testIsWhitespace(part.file, lastEnd, startPos), "none white space tokens between top level definition" + errorBody);
+                    lastEnd = endPos;
+                }
                 string[] canonSrc = partToLines(part);
                 part = scanAndParseModulePart(canonSrc, { filename }, 0);
                 if part is error {
@@ -43,4 +62,33 @@ function partToLines(ModulePart part) returns string[] {
 
 function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
     return parseModulePart(check scanModulePart(createSourceFile(lines, path), partIndex));
+}
+
+function testIsWhitespace(SourceFile file, Position startPos, Position endPos) returns boolean {
+    var [startLineIndex, startFragIndex] = sourceFileFragIndex(file, startPos);
+    var [endLineIndex, endFragIndex] = sourceFileFragIndex(file, endPos);
+    int lineIndex = startLineIndex;
+    int i = unpackPosition(startPos)[1];
+    while lineIndex <= endLineIndex {
+        ScannedLine line = file.scannedLine(lineIndex);
+        while i < line.fragments.length() {
+            if lineIndex >= endLineIndex && i >= endFragIndex {
+                return true;
+            }
+            FragCode frag = line.fragCodes[i];
+            if frag != FRAG_WHITESPACE && frag != FRAG_COMMENT {
+                return false;
+            }
+            i += 1;
+        }
+        i = 0;
+        lineIndex += 1;
+    }
+    return true; // start == end
+}
+
+function sourceFileFragIndex(SourceFile file, Position pos) returns [int, int] {
+    var [lineNumber, codePointIndex] = unpackPosition(pos);
+    ScannedLine line = file.scannedLine(lineNumber);
+    return [lineNumber, scanLineFragIndex(line, codePointIndex)];
 }

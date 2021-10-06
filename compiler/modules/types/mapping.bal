@@ -50,7 +50,8 @@ public class MappingDefinition {
             rw = env.mappingAtom(rwType);
         }
         Atom ro;
-        if typeListIsReadOnly(rwType.types) && isReadOnly(rest) {
+        MappingAtomicType roType = readOnlyMappingAtomicType(rwType);
+        if roType === rwType {
             RecAtom? roRec = self.roRec;
             if roRec == () {
                 // share the definitions
@@ -62,11 +63,6 @@ public class MappingDefinition {
             }
         }
         else {
-            MappingAtomicType roType = {
-                names: rwType.names,
-                types: readOnlyTypeList(rwType.types),
-                rest: intersect(rest, READONLY)
-            };
             ro = env.mappingAtom(roType);
             RecAtom? roRec = self.roRec;
             if roRec != () {
@@ -90,6 +86,17 @@ public class MappingDefinition {
         self.semType = s; 
         return s;
     }       
+}
+
+function readOnlyMappingAtomicType(MappingAtomicType ty) returns MappingAtomicType {
+    if typeListIsReadOnly(ty.types) && isReadOnly(ty.rest) {
+        return ty;
+    }
+    return {
+        names: ty.names,
+        types: readOnlyTypeList(ty.types),
+        rest: intersect(ty.rest, READONLY)
+    };   
 }
 
 function splitFields(Field[] fields) returns [string[], SemType[]] {

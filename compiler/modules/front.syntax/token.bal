@@ -99,6 +99,8 @@ type TokenizerState readonly & record {
     int codePointIndex;
     int fragmentIndex;
     int tokenStartCodePointIndex;
+    int prevTokenEndCodePointIndex;
+    int prevTokenEndLineIndex;
     Mode mode;
     Token? curTok;
 };
@@ -113,6 +115,8 @@ class Tokenizer {
     private int codePointIndex = 0;
     private int fragmentIndex = 0;
     private int tokenStartCodePointIndex = 0;
+    private int prevTokenEndCodePointIndex = 0;
+    private int prevTokenEndLineIndex = 0;
     private Mode mode = MODE_NORMAL;
     final SourceFile file;
 
@@ -122,10 +126,12 @@ class Tokenizer {
         self.lines = file.scannedLines();
         self.file = file;
     }
-    
+
     function advance() returns err:Syntax? {
         string str = "";
         self.tokenStartCodePointIndex = self.codePointIndex;
+        self.prevTokenEndCodePointIndex = self.codePointIndex;
+        self.prevTokenEndLineIndex = self.lineIndex;
         while true {
             int fragCodeIndex = self.fragCodeIndex;
             FragCode[] fragCodes = self.fragCodes;
@@ -138,7 +144,7 @@ class Tokenizer {
             }
             FragCode fragCode = fragCodes[fragCodeIndex];
             fragCodeIndex += 1;
-            self.fragCodeIndex = fragCodeIndex;                
+            self.fragCodeIndex = fragCodeIndex;
             match fragCode {
                 FRAG_STRING_OPEN => {
                     self.codePointIndex += 1;
@@ -230,10 +236,10 @@ class Tokenizer {
                 _ => {
                     FixedToken? ft = fragTokens[fragCode];
                     // if we've missed something above, we'll get a panic from the cast here
-                    self.codePointIndex += (<string>ft).length();          
+                    self.codePointIndex += (<string>ft).length();
                     self.curTok = ft;
                     return ();
-                } 
+                }
             }
         }
     }
@@ -246,8 +252,16 @@ class Tokenizer {
         self.mode = m;
     }
 
-    function currentPos() returns Position {
+    function currentStartPos() returns Position {
         return createPosition(self.lineIndex, self.tokenStartCodePointIndex);
+    }
+
+    function currentEndPos() returns Position {
+        return createPosition(self.lineIndex, self.codePointIndex);
+    }
+
+    function previousEndPos() returns Position {
+        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex);
     }
 
     private function getFragment() returns string {
@@ -290,6 +304,12 @@ class Tokenizer {
         }
     }
 
+    function expectLast(SingleCharDelim|MultiCharDelim|Keyword tok) returns Position|err:Syntax {
+        Position pos = self.currentEndPos();
+        check self.expect(tok);
+        return pos;
+    }
+
     function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns err:Syntax? {
         if self.curTok != tok {
             err:Template msg;
@@ -306,7 +326,7 @@ class Tokenizer {
     }
 
     function err(err:Message msg) returns err:Syntax {
-        return err:syntax(msg, loc=err:location(self.file, self.currentPos()));
+        return err:syntax(msg, loc=err:location(self.file, self.currentStartPos()));
     }
 
     function save() returns TokenizerState {
@@ -317,6 +337,8 @@ class Tokenizer {
             codePointIndex: self.codePointIndex,
             fragmentIndex: self.fragmentIndex,
             tokenStartCodePointIndex: self.tokenStartCodePointIndex,
+            prevTokenEndCodePointIndex: self.prevTokenEndCodePointIndex,
+            prevTokenEndLineIndex: self.prevTokenEndLineIndex,
             mode: self.mode,
             curTok: self.curTok
         };
@@ -331,6 +353,8 @@ class Tokenizer {
         self.codePointIndex = s.codePointIndex;
         self.fragmentIndex = s.fragmentIndex;
         self.tokenStartCodePointIndex = s.tokenStartCodePointIndex;
+        self.prevTokenEndCodePointIndex = s.prevTokenEndCodePointIndex;
+        self.prevTokenEndLineIndex = s.prevTokenEndLineIndex;
         self.mode = s.mode;
         self.curTok = s.curTok;
         if self.lineIndex == 0 {
@@ -350,6 +374,10 @@ function createPosition(int line, int column) returns Position {
     return (line << 32) | column;
 }
 
+function unpackPosition(Position pos) returns [int, int] & readonly {
+    return [pos >> 32, pos & 0xFFFFFFFF];
+}
+
 public readonly class SourceFile {
     *err:File;
     private ScannedLine[] lines;
@@ -367,10 +395,14 @@ public readonly class SourceFile {
     public function directory() returns string? => self.dir;
 
     public function lineColumn(Position pos) returns err:LineColumn {
-        return [pos >> 32, pos & 0xFFFFFFFF];
+        return unpackPosition(pos);
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
+
+    function scannedLine(int lineNumber) returns ScannedLine {
+        return self.lines[lineNumber - 1];
+    }
 }
 
 public function createSourceFile(string[] lines, FilePath path) returns SourceFile {

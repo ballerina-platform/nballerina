@@ -4,6 +4,11 @@ import wso2/nballerina.err;
 
 public type Position err:Position;
 
+type PositionFields record {|
+   Position startPos;
+   Position endPos;
+|};
+
 public type ModulePart record {|
     ImportDecl[] importDecls;
     SourceFile file;
@@ -16,33 +21,36 @@ public type ModuleLevelDefn FunctionDefn|ConstDefn|TypeDefn;
 public type Visibility "public"?;
 
 public type ImportDecl record {|
+    *PositionFields;
     string? org;
     [string, string...] names;
     string? prefix;
-    Position pos;
+    Position namePos;
     int partIndex;
 |};
 
 public type FunctionDefn record {|
+    *PositionFields;
     readonly string name;
     ModulePart part;
     Visibility vis;
     FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
-    Position pos;
+    Position namePos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
 |};
 
 public type ResolvedConst readonly & [t:SemType, t:Value];
 public type ConstDefn record {|
+    *PositionFields;
     readonly string name;
     ModulePart part;
     InlineBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
-    Position pos;
+    Position namePos;
     ResolvedConst|false? resolved = ();    
 |};
 
@@ -315,11 +323,12 @@ public type FpLiteralExpr record {|
 // Types
 
 public type TypeDefn record {|
+    *PositionFields;
     readonly string name;
     ModulePart part;
     Visibility vis;
     TypeDesc td;
-    Position pos;
+    Position namePos;
     t:SemType? semType = ();
     int cycleDepth = -1;
 |};

@@ -31,7 +31,7 @@ class Module {
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`
                     signature: <bir:FunctionSignature>defn.signature,
-                    position: defn.pos,
+                    position: defn.namePos,
                     partIndex: defn.part.partIndex
                 });
             }
@@ -52,7 +52,7 @@ class Module {
         foreach int i in 0 ..< partPrefixes.length() {
             foreach var [prefix, { decl, used }] in partPrefixes[i].entries() {
                 if !used {
-                    return err:semantic(`import ${prefix} unused`, loc=err:location(self.files[i], decl.pos));
+                    return err:semantic(`import ${prefix} unused`, loc=err:location(self.files[i], decl.namePos));
                 }
             }
         }
@@ -183,10 +183,10 @@ function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] res
         foreach var decl in importsById[i].imports {
             if resolved == () {
                 err:Message msg = `unsupported module ${moduleIdToString(moduleId)}`;
-                return err:unimplemented(msg, loc=err:location(files[decl.partIndex], decl.pos));
+                return err:unimplemented(msg, loc=err:location(files[decl.partIndex], decl.namePos));
             }
             else if resolved is string {
-                return err:semantic(resolved, loc=err:location(files[decl.partIndex], decl.pos));
+                return err:semantic(resolved, loc=err:location(files[decl.partIndex], decl.namePos));
             }
             else {
                 string? declPrefix = decl.prefix;
