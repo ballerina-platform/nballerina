@@ -48,24 +48,23 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns boo
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:SubtypeTest test = check s:parseTypeTest(item);
-        var [t1, t2] = extractSemtypes(test.typename1, test.typename2, m);        
-        if test.op is "<" {
-            if !t:isSubtype(tc, t1, t2) || t:isSubtype(tc, t2, t1) {
-                return false;
+        var [t1, t2] = extractSemtypes(test.left, test.right, m);
+        match test.op { 
+            "<" => {
+                if !t:isSubtype(tc, t1, t2) || t:isSubtype(tc, t2, t1) {
+                    return false;
+                }
             }
-            continue;
-        }
-        if test.op is "<>" {
-            if t:isSubtype(tc, t1, t2) || t:isSubtype(tc, t2, t1) {
-                return false;
+            "<>" => {
+                if t:isSubtype(tc, t1, t2) || t:isSubtype(tc, t2, t1) {
+                    return false;
+                }
             }
-            continue;
-        }
-        if test.op is "=" {
-            if !t:isSubtype(tc, t1, t2) || !t:isSubtype(tc, t2, t1) {
-                return false;
+            "=" => {
+                if !t:isSubtype(tc, t1, t2) || !t:isSubtype(tc, t2, t1) {
+                    return false;
+                }
             }
-            continue;
         }
     }
     return true;

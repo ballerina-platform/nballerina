@@ -6,33 +6,29 @@ public function parseTypeTest(string str) returns SubtypeTest|err:Syntax {
     check tok.advance();
     Token? t = tok.current();
     // TODO move to different parse functions
-    if t is [IDENTIFIER, string] {
-        string typename1 = t[1];
+
+    string left = check tok.expectIdentifier();
+    t = tok.current();
+    if t is "<"|"=" {
+        SubtypeTestOp op = t;
         check tok.advance();
         t = tok.current();
-        if t is "<"|"=" {
-            SubtypeTestOp op = t;
+        if t is ">" {
+            op = "<>";
             check tok.advance();
             t = tok.current();
-            if t is ">" {
-                op = "<>";
-                check tok.advance();
-                t = tok.current();
-            }
-            if t is [IDENTIFIER, string] {
-                string typename2 = t[1];
-                return { op, typename1, typename2 };
-            }
-        }  
-        
-    }
+        }
+        string right = check tok.expectIdentifier();
+        return { op, left, right };
+    }  
+    
     return parseError(tok);
 }
 
 public type SubtypeTest record {
     SubtypeTestOp op;
-    string typename1;
-    string typename2;
+    string left;
+    string right;
 };
 
 public type SubtypeTestOp "<" | "=" | "<>";
