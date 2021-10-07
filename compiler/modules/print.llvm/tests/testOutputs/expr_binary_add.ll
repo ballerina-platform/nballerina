@@ -1,4 +1,4 @@
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 define void @abort() {
 }
 define i64 @foo(i64 %0, i64 %1) {
