@@ -1,6 +1,9 @@
 import ballerina/test;
 import ballerina/file;
+import wso2/nballerina.front;
 import ballerina/io;
+import wso2/nballerina.types as t;
+import wso2/nballerina.front.syntax as s;
 
 import wso2/nballerina.err;
 
@@ -173,4 +176,47 @@ function errorLine(string path) returns int|io:Error? {
 function testCompileFile(string filename) returns CompileError? {
     var [basename, _] = basenameExtension(filename);
     return compileBalFile(filename, basename, (), {}, {});
+}
+
+function testSubtypes(front:SourcePart[] sources, string[] expected) returns err:Syntax|err:Any|io:Error? {
+    var [env, m] = check front:typesFromString(sources);
+    var tc = t:typeContext(env);
+    foreach var item in expected {
+        s:TypeTest test = check s:parseTypeTest(item);
+        t:SemType t1 = m.entries().get(test.left)[1];
+        t:SemType t2 = m.entries().get(test.right)[1];
+        if test is s:SubtypeTest {
+            match test.op { 
+                "<" => {
+                    test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
+                    test:assertFalse(t:isSubtype(tc, t2, t1), test.right + " is a subtype of " + test.left);
+                }
+                "<>" => {
+                    test:assertFalse(t:isSubtype(tc, t1, t2), test.left + " is a subtype of " + test.right);
+                    test:assertFalse(t:isSubtype(tc, t2, t1), test.right + " is a subtype of " + test.left);
+                }
+                "=" => {
+                    test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
+                    test:assertTrue(t:isSubtype(tc, t2, t1), test.right + " is not a subtype of " + test.left);
+                }
+            }
+        } 
+        else {
+            t:SemType key = m.entries().get(test.index)[1];
+            if t:isSubtype(tc, t1, t:LIST) {
+                test:assertTrue(t:isSubtype(tc, key, t:INT), "Index for list must be an integer");
+                t:SemType memberType = t:listMemberType(tc, t1);
+                test:assertTrue(t:isSubtype(tc, t2, memberType), test.right + " is not a subtype of member type");
+            }
+            else if t:isSubtype(tc, t1, t:MAPPING) {
+                test:assertTrue(t:isSubtype(tc, key, t:STRING), "Index for map must be a string");
+                t:SemType memberType = t:mappingMemberType(tc, t1);
+                test:assertTrue(t:isSubtype(tc, t2, memberType), test.right + " is not a subtype of member type");
+            }
+            else {
+                test:assertFail(test.left + " is not a list or a map");
+            }
+        }
+        
+    }
 }
