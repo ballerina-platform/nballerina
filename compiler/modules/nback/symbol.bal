@@ -43,7 +43,7 @@ function delimitName(string name) returns string {
     string delimited = len.toString();
     if len > 0 {
         string firstChar = name[0];
-        if isDigit(firstChar) || firstChar == "_" {
+        if isDigit(firstChar) {
             delimited += "_";
         }
     }

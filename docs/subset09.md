@@ -68,10 +68,10 @@ This deals explicitly with operator precedence and associativity.
 module-part = import-decl* module-defn*
 import-decl = "import" [org-name "/"] module-name ["as" import-prefix] ";"
 
-org-name = identifier
+org-name = import-part
 module-name =
-   identifier
-   | module-name "." identifier
+   import-part
+   | module-name "." import-part
 
 import-prefix = identifier
 
@@ -303,6 +303,7 @@ int-literal = (as in Ballerina language spec)
 floating-point-literal = (as in Ballerina spec, except HexFloatingPointLiteral and DecimalTypeSuffix are not allowed)
 string-literal = (as in Ballerina language spec)
 identifier = [A-Za-z][A-Za-z0-9_]*
+import-part = [A-Za-z][A-Za-z0-9]*
 CompoundAssignmentOperator = (as in Ballerina language spec)
 
 // comments starting with // allowed as in Ballerina language spec

@@ -362,10 +362,10 @@ static bool demangleCountedName(const char **pp, const char **name) {
     }
     const char *p = *name;
     while (nChars > 0) {
-        p++;
-        if (*p == '\0') {
+        if (*p == '_' || *p == '\0') {
             return false;
         }
+        p++;
         nChars--;
     }
     *pp = p;
