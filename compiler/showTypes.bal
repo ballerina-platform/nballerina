@@ -53,14 +53,17 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
         t:SemType t2 = m.entries().get(test.right)[1];
         match test.op { 
             "<" => {
-                test:assertTrue(t:isSubtype(tc, t1, t2) && !t:isSubtype(tc, t2, t1), "Types are not proper subtypes");
-            }
-            "<>" => {
-                test:assertTrue(!t:isSubtype(tc, t1, t2) && !t:isSubtype(tc, t2, t1), "Types are subtypes of another");
-            }
-            "=" => {
-                test:assertTrue(t:isSubtype(tc, t1, t2) && t:isSubtype(tc, t2, t1), "Types are not equivalent");
-            }
+                    test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
+                    test:assertFalse(t:isSubtype(tc, t2, t1), test.right + " is a subtype of " + test.left);
+                }
+                "<>" => {
+                    test:assertFalse(t:isSubtype(tc, t1, t2), test.left + " is a subtype of " + test.right);
+                    test:assertFalse(t:isSubtype(tc, t2, t1), test.right + " is a subtype of " + test.left);
+                }
+                "=" => {
+                    test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
+                    test:assertTrue(t:isSubtype(tc, t2, t1), test.right + " is not a subtype of " + test.left);
+                }
         }
     }
 }
