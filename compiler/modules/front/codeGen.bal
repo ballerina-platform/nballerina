@@ -774,19 +774,17 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
-    bir:Register result;
-    bir:BasicBlock nextBlock;
+    t:SemType semType = check cx.resolveTypeDesc(td);
+    bir:Register result = cx.createRegister(semType, varName);
+    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType);
     if varName == "_" {
-        result = cx.createRegister(t:ANY, varName);
-        nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, t:ANY);
-        return { block: nextBlock };
+        if t:isEmpty(cx.mod.tc, t:intersect(semType, t:ERROR)) {
+            return { block: nextBlock };
+        } else {
+            return cx.semanticErr("type descriptor of wildcard should be a subtype of any");
+        }
     }
-    else {
-        t:SemType semType = check cx.resolveTypeDesc(td);
-        result = cx.createRegister(semType, varName);
-        nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType);
-        return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };
-    }
+    return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
 }
 
 function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:AssignStmt stmt) returns CodeGenError|StmtEffect {

@@ -9,7 +9,6 @@ function foo(string str) returns string {
 public function main() {
     int _ = 2;
     int _ = 3;
-    int|error _ = 2;
     boolean _ = true;
     string _ = foo("test string1"); // @output test string1
 }
