@@ -27,6 +27,12 @@ public distinct class Context {
         return new (jLLVMConstStructInContext(self.LLVMContext, elementArray.jObject, elements.length(), 0));
     }
 
+    public function constArray(Type elementType, ConstValue[] values) returns ConstValue {
+        PointerPointer elements = PointerPointerFromValues(values);
+        handle ty = typeToLLVMType(elementType, self);
+        return new (jLLVMConstArray(ty, elements.jObject, values.length()));
+    }
+
     public function constGetElementPtr(ConstPointerValue ptr, ConstValue[] indices, "inbounds"? inbounds=()) returns ConstPointerValue {
         PointerPointer arr = PointerPointerFromValues(indices);
         if inbounds != () {
@@ -85,6 +91,12 @@ function jLLVMConstStringInContext(handle context, handle str, int length, int d
     name: "LLVMConstStringInContext",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMContextRef", "java.lang.String", "int", "int"]
+} external;
+
+function jLLVMConstArray(handle elementTy, handle values, int count) returns handle = @java:Method {
+    name: "LLVMConstArray",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "org.bytedeco.javacpp.PointerPointer", "int"]
 } external;
 
 function jLLVMConstStructInContext(handle context, handle values, int count, int packed) returns handle = @java:Method {
