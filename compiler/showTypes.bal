@@ -2,9 +2,7 @@ import ballerina/io;
 
 import wso2/nballerina.front;
 import wso2/nballerina.err;
-import ballerina/test;
 import wso2/nballerina.types as t;
-import wso2/nballerina.front.syntax as s;
 
 // import wso2/nballerina.types.bdd;
 
@@ -42,28 +40,4 @@ function subtypeRels(front:SourcePart[] sources) returns string[]|err:Any|io:Err
         order by s
         select s;
     return rels;
-}
-
-function testSubtypes(front:SourcePart[] sources, string[] expected) returns err:Syntax|err:Any|io:Error? {
-    var [env, m] = check front:typesFromString(sources);
-    var tc = t:typeContext(env);
-    foreach var item in expected {
-        s:SubtypeTest test = check s:parseTypeTest(item);
-        t:SemType t1 = m.entries().get(test.left)[1];
-        t:SemType t2 = m.entries().get(test.right)[1];
-        match test.op { 
-            "<" => {
-                    test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
-                    test:assertFalse(t:isSubtype(tc, t2, t1), test.right + " is a subtype of " + test.left);
-                }
-                "<>" => {
-                    test:assertFalse(t:isSubtype(tc, t1, t2), test.left + " is a subtype of " + test.right);
-                    test:assertFalse(t:isSubtype(tc, t2, t1), test.right + " is a subtype of " + test.left);
-                }
-                "=" => {
-                    test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
-                    test:assertTrue(t:isSubtype(tc, t2, t1), test.right + " is not a subtype of " + test.left);
-                }
-        }
-    }
 }
