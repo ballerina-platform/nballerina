@@ -14,55 +14,72 @@ function two()  returns int{
 
 public function main() {
    int mul = one() * two();        // @output 1
-   _ = mul;                        // @output 2
+                                   // @output 2
+   _ = mul;
 
    int div = one() / two();        // @output 1
-   _ = div;                        // @output 2
+                                   // @output 2
+   _ = div;
 
    int rmd = one() % two();        // @output 1
-   _ = rmd;                        // @output 2
+                                   // @output 2
+   _ = rmd;
 
    int add = one() + two();        // @output 1
-   _ = add;                        // @output 2
+                                   // @output 2
+   _ = add;
 
    int sub = one() - two();        // @output 1
-   _ = sub;                        // @output 2
+                                   // @output 2
+   _ = sub;
 
    boolean lt = one() < two();     // @output 1
-   _ = lt;                         // @output 2
+                                   // @output 2
+   _ = lt;
 
    boolean lteq = one() <= two();  // @output 1
-   _ = lteq;                       // @output 2
+                                   // @output 2
+   _ = lteq;
 
    boolean gt = one() > two();     // @output 1
-   _ = gt;                         // @output 2
+                                   // @output 2
+   _ = gt;
 
    boolean gteq = one() >= two();  // @output 1
-   _ = gteq;                       // @output 2
+                                   // @output 2
+   _ = gteq;
 
    boolean eq = one() == two();    // @output 1
-   _ = eq;                         // @output 2
+                                   // @output 2
+   _ = eq;
 
    boolean neq = one() != two();   // @output 1
-   _ = neq;                        // @output 2
+                                   // @output 2
+   _ = neq;
 
    boolean eeq = one() === two();  // @output 1
-   _ = eeq;                        // @output 2
+                                   // @output 2
+   _ = eeq;
 
    boolean neeq = one() !== two(); // @output 1
-   _ = neeq;                       // @output 2
+                                   // @output 2
+   _ = neeq;
 
    int and = one() & two();        // @output 1
-   _ = and;                        // @output 2
+                                   // @output 2
+   _ = and;
 
    int xor = one() ^ two();        // @output 1
-   _ = xor;                        // @output 2
+                                   // @output 2
+   _ = xor;
 
    int or = one() | two();         // @output 1
-   _ = or;                         // @output 2
+                                   // @output 2
+   _ = or;
 
    any[] arr = [one(), two()];     // @output 1
-   _ = arr;                        // @output 2
+                                   // @output 2
+   _ = arr;
 
    ignore(one(), two());           // @output 1
                                    // @output 2

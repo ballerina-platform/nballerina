@@ -376,7 +376,6 @@ function unusedLocalVariables(CodeGenContext cx, Environment env, Binding? bindi
         }
         binding = tem.prev;
     }
-    return ();
 }
 
 function environmentCopy(Environment env) returns Environment {
