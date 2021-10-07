@@ -17,19 +17,11 @@ jobs:
         
     steps:
       - uses: actions/checkout@v2
-      - name: Cache brew for LLVM (macOS)
-        id: cache-llvm
-        if: runner.os == 'macOS'
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/Library/Caches/Homebrew/
-          key: brew-llvm-11
-      - name: Install LLVM (macOS)
-        if: runner.os == 'macOS'
+      - name: Set LLVM suffix (macOs)
+        if: runner.os == 'macOs'
+        # default is 12.0.0 but 12.0.1 is available on '$(brew --prefix llvm)/bin/clang'
         run: |
-          brew install llvm@11
-          echo "/usr/local/opt/llvm@11/bin" >> $GITHUB_PATH
+          echo "$(brew --prefix llvm)/bin" >> $GITHUB_PATH
           echo "LLVM_SUFFIX=" >> $GITHUB_ENV
       - name: Cache jBallerina
         id: cache-jbal
