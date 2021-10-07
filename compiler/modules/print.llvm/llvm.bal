@@ -146,6 +146,21 @@ public class Context {
         return new(structTy, concat(...structBody));
     }
 
+    // Corresponds to LLVMConstArray
+    public function constArray(Type elementType, ConstValue[] values) returns ConstValue {
+        ArrayType ty = arrayType(elementType, values.length());
+        string[] body = ["["];
+        foreach int i in 0 ..< values.length() {
+            final ConstValue element = values[i];
+            if i > 0 {
+                body.push(",");
+            }
+            body.push(typeToString(element.ty, self), element.operand);
+        }
+        body.push("]");
+        return new(ty, concat(...body));
+    }
+
     // Corresponds to LLVMConstStringInContext
     public function constString(byte[] bytes) returns ConstValue {
         ArrayType ty = arrayType("i8", bytes.length());
