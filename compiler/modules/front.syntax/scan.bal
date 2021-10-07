@@ -44,20 +44,42 @@ function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, i
     while i < codePointIndex {
         FragCode code = fragCodes[fragCodeIndex];
         fragCodeIndex += 1;
-        if code <= VAR_FRAG_MAX {
+        var [codePointLen, fragmentLen] = fragCodeLength(code, fragmentIndex, fragments);
+        i += codePointLen;
+        if i == codePointIndex {
+            fragCodeIndex += 1;
+        }
+        fragmentIndex += fragmentLen;
+        if i <= codePointIndex {
             currentFragmentIndex = fragmentIndex;
-            i += fragments[fragmentIndex].length();
-            fragmentIndex += 1;
         }
-        else if code >= FRAG_FIXED_TOKEN {
-            FixedToken? ft = fragTokens[code];
-            i += (<string>ft).length();
-        }
-        else {
-            i += 1;
-        }
+        // if code <= VAR_FRAG_MAX {
+        //     currentFragmentIndex = fragmentIndex;
+        //     i += fragments[fragmentIndex].length();
+        //     fragmentIndex += 1;
+        // }
+        // else if code >= FRAG_FIXED_TOKEN {
+        //     FixedToken? ft = fragTokens[code];
+        //     i += (<string>ft).length();
+        // }
+        // else {
+        //     i += 1;
+        // }
     }
     return [fragCodeIndex - 1, currentFragmentIndex];
+}
+
+function fragCodeLength(FragCode fragCode, int fragmentIndex, readonly & string[] fragments) returns [int, int] {
+        if fragCode <= VAR_FRAG_MAX {
+            return [fragments[fragmentIndex].length(), 1];
+        }
+        else if fragCode >= FRAG_FIXED_TOKEN {
+            FixedToken? ft = fragTokens[fragCode];
+            return [(<string>ft).length(), 0];
+        }
+        else {
+            return [1, 0];
+        }
 }
 
 type Scanned record {|
