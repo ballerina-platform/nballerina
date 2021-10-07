@@ -54,25 +54,34 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
         if test is s:SubtypeTest {
             match test.op { 
                 "<" => {
-                    test:assertTrue(t:isSubtype(tc, t1, t2) && !t:isSubtype(tc, t2, t1), "Types are not proper subtypes");
-                    test:assertTrue(t:isSubtype(tc, t1, t2));
-                    test:assertFalse(t:isSubtype(tc, t2, t1));
+                    test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
+                    test:assertFalse(t:isSubtype(tc, t2, t1), test.right + " is a subtype of " + test.left);
                 }
                 "<>" => {
-                    test:assertTrue(!t:isSubtype(tc, t1, t2) && !t:isSubtype(tc, t2, t1), "Types are subtypes of another");
-                    test:assertFalse(t:isSubtype(tc, t1, t2));
-                    test:assertFalse(t:isSubtype(tc, t2, t1));
+                    test:assertFalse(t:isSubtype(tc, t1, t2), test.left + " is a subtype of " + test.right);
+                    test:assertFalse(t:isSubtype(tc, t2, t1), test.right + " is a subtype of " + test.left);
                 }
                 "=" => {
-                    test:assertTrue(t:isSubtype(tc, t1, t2) && t:isSubtype(tc, t2, t1), "Types are not equivalent");
-                    test:assertTrue(t:isSubtype(tc, t1, t2));
-                    test:assertTrue(t:isSubtype(tc, t2, t1));
+                    test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
+                    test:assertTrue(t:isSubtype(tc, t2, t1), test.right + " is not a subtype of " + test.left);
                 }
             }
         } 
         else {
-            
-            test:assertTrue(true);
+            t:SemType key = m.entries().get(test.index)[1];
+            if t:isSubtype(tc, t1, t:LIST) {
+                test:assertTrue(t:isSubtype(tc, key, t:INT), "Index for list must be an integer");
+                t:SemType memberType = t:listMemberType(tc, t1);
+                test:assertTrue(t:isSubtype(tc, t2, memberType), test.right + " is not a subtype of member type");
+            }
+            else if t:isSubtype(tc, t1, t:MAPPING) {
+                test:assertTrue(t:isSubtype(tc, key, t:STRING), "Index for map must be a string");
+                t:SemType memberType = t:mappingMemberType(tc, t1);
+                test:assertTrue(t:isSubtype(tc, t2, memberType), test.right + " is not a subtype of member type");
+            }
+            else {
+                test:assertFail(test.left + " is not a list or a map");
+            }
         }
         
     }

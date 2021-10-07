@@ -29,7 +29,7 @@ public function parseTypeTest(string str) returns TypeTest|err:Syntax {
         if tok.current() is "=" {
             check tok.advance();
             string right = check tok.expectIdentifier();
-            return parseError(tok, "successfully parsed");
+            return { left, index, right};
         } 
     } 
     
