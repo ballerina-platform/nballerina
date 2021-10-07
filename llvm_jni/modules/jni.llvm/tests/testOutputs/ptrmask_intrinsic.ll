@@ -4,7 +4,7 @@ define i8* @foo(i8* %0) {
   ret i8 addrspace(1)* %2
 }
 
-; Function Attrs: nounwind readnone speculatable willreturn
+; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) #0
 
-attributes #0 = { nounwind readnone speculatable willreturn }
+attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }

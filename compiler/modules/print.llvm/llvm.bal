@@ -301,13 +301,13 @@ public class Module {
         if name is IntegerArithmeticIntrinsicName {
             return self.addIntrinsic(name,
                                      { returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"] },
-                                     ["nounwind", "readnone", "speculatable", "willreturn"]);
+                                     ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
 
         }
         else if name == "ptrmask.p1i8.i64" {
             return self.addIntrinsic(name,
                                      { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] },
-                                     ["readnone", "speculatable"]);
+                                     ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
         }
         else {
             panic err:impossible();
