@@ -11,9 +11,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Install LLVM
-        run: |
-          sudo apt-get install llvm-11
       - name: Get run ID
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
