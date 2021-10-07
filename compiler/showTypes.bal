@@ -48,19 +48,32 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
     var [env, m] = check front:typesFromString(sources);
     var tc = t:typeContext(env);
     foreach var item in expected {
-        s:SubtypeTest test = check s:parseTypeTest(item);
+        s:TypeTest test = check s:parseTypeTest(item);
         t:SemType t1 = m.entries().get(test.left)[1];
         t:SemType t2 = m.entries().get(test.right)[1];
-        match test.op { 
-            "<" => {
-                test:assertTrue(t:isSubtype(tc, t1, t2) && !t:isSubtype(tc, t2, t1), "Types are not proper subtypes");
+        if test is s:SubtypeTest {
+            match test.op { 
+                "<" => {
+                    test:assertTrue(t:isSubtype(tc, t1, t2) && !t:isSubtype(tc, t2, t1), "Types are not proper subtypes");
+                    test:assertTrue(t:isSubtype(tc, t1, t2));
+                    test:assertFalse(t:isSubtype(tc, t2, t1));
+                }
+                "<>" => {
+                    test:assertTrue(!t:isSubtype(tc, t1, t2) && !t:isSubtype(tc, t2, t1), "Types are subtypes of another");
+                    test:assertFalse(t:isSubtype(tc, t1, t2));
+                    test:assertFalse(t:isSubtype(tc, t2, t1));
+                }
+                "=" => {
+                    test:assertTrue(t:isSubtype(tc, t1, t2) && t:isSubtype(tc, t2, t1), "Types are not equivalent");
+                    test:assertTrue(t:isSubtype(tc, t1, t2));
+                    test:assertTrue(t:isSubtype(tc, t2, t1));
+                }
             }
-            "<>" => {
-                test:assertTrue(!t:isSubtype(tc, t1, t2) && !t:isSubtype(tc, t2, t1), "Types are subtypes of another");
-            }
-            "=" => {
-                test:assertTrue(t:isSubtype(tc, t1, t2) && t:isSubtype(tc, t2, t1), "Types are not equivalent");
-            }
+        } 
+        else {
+            
+            test:assertTrue(true);
         }
+        
     }
 }
