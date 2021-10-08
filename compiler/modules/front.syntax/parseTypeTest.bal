@@ -23,6 +23,7 @@ public function parseTypeTest(string str) returns TypeTest|error {
     t = tok.current();
     if t is [DECIMAL_NUMBER, string] {
         int i = check int:fromString(t[1]);
+        check tok.advance();
     }
     else {
         index = check tok.expectIdentifier();
