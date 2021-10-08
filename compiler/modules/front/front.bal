@@ -256,14 +256,24 @@ public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:
         check addModulePart(syms.defns, check s:parseModulePart(part));
     }
     check resolveTypes(syms);
+    return [env, createTypeMap(syms), createStringValueMap(syms)];
+}
+
+function createStringValueMap(ModuleSymbols syms) returns map<string> {
     map<string> values = {};
     foreach var v in syms.defns {
-        if v is s:ConstDefn && v.expr is s:ConstValueExpr && (<s:ConstValueExpr> v.expr).value is string {
-            values[v.name] = <string> (<s:ConstValueExpr> v.expr).value;
-        }
-        else if v is s:TypeDefn && v.td is s:SingletonTypeDesc && (<s:SingletonTypeDesc> v.td).value is string {
-            values[v.name] = <string> (<s:SingletonTypeDesc> v.td).value;
+        if v is s:ConstDefn {
+            s:Expr expr = v.expr;
+            if expr is s:ConstValueExpr && expr.value is string {
+                values[v.name] = <string> expr.value;
+            }
+        } 
+        else if v is s:TypeDefn {
+            s:TypeDesc td = v.td;
+            if td is s:SingletonTypeDesc && td.value is string {
+                values[v.name] = <string> td.value;
+            }
         }
     }
-    return [env, createTypeMap(syms), values];
+    return values;
 }

@@ -183,9 +183,15 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:TypeTest test = check s:parseTypeTest(item);
-        t:SemType t1 = m.entries().get(test.left)[1];
+        if !(m.hasKey(test.left)) {
+            test:assertFail(test.left + " is not declared");
+        }
+        t:SemType t1 = m.get(test.left);
         if test is s:SubtypeTest {
-            t:SemType t2 = m.entries().get(test.right)[1];
+            if !(m.hasKey(test.right)) {
+                test:assertFail(test.right + " is not declared");
+            }
+            t:SemType t2 = m.get(test.right);
             match test.op { 
                 "<" => {
                     test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
@@ -202,10 +208,17 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
             }
         }
         else {
-            t:SemType t2 = m.entries().get(test.member)[1];
+            if !(m.hasKey(test.member)) {
+                test:assertFail(test.member + " is not declared");
+            }
+            t:SemType t2 = m.get(test.member);
+            string? index = test.index;
             if t:isSubtype(tc, t1, t:LIST) {
-                if test.index is string {
-                    t:SemType key = m.entries().get(<string> test.index)[1];
+                if index is string {
+                    if !(m.hasKey(index)) {
+                        test:assertFail(index + " is not declared");
+                    }
+                    t:SemType key = m.get(index);
                     test:assertTrue(t:isSubtype(tc, key, t:INT), "Index for list must be an integer");
                 }
                 t:SemType memberType = t:listMemberType(tc, t1);
@@ -213,10 +226,16 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
             }
             else if t:isSubtype(tc, t1, t:MAPPING) {
                 string? keyVal = ();
-                if test.index is string {
-                    t:SemType key = m.entries().get(<string> test.index)[1];
+                if index is string {
+                    if !(m.hasKey(index)) {
+                        test:assertFail(index + " is not declared");
+                    }
+                    t:SemType key = m.get(index);
                     test:assertTrue(t:isSubtype(tc, key, t:STRING), "Index for mapping must be a string");
-                    keyVal = v.entries().get(<string> test.index)[1];
+                    if !(v.hasKey(index)) {
+                        test:assertFail(index + " is not declared");
+                    }
+                    keyVal = v.get(index);
                 }
                 else {
                     test:assertFail("mapping parsing with literal index not supported yet");
