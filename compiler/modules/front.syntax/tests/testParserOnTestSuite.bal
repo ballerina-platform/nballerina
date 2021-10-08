@@ -29,12 +29,18 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                     topLevelDefnPos.push([decl.startPos, decl.endPos]);
                     check tok.moveToPos(decl.startPos, MODE_NORMAL);
                     test:assertEquals(tok.currentStartPos(), decl.startPos, "moved to wrong position");
-                    _ = check parseImportDecl(tok, decl.partIndex);
+                    ImportDecl newDecl = check parseImportDecl(tok, decl.partIndex);
                     test:assertEquals(decl.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
+                    test:assertEquals(decl, newDecl);
                 }
                 foreach ModuleLevelDefn defn in part.defns {
                     topLevelDefnPos.push([defn.startPos, defn.endPos]);
                     check validateModuleLevelDefnPos(defn, tok);
+                    if defn is FunctionDefn {
+                        foreach Stmt stmt in defn.body {
+                            check validateStatementPos(stmt, tok);
+                        }
+                    }
                 }
                 topLevelDefnPos = topLevelDefnPos.sort();
                 err:Position lastEnd = 1<<32;
@@ -63,22 +69,18 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
 function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns err:Syntax? {
     check tok.moveToPos(defn.startPos, MODE_NORMAL);
     test:assertEquals(tok.currentStartPos(), defn.startPos, "moved to wrong position");
+    ModuleLevelDefn newDefn;
     if defn.vis == "public" {
         check tok.advance();
     }
     if defn is FunctionDefn {
         _ = check parseFunctionDefinition(tok, defn.part, defn.vis, defn.startPos);
-        // TODO: remove the separate tokenizer
-        Tokenizer stmtTok = new(tok.file);
-        foreach Stmt stmt in defn.body {
-            check validateStatementPos(stmt, stmtTok);
-        }
     }
     else if defn is ConstDefn {
         _ = check parseConstDefinition(tok, defn.part, defn.vis, defn.startPos);
     }
     else {
-        _= check parseTypeDefinition(tok, defn.part, defn.vis, defn.startPos);
+        _ = check parseTypeDefinition(tok, defn.part, defn.vis, defn.startPos);
     }
     test:assertEquals(defn.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
 }
@@ -88,8 +90,28 @@ function validateStatementPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
     if !(stmt is CallStmt) {
         check tok.moveToPos(stmt.startPos, MODE_NORMAL);
         test:assertEquals(tok.currentStartPos(), stmt.startPos, "moved to wrong position");
-        Stmt newStmt = check parseStmt(tok);
+        _ = check parseStmt(tok);
         test:assertEquals(stmt.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
+        if stmt is IfElseStmt {
+            foreach Stmt trueStmt in stmt.ifTrue {
+                check validateStatementPos(trueStmt, tok);
+            }
+            foreach Stmt falseStmt in stmt.ifFalse {
+                check validateStatementPos(falseStmt, tok);
+            }
+        }
+        else if stmt is MatchStmt {
+            foreach var clause in stmt.clauses {
+                foreach var matchStmt in clause.block {
+                    check validateStatementPos(matchStmt, tok);
+                }
+            }
+        }
+        else if stmt is (WhileStmt|ForeachStmt) {
+            foreach var bodyStmt in <Stmt[]>stmt.body {
+                check validateStatementPos(bodyStmt, tok);
+            }
+        }
     }
 }
 
