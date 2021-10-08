@@ -13,6 +13,7 @@
    * type definitions
 * Type descriptors:
    * predefined basic type name: `boolean`, `float`, `int`, `string`, `error`
+   * nil type `()`
    * `any` type
    * optional type: `T?` where T is one of the above types
    * union of the above types e.g. `int|string?`
@@ -89,11 +90,13 @@ union-type-desc =
   optional-type-desc
   | union-type-desc "|" optional-type-desc
 
-optional-type-desc = (nil-type-desc | builtin-type-name) [ "?" ]
+optional-type-desc = basic-type-desc [ "?" ]
 
-nil-type-desc := "(" ")"
+basic-type-desc = builtin-type-name | nil-type-desc
 
 builtin-type-name = "any" | "boolean" | "int" | "float" | "string" | "error"
+
+nil-type-desc = "(" ")"
 
 array-type-desc = array-member-type-desc "[" "]"
 
@@ -338,6 +341,7 @@ Two kinds of `import` are supported.
 ## Additions from subset 8
 
 * Record types
+* Nil type descriptor
 
 ## Implemented spec changes since 2021R1
 
