@@ -16,7 +16,7 @@ function parseInlineTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         check tok.expect(">");
         return mapTypeDesc;
     }
-    if t is InlineBuiltinTypeDesc {
+    else if t is InlineBuiltinTypeDesc|"(" {
         check tok.advance();
         return finishInlineTypeDesc(tok, t);
     }
@@ -32,7 +32,7 @@ function parseInlineUnionTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     return parseError(tok, "expected built-in type name");
 }
 
-function finishInlineTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc first) returns TypeDesc|err:Syntax {
+function finishInlineTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc|"(" first) returns TypeDesc|err:Syntax {
     TypeDesc td = check parseInlineOptionalTypeDesc(tok, first);
     Token? t = tok.current();
     if t == "[" {
@@ -66,7 +66,15 @@ function finishInlineUnionTypeDesc(Tokenizer tok, TypeDesc first) returns TypeDe
     return left;
 }
 
-function parseInlineOptionalTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc td) returns TypeDesc|err:Syntax {
+function parseInlineOptionalTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc|"(" first) returns TypeDesc|err:Syntax {
+    TypeDesc td;
+    if first == "(" {
+        check tok.expect(")");
+        td = "()";
+    }
+    else {
+        td = first;
+    }
     Token? t = tok.current();
     if t == "?" {
         check tok.advance();

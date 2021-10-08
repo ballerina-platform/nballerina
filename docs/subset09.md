@@ -89,7 +89,9 @@ union-type-desc =
   optional-type-desc
   | union-type-desc "|" optional-type-desc
 
-optional-type-desc = builtin-type-name [ "?" ]
+optional-type-desc = (nil-type-desc | builtin-type-name) [ "?" ]
+
+nil-type-desc := "(" ")"
 
 builtin-type-name = "any" | "boolean" | "int" | "float" | "string" | "error"
 
