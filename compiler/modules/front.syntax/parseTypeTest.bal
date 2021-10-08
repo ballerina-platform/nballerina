@@ -1,6 +1,4 @@
-import wso2/nballerina.err;
-
-public function parseTypeTest(string str) returns TypeTest|err:Syntax {
+public function parseTypeTest(string str) returns TypeTest|error {
     SourceFile file = createSourceFile([str], { filename: "<internal>" });
     Tokenizer tok = new(file);
     check tok.advance();
@@ -19,21 +17,20 @@ public function parseTypeTest(string str) returns TypeTest|err:Syntax {
         string right = check tok.expectIdentifier();
         return { op, left, right };
     } 
-    else if tok.current() is "[" {
-        check tok.advance();
-        string index = check tok.expectIdentifier();
-        if !(tok.current() is "]") {
-            return parseError(tok);
-        }
-        check tok.advance();
-        if tok.current() is "=" {
-            check tok.advance();
-            string right = check tok.expectIdentifier();
-            return { left, index, right};
-        } 
-    } 
-    
-    return parseError(tok);
+    check tok.expect("[");
+    string? index = ();
+    int? indexLiteral = ();
+    t = tok.current();
+    if t is [DECIMAL_NUMBER, string] {
+        int i = check int:fromString(t[1]);
+    }
+    else {
+        index = check tok.expectIdentifier();
+    }
+    check tok.expect("]");
+    check tok.expect("=");
+    string member = check tok.expectIdentifier();
+    return { left, member , index , indexLiteral};
 }
 
 public type SubtypeTest record {
@@ -44,8 +41,9 @@ public type SubtypeTest record {
 
 public type ProjectionTest record {
     string left;
-    string index;
-    string right;
+    string member;
+    string? index;
+    string|int? indexLiteral;
 };
 
 public type SubtypeTestOp "<" | "=" | "<>";

@@ -33,9 +33,9 @@ function testCompileVPO(string path, string kind) returns io:Error? {
 @test:Config {
     dataProvider: listSourcesT
 }
-function testSemTypeT(string path, string kind) returns error? {
+function testSemTypes(string path, string kind) returns error? {
     SubtypeTestCase res = check readSubtypeTests(path);
-    check testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
+    return testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
 }
 
 @test:Config {
@@ -178,14 +178,14 @@ function testCompileFile(string filename) returns CompileError? {
     return compileBalFile(filename, basename, (), {}, {});
 }
 
-function testSubtypes(front:SourcePart[] sources, string[] expected) returns err:Syntax|err:Any|io:Error? {
+function testSubtypes(front:SourcePart[] sources, string[] expected) returns error? {
     var [env, m] = check front:typesFromString(sources);
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:TypeTest test = check s:parseTypeTest(item);
         t:SemType t1 = m.entries().get(test.left)[1];
-        t:SemType t2 = m.entries().get(test.right)[1];
         if test is s:SubtypeTest {
+            t:SemType t2 = m.entries().get(test.right)[1];
             match test.op { 
                 "<" => {
                     test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
@@ -200,21 +200,32 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
                     test:assertTrue(t:isSubtype(tc, t2, t1), test.right + " is not a subtype of " + test.left);
                 }
             }
-        } 
+        }
         else {
-            t:SemType key = m.entries().get(test.index)[1];
+            t:SemType t2 = m.entries().get(test.member)[1];
             if t:isSubtype(tc, t1, t:LIST) {
-                test:assertTrue(t:isSubtype(tc, key, t:INT), "Index for list must be an integer");
+                if test.index is string {
+                    t:SemType key = m.entries().get(<string> test.index)[1];
+                    test:assertTrue(t:isSubtype(tc, key, t:INT), "Index for list must be an integer");
+                }
                 t:SemType memberType = t:listMemberType(tc, t1);
-                test:assertTrue(t:isSubtype(tc, t2, memberType), test.right + " is not a subtype of member type");
+                test:assertTrue(t:isSubtype(tc, t2, memberType), test.member + " is not a subtype of member type");
             }
             else if t:isSubtype(tc, t1, t:MAPPING) {
-                test:assertTrue(t:isSubtype(tc, key, t:STRING), "Index for map must be a string");
-                t:SemType memberType = t:mappingMemberType(tc, t1);
-                test:assertTrue(t:isSubtype(tc, t2, memberType), test.right + " is not a subtype of member type");
+                string? keyVal = ();
+                if test.index is string {
+                    t:SemType key = m.entries().get(<string> test.index)[1];
+                    test:assertTrue(t:isSubtype(tc, key, t:STRING), "Index for mapping must be a string");
+                    // TODO fetch key value 
+                }
+                else {
+                    test:assertFail("mapping parsing with literal index not supported yet");
+                }
+                t:SemType memberType = t:mappingMemberType(tc, t1, keyVal);
+                test:assertTrue(t:isSubtype(tc, t2, memberType), test.member + " is not a subtype of member type");
             }
             else {
-                test:assertFail(test.left + " is not a list or a map");
+                test:assertFail(test.left + " is not a list or a mapping type");
             }
         }
         
