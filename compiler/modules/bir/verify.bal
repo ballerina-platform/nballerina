@@ -179,12 +179,20 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     if !vc.isSubtype(ty, t:MAPPING_RW) {
         return vc.err("bad BIR: inherent type of mapping construct is not a mutable mapping");
     }
-    if t:mappingAtomicTypeRw(vc.typeContext(), ty) === () {
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(vc.typeContext(), ty);
+    foreach int i in 0 ..< insn.operands.length() {
+        t:SemType memberType = t:mappingMemberType(vc.typeContext(), ty, insn.fieldNames[i]);
+        if memberType == t:NEVER {
+            return vc.err(`field ${insn.fieldNames[i]} is not allowed by the type`);
+        }
+        check verifyOperandType(vc, insn.operands[i], memberType,
+                                "type of mapping constructor member of not a subtype of mapping member type");
+    }
+    if mat is () {
         return vc.err("bad BIR: inherent type of map is of an unsupported type");
     }
-    foreach int i in 0 ..< insn.operands.length() {
-        check verifyOperandType(vc, insn.operands[i], t:mappingMemberType(vc.typeContext(), ty, insn.fieldNames[i]),
-                                "type of mapping constructor member of not a subtype of mapping member type");
+    else if insn.operands.length() < mat.names.length() {
+        return vc.err("missing record fields in mapping constructor");
     }
 }
 
