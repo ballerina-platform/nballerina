@@ -21,6 +21,7 @@ type InitModuleContext record {|
     llvm:Context llContext;
     llvm:Module llMod;
     t:Context tc;
+    int stringCount = 0;
     table<TypeDefn> key(semType, howUsed) typeDefns = table [];
 |};
 
@@ -86,14 +87,14 @@ function buildInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType ty
     if t:isSubtypeSimple(ty, t:LIST_RW) {
         [llType, ptr] = buildMemberTypeDefn(cx, symbol, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, ty));
     }
-    else if  t:isSubtypeSimple(ty, t:MAPPING_RW) {
+    else if t:isSubtypeSimple(ty, t:MAPPING_RW) {
         t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, ty);
-        // XXX this is just an approximation for now
-        t:UniformTypeBitSet memberType = t:widenToUniformTypes(mat.rest);
-        foreach var t in mat.types {
-            memberType = t:uniformTypeUnion(memberType | t:widenToUniformTypes(t));
+        if mat.rest !== t:NEVER {
+            [llType, ptr] = buildMemberTypeDefn(cx, symbol, <t:UniformTypeBitSet>mat.rest);
         }
-        [llType, ptr] = buildMemberTypeDefn(cx, symbol, memberType);
+        else {
+            [llType, ptr] = buildRecordInherentTypeDefn(cx, symbol, mat.names, mat.types);
+        }  
     }
     else {
         panic err:impossible("unexpected SemType building inherent type definition in init module");
@@ -106,6 +107,37 @@ function buildMemberTypeDefn(InitModuleContext cx, string symbol, t:UniformTypeB
     llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt("i32", bitSet)]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(ty, symbol, initializer=initValue, isConstant=true);
     return [ty, ptr];
+}
+
+function buildRecordInherentTypeDefn(InitModuleContext cx, string symbol, string[] fieldNames, t:SemType[] fieldTypes) returns [llvm:StructType, llvm:ConstPointerValue] {
+    // 0, fieldCount, fields
+    final int nFields = fieldNames.length();
+    final llvm:StructType llType = llvm:structType(["i32", "i32", llvm:arrayType("i32", nFields)]);
+    llvm:ConstValue[] llFields = from var ty in fieldTypes select llvm:constInt("i32", <t:UniformTypeBitSet>ty);
+    llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt("i32", 0), llvm:constInt("i32", nFields), cx.llContext.constArray("i32", llFields)]);
+    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true);
+    return [llType, ptr];
+}
+
+function buildRecordTypeTestDefn(InitModuleContext cx, string symbol, string[] fieldNames, t:SemType[] fieldTypes) returns [llvm:StructType, llvm:ConstPointerValue] {
+    // 0, fieldCount, fields
+    final llvm:StructType llFieldType = llvm:structType([LLVM_TAGGED_PTR, "i32"]);
+    final int nFields = fieldNames.length();
+    final llvm:StructType llType = llvm:structType(["i32", "i32", llvm:arrayType(llFieldType, nFields)]);
+    llvm:ConstValue[] llFields = [];
+    foreach int i in 0 ..< fieldNames.length() {
+        llFields.push(cx.llContext.constStruct([buildInitString(cx, fieldNames[i]),
+                                               llvm:constInt("i32", <t:UniformTypeBitSet>fieldTypes[i])]));
+    }
+    llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt("i32", 0), llvm:constInt("i32", nFields), cx.llContext.constArray(llFieldType, llFields)]);
+    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true);
+    return [llType, ptr];
+}
+
+function buildInitString(InitModuleContext cx, string str) returns llvm:ConstPointerValue {
+    int index = cx.stringCount;
+    cx.stringCount += 1;
+    return addStringDefn(cx.llContext, cx.llMod, index, str);
 }
 
 // function buildTypeTestDefn(InitModuleContext cx, string symbol, t:SemType ty) returns TypeDefn {

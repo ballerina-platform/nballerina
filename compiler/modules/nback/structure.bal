@@ -136,20 +136,32 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
     llvm:PointerValue m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
                                                           [inherentType, llvm:constInt(LLVM_INT, length)]);
-    foreach int i in 0 ..< length {
+    // JBUG if I combine these statements into a single from/do, then it gives an assignment required error
+    // which is removed by a check; but it's only check failures in the query pipeline that should show up in the
+    // result of the from/do, not check failures in the do clause. (Code now changed a lot.)
+
+    // The sorting here is to ensure that required fields are in the same order here as in the type descriptor.
+    [string, bir:Operand][] members =
+        from int i in 0 ..< length select [insn.fieldNames[i], insn.operands[i]];    
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
+    if !(mat is ()) && mat.names.length() != 0 {
+        // JBUG This doesn't work with array:sort (complains about unordered type)
+        members = from var [k, v] in members order by k select [k, v];
+    } 
+    foreach var [fieldName, operand] in members {
         _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingInitMemberFunction),
                          [
                              m,
-                             check buildConstString(builder, scaffold, insn.fieldNames[i]),
-                             check buildWideRepr(builder, scaffold, insn.operands[i], REPR_ANY,
-                                                 t:mappingMemberType(tc, mappingType, insn.fieldNames[i]))
+                             check buildConstString(builder, scaffold, fieldName),
+                             check buildWideRepr(builder, scaffold, operand, REPR_ANY,
+                                                 t:mappingMemberType(tc, mappingType, fieldName))
                          ]);
     }
     builder.store(m, scaffold.address(insn.result));
 }
 
 function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGetInsn insn) returns BuildError? {
-    // XXX this can get inexact
+    // SUBSET this can widen leading to inexactness when mapping member types are not bitsets
     llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingGetFunction),
                                                 [
                                                     builder.load(scaffold.address(insn.operands[0])),

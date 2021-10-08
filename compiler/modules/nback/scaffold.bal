@@ -181,12 +181,12 @@ class Scaffold {
         return self.mod.llMod.getIntrinsicDeclaration(name);
     }
 
-    function getString(string str) returns StringDefn|BuildError {
+    function getString(string str) returns StringDefn {
         StringDefn? curDefn = self.mod.stringDefns[str];
         if !(curDefn is ()) {
             return curDefn;
         }
-        StringDefn newDefn = check addStringDefn(self.mod.llContext, self.mod.llMod, self.mod.stringDefns.length(), str);
+        StringDefn newDefn = addStringDefn(self.mod.llContext, self.mod.llMod, self.mod.stringDefns.length(), str);
         self.mod.stringDefns[str] = newDefn;
         return newDefn;
     }
@@ -283,7 +283,7 @@ class Scaffold {
     }
 }
 
-function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue|BuildError {
+function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue {
     int nCodePoints = str.length();
     byte[] bytes = str.toBytes();
     int nBytes = bytes.length();

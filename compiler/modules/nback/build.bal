@@ -318,7 +318,7 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
 }
 
 function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:ConstPointerValue|BuildError {   
-    return check scaffold.getString(str);
+    return scaffold.getString(str);
 }
 
 function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) returns [Repr, llvm:Value] {
