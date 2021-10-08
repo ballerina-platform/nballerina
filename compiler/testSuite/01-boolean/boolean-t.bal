@@ -12,6 +12,7 @@ type B boolean;
 type INTEGER int;
 type S string;
 type BL boolean[]; 
+type test "ttt";
 
 type R record {|
     int f1;

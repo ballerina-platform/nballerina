@@ -179,7 +179,7 @@ function testCompileFile(string filename) returns CompileError? {
 }
 
 function testSubtypes(front:SourcePart[] sources, string[] expected) returns error? {
-    var [env, m] = check front:typesFromString(sources);
+    var [env, m, v] = check front:typesFromString(sources);
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:TypeTest test = check s:parseTypeTest(item);
@@ -216,7 +216,7 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
                 if test.index is string {
                     t:SemType key = m.entries().get(<string> test.index)[1];
                     test:assertTrue(t:isSubtype(tc, key, t:STRING), "Index for mapping must be a string");
-                    // TODO fetch key value 
+                    keyVal = v.entries().get(<string> test.index)[1];
                 }
                 else {
                     test:assertFail("mapping parsing with literal index not supported yet");
