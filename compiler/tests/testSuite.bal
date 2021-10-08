@@ -33,7 +33,7 @@ function testCompileVPO(string path, string kind) returns io:Error? {
 @test:Config {
     dataProvider: listSourcesT
 }
-function testSemTypeT(string path, string kind) returns error? {
+function testSemType(string path, string kind) returns error? {
     SubtypeTestCase res = check readSubtypeTests(path);
     check testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
 }
