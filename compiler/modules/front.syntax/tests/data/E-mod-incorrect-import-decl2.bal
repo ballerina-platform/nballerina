@@ -1,3 +1,3 @@
 // @case
-import ballerina_x/io;
+import ballerina__x/io;
 // @end

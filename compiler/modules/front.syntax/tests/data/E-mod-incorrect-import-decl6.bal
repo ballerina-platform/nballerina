@@ -1,3 +1,3 @@
 // @case
-import org/mode_1.submod2;
+import org/mode__1.submod2;
 // @end

@@ -352,16 +352,6 @@ class Tokenizer {
         return true;
     }
 
-    function expectImportPart() returns string|err:Syntax {
-        string identifier = check self.expectIdentifier();
-        if identifier.includes("_") {
-            return self.err(`expect an identifier without underscores`);
-        }
-        else {
-            return identifier;
-        }
-    }
-
     function expectIdentifier() returns string|err:Syntax {
         Token? t = self.curTok;
         if t is [IDENTIFIER, string] {

@@ -1,3 +1,3 @@
 // @case
-import ballerina/io_println;
+import ballerina/io___println;
 // @end
