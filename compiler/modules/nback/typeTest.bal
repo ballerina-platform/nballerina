@@ -142,7 +142,7 @@ function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:Point
         return scaffold.unimplementedErr("cast to record type not implemented yet");
     }
     else {
-        return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingHasTypeFunction),
+        return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(mappingHasTypeFunction),
                                         [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
     }
 }
@@ -155,7 +155,7 @@ function buildMappingExactify(llvm:Builder builder, Scaffold scaffold, llvm:Poin
         return tagged;
     }
     else {
-        return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingExactifyFunction),
+        return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(mappingExactifyFunction),
                                                // XXX what we want here is just an index
                                                [tagged, scaffold.getInherentType(t:intersect(targetType, t:MAPPING_RW))]); 
     }
@@ -163,7 +163,7 @@ function buildMappingExactify(llvm:Builder builder, Scaffold scaffold, llvm:Poin
 
 function buildHasListType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:Value {
     t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), targetType);
-    return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, listHasTypeFunction),
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(listHasTypeFunction),
                                     [tagged, llvm:constInt(LLVM_INT, bitSet)]);     
 }
 
@@ -174,7 +174,7 @@ function buildListExactify(llvm:Builder builder, Scaffold scaffold, llvm:Pointer
         return tagged;
     }
     else {
-        return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, listExactifyFunction),
+        return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(listExactifyFunction),
                                                [tagged, llvm:constInt(LLVM_INT, bitSet)]);   
     }
 }

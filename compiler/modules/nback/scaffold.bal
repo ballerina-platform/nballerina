@@ -181,6 +181,19 @@ class Scaffold {
         return self.mod.llMod.getIntrinsicDeclaration(name);
     }
 
+    function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl {
+        bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: rf.name };
+        llvm:FunctionDecl? decl = self.getImportedFunction(symbol);
+        if !(decl is ()) {
+            return decl;
+        }
+        else {
+            llvm:FunctionDecl f = addRuntimeFunctionDecl(self.mod.llMod, rf);
+            self.addImportedFunction(symbol, f);
+            return f;
+        }
+    }
+
     function getString(string str) returns StringDefn {
         StringDefn? curDefn = self.mod.stringDefns[str];
         if !(curDefn is ()) {
@@ -281,6 +294,14 @@ class Scaffold {
             return used;
         }
     }
+}
+
+function addRuntimeFunctionDecl(llvm:Module mod, RuntimeFunction rf) returns llvm:FunctionDecl {
+    llvm:FunctionDecl f = mod.addFunctionDecl(mangleRuntimeSymbol(rf.name), rf.ty);
+    foreach var attr in rf.attrs {
+        f.addEnumAttribute(attr);
+    }
+    return f;
 }
 
 function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue {

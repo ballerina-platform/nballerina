@@ -121,7 +121,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
 function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
     t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.list.semType);
     // XXX listSetFunction must also clear the exact bit if the list is not exact?
-    llvm:Value? err = builder.call(buildRuntimeFunctionDecl(scaffold, listSetFunction),
+    llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(listSetFunction),
                                    [builder.load(scaffold.address(insn.list)),
                                     buildInt(builder, scaffold, insn.index),
                                     check buildWideRepr(builder, scaffold, insn.operand, REPR_ANY, memberType)]);
@@ -134,7 +134,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     t:Context tc = scaffold.typeContext();
     t:SemType mappingType = insn.result.semType;
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
-    llvm:PointerValue m = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, mappingConstructFunction),
+    llvm:PointerValue m = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(mappingConstructFunction),
                                                           [inherentType, llvm:constInt(LLVM_INT, length)]);
     // JBUG if I combine these statements into a single from/do, then it gives an assignment required error
     // which is removed by a check; but it's only check failures in the query pipeline that should show up in the
@@ -149,7 +149,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
         members = from var [k, v] in members order by k select [k, v];
     } 
     foreach var [fieldName, operand] in members {
-        _ = builder.call(buildRuntimeFunctionDecl(scaffold, mappingInitMemberFunction),
+        _ = builder.call(scaffold.getRuntimeFunctionDecl(mappingInitMemberFunction),
                          [
                              m,
                              check buildConstString(builder, scaffold, fieldName),
@@ -162,7 +162,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
 
 function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGetInsn insn) returns BuildError? {
     // SUBSET this can widen leading to inexactness when mapping member types are not bitsets
-    llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, mappingGetFunction),
+    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(mappingGetFunction),
                                                 [
                                                     builder.load(scaffold.address(insn.operands[0])),
                                                     check buildString(builder, scaffold, insn.operands[1])
@@ -173,7 +173,7 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
     t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), insn.operands[0].semType);
     // SUBSET different field types can lead to inexact projection
-    llvm:Value? err = builder.call(buildRuntimeFunctionDecl(scaffold, mappingSetFunction),
+    llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(mappingSetFunction),
                                    [
                                        builder.load(scaffold.address(insn.operands[0])),
                                        check buildString(builder, scaffold, insn.operands[1]),
