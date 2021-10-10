@@ -280,8 +280,9 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
         check tok.advance();
         // if exp1 { } else if exp2 { }
         if tok.current() == "if" {
+            Position ifFalseStartPos = tok.currentStartPos();
             check tok.advance();
-            ifFalse = [check parseIfElseStmt(tok, startPos)];
+            ifFalse = [check parseIfElseStmt(tok, ifFalseStartPos)];
         }
         // if exp1 { } else { }
         else if tok.current() == "{" {

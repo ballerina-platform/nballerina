@@ -346,11 +346,11 @@ class Tokenizer {
     }
 
     function currentEndPos() returns Position {
-        return createPosition(self.lineIndex, self.codePointIndex);
+        return createPosition(self.lineIndex, self.codePointIndex-1);
     }
 
     function previousEndPos() returns Position {
-        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex);
+        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex-1);
     }
 
     private function getFragment() returns string {

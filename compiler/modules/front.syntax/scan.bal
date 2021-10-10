@@ -39,34 +39,19 @@ function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, i
     readonly & string[] fragments = line.fragments;
     int fragCodeIndex = 0;
     int fragmentIndex = 0;
-    int currentFragmentIndex = fragmentIndex;
     int i = 0;
     while i < codePointIndex {
         FragCode code = fragCodes[fragCodeIndex];
         fragCodeIndex += 1;
         var [codePointLen, fragmentLen] = fragCodeLength(code, fragmentIndex, fragments);
         i += codePointLen;
-        if i == codePointIndex {
-            fragCodeIndex += 1;
-        }
         fragmentIndex += fragmentLen;
-        if i <= codePointIndex {
-            currentFragmentIndex = fragmentIndex;
-        }
-        // if code <= VAR_FRAG_MAX {
-        //     currentFragmentIndex = fragmentIndex;
-        //     i += fragments[fragmentIndex].length();
-        //     fragmentIndex += 1;
-        // }
-        // else if code >= FRAG_FIXED_TOKEN {
-        //     FixedToken? ft = fragTokens[code];
-        //     i += (<string>ft).length();
-        // }
-        // else {
-        //     i += 1;
-        // }
     }
-    return [fragCodeIndex - 1, currentFragmentIndex];
+    if i > codePointIndex {
+        fragCodeIndex -= 1;
+        fragmentIndex -= 1;
+    }
+    return [fragCodeIndex, fragmentIndex];
 }
 
 function fragCodeLength(FragCode fragCode, int fragmentIndex, readonly & string[] fragments) returns [int, int] {
