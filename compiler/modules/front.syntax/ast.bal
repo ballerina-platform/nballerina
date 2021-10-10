@@ -56,7 +56,8 @@ public type ConstDefn record {|
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr|CheckingStmt;
-public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|VarRefExpr|CompoundExpr;
+public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
@@ -75,6 +76,7 @@ public type CompoundAssignStmt record {|
 |};
 
 // L-value expression
+// XXX Add FieldAccessLExpr when we can handle it in codeGen
 public type LExpr VarRefExpr|MemberAccessLExpr;
 
 public type ReturnStmt record {|
@@ -247,6 +249,18 @@ public type MemberAccessExpr record {|
 public type MemberAccessLExpr record {|
     VarRefExpr container;
     Expr index;
+    Position pos;
+|};
+
+public type FieldAccessExpr record {|
+    Expr mapping;
+    string fieldName;
+    Position pos;
+|};
+
+public type FieldAccessLExpr record {|
+    VarRefExpr mapping;
+    string fieldName;
     Position pos;
 |};
 

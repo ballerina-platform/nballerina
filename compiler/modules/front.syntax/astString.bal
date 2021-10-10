@@ -431,6 +431,16 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(")");
         }
     }
+    else if expr is FieldAccessExpr {
+        if wrap {
+            w.push("(");
+        }
+        exprToWords(w, expr.mapping, true);
+        w.push(".", expr.fieldName);
+        if wrap {
+            w.push(")");
+        }
+    }
     else if expr is MethodCallExpr {
          if wrap {
             w.push("(");
