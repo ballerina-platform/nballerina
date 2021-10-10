@@ -71,7 +71,6 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
 function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns err:Syntax? {
     check tok.moveToPos(defn.startPos, MODE_NORMAL);
     test:assertEquals(tok.currentStartPos(), defn.startPos, "moved to wrong position");
-    ModuleLevelDefn newDefn;
     if defn.vis == "public" {
         check tok.advance();
     }

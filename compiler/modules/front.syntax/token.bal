@@ -105,13 +105,6 @@ type TokenizerState readonly & record {
     Token? curTok;
 };
 
-type TokenizerInternalState readonly & record {|
-    int lineIndex;
-    int codePointIndex;
-    int fragCodeIndex;
-    Mode mode;
-|};
-
 class Tokenizer {
     private final ScannedLine[] lines;
     // index of nextLine to be scanned
@@ -327,9 +320,6 @@ class Tokenizer {
 
     // This currently assume pos is the position at the start of the token (currentStartPos)
     function moveToPos(Position pos, Mode mode) returns err:Syntax? {
-        // while self.currentStartPos() < pos {
-        //     check self.advance();
-        // }
         var [lineIndex, codePointIndex] = unpackPosition(pos);
         var [fragIndex, fragmentIndex] = scanLineFragIndex(self.file.scannedLine(lineIndex), codePointIndex);
         self.lineIndex = lineIndex - 1;
