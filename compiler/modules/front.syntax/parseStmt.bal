@@ -80,7 +80,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         "(" => {
             TokenizerState state = tok.save();
             check tok.advance();
-            boolean isTypeDesc = check preparseParenTypeDesc(tok, ")");
+            boolean isTypeDesc = check preparseParenTypeDesc(tok);
             tok.restore(state);
 
             if isTypeDesc {

@@ -23,7 +23,7 @@ function testPreparse(string src, PreparseTestResult expected, int minLookahead,
 
     test:assertEquals(tok.current(), "(");
     check tok.advance();
-    var actual = preparseParenTypeDesc(tok, ")");
+    var actual = preparseParenTypeDesc(tok);
     if expected != SYNTAX_ERROR {
         test:assertEquals(actual, expected);
     }
@@ -78,7 +78,7 @@ function parenStmtBeginnings() returns map<PreparseTestCase>|error {
         ["(()).", "m();", PREPARSE_EXPR], // semantically invalid
         ["(1) n", " = 1;", PREPARSE_TYPE_DESC, "O"],
         ["(1).", "toHex();", PREPARSE_EXPR, "O"], // semantically invalid
-        ["((1).toHex());", "", SYNTAX_ERROR],
+        ["((1).", "toHex()).toHex();", PREPARSE_EXPR, "O"], // semantically invalid
         ["((2)) n", " = 2;", PREPARSE_TYPE_DESC, "O"],
         ["(-2) a", " = -2;", PREPARSE_TYPE_DESC, "O"],
         ["(-2).", "toHex();", PREPARSE_EXPR, "O"], // semantically invalid
