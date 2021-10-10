@@ -80,7 +80,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         "(" => {
             TokenizerState state = tok.save();
             check tok.advance();
-            boolean isTypeDesc = check preparseParenTypeDesc(tok);
+            boolean isTypeDesc = check preparseParenTypeDesc(tok, ")");
             tok.restore(state);
 
             if isTypeDesc {
@@ -244,7 +244,7 @@ function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp o
 }
 
 function parseVarDeclStmt(Tokenizer tok, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
-    TypeDesc td = check parseInlineTypeDesc(tok);
+    TypeDesc td = check parseTypeDesc(tok);
     return finishVarDeclStmt(tok, td, isFinal);
 }
 
