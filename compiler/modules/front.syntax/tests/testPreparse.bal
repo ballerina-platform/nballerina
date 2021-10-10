@@ -3,13 +3,19 @@ import wso2/nballerina.err;
 import ballerina/test;
 
 const SYNTAX_ERROR = ();
-type PreparseTestResult PREDICT_TYPE_DESC|PREDICT_EXPR|SYNTAX_ERROR;
-type PreparseTestCase [string, PreparseTestResult, int];
+type PreparseTestResult PREPARSE_TYPE_DESC|PREPARSE_EXPR|SYNTAX_ERROR;
+
+// `()` Within the subset grammar syntax
+// `O` Over-implementation
+// `W` Wastefully looks ahead more than what is strictly necessary
+type PreparseTestKind ()|"O"|"W";
+
+type PreparseTestCase [string, PreparseTestResult, int, PreparseTestKind];
 
 @test:Config {
     dataProvider: parenStmtBeginnings
 }
-function testPreparse(string src, PreparseTestResult expected, int minLookahead) returns err:Syntax? {
+function testPreparse(string src, PreparseTestResult expected, int minLookahead, PreparseTestKind k) returns err:Syntax? {
     SourceFile file = createSourceFile([src], { filename: "<preparse-test>" });
     Tokenizer tok = new (file);
     check tok.advance();
@@ -17,54 +23,95 @@ function testPreparse(string src, PreparseTestResult expected, int minLookahead)
 
     test:assertEquals(tok.current(), "(");
     check tok.advance();
-    var actual = preparseParenTypeDesc(tok);
-    if expected == SYNTAX_ERROR {
-        test:assertEquals(actual, PREDICT_EXPR);
-        test:assertTrue(parseMethodCallStmt(tok) is error);
+    var actual = preparseParenTypeDesc(tok, ")");
+    if expected != SYNTAX_ERROR {
+        test:assertEquals(actual, expected);
+    }
+
+    if k == "O" {
+        return;
+    }
+
+    int consumed = file.lineColumn(tok.currentEndPos())[1];
+    if k == "W" {
+        test:assertTrue(consumed > minLookahead);
     }
     else {
-        test:assertEquals(actual, expected);
-        test:assertEquals(file.lineColumn(tok.currentEndPos())[1], minLookahead);
+        test:assertEquals(consumed, minLookahead);
+    }
 
-        tok.restore(state);
-        if check actual {
-            _ = check parseVarDeclStmt(tok);
-        }
-        else {
-            _ = check parseMethodCallStmt(tok);
-        }
+    tok.restore(state);
+    Stmt|error err;
+    if check actual {
+        err = parseVarDeclStmt(tok);
+    }
+    else {
+        err = parseMethodCallStmt(tok);
+    }
+
+    if expected == SYNTAX_ERROR {
+        test:assertTrue(err is error, "expected syntax error");
+    }
+    else {
+        test:assertFalse(err is error, "parser error");
     }
 }
 
 function parenStmtBeginnings() returns map<PreparseTestCase>|error {
-    [string, string, PreparseTestResult][] tests = [
-        ["() n", " = ();", PREDICT_TYPE_DESC],
-        ["().", "m();", PREDICT_EXPR], // semantically invalid
-
-        ["()[0", "].m();", PREDICT_EXPR], // semantically invalid
-        ["()[0", "][0].m();", PREDICT_EXPR], // semantically invalid
-        ["()[CONST", "].m();", PREDICT_EXPR], // semantically invalid
-
-        // SUBSET enable after T[n] td
-        // ["()[0] n", " = [];", PREDICT_TYPE_DESC],
-        // ["()[0][0] n", " = [];", PREDICT_TYPE_DESC],
-        // ["()[CONST] n", " = [];", PREDICT_TYPE_DESC],
-
-        ["()[\"hello\"", "].m();", PREDICT_EXPR], // semantically invalid
-        ["()[]", " n = [];", PREDICT_TYPE_DESC],
-        ["()?", " n = ();", PREDICT_TYPE_DESC],
-
+    [string, string, PreparseTestResult, PreparseTestKind][] tests = [
+        ["() n", " = ();", PREPARSE_TYPE_DESC],
+        ["().", "m();", PREPARSE_EXPR], // semantically invalid
+        ["()[0].", "m();", PREPARSE_EXPR], // semantically invalid
+        ["()[0] n", " = [];", PREPARSE_TYPE_DESC, "O"],
+        ["()[0][0].", "m();", PREPARSE_EXPR], // semantically invalid
+        ["()[0][0] n", " = [];", PREPARSE_TYPE_DESC, "O"],
+        ["()[CONST].", "m();", PREPARSE_EXPR], // semantically invalid
+        ["()[CONST] n", " = [];", PREPARSE_TYPE_DESC, "O"],
+        ["()[\"hello\"", "].m();", PREPARSE_EXPR, "W"], // semantically invalid
+        ["()[]", " n = [];", PREPARSE_TYPE_DESC, "W"],
+        ["()?", " n = ();", PREPARSE_TYPE_DESC],
         // SUBSET enable after optional field access
-        // ["()?.", " method();", PREDICT_EXPR]
+        // ["()?.", " method();", PREPARSE_EXPR]
+        ["()|", "int i = ();", PREPARSE_TYPE_DESC],
+        ["(()|", "int) i = ();", PREPARSE_TYPE_DESC, "W"],
+        ["(()) n", " = ();", PREPARSE_TYPE_DESC],
+        ["(()).", "m();", PREPARSE_EXPR], // semantically invalid
+        ["(1) n", " = 1;", PREPARSE_TYPE_DESC, "O"],
+        ["(1).", "toHex();", PREPARSE_EXPR, "O"], // semantically invalid
+        ["((1).toHex());", "", SYNTAX_ERROR],
+        ["((2)) n", " = 2;", PREPARSE_TYPE_DESC, "O"],
+        ["(-2) a", " = -2;", PREPARSE_TYPE_DESC, "O"],
+        ["(-2).", "toHex();", PREPARSE_EXPR, "O"], // semantically invalid
 
-        ["(x", ").m();", PREDICT_EXPR],
-        ["() = 1;", "", SYNTAX_ERROR]
+        ["(\"hello\").", "m();", PREPARSE_EXPR], // semantically invalid
+        ["(\"T\") t", " = \"T\";", PREPARSE_TYPE_DESC, "O"],
+        ["(MyInt) i", " = 4;", PREPARSE_TYPE_DESC],
+        ["(myInt).", "m();", PREPARSE_EXPR],
+        ["(myArr)[1].", "m();", PREPARSE_EXPR],
+        ["(myArr)[1 +", " 1].m();", PREPARSE_EXPR, "W"],
+        ["(myArr[0]).", "m();", PREPARSE_EXPR],
+
+        ["([MyConst]) t", " = [MyConst];", PREPARSE_TYPE_DESC, "O"],
+
+        ["(int)", " i = 2;", PREPARSE_TYPE_DESC, "W"],
+        ["(int|", "string)[] a = [1];", PREPARSE_TYPE_DESC, "W"],
+        ["(int|", "string[])[] a = [1];", PREPARSE_TYPE_DESC, "W"],
+        ["(int:Signed32) i", " = 2;", PREPARSE_TYPE_DESC],
+        // SUBSET this should a semantic error, not a syntax error
+        ["(int:MAX).", "toHex();", SYNTAX_ERROR],
+
+        ["(map<", "int>|())[] maybeMaps = [];", PREPARSE_TYPE_DESC, "W"],
+        ["(map:entries(", "m)).removeAll();", PREPARSE_EXPR, "O"],
+
+        ["(record", " {|int id;|}) m = {id: 8};", PREPARSE_TYPE_DESC, "W"],
+
+        ["() =", " 1;", SYNTAX_ERROR]
     ];
 
     map<PreparseTestCase> testMap = {};
     foreach var t in tests {
         string src = t[0] + t[1];
-        testMap[src] = [src, t[2], t[0].length()];
+        testMap[src] = [src, t[2], t[0].length(), t[3]];
     }
     return testMap;
 }
