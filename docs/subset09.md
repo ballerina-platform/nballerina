@@ -150,8 +150,12 @@ assign-stmt = lvexpr "=" expression ";"
 compound-assign-stmt = lvexpr CompoundAssignmentOperator expression ";"
 
 lvexpr =
-   identifier
-   | identifier "[" expression "]"
+   variable-reference-lvexpr
+   | member-access-lvexpr 
+
+member-access-lvexpr = variable-reference-lvexpr "[" expression "]"
+
+variable-reference-lvexpr = variable-reference
 
 return-stmt = "return" [expression] ";"
 
@@ -290,7 +294,9 @@ qualified-identifier = module-prefix ":" identifier
 
 module-prefix = identifier
 
-variable-reference-expr = identifier | qualified-identifier # can refer to parameter, local variable or constant
+variable-reference-expr = variable-reference
+
+variable-reference = identifier | qualified-identifier # can refer to parameter, local variable or constant
 
 // tokens
 int-literal = (as in Ballerina language spec)
