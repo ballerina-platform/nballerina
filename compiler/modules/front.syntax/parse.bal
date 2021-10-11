@@ -103,15 +103,21 @@ function parseImportNamesRest(Tokenizer tok) returns string[]|err:Syntax {
 
 function validImportPart(Tokenizer tok) returns string|err:Syntax {
     string identifier = check tok.expectIdentifier();
-    if identifier.includes("__") {
-        return tok.err("expect an identifier without consecutive underscores");
+    string? prevChar = ();
+    foreach var ch in identifier {
+        if ch == "_" {
+            if prevChar == () {
+                return tok.err("expect an identifier without leading underscores");
+            } else if prevChar == "_" {
+                return tok.err("expect an identifier without consecutive underscores");
+            }
+        }
+        prevChar = ch;
     }
-    else if identifier.endsWith("_") {
+    if prevChar == "_" {
         return tok.err("expect an identifier without tailing underscores");
     }
-    else {
-        return identifier;
-    }
+    return identifier;
 }
 
 function parseImportPrefix(Tokenizer tok) returns string?|err:Syntax {
