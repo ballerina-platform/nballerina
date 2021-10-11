@@ -14,6 +14,7 @@ type Binding record {|
     string name;
     bir:Register reg;
     boolean isFinal;
+    boolean used = false;
     Binding? prev;
     // When this binding represents a narrowing, this refers to the
     // original binding that was not narrowed.
@@ -359,9 +360,22 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
             env.assignments.push(...effect.assignments);
         }
     }                
+    check unusedLocalVariables(cx, env, initialEnv.bindings);
     int[] assignments = [];
     addAssignments(assignments, env.assignments, startRegister);
     return { block: curBlock, assignments };
+}
+
+function unusedLocalVariables(CodeGenContext cx, Environment env, Binding? bindingLimit) returns CodeGenError? {
+    Binding? binding = env.bindings;
+    while binding !== bindingLimit {
+        // binding is non-nil
+        Binding tem = <Binding>binding;
+        if tem.unnarrowed == () && !tem.used {
+            return cx.semanticErr(`unused local variable ${tem.name}`);
+        }
+        binding = tem.prev;
+    }
 }
 
 function environmentCopy(Environment env) returns Environment {
@@ -1641,12 +1655,16 @@ function lookupLocalVarRef(CodeGenContext cx, string name, Environment env) retu
     if !(binding is ()) {
         Binding? unnarrowed = binding.unnarrowed;
         if !(unnarrowed is ()) {
+            unnarrowed.used = true;
             // This is a narrowed binding
             int num = unnarrowed.reg.number;
             if env.assignments.indexOf(num) != () {
                 // This binding has been invalidated by an assignment
                 return unnarrowed;
             }
+        }
+        else {
+            binding.used = true;
         }
     }
     return binding;

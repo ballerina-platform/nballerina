@@ -10,6 +10,7 @@ public function main() {
     io:println(name == name2); // @output true
     io:println(name != name2); // @output false
     string name3 = "James"; 
+    _ = name3;
     io:println(name == "James"); // @output false
     io:println(name != "James"); // @output true
 }

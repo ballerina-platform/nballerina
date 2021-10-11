@@ -9,5 +9,3 @@ public function main() {
         io:println(x + 0.5); // @output 1.5
     }
 }
-
-function ignore(any x) {}
