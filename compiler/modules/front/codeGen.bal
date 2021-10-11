@@ -153,26 +153,21 @@ class CodeGenContext {
         self.loopContext = (<LoopContext>self.loopContext).enclosing;
     }
 
-    function onBreakLabel() returns bir:Label|err:Semantic {
-        LoopContext? c = self.loopContext;
-        if c is () {
-            return self.semanticErr("break not in loop");
-        }
-        else {
-            c.breakUsed = true;
-            return c.onBreak.label;
-        }
-    }
-
-    function onContinueLabel() returns bir:Label|err:Semantic {
+    function onBreakContinueLabel(s:BreakContinue breakContinue) returns bir:Label|err:Semantic {
         LoopContext? c = self.loopContext;
         if c is () {
             return self.semanticErr("continue not in loop");
         }
         else {
-            bir:BasicBlock b = c.onContinue ?: self.createBasicBlock();
-            c.onContinue = b;
-            return b.label;
+            if breakContinue == "continue" {
+                bir:BasicBlock b = c.onContinue ?: self.createBasicBlock();
+                c.onContinue = b;
+                return b.label;
+            }
+            else {
+                c.breakUsed = true;
+                return c.onBreak.label;
+            }
         }
     }
 
@@ -181,20 +176,14 @@ class CodeGenContext {
             return;
         }
         LoopContext c = <LoopContext>self.loopContext;
+        addAssignments(self.onBreakContinueAssignments(breakContinue), assignments, c.startRegister);
+    }
+
+    function onBreakContinueAssignments(s:BreakContinue breakContinue) returns int[]{
         if breakContinue == "break" {
-            addAssignments(c.onBreakAssignments, assignments, c.startRegister);
+            return  (<LoopContext>self.loopContext).onBreakAssignments;
         }
-        else {
-            addAssignments(c.onContinueAssignments, assignments, c.startRegister);
-        }
-    }
-
-    function onBreakAssignments() returns int[] {
-        return  (<LoopContext>self.loopContext).onBreakAssignments;
-    }
-
-    function onContinueAssignments() returns int[] {
-        return  (<LoopContext>self.loopContext).onContinueAssignments;
+        return (<LoopContext>self.loopContext).onContinueAssignments;
     }
 
     function foldExpr(Environment env, s:Expr expr, t:SemType? expectedType) returns s:Expr|FoldError {
@@ -408,9 +397,9 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         loopEnd.insns.push(branchToLoopStep);
         check validLoopAssignments(cx, assignments);
     }
-    check validLoopAssignments(cx, cx.onContinueAssignments());
-    assignments.push(...cx.onContinueAssignments());
-    assignments.push(...cx.onBreakAssignments());
+    check validLoopAssignments(cx, cx.onBreakContinueAssignments("continue"));
+    assignments.push(...cx.onBreakContinueAssignments("continue"));
+    assignments.push(...cx.onBreakContinueAssignments("break"));
     if !(loopStep is ()) {
         bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", operands: [loopVar, 1], result: loopVar };
         loopStep.insns.push(increment);
@@ -455,10 +444,10 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         loopEnd.insns.push(branchToLoopHead);
         check validLoopAssignments(cx, assignments);
     }
-    check validLoopAssignments(cx, cx.onContinueAssignments());
+    check validLoopAssignments(cx, cx.onBreakContinueAssignments("continue"));
     // We won't used these if the exit isn't reachable
-    assignments.push(...cx.onContinueAssignments());
-    assignments.push(...cx.onBreakAssignments());
+    assignments.push(...cx.onBreakContinueAssignments("continue"));
+    assignments.push(...cx.onBreakContinueAssignments("break"));
     if cx.loopUsedBreak() {
         exitReachable = true;
     }
@@ -481,7 +470,7 @@ function validLoopAssignments(CodeGenContext cx, int[] assignments) returns Code
 }
 
 function codeGenBreakContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
-    bir:Label dest = stmt.breakContinue == "break"? check cx.onBreakLabel() : check cx.onContinueLabel();
+    bir:Label dest = check cx.onBreakContinueLabel(stmt.breakContinue);
     bir:BranchInsn branch = { dest };
     startBlock.insns.push(branch);
     cx.addOnBreakContinueAssignments(env.assignments, stmt.breakContinue);
