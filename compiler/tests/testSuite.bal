@@ -218,12 +218,14 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
             string? index = test.index;
             if t:isSubtype(tc, t1, t:LIST) {
                 if index is string {
-                    t:SemType? keyn = m[index];
-                    if keyn is null {
+                    t:SemType? key = m[index];
+                    if key is null {
                         test:assertFail(index + " is not declared");
                     }
-                    t:SemType key = <t:SemType> keyn;
-                    test:assertTrue(t:isSubtype(tc, key, t:INT), "Index for list must be an integer");
+                    else {
+                        test:assertTrue(t:isSubtype(tc, key, t:INT), "Index for list must be an integer");
+                    }
+                    
                 }
                 t:SemType memberType = t:listMemberType(tc, t1);
                 test:assertTrue(t:isSubtype(tc, t2, memberType), test.member + " is not a subtype of member type");
@@ -231,16 +233,17 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
             else if t:isSubtype(tc, t1, t:MAPPING) {
                 string? keyVal = ();
                 if index is string {
-                    t:SemType? keyn = m[index];
-                    if keyn is null {
+                    t:SemType? key = m[index];
+                    if key is null {
                         test:assertFail(index + " is not declared");
                     }
-                    t:SemType key = <t:SemType> keyn;
-                    test:assertTrue(t:isSubtype(tc, key, t:STRING), "Index for mapping must be a string");
-                    if !(v.hasKey(index)) {
+                    else {
+                        test:assertTrue(t:isSubtype(tc, key, t:STRING), "Index for mapping must be a string");
+                    }
+                    keyVal = v[index];
+                    if keyVal is null {
                         test:assertFail(index + " is not declared");
                     }
-                    keyVal = v.get(index);
                 }
                 else {
                     test:assertFail("mapping parsing with literal index not supported yet");
