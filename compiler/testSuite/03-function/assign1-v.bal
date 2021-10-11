@@ -1,4 +1,4 @@
-// @productions local-var-decl-stmt function-call-expr
+// @labels local-init-var-decl-stmt function-call-expr
 import ballerina/io;
 
 function foo(string str) returns string {
