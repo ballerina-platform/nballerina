@@ -183,8 +183,14 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:SubtypeTest test = check s:parseTypeTest(item);
-        t:SemType t1 = m.entries().get(test.left)[1];
-        t:SemType t2 = m.entries().get(test.right)[1];
+        if !(m.hasKey(test.left)) {
+            test:assertFail(test.left + " is not declared");
+        }
+        t:SemType t1 = m.get(test.left);
+        if !(m.hasKey(test.right)) {
+            test:assertFail(test.right + " is not declared");
+        }
+        t:SemType t2 = m.get(test.right);
         match test.op { 
             "<" => {
                 test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
