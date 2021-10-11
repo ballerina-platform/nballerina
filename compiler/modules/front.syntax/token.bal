@@ -320,6 +320,7 @@ class Tokenizer {
 
     // This currently assume pos is the position at the start of the token (currentStartPos)
     function moveToPos(Position pos, Mode mode) returns err:Syntax? {
+        self.mode = mode;
         var [lineIndex, codePointIndex] = unpackPosition(pos);
         var [fragIndex, fragmentIndex] = scanLineFragIndex(self.file.scannedLine(lineIndex), codePointIndex);
         self.lineIndex = lineIndex - 1;
@@ -383,7 +384,7 @@ class Tokenizer {
         }
     }
 
-    function expectLast(SingleCharDelim|MultiCharDelim|Keyword tok) returns Position|err:Syntax {
+    function expectEnd(SingleCharDelim|MultiCharDelim|Keyword tok) returns Position|err:Syntax {
         Position pos = self.currentEndPos();
         check self.expect(tok);
         return pos;

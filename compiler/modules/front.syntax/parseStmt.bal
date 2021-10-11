@@ -39,15 +39,15 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         }
         "break" => {
             check tok.advance();
-            Position endPos = check tok.expectLast(";");
-            BreakStmt node = { startPos, endPos };
-            return node;
+            Position endPos = check tok.expectEnd(";");
+            BreakContinueStmt stmt = { startPos, endPos, breakContinue:"break" };
+            return stmt;
         }
         "continue" => {
             check tok.advance();
-            Position endPos = check tok.expectLast(";");
-            ContinueStmt node = { startPos, endPos };
-            return node;
+            Position endPos = check tok.expectEnd(";");
+            BreakContinueStmt stmt = { startPos, endPos, breakContinue:"continue" };
+            return stmt;
         }
         "if" => {
             check tok.advance();
@@ -218,7 +218,7 @@ function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword) 
 function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue, Position startPos) returns AssignStmt|err:Syntax {
     check tok.advance();
     Expr expr = check parseExpr(tok);
-    Position endPos = check tok.expectLast(";");
+    Position endPos = check tok.expectEnd(";");
     AssignStmt stmt = { startPos, endPos, lValue, expr };
     return stmt;
 }
@@ -229,7 +229,7 @@ function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp o
     string opStr = op;
     BinaryArithmeticOp|BinaryBitwiseOp binOp = <BinaryArithmeticOp|BinaryBitwiseOp> opStr.substring(0, opStr.length() - 1);
     Position pos = tok.currentStartPos();
-    Position endPos = check tok.expectLast(";");
+    Position endPos = check tok.expectEnd(";");
     CompoundAssignStmt stmt = { startPos, endPos, lValue, expr , op: binOp, pos: pos };
     return stmt;
 }
@@ -245,7 +245,7 @@ function finishVarDeclStmt(Tokenizer tok, TypeDesc td, Position startPos, boolea
     // initExpr is required in the subset
     check tok.expect("=");
     Expr initExpr = check parseExpr(tok);
-    Position endPos = check tok.expectLast(";");
+    Position endPos = check tok.expectEnd(";");
     return { startPos, endPos, td, varName, initExpr, isFinal };
 }
 
@@ -259,14 +259,14 @@ function parseReturnStmt(Tokenizer tok, Position startPos) returns ReturnStmt|er
     }
     else {
         returnExpr = check parseExpr(tok);
-        endPos = check tok.expectLast(";");
+        endPos = check tok.expectEnd(";");
     }
     return { startPos, endPos, returnExpr };
 }
 
 function parsePanicStmt(Tokenizer tok, Position startPos) returns PanicStmt|err:Syntax {
     Expr panicExpr = check parseExpr(tok);
-    Position endPos = check tok.expectLast(";");
+    Position endPos = check tok.expectEnd(";");
     return { startPos, endPos, panicExpr };
 }
 

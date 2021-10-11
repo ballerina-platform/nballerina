@@ -323,11 +323,13 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
         else if stmt is s:ForeachStmt {
             effect = check codeGenForeachStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
-        else if stmt is s:BreakStmt {
-            effect = check codeGenBreakStmt(cx, <bir:BasicBlock>curBlock, env);
-        }
-        else if stmt is s:ContinueStmt {
-            effect = check codeGenContinueStmt(cx, <bir:BasicBlock>curBlock, env);
+        else if stmt is s:BreakContinueStmt {
+            if stmt.breakContinue is "break" {
+                effect = check codeGenBreakStmt(cx, <bir:BasicBlock>curBlock, env);
+            }
+            else {
+                effect = check codeGenContinueStmt(cx, <bir:BasicBlock>curBlock, env);
+            }
         }
         else if stmt is s:ReturnStmt {
             // JBUG #31327 cast

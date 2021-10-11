@@ -54,7 +54,7 @@ public type ConstDefn record {|
     ResolvedConst|false? resolved = ();    
 |};
 
-public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt|PanicStmt;
+public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr|CheckingStmt;
 public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|VarRefExpr|CompoundExpr;
 public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
@@ -131,16 +131,11 @@ public type ForeachStmt record {|
     Stmt[] body;
 |};
 
-public type BreakStmtBody "break";
-public type BreakStmt record {|
-    *PositionFields;
-    BreakStmtBody body = "break";
-|};
+public type BreakContinue "break"|"continue";
 
-public type ContinueStmtBody "continue";
-public type ContinueStmt record {|
-    *PositionFields;
-    ContinueStmtBody body = "continue";
+public type BreakContinueStmt record {|
+   *PositionFields;
+   BreakContinue breakContinue;
 |};
 
 public type VarDeclStmt record {|
