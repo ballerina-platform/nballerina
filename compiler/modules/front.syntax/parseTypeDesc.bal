@@ -160,11 +160,14 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         |"xml" => {
             Position pos = tok.currentStartPos();
             check tok.advance();
-            if tok.current() != ":" {
-                return <LeafTypeDesc> cur;
+            if tok.current() == ":" {
+                check tok.advance();
+                return { prefix: <LeafTypeDesc> cur, typeName: check tok.expectIdentifier(), pos };
             }
-            check tok.advance();
-            return { prefix: <LeafTypeDesc> cur, typeName: check tok.expectIdentifier(), pos };
+            else if tok.current() == "<" {
+                return { constituent: check parseTypeParam(tok) };
+            }
+            return <LeafTypeDesc> cur;
         }
         "byte" => {
             check tok.advance();

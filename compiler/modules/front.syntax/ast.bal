@@ -335,7 +335,7 @@ public type TypeDefn record {|
 
 public type TypeDesc LeafTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc;
 
-public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc;
+public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc;
 
 public type ListTypeDesc record {|
     TypeDesc[] members;
@@ -371,6 +371,10 @@ public type BinaryTypeDesc record {|
     BinaryTypeOp op;
     TypeDesc left;
     TypeDesc right;
+|};
+
+public type XmlSequenceTypeDesc record {|
+    TypeDesc constituent;
 |};
 
 public type TypeDescRef record {|
