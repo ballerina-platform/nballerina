@@ -51,16 +51,27 @@ public distinct class Context {
         return new (jLLVMConstAddrSpaceCast(ptr.LLVMValueRef, typeToLLVMType(destTy, self)));
     }
 
-    public function structCreateNamed(string name, Type[] elementTypes) returns StructType {
+    public function structCreateNamed(string name) returns StructType {
         if self.namedStructTypes.hasKey(name) {
             panic err:illegalArgument("type by that name already exists");
         }
-        StructType balType = { elementTypes: elementTypes.cloneReadOnly() };
+        StructType balType = { elementTypes: [] };
         handle jType = jLLVMStructCreateNamed(self.LLVMContext, java:fromString(name));
-        PointerPointer elements = PointerPointerFromTypes(elementTypes);
-        jLLVMStructSetBody(jType, elements.jObject, elementTypes.length(), 0);
         self.namedStructTypes[name] = [jType, balType];
         return balType;
+    }
+
+    public function structSetBody(StructType namedStructTy, Type[] elementTypes) {
+        foreach var entry in self.namedStructTypes.entries() {
+            var data = entry[1];
+            if data[1] === namedStructTy {
+                handle jType = data[0];
+                PointerPointer elements = PointerPointerFromTypes(elementTypes, self);
+                jLLVMStructSetBody(jType, elements.jObject, elementTypes.length(), 0);
+                return;
+            }
+        }
+        panic err:illegalArgument("no such named struct type");
     }
 
     function namedStructTypeToLLVMType(StructType ty) returns handle? {
