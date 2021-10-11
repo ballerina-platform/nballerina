@@ -1,19 +1,22 @@
 // @type T < TF
-// @type TF = B
 // @type F < B
-// @type INTEGER <> B
-// @type BL[ONE] = B
-// @type R[key] = INTEGER 
-// @type BL[2] = B
 type T true;
 type F false;
+
+// @type TF = B
 type TF true|false;
+
+// @type INTEGER <> B
 type B boolean;
 type INTEGER int;
 type S string;
+
+// @type BL[ONE] = B
+// @type BL[2] = B
 type BL boolean[]; 
 type test "ttt";
 
+// @type R[key] = INTEGER 
 type R record {|
     int f1;
     boolean f2;
