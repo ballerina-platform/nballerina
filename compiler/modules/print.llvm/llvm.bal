@@ -200,6 +200,7 @@ public class Context {
         return constValueWithBody(destTy, words);
     }
 
+    // Corresponds to LLVMStructCreateNamed
     public function structCreateNamed(string name) returns StructType {
         string structName = "%" + escapeIdent(name);
         if self.namedStructTypes.hasKey(structName) {
@@ -211,6 +212,7 @@ public class Context {
         return ty;
     }
 
+    // Corresponds to LLVMStructSetBody
     public function structSetBody(StructType namedStructTy, Type[] elementTypes) {
         foreach var entry in self.namedStructTypes.entries() {
             var data = entry[1];

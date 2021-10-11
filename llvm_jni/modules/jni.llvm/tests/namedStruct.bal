@@ -5,7 +5,7 @@ function namedStruct() returns Module {
     Builder builder = context.createBuilder();
     Module m = context.createModule();
     StructType structTy = context.structCreateNamed("structTy");
-    context.structSetBody(structTy, ["i64", "i32", structTy]);
+    context.structSetBody(structTy, ["i64", pointerType(structTy), structTy]);
     StructType notUsed = context.structCreateNamed("notUsed");
     context.structSetBody(notUsed, ["i32", "i32", structTy]);
 
