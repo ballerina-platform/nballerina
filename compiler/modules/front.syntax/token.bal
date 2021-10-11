@@ -244,6 +244,72 @@ class Tokenizer {
         }
     }
 
+    function peek() returns VariableTokenCode|FixedToken? {
+        readonly & FragCode[] fragCodes = self.fragCodes;
+        int fragCodeIndex = self.fragCodeIndex;
+        int lineIndex = self.lineIndex;
+        while true {
+            if fragCodeIndex > fragCodes.length() {
+                if lineIndex >= self.lines.length() {
+                    break;
+                }
+                fragCodes = self.lines[lineIndex].fragCodes;
+                lineIndex += 1;
+                fragCodeIndex = 0;
+            }
+            else {
+                FragCode fragCode = fragCodes[fragCodeIndex];
+                match fragCode {
+                    FRAG_WHITESPACE|FRAG_COMMENT => {
+                        fragCodeIndex += 1;
+                    }
+                    FRAG_STRING_OPEN => {
+                        return STRING_LITERAL;
+                    }
+                    FRAG_STRING_CLOSE
+                    |FRAG_STRING_CHARS
+                    |FRAG_STRING_CHAR_ESCAPE
+                    |FRAG_STRING_CONTROL_ESCAPE
+                    |FRAG_STRING_NUMERIC_ESCAPE => {
+                        panic err:impossible("unexpected fragCode in peek");
+                    }
+                    FRAG_INVALID => {
+                        return ();
+                    }
+                    FRAG_DECIMAL_NUMBER => {
+                        return DECIMAL_NUMBER;
+                    }
+                    FRAG_GREATER_THAN => {
+                        if self.mode == MODE_NORMAL && fragCodeIndex < fragCodes.length() && fragCodes[fragCodeIndex] == FRAG_GREATER_THAN {
+                            if fragCodeIndex + 1 < fragCodes.length() && fragCodes[fragCodeIndex + 1] == FRAG_GREATER_THAN {
+                                return ">>>";
+                            }
+                            else {
+                                return ">>";
+                            }
+                        }
+                        else {
+                            return ">";
+                        }
+                    }
+                    FRAG_IDENTIFIER => {
+                        return IDENTIFIER;
+                    }
+                    FRAG_HEX_NUMBER => {
+                        return HEX_INT_LITERAL;
+                    }
+                    FRAG_DECIMAL_FP_NUMBER|FRAG_DECIMAL_FP_NUMBER_F|FRAG_DECIMAL_FP_NUMBER_D => {
+                        return DECIMAL_FP_NUMBER;
+                    }
+                    _ => {
+                        return <FixedToken>fragTokens[fragCode];
+                    }
+                }
+            }   
+        }
+        return ();   
+    }
+
     function current() returns Token? {
         return self.curTok;
     }
