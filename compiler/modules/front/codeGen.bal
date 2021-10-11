@@ -866,13 +866,22 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
 }
 
 function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CompoundAssignStmt stmt) returns CodeGenError|StmtEffect {
-    var { lValue, expr , op, pos } = stmt;
+    var { lValue, expr, op, pos } = stmt;
     s:Expr binExpr;
     if lValue is s:VarRefExpr {
         return codeGenCompoundAssignToVar(cx, startBlock, env, lValue, expr, op, pos);
     }
     else {
-        return codeGenCompoundAssignToMember(cx, startBlock, env, lValue, expr, op, pos);
+        var { result: container, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, lValue.container, ()));
+        if container is bir:Register {
+            if t:isSubtypeSimple(container.semType, t:LIST) {
+                return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, pos);
+            }
+            else if t:isSubtypeSimple(container.semType, t:MAPPING) {
+                return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, pos);
+            }
+        }
+        return cx.semanticErr("can only apply member access in lvalue to list or mapping", pos=pos);
     }
 }
 
@@ -887,34 +896,48 @@ function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock
     return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
 }
 
-function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MemberAccessLExpr lValue, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
-    var { result: list, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, lValue.container, ()));
-    if !(list is bir:Register) || !(t:isSubtypeSimple(list.semType, t:LIST)) {
-        return cx.semanticErr("can only apply member access in lvale to list", pos=pos);
+function codeGenCompoundAssignToListMember(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MemberAccessLExpr lValue, bir:Register list, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
+    var { result: index, block: nextBlock } = check codeGenExprForInt(cx, bb, env, check cx.foldExpr(env, lValue.index, t:INT));
+    t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, index is int ? index : ());
+    if t:isEmpty(cx.mod.tc, memberType) {
+        return cx.semanticErr("type of member access is never");
     }
-    bir:Register listReg = <bir:Register> list;
-    var { result: index, block: block2 } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, lValue.index, t:INT));
-    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet> t:simpleArrayMemberType(cx.mod.tc, listReg.semType);
     bir:Register member = cx.createRegister(memberType);
-    bir:ListGetInsn insn = { result: member, list: listReg, operand: index, position: pos };
-    block2.insns.push(insn);
-    var { result: operand, block: block3 } = check codeGenExpr(cx, block2, env, check cx.foldExpr(env, rexpr, memberType));
-    bir:BasicBlock block;
-    bir:Operand result;
+    bir:ListGetInsn getInsn = { result: member, list, operand: index, position: pos };
+    nextBlock.insns.push(getInsn);
+    var { result, block } = check codeGenCompoundableBinaryExpr(cx, nextBlock, env, op, member, rexpr, pos);
+    bir:ListSetInsn setInsn = { list, index, operand: result, position: lValue.pos };
+    block.insns.push(setInsn);
+    return { block };
+}
+
+function codeGenCompoundAssignToMappingMember(CodeGenContext cx, bir:BasicBlock bb, Environment env,
+                                              s:MemberAccessLExpr lValue, bir:Register mapping, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
+    var { result: k, block: nextBlock } = check codeGenExprForString(cx, bb, env, check cx.foldExpr(env, lValue.index, t:STRING));
+    t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, k is string ? k : ());
+    if t:isEmpty(cx.mod.tc, memberType) {
+        return cx.semanticErr("type of member access is never");
+    }
+    bir:Register member = cx.createRegister(memberType);
+    bir:MappingGetInsn getInsn = { result: member, operands: [mapping, k] };
+    nextBlock.insns.push(getInsn);
+    var { result, block } = check codeGenCompoundableBinaryExpr(cx, nextBlock, env, op, member, rexpr, pos);
+    bir:MappingSetInsn setInsn = { operands:[ mapping, k, result], position: lValue.pos };
+    block.insns.push(setInsn);
+    return { block };
+}
+
+function codeGenCompoundableBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, bir:Register member, s:Expr rexpr, err:Position pos) returns CodeGenError|ExprEffect {
+    t:SemType memberType = member.semType;
+    s:Expr folded = check cx.foldExpr(env, rexpr, memberType);
     if op is s:BinaryArithmeticOp {
-        { result, block } = check codeGenArithmeticBinaryExpr(cx, block3, op, member, operand, pos);
+        var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, folded);
+        return check codeGenArithmeticBinaryExpr(cx, nextBlock, op, member, operand, pos);
     }
     else {
-        if !(operand is bir:IntOperand) {
-           return cx.semanticErr("operand for bitwise operation must be integer", pos=pos);  
-        }
-        else {
-            { result, block } = check codeGenBitwiseBinaryExpr(cx, block2, op, member, operand); 
-        }
-    }
-    bir:ListSetInsn insn1 = { list: listReg, index, operand: result, position: lValue.pos };
-    block.insns.push(insn1);
-    return { block };
+        var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, folded);
+        return codeGenBitwiseBinaryExpr(cx, nextBlock, op, member, operand); 
+    }    
 }
 
 function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CallStmt stmt) returns CodeGenError|StmtEffect {
