@@ -27,6 +27,7 @@ function testPreparse(string src, PreparseTestResult expected, int minLookahead,
     if expected != SYNTAX_ERROR {
         test:assertEquals(actual, expected);
     }
+    // even if source has a syntax error preparse might not give an error, so we must continue.
 
     if k == "O" {
         return;
@@ -42,10 +43,15 @@ function testPreparse(string src, PreparseTestResult expected, int minLookahead,
 
     tok.restore(state);
     Stmt|error err;
-    if check actual {
+    if actual is error {
+        test:assertEquals(expected, SYNTAX_ERROR);
+        return;
+    }
+    else if actual {
         err = parseVarDeclStmt(tok);
     }
     else {
+        // actual == false
         err = parseMethodCallStmt(tok);
     }
 
@@ -105,6 +111,9 @@ function parenStmtBeginnings() returns map<PreparseTestCase>|error {
 
         ["(record", " {|int id;|}) m = {id: 8};", PREPARSE_TYPE_DESC, "W"],
 
+        ["(check", " m()).print();", PREPARSE_EXPR],
+        ["(1 is", " int).print();", PREPARSE_EXPR], // semantically invalid
+        ["([)", "]).m();", SYNTAX_ERROR],
         ["() =", " 1;", SYNTAX_ERROR]
     ];
 

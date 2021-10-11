@@ -67,7 +67,12 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             return parseVarDeclStmt(tok, true);
         }
         "error" => {
-            return parseErrorStmt(tok);
+            if tok.peek() == "(" {
+                return parseMethodCallStmt(tok);
+            }
+            else {
+                return finishVarDeclStmt(tok, check parseTypeDesc(tok));
+            }
         }
         "check"|"checkpanic" => {
             check tok.advance();
@@ -159,24 +164,6 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
         return finishVarDeclStmt(tok, ref);
     }
     return parseError(tok, "invalid statement");
-}
-
-// Parse a statement that starts with the keyword `error`
-function parseErrorStmt(Tokenizer tok) returns Stmt|err:Syntax {
-    Position pos = tok.currentStartPos();
-    check tok.advance();
-    if tok.current() == "(" {
-        check tok.advance();
-        ErrorConstructorExpr errExpr = check finishErrorConstructorExpr(tok, pos);
-        if tok.current() == "." {
-            MethodCallExpr expr = check finishMethodCallExpr(tok, errExpr);
-            return finishCallStmt(tok, expr);
-        }
-        return parseError(tok, "error constructor not allowed here");
-    }
-    else {
-        return finishVarDeclStmt(tok, check finishInlineTypeDesc(tok, "error"));
-    }
 }
 
 function parseMethodCallStmt(Tokenizer tok) returns MethodCallExpr|err:Syntax {
