@@ -46,7 +46,7 @@ function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Synta
                 return PREPARSE_EXPR;
             }
             ";" => {
-                if close != "|}" {
+                if close != "|}" && close != "}" {
                     return tok.err(`missing ${close}`);
                 }
                 check tok.advance();
