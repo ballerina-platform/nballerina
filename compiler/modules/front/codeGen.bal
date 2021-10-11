@@ -176,20 +176,17 @@ class CodeGenContext {
         }
     }
 
-    function addOnBreakAssignments(int[] assignments) {
+    function addOnBreakContinueAssignments(int[] assignments, s:BreakContinue breakContinue) {
         if assignments.length() == 0 {
             return;
         }
         LoopContext c = <LoopContext>self.loopContext;
-        addAssignments(c.onBreakAssignments, assignments, c.startRegister);
-    }
-
-    function addOnContinueAssignments(int[] assignments) {
-        if assignments.length() == 0 {
-            return;
+        if breakContinue == "break" {
+            addAssignments(c.onBreakAssignments, assignments, c.startRegister);
         }
-        LoopContext c = <LoopContext>self.loopContext;
-        addAssignments(c.onContinueAssignments, assignments, c.startRegister);
+        else {
+            addAssignments(c.onContinueAssignments, assignments, c.startRegister);
+        }
     }
 
     function onBreakAssignments() returns int[] {
@@ -324,12 +321,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
             effect = check codeGenForeachStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
         else if stmt is s:BreakContinueStmt {
-            if stmt.breakContinue is "break" {
-                effect = check codeGenBreakStmt(cx, <bir:BasicBlock>curBlock, env);
-            }
-            else {
-                effect = check codeGenContinueStmt(cx, <bir:BasicBlock>curBlock, env);
-            }
+            effect = check codeGenBreakContinueStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
         else if stmt is s:ReturnStmt {
             // JBUG #31327 cast
@@ -488,19 +480,11 @@ function validLoopAssignments(CodeGenContext cx, int[] assignments) returns Code
     }
 }
 
-function codeGenBreakStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env) returns CodeGenError|StmtEffect {
-    bir:Label dest = check cx.onBreakLabel();
+function codeGenBreakContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
+    bir:Label dest = stmt.breakContinue == "break"? check cx.onBreakLabel() : check cx.onContinueLabel();
     bir:BranchInsn branch = { dest };
     startBlock.insns.push(branch);
-    cx.addOnBreakAssignments(env.assignments);
-    return { block: () };
-}
-
-function codeGenContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env) returns CodeGenError|StmtEffect {
-    bir:Label dest = check cx.onContinueLabel();
-    bir:BranchInsn branch = { dest };
-    startBlock.insns.push(branch);
-    cx.addOnContinueAssignments(env.assignments);
+    cx.addOnBreakContinueAssignments(env.assignments, stmt.breakContinue);
     return { block: () };
 }
 
