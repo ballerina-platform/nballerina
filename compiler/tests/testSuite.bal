@@ -183,15 +183,17 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:TypeTest test = check s:parseTypeTest(item);
-        if !(m.hasKey(test.left)) {
+        t:SemType? tn1 = m[test.left];
+        if tn1 is null {
             test:assertFail(test.left + " is not declared");
         }
-        t:SemType t1 = m.get(test.left);
+        t:SemType t1 = <t:SemType> tn1;
         if test is s:SubtypeTest {
-            if !(m.hasKey(test.right)) {
+            t:SemType? tn2 = m[test.right];
+            if tn2 is null {
                 test:assertFail(test.right + " is not declared");
             }
-            t:SemType t2 = m.get(test.right);
+            t:SemType t2 = <t:SemType> tn2;
             match test.op { 
                 "<" => {
                     test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
@@ -208,17 +210,19 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
             }
         }
         else {
-            if !(m.hasKey(test.member)) {
+            t:SemType? tn2 = m[test.member];
+            if tn2 is null {
                 test:assertFail(test.member + " is not declared");
             }
-            t:SemType t2 = m.get(test.member);
+            t:SemType t2 = <t:SemType> tn2;
             string? index = test.index;
             if t:isSubtype(tc, t1, t:LIST) {
                 if index is string {
-                    if !(m.hasKey(index)) {
+                    t:SemType? keyn = m[index];
+                    if keyn is null {
                         test:assertFail(index + " is not declared");
                     }
-                    t:SemType key = m.get(index);
+                    t:SemType key = <t:SemType> keyn;
                     test:assertTrue(t:isSubtype(tc, key, t:INT), "Index for list must be an integer");
                 }
                 t:SemType memberType = t:listMemberType(tc, t1);
@@ -227,10 +231,11 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
             else if t:isSubtype(tc, t1, t:MAPPING) {
                 string? keyVal = ();
                 if index is string {
-                    if !(m.hasKey(index)) {
+                    t:SemType? keyn = m[index];
+                    if keyn is null {
                         test:assertFail(index + " is not declared");
                     }
-                    t:SemType key = m.get(index);
+                    t:SemType key = <t:SemType> keyn;
                     test:assertTrue(t:isSubtype(tc, key, t:STRING), "Index for mapping must be a string");
                     if !(v.hasKey(index)) {
                         test:assertFail(index + " is not declared");
