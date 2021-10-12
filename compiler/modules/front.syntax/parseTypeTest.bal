@@ -1,3 +1,16 @@
+public type TypeProjection record {
+    string identifier;
+    int|string index;
+};
+
+public type TypeTest record {
+    SubtypeTestOp op;
+    string|TypeProjection left;
+    string|TypeProjection right;
+};
+
+public type SubtypeTestOp "<" | "=" | "<>";
+
 public function parseTypeTest(string str) returns TypeTest|error {
     SourceFile file = createSourceFile([str], { filename: "<internal>" });
     Tokenizer tok = new(file);
@@ -43,17 +56,3 @@ function parseTypeProjection(Tokenizer tok) returns string|TypeProjection|error 
     }
     return identifier;
 }
-
-public type TypeTest record {
-    SubtypeTestOp op;
-    string|TypeProjection left;
-    string|TypeProjection right;
-};
-
-public type TypeProjection record {
-    string identifier;
-    int|string index;
-};
-
-
-public type SubtypeTestOp "<" | "=" | "<>";
