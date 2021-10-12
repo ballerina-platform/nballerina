@@ -534,6 +534,11 @@ public class FunctionDecl {
     public function setGC(string? name) {
         self.gcName = name;
     }
+
+    // gets a LLVMValue corresponding to the function
+    public function toValue() returns Value {
+        return new(pointerType(self.functionType), "@"+self.functionName);
+    }
 }
 
 public class FunctionDefn {
@@ -725,6 +730,11 @@ public class FunctionDefn {
     // Corresponds to LLVMSetSubprogram
     public function setSubprogram(Metadata metadata) {
         self.metadata = metadata;
+    }
+
+    // gets a LLVMValue corresponding to the function
+    public function toValue() returns Value {
+        return new(pointerType(self.functionType), "@"+self.functionName);
     }
 }
 
