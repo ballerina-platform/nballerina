@@ -31,9 +31,9 @@ type ScannedLine readonly & record {|
     string[] fragments;
 |};
 
-function scanLineFragIndex(ScannedLine line, int codePointIndex) returns int {
+function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, int] {
     if codePointIndex == 0 {
-        return  0;
+        return  [0, 0];
     }
     readonly & FragCode[] fragCodes = line.fragCodes;
     readonly & string[] fragments = line.fragments;
@@ -55,7 +55,11 @@ function scanLineFragIndex(ScannedLine line, int codePointIndex) returns int {
             i += 1;
         }
     }
-    return fragmentIndex - 1;
+    if i > codePointIndex {
+        fragCodeIndex -= 1;
+        fragmentIndex -= 1;
+    }
+    return [fragCodeIndex, fragmentIndex];
 }
 
 type Scanned record {|

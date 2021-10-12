@@ -318,16 +318,30 @@ class Tokenizer {
         self.mode = m;
     }
 
+    // This currently assume pos is the position at the start of the token (currentStartPos)
+    function moveToPos(Position pos, Mode mode) returns err:Syntax? {
+        self.mode = mode;
+        var [lineIndex, codePointIndex] = unpackPosition(pos);
+        var [fragIndex, fragmentIndex] = scanLineFragIndex(self.file.scannedLine(lineIndex), codePointIndex);
+        self.lineIndex = lineIndex - 1;
+        _ = self.advanceLine(); // This will advance tokenizer to line given by lineIndex and set the line related states
+        self.fragCodeIndex = fragIndex;
+        self.codePointIndex = codePointIndex;
+        self.fragmentIndex = fragmentIndex;
+        // We have moved to the start of the token now we must move the tokenizer to the end of the token
+        check self.advance();
+    }
+
     function currentStartPos() returns Position {
         return createPosition(self.lineIndex, self.tokenStartCodePointIndex);
     }
 
     function currentEndPos() returns Position {
-        return createPosition(self.lineIndex, self.codePointIndex);
+        return createPosition(self.lineIndex, self.codePointIndex-1);
     }
 
     function previousEndPos() returns Position {
-        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex);
+        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex-1);
     }
 
     private function getFragment() returns string {
@@ -370,7 +384,7 @@ class Tokenizer {
         }
     }
 
-    function expectLast(SingleCharDelim|MultiCharDelim|Keyword tok) returns Position|err:Syntax {
+    function expectEnd(SingleCharDelim|MultiCharDelim|Keyword tok) returns Position|err:Syntax {
         Position pos = self.currentEndPos();
         check self.expect(tok);
         return pos;

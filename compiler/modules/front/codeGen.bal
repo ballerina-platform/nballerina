@@ -323,11 +323,8 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
         else if stmt is s:ForeachStmt {
             effect = check codeGenForeachStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
-        else if stmt is s:BreakStmt {
-            effect = check codeGenBreakStmt(cx, <bir:BasicBlock>curBlock, env);
-        }
-        else if stmt is s:ContinueStmt {
-            effect = check codeGenContinueStmt(cx, <bir:BasicBlock>curBlock, env);
+        else if stmt is s:BreakContinueStmt {
+            effect = check codeGenBreakContinueStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
         else if stmt is s:ReturnStmt {
             // JBUG #31327 cast
@@ -486,19 +483,16 @@ function validLoopAssignments(CodeGenContext cx, int[] assignments) returns Code
     }
 }
 
-function codeGenBreakStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env) returns CodeGenError|StmtEffect {
-    bir:Label dest = check cx.onBreakLabel();
+function codeGenBreakContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
+    bir:Label dest = stmt.breakContinue == "break"? check cx.onBreakLabel() : check cx.onContinueLabel();
     bir:BranchInsn branch = { dest };
     startBlock.insns.push(branch);
-    cx.addOnBreakAssignments(env.assignments);
-    return { block: () };
-}
-
-function codeGenContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env) returns CodeGenError|StmtEffect {
-    bir:Label dest = check cx.onContinueLabel();
-    bir:BranchInsn branch = { dest };
-    startBlock.insns.push(branch);
-    cx.addOnContinueAssignments(env.assignments);
+    if stmt.breakContinue == "break" {
+        cx.addOnBreakAssignments(env.assignments);
+    }
+    else {
+        cx.addOnContinueAssignments(env.assignments);
+    }
     return { block: () };
 }
 
