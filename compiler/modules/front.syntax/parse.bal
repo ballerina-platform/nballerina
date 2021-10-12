@@ -107,15 +107,15 @@ function validImportPart(Tokenizer tok) returns string|err:Syntax {
     foreach var ch in identifier {
         if ch == "_" {
             if prevChar == () {
-                return tok.err("expect an identifier without leading underscores");
+                return tok.err("identifier in an import must not have leading underscores");
             } else if prevChar == "_" {
-                return tok.err("expect an identifier without consecutive underscores");
+                return tok.err("identifier in an import must not have consecutive underscores");
             }
         }
         prevChar = ch;
     }
     if prevChar == "_" {
-        return tok.err("expect an identifier without tailing underscores");
+        return tok.err("identifier in an import must not have tailing underscores");
     }
     return identifier;
 }
