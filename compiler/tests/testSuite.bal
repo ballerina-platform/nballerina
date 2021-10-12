@@ -237,5 +237,5 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, string|s:TypeProject
         }
     }
     // JBUG: #31642 function must return a call
-    return error("unreachable");
+    panic error("unreachable");
 }
