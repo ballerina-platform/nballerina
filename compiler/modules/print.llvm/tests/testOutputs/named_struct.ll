@@ -1,4 +1,4 @@
-%structTy = type {i64, i32, %structTy}
+%structTy = type {i64, %structTy*, %structTy, %structTy(%structTy, i64)*}
 @g = external global %structTy
 @g1 = external addrspace(1) global %structTy
 define %structTy @foo() {
