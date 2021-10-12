@@ -2,7 +2,7 @@ public function parseTypeTest(string str) returns TypeTest|error {
     SourceFile file = createSourceFile([str], { filename: "<internal>" });
     Tokenizer tok = new(file);
     check tok.advance();
-    string left = check tok.expectIdentifier();
+    Operand left = check parseTypeExpr(tok);
     Token? t = tok.current();
     if t is "<"|"=" {
         check tok.advance();
@@ -12,26 +12,36 @@ public function parseTypeTest(string str) returns TypeTest|error {
             op = "<>";
         }
         else {
-            op = t;
+            op = t;     
         }
-        string right = check tok.expectIdentifier();
-        return { op, left, right };
-    } 
-    check tok.expect("[");
-    string? index = ();
-    int? indexLiteral = ();
-    t = tok.current();
-    if t is [DECIMAL_NUMBER, string] {
-        int i = check int:fromString(t[1]);
+        Operand right = check parseTypeExpr(tok);
+        if left.index is () {
+            return { op, left : left.identifier, right : right.identifier };
+        } 
+        else if op is "=" {
+            return {left, member : right.identifier, index : left.index};
+        }
+    }
+    return parseError(tok);
+    
+}
+
+function parseTypeExpr(Tokenizer tok) returns Operand|error {
+    string identifier = check tok.expectIdentifier();
+    int|string? index = ();
+    if tok.current() is "[" {
         check tok.advance();
+        Token? t = tok.current();
+        if t is [DECIMAL_NUMBER, string] {
+            index = check int:fromString(t[1]);
+            check tok.advance();
+        }
+        else {
+            index = check tok.expectIdentifier();
+        }
+        check tok.expect("]");
     }
-    else {
-        index = check tok.expectIdentifier();
-    }
-    check tok.expect("]");
-    check tok.expect("=");
-    string member = check tok.expectIdentifier();
-    return { left, member , index , indexLiteral};
+    return {identifier, index};
 }
 
 public type SubtypeTest record {
@@ -40,11 +50,15 @@ public type SubtypeTest record {
     string right;
 };
 
+public type Operand record {
+    string identifier;
+    int|string? index;
+};
+
 public type ProjectionTest record {
-    string left;
+    Operand left;
     string member;
-    string? index;
-    string|int? indexLiteral;
+    int|string? index;
 };
 
 public type SubtypeTestOp "<" | "=" | "<>";

@@ -183,12 +183,13 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:TypeTest test = check s:parseTypeTest(item);
-        t:SemType? tn1 = m[test.left];
-        if tn1 is () {
-            test:assertFail(test.left + " is not declared");
-        }
-        t:SemType t1 = <t:SemType> tn1;
+        
         if test is s:SubtypeTest {
+            t:SemType? tn1 = m[test.left];
+            if tn1 is () {
+                test:assertFail(test.left + " is not declared");
+            }
+            t:SemType t1 = <t:SemType> tn1;
             t:SemType? t2 = m[test.right];
             if t2 is () {
                 test:assertFail(test.right + " is not declared");
@@ -211,12 +212,17 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
             }
         }
         else { // projection tests
+            t:SemType? tn1 = m[test.left.identifier];
+            if tn1 is () {
+                test:assertFail(test.left.identifier + " is not declared");
+            }
+            t:SemType t1 = <t:SemType> tn1;
             t:SemType? t2 = m[test.member];
             if t2 is () {
                 test:assertFail(test.member + " is not declared");
             }
             else {
-                string? index = test.index;
+                string|int? index = test.index;
                 if t:isSubtype(tc, t1, t:LIST) {
                     testSemtypeList(tc, m, t1, t2, index, test.member);
                 }
@@ -224,14 +230,14 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
                     testSemtypeMapping(tc, m, t1, t2, index, test.member, v);
                 }
                 else {
-                    test:assertFail(test.left + " is not a list or a mapping type");
+                    test:assertFail(test.left.identifier + " is not a list or a mapping type");
                 }
             }
         }
     }
 }
 
-function testSemtypeList(t:Context tc, map<t:SemType> m, t:SemType t1, t:SemType t2, string? index, string member) {
+function testSemtypeList(t:Context tc, map<t:SemType> m, t:SemType t1, t:SemType t2, string|int? index, string member) {
     if index is string {
         t:SemType? key = m[index];
         if key is () {
@@ -246,7 +252,7 @@ function testSemtypeList(t:Context tc, map<t:SemType> m, t:SemType t1, t:SemType
     test:assertTrue(t:isSubtype(tc, t2, memberType), member + " is not a subtype of member type");
 }
 
-function testSemtypeMapping(t:Context tc, map<t:SemType> m, t:SemType t1, t:SemType t2, string? index, string member, map<string> v) {
+function testSemtypeMapping(t:Context tc, map<t:SemType> m, t:SemType t1, t:SemType t2, string|int? index, string member, map<string> v) {
     string? keyVal = ();
     if index is string {
         t:SemType? key = m[index];
