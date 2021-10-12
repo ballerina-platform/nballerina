@@ -83,6 +83,10 @@ public distinct class Function {
     public function setSubprogram(Metadata metadata) {
         jLLVMSetSubprogram(self.LLVMValueRef, metadata.llvmMetadata);
     }
+
+    public function toValue() returns ConstPointerValue {
+        return new(self.LLVMValueRef);
+    }
 }
 
 public distinct class BasicBlock {
