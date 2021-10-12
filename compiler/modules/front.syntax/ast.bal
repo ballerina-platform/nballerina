@@ -61,7 +61,7 @@ public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|Meth
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
-public const WILDCARD = "_";
+public const WILDCARD = ();
 
 public type AssignStmt record {|
     *PositionFields;
@@ -141,7 +141,7 @@ public type BreakContinueStmt record {|
 public type VarDeclStmt record {|
     *PositionFields;
     TypeDesc td;
-    string varName;
+    string|WILDCARD varName;
     Expr initExpr;
     boolean isFinal;
 |};

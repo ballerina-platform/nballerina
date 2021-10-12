@@ -236,9 +236,9 @@ function parseVarDeclStmt(Tokenizer tok, Position startPos, boolean isFinal = fa
 
 function finishVarDeclStmt(Tokenizer tok, TypeDesc td, Position startPos, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     Token? cur = tok.current();
-    string varName;
+    string? varName;
     if cur == "_" {
-        varName = "_";
+        varName = WILDCARD;
         check tok.advance();
     }
     else {

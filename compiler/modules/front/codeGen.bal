@@ -771,20 +771,30 @@ function codeGenPanicStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
 
 function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarDeclStmt stmt) returns CodeGenError|StmtEffect {
     var { varName, initExpr, td, isFinal } = stmt;
-    if lookup(varName, env) !== () {
-        return cx.semanticErr(`duplicate declaration of ${varName}`);
+    if varName is s:WILDCARD {
+        return codeGenWildcardDeclStmt(cx, startBlock, env, initExpr, td);
     }
-    t:SemType semType = check cx.resolveTypeDesc(td);
-    bir:Register result = cx.createRegister(semType, varName);
-    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType);
-    if varName == "_" {
-        if t:isEmpty(cx.mod.tc, t:intersect(semType, t:ERROR)) {
-            return { block: nextBlock };
-        } else {
-            return cx.semanticErr("type descriptor of wildcard should be a subtype of any");
+    else {
+        if lookup(varName, env) !== () {
+            return cx.semanticErr(`duplicate declaration of ${varName}`);
         }
+        t:SemType semType = check cx.resolveTypeDesc(td);
+        bir:Register result = cx.createRegister(semType, varName);
+        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType);
+        return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
     }
-    return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
+}
+
+function codeGenWildcardDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:Expr expr, s:TypeDesc td) returns CodeGenError|StmtEffect {
+    t:SemType semType = check cx.resolveTypeDesc(td);
+    if t:isEmpty(cx.mod.tc, t:intersect(semType, t:ERROR)) {
+        bir:Register result = cx.createRegister(semType, "_");
+        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, expr, semType);
+        return { block: nextBlock };
+    }
+    else {
+        return cx.semanticErr("type descriptor of wildcard should be a subtype of any");
+    }
 }
 
 function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:AssignStmt stmt) returns CodeGenError|StmtEffect {
