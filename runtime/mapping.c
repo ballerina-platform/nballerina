@@ -70,19 +70,17 @@ static READONLY int64_t lookup(MappingPtr m, TaggedPtr key, uint64_t hash)  {
     return mapIndex;
 }
 
-// false if already there
-static bool insert(MappingPtr m, TaggedPtr key, uint64_t hash, int64_t insertMapIndex) {
+// Returns index into map if found, -1 otherwise; in the -1 case, sets it to insertMapIndex
+static int64_t lookupInsert(MappingPtr m, TaggedPtr key, uint64_t hash, int64_t insertMapIndex) {
     int tableElementShift = m->tableElementShift & 3;
     int tableIndexMax = (1 << m->tableLengthShift) - 1;
     int64_t i = hash & tableIndexMax;
     UntypedPtr table = m->table;
+    int64_t mapIndex;
     for (;;) {
-        int64_t mapIndex = replace(table, i, insertMapIndex, tableElementShift);
-        if (mapIndex == -1) {
+        mapIndex = replace(table, i, insertMapIndex, tableElementShift);
+        if (mapIndex == -1 || matches(m, key, mapIndex)) {
             break;
-        }
-        if (matches(m, key, mapIndex)) {
-            return false;
         }
         if (i == 0) {
             i = tableIndexMax;
@@ -91,7 +89,7 @@ static bool insert(MappingPtr m, TaggedPtr key, uint64_t hash, int64_t insertMap
             --i;
         }
     }
-    return true;
+    return mapIndex;
 }
 
 // This is when we know it's not a duplicate
@@ -201,22 +199,35 @@ void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr value)
     mp->fArray.members[len].key = key;
     mp->fArray.members[len].value = value;
     mp->fArray.length = len + 1;
-    insert(mp, key, _bal_string_hash(key), len);
+    lookupInsert(mp, key, _bal_string_hash(key), len);
 }
 
 PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
-    if ((mp->desc->bitSet & (1 << (getTag(value) & UT_MASK))) == 0) {
-        return storePanicCode(mapping, PANIC_MAPPING_STORE);
-    }
+    MappingDescPtr mdp = mp->desc;
+    uint32_t bitSet = mdp->bitSet;
+    uint32_t flag = 1 << (getTag(value) & UT_MASK);
     int64_t len = mp->fArray.length;
    
     uint64_t h = _bal_string_hash(key);
     // Here may insert something that is equal to the empty marker
     // But it doesn't matter because in this case we will rebuild anyway
-    bool inserted = insert(mp, key, _bal_string_hash(key), len);
-    if (!inserted) {
+    int64_t i = lookupInsert(mp, key, _bal_string_hash(key), len);
+    if (i >= 0) {
+        if (bitSet == 0) {
+            // it's a closed record type
+            bitSet = ((RecordDescPtr)mdp)->fieldBitSets[i];
+        }
+        if ((bitSet & flag) == 0) {
+            return storePanicCode(mapping, PANIC_MAPPING_STORE);
+        }
+        mp->fArray.members[i].value = value;
         return 0;
+    }
+    if ((bitSet & flag) == 0) {
+        // This catches both adding a field to a closed record type
+        // and adding a value of the wrong type.
+        return storePanicCode(mapping, PANIC_MAPPING_STORE);
     }
     if (unlikely(len >= mp->fArray.capacity)) {
         _bal_array_grow(&(mp->gArray), 0, MAP_FIELD_SHIFT);

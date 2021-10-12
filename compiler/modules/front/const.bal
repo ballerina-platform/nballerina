@@ -144,7 +144,7 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
 }
 
 function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:ListConstructorExpr expr) returns s:Expr|FoldError {
-    // grammar of subset07 guarantees that expectedType is non-nil
+    // SUBSET always have contextually expected type for list constructor
     t:SemType expectedListType = t:intersect(<t:SemType>expectedType, t:LIST_RW);
     t:SemType? memberType = t:simpleArrayMemberType(cx.typeContext(), expectedListType);
     s:Expr[] members = expr.members;
@@ -156,11 +156,15 @@ function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:List
 }
 
 function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:MappingConstructorExpr expr) returns s:Expr|FoldError {
-    // grammar of subset07 guarantees that expectedType is non-nil
+    // SUBSET always have contextually expected type for mapping constructor
     t:SemType expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING_RW);
-    t:SemType? memberType = t:simpleMapMemberType(cx.typeContext(), expectedMappingType);
+    // SUBSET with unions of maps we will need to select from possibilities based on the field names
+    if t:mappingAtomicTypeRw(cx.typeContext(), expectedMappingType) is () {
+        return cx.semanticErr("no applicable inherent type for mapping constructor");
+    }
     expr.expectedType = expectedMappingType;
     foreach s:Field f in expr.fields {
+        t:SemType memberType = t:mappingMemberType(cx.typeContext(), expectedMappingType, f.name);
         f.value = check foldExpr(cx, memberType, f.value);
     }
     return expr;

@@ -68,7 +68,7 @@ public function functionType(RetType returnType, Type[] paramTypes) returns Func
 // Corresponds to LLVMLinkage enum
 public type Linkage "internal"|"external";
 
-public type FunctionEnumAttribute "noreturn"|"cold"|"nounwind"|"readnone"|"readonly"|"speculatable"|"willreturn";
+public type FunctionEnumAttribute "nofree"|"nosync"|"readnone"|"noreturn"|"cold"|"nounwind"|"readnone"|"readonly"|"speculatable"|"willreturn";
 public type ParamEnumAttribute "signext"|"zeroext";
 public type ReturnEnumAttribute "signext"|"zeroext"|"noalias";
 public type EnumAttribute FunctionEnumAttribute | (readonly & [int, ParamEnumAttribute]) | (readonly & ["return", ReturnEnumAttribute]);

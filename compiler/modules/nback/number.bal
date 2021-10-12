@@ -147,7 +147,7 @@ function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertT
 }
 
 function buildConvertFloatToInt(llvm:Builder builder, Scaffold scaffold, llvm:Value floatVal, bir:ConvertToIntInsn insn) {
-    llvm:Value resultWithErr = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, floatToIntFunction), [floatVal]);
+    llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(floatToIntFunction), [floatVal]);
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errBlock = scaffold.addBasicBlock();
     builder.condBr(builder.extractValue(resultWithErr, 1), errBlock, continueBlock);

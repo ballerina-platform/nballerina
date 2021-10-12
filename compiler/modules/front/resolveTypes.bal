@@ -51,20 +51,38 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
 
 function resolveSubsetTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn defn, s:TypeDesc td) returns t:SemType|ResolveTypeError {
     t:SemType ty = check resolveTypeDesc(mod, defn, 0, td);
-    if ty is t:UniformTypeBitSet
-       && ((t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) && ty != t:NEVER)
-           || (ty == t:ANY || ty == t:TOP)) {
+    if isSubsetUnionType(ty) {
         return ty;
     }
     t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(mod.tc, ty, strict=true);
-    if memberTy != () {
+    if memberTy != () && isSubsetUnionType(memberTy) {
         return ty;
     }
-    memberTy = t:simpleMapMemberType(mod.tc, ty, strict=true);
-    if memberTy != () {
-        return ty;
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(mod.tc, ty, strict=true);
+    if mat != () {
+        if mat.names.length() == 0 && isSubsetUnionType(mat.rest) {
+            return ty;
+        }
+        if mat.rest === t:NEVER {
+            boolean membersOk = true;
+            foreach var t in mat.types {
+                if !isSubsetUnionType(t) {
+                    membersOk = false;
+                    break;
+                }
+            }
+            if membersOk {
+                return ty;
+            }
+        }
     }
     return err:unimplemented("unimplemented type descriptor", s:locationInDefn(defn), functionName=defn.name);
+}
+
+function isSubsetUnionType(t:SemType ty) returns boolean {
+    return (ty is t:UniformTypeBitSet
+            && ((t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) && ty != t:NEVER)
+                || (ty == t:ANY || ty == t:TOP)));
 }
 
 function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns t:SemType|ResolveTypeError {
@@ -108,12 +126,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         "string" => { return t:STRING; }
         "typedesc" => { return t:TYPEDESC; }
         "xml" => { return t:XML; }
-        "sint8" => { return t:intWidthSigned(8); }
-        "sint16" => { return t:intWidthSigned(16); }
-        "sint32" => { return t:intWidthSigned(32); }
-        "uint8" => { return t:BYTE; }
-        "uint16" => { return t:intWidthUnsigned(16); }
-        "uint32" => { return t:intWidthUnsigned(32); }
+        "byte" => { return t:BYTE; }
         "json" => { return t:createJson(mod.tc.env); }
         "()" => { return t:NIL; }
     }

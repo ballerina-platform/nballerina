@@ -50,7 +50,8 @@ public class MappingDefinition {
             rw = env.mappingAtom(rwType);
         }
         Atom ro;
-        if typeListIsReadOnly(rwType.types) && isReadOnly(rest) {
+        MappingAtomicType roType = readOnlyMappingAtomicType(rwType);
+        if roType === rwType {
             RecAtom? roRec = self.roRec;
             if roRec == () {
                 // share the definitions
@@ -62,11 +63,6 @@ public class MappingDefinition {
             }
         }
         else {
-            MappingAtomicType roType = {
-                names: rwType.names,
-                types: readOnlyTypeList(rwType.types),
-                rest: intersect(rest, READONLY)
-            };
             ro = env.mappingAtom(roType);
             RecAtom? roRec = self.roRec;
             if roRec != () {
@@ -90,6 +86,17 @@ public class MappingDefinition {
         self.semType = s; 
         return s;
     }       
+}
+
+function readOnlyMappingAtomicType(MappingAtomicType ty) returns MappingAtomicType {
+    if typeListIsReadOnly(ty.types) && isReadOnly(ty.rest) {
+        return ty;
+    }
+    return {
+        names: ty.names,
+        types: readOnlyTypeList(ty.types),
+        rest: intersect(ty.rest, READONLY)
+    };   
 }
 
 function splitFields(Field[] fields) returns [string[], SemType[]] {
@@ -397,6 +404,7 @@ function bddMappingMemberType(Context cx, Bdd b, string? key, SemType accum) ret
     }
 }
 
+
 function mappingAtomicMemberType(MappingAtomicType atomic, string? key) returns SemType {
     if key != () {
         int? i = atomic.names.indexOf(key);
@@ -411,6 +419,19 @@ function mappingAtomicMemberType(MappingAtomicType atomic, string? key) returns 
     }
     return m;
 }
+
+function bddMappingMemberRequired(Context cx, Bdd b, string k, boolean requiredOnPath) returns boolean {
+    if b is boolean {
+        return b ? requiredOnPath : true;
+    }
+    else {
+        return bddMappingMemberRequired(cx, b.left, k,
+                                        requiredOnPath || cx.mappingAtomType(b.atom).names.indexOf(k) != ())
+               && bddMappingMemberRequired(cx, b.middle, k, requiredOnPath)
+               && bddMappingMemberRequired(cx, b.right, k, requiredOnPath);
+    }
+}
+
 
 final UniformTypeOps mappingRoOps = {
     union: bddSubtypeUnion,

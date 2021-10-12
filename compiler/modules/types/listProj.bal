@@ -2,6 +2,9 @@
 
 // Based on listMemberType
 public function listProj(Context cx, SemType t, int k) returns SemType {
+    if k < 0 {
+        return NEVER;
+    }
     if t is UniformTypeBitSet {
         return (t & LIST) != 0 ? TOP : NEVER;
     }

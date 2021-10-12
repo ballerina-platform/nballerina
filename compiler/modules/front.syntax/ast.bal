@@ -4,6 +4,11 @@ import wso2/nballerina.err;
 
 public type Position err:Position;
 
+type PositionFields record {|
+   Position startPos;
+   Position endPos;
+|};
+
 public type ModulePart record {|
     ImportDecl[] importDecls;
     SourceFile file;
@@ -16,50 +21,56 @@ public type ModuleLevelDefn FunctionDefn|ConstDefn|TypeDefn;
 public type Visibility "public"?;
 
 public type ImportDecl record {|
+    *PositionFields;
     string? org;
     [string, string...] names;
     string? prefix;
-    Position pos;
+    Position namePos;
     int partIndex;
 |};
 
 public type FunctionDefn record {|
+    *PositionFields;
     readonly string name;
     ModulePart part;
     Visibility vis;
     FunctionTypeDesc typeDesc;
     string[] paramNames;
     Stmt[] body;
-    Position pos;
+    Position namePos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
 |};
 
 public type ResolvedConst readonly & [t:SemType, t:Value];
 public type ConstDefn record {|
+    *PositionFields;
     readonly string name;
     ModulePart part;
     InlineBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
-    Position pos;
+    Position namePos;
     ResolvedConst|false? resolved = ();    
 |};
 
-public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt|PanicStmt;
+public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr|CheckingStmt;
-public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|VarRefExpr|CompoundExpr;
+public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
 public const WILDCARD = "_";
 
 public type AssignStmt record {|
+    *PositionFields;
     LExpr|WILDCARD lValue;
     Expr expr;
 |};
 
 public type CompoundAssignStmt record {|
+    *PositionFields;
     LExpr lValue;
     Expr expr;
     BinaryArithmeticOp|BinaryBitwiseOp op; 
@@ -67,23 +78,28 @@ public type CompoundAssignStmt record {|
 |};
 
 // L-value expression
+// XXX Add FieldAccessLExpr when we can handle it in codeGen
 public type LExpr VarRefExpr|MemberAccessLExpr;
 
 public type ReturnStmt record {|
+    *PositionFields;
     Expr returnExpr;
 |};
 
 public type PanicStmt record {|
+    *PositionFields;
     Expr panicExpr;
 |};
 
 public type IfElseStmt record {|
+    *PositionFields;
     Expr condition;
     Stmt[] ifTrue;
     Stmt[] ifFalse;
 |};
 
 public type MatchStmt record {|
+    *PositionFields;
     Expr expr;
     MatchClause[] clauses;
 |};
@@ -103,21 +119,27 @@ public type ConstPattern record {|
 |};
 
 public type WhileStmt record {|
+    *PositionFields;
     Expr condition;
     Stmt[] body;
 |};
 
 public type ForeachStmt record {|
+    *PositionFields;
     string varName;
     RangeExpr range;
     Stmt[] body;
 |};
 
-public type BreakStmt "break";
+public type BreakContinue "break"|"continue";
 
-public type ContinueStmt "continue";
+public type BreakContinueStmt record {|
+   *PositionFields;
+   BreakContinue breakContinue;
+|};
 
 public type VarDeclStmt record {|
+    *PositionFields;
     TypeDesc td;
     string varName;
     Expr initExpr;
@@ -242,6 +264,18 @@ public type MemberAccessLExpr record {|
     Position pos;
 |};
 
+public type FieldAccessExpr record {|
+    Expr mapping;
+    string fieldName;
+    Position pos;
+|};
+
+public type FieldAccessLExpr record {|
+    VarRefExpr mapping;
+    string fieldName;
+    Position pos;
+|};
+
 public type RangeExpr record {|
     Expr lower;
     Expr upper;
@@ -315,11 +349,12 @@ public type FpLiteralExpr record {|
 // Types
 
 public type TypeDefn record {|
+    *PositionFields;
     readonly string name;
     ModulePart part;
     Visibility vis;
     TypeDesc td;
-    Position pos;
+    Position namePos;
     t:SemType? semType = ();
     int cycleDepth = -1;
 |};
@@ -374,10 +409,8 @@ public type SingletonTypeDesc record {|
     (string|float|int|boolean|decimal) value;
 |};
 
-public type BuiltinIntSubtypeDesc "sint8"|"uint8"|"sint16"|"uint16"|"sint32"|"uint32";
-
 // This is the subtype of BuiltinTypeDesc that we currently allow inline.
 public type InlineBuiltinTypeDesc "boolean"|"int"|"float"|"string"|"error"|"any";
-public type BuiltinTypeDesc InlineBuiltinTypeDesc|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
+public type BuiltinTypeDesc InlineBuiltinTypeDesc|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
 
-public type LeafTypeDesc BuiltinTypeDesc|BuiltinIntSubtypeDesc;
+public type LeafTypeDesc BuiltinTypeDesc;

@@ -106,6 +106,12 @@ typedef struct {
     uint32_t bitSet;
 } MappingDesc, *MappingDescPtr;
 
+typedef struct {
+    uint32_t bitSet; // zero
+    uint32_t nFields;
+    uint32_t fieldBitSets[];
+} *RecordDescPtr;
+
 typedef GC struct Mapping {
     MappingDescPtr desc;
     union {

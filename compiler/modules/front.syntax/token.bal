@@ -99,6 +99,8 @@ type TokenizerState readonly & record {
     int codePointIndex;
     int fragmentIndex;
     int tokenStartCodePointIndex;
+    int prevTokenEndCodePointIndex;
+    int prevTokenEndLineIndex;
     Mode mode;
     Token? curTok;
 };
@@ -113,6 +115,8 @@ class Tokenizer {
     private int codePointIndex = 0;
     private int fragmentIndex = 0;
     private int tokenStartCodePointIndex = 0;
+    private int prevTokenEndCodePointIndex = 0;
+    private int prevTokenEndLineIndex = 0;
     private Mode mode = MODE_NORMAL;
     final SourceFile file;
 
@@ -122,10 +126,12 @@ class Tokenizer {
         self.lines = file.scannedLines();
         self.file = file;
     }
-    
+
     function advance() returns err:Syntax? {
         string str = "";
         self.tokenStartCodePointIndex = self.codePointIndex;
+        self.prevTokenEndCodePointIndex = self.codePointIndex;
+        self.prevTokenEndLineIndex = self.lineIndex;
         while true {
             int fragCodeIndex = self.fragCodeIndex;
             FragCode[] fragCodes = self.fragCodes;
@@ -138,7 +144,7 @@ class Tokenizer {
             }
             FragCode fragCode = fragCodes[fragCodeIndex];
             fragCodeIndex += 1;
-            self.fragCodeIndex = fragCodeIndex;                
+            self.fragCodeIndex = fragCodeIndex;
             match fragCode {
                 FRAG_STRING_OPEN => {
                     self.codePointIndex += 1;
@@ -230,12 +236,78 @@ class Tokenizer {
                 _ => {
                     FixedToken? ft = fragTokens[fragCode];
                     // if we've missed something above, we'll get a panic from the cast here
-                    self.codePointIndex += (<string>ft).length();          
+                    self.codePointIndex += (<string>ft).length();
                     self.curTok = ft;
                     return ();
-                } 
+                }
             }
         }
+    }
+
+    function peek() returns VariableTokenCode|FixedToken? {
+        readonly & FragCode[] fragCodes = self.fragCodes;
+        int fragCodeIndex = self.fragCodeIndex;
+        int lineIndex = self.lineIndex;
+        while true {
+            if fragCodeIndex > fragCodes.length() {
+                if lineIndex >= self.lines.length() {
+                    break;
+                }
+                fragCodes = self.lines[lineIndex].fragCodes;
+                lineIndex += 1;
+                fragCodeIndex = 0;
+            }
+            else {
+                FragCode fragCode = fragCodes[fragCodeIndex];
+                match fragCode {
+                    FRAG_WHITESPACE|FRAG_COMMENT => {
+                        fragCodeIndex += 1;
+                    }
+                    FRAG_STRING_OPEN => {
+                        return STRING_LITERAL;
+                    }
+                    FRAG_STRING_CLOSE
+                    |FRAG_STRING_CHARS
+                    |FRAG_STRING_CHAR_ESCAPE
+                    |FRAG_STRING_CONTROL_ESCAPE
+                    |FRAG_STRING_NUMERIC_ESCAPE => {
+                        panic err:impossible("unexpected fragCode in peek");
+                    }
+                    FRAG_INVALID => {
+                        return ();
+                    }
+                    FRAG_DECIMAL_NUMBER => {
+                        return DECIMAL_NUMBER;
+                    }
+                    FRAG_GREATER_THAN => {
+                        if self.mode == MODE_NORMAL && fragCodeIndex < fragCodes.length() && fragCodes[fragCodeIndex] == FRAG_GREATER_THAN {
+                            if fragCodeIndex + 1 < fragCodes.length() && fragCodes[fragCodeIndex + 1] == FRAG_GREATER_THAN {
+                                return ">>>";
+                            }
+                            else {
+                                return ">>";
+                            }
+                        }
+                        else {
+                            return ">";
+                        }
+                    }
+                    FRAG_IDENTIFIER => {
+                        return IDENTIFIER;
+                    }
+                    FRAG_HEX_NUMBER => {
+                        return HEX_INT_LITERAL;
+                    }
+                    FRAG_DECIMAL_FP_NUMBER|FRAG_DECIMAL_FP_NUMBER_F|FRAG_DECIMAL_FP_NUMBER_D => {
+                        return DECIMAL_FP_NUMBER;
+                    }
+                    _ => {
+                        return <FixedToken>fragTokens[fragCode];
+                    }
+                }
+            }   
+        }
+        return ();   
     }
 
     function current() returns Token? {
@@ -246,8 +318,30 @@ class Tokenizer {
         self.mode = m;
     }
 
-    function currentPos() returns Position {
+    // This currently assume pos is the position at the start of the token (currentStartPos)
+    function moveToPos(Position pos, Mode mode) returns err:Syntax? {
+        self.mode = mode;
+        var [lineIndex, codePointIndex] = unpackPosition(pos);
+        var [fragIndex, fragmentIndex] = scanLineFragIndex(self.file.scannedLine(lineIndex), codePointIndex);
+        self.lineIndex = lineIndex - 1;
+        _ = self.advanceLine(); // This will advance tokenizer to line given by lineIndex and set the line related states
+        self.fragCodeIndex = fragIndex;
+        self.codePointIndex = codePointIndex;
+        self.fragmentIndex = fragmentIndex;
+        // We have moved to the start of the token now we must move the tokenizer to the end of the token
+        check self.advance();
+    }
+
+    function currentStartPos() returns Position {
         return createPosition(self.lineIndex, self.tokenStartCodePointIndex);
+    }
+
+    function currentEndPos() returns Position {
+        return createPosition(self.lineIndex, self.codePointIndex-1);
+    }
+
+    function previousEndPos() returns Position {
+        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex-1);
     }
 
     private function getFragment() returns string {
@@ -290,6 +384,12 @@ class Tokenizer {
         }
     }
 
+    function expectEnd(SingleCharDelim|MultiCharDelim|Keyword tok) returns Position|err:Syntax {
+        Position pos = self.currentEndPos();
+        check self.expect(tok);
+        return pos;
+    }
+
     function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns err:Syntax? {
         if self.curTok != tok {
             err:Template msg;
@@ -306,7 +406,7 @@ class Tokenizer {
     }
 
     function err(err:Message msg) returns err:Syntax {
-        return err:syntax(msg, loc=err:location(self.file, self.currentPos()));
+        return err:syntax(msg, loc=err:location(self.file, self.currentStartPos()));
     }
 
     function save() returns TokenizerState {
@@ -317,6 +417,8 @@ class Tokenizer {
             codePointIndex: self.codePointIndex,
             fragmentIndex: self.fragmentIndex,
             tokenStartCodePointIndex: self.tokenStartCodePointIndex,
+            prevTokenEndCodePointIndex: self.prevTokenEndCodePointIndex,
+            prevTokenEndLineIndex: self.prevTokenEndLineIndex,
             mode: self.mode,
             curTok: self.curTok
         };
@@ -331,6 +433,8 @@ class Tokenizer {
         self.codePointIndex = s.codePointIndex;
         self.fragmentIndex = s.fragmentIndex;
         self.tokenStartCodePointIndex = s.tokenStartCodePointIndex;
+        self.prevTokenEndCodePointIndex = s.prevTokenEndCodePointIndex;
+        self.prevTokenEndLineIndex = s.prevTokenEndLineIndex;
         self.mode = s.mode;
         self.curTok = s.curTok;
         if self.lineIndex == 0 {
@@ -350,6 +454,10 @@ function createPosition(int line, int column) returns Position {
     return (line << 32) | column;
 }
 
+function unpackPosition(Position pos) returns [int, int] & readonly {
+    return [pos >> 32, pos & 0xFFFFFFFF];
+}
+
 public readonly class SourceFile {
     *err:File;
     private ScannedLine[] lines;
@@ -367,10 +475,14 @@ public readonly class SourceFile {
     public function directory() returns string? => self.dir;
 
     public function lineColumn(Position pos) returns err:LineColumn {
-        return [pos >> 32, pos & 0xFFFFFFFF];
+        return unpackPosition(pos);
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
+
+    function scannedLine(int lineNumber) returns ScannedLine {
+        return self.lines[lineNumber - 1];
+    }
 }
 
 public function createSourceFile(string[] lines, FilePath path) returns SourceFile {

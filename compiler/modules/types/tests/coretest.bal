@@ -273,3 +273,50 @@ function testIntSubtypeWidenUnsigned() {
     test:assertEquals(intType2[0].min, 0);
     test:assertEquals(intType2[0].max, 65535);
 }
+
+@test:Config{}
+function testStringCharSubtype() {
+    ComplexSemType st = <ComplexSemType> stringConst("a");
+    test:assertEquals(st.subtypeDataList.length(), 1);
+    StringSubtype subType = <StringSubtype> st.subtypeDataList[0];
+    test:assertEquals(subType.char.values.length(), 1);
+    test:assertEquals(subType.char.values[0], "a");
+    test:assertEquals(subType.char.allowed, true);
+    test:assertEquals(subType.nonChar.values.length(), 0);
+    test:assertEquals(subType.nonChar.allowed, true);
+}
+
+@test:Config{}
+function testStringNonCharSubtype() {
+    ComplexSemType st = <ComplexSemType> stringConst("abc");
+    test:assertEquals(st.subtypeDataList.length(), 1);
+    StringSubtype subType = <StringSubtype> st.subtypeDataList[0];
+    test:assertEquals(subType.char.values.length(), 0);
+    test:assertEquals(subType.char.allowed, true);
+    test:assertEquals(subType.nonChar.values.length(), 1);
+    test:assertEquals(subType.nonChar.values[0], "abc");
+    test:assertEquals(subType.nonChar.allowed, true);
+}
+
+@test:Config{}
+function testStringSubtypeSingleValue() {
+    ComplexSemType abc = <ComplexSemType> stringConst("abc");
+    StringSubtype abcSD = <StringSubtype>abc.subtypeDataList[0];
+    test:assertEquals(stringSubtypeSingleValue(abcSD), "abc");
+
+    ComplexSemType a = <ComplexSemType> stringConst("a");
+    StringSubtype aSD = <StringSubtype>a.subtypeDataList[0];
+    test:assertEquals(stringSubtypeSingleValue(aSD), "a");
+
+    ComplexSemType aAndAbc = <ComplexSemType>union(a, abc);
+    test:assertEquals(stringSubtypeSingleValue(<StringSubtype>aAndAbc.subtypeDataList[0]), ());
+
+    ComplexSemType intersect1 = <ComplexSemType>intersect(aAndAbc, a);
+    test:assertEquals(stringSubtypeSingleValue(<StringSubtype>intersect1.subtypeDataList[0]), "a");    
+    ComplexSemType intersect2 = <ComplexSemType>intersect(aAndAbc, abc);
+    test:assertEquals(stringSubtypeSingleValue(<StringSubtype>intersect2.subtypeDataList[0]), "abc");
+    SemType intersect3 = intersect(a, abc);
+    test:assertEquals(intersect3, NEVER);  
+    SemType intersect4 = intersect(a, STRING);  
+    test:assertEquals(intersect4, a);
+}

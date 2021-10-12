@@ -112,6 +112,7 @@ public function constNull(PointerType ty) returns ConstPointerValue {
 // Corresponds to LLVMContextRef
 public class Context {
     private final map<[StructType,boolean]> namedStructTypes = {};
+    private final map<Type[]> namedStructTypeBody = {};
     // Corresponds to LLVMContextCreate
     public function init() {
     }
@@ -144,6 +145,21 @@ public class Context {
         structBody.push("}");
         Type structTy = structType(elemTypes);
         return new(structTy, concat(...structBody));
+    }
+
+    // Corresponds to LLVMConstArray
+    public function constArray(Type elementType, ConstValue[] values) returns ConstValue {
+        ArrayType ty = arrayType(elementType, values.length());
+        string[] body = ["["];
+        foreach int i in 0 ..< values.length() {
+            final ConstValue element = values[i];
+            if i > 0 {
+                body.push(",");
+            }
+            body.push(typeToString(element.ty, self), element.operand);
+        }
+        body.push("]");
+        return new(ty, concat(...body));
     }
 
     // Corresponds to LLVMConstStringInContext
@@ -184,14 +200,30 @@ public class Context {
         return constValueWithBody(destTy, words);
     }
 
-    public function structCreateNamed(string name, Type[] elementTypes) returns StructType {
+    // Corresponds to LLVMStructCreateNamed
+    public function structCreateNamed(string name) returns StructType {
         string structName = "%" + escapeIdent(name);
         if self.namedStructTypes.hasKey(structName) {
             panic err:illegalArgument("this context already has a struct type by that name");
         }
-        StructType ty = { elementTypes: elementTypes.cloneReadOnly() };
+        StructType ty = { elementTypes: [] };
         self.namedStructTypes[structName] = [ty, false];
+        self.namedStructTypeBody[name] = [];
         return ty;
+    }
+
+    // Corresponds to LLVMStructSetBody
+    public function structSetBody(StructType namedStructTy, Type[] elementTypes) {
+        foreach var entry in self.namedStructTypes.entries() {
+            var data = entry[1];
+            string name = entry[0];
+            StructType ty = data[0];
+            if ty === namedStructTy {
+                self.namedStructTypeBody[name] = elementTypes;
+                return;
+            }
+        }
+        panic err:illegalArgument("no such named struct type");
     }
 
     function output(Output out){
@@ -204,12 +236,14 @@ public class Context {
         }
     }
 
-    function getStructName(StructType ty) returns string? {
+    function getStructName(StructType ty) returns [string, Type[]]? {
         foreach var entry in self.namedStructTypes.entries() {
             var data = entry[1];
             if data[0] === ty {
                 data[1] = true;
-                return entry[0];
+                string name = entry[0];
+                Type[] elements = self.namedStructTypeBody.get(name);
+                return [name, elements];
             }
         }
     }
@@ -286,13 +320,13 @@ public class Module {
         if name is IntegerArithmeticIntrinsicName {
             return self.addIntrinsic(name,
                                      { returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"] },
-                                     ["nounwind", "readnone", "speculatable", "willreturn"]);
+                                     ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
 
         }
         else if name == "ptrmask.p1i8.i64" {
             return self.addIntrinsic(name,
                                      { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] },
-                                     ["readnone", "speculatable"]);
+                                     ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
         }
         else {
             panic err:impossible();
@@ -1354,16 +1388,20 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
         }
     }
     else if ty is StructType {
+        var data = context.getStructName(ty);
+        Type[] elementTypes = ty.elementTypes;
+        if !(data is ()) {
+            elementTypes = data[1];
+        }
         if !forceInline {
-            string? name = context.getStructName(ty);
-            if name is string {
-                return name;
+            if !(data is ()) {
+                return data[0];
             }
         }
         string[] typeStringBody = [];
         typeStringBody.push("{");
-        foreach int i in 0 ..< ty.elementTypes.length() {
-            final Type elementType = ty.elementTypes[i];
+        foreach int i in 0 ..< elementTypes.length() {
+            final Type elementType = elementTypes[i];
             if i > 0 {
                 typeStringBody.push(",");
             }

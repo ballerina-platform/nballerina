@@ -179,14 +179,20 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     if !vc.isSubtype(ty, t:MAPPING_RW) {
         return vc.err("bad BIR: inherent type of mapping construct is not a mutable mapping");
     }
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeContext(), ty);
-    if memberType == () {
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(vc.typeContext(), ty);
+    foreach int i in 0 ..< insn.operands.length() {
+        t:SemType memberType = t:mappingMemberType(vc.typeContext(), ty, insn.fieldNames[i]);
+        if memberType == t:NEVER {
+            return vc.err(`field ${insn.fieldNames[i]} is not allowed by the type`);
+        }
+        check verifyOperandType(vc, insn.operands[i], memberType,
+                                "type of mapping constructor member of not a subtype of mapping member type");
+    }
+    if mat is () {
         return vc.err("bad BIR: inherent type of map is of an unsupported type");
     }
-    else {
-        foreach var operand in insn.operands {
-            check verifyOperandType(vc, operand, memberType, "mapping constructor member of not a subtype of map member type");
-        }
+    else if insn.operands.length() < mat.names.length() {
+        return vc.err("missing record fields in mapping constructor");
     }
 }
 
@@ -206,38 +212,33 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic?
     if !vc.isSubtype(insn.list.semType, t:LIST) {
         return vc.err("list set applied to non-list");
     }
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeContext(), insn.list.semType);
-    if memberType == () {
-        return vc.err("ListSet on unsupported list type");
-    }
-    else {
-        return verifyOperandType(vc, insn.operand, memberType, "value assigned to member of list is not a subtype of array member type");
-    }
+    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.list.semType);
+    return verifyOperandType(vc, insn.operand, memberType, "value assigned to member of list is not a subtype of array member type");
 }
 
 function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic? {
-    check verifyOperandString(vc, insn.name, insn.operands[1]);
+    StringOperand k = insn.operands[1];
+    check verifyOperandString(vc, insn.name, k);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping get applied to non-mapping");
     }
-    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType);
-    if !vc.isSubtype(t:union(memberType, t:NIL), insn.result.semType) {
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
+    if !(k is string) || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k) {
+        memberType = t:union(memberType, t:NIL);
+    }
+    if !vc.isSubtype(memberType, insn.result.semType) {
         return vc.err("bad BIR: unsafe type for result MappingGet");
     }
 }
 
 function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic? {
-    check verifyOperandString(vc, insn.name, insn.operands[1]);
+    StringOperand k = insn.operands[1];
+    check verifyOperandString(vc, insn.name, k);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping set applied to non-mapping");
     }
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeContext(), insn.operands[0].semType);
-    if memberType == () {
-        return vc.err("MappingSet on unsupported mapping type");
-    }
-    else {
-        return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type");
-    }
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
+    return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type");
 }
 
 function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
