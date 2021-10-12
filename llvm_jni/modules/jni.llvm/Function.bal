@@ -84,7 +84,7 @@ public distinct class Function {
         jLLVMSetSubprogram(self.LLVMValueRef, metadata.llvmMetadata);
     }
 
-    public function toValue() returns Value {
+    public function toValue() returns ConstPointerValue {
         return new(self.LLVMValueRef);
     }
 }

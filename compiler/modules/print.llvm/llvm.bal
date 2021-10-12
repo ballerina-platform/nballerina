@@ -536,7 +536,7 @@ public class FunctionDecl {
     }
 
     // gets a LLVMValue corresponding to the function
-    public function toValue() returns Value {
+    public function toValue() returns ConstPointerValue {
         return new(pointerType(self.functionType), "@"+self.functionName);
     }
 }
@@ -733,7 +733,7 @@ public class FunctionDefn {
     }
 
     // gets a LLVMValue corresponding to the function
-    public function toValue() returns Value {
+    public function toValue() returns ConstPointerValue {
         return new(pointerType(self.functionType), "@"+self.functionName);
     }
 }
