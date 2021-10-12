@@ -11,16 +11,14 @@ type B boolean;
 type INTEGER int;
 type S string;
 
-// @type BL[ONE] = B
+// @type BL[1] = B
 // @type BL[2] = B
 type BL boolean[]; 
-type test "ttt";
 
-// @type R[key] = INTEGER 
+// @type R["f1"] = INTEGER 
+// @type R["f2"] = B 
 type R record {|
     int f1;
     boolean f2;
 |};
 
-const ONE = 1;
-const key = "f1";

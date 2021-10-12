@@ -179,98 +179,62 @@ function testCompileFile(string filename) returns CompileError? {
 }
 
 function testSubtypes(front:SourcePart[] sources, string[] expected) returns error? {
-    var [env, m, v] = check front:typesFromString(sources);
+    var [env, m] = check front:typesFromString(sources);
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:TypeTest test = check s:parseTypeTest(item);
-        
-        if test is s:SubtypeTest {
-            t:SemType? tn1 = m[test.left];
-            if tn1 is () {
-                test:assertFail(test.left + " is not declared");
+        t:SemType t1 = resolveTestSemtype(tc, m, test.left);
+        t:SemType t2 = resolveTestSemtype(tc, m, test.right);
+        match test.op { 
+            "<" => {
+                test:assertTrue(t:isSubtype(tc, t1, t2), "LHS is not a subtype of RHS");
+                test:assertFalse(t:isSubtype(tc, t2, t1), "RHS is a subtype of LHS" );
             }
-            t:SemType t1 = <t:SemType> tn1;
-            t:SemType? t2 = m[test.right];
-            if t2 is () {
-                test:assertFail(test.right + " is not declared");
+            "<>" => {
+                test:assertFalse(t:isSubtype(tc, t1, t2), "LHS is a subtype of RHS");
+                test:assertFalse(t:isSubtype(tc, t2, t1), "RHS is a subtype of LHS");
             }
-            else {
-                match test.op { 
-                    "<" => {
-                        test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
-                        test:assertFalse(t:isSubtype(tc, t2, t1), test.right + " is a subtype of " + test.left);
-                    }
-                    "<>" => {
-                        test:assertFalse(t:isSubtype(tc, t1, t2), test.left + " is a subtype of " + test.right);
-                        test:assertFalse(t:isSubtype(tc, t2, t1), test.right + " is a subtype of " + test.left);
-                    }
-                    "=" => {
-                        test:assertTrue(t:isSubtype(tc, t1, t2), test.left + " is not a subtype of " + test.right);
-                        test:assertTrue(t:isSubtype(tc, t2, t1), test.right + " is not a subtype of " + test.left);
-                    }
-                }
-            }
-        }
-        else { // projection tests
-            t:SemType? tn1 = m[test.left.identifier];
-            if tn1 is () {
-                test:assertFail(test.left.identifier + " is not declared");
-            }
-            t:SemType t1 = <t:SemType> tn1;
-            t:SemType? t2 = m[test.member];
-            if t2 is () {
-                test:assertFail(test.member + " is not declared");
-            }
-            else {
-                string|int? index = test.index;
-                if t:isSubtype(tc, t1, t:LIST) {
-                    testSemtypeList(tc, m, t1, t2, index, test.member);
-                }
-                else if t:isSubtype(tc, t1, t:MAPPING) {
-                    testSemtypeMapping(tc, m, t1, t2, index, test.member, v);
-                }
-                else {
-                    test:assertFail(test.left.identifier + " is not a list or a mapping type");
-                }
+            "=" => {
+                test:assertTrue(t:isSubtype(tc, t1, t2), "LHS is not a subtype of RHS");
+                test:assertTrue(t:isSubtype(tc, t2, t1), "RHS is not a subtype of LHS");
             }
         }
     }
 }
 
-function testSemtypeList(t:Context tc, map<t:SemType> m, t:SemType t1, t:SemType t2, string|int? index, string member) {
-    if index is string {
-        t:SemType? key = m[index];
-        if key is () {
-            test:assertFail(index + " is not declared");
+function resolveTestSemtype(t:Context tc, map<t:SemType> m, string|s:TypeProjection tn) returns t:SemType {
+    if tn is string {
+        t:SemType? t = m[tn];
+        if t is () {
+            test:assertFail(tn + " is not declared");
         }
         else {
-            test:assertTrue(t:isSubtype(tc, key, t:INT), "Index for list must be an integer");
-        }
-        
-    }
-    t:SemType memberType = t:listMemberType(tc, t1);
-    test:assertTrue(t:isSubtype(tc, t2, memberType), member + " is not a subtype of member type");
-}
-
-function testSemtypeMapping(t:Context tc, map<t:SemType> m, t:SemType t1, t:SemType t2, string|int? index, string member, map<string> v) {
-    string? keyVal = ();
-    if index is string {
-        t:SemType? key = m[index];
-        if key is () {
-            test:assertFail(index + " is not declared");
-        }
-        else {
-            test:assertTrue(t:isSubtype(tc, key, t:STRING), "Index for mapping must be a string");
-        }
-        keyVal = v[index];
-        if keyVal is () {
-            test:assertFail(index + " is not declared");
+            return t;
         }
     }
     else {
-        test:assertFail("mapping parsing with literal index not supported yet");
+        t:SemType? t = m[tn.identifier];
+        if t is () {
+            test:assertFail(tn.identifier + " is not declared");
+        }
+        else {
+            int|string index = tn.index;
+            if t:isSubtype(tc, t, t:LIST) {
+                if index is int {
+                    return t:listMemberType(tc, t, index);
+                }
+                test:assertFail("index for list must be an integer");
+            }
+            else if t:isSubtype(tc, t, t:MAPPING) {
+                if index is string {
+                    return t:mappingMemberType(tc, t, index);
+                }
+                test:assertFail("index for mapping must be a string");
+            }
+            else {
+                test:assertFail(tn.identifier + " is not a list or a mapping type");
+            } 
+        }
     }
-    t:SemType memberType = t:mappingMemberType(tc, t1, keyVal);
-    test:assertTrue(t:isSubtype(tc, t2, memberType), member + " is not a subtype of member type");
-                
+    return error("cannot resolve semtype");
 }

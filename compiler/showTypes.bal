@@ -16,7 +16,7 @@ public function showTypes(front:SourcePart[] sources) returns err:Any|io:Error? 
 
 function subtypeRels(front:SourcePart[] sources) returns string[]|err:Any|io:Error {
     
-    var [env, m, _] = check front:typesFromString(sources);
+    var [env, m] = check front:typesFromString(sources);
 
     var tc = t:typeContext(env);
 

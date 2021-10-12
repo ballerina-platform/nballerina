@@ -2,7 +2,7 @@ public function parseTypeTest(string str) returns TypeTest|error {
     SourceFile file = createSourceFile([str], { filename: "<internal>" });
     Tokenizer tok = new(file);
     check tok.advance();
-    Operand left = check parseTypeExpr(tok);
+    string|TypeProjection left = check parseTypeProjection(tok);
     Token? t = tok.current();
     if t is "<"|"=" {
         check tok.advance();
@@ -14,21 +14,16 @@ public function parseTypeTest(string str) returns TypeTest|error {
         else {
             op = t;     
         }
-        Operand right = check parseTypeExpr(tok);
-        if left.index is () {
-            return { op, left : left.identifier, right : right.identifier };
-        } 
-        else if op is "=" {
-            return {left, member : right.identifier, index : left.index};
-        }
+        string|TypeProjection right = check parseTypeProjection(tok);
+        return { op, left, right };
     }
     return parseError(tok);
     
 }
 
-function parseTypeExpr(Tokenizer tok) returns Operand|error {
+function parseTypeProjection(Tokenizer tok) returns string|TypeProjection|error {
     string identifier = check tok.expectIdentifier();
-    int|string? index = ();
+    int|string index;
     if tok.current() is "[" {
         check tok.advance();
         Token? t = tok.current();
@@ -36,30 +31,29 @@ function parseTypeExpr(Tokenizer tok) returns Operand|error {
             index = check int:fromString(t[1]);
             check tok.advance();
         }
+        else if t is [STRING_LITERAL, string] {
+            index = t[1];
+            check tok.advance();
+        }
         else {
-            index = check tok.expectIdentifier();
+            return parseError(tok);
         }
         check tok.expect("]");
+        return {identifier, index};
     }
-    return {identifier, index};
+    return identifier;
 }
 
-public type SubtypeTest record {
+public type TypeTest record {
     SubtypeTestOp op;
-    string left;
-    string right;
+    string|TypeProjection left;
+    string|TypeProjection right;
 };
 
-public type Operand record {
+public type TypeProjection record {
     string identifier;
-    int|string? index;
+    int|string index;
 };
 
-public type ProjectionTest record {
-    Operand left;
-    string member;
-    int|string? index;
-};
 
 public type SubtypeTestOp "<" | "=" | "<>";
-public type TypeTest SubtypeTest | ProjectionTest;

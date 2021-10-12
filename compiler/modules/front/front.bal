@@ -247,7 +247,7 @@ function addModulePart(ModuleDefns mod, s:ModulePart part) returns err:Semantic?
 }
 
 // This is old interface for showTypes
-public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:SemType>, map<string>]|err:Any|io:Error {
+public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:SemType>]|err:Any|io:Error {
     t:Env env = new;
     ModuleSymbols syms = { tc: t:typeContext(env) };
     foreach int i in 0 ..< sourceParts.length() {
@@ -256,24 +256,5 @@ public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:
         check addModulePart(syms.defns, check s:parseModulePart(part));
     }
     check resolveTypes(syms);
-    return [env, createTypeMap(syms), createStringValueMap(syms)];
-}
-
-function createStringValueMap(ModuleSymbols syms) returns map<string> {
-    map<string> values = {};
-    foreach var v in syms.defns {
-        if v is s:ConstDefn {
-            s:Expr expr = v.expr;
-            if expr is s:ConstValueExpr && expr.value is string {
-                values[v.name] = <string> expr.value;
-            }
-        } 
-        else if v is s:TypeDefn {
-            s:TypeDesc td = v.td;
-            if td is s:SingletonTypeDesc && td.value is string {
-                values[v.name] = <string> td.value;
-            }
-        }
-    }
-    return values;
+    return [env, createTypeMap(syms)];
 }
