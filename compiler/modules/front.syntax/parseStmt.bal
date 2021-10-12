@@ -37,16 +37,11 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             check tok.advance();
             return parsePanicStmt(tok, startPos);
         }
-        "break" => {
+        "break"|"continue" => {
             check tok.advance();
             Position endPos = check tok.expectEnd(";");
-            BreakContinueStmt stmt = { startPos, endPos, breakContinue:"break" };
-            return stmt;
-        }
-        "continue" => {
-            check tok.advance();
-            Position endPos = check tok.expectEnd(";");
-            BreakContinueStmt stmt = { startPos, endPos, breakContinue:"continue" };
+            // JBUG cast
+            BreakContinueStmt stmt = { startPos, endPos, breakContinue:<BreakContinue>cur };
             return stmt;
         }
         "if" => {
