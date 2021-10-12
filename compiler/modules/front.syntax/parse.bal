@@ -75,14 +75,14 @@ function parseImportDecl(Tokenizer tok, int partIndex) returns ImportDecl|err:Sy
     Position startPos = tok.currentStartPos();
     check tok.advance();
     Position namePos = tok.currentStartPos();
-    string firstModuleName = check tok.expectIdentifier();
+    string firstModuleName = check validImportPart(tok);
     string? org = ();
     if tok.current() == "/" {
         // we have an org
         org = firstModuleName;
         check tok.advance();
         namePos = tok.currentStartPos();
-        firstModuleName = check tok.expectIdentifier();
+        firstModuleName = check validImportPart(tok);
     }
     [string, string...] names = [firstModuleName];
     names.push(...check parseImportNamesRest(tok));
@@ -96,9 +96,28 @@ function parseImportNamesRest(Tokenizer tok) returns string[]|err:Syntax {
     string[] names = [];
     while tok.current() == "." {
         check tok.advance();
-        names.push(check tok.expectIdentifier());
+        names.push(check validImportPart(tok));
     }
     return names;
+}
+
+function validImportPart(Tokenizer tok) returns string|err:Syntax {
+    string identifier = check tok.expectIdentifier();
+    string? prevChar = ();
+    foreach var ch in identifier {
+        if ch == "_" {
+            if prevChar == () {
+                return tok.err("identifier in an import must not have leading underscores");
+            } else if prevChar == "_" {
+                return tok.err("identifier in an import must not have consecutive underscores");
+            }
+        }
+        prevChar = ch;
+    }
+    if prevChar == "_" {
+        return tok.err("identifier in an import must not have tailing underscores");
+    }
+    return identifier;
 }
 
 function parseImportPrefix(Tokenizer tok) returns string?|err:Syntax {
