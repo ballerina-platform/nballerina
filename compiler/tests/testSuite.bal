@@ -236,5 +236,6 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, string|s:TypeProject
             } 
         }
     }
-    return error("cannot resolve semtype");
+    // JBUG: #31642 function must return a call
+    return error("unreachable");
 }
