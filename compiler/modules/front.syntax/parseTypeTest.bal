@@ -36,10 +36,10 @@ public function parseTypeTest(string str) returns TypeTest|error {
 
 function parseTypeProjection(Tokenizer tok) returns string|TypeProjection|error {
     string identifier = check tok.expectIdentifier();
-    int|string index;
     if tok.current() is "[" {
         check tok.advance();
         Token? t = tok.current();
+        int|string index;
         if t is [DECIMAL_NUMBER, string] {
             index = check int:fromString(t[1]);
             check tok.advance();

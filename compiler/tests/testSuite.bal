@@ -183,20 +183,20 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:TypeTest test = check s:parseTypeTest(item);
-        t:SemType t1 = resolveTestSemtype(tc, m, test.left);
-        t:SemType t2 = resolveTestSemtype(tc, m, test.right);
+        t:SemType left = resolveTestSemtype(tc, m, test.left);
+        t:SemType right = resolveTestSemtype(tc, m, test.right);
         match test.op { 
             "<" => {
-                test:assertTrue(t:isSubtype(tc, t1, t2), "LHS is not a subtype of RHS");
-                test:assertFalse(t:isSubtype(tc, t2, t1), "RHS is a subtype of LHS" );
+                test:assertTrue(t:isSubtype(tc, left, right), "LHS is not a subtype of RHS");
+                test:assertFalse(t:isSubtype(tc, right, left), "RHS is a subtype of LHS" );
             }
             "<>" => {
-                test:assertFalse(t:isSubtype(tc, t1, t2), "LHS is a subtype of RHS");
-                test:assertFalse(t:isSubtype(tc, t2, t1), "RHS is a subtype of LHS");
+                test:assertFalse(t:isSubtype(tc, left, right), "LHS is a subtype of RHS");
+                test:assertFalse(t:isSubtype(tc, right, left), "RHS is a subtype of LHS");
             }
             "=" => {
-                test:assertTrue(t:isSubtype(tc, t1, t2), "LHS is not a subtype of RHS");
-                test:assertTrue(t:isSubtype(tc, t2, t1), "RHS is not a subtype of LHS");
+                test:assertTrue(t:isSubtype(tc, left, right), "LHS is not a subtype of RHS");
+                test:assertTrue(t:isSubtype(tc, right, left), "RHS is not a subtype of LHS");
             }
         }
     }
