@@ -161,6 +161,9 @@ public type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticE
 
 // We use different operator names so things work better with match statements
 public type BinaryExprBase record {|
+    // JBUG can't include PositionFields
+    Position startPos;
+    Position endPos;
     Expr left;
     Expr right;
 |};
@@ -187,6 +190,9 @@ public type BinaryBitwiseExpr record {|
 |};
 
 public type UnaryExpr record {|
+    // JBUG can't include PositionFields
+    Position startPos;
+    Position endPos;
     UnaryExprOp op;
     Expr operand;
     Position pos;
@@ -200,11 +206,19 @@ public type SimpleConstNegateExpr record {|
 |};
 
 public type ErrorConstructorExpr record {|
+    // JBUG can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     Expr message;
     Position pos;
 |};
 
 public type FunctionCallExpr record {|
+    // JBUG can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     string? prefix = ();
     string funcName;
     Expr[] args;
@@ -213,6 +227,10 @@ public type FunctionCallExpr record {|
 |};
 
 public type MethodCallExpr record {|
+    // JBUG can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     string methodName;
     Expr target;
     Expr[] args;
@@ -222,6 +240,10 @@ public type MethodCallExpr record {|
 public type CheckingKeyword "check"|"checkpanic";
 
 public type CheckingExpr record {|
+    // JBUG can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     CheckingKeyword checkingKeyword;
     Expr operand;
 |};
@@ -229,17 +251,25 @@ public type CheckingExpr record {|
 public type CheckingStmt record {|
     // JBUG can't include CheckingExpr
     // *CheckingExpr;
+    // *PositionFields
     CheckingKeyword checkingKeyword;
+    Position startPos;
+    Position endPos;
     CallStmt operand;
 |};
 
 public type ListConstructorExpr record {|
+    // JBUG can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     Expr[] members;
     // JBUG adding this field makes match statement in codeGenExpr fail 
     t:SemType? expectedType = ();
 |};
 
 public type MappingConstructorExpr record {|
+    *PositionFields;
     Field[] fields;
     t:SemType? expectedType = ();
 |};
@@ -251,6 +281,10 @@ public type Field record {|
 |};
 
 public type MemberAccessExpr record {|
+    // JBUG can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     Expr container;
     Expr index;
     Position pos;
@@ -258,49 +292,66 @@ public type MemberAccessExpr record {|
 
 // JBUG gets a bad, sad if this uses *MemberAccessExpr and overrides container
 public type MemberAccessLExpr record {|
+    *PositionFields;
     VarRefExpr container;
     Expr index;
     Position pos;
 |};
 
 public type FieldAccessExpr record {|
+    // JBUG can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     Expr container;
     string fieldName;
     Position pos;
 |};
 
 public type FieldAccessLExpr record {|
+    *PositionFields;
     VarRefExpr container;
     string fieldName;
     Position pos;
 |};
 
 public type RangeExpr record {|
+    *PositionFields;
     Expr lower;
     Expr upper;
 |};
 
 public type VarRefExpr record {|
+    *PositionFields;
     string? prefix = ();
     string varName;
 |};
 
 public type TypeCastExpr record {|
+    // JBUG can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc td;
     Expr operand;
     Position pos;
 |};
 
 public type TypeTestExpr record {|
+    // JBUG can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc td;
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
-    boolean negated; 
+    boolean negated;
 |};
 
 public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
 
 public type ConstValueExpr record {|
+    *PositionFields;
     ()|boolean|int|float|string value;
     // This is non-nil when the static public type of the expression
     // contains more than one shape.
@@ -314,6 +365,7 @@ public const float FLOAT_ZERO = 0f;
 // This is an expression where we know that the value is == 0f
 // but do not know whether it is +0f or -0f.
 public type FloatZeroExpr record {|
+    *PositionFields;
     FLOAT_ZERO value = FLOAT_ZERO;
     () multiSemType = ();
     Expr expr;
@@ -327,6 +379,7 @@ public type IntLiteralBase 10|16;
 // depends on the contextually expected public type, which
 // we do not know at parse time.
 public type IntLiteralExpr record {|
+    *PositionFields;
     IntLiteralBase base;
     string digits;
     Position pos;
@@ -339,6 +392,7 @@ public type FpTypeSuffix FLOAT_TYPE_SUFFIX|DECIMAL_TYPE_SUFFIX;
 
 public type FpLiteralExpr record {|
     // This is the literal without the public type suffix
+    *PositionFields;
     string untypedLiteral;
     FpTypeSuffix? typeSuffix;
     Position pos;
