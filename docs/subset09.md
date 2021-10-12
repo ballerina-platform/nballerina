@@ -84,25 +84,30 @@ const-defn = ["public"] "const" [builtin-type-name] identifier "=" const-expr ";
 
 type-defn = ["public"] "type" identifier type-desc ";"
 
-type-desc = union-type-desc | array-type-desc | map-type-desc | record-type-desc | type-reference 
+type-desc =
+  union-type-desc
+  | array-type-desc
+  | map-type-desc
+  | record-type-desc
+  | type-reference
 
+# corresponds to union of one or more complete basic types
 union-type-desc =
   optional-type-desc
   | union-type-desc "|" optional-type-desc
 
 optional-type-desc = basic-type-desc [ "?" ]
 
-basic-type-desc = builtin-type-name | nil-type-desc
+basic-type-desc =
+   builtin-type-name
+   | nil-type-desc
+   | "(" union-type-desc ")"
 
 builtin-type-name = "any" | "boolean" | "int" | "float" | "string" | "error"
 
 nil-type-desc = "(" ")"
 
-array-type-desc = array-member-type-desc "[" "]"
-
-array-member-type-desc =
-  optional-type-desc
-  | "(" union-type-desc ")"
+array-type-desc = optional-type-desc "[" "]"
 
 map-type-desc = "map" "<" union-type-desc ">"
 
@@ -128,12 +133,7 @@ statement =
   | panic-stmt
   | match-stmt
  
-local-var-decl-stmt = ["final"] inline-type-desc identifier "=" expression ";"
-
-# Same as type-desc except the parentheses are not allowed
-inline-type-desc = union-type-desc | inline-array-type-desc | map-type-desc | type-reference
-
-inline-array-type-desc = optional-type-desc "[" "]"
+local-var-decl-stmt = ["final"] type-desc identifier "=" expression ";"
 
 # reference to a type definition
 type-reference = identifier | qualified-identifier
@@ -346,8 +346,9 @@ Two kinds of `import` are supported.
 
 ## Additions from subset 8
 
-* Record types
+* Closed record types
 * Nil type descriptor
+* Proper parsing of type descriptors in statements: all type descriptors that are allowed in a type definition are now allowed within statements
 
 ## Implemented spec changes since 2021R1
 
