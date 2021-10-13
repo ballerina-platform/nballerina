@@ -11,8 +11,10 @@ import ballerina/io;
 // Operand of an unnamed variable/basic block
 type Unnamed int;
 
-# Corresponds to LLVMValueRef 
-public readonly distinct class Value {
+public type Value RegisterValue|Function;
+
+# Corresponds to LLVMValueRef
+public readonly distinct class RegisterValue {
     string|Unnamed operand;
     Type ty;
     function init(Type ty, string|Unnamed operand) {
@@ -24,7 +26,7 @@ public readonly distinct class Value {
 # Subtype of Value that refers to a pointer
 # Ensures compile-time checking that stores and loads use the right kinds of Value
 public readonly class PointerValue {
-    *Value;
+    *RegisterValue;
     string|Unnamed operand;
     PointerType ty;
     function init(PointerType ty, string|Unnamed operand) {
@@ -35,7 +37,7 @@ public readonly class PointerValue {
 
 # Subtype of Value that refers to a constant
 public readonly class ConstValue {
-    *Value;
+    *RegisterValue;
     string operand;
     Type ty;
     function init(Type ty, string operand) {
@@ -488,11 +490,17 @@ public class FunctionDecl {
     final ParamEnumAttribute[][] paramAttributes = [];
     Metadata? metadata = ();
 
+    final string operand;
+    final PointerType ty;
+
     function init(Context context, string functionName, FunctionType functionType) {
         self.functionName = functionName;
         self.functionType = functionType;
         self.paramAttributes.setLength(functionType.paramTypes.length());
         self.context = context;
+        // We will be using operand and ty only when function is used a value (ie. function pointer)
+        self.operand = "@" + self.functionName;
+        self.ty = pointerType(self.functionType);
     }
 
     function output(Output out) {
@@ -534,11 +542,6 @@ public class FunctionDecl {
     public function setGC(string? name) {
         self.gcName = name;
     }
-
-    // gets a LLVMValue corresponding to the function
-    public function toValue() returns ConstPointerValue {
-        return new(pointerType(self.functionType), "@"+self.functionName);
-    }
 }
 
 public class FunctionDefn {
@@ -551,6 +554,9 @@ public class FunctionDefn {
     final Context context;
     string? gcName = ();
     Metadata? metadata = ();
+
+    final string operand;
+    final PointerType ty;
 
     private BasicBlock[] basicBlocks = [];
     private map<int> variableNames = {};
@@ -574,6 +580,9 @@ public class FunctionDefn {
             self.paramValues.push(arg);
         }
         self.paramAttributes.setLength(functionType.paramTypes.length());
+        // We will be using operand and ty only when function is used a value (ie. function pointer)
+        self.operand = "@" + self.functionName;
+        self.ty = pointerType(self.functionType);
     }
 
     // Correspond to LLVMGetParam
@@ -730,11 +739,6 @@ public class FunctionDefn {
     // Corresponds to LLVMSetSubprogram
     public function setSubprogram(Metadata metadata) {
         self.metadata = metadata;
-    }
-
-    // gets a LLVMValue corresponding to the function
-    public function toValue() returns ConstPointerValue {
-        return new(pointerType(self.functionType), "@"+self.functionName);
     }
 }
 
@@ -1045,7 +1049,7 @@ public class Builder {
         string|Unnamed reg = bb.func.genReg(name);
         IntegralType ty = sameIntegralType(lhs, rhs);
         addInsnWithDbLocation(bb, [reg, "=", "icmp", op, typeToString(ty, self.context), lhs.operand, ",", rhs.operand], self.dbLocation);
-        return new Value("i1", reg);
+        return new RegisterValue("i1", reg);
     }
 
     // Corresponds to LLVMBuildFCmp
@@ -1055,7 +1059,7 @@ public class Builder {
         IntType|FloatType ty = sameNumberType(lhs, rhs);
         if ty is FloatType {
             addInsnWithDbLocation(bb, [reg, "=", "fcmp", op, typeToString(ty, self.context), lhs.operand, ",", rhs.operand], self.dbLocation);
-            return new Value("i1", reg);
+            return new RegisterValue("i1", reg);
         }
         else {
             panic err:illegalArgument("values must be a real type");
@@ -1114,8 +1118,9 @@ public class Builder {
 
     // Corresponds to LLVMBuildTrunc
     public function trunc(Value val, IntType destinationType, string? name=()) returns Value {
-        if val.ty is IntType {
-            if val.ty == destinationType {
+        Type valueType = val.ty;
+        if valueType is IntType {
+            if valueType == destinationType {
                 panic err:illegalArgument("equal sized types are not allowed");
             }
             BasicBlock bb = self.bb();
@@ -1131,7 +1136,8 @@ public class Builder {
 
     // Corresponds to LLVMBuildFNeg
     public function fNeg(Value val, string? name=()) returns Value {
-        if val.ty is FloatType {
+        Type valTy = val.ty;
+        if valTy is FloatType {
             BasicBlock bb = self.bb();
             string|Unnamed reg = bb.func.genReg(name);
             addInsnWithDbLocation(bb, [reg, "=", "fneg", typeToString(val.ty, self.context), val.operand], self.dbLocation);
@@ -1144,7 +1150,8 @@ public class Builder {
 
     // Corresponds to LLVMBuildSIToFP
     public function sIToFP(Value val, FloatType destTy, string? name=()) returns Value {
-        if val.ty is IntType {
+        Type valTy = val.ty;
+        if valTy is IntType {
             BasicBlock bb = self.bb();
             string|Unnamed reg = bb.func.genReg(name);
             addInsnWithDbLocation(bb, [reg, "=", "sitofp", typeToString(val.ty, self.context), val.operand,
@@ -1220,10 +1227,11 @@ public class Builder {
 
     // Corresponds to LLVMBuildCondBr
     public function condBr(Value condition, BasicBlock ifTrue, BasicBlock ifFalse) {
-        if condition.ty is "i1" {
+        Type condTy = condition.ty;
+        if condTy is "i1" {
             BasicBlock bb = self.bb();
             addInsnWithDbLocation(bb, ["br", "i1", condition.operand, ",", "label", ifTrue.ref(), ",", "label", ifFalse.ref()], self.dbLocation);
-        } 
+        }
         else {
             panic err:illegalArgument("Condition must be a u1");
         }
@@ -1591,11 +1599,11 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
         if resultType is PointerType {
             resultAddressSpace = resultType.addressSpace;
             resultType = resultType.pointsTo;
-        } 
+        }
         else {
             if resultType is ArrayType {
                 resultType = resultType.elementType;
-            } 
+            }
             else if resultType is StructType {
                 int i;
                 if index.operand is Unnamed {
@@ -1603,13 +1611,14 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
                 } else {
                     i = checkpanic int:fromString(<string>index.operand);
                 }
-                if index.ty != "i32" {
+                Type indexTy = index.ty;
+                if !(indexTy is "i32") {
                     panic err:illegalArgument("structures can be index only using i32 constants"); 
-                } 
+                }
                 else {
                     resultType = getTypeAtIndex(resultType, i);
                 }
-            } 
+            }
             else {
                 panic err:illegalArgument(string `type  ${typeToString(resultType, context)} can't be indexed`);
             }
