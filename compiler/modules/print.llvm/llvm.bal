@@ -11,10 +11,10 @@ import ballerina/io;
 // Operand of an unnamed variable/basic block
 type Unnamed int;
 
-public type Value RegisterValue|Function;
+public type Value DataValue|Function;
 
 # Corresponds to LLVMValueRef
-public readonly distinct class RegisterValue {
+public readonly distinct class DataValue {
     string|Unnamed operand;
     Type ty;
     function init(Type ty, string|Unnamed operand) {
@@ -26,7 +26,7 @@ public readonly distinct class RegisterValue {
 # Subtype of Value that refers to a pointer
 # Ensures compile-time checking that stores and loads use the right kinds of Value
 public readonly class PointerValue {
-    *RegisterValue;
+    *DataValue;
     string|Unnamed operand;
     PointerType ty;
     function init(PointerType ty, string|Unnamed operand) {
@@ -37,7 +37,7 @@ public readonly class PointerValue {
 
 # Subtype of Value that refers to a constant
 public readonly class ConstValue {
-    *RegisterValue;
+    *DataValue;
     string operand;
     Type ty;
     function init(Type ty, string operand) {
@@ -1049,7 +1049,7 @@ public class Builder {
         string|Unnamed reg = bb.func.genReg(name);
         IntegralType ty = sameIntegralType(lhs, rhs);
         addInsnWithDbLocation(bb, [reg, "=", "icmp", op, typeToString(ty, self.context), lhs.operand, ",", rhs.operand], self.dbLocation);
-        return new RegisterValue("i1", reg);
+        return new DataValue("i1", reg);
     }
 
     // Corresponds to LLVMBuildFCmp
@@ -1059,7 +1059,7 @@ public class Builder {
         IntType|FloatType ty = sameNumberType(lhs, rhs);
         if ty is FloatType {
             addInsnWithDbLocation(bb, [reg, "=", "fcmp", op, typeToString(ty, self.context), lhs.operand, ",", rhs.operand], self.dbLocation);
-            return new RegisterValue("i1", reg);
+            return new DataValue("i1", reg);
         }
         else {
             panic err:illegalArgument("values must be a real type");
