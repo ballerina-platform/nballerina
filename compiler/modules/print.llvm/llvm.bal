@@ -11,9 +11,9 @@ import ballerina/io;
 // Operand of an unnamed variable/basic block
 type Unnamed int;
 
+# Corresponds to LLVMValueRef
 public type Value DataValue|Function;
 
-# Corresponds to LLVMValueRef
 public readonly distinct class DataValue {
     string|Unnamed operand;
     Type ty;
@@ -498,7 +498,7 @@ public class FunctionDecl {
         self.functionType = functionType;
         self.paramAttributes.setLength(functionType.paramTypes.length());
         self.context = context;
-        // We will be using operand and ty only when function is used a value (ie. function pointer)
+        // We will be using operand and ty only when function is used as value (ie. function pointer)
         self.operand = "@" + self.functionName;
         self.ty = pointerType(self.functionType);
     }
@@ -580,7 +580,7 @@ public class FunctionDefn {
             self.paramValues.push(arg);
         }
         self.paramAttributes.setLength(functionType.paramTypes.length());
-        // We will be using operand and ty only when function is used a value (ie. function pointer)
+        // We will be using operand and ty only when function is used as value (ie. function pointer)
         self.operand = "@" + self.functionName;
         self.ty = pointerType(self.functionType);
     }
