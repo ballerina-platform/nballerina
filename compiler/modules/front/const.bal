@@ -209,7 +209,9 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
                 else {
                     expr.right = rightExpr;
                 }
-                s:FloatZeroExpr zeroExpr = { expr };
+                s:Position startPos = expr.startPos;
+                s:Position endPos = expr.endPos;
+                s:FloatZeroExpr zeroExpr = { startPos, endPos, expr };
                 return zeroExpr;
             }
             return foldedBinaryConstExpr(f, t:FLOAT, leftExpr, rightExpr);
@@ -231,6 +233,8 @@ function foldBinaryBitwiseExpr(FoldContext cx, t:SemType? expectedType, s:Binary
         SimpleConst right = rightExpr.value;
         if left is int && right is int {
             return <s:ConstValueExpr> {
+                startPos: expr.startPos,
+                endPos: expr.endPos,
                 value: bitwiseEval(expr.bitwiseOp, left, right),
                 multiSemType: foldedBinaryBitwiseType(expr.bitwiseOp, left, leftExpr.multiSemType, right, rightExpr.multiSemType)
             };
@@ -263,7 +267,7 @@ function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:Binar
             if !equal && !isEqual(leftExpr.value, rightExpr.value) && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
                 return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`);
             }
-            return <s:ConstValueExpr> { value, multiSemType: t:BOOLEAN };
+            return <s:ConstValueExpr> { startPos: expr.startPos, endPos: expr.endPos, value, multiSemType: t:BOOLEAN };
         }
     }
     else {
@@ -344,7 +348,7 @@ function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:Bin
 }
 
 function foldedBinaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, s:ConstShapeExpr left, s:ConstShapeExpr right) returns s:ConstValueExpr {
-    return { value, multiSemType: left.multiSemType === () && right.multiSemType === () ? () : basicType };
+    return { startPos: left.startPos, endPos: right.endPos, value, multiSemType: left.multiSemType === () && right.multiSemType === () ? () : basicType };
 }
 
 function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr) returns s:Expr|FoldError {
@@ -462,7 +466,7 @@ function foldCheckingExpr(FoldContext cx, t:SemType? expectedType, s:CheckingExp
 }
 
 function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, s:ConstShapeExpr subExpr) returns s:ConstValueExpr {
-    return { value, multiSemType: subExpr.multiSemType === () ? () : basicType };
+    return { startPos: subExpr.startPos, endPos: subExpr.endPos, value, multiSemType: subExpr.multiSemType === () ? () : basicType };
 }
 
 function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr expr) returns s:Expr|FoldError {
@@ -471,11 +475,11 @@ function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr ex
         return expr;
     }
     else if constValue is s:FLOAT_ZERO {
-        s:FloatZeroExpr zeroExpr = { expr };
+        s:FloatZeroExpr zeroExpr = { startPos: expr.startPos, endPos: expr.endPos, expr };
         return zeroExpr;
     }
     else {
-        s:ConstValueExpr constExpr = { value: constValue.value };
+        s:ConstValueExpr constExpr = { startPos: expr.startPos, endPos: expr.endPos, value: constValue.value };
         return constExpr;
     }
 }
@@ -484,7 +488,7 @@ function foldFloatLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiter
     // This will need to change when we support decimal
     float|error result = floatFromDecimalLiteral(expr.untypedLiteral);
     if result is float {
-        return { value: result };
+        return { startPos: expr.startPos, endPos: expr.endPos, value: result };
     }
     else {
         return cx.semanticErr("invalid float literal", cause=result, pos=expr.pos);
@@ -503,7 +507,7 @@ function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLitera
         ty = "int";
     }
     if result is int|float {
-        return { value: result };
+        return { startPos: expr.startPos, endPos: expr.endPos, value: result };
     }
     else {
         return cx.semanticErr("invalid " + ty + " literal", cause=result, pos=expr.pos);
