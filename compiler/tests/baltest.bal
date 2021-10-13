@@ -23,7 +23,7 @@ function subtypeCaseProvider() returns map<SubtypeTestCase>|error {
         where res is SubtypeTestCase && res[1].length() > 0
         do {
             tests[base] = res;
-        };
+        }; // JBUG #33227 semicolon should not be needed
 
     return tests;
 }
