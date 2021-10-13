@@ -219,13 +219,13 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, string|s:TypeProject
         }
         else {
             int|string index = tn.index;
-            if t:isSubtype(tc, t, t:LIST) {
+            if t:isSubtypeSimple(t, t:LIST) {
                 if index is int {
                     return t:listMemberType(tc, t, index);
                 }
                 test:assertFail("index for list must be an integer");
             }
-            else if t:isSubtype(tc, t, t:MAPPING) {
+            else if t:isSubtypeSimple(t, t:MAPPING) {
                 if index is string {
                     return t:mappingMemberType(tc, t, index);
                 }
