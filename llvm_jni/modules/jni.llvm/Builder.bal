@@ -275,7 +275,7 @@ public distinct class Builder {
         _ = jLLVMBuildUnreachable(self.LLVMBuilder);
     }
 
-    public function call(Function fn, Value[] args, string? name = ()) returns Value? {
+    public function call(Function|PointerValue fn, Value[] args, string? name = ()) returns Value? {
         string reg = self.extractName(name);
         PointerPointer arr = PointerPointerFromValues(args);
         return new (jLLVMBuildCall(self.LLVMBuilder, fn.LLVMValueRef, arr.jObject, args.length(), java:fromString(reg)));

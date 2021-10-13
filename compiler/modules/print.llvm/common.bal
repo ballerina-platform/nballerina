@@ -46,15 +46,6 @@ public function structType(Type[] elementTypes) returns StructType {
     return { elementTypes: elementTypes.cloneReadOnly() };
 }
 
-function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
-    var data = context.getStructName(ty);
-    Type[] elementTypes = ty.elementTypes;
-    if !(data is ()) {
-        elementTypes = data[1];
-    }
-    return elementTypes[index];
-}
-
 public type Type IntType|FloatType|PointerType|StructType|ArrayType|FunctionType;
 
 // A RetType is valid only as the return type of a function

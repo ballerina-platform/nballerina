@@ -1648,6 +1648,15 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
     return pointerType(resultType, resultAddressSpace);
 }
 
+function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
+    var data = context.getStructName(ty);
+    Type[] elementTypes = ty.elementTypes;
+    if !(data is ()) {
+        elementTypes = data[1];
+    }
+    return elementTypes[index];
+}
+
 function bitCastArgs((string|Unnamed)[] words, Value val, PointerType destTy, Context context) {
     words.push(typeToString(val.ty, context), val.operand, "to", typeToString(destTy, context));
 }
