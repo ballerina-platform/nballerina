@@ -47,7 +47,7 @@ public type ConstDefn record {|
     *PositionFields;
     readonly string name;
     ModulePart part;
-    InlineBuiltinTypeDesc? td;
+    BuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
     Position namePos;
@@ -415,6 +415,9 @@ public type TypeDesc LeafTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef
 public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc;
 
 public type ListTypeDesc record {|
+    // JBUG can't include PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc[] members;
     TypeDesc rest;
     t:ListDefinition? defn = ();
@@ -426,6 +429,9 @@ public type FieldDesc record {|
 |};
 
 public type MappingTypeDesc record {|
+    // JBUG can't include PositionFields
+    Position startPos;
+    Position endPos;
     FieldDesc[] fields;
     TypeDesc rest;
     t:MappingDefinition? defn = ();
@@ -433,35 +439,47 @@ public type MappingTypeDesc record {|
 
 public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
+    // JBUG can't include PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc[] args;
     TypeDesc ret;
     t:FunctionDefinition? defn = ();
 |};
 
 public type ErrorTypeDesc record {|
+    // JBUG can't include PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc detail;
 |};
 
 public type BinaryTypeOp "|" | "&";
 
 public type BinaryTypeDesc record {|
+    *PositionFields;
     BinaryTypeOp op;
     TypeDesc left;
     TypeDesc right;
 |};
 
 public type TypeDescRef record {|
+    *PositionFields;
     string? prefix = ();
     string typeName;
     Position pos;
 |};
 
 public type SingletonTypeDesc record {|
+    *PositionFields;
     (string|float|int|boolean|decimal) value;
 |};
 
-// This is the subtype of BuiltinTypeDesc that we currently allow inline.
-public type InlineBuiltinTypeDesc "boolean"|"int"|"float"|"string"|"error"|"any";
-public type BuiltinTypeDesc InlineBuiltinTypeDesc|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
+public type BuiltinType "boolean"|"int"|"float"|"string"|"error"|"any"|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
+
+public type BuiltinTypeDesc record {|
+    *PositionFields;
+    BuiltinType builtinType;
+|};
 
 public type LeafTypeDesc BuiltinTypeDesc;

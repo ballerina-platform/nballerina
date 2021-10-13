@@ -44,9 +44,17 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                         foreach Stmt stmt in defn.body {
                             check validateStatementPos(stmt, tok, defn.startPos, defn.endPos);
                         }
+                        check validateTypeDescPos(defn.typeDesc, tok, defn.startPos, defn.endPos);
                     }
-                    if defn is ConstDefn {
+                    else if defn is ConstDefn {
                         check validateExpressionPos(defn.expr, tok, defn.startPos, defn.endPos);
+                        TypeDesc? td = defn.td;
+                        if td != () {
+                            check validateTypeDescPos(td, tok, defn.startPos, defn.endPos);
+                        }
+                    }
+                    else {
+                        check validateTypeDescPos(defn.td, tok, defn.startPos, defn.endPos);
                     }
                 }
                 topLevelDefnPos = topLevelDefnPos.sort();
@@ -138,6 +146,7 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
         lastEnd = endPos;
     }
     check validateChildExpressions(stmt, tok);
+    check validateChildTypeDesc(stmt, tok);
 }
 
 function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? {
@@ -325,6 +334,87 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         if lastEnd != expr.startPos {
             test:assertTrue(testValidInterExpressionRange(tok.file, lastEnd, startPos), "invalid token between expressions");
         }
+        lastEnd = endPos;
+    }
+    check validateChildTypeDesc(expr, tok);
+}
+
+function validateChildTypeDesc(Stmt|Expr parent, Tokenizer tok) returns err:Syntax? {
+    if parent is VarDeclStmt|TypeCastExpr|TypeTestExpr {
+        check validateTypeDescPos(parent.td, tok, parent.startPos, parent.endPos);
+    }
+}
+
+function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(td.startPos, MODE_NORMAL);
+    test:assertEquals(tok.currentStartPos(), td.startPos, "moved to wrong position");
+    TypeDesc newTd;
+    if td is FunctionTypeDesc {
+        newTd = check parseFunctionTypeDesc(tok);
+    }
+    else if td is LeafTypeDesc && td.builtinType is "()" {
+        // these are hardcoded based on context
+        return;
+    }
+    else {
+        newTd = check parseTypeDesc(tok);
+    }
+    Position actualEnd;
+    if td is FunctionTypeDesc {
+        actualEnd = tok.currentEndPos();
+    }
+    else {
+        actualEnd = tok.previousEndPos();
+    }
+    if td.endPos != actualEnd {
+        io:println(tok.file.filename());
+        io:println("td:", td, "\nnew:", newTd);
+        io:println("expected:", td.endPos, unpackPosition(td.endPos));
+        io:println("actual:", actualEnd, unpackPosition(actualEnd));
+    }
+    test:assertEquals(td.endPos, actualEnd);
+    test:assertEquals(td.toString(), newTd.toString());
+    test:assertTrue(td.startPos >= parentStartPos && td.endPos <= parentEndPos, "child node outside of parent");
+    test:assertFalse(testPositionIsWhiteSpace(tok.file, td.startPos), "start position is a white space");
+    test:assertFalse(testPositionIsWhiteSpace(tok.file, td.endPos), "end position is a white space");
+    [err:Position, err:Position][] childNodePos = [];
+    if td is ListTypeDesc {
+        foreach var member in td.members {
+            check validateTypeDescPos(member, tok, td.startPos, td.endPos);
+            childNodePos.push([member.startPos, member.endPos]);
+        }
+        // rest is a left recursion
+        // check validateTypeDescPos(td.rest, tok, td.startPos, td.endPos);
+        // childNodePos.push([td.rest.startPos, td.rest.endPos]);
+    }
+    else if td is MappingTypeDesc {
+        foreach var f in td.fields {
+            check validateTypeDescPos(f.typeDesc, tok, td.startPos, td.endPos);
+            childNodePos.push([f.typeDesc.startPos, f.typeDesc.endPos]);
+        }
+        // rest is a left recursion
+        // check validateTypeDescPos(td.rest, tok, td.startPos, td.endPos);
+        // childNodePos.push([td.rest.startPos, td.rest.endPos]);
+    }
+    else if td is FunctionTypeDesc {
+        foreach var arg in td.args {
+            check validateTypeDescPos(arg, tok, td.startPos, td.endPos);
+            childNodePos.push([arg.startPos, arg.endPos]);
+        }
+        TypeDesc ret = td.ret;
+        if !(ret is LeafTypeDesc && ret.builtinType is "()") {
+            // these are hardcoded based on context
+            check validateTypeDescPos(td.ret, tok, td.startPos, td.endPos);
+            childNodePos.push([td.ret.startPos, td.ret.endPos]);
+        }
+    }
+    childNodePos = childNodePos.sort();
+    err:Position lastEnd = td.startPos;
+    foreach var [startPos, endPos] in childNodePos {
+        test:assertTrue(startPos <= endPos, "invalid start and end positions"); // single character td get same start and end pos
+        test:assertTrue((startPos == td.startPos) || (startPos > lastEnd), "overlapping type descriptions");
+        test:assertFalse(testPositionIsWhiteSpace(tok.file, startPos), "start position is a white space");
+        test:assertFalse(testPositionIsWhiteSpace(tok.file, endPos), "end position is a white space");
         lastEnd = endPos;
     }
 }

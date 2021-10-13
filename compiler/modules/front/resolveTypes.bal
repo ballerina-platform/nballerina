@@ -112,7 +112,8 @@ function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns 
 }
 
 function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
-    match td {
+    if td is s:BuiltinTypeDesc {
+    match td.builtinType {
         // These are easy
         "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }
@@ -129,6 +130,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         "byte" => { return t:BYTE; }
         "json" => { return t:createJson(mod.tc.env); }
         "()" => { return t:NIL; }
+    }
+
     }
     final t:Env env = mod.tc.env;
     // JBUG would like to use match patterns here, but #30718 prevents it
@@ -254,8 +257,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     panic error("unimplemented type-descriptor");
 }
 
-function resolveInlineBuiltinTypeDesc(s:InlineBuiltinTypeDesc td) returns t:UniformTypeBitSet {
-    match td {
+function resolveInlineBuiltinTypeDesc(s:BuiltinTypeDesc td) returns t:UniformTypeBitSet {
+    match td.builtinType {
         "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }
         "int" => { return t:INT; }

@@ -166,10 +166,12 @@ function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis, Pos
 function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis, Position startPos) returns ConstDefn|err:Syntax {
     check tok.advance();
     Token? t = tok.current();
-    InlineBuiltinTypeDesc? td = ();
-    if t is InlineBuiltinTypeDesc {
+    BuiltinTypeDesc? td = ();
+    if t is BuiltinType {
+        Position tdStartPos = tok.currentStartPos();
+        Position tdEndPos = tok.currentEndPos();
         check tok.advance();
-        td = t;
+        td = { startPos: tdStartPos, endPos: tdEndPos, builtinType:t };
     }
     Position namePos = tok.currentStartPos();
     string name = check tok.expectIdentifier();
