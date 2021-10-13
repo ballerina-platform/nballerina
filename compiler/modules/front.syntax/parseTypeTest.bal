@@ -52,7 +52,7 @@ function parseTypeProjection(Tokenizer tok) returns string|TypeProjection|error 
             return parseError(tok);
         }
         check tok.expect("]");
-        return {identifier, index};
+        return { identifier, index };
     }
     return identifier;
 }
