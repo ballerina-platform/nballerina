@@ -228,7 +228,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     if td is s:XmlSequenceTypeDesc {
         t:SemType t = check resolveTypeDesc(mod, modDefn, depth, td.constituent);
-        return t:xmlSequence(t);
+        err:Location loc =  err:location(modDefn.part.file, td.pos);
+        return t:xmlSequence(t, loc);
     }
     panic error("unimplemented type-descriptor");
 }

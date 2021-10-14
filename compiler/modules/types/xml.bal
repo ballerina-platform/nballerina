@@ -1,4 +1,5 @@
 // Implementation specific to basic type xml.
+import wso2/nballerina.err;
 
 public type XmlSubtypeData readonly & record {|
     int data;
@@ -27,18 +28,31 @@ function xmlSingleton(int bits) returns SemType {
     );
 }
 
-public function xmlSequence(SemType constituentType) returns SemType {
+public function xmlSequence(SemType constituentType, err:Location loc) returns SemType|err:Semantic {
     if constituentType == XML {
         return constituentType;
     }
-    var roData = getComplexSubtypeData(<ComplexSemType>constituentType, UT_XML_RO);
-    var rwData = getComplexSubtypeData(<ComplexSemType>constituentType, UT_XML_RW);
+    if constituentType is UniformTypeBitSet {
+        return err:semantic("Invalid xml constituent type", loc=loc);
+    }
+    ComplexSemType t = <ComplexSemType>constituentType;
+    if hasNonXmlTypes(t) {
+        return err:semantic("Non xml type as xml constituent type", loc=loc);
+    }
+    var roData = getComplexSubtypeData(t, UT_XML_RO);
+    var rwData = getComplexSubtypeData(t, UT_XML_RW);
+
 
     XmlSubtypeData ro = roData == false ? emptyXmlSubtype : makeSequence((<XmlSubtypeData>roData));
     XmlSubtypeData rw = rwData == false ? emptyXmlSubtype : makeSequence((<XmlSubtypeData>rwData));
     
     return createXmlSemtype(ro, rw);
 }
+
+function hasNonXmlTypes(ComplexSemType t) returns boolean {
+    return (t.all & ~XML) != 0 || (t.some & ~XML) != 0;
+}
+
 
 function makeSequence(XmlSubtypeData d) returns XmlSubtypeData {
     if d.sequence == false {

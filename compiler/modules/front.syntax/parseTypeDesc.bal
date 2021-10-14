@@ -165,7 +165,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 return { prefix: <LeafTypeDesc> cur, typeName: check tok.expectIdentifier(), pos };
             }
             else if tok.current() == "<" {
-                return { constituent: check parseTypeParam(tok) };
+                return { constituent: check parseTypeParam(tok), pos };
             }
             return <LeafTypeDesc> cur;
         }

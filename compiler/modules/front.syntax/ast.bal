@@ -375,6 +375,7 @@ public type BinaryTypeDesc record {|
 
 public type XmlSequenceTypeDesc record {|
     TypeDesc constituent;
+    Position pos;
 |};
 
 public type TypeDescRef record {|
