@@ -209,7 +209,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
     }
     else {
         t:SemType t = lookupSemtype(m, tn.identifier);
-        int|string|s:Identifier index = tn.index;
+        int|s:Identifier index = tn.index;
         if t:isSubtypeSimple(t, t:LIST) {
             if index is int {
                 return t:listMemberType(tc, t, index);
