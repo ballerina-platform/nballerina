@@ -16,7 +16,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 continue;
             }
             string filename = test.absPath;
-            // xxx remove after fixing #555
+            // XXX remove after fixing #555
             if filename.endsWith("-t.bal") {
                 continue;
             }
