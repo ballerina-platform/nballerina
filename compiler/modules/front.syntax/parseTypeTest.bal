@@ -11,7 +11,7 @@ public type TypeTest record {
 
 public type SubtypeTestOp "<" | "=" | "<>";
 
-public type Identifier [string];
+public type Identifier string;
 
 public function parseTypeTest(string str) returns TypeTest|error {
     SourceFile file = createSourceFile([str], { filename: "<internal>" });
@@ -37,21 +37,17 @@ public function parseTypeTest(string str) returns TypeTest|error {
 }
 
 function parseTypeProjection(Tokenizer tok) returns Identifier|TypeProjection|error {
-    Identifier identifier = [check tok.expectIdentifier()];
+    Identifier identifier = check tok.expectIdentifier();
     if tok.current() is "[" {
         check tok.advance();
         Token? t = tok.current();
-        int|string|Identifier index;
+        int|Identifier index;
         if t is [DECIMAL_NUMBER, string] {
             index = check int:fromString(t[1]);
             check tok.advance();
         }
-        else if t is [STRING_LITERAL, string] {
-            index = t[1];
-            check tok.advance();
-        }
         else {
-            index = [check tok.expectIdentifier()]; 
+            index = check tok.expectIdentifier(); 
         }
         check tok.expect("]");
         return { identifier, index};

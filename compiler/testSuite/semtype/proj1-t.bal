@@ -14,18 +14,22 @@ type INTEGER int;
 
 type S string;
 type I int;
+type N 2;
 
 // @type BL[1] = B
 // @type BL[2] = B
 // @type BL[I] = B
+// @type BL[N] = B
 type BL boolean[]; 
 
-// @type M["k"] = B
 // @type M[S] = B
 type M map<boolean>;
 
-// @type R["f1"] = INTEGER 
-// @type R["f2"] = B 
+type f1 "f1";
+type f2 "f2";
+
+// @type R[f1] = INTEGER 
+// @type R[f2] = B 
 type R record {|
     int f1;
     boolean f2;

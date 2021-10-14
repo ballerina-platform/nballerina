@@ -215,34 +215,33 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
                 return t:listMemberType(tc, t, index);
                 //return t:listProj(tc, t, index);
             }
-            else if index is s:Identifier {
+            else {
                 t:SemType k = lookupSemtype(m, index);
                 if k == t:INT {
                     return t:listMemberType(tc, t, ());
                 }
-                else {
-                    test:assertFail("list projection is only supported for int type");
+                t:Value? val = t:singleShape(k);
+                if val is t:Value && val.value is int {
+                    return t:listMemberType(tc, t, <int> val.value);
                 }
+                test:assertFail("index for list projection must be an int");
             }
-            test:assertFail("index literal for list must be an integer");
         }
         else if t:isSubtypeSimple(t, t:MAPPING) {
-            if index is string {
-                return t:mappingMemberType(tc, t, index);
-            }
-            else if index is s:Identifier {
+            if index is s:Identifier {
                 t:SemType k = lookupSemtype(m, index);
                 if k == t:STRING {
                     return t:mappingMemberType(tc, t, ());
-                } 
-                else {
-                    test:assertFail("list projection is only supported for int type");
+                }
+                t:Value? val = t:singleShape(k);
+                if val is t:Value && val.value is string {
+                    return t:mappingMemberType(tc, t, <string> val.value);
                 }
             }
-            test:assertFail("index literal for mapping must be a string");
+            test:assertFail("index for mapping projection must be a string");
         }
         else {
-            test:assertFail(tn.identifier[0] + " is not a list or a mapping type");
+            test:assertFail(tn.identifier + " is not a list or a mapping type");
         } 
     }
     // JBUG: #31642 function must return a call
@@ -250,9 +249,9 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
 }
 
 function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
-    t:SemType? t = m[id[0]];
+    t:SemType? t = m[id];
     if t is () {
-        test:assertFail(id[0] + " is not declared");
+        test:assertFail(id + " is not declared");
     }
     else {
         return t;
