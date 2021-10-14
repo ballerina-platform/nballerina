@@ -12,8 +12,8 @@ type F false;
 // @type INTEGER <> B
 type INTEGER int;
 
-type S "key";
-type I 2;
+type S string;
+type I int;
 
 // @type BL[1] = B
 // @type BL[2] = B

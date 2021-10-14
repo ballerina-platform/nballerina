@@ -185,77 +185,77 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
         s:TypeTest test = check s:parseTypeTest(item);
         t:SemType left = resolveTestSemtype(tc, m, test.left);
         t:SemType right = resolveTestSemtype(tc, m, test.right);
+        
+        boolean lsr = t:isSubtype(tc, left, right);
+        boolean rsl = t:isSubtype(tc, right, left);
+        boolean[2] testPair = [lsr, rsl]; 
         match test.op { 
             "<" => {
-                test:assertTrue(t:isSubtype(tc, left, right), "LHS is not a subtype of RHS");
-                test:assertFalse(t:isSubtype(tc, right, left), "RHS is a subtype of LHS" );
+                test:assertEquals(testPair, [true, false], "LHS is not a proper subtype of RHS");
             }
             "<>" => {
-                test:assertFalse(t:isSubtype(tc, left, right), "LHS is a subtype of RHS");
-                test:assertFalse(t:isSubtype(tc, right, left), "RHS is a subtype of LHS");
+                test:assertEquals(testPair, [false, false], "LHS and RHS are subtypes");
             }
             "=" => {
-                test:assertTrue(t:isSubtype(tc, left, right), "LHS is not a subtype of RHS");
-                test:assertTrue(t:isSubtype(tc, right, left), "RHS is not a subtype of LHS");
+                test:assertEquals(testPair, [true, true], "LHS is not equivalent to RHS");
             }
         }
     }
 }
 
-function resolveTestSemtype(t:Context tc, map<t:SemType> m, string|s:TypeProjection tn) returns t:SemType {
-    if tn is string {
-        t:SemType? t = m[tn];
-        if t is () {
-            test:assertFail(tn + " is not declared");
-        }
-        else {
-            return t;
-        }
+function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeProjection tn) returns t:SemType {
+    if tn is s:Identifier {
+        return lookupSemtype(m, tn);
     }
     else {
-        t:SemType? t = m[tn.identifier];
-        if t is () {
-            test:assertFail(tn.identifier + " is not declared");
+        t:SemType t = lookupSemtype(m, tn.identifier);
+        int|string|s:Identifier index = tn.index;
+        if t:isSubtypeSimple(t, t:LIST) {
+            if index is int {
+                return t:listMemberType(tc, t, index);
+                //return t:listProj(tc, t, index);
+            }
+            else if index is s:Identifier {
+                t:SemType k = lookupSemtype(m, index);
+                if k == t:INT {
+                    return t:listMemberType(tc, t, ());
+                }
+                else {
+                    test:assertFail("list projection is only supported for int type");
+                }
+            }
+            test:assertFail("index literal for list must be an integer");
+        }
+        else if t:isSubtypeSimple(t, t:MAPPING) {
+            if index is string {
+                return t:mappingMemberType(tc, t, index);
+            }
+            else if index is s:Identifier {
+                t:SemType k = lookupSemtype(m, index);
+                if k == t:STRING {
+                    return t:mappingMemberType(tc, t, ());
+                } 
+                else {
+                    test:assertFail("list projection is only supported for int type");
+                }
+            }
+            test:assertFail("index literal for mapping must be a string");
         }
         else {
-            int|string index = tn.index;
-            if t:isSubtypeSimple(t, t:LIST) {
-                if index is int {
-                    return t:listMemberType(tc, t, index);
-                    //return t:listProj(tc, t, index);
-                }
-                else if !tn.literal {
-                    t:SemType? k = m[index];
-                    if k is () {
-                        test:assertFail(tn.identifier + " is not declared");
-                    }
-                    else if t:isSubtype(tc, k, t:INT){
-                        return t:listMemberType(tc, t, ());
-                    } 
-                }
-                test:assertFail("index for list must be an integer");
-            }
-            else if t:isSubtypeSimple(t, t:MAPPING) {
-                if index is string {
-                    if tn.literal {
-                        return t:mappingMemberType(tc, t, index);
-                    }
-                    else {
-                        t:SemType? k = m[index];
-                        if k is () {
-                            test:assertFail(tn.identifier + " is not declared");
-                        }
-                        else if t:isSubtype(tc, k, t:STRING){
-                            return t:mappingMemberType(tc, t, ());
-                        } 
-                    }
-                }
-                test:assertFail("index for mapping must be a string");
-            }
-            else {
-                test:assertFail(tn.identifier + " is not a list or a mapping type");
-            } 
-        }
+            test:assertFail(tn.identifier[0] + " is not a list or a mapping type");
+        } 
+    }
+    // JBUG: #31642 function must return a call
+    panic error("unreachable");
+}
+
+function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
+    t:SemType? t = m[id[0]];
+    if t is () {
+        test:assertFail(id[0] + " is not declared");
+    }
+    else {
+        return t;
     }
     // JBUG: #31642 function must return a call
     panic error("unreachable");

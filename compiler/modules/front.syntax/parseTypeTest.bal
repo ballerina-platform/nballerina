@@ -1,22 +1,23 @@
 public type TypeProjection record {
-    string identifier;
-    int|string index;
-    boolean literal;
+    Identifier identifier;
+    int|string|Identifier index;
 };
 
 public type TypeTest record {
     SubtypeTestOp op;
-    string|TypeProjection left;
-    string|TypeProjection right;
+    Identifier|TypeProjection left;
+    Identifier|TypeProjection right;
 };
 
 public type SubtypeTestOp "<" | "=" | "<>";
+
+public type Identifier [string];
 
 public function parseTypeTest(string str) returns TypeTest|error {
     SourceFile file = createSourceFile([str], { filename: "<internal>" });
     Tokenizer tok = new(file);
     check tok.advance();
-    string|TypeProjection left = check parseTypeProjection(tok);
+    Identifier|TypeProjection left = check parseTypeProjection(tok);
     Token? t = tok.current();
     if t is "<"|"=" {
         check tok.advance();
@@ -28,20 +29,19 @@ public function parseTypeTest(string str) returns TypeTest|error {
         else {
             op = t;     
         }
-        string|TypeProjection right = check parseTypeProjection(tok);
+        Identifier|TypeProjection right = check parseTypeProjection(tok);
         return { op, left, right };
     }
     return parseError(tok);
     
 }
 
-function parseTypeProjection(Tokenizer tok) returns string|TypeProjection|error {
-    string identifier = check tok.expectIdentifier();
+function parseTypeProjection(Tokenizer tok) returns Identifier|TypeProjection|error {
+    Identifier identifier = [check tok.expectIdentifier()];
     if tok.current() is "[" {
         check tok.advance();
         Token? t = tok.current();
-        int|string index;
-        boolean literal = true;
+        int|string|Identifier index;
         if t is [DECIMAL_NUMBER, string] {
             index = check int:fromString(t[1]);
             check tok.advance();
@@ -51,11 +51,10 @@ function parseTypeProjection(Tokenizer tok) returns string|TypeProjection|error 
             check tok.advance();
         }
         else {
-            index = check tok.expectIdentifier(); 
-            literal = false;
+            index = [check tok.expectIdentifier()]; 
         }
         check tok.expect("]");
-        return { identifier, index , literal};
+        return { identifier, index};
     }
     return identifier;
 }
