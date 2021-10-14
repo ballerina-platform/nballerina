@@ -1,6 +1,6 @@
 public type TypeProjection record {
     Identifier identifier;
-    int|string|Identifier index;
+    int|Identifier index;
 };
 
 public type TypeTest record {
