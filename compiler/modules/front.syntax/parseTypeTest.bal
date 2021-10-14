@@ -1,6 +1,7 @@
 public type TypeProjection record {
     string identifier;
     int|string index;
+    boolean literal;
 };
 
 public type TypeTest record {
@@ -40,6 +41,7 @@ function parseTypeProjection(Tokenizer tok) returns string|TypeProjection|error 
         check tok.advance();
         Token? t = tok.current();
         int|string index;
+        boolean literal = true;
         if t is [DECIMAL_NUMBER, string] {
             index = check int:fromString(t[1]);
             check tok.advance();
@@ -49,10 +51,11 @@ function parseTypeProjection(Tokenizer tok) returns string|TypeProjection|error 
             check tok.advance();
         }
         else {
-            return parseError(tok);
+            index = check tok.expectIdentifier(); 
+            literal = false;
         }
         check tok.expect("]");
-        return { identifier, index };
+        return { identifier, index , literal};
     }
     return identifier;
 }

@@ -222,12 +222,33 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, string|s:TypeProject
             if t:isSubtypeSimple(t, t:LIST) {
                 if index is int {
                     return t:listMemberType(tc, t, index);
+                    //return t:listProj(tc, t, index);
+                }
+                else if !tn.literal {
+                    t:SemType? k = m[index];
+                    if k is () {
+                        test:assertFail(tn.identifier + " is not declared");
+                    }
+                    else if t:isSubtype(tc, k, t:INT){
+                        return t:listMemberType(tc, t, ());
+                    } 
                 }
                 test:assertFail("index for list must be an integer");
             }
             else if t:isSubtypeSimple(t, t:MAPPING) {
                 if index is string {
-                    return t:mappingMemberType(tc, t, index);
+                    if tn.literal {
+                        return t:mappingMemberType(tc, t, index);
+                    }
+                    else {
+                        t:SemType? k = m[index];
+                        if k is () {
+                            test:assertFail(tn.identifier + " is not declared");
+                        }
+                        else if t:isSubtype(tc, k, t:STRING){
+                            return t:mappingMemberType(tc, t, ());
+                        } 
+                    }
                 }
                 test:assertFail("index for mapping must be a string");
             }
