@@ -7,10 +7,10 @@ declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 define void @_B04rootmain() !dbg !5 {
+  %f = alloca double
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca double
-  %f = alloca double
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i8

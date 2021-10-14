@@ -3,13 +3,13 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_float_to_tagged(double)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
 declare i64 @_bal_list_set(i8 addrspace(1)*, i64, i8 addrspace(1)*)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
   %x = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %2 = alloca double
   %3 = alloca double
   %4 = alloca double

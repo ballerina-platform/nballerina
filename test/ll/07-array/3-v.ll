@@ -1,12 +1,12 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_alloc(i64)
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
   %v = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8
   %4 = load i8*, i8** @_bal_stack_guard

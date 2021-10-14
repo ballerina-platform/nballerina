@@ -3,17 +3,17 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare i64 @_bal_list_set(i8 addrspace(1)*, i64, i8 addrspace(1)*)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)*, i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
   %x = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %2 = alloca i64
   %3 = alloca i64
   %4 = alloca i64
@@ -31,8 +31,8 @@ define void @_B04rootmain() !dbg !5 {
   %16 = alloca i64
   %17 = alloca i64
   %18 = alloca i8 addrspace(1)*
-  %19 = alloca i8 addrspace(1)*
   %s = alloca i8 addrspace(1)*
+  %19 = alloca i8 addrspace(1)*
   %20 = alloca i8 addrspace(1)*
   %21 = alloca i8 addrspace(1)*
   %22 = alloca i8 addrspace(1)*

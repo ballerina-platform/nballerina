@@ -5,12 +5,12 @@ declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i64 @_bal_array_boolean_compare(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
   %a = alloca i8 addrspace(1)*
-  %2 = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %b = alloca i8 addrspace(1)*
-  %3 = alloca i8 addrspace(1)*
+  %2 = alloca i8 addrspace(1)*
   %c = alloca i8 addrspace(1)*
+  %3 = alloca i8 addrspace(1)*
   %4 = alloca i1
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i1

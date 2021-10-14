@@ -4,30 +4,30 @@ declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i64 @_Bb0m4lang5arraylength(i8 addrspace(1)*)
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 declare void @_Bb0m4lang5arraypush(i8 addrspace(1)*, i8 addrspace(1)*)
-declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
 declare {i64, i1} @_bal_float_to_int(double) nounwind readnone speculatable willreturn
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 define void @_B04rootmain() !dbg !5 {
   %len = alloca i64
   %a = alloca i64
   %m = alloca i64
   %x = alloca i64
-  %1 = alloca i8 addrspace(1)*
   %v = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %i = alloca i64
   %3 = alloca i1
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i64
   %6 = alloca i64
-  %7 = alloca i8 addrspace(1)*
   %s = alloca i8 addrspace(1)*
+  %7 = alloca i8 addrspace(1)*
   %8 = alloca i1
   %9 = alloca i64
   %10 = alloca i8 addrspace(1)*
@@ -456,19 +456,19 @@ define internal i8 addrspace(1)* @_B_sort(i8 addrspace(1)* %0) !dbg !9 {
   %v = alloca i8 addrspace(1)*
   %2 = alloca i1
   %3 = alloca i64
+  %mid = alloca i64
   %4 = alloca i64
   %5 = alloca i64
-  %mid = alloca i64
-  %6 = alloca i8 addrspace(1)*
   %list1 = alloca i8 addrspace(1)*
+  %6 = alloca i8 addrspace(1)*
   %i = alloca i64
   %7 = alloca i1
   %8 = alloca i8 addrspace(1)*
   %9 = alloca i8 addrspace(1)*
   %10 = alloca i64
   %11 = alloca i8 addrspace(1)*
-  %12 = alloca i8 addrspace(1)*
   %list2 = alloca i8 addrspace(1)*
+  %12 = alloca i8 addrspace(1)*
   %13 = alloca i64
   %i.1 = alloca i64
   %14 = alloca i1
@@ -737,14 +737,14 @@ define internal i8 addrspace(1)* @_B_sort(i8 addrspace(1)* %0) !dbg !9 {
 define internal i8 addrspace(1)* @_B_merge(i8 addrspace(1)* %0, i8 addrspace(1)* %1) !dbg !11 {
   %v1 = alloca i8 addrspace(1)*
   %v2 = alloca i8 addrspace(1)*
-  %3 = alloca i8 addrspace(1)*
   %result = alloca i8 addrspace(1)*
+  %3 = alloca i8 addrspace(1)*
   %i1 = alloca i64
   %i2 = alloca i64
-  %4 = alloca i64
   %len1 = alloca i64
-  %5 = alloca i64
+  %4 = alloca i64
   %len2 = alloca i64
+  %5 = alloca i64
   %6 = alloca i1
   %7 = alloca i1
   %8 = alloca i1

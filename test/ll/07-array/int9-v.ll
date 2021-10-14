@@ -6,8 +6,8 @@ declare i8 addrspace(1)* @_bal_alloc(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i1 @_bal_list_has_type(i8 addrspace(1)*, i64) readonly
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
   %iv = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i1
   %iv.1 = alloca i8 addrspace(1)*

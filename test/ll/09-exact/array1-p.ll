@@ -3,16 +3,15 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i64 @_bal_list_set(i8 addrspace(1)*, i64, i8 addrspace(1)*)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
-declare i1 @_bal_list_has_type(i8 addrspace(1)*, i64) readonly
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
   %v1 = alloca i8 addrspace(1)*
-  %2 = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %v2 = alloca i8 addrspace(1)*
+  %2 = alloca i8 addrspace(1)*
+  %v3 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
   %4 = alloca i8 addrspace(1)*
-  %v3 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard
@@ -68,7 +67,7 @@ define void @_B04rootmain() !dbg !5 {
   %39 = getelementptr {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %38, i64 0, i32 1
   %40 = load i64, i64 addrspace(1)* %39, align 8
   %41 = icmp ult i64 0, %40
-  br i1 %41, label %45, label %52
+  br i1 %41, label %45, label %58
 42:
   %43 = or i64 %29, 1536
   %44 = call i8 addrspace(1)* @_bal_panic_construct(i64 %43), !dbg !7
@@ -81,39 +80,45 @@ define void @_B04rootmain() !dbg !5 {
   %49 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %48, align 8
   store i8 addrspace(1)* %49, i8 addrspace(1)** %3
   %50 = load i8 addrspace(1)*, i8 addrspace(1)** %3
-  %51 = call i1 @_bal_list_has_type(i8 addrspace(1)* %50, i64 8388607)
-  br i1 %51, label %54, label %62
-52:
-  %53 = call i8 addrspace(1)* @_bal_panic_construct(i64 1797), !dbg !7
-  store i8 addrspace(1)* %53, i8 addrspace(1)** %5
+  %51 = addrspacecast i8 addrspace(1)* %50 to i8*
+  %52 = ptrtoint i8* %51 to i64
+  %53 = and i64 %52, 2233785415175766016
+  %54 = lshr i64 %53, 56
+  %55 = shl i64 1, %54
+  %56 = and i64 %55, 262148
+  %57 = icmp ne i64 %56, 0
+  br i1 %57, label %60, label %68
+58:
+  %59 = call i8 addrspace(1)* @_bal_panic_construct(i64 1797), !dbg !7
+  store i8 addrspace(1)* %59, i8 addrspace(1)** %5
   br label %31
-54:
+60:
   store i8 addrspace(1)* %50, i8 addrspace(1)** %4
-  %55 = load i8 addrspace(1)*, i8 addrspace(1)** %4
-  store i8 addrspace(1)* %55, i8 addrspace(1)** %v3
-  %56 = load i8 addrspace(1)*, i8 addrspace(1)** %v3
-  %57 = zext i1 1 to i64
-  %58 = or i64 %57, 72057594037927936
-  %59 = getelementptr i8, i8 addrspace(1)* null, i64 %58
-  %60 = call i64 @_bal_list_set(i8 addrspace(1)* %56, i64 0, i8 addrspace(1)* %59)
-  %61 = icmp eq i64 %60, 0
-  br i1 %61, label %64, label %65
-62:
-  %63 = call i8 addrspace(1)* @_bal_panic_construct(i64 1795), !dbg !7
-  store i8 addrspace(1)* %63, i8 addrspace(1)** %5
+  %61 = load i8 addrspace(1)*, i8 addrspace(1)** %4
+  store i8 addrspace(1)* %61, i8 addrspace(1)** %v3
+  %62 = load i8 addrspace(1)*, i8 addrspace(1)** %v3
+  %63 = zext i1 1 to i64
+  %64 = or i64 %63, 72057594037927936
+  %65 = getelementptr i8, i8 addrspace(1)* null, i64 %64
+  %66 = call i64 @_bal_list_set(i8 addrspace(1)* %62, i64 0, i8 addrspace(1)* %65)
+  %67 = icmp eq i64 %66, 0
+  br i1 %67, label %70, label %71
+68:
+  %69 = call i8 addrspace(1)* @_bal_panic_construct(i64 1795), !dbg !7
+  store i8 addrspace(1)* %69, i8 addrspace(1)** %5
   br label %31
-64:
+70:
   ret void
-65:
-  %66 = or i64 %60, 2048
-  %67 = call i8 addrspace(1)* @_bal_panic_construct(i64 %66), !dbg !7
-  store i8 addrspace(1)* %67, i8 addrspace(1)** %5
+71:
+  %72 = or i64 %66, 2048
+  %73 = call i8 addrspace(1)* @_bal_panic_construct(i64 %72), !dbg !7
+  store i8 addrspace(1)* %73, i8 addrspace(1)** %5
   br label %31
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
 !0 = !{i32 1, !"Debug Info Version", i32 3}
-!1 = !DIFile(filename:"../../../compiler/testSuite/08-exact/array1-p.bal", directory:"")
+!1 = !DIFile(filename:"../../../compiler/testSuite/09-exact/array1-p.bal", directory:"")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !3 = !DISubroutineType(types: !4)
 !4 = !{}

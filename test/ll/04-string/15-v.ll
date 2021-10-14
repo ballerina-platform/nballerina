@@ -40,8 +40,8 @@ define internal void @_B_concatTest(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i8
   %s1 = alloca i8 addrspace(1)*
   %s2 = alloca i8 addrspace(1)*
   %expected = alloca i8 addrspace(1)*
-  %4 = alloca i8 addrspace(1)*
   %s = alloca i8 addrspace(1)*
+  %4 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i64
   %7 = alloca i8 addrspace(1)*

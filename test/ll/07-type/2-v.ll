@@ -3,7 +3,7 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
 declare {i64, i1} @_bal_float_to_int(double) nounwind readnone speculatable willreturn
@@ -13,9 +13,9 @@ define void @_B04rootmain() !dbg !5 {
   %x.1 = alloca i64
   %2 = alloca i64
   %3 = alloca i8 addrspace(1)*
+  %n = alloca i64
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i64
-  %n = alloca i64
   %6 = alloca i8 addrspace(1)*
   %7 = alloca i8 addrspace(1)*
   %8 = alloca i8

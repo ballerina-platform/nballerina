@@ -5,9 +5,9 @@ declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
 declare i8 addrspace(1)* @_bal_float_to_tagged(double)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
+  %f = alloca double
   %1 = alloca i8 addrspace(1)*
   %2 = alloca double
-  %f = alloca double
   %3 = alloca i8 addrspace(1)*
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i8

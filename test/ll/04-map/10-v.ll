@@ -2,22 +2,23 @@
 @.str2 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 9, i16 9, [12 x i8] c"Wednesday\00\00\00"}, align 8
 @.str3 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"Thursday\00\00\00\00"}, align 8
 @.str5 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"Saturday\00\00\00\00"}, align 8
+@_Bi04root0 = external constant {i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
-declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
+declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i64 @_Bb0m4lang5arraylength(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
   %days = alloca i8 addrspace(1)*
-  %2 = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %dayNumber = alloca i8 addrspace(1)*
+  %2 = alloca i8 addrspace(1)*
   %3 = alloca i64
   %i = alloca i64
   %4 = alloca i1
@@ -63,7 +64,7 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* %31, i8 addrspace(1)** %1
   %32 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %32, i8 addrspace(1)** %days
-  %33 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8386559, i64 0)
+  %33 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 0)
   store i8 addrspace(1)* %33, i8 addrspace(1)** %2
   %34 = load i8 addrspace(1)*, i8 addrspace(1)** %2
   store i8 addrspace(1)* %34, i8 addrspace(1)** %dayNumber

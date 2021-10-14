@@ -4,7 +4,7 @@ declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_Bb0m4lang3inttoHexString(i64)
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 define void @_B04rootmain() !dbg !5 {
   %i = alloca i64
   %1 = alloca i64

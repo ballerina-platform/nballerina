@@ -1,17 +1,18 @@
 @_bal_stack_guard = external global i8*
+@_Bi04root0 = external constant {i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
+declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_float_to_tagged(double)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
   %m = alloca i8 addrspace(1)*
-  %2 = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %x = alloca i8 addrspace(1)*
+  %2 = alloca i8 addrspace(1)*
   %3 = alloca i1
   %x.1 = alloca double
   %4 = alloca double
@@ -22,7 +23,7 @@ define void @_B04rootmain() !dbg !5 {
   %9 = icmp ult i8* %7, %8
   br i1 %9, label %27, label %10
 10:
-  %11 = call i8 addrspace(1)* @_bal_mapping_construct(i64 256, i64 0)
+  %11 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 0)
   store i8 addrspace(1)* %11, i8 addrspace(1)** %1
   %12 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %12, i8 addrspace(1)** %m
@@ -38,10 +39,10 @@ define void @_B04rootmain() !dbg !5 {
   %20 = load double, double* %x.1
   %21 = fadd double %20, 0.5
   store double %21, double* %4
-  %22 = load double, double* %4, !dbg !10
-  %23 = call i8 addrspace(1)* @_bal_float_to_tagged(double %22), !dbg !10
-  call void @_Bb02ioprintln(i8 addrspace(1)* %23), !dbg !10
-  store i8 addrspace(1)* null, i8 addrspace(1)** %5, !dbg !10
+  %22 = load double, double* %4, !dbg !8
+  %23 = call i8 addrspace(1)* @_bal_float_to_tagged(double %22), !dbg !8
+  call void @_Bb02ioprintln(i8 addrspace(1)* %23), !dbg !8
+  store i8 addrspace(1)* null, i8 addrspace(1)** %5, !dbg !8
   br label %24
 24:
   ret void
@@ -50,7 +51,7 @@ define void @_B04rootmain() !dbg !5 {
   call void @_bal_panic(i8 addrspace(1)* %26)
   unreachable
 27:
-  %28 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
+  %28 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
   call void @_bal_panic(i8 addrspace(1)* %28)
   unreachable
 29:
@@ -66,23 +67,9 @@ define void @_B04rootmain() !dbg !5 {
   br i1 %35, label %17, label %24
 36:
   %37 = or i64 %15, 1536
-  %38 = call i8 addrspace(1)* @_bal_panic_construct(i64 %37), !dbg !9
+  %38 = call i8 addrspace(1)* @_bal_panic_construct(i64 %37), !dbg !7
   store i8 addrspace(1)* %38, i8 addrspace(1)** %6
   br label %25
-}
-define internal void @_B_ignore(i8 addrspace(1)* %0) !dbg !7 {
-  %x = alloca i8 addrspace(1)*
-  %2 = alloca i8
-  %3 = load i8*, i8** @_bal_stack_guard
-  %4 = icmp ult i8* %2, %3
-  br i1 %4, label %6, label %5
-5:
-  store i8 addrspace(1)* %0, i8 addrspace(1)** %x
-  ret void
-6:
-  %7 = call i8 addrspace(1)* @_bal_panic_construct(i64 3332), !dbg !11
-  call void @_bal_panic(i8 addrspace(1)* %7)
-  unreachable
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
@@ -93,8 +80,5 @@ define internal void @_B_ignore(i8 addrspace(1)* %0) !dbg !7 {
 !4 = !{}
 !5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
 !6 = !{}
-!7 = distinct !DISubprogram(name:"ignore", linkageName:"_B_ignore", scope: !1, file: !1, line: 13, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
-!8 = !{}
-!9 = !DILocation(line: 0, column: 0, scope: !5)
-!10 = !DILocation(line: 9, column: 8, scope: !5)
-!11 = !DILocation(line: 0, column: 0, scope: !7)
+!7 = !DILocation(line: 0, column: 0, scope: !5)
+!8 = !DILocation(line: 9, column: 8, scope: !5)

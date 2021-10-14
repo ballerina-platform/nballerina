@@ -3,11 +3,11 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i64 @_bal_list_set(i8 addrspace(1)*, i64, i8 addrspace(1)*)
-declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
+declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i64 @_Bb0m4lang5arraylength(i8 addrspace(1)*)
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
@@ -30,16 +30,16 @@ define void @_B04rootmain() !dbg !5 {
   unreachable
 }
 define internal i8 addrspace(1)* @_B_findPrimes() !dbg !7 {
-  %1 = alloca i8 addrspace(1)*
   %primes = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %gap = alloca i64
   %2 = alloca i1
   %3 = alloca i64
   %4 = alloca i64
   %5 = alloca i1
   %6 = alloca i8 addrspace(1)*
-  %7 = alloca i64
   %i = alloca i64
+  %7 = alloca i64
   %8 = alloca i1
   %9 = alloca i64
   %10 = alloca i64

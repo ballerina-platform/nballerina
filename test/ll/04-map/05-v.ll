@@ -1,17 +1,19 @@
 @_bal_stack_guard = external global i8*
+@_Bi04root0 = external constant {i32}
+@_Bi04root1 = external constant {i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
+declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
+  %m = alloca i8 addrspace(1)*
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
-  %m = alloca i8 addrspace(1)*
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i8
   %6 = load i8*, i8** @_bal_stack_guard
@@ -42,13 +44,13 @@ define void @_B04rootmain() !dbg !5 {
   store [0 x i8 addrspace(1)*] addrspace(1)* %17, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %23
   %24 = getelementptr i8, i8 addrspace(1)* %18, i64 1297036692682702852
   store i8 addrspace(1)* %24, i8 addrspace(1)** %1
-  %25 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 2)
+  %25 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 2)
   %26 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %25, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)* %26)
   %27 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %25, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901113), i8 addrspace(1)* %27)
   store i8 addrspace(1)* %25, i8 addrspace(1)** %2
-  %28 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8386559, i64 2)
+  %28 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root1, i64 2)
   %29 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   %30 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %29, i64 -5)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %28, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541289654636), i8 addrspace(1)* %30)

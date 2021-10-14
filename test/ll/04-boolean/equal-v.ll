@@ -48,8 +48,8 @@ define internal i1 @_B_checkInEquality(i1 %0, i1 %1) !dbg !7 {
   unreachable
 }
 define void @_B04rootmain() !dbg !9 {
-  %1 = alloca i1
   %b = alloca i1
+  %1 = alloca i1
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
   %4 = alloca i1

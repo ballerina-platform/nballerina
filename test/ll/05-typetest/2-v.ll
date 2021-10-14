@@ -1,15 +1,19 @@
+%TypeTestVTable = type {i1(%TypeTestVTable*, i8 addrspace(1)*)*}
 @_bal_stack_guard = external global i8*
 @.str1 = internal unnamed_addr constant {i16, i16, [28 x i8]} {i16 21, i16 21, [28 x i8] c"this is a long string\00\00\00\00\00\00\00"}, align 8
+@_Bi04root0 = external constant {i32}
+@_Bt04root1 = external constant %TypeTestVTable
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_alloc(i64)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
-declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
+declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare i1 @_bal_list_has_type(i8 addrspace(1)*, i64) readonly
-declare i1 @_bal_mapping_has_type(i8 addrspace(1)*, i64) readonly
+declare i8 addrspace(1)* @_bal_list_exactify(i8 addrspace(1)*, i64) readonly
+declare i8 addrspace(1)* @_bal_mapping_exactify(i8 addrspace(1)*, {i32}*) readonly
 define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
@@ -17,11 +21,11 @@ define void @_B04rootmain() !dbg !5 {
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i8 addrspace(1)*
-  %7 = alloca i8 addrspace(1)*
   %list = alloca i8 addrspace(1)*
+  %7 = alloca i8 addrspace(1)*
   %8 = alloca i8 addrspace(1)*
-  %9 = alloca i8 addrspace(1)*
   %mapping = alloca i8 addrspace(1)*
+  %9 = alloca i8 addrspace(1)*
   %10 = alloca i8 addrspace(1)*
   %11 = alloca i8
   %12 = load i8*, i8** @_bal_stack_guard
@@ -73,7 +77,7 @@ define void @_B04rootmain() !dbg !5 {
   %37 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %36, i64 -5), !dbg !16
   call void @_B_p(i8 addrspace(1)* %37), !dbg !16
   store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !16
-  %38 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8386559, i64 0)
+  %38 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 0)
   store i8 addrspace(1)* %38, i8 addrspace(1)** %9
   %39 = load i8 addrspace(1)*, i8 addrspace(1)** %9
   store i8 addrspace(1)* %39, i8 addrspace(1)** %mapping
@@ -107,7 +111,7 @@ define internal void @_B_p(i8 addrspace(1)* %0) !dbg !7 {
   %12 = alloca i8
   %13 = load i8*, i8** @_bal_stack_guard
   %14 = icmp ult i8* %12, %13
-  br i1 %14, label %59, label %15
+  br i1 %14, label %63, label %15
 15:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v
   %16 = load i8 addrspace(1)*, i8 addrspace(1)** %v
@@ -163,30 +167,34 @@ define internal void @_B_p(i8 addrspace(1)* %0) !dbg !7 {
   %48 = call i1 @_bal_list_has_type(i8 addrspace(1)* %47, i64 8386559)
   store i1 %48, i1* %8
   %49 = load i1, i1* %8
-  br i1 %49, label %50, label %52
+  br i1 %49, label %50, label %53
 50:
   %51 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  store i8 addrspace(1)* %51, i8 addrspace(1)** %v.4
+  %52 = call i8 addrspace(1)* @_bal_list_exactify(i8 addrspace(1)* %51, i64 8386559)
+  store i8 addrspace(1)* %52, i8 addrspace(1)** %v.4
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475965445206625)), !dbg !22
   store i8 addrspace(1)* null, i8 addrspace(1)** %9, !dbg !22
-  br label %52
-52:
-  %53 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %54 = call i1 @_bal_mapping_has_type(i8 addrspace(1)* %53, i64 8386559)
-  store i1 %54, i1* %10
-  %55 = load i1, i1* %10
-  br i1 %55, label %56, label %58
-56:
-  %57 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  store i8 addrspace(1)* %57, i8 addrspace(1)** %v.5
+  br label %53
+53:
+  %54 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %55 = getelementptr %TypeTestVTable, %TypeTestVTable* @_Bt04root1, i64 0, i32 0
+  %56 = load i1(%TypeTestVTable*, i8 addrspace(1)*)*, i1(%TypeTestVTable*, i8 addrspace(1)*)** %55, align 8
+  %57 = call i1 %56(%TypeTestVTable* @_Bt04root1, i8 addrspace(1)* %54)
+  store i1 %57, i1* %10
+  %58 = load i1, i1* %10
+  br i1 %58, label %59, label %62
+59:
+  %60 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %61 = call i8 addrspace(1)* @_bal_mapping_exactify(i8 addrspace(1)* %60, {i32}* @_Bi04root0)
+  store i8 addrspace(1)* %61, i8 addrspace(1)** %v.5
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621489005)), !dbg !23
   store i8 addrspace(1)* null, i8 addrspace(1)** %11, !dbg !23
-  br label %58
-58:
+  br label %62
+62:
   ret void
-59:
-  %60 = call i8 addrspace(1)* @_bal_panic_construct(i64 4356), !dbg !18
-  call void @_bal_panic(i8 addrspace(1)* %60)
+63:
+  %64 = call i8 addrspace(1)* @_bal_panic_construct(i64 4356), !dbg !18
+  call void @_bal_panic(i8 addrspace(1)* %64)
   unreachable
 }
 !llvm.module.flags = !{!0}
