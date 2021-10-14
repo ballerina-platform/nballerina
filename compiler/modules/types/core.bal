@@ -364,10 +364,10 @@ public final UniformTypeBitSet SIMPLE_OR_STRING = uniformTypeUnion((1 << UT_NIL)
 public final UniformTypeBitSet NUMBER = uniformTypeUnion((1 << UT_INT) | (1 << UT_FLOAT) | (1 << UT_DECIMAL));
 public final SemType BYTE = intWidthUnsigned(8);
 public final SemType STRING_CHAR = stringChar();
-public final SemType XML_ELEMENT = xmlSingleton(ELEM_RW);
-public final SemType XML_COMMENT = xmlSingleton(COMMENT_RW);
+public final SemType XML_ELEMENT = xmlSingleton(ELEM_RO | ELEM_RW);
+public final SemType XML_COMMENT = xmlSingleton(COMMENT_RO | COMMENT_RW);
 public final SemType XML_TEXT = xmlSingleton(TEXT);
-public final SemType XML_PI = xmlSingleton(PI_RW);
+public final SemType XML_PI = xmlSingleton(PI_RO | PI_RW);
 
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
