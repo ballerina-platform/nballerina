@@ -11,15 +11,6 @@ final RuntimeFunction listHasTypeFunction = {
     attrs: ["readonly"]
 };
 
-final RuntimeFunction mappingHasTypeFunction = {
-    name: "mapping_has_type",
-    ty: {
-        returnType: "i1",
-        paramTypes: [LLVM_TAGGED_PTR, "i64"]
-    },
-    attrs: ["readonly"]
-};
-
 final RuntimeFunction listExactifyFunction = {
     name: "list_exactify",
     ty: {
@@ -137,14 +128,11 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
 }
 
 function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:Value|BuildError {
-    t:UniformTypeBitSet? bitSet = t:simpleMapMemberType(scaffold.typeContext(), targetType);
-    if bitSet is () {
-        return scaffold.unimplementedErr("cast to record type not implemented yet");
-    }
-    else {
-        return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(mappingHasTypeFunction),
-                                        [tagged, llvm:constInt(LLVM_INT, bitSet)]);      
-    }
+    llvm:ConstPointerValue tt = scaffold.getTypeTest(targetType);
+    // return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFunction), [tt, tagged]);
+    llvm:PointerValue funcPtrPtr = builder.getElementPtr(tt, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]);
+    llvm:PointerValue funcPtr = <llvm:PointerValue>builder.load(funcPtrPtr, ALIGN_HEAP);
+    return <llvm:Value>builder.call(funcPtr, [tt, tagged]);      
 }
 
 function buildMappingExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {

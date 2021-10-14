@@ -89,6 +89,7 @@ type Module record {|
     bir:File[] partFiles;
     ModuleDI? di;
     table<UsedSemType> key(semType) usedSemTypes = table [];
+    InitTypes llInitTypes;
 |};
 
 type UsedSemType record {|
@@ -263,6 +264,23 @@ class Scaffold {
     function unimplementedErr(err:Message message) returns err:Unimplemented {
         err:Location loc = err:location(self.file);
         return err:unimplemented(message, loc);
+    }
+
+    function initTypes() returns InitTypes => self.mod.llInitTypes;
+
+    function getTypeTest(t:SemType ty) returns llvm:ConstPointerValue {
+        UsedSemType used = self.getUsedSemType(ty);
+        llvm:ConstPointerValue? value = used.typeTest;
+        if value is () {
+            Module m = self.mod;
+            string symbol = mangleTypeSymbol(m.modId, USED_TYPE_TEST, used.index);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(self.initTypes().typeTestVTable, symbol, isConstant = true);
+            used.typeTest = v;
+            return v;
+        }
+        else {
+            return value;
+        }
     }
 
     function getInherentType(t:SemType ty) returns llvm:ConstPointerValue {

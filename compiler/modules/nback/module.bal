@@ -3,7 +3,8 @@ import wso2/nballerina.print.llvm;
 import wso2/nballerina.types as t;
 
 
-public function buildModule(bir:Module birMod, llvm:Context llContext, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
+public function buildModule(bir:Module birMod, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
+    llvm:Context llContext = new;
     bir:ModuleId modId = birMod.getId();
     llvm:Module llMod = llContext.createModule();
     bir:File[] partFiles = birMod.getPartFiles();
@@ -47,7 +48,8 @@ public function buildModule(bir:Module birMod, llvm:Context llContext, *Options 
         di,
         typeContext: birMod.getTypeContext(),
         functionDefns: llFuncMap,
-        stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard"))
+        stackGuard: llMod.addGlobal(llvm:pointerType("i8"), mangleRuntimeSymbol("stack_guard")),
+        llInitTypes: createInitTypes(llContext)
     };  
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionDefn defn = functionDefns[i];

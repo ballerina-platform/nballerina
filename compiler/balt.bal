@@ -56,8 +56,7 @@ function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Opt
     t:Env env = new;
     front:ScannedModule scanned = check front:scanModule(sources, modId);
     bir:Module birMod = check front:resolveModule(scanned, env, []);
-    LlvmContext context = new;
-    var [llMod, _] = check nback:buildModule(birMod, context, nbackOptions);
+    var [llMod, _] = check nback:buildModule(birMod, nbackOptions);
     return llMod;
 }
 

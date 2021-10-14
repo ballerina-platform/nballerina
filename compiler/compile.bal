@@ -19,7 +19,6 @@ type Job record {|
 |};
 
 class CompileContext {
-    private final LlvmContext llContext = new;
     private final nback:Options nbackOptions;
     private final string? outputBasename;
     private final nback:ProgramModule[] programModules = [];
@@ -39,13 +38,13 @@ class CompileContext {
     }
 
     function buildModule(bir:ModuleId id, bir:Module birMod) returns LlvmModule|CompileError {
-        var [llMod, typeUsage] = check nback:buildModule(birMod, self.llContext, self.nbackOptions);
+        var [llMod, typeUsage] = check nback:buildModule(birMod, self.nbackOptions);
         self.programModules.push({ id, typeUsage });
         return llMod;
     }
 
     function buildInitModule(map<bir:FunctionSignature> publicFuncs) returns LlvmModule|CompileError {
-        return nback:buildInitModule(self.llContext, self.env, self.programModules.reverse(), publicFuncs);
+        return nback:buildInitModule(self.env, self.programModules.reverse(), publicFuncs);
     }
 
     function job(bir:ModuleId id) returns Job {

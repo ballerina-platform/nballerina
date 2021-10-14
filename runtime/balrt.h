@@ -134,6 +134,26 @@ typedef GC struct Mapping {
     uint8_t tableLengthShift;
 } *MappingPtr;
 
+typedef struct TypeTest {
+    bool (*contains)(struct TypeTest *, TaggedPtr);
+} TypeTest, *TypeTestPtr;
+
+typedef struct {
+    TaggedPtr fieldName;
+    uint32_t fieldBitSet;
+} RecordTypeTestField;
+
+typedef struct {
+    TypeTest typeTest;
+    uint32_t nFields;
+    RecordTypeTestField fields[];
+} *RecordTypeTestPtr;
+
+typedef struct {
+    TypeTest typeTest;
+    uint32_t bitSet;
+} *MapTypeTestPtr;
+
 typedef GC struct Error {
     TaggedPtr message;
     int64_t lineNumber;
