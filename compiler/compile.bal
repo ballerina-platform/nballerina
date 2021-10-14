@@ -135,7 +135,8 @@ function isSubModule(bir:ModuleId id) returns boolean {
 
 function subModuleSourceParts(string basename, bir:ModuleId id) returns front:SourcePart[]|file:Error|io:Error {
     string directory = check file:joinPath(basename + ".modules", subModuleSuffix(id));
-    return from var md in check file:readDir(directory)
+    return
+        from var md in check file:readDir(directory)
         where !md.dir
         let var [_, ext] = basenameExtension(md.absPath)
         where ext == SOURCE_EXTENSION
