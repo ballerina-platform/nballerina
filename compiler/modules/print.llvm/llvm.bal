@@ -1170,29 +1170,29 @@ public class Builder {
 
     // Corresponds to LLVMBuildCall
     // Returns () if there is no result i.e. function return type is void
-    public function call(Function fn, Value[] args, string? name=()) returns Value? {
-        if fn.functionType.paramTypes.length() != args.length() {
-            panic err:illegalArgument(`number of arguments is invalid for function ${fn.functionName}`);
-        }
+    public function call(Function|PointerValue fn, Value[] args, string? name=()) returns Value? {
+        (string|Unnamed)[] insnWords;
+        RetType retType;
         BasicBlock bb = self.bb();
-        (string|Unnamed)[] insnWords = [];
-        RetType retType = fn.functionType.returnType;
-        if retType != "void" {
-            insnWords.push("=");
-        }
-        insnWords.push("call");
-        insnWords.push(typeToString(retType, self.context));
-        insnWords.push("@" + fn.functionName);
-        insnWords.push("(");
-        foreach int i in 0 ..< args.length() {
-            final Value arg = args[i];
-            if i > 0 {
-                insnWords.push(",");
+        if fn is PointerValue {
+            Type fnTy = fn.ty.pointsTo;
+            if fnTy is FunctionType {
+                retType = fnTy.returnType;
+                var fnName = fn.operand;
+                insnWords = self.buildFunctionCallBody(retType, fnName, args);
             }
-            insnWords.push(typeToString(arg.ty, self.context));
-            insnWords.push(arg.operand);
+            else {
+                panic err:illegalArgument("not a function pointer");
+            }
         }
-        insnWords.push(")");
+        else {
+            if fn.functionType.paramTypes.length() != args.length() {
+                panic err:illegalArgument(`number of arguments is invalid for function ${fn.functionName}`);
+            }
+            retType = fn.functionType.returnType;
+            string functionName = "@" + fn.functionName;
+            insnWords = self.buildFunctionCallBody(retType, functionName, args );
+        }
         if retType != "void" {
             string|Unnamed reg = bb.func.genReg(name);
             (string|Unnamed)[] words = [reg];
@@ -1204,6 +1204,27 @@ public class Builder {
         }
     }
 
+    function buildFunctionCallBody(RetType retType, string|Unnamed functionName, Value[] args) returns (string|Unnamed)[] {
+        (string|Unnamed)[] insnWords = [];
+        if retType != "void" {
+            insnWords.push("=");
+        }
+        insnWords.push("call");
+        insnWords.push(typeToString(retType, self.context));
+        insnWords.push(functionName);
+        insnWords.push("(");
+        foreach int i in 0 ..< args.length() {
+            final Value arg = args[i];
+            if i > 0 {
+                insnWords.push(",");
+            }
+            insnWords.push(typeToString(arg.ty, self.context));
+            insnWords.push(arg.operand);
+        }
+        insnWords.push(")");
+        return insnWords;
+    }
+
     // Corresponds to LLVMBuildExtractValue
     public function extractValue(Value value, int index, string? name=()) returns Value {
         if value.ty is StructType {
@@ -1211,7 +1232,7 @@ public class Builder {
             string|Unnamed reg = bb.func.genReg(name);
             addInsnWithDbLocation(bb, [reg, "=", "extractvalue", typeToString(value.ty, self.context),
                                        value.operand, ",", index.toString()], self.dbLocation);
-            Type elementType = getTypeAtIndex(<StructType>value.ty, index);
+            Type elementType = getTypeAtIndex(<StructType>value.ty, index, self.context);
             return new Value(elementType, reg);
         }
         else {
@@ -1616,7 +1637,7 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
                     panic err:illegalArgument("structures can be index only using i32 constants"); 
                 }
                 else {
-                    resultType = getTypeAtIndex(resultType, i);
+                    resultType = getTypeAtIndex(resultType, i, context);
                 }
             }
             else {
@@ -1625,6 +1646,15 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
         }
     }
     return pointerType(resultType, resultAddressSpace);
+}
+
+function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
+    var data = context.getStructName(ty);
+    Type[] elementTypes = ty.elementTypes;
+    if !(data is ()) {
+        elementTypes = data[1];
+    }
+    return elementTypes[index];
 }
 
 function bitCastArgs((string|Unnamed)[] words, Value val, PointerType destTy, Context context) {
