@@ -2,29 +2,30 @@
 import wso2/nballerina.err;
 
 public type XmlSubtypeData readonly & record {|
+    // allowed non-empty sequence values
     int data;
     Bdd sequence;
 |};
 
 const int XML_NEVER = 1;
 const int TEXT = 1 << 1;
-const int ELEM_RO = 1 << 2;
+const int ELEMENT_RO = 1 << 2;
 const int PI_RO = 1 << 3;
 const int COMMENT_RO = 1 << 4;
-const int ELEM_RW = 1 << 5;
+const int ELEMENT_RW = 1 << 5;
 const int PI_RW = 1 << 6;
 const int COMMENT_RW = 1 << 7;
 
-const int XML_RO_MASK = XML_NEVER | TEXT | ELEM_RO | PI_RO | COMMENT_RO;
-const int XML_RW_MASK = ELEM_RW | PI_RW | COMMENT_RW;
-const int XML_RO_SEQ_MASK = TEXT | ELEM_RO | PI_RO | COMMENT_RO;
+const int XML_RO_MASK = XML_NEVER | TEXT | ELEMENT_RO | PI_RO | COMMENT_RO;
+const int XML_RW_MASK = ELEMENT_RW | PI_RW | COMMENT_RW;
+const int XML_RO_SEQ_MASK = TEXT | ELEMENT_RO | PI_RO | COMMENT_RO;
 
 final XmlSubtypeData emptyXmlSubtype = { data: 0, sequence: false };
 
-function xmlSingleton(int bits) returns SemType {
+function xmlSingleton(int data) returns SemType {
     return createXmlSemtype(
-        { data: bits & XML_RO_MASK, sequence: false }, 
-        { data: bits & XML_RW_MASK, sequence: false }
+        { data: data & XML_RO_MASK, sequence: false }, 
+        { data: data & XML_RW_MASK, sequence: false }
     );
 }
 
@@ -33,20 +34,20 @@ public function xmlSequence(SemType constituentType, err:Location loc) returns S
         return constituentType;
     }
     if constituentType is UniformTypeBitSet {
-        return err:semantic("Invalid xml constituent type", loc=loc);
-    }
-    ComplexSemType t = <ComplexSemType>constituentType;
-    if hasNonXmlTypes(t) {
-        return err:semantic("Non xml type as xml constituent type", loc=loc);
-    }
-    var roData = getComplexSubtypeData(t, UT_XML_RO);
-    var rwData = getComplexSubtypeData(t, UT_XML_RW);
+        return err:semantic("invalid xml constituent type", loc=loc);
+    }   
+    else {
+        if !isSubtypeSimple(constituentType, XML) {
+            return err:semantic("non xml type as xml constituent type", loc=loc);
+        }
+        SubtypeData roData = getComplexSubtypeData(constituentType, UT_XML_RO);
+        SubtypeData rwData = getComplexSubtypeData(constituentType, UT_XML_RW);
 
-
-    XmlSubtypeData ro = roData == false ? emptyXmlSubtype : makeSequence((<XmlSubtypeData>roData));
-    XmlSubtypeData rw = rwData == false ? emptyXmlSubtype : makeSequence((<XmlSubtypeData>rwData));
-    
-    return createXmlSemtype(ro, rw);
+        XmlSubtypeData? ro = (roData == false) ? () : makeSequence((<XmlSubtypeData>roData));
+        XmlSubtypeData? rw = (rwData == false) ? () : makeSequence((<XmlSubtypeData>rwData));
+        
+        return createXmlSemtype(ro, rw);
+    }
 }
 
 function hasNonXmlTypes(ComplexSemType t) returns boolean {
@@ -64,21 +65,29 @@ function makeSequence(XmlSubtypeData d) returns XmlSubtypeData {
 }
 
 function createXmlSubtype(boolean isRo, int data, Bdd sequence) returns SubtypeData {
-    if data == 0 && sequence == false {
-        return false;
+    if sequence == false {
+        if data == 0 {
+            return false;
+        }
     }
-    boolean containsAllData = isRo ? (data & XML_RO_MASK) == XML_RO_MASK : (data & XML_RW_MASK) == XML_RW_MASK;
-    if containsAllData && sequence == true {
-        return true;
+    else if sequence == true {
+        int mask = isRo ? XML_RO_MASK : XML_RW_MASK;
+        if (data & mask) == mask {
+            return true;
+        }
     }
     return { data, sequence };
 }
 
-function createXmlSemtype(XmlSubtypeData ro, XmlSubtypeData rw) returns ComplexSemType {
-    if ro == emptyXmlSubtype {
-        return createComplexSemType(0, [[UT_XML_RW, rw]]);
+function createXmlSemtype(XmlSubtypeData? ro, XmlSubtypeData? rw) returns ComplexSemType {
+    if ro == () && rw == () {
+        panic error("illegal state"); // todo: How should we handle this?
     }
-    else if rw == emptyXmlSubtype {
+    else if ro == () {
+        // JBUG: type narrowing doesn't narrow rw.
+        return createComplexSemType(0, [[UT_XML_RW, <SubtypeData> rw]]);
+    }
+    else if rw == () {
         return createComplexSemType(0, [[UT_XML_RO, ro]]); 
     }
     else {
@@ -109,13 +118,7 @@ function xmlSubtypeDiff(boolean isRo, SubtypeData d1, SubtypeData d2) returns Su
 
 function xmlSubtypeComplement(boolean isRo, SubtypeData d) returns SubtypeData {
     XmlSubtypeData sd = <XmlSubtypeData>d;
-    int emptySeqComp = ~sd.data & XML_NEVER;
-
-    int singletonData = sd.data & ~XML_NEVER;
-    int complement = emptySeqComp;
-    if singletonData != 0 {
-        complement |= ~singletonData & (isRo ? XML_RO_SEQ_MASK : XML_RW_MASK);
-    }
+    int complement = ~sd.data & (isRo ? XML_RO_MASK : XML_RW_MASK);
     int rootAtom = isRo ? XML_RO_SEQ_MASK : XML_RW_MASK;
     Bdd seq = bddCreate(rootAtom, bddComplement(sd.sequence), false, false);
     return createXmlSubtype(isRo, complement, seq);
@@ -126,33 +129,29 @@ function xmlSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
     if sd.data != 0 {
         return false;
     }
-    return !xmlSequenceInhabited(cx, sd.sequence);
+    return xmlBddEmpty(cx, sd.sequence);
 }
 
-function xmlSequenceInhabited(Context cx, Bdd bdd) returns boolean {
-    boolean isEmpty = bddEvery(cx, bdd, (), (), xmlFormulaIsEmpty);
-    return !isEmpty;
+function xmlBddEmpty(Context cx, Bdd bdd) returns boolean {
+    return bddEvery(cx, bdd, (), (), xmlFormulaIsEmpty);
 }
 
 function xmlFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    return hasIntersectionAll(allBits(pos), neg);
-}
+    int allBits = 0;
+    Conjunction? current = pos;
+    while current != () {
+        allBits |= <int>current.atom;
+        current = current.next;
+    }
 
-function hasIntersectionAll(int bits, Conjunction? c) returns boolean {
-    if c != () {
-        if (bits & ~<int>c.atom) == 0 {
+    Conjunction? n = neg;
+    while n != () {
+        if (allBits & ~<int>n.atom) == 0 {
             return true;
-        }   
-        return hasIntersectionAll(bits, c.next);
+        }
+        n = n.next;
     }
     return false;
-}
-
-function allBits(Conjunction? u) returns int {
-    if u != () {
-        return <int>u.atom | allBits(u.next);
-    }
-    return 0;
 }
 
 function xmlSubtypeUnionRo(SubtypeData d1, SubtypeData d2) returns SubtypeData => xmlSubtypeUnion(true, d1, d2);
