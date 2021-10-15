@@ -77,7 +77,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             // JBUG cast
             return finishCheckingCallStmt(tok, <CheckingKeyword>cur);
         }
-        var td if td is InlineBuiltinTypeDesc|"map" => {
+        var td if td is InlineBuiltinTypeDesc|"map"|"record" => {
             return parseVarDeclStmt(tok, startPos);
         }
         "(" => {
