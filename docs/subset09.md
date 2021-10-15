@@ -112,7 +112,7 @@ array-type-desc = optional-type-desc "[" "]"
 map-type-desc = "map" "<" union-type-desc ">"
 
 record-type-desc = "record" "{|" field-desc* "|}"
-field-desc = type-desc identifier ";"
+field-desc = union-type-desc identifier ";"
 
 param-list = param ["," param]*
 param = type-desc identifier
