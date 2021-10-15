@@ -6,30 +6,27 @@ import wso2/nballerina.print.llvm;
 type Alignment 1|8;
 
 // Pointer tagging
-// JBUG #31394 would be better to use shifts for these
-                     //1234567812345678
-const TAG_FACTOR   = 0x0100000000000000;
-const POINTER_MASK = 0x00fffffffffffff8;
+const TAG_SHIFT = 56;
+const ALIGN_HEAP = 8;
+// JBUG #28334 type-descriptor is not needed
+const int POINTER_MASK = ((1 << TAG_SHIFT) - 1) & ~(ALIGN_HEAP - 1);
 
-const int TAG_MASK     = 0x1f * TAG_FACTOR;
+const int TAG_MASK     = 0x1f << TAG_SHIFT;
 const int TAG_NIL      = 0;
-const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
-const int TAG_INT      = t:UT_INT * TAG_FACTOR;
-const int TAG_FLOAT    = t:UT_FLOAT * TAG_FACTOR;
-const int TAG_STRING   = t:UT_STRING * TAG_FACTOR;
-const int TAG_ERROR   = t:UT_ERROR * TAG_FACTOR;
+const int TAG_BOOLEAN  = t:UT_BOOLEAN << TAG_SHIFT;
+const int TAG_INT      = t:UT_INT << TAG_SHIFT;
+const int TAG_FLOAT    = t:UT_FLOAT << TAG_SHIFT;
+const int TAG_STRING   = t:UT_STRING << TAG_SHIFT;
+const int TAG_ERROR   = t:UT_ERROR << TAG_SHIFT;
 
-const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
+const int TAG_LIST_RW  = t:UT_LIST_RW << TAG_SHIFT;
 
-const int TAG_BASIC_TYPE_MASK = 0xf * TAG_FACTOR;
+const int TAG_BASIC_TYPE_MASK = 0xf << TAG_SHIFT;
 
-const int FLAG_IMMEDIATE = 0x20 * TAG_FACTOR;
+const int FLAG_IMMEDIATE = 0x20 << TAG_SHIFT;
 const int FLAG_EXACT = 0x4;
 
-const TAG_SHIFT = 56;
-
 const HEAP_ADDR_SPACE = 1;
-const ALIGN_HEAP = 8;
 
 type ValueType llvm:IntegralType;
 

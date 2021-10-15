@@ -186,7 +186,7 @@ function testTypeAsUniformBitSet(t:Context tc, t:SemType sourceType, t:SemType t
 function buildHasTagInSet(llvm:Builder builder, llvm:PointerValue tagged, t:UniformTypeBitSet bitSet) returns llvm:Value {
     t:UniformTypeCode? utCode = t:uniformTypeCode(bitSet);
     if utCode != () {
-        return buildHasTag(builder, tagged, utCode * TAG_FACTOR);
+        return buildHasTag(builder, tagged, utCode << TAG_SHIFT);
     }
     t:UniformTypeBitSet roBitSet = <t:UniformTypeBitSet>(bitSet & t:UT_READONLY);
     utCode = t:uniformTypeCode(roBitSet);
