@@ -147,7 +147,6 @@ function subModuleSourceParts(string basename, bir:ModuleId id) returns front:So
                     directory 
                 });
             }
-
         }
     }
     return sourceParts;
