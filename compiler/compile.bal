@@ -135,21 +135,16 @@ function isSubModule(bir:ModuleId id) returns boolean {
 
 function subModuleSourceParts(string basename, bir:ModuleId id) returns front:SourcePart[]|file:Error|io:Error {
     string directory = check file:joinPath(basename + ".modules", subModuleSuffix(id));
-    front:SourcePart[] sourceParts = [];
-    // JBUG gets a bad, sad when done with a query expression
-    foreach var md in check file:readDir(directory) {
-        if !md.dir {
-            var [_, ext] = basenameExtension(md.absPath);
-            if ext == SOURCE_EXTENSION {
-                sourceParts.push({
-                    lines: check io:fileReadLines(md.absPath),
-                    filename: check file:normalizePath(check file:joinPath(directory, check file:basename(md.absPath)), file:CLEAN),
-                    directory 
-                });
-            }
-        }
-    }
-    return sourceParts;
+    return
+        from var md in check file:readDir(directory)
+        where !md.dir
+        let var [_, ext] = basenameExtension(md.absPath)
+        where ext == SOURCE_EXTENSION
+        select {
+            lines: check io:fileReadLines(md.absPath),
+            filename: check file:normalizePath(check file:joinPath(directory, check file:basename(md.absPath)), file:CLEAN),
+            directory
+        };
 }
 
 function subModuleSuffix(bir:ModuleId id) returns string {
