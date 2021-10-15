@@ -2,8 +2,8 @@
 import wso2/nballerina.err;
 
 public type XmlSubtypeData readonly & record {|
-    // allowed non-empty sequence values
-    int data;
+    // Each xml singleton and the empty sequence is considered a primitive.
+    int primitives;
     Bdd sequence;
 |};
 
@@ -18,76 +18,64 @@ const int COMMENT_RW = 1 << 7;
 
 const int XML_RO_MASK = XML_NEVER | TEXT | ELEMENT_RO | PI_RO | COMMENT_RO;
 const int XML_RW_MASK = ELEMENT_RW | PI_RW | COMMENT_RW;
-const int XML_RO_SEQ_MASK = TEXT | ELEMENT_RO | PI_RO | COMMENT_RO;
 
-final XmlSubtypeData emptyXmlSubtype = { data: 0, sequence: false };
+final XmlSubtypeData xmlRoAll = { primitives: XML_RO_MASK, sequence: bddAtom(XML_RO_MASK & ~XML_NEVER) };
+final XmlSubtypeData xmlRwAll = { primitives: XML_RW_MASK, sequence: bddAtom(XML_RW_MASK) };
 
-function xmlSingleton(int data) returns SemType {
+function xmlSingleton(int primitives) returns SemType {
     return createXmlSemtype(
-        { data: data & XML_RO_MASK, sequence: false }, 
-        { data: data & XML_RW_MASK, sequence: false }
+        { primitives: primitives & XML_RO_MASK, sequence: false }, 
+        { primitives: primitives & XML_RW_MASK, sequence: false }
     );
 }
 
-public function xmlSequence(SemType constituentType, err:Location loc) returns SemType|err:Semantic {
-    if constituentType == XML {
-        return constituentType;
-    }
+public function xmlSequence(SemType constituentType, err:Location loc) returns SemType {
     if constituentType is UniformTypeBitSet {
-        return err:semantic("invalid xml constituent type", loc=loc);
+        return constituentType;
     }   
     else {
-        if !isSubtypeSimple(constituentType, XML) {
-            return err:semantic("non xml type as xml constituent type", loc=loc);
-        }
-        SubtypeData roData = getComplexSubtypeData(constituentType, UT_XML_RO);
-        SubtypeData rwData = getComplexSubtypeData(constituentType, UT_XML_RW);
-
-        XmlSubtypeData? ro = (roData == false) ? () : makeSequence((<XmlSubtypeData>roData));
-        XmlSubtypeData? rw = (rwData == false) ? () : makeSequence((<XmlSubtypeData>rwData));
+        SubtypeData ro = getComplexSubtypeData(constituentType, UT_XML_RO);
+        ro = ro is boolean ? ro : makeSequence(<XmlSubtypeData>ro);
+        
+        SubtypeData rw = getComplexSubtypeData(constituentType, UT_XML_RW);
+        rw = rw is boolean ? rw : makeSequence(<XmlSubtypeData>rw);
         
         return createXmlSemtype(ro, rw);
     }
 }
 
-function hasNonXmlTypes(ComplexSemType t) returns boolean {
-    return (t.all & ~XML) != 0 || (t.some & ~XML) != 0;
-}
-
-
 function makeSequence(XmlSubtypeData d) returns XmlSubtypeData {
-    if d.sequence == false {
-        return  { data: XML_NEVER | d.data, sequence: bddCreate(d.data, true, false, false) };
-    }
-    else {
-        return d;
-    }
+    return { 
+        primitives: XML_NEVER | d.primitives, 
+        sequence: bddUnion(bddAtom(d.primitives & ~XML_NEVER), d.sequence) 
+        };
 }
 
-function createXmlSubtype(boolean isRo, int data, Bdd sequence) returns SubtypeData {
-    if sequence == false {
-        if data == 0 {
-            return false;
-        }
-    }
-    else if sequence == true {
+function createXmlSubtype(boolean isRo, int primitives, Bdd sequence) returns SubtypeData {
+    if sequence == true {
         int mask = isRo ? XML_RO_MASK : XML_RW_MASK;
-        if (data & mask) == mask {
+        if (primitives & mask) == mask {
             return true;
         }
     }
-    return { data, sequence };
+    return createXmlSubtypeOrEmpty(primitives, sequence);
 }
 
-function createXmlSemtype(XmlSubtypeData? ro, XmlSubtypeData? rw) returns ComplexSemType {
-    if ro == () && rw == () {
-        panic error("illegal state"); // todo: How should we handle this?
+function createXmlSubtypeOrEmpty(int primitives, Bdd sequence) returns SubtypeData {
+    if sequence == false {
+        if primitives == 0 {
+            return false;
+        }
     }
-    else if ro == () {
-        // JBUG: type narrowing doesn't narrow rw.
-        return createComplexSemType(0, [[UT_XML_RW, <SubtypeData> rw]]);
+    return { primitives, sequence };
+}
+
+
+function createXmlSemtype(SubtypeData ro, SubtypeData rw) returns ComplexSemType {
+    if ro == false {
+        return createComplexSemType(0, [[UT_XML_RW, rw]]);
     }
-    else if rw == () {
+    else if rw == false {
         return createComplexSemType(0, [[UT_XML_RO, ro]]); 
     }
     else {
@@ -98,35 +86,32 @@ function createXmlSemtype(XmlSubtypeData? ro, XmlSubtypeData? rw) returns Comple
 function xmlSubtypeUnion(boolean isRo, SubtypeData d1, SubtypeData d2) returns SubtypeData {
     XmlSubtypeData v1 = <XmlSubtypeData>d1;
     XmlSubtypeData v2 = <XmlSubtypeData>d2;
-    int data = v1.data | v2.data;
-    return createXmlSubtype(isRo, data, bddUnion(v1.sequence, v2.sequence));
+    int primitives = v1.primitives | v2.primitives;
+    return createXmlSubtype(isRo, primitives, bddUnion(v1.sequence, v2.sequence));
 }
 
-function xmlSubtypeIntersect(boolean isRo, SubtypeData d1, SubtypeData d2) returns SubtypeData {
+function xmlSubtypeIntersect(SubtypeData d1, SubtypeData d2) returns SubtypeData {
     XmlSubtypeData v1 = <XmlSubtypeData>d1;
     XmlSubtypeData v2 = <XmlSubtypeData>d2;
-    int data = v1.data & v2.data;
-    return createXmlSubtype(isRo, data, bddIntersect(v1.sequence, v2.sequence));
+    int primitives = v1.primitives & v2.primitives;
+    return createXmlSubtypeOrEmpty(primitives, bddIntersect(v1.sequence, v2.sequence));
 }
 
-function xmlSubtypeDiff(boolean isRo, SubtypeData d1, SubtypeData d2) returns SubtypeData {
+function xmlSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
     XmlSubtypeData v1 = <XmlSubtypeData>d1;
     XmlSubtypeData v2 = <XmlSubtypeData>d2;
-    int data = v1.data & ~v2.data;
-    return createXmlSubtype(isRo, data, bddDiff(v1.sequence, v2.sequence));
+    int primitives = v1.primitives & ~v2.primitives;
+    return createXmlSubtypeOrEmpty(primitives, bddDiff(v1.sequence, v2.sequence));
 }
 
 function xmlSubtypeComplement(boolean isRo, SubtypeData d) returns SubtypeData {
-    XmlSubtypeData sd = <XmlSubtypeData>d;
-    int complement = ~sd.data & (isRo ? XML_RO_MASK : XML_RW_MASK);
-    int rootAtom = isRo ? XML_RO_SEQ_MASK : XML_RW_MASK;
-    Bdd seq = bddCreate(rootAtom, bddComplement(sd.sequence), false, false);
-    return createXmlSubtype(isRo, complement, seq);
+    XmlSubtypeData top = isRo ? xmlRoAll : xmlRwAll;
+    return xmlSubtypeDiff(top, d);
 }
 
 function xmlSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
     XmlSubtypeData sd = <XmlSubtypeData>d;
-    if sd.data != 0 {
+    if sd.primitives != 0 {
         return false;
     }
     return xmlBddEmpty(cx, sd.sequence);
@@ -158,30 +143,22 @@ function xmlSubtypeUnionRo(SubtypeData d1, SubtypeData d2) returns SubtypeData =
 
 function xmlSubtypeUnionRw(SubtypeData d1, SubtypeData d2) returns SubtypeData => xmlSubtypeUnion(false, d1, d2);
 
-function xmlSubtypeIntersectRo(SubtypeData d1, SubtypeData d2) returns SubtypeData => xmlSubtypeIntersect(true, d1, d2);
-
-function xmlSubtypeIntersectRw(SubtypeData d1, SubtypeData d2) returns SubtypeData => xmlSubtypeIntersect(false, d1, d2);
-
-function xmlSubtypeDiffRo(SubtypeData d1, SubtypeData d2) returns SubtypeData => xmlSubtypeDiff(true, d1, d2);
-
-function xmlSubtypeDiffRw(SubtypeData d1, SubtypeData d2) returns SubtypeData => xmlSubtypeDiff(false, d1, d2);
-
 function xmlSubtypeComplementRo(SubtypeData d) returns SubtypeData => xmlSubtypeComplement(true, d);
 
 function xmlSubtypeComplementRw(SubtypeData d) returns SubtypeData => xmlSubtypeComplement(false, d);
 
 final UniformTypeOps xmlRoOps = {
     union: xmlSubtypeUnionRo,
-    intersect: xmlSubtypeIntersectRo,
-    diff: xmlSubtypeDiffRo,
+    intersect: xmlSubtypeIntersect,
+    diff: xmlSubtypeDiff,
     complement: xmlSubtypeComplementRo,
     isEmpty: xmlSubtypeIsEmpty
 };
 
 final UniformTypeOps xmlRwOps = {
     union: xmlSubtypeUnionRw,
-    intersect: xmlSubtypeIntersectRw,
-    diff: xmlSubtypeDiffRw,
+    intersect: xmlSubtypeIntersect,
+    diff: xmlSubtypeDiff,
     complement: xmlSubtypeComplementRw,
     isEmpty: xmlSubtypeIsEmpty
 };
