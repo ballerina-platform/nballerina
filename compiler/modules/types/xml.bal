@@ -6,33 +6,37 @@ public type XmlSubtypeData readonly & record {|
     Bdd sequence;
 |};
 
-const int XML_NEVER = 1;
-const int TEXT = 1 << 1;
-const int ELEMENT_RO = 1 << 2;
-const int PI_RO = 1 << 3;
-const int COMMENT_RO = 1 << 4;
-const int ELEMENT_RW = 1 << 5;
-const int PI_RW = 1 << 6;
-const int COMMENT_RW = 1 << 7;
+// Each bit represents a XML singleton subtype or a empty sequence.
+// `primitives` fields are composed of allowed values from this singleton set.
+// Atom of the `Bdd` represented by `sequence` field is also composed of these to indicate 
+// non-empty sequence of allowed singletons.
+const int XML_NEVER_BIT      = 1;
+const int XML_TEXT_BIT       = 1 << 1;
+const int XML_ELEMENT_RO_BIT = 1 << 2;
+const int XML_PI_RO_BIT      = 1 << 3;
+const int XML_COMMENT_RO_BIT = 1 << 4;
+const int XML_ELEMENT_RW_BIT = 1 << 5;
+const int XML_PI_RW_BIT      = 1 << 6;
+const int XML_COMMENT_RW_BIT = 1 << 7;
 
-const int XML_RO_MASK = XML_NEVER | TEXT | ELEMENT_RO | PI_RO | COMMENT_RO;
-const int XML_RW_MASK = ELEMENT_RW | PI_RW | COMMENT_RW;
+const int XML_RO_SINGLTONS = XML_TEXT_BIT | XML_ELEMENT_RO_BIT | XML_PI_RO_BIT | XML_COMMENT_RO_BIT;
+const int XML_RO_MASK = XML_NEVER_BIT | XML_RO_SINGLTONS;
+const int XML_RW_MASK = XML_ELEMENT_RW_BIT | XML_PI_RW_BIT | XML_COMMENT_RW_BIT;
 
-final XmlSubtypeData xmlRoAll = { primitives: XML_RO_MASK, sequence: bddAtom(XML_RO_MASK & ~XML_NEVER) };
+final XmlSubtypeData xmlRoAll = { primitives: XML_RO_MASK, sequence: bddAtom(XML_RO_SINGLTONS) };
 final XmlSubtypeData xmlRwAll = { primitives: XML_RW_MASK, sequence: bddAtom(XML_RW_MASK) };
 
 function xmlSingleton(int primitives) returns SemType {
     return createXmlSemtype(
-        { primitives: primitives & XML_RO_MASK, sequence: false }, 
-        { primitives: primitives & XML_RW_MASK, sequence: false }
+        createXmlSubtype(true, primitives & XML_RO_MASK, false), 
+        createXmlSubtype(false, primitives & XML_RW_MASK, false)
     );
 }
 
 public function xmlSequence(SemType constituentType) returns SemType {
     if constituentType == NEVER {
-        return xmlSequence(xmlSingleton(XML_NEVER));
+        return xmlSequence(xmlSingleton(XML_NEVER_BIT));
     }
-
     if constituentType is UniformTypeBitSet {
         return constituentType;
     }   
@@ -49,9 +53,9 @@ public function xmlSequence(SemType constituentType) returns SemType {
 
 function makeSequence(boolean roPart, XmlSubtypeData d) returns XmlSubtypeData {
     return { 
-        primitives: (roPart ? XML_NEVER : 0) | d.primitives, 
-        sequence: bddUnion(bddAtom(d.primitives & ~XML_NEVER), d.sequence) 
-        };
+        primitives: (roPart ? XML_NEVER_BIT : 0) | d.primitives, 
+        sequence: bddUnion(bddAtom(d.primitives & ~XML_NEVER_BIT), d.sequence) 
+    };
 }
 
 function createXmlSubtype(boolean isRo, int primitives, Bdd sequence) returns SubtypeData {
@@ -65,10 +69,8 @@ function createXmlSubtype(boolean isRo, int primitives, Bdd sequence) returns Su
 }
 
 function createXmlSubtypeOrEmpty(int primitives, Bdd sequence) returns SubtypeData {
-    if sequence == false {
-        if primitives == 0 {
-            return false;
-        }
+    if sequence == false && primitives == 0 {
+        return false;
     }
     return { primitives, sequence };
 }
