@@ -264,7 +264,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         else {
             endPos = tok.currentEndPos();
         }
-        return { startPos, endPos,prefix, varName };
+        return { startPos, endPos, prefix, varName };
     }
     else if t is [DECIMAL_NUMBER, string] {
         IntLiteralExpr expr = { startPos, endPos, base: 10, digits: t[1], pos: tok.currentStartPos() };
@@ -329,7 +329,7 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         check tok.advance();
         Expr index = check parseInnerExpr(tok);
         Position accessEndPos = check tok.expectEnd("]");
-        MemberAccessExpr accessExpr = { startPos:accessStartPos, endPos: accessEndPos, container: expr, index, pos };
+        MemberAccessExpr accessExpr = { startPos: accessStartPos, endPos: accessEndPos, container: expr, index, pos };
         return finishPrimaryExpr(tok, accessExpr, startPos);
     }
     else if t == "." {
