@@ -481,6 +481,17 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "false.length()", "false.length()"],
          ["V", "expr", "-1.hexStr()", "-(1.hexStr())"],
          ["V", "expr", "-0xf.max()", "-(0xF.max())"],
+        // field access
+         ["V", "expr", "a.b", "a.b"],
+         ["V", "expr", "a.b.c", "(a.b).c"],
+         ["V", "expr", "a.b().c", "(a.b()).c"],
+         ["V", "expr", "a.b.c()", "(a.b).c()"],
+         ["V", "expr", "a[n].b.c(m)", "((a[n]).b).c(m)"],
+         ["V", "expr", "a(x).b.c[y]", "((a(x).b).c)[y]"],
+         ["V", "expr", "a[b.c]", "a[b.c]"],
+         ["E", "expr", "a.1", ""],
+         // may get allowed under  ballerina-spec#34
+         ["E", "expr", "a.map", ""],
          // XXX Output is illegal in 2021R1 but will be addressed in ballerina-spec#905
          ["V", "expr", "42 .length()", "42.length()"],
          ["V", "expr", "x.foo().bar()", "(x.foo()).bar()"],

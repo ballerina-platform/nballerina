@@ -287,8 +287,8 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
 
 function finishPrimaryExpr(Tokenizer tok, Expr expr) returns Expr|err:Syntax {
     Token? t = tok.current();
+    Position pos = tok.currentStartPos();
     if t == "[" {
-        Position pos = tok.currentStartPos();
         check tok.advance();
         Expr index = check parseInnerExpr(tok);
         check tok.expect("]");
@@ -296,26 +296,26 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr) returns Expr|err:Syntax {
         return finishPrimaryExpr(tok, accessExpr);
     }
     else if t == "." {
-        MethodCallExpr methodCallExpr = check finishMethodCallExpr(tok, expr);
-        return finishPrimaryExpr(tok, methodCallExpr);
+        check tok.advance();
+        string name = check tok.expectIdentifier();
+        if tok.current() == "(" {
+            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, pos));
+        }
+        else {
+            FieldAccessExpr fieldAccessExpr = { mapping: expr, fieldName: name, pos };
+            return finishPrimaryExpr(tok, fieldAccessExpr);
+        }
     }
     else {
         return expr;
     }
 }
 
-// Called with current token as "."
-function finishMethodCallExpr(Tokenizer tok, Expr target) returns MethodCallExpr|err:Syntax {
-    Position pos = tok.currentStartPos();
+// Called with current token as "("
+function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Position pos) returns MethodCallExpr|err:Syntax {
     check tok.advance();
-    string name = check tok.expectIdentifier();
-    if tok.current() == "(" {
-        check tok.advance();
-        Expr[] args = check parseExprList(tok, ")");
-        MethodCallExpr methodCallExpr = { methodName: name, target, pos, args };
-        return methodCallExpr;
-    }
-    return parseError(tok, "expected method call after dot");
+    Expr[] args = check parseExprList(tok, ")");
+    return { target, methodName, args, pos };
 }
 
 function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position pos) returns FunctionCallExpr|err:Syntax {
