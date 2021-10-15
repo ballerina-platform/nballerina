@@ -904,7 +904,6 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
 
 function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarRefExpr lValue, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp  op, err:Position pos) returns CodeGenError|StmtEffect {
     s:Expr expr;
-    // FIXME:
     s:Position startPos = rexpr.startPos;
     s:Position endPos = rexpr.endPos;
     if op is s:BinaryArithmeticOp {

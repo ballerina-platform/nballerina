@@ -185,7 +185,7 @@ function findMatchingChildExpr(RecursiveBinaryExpr expected, RecursiveBinaryExpr
 function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(expr.startPos, MODE_NORMAL);
     test:assertEquals(tok.currentStartPos(), expr.startPos, "moved to wrong position");
-    Expr? newExpr = ();
+    Expr newExpr;
     if expr is SimpleConstExpr {
         if expr is ConstValueExpr && expr.value == () {
             newExpr = check parseExpr(tok);
@@ -193,9 +193,15 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         else {
             newExpr = check parseSimpleConstExpr(tok);
         }
+        if newExpr.endPos != expr.endPos && expr is ConstValueExpr {
+            // ConstValue expressions can be parsed by both parseSimpleConstExpr and parsePrimaryExpr giving different results
+            check tok.moveToPos(expr.startPos, MODE_NORMAL);
+            newExpr = check parsePrimaryExpr(tok);
+        }
     }
     else if expr is BinaryBitwiseExpr {
-        match expr.bitwiseOp {
+        BinaryBitwiseOp op = expr.bitwiseOp;
+        match op {
             "<<"|">>>"|">>" => {
                 newExpr = check parseShiftExpr(tok);
             }
@@ -205,11 +211,8 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             "^" => {
                 newExpr = check parseBitwiseXorExpr(tok);
             }
-            "&" => {
-                newExpr = check parseBitwiseAndExpr(tok);
-            }
             _ => {
-                panic error("unknown bitwise op");
+                newExpr = check parseBitwiseAndExpr(tok);
             }
         }
     }
@@ -241,10 +244,6 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     }
     else {
         newExpr = check parseExpr(tok);
-    }
-    if newExpr is Expr && newExpr.endPos != expr.endPos && expr is ConstValueExpr {
-        check tok.moveToPos(expr.startPos, MODE_NORMAL);
-        newExpr = check parsePrimaryExpr(tok);
     }
     Position actualEnd;
     if expr is ConstValueExpr
@@ -280,44 +279,39 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         actualEnd = matchingChild.endPos;
         newExpr = matchingChild;
     }
-    if newExpr is () {
-        panic error("failed to find a suitable parser to parse expression");
+    test:assertEquals(expr.endPos, actualEnd);
+    test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
+    test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
+    test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.endPos), "end position is a white space");
+    [err:Position, err:Position][] childNodePos = [];
+    if expr is BinaryExpr {
+        check validateExpressionPos(expr.left, tok, expr.startPos, expr.endPos);
+        childNodePos.push([expr.left.startPos, expr.left.endPos]);
+        check validateExpressionPos(expr.right, tok, expr.startPos, expr.endPos);
+        childNodePos.push([expr.right.startPos, expr.right.endPos]);
     }
-    else {
-        test:assertEquals(expr.endPos, actualEnd);
-        test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
-        test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
-        test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.endPos), "end position is a white space");
-        [err:Position, err:Position][] childNodePos = [];
-        if expr is BinaryExpr {
-            check validateExpressionPos(expr.left, tok, expr.startPos, expr.endPos);
-            childNodePos.push([expr.left.startPos, expr.left.endPos]);
-            check validateExpressionPos(expr.right, tok, expr.startPos, expr.endPos);
-            childNodePos.push([expr.right.startPos, expr.right.endPos]);
+    else if expr is UnaryExpr|SimpleConstNegateExpr {
+        check validateExpressionPos(expr.operand, tok, expr.startPos, expr.endPos);
+        childNodePos.push([expr.operand.startPos, expr.operand.endPos]);
+    }
+    else if expr is ErrorConstructorExpr {
+        check validateExpressionPos(expr.message, tok, expr.startPos, expr.endPos);
+        childNodePos.push([expr.message.startPos, expr.message.endPos]);
+    }
+    else if expr is FunctionCallExpr {
+        foreach var arg in expr.args {
+            check validateExpressionPos(arg, tok, expr.startPos, expr.endPos);
+            childNodePos.push([arg.startPos, arg.endPos]);
         }
-        else if expr is UnaryExpr|SimpleConstNegateExpr {
-            check validateExpressionPos(expr.operand, tok, expr.startPos, expr.endPos);
-            childNodePos.push([expr.operand.startPos, expr.operand.endPos]);
-        }
-        else if expr is ErrorConstructorExpr {
-            check validateExpressionPos(expr.message, tok, expr.startPos, expr.endPos);
-            childNodePos.push([expr.message.startPos, expr.message.endPos]);
-        }
-        else if expr is FunctionCallExpr {
-            foreach var arg in expr.args {
-                check validateExpressionPos(arg, tok, expr.startPos, expr.endPos);
-                childNodePos.push([arg.startPos, arg.endPos]);
-            }
-        }
+    }
 
-        err:Position lastEnd = expr.startPos;
-        foreach var [startPos, endPos] in childNodePos {
-            test:assertTrue(startPos <= endPos, "invalid start and end positions"); // single character expressions get same start and end pos
-            test:assertTrue((startPos == expr.startPos) || (startPos > lastEnd), "overlapping statements");
-            test:assertFalse(testPositionIsWhiteSpace(tok.file, startPos), "start position is a white space");
-            test:assertFalse(testPositionIsWhiteSpace(tok.file, endPos), "end position is a white space");
-            lastEnd = endPos;
-        }
+    err:Position lastEnd = expr.startPos;
+    foreach var [startPos, endPos] in childNodePos {
+        test:assertTrue(startPos <= endPos, "invalid start and end positions"); // single character expressions get same start and end pos
+        test:assertTrue((startPos == expr.startPos) || (startPos > lastEnd), "overlapping statements");
+        test:assertFalse(testPositionIsWhiteSpace(tok.file, startPos), "start position is a white space");
+        test:assertFalse(testPositionIsWhiteSpace(tok.file, endPos), "end position is a white space");
+        lastEnd = endPos;
     }
 }
 
