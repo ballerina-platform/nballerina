@@ -111,8 +111,7 @@ final bir:ModuleId runtimeModule = {
 };
 
 function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
-    // JBUG #31753 cast
-    return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, <int>panicIndex | (scaffold.lineNumber(pos) << 8)), pos);
+    return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, panicIndex | (scaffold.lineNumber(pos) << 8)), pos);
 }
 
 function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicIndex, bir:Position pos) returns llvm:PointerValue {
@@ -181,8 +180,7 @@ function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand oper
 
 function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value value, Repr targetRepr) returns llvm:Value {
     // SUBSET need to use targetRepr to handle unions including mappings and lists
-    // JBUG <int> cast needed (otherwise result is or'd with 0xFF)
-    return <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [value, llvm:constInt(LLVM_INT, ~<int>FLAG_EXACT)]);
+    return <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [value, llvm:constInt(LLVM_INT, ~FLAG_EXACT)]);
 }
 
 function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
