@@ -6,9 +6,10 @@ import wso2/nballerina.print.llvm;
 type Alignment 1|8;
 
 // Pointer tagging
-                     //1234567812345678
-const POINTER_MASK = 0x00fffffffffffff8;
 const TAG_SHIFT = 56;
+const ALIGN_HEAP = 8;
+// JBUG #28334 type-descriptor is not needed
+const int POINTER_MASK = ((1 << TAG_SHIFT) - 1) & ~(ALIGN_HEAP - 1);
 
 const int TAG_MASK     = 0x1f << TAG_SHIFT;
 const int TAG_NIL      = 0;
@@ -26,7 +27,6 @@ const int FLAG_IMMEDIATE = 0x20 << TAG_SHIFT;
 const int FLAG_EXACT = 0x4;
 
 const HEAP_ADDR_SPACE = 1;
-const ALIGN_HEAP = 8;
 
 type ValueType llvm:IntegralType;
 
