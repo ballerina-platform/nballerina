@@ -382,7 +382,6 @@ public type IntLiteralExpr record {|
     *PositionFields;
     IntLiteralBase base;
     string digits;
-    Position pos;
 |};
 
 public const FLOAT_TYPE_SUFFIX = "f";
@@ -395,7 +394,6 @@ public type FpLiteralExpr record {|
     *PositionFields;
     string untypedLiteral;
     FpTypeSuffix? typeSuffix;
-    Position pos;
 |};
 
 

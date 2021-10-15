@@ -262,17 +262,17 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         return { startPos, endPos, prefix, varName };
     }
     else if t is [DECIMAL_NUMBER, string] {
-        IntLiteralExpr expr = { startPos, endPos, base: 10, digits: t[1], pos: tok.currentStartPos() };
+        IntLiteralExpr expr = { startPos, endPos, base: 10, digits: t[1] };
         check tok.advance();
         return expr;
     }
     else if t is [DECIMAL_FP_NUMBER, string, FLOAT_TYPE_SUFFIX|()] {
-        FpLiteralExpr expr = { startPos, endPos, untypedLiteral: t[1], typeSuffix: t[2], pos: tok.currentStartPos() };
+        FpLiteralExpr expr = { startPos, endPos, untypedLiteral: t[1], typeSuffix: t[2] };
         check tok.advance();
         return expr;
     }
     else if t is [HEX_INT_LITERAL, string] {
-        IntLiteralExpr expr = { startPos, endPos, base: 16, digits: t[1], pos: tok.currentStartPos() };
+        IntLiteralExpr expr = { startPos, endPos, base: 16, digits: t[1] };
         check tok.advance();
         return expr;
     }
@@ -482,8 +482,7 @@ function parseOptQualIdentifier(Tokenizer tok, string identifier) returns [strin
 
 function parseNumericLiteralExpr(Tokenizer tok) returns NumericLiteralExpr|err:Syntax {
     Token? t = tok.current();
-    Position pos = tok.currentStartPos();
-    Position startPos = pos;
+    Position startPos = tok.currentStartPos();
     match t {
         [DECIMAL_NUMBER, _]
         | [HEX_INT_LITERAL, _] => {
@@ -492,7 +491,7 @@ function parseNumericLiteralExpr(Tokenizer tok) returns NumericLiteralExpr|err:S
         [DECIMAL_FP_NUMBER, var untypedLiteral, var typeSuffix] => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            return { startPos, endPos, untypedLiteral, typeSuffix, pos };
+            return { startPos, endPos, untypedLiteral, typeSuffix };
         }
     }
     return parseError(tok, "expected numeric literal");
@@ -502,17 +501,16 @@ function parseNumericLiteralExpr(Tokenizer tok) returns NumericLiteralExpr|err:S
 // outside types
 function parseIntLiteralExpr(Tokenizer tok) returns IntLiteralExpr|err:Syntax {
     Token? t = tok.current();
-    Position pos = tok.currentStartPos();
-    Position startPos = pos;
+    Position startPos = tok.currentStartPos();
     Position endPos = tok.currentEndPos();
     match t {
         [DECIMAL_NUMBER, var digits] => {
             check tok.advance();
-            return { startPos, endPos, base: 10, digits, pos };
+            return { startPos, endPos, base: 10, digits };
         }
         [HEX_INT_LITERAL, var digits] => {
             check tok.advance();
-            return { startPos, endPos, base: 16, digits, pos };
+            return { startPos, endPos, base: 16, digits };
         }
     }
     return parseError(tok, "expected integer literal");

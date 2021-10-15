@@ -491,7 +491,7 @@ function foldFloatLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiter
         return { startPos: expr.startPos, endPos: expr.endPos, value: result };
     }
     else {
-        return cx.semanticErr("invalid float literal", cause=result, pos=expr.pos);
+        return cx.semanticErr("invalid float literal", cause=result, pos=expr.startPos);
     }
 }
 
@@ -510,7 +510,7 @@ function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLitera
         return { startPos: expr.startPos, endPos: expr.endPos, value: result };
     }
     else {
-        return cx.semanticErr("invalid " + ty + " literal", cause=result, pos=expr.pos);
+        return cx.semanticErr("invalid " + ty + " literal", cause=result, pos=expr.startPos);
     }
 }
 
