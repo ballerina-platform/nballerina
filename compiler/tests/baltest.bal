@@ -44,6 +44,17 @@ function readTestCase(string filename) returns SubtypeTestCase|error {
     return [filename, lines, expected];
 }
 
+function readSubtypeTests(string filename) returns SubtypeTestCase|error {
+    string[] lines = check io:fileReadLines(filename);
+    string[] expected =
+        from var line in lines
+        where line.startsWith("// @type")
+        let string result = line.substring(9)
+        order by result
+        select result;
+    return [filename, lines, expected];
+}
+
 // @test:Config{}
 // function test1() returns error? {
 //     var args = check readTestCase("tests/data/function.bal");
