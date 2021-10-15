@@ -230,10 +230,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         t:SemType t = check resolveTypeDesc(mod, modDefn, depth, td.constituent);
         err:Location loc =  err:location(modDefn.part.file, td.pos);
         
-        if !t:isSubtypeSimple(t, t:XML) {
+        if !t:isSubtypeSimple(t, t:NEVER) && !t:isSubtypeSimple(t, t:XML) {
             return err:semantic("non xml type as xml constituent type", loc=loc);
         }
-        return t:xmlSequence(t, loc);
+        return t:xmlSequence(t);
     }
     panic error("unimplemented type-descriptor");
 }

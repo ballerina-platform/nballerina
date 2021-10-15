@@ -1,5 +1,4 @@
 // Implementation specific to basic type xml.
-import wso2/nballerina.err;
 
 public type XmlSubtypeData readonly & record {|
     // Each xml singleton and the empty sequence is considered a primitive.
@@ -29,24 +28,28 @@ function xmlSingleton(int primitives) returns SemType {
     );
 }
 
-public function xmlSequence(SemType constituentType, err:Location loc) returns SemType {
+public function xmlSequence(SemType constituentType) returns SemType {
+    if constituentType == NEVER {
+        return xmlSequence(xmlSingleton(XML_NEVER));
+    }
+
     if constituentType is UniformTypeBitSet {
         return constituentType;
     }   
     else {
         SubtypeData ro = getComplexSubtypeData(constituentType, UT_XML_RO);
-        ro = ro is boolean ? ro : makeSequence(<XmlSubtypeData>ro);
+        ro = ro is boolean ? ro : makeSequence(true, <XmlSubtypeData>ro);
         
         SubtypeData rw = getComplexSubtypeData(constituentType, UT_XML_RW);
-        rw = rw is boolean ? rw : makeSequence(<XmlSubtypeData>rw);
+        rw = rw is boolean ? rw : makeSequence(false, <XmlSubtypeData>rw);
         
         return createXmlSemtype(ro, rw);
     }
 }
 
-function makeSequence(XmlSubtypeData d) returns XmlSubtypeData {
+function makeSequence(boolean roPart, XmlSubtypeData d) returns XmlSubtypeData {
     return { 
-        primitives: XML_NEVER | d.primitives, 
+        primitives: (roPart ? XML_NEVER : 0) | d.primitives, 
         sequence: bddUnion(bddAtom(d.primitives & ~XML_NEVER), d.sequence) 
         };
 }
@@ -127,6 +130,10 @@ function xmlFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retur
     while current != () {
         allBits |= <int>current.atom;
         current = current.next;
+    }
+
+    if allBits == 0 {
+        return true;
     }
 
     Conjunction? n = neg;

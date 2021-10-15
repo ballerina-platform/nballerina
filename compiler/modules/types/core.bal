@@ -366,7 +366,7 @@ public final SemType BYTE = intWidthUnsigned(8);
 public final SemType STRING_CHAR = stringChar();
 public final SemType XML_ELEMENT = xmlSingleton(ELEMENT_RO | ELEMENT_RW);
 public final SemType XML_COMMENT = xmlSingleton(COMMENT_RO | COMMENT_RW);
-public final SemType XML_TEXT = xmlSingleton(TEXT);
+public final SemType XML_TEXT = xmlSingleton(XML_NEVER | TEXT);
 public final SemType XML_PI = xmlSingleton(PI_RO | PI_RW);
 
 // Need this type to workaround slalpha4 bug.
