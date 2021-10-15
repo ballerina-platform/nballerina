@@ -191,8 +191,7 @@ function parseMethodCallStmt(Tokenizer tok) returns MethodCallExpr|err:Syntax {
     if cur == "." || cur == "[" {
         expr = check finishPrimaryExpr(tok, expr, startPos);
         if expr is MethodCallExpr {
-            Position endPos = check tok.expectEnd(";");
-            expr.endPos = endPos;
+            check tok.expect(";");
             return expr;
         }
     }

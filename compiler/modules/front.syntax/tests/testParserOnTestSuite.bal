@@ -95,9 +95,13 @@ function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns
 
 function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(stmt.startPos, MODE_NORMAL);
+    if stmt is MethodCallExpr {
+        return check validateExpressionPos(stmt, tok, parentStartPos, parentEndPos);
+    }
     test:assertEquals(tok.currentStartPos(), stmt.startPos, "moved to wrong position");
-    _ = check parseStmt(tok);
+    Stmt newStmt = check parseStmt(tok);
     test:assertEquals(stmt.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
+    test:assertEquals(stmt.toString(), newStmt.toString());
     test:assertTrue(stmt.startPos >= parentStartPos && stmt.endPos <= parentEndPos, "child node outside of parent");
     [err:Position, err:Position][] childNodePos = [];
     if stmt is IfElseStmt {
@@ -182,10 +186,13 @@ function findMatchingChildExpr(RecursiveBinaryExpr expected, RecursiveBinaryExpr
     panic error("expected and actual expression are not same type");
 }
 
+type PrimaryExpr ConstValueExpr|VarRefExpr|FunctionCallExpr|MethodCallExpr|NumericLiteralExpr|ErrorConstructorExpr;
+
 function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(expr.startPos, MODE_NORMAL);
     test:assertEquals(tok.currentStartPos(), expr.startPos, "moved to wrong position");
     Expr newExpr;
+    boolean usedSimpleConstExprParser = true;
     if expr is SimpleConstExpr {
         if expr is ConstValueExpr && expr.value == () {
             newExpr = check parseExpr(tok);
@@ -193,8 +200,10 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         else {
             newExpr = check parseSimpleConstExpr(tok);
         }
-        if newExpr.endPos != expr.endPos && expr is ConstValueExpr {
-            // ConstValue expressions can be parsed by both parseSimpleConstExpr and parsePrimaryExpr giving different results
+        if tok.currentEndPos() != expr.endPos && expr is PrimaryExpr {
+            // these expressions can be parsed by both parseSimpleConstExpr and parsePrimaryExpr
+            // parseSimpleConstExpr don't advance to the next token
+            usedSimpleConstExprParser = false;
             check tok.moveToPos(expr.startPos, MODE_NORMAL);
             newExpr = check parsePrimaryExpr(tok);
         }
@@ -233,10 +242,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     else if expr is UnaryExpr {
         newExpr = check parseUnaryExpr(tok);
     }
-    else if expr is FunctionCallExpr
-                   |MethodCallExpr
-                   |NumericLiteralExpr
-                   |ErrorConstructorExpr {
+    else if expr is PrimaryExpr|MemberAccessExpr {
         newExpr = check parsePrimaryExpr(tok);
     }
     else if expr is TypeCastExpr {
@@ -245,29 +251,28 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     else {
         newExpr = check parseExpr(tok);
     }
+
     Position actualEnd;
-    if expr is ConstValueExpr
-              |ErrorConstructorExpr
-              |FpLiteralExpr
-              |FunctionCallExpr
-              |IntLiteralExpr
-              |ListConstructorExpr
+    if expr is ListConstructorExpr
               |MemberAccessExpr
+              |PrimaryExpr
               |TypeTestExpr
               |MappingConstructorExpr
-              |MethodCallExpr {
-        actualEnd = tok.previousEndPos();
-    }
-    else if expr is VarRefExpr{
-        if expr.prefix != () {
-            actualEnd = tok.previousEndPos();
+              |SimpleConstExpr {
+        if expr is SimpleConstExpr && usedSimpleConstExprParser {
+            if expr is SimpleConstNegateExpr {
+                actualEnd = tok.previousEndPos();
+            }
+            else {
+                actualEnd = tok.currentEndPos();
+            }
         }
-        else {
+        else if expr is MethodCallExpr {
             actualEnd = tok.currentEndPos();
         }
-    }
-    else if expr is SimpleConstExpr {
-        actualEnd = tok.previousEndPos();
+        else {
+            actualEnd = tok.previousEndPos();
+        }
     }
     else {
         actualEnd = tok.currentEndPos();
@@ -280,6 +285,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         newExpr = matchingChild;
     }
     test:assertEquals(expr.endPos, actualEnd);
+    test:assertEquals(expr.toString(), newExpr.toString());
     test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
     test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
     test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.endPos), "end position is a white space");

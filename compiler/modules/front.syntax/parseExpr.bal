@@ -258,12 +258,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
             check tok.advance();
             return finishFunctionCallExpr(tok, prefix, varName, pos, startPos);
         }
-        if prefix != () {
-            endPos = tok.previousEndPos();
-        }
-        else {
-            endPos = tok.currentEndPos();
-        }
+        endPos = tok.previousEndPos();
         return { startPos, endPos, prefix, varName };
     }
     else if t is [DECIMAL_NUMBER, string] {
@@ -325,11 +320,10 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
     Token? t = tok.current();
     Position pos = tok.currentStartPos();
     if t == "[" {
-        Position accessStartPos = pos;
         check tok.advance();
         Expr index = check parseInnerExpr(tok);
         Position accessEndPos = check tok.expectEnd("]");
-        MemberAccessExpr accessExpr = { startPos: accessStartPos, endPos: accessEndPos, container: expr, index, pos };
+        MemberAccessExpr accessExpr = { startPos, endPos: accessEndPos, container: expr, index, pos };
         return finishPrimaryExpr(tok, accessExpr, startPos);
     }
     else if t == "." {
