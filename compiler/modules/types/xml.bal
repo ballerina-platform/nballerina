@@ -139,17 +139,17 @@ function xmlFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retur
 }
 
 function hasIntersectionAll(int bits, Conjunction? c) returns boolean {
-    if c != null {
+    if c != () {
         if (bits & ~<int>c.atom) == 0 {
             return true;
-        }
+        }   
         return hasIntersectionAll(bits, c.next);
     }
     return false;
 }
 
 function allBits(Conjunction? u) returns int {
-    if u != null {
+    if u != () {
         return <int>u.atom | allBits(u.next);
     }
     return 0;
