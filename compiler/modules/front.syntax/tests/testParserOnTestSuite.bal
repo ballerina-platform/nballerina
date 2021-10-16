@@ -154,10 +154,10 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
         }
     }
     else if stmt is ReturnStmt {
-        Expr returnExpr = stmt.returnExpr;
-        if !(returnExpr is ConstValueExpr && returnExpr.value == ()) {
+        Expr? returnExpr = stmt.returnExpr;
+        if returnExpr != () {
             // If above is true it is an empty expression that can't be parsed (ex return;)
-            check validateExpressionPos(stmt.returnExpr, tok, stmt.startPos, stmt.endPos);
+            check validateExpressionPos(returnExpr, tok, stmt.startPos, stmt.endPos);
         }
     }
     else if stmt is PanicStmt {

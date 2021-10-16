@@ -276,11 +276,11 @@ function finishVarDeclStmt(Tokenizer tok, TypeDesc td, Position startPos, boolea
 }
 
 function parseReturnStmt(Tokenizer tok, Position startPos) returns ReturnStmt|err:Syntax {
-    Expr returnExpr;
+    Expr? returnExpr;
     Position endPos;
     if tok.current() == ";" {
         endPos = tok.currentEndPos();
-        returnExpr = { startPos: tok.currentStartPos(), endPos, value: () }; // ConstValueExpr
+        returnExpr = ();
         check tok.advance();
     }
     else {

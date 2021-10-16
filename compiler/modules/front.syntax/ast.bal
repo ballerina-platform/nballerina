@@ -82,7 +82,7 @@ public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
 
 public type ReturnStmt record {|
     *PositionFields;
-    Expr returnExpr;
+    Expr? returnExpr;
 |};
 
 public type PanicStmt record {|

@@ -109,11 +109,11 @@ function stmtToWords(Word[] w, Stmt stmt) {
         w.push("=");
         exprToWords(w, stmt.initExpr);
         w.push(";");
-    } 
+    }
     else if stmt is ReturnStmt {
         w.push("return");
-        Expr retExpr = stmt.returnExpr;
-        if !(retExpr is ConstValueExpr) || retExpr.value != () {
+        Expr? retExpr = stmt.returnExpr;
+        if retExpr != () {
             exprToWords(w, retExpr);
         }
         w.push(";");

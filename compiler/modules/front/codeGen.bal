@@ -749,7 +749,17 @@ function unnarrowBinding(Binding binding) returns Binding {
 
 function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:ReturnStmt stmt) returns CodeGenError|StmtEffect {
     var { returnExpr } = stmt;
-    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, returnExpr, cx.returnType));
+    bir:BasicBlock nextBlock;
+    bir:Operand operand;
+    if returnExpr is s:Expr {
+        var codeGenExpr = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, returnExpr, cx.returnType));
+        operand = codeGenExpr.result;
+        nextBlock = codeGenExpr.block;
+    }
+    else {
+        operand = ();
+        nextBlock = startBlock;
+    }
     bir:RetInsn insn = { operand };
     nextBlock.insns.push(insn);
     return { block: () };
