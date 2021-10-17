@@ -918,7 +918,7 @@ function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock
         expr = { startPos, endPos, arithmeticOp: op, left: lValue, right: rexpr, pos: pos };
     }
     else {
-        expr = { startPos, endPos, bitwiseOp: <s:BinaryBitwiseOp> op, left: lValue, right: rexpr };
+        expr = { startPos, endPos, bitwiseOp: op, left: lValue, right: rexpr };
     }
     return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
 }
