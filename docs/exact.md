@@ -8,15 +8,17 @@ Exactness tracking maintains a bit in tagged pointers of these uniform types, ca
 
 This enables two important optimizations.
 
-First, when a a member of a structure s is set to a value v, and the tagged pointer for s is exact, then it is not necessary to check that the v has the type required by the inherent type. The check performed at compile-time will be sufficient to guarantee this.
+First, when a member of a structure s is set to a value v, and the tagged pointer for s is exact, it is not necessary to check that the v has the type required by the inherent type. The check performed at compile-time will be sufficient to guarantee this.
 
-Second, it allows us to optimize the case when we have multiple representations of a uniform type, with the representation chosen based on the inherent type. We can optimize by having fast and slow execution paths: the fast execution path is applied when the exact bit is set and can be optimized knowing what representation is used; the slow execution path is used otherwise and would typically use a function pointer in the structure's descriptor. For example, suppose we want to have three different representations for lists:
+Second, it allows us to optimize the case when we have multiple representations of a uniform type, with the representation chosen based on the inherent type. We can optimize by having fast and slow execution paths: the fast execution path is applied when the exact bit is set and can be optimized knowing what representation is being used; the slow execution path is used otherwise and would typically use a function pointer in the structure's descriptor. For example, suppose we want to have three different representations for lists:
 
 1. as an array of i8, used when the inherent type is a subtype of byte[]
 2. as an array of i64, used when the inherent type is a subtype of int[] but not of byte[]
 3. as an array of tagged pointers
 
-Then suppose we have an expression `v[i]` where the type of `v` is `int[]`.  We can compile this into code that checks the exact bit, and if it is set, performs the access knowing that representation 2 is being used, and otherwise uses a `get` function pointer accessed via the list's descriptor. When there are only 3 representations, this could be done easily without exact tracking. But with exact tracking we can efficiently have many optimized representations, for example a representation for every tuple type (and every record type): if we have a type `[int,int]` we can represent it as an LLVM `{i64*, i64, i64}`, where the initial `i64*` points to a list descriptor. 
+Then suppose we have an expression `v[i]` where the static type of `v` is `int[]`.  We can compile this into code that checks the exact bit, and if it is set, performs the access knowing that representation 2 is being used, and otherwise uses a `get` function pointer accessed via the list's descriptor. When there are only 3 representations, this could be done easily without exact tracking. But with exact tracking we can efficiently have many optimized representations, for example a representation for every tuple type: if we have a type `[int,int]` we can represent it as an LLVM `{i64*, i64, i64}`, where the initial `i64*` points to a list descriptor. This is particularly useful for records: we can use a representation similar to what would be used in a language like C++.
+
+## Implementation
 
 We define a type S to be _equivalent within_ X to type T, if T & X is equivalent to S & X.  We write this S =<sub>X</sub> T. If v is a mutable structure, then we write I(v) to mean the inherent type of v, and U(v) to mean the uniform type of V.
 
