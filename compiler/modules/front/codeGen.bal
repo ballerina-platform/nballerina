@@ -752,9 +752,7 @@ function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     bir:BasicBlock nextBlock;
     bir:Operand operand;
     if returnExpr is s:Expr {
-        var codeGenExpr = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, returnExpr, cx.returnType));
-        operand = codeGenExpr.result;
-        nextBlock = codeGenExpr.block;
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, returnExpr, cx.returnType));
     }
     else {
         operand = ();
