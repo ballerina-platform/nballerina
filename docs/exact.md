@@ -2,9 +2,9 @@
 
 This is issue [#204](https://github.com/ballerina-platform/nballerina/issues/204).
 
-Exactness tracking is an optimization that applies to tagged pointers with a uniform type of read-write list of read-write mapping, which we will call the _potentially exact_ uniform types.
+Exactness tracking is an optimization that applies to tagged pointers with a uniform type of read-write list or read-write mapping, which we will call the _potentially exact_ uniform types.
 
-Exactness tracking maintains a bit in these tagged pointers, called the _exact bit_. (This is the bit #2, starting with 0 as the least significant.) We say that a tagged pointer is exact if its exact bit is set. The goal of exactness tracking is to guarantee that whenever a get or set operation is performed on an exact tagged pointer, the compile-time type is equal to the inherent type. The compile-time type is the type of the register in the instruction in the intermediate representation (BIR).
+Exactness tracking maintains a bit in tagged pointers of these uniform types, called the _exact bit_. (This is the bit #2, starting with 0 as the least significant.) We say that a tagged pointer is exact if its exact bit is set. The goal of exactness tracking is to guarantee that whenever a get or set operation is performed on an exact tagged pointer, the compile-time type is equal to the inherent type. The compile-time type is the type of the register in the instruction in the intermediate representation (BIR).
 
 This enables two important optimizations.
 
@@ -16,11 +16,11 @@ Second, it allows us to optimize the case when we have multiple representations 
 2. as an array of i64, used when the inherent type is a subtype of int[] but not of byte[]
 3. as an array of tagged pointers
 
-Then suppose we have an expression `v[i]` where the type of `v` is `int[]`.  We can compile this into code that checks the exact bit, and if it is set, performs the access assuming that representation 2 is in used, and otherwise uses a `get` function pointer accessed via the list's descriptors. When there are only 3 representations, this could be done easily without exact tracking. But with exact tracking we can efficiently have a many optimized representations, for example a representation for every tuple type: if we have a type `[int,int]` we can represent it as an LLVM `{i64*, i64, i64}`, where the initial `i64*` points to a list descriptor. 
+Then suppose we have an expression `v[i]` where the type of `v` is `int[]`.  We can compile this into code that checks the exact bit, and if it is set, performs the access knowing that representation 2 is being used, and otherwise uses a `get` function pointer accessed via the list's descriptor. When there are only 3 representations, this could be done easily without exact tracking. But with exact tracking we can efficiently have many optimized representations, for example a representation for every tuple type (and every record type): if we have a type `[int,int]` we can represent it as an LLVM `{i64*, i64, i64}`, where the initial `i64*` points to a list descriptor. 
 
-A type S is equivalent within X to type T, if T & X is equivalent to S & X.  We write this S =<sub>X</sub> T. If v is a mutable structure, then we write I(v) to mean the inherent type of v, and U(v) to mean the uniform type of V.
+We define a type S to be _equivalent within_ X to type T, if T & X is equivalent to S & X.  We write this S =<sub>X</sub> T. If v is a mutable structure, then we write I(v) to mean the inherent type of v, and U(v) to mean the uniform type of V.
 
-Exactness tracking maintains the following invariants
+Exactness tracking maintains the following invariants:
 
 - when a BIR register with type T contains an exact tagged pointer referring to a value v, then T =<sub>U(v)</sub> I(v)
 - when a structure with inherent type S has a member with key k that is an exact tagged pointer referring to a value v, then the type S[k] =<sub>U(v)</sub> I(v), where S[k] means the type that S requires for a member with key k
@@ -29,7 +29,7 @@ Exactness tracking works by
 
 - setting the exact bit when the structure is created
 - clearing the exact bit whenever a BIR instruction might cause the invariants not to hold;
-- when a type test is performed, setting the exact bit if consistent with the invariants
+- when a type test is performed, setting the exact bit if the narrowed type is now exact
 
 Most cases where the exact bit needs clearing involve a type widening and are straightforward.  For example, if an assignment instruction has a source type of `byte[]` and a result type of `int[]`, then it needs to clear the exact bit.
 
