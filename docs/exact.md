@@ -49,7 +49,7 @@ or a list/mapping set instruction
 r1[r2] = r3
 ```
 
-Clearing the exact bit here happens for the get before storing the tagged pointer in r3, and for set before the value of r3 is stored.
+Clearing the exact bit here happens for the get before storing the tagged pointer in r3, and for the set before the value of r3 is stored.
 For both get and set, there are two cases when the exact bit needs to be cleared:
 
 - if the tagged pointer for r1 is not exact, and
@@ -59,7 +59,7 @@ When S is a structure type and K is a key type for that structure type, define `
 
 Let E be the union of all the potentially exact uniform types. A key type K is an _exact key type_ for a structure type S iff
 
-- S & E is an atomic type A (this is ignoring the immutable uniform types), and
+- S & E is an atomic type A (note the effect of this is ignoring the readonly uniform types), and
 - for every value k in K, if A allows k as a key, then A[k] =<sub>E</sub> A[K] and
 - (S & readonly)[K] is a subtype of A[K]
 
@@ -112,6 +112,8 @@ But U3 is a subtype of E, which implies that
 (8) C3 =<sub>U3</sub> R3
 
 as required.
+
+TBD Set case: I think it's very similar, but need to work it through.
 
 ## Readonly
 
