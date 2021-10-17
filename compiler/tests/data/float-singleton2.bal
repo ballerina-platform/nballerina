@@ -9,7 +9,7 @@
 // Zero<:Float
 // Zero<:NegativeZero
 
-// JBUG this is highlighted as an error
+// JBUG #28334 this is highlighted as an error
 const INFINITY = 1.0/0.0;
 const NEGATIVE_INFINITY = -1.0/0.0;
 const NAN = 0f/0f;

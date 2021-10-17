@@ -13,23 +13,18 @@ function testSubtype(string filename, string[] lines, string[] expected) returns
 
 function subtypeCaseProvider() returns map<SubtypeTestCase>|error {
     map<SubtypeTestCase> tests = {};
-    var testList =
-        from var entry in check file:readDir("tests/data")
+
+    check from var entry in check file:readDir("tests/data")
         let string path = entry.absPath
         let string base = check file:basename(path)
         where path.endsWith(".bal")
         let SubtypeTestCase|error res = readTestCase(path)
         // skip files with no subtype lines on them
         where res is SubtypeTestCase && res[1].length() > 0
-        select [base, res];
-        // JBUG #31679 should use do
-        //  do {
-        //   tests[base] = res;
-        //  };
+        do {
+            tests[base] = res;
+        }; // JBUG #33227 semicolon should not be needed
 
-    foreach var t in testList {
-        tests[t[0]] = t[1];
-    }
     return tests;
 }
 
