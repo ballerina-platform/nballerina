@@ -78,8 +78,7 @@ public type CompoundAssignStmt record {|
 |};
 
 // L-value expression
-// XXX Add FieldAccessLExpr when we can handle it in codeGen
-public type LExpr VarRefExpr|MemberAccessLExpr;
+public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
 
 public type ReturnStmt record {|
     *PositionFields;
@@ -265,13 +264,13 @@ public type MemberAccessLExpr record {|
 |};
 
 public type FieldAccessExpr record {|
-    Expr mapping;
+    Expr container;
     string fieldName;
     Position pos;
 |};
 
 public type FieldAccessLExpr record {|
-    VarRefExpr mapping;
+    VarRefExpr container;
     string fieldName;
     Position pos;
 |};

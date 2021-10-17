@@ -241,6 +241,10 @@ function stmtSourceFragments() returns SingleStringParserTestCase[] {
          ["V", "stmt", "error e = error(\"\");", "error e = error(\"\");"],
          // statement method call
          ["V", "stmt", "error(\"\").message();", "error(\"\").message();"], // not semantically valid
+         // statement field access lvalue
+         ["V", "stmt", "a.b = c;", "a.b = c;"],
+         ["V", "stmt", "a.b += c;", "a.b += c;"],
+         ["E", "stmt", "a.1 = b;", ""],
          // statement assign
          ["E", "stmt", "a = b = d;", ""],
          ["V", "stmt", "a = 0;", "a = 0;"],

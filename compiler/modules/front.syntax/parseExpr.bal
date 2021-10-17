@@ -302,7 +302,7 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr) returns Expr|err:Syntax {
             return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, pos));
         }
         else {
-            FieldAccessExpr fieldAccessExpr = { mapping: expr, fieldName: name, pos };
+            FieldAccessExpr fieldAccessExpr = { container: expr, fieldName: name, pos };
             return finishPrimaryExpr(tok, fieldAccessExpr);
         }
     }

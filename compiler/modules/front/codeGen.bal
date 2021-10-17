@@ -825,7 +825,7 @@ function codeGenAssign(CodeGenContext cx, Environment env, bir:BasicBlock block,
     return nextBlock;
 }
 
-function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
+function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr|s:FieldAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
     bir:Register reg = (check lookupVarRefBinding(cx, lValue.container.varName, env)).reg;
     t:UniformTypeBitSet indexType;
     t:SemType memberType;
@@ -840,18 +840,22 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
     else {
         return cx.semanticErr("member access can only be applied to mapping or list", pos=lValue.pos);
     }
-    s:Expr foldedIndexExpr = check cx.foldExpr(env, lValue.index, indexType);
     s:Expr foldedExpr = check cx.foldExpr(env, expr, memberType);
     bir:Operand operand;
     if indexType == t:INT {
-        var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, foldedIndexExpr);
-        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
-        bir:ListSetInsn insn = { list: reg, index: index, operand, position: lValue.pos };
-        nextBlock.insns.push(insn);
-        return { block: nextBlock };
+        if lValue is s:FieldAccessLExpr {
+            return cx.semanticErr("can only apply field access in lvalue to mapping");
+        }
+        else {
+            var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, lValue.index, indexType));
+            { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
+            bir:ListSetInsn insn = { list: reg, index: index, operand, position: lValue.pos };
+            nextBlock.insns.push(insn);
+            return { block: nextBlock };
+        }
     }
     else {
-        var { result: index, block: nextBlock } = check codeGenExprForString(cx, startBlock, env, foldedIndexExpr);
+        var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, startBlock, env, lValue, reg.semType);
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
         bir:MappingSetInsn insn =  { operands: [ reg, index, operand], position: lValue.pos };
         nextBlock.insns.push(insn);
@@ -869,7 +873,12 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
         var { result: container, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, lValue.container, ()));
         if container is bir:Register {
             if t:isSubtypeSimple(container.semType, t:LIST) {
-                return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, pos);
+                if lValue is s:FieldAccessLExpr {
+                    return cx.semanticErr("can only apply field access in lvalue to mapping", pos=pos);
+                }
+                else {
+                    return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, pos);
+                }
             }
             else if t:isSubtypeSimple(container.semType, t:MAPPING) {
                 return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, pos);
@@ -906,8 +915,8 @@ function codeGenCompoundAssignToListMember(CodeGenContext cx, bir:BasicBlock bb,
 }
 
 function codeGenCompoundAssignToMappingMember(CodeGenContext cx, bir:BasicBlock bb, Environment env,
-                                              s:MemberAccessLExpr lValue, bir:Register mapping, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
-    var { result: k, block: block1 } = check codeGenExprForString(cx, bb, env, check cx.foldExpr(env, lValue.index, t:STRING));
+                                              s:MemberAccessLExpr|s:FieldAccessLExpr lValue, bir:Register mapping, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
+    var { result: k, block: block1 } = check codeGenLExprMappingKey(cx, bb, env, lValue, mapping.semType);
     var { result: member, block: block2 } = check codeGenMappingGet(cx, block1, mapping, "[", k, pos);
     var { result, block } = check codeGenCompoundableBinaryExpr(cx, block2, env, op, member, rexpr, pos);
     bir:MappingSetInsn setInsn = { operands:[ mapping, k, result], position: lValue.pos };
@@ -1109,8 +1118,8 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
         }
         // Field access
-        var { mapping, fieldName, pos } => {
-            var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, mapping, ()));
+        var { container, fieldName, pos } => {
+            var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
             if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
                 return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
             }
@@ -1158,6 +1167,19 @@ function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register
     bir:MappingGetInsn insn = { result, operands: [mapping, k] };
     block.insns.push(insn);
     return { result, block };
+}
+
+function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environment env, s:MemberAccessLExpr|s:FieldAccessLExpr mappingLValue, t:SemType mappingType) returns CodeGenError|StringExprEffect {
+    if mappingLValue is s:FieldAccessLExpr {
+        string fieldName = mappingLValue.fieldName;
+        if !t:mappingMemberRequired(cx.mod.tc, mappingType, fieldName) {
+            return cx.semanticErr(`${fieldName} must be a required key`, pos=mappingLValue.pos);
+        }
+        return { result: fieldName, block };
+    }
+    else {
+        return codeGenExprForString(cx, block, env, check cx.foldExpr(env, mappingLValue.index, t:STRING));
+    }
 }
 
 function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, bir:Operand lhs, bir:Operand rhs, bir:Position pos) returns CodeGenError|ExprEffect {
