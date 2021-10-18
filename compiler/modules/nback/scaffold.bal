@@ -333,8 +333,7 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
     if isSmallString(nCodePoints, bytes, nBytes) {
         int encoded = 0;
         foreach int i in 0 ..< 7 {
-            // JBUG cast needed #31867
-            encoded |= <int>(i < nBytes ? bytes[i] : 0xFF) << i*8;
+            encoded |= (i < nBytes ? bytes[i] : 0xFF) << i*8;
         }
         encoded |= FLAG_IMMEDIATE|TAG_STRING;
         return context.constGetElementPtr(llvm:constNull(LLVM_TAGGED_PTR), [llvm:constInt(LLVM_INT, encoded)]);
@@ -400,8 +399,6 @@ final TaggedRepr REPR_ERROR = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, s
 
 final TaggedRepr REPR_TOP = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:TOP };
 final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ANY };
-// JBUG this goes wrong when you use REPR_VOID as a type as in buildRet
-// const int REPR_VOID = REPR_TAGGED + 1;
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, llvm: LLVM_VOID };
 
 final readonly & record {|
