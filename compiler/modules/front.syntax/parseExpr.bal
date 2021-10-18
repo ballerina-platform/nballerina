@@ -32,7 +32,7 @@ function parseBitwiseOrExpr(Tokenizer tok) returns Expr|err:Syntax {
         if t == "|" {
             check tok.advance();
             Expr right = check parseBitwiseXorExpr(tok);
-            Position endPos = tok.currentEndPos();
+            Position endPos = tok.previousEndPos();
             BinaryBitwiseExpr bin = { startPos, endPos,  bitwiseOp: t, left: expr, right };
             expr = bin;
         }
@@ -51,7 +51,7 @@ function parseBitwiseXorExpr(Tokenizer tok) returns Expr|err:Syntax {
         if t == "^" {
             check tok.advance();
             Expr right = check parseBitwiseAndExpr(tok);
-            Position endPos = tok.currentEndPos();
+            Position endPos = tok.previousEndPos();
             BinaryBitwiseExpr bin = { startPos, endPos, bitwiseOp: t, left: expr, right };
             expr = bin;
         }
@@ -70,7 +70,7 @@ function parseBitwiseAndExpr(Tokenizer tok) returns Expr|err:Syntax {
         if t == "&" {
             check tok.advance();
             Expr right = check parseEqualityExpr(tok);
-            Position endPos = tok.currentEndPos();
+            Position endPos = tok.previousEndPos();
             BinaryBitwiseExpr bin = { startPos, endPos, bitwiseOp: t, left: expr, right };
             expr = bin;
         }
@@ -89,7 +89,7 @@ function parseEqualityExpr(Tokenizer tok)  returns Expr|err:Syntax {
         if t is BinaryEqualityOp {
             check tok.advance();
             Expr right = check parseRelationalExpr(tok);
-            Position endPos = tok.currentEndPos();
+            Position endPos = tok.previousEndPos();
             BinaryEqualityExpr bin = { startPos, endPos, equalityOp: t, left: expr, right };
             expr = bin;
         }
@@ -107,7 +107,7 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
     if t is BinaryRelationalOp {
         check tok.advance();
         Expr right = check parseShiftExpr(tok);
-        Position endPos = tok.currentEndPos();
+        Position endPos = tok.previousEndPos();
         BinaryRelationalExpr bin = { startPos, endPos, relationalOp: t, left: expr, right };
         return bin;
     }
@@ -141,7 +141,7 @@ function parseRangeExpr(Tokenizer tok) returns RangeExpr|err:Syntax {
     Expr lower = check parseAdditiveExpr(tok);
     check tok.expect("..<");
     Expr upper = check parseAdditiveExpr(tok);
-    Position endPos = tok.currentEndPos();
+    Position endPos = tok.previousEndPos();
     return { startPos, endPos, lower, upper };
 }
 
@@ -153,7 +153,7 @@ function parseShiftExpr(Tokenizer tok) returns Expr|err:Syntax {
         if t is ("<<"|">>>"|">>") {
             check tok.advance();
             Expr right = check parseAdditiveExpr(tok);
-            Position endPos = tok.currentEndPos();
+            Position endPos = tok.previousEndPos();
             BinaryBitwiseExpr shift = { startPos, endPos, bitwiseOp: t, left: expr, right };
             expr = shift;
         }
@@ -173,7 +173,7 @@ function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
             Position pos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseMultiplicativeExpr(tok);
-            Position endPos = tok.currentEndPos();
+            Position endPos = tok.previousEndPos();
             BinaryArithmeticExpr bin = { startPos, endPos, arithmeticOp: t, left: expr, right, pos };
             expr = bin;
         }
@@ -193,7 +193,7 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
             Position pos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseUnaryExpr(tok);
-            Position endPos = tok.currentEndPos();
+            Position endPos = tok.previousEndPos();
             BinaryArithmeticExpr bin = { startPos, endPos, arithmeticOp: t, left: expr, right, pos };
             expr = bin;
         }
@@ -211,14 +211,14 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         Position pos = tok.currentStartPos();
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
-        Position endPos = tok.currentEndPos();
+        Position endPos = tok.previousEndPos();
         UnaryExpr expr = { startPos, endPos, op: t, operand, pos };
         return expr;
     }
     else if t is CheckingKeyword {
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
-        Position endPos = tok.currentEndPos();
+        Position endPos = tok.previousEndPos();
         CheckingExpr expr = { startPos, endPos, checkingKeyword: t, operand };
         return expr;
     }
@@ -236,7 +236,7 @@ function parseTypeCastExpr(Tokenizer tok, Position startPos) returns Expr|err:Sy
     check tok.expect(">");
     tok.setMode(MODE_NORMAL);
     Expr operand = check parseUnaryExpr(tok);
-    Position endPos = tok.currentEndPos();
+    Position endPos = tok.previousEndPos();
     TypeCastExpr expr = { startPos, endPos, pos, td, operand };
     return expr;
 }

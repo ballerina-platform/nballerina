@@ -258,7 +258,11 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
               |PrimaryExpr
               |TypeTestExpr
               |MappingConstructorExpr
-              |SimpleConstExpr {
+              |SimpleConstExpr
+              |BinaryExpr
+              |UnaryExpr
+              |CheckingExpr
+              |TypeCastExpr {
         if expr is SimpleConstExpr && usedSimpleConstExprParser {
             if expr is SimpleConstNegateExpr {
                 actualEnd = tok.previousEndPos();
@@ -274,13 +278,15 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     else {
         actualEnd = tok.currentEndPos();
     }
-    if (expr.endPos != actualEnd) && (expr is RecursiveBinaryExpr && newExpr is RecursiveBinaryExpr) {
+
+    if (expr.endPos != newExpr.endPos) && (expr is RecursiveBinaryExpr && newExpr is RecursiveBinaryExpr) {
         // These are left recursive expression that can't be separately parsed
         Expr matchingChild = findMatchingChildExpr(expr, newExpr);
         // We are validating tokenizer ends in the correct position only for the parent node
         actualEnd = matchingChild.endPos;
         newExpr = matchingChild;
     }
+
     test:assertEquals(expr.endPos, actualEnd);
     if newExpr is MethodCallExpr|FunctionCallExpr {
         // pos depends on whether original was parsed as a stmt or expr but for testing we always treat it as expr
