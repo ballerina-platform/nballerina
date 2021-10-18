@@ -20,6 +20,14 @@ final RuntimeFunction mappingSetFunction = {
     attrs: []
 };
 
+final RuntimeFunction mappingIndexedSetFunction = {
+    name: "mapping_indexed_set",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_INT, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
 final RuntimeFunction mappingGetFunction = {
     name: "mapping_get",
     ty: {
@@ -170,12 +178,14 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
 }
 
 function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGetInsn insn) returns BuildError? {
-    int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), insn.operands[0].semType, insn.operands[1]);
+    bir:Register mappingReg = insn.operands[0];
+    bir:StringOperand keyOperand = insn.operands[1];
+    int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
     RuntimeFunction rf;
     llvm:Value k;
     if fieldIndex is () {
         rf = mappingGetFunction;
-        k = check buildString(builder, scaffold, insn.operands[1]);
+        k = check buildString(builder, scaffold, keyOperand);
     }
     else {
         rf = mappingIndexedGetFunction;
@@ -183,8 +193,33 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
     }
     // SUBSET this can widen leading to inexactness when mapping member types are not bitsets
     llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf),
-                                                [builder.load(scaffold.address(insn.operands[0])), k]);
+                                                [builder.load(scaffold.address(mappingReg)), k]);
     buildStoreTagged(builder, scaffold, value, insn.result);
+}
+
+function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
+    bir:Register mappingReg = insn.operands[0];
+    bir:StringOperand keyOperand = insn.operands[1];
+    int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
+    RuntimeFunction rf;
+    llvm:Value k;
+    if fieldIndex is () {
+        rf = mappingSetFunction;
+        k = check buildString(builder, scaffold, keyOperand);
+    }
+    else {
+        rf = mappingIndexedSetFunction;
+        k = llvm:constInt(LLVM_INT, fieldIndex);
+    }
+    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingReg.semType);
+    // SUBSET different field types can lead to inexact projection
+    llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(rf),
+                                   [
+                                       builder.load(scaffold.address(mappingReg)),
+                                       k,
+                                       check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)
+                                   ]);
+    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
 }
 
 function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {
@@ -195,18 +230,6 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
         }
     }
     return ();
-}
-
-function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
-    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), insn.operands[0].semType);
-    // SUBSET different field types can lead to inexact projection
-    llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(mappingSetFunction),
-                                   [
-                                       builder.load(scaffold.address(insn.operands[0])),
-                                       check buildString(builder, scaffold, insn.operands[1]),
-                                       check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)
-                                   ]);
-    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
 }
 
 function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, bir:Position pos) {
