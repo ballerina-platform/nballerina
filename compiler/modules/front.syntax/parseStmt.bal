@@ -27,7 +27,9 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         }
         "_" => {
             check tok.advance();
-            return finishAssignStmt(tok, WILDCARD, startPos);
+            if tok.current() == "=" {
+                return finishAssignStmt(tok, WILDCARD, startPos);
+            }
         }
         "return" => {
             check tok.advance();
