@@ -99,7 +99,14 @@ function stmtToWords(Word[] w, Stmt stmt) {
             w.push("final");
         }
         typeDescToWords(w, stmt.td);
-        w.push(stmt.varName, "=");
+        string? varName = stmt.varName;
+        if varName is WILDCARD {
+            w.push("_");
+        }
+        else {
+            w.push(varName);
+        }
+        w.push("=");
         exprToWords(w, stmt.initExpr);
         w.push(";");
     } 
@@ -119,7 +126,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
     else if stmt is AssignStmt {
         LExpr|WILDCARD lValue = stmt.lValue;
         if lValue is WILDCARD {
-            w.push(WILDCARD);
+            w.push("_");
         }
         else {
             lExprToWords(w, lValue);
