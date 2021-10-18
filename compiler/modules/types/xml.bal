@@ -28,8 +28,8 @@ final XmlSubtypeData xmlRwTop = { primitives: XML_PRIMITIVE_RW_MASK, sequence: b
 
 function xmlSingleton(int primitives) returns SemType {
     return createXmlSemtype(
-        createXmlSubtype(true, primitives & XML_PRIMITIVE_RO_MASK, false), 
-        createXmlSubtype(false, primitives & XML_PRIMITIVE_RW_MASK, false)
+        createXmlSubtype(true, primitives, false), 
+        createXmlSubtype(false, primitives, false)
     );
 }
 
@@ -59,13 +59,12 @@ function makeSequence(boolean roPart, XmlSubtypeData d) returns XmlSubtypeData {
 }
 
 function createXmlSubtype(boolean isRo, int primitives, Bdd sequence) returns SubtypeData {
-    if sequence == true {
-        int mask = isRo ? XML_PRIMITIVE_RO_MASK : XML_PRIMITIVE_RW_MASK;
-        if (primitives & mask) == mask {
-            return true;
-        }
+    int mask = isRo ? XML_PRIMITIVE_RO_MASK : XML_PRIMITIVE_RW_MASK;
+    int p = primitives & mask;
+    if sequence == true && p == mask {
+        return true;
     }
-    return createXmlSubtypeOrEmpty(primitives, sequence);
+    return createXmlSubtypeOrEmpty(p, sequence);
 }
 
 function createXmlSubtypeOrEmpty(int primitives, Bdd sequence) returns SubtypeData {
