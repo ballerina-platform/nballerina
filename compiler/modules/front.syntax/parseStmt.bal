@@ -210,8 +210,7 @@ function finishCallStmt(Tokenizer tok, CallStmt expr, Position startPos) returns
     else {
         return parseError(tok, "member access expr not allowed as a statement");
     }
-    Position endPos = check tok.expectEnd(";");
-    stmt.endPos = endPos;
+    check tok.expect(";");
     return stmt;
 }
 

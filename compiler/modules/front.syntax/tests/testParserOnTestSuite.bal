@@ -95,7 +95,7 @@ function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns
 
 function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(stmt.startPos, MODE_NORMAL);
-    if stmt is MethodCallExpr {
+    if stmt is MethodCallExpr|FunctionCallExpr {
         return check validateExpressionPos(stmt, tok, parentStartPos, parentEndPos);
     }
     test:assertEquals(tok.currentStartPos(), stmt.startPos, "moved to wrong position");
@@ -186,7 +186,7 @@ function findMatchingChildExpr(RecursiveBinaryExpr expected, RecursiveBinaryExpr
     panic error("expected and actual expression are not same type");
 }
 
-type PrimaryExpr ConstValueExpr|VarRefExpr|FunctionCallExpr|MethodCallExpr|NumericLiteralExpr|ErrorConstructorExpr;
+type PrimaryExpr ConstValueExpr|VarRefExpr|FunctionCallExpr|MethodCallExpr|NumericLiteralExpr|ErrorConstructorExpr|FieldAccessExpr;
 
 function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(expr.startPos, MODE_NORMAL);
@@ -267,9 +267,6 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
                 actualEnd = tok.currentEndPos();
             }
         }
-        else if expr is MethodCallExpr {
-            actualEnd = tok.currentEndPos();
-        }
         else {
             actualEnd = tok.previousEndPos();
         }
@@ -285,6 +282,10 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         newExpr = matchingChild;
     }
     test:assertEquals(expr.endPos, actualEnd);
+    if newExpr is MethodCallExpr|FunctionCallExpr {
+        // pos depends on whether original was parsed as a stmt or expr but for testing we always treat it as expr
+        newExpr.pos = (<MethodCallExpr|FunctionCallExpr>expr).pos;
+    }
     test:assertEquals(expr.toString(), newExpr.toString());
     test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
     test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
