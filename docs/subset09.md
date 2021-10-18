@@ -24,7 +24,6 @@
 * Statements:
    * function/method call statement
    * local variable declaration with explicit type descriptor and initializer
-      * parentheses are not supported in the type descriptor; a type reference must be used instead
       * binding pattern is either an identifier or `_`
    * assignment
       * to variable `v = E;`
