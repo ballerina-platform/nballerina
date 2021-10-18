@@ -115,7 +115,7 @@ But U3 is a subtype of E, which implies that
 
 as required.
 
-TBD Set case: I think it's very similar, but need to work it through.
+TBD Set case: I think it's very similar, but need to work it through. Note that the exact bit will also be cleared if there is a widening from the static type of r3 to the static type of r1[r2].
 
 ## Readonly
 
