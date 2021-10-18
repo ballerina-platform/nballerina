@@ -1140,11 +1140,18 @@ type MappingAccessType "."|"[";
 
 // if accessType is ".", k must be a string
 function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, err:Position pos) returns CodeGenError|RegExprEffect {
-    t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, k is string ? k : ());
-    if !(k is string) || !t:mappingMemberRequired(cx.mod.tc, mapping.semType, k) {
-        if accessType == "." {
-            return cx.semanticErr(`${<string>k} must be a required key`, pos=pos);
+    string? kVal = k is string ? k : ();
+    boolean keyRequired = false;
+    if kVal != () {
+        if t:mappingMemberRequired(cx.mod.tc, mapping.semType, kVal) {
+            keyRequired = true;
         }
+        else if accessType == "." {
+            return cx.semanticErr(`field access to ${kVal} is invalid because field may not be present`, pos=pos);
+        }
+    }
+    t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, kVal);
+    if !keyRequired {
         memberType = t:union(memberType, t:NIL);
     }
     bir:Register result = cx.createRegister(memberType);
