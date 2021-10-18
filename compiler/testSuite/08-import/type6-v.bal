@@ -4,6 +4,7 @@ import root.mod.with.dots;
 
 public function main() {
     dots:BI x = false;
+    _ = x;
     int i = 4;
     io:println(i is float); // @output false
     io:println(true is dots:BI); // @output true

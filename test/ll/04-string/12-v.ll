@@ -18,6 +18,7 @@ define void @_B04rootmain() !dbg !5 {
   %7 = alloca i1
   %8 = alloca i8 addrspace(1)*
   %name3 = alloca i8 addrspace(1)*
+  %_ = alloca i8 addrspace(1)*
   %9 = alloca i1
   %10 = alloca i8 addrspace(1)*
   %11 = alloca i1
@@ -25,7 +26,7 @@ define void @_B04rootmain() !dbg !5 {
   %13 = alloca i8
   %14 = load i8*, i8** @_bal_stack_guard
   %15 = icmp ult i8* %13, %14
-  br i1 %15, label %50, label %16
+  br i1 %15, label %51, label %16
 16:
   store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [20 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)** %name
   %17 = load i8 addrspace(1)*, i8 addrspace(1)** %name, !dbg !8
@@ -64,28 +65,30 @@ define void @_B04rootmain() !dbg !5 {
   call void @_Bb02ioprintln(i8 addrspace(1)* %37), !dbg !13
   store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !13
   store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658), i8 addrspace(1)** %name3
-  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %name
-  %39 = icmp eq i8 addrspace(1)* %38, getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658)
-  store i1 %39, i1* %9
-  %40 = load i1, i1* %9, !dbg !14
-  %41 = zext i1 %40 to i64, !dbg !14
-  %42 = or i64 %41, 72057594037927936, !dbg !14
-  %43 = getelementptr i8, i8 addrspace(1)* null, i64 %42, !dbg !14
-  call void @_Bb02ioprintln(i8 addrspace(1)* %43), !dbg !14
+  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %name3
+  store i8 addrspace(1)* %38, i8 addrspace(1)** %_
+  %39 = load i8 addrspace(1)*, i8 addrspace(1)** %name
+  %40 = icmp eq i8 addrspace(1)* %39, getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658)
+  store i1 %40, i1* %9
+  %41 = load i1, i1* %9, !dbg !14
+  %42 = zext i1 %41 to i64, !dbg !14
+  %43 = or i64 %42, 72057594037927936, !dbg !14
+  %44 = getelementptr i8, i8 addrspace(1)* null, i64 %43, !dbg !14
+  call void @_Bb02ioprintln(i8 addrspace(1)* %44), !dbg !14
   store i8 addrspace(1)* null, i8 addrspace(1)** %10, !dbg !14
-  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %name
-  %45 = icmp ne i8 addrspace(1)* %44, getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658)
-  store i1 %45, i1* %11
-  %46 = load i1, i1* %11, !dbg !15
-  %47 = zext i1 %46 to i64, !dbg !15
-  %48 = or i64 %47, 72057594037927936, !dbg !15
-  %49 = getelementptr i8, i8 addrspace(1)* null, i64 %48, !dbg !15
-  call void @_Bb02ioprintln(i8 addrspace(1)* %49), !dbg !15
+  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %name
+  %46 = icmp ne i8 addrspace(1)* %45, getelementptr(i8, i8 addrspace(1)* null, i64 3098475939742179658)
+  store i1 %46, i1* %11
+  %47 = load i1, i1* %11, !dbg !15
+  %48 = zext i1 %47 to i64, !dbg !15
+  %49 = or i64 %48, 72057594037927936, !dbg !15
+  %50 = getelementptr i8, i8 addrspace(1)* null, i64 %49, !dbg !15
+  call void @_Bb02ioprintln(i8 addrspace(1)* %50), !dbg !15
   store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !15
   ret void
-50:
-  %51 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %51)
+51:
+  %52 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
+  call void @_bal_panic(i8 addrspace(1)* %52)
   unreachable
 }
 !llvm.module.flags = !{!0}
@@ -104,5 +107,5 @@ define void @_B04rootmain() !dbg !5 {
 !11 = !DILocation(line: 9, column: 4, scope: !5)
 !12 = !DILocation(line: 10, column: 4, scope: !5)
 !13 = !DILocation(line: 11, column: 4, scope: !5)
-!14 = !DILocation(line: 13, column: 4, scope: !5)
-!15 = !DILocation(line: 14, column: 4, scope: !5)
+!14 = !DILocation(line: 14, column: 4, scope: !5)
+!15 = !DILocation(line: 15, column: 4, scope: !5)

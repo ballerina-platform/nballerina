@@ -163,7 +163,7 @@ function buildPanic(llvm:Builder builder, Scaffold scaffold, bir:PanicInsn insn)
 }
 
 function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue err) {
-    _ = builder.call(buildRuntimeFunctionDecl(scaffold, panicFunction), [err]);
+    _ = builder.call(scaffold.getRuntimeFunctionDecl(panicFunction), [err]);
     builder.unreachable();
 }
 
@@ -179,8 +179,9 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     llvm:Value[] args = [];
     bir:FunctionSignature signature = funcRef.erasedSignature;
     t:SemType[] paramTypes = signature.paramTypes;
+    t:SemType[] instantiatedParamTypes = funcRef.signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), paramTypes[i]));
+        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]));
     }
 
     bir:Symbol funcSymbol = funcRef.symbol;
@@ -222,7 +223,7 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
     scaffold.setDebugLocation(builder, insn.position, "file");
-    llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, errorConstructFunction),
+    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(errorConstructFunction),
                                                 [
                                                     check buildString(builder, scaffold, insn.operand),
                                                     llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.position))
@@ -231,7 +232,7 @@ function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorC
 }
 
 function buildStringConcat(llvm:Builder builder, Scaffold scaffold, bir:StringConcatInsn insn) returns BuildError? {
-    llvm:Value value = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringConcatFunction),
+    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringConcatFunction),
                                                 [
                                                     check buildString(builder, scaffold, insn.operands[0]),
                                                     check buildString(builder, scaffold, insn.operands[1])

@@ -13,6 +13,7 @@
    * type definitions
 * Type descriptors:
    * predefined basic type name: `boolean`, `float`, `int`, `string`, `error`
+   * nil type `()`
    * `any` type
    * optional type: `T?` where T is one of the above types
    * union of the above types e.g. `int|string?`
@@ -83,26 +84,35 @@ const-defn = ["public"] "const" [builtin-type-name] identifier "=" const-expr ";
 
 type-defn = ["public"] "type" identifier type-desc ";"
 
-type-desc = union-type-desc | array-type-desc | map-type-desc | record-type-desc | type-reference 
+type-desc =
+  union-type-desc
+  | array-type-desc
+  | map-type-desc
+  | record-type-desc
+  | type-reference
 
+# corresponds to union of one or more complete basic types
 union-type-desc =
   optional-type-desc
   | union-type-desc "|" optional-type-desc
 
-optional-type-desc = builtin-type-name [ "?" ]
+optional-type-desc = basic-type-desc [ "?" ]
+
+basic-type-desc =
+   builtin-type-name
+   | nil-type-desc
+   | "(" union-type-desc ")"
 
 builtin-type-name = "any" | "boolean" | "int" | "float" | "string" | "error"
 
-array-type-desc = array-member-type-desc "[" "]"
+nil-type-desc = "(" ")"
 
-array-member-type-desc =
-  optional-type-desc
-  | "(" union-type-desc ")"
+array-type-desc = optional-type-desc "[" "]"
 
 map-type-desc = "map" "<" union-type-desc ">"
 
 record-type-desc = "record" "{|" field-desc* "|}"
-field-desc = type-desc identifier ";"
+field-desc = union-type-desc identifier ";"
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -123,12 +133,7 @@ statement =
   | panic-stmt
   | match-stmt
  
-local-var-decl-stmt = ["final"] inline-type-desc identifier "=" expression ";"
-
-# Same as type-desc except the parentheses are not allowed
-inline-type-desc = union-type-desc | inline-array-type-desc | map-type-desc | type-reference
-
-inline-array-type-desc = optional-type-desc "[" "]"
+local-var-decl-stmt = ["final"] type-desc identifier "=" expression ";"
 
 # reference to a type definition
 type-reference = identifier | qualified-identifier
@@ -145,8 +150,12 @@ assign-stmt = lvexpr "=" expression ";"
 compound-assign-stmt = lvexpr CompoundAssignmentOperator expression ";"
 
 lvexpr =
-   identifier
-   | identifier "[" expression "]"
+   variable-reference-lvexpr
+   | member-access-lvexpr 
+
+member-access-lvexpr = variable-reference-lvexpr "[" expression "]"
+
+variable-reference-lvexpr = variable-reference
 
 return-stmt = "return" [expression] ";"
 
@@ -248,6 +257,7 @@ primary-expr =
   literal
   | error-constructor-expr
   | member-access-expr
+  | field-access-expr
   | function-call-expr
   | method-call-expr
   | variable-reference-expr
@@ -273,6 +283,8 @@ field-name = string-literal | identifier
 
 member-access-expr = primary-expr "[" expression "]"
 
+field-access-expr = primary-expr "." identifier
+
 function-call-expr = function-reference arg-list
 
 method-call-expr = primary-expr "." identifier arg-list
@@ -285,7 +297,9 @@ qualified-identifier = module-prefix ":" identifier
 
 module-prefix = identifier
 
-variable-reference-expr = identifier | qualified-identifier # can refer to parameter, local variable or constant
+variable-reference-expr = variable-reference
+
+variable-reference = identifier | qualified-identifier # can refer to parameter, local variable or constant
 
 // tokens
 int-literal = (as in Ballerina language spec)
@@ -335,16 +349,18 @@ Two kinds of `import` are supported.
 
 ## Additions from subset 8
 
-* Record types
+* Closed record types
+* Nil type descriptor
+* Proper parsing of type descriptors in statements: all type descriptors that are allowed in a type definition are now allowed within statements
+* Filed access expression
 
 ## Implemented spec changes since 2021R1
 
 * [#752](https://github.com/ballerina-platform/ballerina-spec/issues/752) - `!is` operator
+* [#791](https://github.com/ballerina-platform/ballerina-spec/issues/791) - restrict characters in organization/module name in an import declaration
 * [#814](https://github.com/ballerina-platform/ballerina-spec/issues/814) - improved typing rules for `==` and `!=`
 * [#827](https://github.com/ballerina-platform/ballerina-spec/issues/827#issuecomment-895601520) - improved type narrowing for `match` statement
 * [#887](https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability
 * [#902](https://github.com/ballerina-platform/ballerina-spec/issues/902) - expression has a singleton type when its subexpressions have singleton type
 * [#904](https://github.com/ballerina-platform/ballerina-spec/issues/904) - restrict assignment to type-narrowed variables within loops
 * [#905](https://github.com/ballerina-platform/ballerina-spec/issues/905) - disallow trailing dot in floating-point literals
-
-

@@ -18,9 +18,9 @@ function linkageToInt(Linkage linkage) returns int {
 }
 
 public distinct class Function {
-    handle LLVMValueRef;
-    FunctionType fnType;
-    Context context;
+    final handle LLVMValueRef;
+    final FunctionType fnType;
+    final Context context;
     function init(handle llvmFunction, FunctionType fnType, Context context) {
         self.LLVMValueRef = llvmFunction;
         jLLVMSetFunctionCallConv(llvmFunction, 0);

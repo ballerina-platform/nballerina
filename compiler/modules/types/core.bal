@@ -905,13 +905,23 @@ function bddMappingAtomicType(Env env, Bdd bdd, MappingAtomicType top) returns M
 // for when T is a subtype of mapping, and K is either `string` or a singleton string.
 // This is what Castagna calls projection.
 // We will extend this to allow `key` to be a SemType, which will turn into a StringSubtype.
-public function mappingMemberType(Context cx, SemType t, string? key = ()) returns SemType {
+public function mappingMemberType(Context cx, SemType t, string? k = ()) returns SemType {
     if t is UniformTypeBitSet {
         return (t & MAPPING) != 0 ? TOP : NEVER;
     }
     else {
-        return union(bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), key, TOP),
-                     bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), key, TOP));
+        return union(bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), k, TOP),
+                     bddMappingMemberType(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), k, TOP));
+    }
+}
+
+public function mappingMemberRequired(Context cx, SemType t, string k) returns boolean {
+    if t is UniformTypeBitSet {
+        return false;
+    }
+    else {
+        return bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), k, false)
+               && bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), k, false);
     }
 }
 

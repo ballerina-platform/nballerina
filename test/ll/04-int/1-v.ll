@@ -1,8 +1,8 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
 declare {i64, i1} @_bal_float_to_int(double) nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
@@ -11,14 +11,14 @@ declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
   %two48 = alloca i64
   %1 = alloca i8 addrspace(1)*
-  %2 = alloca i64
   %two55 = alloca i64
+  %2 = alloca i64
   %3 = alloca i8 addrspace(1)*
-  %4 = alloca i64
   %two56 = alloca i64
+  %4 = alloca i64
   %5 = alloca i8 addrspace(1)*
-  %6 = alloca i64
   %two62 = alloca i64
+  %6 = alloca i64
   %7 = alloca i8 addrspace(1)*
   %8 = alloca i8 addrspace(1)*
   %9 = alloca i8

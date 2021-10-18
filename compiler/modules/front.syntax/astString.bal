@@ -194,8 +194,8 @@ function stmtToWords(Word[] w, Stmt stmt) {
         exprToWords(w, stmt.range.upper, true);
         blockToWords(w, stmt.body);
     }
-    else if stmt is BreakStmt || stmt is ContinueStmt {
-        w.push(stmt, ";");
+    else if stmt is BreakContinueStmt {
+        w.push(stmt.breakContinue, ";");
     }
     else if stmt is CheckingStmt {
         w.push(stmt.checkingKeyword);
@@ -427,6 +427,16 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         w.push(CLING, "[");
         exprToWords(w, expr.index, false);
         w.push("]");
+        if wrap {
+            w.push(")");
+        }
+    }
+    else if expr is FieldAccessExpr {
+        if wrap {
+            w.push("(");
+        }
+        exprToWords(w, expr.mapping, true);
+        w.push(".", expr.fieldName);
         if wrap {
             w.push(")");
         }

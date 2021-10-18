@@ -1,9 +1,6 @@
-// @productions list-type-descriptor any function-call-expr local-var-decl-stmt int-literal
+// @productions list-type-descriptor any local-var-decl-stmt int-literal
 public function main() {
     int n = 1;
     any[] x = n; // @error
-    ignore(x);
-}
-
-public function ignore(any x) {
+    _ = x;
 }

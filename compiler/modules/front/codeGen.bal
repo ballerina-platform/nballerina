@@ -14,6 +14,7 @@ type Binding record {|
     string name;
     bir:Register reg;
     boolean isFinal;
+    boolean used = false;
     Binding? prev;
     // When this binding represents a narrowing, this refers to the
     // original binding that was not narrowed.
@@ -322,11 +323,8 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
         else if stmt is s:ForeachStmt {
             effect = check codeGenForeachStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
-        else if stmt is s:BreakStmt {
-            effect = check codeGenBreakStmt(cx, <bir:BasicBlock>curBlock, env);
-        }
-        else if stmt is s:ContinueStmt {
-            effect = check codeGenContinueStmt(cx, <bir:BasicBlock>curBlock, env);
+        else if stmt is s:BreakContinueStmt {
+            effect = check codeGenBreakContinueStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
         }
         else if stmt is s:ReturnStmt {
             // JBUG #31327 cast
@@ -359,9 +357,22 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
             env.assignments.push(...effect.assignments);
         }
     }                
+    check unusedLocalVariables(cx, env, initialEnv.bindings);
     int[] assignments = [];
     addAssignments(assignments, env.assignments, startRegister);
     return { block: curBlock, assignments };
+}
+
+function unusedLocalVariables(CodeGenContext cx, Environment env, Binding? bindingLimit) returns CodeGenError? {
+    Binding? binding = env.bindings;
+    while binding !== bindingLimit {
+        // binding is non-nil
+        Binding tem = <Binding>binding;
+        if tem.unnarrowed == () && !tem.used {
+            return cx.semanticErr(`unused local variable ${tem.name}`);
+        }
+        binding = tem.prev;
+    }
 }
 
 function environmentCopy(Environment env) returns Environment {
@@ -472,19 +483,16 @@ function validLoopAssignments(CodeGenContext cx, int[] assignments) returns Code
     }
 }
 
-function codeGenBreakStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env) returns CodeGenError|StmtEffect {
-    bir:Label dest = check cx.onBreakLabel();
+function codeGenBreakContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
+    bir:Label dest = stmt.breakContinue == "break"? check cx.onBreakLabel() : check cx.onContinueLabel();
     bir:BranchInsn branch = { dest };
     startBlock.insns.push(branch);
-    cx.addOnBreakAssignments(env.assignments);
-    return { block: () };
-}
-
-function codeGenContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env) returns CodeGenError|StmtEffect {
-    bir:Label dest = check cx.onContinueLabel();
-    bir:BranchInsn branch = { dest };
-    startBlock.insns.push(branch);
-    cx.addOnContinueAssignments(env.assignments);
+    if stmt.breakContinue == "break" {
+        cx.addOnBreakAssignments(env.assignments);
+    }
+    else {
+        cx.addOnContinueAssignments(env.assignments);
+    }
     return { block: () };
 }
 
@@ -852,13 +860,22 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
 }
 
 function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CompoundAssignStmt stmt) returns CodeGenError|StmtEffect {
-    var { lValue, expr , op, pos } = stmt;
+    var { lValue, expr, op, pos } = stmt;
     s:Expr binExpr;
     if lValue is s:VarRefExpr {
         return codeGenCompoundAssignToVar(cx, startBlock, env, lValue, expr, op, pos);
     }
     else {
-        return codeGenCompoundAssignToMember(cx, startBlock, env, lValue, expr, op, pos);
+        var { result: container, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, lValue.container, ()));
+        if container is bir:Register {
+            if t:isSubtypeSimple(container.semType, t:LIST) {
+                return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, pos);
+            }
+            else if t:isSubtypeSimple(container.semType, t:MAPPING) {
+                return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, pos);
+            }
+        }
+        return cx.semanticErr("can only apply member access in lvalue to list or mapping", pos=pos);
     }
 }
 
@@ -873,34 +890,42 @@ function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock
     return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
 }
 
-function codeGenCompoundAssignToMember(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MemberAccessLExpr lValue, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
-    var { result: list, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, lValue.container, ()));
-    if !(list is bir:Register) || !(t:isSubtypeSimple(list.semType, t:LIST)) {
-        return cx.semanticErr("can only apply member access in lvale to list", pos=pos);
+function codeGenCompoundAssignToListMember(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MemberAccessLExpr lValue, bir:Register list, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
+    var { result: index, block: nextBlock } = check codeGenExprForInt(cx, bb, env, check cx.foldExpr(env, lValue.index, t:INT));
+    t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, index is int ? index : ());
+    if t:isEmpty(cx.mod.tc, memberType) {
+        return cx.semanticErr("type of member access is never");
     }
-    bir:Register listReg = <bir:Register> list;
-    var { result: index, block: block2 } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, lValue.index, t:INT));
-    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet> t:simpleArrayMemberType(cx.mod.tc, listReg.semType);
     bir:Register member = cx.createRegister(memberType);
-    bir:ListGetInsn insn = { result: member, list: listReg, operand: index, position: pos };
-    block2.insns.push(insn);
-    var { result: operand, block: block3 } = check codeGenExpr(cx, block2, env, check cx.foldExpr(env, rexpr, memberType));
-    bir:BasicBlock block;
-    bir:Operand result;
+    bir:ListGetInsn getInsn = { result: member, list, operand: index, position: pos };
+    nextBlock.insns.push(getInsn);
+    var { result, block } = check codeGenCompoundableBinaryExpr(cx, nextBlock, env, op, member, rexpr, pos);
+    bir:ListSetInsn setInsn = { list, index, operand: result, position: lValue.pos };
+    block.insns.push(setInsn);
+    return { block };
+}
+
+function codeGenCompoundAssignToMappingMember(CodeGenContext cx, bir:BasicBlock bb, Environment env,
+                                              s:MemberAccessLExpr lValue, bir:Register mapping, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
+    var { result: k, block: block1 } = check codeGenExprForString(cx, bb, env, check cx.foldExpr(env, lValue.index, t:STRING));
+    var { result: member, block: block2 } = check codeGenMappingGet(cx, block1, mapping, "[", k, pos);
+    var { result, block } = check codeGenCompoundableBinaryExpr(cx, block2, env, op, member, rexpr, pos);
+    bir:MappingSetInsn setInsn = { operands:[ mapping, k, result], position: lValue.pos };
+    block.insns.push(setInsn);
+    return { block };
+}
+
+function codeGenCompoundableBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, bir:Register member, s:Expr rexpr, err:Position pos) returns CodeGenError|ExprEffect {
+    t:SemType memberType = member.semType;
+    s:Expr folded = check cx.foldExpr(env, rexpr, memberType);
     if op is s:BinaryArithmeticOp {
-        { result, block } = check codeGenArithmeticBinaryExpr(cx, block3, op, member, operand, pos);
+        var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, folded);
+        return check codeGenArithmeticBinaryExpr(cx, nextBlock, op, member, operand, pos);
     }
     else {
-        if !(operand is bir:IntOperand) {
-           return cx.semanticErr("operand for bitwise operation must be integer", pos=pos);  
-        }
-        else {
-            { result, block } = check codeGenBitwiseBinaryExpr(cx, block2, op, member, operand); 
-        }
-    }
-    bir:ListSetInsn insn1 = { list: listReg, index, operand: result, position: lValue.pos };
-    block.insns.push(insn1);
-    return { block };
+        var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, folded);
+        return codeGenBitwiseBinaryExpr(cx, nextBlock, op, member, operand); 
+    }    
 }
 
 function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CallStmt stmt) returns CodeGenError|StmtEffect {
@@ -1064,8 +1089,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             if l is bir:Register {
                 if t:isSubtypeSimple(l.semType, t:LIST) {
                     var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, index, t:INT));
-                    // subset07 list types are restricted to arrays, , so we do not need to consider key type
-                    t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType);
+                    t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r is int ? r : ());
                     if t:isEmpty(cx.mod.tc, memberType) {
                         return cx.semanticErr("type of member access is never");
                     }
@@ -1076,17 +1100,21 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 }
                 else if t:isSubtypeSimple(l.semType, t:MAPPING) {
                     var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
-                    // subset07 mapping types are restricted to maps, so we do not need to consider key type
-                    bir:Register result = cx.createRegister(t:union(t:mappingMemberType(cx.mod.tc, l.semType), t:NIL));
-                    bir:MappingGetInsn insn = { result, operands: [l, r] };
-                    nextBlock.insns.push(insn);
-                    return { result, block: nextBlock };
+                    return codeGenMappingGet(cx, nextBlock, l, "[", r, pos);
                 }
                 else if t:isSubtypeSimple(l.semType, t:STRING) {
                     return cx.unimplementedErr("not implemented: member access on string", pos=pos);
                 }
             }
             return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
+        }
+        // Field access
+        var { mapping, fieldName, pos } => {
+            var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, mapping, ()));
+            if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
+                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
+            }
+            return cx.semanticErr("can only apply field access to mapping", pos=pos);
         }
         // List construct
         // JBUG should be able to use just `var { members }`
@@ -1107,7 +1135,31 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
     }
     panic err:impossible("unrecognized expression type in code gen: " +  s:exprToString(expr));
 }
-     
+
+type MappingAccessType "."|"[";
+
+// if accessType is ".", k must be a string
+function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, err:Position pos) returns CodeGenError|RegExprEffect {
+    string? kVal = k is string ? k : ();
+    boolean keyRequired = false;
+    if kVal != () {
+        if t:mappingMemberRequired(cx.mod.tc, mapping.semType, kVal) {
+            keyRequired = true;
+        }
+        else if accessType == "." {
+            return cx.semanticErr(`field access to ${kVal} is invalid because field may not be present`, pos=pos);
+        }
+    }
+    t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, kVal);
+    if !keyRequired {
+        memberType = t:union(memberType, t:NIL);
+    }
+    bir:Register result = cx.createRegister(memberType);
+    bir:MappingGetInsn insn = { result, operands: [mapping, k] };
+    block.insns.push(insn);
+    return { result, block };
+}
+
 function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, bir:Operand lhs, bir:Operand rhs, bir:Position pos) returns CodeGenError|ExprEffect {
     TypedOperandPair? pair = typedOperandPair(lhs, rhs);
     bir:Register result;
@@ -1639,12 +1691,16 @@ function lookupLocalVarRef(CodeGenContext cx, string name, Environment env) retu
     if !(binding is ()) {
         Binding? unnarrowed = binding.unnarrowed;
         if !(unnarrowed is ()) {
+            unnarrowed.used = true;
             // This is a narrowed binding
             int num = unnarrowed.reg.number;
             if env.assignments.indexOf(num) != () {
                 // This binding has been invalidated by an assignment
                 return unnarrowed;
             }
+        }
+        else {
+            binding.used = true;
         }
     }
     return binding;

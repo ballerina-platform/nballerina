@@ -89,6 +89,7 @@ type Module record {|
     bir:File[] partFiles;
     ModuleDI? di;
     table<UsedSemType> key(semType) usedSemTypes = table [];
+    InitTypes llInitTypes;
 |};
 
 type UsedSemType record {|
@@ -181,12 +182,25 @@ class Scaffold {
         return self.mod.llMod.getIntrinsicDeclaration(name);
     }
 
-    function getString(string str) returns StringDefn|BuildError {
+    function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl {
+        bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: rf.name };
+        llvm:FunctionDecl? decl = self.getImportedFunction(symbol);
+        if !(decl is ()) {
+            return decl;
+        }
+        else {
+            llvm:FunctionDecl f = addRuntimeFunctionDecl(self.mod.llMod, rf);
+            self.addImportedFunction(symbol, f);
+            return f;
+        }
+    }
+
+    function getString(string str) returns StringDefn {
         StringDefn? curDefn = self.mod.stringDefns[str];
         if !(curDefn is ()) {
             return curDefn;
         }
-        StringDefn newDefn = check addStringDefn(self.mod.llContext, self.mod.llMod, self.mod.stringDefns.length(), str);
+        StringDefn newDefn = addStringDefn(self.mod.llContext, self.mod.llMod, self.mod.stringDefns.length(), str);
         self.mod.stringDefns[str] = newDefn;
         return newDefn;
     }
@@ -252,6 +266,23 @@ class Scaffold {
         return err:unimplemented(message, loc);
     }
 
+    function initTypes() returns InitTypes => self.mod.llInitTypes;
+
+    function getTypeTest(t:SemType ty) returns llvm:ConstPointerValue {
+        UsedSemType used = self.getUsedSemType(ty);
+        llvm:ConstPointerValue? value = used.typeTest;
+        if value is () {
+            Module m = self.mod;
+            string symbol = mangleTypeSymbol(m.modId, USED_TYPE_TEST, used.index);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(self.initTypes().typeTestVTable, symbol, isConstant = true);
+            used.typeTest = v;
+            return v;
+        }
+        else {
+            return value;
+        }
+    }
+
     function getInherentType(t:SemType ty) returns llvm:ConstPointerValue {
         UsedSemType used = self.getUsedSemType(ty);
         llvm:ConstPointerValue? value = used.inherentType;
@@ -283,7 +314,15 @@ class Scaffold {
     }
 }
 
-function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue|BuildError {
+function addRuntimeFunctionDecl(llvm:Module mod, RuntimeFunction rf) returns llvm:FunctionDecl {
+    llvm:FunctionDecl f = mod.addFunctionDecl(mangleRuntimeSymbol(rf.name), rf.ty);
+    foreach var attr in rf.attrs {
+        f.addEnumAttribute(attr);
+    }
+    return f;
+}
+
+function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue {
     int nCodePoints = str.length();
     byte[] bytes = str.toBytes();
     int nBytes = bytes.length();
@@ -294,8 +333,7 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
     if isSmallString(nCodePoints, bytes, nBytes) {
         int encoded = 0;
         foreach int i in 0 ..< 7 {
-            // JBUG cast needed #31867
-            encoded |= <int>(i < nBytes ? bytes[i] : 0xFF) << i*8;
+            encoded |= (i < nBytes ? bytes[i] : 0xFF) << i*8;
         }
         encoded |= FLAG_IMMEDIATE|TAG_STRING;
         return context.constGetElementPtr(llvm:constNull(LLVM_TAGGED_PTR), [llvm:constInt(LLVM_INT, encoded)]);
@@ -361,8 +399,6 @@ final TaggedRepr REPR_ERROR = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, s
 
 final TaggedRepr REPR_TOP = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:TOP };
 final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ANY };
-// JBUG this goes wrong when you use REPR_VOID as a type as in buildRet
-// const int REPR_VOID = REPR_TAGGED + 1;
 final VoidRepr REPR_VOID = { base: BASE_REPR_VOID, llvm: LLVM_VOID };
 
 final readonly & record {|

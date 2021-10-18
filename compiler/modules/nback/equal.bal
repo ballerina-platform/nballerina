@@ -53,8 +53,7 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
     var [lhsRepr, lhsValue] = check buildReprValue(builder, scaffold, insn.operands[0]);
     var [rhsRepr, rhsValue] = check buildReprValue(builder, scaffold, insn.operands[1]);
     CmpEqOp op = insn.op[0] == "!" ?  "ne" : "eq"; 
-    // JBUG cast
-    boolean exact = (<string>insn.op).length() == 3; // either "===" or "!=="
+    boolean exact = insn.op.length() == 3; // either "===" or "!=="
     bir:Register result = insn.result;
     match [lhsRepr.base, rhsRepr.base] {
         [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
@@ -120,7 +119,7 @@ function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean 
 
 function buildEqualFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:Value lhsValue, llvm:Value rhsValue, bir:Register reg) {
     RuntimeFunction eqFunc = exact ? floatExactEqFunction : floatEqFunction;
-    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, eqFunc), [lhsValue, rhsValue]);
+    llvm:Value b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(eqFunc), [lhsValue, rhsValue]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
@@ -177,7 +176,7 @@ function buildEqualTaggedInt(llvm:Builder builder, Scaffold scaffold, CmpEqOp op
 
 function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
     RuntimeFunction func = exact ? exactEqFunction : eqFunction;
-    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, func), [tagged1, tagged2]);
+    llvm:Value b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(func), [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }
@@ -185,7 +184,7 @@ function buildEqualTaggedTagged(llvm:Builder builder, Scaffold scaffold, boolean
 }
 
 function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
-    llvm:Value b = <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringEqFunction), [tagged1, tagged2]);
+    llvm:Value b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringEqFunction), [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
     }

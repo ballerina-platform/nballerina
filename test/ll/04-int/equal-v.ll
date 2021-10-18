@@ -4,8 +4,8 @@ declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i1
   %b = alloca i1
+  %1 = alloca i1
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
   %4 = alloca i1

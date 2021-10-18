@@ -154,12 +154,12 @@ define void @_B04rootmain() !dbg !5 {
 define internal i8 addrspace(1)* @_B_exactEq(double %0, double %1) !dbg !7 {
   %f1 = alloca double
   %f2 = alloca double
-  %3 = alloca i8 addrspace(1)*
   %b1 = alloca i8 addrspace(1)*
-  %4 = alloca i8 addrspace(1)*
+  %3 = alloca i8 addrspace(1)*
   %b2 = alloca i8 addrspace(1)*
-  %5 = alloca i8 addrspace(1)*
+  %4 = alloca i8 addrspace(1)*
   %b3 = alloca i8 addrspace(1)*
+  %5 = alloca i8 addrspace(1)*
   %6 = alloca i1
   %7 = alloca i1
   %8 = alloca i8
@@ -221,10 +221,10 @@ define internal i8 addrspace(1)* @_B_exactEq(double %0, double %1) !dbg !7 {
 define internal i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* %0, double %1) !dbg !9 {
   %f1 = alloca i8 addrspace(1)*
   %f2 = alloca double
-  %3 = alloca i1
   %eq = alloca i1
-  %4 = alloca i1
+  %3 = alloca i1
   %neEq = alloca i1
+  %4 = alloca i1
   %5 = alloca i1
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard
@@ -295,10 +295,10 @@ define internal i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* %0, double %1) !
 define internal i8 addrspace(1)* @_B_exactEqFA(double %0, i8 addrspace(1)* %1) !dbg !11 {
   %f1 = alloca double
   %f2 = alloca i8 addrspace(1)*
-  %3 = alloca i1
   %eq = alloca i1
-  %4 = alloca i1
+  %3 = alloca i1
   %neEq = alloca i1
+  %4 = alloca i1
   %5 = alloca i1
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard
@@ -369,10 +369,10 @@ define internal i8 addrspace(1)* @_B_exactEqFA(double %0, i8 addrspace(1)* %1) !
 define internal i8 addrspace(1)* @_B_exactEqAA(i8 addrspace(1)* %0, i8 addrspace(1)* %1) !dbg !13 {
   %f1 = alloca i8 addrspace(1)*
   %f2 = alloca i8 addrspace(1)*
-  %3 = alloca i1
   %eq = alloca i1
-  %4 = alloca i1
+  %3 = alloca i1
   %neEq = alloca i1
+  %4 = alloca i1
   %5 = alloca i1
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard

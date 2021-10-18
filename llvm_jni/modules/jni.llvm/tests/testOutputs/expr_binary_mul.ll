@@ -1,5 +1,5 @@
 
-; Function Attrs: nounwind readnone speculatable willreturn
+; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare { i64, i1 } @llvm.smul.with.overflow.i64.i64(i64, i64) #0
 
 declare void @abort()
@@ -24,4 +24,4 @@ define i64 @foo(i64 %0, i64 %1) {
   call void @abort()
 }
 
-attributes #0 = { nounwind readnone speculatable willreturn }
+attributes #0 = { nofree nosync nounwind readnone speculatable willreturn }

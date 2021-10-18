@@ -169,10 +169,10 @@ function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:Compare
     bir:OrderType orderTy = insn.orderType;
     llvm:Value? compareResult = ();
     if orderTy is bir:OptOrderType {
-        compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, compareFunctions.get(orderTy.opt).compareFunction), [lhs, rhs]);
+        compareResult = builder.call(scaffold.getRuntimeFunctionDecl(compareFunctions.get(orderTy.opt).compareFunction), [lhs, rhs]);
     }
     else if orderTy is bir:ArrayOrderType {
-        compareResult = builder.call(buildRuntimeFunctionDecl(scaffold, compareFunctions.get(orderTy[0].opt).arrayCompareFunction), [lhs, rhs]);
+        compareResult = builder.call(scaffold.getRuntimeFunctionDecl(compareFunctions.get(orderTy[0].opt).arrayCompareFunction), [lhs, rhs]);
     }
     if compareResult is () {
         panic error("failed to find runtime compare function");
@@ -231,7 +231,7 @@ function buildCompareFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPr
 
 function buildCompareString(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     buildStoreBoolean(builder, scaffold,
-                      builder.iCmp(op, <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, stringCmpFunction), [lhs, rhs]),
+                      builder.iCmp(op, <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringCmpFunction), [lhs, rhs]),
                                    llvm:constInt(LLVM_INT, 0)),
                       result);
 }

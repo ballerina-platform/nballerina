@@ -1,6 +1,9 @@
 import ballerina/test;
 import ballerina/file;
+import wso2/nballerina.front;
 import ballerina/io;
+import wso2/nballerina.types as t;
+import wso2/nballerina.front.syntax as s;
 
 import wso2/nballerina.err;
 
@@ -25,6 +28,14 @@ function testCompileVPO(string path, string kind) returns io:Error? {
         }
         test:assertEquals(err, (), msg);
     }
+}
+
+@test:Config {
+    dataProvider: listSourcesT
+}
+function testSemTypes(string path, string kind) returns error? {
+    SubtypeTestCase res = check readSubtypeTests(path);
+    return testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
 }
 
 @test:Config {
@@ -109,6 +120,8 @@ function listSourcesVPO() returns TestSuiteCases|error => listSources("vpo");
 
 function listSourcesEU() returns TestSuiteCases|error => listSources("eu");
 
+function listSourcesT() returns TestSuiteCases|error => listSources("t");
+
 function listSources(string initialChars) returns TestSuiteCases|io:Error|file:Error {
     TestSuiteCases cases = {};
     // JBUG #32615 can't use from-in-from query syntax
@@ -163,4 +176,86 @@ function errorLine(string path) returns int|io:Error? {
 function testCompileFile(string filename) returns CompileError? {
     var [basename, _] = basenameExtension(filename);
     return compileBalFile(filename, basename, (), {}, {});
+}
+
+function testSubtypes(front:SourcePart[] sources, string[] expected) returns error? {
+    var [env, m] = check front:typesFromString(sources);
+    var tc = t:typeContext(env);
+    foreach var item in expected {
+        s:TypeTest test = check s:parseTypeTest(item);
+        t:SemType left = resolveTestSemtype(tc, m, test.left);
+        t:SemType right = resolveTestSemtype(tc, m, test.right);
+        
+        boolean lsr = t:isSubtype(tc, left, right);
+        boolean rsl = t:isSubtype(tc, right, left);
+        boolean[2] testPair = [lsr, rsl]; 
+        match test.op { 
+            "<" => {
+                test:assertEquals(testPair, [true, false], "LHS is not a proper subtype of RHS");
+            }
+            "<>" => {
+                test:assertEquals(testPair, [false, false], "LHS and RHS are subtypes");
+            }
+            "=" => {
+                test:assertEquals(testPair, [true, true], "LHS is not equivalent to RHS");
+            }
+        }
+    }
+}
+
+function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeProjection tn) returns t:SemType {
+    if tn is s:Identifier {
+        return lookupSemtype(m, tn);
+    }
+    else {
+        t:SemType t = lookupSemtype(m, tn.identifier);
+        int|s:Identifier index = tn.index;
+        if t:isSubtypeSimple(t, t:LIST) {
+            if index is int {
+                return t:listMemberType(tc, t, index);
+                //return t:listProj(tc, t, index);
+            }
+            else {
+                t:SemType k = lookupSemtype(m, index);
+                if k == t:INT {
+                    return t:listMemberType(tc, t, ());
+                }
+                t:Value? val = t:singleShape(k);
+                if val is t:Value && val.value is int {
+                    return t:listMemberType(tc, t, <int> val.value);
+                }
+                test:assertFail("index for list projection must be an int");
+            }
+        }
+        else if t:isSubtypeSimple(t, t:MAPPING) {
+            if index is s:Identifier {
+                t:SemType k = lookupSemtype(m, index);
+                if k == t:STRING {
+                    return t:mappingMemberType(tc, t, ());
+                }
+                t:Value? val = t:singleShape(k);
+                if val is t:Value && val.value is string {
+                    return t:mappingMemberType(tc, t, <string> val.value);
+                }
+            }
+            test:assertFail("index for mapping projection must be a string");
+        }
+        else {
+            test:assertFail(tn.identifier + " is not a list or a mapping type");
+        } 
+    }
+    // JBUG: #31642 function must return a call
+    panic error("unreachable");
+}
+
+function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
+    t:SemType? t = m[id];
+    if t is () {
+        test:assertFail(id + " is not declared");
+    }
+    else {
+        return t;
+    }
+    // JBUG: #31642 function must return a call
+    panic error("unreachable");
 }

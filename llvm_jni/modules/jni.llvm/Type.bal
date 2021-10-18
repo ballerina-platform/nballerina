@@ -55,7 +55,7 @@ function typeToLLVMType(RetType ty, Context? context) returns handle {
 }
 
 public function constInt(Type ty, int value) returns ConstValue {
-    Value val = new (jLLVMConstInt(typeToLLVMType(ty, ()), value, 0));
+    DataValue val = new (jLLVMConstInt(typeToLLVMType(ty, ()), value, 0));
     return val;
 }
 
@@ -68,7 +68,9 @@ public function constNull(PointerType ty) returns PointerValue {
     return new (jLLVMConstPointerNull(typeToLLVMType(ty, ())));
 }
 
-public readonly distinct class Value {
+public type Value DataValue|Function;
+
+public readonly distinct class DataValue {
     handle LLVMValueRef;
 
     function init(handle valueRef) {
@@ -77,7 +79,7 @@ public readonly distinct class Value {
 }
 
 public readonly class PointerValue {
-    *Value;
+    *DataValue;
     handle LLVMValueRef;
     function init(handle valueRef) {
         self.LLVMValueRef = valueRef;
@@ -85,7 +87,7 @@ public readonly class PointerValue {
 }
 
 public readonly class ConstValue {
-    *Value;
+    *DataValue;
     handle LLVMValueRef;
     function init(handle valueRef) {
         self.LLVMValueRef = valueRef;
@@ -93,7 +95,7 @@ public readonly class ConstValue {
 }
 
 public readonly class ConstPointerValue {
-    *Value;
+    *DataValue;
     *PointerValue;
     handle LLVMValueRef;
     function init(handle valueRef) {

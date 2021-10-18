@@ -3,16 +3,17 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i1 @_bal_list_has_type(i8 addrspace(1)*, i64) readonly
+declare i8 addrspace(1)* @_bal_list_exactify(i8 addrspace(1)*, i64) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare zeroext i1 @_bal_exact_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
   %iv = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %v = alloca i8 addrspace(1)*
-  %2 = alloca i8 addrspace(1)*
   %iv2 = alloca i8 addrspace(1)*
+  %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
   %4 = alloca i1
   %5 = alloca i8 addrspace(1)*
@@ -53,7 +54,7 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* %29, i8 addrspace(1)** %v
   %30 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   %31 = call i1 @_bal_list_has_type(i8 addrspace(1)* %30, i64 128)
-  br i1 %31, label %36, label %47
+  br i1 %31, label %36, label %48
 32:
   %33 = load i8 addrspace(1)*, i8 addrspace(1)** %6
   call void @_bal_panic(i8 addrspace(1)* %33)
@@ -63,27 +64,28 @@ define void @_B04rootmain() !dbg !5 {
   call void @_bal_panic(i8 addrspace(1)* %35)
   unreachable
 36:
-  store i8 addrspace(1)* %30, i8 addrspace(1)** %2
-  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %2
-  store i8 addrspace(1)* %37, i8 addrspace(1)** %iv2
-  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %iv2, !dbg !8
-  %39 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %38, i64 -5), !dbg !8
-  call void @_Bb02ioprintln(i8 addrspace(1)* %39), !dbg !8
+  %37 = call i8 addrspace(1)* @_bal_list_exactify(i8 addrspace(1)* %30, i64 128)
+  store i8 addrspace(1)* %37, i8 addrspace(1)** %2
+  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %2
+  store i8 addrspace(1)* %38, i8 addrspace(1)** %iv2
+  %39 = load i8 addrspace(1)*, i8 addrspace(1)** %iv2, !dbg !8
+  %40 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %39, i64 -5), !dbg !8
+  call void @_Bb02ioprintln(i8 addrspace(1)* %40), !dbg !8
   store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !8
-  %40 = load i8 addrspace(1)*, i8 addrspace(1)** %iv
-  %41 = load i8 addrspace(1)*, i8 addrspace(1)** %iv2
-  %42 = call i1 @_bal_exact_eq(i8 addrspace(1)* %40, i8 addrspace(1)* %41)
-  store i1 %42, i1* %4
-  %43 = load i1, i1* %4, !dbg !9
-  %44 = zext i1 %43 to i64, !dbg !9
-  %45 = or i64 %44, 72057594037927936, !dbg !9
-  %46 = getelementptr i8, i8 addrspace(1)* null, i64 %45, !dbg !9
-  call void @_Bb02ioprintln(i8 addrspace(1)* %46), !dbg !9
+  %41 = load i8 addrspace(1)*, i8 addrspace(1)** %iv
+  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %iv2
+  %43 = call i1 @_bal_exact_eq(i8 addrspace(1)* %41, i8 addrspace(1)* %42)
+  store i1 %43, i1* %4
+  %44 = load i1, i1* %4, !dbg !9
+  %45 = zext i1 %44 to i64, !dbg !9
+  %46 = or i64 %45, 72057594037927936, !dbg !9
+  %47 = getelementptr i8, i8 addrspace(1)* null, i64 %46, !dbg !9
+  call void @_Bb02ioprintln(i8 addrspace(1)* %47), !dbg !9
   store i8 addrspace(1)* null, i8 addrspace(1)** %5, !dbg !9
   ret void
-47:
-  %48 = call i8 addrspace(1)* @_bal_panic_construct(i64 1795), !dbg !7
-  store i8 addrspace(1)* %48, i8 addrspace(1)** %6
+48:
+  %49 = call i8 addrspace(1)* @_bal_panic_construct(i64 1795), !dbg !7
+  store i8 addrspace(1)* %49, i8 addrspace(1)** %6
   br label %32
 }
 !llvm.module.flags = !{!0}

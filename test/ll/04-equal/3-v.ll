@@ -1,16 +1,17 @@
 @_bal_stack_guard = external global i8*
+@_Bi04root0 = external constant {i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct(i64, i64)
+declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare zeroext i1 @_bal_exact_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i8 addrspace(1)*
   %x = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %y = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
@@ -32,7 +33,7 @@ define void @_B04rootmain() !dbg !5 {
   %19 = icmp ult i8* %17, %18
   br i1 %19, label %73, label %20
 20:
-  %21 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 1)
+  %21 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 1)
   %22 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %21, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901110), i8 addrspace(1)* %22)
   store i8 addrspace(1)* %21, i8 addrspace(1)** %1
@@ -45,7 +46,7 @@ define void @_B04rootmain() !dbg !5 {
   %27 = load i8 addrspace(1)*, i8 addrspace(1)** %y, !dbg !10
   call void @_B_printEq(i8 addrspace(1)* %26, i8 addrspace(1)* %27), !dbg !10
   store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !10
-  %28 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 1)
+  %28 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 1)
   %29 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %28, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901110), i8 addrspace(1)* %29)
   store i8 addrspace(1)* %28, i8 addrspace(1)** %3
@@ -54,7 +55,7 @@ define void @_B04rootmain() !dbg !5 {
   %32 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1), !dbg !11
   call void @_B_printEq(i8 addrspace(1)* %31, i8 addrspace(1)* %32), !dbg !11
   store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !11
-  %33 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 1)
+  %33 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 1)
   %34 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %33, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901110), i8 addrspace(1)* %34)
   store i8 addrspace(1)* %33, i8 addrspace(1)** %5
@@ -82,11 +83,11 @@ define void @_B04rootmain() !dbg !5 {
   %50 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %49, i64 -5), !dbg !12
   call void @_B_printEq(i8 addrspace(1)* %48, i8 addrspace(1)* %50), !dbg !12
   store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !12
-  %51 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 1)
+  %51 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 1)
   %52 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %51, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901110), i8 addrspace(1)* %52)
   store i8 addrspace(1)* %51, i8 addrspace(1)** %8
-  %53 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 1)
+  %53 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 1)
   %54 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %53, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901110), i8 addrspace(1)* %54)
   store i8 addrspace(1)* %53, i8 addrspace(1)** %9
@@ -96,9 +97,9 @@ define void @_B04rootmain() !dbg !5 {
   %58 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %57, i64 -5), !dbg !13
   call void @_B_printEq(i8 addrspace(1)* %56, i8 addrspace(1)* %58), !dbg !13
   store i8 addrspace(1)* null, i8 addrspace(1)** %10, !dbg !13
-  %59 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 0)
+  %59 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 0)
   store i8 addrspace(1)* %59, i8 addrspace(1)** %11
-  %60 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 0)
+  %60 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 0)
   store i8 addrspace(1)* %60, i8 addrspace(1)** %12
   %61 = load i8 addrspace(1)*, i8 addrspace(1)** %11, !dbg !14
   %62 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %61, i64 -5), !dbg !14
@@ -106,11 +107,11 @@ define void @_B04rootmain() !dbg !5 {
   %64 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %63, i64 -5), !dbg !14
   call void @_B_printEq(i8 addrspace(1)* %62, i8 addrspace(1)* %64), !dbg !14
   store i8 addrspace(1)* null, i8 addrspace(1)** %13, !dbg !14
-  %65 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 1)
+  %65 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 1)
   %66 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %65, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901110), i8 addrspace(1)* %66)
   store i8 addrspace(1)* %65, i8 addrspace(1)** %14
-  %67 = call i8 addrspace(1)* @_bal_mapping_construct(i64 8388607, i64 1)
+  %67 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 1)
   %68 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %67, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901110), i8 addrspace(1)* %68)
   store i8 addrspace(1)* %67, i8 addrspace(1)** %15

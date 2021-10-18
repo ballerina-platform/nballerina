@@ -5,8 +5,8 @@ declare i8 addrspace(1)* @_Bb0m4lang3inttoHexString(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
   %i = alloca i64
-  %1 = alloca i8 addrspace(1)*
   %s = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i1
   %4 = alloca i8 addrspace(1)*

@@ -3,7 +3,7 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 define void @_B04rootmain() !dbg !5 {
   %1 = alloca i64
   %2 = alloca i8 addrspace(1)*
@@ -26,8 +26,8 @@ define void @_B04rootmain() !dbg !5 {
 }
 define internal i64 @_B_foo(i64 %0) !dbg !7 {
   %x = alloca i64
-  %2 = alloca i64
   %i = alloca i64
+  %2 = alloca i64
   %3 = alloca i1
   %i.1 = alloca i64
   %4 = alloca i64

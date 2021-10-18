@@ -4,8 +4,11 @@ function namedStruct() returns Module {
     Context context = new;
     Builder builder = context.createBuilder();
     Module m = context.createModule();
-    StructType structTy = context.structCreateNamed("structTy", ["i64", "i32", "i8"]);
-    StructType notUsed = context.structCreateNamed("notUsed", ["i32", "i32", "i8"]);
+    StructType structTy = context.structCreateNamed("structTy");
+    FunctionType fnTy = functionType(structTy, [structTy, "i64"]);
+    context.structSetBody(structTy, ["i64", pointerType(structTy), structTy, pointerType(fnTy)]);
+    StructType notUsed = context.structCreateNamed("notUsed");
+    context.structSetBody(notUsed, ["i32", "i32", structTy]);
 
     ConstPointerValue g = m.addGlobal(structTy, "g");
     ConstPointerValue g1 = m.addGlobal(structTy, "g1", addressSpace=1);

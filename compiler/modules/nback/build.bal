@@ -6,30 +6,27 @@ import wso2/nballerina.print.llvm;
 type Alignment 1|8;
 
 // Pointer tagging
-// JBUG #31394 would be better to use shifts for these
-                     //1234567812345678
-const TAG_FACTOR   = 0x0100000000000000;
-const POINTER_MASK = 0x00fffffffffffff8;
+const TAG_SHIFT = 56;
+const ALIGN_HEAP = 8;
+// JBUG #28334 type-descriptor is not needed
+const int POINTER_MASK = ((1 << TAG_SHIFT) - 1) & ~(ALIGN_HEAP - 1);
 
-const int TAG_MASK     = 0x1f * TAG_FACTOR;
+const int TAG_MASK     = 0x1f << TAG_SHIFT;
 const int TAG_NIL      = 0;
-const int TAG_BOOLEAN  = t:UT_BOOLEAN * TAG_FACTOR;
-const int TAG_INT      = t:UT_INT * TAG_FACTOR;
-const int TAG_FLOAT    = t:UT_FLOAT * TAG_FACTOR;
-const int TAG_STRING   = t:UT_STRING * TAG_FACTOR;
-const int TAG_ERROR   = t:UT_ERROR * TAG_FACTOR;
+const int TAG_BOOLEAN  = t:UT_BOOLEAN << TAG_SHIFT;
+const int TAG_INT      = t:UT_INT << TAG_SHIFT;
+const int TAG_FLOAT    = t:UT_FLOAT << TAG_SHIFT;
+const int TAG_STRING   = t:UT_STRING << TAG_SHIFT;
+const int TAG_ERROR   = t:UT_ERROR << TAG_SHIFT;
 
-const int TAG_LIST_RW  = t:UT_LIST_RW * TAG_FACTOR;
+const int TAG_LIST_RW  = t:UT_LIST_RW << TAG_SHIFT;
 
-const int TAG_BASIC_TYPE_MASK = 0xf * TAG_FACTOR;
+const int TAG_BASIC_TYPE_MASK = 0xf << TAG_SHIFT;
 
-const int FLAG_IMMEDIATE = 0x20 * TAG_FACTOR;
+const int FLAG_IMMEDIATE = 0x20 << TAG_SHIFT;
 const int FLAG_EXACT = 0x4;
 
-const TAG_SHIFT = 56;
-
 const HEAP_ADDR_SPACE = 1;
-const ALIGN_HEAP = 8;
 
 type ValueType llvm:IntegralType;
 
@@ -110,26 +107,8 @@ final bir:ModuleId runtimeModule = {
     names: ["runtime"]
 };
 
-function buildRuntimeFunctionDecl(Scaffold scaffold, RuntimeFunction rf) returns llvm:FunctionDecl {
-    bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: rf.name };
-    llvm:FunctionDecl? decl = scaffold.getImportedFunction(symbol);
-    if !(decl is ()) {
-        return decl;
-    }
-    else {
-        llvm:Module mod = scaffold.getModule();
-        llvm:FunctionDecl f = mod.addFunctionDecl(mangleRuntimeSymbol(rf.name), rf.ty);
-        foreach var attr in rf.attrs {
-            f.addEnumAttribute(attr);
-        }
-        scaffold.addImportedFunction(symbol, f);
-        return f;
-    } 
-}
-
 function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
-    // JBUG #31753 cast
-    return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, <int>panicIndex | (scaffold.lineNumber(pos) << 8)), pos);
+    return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, panicIndex | (scaffold.lineNumber(pos) << 8)), pos);
 }
 
 function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value panicIndex, bir:Position pos) returns llvm:PointerValue {
@@ -138,7 +117,7 @@ function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value 
 
 function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic, bir:Position pos) returns llvm:PointerValue {
     scaffold.setDebugLocation(builder, pos, "file");
-    var err = <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, panicConstructFunction), [packedPanic]);
+    var err = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(panicConstructFunction), [packedPanic]);
     scaffold.clearDebugLocation(builder);
     return err;
 }
@@ -198,8 +177,7 @@ function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand oper
 
 function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value value, Repr targetRepr) returns llvm:Value {
     // SUBSET need to use targetRepr to handle unions including mappings and lists
-    // JBUG <int> cast needed (otherwise result is or'd with 0xFF)
-    return <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [value, llvm:constInt(LLVM_INT, ~<int>FLAG_EXACT)]);
+    return <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [value, llvm:constInt(LLVM_INT, ~FLAG_EXACT)]);
 }
 
 function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
@@ -236,11 +214,11 @@ function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm
 }
 
 function buildTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
-    return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, intToTaggedFunction), [value]);
+    return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(intToTaggedFunction), [value]);
 }
 
 function buildTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value value) returns llvm:PointerValue {
-    return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, floatToTaggedFunction), [value]);
+    return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(floatToTaggedFunction), [value]);
 }
 
 function buildTaggedPtr(llvm:Builder builder, llvm:PointerValue mem, int tag) returns llvm:PointerValue {
@@ -252,7 +230,7 @@ function buildTypedAlloc(llvm:Builder builder, Scaffold scaffold, llvm:Type ty) 
 }
 
 function buildUntypedAlloc(llvm:Builder builder, Scaffold scaffold, llvm:Type ty) returns llvm:PointerValue {
-    return <llvm:PointerValue>builder.call(buildRuntimeFunctionDecl(scaffold, allocFunction),
+    return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(allocFunction),
                                            [llvm:constInt(LLVM_INT, typeSize(ty))]);
 }
 
@@ -290,11 +268,11 @@ function buildTestTag(llvm:Builder builder, llvm:PointerValue tagged, int tag, i
 
 
 function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
-    return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, taggedToIntFunction), [tagged]);
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(taggedToIntFunction), [tagged]);
 }
 
 function buildUntagFloat(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
-    return <llvm:Value>builder.call(buildRuntimeFunctionDecl(scaffold, taggedToFloatFunction), [tagged]);
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(taggedToFloatFunction), [tagged]);
 }
 
 function buildUntagBoolean(llvm:Builder builder, llvm:PointerValue tagged) returns llvm:Value {
@@ -318,7 +296,7 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
 }
 
 function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:ConstPointerValue|BuildError {   
-    return check scaffold.getString(str);
+    return scaffold.getString(str);
 }
 
 function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) returns [Repr, llvm:Value] {

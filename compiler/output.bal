@@ -1,7 +1,6 @@
 import wso2/nballerina.print.llvm;
 import ballerina/io;
 
-type LlvmContext llvm:Context;
 type LlvmModule llvm:Module;
 
 # The preferred output extension for the output filename.

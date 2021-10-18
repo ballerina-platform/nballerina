@@ -190,10 +190,10 @@ define void @_B04rootmain() !dbg !5 {
 define internal i8 addrspace(1)* @_B_exactEq(double %0, double %1) !dbg !7 {
   %f1 = alloca double
   %f2 = alloca double
-  %3 = alloca i1
   %eq = alloca i1
-  %4 = alloca i1
+  %3 = alloca i1
   %neEq = alloca i1
+  %4 = alloca i1
   %5 = alloca i1
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard

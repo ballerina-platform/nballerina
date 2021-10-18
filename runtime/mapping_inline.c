@@ -5,14 +5,6 @@ int64_t BAL_LANG_MAP_NAME(length)(TaggedPtr p) {
     return lp->fArray.length;
 }
 
-bool _bal_mapping_has_type(TaggedPtr p, int64_t desc) {
-    if ((getTag(p) & UT_MASK) != TAG_MAPPING_RW) {
-        return false;
-    }
-    MappingPtr mp = taggedToPtr(p);
-    return (mp->desc->bitSet & ~desc) == 0;
-}
-
 TaggedPtr _bal_mapping_exactify(TaggedPtr p, MappingDescPtr desc) {
     MappingPtr mp = taggedToPtr(p);
     if (mp == taggedToPtrExact(p) && (mp->desc == desc)) {
@@ -20,4 +12,9 @@ TaggedPtr _bal_mapping_exactify(TaggedPtr p, MappingDescPtr desc) {
         return p + EXACT_FLAG;
     }
     return p;
+}
+
+READONLY TaggedPtr _bal_mapping_indexed_get(TaggedPtr mapping, int64_t i) {
+    MappingPtr mp = taggedToPtr(mapping);
+    return mp->fArray.members[i].value;
 }

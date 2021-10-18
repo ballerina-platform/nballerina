@@ -106,6 +106,12 @@ typedef struct {
     uint32_t bitSet;
 } MappingDesc, *MappingDescPtr;
 
+typedef struct {
+    uint32_t bitSet; // zero
+    uint32_t nFields;
+    uint32_t fieldBitSets[];
+} *RecordDescPtr;
+
 typedef GC struct Mapping {
     MappingDescPtr desc;
     union {
@@ -127,6 +133,26 @@ typedef GC struct Mapping {
     uint8_t tableElementShift;
     uint8_t tableLengthShift;
 } *MappingPtr;
+
+typedef struct TypeTest {
+    bool (*contains)(struct TypeTest *, TaggedPtr);
+} TypeTest, *TypeTestPtr;
+
+typedef struct {
+    TaggedPtr fieldName;
+    uint32_t fieldBitSet;
+} RecordTypeTestField;
+
+typedef struct {
+    TypeTest typeTest;
+    uint32_t nFields;
+    RecordTypeTestField fields[];
+} *RecordTypeTestPtr;
+
+typedef struct {
+    TypeTest typeTest;
+    uint32_t bitSet;
+} *MapTypeTestPtr;
 
 typedef GC struct Error {
     TaggedPtr message;

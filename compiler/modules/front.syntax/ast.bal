@@ -54,20 +54,23 @@ public type ConstDefn record {|
     ResolvedConst|false? resolved = ();    
 |};
 
-public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakStmt|ContinueStmt|CompoundAssignStmt|PanicStmt;
+public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallStmt FunctionCallExpr|MethodCallExpr|CheckingStmt;
-public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|VarRefExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|VarRefExpr|CompoundExpr;
+public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
 public const WILDCARD = "_";
 
 public type AssignStmt record {|
+    *PositionFields;
     LExpr|WILDCARD lValue;
     Expr expr;
 |};
 
 public type CompoundAssignStmt record {|
+    *PositionFields;
     LExpr lValue;
     Expr expr;
     BinaryArithmeticOp|BinaryBitwiseOp op; 
@@ -75,23 +78,28 @@ public type CompoundAssignStmt record {|
 |};
 
 // L-value expression
+// XXX Add FieldAccessLExpr when we can handle it in codeGen
 public type LExpr VarRefExpr|MemberAccessLExpr;
 
 public type ReturnStmt record {|
+    *PositionFields;
     Expr returnExpr;
 |};
 
 public type PanicStmt record {|
+    *PositionFields;
     Expr panicExpr;
 |};
 
 public type IfElseStmt record {|
+    *PositionFields;
     Expr condition;
     Stmt[] ifTrue;
     Stmt[] ifFalse;
 |};
 
 public type MatchStmt record {|
+    *PositionFields;
     Expr expr;
     MatchClause[] clauses;
 |};
@@ -111,21 +119,27 @@ public type ConstPattern record {|
 |};
 
 public type WhileStmt record {|
+    *PositionFields;
     Expr condition;
     Stmt[] body;
 |};
 
 public type ForeachStmt record {|
+    *PositionFields;
     string varName;
     RangeExpr range;
     Stmt[] body;
 |};
 
-public type BreakStmt "break";
+public type BreakContinue "break"|"continue";
 
-public type ContinueStmt "continue";
+public type BreakContinueStmt record {|
+   *PositionFields;
+   BreakContinue breakContinue;
+|};
 
 public type VarDeclStmt record {|
+    *PositionFields;
     TypeDesc td;
     string varName;
     Expr initExpr;
@@ -247,6 +261,18 @@ public type MemberAccessExpr record {|
 public type MemberAccessLExpr record {|
     VarRefExpr container;
     Expr index;
+    Position pos;
+|};
+
+public type FieldAccessExpr record {|
+    Expr mapping;
+    string fieldName;
+    Position pos;
+|};
+
+public type FieldAccessLExpr record {|
+    VarRefExpr mapping;
+    string fieldName;
     Position pos;
 |};
 
