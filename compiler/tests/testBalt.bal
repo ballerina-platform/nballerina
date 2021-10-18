@@ -7,7 +7,6 @@ import ballerina/file;
 type TestCaseMap map<[string, int, BaltTestHeader, string[]]>;
 
 // disable because there are no .balt tests
-// JBUG: #32575
 // @test:Config {
 //     dataProvider: parseBalts
 // }

@@ -247,6 +247,9 @@ function stmtSourceFragments() returns SingleStringParserTestCase[] {
          ["V", "stmt", "a = 0 == 1;", "a = 0 == 1;"],
          ["E", "stmt", "a + b = c + d;", ""],
          ["V", "stmt", "a = 0 != 1;", "a = 0 != 1;"],
+         // statement destructuring assign
+         ["V", "stmt", "_ = a;", "_ = a;"],
+         ["E", "stmt", "_ equals 1;", ""],
          // statement if else
          ["E", "stmt", "if a noOp(1);", ""],
          ["E", "stmt", "if a {} else return;", ""],
