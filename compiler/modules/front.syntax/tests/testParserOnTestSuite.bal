@@ -373,40 +373,30 @@ function checkPosFragCode(SourceFile file, Position pos, FragCode... invalidCode
     return invalidCodes.indexOf(frag) != ();
 }
 
+final readonly & FragCode[] whitespaceCodes = [
+    FRAG_WHITESPACE,
+    FRAG_COMMENT
+];
+
 final readonly & FragCode[] interExpressionCodes = [
     FRAG_WHITESPACE,
     FRAG_COMMENT,
     CP_PLUS,
     CP_MINUS,
+    CP_ASTERISK,
+    CP_BACKSLASH,
     CP_LEFT_PAREN
 ];
 
 function testValidInterExpressionRange(SourceFile file, Position startPos, Position endPos) returns boolean {
-    var [startLineIndex, startFragIndex] = sourceFileFragIndex(file, startPos);
-    var [endLineIndex, endFragIndex] = sourceFileFragIndex(file, endPos);
-    int lineIndex = startLineIndex;
-    int i = unpackPosition(startPos)[1];
-    while lineIndex <= endLineIndex {
-        ScannedLine line = file.scannedLine(lineIndex);
-        while i < line.fragments.length() {
-            if lineIndex >= endLineIndex && i >= endFragIndex {
-                return true;
-            }
-            FragCode frag = line.fragCodes[i];
-            if interExpressionCodes.indexOf(frag) == (){
-                if !(lineIndex == startLineIndex && i == unpackPosition(startPos)[1]) {
-                    return false;
-                }
-            }
-            i += 1;
-        }
-        i = 0;
-        lineIndex += 1;
-    }
-    return true; // start == end
+    return testValidRange(file, startPos, endPos, interExpressionCodes);
 }
 
 function testIsWhitespace(SourceFile file, Position startPos, Position endPos) returns boolean {
+    return testValidRange(file, startPos, endPos, whitespaceCodes);
+}
+
+function testValidRange(SourceFile file, Position startPos, Position endPos, FragCode[] allowedCodes) returns boolean {
     var [startLineIndex, startFragIndex] = sourceFileFragIndex(file, startPos);
     var [endLineIndex, endFragIndex] = sourceFileFragIndex(file, endPos);
     int lineIndex = startLineIndex;
@@ -418,8 +408,10 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
                 return true;
             }
             FragCode frag = line.fragCodes[i];
-            if frag != FRAG_WHITESPACE && frag != FRAG_COMMENT {
-                return false;
+            if allowedCodes.indexOf(frag) == (){
+                if !(lineIndex == startLineIndex && i == unpackPosition(startPos)[1]) {
+                    return false;
+                }
             }
             i += 1;
         }
