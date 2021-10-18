@@ -295,7 +295,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     test:assertEquals(expr.toString(), newExpr.toString());
     test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
     test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
-    test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.endPos), "end position is a white space");
+    test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), "end position is invalid");
     [err:Position, err:Position][] childNodePos = [];
     if expr is BinaryExpr {
         check validateExpressionPos(expr.left, tok, expr.startPos, expr.endPos);
@@ -322,8 +322,9 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     foreach var [startPos, endPos] in childNodePos {
         test:assertTrue(startPos <= endPos, "invalid start and end positions"); // single character expressions get same start and end pos
         test:assertTrue((startPos == expr.startPos) || (startPos > lastEnd), "overlapping statements");
-        test:assertFalse(testPositionIsWhiteSpace(tok.file, startPos), "start position is a white space");
-        test:assertFalse(testPositionIsWhiteSpace(tok.file, endPos), "end position is a white space");
+        if lastEnd != expr.startPos {
+            test:assertTrue(testValidInterExpressionRange(tok.file, lastEnd, startPos), "invalid token between expressions");
+        }
         lastEnd = endPos;
     }
 }
@@ -339,10 +340,70 @@ function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) re
 }
 
 function testPositionIsWhiteSpace(SourceFile file, Position pos) returns boolean {
+    return checkPosFragCode(file, pos, FRAG_WHITESPACE, FRAG_COMMENT);
+}
+
+function testValidExprEnd(SourceFile file, Position pos, Expr expr) returns boolean {
+    FragCode[] base = [FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON];
+    if expr is FunctionCallExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
+    }
+    else if expr is PrimaryExpr|TypeCastExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
+    }
+    else if expr is MemberAccessExpr|ListConstructorExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_PAREN, ...base);
+    }
+    else if expr is MappingConstructorExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_SQUARE, CP_RIGHT_PAREN, ...base);
+    }
+    else if expr is TypeTestExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
+    }
+    else if expr is BinaryExpr|UnaryExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
+    }
+    return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
+}
+
+function checkPosFragCode(SourceFile file, Position pos, FragCode... invalidCodes) returns boolean {
     var [lineIndex, fragIndex] = sourceFileFragIndex(file, pos);
     ScannedLine line = file.scannedLine(lineIndex);
     FragCode frag = line.fragCodes[fragIndex];
-    return frag == FRAG_WHITESPACE || frag == FRAG_COMMENT;
+    return invalidCodes.indexOf(frag) != ();
+}
+
+final readonly & FragCode[] interExpressionCodes = [
+    FRAG_WHITESPACE,
+    FRAG_COMMENT,
+    CP_PLUS,
+    CP_MINUS,
+    CP_LEFT_PAREN
+];
+
+function testValidInterExpressionRange(SourceFile file, Position startPos, Position endPos) returns boolean {
+    var [startLineIndex, startFragIndex] = sourceFileFragIndex(file, startPos);
+    var [endLineIndex, endFragIndex] = sourceFileFragIndex(file, endPos);
+    int lineIndex = startLineIndex;
+    int i = unpackPosition(startPos)[1];
+    while lineIndex <= endLineIndex {
+        ScannedLine line = file.scannedLine(lineIndex);
+        while i < line.fragments.length() {
+            if lineIndex >= endLineIndex && i >= endFragIndex {
+                return true;
+            }
+            FragCode frag = line.fragCodes[i];
+            if interExpressionCodes.indexOf(frag) == (){
+                if !(lineIndex == startLineIndex && i == unpackPosition(startPos)[1]) {
+                    return false;
+                }
+            }
+            i += 1;
+        }
+        i = 0;
+        lineIndex += 1;
+    }
+    return true; // start == end
 }
 
 function testIsWhitespace(SourceFile file, Position startPos, Position endPos) returns boolean {
