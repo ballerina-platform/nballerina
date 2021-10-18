@@ -23,8 +23,8 @@ const int XML_RO_SINGLTONS = XML_TEXT_BIT | XML_ELEMENT_RO_BIT | XML_PI_RO_BIT |
 const int XML_RO_MASK = XML_NEVER_BIT | XML_RO_SINGLTONS;
 const int XML_RW_MASK = XML_ELEMENT_RW_BIT | XML_PI_RW_BIT | XML_COMMENT_RW_BIT;
 
-final XmlSubtypeData xmlRoAll = { primitives: XML_RO_MASK, sequence: bddAtom(XML_RO_SINGLTONS) };
-final XmlSubtypeData xmlRwAll = { primitives: XML_RW_MASK, sequence: bddAtom(XML_RW_MASK|XML_RO_SINGLTONS) };
+final XmlSubtypeData xmlRoTop = { primitives: XML_RO_MASK, sequence: bddAtom(XML_RO_SINGLTONS) };
+final XmlSubtypeData xmlRwTop = { primitives: XML_RW_MASK, sequence: bddAtom(XML_RW_MASK|XML_RO_SINGLTONS) };
 
 function xmlSingleton(int primitives) returns SemType {
     return createXmlSemtype(
@@ -110,7 +110,7 @@ function xmlSubtypeDiff(SubtypeData d1, SubtypeData d2) returns SubtypeData {
 }
 
 function xmlSubtypeComplement(boolean isRo, SubtypeData d) returns SubtypeData {
-    XmlSubtypeData top = isRo ? xmlRoAll : xmlRwAll;
+    XmlSubtypeData top = isRo ? xmlRoTop : xmlRwTop;
     return xmlSubtypeDiff(top, d);
 }
 
@@ -119,7 +119,7 @@ function xmlRwSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
     if sd.primitives != 0 {
         return false;
     }
-    return xmlBddEmpty(cx, sd.sequence, true);
+    return xmlBddEmptyRw(cx, sd.sequence);
 }
 
 function xmlRoSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
@@ -127,51 +127,42 @@ function xmlRoSubtypeIsEmpty(Context cx, SubtypeData d) returns boolean {
     if sd.primitives != 0 {
         return false;
     }
-    return xmlBddEmpty(cx, sd.sequence, false);
+    return xmlBddEmptyRo(cx, sd.sequence);
 }
 
-function xmlBddEmpty(Context cx, Bdd bdd, boolean isRw) returns boolean {
-    BddPredicate xmlFormulaIsEmpty = function (Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-        int allBits = 0;
-        Conjunction? current = pos;
-        while current != () {
-            allBits |= <int>current.atom;
-            current = current.next;
-        }
-
-        if allBits == 0 {
-            return true;
-        }
-
-        if isRw {
-            allBits &= XML_RW_MASK;
-        }
-
-        Conjunction? n = neg;
-        while n != () {
-            if (allBits & ~<int>n.atom) == 0 {
-                return true;
-            }
-            n = n.next;
-        }
-        return false;
-    };
-    return bddEvery(cx, bdd, (), (), xmlFormulaIsEmpty);
+function xmlBddEmptyRw(Context cx, Bdd bdd) returns boolean {
+    return bddEvery(cx, bdd, (), (), xmlFormulaIsEmptyRw);
 }
 
-function xmlFormulaIsEmpty1(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+function xmlBddEmptyRo(Context cx, Bdd bdd) returns boolean {
+    return bddEvery(cx, bdd, (), (), xmlFormulaIsEmptyRo);
+}
+
+function xmlFormulaIsEmptyRo(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+    return hasTotalNegative(collectAllBits(pos), neg);
+}
+
+function xmlFormulaIsEmptyRw(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
+    int rwOnlyBits = collectAllBits(pos) & XML_RW_MASK;
+    return hasTotalNegative(rwOnlyBits, neg);
+}
+
+function collectAllBits(Conjunction? con) returns int {
     int allBits = 0;
-    Conjunction? current = pos;
+    Conjunction? current = con;
     while current != () {
         allBits |= <int>current.atom;
         current = current.next;
     }
+    return allBits;
+}
 
+function hasTotalNegative(int allBits, Conjunction? con) returns boolean {
     if allBits == 0 {
         return true;
     }
 
-    Conjunction? n = neg;
+    Conjunction? n = con;
     while n != () {
         if (allBits & ~<int>n.atom) == 0 {
             return true;
