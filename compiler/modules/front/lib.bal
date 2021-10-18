@@ -51,10 +51,10 @@ final readonly & map<Import> autoImportPrefixes = {
     "xml": {
         moduleId: {org: "ballerina", names: ["lang", "xml"]},
         defns: {
-            Element: t:XML_ELEMENT,
-            Comment: t:XML_COMMENT,
-            Text: t:XML_TEXT,
-            ProcessingInstruction: t:XML_PI
+            Element: t:XML_PRIMITIVE_ELEMENT,
+            Comment: t:XML_PRIMITIVE_COMMENT,
+            Text: t:XML_PRIMITIVE_TEXT,
+            ProcessingInstruction: t:XML_PRIMITIVE_PI
         },
         partial: true
     }

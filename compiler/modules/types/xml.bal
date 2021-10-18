@@ -10,32 +10,32 @@ public type XmlSubtypeData readonly & record {|
 // `primitives` fields are composed of allowed values from this singleton set.
 // Atom of the `Bdd` represented by `sequence` field is also composed of these to indicate 
 // non-empty sequence of allowed singletons.
-const int XML_NEVER_BIT      = 1;
-const int XML_TEXT_BIT       = 1 << 1;
-const int XML_ELEMENT_RO_BIT = 1 << 2;
-const int XML_PI_RO_BIT      = 1 << 3;
-const int XML_COMMENT_RO_BIT = 1 << 4;
-const int XML_ELEMENT_RW_BIT = 1 << 5;
-const int XML_PI_RW_BIT      = 1 << 6;
-const int XML_COMMENT_RW_BIT = 1 << 7;
+const int XML_PRIMITIVE_NEVER_BIT      = 1;
+const int XML_PRIMITIVE_TEXT_BIT       = 1 << 1;
+const int XML_PRIMITIVE_ELEMENT_RO_BIT = 1 << 2;
+const int XML_PRIMITIVE_PI_RO_BIT      = 1 << 3;
+const int XML_PRIMITIVE_COMMENT_RO_BIT = 1 << 4;
+const int XML_PRIMITIVE_ELEMENT_RW_BIT = 1 << 5;
+const int XML_PRIMITIVE_PI_RW_BIT      = 1 << 6;
+const int XML_PRIMITIVE_COMMENT_RW_BIT = 1 << 7;
 
-const int XML_RO_SINGLTONS = XML_TEXT_BIT | XML_ELEMENT_RO_BIT | XML_PI_RO_BIT | XML_COMMENT_RO_BIT;
-const int XML_RO_MASK = XML_NEVER_BIT | XML_RO_SINGLTONS;
-const int XML_RW_MASK = XML_ELEMENT_RW_BIT | XML_PI_RW_BIT | XML_COMMENT_RW_BIT;
+const int XML_PRIMITIVE_RO_SINGLTONS = XML_PRIMITIVE_TEXT_BIT | XML_PRIMITIVE_ELEMENT_RO_BIT | XML_PRIMITIVE_PI_RO_BIT | XML_PRIMITIVE_COMMENT_RO_BIT;
+const int XML_PRIMITIVE_RO_MASK = XML_PRIMITIVE_NEVER_BIT | XML_PRIMITIVE_RO_SINGLTONS;
+const int XML_PRIMITIVE_RW_MASK = XML_PRIMITIVE_ELEMENT_RW_BIT | XML_PRIMITIVE_PI_RW_BIT | XML_PRIMITIVE_COMMENT_RW_BIT;
 
-final XmlSubtypeData xmlRoTop = { primitives: XML_RO_MASK, sequence: bddAtom(XML_RO_SINGLTONS) };
-final XmlSubtypeData xmlRwTop = { primitives: XML_RW_MASK, sequence: bddAtom(XML_RW_MASK|XML_RO_SINGLTONS) };
+final XmlSubtypeData xmlRoTop = { primitives: XML_PRIMITIVE_RO_MASK, sequence: bddAtom(XML_PRIMITIVE_RO_SINGLTONS) };
+final XmlSubtypeData xmlRwTop = { primitives: XML_PRIMITIVE_RW_MASK, sequence: bddAtom(XML_PRIMITIVE_RW_MASK|XML_PRIMITIVE_RO_SINGLTONS) };
 
 function xmlSingleton(int primitives) returns SemType {
     return createXmlSemtype(
-        createXmlSubtype(true, primitives & XML_RO_MASK, false), 
-        createXmlSubtype(false, primitives & XML_RW_MASK, false)
+        createXmlSubtype(true, primitives & XML_PRIMITIVE_RO_MASK, false), 
+        createXmlSubtype(false, primitives & XML_PRIMITIVE_RW_MASK, false)
     );
 }
 
 public function xmlSequence(SemType constituentType) returns SemType {
     if constituentType == NEVER {
-        return xmlSequence(xmlSingleton(XML_NEVER_BIT));
+        return xmlSequence(xmlSingleton(XML_PRIMITIVE_NEVER_BIT));
     }
     if constituentType is UniformTypeBitSet {
         return constituentType;
@@ -53,14 +53,14 @@ public function xmlSequence(SemType constituentType) returns SemType {
 
 function makeSequence(boolean roPart, XmlSubtypeData d) returns XmlSubtypeData {
     return { 
-        primitives: (roPart ? XML_NEVER_BIT : 0) | d.primitives, 
-        sequence: bddUnion(bddAtom(d.primitives & ~XML_NEVER_BIT), d.sequence) 
+        primitives: (roPart ? XML_PRIMITIVE_NEVER_BIT : 0) | d.primitives, 
+        sequence: bddUnion(bddAtom(d.primitives & ~XML_PRIMITIVE_NEVER_BIT), d.sequence) 
     };
 }
 
 function createXmlSubtype(boolean isRo, int primitives, Bdd sequence) returns SubtypeData {
     if sequence == true {
-        int mask = isRo ? XML_RO_MASK : XML_RW_MASK;
+        int mask = isRo ? XML_PRIMITIVE_RO_MASK : XML_PRIMITIVE_RW_MASK;
         if (primitives & mask) == mask {
             return true;
         }
@@ -143,7 +143,7 @@ function xmlFormulaIsEmptyRo(Context cx, Conjunction? pos, Conjunction? neg) ret
 }
 
 function xmlFormulaIsEmptyRw(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    int rwOnlyBits = collectAllBits(pos) & XML_RW_MASK;
+    int rwOnlyBits = collectAllBits(pos) & XML_PRIMITIVE_RW_MASK;
     return hasTotalNegative(rwOnlyBits, neg);
 }
 
