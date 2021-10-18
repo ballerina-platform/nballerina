@@ -908,26 +908,11 @@ function codeGenCompoundAssignToListMember(CodeGenContext cx, bir:BasicBlock bb,
 function codeGenCompoundAssignToMappingMember(CodeGenContext cx, bir:BasicBlock bb, Environment env,
                                               s:MemberAccessLExpr lValue, bir:Register mapping, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, err:Position pos) returns CodeGenError|StmtEffect {
     var { result: k, block: block1 } = check codeGenExprForString(cx, bb, env, check cx.foldExpr(env, lValue.index, t:STRING));
-    var { result: member, block: block2 } = check codeGenMappingGet(cx, block1, mapping, false, k, pos);
+    var { result: member, block: block2 } = check codeGenMappingGet(cx, block1, mapping, "[", k, pos);
     var { result, block } = check codeGenCompoundableBinaryExpr(cx, block2, env, op, member, rexpr, pos);
     bir:MappingSetInsn setInsn = { operands:[ mapping, k, result], position: lValue.pos };
     block.insns.push(setInsn);
     return { block };
-}
-
-// if keyMustRequired is true, k must be a string
-function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register mapping, boolean keyMustRequired , bir:StringOperand k, err:Position pos) returns CodeGenError|RegExprEffect {
-    t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, k is string ? k : ());
-    if !(k is string) || !t:mappingMemberRequired(cx.mod.tc, mapping.semType, k) {
-        if keyMustRequired == true {
-            return cx.semanticErr(`${<string>k} must be a required key`, pos=pos);
-        }
-        memberType = t:union(memberType, t:NIL);
-    }
-    bir:Register result = cx.createRegister(memberType);
-    bir:MappingGetInsn insn = { result, operands: [mapping, k] };
-    block.insns.push(insn);
-    return { result, block };
 }
 
 function codeGenCompoundableBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryArithmeticOp|s:BinaryBitwiseOp op, bir:Register member, s:Expr rexpr, err:Position pos) returns CodeGenError|ExprEffect {
@@ -1115,7 +1100,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 }
                 else if t:isSubtypeSimple(l.semType, t:MAPPING) {
                     var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
-                    return codeGenMappingGet(cx, nextBlock, l,  false, r, pos);
+                    return codeGenMappingGet(cx, nextBlock, l, "[", r, pos);
                 }
                 else if t:isSubtypeSimple(l.semType, t:STRING) {
                     return cx.unimplementedErr("not implemented: member access on string", pos=pos);
@@ -1127,7 +1112,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         var { mapping, fieldName, pos } => {
             var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, mapping, ()));
             if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
-                return codeGenMappingGet(cx, nextBlock, l, true, fieldName, pos);
+                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
             }
             return cx.semanticErr("can only apply field access to mapping", pos=pos);
         }
@@ -1149,6 +1134,23 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
     }
     panic err:impossible("unrecognized expression type in code gen: " +  s:exprToString(expr));
+}
+
+type MappingAccessType "."|"[";
+
+// if accessType is ".", k must be a string
+function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, err:Position pos) returns CodeGenError|RegExprEffect {
+    t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, k is string ? k : ());
+    if !(k is string) || !t:mappingMemberRequired(cx.mod.tc, mapping.semType, k) {
+        if accessType == "." {
+            return cx.semanticErr(`${<string>k} must be a required key`, pos=pos);
+        }
+        memberType = t:union(memberType, t:NIL);
+    }
+    bir:Register result = cx.createRegister(memberType);
+    bir:MappingGetInsn insn = { result, operands: [mapping, k] };
+    block.insns.push(insn);
+    return { result, block };
 }
 
 function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, bir:Operand lhs, bir:Operand rhs, bir:Position pos) returns CodeGenError|ExprEffect {
