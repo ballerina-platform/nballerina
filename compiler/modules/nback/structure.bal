@@ -29,6 +29,15 @@ final RuntimeFunction mappingGetFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction mappingIndexedGetFunction = {
+    name: "mapping_indexed_get",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_INT]
+    },
+    attrs: ["readonly"]
+};
+
 final RuntimeFunction mappingInitMemberFunction = {
     name: "mapping_init_member",
     ty: {
@@ -161,13 +170,31 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
 }
 
 function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGetInsn insn) returns BuildError? {
+    int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), insn.operands[0].semType, insn.operands[1]);
+    RuntimeFunction rf;
+    llvm:Value k;
+    if fieldIndex is () {
+        rf = mappingGetFunction;
+        k = check buildString(builder, scaffold, insn.operands[1]);
+    }
+    else {
+        rf = mappingIndexedGetFunction;
+        k = llvm:constInt(LLVM_INT, fieldIndex);
+    }
     // SUBSET this can widen leading to inexactness when mapping member types are not bitsets
-    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(mappingGetFunction),
-                                                [
-                                                    builder.load(scaffold.address(insn.operands[0])),
-                                                    check buildString(builder, scaffold, insn.operands[1])
-                                                ]);
+    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf),
+                                                [builder.load(scaffold.address(insn.operands[0])), k]);
     buildStoreTagged(builder, scaffold, value, insn.result);
+}
+
+function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {
+    if k is string {
+        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
+        if mat !is () {
+            return mat.names.indexOf(k);
+        }
+    }
+    return ();
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
