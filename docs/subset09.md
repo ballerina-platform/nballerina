@@ -257,6 +257,7 @@ primary-expr =
   literal
   | error-constructor-expr
   | member-access-expr
+  | field-access-expr
   | function-call-expr
   | method-call-expr
   | variable-reference-expr
@@ -281,6 +282,8 @@ field = field-name ":" expression
 field-name = string-literal | identifier
 
 member-access-expr = primary-expr "[" expression "]"
+
+field-access-expr = primary-expr "." identifier
 
 function-call-expr = function-reference arg-list
 
@@ -349,6 +352,7 @@ Two kinds of `import` are supported.
 * Closed record types
 * Nil type descriptor
 * Proper parsing of type descriptors in statements: all type descriptors that are allowed in a type definition are now allowed within statements
+* Filed access expression
 
 ## Implemented spec changes since 2021R1
 

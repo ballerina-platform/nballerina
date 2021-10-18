@@ -156,8 +156,12 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
     }
     else if cur == "." {
         VarRefExpr varRef = { varName: identifier, prefix };
-        MethodCallExpr expr = check finishMethodCallExpr(tok, varRef);
-        return finishCallStmt(tok, expr);
+        check tok.advance();
+        string name = check tok.expectIdentifier();
+        if tok.current() == "(" {
+            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, pos));
+        }
+        // falls through to end
     }
     else if cur is [IDENTIFIER, string] {
         TypeDescRef ref = { prefix, typeName: identifier, pos };
