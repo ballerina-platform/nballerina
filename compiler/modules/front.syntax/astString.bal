@@ -122,14 +122,14 @@ function stmtToWords(Word[] w, Stmt stmt) {
             w.push(WILDCARD);
         }
         else {
-            exprToWords(w, lValue);
+            lExprToWords(w, lValue);
         }
         w.push("=");
         exprToWords(w, stmt.expr);
         w.push(";");
     }
     else if stmt is CompoundAssignStmt {
-        exprToWords(w, stmt.lValue);
+        lExprToWords(w, stmt.lValue);
         w.push(stmt.op, CLING, "=");
         exprToWords(w, stmt.expr);
         w.push(";");
@@ -289,6 +289,27 @@ function exprsToWords(Word[] w, Expr[] exprs) {
     }
 }
 
+function lExprToWords(Word[] w, LExpr expr) {
+    if expr is VarRefExpr {
+        string? prefix = expr.prefix;
+        if prefix != () {
+            w.push(prefix, ":", CLING);
+        }
+        w.push(expr.varName);
+    }
+    else if expr is MemberAccessLExpr {
+        lExprToWords(w, expr.container);
+        w.push("[");
+        exprToWords(w, expr.index, true);
+        w.push("]");
+    }
+    else {
+        // expr is FieldAccessLExpr
+        lExprToWords(w, expr.container);
+        w.push(".", expr.fieldName);
+    }
+}
+
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     if expr is ConstValueExpr {
         var val = expr.value;
@@ -435,7 +456,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         if wrap {
             w.push("(");
         }
-        exprToWords(w, expr.mapping, true);
+        exprToWords(w, expr.container, true);
         w.push(".", expr.fieldName);
         if wrap {
             w.push(")");

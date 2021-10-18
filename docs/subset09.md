@@ -28,6 +28,7 @@
    * assignment
       * to variable `v = E;`
       * to member of a list or mapping `v[E1] = E2;`
+      * to field of a mapping `v.f = E`
       * compound assignment `op=`
    * `return` statement
    * `if`/`else` statements
@@ -45,6 +46,7 @@
    * function call
    * method call `v.f(args)` syntax for calling langlib functions
    * member access `E[i]` for both list and mapping
+   * field access `E.f` for mapping
    * list constructor `[E1, E2, ..., En]`
    * mapping constructor `{ f1: E1, f2: E2,..., fn: En }`
    * error constructor `error(msg)`
@@ -151,9 +153,12 @@ compound-assign-stmt = lvexpr CompoundAssignmentOperator expression ";"
 
 lvexpr =
    variable-reference-lvexpr
+   | field-access-lvexpr
    | member-access-lvexpr 
 
 member-access-lvexpr = variable-reference-lvexpr "[" expression "]"
+
+field-access-lvexpr = variable-reference-lvexpr "." identifier
 
 variable-reference-lvexpr = variable-reference
 
@@ -350,9 +355,10 @@ Two kinds of `import` are supported.
 ## Additions from subset 8
 
 * Closed record types
+   * Filed access expression
+   * Field access lvalue
 * Nil type descriptor
 * Proper parsing of type descriptors in statements: all type descriptors that are allowed in a type definition are now allowed within statements
-* Filed access expression
 
 ## Implemented spec changes since 2021R1
 

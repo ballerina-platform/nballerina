@@ -161,6 +161,18 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
         if tok.current() == "(" {
             return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, pos));
         }
+        else {
+            VarRefExpr container = { varName: identifier };
+            FieldAccessLExpr lValue = { fieldName: name, container, pos };
+            Token? t = tok.current();
+            if t == "=" {
+                return finishAssignStmt(tok, lValue, startPos);
+            }
+            else if t is CompoundAssignOp {
+                return parseCompoundAssignStmt(tok, lValue, t, startPos);
+            }
+            // SUBSET handle "["
+        }
         // falls through to end
     }
     else if cur is [IDENTIFIER, string] {
