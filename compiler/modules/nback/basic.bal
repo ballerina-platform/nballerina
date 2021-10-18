@@ -179,8 +179,9 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     llvm:Value[] args = [];
     bir:FunctionSignature signature = funcRef.erasedSignature;
     t:SemType[] paramTypes = signature.paramTypes;
+    t:SemType[] instantiatedParamTypes = funcRef.signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), paramTypes[i]));
+        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]));
     }
 
     bir:Symbol funcSymbol = funcRef.symbol;
