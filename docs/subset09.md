@@ -25,10 +25,12 @@
    * function/method call statement
    * local variable declaration with explicit type descriptor and initializer
       * parentheses are not supported in the type descriptor; a type reference must be used instead
+      * binding pattern is either an identifier or `_`
    * assignment
       * to variable `v = E;`
       * to member of a list or mapping `v[E1] = E2;`
       * to a field `v.f = E`
+      * to wildcard binding pattern `_ = E`
       * compound assignment `op=`
    * `return` statement
    * `if`/`else` statements
@@ -126,6 +128,7 @@ statement =
   | call-stmt
   | assign-stmt
   | compound-assign-stmt
+  | destructuring-assign-stmt
   | return-stmt
   | if-else-stmt
   | while-stmt
@@ -135,7 +138,9 @@ statement =
   | panic-stmt
   | match-stmt
  
-local-var-decl-stmt = ["final"] type-desc identifier "=" expression ";"
+local-var-decl-stmt = ["final"] type-desc binding-pattern "=" expression ";"
+
+binding-pattern = identifier | wildcard-binding-pattern
 
 # reference to a type definition
 type-reference = identifier | qualified-identifier
@@ -150,6 +155,10 @@ call-expr =
 assign-stmt = lvexpr "=" expression ";"
 
 compound-assign-stmt = lvexpr CompoundAssignmentOperator expression ";"
+
+destructuring-assign-stmt = wildcard-binding-pattern "=" expression ";"
+
+wildcard-binding-pattern = "_"
 
 lvexpr =
    variable-reference-lvexpr
@@ -359,6 +368,7 @@ Two kinds of `import` are supported.
    * Field access lvalue
 * Nil type descriptor
 * Proper parsing of type descriptors in statements: all type descriptors that are allowed in a type definition are now allowed within statements
+* Wildcard binding pattern `_` in assigment and local variable declaration statements
 
 ## Implemented spec changes since 2021R1
 
