@@ -1,4 +1,4 @@
-# Language subset 9
+# Language subset 10
 
 ## Summary
 
@@ -360,14 +360,9 @@ Two kinds of `import` are supported.
 * The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
 
-## Additions from subset 8
+## Additions from subset 9
 
-* Closed record types
-   * Field access expression
-   * Field access lvalue
-* Nil type descriptor
-* Proper parsing of type descriptors in statements: all type descriptors that are allowed in a type definition are now allowed within statements
-* Wildcard binding pattern `_` in assigment and local variable declaration statements
+* TBD
 
 ## Implemented spec changes since 2021R1
 
