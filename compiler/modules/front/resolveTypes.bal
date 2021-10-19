@@ -155,6 +155,13 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             // JBUG temp variable `f` is to avoid compiler bug #30736
             s:FieldDesc[] f = td.fields;
             t:Field[] fields = from var { name, typeDesc } in f select [name, check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc)];
+            map<s:FieldDesc> fieldsByName = {};
+            foreach var fd in f {
+                if fieldsByName[fd.name] != () {
+                    return err:semantic(`duplicate field ${fd.name}`, err:location(modDefn.part.file));
+                }
+                fieldsByName[fd.name] = fd;
+            }
             t:SemType rest = check resolveTypeDesc(mod, modDefn, depth + 1, td.rest);
             return d.define(env, fields, rest);
         }
