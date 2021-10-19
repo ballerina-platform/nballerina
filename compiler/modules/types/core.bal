@@ -2,8 +2,8 @@
 // Uniform types are like basic types except that each selectively immutable
 // basic type is split into two uniform types, one immutable and on mutable.
 
-// JBUG #31751 bad, sad if UT_OBJECT_RW + 1
-public const UT_COUNT = 0x17;
+// JBUG #28334 type-descriptor is not needed
+public const int UT_COUNT = UT_OBJECT_RW + 1;
 
 const int UT_MASK = (1 << UT_COUNT) - 1;
 
