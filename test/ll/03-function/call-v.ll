@@ -2,9 +2,9 @@
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb0m4lang5arraypush(i8 addrspace(1)*, i8 addrspace(1)*)
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
@@ -33,7 +33,7 @@ define internal void @_B_test1() !dbg !7 {
   %5 = alloca i8
   %6 = load i8*, i8** @_bal_stack_guard
   %7 = icmp ult i8* %5, %6
-  br i1 %7, label %24, label %8
+  br i1 %7, label %23, label %8
 8:
   %9 = call i8 addrspace(1)* @_bal_alloc(i64 32)
   %10 = bitcast i8 addrspace(1)* %9 to {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
@@ -53,18 +53,17 @@ define internal void @_B_test1() !dbg !7 {
   %18 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %17), !dbg !17
   store i8 addrspace(1)* %18, i8 addrspace(1)** %2, !dbg !17
   %19 = load i8 addrspace(1)*, i8 addrspace(1)** %2, !dbg !18
-  %20 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %19, i64 -5), !dbg !18
-  %21 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1), !dbg !18
-  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %20, i8 addrspace(1)* %21), !dbg !18
+  %20 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1), !dbg !18
+  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %19, i8 addrspace(1)* %20), !dbg !18
   store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !18
-  %22 = load i8 addrspace(1)*, i8 addrspace(1)** %x, !dbg !19
-  %23 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %22, i64 -5), !dbg !19
-  call void @_Bb02ioprintln(i8 addrspace(1)* %23), !dbg !19
+  %21 = load i8 addrspace(1)*, i8 addrspace(1)** %x, !dbg !19
+  %22 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %21, i64 -5), !dbg !19
+  call void @_Bb02ioprintln(i8 addrspace(1)* %22), !dbg !19
   store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !19
   ret void
-24:
-  %25 = call i8 addrspace(1)* @_bal_panic_construct(i64 2820), !dbg !16
-  call void @_bal_panic(i8 addrspace(1)* %25)
+23:
+  %24 = call i8 addrspace(1)* @_bal_panic_construct(i64 2820), !dbg !16
+  call void @_bal_panic(i8 addrspace(1)* %24)
   unreachable
 }
 define internal void @_B_test2() !dbg !9 {
@@ -76,7 +75,7 @@ define internal void @_B_test2() !dbg !9 {
   %5 = alloca i8
   %6 = load i8*, i8** @_bal_stack_guard
   %7 = icmp ult i8* %5, %6
-  br i1 %7, label %24, label %8
+  br i1 %7, label %23, label %8
 8:
   %9 = call i8 addrspace(1)* @_bal_alloc(i64 32)
   %10 = bitcast i8 addrspace(1)* %9 to {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
@@ -96,18 +95,17 @@ define internal void @_B_test2() !dbg !9 {
   %18 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %17), !dbg !21
   store i8 addrspace(1)* %18, i8 addrspace(1)** %2, !dbg !21
   %19 = load i8 addrspace(1)*, i8 addrspace(1)** %2, !dbg !22
-  %20 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %19, i64 -5), !dbg !22
-  %21 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2), !dbg !22
-  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %20, i8 addrspace(1)* %21), !dbg !22
+  %20 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2), !dbg !22
+  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %19, i8 addrspace(1)* %20), !dbg !22
   store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !22
-  %22 = load i8 addrspace(1)*, i8 addrspace(1)** %x, !dbg !23
-  %23 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %22, i64 -5), !dbg !23
-  call void @_Bb02ioprintln(i8 addrspace(1)* %23), !dbg !23
+  %21 = load i8 addrspace(1)*, i8 addrspace(1)** %x, !dbg !23
+  %22 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %21, i64 -5), !dbg !23
+  call void @_Bb02ioprintln(i8 addrspace(1)* %22), !dbg !23
   store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !23
   ret void
-24:
-  %25 = call i8 addrspace(1)* @_bal_panic_construct(i64 4356), !dbg !20
-  call void @_bal_panic(i8 addrspace(1)* %25)
+23:
+  %24 = call i8 addrspace(1)* @_bal_panic_construct(i64 4356), !dbg !20
+  call void @_bal_panic(i8 addrspace(1)* %24)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %0) !dbg !11 {

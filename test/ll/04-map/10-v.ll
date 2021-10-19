@@ -140,11 +140,11 @@ define void @_B04rootmain() !dbg !5 {
 80:
   %81 = extractvalue {i64, i1} %76, 0
   store i64 %81, i64* %7
-  %82 = load i8 addrspace(1)*, i8 addrspace(1)** %dayNumber
-  %83 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  %82 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  %83 = load i8 addrspace(1)*, i8 addrspace(1)** %dayNumber
   %84 = load i64, i64* %7
   %85 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %84)
-  %86 = call i64 @_bal_mapping_set(i8 addrspace(1)* %82, i8 addrspace(1)* %83, i8 addrspace(1)* %85)
+  %86 = call i64 @_bal_mapping_set(i8 addrspace(1)* %83, i8 addrspace(1)* %82, i8 addrspace(1)* %85)
   %87 = icmp eq i64 %86, 0
   br i1 %87, label %90, label %91
 88:

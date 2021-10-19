@@ -54,11 +54,11 @@ define internal void @_B_put(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i64 %2) !
   store i8 addrspace(1)* %0, i8 addrspace(1)** %m
   store i8 addrspace(1)* %1, i8 addrspace(1)** %k
   store i64 %2, i64* %v
-  %9 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %10 = load i8 addrspace(1)*, i8 addrspace(1)** %k
+  %9 = load i8 addrspace(1)*, i8 addrspace(1)** %k
+  %10 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %11 = load i64, i64* %v
   %12 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %11)
-  %13 = call i64 @_bal_mapping_set(i8 addrspace(1)* %9, i8 addrspace(1)* %10, i8 addrspace(1)* %12)
+  %13 = call i64 @_bal_mapping_set(i8 addrspace(1)* %10, i8 addrspace(1)* %9, i8 addrspace(1)* %12)
   %14 = icmp eq i64 %13, 0
   br i1 %14, label %19, label %20
 15:
@@ -91,9 +91,9 @@ define internal i64 @_B_get(i8 addrspace(1)* %0, i8 addrspace(1)* %1) !dbg !9 {
 10:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %m
   store i8 addrspace(1)* %1, i8 addrspace(1)** %k
-  %11 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %12 = load i8 addrspace(1)*, i8 addrspace(1)** %k
-  %13 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %11, i8 addrspace(1)* %12)
+  %11 = load i8 addrspace(1)*, i8 addrspace(1)** %k
+  %12 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %13 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %12, i8 addrspace(1)* %11)
   store i8 addrspace(1)* %13, i8 addrspace(1)** %3
   %14 = load i8 addrspace(1)*, i8 addrspace(1)** %3
   %15 = addrspacecast i8 addrspace(1)* %14 to i8*

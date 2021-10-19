@@ -177,10 +177,10 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* %118, i8 addrspace(1)** %26
   %119 = load i8 addrspace(1)*, i8 addrspace(1)** %26
   store i8 addrspace(1)* %119, i8 addrspace(1)** %m
-  %120 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %121 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
+  %120 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
+  %121 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %122 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 42)
-  %123 = call i64 @_bal_mapping_set(i8 addrspace(1)* %120, i8 addrspace(1)* %121, i8 addrspace(1)* %122)
+  %123 = call i64 @_bal_mapping_set(i8 addrspace(1)* %121, i8 addrspace(1)* %120, i8 addrspace(1)* %122)
   %124 = icmp eq i64 %123, 0
   br i1 %124, label %129, label %135
 125:
@@ -192,10 +192,10 @@ define void @_B04rootmain() !dbg !5 {
   call void @_bal_panic(i8 addrspace(1)* %128)
   unreachable
 129:
-  %130 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %131 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
+  %130 = load i8 addrspace(1)*, i8 addrspace(1)** %s2
+  %131 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %132 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 24)
-  %133 = call i64 @_bal_mapping_set(i8 addrspace(1)* %130, i8 addrspace(1)* %131, i8 addrspace(1)* %132)
+  %133 = call i64 @_bal_mapping_set(i8 addrspace(1)* %131, i8 addrspace(1)* %130, i8 addrspace(1)* %132)
   %134 = icmp eq i64 %133, 0
   br i1 %134, label %138, label %143
 135:
@@ -215,9 +215,9 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* %145, i8 addrspace(1)** %29
   br label %125
 146:
-  %147 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %148 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
-  %149 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %147, i8 addrspace(1)* %148)
+  %147 = load i8 addrspace(1)*, i8 addrspace(1)** %s1
+  %148 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %149 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %148, i8 addrspace(1)* %147)
   store i8 addrspace(1)* %149, i8 addrspace(1)** %27
   %150 = load i8 addrspace(1)*, i8 addrspace(1)** %27, !dbg !22
   call void @_Bb02ioprintln(i8 addrspace(1)* %150), !dbg !22
