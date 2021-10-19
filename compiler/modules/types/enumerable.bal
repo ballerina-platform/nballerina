@@ -171,14 +171,13 @@ function compareEnumerable(EnumerableType v1, EnumerableType v2) returns Order {
     }
     else {
         float f2 = <float>v2;
-        // JBUG: #17977 can't use `==`
-        if floatEq(v1, f2) {
+        if v1 == f2 {
             return EQ;
         }
-        else if floatEq(v1, float:NaN) {
+        else if v1 == float:NaN {
              return LT;
         }
-        else if floatEq(f2, float:NaN) {
+        else if f2 == float:NaN {
             return GT;
         }
         else if v1 < f2 {
@@ -186,17 +185,4 @@ function compareEnumerable(EnumerableType v1, EnumerableType v2) returns Order {
         }
         return GT;
     }
-}
-
-// XXX remove this after JBUG #17977 is fixed
-function floatEq(float f1, float f2) returns boolean {
-    if float:isNaN(f1) {
-        if float:isNaN(f2) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-    return f1 == f2;
 }
