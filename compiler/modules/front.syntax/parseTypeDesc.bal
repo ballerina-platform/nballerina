@@ -268,7 +268,7 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
             check tok.advance();
         }
     }
-    Position endPos = tok.currentEndPos();
+    Position endPos = tok.previousEndPos();
     // on ")"
     check tok.advance();
     TypeDesc ret;
@@ -279,7 +279,7 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
     else {
         ret = { startPos:tok.currentStartPos(), endPos, builtinType:"()" };
     }
-    endPos = tok.currentEndPos();
+    endPos = tok.previousEndPos();
     return <FunctionTypeDesc>{ startPos, endPos, args, ret };
 }
 

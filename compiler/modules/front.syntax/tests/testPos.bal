@@ -264,6 +264,29 @@ function validateChildTypeDesc(Stmt|Expr parent, Tokenizer tok) returns err:Synt
     }
 }
 
+function testValidExprEnd(SourceFile file, Position pos, Expr expr) returns boolean {
+    FragCode[] base = [FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON];
+    if expr is FunctionCallExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
+    }
+    else if expr is PrimaryExpr|TypeCastExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
+    }
+    else if expr is MemberAccessExpr|ListConstructorExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_PAREN, ...base);
+    }
+    else if expr is MappingConstructorExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_SQUARE, CP_RIGHT_PAREN, ...base);
+    }
+    else if expr is TypeTestExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
+    }
+    else if expr is BinaryExpr|UnaryExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
+    }
+    return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
+}
+
 function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(td.startPos, MODE_NORMAL);
     test:assertEquals(tok.currentStartPos(), td.startPos, "moved to wrong position");
@@ -278,13 +301,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     else {
         newTd = check parseTypeDesc(tok);
     }
-    Position actualEnd;
-    if td is FunctionTypeDesc {
-        actualEnd = tok.currentEndPos();
-    }
-    else {
-        actualEnd = tok.previousEndPos();
-    }
+    Position actualEnd = tok.previousEndPos();
     if td.toString() != newTd.toString() && newTd is ListTypeDesc|MappingTypeDesc {
         // These are left recursions which we can't separately parse
         actualEnd = newTd.rest.endPos;
@@ -294,7 +311,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     test:assertEquals(td.toString(), newTd.toString());
     test:assertTrue(td.startPos >= parentStartPos && td.endPos <= parentEndPos, "child node outside of parent");
     test:assertFalse(testPositionIsWhiteSpace(tok.file, td.startPos), "start position is a white space");
-    test:assertFalse(testPositionIsWhiteSpace(tok.file, td.endPos), "end position is a white space");
+    test:assertTrue(testValidTypeDescEnd(tok.file, td.endPos, td), "end position is invalid");
     [err:Position, err:Position][] childNodePos = [];
     if td is ListTypeDesc {
         foreach var member in td.members {
@@ -330,34 +347,18 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     foreach var [startPos, endPos] in childNodePos {
         test:assertTrue(startPos <= endPos, "invalid start and end positions"); // single character td get same start and end pos
         test:assertTrue((startPos == td.startPos) || (startPos > lastEnd), "overlapping type descriptions");
-        test:assertFalse(testPositionIsWhiteSpace(tok.file, startPos), "start position is a white space");
-        test:assertFalse(testPositionIsWhiteSpace(tok.file, endPos), "end position is a white space");
         lastEnd = endPos;
     }
 }
 
-function testValidExprEnd(SourceFile file, Position pos, Expr expr) returns boolean {
+function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) returns boolean {
     FragCode[] base = [FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON];
-    if expr is FunctionCallExpr {
-        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
+    if td is ListTypeDesc || (td is FunctionTypeDesc && td.ret is ListTypeDesc) {
+        return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
     }
-    else if expr is PrimaryExpr|TypeCastExpr {
-        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
-    }
-    else if expr is MemberAccessExpr|ListConstructorExpr {
-        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_PAREN, ...base);
-    }
-    else if expr is MappingConstructorExpr {
-        return !checkPosFragCode(file, pos, CP_RIGHT_SQUARE, CP_RIGHT_PAREN, ...base);
-    }
-    else if expr is TypeTestExpr {
-        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
-    }
-    else if expr is BinaryExpr|UnaryExpr {
-        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
-    }
-    return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
+    return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
 }
+
 
 function checkPosFragCode(SourceFile file, Position pos, FragCode... invalidCodes) returns boolean {
     var [lineIndex, fragIndex] = sourceFileFragIndex(file, pos);
