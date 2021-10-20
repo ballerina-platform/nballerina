@@ -506,7 +506,7 @@ function stringLiteral(string str) returns string {
     foreach int cp in cps {
         string:Char ch = checkpanic string:fromCodePointInt(cp);
         string:Char? singleEscaped =  REVERSE_ESCAPES[ch];
-        if singleEscaped is () {
+        if singleEscaped == () {
             if 0x20 <= cp && cp < 0x7F {
                 chunks.push(ch);
             }

@@ -310,7 +310,7 @@ function buildSimpleConst(bir:SimpleConstOperand operand) returns [Repr, llvm:Va
     else if operand is float {
         return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, operand)];
     }
-    else if operand is () {
+    else if operand == () {
         return [REPR_NIL, buildConstNil()];
     }
     else {

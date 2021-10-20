@@ -59,7 +59,7 @@ function tokenization(string str) returns Token[]|error {
     while true {
         check tok.advance();
         Token? t = tok.current();
-        if t is () {
+        if t == () {
             break;
         }
         else {

@@ -174,7 +174,7 @@ function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:Compare
     else if orderTy is bir:ArrayOrderType {
         compareResult = builder.call(scaffold.getRuntimeFunctionDecl(compareFunctions.get(orderTy[0].opt).arrayCompareFunction), [lhs, rhs]);
     }
-    if compareResult is () {
+    if compareResult == () {
         panic error("failed to find runtime compare function");
     }
     else {

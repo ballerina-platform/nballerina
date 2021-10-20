@@ -64,7 +64,7 @@ function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntA
         result = builder.iArithmeticSigned(op, lhs, rhs);
     }
     buildStoreInt(builder, scaffold, result, insn.result);                                  
-    if joinBlock !is () {
+    if joinBlock != () {
         builder.br(joinBlock);
         builder.positionAtEnd(joinBlock);
     }                         

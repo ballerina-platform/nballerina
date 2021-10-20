@@ -316,7 +316,7 @@ public class Module {
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
         FunctionDecl? fnExisting = <FunctionDecl?>self.globals[name];
-        if fnExisting !is () {
+        if fnExisting != () {
             return fnExisting;
         }
         if name is IntegerArithmeticIntrinsicName {
@@ -433,7 +433,7 @@ public class Module {
     function outputGlobalVar(PointerValue val, GlobalProperties prop, Output out){
         string[] words = [];
         words.push(<string> val.operand, "=");
-        if !(prop.initializer is ()) {
+        if !(prop.initializer == ()) {
             if prop.linkage == "internal"{
                 words.push(prop.linkage);
             }
@@ -890,7 +890,7 @@ public class DIBuilder {
         }
         if props.isDefinition {
             self.addMetadataToWords(words, self.compileUnit, "unit");
-            if self.compileUnit is () {
+            if self.compileUnit == () {
                 panic error("No compile unit is defined");
             }
         }
@@ -1081,7 +1081,7 @@ public class Builder {
     // value of () represents void return value
     public function ret(Value? value=()) {
         BasicBlock bb = self.bb();
-        if value is () {
+        if value == () {
             addInsnWithDbLocation(bb, ["ret", "void"], self.dbLocation);
         }
         else {
@@ -1286,7 +1286,7 @@ public class Builder {
 
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
-        if tem is () {
+        if tem == () {
             panic err:impossible("no current basic block");
         }
         else {
@@ -1301,7 +1301,7 @@ public class Builder {
 }
 
 function addInsnWithAlign(BasicBlock bb, (string|Unnamed)[] words, Alignment? align, Metadata? dbLocation) {
-    if align !is () {
+    if align != () {
         words.push(",", "align", align.toString());
     }
     addInsnWithDbLocation(bb, words, dbLocation);
@@ -1429,11 +1429,11 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
     else if ty is StructType {
         var data = context.getStructName(ty);
         Type[] elementTypes = ty.elementTypes;
-        if data !is () {
+        if data != () {
             elementTypes = data[1];
         }
         if !forceInline {
-            if data !is () {
+            if data != () {
                 return data[0];
             }
         }
@@ -1651,7 +1651,7 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
 function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
     var data = context.getStructName(ty);
     Type[] elementTypes = ty.elementTypes;
-    if data !is () {
+    if data != () {
         elementTypes = data[1];
     }
     return elementTypes[index];

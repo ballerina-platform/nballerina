@@ -88,7 +88,7 @@ type LlvmTypeDefn [llvm:StructType, llvm:ConstPointerValue];
 function addTypeGlobal(InitModuleContext cx, bir:ModuleId id, int i, t:SemType semType, TypeHowUsed howUsed) {
     string sym = mangleTypeSymbol(id, howUsed, i);
     TypeDefn? existingDefn = cx.typeDefns[semType, howUsed];
-    if existingDefn is () {
+    if existingDefn == () {
         var [llType, ptr] = addTypeDefn(cx, sym, semType, howUsed);
         cx.typeDefns.add( { llType, ptr, howUsed, semType });
     }
@@ -168,7 +168,7 @@ function addRecordTypeTestDefn(InitModuleContext cx, string symbol, string[] fie
 
 function getTypeTestFunc(InitModuleContext cx, TypeKind tk) returns llvm:FunctionDecl {
     llvm:FunctionDecl? existing = cx.typeTestFuncs[tk];
-    if existing is () {
+    if existing == () {
         llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol(typeKindNames[tk] + "_type_contains"), cx.llTypes.typeTestFunction);
         cx.typeTestFuncs[tk] = decl;
         return decl;

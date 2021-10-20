@@ -209,7 +209,7 @@ function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr,
 
 function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:FunctionSignature sig) returns llvm:FunctionDecl|BuildError {
     llvm:FunctionDecl? decl = scaffold.getImportedFunction(symbol);
-    if decl !is () {
+    if decl != () {
         return decl;
     }
     else {

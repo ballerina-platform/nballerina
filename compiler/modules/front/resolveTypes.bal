@@ -87,14 +87,14 @@ function isSubsetUnionType(t:SemType ty) returns boolean {
 
 function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns t:SemType|ResolveTypeError {
     t:SemType? t = defn.semType;
-    if t is () {
+    if t == () {
         if depth == defn.cycleDepth {
             return err:semantic(`invalid cycle detected for ${defn.name}`, s:defnLocation(defn));
         }
         defn.cycleDepth = depth;
         t:SemType s = check resolveTypeDesc(mod, defn, depth, defn.td);
         t = defn.semType;
-        if t is () {
+        if t == () {
             defn.semType = s;
             defn.cycleDepth = -1;
             return s;
@@ -134,7 +134,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     // JBUG would like to use match patterns here, but #30718 prevents it
     if td is s:ListTypeDesc {
         t:ListDefinition? defn = td.defn;
-        if defn is () {
+        if defn == () {
             t:ListDefinition d = new;
             td.defn = d;
             // JBUG temp variable `m` is to avoid compiler bug #30736
@@ -149,7 +149,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     if td is s:MappingTypeDesc {
         t:MappingDefinition? defn = td.defn;
-        if defn is () {
+        if defn == () {
             t:MappingDefinition d = new;
             td.defn = d;
             // JBUG temp variable `f` is to avoid compiler bug #30736
@@ -171,7 +171,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
      if td is s:FunctionTypeDesc {
         t:FunctionDefinition? defn = td.defn;
-        if defn is () {
+        if defn == () {
             t:FunctionDefinition d = new(env);
             td.defn = d;
             s:TypeDesc[] a = td.args;
@@ -187,7 +187,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         string? prefix = td.prefix;
         if prefix == () {
             s:ModuleLevelDefn? defn = mod.defns[td.typeName];
-            if defn is () {
+            if defn == () {
                 return err:semantic(`reference to undefined type ${td.typeName}`, err:location(modDefn.part.file, td.pos));
             }
             else if defn is s:TypeDefn {
@@ -210,7 +210,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             else {
                 string qName = prefix + ":" + td.typeName;
                 err:Location loc =  err:location(modDefn.part.file, td.pos);
-                if defn is () {
+                if defn == () {
                     return err:semantic(`no public definition of ${qName}`, loc=loc);
                 }
                 else {

@@ -49,7 +49,7 @@ class ConstFoldContext {
             var resolved = check resolveConstDefn(self.mod, defn);
             return resolved[1];
         }
-        else if defn is () {
+        else if defn == () {
             return self.semanticErr(`${varName} is not defined`);
         }
         else {
@@ -73,14 +73,14 @@ function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:Resolve
     if resolved is false {
         return err:semantic(`cycle in evaluating ${defn.name}`, s:defnLocation(defn));
     }
-    else if resolved !is () {
+    else if resolved != () {
         return resolved;
     }
     else {
         defn.resolved = false;
         ConstFoldContext cx = new ConstFoldContext(defn, mod);
         s:InlineBuiltinTypeDesc? td = defn.td;
-        t:SemType? expectedType = td is () ? () : resolveInlineBuiltinTypeDesc(td);
+        t:SemType? expectedType = td == () ? () : resolveInlineBuiltinTypeDesc(td);
         s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
         if expr is s:ConstValueExpr {
             if expectedType == () || t:containsConst(expectedType, expr.value) {
@@ -159,7 +159,7 @@ function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:M
     // SUBSET always have contextually expected type for mapping constructor
     t:SemType expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING_RW);
     // SUBSET with unions of maps we will need to select from possibilities based on the field names
-    if t:mappingAtomicTypeRw(cx.typeContext(), expectedMappingType) is () {
+    if t:mappingAtomicTypeRw(cx.typeContext(), expectedMappingType) == () {
         return cx.semanticErr("no applicable inherent type for mapping constructor");
     }
     expr.expectedType = expectedMappingType;
@@ -299,8 +299,8 @@ function isExactEqual(SimpleConst c1, SimpleConst c2) returns boolean {
 function simpleConstExprIntersectIsEmpty(s:ConstShapeExpr leftExpr, s:ConstShapeExpr rightExpr) returns boolean {
     t:SemType? lt = leftExpr.multiSemType;
     t:SemType? rt = rightExpr.multiSemType;
-    if lt is () {
-        if rt is () {
+    if lt == () {
+        if rt == () {
             // precondition of this function is that the values are != 
             // so if the types are both singletons, the intersection must be empty
             return true;
@@ -309,7 +309,7 @@ function simpleConstExprIntersectIsEmpty(s:ConstShapeExpr leftExpr, s:ConstShape
             return !t:containsConst(rt, leftExpr.value);
         }
     }
-    else if rt is () {
+    else if rt == () {
         return !t:containsConst(lt, rightExpr.value);
     }
     else {
@@ -335,8 +335,8 @@ function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:Bin
         else if left is boolean && right is boolean {
             return foldedBinaryConstExpr(booleanRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
         }
-        else if (left is () && right is int|float|string|boolean)
-                || (right is () && left is int|float|string|boolean) {
+        else if (left == () && right is int|float|string|boolean)
+                || (right == () && left is int|float|string|boolean) {
             // () behaves like NaN
             return foldedBinaryConstExpr(false, t:BOOLEAN, leftExpr, rightExpr);
         }
@@ -407,7 +407,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
 function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExpr expr) returns s:Expr|FoldError {
     t:SemType semType = check cx.resolveTypeDesc(expr.td);
     t:SemType targetType = semType;
-    if expectedType !is () {
+    if expectedType != () {
         targetType = t:intersect(targetType, expectedType);
     }
     s:Expr subExpr = check foldExpr(cx, targetType, expr.operand);
@@ -456,7 +456,7 @@ function foldTypeTestExpr(FoldContext cx, t:SemType? expectedType, s:TypeTestExp
 }
 
 function foldCheckingExpr(FoldContext cx, t:SemType? expectedType, s:CheckingExpr expr) returns s:Expr|FoldError {
-    t:SemType? ty = expectedType is () ? () : t:diff(expectedType, t:ERROR);
+    t:SemType? ty = expectedType == () ? () : t:diff(expectedType, t:ERROR);
     s:Expr subExpr = check foldExpr(cx, ty, expr.operand);
     if subExpr is s:ConstShapeExpr && !cx.isConstDefn() {
         return subExpr;
@@ -471,7 +471,7 @@ function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, 
 
 function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr expr) returns s:Expr|FoldError {
     s:FLOAT_ZERO|t:Value? constValue = check cx.lookupConst(expr.prefix, expr.varName);
-    if constValue is () {
+    if constValue == () {
         return expr;
     }
     else if constValue is s:FLOAT_ZERO {
@@ -515,7 +515,7 @@ function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLitera
 }
 
 function expectsFloat(t:SemType? semType) returns boolean {
-    if semType is () {
+    if semType == () {
         return false;
     }
     else {

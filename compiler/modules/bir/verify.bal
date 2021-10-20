@@ -192,7 +192,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
         check verifyOperandType(vc, insn.operands[i], memberType,
                                 "type of mapping constructor member of not a subtype of mapping member type");
     }
-    if mat is () {
+    if mat == () {
         return vc.err("bad BIR: inherent type of map is of an unsupported type");
     }
     else if insn.operands.length() < mat.names.length() {
@@ -304,7 +304,7 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
         else {
             operandType = t:constBasicType(operand);
         }
-        if memberType is () {
+        if memberType == () {
             check verifyCompareOperandTypeBase(vc, insn, operandType, expectType);
         }
         else {
