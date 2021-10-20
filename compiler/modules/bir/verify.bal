@@ -21,6 +21,10 @@ class VerifyContext {
         return t:isSubtype(self.tc, s, t);
     }
 
+    function isSameType(t:SemType s, t:SemType t) returns boolean {
+        return s == t || (t:isSubtype(self.tc, s, t) && t:isSubtype(self.tc, t, s));
+    }
+
     function isEmpty(t:SemType t) returns boolean {
         return t:isEmpty(self.tc, t);
     }
@@ -202,8 +206,8 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
         return vc.err("list get applied to non-list");
     }
     t:SemType memberType = t:listMemberType(vc.typeContext(), insn.list.semType);
-    if !vc.isSubtype(memberType, insn.result.semType) {
-        return vc.err("bad BIR: unsafe type for result ListGet", pos=insn.position);
+    if !vc.isSameType(memberType, insn.result.semType) {
+        return vc.err("bad BIR: ListGet result type is not same as member type", pos=insn.position);
     }
 }
 
@@ -226,8 +230,8 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
     if !(k is string) || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k) {
         memberType = t:union(memberType, t:NIL);
     }
-    if !vc.isSubtype(memberType, insn.result.semType) {
-        return vc.err("bad BIR: unsafe type for result MappingGet");
+    if !vc.isSameType(memberType, insn.result.semType) {
+        return vc.err("bad BIR: MappingGet result type is not same as member type");
     }
 }
 
@@ -249,8 +253,8 @@ function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semanti
     if !vc.isSubtype(insn.result.semType, insn.operand.semType) {
         return vc.err("bad BIR: result of type cast is not subtype of operand");
     }
-    if !vc.isSubtype(insn.result.semType, insn.semType) {
-        return vc.err("bad BIR: result of type cast is not subtype of cast to type");
+    if !vc.isSameType(insn.result.semType, insn.semType) {
+        return vc.err("bad BIR: result of type cast is not same as cast to type");
     }
 }
 
@@ -258,8 +262,8 @@ function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns
     if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:INT), t:NUMBER)) {
         return vc.err("bad BIR: operand type of ConvertToInt has no non-integral numeric component");
     }
-    if !vc.isSubtype(t:union(t:diff(insn.operand.semType, t:NUMBER), t:INT), insn.result.semType) {
-        return vc.err("bad BIR: result type of ConvertToInt does not contain everything it should");
+    if !vc.isSameType(t:union(t:diff(insn.operand.semType, t:NUMBER), t:INT), insn.result.semType) {
+        return vc.err("bad BIR: result type of ConvertToInt is incorrect");
     }
     if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:INT), t:NUMBER)) {
         return vc.err("bad BIR: result type of ConvertToInt contains non-integral numeric type");
@@ -270,8 +274,8 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
     if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:FLOAT), t:NUMBER)) {
         return vc.err("bad BIR: operand type of ConvertToFloat has no non-float numeric component");
     }
-    if !vc.isSubtype(t:union(t:diff(insn.operand.semType, t:NUMBER), t:FLOAT), insn.result.semType) {
-        return vc.err("bad BIR: result type of ConvertToFloat does not contain everything it should");
+    if !vc.isSameType(t:union(t:diff(insn.operand.semType, t:NUMBER), t:FLOAT), insn.result.semType) {
+        return vc.err("bad BIR: result type of ConvertToFloat is incorrect");
     }
     if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:FLOAT), t:NUMBER)) {
         return vc.err("bad BIR: result type of ConvertToFloat contains non-float numeric type");
