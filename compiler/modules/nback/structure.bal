@@ -153,7 +153,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
     llvm:PointerValue m = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(mappingConstructFunction),
                                                           [inherentType, llvm:constInt(LLVM_INT, length)]);
-    // JBUG if I combine these statements into a single from/do, then it gives an assignment required error
+    // JBUG #31681 if I combine these statements into a single from/do, then it gives an assignment required error
     // which is removed by a check; but it's only check failures in the query pipeline that should show up in the
     // result of the from/do, not check failures in the do clause. (Code now changed a lot.)
 
@@ -162,7 +162,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
         from int i in 0 ..< length select [insn.fieldNames[i], insn.operands[i]];    
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
     if !(mat is ()) && mat.names.length() != 0 {
-        // JBUG This doesn't work with array:sort (complains about unordered type)
+        // JBUG #33300 This doesn't work with array:sort (complains about unordered type)
         members = from var [k, v] in members order by k select [k, v];
     } 
     foreach var [fieldName, operand] in members {
