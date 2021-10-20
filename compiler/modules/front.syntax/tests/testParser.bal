@@ -34,7 +34,7 @@ function testParser(string k, string rule, string[] subject, string[] expected) 
         panic err:impossible("kind must be FE or FV but was '" + k + "'");
     }
     if k.includes("E") {
-        if !(parsed is error) {
+        if parsed !is error {
             test:assertFail("expected a syntax error but got " + "\n".'join(...wordsToLines(parsed)));
         }
         return;

@@ -316,7 +316,7 @@ public class Module {
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
         FunctionDecl? fnExisting = <FunctionDecl?>self.globals[name];
-        if !(fnExisting is ()) {
+        if fnExisting !is () {
             return fnExisting;
         }
         if name is IntegerArithmeticIntrinsicName {
@@ -1301,7 +1301,7 @@ public class Builder {
 }
 
 function addInsnWithAlign(BasicBlock bb, (string|Unnamed)[] words, Alignment? align, Metadata? dbLocation) {
-    if !(align is ()) {
+    if align !is () {
         words.push(",", "align", align.toString());
     }
     addInsnWithDbLocation(bb, words, dbLocation);
@@ -1429,11 +1429,11 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
     else if ty is StructType {
         var data = context.getStructName(ty);
         Type[] elementTypes = ty.elementTypes;
-        if !(data is ()) {
+        if data !is () {
             elementTypes = data[1];
         }
         if !forceInline {
-            if !(data is ()) {
+            if data !is () {
                 return data[0];
             }
         }
@@ -1633,7 +1633,7 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
                     i = checkpanic int:fromString(<string>index.operand);
                 }
                 Type indexTy = index.ty;
-                if !(indexTy is "i32") {
+                if indexTy !is "i32" {
                     panic err:illegalArgument("structures can be index only using i32 constants"); 
                 }
                 else {
@@ -1651,7 +1651,7 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
 function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
     var data = context.getStructName(ty);
     Type[] elementTypes = ty.elementTypes;
-    if !(data is ()) {
+    if data !is () {
         elementTypes = data[1];
     }
     return elementTypes[index];

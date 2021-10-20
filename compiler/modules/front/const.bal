@@ -73,7 +73,7 @@ function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:Resolve
     if resolved is false {
         return err:semantic(`cycle in evaluating ${defn.name}`, s:defnLocation(defn));
     }
-    else if !(resolved is ()) {
+    else if resolved !is () {
         return resolved;
     }
     else {
@@ -407,7 +407,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
 function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExpr expr) returns s:Expr|FoldError {
     t:SemType semType = check cx.resolveTypeDesc(expr.td);
     t:SemType targetType = semType;
-    if !(expectedType is ()) {
+    if expectedType !is () {
         targetType = t:intersect(targetType, expectedType);
     }
     s:Expr subExpr = check foldExpr(cx, targetType, expr.operand);

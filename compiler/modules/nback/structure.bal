@@ -161,7 +161,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     [string, bir:Operand][] members =
         from int i in 0 ..< length select [insn.fieldNames[i], insn.operands[i]];    
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
-    if !(mat is ()) && mat.names.length() != 0 {
+    if mat !is () && mat.names.length() != 0 {
         // JBUG #33300 This doesn't work with array:sort (complains about unordered type)
         members = from var [k, v] in members order by k select [k, v];
     } 

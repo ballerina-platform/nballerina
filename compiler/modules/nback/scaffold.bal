@@ -185,7 +185,7 @@ class Scaffold {
     function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl {
         bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: rf.name };
         llvm:FunctionDecl? decl = self.getImportedFunction(symbol);
-        if !(decl is ()) {
+        if decl !is () {
             return decl;
         }
         else {
@@ -197,7 +197,7 @@ class Scaffold {
 
     function getString(string str) returns StringDefn {
         StringDefn? curDefn = self.mod.stringDefns[str];
-        if !(curDefn is ()) {
+        if curDefn !is () {
             return curDefn;
         }
         StringDefn newDefn = addStringDefn(self.mod.llContext, self.mod.llMod, self.mod.stringDefns.length(), str);
@@ -234,7 +234,7 @@ class Scaffold {
 
     function setDebugLocation(llvm:Builder builder, bir:Position pos, "file"? fileOnly = ()) {
         DISubprogram? diFunc = self.diFunc;
-        if !(diFunc is ()) {
+        if diFunc !is () {
             ModuleDI di = <ModuleDI>self.mod.di;
             DILocation loc;
             if fileOnly == () {

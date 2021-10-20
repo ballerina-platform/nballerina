@@ -788,7 +788,7 @@ public function simpleArrayMemberType(Context cx, SemType t, boolean strict = fa
 }
 
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns UniformTypeBitSet? {
-    if !(atomic is ()) && atomic.members.length() == 0 {
+    if atomic !is () && atomic.members.length() == 0 {
         SemType memberType = atomic.rest;
         if memberType is UniformTypeBitSet {
             return memberType;
@@ -853,7 +853,7 @@ public function simpleMapMemberType(Context cx, SemType t, boolean strict = fals
 }
 
 public function mappingAtomicSimpleArrayMemberType(MappingAtomicType? atomic) returns UniformTypeBitSet? {
-    if !(atomic is ()) && atomic.names.length() == 0 {
+    if atomic !is () && atomic.names.length() == 0 {
         SemType memberType = atomic.rest;
         if memberType is UniformTypeBitSet {
             return memberType;

@@ -227,7 +227,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
         return vc.err("mapping get applied to non-mapping");
     }
     t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
-    if !(k is string) || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k) {
+    if k !is string || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k) {
         memberType = t:union(memberType, t:NIL);
     }
     if !vc.isSameType(memberType, insn.result.semType) {

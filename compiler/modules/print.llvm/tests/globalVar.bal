@@ -36,7 +36,7 @@ function testRepeatedVarDecln() {
     Module m = context.createModule();
     _ = m.addGlobal("i64", "g1");
     error|PointerValue e = trap m.addGlobal("i64", "g1");
-    if !(e is error) {
+    if e !is error {
         test:assertFail("Repeated global variable declaration allowed");
     }
 }

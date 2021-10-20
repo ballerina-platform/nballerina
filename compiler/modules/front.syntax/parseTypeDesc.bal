@@ -221,13 +221,13 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
         args.push(check parseTypeDesc(tok));
         match tok.current() {
             [IDENTIFIER, var paramName] => {
-                if !(paramNames is ()) {
+                if paramNames !is () {
                     paramNames.push(paramName);
                 }
                 check tok.advance();
             }
             _ => {
-                if !(paramNames is ()) {
+                if paramNames !is () {
                     return parseError(tok);
                 }
             }
@@ -284,7 +284,7 @@ function parseRecordTypeDesc(Tokenizer tok) returns MappingTypeDesc|err:Syntax {
     FieldDesc[] fields = [];
     TypeDesc? rest = ();
     while tok.current() != "|}" {
-        if !(rest is ()) {
+        if rest !is () {
             return parseError(tok);
         }
         TypeDesc td = check parseTypeDesc(tok);

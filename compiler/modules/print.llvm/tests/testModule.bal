@@ -6,7 +6,7 @@ function testIntrinsicNamedGlobalVar() {
     Builder builder = context.createBuilder();
     Module m = context.createModule();
     error|PointerValue e = trap m.addGlobal("i64", "sadd.with.overflow.i64");
-    if !(e is error) {
+    if e !is error {
         test:assertFail("Global variables named as reserved intrinsic allowed");
     }
 }
@@ -17,7 +17,7 @@ function testIntrinsicNamedFunctionDecln() {
     Builder builder = context.createBuilder();
     Module m = context.createModule();
     error|FunctionDecl fn = trap m.addFunctionDecl("sadd.with.overflow.i64",{returnType:"i64", paramTypes:["i64"]});
-    if !(fn is error) {
+    if fn !is error {
         test:assertFail("Function declarations named as reserved intrinsic allowed");
     }
 }
@@ -28,7 +28,7 @@ function testIntrinsicNamedFunctionDefn() {
     Builder builder = context.createBuilder();
     Module m = context.createModule();
     error|FunctionDefn fn = trap m.addFunctionDefn("sadd.with.overflow.i64",{returnType:"i64", paramTypes:["i64"]});
-    if !(fn is error) {
+    if fn !is error {
         test:assertFail("Function declarations named as reserved intrinsic allowed");
     }
 }
@@ -40,7 +40,7 @@ function testSameNamedDeclarations1() {
     Module m = context.createModule();
     _ =  m.addGlobal("i64", "g1");
     error|FunctionDefn fn = trap m.addFunctionDefn("g1",{returnType:"i64", paramTypes:["i64"]});
-    if !(fn is error) {
+    if fn !is error {
         test:assertFail("Repeated use of same name allowed");
     }
 }
@@ -52,7 +52,7 @@ function testSameNamedDeclarations2() {
     Module m = context.createModule();
     _ =  m.addGlobal("i64", "g1");
     error|FunctionDecl fn = trap m.addFunctionDecl("g1",{returnType:"i64", paramTypes:["i64"]});
-    if !(fn is error) {
+    if fn !is error {
         test:assertFail("Repeated use of same name allowed");
     }
 }
@@ -64,7 +64,7 @@ function testSameNamedDeclarations3() {
     Module m = context.createModule();
     _ = m.addFunctionDefn("g1",{returnType:"i64", paramTypes:["i64"]});
     error|FunctionDecl fn = trap m.addFunctionDecl("g1",{returnType:"i64", paramTypes:["i64"]});
-    if !(fn is error) {
+    if fn !is error {
         test:assertFail("Repeated use of same name allowed");
     }
 }

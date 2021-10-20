@@ -24,7 +24,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         bir:InternalSymbol symbol = defn.symbol;
         string mangledName = mangleInternalSymbol(modId, symbol);
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
-        if !(di is ()) {
+        if di !is () {
             DISubprogram diFunc = createFunctionDI(di, partFiles, defn, llFunc, mangledName);
             diFuncs.push(diFunc);
             llFunc.setSubprogram(diFunc);

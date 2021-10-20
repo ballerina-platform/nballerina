@@ -226,7 +226,7 @@ class CodeGenFoldContext {
         t:Value|Binding v = check lookupVarRef(self.cx, varName, self.env);
         if v is Binding {
             t:Value? shape = t:singleShape(v.reg.semType);
-            if !(shape is ()) && shape.value == s:FLOAT_ZERO {
+            if shape !is () && shape.value == s:FLOAT_ZERO {
                 return s:FLOAT_ZERO;
             }
             return shape;
@@ -269,7 +269,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
         bindings = { name: paramNames[i], reg, prev: bindings, isFinal: true };
     }
     var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
-    if !(endBlock is ()) {
+    if endBlock !is () {
         bir:RetInsn ret = { operand: () };
         endBlock.insns.push(ret);
     }
@@ -293,7 +293,7 @@ function codeGenOnPanic(CodeGenContext cx) {
             b.onPanic = pb.label;
         }
     }
-    if !(onPanicBlock is ()) {
+    if onPanicBlock !is () {
         bir:Register reg = cx.createRegister(t:ERROR);
         bir:CatchInsn catch = { result: reg };
         onPanicBlock.insns.push(catch);
@@ -347,7 +347,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
         }
         curBlock = effect.block;
         Binding? bindings = effect.bindings;
-        if !(bindings is ()) {
+        if bindings !is () {
             env.bindings = bindings;
         }
         if curBlock is () {
@@ -405,7 +405,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     var { block: loopEnd, assignments } = check codeGenStmts(cx, loopBody, { bindings: loopBindings }, stmt.body);
     
     bir:BasicBlock? loopStep = cx.loopContinueBlock();
-    if !(loopEnd is ()) {
+    if loopEnd !is () {
         loopStep = loopStep ?: cx.createBasicBlock();
         bir:BranchInsn branchToLoopStep = { dest: (<bir:BasicBlock>loopStep).label };
         loopEnd.insns.push(branchToLoopStep);
@@ -414,7 +414,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     check validLoopAssignments(cx, cx.onContinueAssignments());
     assignments.push(...cx.onContinueAssignments());
     assignments.push(...cx.onBreakAssignments());
-    if !(loopStep is ()) {
+    if loopStep !is () {
         bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", operands: [loopVar, 1], result: loopVar };
         loopStep.insns.push(increment);
         loopStep.insns.push(branchToLoopHead);
@@ -454,7 +454,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     afterCondition.insns.push(branch);
     cx.pushLoopContext(exit, loopHead);
     var { block: loopEnd, assignments } = check codeGenStmts(cx, loopBody, env, stmt.body);
-    if !(loopEnd is ()) {
+    if loopEnd !is () {
         loopEnd.insns.push(branchToLoopHead);
         check validLoopAssignments(cx, assignments);
     }
@@ -587,7 +587,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         bir:BasicBlock stmtBlock = clauseBlocks[clauseIndex];
         Environment clauseEnv = env;
         // Do type narrowing
-        if !(binding is ()) {
+        if binding !is () {
             bir:Result? basis = ();
             if clauseIndex == wildcardClauseIndex {
                 bir:Result[] and = [];
@@ -682,7 +682,7 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
             contBlock = cx.createBasicBlock();
             bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: contBlock.label };
             branchBlock.insns.push(condBranch);
-            if !(ifContBlock is ()) {
+            if ifContBlock !is () {
                 bir:BranchInsn branch = { dest: contBlock.label };
                 ifContBlock.insns.push(branch);
             }
@@ -701,10 +701,10 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
             }
             contBlock = cx.createBasicBlock();
             bir:BranchInsn branch = { dest: contBlock.label };
-            if !(ifContBlock is ()) {
+            if ifContBlock !is () {
                 ifContBlock.insns.push(branch);
             }
-            if !(elseContBlock is ()) {
+            if elseContBlock !is () {
                 elseContBlock.insns.push(branch);
                 assignments.push(...elseAssignments);
             }
@@ -1054,7 +1054,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             bir:Register result = cx.createRegister(t:BOOLEAN);
             bir:BooleanNotInsn insn = { operand: reg, result };
             nextBlock.insns.push(insn);
-            if !(narrowing is ()) {
+            if narrowing !is () {
                 narrowing.negated = !narrowing.negated;
             }
             return { result, block: nextBlock, narrowing };
@@ -1424,7 +1424,7 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
         [intersect, diff] = [diff, intersect];
     }
     Narrowing? narrowing = ();
-    if !(binding is ()) {
+    if binding !is () {
         narrowing = {
             binding,
             ifTrue: intersect,
@@ -1640,7 +1640,7 @@ type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
 
 function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName) returns bir:FunctionRef|CodeGenError {
     TypedOperand? t = typedOperand(target);
-    if !(t is ()) && t[0] is LangLibModuleName {
+    if t !is () && t[0] is LangLibModuleName {
         string moduleName = t[0];
         bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature is () {
@@ -1734,9 +1734,9 @@ function lookupVarRef(CodeGenContext cx, string name, Environment env) returns t
 
 function lookupLocalVarRef(CodeGenContext cx, string name, Environment env) returns Binding? {
     Binding? binding = lookup(name, env);
-    if !(binding is ()) {
+    if binding !is () {
         Binding? unnarrowed = binding.unnarrowed;
-        if !(unnarrowed is ()) {
+        if unnarrowed !is () {
             unnarrowed.used = true;
             // This is a narrowed binding
             int num = unnarrowed.reg.number;

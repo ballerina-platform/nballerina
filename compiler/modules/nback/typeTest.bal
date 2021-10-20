@@ -39,7 +39,7 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     t:UniformTypeBitSet? bitSet = testTypeAsUniformBitSet(scaffold.typeContext(), insn.operand.semType, insn.semType);
     llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:Value hasType;
-    if !(bitSet is ()) {
+    if bitSet !is () {
         hasType = buildHasTagInSet(builder, tagged, bitSet);
     }
     else if t:isSubtypeSimple(semType, t:LIST) {
@@ -72,7 +72,7 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     llvm:BasicBlock castFailBlock = scaffold.addBasicBlock();
     t:SemType semType = insn.semType;
     t:UniformTypeBitSet? bitSet = testTypeAsUniformBitSet(scaffold.typeContext(), insn.operand.semType, insn.semType);
-    if !(bitSet is ()) {
+    if bitSet !is () {
         builder.condBr(buildHasTagInSet(builder, tagged, bitSet), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
         builder.store(check buildNarrowRepr(builder, scaffold, repr, val, scaffold.getRepr(insn.result)), scaffold.address(insn.result));
