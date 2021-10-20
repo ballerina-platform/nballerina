@@ -25,7 +25,7 @@ class TestFoldContext {
     }
     function resolveTypeDesc(s:TypeDesc td) returns err:Semantic|t:SemType {
         if td is s:BuiltinTypeDesc {
-            return resolveInlineBuiltinTypeDesc(td);
+            return resolveBuiltinTypeDesc(td);
         }
         return err:semantic("TestFoldContext cannot resolve TypeDesc", location("testConst.bal"));
     }

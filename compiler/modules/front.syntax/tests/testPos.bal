@@ -337,7 +337,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         }
         TypeDesc ret = td.ret;
         if !(ret is LeafTypeDesc && ret.builtinType is "()") {
-            // these are hardcoded based on context
+            // above is true when there is no actual return type and value is hardcoded not parsed
             check validateTypeDescPos(td.ret, tok, td.startPos, td.endPos);
             childNodePos.push([td.ret.startPos, td.ret.endPos]);
         }

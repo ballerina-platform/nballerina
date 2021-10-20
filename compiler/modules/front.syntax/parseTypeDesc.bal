@@ -71,7 +71,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             if tok.current() == ")" {
                 endPos = tok.currentEndPos();
                 check tok.advance();
-                return {startPos, endPos, builtinType:"()"};
+                return { startPos, endPos, builtinType:"()" };
             }
             TypeDesc td = check parseTypeDesc(tok);
             endPos = check tok.expectEnd(")");
@@ -95,7 +95,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 return {startPos, endPos, builtinType: cur};
             }
             // JBUG should not need cast #30191
-            return {startPos, endPos, builtinType: <BuiltinType>cur};
+            return { startPos, endPos, builtinType: <BuiltinType>cur };
         }
         "string"
         |"int" => {
@@ -104,7 +104,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             check tok.advance();
             if tok.current() != ":" {
                 // JBUG should not need cast #30191
-                return {startPos, endPos, builtinType: <BuiltinType>cur};
+                return { startPos, endPos, builtinType: <BuiltinType>cur };
             }
             check tok.advance();
             string typeName = check tok.expectIdentifier();
@@ -123,7 +123,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             check tok.advance();
             var rest = check parseTypeParam(tok);
             Position endPos = tok.previousEndPos();
-            return <MappingTypeDesc>{ startPos, endPos, rest, fields: [] };
+            return { startPos, endPos, rest, fields: [] };
         }
         "error" => {
             Position endPos = tok.currentEndPos();
@@ -148,7 +148,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         [STRING_LITERAL, var str] => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            return <SingletonTypeDesc>{ startPos, endPos, value: str };
+            return { startPos, endPos, value: str };
         }
         [DECIMAL_NUMBER, _]
         | [HEX_INT_LITERAL, _]
@@ -180,7 +180,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 // Another approach would be to have a kind of TypeDesc that refers to an NumericLiteralExpr and then convert in resolveTypes.
 // XXX Revisit when floats (and maybe decimals) are fully incorporated in the front-end.
 function parseNumericLiteralTypeDesc(Tokenizer tok, Position? signPos = ()) returns SingletonTypeDesc|err:Syntax {
-    Position startPos = signPos != ()? signPos : tok.currentStartPos();
+    Position startPos = signPos != () ? signPos : tok.currentStartPos();
     NumericLiteralExpr expr = check parseNumericLiteralExpr(tok);
     if expr is FpLiteralExpr {
         if expr.typeSuffix == "d" {
@@ -280,7 +280,7 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
         ret = { startPos:tok.currentStartPos(), endPos, builtinType:"()" };
     }
     endPos = tok.previousEndPos();
-    return <FunctionTypeDesc>{ startPos, endPos, args, ret };
+    return { startPos, endPos, args, ret };
 }
 
 // current token is []

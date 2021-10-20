@@ -80,7 +80,7 @@ function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:Resolve
         defn.resolved = false;
         ConstFoldContext cx = new ConstFoldContext(defn, mod);
         s:BuiltinTypeDesc? td = defn.td;
-        t:SemType? expectedType = td == () ? () : resolveInlineBuiltinTypeDesc(td);
+        t:SemType? expectedType = td == () ? () : resolveBuiltinTypeDesc(td);
         s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
         if expr is s:ConstValueExpr {
             if expectedType == () || t:containsConst(expectedType, expr.value) {

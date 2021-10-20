@@ -113,25 +113,24 @@ function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns 
 
 function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
     if td is s:BuiltinTypeDesc {
-    match td.builtinType {
-        // These are easy
-        "any" => { return t:ANY; }
-        "boolean" => { return t:BOOLEAN; }
-        "decimal" => { return t:DECIMAL; }
-        "error" => { return t:ERROR; }
-        "float" => { return t:FLOAT; }
-        "handle" => { return t:HANDLE; }
-        "int" => { return t:INT; }
-        "never" => { return t:NEVER; }
-        "readonly" => { return t:READONLY; }
-        "string" => { return t:STRING; }
-        "typedesc" => { return t:TYPEDESC; }
-        "xml" => { return t:XML; }
-        "byte" => { return t:BYTE; }
-        "json" => { return t:createJson(mod.tc.env); }
-        "()" => { return t:NIL; }
-    }
-
+        match td.builtinType {
+            // These are easy
+            "any" => { return t:ANY; }
+            "boolean" => { return t:BOOLEAN; }
+            "decimal" => { return t:DECIMAL; }
+            "error" => { return t:ERROR; }
+            "float" => { return t:FLOAT; }
+            "handle" => { return t:HANDLE; }
+            "int" => { return t:INT; }
+            "never" => { return t:NEVER; }
+            "readonly" => { return t:READONLY; }
+            "string" => { return t:STRING; }
+            "typedesc" => { return t:TYPEDESC; }
+            "xml" => { return t:XML; }
+            "byte" => { return t:BYTE; }
+            "json" => { return t:createJson(mod.tc.env); }
+            "()" => { return t:NIL; }
+        }
     }
     final t:Env env = mod.tc.env;
     // JBUG would like to use match patterns here, but #30718 prevents it
@@ -257,7 +256,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     panic error("unimplemented type-descriptor");
 }
 
-function resolveInlineBuiltinTypeDesc(s:BuiltinTypeDesc td) returns t:UniformTypeBitSet {
+function resolveBuiltinTypeDesc(s:BuiltinTypeDesc td) returns t:UniformTypeBitSet {
     match td.builtinType {
         "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }
