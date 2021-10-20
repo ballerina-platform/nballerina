@@ -71,7 +71,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             if tok.current() == ")" {
                 endPos = tok.currentEndPos();
                 check tok.advance();
-                return { startPos, endPos, builtinTypeName:"null" };
+                return { startPos, endPos, builtinTypeName: "null" };
             }
             TypeDesc td = check parseTypeDesc(tok);
             endPos = check tok.expectEnd(")");
@@ -106,7 +106,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             check tok.advance();
             string typeName = check tok.expectIdentifier();
             endPos = tok.previousEndPos();
-            return { startPos, endPos, prefix: <BuiltinTypeName> cur, typeName, pos };
+            return { startPos, endPos, prefix: <BuiltinTypeName>cur, typeName, pos };
         }
         "byte" => {
             Position endPos = tok.currentEndPos();
@@ -126,7 +126,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             Position endPos = tok.currentEndPos();
             check tok.advance();
             if tok.current() != "<" {
-                return { startPos, endPos, builtinTypeName:"error" };
+                return { startPos, endPos, builtinTypeName: "error" };
             }
             var detail = check parseTypeParam(tok);
             endPos = tok.previousEndPos();
