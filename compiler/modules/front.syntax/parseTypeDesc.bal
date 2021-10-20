@@ -339,5 +339,5 @@ function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTy
     }
     Position endPos = tok.currentEndPos();
     check tok.advance();
-    return { startPos, endPos, fields, rest: rest ?: { startPos, endPos: startPos, builtinTypeName: "never" } };
+    return { startPos, endPos, fields, rest };
 }

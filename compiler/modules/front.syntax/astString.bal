@@ -248,7 +248,13 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     }
     else if td is MappingTypeDesc {
         w.push("map", CLING, "<", CLING);
-        typeDescToWords(w, td.rest);
+        TypeDesc? rest = td.rest;
+        if rest == () {
+            typeDescToWords(w, { startPos: td.startPos, endPos: td.endPos, builtinTypeName: "never" });
+        }
+        else {
+            typeDescToWords(w, rest);
+        }
         w.push(CLING, ">");
         return;
     }

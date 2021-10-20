@@ -433,7 +433,7 @@ public type MappingTypeDesc record {|
     Position startPos;
     Position endPos;
     FieldDesc[] fields;
-    TypeDesc rest;
+    TypeDesc? rest;
     t:MappingDefinition? defn = ();
 |};
 

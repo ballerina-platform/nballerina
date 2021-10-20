@@ -164,7 +164,14 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
                 fieldsByName[fd.name] = fd;
             }
-            t:SemType rest = check resolveTypeDesc(mod, modDefn, depth + 1, td.rest);
+            s:TypeDesc? restTd = td.rest;
+            t:SemType rest;
+            if restTd == () {
+                rest = t:NEVER;
+            }
+            else {
+                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+            }
             return d.define(env, fields, rest);
         }
         else {

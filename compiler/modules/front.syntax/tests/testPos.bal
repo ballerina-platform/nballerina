@@ -294,18 +294,15 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     if td is FunctionTypeDesc {
         newTd = check parseFunctionTypeDesc(tok);
     }
-    else if td is LeafTypeDesc && td.builtinTypeName is "null" {
-        // these are hardcoded based on context
-        return;
-    }
     else {
         newTd = check parseTypeDesc(tok);
     }
     Position actualEnd = tok.previousEndPos();
     if td.toString() != newTd.toString() && newTd is ListTypeDesc|MappingTypeDesc {
         // These are left recursions which we can't separately parse
-        actualEnd = newTd.rest.endPos;
-        newTd = newTd.rest;
+        TypeDesc rest = <TypeDesc> newTd.rest;
+        actualEnd = rest.endPos;
+        newTd = rest;
     }
     test:assertEquals(td.endPos, actualEnd);
     test:assertEquals(td.toString(), newTd.toString());
@@ -326,9 +323,11 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
             check validateTypeDescPos(f.typeDesc, tok, td.startPos, td.endPos);
             childNodePos.push([f.typeDesc.startPos, f.typeDesc.endPos]);
         }
-        TypeDesc rest = td.rest;
-        childNodePos.push([td.rest.startPos, td.rest.endPos]);
-        check validateTypeDescPos(td.rest, tok, td.startPos, td.endPos);
+        TypeDesc? rest = td.rest;
+        if rest is TypeDesc {
+            childNodePos.push([rest.startPos, rest.endPos]);
+            check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
+        }
     }
     else if td is FunctionTypeDesc {
         foreach var arg in td.args {
