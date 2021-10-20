@@ -113,7 +113,7 @@ function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns 
 
 function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
     if td is s:BuiltinTypeDesc {
-        match td.builtinType {
+        match td.builtinTypeName {
             // These are easy
             "any" => { return t:ANY; }
             "boolean" => { return t:BOOLEAN; }
@@ -129,7 +129,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             "xml" => { return t:XML; }
             "byte" => { return t:BYTE; }
             "json" => { return t:createJson(mod.tc.env); }
-            "()" => { return t:NIL; }
+            "null" => { return t:NIL; }
         }
     }
     final t:Env env = mod.tc.env;
@@ -257,7 +257,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
 }
 
 function resolveBuiltinTypeDesc(s:BuiltinTypeDesc td) returns t:UniformTypeBitSet {
-    match td.builtinType {
+    match td.builtinTypeName {
         "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }
         "int" => { return t:INT; }

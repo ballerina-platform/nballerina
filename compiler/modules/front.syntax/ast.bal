@@ -475,11 +475,11 @@ public type SingletonTypeDesc record {|
     (string|float|int|boolean|decimal) value;
 |};
 
-public type BuiltinType "boolean"|"int"|"float"|"string"|"error"|"any"|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
+public type BuiltinTypeName "boolean"|"int"|"float"|"string"|"error"|"any"|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
 
 public type BuiltinTypeDesc record {|
     *PositionFields;
-    BuiltinType builtinType;
+    BuiltinTypeName builtinTypeName;
 |};
 
 public type LeafTypeDesc BuiltinTypeDesc;

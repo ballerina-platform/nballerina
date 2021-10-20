@@ -294,7 +294,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     if td is FunctionTypeDesc {
         newTd = check parseFunctionTypeDesc(tok);
     }
-    else if td is LeafTypeDesc && td.builtinType is "()" {
+    else if td is LeafTypeDesc && td.builtinTypeName is "null" {
         // these are hardcoded based on context
         return;
     }
@@ -336,7 +336,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
             childNodePos.push([arg.startPos, arg.endPos]);
         }
         TypeDesc ret = td.ret;
-        if !(ret is LeafTypeDesc && ret.builtinType is "()") {
+        if !(ret is LeafTypeDesc && ret.builtinTypeName is "null") {
             // above is true when there is no actual return type and value is hardcoded not parsed
             check validateTypeDescPos(td.ret, tok, td.startPos, td.endPos);
             childNodePos.push([td.ret.startPos, td.ret.endPos]);

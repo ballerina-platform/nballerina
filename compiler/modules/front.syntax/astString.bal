@@ -65,7 +65,7 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
     }
     w.push(")");
     TypeDesc funcRetTd = func.typeDesc.ret;
-    if !(funcRetTd is BuiltinTypeDesc && funcRetTd.builtinType == "()") {
+    if !(funcRetTd is BuiltinTypeDesc && funcRetTd.builtinTypeName == "null") {
         w.push("returns");
         typeDescToWords(w, func.typeDesc.ret);
     }
@@ -230,7 +230,12 @@ function blockToWords(Word[] w, Stmt[] body) {
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
     if td is BuiltinTypeDesc {
-        w.push(td.builtinType);
+        if td.builtinTypeName == "null" {
+            w.push("()");
+        }
+        else {
+            w.push(td.builtinTypeName);
+        }
         return;
     }
     else if td is TypeDescRef {
@@ -263,7 +268,7 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         // so we need to take care not to add them unnecessarily
         // JBUG error if `===` used instead if `is`
         TypeDesc rightTd = td.right;
-        if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinType is "()" {
+        if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName is "null" {
             typeDescToWords(w, td.left, wrap);
             w.push(CLING, "?");
         }

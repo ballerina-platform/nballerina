@@ -167,11 +167,11 @@ function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis, Po
     check tok.advance();
     Token? t = tok.current();
     BuiltinTypeDesc? td = ();
-    if t is BuiltinType {
+    if t is BuiltinTypeName {
         Position tdStartPos = tok.currentStartPos();
         Position tdEndPos = tok.currentEndPos();
         check tok.advance();
-        td = { startPos: tdStartPos, endPos: tdEndPos, builtinType:t };
+        td = { startPos: tdStartPos, endPos: tdEndPos, builtinTypeName: t };
     }
     Position namePos = tok.currentStartPos();
     string name = check tok.expectIdentifier();
