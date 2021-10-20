@@ -317,33 +317,31 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
             effect = check codeGenMatchStmt(cx, curBlock, env, stmt);
         }
         else if stmt is s:WhileStmt {
-            // JBUG #31327 cast
-            effect = check codeGenWhileStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+            effect = check codeGenWhileStmt(cx, curBlock, env, stmt);
         }
         else if stmt is s:ForeachStmt {
-            effect = check codeGenForeachStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+            effect = check codeGenForeachStmt(cx, curBlock, env, stmt);
         }
         else if stmt is s:BreakContinueStmt {
-            effect = check codeGenBreakContinueStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+            effect = check codeGenBreakContinueStmt(cx, curBlock, env, stmt);
         }
         else if stmt is s:ReturnStmt {
-            // JBUG #31327 cast
-            effect = check codeGenReturnStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+            effect = check codeGenReturnStmt(cx, curBlock, env, stmt);
         }
         else if stmt is s:PanicStmt {
-            effect = check codeGenPanicStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+            effect = check codeGenPanicStmt(cx, curBlock, env, stmt);
         }
         else if stmt is s:VarDeclStmt {
-            effect = check codeGenVarDeclStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+            effect = check codeGenVarDeclStmt(cx, curBlock, env, stmt);
         }
         else if stmt is s:AssignStmt {
-            effect = check codeGenAssignStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+            effect = check codeGenAssignStmt(cx, curBlock, env, stmt);
         }
         else if stmt is s:CompoundAssignStmt {
-            effect = check codeGenCompoundAssignStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+            effect = check codeGenCompoundAssignStmt(cx, curBlock, env, stmt);
         }
         else {
-            effect = check codeGenCallStmt(cx, <bir:BasicBlock>curBlock, env, stmt);
+            effect = check codeGenCallStmt(cx, curBlock, env, stmt);
         }
         curBlock = effect.block;
         Binding? bindings = effect.bindings;
