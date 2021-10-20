@@ -77,7 +77,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         "check"|"checkpanic" => {
             check tok.advance();
             // JBUG cast
-            return finishCheckingCallStmt(tok, <CheckingKeyword>cur);
+            return finishCheckingCallStmt(tok, <CheckingKeyword>cur, startPos);
         }
         var td if td is InlineBuiltinTypeDesc|"map"|"record" => {
             return parseVarDeclStmt(tok, startPos);
@@ -105,31 +105,32 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 
 function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Position startPos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
+    Position endPos = tok.previousEndPos();
     if cur == "=" {
-        VarRefExpr lValue = { varName: identifier };
+        VarRefExpr lValue = { startPos, endPos, varName: identifier };
         return finishAssignStmt(tok, lValue, startPos);
     }
     else if cur is CompoundAssignOp {
-        VarRefExpr lValue = { varName: identifier };
+        VarRefExpr lValue = { startPos, endPos, varName: identifier };
         return parseCompoundAssignStmt(tok, lValue, cur, startPos);
     }
     else if cur == "[" {
-        VarRefExpr varRef = { varName: identifier };
+        VarRefExpr varRef = { startPos, endPos, varName: identifier };
         Position bracketPos = tok.currentStartPos();
         check tok.advance();
         Expr index = check parseInnerExpr(tok);
-        check tok.expect("]");
+        Position memberAccessEndPos = check tok.expectEnd("]");
         cur = tok.current();
         if cur == "=" {
-            MemberAccessLExpr lValue = { container: varRef, index, pos: bracketPos };
+            MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
             return finishAssignStmt(tok, lValue, startPos);
         }
         else if cur is CompoundAssignOp {
-            MemberAccessLExpr lValue = { container: varRef, index, pos: bracketPos };
+            MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
             return parseCompoundAssignStmt(tok, lValue, cur, startPos);
         }
-        MemberAccessExpr memberAccess = { container: varRef, index, pos: bracketPos };
-        Expr expr = check finishPrimaryExpr(tok, memberAccess);
+        MemberAccessExpr memberAccess = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
+        Expr expr = check finishPrimaryExpr(tok, memberAccess, startPos);
         if expr is MethodCallExpr {
             check tok.expect(";");
             return expr;
@@ -151,19 +152,20 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
     Token? cur = tok.current();
     if cur == "(" {
         check tok.advance();
-        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, pos);
-        return finishCallStmt(tok, expr);
+        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, pos, startPos);
+        return finishCallStmt(tok, expr, startPos);
     }
     else if cur == "." {
-        VarRefExpr varRef = { varName: identifier, prefix };
+        VarRefExpr varRef = { startPos, endPos:tok.previousEndPos(), varName: identifier, prefix };
         check tok.advance();
         string name = check tok.expectIdentifier();
         if tok.current() == "(" {
-            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, pos));
+            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, pos, startPos), startPos);
         }
         else {
-            VarRefExpr container = { varName: identifier };
-            FieldAccessLExpr lValue = { fieldName: name, container, pos };
+            Position endPos = tok.previousEndPos();
+            VarRefExpr container = { startPos, endPos, varName: identifier };
+            FieldAccessLExpr lValue = { startPos, endPos, fieldName: name, container, pos };
             Token? t = tok.current();
             if t == "=" {
                 return finishAssignStmt(tok, lValue, startPos);
@@ -183,10 +185,11 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
 }
 
 function parseMethodCallStmt(Tokenizer tok) returns MethodCallExpr|err:Syntax {
+    Position startPos = tok.currentStartPos();
     Expr expr = check startPrimaryExpr(tok);
     Token? cur = tok.current();
     if cur == "." || cur == "[" {
-        expr = check finishPrimaryExpr(tok, expr);
+        expr = check finishPrimaryExpr(tok, expr, startPos);
         if expr is MethodCallExpr {
             check tok.expect(";");
             return expr;
@@ -195,8 +198,8 @@ function parseMethodCallStmt(Tokenizer tok) returns MethodCallExpr|err:Syntax {
     return parseError(tok, "expression not allowed as a statement");
 }
 
-function finishCallStmt(Tokenizer tok, CallStmt expr) returns Stmt|err:Syntax {
-    Expr primary = check finishPrimaryExpr(tok, expr);
+function finishCallStmt(Tokenizer tok, CallStmt expr, Position startPos) returns Stmt|err:Syntax {
+    Expr primary = check finishPrimaryExpr(tok, expr, startPos);
     CallStmt stmt;
     if primary === expr {
         stmt = expr;
@@ -211,19 +214,21 @@ function finishCallStmt(Tokenizer tok, CallStmt expr) returns Stmt|err:Syntax {
     return stmt;
 }
 
-function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword) returns CallStmt|err:Syntax {
+function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, Position startPos) returns CallStmt|err:Syntax {
     Token? t = tok.current();
     if t is "check"|"checkpanic" {
         check tok.advance();
-        return { checkingKeyword, operand: check finishCheckingCallStmt(tok, t) };
+        CallStmt operand = check finishCheckingCallStmt(tok, t, startPos);
+        return { startPos, endPos: operand.endPos, checkingKeyword, operand };
     }
     else if t == "(" {
-        return { checkingKeyword, operand: check parseMethodCallStmt(tok) };
+        MethodCallExpr operand = check parseMethodCallStmt(tok);
+        return { startPos, endPos: operand.endPos, checkingKeyword, operand };
     }
     Expr operand = check parsePrimaryExpr(tok);
     if operand is FunctionCallExpr|MethodCallExpr {
-        check tok.expect(";");
-        return { checkingKeyword, operand };
+        Position endPos = check tok.expectEnd(";");
+        return { startPos, endPos, checkingKeyword, operand };
     }
     return parseError(tok, "function call, method call or checking expression expected");
 }
@@ -270,11 +275,11 @@ function finishVarDeclStmt(Tokenizer tok, TypeDesc td, Position startPos, boolea
 }
 
 function parseReturnStmt(Tokenizer tok, Position startPos) returns ReturnStmt|err:Syntax {
-    Expr returnExpr;
+    Expr? returnExpr;
     Position endPos;
     if tok.current() == ";" {
         endPos = tok.currentEndPos();
-        returnExpr = { value: () }; // ConstValueExpr
+        returnExpr = ();
         check tok.advance();
     }
     else {

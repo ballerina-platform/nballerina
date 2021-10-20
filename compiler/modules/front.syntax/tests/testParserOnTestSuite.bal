@@ -45,6 +45,9 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                             check validateStatementPos(stmt, tok, defn.startPos, defn.endPos);
                         }
                     }
+                    if defn is ConstDefn {
+                        check validateExpressionPos(defn.expr, tok, defn.startPos, defn.endPos);
+                    }
                 }
                 topLevelDefnPos = topLevelDefnPos.sort();
                 err:Position lastEnd = 1<<32;
@@ -91,59 +94,238 @@ function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns
 }
 
 function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
-    // TODO: Once stmts that can be expressions also support positions remove this check
-    if !(stmt is CallStmt) {
-        check tok.moveToPos(stmt.startPos, MODE_NORMAL);
-        test:assertEquals(tok.currentStartPos(), stmt.startPos, "moved to wrong position");
-        _ = check parseStmt(tok);
-        test:assertEquals(stmt.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
-        test:assertTrue(stmt.startPos >= parentStartPos && stmt.endPos <= parentEndPos, "child node outside of parent");
-        [err:Position, err:Position][] childNodePos = [];
-        if stmt is IfElseStmt {
-            foreach Stmt trueStmt in stmt.ifTrue {
-                check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
-                // TODO: Once stmts that can be expressions also support positions remove this check
-                if !(trueStmt is CallStmt) {
-                    childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
-                }
-            }
-            foreach Stmt falseStmt in stmt.ifFalse {
-                check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
-                // TODO: Once stmts that can be expressions also support positions remove this check
-                if !(falseStmt is CallStmt) {
-                    childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
-                }
+    check tok.moveToPos(stmt.startPos, MODE_NORMAL);
+    if stmt is MethodCallExpr|FunctionCallExpr {
+        return check validateExpressionPos(stmt, tok, parentStartPos, parentEndPos);
+    }
+    test:assertEquals(tok.currentStartPos(), stmt.startPos, "moved to wrong position");
+    Stmt newStmt = check parseStmt(tok);
+    test:assertEquals(stmt.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
+    test:assertEquals(stmt.toString(), newStmt.toString());
+    test:assertTrue(stmt.startPos >= parentStartPos && stmt.endPos <= parentEndPos, "child node outside of parent");
+    [err:Position, err:Position][] childNodePos = [];
+    if stmt is IfElseStmt {
+        foreach Stmt trueStmt in stmt.ifTrue {
+            check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
+            childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
+        }
+        foreach Stmt falseStmt in stmt.ifFalse {
+            check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
+            childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
+        }
+    }
+    else if stmt is MatchStmt {
+        foreach var clause in stmt.clauses {
+            foreach var matchStmt in clause.block {
+                check validateStatementPos(matchStmt, tok, stmt.startPos, stmt.endPos);
+                childNodePos.push([matchStmt.startPos, matchStmt.endPos]);
             }
         }
-        else if stmt is MatchStmt {
+    }
+    else if stmt is (WhileStmt|ForeachStmt) {
+        foreach var bodyStmt in <Stmt[]>stmt.body {
+            check validateStatementPos(bodyStmt, tok, stmt.startPos, stmt.endPos);
+            childNodePos.push([bodyStmt.startPos, bodyStmt.endPos]);
+        }
+    }
+    childNodePos = childNodePos.sort();
+    err:Position lastEnd = stmt.startPos;
+    foreach var [startPos, endPos] in childNodePos {
+        test:assertTrue(startPos < endPos, "invalid start and end positions");
+        test:assertTrue((startPos == stmt.startPos) || (startPos > lastEnd), "overlapping statements");
+        test:assertFalse(testPositionIsWhiteSpace(tok.file, startPos), "start position is a white space");
+        test:assertFalse(testPositionIsWhiteSpace(tok.file, endPos), "end position is a white space");
+        lastEnd = endPos;
+    }
+    check validateChildExpressions(stmt, tok);
+}
+
+function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? {
+    if stmt is AssignStmt|CompoundAssignStmt|MatchStmt {
+        check validateExpressionPos(stmt.expr, tok, stmt.startPos, stmt.endPos);
+        if stmt is MatchStmt {
             foreach var clause in stmt.clauses {
-                foreach var matchStmt in clause.block {
-                    check validateStatementPos(matchStmt, tok, stmt.startPos, stmt.endPos);
-                        // TODO: Once stmts that can be expressions also support positions remove this check
-                        if !(matchStmt is CallStmt) {
-                            childNodePos.push([matchStmt.startPos, matchStmt.endPos]);
-                        }
+                foreach var matchPattern in clause.patterns {
+                    if matchPattern is ConstPattern {
+                        check validateExpressionPos(matchPattern.expr, tok, stmt.startPos, stmt.endPos);
+                    }
                 }
             }
         }
-        else if stmt is (WhileStmt|ForeachStmt) {
-            foreach var bodyStmt in <Stmt[]>stmt.body {
-                check validateStatementPos(bodyStmt, tok, stmt.startPos, stmt.endPos);
-                // TODO: Once stmts that can be expressions also support positions remove this check
-                if !(bodyStmt is CallStmt) {
-                    childNodePos.push([bodyStmt.startPos, bodyStmt.endPos]);
-                }
+    }
+    else if stmt is ReturnStmt {
+        Expr? returnExpr = stmt.returnExpr;
+        if returnExpr != () {
+            // If above is true it is an empty expression that can't be parsed (ex return;)
+            check validateExpressionPos(returnExpr, tok, stmt.startPos, stmt.endPos);
+        }
+    }
+    else if stmt is PanicStmt {
+        check validateExpressionPos(stmt.panicExpr, tok, stmt.startPos, stmt.endPos);
+    }
+    else if stmt is IfElseStmt|WhileStmt {
+        check validateExpressionPos(stmt.condition, tok, stmt.startPos, stmt.endPos);
+    }
+    else if stmt is VarDeclStmt {
+        check validateExpressionPos(stmt.initExpr, tok, stmt.startPos, stmt.endPos);
+    }
+}
+
+type RecursiveBinaryExpr BinaryBitwiseExpr|BinaryEqualityExpr|BinaryArithmeticExpr;
+
+function findMatchingChildExpr(RecursiveBinaryExpr expected, RecursiveBinaryExpr actual) returns Expr {
+    if (expected is BinaryBitwiseExpr && actual is BinaryBitwiseExpr)
+    || (expected is BinaryEqualityExpr && actual is BinaryEqualityExpr)
+    || (expected is BinaryArithmeticExpr && actual is BinaryArithmeticExpr) {
+        Expr matchingChild = actual.left;
+        while matchingChild.endPos != expected.endPos && matchingChild is RecursiveBinaryExpr {
+            matchingChild = matchingChild.left;
+        }
+        return matchingChild;
+    }
+    panic error("expected and actual expression are not same type");
+}
+
+type PrimaryExpr ConstValueExpr|VarRefExpr|FunctionCallExpr|MethodCallExpr|NumericLiteralExpr|ErrorConstructorExpr|FieldAccessExpr;
+
+function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(expr.startPos, MODE_NORMAL);
+    test:assertEquals(tok.currentStartPos(), expr.startPos, "moved to wrong position");
+    Expr newExpr;
+    boolean usedSimpleConstExprParser = true;
+    if expr is SimpleConstExpr {
+        if expr is ConstValueExpr && expr.value == () {
+            newExpr = check parseExpr(tok);
+        }
+        else {
+            newExpr = check parseSimpleConstExpr(tok);
+        }
+        if tok.currentEndPos() != expr.endPos && expr is PrimaryExpr {
+            // these expressions can be parsed by both parseSimpleConstExpr and parsePrimaryExpr
+            // parseSimpleConstExpr don't advance to the next token
+            usedSimpleConstExprParser = false;
+            check tok.moveToPos(expr.startPos, MODE_NORMAL);
+            newExpr = check parsePrimaryExpr(tok);
+        }
+    }
+    else if expr is BinaryBitwiseExpr {
+        BinaryBitwiseOp op = expr.bitwiseOp;
+        match op {
+            "<<"|">>>"|">>" => {
+                newExpr = check parseShiftExpr(tok);
+            }
+            "|" => {
+                newExpr = check parseBitwiseOrExpr(tok);
+            }
+            "^" => {
+                newExpr = check parseBitwiseXorExpr(tok);
+            }
+            _ => {
+                newExpr = check parseBitwiseAndExpr(tok);
             }
         }
-        childNodePos = childNodePos.sort();
-        err:Position lastEnd = stmt.startPos;
-        foreach var [startPos, endPos] in childNodePos {
-            test:assertTrue(startPos < endPos, "invalid start and end positions");
-            test:assertTrue((startPos == stmt.startPos) || (startPos > lastEnd), "overlapping statements");
-            test:assertFalse(testPositionIsWhiteSpace(tok.file, startPos), "start position is a white space");
-            test:assertFalse(testPositionIsWhiteSpace(tok.file, endPos), "end position is a white space");
-            lastEnd = endPos;
+    }
+    else if expr is BinaryArithmeticExpr {
+        if expr.arithmeticOp is "+"|"-" {
+            newExpr = check parseAdditiveExpr(tok);
         }
+        else {
+            newExpr = check parseMultiplicativeExpr(tok);
+        }
+    }
+    else if expr is BinaryEqualityExpr {
+        newExpr = check parseEqualityExpr(tok);
+    }
+    else if expr is BinaryRelationalExpr {
+        newExpr = check parseRelationalExpr(tok);
+    }
+    else if expr is UnaryExpr {
+        newExpr = check parseUnaryExpr(tok);
+    }
+    else if expr is PrimaryExpr|MemberAccessExpr {
+        newExpr = check parsePrimaryExpr(tok);
+    }
+    else if expr is TypeCastExpr {
+        newExpr = check parseTypeCastExpr(tok, expr.startPos);
+    }
+    else {
+        newExpr = check parseExpr(tok);
+    }
+
+    Position actualEnd;
+    if expr is ListConstructorExpr
+              |MemberAccessExpr
+              |PrimaryExpr
+              |TypeTestExpr
+              |MappingConstructorExpr
+              |SimpleConstExpr
+              |BinaryExpr
+              |UnaryExpr
+              |CheckingExpr
+              |TypeCastExpr {
+        if expr is SimpleConstExpr && usedSimpleConstExprParser {
+            if expr is SimpleConstNegateExpr {
+                actualEnd = tok.previousEndPos();
+            }
+            else {
+                actualEnd = tok.currentEndPos();
+            }
+        }
+        else {
+            actualEnd = tok.previousEndPos();
+        }
+    }
+    else {
+        actualEnd = tok.currentEndPos();
+    }
+
+    if (expr.endPos != newExpr.endPos) && (expr is RecursiveBinaryExpr && newExpr is RecursiveBinaryExpr) {
+        // These are left recursive expression that can't be separately parsed
+        Expr matchingChild = findMatchingChildExpr(expr, newExpr);
+        // We are validating tokenizer ends in the correct position only for the parent node
+        actualEnd = matchingChild.endPos;
+        newExpr = matchingChild;
+    }
+
+    test:assertEquals(expr.endPos, actualEnd);
+    if newExpr is MethodCallExpr|FunctionCallExpr {
+        // pos depends on whether original was parsed as a stmt or expr but for testing we always treat it as expr
+        newExpr.pos = (<MethodCallExpr|FunctionCallExpr>expr).pos;
+    }
+    test:assertEquals(expr.toString(), newExpr.toString());
+    test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
+    test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
+    test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), "end position is invalid");
+    [err:Position, err:Position][] childNodePos = [];
+    if expr is BinaryExpr {
+        check validateExpressionPos(expr.left, tok, expr.startPos, expr.endPos);
+        childNodePos.push([expr.left.startPos, expr.left.endPos]);
+        check validateExpressionPos(expr.right, tok, expr.startPos, expr.endPos);
+        childNodePos.push([expr.right.startPos, expr.right.endPos]);
+    }
+    else if expr is UnaryExpr|SimpleConstNegateExpr {
+        check validateExpressionPos(expr.operand, tok, expr.startPos, expr.endPos);
+        childNodePos.push([expr.operand.startPos, expr.operand.endPos]);
+    }
+    else if expr is ErrorConstructorExpr {
+        check validateExpressionPos(expr.message, tok, expr.startPos, expr.endPos);
+        childNodePos.push([expr.message.startPos, expr.message.endPos]);
+    }
+    else if expr is FunctionCallExpr {
+        foreach var arg in expr.args {
+            check validateExpressionPos(arg, tok, expr.startPos, expr.endPos);
+            childNodePos.push([arg.startPos, arg.endPos]);
+        }
+    }
+
+    err:Position lastEnd = expr.startPos;
+    foreach var [startPos, endPos] in childNodePos {
+        test:assertTrue(startPos <= endPos, "invalid start and end positions"); // single character expressions get same start and end pos
+        test:assertTrue((startPos == expr.startPos) || (startPos > lastEnd), "overlapping statements");
+        if lastEnd != expr.startPos {
+            test:assertTrue(testValidInterExpressionRange(tok.file, lastEnd, startPos), "invalid token between expressions");
+        }
+        lastEnd = endPos;
     }
 }
 
@@ -158,13 +340,63 @@ function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) re
 }
 
 function testPositionIsWhiteSpace(SourceFile file, Position pos) returns boolean {
+    return checkPosFragCode(file, pos, FRAG_WHITESPACE, FRAG_COMMENT);
+}
+
+function testValidExprEnd(SourceFile file, Position pos, Expr expr) returns boolean {
+    FragCode[] base = [FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON];
+    if expr is FunctionCallExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
+    }
+    else if expr is PrimaryExpr|TypeCastExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
+    }
+    else if expr is MemberAccessExpr|ListConstructorExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_PAREN, ...base);
+    }
+    else if expr is MappingConstructorExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_SQUARE, CP_RIGHT_PAREN, ...base);
+    }
+    else if expr is TypeTestExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
+    }
+    else if expr is BinaryExpr|UnaryExpr {
+        return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, ...base);
+    }
+    return !checkPosFragCode(file, pos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
+}
+
+function checkPosFragCode(SourceFile file, Position pos, FragCode... invalidCodes) returns boolean {
     var [lineIndex, fragIndex] = sourceFileFragIndex(file, pos);
     ScannedLine line = file.scannedLine(lineIndex);
     FragCode frag = line.fragCodes[fragIndex];
-    return frag == FRAG_WHITESPACE || frag == FRAG_COMMENT;
+    return invalidCodes.indexOf(frag) != ();
+}
+
+final readonly & FragCode[] whitespaceCodes = [
+    FRAG_WHITESPACE,
+    FRAG_COMMENT
+];
+
+final readonly & FragCode[] interExpressionCodes = [
+    FRAG_WHITESPACE,
+    FRAG_COMMENT,
+    CP_PLUS,
+    CP_MINUS,
+    CP_ASTERISK,
+    CP_BACKSLASH,
+    CP_LEFT_PAREN
+];
+
+function testValidInterExpressionRange(SourceFile file, Position startPos, Position endPos) returns boolean {
+    return testValidRange(file, startPos, endPos, interExpressionCodes);
 }
 
 function testIsWhitespace(SourceFile file, Position startPos, Position endPos) returns boolean {
+    return testValidRange(file, startPos, endPos, whitespaceCodes);
+}
+
+function testValidRange(SourceFile file, Position startPos, Position endPos, FragCode[] allowedCodes) returns boolean {
     var [startLineIndex, startFragIndex] = sourceFileFragIndex(file, startPos);
     var [endLineIndex, endFragIndex] = sourceFileFragIndex(file, endPos);
     int lineIndex = startLineIndex;
@@ -176,8 +408,10 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
                 return true;
             }
             FragCode frag = line.fragCodes[i];
-            if frag != FRAG_WHITESPACE && frag != FRAG_COMMENT {
-                return false;
+            if allowedCodes.indexOf(frag) == (){
+                if !(lineIndex == startLineIndex && i == unpackPosition(startPos)[1]) {
+                    return false;
+                }
             }
             i += 1;
         }

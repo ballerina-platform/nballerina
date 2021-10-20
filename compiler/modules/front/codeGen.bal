@@ -749,7 +749,15 @@ function unnarrowBinding(Binding binding) returns Binding {
 
 function codeGenReturnStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:ReturnStmt stmt) returns CodeGenError|StmtEffect {
     var { returnExpr } = stmt;
-    var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, returnExpr, cx.returnType));
+    bir:BasicBlock nextBlock;
+    bir:Operand operand;
+    if returnExpr is s:Expr {
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, returnExpr, cx.returnType));
+    }
+    else {
+        operand = ();
+        nextBlock = startBlock;
+    }
     bir:RetInsn insn = { operand };
     nextBlock.insns.push(insn);
     return { block: () };
@@ -904,11 +912,13 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
 
 function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarRefExpr lValue, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp  op, err:Position pos) returns CodeGenError|StmtEffect {
     s:Expr expr;
+    s:Position startPos = rexpr.startPos;
+    s:Position endPos = rexpr.endPos;
     if op is s:BinaryArithmeticOp {
-        expr = { arithmeticOp: op, left: lValue, right: rexpr, pos: pos };
+        expr = { startPos, endPos, arithmeticOp: op, left: lValue, right: rexpr, pos: pos };
     }
     else {
-        expr = { bitwiseOp: <s:BinaryBitwiseOp> op, left: lValue, right: rexpr };
+        expr = { startPos, endPos, bitwiseOp: op, left: lValue, right: rexpr };
     }
     return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
 }
