@@ -285,6 +285,11 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     else {
         actualEnd = tok.previousEndPos();
     }
+    if td.toString() != newTd.toString() && newTd is ListTypeDesc|MappingTypeDesc {
+        // These are left recursions which we can't separately parse
+        actualEnd = newTd.rest.endPos;
+        newTd = newTd.rest;
+    }
     test:assertEquals(td.endPos, actualEnd);
     test:assertEquals(td.toString(), newTd.toString());
     test:assertTrue(td.startPos >= parentStartPos && td.endPos <= parentEndPos, "child node outside of parent");
@@ -296,18 +301,17 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
             check validateTypeDescPos(member, tok, td.startPos, td.endPos);
             childNodePos.push([member.startPos, member.endPos]);
         }
-        // rest is a left recursion
-        // check validateTypeDescPos(td.rest, tok, td.startPos, td.endPos);
-        // childNodePos.push([td.rest.startPos, td.rest.endPos]);
+        check validateTypeDescPos(td.rest, tok, td.startPos, td.endPos);
+        childNodePos.push([td.rest.startPos, td.rest.endPos]);
     }
     else if td is MappingTypeDesc {
         foreach var f in td.fields {
             check validateTypeDescPos(f.typeDesc, tok, td.startPos, td.endPos);
             childNodePos.push([f.typeDesc.startPos, f.typeDesc.endPos]);
         }
-        // rest is a left recursion
-        // check validateTypeDescPos(td.rest, tok, td.startPos, td.endPos);
-        // childNodePos.push([td.rest.startPos, td.rest.endPos]);
+        TypeDesc rest = td.rest;
+        childNodePos.push([td.rest.startPos, td.rest.endPos]);
+        check validateTypeDescPos(td.rest, tok, td.startPos, td.endPos);
     }
     else if td is FunctionTypeDesc {
         foreach var arg in td.args {

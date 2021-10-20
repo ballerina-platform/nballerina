@@ -271,7 +271,6 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
     Position endPos = tok.currentEndPos();
     // on ")"
     check tok.advance();
-    // TODO: turn the return type to be nullable
     TypeDesc ret;
     if tok.current() == "returns" {
         check tok.advance();
@@ -343,5 +342,5 @@ function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTy
     }
     Position endPos = tok.currentEndPos();
     check tok.advance();
-    return { startPos, endPos, fields, rest: rest ?: { startPos, endPos, builtinType:"never" } };
+    return { startPos, endPos, fields, rest: rest ?: { startPos, endPos:startPos, builtinType:"never" } };
 }
