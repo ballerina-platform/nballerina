@@ -7,7 +7,9 @@ int64_t BAL_LANG_ARRAY_NAME(length)(TaggedPtr p) {
 
 void BAL_LANG_ARRAY_NAME(push)(TaggedPtr p, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
-    if ((lp->desc & (1 << (getTag(val) & UT_MASK))) == 0) {
+    ListDescPtr ldp = lp->desc;
+    uint32_t bitSet = ldp->bitSet;
+    if ((bitSet & (1 << (getTag(val) & UT_MASK))) == 0) {
         _bal_panic_internal(storePanicCode(p, PANIC_LIST_STORE));
     }
     int64_t len = lp->tpArray.length;
@@ -19,17 +21,19 @@ void BAL_LANG_ARRAY_NAME(push)(TaggedPtr p, TaggedPtr val) {
     lp->tpArray.length = len + 1;
 }
 
-bool _bal_list_has_type(TaggedPtr p, ListDesc desc) {
+bool _bal_list_has_type(TaggedPtr p, uint32_t desc) {
     if ((getTag(p) & UT_MASK) != TAG_LIST_RW) {
         return false;
     }
     ListPtr lp = taggedToPtr(p);
-    return (lp->desc & ~desc) == 0;
+    ListDescPtr ldp = lp->desc;
+    return (ldp->bitSet & ~desc) == 0;
 }
 
-TaggedPtr _bal_list_exactify(TaggedPtr p, ListDesc desc) {
+TaggedPtr _bal_list_exactify(TaggedPtr p, ListDescPtr desc) {
     ListPtr lp = taggedToPtr(p);
-    if (lp == taggedToPtrExact(p) && (lp->desc == desc)) {
+    ListDescPtr ldp = lp->desc;
+    if (lp == taggedToPtrExact(p) && (ldp->bitSet == desc->bitSet)) {
         // exact bit is not set, but should be
         return p + EXACT_FLAG;
     }
