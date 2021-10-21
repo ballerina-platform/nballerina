@@ -79,7 +79,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             // JBUG cast
             return finishCheckingCallStmt(tok, <CheckingKeyword>cur, startPos);
         }
-        var td if td is InlineBuiltinTypeDesc|"map"|"record" => {
+        var td if td is SubsetBuiltinTypeName|"map"|"record" => {
             return parseVarDeclStmt(tok, startPos);
         }
         "(" => {
@@ -142,7 +142,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
         return finishOptQualIdentifierStmt(tok, identifier, check tok.expectIdentifier(), pos, startPos);
     }
     else if cur is [IDENTIFIER, string] {
-        TypeDescRef ref = { typeName: identifier, pos };
+        TypeDescRef ref = { startPos, endPos, typeName: identifier, pos };
         return finishVarDeclStmt(tok, ref, startPos);
     }
     return finishOptQualIdentifierStmt(tok, (), identifier, pos, startPos);
@@ -150,6 +150,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
 
 function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string identifier, Position pos, Position startPos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
+    Position endPos = tok.previousEndPos();
     if cur == "(" {
         check tok.advance();
         FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, pos, startPos);
@@ -163,7 +164,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
             return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, pos, startPos), startPos);
         }
         else {
-            Position endPos = tok.previousEndPos();
+            endPos = tok.previousEndPos();
             VarRefExpr container = { startPos, endPos, varName: identifier };
             FieldAccessLExpr lValue = { startPos, endPos, fieldName: name, container, pos };
             Token? t = tok.current();
@@ -178,7 +179,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
         // falls through to end
     }
     else if cur is [IDENTIFIER, string] {
-        TypeDescRef ref = { prefix, typeName: identifier, pos };
+        TypeDescRef ref = { startPos, endPos, prefix, typeName: identifier, pos };
         return finishVarDeclStmt(tok, ref, startPos);
     }
     return parseError(tok, "invalid statement");

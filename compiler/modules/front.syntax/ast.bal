@@ -47,7 +47,7 @@ public type ConstDefn record {|
     *PositionFields;
     readonly string name;
     ModulePart part;
-    InlineBuiltinTypeDesc? td;
+    SubsetBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
     Position namePos;
@@ -410,11 +410,14 @@ public type TypeDefn record {|
     int cycleDepth = -1;
 |};
 
-public type TypeDesc LeafTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc;
+public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc;
 
 public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc;
 
 public type ListTypeDesc record {|
+    // JBUG can't include PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc[] members;
     TypeDesc rest;
     t:ListDefinition? defn = ();
@@ -426,42 +429,63 @@ public type FieldDesc record {|
 |};
 
 public type MappingTypeDesc record {|
+    // JBUG can't include PositionFields
+    Position startPos;
+    Position endPos;
     FieldDesc[] fields;
-    TypeDesc rest;
+    TypeDesc? rest;
     t:MappingDefinition? defn = ();
 |};
 
 public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
+    // JBUG can't include PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc[] args;
     TypeDesc ret;
     t:FunctionDefinition? defn = ();
 |};
 
 public type ErrorTypeDesc record {|
+    // JBUG can't include PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc detail;
 |};
 
 public type BinaryTypeOp "|" | "&";
 
 public type BinaryTypeDesc record {|
+    *PositionFields;
     BinaryTypeOp op;
     TypeDesc left;
     TypeDesc right;
 |};
 
 public type TypeDescRef record {|
+    *PositionFields;
     string? prefix = ();
     string typeName;
     Position pos;
 |};
 
 public type SingletonTypeDesc record {|
+    *PositionFields;
     (string|float|int|boolean|decimal) value;
 |};
 
-// This is the subtype of BuiltinTypeDesc that we currently allow inline.
-public type InlineBuiltinTypeDesc "boolean"|"int"|"float"|"string"|"error"|"any";
-public type BuiltinTypeDesc InlineBuiltinTypeDesc|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
+public type SubsetBuiltinTypeName "any"|"boolean"|"int"|"float"|"string"|"error";
 
-public type LeafTypeDesc BuiltinTypeDesc;
+public type BuiltinTypeName SubsetBuiltinTypeName|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
+
+public type BuiltinTypeDesc readonly & record {|
+    *PositionFields;
+    BuiltinTypeName builtinTypeName;
+|};
+
+// This is used for ConstDefinitions
+public type SubsetBuiltinTypeDesc readonly & record {|
+    *PositionFields;
+    SubsetBuiltinTypeName builtinTypeName;
+|};

@@ -64,7 +64,8 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
         firstArg = false;
     }
     w.push(")");
-    if !(func.typeDesc.ret is "()") {
+    TypeDesc funcRetTd = func.typeDesc.ret;
+    if !(funcRetTd is BuiltinTypeDesc && funcRetTd.builtinTypeName == "null") {
         w.push("returns");
         typeDescToWords(w, func.typeDesc.ret);
     }
@@ -229,7 +230,12 @@ function blockToWords(Word[] w, Stmt[] body) {
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
     if td is BuiltinTypeDesc {
-        w.push(td);
+        if td.builtinTypeName == "null" {
+            w.push("()");
+        }
+        else {
+            w.push(td.builtinTypeName);
+        }
         return;
     }
     else if td is TypeDescRef {
@@ -242,7 +248,13 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     }
     else if td is MappingTypeDesc {
         w.push("map", CLING, "<", CLING);
-        typeDescToWords(w, td.rest);
+        TypeDesc? rest = td.rest;
+        if rest == () {
+            typeDescToWords(w, { startPos: td.startPos, endPos: td.endPos, builtinTypeName: "never" });
+        }
+        else {
+            typeDescToWords(w, rest);
+        }
         w.push(CLING, ">");
         return;
     }
@@ -261,8 +273,8 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         // subset 6 does not allow parentheses
         // so we need to take care not to add them unnecessarily
         // JBUG error if `===` used instead if `is`
-
-        if td.op === "|" && td.right is "()" {
+        TypeDesc rightTd = td.right;
+        if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName is "null" {
             typeDescToWords(w, td.left, wrap);
             w.push(CLING, "?");
         }
