@@ -109,10 +109,10 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
     final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
 
-    llvm:Value index = buildInt(builder, scaffold, insn.operand);
+    llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
     // struct is the untagged pointer to the struct
     llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
-                                                                               [builder.load(scaffold.address(insn.list)), llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                                                               [builder.load(scaffold.address(insn.operands[0])), llvm:constInt(LLVM_INT, POINTER_MASK)]),
                                                heapPointerType(structType));
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
@@ -137,12 +137,12 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
 }
 
 function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
-    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.list.semType);
+    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
     // XXX listSetFunction must also clear the exact bit if the list is not exact?
     llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(listSetFunction),
-                                   [builder.load(scaffold.address(insn.list)),
-                                    buildInt(builder, scaffold, insn.index),
-                                    check buildWideRepr(builder, scaffold, insn.operand, REPR_ANY, memberType)]);
+                                   [builder.load(scaffold.address(insn.operands[0])),
+                                    buildInt(builder, scaffold, insn.operands[1]),
+                                    check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
    
 }
