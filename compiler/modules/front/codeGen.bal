@@ -77,7 +77,6 @@ type LoopContext record {|
     int startRegister;
     bir:BasicBlock onBreak;
     bir:BasicBlock? onContinue;
-    // JBUG #31311 does not allow `outer` here
     LoopContext? enclosing;
     // will use this with while true to determine whether
     // following block is reachable
@@ -505,7 +504,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     final int startRegister = cx.nextRegisterNumber();
     int[] assignments = [];
     var { result: matched, block: testBlock, binding } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, stmt.expr, ()));
-    // JBUG need parentheses
+    // JBUG #33303 need parentheses
     t:SemType matchedType = matched is bir:Register ? (matched.semType) : t:singleton(matched);
     // we enforce that the wildcardClauseIndex is either () or the index of the last clause
     int? wildcardClauseIndex = ();
@@ -716,7 +715,7 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 // JBUG changing `returns` to `return` makes the parse get a NPE during error recovery
 function codeGenIfElseNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Narrowing narrowing, boolean condition) returns Environment {
     boolean insnResult = condition == !narrowing.negated;
-    // JBUG without parentheses this gets a parse error
+    // JBUG #33303 without parentheses this gets a parse error
     t:SemType narrowedType = insnResult ? (narrowing.ifTrue) : narrowing.ifFalse;
     if narrowedType === t:NEVER {
         panic err:impossible("narrowed to never type");
