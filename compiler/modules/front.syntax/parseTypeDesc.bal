@@ -42,8 +42,13 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         if tok.current() == "?" {
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            BinaryTypeDesc bin =  { startPos, endPos, op: "|", left: td,
-                                    right: { startPos: endPos, endPos, builtinTypeName: "null"} }; // start and end position of right is same because its single character
+            BinaryTypeDesc bin =  {
+                startPos,
+                endPos,
+                op: "|",
+                left: td,
+                right: { startPos: endPos, endPos, builtinTypeName: "null"} // start and end position of right is same because its single character
+            };
             td = bin;
         }
         else if tok.current() == "[" {
@@ -77,7 +82,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             endPos = check tok.expectEnd(")");
             if td is BuiltinTypeDesc {
                 // td is readonly
-                return {startPos, endPos, builtinTypeName: td.builtinTypeName};
+                return { startPos, endPos, builtinTypeName: td.builtinTypeName };
             }
             else {
                 td.startPos = startPos;
@@ -112,7 +117,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             check tok.advance();
             string typeName = check tok.expectIdentifier();
             endPos = tok.previousEndPos();
-            return { startPos, endPos, prefix: <BuiltinTypeName>cur, typeName, pos };
+            return { startPos, endPos, prefix: <string>cur, typeName, pos };
         }
         "byte" => {
             Position endPos = tok.currentEndPos();
