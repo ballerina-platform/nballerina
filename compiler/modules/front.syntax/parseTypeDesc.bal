@@ -75,9 +75,15 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             }
             TypeDesc td = check parseTypeDesc(tok);
             endPos = check tok.expectEnd(")");
-            td.startPos = startPos;
-            td.endPos = endPos;
-            return td;
+            if td is BuiltinTypeDesc {
+                // td is readonly
+                return {startPos, endPos, builtinTypeName: td.builtinTypeName};
+            }
+            else {
+                td.startPos = startPos;
+                td.endPos = endPos;
+                return td;
+            }
         }
         "boolean"
         | "decimal"

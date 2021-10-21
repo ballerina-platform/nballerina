@@ -47,7 +47,7 @@ public type ConstDefn record {|
     *PositionFields;
     readonly string name;
     ModulePart part;
-    BuiltinTypeDesc? td;
+    SubsetBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
     Position namePos;
@@ -475,11 +475,19 @@ public type SingletonTypeDesc record {|
     (string|float|int|boolean|decimal) value;
 |};
 
-public type BuiltinTypeName "boolean"|"int"|"float"|"string"|"error"|"any"|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
+public type SubsetBuiltinTypeName "any"|"boolean"|"int"|"float"|"string"|"error";
 
-public type BuiltinTypeDesc record {|
+public type BuiltinTypeName SubsetBuiltinTypeName|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
+
+public type BuiltinTypeDesc readonly & record {|
     *PositionFields;
     BuiltinTypeName builtinTypeName;
+|};
+
+// This is used for ConstDefinitions
+public type SubsetBuiltinTypeDesc readonly & record {|
+    *PositionFields;
+    SubsetBuiltinTypeName builtinTypeName;
 |};
 
 public type LeafTypeDesc BuiltinTypeDesc;
