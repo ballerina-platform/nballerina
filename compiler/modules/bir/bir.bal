@@ -332,8 +332,7 @@ public type ListConstructInsn readonly & record {|
 public type ListGetInsn readonly & record {|
     INSN_LIST_GET name = INSN_LIST_GET;
     Register result;
-    Register list;
-    IntOperand operand;
+    [Register, IntOperand] operands;
     Position position;
 |};
 
@@ -341,10 +340,7 @@ public type ListGetInsn readonly & record {|
 # This is a PPI (since the index may be out of bounds).
 public type ListSetInsn readonly & record {|
     INSN_LIST_SET name = INSN_LIST_SET;
-    Register list;
-    IntOperand index;
-    // operand is the value to store in the list
-    Operand operand;
+    [Register, IntOperand, Operand] operands;
     Position position;
 |};
 

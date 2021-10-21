@@ -201,23 +201,24 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
 }
 
 function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic? {
-    check verifyOperandInt(vc, insn.name, insn.operand);
-    if !vc.isSubtype(insn.list.semType, t:LIST) {
+    check verifyOperandInt(vc, insn.name, insn.operands[1]);
+    if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.err("list get applied to non-list");
     }
-    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.list.semType);
+    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
     if !vc.isSameType(memberType, insn.result.semType) {
         return vc.err("bad BIR: ListGet result type is not same as member type", pos=insn.position);
     }
 }
 
 function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic? {
-    check verifyOperandInt(vc, insn.name, insn.index);
-    if !vc.isSubtype(insn.list.semType, t:LIST) {
+    IntOperand i = insn.operands[1];
+    check verifyOperandInt(vc, insn.name, i);
+    if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.err("list set applied to non-list");
     }
-    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.list.semType);
-    return verifyOperandType(vc, insn.operand, memberType, "value assigned to member of list is not a subtype of array member type");
+    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
+    return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type");
 }
 
 function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic? {

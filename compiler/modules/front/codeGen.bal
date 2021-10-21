@@ -854,7 +854,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
         else {
             var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, lValue.index, indexType));
             { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
-            bir:ListSetInsn insn = { list: reg, index: index, operand, position: lValue.pos };
+            bir:ListSetInsn insn = { operands: [reg, index, operand], position: lValue.pos };
             nextBlock.insns.push(insn);
             return { block: nextBlock };
         }
@@ -913,10 +913,10 @@ function codeGenCompoundAssignToListMember(CodeGenContext cx, bir:BasicBlock bb,
         return cx.semanticErr("type of member access is never");
     }
     bir:Register member = cx.createRegister(memberType);
-    bir:ListGetInsn getInsn = { result: member, list, operand: index, position: pos };
+    bir:ListGetInsn getInsn = { result: member, operands: [list, index], position: pos };
     nextBlock.insns.push(getInsn);
     var { result, block } = check codeGenCompoundableBinaryExpr(cx, nextBlock, env, op, member, rexpr, pos);
-    bir:ListSetInsn setInsn = { list, index, operand: result, position: lValue.pos };
+    bir:ListSetInsn setInsn = { operands: [list, index, result], position: lValue.pos };
     block.insns.push(setInsn);
     return { block };
 }
@@ -1110,7 +1110,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                         return cx.semanticErr("type of member access is never");
                     }
                     bir:Register result = cx.createRegister(memberType);
-                    bir:ListGetInsn insn = { result, list: l, operand: r, position: pos };
+                    bir:ListGetInsn insn = { result, operands: [l, r], position: pos };
                     nextBlock.insns.push(insn);
                     return { result, block: nextBlock };
                 }
