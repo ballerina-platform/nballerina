@@ -410,7 +410,7 @@ public type TypeDefn record {|
     int cycleDepth = -1;
 |};
 
-public type TypeDesc LeafTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc;
+public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc;
 
 public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc;
 
@@ -489,5 +489,3 @@ public type SubsetBuiltinTypeDesc readonly & record {|
     *PositionFields;
     SubsetBuiltinTypeName builtinTypeName;
 |};
-
-public type LeafTypeDesc BuiltinTypeDesc;
