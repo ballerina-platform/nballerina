@@ -340,8 +340,7 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
         if rhs is Register {
             t:SemType intersectType = t:intersect(lhs.semType, rhs.semType);
             if !vc.isEmpty(intersectType) {
-                // JBUG #31749 cast should not be needed
-                if (<string>insn.op).length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
+                if insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
                     return vc.err("at least one operand of an == or != expression must be a subtype of anydata");
                 }
                 return;
