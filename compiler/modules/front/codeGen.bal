@@ -524,20 +524,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
                     return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.pos);
                 }
                 s:Expr patternExpr = pattern.expr;
-                // JBUG following line results in bad code
-                // ConstValueExpr cv = <ConstValueExpr> check cx.foldExpr(env, patternExpr, matchedType);
-                // Can see this on FVmatch03.bal
-                // Should give TypeCastError panic but instead reports "duplicate const match pattern"
-                // This longer former if a workaround
-                var foldResult = cx.foldExpr(env, patternExpr, matchedType);
-                s:ConstValueExpr cv;
-                if foldResult is CodeGenError {
-                    return foldResult;
-                }
-                else {
-                    cv = <s:ConstValueExpr>foldResult;
-                }
-              
+                s:ConstValueExpr cv = <s:ConstValueExpr> check cx.foldExpr(env, patternExpr, matchedType);
                 ConstMatchValue mv = { value: cv.value, clauseIndex: i };
                 if constMatchValues.hasKey(mv.value) {
                     return cx.semanticErr("duplicate const match pattern", pos=pattern.pos);
@@ -710,7 +697,6 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     }
 }
 
-// JBUG changing `returns` to `return` makes the parse get a NPE during error recovery
 function codeGenIfElseNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Narrowing narrowing, boolean condition) returns Environment {
     boolean insnResult = condition == !narrowing.negated;
     // JBUG #33303 without parentheses this gets a parse error
