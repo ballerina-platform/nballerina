@@ -76,7 +76,7 @@ function createExports(ModuleSymbols mod) returns ModuleExports {
 }
 
 function moduleIdDefaultPrefix(bir:ModuleId id) returns string {
-    // JBUG Bad, sad without `names` variable
+    // JBUG #33301 Bad, sad without `names` variable
     string[] names = id.names;
     return names[names.length() - 1];
 }
