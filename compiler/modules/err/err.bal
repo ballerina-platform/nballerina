@@ -38,7 +38,6 @@ public type Detail record {
 public type Any Syntax|Semantic|Unimplemented;
 
 // Grammatical inconsistency here is reluctantly intentional
-// JBUG defining these as `error<Detail> & distinct error` results in these errors not being distinct
 public type Syntax distinct error<Detail>;
 public type Semantic distinct error<Detail>;
 public type Unimplemented distinct error<Detail>;
