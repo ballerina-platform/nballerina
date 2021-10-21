@@ -1091,12 +1091,12 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenTypeTest(cx, bb, env, td, left, negated);
         }
         // Variable reference
-        // JBUG does not work as match pattern
+        // JBUG #33309 does not work as match pattern
         var ref if ref is s:VarRefExpr => {
             return codeGenVarRefExpr(cx, ref, env, bb);
         }
         // Constant
-        // JBUG does not work as match pattern `var { value, multiSemType }`
+        // JBUG #33309 does not work as match pattern `var { value, multiSemType }`
         var cvExpr if cvExpr is s:ConstValueExpr => {
             return codeGenConstValue(cx, bb, env, cvExpr);
         }
@@ -1147,7 +1147,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return cx.semanticErr("can only apply field access to mapping", pos=pos);
         }
         // List construct
-        // JBUG should be able to use just `var { members }`
+        // JBUG #33309 should be able to use just `var { members }`
         var listConstructorExpr if listConstructorExpr is s:ListConstructorExpr => {
             return codeGenListConstructor(cx, bb, env, listConstructorExpr);  
         }
