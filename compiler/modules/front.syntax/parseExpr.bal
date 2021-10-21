@@ -290,7 +290,6 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
             return expr;
         }
         Expr expr = check parseInnerExpr(tok);
-        // check tok.expect(")");
         endPos = check tok.expectEnd(")");
         expr.startPos = startPos;
         expr.endPos = endPos;

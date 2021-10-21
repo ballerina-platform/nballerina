@@ -114,7 +114,7 @@ type PrimaryExpr ConstValueExpr|VarRefExpr|FunctionCallExpr|MethodCallExpr|Numer
 function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(expr.startPos, MODE_NORMAL);
     test:assertEquals(tok.currentStartPos(), expr.startPos, "moved to wrong position");
-    Expr? newExpr=();
+    Expr? newExpr = ();
     boolean usedSimpleConstExprParser = false;
     if expr is SimpleConstExpr {
         if expr is PrimaryExpr {
