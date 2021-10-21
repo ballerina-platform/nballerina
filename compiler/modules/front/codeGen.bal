@@ -1450,7 +1450,6 @@ function codeGenCheckingStmt(CodeGenContext cx, bir:BasicBlock bb, Environment e
             codeGenCheckingTerminator(nextBlock, checkingKeyword, operand);
             return { block: () };
         }
-        // JBUG build fails when the order of binding pattern is reversed
         { block, result: _ } = check codeGenCheckingCond(cx, nextBlock, operand, errorType, checkingKeyword, resultType);
     }
     // resultType === NEVER case is already handled
