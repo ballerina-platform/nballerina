@@ -6,7 +6,7 @@ final RuntimeFunction listHasTypeFunction = {
     name: "list_has_type",
     ty: {
         returnType: "i1",
-        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_BITSET]
     },
     attrs: ["readonly"]
 };
@@ -15,7 +15,7 @@ final RuntimeFunction listExactifyFunction = {
     name: "list_exactify",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: [LLVM_TAGGED_PTR, "i64"]
+        paramTypes: [LLVM_TAGGED_PTR, llvm:pointerType(llInherentType)]
     },
     attrs: ["readonly"]
 };
@@ -152,7 +152,7 @@ function buildMappingExactify(llvm:Builder builder, Scaffold scaffold, llvm:Poin
 function buildHasListType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:Value {
     t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), targetType);
     return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(listHasTypeFunction),
-                                    [tagged, llvm:constInt(LLVM_INT, bitSet)]);     
+                                    [tagged, llvm:constInt(LLVM_BITSET, bitSet)]);
 }
 
 function buildListExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {
@@ -163,7 +163,7 @@ function buildListExactify(llvm:Builder builder, Scaffold scaffold, llvm:Pointer
     }
     else {
         return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(listExactifyFunction),
-                                               [tagged, llvm:constInt(LLVM_INT, bitSet)]);   
+                                               [tagged, scaffold.getInherentType(t:intersect(targetType, t:LIST_RW))]);
     }
 }
 
