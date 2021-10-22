@@ -216,6 +216,7 @@ public type IntArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_ARITHMETIC_BINARY name = INSN_INT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
+    Position opPos;
     Register result;
     IntOperand[2] operands;
     Position position;
@@ -236,6 +237,7 @@ public type IntNoPanicArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY name = INSN_INT_NO_PANIC_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
+    Position opPos;
     Register result;
     IntOperand[2] operands;
 |};
@@ -244,6 +246,7 @@ public type IntBitwiseBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_BITWISE_BINARY name = INSN_INT_BITWISE_BINARY;
     BitwiseBinaryOp op;
+    Position opPos;
     Register result;
     IntOperand[2] operands;
 |};
@@ -261,6 +264,7 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_FLOAT_ARITHMETIC_BINARY name = INSN_FLOAT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
+    Position opPos;
     Register result;
     FloatOperand[2] operands;
     Position position;
@@ -314,6 +318,7 @@ public type CompareInsn readonly & record {|
     *InsnBase;
     INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
+    Position opPos;
     OrderType orderType;
     Register result;
     Operand[2] operands;
