@@ -16,7 +16,7 @@ function modulePartToWords(Word[] w, ModulePart mod) {
     foreach int i in 0 ..< importDecls.length() {
         ImportDecl decl = importDecls[i];
         if i > 0 {
-            // JBUG cast
+            // JBUG #33335 cast
             w.push(<Word>LF);
         }
         w.push("import");
@@ -79,7 +79,7 @@ function constDefnToWords(Word[] w, ConstDefn defn) {
     w.push("const", defn.name, "=");
     exprToWords(w, defn.expr);
     w.push(";");
-    // JBUG cast
+    // JBUG #33335 cast
     w.push(<Word>LF);
 }
 
@@ -90,7 +90,7 @@ function typeDefnToWords(Word[] w, TypeDefn defn) {
     w.push("type", defn.name);
     typeDescToWords(w, defn.td);
     w.push(";");
-    // JBUG cast
+    // JBUG #33335 cast
     w.push(<Word>LF);
 }
 
@@ -272,9 +272,8 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is BinaryTypeDesc {
         // subset 6 does not allow parentheses
         // so we need to take care not to add them unnecessarily
-        // JBUG error if `===` used instead if `is`
         TypeDesc rightTd = td.right;
-        if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName is "null" {
+        if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName === "null" {
             typeDescToWords(w, td.left, wrap);
             w.push(CLING, "?");
         }
@@ -513,12 +512,10 @@ final readonly & map<string:Char> REVERSE_ESCAPES = {
 
 function stringLiteral(string str) returns string {
     string[] chunks = ["\""];
-    // JBUG #31775 `foreach var ch in str` gives wrong ch for some str like "\u{10FFFF}""
-    int[] cps = str.toCodePointInts();
-    foreach int cp in cps {
-        string:Char ch = checkpanic string:fromCodePointInt(cp);
+    foreach var ch in str {
         string:Char? singleEscaped =  REVERSE_ESCAPES[ch];
         if singleEscaped == () {
+            int cp = ch.toCodePointInt();
             if 0x20 <= cp && cp < 0x7F {
                 chunks.push(ch);
             }
