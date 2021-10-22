@@ -123,7 +123,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
         Position memberAccessEndPos = check tok.expectEnd("]");
         cur = tok.current();
         if cur == "=" {
-            MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
+            MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, opPos: bracketPos };
             return finishAssignStmt(tok, lValue, startPos);
         }
         else if cur is CompoundAssignOp {
@@ -131,7 +131,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
             MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
             return parseCompoundAssignStmt(tok, lValue, cur, startPos, opPos);
         }
-        MemberAccessExpr memberAccess = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
+        MemberAccessExpr memberAccess = { startPos, endPos: memberAccessEndPos, container: varRef, index, opPos: bracketPos };
         Expr expr = check finishPrimaryExpr(tok, memberAccess, startPos);
         if expr is MethodCallExpr {
             check tok.expect(";");
@@ -168,7 +168,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
         else {
             endPos = tok.previousEndPos();
             VarRefExpr container = { startPos, endPos, varName: identifier };
-            FieldAccessLExpr lValue = { startPos, endPos, fieldName: name, container, pos };
+            FieldAccessLExpr lValue = { startPos, endPos, fieldName: name, container, opPos: pos };
             Token? t = tok.current();
             if t == "=" {
                 return finishAssignStmt(tok, lValue, startPos);
