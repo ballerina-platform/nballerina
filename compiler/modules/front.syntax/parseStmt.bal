@@ -111,8 +111,9 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
         return finishAssignStmt(tok, lValue, startPos);
     }
     else if cur is CompoundAssignOp {
+        Position opPos = tok.currentStartPos();
         VarRefExpr lValue = { startPos, endPos, varName: identifier };
-        return parseCompoundAssignStmt(tok, lValue, cur, startPos);
+        return parseCompoundAssignStmt(tok, lValue, cur, opPos, startPos);
     }
     else if cur == "[" {
         VarRefExpr varRef = { startPos, endPos, varName: identifier };
@@ -126,8 +127,9 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
             return finishAssignStmt(tok, lValue, startPos);
         }
         else if cur is CompoundAssignOp {
+            Position opPos = tok.currentStartPos();
             MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
-            return parseCompoundAssignStmt(tok, lValue, cur, startPos);
+            return parseCompoundAssignStmt(tok, lValue, cur, opPos, startPos);
         }
         MemberAccessExpr memberAccess = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
         Expr expr = check finishPrimaryExpr(tok, memberAccess, startPos);
@@ -172,7 +174,8 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
                 return finishAssignStmt(tok, lValue, startPos);
             }
             else if t is CompoundAssignOp {
-                return parseCompoundAssignStmt(tok, lValue, t, startPos);
+                Position opPos = tok.currentStartPos();
+                return parseCompoundAssignStmt(tok, lValue, t, opPos, startPos);
             }
             // SUBSET handle "["
         }
@@ -242,14 +245,14 @@ function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue, Position startPo
     return stmt;
 }
 
-function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp op, Position startPos) returns CompoundAssignStmt|err:Syntax {
+function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp op, Position opPos, Position startPos) returns CompoundAssignStmt|err:Syntax {
     check tok.advance();
     Expr expr = check parseExpr(tok);
     string opStr = op;
     BinaryArithmeticOp|BinaryBitwiseOp binOp = <BinaryArithmeticOp|BinaryBitwiseOp> opStr.substring(0, opStr.length() - 1);
     Position pos = tok.currentStartPos();
     Position endPos = check tok.expectEnd(";");
-    CompoundAssignStmt stmt = { startPos, endPos, lValue, expr , op: binOp, pos: pos };
+    CompoundAssignStmt stmt = { startPos, endPos, opPos, lValue, expr , op: binOp, pos: pos };
     return stmt;
 }
 

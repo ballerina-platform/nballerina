@@ -262,6 +262,27 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     else {
         panic err:impossible("failed to find a parser for expression");
     }
+    check validateChildTypeDesc(expr, tok);
+    check validateExprOpPos(expr, tok);
+}
+
+function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
+    if expr is BinaryExpr {
+        check tok.moveToPos(expr.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        if expr is BinaryRelationalExpr {
+            test:assertTrue(opToken is BinaryRelationalOp);
+        }
+        else if expr is BinaryEqualityExpr {
+            test:assertTrue(opToken is BinaryEqualityOp);
+        }
+        else if expr is BinaryArithmeticExpr {
+            test:assertTrue(opToken is BinaryArithmeticOp);
+        }
+        else {
+            test:assertTrue(opToken is BinaryBitwiseOp);
+        }
+    }
 }
 
 function validateChildTypeDesc(Stmt|Expr parent, Tokenizer tok) returns err:Syntax? {

@@ -869,10 +869,10 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
 }
 
 function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CompoundAssignStmt stmt) returns CodeGenError|StmtEffect {
-    var { lValue, expr, op, pos } = stmt;
+    var { lValue, expr, op, opPos, pos } = stmt;
     s:Expr binExpr;
     if lValue is s:VarRefExpr {
-        return codeGenCompoundAssignToVar(cx, startBlock, env, lValue, expr, op, pos);
+        return codeGenCompoundAssignToVar(cx, startBlock, env, lValue, expr, op, opPos, pos);
     }
     else {
         var { result: container, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, lValue.container, ()));
@@ -893,15 +893,15 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
     }
 }
 
-function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarRefExpr lValue, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp  op, err:Position pos) returns CodeGenError|StmtEffect {
+function codeGenCompoundAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarRefExpr lValue, s:Expr rexpr, s:BinaryArithmeticOp|s:BinaryBitwiseOp  op, err:Position opPos, err:Position pos) returns CodeGenError|StmtEffect {
     s:Expr expr;
     s:Position startPos = rexpr.startPos;
     s:Position endPos = rexpr.endPos;
     if op is s:BinaryArithmeticOp {
-        expr = { startPos, endPos, arithmeticOp: op, left: lValue, right: rexpr, pos: pos };
+        expr = { startPos, endPos, opPos, arithmeticOp: op, left: lValue, right: rexpr, pos: pos };
     }
     else {
-        expr = { startPos, endPos, bitwiseOp: op, left: lValue, right: rexpr };
+        expr = { startPos, endPos, opPos, bitwiseOp: op, left: lValue, right: rexpr };
     }
     return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
 }

@@ -30,10 +30,11 @@ function parseBitwiseOrExpr(Tokenizer tok) returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t == "|" {
+            Position opPos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseBitwiseXorExpr(tok);
             Position endPos = tok.previousEndPos();
-            BinaryBitwiseExpr bin = { startPos, endPos,  bitwiseOp: t, left: expr, right };
+            BinaryBitwiseExpr bin = { startPos, endPos, opPos, bitwiseOp: t, left: expr, right };
             expr = bin;
         }
         else {
@@ -49,10 +50,11 @@ function parseBitwiseXorExpr(Tokenizer tok) returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t == "^" {
+            Position opPos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseBitwiseAndExpr(tok);
             Position endPos = tok.previousEndPos();
-            BinaryBitwiseExpr bin = { startPos, endPos, bitwiseOp: t, left: expr, right };
+            BinaryBitwiseExpr bin = { startPos, endPos, opPos, bitwiseOp: t, left: expr, right };
             expr = bin;
         }
         else {
@@ -68,10 +70,11 @@ function parseBitwiseAndExpr(Tokenizer tok) returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t == "&" {
+            Position opPos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseEqualityExpr(tok);
             Position endPos = tok.previousEndPos();
-            BinaryBitwiseExpr bin = { startPos, endPos, bitwiseOp: t, left: expr, right };
+            BinaryBitwiseExpr bin = { startPos, endPos, opPos, bitwiseOp: t, left: expr, right };
             expr = bin;
         }
         else {
@@ -87,10 +90,11 @@ function parseEqualityExpr(Tokenizer tok)  returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t is BinaryEqualityOp {
+            Position opPos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseRelationalExpr(tok);
             Position endPos = tok.previousEndPos();
-            BinaryEqualityExpr bin = { startPos, endPos, equalityOp: t, left: expr, right };
+            BinaryEqualityExpr bin = { startPos, endPos, opPos, equalityOp: t, left: expr, right };
             expr = bin;
         }
         else {
@@ -105,10 +109,11 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
     Expr expr = check parseShiftExpr(tok);
     Token? t = tok.current();
     if t is BinaryRelationalOp {
+        Position opPos = tok.currentStartPos();
         check tok.advance();
         Expr right = check parseShiftExpr(tok);
         Position endPos = tok.previousEndPos();
-        BinaryRelationalExpr bin = { startPos, endPos, relationalOp: t, left: expr, right };
+        BinaryRelationalExpr bin = { startPos, endPos, opPos, relationalOp: t, left: expr, right };
         return bin;
     }
     else if t == "is" {
@@ -151,10 +156,11 @@ function parseShiftExpr(Tokenizer tok) returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t is ("<<"|">>>"|">>") {
+            Position opPos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseAdditiveExpr(tok);
             Position endPos = tok.previousEndPos();
-            BinaryBitwiseExpr shift = { startPos, endPos, bitwiseOp: t, left: expr, right };
+            BinaryBitwiseExpr shift = { startPos, endPos, opPos, bitwiseOp: t, left: expr, right };
             expr = shift;
         }
         else {
@@ -170,11 +176,12 @@ function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t is ("+"|"-") {
+            Position opPos = tok.currentStartPos();
             Position pos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseMultiplicativeExpr(tok);
             Position endPos = tok.previousEndPos();
-            BinaryArithmeticExpr bin = { startPos, endPos, arithmeticOp: t, left: expr, right, pos };
+            BinaryArithmeticExpr bin = { startPos, endPos, opPos, arithmeticOp: t, left: expr, right, pos };
             expr = bin;
         }
         else {
@@ -190,11 +197,12 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
     while true {
         Token? t = tok.current();
         if t is ("*"|"/"|"%") {
+            Position opPos = tok.currentStartPos();
             Position pos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseUnaryExpr(tok);
             Position endPos = tok.previousEndPos();
-            BinaryArithmeticExpr bin = { startPos, endPos, arithmeticOp: t, left: expr, right, pos };
+            BinaryArithmeticExpr bin = { startPos, endPos, opPos, arithmeticOp: t, left: expr, right, pos };
             expr = bin;
         }
         else {

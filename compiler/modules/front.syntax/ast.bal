@@ -73,7 +73,8 @@ public type CompoundAssignStmt record {|
     *PositionFields;
     LExpr lValue;
     Expr expr;
-    BinaryArithmeticOp|BinaryBitwiseOp op; 
+    BinaryArithmeticOp|BinaryBitwiseOp op;
+    Position opPos;
     Position pos;
 |};
 
@@ -166,6 +167,7 @@ public type BinaryExprBase record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     Expr left;
     Expr right;
 |};
