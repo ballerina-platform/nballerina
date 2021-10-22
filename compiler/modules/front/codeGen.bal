@@ -936,7 +936,7 @@ function codeGenCompoundableBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, Env
     s:Expr folded = check cx.foldExpr(env, rexpr, memberType);
     if op is s:BinaryArithmeticOp {
         var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, folded);
-        return check codeGenArithmeticBinaryExpr(cx, nextBlock, op, opPos, member, operand, pos);
+        return check codeGenArithmeticBinaryExpr(cx, nextBlock, op, opPos, member, operand);
     }
     else {
         var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, folded);
@@ -996,21 +996,21 @@ function codeGenExprForString(CodeGenContext cx, bir:BasicBlock bb, Environment 
 
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|ExprEffect {
     match expr {
-        var { opPos, arithmeticOp: op, left, right, pos } => {
+        var { opPos, arithmeticOp: op, left, right } => {
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
             var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
             // We evaluate the operands here, so we can reuse the function for compound assignment.
-            return codeGenArithmeticBinaryExpr(cx, nextBlock, op, opPos, l, r, pos);
+            return codeGenArithmeticBinaryExpr(cx, nextBlock, op, opPos, l, r);
         }
         // Negation
-        { opPos: var opPos, op: "-",  operand: var o, pos: var pos } => {
+        { opPos: var opPos, op: "-",  operand: var o } => {
             var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
             TypedOperand? typed = typedOperand(operand);
             bir:Register result;
             bir:Insn insn;
             if typed is ["int", bir:IntOperand] {
                 result = cx.createRegister(t:INT);
-                insn = <bir:IntArithmeticBinaryInsn> { op: "-", opPos, operands: [0, typed[1]], result, position: pos };
+                insn = <bir:IntArithmeticBinaryInsn> { op: "-", opPos, operands: [0, typed[1]], result };
             }
             else if typed is ["float", bir:FloatOperand] {
                 result = cx.createRegister(t:FLOAT);
@@ -1189,17 +1189,17 @@ function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environ
     }
 }
 
-function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, bir:Position opPos, bir:Operand lhs, bir:Operand rhs, bir:Position pos) returns CodeGenError|ExprEffect {
+function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, bir:Position opPos, bir:Operand lhs, bir:Operand rhs) returns CodeGenError|ExprEffect {
     TypedOperandPair? pair = typedOperandPair(lhs, rhs);
     bir:Register result;
     if pair is IntOperandPair {
         result = cx.createRegister(t:INT);
-        bir:IntArithmeticBinaryInsn insn = { op, opPos, operands: pair[1], result, position: pos };
+        bir:IntArithmeticBinaryInsn insn = { op, opPos, operands: pair[1], result };
         bb.insns.push(insn);
     }
     else if pair is FloatOperandPair {
         result = cx.createRegister(t:FLOAT);
-        bir:FloatArithmeticBinaryInsn insn = { op, opPos, operands: pair[1], result, position: pos };
+        bir:FloatArithmeticBinaryInsn insn = { op, opPos, operands: pair[1], result };
         bb.insns.push(insn);
     }
     else if pair is StringOperandPair && op == "+" {
@@ -1208,7 +1208,7 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
         bb.insns.push(insn);
     }
     else {
-        return cx.semanticErr(`${op} not supported for operand types`);
+        return cx.semanticErr(`${op} at ${opPos} not supported for operand types`);
     } 
     return { result, block: bb };
 }

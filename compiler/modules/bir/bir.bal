@@ -219,7 +219,6 @@ public type IntArithmeticBinaryInsn readonly & record {|
     Position opPos;
     Register result;
     IntOperand[2] operands;
-    Position position;
 |};
 
 # Concatenate strings, returns a new string
@@ -268,7 +267,6 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     Position opPos;
     Register result;
     FloatOperand[2] operands;
-    Position position;
 |};
 
 public type FloatNegateInsn readonly & record {|

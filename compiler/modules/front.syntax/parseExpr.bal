@@ -221,7 +221,7 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
         Position endPos = tok.previousEndPos();
-        UnaryExpr expr = { startPos, endPos, opPos, op: t, operand, pos };
+        UnaryExpr expr = { startPos, endPos, opPos, op: t, operand };
         return expr;
     }
     else if t is CheckingKeyword {
@@ -443,7 +443,7 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
         check tok.advance();
         IntLiteralExpr operand = check parseIntLiteralExpr(tok);
         Position endPos = tok.previousEndPos();
-        SimpleConstNegateExpr expr = { startPos, endPos, opPos, operand, pos };
+        SimpleConstNegateExpr expr = { startPos, endPos, opPos, operand };
         return expr;
     }
     match t {

@@ -190,7 +190,7 @@ public type BinaryArithmeticExpr record {|
 
 public type BinaryBitwiseExpr record {|
     *BinaryExprBase;
-    BinaryBitwiseOp bitwiseOp; 
+    BinaryBitwiseOp bitwiseOp;
 |};
 
 public type UnaryExpr record {|
@@ -200,7 +200,6 @@ public type UnaryExpr record {|
     Position opPos;
     UnaryExprOp op;
     Expr operand;
-    Position pos;
 |};
 
 public type SimpleConstNegateExpr record {|
