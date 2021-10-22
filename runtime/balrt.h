@@ -154,7 +154,7 @@ typedef struct {
 typedef struct {
     TypeTest typeTest;
     uint32_t bitSet;
-} *MapTypeTestPtr;
+} *MapTypeTestPtr, *ArrayTypeTestPtr;
 
 typedef GC struct Error {
     TaggedPtr message;

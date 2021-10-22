@@ -125,3 +125,11 @@ bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
     }
     return true;
 }
+
+bool _bal_array_type_contains(TypeTestPtr ttp, TaggedPtr p) {
+    if ((getTag(p) & UT_MASK) != TAG_LIST_RW) {
+        return false;
+    }
+    ListPtr lp = taggedToPtr(p);   
+    return (lp->desc->bitSet & ~((ArrayTypeTestPtr)ttp)->bitSet) == 0;
+}

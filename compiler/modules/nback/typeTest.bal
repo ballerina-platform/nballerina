@@ -2,15 +2,6 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-final RuntimeFunction listHasTypeFunction = {
-    name: "list_has_type",
-    ty: {
-        returnType: "i1",
-        paramTypes: [LLVM_TAGGED_PTR, LLVM_BITSET]
-    },
-    attrs: ["readonly"]
-};
-
 final RuntimeFunction listExactifyFunction = {
     name: "list_exactify",
     ty: {
@@ -42,14 +33,8 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     if bitSet != () {
         hasType = buildHasTagInSet(builder, tagged, bitSet);
     }
-    else if t:isSubtypeSimple(semType, t:LIST) {
-        hasType = buildHasListType(builder, scaffold, tagged, semType);
-    }
-    else if t:isSubtypeSimple(semType, t:MAPPING) {
-        hasType = check buildHasMappingType(builder, scaffold, tagged, semType);
-    }
     else {
-        return scaffold.unimplementedErr("unimplemented type test"); // should not happen in subset 6
+        hasType = check buildHasComplexSemType(builder, scaffold, tagged, <t:ComplexSemType>semType);
     }
     if insn.negated {
         buildStoreBoolean(builder, scaffold, 
@@ -71,25 +56,20 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock castFailBlock = scaffold.addBasicBlock();
     t:SemType semType = insn.semType;
-    t:UniformTypeBitSet? bitSet = testTypeAsUniformBitSet(scaffold.typeContext(), insn.operand.semType, insn.semType);
+    t:UniformTypeBitSet? bitSet = testTypeAsUniformBitSet(scaffold.typeContext(), insn.operand.semType, semType);
     if bitSet != () {
         builder.condBr(buildHasTagInSet(builder, tagged, bitSet), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
         builder.store(check buildNarrowRepr(builder, scaffold, repr, val, scaffold.getRepr(insn.result)), scaffold.address(insn.result));
     }
     else {
+        builder.condBr(check buildHasComplexSemType(builder, scaffold, tagged, <t:ComplexSemType>semType), continueBlock, castFailBlock);
+        builder.positionAtEnd(continueBlock);
         if t:isSubtypeSimple(semType, t:LIST) {
-            builder.condBr(buildHasListType(builder, scaffold, tagged, semType), continueBlock, castFailBlock);
-            builder.positionAtEnd(continueBlock);
             tagged = buildListExactify(builder, scaffold, tagged, insn.result.semType);
         }
         else if t:isSubtypeSimple(semType, t:MAPPING) {
-            builder.condBr(check buildHasMappingType(builder, scaffold, tagged, semType), continueBlock, castFailBlock);
-            builder.positionAtEnd(continueBlock);
             tagged = buildMappingExactify(builder, scaffold, tagged, insn.result.semType);
-        }
-        else {
-            return scaffold.unimplementedErr("unimplemented type cast"); // should not happen in subset 6
         }
         builder.store(tagged, scaffold.address(insn.result));
     }
@@ -127,7 +107,7 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
     return scaffold.unimplementedErr("unimplemented narrowing conversion required");
 }
 
-function buildHasMappingType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:Value|BuildError {
+function buildHasComplexSemType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:ComplexSemType targetType) returns llvm:Value|BuildError {
     llvm:ConstPointerValue tt = scaffold.getTypeTest(targetType);
     // return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFunction), [tt, tagged]);
     llvm:PointerValue funcPtrPtr = builder.getElementPtr(tt, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]);
@@ -147,12 +127,6 @@ function buildMappingExactify(llvm:Builder builder, Scaffold scaffold, llvm:Poin
                                                // XXX what we want here is just an index
                                                [tagged, scaffold.getInherentType(t:intersect(targetType, t:MAPPING_RW))]); 
     }
-}
-
-function buildHasListType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:Value {
-    t:UniformTypeBitSet bitSet = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), targetType);
-    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(listHasTypeFunction),
-                                    [tagged, llvm:constInt(LLVM_BITSET, bitSet)]);
 }
 
 function buildListExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {

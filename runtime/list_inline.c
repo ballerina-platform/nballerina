@@ -21,15 +21,6 @@ void BAL_LANG_ARRAY_NAME(push)(TaggedPtr p, TaggedPtr val) {
     lp->tpArray.length = len + 1;
 }
 
-bool _bal_list_has_type(TaggedPtr p, uint32_t desc) {
-    if ((getTag(p) & UT_MASK) != TAG_LIST_RW) {
-        return false;
-    }
-    ListPtr lp = taggedToPtr(p);
-    ListDescPtr ldp = lp->desc;
-    return (ldp->bitSet & ~desc) == 0;
-}
-
 TaggedPtr _bal_list_exactify(TaggedPtr p, ListDescPtr desc) {
     ListPtr lp = taggedToPtr(p);
     ListDescPtr ldp = lp->desc;
