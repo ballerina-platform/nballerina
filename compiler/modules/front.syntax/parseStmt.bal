@@ -42,7 +42,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         "break"|"continue" => {
             check tok.advance();
             Position endPos = check tok.expectEnd(";");
-            // JBUG cast
+            // JBUG #33341 cast
             BreakContinueStmt stmt = { startPos, endPos, breakContinue:<BreakContinue>cur };
             return stmt;
         }
@@ -76,7 +76,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         }
         "check"|"checkpanic" => {
             check tok.advance();
-            // JBUG cast
+            // JBUG #33341 cast
             return finishCheckingCallStmt(tok, <CheckingKeyword>cur, startPos);
         }
         var td if td is SubsetBuiltinTypeName|"map"|"record" => {
