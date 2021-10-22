@@ -7,14 +7,14 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         Expr[] members = check parseExprList(tok, "]");
         Position endPos = tok.previousEndPos();
-        ListConstructorExpr expr = { startPos, endPos, members };
+        ListConstructorExpr expr = { startPos, endPos, opPos: startPos, members };
         return expr;
     }
     else if t == "{" {
         check tok.advance();
         Field[] fields = check parseFields(tok);
         Position endPos = tok.previousEndPos();
-        MappingConstructorExpr expr = { startPos, endPos, fields };
+        MappingConstructorExpr expr = { startPos, endPos, opPos: startPos, fields };
         return expr;
     }
     return parseInnerExpr(tok);
@@ -313,12 +313,12 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         return expr;
     }
     else if t is "error" {
-        Position pos = tok.currentStartPos();
+        Position opPos = tok.currentStartPos();
         check tok.advance();
         check tok.expect("(");
         Expr message  = check parseExpr(tok);
         endPos = check tok.expectEnd(")");
-        return { startPos, endPos, message, pos };
+        return { startPos, endPos, message, opPos };
     }
     else {
         return parseError(tok);
@@ -327,23 +327,23 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
 
 function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns Expr|err:Syntax {
     Token? t = tok.current();
-    Position pos = tok.currentStartPos();
+    Position opPos = tok.currentStartPos();
     if t == "[" {
         check tok.advance();
         Expr index = check parseInnerExpr(tok);
         Position accessEndPos = check tok.expectEnd("]");
-        MemberAccessExpr accessExpr = { startPos, endPos: accessEndPos, container: expr, index, pos };
+        MemberAccessExpr accessExpr = { startPos, endPos: accessEndPos, opPos, container: expr, index };
         return finishPrimaryExpr(tok, accessExpr, startPos);
     }
     else if t == "." {
         check tok.advance();
         string name = check tok.expectIdentifier();
         if tok.current() == "(" {
-            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, pos, startPos), startPos);
+            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, opPos, startPos), startPos);
         }
         else {
             Position endPos = tok.previousEndPos();
-            FieldAccessExpr fieldAccessExpr = { startPos, endPos, container: expr, fieldName: name, pos };
+            FieldAccessExpr fieldAccessExpr = { startPos, endPos, opPos, container: expr, fieldName: name };
             return finishPrimaryExpr(tok, fieldAccessExpr, startPos);
         }
     }

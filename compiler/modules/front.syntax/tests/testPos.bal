@@ -311,7 +311,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     check validateExprOpPos(expr, tok);
 }
 
-type ExprOpPos BinaryExpr|UnaryExpr;
+type ExprOpPos BinaryExpr|UnaryExpr|ErrorConstructorExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 
 function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
     if expr is ExprOpPos {
@@ -329,8 +329,20 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         else if expr is BinaryBitwiseExpr {
             test:assertTrue(opToken is BinaryBitwiseOp);
         }
-        else {
+        else if expr is UnaryExpr {
             test:assertTrue(opToken is UnaryExprOp);
+        }
+        else if expr is ErrorConstructorExpr {
+            test:assertEquals(opToken, "error");
+        }
+        else if expr is ListConstructorExpr|MemberAccessExpr|MemberAccessLExpr {
+            test:assertEquals(opToken, "[");
+        }
+        else if expr is MappingConstructorExpr {
+            test:assertEquals(opToken, "{");
+        }
+        else if expr is FieldAccessExpr|FieldAccessLExpr {
+            test:assertEquals(opToken, ".");
         }
     }
 }

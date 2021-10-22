@@ -844,7 +844,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
         memberType = t:listMemberType(cx.mod.tc, reg.semType);
     }
     else {
-        return cx.semanticErr("member access can only be applied to mapping or list", pos=lValue.pos);
+        return cx.semanticErr("member access can only be applied to mapping or list", pos=lValue.opPos);
     }
     s:Expr foldedExpr = check cx.foldExpr(env, expr, memberType);
     bir:Operand operand;
@@ -855,7 +855,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
         else {
             var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, lValue.index, indexType));
             { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
-            bir:ListSetInsn insn = { operands: [reg, index, operand], position: lValue.pos };
+            bir:ListSetInsn insn = { operands: [reg, index, operand], position: lValue.opPos };
             nextBlock.insns.push(insn);
             return { block: nextBlock };
         }
@@ -863,7 +863,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
     else {
         var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, startBlock, env, lValue, reg.semType);
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
-        bir:MappingSetInsn insn =  { operands: [ reg, index, operand], position: lValue.pos };
+        bir:MappingSetInsn insn =  { operands: [ reg, index, operand], position: lValue.opPos };
         nextBlock.insns.push(insn);
         return { block: nextBlock };
     }
@@ -883,11 +883,11 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
                     return cx.semanticErr("can only apply field access in lvalue to mapping", pos=pos);
                 }
                 else {
-                    return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, pos);
+                    return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, opPos, pos);
                 }
             }
             else if t:isSubtypeSimple(container.semType, t:MAPPING) {
-                return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, pos);
+                return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, opPos, pos);
             }
         }
         return cx.semanticErr("can only apply member access in lvalue to list or mapping", pos=pos);
@@ -1119,7 +1119,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             }
         }
         // Member access E[i]
-        var { container, index, pos } => {
+        var { container, index, opPos } => {
             // Do constant folding here since these expressions are not allowed in const definitions
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
             if l is bir:Register {
@@ -1130,27 +1130,27 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                         return cx.semanticErr("type of member access is never");
                     }
                     bir:Register result = cx.createRegister(memberType);
-                    bir:ListGetInsn insn = { result, operands: [l, r], position: pos };
+                    bir:ListGetInsn insn = { result, operands: [l, r], position: opPos };
                     nextBlock.insns.push(insn);
                     return { result, block: nextBlock };
                 }
                 else if t:isSubtypeSimple(l.semType, t:MAPPING) {
                     var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
-                    return codeGenMappingGet(cx, nextBlock, l, "[", r, pos);
+                    return codeGenMappingGet(cx, nextBlock, l, "[", r, opPos);
                 }
                 else if t:isSubtypeSimple(l.semType, t:STRING) {
-                    return cx.unimplementedErr("not implemented: member access on string", pos=pos);
+                    return cx.unimplementedErr("not implemented: member access on string", pos=opPos);
                 }
             }
-            return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
+            return cx.semanticErr("can only apply member access to list or mapping", pos=opPos);
         }
         // Field access
-        var { container, fieldName, pos } => {
+        var { container, fieldName, opPos } => {
             var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
             if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
-                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
+                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, opPos);
             }
-            return cx.semanticErr("can only apply field access to mapping", pos=pos);
+            return cx.semanticErr("can only apply field access to mapping", pos=opPos);
         }
         // List construct
         // JBUG #33309 should be able to use just `var { members }`
@@ -1162,8 +1162,8 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenMappingConstructor(cx, bb, env, mappingConstructorExpr);  
         }
         // Error construct
-        var { message, pos } => {
-            return codeGenErrorConstructor(cx, bb, env, message, pos);
+        var { message, opPos } => {
+            return codeGenErrorConstructor(cx, bb, env, message, opPos);
         }
         var { digits } => {
             panic err:impossible(`failed to fold int literal ${digits}`);
@@ -1200,7 +1200,7 @@ function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environ
     if mappingLValue is s:FieldAccessLExpr {
         string fieldName = mappingLValue.fieldName;
         if !t:mappingMemberRequired(cx.mod.tc, mappingType, fieldName) {
-            return cx.semanticErr(`${fieldName} must be a required key`, pos=mappingLValue.pos);
+            return cx.semanticErr(`${fieldName} must be a required key`, pos=mappingLValue.opPos);
         }
         return { result: fieldName, block };
     }

@@ -221,8 +221,8 @@ public type ErrorConstructorExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     Expr message;
-    Position pos;
 |};
 
 public type FunctionCallExpr record {|
@@ -274,6 +274,7 @@ public type ListConstructorExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     Expr[] members;
     // JBUG #33309 adding this field makes match statement in codeGenExpr fail
     t:SemType? expectedType = ();
@@ -281,6 +282,7 @@ public type ListConstructorExpr record {|
 
 public type MappingConstructorExpr record {|
     *PositionFields;
+    Position opPos;
     Field[] fields;
     t:SemType? expectedType = ();
 |};
@@ -299,17 +301,17 @@ public type MemberAccessExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     Expr container;
     Expr index;
-    Position pos;
 |};
 
 // JBUG #32617 gets a bad, sad if this uses *MemberAccessExpr and overrides container
 public type MemberAccessLExpr record {|
     *PositionFields;
+    Position opPos;
     VarRefExpr container;
     Expr index;
-    Position pos;
 |};
 
 public type FieldAccessExpr record {|
@@ -317,16 +319,16 @@ public type FieldAccessExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     Expr container;
     string fieldName;
-    Position pos;
 |};
 
 public type FieldAccessLExpr record {|
     *PositionFields;
+    Position opPos;
     VarRefExpr container;
     string fieldName;
-    Position pos;
 |};
 
 public type RangeExpr record {|
