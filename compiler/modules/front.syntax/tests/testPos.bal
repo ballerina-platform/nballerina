@@ -283,6 +283,11 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
             test:assertTrue(opToken is BinaryBitwiseOp);
         }
     }
+    else if expr is UnaryExpr {
+        check tok.moveToPos(expr.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        test:assertTrue(opToken is UnaryExprOp);
+    }
 }
 
 function validateChildTypeDesc(Stmt|Expr parent, Tokenizer tok) returns err:Syntax? {

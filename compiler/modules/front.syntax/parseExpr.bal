@@ -216,11 +216,12 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
     if t is "-"|"!"|"~" {
+        Position opPos = tok.currentStartPos();
         Position pos = tok.currentStartPos();
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
         Position endPos = tok.previousEndPos();
-        UnaryExpr expr = { startPos, endPos, op: t, operand, pos };
+        UnaryExpr expr = { startPos, endPos, opPos, op: t, operand, pos };
         return expr;
     }
     else if t is CheckingKeyword {
@@ -437,11 +438,12 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
     if t == "-" {
+        Position opPos = tok.currentStartPos();
         Position pos = tok.currentStartPos();
         check tok.advance();
         IntLiteralExpr operand = check parseIntLiteralExpr(tok);
         Position endPos = tok.previousEndPos();
-        SimpleConstNegateExpr expr = { startPos, endPos, operand, pos };
+        SimpleConstNegateExpr expr = { startPos, endPos, opPos, operand, pos };
         return expr;
     }
     match t {

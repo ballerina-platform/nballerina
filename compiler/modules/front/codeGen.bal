@@ -548,7 +548,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         clauseLooksLike[i] = t:diff(clausePatternUnion, precedingPatternsUnion);
         precedingPatternsUnion = t:union(precedingPatternsUnion, clausePatternUnion);
     }
-  
+
     int patternIndex = 0;
     foreach var mv in constMatchValues {
         int clauseIndex = mv.clauseIndex;
@@ -556,7 +556,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
             break;
         }
         bir:Register testResult = cx.createRegister(t:BOOLEAN);
-        bir:EqualityInsn eq = { op: "==", result: testResult, operands: [matched, mv.value] };
+        bir:EqualityInsn eq = { op: "==", opPos: stmt.startPos, result: testResult, operands: [matched, mv.value] };
         testBlock.insns.push(eq);
         clauseTestInsns[clauseIndex].push(bir:lastInsnRef(testBlock));
         bir:BasicBlock nextBlock = cx.createBasicBlock("pattern." + patternIndex.toString());
@@ -1003,18 +1003,18 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenArithmeticBinaryExpr(cx, nextBlock, op, opPos, l, r, pos);
         }
         // Negation
-        { op: "-",  operand: var o, pos: var pos } => {
+        { opPos: var opPos, op: "-",  operand: var o, pos: var pos } => {
             var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
             TypedOperand? typed = typedOperand(operand);
             bir:Register result;
             bir:Insn insn;
             if typed is ["int", bir:IntOperand] {
                 result = cx.createRegister(t:INT);
-                insn = <bir:IntArithmeticBinaryInsn> { op: "-", opPos: pos, operands: [0, typed[1]], result, position: pos };
+                insn = <bir:IntArithmeticBinaryInsn> { op: "-", opPos, operands: [0, typed[1]], result, position: pos };
             }
             else if typed is ["float", bir:FloatOperand] {
                 result = cx.createRegister(t:FLOAT);
-                insn = <bir:FloatNegateInsn> { operand: <bir:Register>typed[1], result };
+                insn = <bir:FloatNegateInsn> { operand: <bir:Register>typed[1], result, opPos };
             }
             else {
                 return cx.semanticErr(`operand of ${"-"} must be int or float`);
@@ -1022,20 +1022,20 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             nextBlock.insns.push(insn);
             return { result, block: nextBlock };
         }
-        // Bitwise complement 
-        { op: "~",  operand: var o } => {
+        // Bitwise complement
+        { opPos: var opPos, op: "~",  operand: var o } => {
             var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, o);
             bir:Register result = cx.createRegister(t:INT);
-            bir:IntBitwiseBinaryInsn insn = { op: "^", opPos: o.startPos, operands: [-1, operand], result };
+            bir:IntBitwiseBinaryInsn insn = { op: "^", opPos, operands: [-1, operand], result };
             nextBlock.insns.push(insn);
             return { result, block: nextBlock };
         }
-        { op: "!",  operand: var o } => {
+        { opPos: var opPos, op: "!",  operand: var o } => {
             var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, env, o);
             // Should have been resolved during constant folding
             bir:Register reg = <bir:Register>operand;
             bir:Register result = cx.createRegister(t:BOOLEAN);
-            bir:BooleanNotInsn insn = { operand: reg, result };
+            bir:BooleanNotInsn insn = { operand: reg, result, opPos };
             nextBlock.insns.push(insn);
             if narrowing != () {
                 narrowing.negated = !narrowing.negated;
@@ -1051,8 +1051,8 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             // We evaluate the operands here, so we can reuse the function for compound assignment.
             return codeGenBitwiseBinaryExpr(cx, nextBlock, op, opPos, l, r);
         }
-        var { equalityOp: op, left, right } => {
-            return codeGenEquality(cx, bb, env, op, left, right);
+        var { opPos, equalityOp: op, left, right } => {
+            return codeGenEquality(cx, bb, env, op, opPos, left, right);
         }
         var { opPos, relationalOp: op, left, right } => {
             bir:Register result = cx.createRegister(t:BOOLEAN);
@@ -1292,12 +1292,12 @@ function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env
     }
 }
 
-function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryEqualityOp op, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
+function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryEqualityOp op, err:Position opPos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
     bir:Register result = cx.createRegister(t:BOOLEAN);
     var { result: l, block: block1, binding: lBinding } = check codeGenExpr(cx, bb, env, left);
     var { result: r, block: nextBlock, binding: rBinding } = check codeGenExpr(cx, block1, env, right);
     // Type checking is done in the verifier
-    bir:EqualityInsn insn = { op, operands: [l, r], result };
+    bir:EqualityInsn insn = { op, opPos, operands: [l, r], result };
     nextBlock.insns.push(insn);
     [Binding, SimpleConst]? narrowingCompare = ();
     if op is ("=="|"!=") {

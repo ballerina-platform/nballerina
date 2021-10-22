@@ -254,6 +254,7 @@ public type IntBitwiseBinaryInsn readonly & record {|
 # Perform logical not operation on a boolean.
 public type BooleanNotInsn readonly & record {|
     *InsnBase;
+    Position opPos;
     INSN_BOOLEAN_NOT name = INSN_BOOLEAN_NOT;
     Register result;
     Register operand;
@@ -272,6 +273,7 @@ public type FloatArithmeticBinaryInsn readonly & record {|
 
 public type FloatNegateInsn readonly & record {|
     *InsnBase;
+    Position opPos;
     INSN_FLOAT_NEGATE name = INSN_FLOAT_NEGATE;
     Register result;
     Register operand;
@@ -394,6 +396,7 @@ public type EqualityInsn readonly & record {|
     *InsnBase;
     INSN_EQUALITY name = INSN_EQUALITY;
     EqualityOp op;
+    Position opPos;
     Register result;
     Operand[2] operands;
 |};

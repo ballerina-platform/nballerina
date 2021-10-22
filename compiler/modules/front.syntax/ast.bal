@@ -197,6 +197,7 @@ public type UnaryExpr record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     UnaryExprOp op;
     Expr operand;
     Position pos;
