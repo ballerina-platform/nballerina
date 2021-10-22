@@ -1570,8 +1570,7 @@ function escapeIdent(string name) returns string {
         return name;
     }
     string escaped = "\"";
-    foreach int i in 0 ..< name.length() { // JBUG issue:#31767
-        string:Char ch = <string:Char>name[i];
+    foreach var ch in name {
         escaped += escapeIdentChar(ch);
     }
     escaped += "\"";
@@ -1587,10 +1586,9 @@ function escapeIdentChar(string:Char ch) returns string {
         byte[] bytes = ch.toBytes();
         string result = "";
         foreach byte b in bytes {
-            // JBUG #31776 int cast should not be required
             // UTF-8 representation of a code point >= 0x80 consists of bytes >= 0x80
             // so toHexString here will always produce two bytes
-            result += "\\" + (<int>b).toHexString().toUpperAscii();
+            result += "\\" + b.toHexString().toUpperAscii();
         } 
         return result;
     }
@@ -1665,21 +1663,18 @@ function addrSpaceCastArgs((string|Unnamed)[] words, Value val, PointerType dest
     words.push(typeToString(val.ty, context), val.operand, "to", typeToString(destTy, context));
 }
 
-// JBUG #31777 cast should not be necessary
-final int CP_DOUBLE_QUOTE = (<string:Char>"\"").toCodePointInt();
-final int CP_BACKSLASH = (<string:Char>"\\").toCodePointInt();
+final int CP_DOUBLE_QUOTE = "\"".toCodePointInt();
+final int CP_BACKSLASH = "\\".toCodePointInt();
 
 function charArray(byte[] bytes) returns string {
     string result = "c\"";
     foreach var b in bytes {
-        // JBUG 31700 incorrect code generated if 32 is in hex
-        if b >= 32 && b < 127 && b != CP_DOUBLE_QUOTE && b != CP_BACKSLASH {
+        if b >= 0x20 && b < 0x7F && b != CP_DOUBLE_QUOTE && b != CP_BACKSLASH {
             result += checkpanic string:fromBytes([b]);
         }
         else {
             result += "\\";
-            // JBUG #31776 cast should not be necessary
-            string hex = (<int>b).toHexString().toUpperAscii();
+            string hex = b.toHexString().toUpperAscii();
             if hex.length() == 1 {
                 result += "0" + hex;
             }
@@ -1696,13 +1691,11 @@ function isIdent(string name) returns boolean {
     if name.length() == 0 {
         return false;
     }
-    // JBUG #31758 type of name[0] is string:Char
-    if isDigit(<string:Char>name[0]) {
+    if isDigit(name[0]) {
         return false;
     }
 
-    foreach int i in 0 ..< name.length() {// JBUG issue:#31767
-        string:Char ch = <string:Char>name[i];
+    foreach var ch in name {
         if !isIdentFollow(ch) {
             return false;
         }
