@@ -64,17 +64,13 @@ type Keyword
     | "import"
     ;
 
-
-// JBUG cannot use string:Char #31668 #31660
-type Char string;
-
 type StringIterator object {
     public isolated function next() returns record {|
-        Char value;
+        string:Char value;
     |}?;
 };
 
-final readonly & map<Char> ESCAPES = {
+final readonly & map<string:Char> ESCAPES = {
     "\\": "\\",
     "\"": "\"",
     "n": "\n",
@@ -86,11 +82,6 @@ final readonly & map<Char> ESCAPES = {
 const MODE_NORMAL = 0;
 const MODE_TYPE_DESC = 1;
 type Mode MODE_NORMAL|MODE_TYPE_DESC;
-
-// JBUG this avoids bloat that causes `method is too large` errors
-function toToken(string t) returns Token {
-    return <Token>t;
-}
 
 type TokenizerState readonly & record {
     SourceFile file;
@@ -179,17 +170,17 @@ class Tokenizer {
                         if fragCodeIndex + 1 < fragCodes.length() && fragCodes[fragCodeIndex + 1] == FRAG_GREATER_THAN {
                             self.fragCodeIndex += 2;
                             self.codePointIndex += 3;
-                            self.curTok = toToken(">>>");
+                            self.curTok = ">>>";
                         }
                         else {
                             self.fragCodeIndex += 1;
                             self.codePointIndex += 2;
-                            self.curTok = toToken(">>");
+                            self.curTok = ">>";
                         }
                     }
                     else {
                         self.codePointIndex += 1;
-                        self.curTok = toToken(">");
+                        self.curTok = ">";
                     }
                     return;
                 }
