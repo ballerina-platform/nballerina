@@ -452,7 +452,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
             if value is float {
                 int|error converted = trap <int>value;
                 if converted is error {
-                    return cx.semanticErr(`cannot convert ${value} to int`, pos = expr.pos);
+                    return cx.semanticErr(`cannot convert ${value} to int`, pos = expr.opPos);
                 }
                 else {
                     value = converted;
@@ -465,7 +465,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
             }
         }
         if !t:containsConst(semType, value) {
-            return cx.semanticErr(`type cast will always fail`, pos=expr.pos);
+            return cx.semanticErr(`type cast will always fail`, pos=expr.opPos);
         }
         if toNumType != () && value != subExpr.value {
             return foldedUnaryConstExpr(value, toNumType, subExpr);

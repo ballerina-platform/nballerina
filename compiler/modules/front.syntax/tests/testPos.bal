@@ -66,6 +66,9 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     check validateStmtOpPos(stmt, tok);
 }
 
+type OpStmt VarDeclStmt|AssignStmt|CompoundAssignStmt;
+type KwStmt ReturnStmt|PanicStmt;
+
 function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
     if stmt is MatchStmt {
         foreach var clause in stmt.clauses {
@@ -74,21 +77,31 @@ function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
             test:assertEquals(opToken, "=>");
         }
     }
+    else if stmt is OpStmt {
+        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        if stmt is VarDeclStmt|AssignStmt {
+            test:assertEquals(opToken, "=");
+        }
+        else {
+            test:assertTrue(opToken is CompoundAssignOp);
+        }
+    }
     else if stmt is ForeachStmt {
         RangeExpr rangeExpr = stmt.range;
         check tok.moveToPos(rangeExpr.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;
         test:assertTrue(opToken == "..<");
     }
-    else if stmt is VarDeclStmt|AssignStmt {
-        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
-        Token? opToken = tok.curTok;
-        test:assertEquals(opToken, "=");
-    }
-    else if stmt is CompoundAssignStmt {
-        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
-        Token? opToken = tok.curTok;
-        test:assertTrue(opToken is CompoundAssignOp);
+    else if stmt is KwStmt {
+        check tok.moveToPos(stmt.kwPos, MODE_NORMAL);
+        Token? kwToken = tok.curTok;
+        if stmt is ReturnStmt {
+            test:assertEquals(kwToken, "return");
+        }
+        else {
+            test:assertEquals(kwToken, "panic");
+        }
     }
 }
 
@@ -307,8 +320,8 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     check validateExprOpPos(expr, tok);
 }
 
-type ExprOpPos BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr;
-type ExprKwPos CheckingExpr|ErrorConstructorExpr;
+type ExprOpPos BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr|TypeCastExpr;
+type ExprKwPos CheckingExpr|ErrorConstructorExpr|TypeTestExpr;
 
 function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
     if expr is ExprOpPos|ExprKwPos {
@@ -348,6 +361,12 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         }
         else if expr is CheckingExpr {
             test:assertTrue(token is CheckingKeyword);
+        }
+        else if expr is TypeCastExpr {
+            test:assertEquals(token, "<");
+        }
+        else if expr is TypeTestExpr {
+            test:assertEquals(token, "is");
         }
         else {
             test:assertEquals(token, ".");

@@ -188,6 +188,8 @@ public type InsnBase record {
     # Whether an instruction is a terminator or a PPI is determined
     # just by its name.
     InsnName name;
+    # Position based on the AST node that generated the instruction
+    Position pos;
 };
 
 public type Insn 
@@ -216,7 +218,6 @@ public type IntArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_ARITHMETIC_BINARY name = INSN_INT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Position pos;
     Register result;
     IntOperand[2] operands;
 |};
@@ -236,7 +237,6 @@ public type IntNoPanicArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY name = INSN_INT_NO_PANIC_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Position pos;
     Register result;
     IntOperand[2] operands;
 |};
@@ -245,7 +245,6 @@ public type IntBitwiseBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_BITWISE_BINARY name = INSN_INT_BITWISE_BINARY;
     BitwiseBinaryOp op;
-    Position pos;
     Register result;
     IntOperand[2] operands;
 |};
@@ -253,7 +252,6 @@ public type IntBitwiseBinaryInsn readonly & record {|
 # Perform logical not operation on a boolean.
 public type BooleanNotInsn readonly & record {|
     *InsnBase;
-    Position pos;
     INSN_BOOLEAN_NOT name = INSN_BOOLEAN_NOT;
     Register result;
     Register operand;
@@ -264,14 +262,12 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_FLOAT_ARITHMETIC_BINARY name = INSN_FLOAT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Position pos;
     Register result;
     FloatOperand[2] operands;
 |};
 
 public type FloatNegateInsn readonly & record {|
     *InsnBase;
-    Position pos;
     INSN_FLOAT_NEGATE name = INSN_FLOAT_NEGATE;
     Register result;
     Register operand;
@@ -289,7 +285,6 @@ public type ConvertToIntInsn readonly & record {|
     INSN_CONVERT_TO_INT name = INSN_CONVERT_TO_INT;
     Register result;
     Register operand;
-    Position position;
 |};
 
 # If the operand is an int or decimal, then convert it to a float.
@@ -318,7 +313,6 @@ public type CompareInsn readonly & record {|
     *InsnBase;
     INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
-    Position pos;
     OrderType orderType;
     Register result;
     Operand[2] operands;
@@ -397,7 +391,6 @@ public type EqualityInsn readonly & record {|
     *InsnBase;
     INSN_EQUALITY name = INSN_EQUALITY;
     EqualityOp op;
-    Position pos;
     Register result;
     Operand[2] operands;
 |};
@@ -413,7 +406,6 @@ public type EqualityInsn readonly & record {|
 public type CallInsn readonly & record {|
     *InsnBase;
     # Position in the source that resulted in the instruction
-    Position pos;
     INSN_CALL name = INSN_CALL;
     Register result;
     FunctionOperand func;
@@ -425,7 +417,6 @@ public type CallInsn readonly & record {|
 # typeof(operand) <: typeof(result)
 public type AssignInsn readonly & record {|
     *InsnBase;
-    Position pos;
     INSN_ASSIGN name = INSN_ASSIGN;
     Register result;
     Operand operand;
@@ -445,7 +436,6 @@ public type TypeCastInsn readonly & record {|
     Register result;
     Register operand;
     SemType semType;
-    Position position;
 |};
 
 

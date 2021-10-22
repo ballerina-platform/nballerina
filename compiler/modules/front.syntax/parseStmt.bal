@@ -308,13 +308,13 @@ function parseReturnStmt(Tokenizer tok, Position startPos) returns ReturnStmt|er
         returnExpr = check parseExpr(tok);
         endPos = check tok.expectEnd(";");
     }
-    return { startPos, endPos, returnExpr };
+    return { startPos, endPos, returnExpr, kwPos: startPos };
 }
 
 function parsePanicStmt(Tokenizer tok, Position startPos) returns PanicStmt|err:Syntax {
     Expr panicExpr = check parseExpr(tok);
     Position endPos = check tok.expectEnd(";");
-    return { startPos, endPos, panicExpr };
+    return { startPos, endPos, panicExpr, kwPos: startPos };
 }
 
 function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|err:Syntax {

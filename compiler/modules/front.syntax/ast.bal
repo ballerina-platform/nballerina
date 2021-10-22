@@ -88,11 +88,13 @@ public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
 
 public type ReturnStmt record {|
     *PositionFields;
+    Position kwPos;
     Expr? returnExpr;
 |};
 
 public type PanicStmt record {|
     *PositionFields;
+    Position kwPos;
     Expr panicExpr;
 |};
 
@@ -352,7 +354,7 @@ public type TypeCastExpr record {|
     Position endPos;
     TypeDesc td;
     Expr operand;
-    Position pos;
+    Position opPos;
 |};
 
 public type TypeTestExpr record {|
@@ -364,6 +366,7 @@ public type TypeTestExpr record {|
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
     boolean negated;
+    Position kwPos;
 |};
 
 public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
