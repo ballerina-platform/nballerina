@@ -238,10 +238,11 @@ function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, 
 }
 
 function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue, Position startPos) returns AssignStmt|err:Syntax {
+    Position opPos = tok.currentStartPos();
     check tok.advance();
     Expr expr = check parseExpr(tok);
     Position endPos = check tok.expectEnd(";");
-    AssignStmt stmt = { startPos, endPos, lValue, expr };
+    AssignStmt stmt = { startPos, endPos, opPos, lValue, expr };
     return stmt;
 }
 
@@ -271,10 +272,10 @@ function finishVarDeclStmt(Tokenizer tok, TypeDesc td, Position startPos, boolea
         varName = check tok.expectIdentifier();
     }
     // initExpr is required in the subset
-    check tok.expect("=");
+    Position opPos = check tok.expectEnd("=");
     Expr initExpr = check parseExpr(tok);
     Position endPos = check tok.expectEnd(";");
-    return { startPos, endPos, td, varName, initExpr, isFinal };
+    return { startPos, endPos, opPos, td, varName, initExpr, isFinal };
 }
 
 function parseReturnStmt(Tokenizer tok, Position startPos) returns ReturnStmt|err:Syntax {
