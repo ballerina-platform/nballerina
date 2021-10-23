@@ -9,6 +9,10 @@ const USED_TYPE_TEST = 0x2;
 const LLVM_BITSET = "i32";
 
 final llvm:StructType llInherentType = llvm:structType([LLVM_BITSET]);
+final llvm:Type llListType = llvm:structType([heapPointerType(llInherentType),                       // *desc
+                                              LLVM_INT,                                              // length
+                                              LLVM_INT,                                              // capacity
+                                              heapPointerType(llvm:arrayType(LLVM_TAGGED_PTR, 0))]); // *members
 
 type TypeHowUsed USED_INHERENT_TYPE|USED_TYPE_TEST;
 
