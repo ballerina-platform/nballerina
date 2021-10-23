@@ -197,7 +197,6 @@ function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
     string message = "parse error";
     Token? t = tok.current();
     if t is string {
-        // JBUG cast needed #30734
         // XXX should use err:Template here
         message += " at '" + t + "'";
     }
