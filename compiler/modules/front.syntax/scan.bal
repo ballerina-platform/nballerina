@@ -6,9 +6,7 @@ import wso2/nballerina.err;
 
 //import ballerina/io;
 
-// This should be byte
-// But multiple runtime/compile-time JBUGs
-type FragCode int;
+type FragCode byte;
 
 type ScannedLine readonly & record {|
     // In the future, we will need some more fields here.
@@ -48,7 +46,8 @@ function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, i
             fragmentIndex += 1;
         }
         else if code >= FRAG_FIXED_TOKEN {
-            FixedToken? ft = fragTokens[code];
+            // JBUG #33346 cast should not be needed
+            FixedToken? ft = fragTokens[<int>code];
             i += (<string>ft).length();
         }
         else {
@@ -178,29 +177,28 @@ function createFragTokens() returns readonly & FixedToken?[] {
         ft[FRAG_KEYWORD + i] = keywords[i];
     }
     // JBUG #33346 int casts needed
-    // Use toFixedToken to avoid method too large error
-    ft[<int>FRAG_LEFT_CURLY_VBAR] = toFixedToken("{|");
-    ft[<int>FRAG_VBAR_RIGHT_CURLY] = toFixedToken("|}");
-    ft[<int>FRAG_DOT_DOT_DOT] = toFixedToken("...");
-    ft[<int>FRAG_DOT_DOT_LESS_THAN] = toFixedToken("..<");
-    ft[<int>FRAG_EQUAL_EQUAL] = toFixedToken("==");
-    ft[<int>FRAG_NOT_EQUAL] = toFixedToken("!=");
-    ft[<int>FRAG_EQUAL_EQUAL_EQUAL] = toFixedToken("===");
-    ft[<int>FRAG_NOT_EQUAL_EQUAL] = toFixedToken("!==");
-    ft[<int>FRAG_LESS_THAN_EQUAL] = toFixedToken("<="); 
-    ft[<int>FRAG_GREATER_THAN_EQUAL] = toFixedToken(">=");
-    ft[<int>FRAG_LESS_THAN_LESS_THAN] = toFixedToken("<<");
-    ft[<int>FRAG_EQUAL_GREATER_THAN] = toFixedToken("=>");
-    ft[<int>FRAG_PLUS_EQUAL] = toFixedToken("+=");
-    ft[<int>FRAG_MINUS_EQUAL] = toFixedToken("-=");
-    ft[<int>FRAG_ASTERISK_EQUAL] = toFixedToken("*=");
-    ft[<int>FRAG_SLASH_EQUAL] = toFixedToken("/=");
-    ft[<int>FRAG_AMPERSAND_EQUAL] = toFixedToken("&=");
-    ft[<int>FRAG_VBAR_EQUAL] = toFixedToken("|=");
-    ft[<int>FRAG_CIRCUMFLEX_EQUAL] = toFixedToken("^=");
-    ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = toFixedToken("<<=");
-    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>=");
-    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>>=");
+    ft[<int>FRAG_LEFT_CURLY_VBAR] = "{|";
+    ft[<int>FRAG_VBAR_RIGHT_CURLY] = "|}";
+    ft[<int>FRAG_DOT_DOT_DOT] = "...";
+    ft[<int>FRAG_DOT_DOT_LESS_THAN] = "..<";
+    ft[<int>FRAG_EQUAL_EQUAL] = "==";
+    ft[<int>FRAG_NOT_EQUAL] = "!=";
+    ft[<int>FRAG_EQUAL_EQUAL_EQUAL] = "===";
+    ft[<int>FRAG_NOT_EQUAL_EQUAL] = "!==";
+    ft[<int>FRAG_LESS_THAN_EQUAL] = "<=";
+    ft[<int>FRAG_GREATER_THAN_EQUAL] = ">=";
+    ft[<int>FRAG_LESS_THAN_LESS_THAN] = "<<";
+    ft[<int>FRAG_EQUAL_GREATER_THAN] = "=>";
+    ft[<int>FRAG_PLUS_EQUAL] = "+=";
+    ft[<int>FRAG_MINUS_EQUAL] = "-=";
+    ft[<int>FRAG_ASTERISK_EQUAL] = "*=";
+    ft[<int>FRAG_SLASH_EQUAL] = "/=";
+    ft[<int>FRAG_AMPERSAND_EQUAL] = "&=";
+    ft[<int>FRAG_VBAR_EQUAL] = "|=";
+    ft[<int>FRAG_CIRCUMFLEX_EQUAL] = "^=";
+    ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = "<<=";
+    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = ">>=";
+    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = ">>>=";
     // JBUG #33347 error if hex used for 32 and 128
     foreach int cp in 32 ..< 128 {
         string s = checkpanic string:fromCodePointInt(cp);
@@ -219,9 +217,8 @@ function unicodeEscapeValue(string fragment) returns string|error {
 }
 
 function scanLines(string[] lines) returns readonly & ScannedLine[] {
-    //JBUG NPE from BIROptimizer.java:159 when inlined
     ScannedLine[] result = from var l in lines select scanLine(l);
-    //JBUG shouldn't clone, query syntax should produce readonly arrays
+    //JBUG #33355 shouldn't clone, query syntax should produce readonly arrays
     return result.cloneReadOnly();
 }
 
@@ -495,7 +492,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
             |CP_RIGHT_SQUARE
             |CP_RIGHT_CURLY
             |CP_TILDE => {
-                endFragment(cp, i, result);
+                endFragment(<FragCode>cp, i, result);
             }
             CP_CIRCUMFLEX => {
                 i = endFragmentCompoundAssign(codePoints, i, CP_CIRCUMFLEX, FRAG_CIRCUMFLEX_EQUAL, result);
@@ -857,11 +854,11 @@ function endFragmentCompoundAssign(int[] codePoints, int i, int CP, int FCP, Sca
     if i < len {
         int cp = codePoints[i];
         if cp == CP_EQUAL {
-            endFragment(FCP, i + 1, result);
+            endFragment(<FragCode>FCP, i + 1, result);
             return i + 1;
         }
     }
-    endFragment(CP, i, result);
+    endFragment(<FragCode>CP, i, result);
     return i;
 }
 
@@ -887,9 +884,4 @@ function isCodePointAsciiUpper(int cp) returns boolean {
 
 function isCodePointUnicodeIdentifier(int cp) returns boolean {
     return false;
-}
-
-// JBUG this avoids bloat that causes `method is too large` errors
-function toFixedToken(string t) returns FixedToken? {
-    return <FixedToken?>t;
 }
