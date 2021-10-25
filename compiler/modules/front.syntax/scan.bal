@@ -492,6 +492,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
             |CP_RIGHT_SQUARE
             |CP_RIGHT_CURLY
             |CP_TILDE => {
+                // JBUG #33446 cast is not needed
                 endFragment(<FragCode>cp, i, result);
             }
             CP_CIRCUMFLEX => {
@@ -849,16 +850,16 @@ function endFragmentMerge(FragCode fragCode, int endIndex, Scanned result) {
     }
 }
 
-function endFragmentCompoundAssign(int[] codePoints, int i, int CP, int FCP, Scanned result) returns int {
+function endFragmentCompoundAssign(int[] codePoints, int i, byte CP, byte FCP, Scanned result) returns int {
     int len = codePoints.length();
     if i < len {
         int cp = codePoints[i];
         if cp == CP_EQUAL {
-            endFragment(<FragCode>FCP, i + 1, result);
+            endFragment(FCP, i + 1, result);
             return i + 1;
         }
     }
-    endFragment(<FragCode>CP, i, result);
+    endFragment(CP, i, result);
     return i;
 }
 
