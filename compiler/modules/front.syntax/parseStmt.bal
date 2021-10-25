@@ -363,9 +363,9 @@ function parseMatchStmt(Tokenizer tok, Position startPos) returns MatchStmt|err:
 
 function parseMatchClause(Tokenizer tok) returns MatchClause|err:Syntax {
     MatchPattern[] patterns = check parseMatchPatternList(tok);
-    check tok.expect("=>");
+    Position opPos = check tok.expectEnd("=>");
     Stmt[] block = check parseStmtBlock(tok);
-    return { patterns, block };
+    return { patterns, block, opPos };
 }
 
 function parseMatchPatternList(Tokenizer tok) returns MatchPattern[]|err:Syntax {

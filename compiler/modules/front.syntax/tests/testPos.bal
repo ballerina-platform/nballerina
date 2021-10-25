@@ -66,6 +66,17 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     }
     check validateChildExpressions(stmt, tok);
     check validateChildTypeDesc(stmt, tok);
+    check validateStmtOpPos(stmt, tok);
+}
+
+function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
+    if stmt is MatchStmt {
+        foreach var clause in stmt.clauses {
+            check tok.moveToPos(clause.opPos, MODE_NORMAL);
+            Token? opToken = tok.curTok;
+            test:assertTrue(opToken == "=>");
+        }
+    }
 }
 
 function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? {

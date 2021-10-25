@@ -107,6 +107,7 @@ public type MatchStmt record {|
 public type MatchClause record {|
     MatchPattern[] patterns;
     Stmt[] block;
+    Position opPos;
 |};
 
 public type MatchPattern ConstPattern|WildcardMatchPattern;

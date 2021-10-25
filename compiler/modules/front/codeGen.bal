@@ -496,6 +496,7 @@ function codeGenBreakContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, 
 type ConstMatchValue record {|
     readonly SimpleConst value;
     readonly int clauseIndex;
+    readonly err:Position opPos;
 |};
 
 function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MatchStmt stmt) returns CodeGenError|StmtEffect {
@@ -525,7 +526,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
                 }
                 s:Expr patternExpr = pattern.expr;
                 s:ConstValueExpr cv = <s:ConstValueExpr> check cx.foldExpr(env, patternExpr, matchedType);
-                ConstMatchValue mv = { value: cv.value, clauseIndex: i };
+                ConstMatchValue mv = { value: cv.value, clauseIndex: i, opPos: clause.opPos };
                 if constMatchValues.hasKey(mv.value) {
                     return cx.semanticErr("duplicate const match pattern", pos=pattern.pos);
                 }
@@ -556,7 +557,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
             break;
         }
         bir:Register testResult = cx.createRegister(t:BOOLEAN);
-        bir:EqualityInsn eq = { op: "==", opPos: stmt.startPos, result: testResult, operands: [matched, mv.value] };
+        bir:EqualityInsn eq = { op: "==", opPos: mv.opPos, result: testResult, operands: [matched, mv.value] };
         testBlock.insns.push(eq);
         clauseTestInsns[clauseIndex].push(bir:lastInsnRef(testBlock));
         bir:BasicBlock nextBlock = cx.createBasicBlock("pattern." + patternIndex.toString());
