@@ -161,7 +161,7 @@ public type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticE
 
 // We use different operator names so things work better with match statements
 public type BinaryExprBase record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     Expr left;
@@ -190,7 +190,7 @@ public type BinaryBitwiseExpr record {|
 |};
 
 public type UnaryExpr record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     UnaryExprOp op;
@@ -206,7 +206,7 @@ public type SimpleConstNegateExpr record {|
 |};
 
 public type ErrorConstructorExpr record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     // *PositionFields
     Position startPos;
     Position endPos;
@@ -215,7 +215,7 @@ public type ErrorConstructorExpr record {|
 |};
 
 public type FunctionCallExpr record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     // *PositionFields
     Position startPos;
     Position endPos;
@@ -227,7 +227,7 @@ public type FunctionCallExpr record {|
 |};
 
 public type MethodCallExpr record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     // *PositionFields
     Position startPos;
     Position endPos;
@@ -240,7 +240,7 @@ public type MethodCallExpr record {|
 public type CheckingKeyword "check"|"checkpanic";
 
 public type CheckingExpr record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     // *PositionFields
     Position startPos;
     Position endPos;
@@ -249,7 +249,7 @@ public type CheckingExpr record {|
 |};
 
 public type CheckingStmt record {|
-    // JBUG can't include CheckingExpr
+    // JBUG #32617 can't include CheckingExpr
     // *CheckingExpr;
     // *PositionFields
     CheckingKeyword checkingKeyword;
@@ -259,7 +259,7 @@ public type CheckingStmt record {|
 |};
 
 public type ListConstructorExpr record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     // *PositionFields
     Position startPos;
     Position endPos;
@@ -281,7 +281,7 @@ public type Field record {|
 |};
 
 public type MemberAccessExpr record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     // *PositionFields
     Position startPos;
     Position endPos;
@@ -290,7 +290,7 @@ public type MemberAccessExpr record {|
     Position pos;
 |};
 
-// JBUG gets a bad, sad if this uses *MemberAccessExpr and overrides container
+// JBUG #32617 gets a bad, sad if this uses *MemberAccessExpr and overrides container
 public type MemberAccessLExpr record {|
     *PositionFields;
     VarRefExpr container;
@@ -299,7 +299,7 @@ public type MemberAccessLExpr record {|
 |};
 
 public type FieldAccessExpr record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     // *PositionFields
     Position startPos;
     Position endPos;
@@ -328,7 +328,7 @@ public type VarRefExpr record {|
 |};
 
 public type TypeCastExpr record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     // *PositionFields
     Position startPos;
     Position endPos;
@@ -338,7 +338,7 @@ public type TypeCastExpr record {|
 |};
 
 public type TypeTestExpr record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     // *PositionFields
     Position startPos;
     Position endPos;
@@ -415,7 +415,7 @@ public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDesc
 public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc;
 
 public type ListTypeDesc record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     TypeDesc[] members;
@@ -429,7 +429,7 @@ public type FieldDesc record {|
 |};
 
 public type MappingTypeDesc record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     FieldDesc[] fields;
@@ -439,7 +439,7 @@ public type MappingTypeDesc record {|
 
 public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     TypeDesc[] args;
@@ -448,7 +448,7 @@ public type FunctionTypeDesc record {|
 |};
 
 public type ErrorTypeDesc record {|
-    // JBUG can't include PositionFields
+    // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     TypeDesc detail;
