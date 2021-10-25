@@ -79,6 +79,10 @@ function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
         check tok.moveToPos(rangeExpr.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;
         test:assertTrue(opToken == "..<");
+    else if stmt is CheckingStmt {
+        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        test:assertTrue(opToken is CheckingKeyword);
     }
     else if stmt is VarDeclStmt|AssignStmt {
         check tok.moveToPos(stmt.opPos, MODE_NORMAL);
@@ -311,7 +315,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     check validateExprOpPos(expr, tok);
 }
 
-type ExprOpPos BinaryExpr|UnaryExpr|ErrorConstructorExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr;
+type ExprOpPos BinaryExpr|UnaryExpr|ErrorConstructorExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr|FunctionCallExpr|MethodCallExpr|CheckingExpr;
 
 function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
     if expr is ExprOpPos {
@@ -341,14 +345,15 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         else if expr is MappingConstructorExpr {
             test:assertEquals(opToken, "{");
         }
+        else if expr is FunctionCallExpr|MethodCallExpr {
+            test:assertTrue(opToken == "(");
+        }
+        else if expr is CheckingExpr {
+            test:assertTrue(opToken is CheckingKeyword);
+        }
         else {
             test:assertEquals(opToken, ".");
         }
-    }
-    else if expr is FunctionCallExpr|MethodCallExpr {
-        check tok.moveToPos(expr.opPos, MODE_NORMAL);
-        Token? opToken = tok.curTok;
-        test:assertTrue(opToken == "(");
     }
 }
 
