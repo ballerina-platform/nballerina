@@ -7,7 +7,7 @@ import wso2/nballerina.front.syntax as s;
 type ConstEvalTest [string,SimpleConst];
 
 class TestFoldContext {
-    // JBUG error if next line uncommented
+    // JBUG #33394 error if next line uncommented
     // *FoldContext;
     t:Context tc;
 
