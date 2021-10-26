@@ -20,6 +20,14 @@ final RuntimeFunction mappingSetFunction = {
     attrs: []
 };
 
+final RuntimeFunction mappingIndexedSetFunction = {
+    name: "mapping_indexed_set",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_INT, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
 final RuntimeFunction mappingGetFunction = {
     name: "mapping_get",
     ty: {
@@ -61,7 +69,7 @@ const LLVM_INDEX = "i32";
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
     final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
     final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
-    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
+    final llvm:Type structType = llvm:structType([llvm:pointerType(llInherentType), LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
     // Cases that are not UniformTypeBitSet should have been filtered out before
     t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), insn.result.semType);
     final int length = insn.operands.length();
@@ -82,8 +90,9 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
     }
     final llvm:PointerValue structMem = buildUntypedAlloc(builder, scaffold, structType);
     final llvm:PointerValue struct = builder.bitCast(structMem, heapPointerType(structType));
-    // Store the member bitset as the ListDesc
-    builder.store(llvm:constInt(LLVM_INT, memberType),
+    // Store a pointer to member bitset as the ListDescPtr
+    llvm:ConstPointerValue inherentType = scaffold.getInherentType(insn.result.semType);
+    builder.store(inherentType,
                   builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)], "inbounds"));
     foreach int i in 1 ..< 3 {
         builder.store(llvm:constInt(LLVM_INT, length),
@@ -100,10 +109,10 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
     final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
 
-    llvm:Value index = buildInt(builder, scaffold, insn.operand);
+    llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
     // struct is the untagged pointer to the struct
     llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
-                                                                               [builder.load(scaffold.address(insn.list)), llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                                                               [builder.load(scaffold.address(insn.operands[0])), llvm:constInt(LLVM_INT, POINTER_MASK)]),
                                                heapPointerType(structType));
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
@@ -128,12 +137,12 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
 }
 
 function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
-    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.list.semType);
+    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
     // XXX listSetFunction must also clear the exact bit if the list is not exact?
     llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(listSetFunction),
-                                   [builder.load(scaffold.address(insn.list)),
-                                    buildInt(builder, scaffold, insn.index),
-                                    check buildWideRepr(builder, scaffold, insn.operand, REPR_ANY, memberType)]);
+                                   [builder.load(scaffold.address(insn.operands[0])),
+                                    buildInt(builder, scaffold, insn.operands[1]),
+                                    check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
    
 }
@@ -145,7 +154,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
     llvm:PointerValue m = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(mappingConstructFunction),
                                                           [inherentType, llvm:constInt(LLVM_INT, length)]);
-    // JBUG if I combine these statements into a single from/do, then it gives an assignment required error
+    // JBUG #31681 if I combine these statements into a single from/do, then it gives an assignment required error
     // which is removed by a check; but it's only check failures in the query pipeline that should show up in the
     // result of the from/do, not check failures in the do clause. (Code now changed a lot.)
 
@@ -153,8 +162,8 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
     [string, bir:Operand][] members =
         from int i in 0 ..< length select [insn.fieldNames[i], insn.operands[i]];    
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
-    if !(mat is ()) && mat.names.length() != 0 {
-        // JBUG This doesn't work with array:sort (complains about unordered type)
+    if mat != () && mat.names.length() != 0 {
+        // JBUG #33300 This doesn't work with array:sort (complains about unordered type)
         members = from var [k, v] in members order by k select [k, v];
     } 
     foreach var [fieldName, operand] in members {
@@ -170,12 +179,14 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
 }
 
 function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGetInsn insn) returns BuildError? {
-    int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), insn.operands[0].semType, insn.operands[1]);
+    bir:Register mappingReg = insn.operands[0];
+    bir:StringOperand keyOperand = insn.operands[1];
+    int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
     RuntimeFunction rf;
     llvm:Value k;
-    if fieldIndex is () {
+    if fieldIndex == () {
         rf = mappingGetFunction;
-        k = check buildString(builder, scaffold, insn.operands[1]);
+        k = check buildString(builder, scaffold, keyOperand);
     }
     else {
         rf = mappingIndexedGetFunction;
@@ -183,30 +194,43 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
     }
     // SUBSET this can widen leading to inexactness when mapping member types are not bitsets
     llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf),
-                                                [builder.load(scaffold.address(insn.operands[0])), k]);
+                                                [builder.load(scaffold.address(mappingReg)), k]);
     buildStoreTagged(builder, scaffold, value, insn.result);
+}
+
+function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
+    bir:Register mappingReg = insn.operands[0];
+    bir:StringOperand keyOperand = insn.operands[1];
+    int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
+    RuntimeFunction rf;
+    llvm:Value k;
+    if fieldIndex == () {
+        rf = mappingSetFunction;
+        k = check buildString(builder, scaffold, keyOperand);
+    }
+    else {
+        rf = mappingIndexedSetFunction;
+        k = llvm:constInt(LLVM_INT, fieldIndex);
+    }
+    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingReg.semType);
+    // SUBSET different field types can lead to inexact projection
+    llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(rf),
+                                   [
+                                       builder.load(scaffold.address(mappingReg)),
+                                       k,
+                                       check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)
+                                   ]);
+    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
 }
 
 function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {
     if k is string {
         t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
-        if mat !is () {
+        if mat != () {
             return mat.names.indexOf(k);
         }
     }
     return ();
-}
-
-function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
-    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), insn.operands[0].semType);
-    // SUBSET different field types can lead to inexact projection
-    llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(mappingSetFunction),
-                                   [
-                                       builder.load(scaffold.address(insn.operands[0])),
-                                       check buildString(builder, scaffold, insn.operands[1]),
-                                       check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)
-                                   ]);
-    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
 }
 
 function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, bir:Position pos) {

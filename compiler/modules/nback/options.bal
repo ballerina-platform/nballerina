@@ -14,7 +14,7 @@ public type Options record {|
 |};
 
 public function validGcName(string? gcName) returns string?|error {
-    if gcName is () {
+    if gcName == () {
         return ();
     } 
     else {
@@ -28,7 +28,7 @@ public function validGcName(string? gcName) returns string?|error {
 }
 
 public function validDebugLevel(int? debugLevel) returns DebugLevel|error {
-    if (debugLevel is ()) {
+    if (debugLevel == ()) {
         return DEBUG_BACKTRACE;
     }
     else if (debugLevel < DEBUG_NONE || debugLevel > DEBUG_FULL) {

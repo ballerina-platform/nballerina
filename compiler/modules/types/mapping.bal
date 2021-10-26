@@ -21,7 +21,7 @@ public class MappingDefinition {
 
     public function getSemType(Env env) returns SemType {
         SemType? s = self.semType;
-        if s is () {
+        if s == () {
             RecAtom ro = env.recMappingAtom();
             RecAtom rw = env.recMappingAtom();
             self.roRec = ro;
@@ -122,14 +122,14 @@ function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.mappingMemo[b];
     BddMemo m;
-    if mm is () {
+    if mm == () {
         m = { bdd: b };
         cx.mappingMemo.add(m);
     }
     else {
         m = mm;
         boolean? res = m.isEmpty;
-        if res is () {
+        if res == () {
             // we've got a loop
             // XXX is this right???
             return true;
@@ -147,7 +147,7 @@ function mappingSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 // just comparing the lengths of the tuples we compare the sorted list of field names
 function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? negList) returns boolean {
     TempMappingSubtype combined;
-    if posList is () {
+    if posList == () {
         combined = {
             types: [],
             names: [],
@@ -161,12 +161,12 @@ function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? ne
         combined = cx.mappingAtomType(posList.atom);
         Conjunction? p = posList.next;
         while true {
-            if p is () {
+            if p == () {
                 break;
             }
             else {
                 var m = intersectMapping(combined, cx.mappingAtomType(p.atom));
-                if m is () {
+                if m == () {
                     return true;
                 }
                 else {
@@ -186,7 +186,7 @@ function mappingFormulaIsEmpty(Context cx, Conjunction? posList, Conjunction? ne
 }
 
 function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negList) returns boolean {
-    if negList is () {
+    if negList == () {
         return true;
     }
     else {
@@ -223,7 +223,7 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
             if !isEmpty(cx, d) {
                 TempMappingSubtype mt;
                 int? i = pairing.index1(name);
-                if i is () {
+                if i == () {
                     // the posType came from the rest type
                     mt = insertField(pos, name, d);
                 }

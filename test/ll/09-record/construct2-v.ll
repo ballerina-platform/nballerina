@@ -32,9 +32,9 @@ define void @_B04rootmain() !dbg !5 {
   %13 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %13, i8 addrspace(1)** %r
   store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)** %s
-  %14 = load i8 addrspace(1)*, i8 addrspace(1)** %r
-  %15 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %16 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %14, i8 addrspace(1)* %15)
+  %14 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %15 = load i8 addrspace(1)*, i8 addrspace(1)** %r
+  %16 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %15, i8 addrspace(1)* %14)
   store i8 addrspace(1)* %16, i8 addrspace(1)** %2
   %17 = load i8 addrspace(1)*, i8 addrspace(1)** %2
   store i8 addrspace(1)* %17, i8 addrspace(1)** %x
@@ -42,9 +42,9 @@ define void @_B04rootmain() !dbg !5 {
   call void @_Bb02ioprintln(i8 addrspace(1)* %18), !dbg !8
   store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !8
   store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901113), i8 addrspace(1)** %s
-  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %r
-  %20 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %21 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %19, i8 addrspace(1)* %20)
+  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %20 = load i8 addrspace(1)*, i8 addrspace(1)** %r
+  %21 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %20, i8 addrspace(1)* %19)
   store i8 addrspace(1)* %21, i8 addrspace(1)** %4
   %22 = load i8 addrspace(1)*, i8 addrspace(1)** %4
   store i8 addrspace(1)* %22, i8 addrspace(1)** %y

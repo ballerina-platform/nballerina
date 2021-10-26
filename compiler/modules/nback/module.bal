@@ -24,12 +24,12 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         bir:InternalSymbol symbol = defn.symbol;
         string mangledName = mangleInternalSymbol(modId, symbol);
         llvm:FunctionDefn llFunc = llMod.addFunctionDefn(mangledName, ty);
-        if !(di is ()) {
+        if di != () {
             DISubprogram diFunc = createFunctionDI(di, partFiles, defn, llFunc, mangledName);
             diFuncs.push(diFunc);
             llFunc.setSubprogram(diFunc);
         }   
-        if !(options.gcName is ()) {
+        if !(options.gcName == ()) {
             llFunc.setGC(options.gcName);
         }
         if !symbol.isPublic {
@@ -55,7 +55,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         bir:FunctionDefn defn = functionDefns[i];
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
         check bir:verifyFunctionCode(birMod, defn, code);
-        DISubprogram? diFunc = di is () ? () : diFuncs[i];
+        DISubprogram? diFunc = di == () ? () : diFuncs[i];
         Scaffold scaffold = new(mod, llFuncs[i], diFunc, builder, defn, code);
         buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code);
@@ -70,10 +70,10 @@ function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
     foreach var used in usedSemTypes {
         types.push(used.semType);
         byte use = 0;
-        if !(used.inherentType is ()) {
+        if !(used.inherentType == ()) {
             use = USED_INHERENT_TYPE;
         }
-        if !(used.typeTest is ()) {
+        if !(used.typeTest == ()) {
             use |= USED_TYPE_TEST;
         }
         uses.push(use);

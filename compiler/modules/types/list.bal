@@ -20,7 +20,7 @@ public class ListDefinition {
 
     public function getSemType(Env env) returns ComplexSemType {
         ComplexSemType? s = self.semType;
-        if s is () {
+        if s == () {
             RecAtom ro = env.recListAtom();
             RecAtom rw = env.recListAtom();
             self.roRec = ro;
@@ -105,14 +105,14 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.listMemo[b];
     BddMemo m;
-    if mm is () {
+    if mm == () {
         m = { bdd: b };
         cx.listMemo.add(m);
     }
     else {
         m = mm;
         boolean? res = m.isEmpty;
-        if res is () {
+        if res == () {
             // we've got a loop
             // XXX is this right???
             return true;
@@ -129,7 +129,7 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
     SemType[] members;
     SemType rest;
-    if pos is () {
+    if pos == () {
         members = [];
         rest = TOP;
     }
@@ -144,7 +144,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             members = shallowCopyTypes(members);
         }
         while true {
-            if p is () {
+            if p == () {
                 break;
             }
             else {
@@ -195,7 +195,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
 function listInhabited(Context cx, SemType[] members, SemType rest, Conjunction? neg) returns boolean {
-    if neg is () {
+    if neg == () {
         return true;
     }
     else {

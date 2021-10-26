@@ -2,8 +2,8 @@
 // Uniform types are like basic types except that each selectively immutable
 // basic type is split into two uniform types, one immutable and on mutable.
 
-// JBUG #31751 bad, sad if UT_OBJECT_RW + 1
-public const UT_COUNT = 0x17;
+// JBUG #28334 type-descriptor is not needed
+public const int UT_COUNT = UT_OBJECT_RW + 1;
 
 const int UT_MASK = (1 << UT_COUNT) - 1;
 
@@ -502,10 +502,10 @@ public function union(SemType t1, SemType t2) returns SemType {
     UniformSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if data1 is () {
+        if data1 == () {
             data = <SubtypeData>data2; // if they are both null, something's gone wrong
         }
-        else if data2 is () {
+        else if data2 == () {
             data = data1;
         }
         else {
@@ -580,10 +580,10 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     UniformSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if data1 is () {
+        if data1 == () {
             data = <SubtypeData>data2;
         }
-        else if data2 is () {
+        else if data2 == () {
             data = data1;
         }
         else {
@@ -656,13 +656,13 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
     UniformSubtype[] subtypes = [];
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
-        if cx is () || code < UT_COUNT_RO {
+        if cx == () || code < UT_COUNT_RO {
             // normal diff or read-only uniform type
-            if data1 is () {
+            if data1 == () {
                 var complement = ops[code].complement;
                 data = complement(<SubtypeData>data2);
             }
-            else if data2 is () {
+            else if data2 == () {
                 data = data1;
             }
             else {
@@ -672,11 +672,11 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
         }
         else {
             // read-only diff for mutable uniform type
-            if data1 is () {
+            if data1 == () {
                 // data1 was all
                 data = true;
             }
-            else if data2 is () {
+            else if data2 == () {
                 // data2 was none
                 data = data1;
             }
@@ -792,7 +792,7 @@ public function simpleArrayMemberType(Context cx, SemType t, boolean strict = fa
 }
 
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns UniformTypeBitSet? {
-    if !(atomic is ()) && atomic.members.length() == 0 {
+    if atomic != () && atomic.members.length() == 0 {
         SemType memberType = atomic.rest;
         if memberType is UniformTypeBitSet {
             return memberType;
@@ -857,7 +857,7 @@ public function simpleMapMemberType(Context cx, SemType t, boolean strict = fals
 }
 
 public function mappingAtomicSimpleArrayMemberType(MappingAtomicType? atomic) returns UniformTypeBitSet? {
-    if !(atomic is ()) && atomic.names.length() == 0 {
+    if atomic != () && atomic.names.length() == 0 {
         SemType memberType = atomic.rest;
         if memberType is UniformTypeBitSet {
             return memberType;
@@ -962,7 +962,7 @@ public function singleShape(SemType t) returns Value? {
 }
 
 public function singleton(string|int|float|boolean|decimal|() v) returns SemType {
-    if v is () {
+    if v == () {
         return NIL;
     }
     else if v is int {
@@ -994,7 +994,7 @@ public function isReadOnly(SemType t) returns boolean {
 }
 
 public function constUniformTypeCode(string|int|float|boolean|decimal|() v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL {
-    if v is () {
+    if v == () {
         return UT_NIL;
     }
     else if v is int {
@@ -1019,7 +1019,7 @@ public function constBasicType(string|int|float|boolean|decimal|() v) returns Un
 }
 
 public function containsConst(SemType t, string|int|float|boolean|decimal|() v) returns boolean {
-    if v is () {
+    if v == () {
         return containsNil(t);
     }
     else if v is int {

@@ -16,7 +16,7 @@ function modulePartToWords(Word[] w, ModulePart mod) {
     foreach int i in 0 ..< importDecls.length() {
         ImportDecl decl = importDecls[i];
         if i > 0 {
-            // JBUG cast
+            // JBUG #33335 cast
             w.push(<Word>LF);
         }
         w.push("import");
@@ -64,7 +64,8 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
         firstArg = false;
     }
     w.push(")");
-    if !(func.typeDesc.ret is "()") {
+    TypeDesc funcRetTd = func.typeDesc.ret;
+    if !(funcRetTd is BuiltinTypeDesc && funcRetTd.builtinTypeName == "null") {
         w.push("returns");
         typeDescToWords(w, func.typeDesc.ret);
     }
@@ -78,7 +79,7 @@ function constDefnToWords(Word[] w, ConstDefn defn) {
     w.push("const", defn.name, "=");
     exprToWords(w, defn.expr);
     w.push(";");
-    // JBUG cast
+    // JBUG #33335 cast
     w.push(<Word>LF);
 }
 
@@ -89,7 +90,7 @@ function typeDefnToWords(Word[] w, TypeDefn defn) {
     w.push("type", defn.name);
     typeDescToWords(w, defn.td);
     w.push(";");
-    // JBUG cast
+    // JBUG #33335 cast
     w.push(<Word>LF);
 }
 
@@ -99,14 +100,21 @@ function stmtToWords(Word[] w, Stmt stmt) {
             w.push("final");
         }
         typeDescToWords(w, stmt.td);
-        w.push(stmt.varName, "=");
+        string? varName = stmt.varName;
+        if varName is WILDCARD {
+            w.push("_");
+        }
+        else {
+            w.push(varName);
+        }
+        w.push("=");
         exprToWords(w, stmt.initExpr);
         w.push(";");
-    } 
+    }
     else if stmt is ReturnStmt {
         w.push("return");
-        Expr retExpr = stmt.returnExpr;
-        if !(retExpr is ConstValueExpr) || retExpr.value != () {
+        Expr? retExpr = stmt.returnExpr;
+        if retExpr != () {
             exprToWords(w, retExpr);
         }
         w.push(";");
@@ -119,17 +127,17 @@ function stmtToWords(Word[] w, Stmt stmt) {
     else if stmt is AssignStmt {
         LExpr|WILDCARD lValue = stmt.lValue;
         if lValue is WILDCARD {
-            w.push(WILDCARD);
+            w.push("_");
         }
         else {
-            exprToWords(w, lValue);
+            lExprToWords(w, lValue);
         }
         w.push("=");
         exprToWords(w, stmt.expr);
         w.push(";");
     }
     else if stmt is CompoundAssignStmt {
-        exprToWords(w, stmt.lValue);
+        lExprToWords(w, stmt.lValue);
         w.push(stmt.op, CLING, "=");
         exprToWords(w, stmt.expr);
         w.push(";");
@@ -222,7 +230,12 @@ function blockToWords(Word[] w, Stmt[] body) {
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
     if td is BuiltinTypeDesc {
-        w.push(td);
+        if td.builtinTypeName == "null" {
+            w.push("()");
+        }
+        else {
+            w.push(td.builtinTypeName);
+        }
         return;
     }
     else if td is TypeDescRef {
@@ -235,7 +248,13 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     }
     else if td is MappingTypeDesc {
         w.push("map", CLING, "<", CLING);
-        typeDescToWords(w, td.rest);
+        TypeDesc? rest = td.rest;
+        if rest == () {
+            typeDescToWords(w, { startPos: td.startPos, endPos: td.endPos, builtinTypeName: "never" });
+        }
+        else {
+            typeDescToWords(w, rest);
+        }
         w.push(CLING, ">");
         return;
     }
@@ -253,9 +272,8 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is BinaryTypeDesc {
         // subset 6 does not allow parentheses
         // so we need to take care not to add them unnecessarily
-        // JBUG error if `===` used instead if `is`
-
-        if td.op === "|" && td.right is "()" {
+        TypeDesc rightTd = td.right;
+        if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName === "null" {
             typeDescToWords(w, td.left, wrap);
             w.push(CLING, "?");
         }
@@ -286,6 +304,27 @@ function exprsToWords(Word[] w, Expr[] exprs) {
         }
         exprToWords(w, expr);
         firstExpr = false;
+    }
+}
+
+function lExprToWords(Word[] w, LExpr expr) {
+    if expr is VarRefExpr {
+        string? prefix = expr.prefix;
+        if prefix != () {
+            w.push(prefix, ":", CLING);
+        }
+        w.push(expr.varName);
+    }
+    else if expr is MemberAccessLExpr {
+        lExprToWords(w, expr.container);
+        w.push("[");
+        exprToWords(w, expr.index, true);
+        w.push("]");
+    }
+    else {
+        // expr is FieldAccessLExpr
+        lExprToWords(w, expr.container);
+        w.push(".", expr.fieldName);
     }
 }
 
@@ -435,7 +474,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         if wrap {
             w.push("(");
         }
-        exprToWords(w, expr.mapping, true);
+        exprToWords(w, expr.container, true);
         w.push(".", expr.fieldName);
         if wrap {
             w.push(")");
@@ -473,12 +512,10 @@ final readonly & map<string:Char> REVERSE_ESCAPES = {
 
 function stringLiteral(string str) returns string {
     string[] chunks = ["\""];
-    // JBUG #31775 `foreach var ch in str` gives wrong ch for some str like "\u{10FFFF}""
-    int[] cps = str.toCodePointInts();
-    foreach int cp in cps {
-        string:Char ch = checkpanic string:fromCodePointInt(cp);
+    foreach var ch in str {
         string:Char? singleEscaped =  REVERSE_ESCAPES[ch];
-        if singleEscaped is () {
+        if singleEscaped == () {
+            int cp = ch.toCodePointInt();
             if 0x20 <= cp && cp < 0x7F {
                 chunks.push(ch);
             }

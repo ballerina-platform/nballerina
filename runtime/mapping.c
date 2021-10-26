@@ -243,6 +243,17 @@ PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     return 0;
 }
 
+PanicCode _bal_mapping_indexed_set(TaggedPtr mapping, int64_t i, TaggedPtr value) {
+    MappingPtr mp = taggedToPtr(mapping);
+    uint32_t flag = 1 << (getTag(value) & UT_MASK);
+    uint32_t bitSet = ((RecordDescPtr)(mp->desc))->fieldBitSets[i];
+    if ((bitSet & flag) == 0) {
+        return storePanicCode(mapping, PANIC_MAPPING_STORE);
+    }
+    mp->fArray.members[i].value = value;
+    return 0;
+}
+
 bool _bal_record_type_contains(TypeTestPtr ttp, TaggedPtr p) {
     if ((getTag(p) & UT_MASK) != TAG_MAPPING_RW) {
         return false;

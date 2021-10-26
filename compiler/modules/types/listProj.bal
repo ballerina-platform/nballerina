@@ -30,7 +30,7 @@ function listProjBdd(Context cx, int k, Bdd b, Conjunction? pos, Conjunction? ne
 function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) returns SemType {
     SemType[] members;
     SemType rest;
-    if pos is () {
+    if pos == () {
         members = [];
         rest = TOP;
     }
@@ -45,7 +45,7 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
             members = shallowCopyTypes(members);
         }
         while true {
-            if p is () {
+            if p == () {
                 break;
             }
             else {
@@ -94,7 +94,7 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
 // Based on listInhabited
 // Corresponds to phi^x in AMK tutorial generalized for list types.
 function listProjExclude(Context cx, int k, SemType[] members, SemType rest, Conjunction? neg) returns SemType {
-    if neg is () {
+    if neg == () {
         return k < members.length() ? members[k] : rest;
     }
     else {

@@ -170,7 +170,6 @@ final readonly & Keyword[] keywords = [
 ];
 
 // This maps a frag code to a string
-// JBUG if this comes before keywords it gets a NPE at module init time
 final readonly & FixedToken?[] fragTokens = createFragTokens();
 
 function createFragTokens() returns readonly & FixedToken?[] {
@@ -178,7 +177,7 @@ function createFragTokens() returns readonly & FixedToken?[] {
     foreach int i in 0 ..< keywords.length() {
         ft[FRAG_KEYWORD + i] = keywords[i];
     }
-    // JBUG int casts needed
+    // JBUG #33346 int casts needed
     // Use toFixedToken to avoid method too large error
     ft[<int>FRAG_LEFT_CURLY_VBAR] = toFixedToken("{|");
     ft[<int>FRAG_VBAR_RIGHT_CURLY] = toFixedToken("|}");
@@ -202,7 +201,7 @@ function createFragTokens() returns readonly & FixedToken?[] {
     ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = toFixedToken("<<=");
     ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>=");
     ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>>=");
-    // JBUG error if hex used for 32 and 128
+    // JBUG #33347 error if hex used for 32 and 128
     foreach int cp in 32 ..< 128 {
         string s = checkpanic string:fromCodePointInt(cp);
         if s is SingleCharDelim {
@@ -215,10 +214,6 @@ function createFragTokens() returns readonly & FixedToken?[] {
 function unicodeEscapeValue(string fragment) returns string|error {
     string hexDigits = fragment.substring(3, fragment.length() - 1);
     int codePoint = check int:fromHexString(hexDigits);
-    // JBUG #31778 shouldn't need this check, fromCodePointInt should return an error
-    if 0xD800 <= codePoint && codePoint <= 0xDFFF {
-        return error("invalid codepoint");
-    }
     string:Char ch = check string:fromCodePointInt(codePoint);
     return ch;
 }
@@ -500,8 +495,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
             |CP_RIGHT_SQUARE
             |CP_RIGHT_CURLY
             |CP_TILDE => {
-                // JBUG when FragCode is byte, error without cast
-                endFragment(<FragCode>cp, i, result);
+                endFragment(cp, i, result);
             }
             CP_CIRCUMFLEX => {
                 i = endFragmentCompoundAssign(codePoints, i, CP_CIRCUMFLEX, FRAG_CIRCUMFLEX_EQUAL, result);

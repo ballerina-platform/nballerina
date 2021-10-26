@@ -6,9 +6,9 @@ declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_float_to_tagged(double)
-declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)*, i64) readonly
 declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
-declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
+declare i64 @_bal_mapping_indexed_set(i8 addrspace(1)*, i64, i8 addrspace(1)*)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
@@ -38,7 +38,7 @@ define void @_B04rootmain() !dbg !5 {
   %18 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %18, i8 addrspace(1)** %r
   %19 = load i8 addrspace(1)*, i8 addrspace(1)** %r
-  %20 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %19, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112))
+  %20 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %19, i64 1)
   %21 = call double @_bal_tagged_to_float(i8 addrspace(1)* %20)
   store double %21, double* %2
   %22 = load double, double* %2
@@ -47,7 +47,7 @@ define void @_B04rootmain() !dbg !5 {
   %24 = load i8 addrspace(1)*, i8 addrspace(1)** %r
   %25 = load double, double* %3
   %26 = call i8 addrspace(1)* @_bal_float_to_tagged(double %25)
-  %27 = call i64 @_bal_mapping_set(i8 addrspace(1)* %24, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)* %26)
+  %27 = call i64 @_bal_mapping_indexed_set(i8 addrspace(1)* %24, i64 1, i8 addrspace(1)* %26)
   %28 = icmp eq i64 %27, 0
   br i1 %28, label %33, label %40
 29:
@@ -60,7 +60,7 @@ define void @_B04rootmain() !dbg !5 {
   unreachable
 33:
   %34 = load i8 addrspace(1)*, i8 addrspace(1)** %r
-  %35 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %34, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901102))
+  %35 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %34, i64 0)
   %36 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %35)
   store i64 %36, i64* %4
   %37 = load i64, i64* %4
@@ -78,7 +78,7 @@ define void @_B04rootmain() !dbg !5 {
   %45 = load i8 addrspace(1)*, i8 addrspace(1)** %r
   %46 = load i64, i64* %5
   %47 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %46)
-  %48 = call i64 @_bal_mapping_set(i8 addrspace(1)* %45, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901102), i8 addrspace(1)* %47)
+  %48 = call i64 @_bal_mapping_indexed_set(i8 addrspace(1)* %45, i64 0, i8 addrspace(1)* %47)
   %49 = icmp eq i64 %48, 0
   br i1 %49, label %52, label %63
 50:
@@ -87,7 +87,7 @@ define void @_B04rootmain() !dbg !5 {
   br label %29
 52:
   %53 = load i8 addrspace(1)*, i8 addrspace(1)** %r
-  %54 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %53, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112))
+  %54 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %53, i64 1)
   %55 = call double @_bal_tagged_to_float(i8 addrspace(1)* %54)
   store double %55, double* %6
   %56 = load double, double* %6, !dbg !8
@@ -95,7 +95,7 @@ define void @_B04rootmain() !dbg !5 {
   call void @_Bb02ioprintln(i8 addrspace(1)* %57), !dbg !8
   store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !8
   %58 = load i8 addrspace(1)*, i8 addrspace(1)** %r
-  %59 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %58, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901102))
+  %59 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %58, i64 0)
   %60 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %59)
   store i64 %60, i64* %8
   %61 = load i64, i64* %8, !dbg !9

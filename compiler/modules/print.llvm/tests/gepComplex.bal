@@ -80,7 +80,7 @@ function testGepComplexTypeCheck1() returns error? {
     builder.positionAtEnd(bb);
 
     error|PointerValue v0 = trap builder.getElementPtr(g1, [constInt("i32", 0),constInt("i64", 1)]);
-    if !(v0 is error) {
+    if v0 !is error {
         test:assertFail("Struct indexing by non i32 constants allowed");
     }
 }
@@ -101,7 +101,7 @@ function testGepComplexTypeCheck2() returns error? {
     builder.positionAtEnd(bb);
     Value v1 = builder.ptrToInt(g2, "i32");
     error|PointerValue v0 = trap builder.getElementPtr(g1, [constInt("i32", 0), v1]);
-    if !(v0 is error) {
+    if v0 !is error {
         test:assertFail("Struct indexing by i32 variables allowed");
     }
 }
@@ -119,7 +119,7 @@ function testGepComplexTypeCheck3() returns error? {
     builder.positionAtEnd(bb);
     PointerValue v0 = builder.getElementPtr(g1, [constInt("i64", 10)]);
     error|PointerValue v1 = builder.getElementPtr(v0, [constInt("i64", 10)]);
-    if !(v1 is error) {
+    if v1 !is error {
         test:assertFail("Struct indexing by not i32 constant allowed");
     }
 }

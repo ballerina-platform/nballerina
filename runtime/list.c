@@ -6,9 +6,9 @@
 
 const double F0 = +0.0;
 
-static bool getFiller(ListDesc desc, TaggedPtr *valuePtr) {
+static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
     uint64_t bits;
-    switch (desc) {
+    switch (desc->bitSet) {
         case (1 << TAG_BOOLEAN):
             *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
             return true;
@@ -25,7 +25,7 @@ static bool getFiller(ListDesc desc, TaggedPtr *valuePtr) {
             _bal_string_alloc(0, 0, valuePtr);
             return true;
     }
-    if (desc & (1 << TAG_NIL)) {
+    if (desc->bitSet & (1 << TAG_NIL)) {
         *valuePtr = 0;
         return true;
     }
@@ -34,7 +34,9 @@ static bool getFiller(ListDesc desc, TaggedPtr *valuePtr) {
 
 PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
-    if ((lp->desc & (1 << (getTag(val) & UT_MASK))) == 0) {
+    ListDescPtr ldp = lp->desc;
+    uint32_t bitSet = ldp->bitSet;
+    if ((bitSet & (1 << (getTag(val) & UT_MASK))) == 0) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     GC TaggedPtrArray *ap = &(lp->tpArray);
@@ -53,7 +55,7 @@ PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
         // we have a gap to fill
         // from length..<index
         TaggedPtr filler;
-        if (!getFiller(lp->desc, &filler)) {
+        if (!getFiller(ldp, &filler)) {
             return PANIC_NO_FILLER;
         }
         for (int64_t i = ap->length; i < index; i++) {
@@ -122,4 +124,12 @@ bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
         }
     }
     return true;
+}
+
+bool _bal_array_type_contains(TypeTestPtr ttp, TaggedPtr p) {
+    if ((getTag(p) & UT_MASK) != TAG_LIST_RW) {
+        return false;
+    }
+    ListPtr lp = taggedToPtr(p);   
+    return (lp->desc->bitSet & ~((ArrayTypeTestPtr)ttp)->bitSet) == 0;
 }

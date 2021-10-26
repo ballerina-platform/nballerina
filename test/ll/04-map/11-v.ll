@@ -24,10 +24,10 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* %9, i8 addrspace(1)** %1
   %10 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %10, i8 addrspace(1)** %m
-  %11 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %12 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %11 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %12 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %13 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 42)
-  %14 = call i64 @_bal_mapping_set(i8 addrspace(1)* %11, i8 addrspace(1)* %12, i8 addrspace(1)* %13)
+  %14 = call i64 @_bal_mapping_set(i8 addrspace(1)* %12, i8 addrspace(1)* %11, i8 addrspace(1)* %13)
   %15 = icmp eq i64 %14, 0
   br i1 %15, label %20, label %25
 16:
@@ -39,9 +39,9 @@ define void @_B04rootmain() !dbg !5 {
   call void @_bal_panic(i8 addrspace(1)* %19)
   unreachable
 20:
-  %21 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %22 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %23 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %21, i8 addrspace(1)* %22)
+  %21 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %22 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %23 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %22, i8 addrspace(1)* %21)
   store i8 addrspace(1)* %23, i8 addrspace(1)** %2
   %24 = load i8 addrspace(1)*, i8 addrspace(1)** %2, !dbg !8
   call void @_Bb02ioprintln(i8 addrspace(1)* %24), !dbg !8

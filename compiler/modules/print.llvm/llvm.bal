@@ -316,7 +316,7 @@ public class Module {
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
         FunctionDecl? fnExisting = <FunctionDecl?>self.globals[name];
-        if !(fnExisting is ()) {
+        if fnExisting != () {
             return fnExisting;
         }
         if name is IntegerArithmeticIntrinsicName {
@@ -433,7 +433,7 @@ public class Module {
     function outputGlobalVar(PointerValue val, GlobalProperties prop, Output out){
         string[] words = [];
         words.push(<string> val.operand, "=");
-        if !(prop.initializer is ()) {
+        if !(prop.initializer == ()) {
             if prop.linkage == "internal"{
                 words.push(prop.linkage);
             }
@@ -890,7 +890,7 @@ public class DIBuilder {
         }
         if props.isDefinition {
             self.addMetadataToWords(words, self.compileUnit, "unit");
-            if self.compileUnit is () {
+            if self.compileUnit == () {
                 panic error("No compile unit is defined");
             }
         }
@@ -1081,7 +1081,7 @@ public class Builder {
     // value of () represents void return value
     public function ret(Value? value=()) {
         BasicBlock bb = self.bb();
-        if value is () {
+        if value == () {
             addInsnWithDbLocation(bb, ["ret", "void"], self.dbLocation);
         }
         else {
@@ -1286,7 +1286,7 @@ public class Builder {
 
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
-        if tem is () {
+        if tem == () {
             panic err:impossible("no current basic block");
         }
         else {
@@ -1301,7 +1301,7 @@ public class Builder {
 }
 
 function addInsnWithAlign(BasicBlock bb, (string|Unnamed)[] words, Alignment? align, Metadata? dbLocation) {
-    if !(align is ()) {
+    if align != () {
         words.push(",", "align", align.toString());
     }
     addInsnWithDbLocation(bb, words, dbLocation);
@@ -1429,11 +1429,11 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
     else if ty is StructType {
         var data = context.getStructName(ty);
         Type[] elementTypes = ty.elementTypes;
-        if !(data is ()) {
+        if data != () {
             elementTypes = data[1];
         }
         if !forceInline {
-            if !(data is ()) {
+            if data != () {
                 return data[0];
             }
         }
@@ -1570,8 +1570,7 @@ function escapeIdent(string name) returns string {
         return name;
     }
     string escaped = "\"";
-    foreach int i in 0 ..< name.length() { // JBUG issue:#31767
-        string:Char ch = <string:Char>name[i];
+    foreach var ch in name {
         escaped += escapeIdentChar(ch);
     }
     escaped += "\"";
@@ -1587,10 +1586,9 @@ function escapeIdentChar(string:Char ch) returns string {
         byte[] bytes = ch.toBytes();
         string result = "";
         foreach byte b in bytes {
-            // JBUG #31776 int cast should not be required
             // UTF-8 representation of a code point >= 0x80 consists of bytes >= 0x80
             // so toHexString here will always produce two bytes
-            result += "\\" + (<int>b).toHexString().toUpperAscii();
+            result += "\\" + b.toHexString().toUpperAscii();
         } 
         return result;
     }
@@ -1633,7 +1631,7 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
                     i = checkpanic int:fromString(<string>index.operand);
                 }
                 Type indexTy = index.ty;
-                if !(indexTy is "i32") {
+                if indexTy !is "i32" {
                     panic err:illegalArgument("structures can be index only using i32 constants"); 
                 }
                 else {
@@ -1651,7 +1649,7 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
 function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
     var data = context.getStructName(ty);
     Type[] elementTypes = ty.elementTypes;
-    if !(data is ()) {
+    if data != () {
         elementTypes = data[1];
     }
     return elementTypes[index];
@@ -1665,21 +1663,18 @@ function addrSpaceCastArgs((string|Unnamed)[] words, Value val, PointerType dest
     words.push(typeToString(val.ty, context), val.operand, "to", typeToString(destTy, context));
 }
 
-// JBUG #31777 cast should not be necessary
-final int CP_DOUBLE_QUOTE = (<string:Char>"\"").toCodePointInt();
-final int CP_BACKSLASH = (<string:Char>"\\").toCodePointInt();
+final int CP_DOUBLE_QUOTE = "\"".toCodePointInt();
+final int CP_BACKSLASH = "\\".toCodePointInt();
 
 function charArray(byte[] bytes) returns string {
     string result = "c\"";
     foreach var b in bytes {
-        // JBUG 31700 incorrect code generated if 32 is in hex
-        if b >= 32 && b < 127 && b != CP_DOUBLE_QUOTE && b != CP_BACKSLASH {
+        if b >= 0x20 && b < 0x7F && b != CP_DOUBLE_QUOTE && b != CP_BACKSLASH {
             result += checkpanic string:fromBytes([b]);
         }
         else {
             result += "\\";
-            // JBUG #31776 cast should not be necessary
-            string hex = (<int>b).toHexString().toUpperAscii();
+            string hex = b.toHexString().toUpperAscii();
             if hex.length() == 1 {
                 result += "0" + hex;
             }
@@ -1696,13 +1691,11 @@ function isIdent(string name) returns boolean {
     if name.length() == 0 {
         return false;
     }
-    // JBUG #31758 type of name[0] is string:Char
-    if isDigit(<string:Char>name[0]) {
+    if isDigit(name[0]) {
         return false;
     }
 
-    foreach int i in 0 ..< name.length() {// JBUG issue:#31767
-        string:Char ch = <string:Char>name[i];
+    foreach var ch in name {
         if !isIdentFollow(ch) {
             return false;
         }

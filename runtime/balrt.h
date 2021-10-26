@@ -79,10 +79,12 @@ typedef struct {
     GC TaggedPtr *members;
 } TaggedPtrArray;
 
-typedef int64_t ListDesc;
+typedef struct {
+    uint32_t bitSet;
+} ListDesc, *ListDescPtr;
 
 typedef GC struct List {
-    ListDesc desc;
+    ListDescPtr desc;
     // This isn't strictly portable because void* and TaggedPtr* might have different alignments/sizes
     // But we ain't writing portable code here
     union {
@@ -152,7 +154,7 @@ typedef struct {
 typedef struct {
     TypeTest typeTest;
     uint32_t bitSet;
-} *MapTypeTestPtr;
+} *MapTypeTestPtr, *ArrayTypeTestPtr;
 
 typedef GC struct Error {
     TaggedPtr message;

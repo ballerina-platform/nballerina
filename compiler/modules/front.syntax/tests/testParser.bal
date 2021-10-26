@@ -9,13 +9,13 @@ const CASE_START = "// @case";
 final int CASE_START_LENGTH = CASE_START.length();
 const CASE_END = "// @end";
 
-// JBUG #31673 can't specify the first type to be "V"|"E"|ect
-type ParserTestCase [string, string, string[], string[]];
-type SingleStringParserTestCase [string, string, string, string];
+type Kind "V"|"E"|"U"|"UE";
+type ParserTestCase [Kind, string, string[], string[]];
+type SingleStringParserTestCase [Kind, string, string, string];
 @test:Config {
     dataProvider: validTokenSourceFragments
 }
-function testParser(string k, string rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
+function testParser(Kind k, string rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
     if k.includes("U") {
         // XXX validate unimplemented error is being returned
         return;
@@ -34,7 +34,7 @@ function testParser(string k, string rule, string[] subject, string[] expected) 
         panic err:impossible("kind must be FE or FV but was '" + k + "'");
     }
     if k.includes("E") {
-        if !(parsed is error) {
+        if parsed !is error {
             test:assertFail("expected a syntax error but got " + "\n".'join(...wordsToLines(parsed)));
         }
         return;
@@ -184,91 +184,6 @@ function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
         tests[s[1]] = [s[0], splitIntoLines(s[1])];
     }
     return tests;
-}
-
-// JBUG moved to a separate method due to method too large, move back to validTokenSourceFragments after beta3
-function stmtSourceFragments() returns SingleStringParserTestCase[] {
-    SingleStringParserTestCase[] sources =
-        [ // statement
-         ["E", "stmt", ";", ""],
-         ["E", "stmt", "1;", ""],
-         ["E", "stmt", "--a;", ""],
-         ["E", "stmt", "a + b;", ""],
-         ["V", "stmt", "break;", "break;"],
-         ["V", "stmt", "continue;", "continue;"],
-         ["V", "stmt", "a:x(c,d);", "a:x(c, d);"],
-         ["V", "stmt", "obj.x(c,d);", "obj.x(c, d);"],
-         ["V", "stmt", "foo().bar(c,d);", "foo().bar(c, d);"],
-         ["V", "stmt", "true.ok();", "true.ok();"], // not semantically valid
-         ["V", "stmt", "null.ok();", "().ok();"], // not semantically valid
-         ["V", "stmt", "().ok();", "().ok();"], // not semantically valid
-         ["V", "stmt", "(x|y).ok();", "(x | y).ok();"], // not semantically valid
-         ["V", "stmt", "foo()[0].push(1);", "(foo()[0]).push(1);"],
-         ["V", "stmt", "foo[1].push(2);", "(foo[1]).push(2);"],
-         ["E", "stmt", "foo.push(1)[0];", ""],
-         ["E", "stmt", "foo[0];", ""],
-         ["V", "stmt", "x = a >> b;", "x = a >> b;"],
-         ["UE", "expr", string`string w = "Say "what" one more time.";`, ""],
-         // statement return
-         ["V", "stmt", "return;", "return;"],
-         ["V", "stmt", "return ok;", "return ok;"],
-         ["E", "stmt", "return a, b;", "return a, b;"],
-         // statement var decl
-         ["E", "stmt", "int 1i = 0;", ""],
-         ["E", "stmt", "int i = 1(-1);", ""],
-         ["E", "stmt", "int i = (-1)1;", ""],
-         ["E", "stmt", "int i = 1 2;", ""],
-         ["E", "stmt", "(int i = 10);", ""],
-         ["V", "stmt", "int x = a != b;", "int x = a != b;"],
-         ["E", "stmt", "int i = {}", ""],
-         ["E", "stmt", "int x = a =! b;", ""],
-         ["E", "stmt", "int i = 0xBABE1F1SH;", ""],
-         ["V", "stmt", "int i = 10;", "int i = 10;"],
-         ["V", "stmt", "a:b i = 10;", "a:b i = 10;"],
-         ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
-         ["E", "stmt", "int i = a ... b ... c;", ""],
-         ["V", "stmt", "final int i = 1;", "final int i = 1;"],
-         ["V", "stmt", "boolean b = false;", "boolean b = false;"],
-         ["V", "stmt", "any v = false;", "any v = false;"],
-         ["V", "stmt", "any v = 1;", "any v = 1;"],
-         ["V", "stmt", "any [ ] v = [1];", "any[] v = [1];"],
-         ["E", "stmt", "any [x ] v = [1];", ""],
-         ["V", "stmt", "map<any> v = {x:1};", string`map<any> v = { "x": 1 };`],
-         ["V", "stmt", "a:b();", "a:b();"],
-         ["V", "stmt", "a:b().x();", "a:b().x();"],
-         ["V", "stmt", "a:b((j), k).x();", "a:b(j, k).x();"],
-         ["V", "stmt", "a:b.m();", "a:b.m();"],
-         ["V", "stmt", "error e = error(\"\");", "error e = error(\"\");"],
-         // statement method call
-         ["V", "stmt", "error(\"\").message();", "error(\"\").message();"], // not semantically valid
-         // statement assign
-         ["E", "stmt", "a = b = d;", ""],
-         ["V", "stmt", "a = 0;", "a = 0;"],
-         ["V", "stmt", "a = 0 == 1;", "a = 0 == 1;"],
-         ["E", "stmt", "a + b = c + d;", ""],
-         ["V", "stmt", "a = 0 != 1;", "a = 0 != 1;"],
-         // statement destructuring assign
-         ["V", "stmt", "_ = a;", "_ = a;"],
-         ["E", "stmt", "_ equals 1;", ""],
-         // statement if else
-         ["E", "stmt", "if a noOp(1);", ""],
-         ["E", "stmt", "if a {} else return;", ""],
-         ["E", "stmt", "if a = b {}", ""],
-         // check
-         ["V", "stmt", "check a();", "check a();"],
-         ["V", "stmt", "check check a();", "check check a();"],
-         ["E", "stmt", "check (a());"],
-         ["E", "stmt", "check check (a());"],
-         ["V", "stmt", "check ().clone();", "check ().clone();"],
-         ["E", "stmt", "check a;"],
-         ["E", "stmt", "check a() + b();"],
-         ["E", "stmt", "check a[1];"],
-         ["V", "stmt", "check a.b();", "check a.b();"],
-         ["E", "stmt", "check (a.b());"],
-         ["V", "stmt", "check ((a)).b();", "check a.b();"],
-         ["V", "stmt", "check a[1].b();", "check (a[1]).b();"]
-    ];
-    return sources;
 }
 
 function validTokenSourceFragments() returns map<ParserTestCase>|error {
@@ -524,6 +439,88 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "td", "a|b", "a | b"],
          ["V", "td", "a|b[]", "a | (b[])"],
          ["V", "td", "(a|b)[]", "(a | b)[]"],
+         // statement
+         ["E", "stmt", ";", ""],
+         ["E", "stmt", "1;", ""],
+         ["E", "stmt", "--a;", ""],
+         ["E", "stmt", "a + b;", ""],
+         ["V", "stmt", "break;", "break;"],
+         ["V", "stmt", "continue;", "continue;"],
+         ["V", "stmt", "a:x(c,d);", "a:x(c, d);"],
+         ["V", "stmt", "obj.x(c,d);", "obj.x(c, d);"],
+         ["V", "stmt", "foo().bar(c,d);", "foo().bar(c, d);"],
+         ["V", "stmt", "true.ok();", "true.ok();"], // not semantically valid
+         ["V", "stmt", "null.ok();", "().ok();"], // not semantically valid
+         ["V", "stmt", "().ok();", "().ok();"], // not semantically valid
+         ["V", "stmt", "(x|y).ok();", "(x | y).ok();"], // not semantically valid
+         ["V", "stmt", "foo()[0].push(1);", "(foo()[0]).push(1);"],
+         ["V", "stmt", "foo[1].push(2);", "(foo[1]).push(2);"],
+         ["E", "stmt", "foo.push(1)[0];", ""],
+         ["E", "stmt", "foo[0];", ""],
+         ["V", "stmt", "x = a >> b;", "x = a >> b;"],
+         ["UE", "expr", string`string w = "Say "what" one more time.";`, ""],
+         // statement return
+         ["V", "stmt", "return;", "return;"],
+         ["V", "stmt", "return ok;", "return ok;"],
+         ["E", "stmt", "return a, b;", "return a, b;"],
+         // statement var decl
+         ["E", "stmt", "int 1i = 0;", ""],
+         ["E", "stmt", "int i = 1(-1);", ""],
+         ["E", "stmt", "int i = (-1)1;", ""],
+         ["E", "stmt", "int i = 1 2;", ""],
+         ["E", "stmt", "(int i = 10);", ""],
+         ["V", "stmt", "int x = a != b;", "int x = a != b;"],
+         ["E", "stmt", "int i = {}", ""],
+         ["E", "stmt", "int x = a =! b;", ""],
+         ["E", "stmt", "int i = 0xBABE1F1SH;", ""],
+         ["V", "stmt", "int i = 10;", "int i = 10;"],
+         ["V", "stmt", "a:b i = 10;", "a:b i = 10;"],
+         ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
+         ["E", "stmt", "int i = a ... b ... c;", ""],
+         ["V", "stmt", "final int i = 1;", "final int i = 1;"],
+         ["V", "stmt", "boolean b = false;", "boolean b = false;"],
+         ["V", "stmt", "any v = false;", "any v = false;"],
+         ["V", "stmt", "any v = 1;", "any v = 1;"],
+         ["V", "stmt", "any [ ] v = [1];", "any[] v = [1];"],
+         ["E", "stmt", "any [x ] v = [1];", ""],
+         ["V", "stmt", "map<any> v = {x:1};", string`map<any> v = { "x": 1 };`],
+         ["V", "stmt", "a:b();", "a:b();"],
+         ["V", "stmt", "a:b().x();", "a:b().x();"],
+         ["V", "stmt", "a:b((j), k).x();", "a:b(j, k).x();"],
+         ["V", "stmt", "a:b.m();", "a:b.m();"],
+         ["V", "stmt", "error e = error(\"\");", "error e = error(\"\");"],
+         // statement method call
+         ["V", "stmt", "error(\"\").message();", "error(\"\").message();"], // not semantically valid
+         // statement field access lvalue
+         ["V", "stmt", "a.b = c;", "a.b = c;"],
+         ["V", "stmt", "a.b += c;", "a.b += c;"],
+         ["E", "stmt", "a.1 = b;", ""],
+         // statement assign
+         ["E", "stmt", "a = b = d;", ""],
+         ["V", "stmt", "a = 0;", "a = 0;"],
+         ["V", "stmt", "a = 0 == 1;", "a = 0 == 1;"],
+         ["E", "stmt", "a + b = c + d;", ""],
+         ["V", "stmt", "a = 0 != 1;", "a = 0 != 1;"],
+         // statement destructuring assign
+         ["V", "stmt", "_ = a;", "_ = a;"],
+         ["E", "stmt", "_ equals 1;", ""],
+         // statement if else
+         ["E", "stmt", "if a noOp(1);", ""],
+         ["E", "stmt", "if a {} else return;", ""],
+         ["E", "stmt", "if a = b {}", ""],
+         // check
+         ["V", "stmt", "check a();", "check a();"],
+         ["V", "stmt", "check check a();", "check check a();"],
+         ["E", "stmt", "check (a());"],
+         ["E", "stmt", "check check (a());"],
+         ["V", "stmt", "check ().clone();", "check ().clone();"],
+         ["E", "stmt", "check a;"],
+         ["E", "stmt", "check a() + b();"],
+         ["E", "stmt", "check a[1];"],
+         ["V", "stmt", "check a.b();", "check a.b();"],
+         ["E", "stmt", "check (a.b());"],
+         ["V", "stmt", "check ((a)).b();", "check a.b();"],
+         ["V", "stmt", "check a[1].b();", "check (a[1]).b();"],
          // module parts
          ["U", "mod", "type ER error<map<readonly>>;", ""],
          ["E", "mod", "import;", ""],
@@ -531,9 +528,6 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "mod", "import x/y;", "import x/y;"]];
     map<ParserTestCase> tests = {};
     foreach var s in sources {
-        tests[s[2]] = [s[0], s[1], splitIntoLines(s[2]), [s[3]]];
-    }
-    foreach var s in stmtSourceFragments() {
         tests[s[2]] = [s[0], s[1], splitIntoLines(s[2]), [s[3]]];
     }
     var testFiles = check file:readDir("modules/front.syntax/tests/data");
@@ -553,19 +547,22 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
             expected = src;
         }
 
-        string[] baseParts = splitTestName(base);
+        [Kind, string] baseParts = check splitTestName(base);
         tests["file:" + base] = [baseParts[0], baseParts[1], src, expected];
     }
     return tests;
 }
-function splitTestName(string base) returns [string, string] {
+function splitTestName(string base) returns [Kind, string]|error {
     int len = base.length();
     int kindPos = base.indexOf("-") ?: 0;
     string kind = base.substring(0, kindPos);
-    int afterKindPos = min(kindPos + 1, len);
-    int rulePos = base.indexOf("-", afterKindPos) ?: afterKindPos;
-    string rule = base.substring(afterKindPos, rulePos);
-    return [kind, rule];
+    if kind is Kind {
+        int afterKindPos = min(kindPos + 1, len);
+        int rulePos = base.indexOf("-", afterKindPos) ?: afterKindPos;
+        string rule = base.substring(afterKindPos, rulePos);
+        return [kind, rule];
+    }
+    return error("invalid test kind");
 }
 
 function min(int a, int b) returns int {

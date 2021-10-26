@@ -40,11 +40,7 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
 
 function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) returns bir:FunctionSignature|ResolveTypeError {
     s:FunctionTypeDesc td = defn.typeDesc;  
-    t:SemType[] params = [];
-    // JBUG if this is done with a select, then it gets a bad, sad at runtime if the check gets an error
-    foreach var x in td.args {
-        params.push(check resolveSubsetTypeDesc(mod, defn, x));
-    }
+    t:SemType[] params = from var x in td.args select check resolveSubsetTypeDesc(mod, defn, x);
     t:SemType ret = check resolveSubsetTypeDesc(mod, defn, td.ret);
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
@@ -87,14 +83,14 @@ function isSubsetUnionType(t:SemType ty) returns boolean {
 
 function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns t:SemType|ResolveTypeError {
     t:SemType? t = defn.semType;
-    if t is () {
+    if t == () {
         if depth == defn.cycleDepth {
             return err:semantic(`invalid cycle detected for ${defn.name}`, s:defnLocation(defn));
         }
         defn.cycleDepth = depth;
         t:SemType s = check resolveTypeDesc(mod, defn, depth, defn.td);
         t = defn.semType;
-        if t is () {
+        if t == () {
             defn.semType = s;
             defn.cycleDepth = -1;
             return s;
@@ -112,34 +108,34 @@ function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns 
 }
 
 function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
-    match td {
-        // These are easy
-        "any" => { return t:ANY; }
-        "boolean" => { return t:BOOLEAN; }
-        "decimal" => { return t:DECIMAL; }
-        "error" => { return t:ERROR; }
-        "float" => { return t:FLOAT; }
-        "handle" => { return t:HANDLE; }
-        "int" => { return t:INT; }
-        "never" => { return t:NEVER; }
-        "readonly" => { return t:READONLY; }
-        "string" => { return t:STRING; }
-        "typedesc" => { return t:TYPEDESC; }
-        "xml" => { return t:XML; }
-        "byte" => { return t:BYTE; }
-        "json" => { return t:createJson(mod.tc.env); }
-        "()" => { return t:NIL; }
+    if td is s:BuiltinTypeDesc {
+        match td.builtinTypeName {
+            // These are easy
+            "any" => { return t:ANY; }
+            "boolean" => { return t:BOOLEAN; }
+            "decimal" => { return t:DECIMAL; }
+            "error" => { return t:ERROR; }
+            "float" => { return t:FLOAT; }
+            "handle" => { return t:HANDLE; }
+            "int" => { return t:INT; }
+            "never" => { return t:NEVER; }
+            "readonly" => { return t:READONLY; }
+            "string" => { return t:STRING; }
+            "typedesc" => { return t:TYPEDESC; }
+            "xml" => { return t:XML; }
+            "byte" => { return t:BYTE; }
+            "json" => { return t:createJson(mod.tc.env); }
+            "null" => { return t:NIL; }
+        }
     }
     final t:Env env = mod.tc.env;
-    // JBUG would like to use match patterns here, but #30718 prevents it
+    // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
     if td is s:ListTypeDesc {
         t:ListDefinition? defn = td.defn;
-        if defn is () {
+        if defn == () {
             t:ListDefinition d = new;
             td.defn = d;
-            // JBUG temp variable `m` is to avoid compiler bug #30736
-            s:TypeDesc[] m = td.members;
-            t:SemType[] members = from var x in m select check resolveTypeDesc(mod, modDefn, depth + 1, x);
+            t:SemType[] members = from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);
             t:SemType rest = check resolveTypeDesc(mod, modDefn, depth + 1, td.rest);
             return d.define(env, members, rest);
         }
@@ -149,13 +145,25 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     if td is s:MappingTypeDesc {
         t:MappingDefinition? defn = td.defn;
-        if defn is () {
+        if defn == () {
             t:MappingDefinition d = new;
             td.defn = d;
-            // JBUG temp variable `f` is to avoid compiler bug #30736
-            s:FieldDesc[] f = td.fields;
-            t:Field[] fields = from var { name, typeDesc } in f select [name, check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc)];
-            t:SemType rest = check resolveTypeDesc(mod, modDefn, depth + 1, td.rest);
+            t:Field[] fields = from var { name, typeDesc } in td.fields select [name, check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc)];
+            map<s:FieldDesc> fieldsByName = {};
+            foreach var fd in td.fields {
+                if fieldsByName[fd.name] != () {
+                    return err:semantic(`duplicate field ${fd.name}`, err:location(modDefn.part.file));
+                }
+                fieldsByName[fd.name] = fd;
+            }
+            s:TypeDesc? restTd = td.rest;
+            t:SemType rest;
+            if restTd == () {
+                rest = t:NEVER;
+            }
+            else {
+                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+            }
             return d.define(env, fields, rest);
         }
         else {
@@ -164,7 +172,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
      if td is s:FunctionTypeDesc {
         t:FunctionDefinition? defn = td.defn;
-        if defn is () {
+        if defn == () {
             t:FunctionDefinition d = new(env);
             td.defn = d;
             s:TypeDesc[] a = td.args;
@@ -180,7 +188,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         string? prefix = td.prefix;
         if prefix == () {
             s:ModuleLevelDefn? defn = mod.defns[td.typeName];
-            if defn is () {
+            if defn == () {
                 return err:semantic(`reference to undefined type ${td.typeName}`, err:location(modDefn.part.file, td.pos));
             }
             else if defn is s:TypeDefn {
@@ -203,7 +211,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             else {
                 string qName = prefix + ":" + td.typeName;
                 err:Location loc =  err:location(modDefn.part.file, td.pos);
-                if defn is () {
+                if defn == () {
                     return err:semantic(`no public definition of ${qName}`, loc=loc);
                 }
                 else {
@@ -256,8 +264,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     panic error("unimplemented type-descriptor");
 }
 
-function resolveInlineBuiltinTypeDesc(s:InlineBuiltinTypeDesc td) returns t:UniformTypeBitSet {
-    match td {
+function resolveBuiltinTypeDesc(s:SubsetBuiltinTypeDesc td) returns t:UniformTypeBitSet {
+    match td.builtinTypeName {
         "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }
         "int" => { return t:INT; }

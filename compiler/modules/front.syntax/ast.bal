@@ -47,7 +47,7 @@ public type ConstDefn record {|
     *PositionFields;
     readonly string name;
     ModulePart part;
-    InlineBuiltinTypeDesc? td;
+    SubsetBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
     Position namePos;
@@ -61,7 +61,7 @@ public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|Meth
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
-public const WILDCARD = "_";
+public const WILDCARD = ();
 
 public type AssignStmt record {|
     *PositionFields;
@@ -78,12 +78,11 @@ public type CompoundAssignStmt record {|
 |};
 
 // L-value expression
-// XXX Add FieldAccessLExpr when we can handle it in codeGen
-public type LExpr VarRefExpr|MemberAccessLExpr;
+public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
 
 public type ReturnStmt record {|
     *PositionFields;
-    Expr returnExpr;
+    Expr? returnExpr;
 |};
 
 public type PanicStmt record {|
@@ -141,7 +140,7 @@ public type BreakContinueStmt record {|
 public type VarDeclStmt record {|
     *PositionFields;
     TypeDesc td;
-    string varName;
+    string|WILDCARD varName;
     Expr initExpr;
     boolean isFinal;
 |};
@@ -162,6 +161,9 @@ public type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticE
 
 // We use different operator names so things work better with match statements
 public type BinaryExprBase record {|
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
     Expr left;
     Expr right;
 |};
@@ -188,6 +190,9 @@ public type BinaryBitwiseExpr record {|
 |};
 
 public type UnaryExpr record {|
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
     UnaryExprOp op;
     Expr operand;
     Position pos;
@@ -201,11 +206,19 @@ public type SimpleConstNegateExpr record {|
 |};
 
 public type ErrorConstructorExpr record {|
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     Expr message;
     Position pos;
 |};
 
 public type FunctionCallExpr record {|
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     string? prefix = ();
     string funcName;
     Expr[] args;
@@ -214,6 +227,10 @@ public type FunctionCallExpr record {|
 |};
 
 public type MethodCallExpr record {|
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     string methodName;
     Expr target;
     Expr[] args;
@@ -223,24 +240,36 @@ public type MethodCallExpr record {|
 public type CheckingKeyword "check"|"checkpanic";
 
 public type CheckingExpr record {|
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     CheckingKeyword checkingKeyword;
     Expr operand;
 |};
 
 public type CheckingStmt record {|
-    // JBUG can't include CheckingExpr
+    // JBUG #32617 can't include CheckingExpr
     // *CheckingExpr;
+    // *PositionFields
     CheckingKeyword checkingKeyword;
+    Position startPos;
+    Position endPos;
     CallStmt operand;
 |};
 
 public type ListConstructorExpr record {|
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     Expr[] members;
     // JBUG adding this field makes match statement in codeGenExpr fail 
     t:SemType? expectedType = ();
 |};
 
 public type MappingConstructorExpr record {|
+    *PositionFields;
     Field[] fields;
     t:SemType? expectedType = ();
 |};
@@ -252,56 +281,77 @@ public type Field record {|
 |};
 
 public type MemberAccessExpr record {|
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     Expr container;
     Expr index;
     Position pos;
 |};
 
-// JBUG gets a bad, sad if this uses *MemberAccessExpr and overrides container
+// JBUG #32617 gets a bad, sad if this uses *MemberAccessExpr and overrides container
 public type MemberAccessLExpr record {|
+    *PositionFields;
     VarRefExpr container;
     Expr index;
     Position pos;
 |};
 
 public type FieldAccessExpr record {|
-    Expr mapping;
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
+    Expr container;
     string fieldName;
     Position pos;
 |};
 
 public type FieldAccessLExpr record {|
-    VarRefExpr mapping;
+    *PositionFields;
+    VarRefExpr container;
     string fieldName;
     Position pos;
 |};
 
 public type RangeExpr record {|
+    *PositionFields;
     Expr lower;
     Expr upper;
 |};
 
 public type VarRefExpr record {|
+    *PositionFields;
     string? prefix = ();
     string varName;
 |};
 
 public type TypeCastExpr record {|
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc td;
     Expr operand;
     Position pos;
 |};
 
 public type TypeTestExpr record {|
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc td;
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
-    boolean negated; 
+    boolean negated;
 |};
 
 public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
 
 public type ConstValueExpr record {|
+    *PositionFields;
     ()|boolean|int|float|string value;
     // This is non-nil when the static public type of the expression
     // contains more than one shape.
@@ -315,6 +365,7 @@ public const float FLOAT_ZERO = 0f;
 // This is an expression where we know that the value is == 0f
 // but do not know whether it is +0f or -0f.
 public type FloatZeroExpr record {|
+    *PositionFields;
     FLOAT_ZERO value = FLOAT_ZERO;
     () multiSemType = ();
     Expr expr;
@@ -328,9 +379,9 @@ public type IntLiteralBase 10|16;
 // depends on the contextually expected public type, which
 // we do not know at parse time.
 public type IntLiteralExpr record {|
+    *PositionFields;
     IntLiteralBase base;
     string digits;
-    Position pos;
 |};
 
 public const FLOAT_TYPE_SUFFIX = "f";
@@ -340,9 +391,9 @@ public type FpTypeSuffix FLOAT_TYPE_SUFFIX|DECIMAL_TYPE_SUFFIX;
 
 public type FpLiteralExpr record {|
     // This is the literal without the public type suffix
+    *PositionFields;
     string untypedLiteral;
     FpTypeSuffix? typeSuffix;
-    Position pos;
 |};
 
 
@@ -359,11 +410,14 @@ public type TypeDefn record {|
     int cycleDepth = -1;
 |};
 
-public type TypeDesc LeafTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc;
+public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc;
 
 public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc;
 
 public type ListTypeDesc record {|
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc[] members;
     TypeDesc rest;
     t:ListDefinition? defn = ();
@@ -375,25 +429,35 @@ public type FieldDesc record {|
 |};
 
 public type MappingTypeDesc record {|
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
     FieldDesc[] fields;
-    TypeDesc rest;
+    TypeDesc? rest;
     t:MappingDefinition? defn = ();
 |};
 
 public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc[] args;
     TypeDesc ret;
     t:FunctionDefinition? defn = ();
 |};
 
 public type ErrorTypeDesc record {|
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
     TypeDesc detail;
 |};
 
 public type BinaryTypeOp "|" | "&";
 
 public type BinaryTypeDesc record {|
+    *PositionFields;
     BinaryTypeOp op;
     TypeDesc left;
     TypeDesc right;
@@ -405,17 +469,28 @@ public type XmlSequenceTypeDesc record {|
 |};
 
 public type TypeDescRef record {|
+    *PositionFields;
     string? prefix = ();
     string typeName;
     Position pos;
 |};
 
 public type SingletonTypeDesc record {|
+    *PositionFields;
     (string|float|int|boolean|decimal) value;
 |};
 
-// This is the subtype of BuiltinTypeDesc that we currently allow inline.
-public type InlineBuiltinTypeDesc "boolean"|"int"|"float"|"string"|"error"|"any";
-public type BuiltinTypeDesc InlineBuiltinTypeDesc|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"()";
+public type SubsetBuiltinTypeName "any"|"boolean"|"int"|"float"|"string"|"error";
 
-public type LeafTypeDesc BuiltinTypeDesc;
+public type BuiltinTypeName SubsetBuiltinTypeName|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
+
+public type BuiltinTypeDesc readonly & record {|
+    *PositionFields;
+    BuiltinTypeName builtinTypeName;
+|};
+
+// This is used for ConstDefinitions
+public type SubsetBuiltinTypeDesc readonly & record {|
+    *PositionFields;
+    SubsetBuiltinTypeName builtinTypeName;
+|};

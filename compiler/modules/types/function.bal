@@ -32,14 +32,14 @@ function functionSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
     BddMemo? mm = cx.functionMemo[b];
     BddMemo m;
-    if mm is () {
+    if mm == () {
         m = { bdd: b };
         cx.functionMemo.add(m);
     }
     else {
         m = mm;
         boolean? res = m.isEmpty;
-        if res is () {
+        if res == () {
             // we've got a loop
             io:println("got a function loop");
             // XXX is this right???
@@ -59,7 +59,7 @@ function functionBddIsEmpty(Context cx, Bdd b, SemType s, Conjunction? pos, Conj
         if b == false {
             return true;
         }
-        if neg is () {
+        if neg == () {
             return false;
         }
         else {
@@ -77,7 +77,7 @@ function functionBddIsEmpty(Context cx, Bdd b, SemType s, Conjunction? pos, Conj
 }
 
 function functionTheta(Context cx, SemType t0, SemType t1, Conjunction? pos) returns boolean {
-    if pos is () {
+    if pos == () {
         // XXX can have function with return type of never
         return isEmpty(cx, t0) || isEmpty(cx, t1);
     }

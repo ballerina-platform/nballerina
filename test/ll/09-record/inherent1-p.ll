@@ -6,7 +6,7 @@ declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
-declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)*, i64) readonly
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
@@ -33,7 +33,7 @@ define void @_B04rootmain() !dbg !5 {
   call void @_B_foo(i8 addrspace(1)* %13), !dbg !10
   store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !10
   %14 = load i8 addrspace(1)*, i8 addrspace(1)** %p
-  %15 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %14, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620769633))
+  %15 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %14, i64 0)
   %16 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %15)
   store i64 %16, i64* %3
   %17 = load i64, i64* %3, !dbg !11

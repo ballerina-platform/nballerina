@@ -137,11 +137,11 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) !dbg !7 {
 58:
   %59 = extractvalue {i64, i1} %54, 0
   store i64 %59, i64* %7
-  %60 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %61 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  %60 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  %61 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %62 = load i64, i64* %7
   %63 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %62)
-  %64 = call i64 @_bal_mapping_set(i8 addrspace(1)* %60, i8 addrspace(1)* %61, i8 addrspace(1)* %63)
+  %64 = call i64 @_bal_mapping_set(i8 addrspace(1)* %61, i8 addrspace(1)* %60, i8 addrspace(1)* %63)
   %65 = icmp eq i64 %64, 0
   br i1 %65, label %68, label %74
 66:
@@ -164,11 +164,11 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) !dbg !7 {
 77:
   %78 = extractvalue {i64, i1} %72, 0
   store i64 %78, i64* %9
-  %79 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %80 = load i8 addrspace(1)*, i8 addrspace(1)** %8
+  %79 = load i8 addrspace(1)*, i8 addrspace(1)** %8
+  %80 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %81 = load i64, i64* %9
   %82 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %81)
-  %83 = call i64 @_bal_mapping_set(i8 addrspace(1)* %79, i8 addrspace(1)* %80, i8 addrspace(1)* %82)
+  %83 = call i64 @_bal_mapping_set(i8 addrspace(1)* %80, i8 addrspace(1)* %79, i8 addrspace(1)* %82)
   %84 = icmp eq i64 %83, 0
   br i1 %84, label %87, label %93
 85:
@@ -191,11 +191,11 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) !dbg !7 {
 96:
   %97 = extractvalue {i64, i1} %91, 0
   store i64 %97, i64* %11
-  %98 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %99 = load i8 addrspace(1)*, i8 addrspace(1)** %10
+  %98 = load i8 addrspace(1)*, i8 addrspace(1)** %10
+  %99 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %100 = load i64, i64* %11
   %101 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %100)
-  %102 = call i64 @_bal_mapping_set(i8 addrspace(1)* %98, i8 addrspace(1)* %99, i8 addrspace(1)* %101)
+  %102 = call i64 @_bal_mapping_set(i8 addrspace(1)* %99, i8 addrspace(1)* %98, i8 addrspace(1)* %101)
   %103 = icmp eq i64 %102, 0
   br i1 %103, label %106, label %112
 104:
@@ -218,11 +218,11 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) !dbg !7 {
 115:
   %116 = extractvalue {i64, i1} %110, 0
   store i64 %116, i64* %13
-  %117 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %118 = load i8 addrspace(1)*, i8 addrspace(1)** %12
+  %117 = load i8 addrspace(1)*, i8 addrspace(1)** %12
+  %118 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %119 = load i64, i64* %13
   %120 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %119)
-  %121 = call i64 @_bal_mapping_set(i8 addrspace(1)* %117, i8 addrspace(1)* %118, i8 addrspace(1)* %120)
+  %121 = call i64 @_bal_mapping_set(i8 addrspace(1)* %118, i8 addrspace(1)* %117, i8 addrspace(1)* %120)
   %122 = icmp eq i64 %121, 0
   br i1 %122, label %125, label %131
 123:
@@ -245,11 +245,11 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) !dbg !7 {
 134:
   %135 = extractvalue {i64, i1} %129, 0
   store i64 %135, i64* %15
-  %136 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %137 = load i8 addrspace(1)*, i8 addrspace(1)** %14
+  %136 = load i8 addrspace(1)*, i8 addrspace(1)** %14
+  %137 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %138 = load i64, i64* %15
   %139 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %138)
-  %140 = call i64 @_bal_mapping_set(i8 addrspace(1)* %136, i8 addrspace(1)* %137, i8 addrspace(1)* %139)
+  %140 = call i64 @_bal_mapping_set(i8 addrspace(1)* %137, i8 addrspace(1)* %136, i8 addrspace(1)* %139)
   %141 = icmp eq i64 %140, 0
   br i1 %141, label %144, label %150
 142:
@@ -272,11 +272,11 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) !dbg !7 {
 153:
   %154 = extractvalue {i64, i1} %148, 0
   store i64 %154, i64* %17
-  %155 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %156 = load i8 addrspace(1)*, i8 addrspace(1)** %16
+  %155 = load i8 addrspace(1)*, i8 addrspace(1)** %16
+  %156 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %157 = load i64, i64* %17
   %158 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %157)
-  %159 = call i64 @_bal_mapping_set(i8 addrspace(1)* %155, i8 addrspace(1)* %156, i8 addrspace(1)* %158)
+  %159 = call i64 @_bal_mapping_set(i8 addrspace(1)* %156, i8 addrspace(1)* %155, i8 addrspace(1)* %158)
   %160 = icmp eq i64 %159, 0
   br i1 %160, label %163, label %169
 161:
@@ -299,11 +299,11 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) !dbg !7 {
 172:
   %173 = extractvalue {i64, i1} %167, 0
   store i64 %173, i64* %19
-  %174 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %175 = load i8 addrspace(1)*, i8 addrspace(1)** %18
+  %174 = load i8 addrspace(1)*, i8 addrspace(1)** %18
+  %175 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %176 = load i64, i64* %19
   %177 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %176)
-  %178 = call i64 @_bal_mapping_set(i8 addrspace(1)* %174, i8 addrspace(1)* %175, i8 addrspace(1)* %177)
+  %178 = call i64 @_bal_mapping_set(i8 addrspace(1)* %175, i8 addrspace(1)* %174, i8 addrspace(1)* %177)
   %179 = icmp eq i64 %178, 0
   br i1 %179, label %182, label %188
 180:
@@ -326,11 +326,11 @@ define internal void @_B_populate(i8 addrspace(1)* %0, i64 %1) !dbg !7 {
 191:
   %192 = extractvalue {i64, i1} %186, 0
   store i64 %192, i64* %21
-  %193 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %194 = load i8 addrspace(1)*, i8 addrspace(1)** %20
+  %193 = load i8 addrspace(1)*, i8 addrspace(1)** %20
+  %194 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %195 = load i64, i64* %21
   %196 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %195)
-  %197 = call i64 @_bal_mapping_set(i8 addrspace(1)* %193, i8 addrspace(1)* %194, i8 addrspace(1)* %196)
+  %197 = call i64 @_bal_mapping_set(i8 addrspace(1)* %194, i8 addrspace(1)* %193, i8 addrspace(1)* %196)
   %198 = icmp eq i64 %197, 0
   br i1 %198, label %201, label %202
 199:
@@ -425,9 +425,9 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) !dbg !9 {
   %62 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   %63 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %62, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901247))
   store i8 addrspace(1)* %63, i8 addrspace(1)** %5
-  %64 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %65 = load i8 addrspace(1)*, i8 addrspace(1)** %5
-  %66 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %64, i8 addrspace(1)* %65)
+  %64 = load i8 addrspace(1)*, i8 addrspace(1)** %5
+  %65 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %66 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %65, i8 addrspace(1)* %64)
   store i8 addrspace(1)* %66, i8 addrspace(1)** %6
   %67 = load i8 addrspace(1)*, i8 addrspace(1)** %6
   %68 = addrspacecast i8 addrspace(1)* %67 to i8*
@@ -490,9 +490,9 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) !dbg !9 {
   %105 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   %106 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %105, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901089))
   store i8 addrspace(1)* %106, i8 addrspace(1)** %10
-  %107 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %108 = load i8 addrspace(1)*, i8 addrspace(1)** %10
-  %109 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %107, i8 addrspace(1)* %108)
+  %107 = load i8 addrspace(1)*, i8 addrspace(1)** %10
+  %108 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %109 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %108, i8 addrspace(1)* %107)
   store i8 addrspace(1)* %109, i8 addrspace(1)** %11
   %110 = load i8 addrspace(1)*, i8 addrspace(1)** %11
   %111 = addrspacecast i8 addrspace(1)* %110 to i8*
@@ -546,9 +546,9 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) !dbg !9 {
   %143 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   %144 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %143, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630860897))
   store i8 addrspace(1)* %144, i8 addrspace(1)** %15
-  %145 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %146 = load i8 addrspace(1)*, i8 addrspace(1)** %15
-  %147 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %145, i8 addrspace(1)* %146)
+  %145 = load i8 addrspace(1)*, i8 addrspace(1)** %15
+  %146 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %147 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %146, i8 addrspace(1)* %145)
   store i8 addrspace(1)* %147, i8 addrspace(1)** %16
   %148 = load i8 addrspace(1)*, i8 addrspace(1)** %16
   %149 = addrspacecast i8 addrspace(1)* %148 to i8*
@@ -602,9 +602,9 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) !dbg !9 {
   %181 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   %182 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %181, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620637281))
   store i8 addrspace(1)* %182, i8 addrspace(1)** %20
-  %183 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %184 = load i8 addrspace(1)*, i8 addrspace(1)** %20
-  %185 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %183, i8 addrspace(1)* %184)
+  %183 = load i8 addrspace(1)*, i8 addrspace(1)** %20
+  %184 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %185 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %184, i8 addrspace(1)* %183)
   store i8 addrspace(1)* %185, i8 addrspace(1)** %21
   %186 = load i8 addrspace(1)*, i8 addrspace(1)** %21
   %187 = addrspacecast i8 addrspace(1)* %186 to i8*
@@ -658,9 +658,9 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) !dbg !9 {
   %219 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   %220 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %219, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541020168801))
   store i8 addrspace(1)* %220, i8 addrspace(1)** %25
-  %221 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %222 = load i8 addrspace(1)*, i8 addrspace(1)** %25
-  %223 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %221, i8 addrspace(1)* %222)
+  %221 = load i8 addrspace(1)*, i8 addrspace(1)** %25
+  %222 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %223 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %222, i8 addrspace(1)* %221)
   store i8 addrspace(1)* %223, i8 addrspace(1)** %26
   %224 = load i8 addrspace(1)*, i8 addrspace(1)** %26
   %225 = addrspacecast i8 addrspace(1)* %224 to i8*
@@ -714,9 +714,9 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) !dbg !9 {
   %257 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   %258 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %257, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475879595205217))
   store i8 addrspace(1)* %258, i8 addrspace(1)** %30
-  %259 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %260 = load i8 addrspace(1)*, i8 addrspace(1)** %30
-  %261 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %259, i8 addrspace(1)* %260)
+  %259 = load i8 addrspace(1)*, i8 addrspace(1)** %30
+  %260 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %261 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %260, i8 addrspace(1)* %259)
   store i8 addrspace(1)* %261, i8 addrspace(1)** %31
   %262 = load i8 addrspace(1)*, i8 addrspace(1)** %31
   %263 = addrspacecast i8 addrspace(1)* %262 to i8*
@@ -770,9 +770,9 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) !dbg !9 {
   %295 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   %296 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %295, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098307654316155489))
   store i8 addrspace(1)* %296, i8 addrspace(1)** %35
-  %297 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %298 = load i8 addrspace(1)*, i8 addrspace(1)** %35
-  %299 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %297, i8 addrspace(1)* %298)
+  %297 = load i8 addrspace(1)*, i8 addrspace(1)** %35
+  %298 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %299 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %298, i8 addrspace(1)* %297)
   store i8 addrspace(1)* %299, i8 addrspace(1)** %36
   %300 = load i8 addrspace(1)*, i8 addrspace(1)** %36
   %301 = addrspacecast i8 addrspace(1)* %300 to i8*
@@ -826,9 +826,9 @@ define internal i64 @_B_retrieve(i8 addrspace(1)* %0, i64 %1) !dbg !9 {
   %333 = load i8 addrspace(1)*, i8 addrspace(1)** %x
   %334 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %333, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3055523457856135777))
   store i8 addrspace(1)* %334, i8 addrspace(1)** %40
-  %335 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %336 = load i8 addrspace(1)*, i8 addrspace(1)** %40
-  %337 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %335, i8 addrspace(1)* %336)
+  %335 = load i8 addrspace(1)*, i8 addrspace(1)** %40
+  %336 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %337 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %336, i8 addrspace(1)* %335)
   store i8 addrspace(1)* %337, i8 addrspace(1)** %41
   %338 = load i8 addrspace(1)*, i8 addrspace(1)** %41
   %339 = addrspacecast i8 addrspace(1)* %338 to i8*

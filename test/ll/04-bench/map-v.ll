@@ -121,11 +121,11 @@ define void @_B04rootmain() !dbg !5 {
   %65 = load i64, i64* %x, !dbg !8
   %66 = call i8 addrspace(1)* @_Bb0m4lang3inttoHexString(i64 %65), !dbg !8
   store i8 addrspace(1)* %66, i8 addrspace(1)** %5, !dbg !8
-  %67 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %68 = load i8 addrspace(1)*, i8 addrspace(1)** %5
+  %67 = load i8 addrspace(1)*, i8 addrspace(1)** %5
+  %68 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %69 = load i64, i64* %i
   %70 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %69)
-  %71 = call i64 @_bal_mapping_set(i8 addrspace(1)* %67, i8 addrspace(1)* %68, i8 addrspace(1)* %70)
+  %71 = call i64 @_bal_mapping_set(i8 addrspace(1)* %68, i8 addrspace(1)* %67, i8 addrspace(1)* %70)
   %72 = icmp eq i64 %71, 0
   br i1 %72, label %75, label %76
 73:
@@ -147,9 +147,9 @@ define void @_B04rootmain() !dbg !5 {
   %82 = load i64, i64* %x.1, !dbg !10
   %83 = call i8 addrspace(1)* @_Bb0m4lang3inttoHexString(i64 %82), !dbg !10
   store i8 addrspace(1)* %83, i8 addrspace(1)** %8, !dbg !10
-  %84 = load i8 addrspace(1)*, i8 addrspace(1)** %m
-  %85 = load i8 addrspace(1)*, i8 addrspace(1)** %8
-  %86 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %84, i8 addrspace(1)* %85)
+  %84 = load i8 addrspace(1)*, i8 addrspace(1)** %8
+  %85 = load i8 addrspace(1)*, i8 addrspace(1)** %m
+  %86 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %85, i8 addrspace(1)* %84)
   store i8 addrspace(1)* %86, i8 addrspace(1)** %9
   %87 = load i8 addrspace(1)*, i8 addrspace(1)** %9
   %88 = addrspacecast i8 addrspace(1)* %87 to i8*

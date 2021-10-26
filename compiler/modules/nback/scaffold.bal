@@ -171,7 +171,7 @@ class Scaffold {
 
     function getImportedFunction(bir:ExternalSymbol symbol) returns llvm:FunctionDecl? {
         ImportedFunction? fn = self.mod.importedFunctions[symbol];
-        return fn is () ? () : fn.decl;
+        return fn == () ? () : fn.decl;
     }
     
     function addImportedFunction(bir:ExternalSymbol symbol, llvm:FunctionDecl decl) {
@@ -185,7 +185,7 @@ class Scaffold {
     function getRuntimeFunctionDecl(RuntimeFunction rf) returns llvm:FunctionDecl {
         bir:ExternalSymbol symbol =  { module: runtimeModule, identifier: rf.name };
         llvm:FunctionDecl? decl = self.getImportedFunction(symbol);
-        if !(decl is ()) {
+        if decl != () {
             return decl;
         }
         else {
@@ -197,7 +197,7 @@ class Scaffold {
 
     function getString(string str) returns StringDefn {
         StringDefn? curDefn = self.mod.stringDefns[str];
-        if !(curDefn is ()) {
+        if curDefn != () {
             return curDefn;
         }
         StringDefn newDefn = addStringDefn(self.mod.llContext, self.mod.llMod, self.mod.stringDefns.length(), str);
@@ -234,7 +234,7 @@ class Scaffold {
 
     function setDebugLocation(llvm:Builder builder, bir:Position pos, "file"? fileOnly = ()) {
         DISubprogram? diFunc = self.diFunc;
-        if !(diFunc is ()) {
+        if diFunc != () {
             ModuleDI di = <ModuleDI>self.mod.di;
             DILocation loc;
             if fileOnly == () {
@@ -243,7 +243,7 @@ class Scaffold {
             }
             else {
                 DILocation? noLineLoc = self.noLineLocation;
-                if noLineLoc is () {
+                if noLineLoc == () {
                     loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
                     self.noLineLocation = loc;
                 }
@@ -256,7 +256,7 @@ class Scaffold {
     }
 
     function clearDebugLocation(llvm:Builder builder) {
-        if !(self.diFunc is ()) {
+        if !(self.diFunc == ()) {
             builder.setCurrentDebugLocation(());
         }
     }
@@ -271,7 +271,7 @@ class Scaffold {
     function getTypeTest(t:SemType ty) returns llvm:ConstPointerValue {
         UsedSemType used = self.getUsedSemType(ty);
         llvm:ConstPointerValue? value = used.typeTest;
-        if value is () {
+        if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_TYPE_TEST, used.index);
             llvm:ConstPointerValue v = m.llMod.addGlobal(self.initTypes().typeTestVTable, symbol, isConstant = true);
@@ -286,7 +286,7 @@ class Scaffold {
     function getInherentType(t:SemType ty) returns llvm:ConstPointerValue {
         UsedSemType used = self.getUsedSemType(ty);
         llvm:ConstPointerValue? value = used.inherentType;
-        if value is () {
+        if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
             llvm:ConstPointerValue v = m.llMod.addGlobal(llInherentType, symbol, isConstant = true);
@@ -300,7 +300,7 @@ class Scaffold {
 
     private function getUsedSemType(t:SemType ty) returns UsedSemType {
         UsedSemType? used  = self.mod.usedSemTypes[ty];
-        if used is () {
+        if used == () {
             UsedSemType t = {
                 index: self.mod.usedSemTypes.length(),
                 semType: ty

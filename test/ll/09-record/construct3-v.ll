@@ -6,7 +6,7 @@ declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_float_to_tagged(double)
-declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)*, i64) readonly
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
@@ -34,7 +34,7 @@ define void @_B04rootmain() !dbg !5 {
   %14 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %14, i8 addrspace(1)** %r
   %15 = load i8 addrspace(1)*, i8 addrspace(1)** %r
-  %16 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %15, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112))
+  %16 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %15, i64 0)
   %17 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %16)
   store i64 %17, i64* %2
   %18 = load i64, i64* %2
@@ -44,7 +44,7 @@ define void @_B04rootmain() !dbg !5 {
   call void @_Bb02ioprintln(i8 addrspace(1)* %20), !dbg !8
   store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !8
   %21 = load i8 addrspace(1)*, i8 addrspace(1)** %r
-  %22 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %21, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901113))
+  %22 = call i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)* %21, i64 1)
   %23 = call double @_bal_tagged_to_float(i8 addrspace(1)* %22)
   store double %23, double* %4
   %24 = load double, double* %4

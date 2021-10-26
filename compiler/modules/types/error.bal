@@ -28,14 +28,14 @@ function errorSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = bddFixReadOnly(<Bdd>t);
     BddMemo? mm = cx.mappingMemo[b];
     BddMemo m;
-    if mm is () {
+    if mm == () {
         m = { bdd: b };
         cx.mappingMemo.add(m);
     }
     else {
         m = mm;
         boolean? res = m.isEmpty;
-        if res is () {
+        if res == () {
             return true;
         }
         else {

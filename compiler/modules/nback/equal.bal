@@ -148,7 +148,7 @@ function reprIsString(Repr repr) returns boolean {
 }
 
 function reprIsImmediate(Repr repr) returns boolean {
-    return !(repr is TaggedRepr) || (repr.subtype & ~(t:NIL|t:BOOLEAN)) == 0;
+    return repr !is TaggedRepr || (repr.subtype & ~(t:NIL|t:BOOLEAN)) == 0;
 }
 
 function buildEqualTaggedBoolean(llvm:Builder builder, Scaffold scaffold, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result)  {

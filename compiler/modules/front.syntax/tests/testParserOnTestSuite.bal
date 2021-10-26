@@ -44,6 +44,17 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                         foreach Stmt stmt in defn.body {
                             check validateStatementPos(stmt, tok, defn.startPos, defn.endPos);
                         }
+                        check validateTypeDescPos(defn.typeDesc, tok, defn.startPos, defn.endPos);
+                    }
+                    else if defn is ConstDefn {
+                        check validateExpressionPos(defn.expr, tok, defn.startPos, defn.endPos);
+                        TypeDesc? td = defn.td;
+                        if td != () {
+                            check validateTypeDescPos(td, tok, defn.startPos, defn.endPos);
+                        }
+                    }
+                    else {
+                        check validateTypeDescPos(defn.td, tok, defn.startPos, defn.endPos);
                     }
                 }
                 topLevelDefnPos = topLevelDefnPos.sort();
@@ -72,81 +83,6 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
     }
 }
 
-function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns err:Syntax? {
-    check tok.moveToPos(defn.startPos, MODE_NORMAL);
-    test:assertEquals(tok.currentStartPos(), defn.startPos, "moved to wrong position");
-    if defn.vis == "public" {
-        check tok.advance();
-    }
-    if defn is FunctionDefn {
-        _ = check parseFunctionDefinition(tok, defn.part, defn.vis, defn.startPos);
-    }
-    else if defn is ConstDefn {
-        _ = check parseConstDefinition(tok, defn.part, defn.vis, defn.startPos);
-    }
-    else {
-        _ = check parseTypeDefinition(tok, defn.part, defn.vis, defn.startPos);
-    }
-    test:assertEquals(defn.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
-}
-
-function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
-    // TODO: Once stmts that can be expressions also support positions remove this check
-    if !(stmt is CallStmt) {
-        check tok.moveToPos(stmt.startPos, MODE_NORMAL);
-        test:assertEquals(tok.currentStartPos(), stmt.startPos, "moved to wrong position");
-        _ = check parseStmt(tok);
-        test:assertEquals(stmt.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
-        test:assertTrue(stmt.startPos >= parentStartPos && stmt.endPos <= parentEndPos, "child node outside of parent");
-        [err:Position, err:Position][] childNodePos = [];
-        if stmt is IfElseStmt {
-            foreach Stmt trueStmt in stmt.ifTrue {
-                check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
-                // TODO: Once stmts that can be expressions also support positions remove this check
-                if !(trueStmt is CallStmt) {
-                    childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
-                }
-            }
-            foreach Stmt falseStmt in stmt.ifFalse {
-                check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
-                // TODO: Once stmts that can be expressions also support positions remove this check
-                if !(falseStmt is CallStmt) {
-                    childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
-                }
-            }
-        }
-        else if stmt is MatchStmt {
-            foreach var clause in stmt.clauses {
-                foreach var matchStmt in clause.block {
-                    check validateStatementPos(matchStmt, tok, stmt.startPos, stmt.endPos);
-                        // TODO: Once stmts that can be expressions also support positions remove this check
-                        if !(matchStmt is CallStmt) {
-                            childNodePos.push([matchStmt.startPos, matchStmt.endPos]);
-                        }
-                }
-            }
-        }
-        else if stmt is (WhileStmt|ForeachStmt) {
-            foreach var bodyStmt in <Stmt[]>stmt.body {
-                check validateStatementPos(bodyStmt, tok, stmt.startPos, stmt.endPos);
-                // TODO: Once stmts that can be expressions also support positions remove this check
-                if !(bodyStmt is CallStmt) {
-                    childNodePos.push([bodyStmt.startPos, bodyStmt.endPos]);
-                }
-            }
-        }
-        childNodePos = childNodePos.sort();
-        err:Position lastEnd = stmt.startPos;
-        foreach var [startPos, endPos] in childNodePos {
-            test:assertTrue(startPos < endPos, "invalid start and end positions");
-            test:assertTrue((startPos == stmt.startPos) || (startPos > lastEnd), "overlapping statements");
-            test:assertFalse(testPositionIsWhiteSpace(tok.file, startPos), "start position is a white space");
-            test:assertFalse(testPositionIsWhiteSpace(tok.file, endPos), "end position is a white space");
-            lastEnd = endPos;
-        }
-    }
-}
-
 function partToLines(ModulePart part) returns string[] {
     Word[] w = [];
     modulePartToWords(w, part);
@@ -158,37 +94,5 @@ function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) re
 }
 
 function testPositionIsWhiteSpace(SourceFile file, Position pos) returns boolean {
-    var [lineIndex, fragIndex] = sourceFileFragIndex(file, pos);
-    ScannedLine line = file.scannedLine(lineIndex);
-    FragCode frag = line.fragCodes[fragIndex];
-    return frag == FRAG_WHITESPACE || frag == FRAG_COMMENT;
-}
-
-function testIsWhitespace(SourceFile file, Position startPos, Position endPos) returns boolean {
-    var [startLineIndex, startFragIndex] = sourceFileFragIndex(file, startPos);
-    var [endLineIndex, endFragIndex] = sourceFileFragIndex(file, endPos);
-    int lineIndex = startLineIndex;
-    int i = unpackPosition(startPos)[1];
-    while lineIndex <= endLineIndex {
-        ScannedLine line = file.scannedLine(lineIndex);
-        while i < line.fragments.length() {
-            if lineIndex >= endLineIndex && i >= endFragIndex {
-                return true;
-            }
-            FragCode frag = line.fragCodes[i];
-            if frag != FRAG_WHITESPACE && frag != FRAG_COMMENT {
-                return false;
-            }
-            i += 1;
-        }
-        i = 0;
-        lineIndex += 1;
-    }
-    return true; // start == end
-}
-
-function sourceFileFragIndex(SourceFile file, Position pos) returns [int, int] {
-    var [lineNumber, codePointIndex] = unpackPosition(pos);
-    ScannedLine line = file.scannedLine(lineNumber);
-    return [lineNumber, scanLineFragIndex(line, codePointIndex)[0]];
+    return checkPosFragCode(file, pos, FRAG_WHITESPACE, FRAG_COMMENT);
 }
