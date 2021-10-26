@@ -9,13 +9,13 @@ const CASE_START = "// @case";
 final int CASE_START_LENGTH = CASE_START.length();
 const CASE_END = "// @end";
 
-// JBUG #31673 can't specify the first type to be "V"|"E"|ect
-type ParserTestCase [string, string, string[], string[]];
-type SingleStringParserTestCase [string, string, string, string];
+type Kind "V"|"E"|"U"|"UE";
+type ParserTestCase [Kind, string, string[], string[]];
+type SingleStringParserTestCase [Kind, string, string, string];
 @test:Config {
     dataProvider: validTokenSourceFragments
 }
-function testParser(string k, string rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
+function testParser(Kind k, string rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
     if k.includes("U") {
         // XXX validate unimplemented error is being returned
         return;
@@ -547,19 +547,22 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
             expected = src;
         }
 
-        string[] baseParts = splitTestName(base);
+        [Kind, string] baseParts = check splitTestName(base);
         tests["file:" + base] = [baseParts[0], baseParts[1], src, expected];
     }
     return tests;
 }
-function splitTestName(string base) returns [string, string] {
+function splitTestName(string base) returns [Kind, string]|error {
     int len = base.length();
     int kindPos = base.indexOf("-") ?: 0;
     string kind = base.substring(0, kindPos);
-    int afterKindPos = min(kindPos + 1, len);
-    int rulePos = base.indexOf("-", afterKindPos) ?: afterKindPos;
-    string rule = base.substring(afterKindPos, rulePos);
-    return [kind, rule];
+    if kind is Kind {
+        int afterKindPos = min(kindPos + 1, len);
+        int rulePos = base.indexOf("-", afterKindPos) ?: afterKindPos;
+        string rule = base.substring(afterKindPos, rulePos);
+        return [kind, rule];
+    }
+    return error("invalid test kind");
 }
 
 function min(int a, int b) returns int {
