@@ -93,7 +93,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         |  "readonly" => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            // JBUG should not need cast #30191
             return { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
         }
         "string"
@@ -112,15 +111,17 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         "xml" => {
             Position pos = tok.currentStartPos();
+            Position endPos = tok.currentEndPos();
             check tok.advance();
             if tok.current() == ":" {
                 check tok.advance();
-                return { prefix: <LeafTypeDesc> cur, typeName: check tok.expectIdentifier(), pos };
+                string typeName = check tok.expectIdentifier();
+                return { startPos, endPos, prefix: <string>cur, typeName, pos };
             }
             else if tok.current() == "<" {
-                return { constituent: check parseTypeParam(tok), pos };
+                return { startPos, endPos, constituent: check parseTypeParam(tok), pos };
             }
-            return <LeafTypeDesc> cur;
+            return  { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
         }
         "byte" => {
             Position endPos = tok.currentEndPos();

@@ -464,8 +464,11 @@ public type BinaryTypeDesc record {|
 |};
 
 public type XmlSequenceTypeDesc record {|
-    TypeDesc constituent;
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
     Position pos;
+    TypeDesc constituent;
 |};
 
 public type TypeDescRef record {|
