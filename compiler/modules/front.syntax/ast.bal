@@ -461,6 +461,7 @@ public type BinaryTypeOp "|" | "&";
 public type BinaryTypeDesc record {|
     *PositionFields;
     BinaryTypeOp op;
+    Position opPos;
     TypeDesc left;
     TypeDesc right;
 |};
