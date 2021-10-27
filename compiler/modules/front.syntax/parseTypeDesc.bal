@@ -9,9 +9,25 @@ function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     return parseUnion(tok);
 }
 
+function finishTypeDesc(Tokenizer tok, TypeDesc first, Position startPos) returns TypeDesc|err:Syntax {
+    return check finishUnion(tok, first, startPos);
+}
+
 function parseUnion(Tokenizer tok) returns TypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     TypeDesc td = check parseIntersection(tok);
+    while tok.current() == "|" {
+        check tok.advance();
+        TypeDesc right = check parseIntersection(tok);
+        Position endPos = tok.previousEndPos();
+        BinaryTypeDesc bin = { startPos, endPos, op: "|", left: td, right };
+        td = bin;
+    }
+    return td;
+}
+
+function finishUnion(Tokenizer tok, TypeDesc first, Position startPos) returns TypeDesc|err:Syntax {
+    TypeDesc td = check finishIntersection(tok, first, startPos);
     while tok.current() == "|" {
         check tok.advance();
         TypeDesc right = check parseIntersection(tok);
@@ -35,9 +51,49 @@ function parseIntersection(Tokenizer tok) returns TypeDesc|err:Syntax {
     return td;
 }
 
+function finishIntersection(Tokenizer tok, TypeDesc first, Position startPos) returns TypeDesc|err:Syntax {
+    TypeDesc td = check finishPostfixTypeDesc(tok, first, startPos);
+    while tok.current() == "&" {
+        check tok.advance();
+        TypeDesc right = check parsePostfixTypeDesc(tok);
+        Position endPos = tok.previousEndPos();
+        BinaryTypeDesc bin = { startPos, endPos, op: "&", left: td, right };
+        td = bin;
+    }
+    return td;
+}
+
 function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     TypeDesc td = check parsePrimaryTypeDesc(tok);
+    while true {
+        if tok.current() == "?" {
+            Position endPos = tok.currentEndPos();
+            check tok.advance();
+            BinaryTypeDesc bin =  {
+                startPos,
+                endPos,
+                op: "|",
+                left: td,
+                right: { startPos: endPos, endPos, builtinTypeName: "null"} // start and end position of right is same because its single character
+            };
+            td = bin;
+        }
+        else if tok.current() == "[" {
+            check tok.advance();
+            Position endPos = check tok.expectEnd("]");
+            ListTypeDesc list = { startPos, endPos, members: [], rest: td };
+            td = list;
+        }
+        else {
+            break;
+        }
+    }
+    return td;
+}
+
+function finishPostfixTypeDesc(Tokenizer tok, TypeDesc first, Position startPos) returns TypeDesc|err:Syntax {
+    TypeDesc td = first;
     while true {
         if tok.current() == "?" {
             Position endPos = tok.currentEndPos();

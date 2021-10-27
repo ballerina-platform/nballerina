@@ -115,6 +115,13 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
         return parseCompoundAssignStmt(tok, lValue, cur, startPos);
     }
     else if cur == "[" {
+        // SUBSET fixed length array types / tuples are not supported, is a td only if no token between `[` `]`
+        if tok.peek() == "]" {
+            TypeDescRef ref = { startPos, endPos, typeName: identifier, pos };
+            TypeDesc td = check finishTypeDesc(tok, ref, tok.currentStartPos());
+            return finishVarDeclStmt(tok, td, startPos);
+        }
+
         VarRefExpr varRef = { startPos, endPos, varName: identifier };
         Position bracketPos = tok.currentStartPos();
         check tok.advance();
@@ -177,6 +184,12 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
             // SUBSET handle "["
         }
         // falls through to end
+    }
+    // SUBSET no module level lists, so `x:y[` implies a td
+    else if cur is "|" | "?" | "[" {
+        TypeDescRef ref = { startPos, endPos, prefix, typeName: identifier, pos };
+        TypeDesc td = check finishTypeDesc(tok, ref, tok.currentStartPos());
+        return finishVarDeclStmt(tok, td, startPos);
     }
     else if cur is [IDENTIFIER, string] {
         TypeDescRef ref = { startPos, endPos, prefix, typeName: identifier, pos };
