@@ -225,7 +225,8 @@ class Tokenizer {
                     return;
                 }
                 _ => {
-                    FixedToken? ft = fragTokens[fragCode];
+                    // JBUG #33346 cast should not be needed
+                    FixedToken? ft = fragTokens[<int>fragCode];
                     // if we've missed something above, we'll get a panic from the cast here
                     self.codePointIndex += (<string>ft).length();
                     self.curTok = ft;
@@ -293,7 +294,8 @@ class Tokenizer {
                         return DECIMAL_FP_NUMBER;
                     }
                     _ => {
-                        return <FixedToken>fragTokens[fragCode];
+                        // JBUG #33346 cast should not be needed
+                        return <FixedToken>fragTokens[<int>fragCode];
                     }
                 }
             }   
