@@ -93,6 +93,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         |  "readonly" => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
+            // JBUG should not need cast #30191
             return { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
         }
         "string"

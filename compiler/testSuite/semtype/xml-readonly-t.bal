@@ -30,3 +30,4 @@ type RO_XML xml<N|RO_E|RO_C|RO_P|T>;
 // @type RO_XML_INTERSECTION = RO_XML
 // @type RO_XML_INTERSECTION = RX
 type RO_XML_INTERSECTION RO_XML & readonly;
+
