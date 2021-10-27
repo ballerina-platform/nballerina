@@ -227,6 +227,7 @@ extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoin
 #define TAGGED_PTR_SHIFT 3
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
+extern ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity);
 extern PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
 extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 
@@ -541,4 +542,15 @@ static READONLY inline int64_t stringArrayCompare(TaggedPtr lhs, TaggedPtr rhs) 
 
 static READONLY inline int64_t booleanArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
     return arrayCompare(lhs, rhs, &taggedBooleanCompare);
+}
+
+static inline void initGenericArray(GC GenericArray *ap, int64_t capacity, int shift) {
+    ap->length = 0;
+    ap->capacity = capacity;
+    if (capacity == 0) {
+        ap->members = 0;
+    }
+    else {
+        ap->members = _bal_alloc(capacity << shift);
+    }
 }

@@ -28,6 +28,16 @@ final RuntimeFunction mappingIndexedSetFunction = {
     },
     attrs: []
 };
+
+final RuntimeFunction listConstructFunction = {
+    name: "list_construct",
+    ty: {
+        returnType: heapPointerType(llListType),
+        paramTypes: [llvm:pointerType(llInherentType), LLVM_INT]
+    },
+    attrs: []
+};
+
 final RuntimeFunction mappingGetFunction = {
     name: "mapping_get",
     ty: {
@@ -67,53 +77,39 @@ final RuntimeFunction mappingConstructFunction = {
 const LLVM_INDEX = "i32";
 
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
-    final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
-    final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
-    final llvm:Type structType = llvm:structType([llvm:pointerType(llInherentType), LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
-    // Cases that are not UniformTypeBitSet should have been filtered out before
-    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), insn.result.semType);
     final int length = insn.operands.length();
-    llvm:PointerValue array;
+    t:SemType listType = insn.result.semType;
+    llvm:ConstPointerValue inherentType = scaffold.getInherentType(listType);
+    llvm:PointerValue struct = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(listConstructFunction),
+                                                               [inherentType, llvm:constInt(LLVM_INT, length)]);
+
     if length > 0 {
+        // de-refer the member array from the list struct
         final llvm:Type sizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, length);
         final llvm:PointerType ptrSizedArrayType = heapPointerType(sizedArrayType);
+        llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct,
+                                                                                        [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)],
+                                                                                        "inbounds"),
+                                                                  ALIGN_HEAP);
 
-        array = buildTypedAlloc(builder, scaffold, sizedArrayType);
+        // Cases that are not UniformTypeBitSet should have been filtered out before
+        t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), listType);
         foreach int i in 0 ..< length {
             builder.store(check buildWideRepr(builder, scaffold, insn.operands[i], REPR_ANY, memberType),
                           builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));
         }
-        array = builder.bitCast(array, ptrUnsizedArrayType);
-    }
-    else {
-        array = llvm:constNull(ptrUnsizedArrayType);
-    }
-    final llvm:PointerValue structMem = buildUntypedAlloc(builder, scaffold, structType);
-    final llvm:PointerValue struct = builder.bitCast(structMem, heapPointerType(structType));
-    // Store a pointer to member bitset as the ListDescPtr
-    llvm:ConstPointerValue inherentType = scaffold.getInherentType(insn.result.semType);
-    builder.store(inherentType,
-                  builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)], "inbounds"));
-    foreach int i in 1 ..< 3 {
         builder.store(llvm:constInt(LLVM_INT, length),
-                      builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, i)], "inbounds"));
+                      builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)], "inbounds"));
     }
-    builder.store(array,
-                  builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)], "inbounds"));
-    // Don't need to convert here
-    builder.store(buildTaggedPtr(builder, structMem, TAG_LIST_RW|FLAG_EXACT), scaffold.address(insn.result));
+    builder.store(buildTaggedPtr(builder, builder.bitCast(struct, LLVM_TAGGED_PTR), TAG_LIST_RW|FLAG_EXACT), scaffold.address(insn.result));
 }
 
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
-    final llvm:Type unsizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, 0);
-    final llvm:PointerType ptrUnsizedArrayType = heapPointerType(unsizedArrayType);
-    final llvm:Type structType = llvm:structType([LLVM_INT, LLVM_INT, LLVM_INT, ptrUnsizedArrayType]);
-
     llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
     // struct is the untagged pointer to the struct
     llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
                                                                                [builder.load(scaffold.address(insn.operands[0])), llvm:constInt(LLVM_INT, POINTER_MASK)]),
-                                               heapPointerType(structType));
+                                               heapPointerType(llListType));
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
     builder.condBr(builder.iCmp("ult",
