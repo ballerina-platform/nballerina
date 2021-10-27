@@ -277,8 +277,10 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     check validateExprOpPos(expr, tok);
 }
 
+type ExprOpPos BinaryExpr|UnaryExpr;
+
 function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
-    if expr is BinaryExpr {
+    if expr is ExprOpPos {
         check tok.moveToPos(expr.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;
         if expr is BinaryRelationalExpr {
@@ -290,14 +292,12 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         else if expr is BinaryArithmeticExpr {
             test:assertTrue(opToken is BinaryArithmeticOp);
         }
-        else {
+        else if expr is BinaryBitwiseExpr {
             test:assertTrue(opToken is BinaryBitwiseOp);
         }
-    }
-    else if expr is UnaryExpr {
-        check tok.moveToPos(expr.opPos, MODE_NORMAL);
-        Token? opToken = tok.curTok;
-        test:assertTrue(opToken is UnaryExprOp);
+        else {
+            test:assertTrue(opToken is UnaryExprOp);
+        }
     }
 }
 
