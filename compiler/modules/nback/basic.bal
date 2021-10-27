@@ -222,11 +222,11 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
 }
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.position, "file");
+    scaffold.setDebugLocation(builder, insn.opPos, "file");
     llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(errorConstructFunction),
                                                 [
                                                     check buildString(builder, scaffold, insn.operand),
-                                                    llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.position))
+                                                    llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.opPos))
                                                 ]);
     builder.store(value, scaffold.address(insn.result));
 }
