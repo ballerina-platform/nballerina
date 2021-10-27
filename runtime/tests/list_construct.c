@@ -30,7 +30,7 @@ void testListSet(int64_t capacity, int64_t length) {
     }
 
     ListPtr lp = _bal_list_construct(&DESC_STRING, capacity);
-    assert(lp->tpArray.capacity = capacity);
+    assert(lp->tpArray.capacity == capacity);
     TaggedPtr taggedLp = ptrAddFlags(lp, ((uint64_t)TAG_LIST_RW << TAG_SHIFT)|EXACT_FLAG);
     for (i = 0; i < length; i++) {
         _bal_list_set(taggedLp, i, strs[i]);
