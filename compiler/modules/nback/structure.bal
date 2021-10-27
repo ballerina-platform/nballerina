@@ -118,7 +118,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
                    continueBlock,
                    outOfBoundsBlock);
     builder.positionAtEnd(outOfBoundsBlock);
-    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_INDEX_OUT_OF_BOUNDS, insn.position), scaffold.panicAddress());
+    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_INDEX_OUT_OF_BOUNDS, insn.opPos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
     // array is a pointer to the array
@@ -139,8 +139,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
                                    [builder.load(scaffold.address(insn.operands[0])),
                                     buildInt(builder, scaffold, insn.operands[1]),
                                     check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)]);
-    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
-   
+    buildCheckError(builder, scaffold, <llvm:Value>err, insn.opPos);
 }
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
@@ -216,7 +215,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
                                        k,
                                        check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)
                                    ]);
-    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
+    buildCheckError(builder, scaffold, <llvm:Value>err, insn.opPos);
 }
 
 function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {
