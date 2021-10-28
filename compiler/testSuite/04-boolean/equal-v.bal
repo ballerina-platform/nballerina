@@ -1,3 +1,4 @@
+// @productions equality boolean if-else-stmt equality-expr boolean-literal return-stmt function-call-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
 function checkEquality(boolean b1, boolean b2) returns boolean {

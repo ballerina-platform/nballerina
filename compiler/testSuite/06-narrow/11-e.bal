@@ -1,3 +1,4 @@
+// @productions float module-const-decl string-literal equality if-else-stmt equality-expr floating-point-literal function-call-expr
 import ballerina/io;
 
 const ZERO = 0.0;

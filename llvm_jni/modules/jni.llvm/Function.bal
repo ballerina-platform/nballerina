@@ -1,14 +1,5 @@
 import ballerina/jballerina.java;
 
-function toLLVmFunctionType(FunctionType fnType, Context context) returns handle {
-    int paramCount = fnType.paramTypes.length();
-    PointerPointer paramType = new (paramCount);
-    foreach var ty in fnType.paramTypes {
-        paramType.put(typeToLLVMType(ty));
-    }
-    return jLLVMFunctionType(typeToLLVMType(fnType.returnType), paramType.jObject, paramCount, 0);
-}
-
 // LLVM C-API don't differentiate between function declarations and definitions
 public type FunctionDefn Function;
 
@@ -27,29 +18,29 @@ function linkageToInt(Linkage linkage) returns int {
 }
 
 public distinct class Function {
-    handle LLVMFunction;
-    FunctionType fnType;
-    Context context;
+    final handle LLVMValueRef;
+    final FunctionType fnType;
+    final Context context;
     function init(handle llvmFunction, FunctionType fnType, Context context) {
-        self.LLVMFunction = llvmFunction;
+        self.LLVMValueRef = llvmFunction;
         jLLVMSetFunctionCallConv(llvmFunction, 0);
         self.fnType = fnType;
         self.context = context;
     }
 
     public function getParam(int index) returns Value {
-        return new (jLLVMGetParam(self.LLVMFunction, index));
+        return new (jLLVMGetParam(self.LLVMValueRef, index));
     }
 
     public function appendBasicBlock(string? label = ()) returns BasicBlock {
         string bbLabel = label ?: "";
-        BasicBlock bb = new (jLLVMAppendBasicBlockInContext(self.context.LLVMContext, self.LLVMFunction, java:fromString(bbLabel)));
+        BasicBlock bb = new (jLLVMAppendBasicBlockInContext(self.context.LLVMContext, self.LLVMValueRef, java:fromString(bbLabel)));
         return bb;
     }
 
     public function setLinkage(Linkage linkage) {
         int linkageVal = linkageToInt(linkage);
-        jLLVMSetLinkage(self.LLVMFunction, linkageVal);
+        jLLVMSetLinkage(self.LLVMValueRef, linkageVal);
     }
 
     public function addEnumAttribute(EnumAttribute attribute) {
@@ -76,21 +67,21 @@ public distinct class Function {
         } else {
             int attrKind = jLLVMGetEnumAttributeKindForName(attributeName, attributeNameLength);
             handle attr = jLLVMCreateEnumAttribute(self.context.LLVMContext, attrKind, 0);
-            jLLVMAddAttributeAtIndex(self.LLVMFunction, index, attr);
+            jLLVMAddAttributeAtIndex(self.LLVMValueRef, index, attr);
         }
     }
 
     public function setGC(string? name) {
         if name is string {
-            jLLVMSetGC(self.LLVMFunction, java:fromString(name));
+            jLLVMSetGC(self.LLVMValueRef, java:fromString(name));
         } 
         else {
-            jLLVMSetGC(self.LLVMFunction, java:fromString(""));
+            jLLVMSetGC(self.LLVMValueRef, java:fromString(""));
         }
     }
 
     public function setSubprogram(Metadata metadata) {
-        jLLVMSetSubprogram(self.LLVMFunction, metadata.llvmMetadata);
+        jLLVMSetSubprogram(self.LLVMValueRef, metadata.llvmMetadata);
     }
 }
 

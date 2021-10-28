@@ -1,9 +1,9 @@
 // EnumerableTypes are types in which each expressible subtype can be reasonably
 // represented by a list of values. counter-eg: `int` is not a EnumerableType since
 // uint32 can't be reasonably represented by listing all values.
-type EnumerableType float|string;
+type EnumerableType float|string|decimal;
 
-type EnumerableSubtype FloatSubtype|StringSubtype;
+type EnumerableSubtype FloatSubtype|DecimalSubtype|CharStringSubtype|NonCharStringSubtype;
 
 const LT = -1;
 const EQ = 0;
@@ -165,16 +165,19 @@ function compareEnumerable(EnumerableType v1, EnumerableType v2) returns Order {
         string s2 = <string>v2;
         return v1 == s2 ? EQ : (v1 < s2 ? LT : GT);
     }
+    else if v1 is decimal {
+        decimal d2 = <decimal>v2;
+        return v1 == d2 ? EQ : (v1 < d2 ? LT : GT);
+    }
     else {
         float f2 = <float>v2;
-        // JBUG: #17977 can't use `==`
-        if floatEq(v1, f2) {
+        if v1 == f2 {
             return EQ;
         }
-        else if floatEq(v1, float:NaN) {
+        else if v1 == float:NaN {
              return LT;
         }
-        else if floatEq(f2, float:NaN) {
+        else if f2 == float:NaN {
             return GT;
         }
         else if v1 < f2 {
@@ -182,17 +185,4 @@ function compareEnumerable(EnumerableType v1, EnumerableType v2) returns Order {
         }
         return GT;
     }
-}
-
-// XXX remove this after JBUG #17977 is fixed
-function floatEq(float f1, float f2) returns boolean {
-    if float:isNaN(f1) {
-        if float:isNaN(f2) {
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-    return f1 == f2;
 }

@@ -79,7 +79,7 @@ The compiler has not yet got to a stage where it is useful. But if you want to p
 2. [Download](https://ballerina.io/downloads/) and [install](https://ballerina.io/learn/user-guide/getting-started/installation-options/) the latest Ballerina distribution (Swan Lake not 1.2.x)
 3. You can build the compiler by using the command `bal build` in the `compiler` directory; this will generate a file `target/bin/nballerina.jar`. This should work on any system that Ballerina works on.
 4. You can use `java -jar nballerina.jar example.bal` to compile a Ballerina module into an LLVM assembly file `example.ll` (note that only a tiny subset of the language is currently implemented, as described in the Status section).
-5. If you want to be able to turn the LLVM assembly file into something you can execute, there are additional requirements: Linux or OS X, LLVM 11 and GNU make. With these, you can build the runtime and run the tests by running `make test` in the top-level directory. This compiles and executes all the test cases and checks that they produce the right outputs. You can use e.g. `make -j8` to make it run tests in parallel.
+5. If you want to be able to turn the LLVM assembly file into something you can execute, there are additional requirements: Linux or OS X, LLVM 12 and GNU make. With these, you can build the runtime and run the tests by running `make test` in the top-level directory. This compiles and executes all the test cases and checks that they produce the right outputs. You can use e.g. `make -j8` to make it run tests in parallel.
 
 If you want to turn the LLVM assembly into an executable, you can use the [test/run.sh](test/run.sh) command.
 
@@ -103,6 +103,6 @@ For those test cases that are valid Ballerina programs, the Makefile in the [tes
 
 ## Status
 
-We have completed [subset 6](docs/subset06.md) and are working on [subset 7](docs/subset07.md).
+We have completed [subset 9](docs/subset09.md) and are working on [subset 10](docs/subset10.md).
 
 The semantic subtyping implementation is further along than the backend. It implements the subset of Ballerina's type syntax described by this [grammar](docs/type-subset.md).

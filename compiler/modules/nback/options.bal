@@ -6,13 +6,15 @@ public const DEBUG_NONE = 0;
 public const DEBUG_BACKTRACE = 1;
 public const DEBUG_FULL = 2;
 
+public type DebugLevel DEBUG_NONE|DEBUG_BACKTRACE|DEBUG_FULL;
+
 public type Options record {|
     string? gcName = ();
-    int debugLevel = DEBUG_NONE;
+    DebugLevel debugLevel = DEBUG_BACKTRACE;
 |};
 
 public function validGcName(string? gcName) returns string?|error {
-    if gcName is () {
+    if gcName == () {
         return ();
     } 
     else {
@@ -22,5 +24,17 @@ public function validGcName(string? gcName) returns string?|error {
             }
         }
         return gcName;
+    }
+}
+
+public function validDebugLevel(int? debugLevel) returns DebugLevel|error {
+    if (debugLevel == ()) {
+        return DEBUG_BACKTRACE;
+    }
+    else if (debugLevel < DEBUG_NONE || debugLevel > DEBUG_FULL) {
+        return error("invalid debug level " + debugLevel.toString());
+    } 
+    else {
+        return <DebugLevel>debugLevel;
     }
 }

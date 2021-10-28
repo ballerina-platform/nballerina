@@ -1,3 +1,4 @@
+// @productions while-stmt break-stmt if-else-stmt relational-expr boolean-literal unary-expr additive-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

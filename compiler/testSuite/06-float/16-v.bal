@@ -1,3 +1,4 @@
+// @productions float string string-literal exact-equality equality multiplicative-expr if-else-stmt equality-expr floating-point-literal return-stmt unary-expr any function-call-expr local-var-decl-stmt int-literal
 
 import ballerina/io;
 

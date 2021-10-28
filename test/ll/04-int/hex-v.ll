@@ -3,11 +3,11 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_alloc(i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) readnone speculatable
-declare void @_Bio__println(i8 addrspace(1)*)
-define void @_B_main() {
-  %1 = alloca i8 addrspace(1)*
+declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
+define void @_B04rootmain() !dbg !5 {
   %answers = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
   %4 = alloca i8 addrspace(1)*
@@ -38,12 +38,12 @@ define void @_B_main() {
   store i64 3, i64 addrspace(1)* %22
   %23 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %19, i64 0, i32 3
   store [0 x i8 addrspace(1)*] addrspace(1)* %17, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %23
-  %24 = getelementptr i8, i8 addrspace(1)* %18, i64 1297036692682702848
+  %24 = getelementptr i8, i8 addrspace(1)* %18, i64 1297036692682702852
   store i8 addrspace(1)* %24, i8 addrspace(1)** %1
   %25 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %25, i8 addrspace(1)** %answers
   %26 = load i8 addrspace(1)*, i8 addrspace(1)** %answers
-  %27 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %26, i64 72057594037927935)
+  %27 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %26, i64 72057594037927928)
   %28 = bitcast i8 addrspace(1)* %27 to {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
   %29 = getelementptr {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %28, i64 0, i32 1
   %30 = load i64, i64 addrspace(1)* %29, align 8
@@ -54,7 +54,7 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %33)
   unreachable
 34:
-  %35 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %35 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
   call void @_bal_panic(i8 addrspace(1)* %35)
   unreachable
 36:
@@ -63,12 +63,23 @@ define void @_B_main() {
   %39 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %38, i64 0, i64 1
   %40 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %39, align 8
   store i8 addrspace(1)* %40, i8 addrspace(1)** %2
-  %41 = load i8 addrspace(1)*, i8 addrspace(1)** %2
-  call void @_Bio__println(i8 addrspace(1)* %41)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  %41 = load i8 addrspace(1)*, i8 addrspace(1)** %2, !dbg !8
+  call void @_Bb02ioprintln(i8 addrspace(1)* %41), !dbg !8
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !8
   ret void
 42:
-  %43 = call i8 addrspace(1)* @_bal_panic_construct(i64 1285)
+  %43 = call i8 addrspace(1)* @_bal_panic_construct(i64 1541), !dbg !7
   store i8 addrspace(1)* %43, i8 addrspace(1)** %4
   br label %32
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/04-int/hex-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = !DILocation(line: 0, column: 0, scope: !5)
+!8 = !DILocation(line: 6, column: 4, scope: !5)

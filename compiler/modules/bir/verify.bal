@@ -5,13 +5,13 @@ import wso2/nballerina.err;
 
 class VerifyContext {
     private final Module mod;
-    private final t:TypeCheckContext tc;
+    private final t:Context tc;
     private final FunctionDefn defn;
     private final t:SemType anydataType;
 
     function init(Module mod, FunctionDefn defn) {
         self.mod = mod;
-        t:TypeCheckContext tc  = mod.getTypeCheckContext();
+        t:Context tc  = mod.getTypeContext();
         self.tc = tc;
         self.defn = defn;
         self.anydataType = createAnydata(tc.env);
@@ -19,6 +19,10 @@ class VerifyContext {
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
         return t:isSubtype(self.tc, s, t);
+    }
+
+    function isSameType(t:SemType s, t:SemType t) returns boolean {
+        return s == t || (t:isSubtype(self.tc, s, t) && t:isSubtype(self.tc, t, s));
     }
 
     function isEmpty(t:SemType t) returns boolean {
@@ -29,8 +33,8 @@ class VerifyContext {
         return t:isSubtype(self.tc, t, self.anydataType);
     }
 
-    function typeEnv() returns t:Env {
-        return self.tc.env;
+    function typeContext() returns t:Context {
+        return self.tc;
     }
 
     function err(err:Message msg, Position? pos = ()) returns err:Semantic {
@@ -40,7 +44,7 @@ class VerifyContext {
     function returnType() returns t:SemType => self.defn.signature.returnType;
 
     function symbolToString(Symbol sym) returns string {
-        return symbolToString(self.mod, self.defn.partIndex, sym);
+        return self.mod.symbolToString(self.defn.partIndex, sym);
     }
 }
 
@@ -163,7 +167,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
     if !vc.isSubtype(ty, t:LIST_RW) {
         return vc.err("bad BIR: inherent type of list construct is not a mutable list");
     }
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), ty);
+    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeContext(), ty);
     if memberType == () {
         return vc.err("bad BIR: inherent type of list is of an unsupported type");
     }
@@ -179,65 +183,67 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     if !vc.isSubtype(ty, t:MAPPING_RW) {
         return vc.err("bad BIR: inherent type of mapping construct is not a mutable mapping");
     }
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), ty);
-    if memberType == () {
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(vc.typeContext(), ty);
+    foreach int i in 0 ..< insn.operands.length() {
+        t:SemType memberType = t:mappingMemberType(vc.typeContext(), ty, insn.fieldNames[i]);
+        if memberType == t:NEVER {
+            return vc.err(`field ${insn.fieldNames[i]} is not allowed by the type`);
+        }
+        check verifyOperandType(vc, insn.operands[i], memberType,
+                                "type of mapping constructor member of not a subtype of mapping member type");
+    }
+    if mat == () {
         return vc.err("bad BIR: inherent type of map is of an unsupported type");
     }
-    else {
-        foreach var operand in insn.operands {
-            check verifyOperandType(vc, operand, memberType, "mapping constructor member of not a subtype of map member type");
-        }
+    else if insn.operands.length() < mat.names.length() {
+        return vc.err("missing record fields in mapping constructor");
     }
 }
 
 function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic? {
-    check verifyOperandInt(vc, insn.name, insn.operand);
-    if !vc.isSubtype(insn.list.semType, t:LIST) {
+    check verifyOperandInt(vc, insn.name, insn.operands[1]);
+    if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.err("list get applied to non-list");
     }
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), insn.list.semType);
-    if memberType == () || !vc.isSubtype(memberType, insn.result.semType) {
-        return vc.err("bad BIR: unsafe type for result ListGet", pos=insn.position);
+    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
+    if !vc.isSameType(memberType, insn.result.semType) {
+        return vc.err("bad BIR: ListGet result type is not same as member type", pos=insn.position);
     }
 }
 
 function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic? {
-    check verifyOperandInt(vc, insn.name, insn.index);
-    if !vc.isSubtype(insn.list.semType, t:LIST) {
+    IntOperand i = insn.operands[1];
+    check verifyOperandInt(vc, insn.name, i);
+    if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.err("list set applied to non-list");
     }
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeEnv(), insn.list.semType);
-    if memberType == () {
-        return vc.err("ListSet on unsupported list type");
-    }
-    else {
-        return verifyOperandType(vc, insn.operand, memberType, "value assigned to member of list is not a subtype of array member type");
-    }
+    t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
+    return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type");
 }
 
 function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic? {
-    check verifyOperandString(vc, insn.name, insn.operands[1]);
+    StringOperand k = insn.operands[1];
+    check verifyOperandString(vc, insn.name, k);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping get applied to non-mapping");
     }
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), insn.operands[0].semType);
-    if memberType == () || !vc.isSubtype(t:union(memberType, t:NIL), insn.result.semType) {
-        return vc.err("bad BIR: unsafe type for result MappingGet");
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
+    if k !is string || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k) {
+        memberType = t:union(memberType, t:NIL);
+    }
+    if !vc.isSameType(memberType, insn.result.semType) {
+        return vc.err("bad BIR: MappingGet result type is not same as member type");
     }
 }
 
 function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic? {
-    check verifyOperandString(vc, insn.name, insn.operands[1]);
+    StringOperand k = insn.operands[1];
+    check verifyOperandString(vc, insn.name, k);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping set applied to non-mapping");
     }
-    t:UniformTypeBitSet? memberType = t:simpleMapMemberType(vc.typeEnv(), insn.operands[0].semType);
-    if memberType == () {
-        return vc.err("MappingSet on unsupported mapping type");
-    }
-    else {
-        return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type");
-    }
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
+    return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type");
 }
 
 function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
@@ -248,8 +254,8 @@ function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semanti
     if !vc.isSubtype(insn.result.semType, insn.operand.semType) {
         return vc.err("bad BIR: result of type cast is not subtype of operand");
     }
-    if !vc.isSubtype(insn.result.semType, insn.semType) {
-        return vc.err("bad BIR: result of type cast is not subtype of cast to type");
+    if !vc.isSameType(insn.result.semType, insn.semType) {
+        return vc.err("bad BIR: result of type cast is not same as cast to type");
     }
 }
 
@@ -257,8 +263,8 @@ function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns
     if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:INT), t:NUMBER)) {
         return vc.err("bad BIR: operand type of ConvertToInt has no non-integral numeric component");
     }
-    if !vc.isSubtype(t:union(t:diff(insn.operand.semType, t:NUMBER), t:INT), insn.result.semType) {
-        return vc.err("bad BIR: result type of ConvertToInt does not contain everything it should");
+    if !vc.isSameType(t:union(t:diff(insn.operand.semType, t:NUMBER), t:INT), insn.result.semType) {
+        return vc.err("bad BIR: result type of ConvertToInt is incorrect");
     }
     if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:INT), t:NUMBER)) {
         return vc.err("bad BIR: result type of ConvertToInt contains non-integral numeric type");
@@ -269,8 +275,8 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
     if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:FLOAT), t:NUMBER)) {
         return vc.err("bad BIR: operand type of ConvertToFloat has no non-float numeric component");
     }
-    if !vc.isSubtype(t:union(t:diff(insn.operand.semType, t:NUMBER), t:FLOAT), insn.result.semType) {
-        return vc.err("bad BIR: result type of ConvertToFloat does not contain everything it should");
+    if !vc.isSameType(t:union(t:diff(insn.operand.semType, t:NUMBER), t:FLOAT), insn.result.semType) {
+        return vc.err("bad BIR: result type of ConvertToFloat is incorrect");
     }
     if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:FLOAT), t:NUMBER)) {
         return vc.err("bad BIR: result type of ConvertToFloat contains non-float numeric type");
@@ -279,6 +285,7 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
 
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
     t:UniformTypeBitSet expectType;
+    t:UniformTypeBitSet? memberType = ();
     OrderType ot = insn.orderType;
     if ot is OptOrderType {
         expectType = t:uniformTypeUnion((1 << t:UT_NIL) | (1 << ot.opt ));
@@ -287,7 +294,8 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
         expectType  = t:uniformType(ot);
     }
     else {
-        panic err:impossible("array order type");
+        expectType = t:LIST;
+        memberType = t:uniformType(ot[0].opt);
     }
     foreach var operand in insn.operands {
         t:SemType operandType;
@@ -297,9 +305,32 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
         else {
             operandType = t:constBasicType(operand);
         }
-        if !t:isSubtypeSimple(operandType, expectType) {
-            return vc.err(`operand of ${insn.op} does not match order type`);
+        if memberType == () {
+            check verifyCompareOperandTypeBase(vc, insn, operandType, expectType);
         }
+        else {
+            check verifyCompareOperandTypeArray(vc, insn, operandType, expectType, memberType);
+        }
+    }
+}
+
+function verifyCompareOperandTypeArray(VerifyContext vc, CompareInsn insn, t:SemType operandType,
+                                       t:UniformTypeBitSet expectType, t:UniformTypeBitSet expectMemberType) returns err:Semantic? {
+    check verifyCompareOperandTypeBase(vc, insn, operandType, expectType);
+    t:UniformTypeBitSet? operandMemberTy = t:simpleArrayMemberType(vc.typeContext(), operandType);
+    if operandMemberTy is t:UniformTypeBitSet {
+        t:UniformTypeBitSet optExpectedType = t:uniformTypeUnion(expectType | (1 << t:UT_NIL));
+        check verifyCompareOperandTypeBase(vc, insn, operandType, optExpectedType);
+    }
+    else {
+        panic err:impossible("failed to get array member type");
+    }
+}
+
+function verifyCompareOperandTypeBase(VerifyContext vc, CompareInsn insn, t:SemType operandType,
+                                      t:UniformTypeBitSet expectType) returns err:Semantic?{
+    if !t:isSubtypeSimple(operandType, expectType) {
+        return vc.err(`operand of ${insn.op} does not match order type`);
     }
 }
 
@@ -310,8 +341,7 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
         if rhs is Register {
             t:SemType intersectType = t:intersect(lhs.semType, rhs.semType);
             if !vc.isEmpty(intersectType) {
-                // JBUG #31749 cast should not be needed
-                if (<string>insn.op).length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
+                if insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
                     return vc.err("at least one operand of an == or != expression must be a subtype of anydata");
                 }
                 return;

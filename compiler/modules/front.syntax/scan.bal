@@ -6,9 +6,7 @@ import wso2/nballerina.err;
 
 //import ballerina/io;
 
-// This should be byte
-// But multiple runtime/compile-time JBUGs
-type FragCode int;
+type FragCode byte;
 
 type ScannedLine readonly & record {|
     // In the future, we will need some more fields here.
@@ -31,6 +29,38 @@ type ScannedLine readonly & record {|
     string[] fragments;
 |};
 
+function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, int] {
+    if codePointIndex == 0 {
+        return  [0, 0];
+    }
+    readonly & FragCode[] fragCodes = line.fragCodes;
+    readonly & string[] fragments = line.fragments;
+    int fragCodeIndex = 0;
+    int fragmentIndex = 0;
+    int i = 0;
+    while i < codePointIndex {
+        FragCode code = fragCodes[fragCodeIndex];
+        fragCodeIndex += 1;
+        if code <= VAR_FRAG_MAX {
+            i += fragments[fragmentIndex].length();
+            fragmentIndex += 1;
+        }
+        else if code >= FRAG_FIXED_TOKEN {
+            // JBUG #33346 cast should not be needed
+            FixedToken? ft = fragTokens[<int>code];
+            i += (<string>ft).length();
+        }
+        else {
+            i += 1;
+        }
+    }
+    if i > codePointIndex {
+        fragCodeIndex -= 1;
+        fragmentIndex -= 1;
+    }
+    return [fragCodeIndex, fragmentIndex];
+}
+
 type Scanned record {|
     FragCode[] fragCodes;
     int[] endIndex;
@@ -45,13 +75,14 @@ const FRAG_DECIMAL_NUMBER = 0x04;
 const FRAG_HEX_NUMBER = 0x05; // 0xDEADBEEF
 const FRAG_DECIMAL_FP_NUMBER = 0x06; // with `.` or exponent
 const FRAG_DECIMAL_FP_NUMBER_F = 0x07; // with F or f suffix
+const FRAG_DECIMAL_FP_NUMBER_D = 0x08; // with D or d suffix
 
-const FRAG_STRING_CHARS = 0x08;
-const FRAG_STRING_CONTROL_ESCAPE = 0x09; // \r \t \n
-const FRAG_STRING_CHAR_ESCAPE = 0x0A; // \" \\
-const FRAG_STRING_NUMERIC_ESCAPE = 0x0B; // \u{NNN}
+const FRAG_STRING_CHARS = 0x09;
+const FRAG_STRING_CONTROL_ESCAPE = 0x0A; // \r \t \n
+const FRAG_STRING_CHAR_ESCAPE = 0x0B; // \" \\
+const FRAG_STRING_NUMERIC_ESCAPE = 0x0C; // \u{NNN}
 
-const VAR_FRAG_MAX = 0x0B;
+const VAR_FRAG_MAX = 0x0C;
 
 // each fragment codes >= always comes from the same string
 const FRAG_FIXED = 0x1D; // >= this corre
@@ -94,10 +125,14 @@ const FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL = 0x56;
 const FRAG_KEYWORD = 0x80;
 
 final readonly & Keyword[] keywords = [
+    "_",
     "any",
+    "as",
     "boolean",
     "break",
     "byte",
+    "check",
+    "checkpanic",
     "const",
     "continue",
     "decimal",
@@ -134,7 +169,6 @@ final readonly & Keyword[] keywords = [
 ];
 
 // This maps a frag code to a string
-// JBUG if this comes before keywords it gets a NPE at module init time
 final readonly & FixedToken?[] fragTokens = createFragTokens();
 
 function createFragTokens() returns readonly & FixedToken?[] {
@@ -142,31 +176,30 @@ function createFragTokens() returns readonly & FixedToken?[] {
     foreach int i in 0 ..< keywords.length() {
         ft[FRAG_KEYWORD + i] = keywords[i];
     }
-    // JBUG int casts needed
-    // Use toFixedToken to avoid method too large error
-    ft[<int>FRAG_LEFT_CURLY_VBAR] = toFixedToken("{|");
-    ft[<int>FRAG_VBAR_RIGHT_CURLY] = toFixedToken("|}");
-    ft[<int>FRAG_DOT_DOT_DOT] = toFixedToken("...");
-    ft[<int>FRAG_DOT_DOT_LESS_THAN] = toFixedToken("..<");
-    ft[<int>FRAG_EQUAL_EQUAL] = toFixedToken("==");
-    ft[<int>FRAG_NOT_EQUAL] = toFixedToken("!=");
-    ft[<int>FRAG_EQUAL_EQUAL_EQUAL] = toFixedToken("===");
-    ft[<int>FRAG_NOT_EQUAL_EQUAL] = toFixedToken("!==");
-    ft[<int>FRAG_LESS_THAN_EQUAL] = toFixedToken("<="); 
-    ft[<int>FRAG_GREATER_THAN_EQUAL] = toFixedToken(">=");
-    ft[<int>FRAG_LESS_THAN_LESS_THAN] = toFixedToken("<<");
-    ft[<int>FRAG_EQUAL_GREATER_THAN] = toFixedToken("=>");
-    ft[<int>FRAG_PLUS_EQUAL] = toFixedToken("+=");
-    ft[<int>FRAG_MINUS_EQUAL] = toFixedToken("-=");
-    ft[<int>FRAG_ASTERISK_EQUAL] = toFixedToken("*=");
-    ft[<int>FRAG_SLASH_EQUAL] = toFixedToken("/=");
-    ft[<int>FRAG_AMPERSAND_EQUAL] = toFixedToken("&=");
-    ft[<int>FRAG_VBAR_EQUAL] = toFixedToken("|=");
-    ft[<int>FRAG_CIRCUMFLEX_EQUAL] = toFixedToken("^=");
-    ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = toFixedToken("<<=");
-    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>=");
-    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = toFixedToken(">>>=");
-    // JBUG error if hex used for 32 and 128
+    // JBUG #33346 int casts needed
+    ft[<int>FRAG_LEFT_CURLY_VBAR] = "{|";
+    ft[<int>FRAG_VBAR_RIGHT_CURLY] = "|}";
+    ft[<int>FRAG_DOT_DOT_DOT] = "...";
+    ft[<int>FRAG_DOT_DOT_LESS_THAN] = "..<";
+    ft[<int>FRAG_EQUAL_EQUAL] = "==";
+    ft[<int>FRAG_NOT_EQUAL] = "!=";
+    ft[<int>FRAG_EQUAL_EQUAL_EQUAL] = "===";
+    ft[<int>FRAG_NOT_EQUAL_EQUAL] = "!==";
+    ft[<int>FRAG_LESS_THAN_EQUAL] = "<=";
+    ft[<int>FRAG_GREATER_THAN_EQUAL] = ">=";
+    ft[<int>FRAG_LESS_THAN_LESS_THAN] = "<<";
+    ft[<int>FRAG_EQUAL_GREATER_THAN] = "=>";
+    ft[<int>FRAG_PLUS_EQUAL] = "+=";
+    ft[<int>FRAG_MINUS_EQUAL] = "-=";
+    ft[<int>FRAG_ASTERISK_EQUAL] = "*=";
+    ft[<int>FRAG_SLASH_EQUAL] = "/=";
+    ft[<int>FRAG_AMPERSAND_EQUAL] = "&=";
+    ft[<int>FRAG_VBAR_EQUAL] = "|=";
+    ft[<int>FRAG_CIRCUMFLEX_EQUAL] = "^=";
+    ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = "<<=";
+    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = ">>=";
+    ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = ">>>=";
+    // JBUG #33347 error if hex used for 32 and 128
     foreach int cp in 32 ..< 128 {
         string s = checkpanic string:fromCodePointInt(cp);
         if s is SingleCharDelim {
@@ -179,12 +212,14 @@ function createFragTokens() returns readonly & FixedToken?[] {
 function unicodeEscapeValue(string fragment) returns string|error {
     string hexDigits = fragment.substring(3, fragment.length() - 1);
     int codePoint = check int:fromHexString(hexDigits);
-    // JBUG #31778 shouldn't need this check, fromCodePointInt should return an error
-    if 0xD800 <= codePoint && codePoint <= 0xDFFF {
-        return error("invalid codepoint");
-    }
     string:Char ch = check string:fromCodePointInt(codePoint);
     return ch;
+}
+
+function scanLines(string[] lines) returns readonly & ScannedLine[] {
+    ScannedLine[] result = from var l in lines select scanLine(l);
+    //JBUG #33355 shouldn't clone, query syntax should produce readonly arrays
+    return result.cloneReadOnly();
 }
 
 function scanLine(string line) returns ScannedLine {
@@ -457,7 +492,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
             |CP_RIGHT_SQUARE
             |CP_RIGHT_CURLY
             |CP_TILDE => {
-                // JBUG when FragCode is byte, error without cast
+                // JBUG #33446 cast is not needed
                 endFragment(<FragCode>cp, i, result);
             }
             CP_CIRCUMFLEX => {
@@ -557,7 +592,8 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     i = scanIdentifier(codePoints, i + 1, result);
                 }
                 else {
-                    endFragment(CP_UNDERSCORE, i, result);
+                    // keywords index of '_' is 0
+                    endFragment(FRAG_KEYWORD, i, result);
                 }
             }
             _ => {
@@ -706,6 +742,10 @@ function endDecimal(FragCode fragCodeIfNoSuffix, int[] codePoints, int i, Scanne
         if cp == CP_UPPER_F || cp == CP_LOWER_F {
             endFragment(FRAG_DECIMAL_FP_NUMBER_F, i + 1, result);
             return i + 1;
+        } 
+        else if cp == CP_UPPER_D || cp == CP_LOWER_D {
+            endFragment(FRAG_DECIMAL_FP_NUMBER_D, i + 1, result);
+            return i + 1;
         }
     }
     endFragment(fragCodeIfNoSuffix, i, result);
@@ -810,7 +850,7 @@ function endFragmentMerge(FragCode fragCode, int endIndex, Scanned result) {
     }
 }
 
-function endFragmentCompoundAssign(int[] codePoints, int i, int CP, int FCP, Scanned result) returns int {
+function endFragmentCompoundAssign(int[] codePoints, int i, byte CP, byte FCP, Scanned result) returns int {
     int len = codePoints.length();
     if i < len {
         int cp = codePoints[i];
@@ -845,9 +885,4 @@ function isCodePointAsciiUpper(int cp) returns boolean {
 
 function isCodePointUnicodeIdentifier(int cp) returns boolean {
     return false;
-}
-
-// JBUG this avoids bloat that causes `method is too large` errors
-function toFixedToken(string t) returns FixedToken? {
-    return <FixedToken?>t;
 }

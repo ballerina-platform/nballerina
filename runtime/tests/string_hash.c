@@ -7,6 +7,7 @@ void testStringHash() {
        checkMediumStringHash(randMediumString());
 }
 
+
 void testRandMapping(int len) {
     TaggedPtr *k = malloc(len * sizeof(TaggedPtr));
     TaggedPtr *v = malloc(len * sizeof(TaggedPtr));
@@ -15,14 +16,15 @@ void testRandMapping(int len) {
         k[i] = randSmallString();
         v[i] = randSmallString();
     }
-    TaggedPtr m = _bal_mapping_construct(1 << TAG_STRING, 0);
+    static MappingDesc inherentType = { 1 << TAG_STRING };
+    TaggedPtr m = _bal_mapping_construct(&inherentType, 0);
     for (int i = 0; i < len; i++) {
         bool dup = _bal_mapping_get(m, k[i]) != 0;
-        _bal_mapping_set(m, k[i], v[i]);
         if (dup) {
             k[i] = 0;
         }
         else {
+            _bal_mapping_set(m, k[i], v[i]);
             k[i] = copyString(k[i]);
         }
     }

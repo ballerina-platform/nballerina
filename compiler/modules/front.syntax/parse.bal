@@ -1,5 +1,4 @@
 // Parse one file in a module
-
 import wso2/nballerina.err;
 
 public type FilePath record {|
@@ -7,25 +6,52 @@ public type FilePath record {|
     string? directory = ();
 |};
 
-public function parseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
-    SourceFile file = new(path);
-    Tokenizer tok = new (lines, file);
+public readonly class ScannedModulePart {
+    private TokenizerState tokState;
+    public ImportDecl[] importDecls;
+    int partIndex; 
+
+    function init(ImportDecl[] decls, Tokenizer tok, int partIndex) {
+        self.importDecls = decls.cloneReadOnly();
+        self.tokState = tok.save();
+        self.partIndex = partIndex;
+    }
+
+    function tokenizer() returns Tokenizer {
+        Tokenizer tok = new(self.tokState.file);
+        tok.restore(self.tokState);
+        return tok;
+    }
+
+    public function sourceFile() returns SourceFile {
+        return self.tokState.file;
+    }
+}
+
+public function scanModulePart(SourceFile file, int partIndex) returns ScannedModulePart|err:Syntax {
+    Tokenizer tok = new (file);
     check tok.advance();
+    return new(check parseImportDecls(tok, partIndex), tok, partIndex);
+}
+
+public function parseModulePart(ScannedModulePart scanned) returns ModulePart|err:Syntax {
+    Tokenizer tok = scanned.tokenizer();
+    ModuleLevelDefn[] defns = [];
     ModulePart part = {
-        file,
-        partIndex,
-        defns: [],
-        importDecl: check parseImportDecl(tok)
+        file: scanned.sourceFile(),
+        partIndex: scanned.partIndex,
+        defns,
+        importDecls: scanned.importDecls
     };
     while tok.current() != () {
-        part.defns.push(check parseModuleDecl(tok, part));
+        defns.push(check parseModuleDecl(tok, part));
     }
     return part;
 }
 
 public function parseExpression(string[] lines, FilePath path) returns Expr|err:Syntax {
-    SourceFile file = new(path);
-    Tokenizer tok = new (lines, file);
+    SourceFile file = createSourceFile(lines, path);
+    Tokenizer tok = new (file);
     check tok.advance();
     Expr expr = check parseExpr(tok);
     if tok.current() != () {
@@ -34,31 +60,77 @@ public function parseExpression(string[] lines, FilePath path) returns Expr|err:
     return expr;
 }
 
-function parseImportDecl(Tokenizer tok) returns ImportDecl?|err:Syntax {
+function parseImportDecls(Tokenizer tok, int partIndex) returns ImportDecl[]|err:Syntax {
+    ImportDecl[] imports = [];
     Token? t = tok.current();
-    if t != "import" {
-        return;
-    }
-    Position pos = tok.currentPos();
-
-    check tok.advance();
-    t = tok.current();
-    if t is [IDENTIFIER, string] { 
-        string org = t[1];
-        check tok.advance();
-        check tok.expect("/");
+    while t == "import" {
+        ImportDecl im = check parseImportDecl(tok, partIndex);
+        imports.push(im);
         t = tok.current();
-        if t is [IDENTIFIER, string] {
-            check tok.advance();
-            check tok.expect(";");
-            return { org, module: t[1], pos };
-        }
     }
-    return parseError(tok, "import declaration");
+    return imports;
+}
+
+function parseImportDecl(Tokenizer tok, int partIndex) returns ImportDecl|err:Syntax {
+    Position startPos = tok.currentStartPos();
+    check tok.advance();
+    Position namePos = tok.currentStartPos();
+    string firstModuleName = check validImportPart(tok);
+    string? org = ();
+    if tok.current() == "/" {
+        // we have an org
+        org = firstModuleName;
+        check tok.advance();
+        namePos = tok.currentStartPos();
+        firstModuleName = check validImportPart(tok);
+    }
+    [string, string...] names = [firstModuleName];
+    names.push(...check parseImportNamesRest(tok));
+    string? prefix = check parseImportPrefix(tok);
+    Position endPos = check tok.expectEnd(";");
+    return { startPos, endPos, org, names, prefix, namePos, partIndex };
+}
+
+function parseImportNamesRest(Tokenizer tok) returns string[]|err:Syntax {
+    string[] names = [];
+    while tok.current() == "." {
+        check tok.advance();
+        names.push(check validImportPart(tok));
+    }
+    return names;
+}
+
+function validImportPart(Tokenizer tok) returns string|err:Syntax {
+    string identifier = check tok.expectIdentifier();
+    string? prevChar = ();
+    foreach var ch in identifier {
+        if ch == "_" {
+            if prevChar == () {
+                return tok.err("identifier in an import must not have leading underscores");
+            } else if prevChar == "_" {
+                return tok.err("identifier in an import must not have consecutive underscores");
+            }
+        }
+        prevChar = ch;
+    }
+    if prevChar == "_" {
+        return tok.err("identifier in an import must not have tailing underscores");
+    }
+    return identifier;
+}
+
+function parseImportPrefix(Tokenizer tok) returns string?|err:Syntax {
+    Token? t = tok.current();
+    if t != "as" {
+        return ();
+    }
+    check tok.advance();
+    return tok.expectIdentifier();
 }
 
 function parseModuleDecl(Tokenizer tok, ModulePart part) returns ModuleLevelDefn|err:Syntax {
     Token? t = tok.current();
+    Position startPos = tok.currentStartPos();
     Visibility vis;
     if t == "public" {
         vis = t;
@@ -70,74 +142,61 @@ function parseModuleDecl(Tokenizer tok, ModulePart part) returns ModuleLevelDefn
     }
     match t {
         "type" => {
-            return parseTypeDefinition(tok, part, vis);
+            return parseTypeDefinition(tok, part, vis, startPos);
         }
         "const" => {
-            return parseConstDefinition(tok, part, vis);
+            return parseConstDefinition(tok, part, vis, startPos);
         }
         "function" => {
-            return parseFunctionDefinition(tok, part, vis);
+            return parseFunctionDefinition(tok, part, vis, startPos);
         }
     }
     return parseError(tok);
 }
 
-function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns TypeDefn|err:Syntax {
+function parseTypeDefinition(Tokenizer tok, ModulePart part, Visibility vis, Position startPos) returns TypeDefn|err:Syntax {
     check tok.advance();
-    Position pos = tok.currentPos();
-    Token? t = tok.current();
-    if t is [IDENTIFIER, string] {
-        string name = t[1];
-        check tok.advance();
-        TypeDesc td = check parseTypeDesc(tok);
-        check tok.expect(";");
-        return { name, td, pos, vis, part };
-    }
-    return parseError(tok);
+    Position namePos = tok.currentStartPos();
+    string name = check tok.expectIdentifier();
+    TypeDesc td = check parseTypeDesc(tok);
+    Position endPos = check tok.expectEnd(";");
+    return { startPos, endPos, name, td, namePos, vis, part };
 }
 
-function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns ConstDefn|err:Syntax {
+function parseConstDefinition(Tokenizer tok, ModulePart part, Visibility vis, Position startPos) returns ConstDefn|err:Syntax {
     check tok.advance();
-    Position pos = tok.currentPos();
     Token? t = tok.current();
-    InlineBuiltinTypeDesc? td = ();
-    if t is InlineBuiltinTypeDesc {
+    SubsetBuiltinTypeDesc? td = ();
+    if t is SubsetBuiltinTypeName {
+        Position tdStartPos = tok.currentStartPos();
+        Position tdEndPos = tok.currentEndPos();
         check tok.advance();
-        td = t;
-        t = tok.current();
+        td = { startPos: tdStartPos, endPos: tdEndPos, builtinTypeName: t };
     }
-    if t is [IDENTIFIER, string] {
-        string name = t[1];
-        check tok.advance();
-        check tok.expect("=");
-        Expr expr = check parseInnerExpr(tok);
-        check tok.expect(";");
-        return { td, name, expr, pos, vis, part };
-    }
-    return parseError(tok);
+    Position namePos = tok.currentStartPos();
+    string name = check tok.expectIdentifier();
+    check tok.expect("=");
+    Expr expr = check parseInnerExpr(tok);
+    Position endPos = check tok.expectEnd(";");
+    return { startPos, endPos, td, name, expr, namePos, vis, part };
 }
 
-function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis) returns FunctionDefn|err:Syntax {
+function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis, Position startPos) returns FunctionDefn|err:Syntax {
     check tok.advance();
-    Position pos = tok.currentPos();
-    Token? t = tok.current();
-    if t is [IDENTIFIER, string] {
-        string name = t[1];
-        check tok.advance();
-        string[] paramNames = [];
-        FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
-        Stmt[] body = check parseStmtBlock(tok);
-        FunctionDefn defn = { name, vis, paramNames, typeDesc, pos, body, part };
-        return defn;
-    }
-    return parseError(tok);
+    Position namePos = tok.currentStartPos();
+    string name = check tok.expectIdentifier();
+    string[] paramNames = [];
+    FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
+    Stmt[] body = check parseStmtBlock(tok);
+    Position endPos = tok.previousEndPos();
+    FunctionDefn defn = { startPos, endPos, name, vis, paramNames, typeDesc, namePos, body, part };
+    return defn;
 }
 
 function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
     string message = "parse error";
     Token? t = tok.current();
     if t is string {
-        // JBUG cast needed #30734
         // XXX should use err:Template here
         message += " at '" + t + "'";
     }
@@ -148,5 +207,9 @@ function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
 }
 
 public function defnLocation(ModuleLevelDefn defn) returns err:Location {
-    return err:location(defn.part.file, defn.pos);
+    return err:location(defn.part.file, defn.namePos);
+}
+
+public function locationInDefn(ModuleLevelDefn defn, Position? pos = ()) returns err:Location {
+    return err:location(defn.part.file, pos);
 }

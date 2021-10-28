@@ -1,3 +1,4 @@
+// @productions is-expr type-cast-expr if-else-stmt additive-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
 type Int int;

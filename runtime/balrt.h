@@ -1,6 +1,8 @@
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include <inttypes.h>
+#include <stdio.h>
 
 #include "tag.h"
 #include "panic.h"
@@ -8,10 +10,15 @@
 #define UT_MASK 0x1F
 #define TAG_SHIFT 56
 
+#define COMPARE_UN -1
+#define COMPARE_LT 0
+#define COMPARE_EQ 1
+#define COMPARE_GT 2
+
 #define POINTER_MASK ((1L << TAG_SHIFT) - 1)
 
-#define FLAG_INT_ON_HEAP 0x20
 #define IMMEDIATE_FLAG (((uint64_t)0x20) << TAG_SHIFT)
+#define EXACT_FLAG 0x4
 
 #define STRING_LARGE_FLAG 1
 
@@ -72,10 +79,12 @@ typedef struct {
     GC TaggedPtr *members;
 } TaggedPtrArray;
 
-typedef int64_t ListDesc;
+typedef struct {
+    uint32_t bitSet;
+} ListDesc, *ListDescPtr;
 
 typedef GC struct List {
-    ListDesc desc;
+    ListDescPtr desc;
     // This isn't strictly portable because void* and TaggedPtr* might have different alignments/sizes
     // But we ain't writing portable code here
     union {
@@ -95,11 +104,18 @@ typedef struct {
     GC MapField *members;
 } MapFieldArray;
 
-typedef int64_t MappingDesc;
+typedef struct {
+    uint32_t bitSet;
+} MappingDesc, *MappingDescPtr;
+
+typedef struct {
+    uint32_t bitSet; // zero
+    uint32_t nFields;
+    uint32_t fieldBitSets[];
+} *RecordDescPtr;
 
 typedef GC struct Mapping {
-    MappingDesc desc;
-    // XXX will also have a typedescriptor here
+    MappingDescPtr desc;
     union {
         GenericArray gArray;
         MapFieldArray fArray;
@@ -119,6 +135,26 @@ typedef GC struct Mapping {
     uint8_t tableElementShift;
     uint8_t tableLengthShift;
 } *MappingPtr;
+
+typedef struct TypeTest {
+    bool (*contains)(struct TypeTest *, TaggedPtr);
+} TypeTest, *TypeTestPtr;
+
+typedef struct {
+    TaggedPtr fieldName;
+    uint32_t fieldBitSet;
+} RecordTypeTestField;
+
+typedef struct {
+    TypeTest typeTest;
+    uint32_t nFields;
+    RecordTypeTestField fields[];
+} *RecordTypeTestPtr;
+
+typedef struct {
+    TypeTest typeTest;
+    uint32_t bitSet;
+} *MapTypeTestPtr, *ArrayTypeTestPtr;
 
 typedef GC struct Error {
     TaggedPtr message;
@@ -178,9 +214,6 @@ typedef struct {
 extern UntypedPtr _bal_alloc(uint64_t nBytes);
 extern NORETURN void _bal_panic(TaggedPtr tp);
 
-extern void _Bio__println(TaggedPtr p);
-extern TaggedPtr _Berror__message(TaggedPtr p);
-
 extern bool _bal_float_eq(double, double);
 
 // precondition is that both strings are on the heap and the pointers are not ==
@@ -194,23 +227,40 @@ extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoin
 #define TAGGED_PTR_SHIFT 3
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
+extern ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity);
 extern PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
 extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 
 #define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
 
-extern TaggedPtr _bal_mapping_construct(MappingDesc desc, int64_t capacity);
+extern TaggedPtr _bal_mapping_construct(MappingDescPtr desc, int64_t capacity);
 extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
 extern READONLY bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
+extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
+
 extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
-extern void _bal_error_backtrace_print(ErrorPtr ep);
+extern void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start, FILE *fp);
+extern void _bal_print_mangled_name(const char *mangledName, FILE *fp);
 // Returns an error value
 extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
 extern NORETURN COLD void _bal_panic_internal(PanicCode code);
+
+// Library mangling
+#define BAL_ROOT_NAME(sym) _B04root ## sym
+#define BAL_LIB_IO_NAME(sym) _Bb02io ## sym
+#define BAL_LANG_INT_NAME(sym) _Bb0m4lang3int ## sym
+#define BAL_LANG_STRING_NAME(sym) _Bb0m4lang6string ## sym
+#define BAL_LANG_ARRAY_NAME(sym) _Bb0m4lang5array ## sym
+#define BAL_LANG_MAP_NAME(sym) _Bb0m4lang3map ## sym
+#define BAL_LANG_ERROR_NAME(sym) _Bb0m4lang5error ## sym
+// Library functions
+extern TaggedPtr BAL_LANG_ERROR_NAME(message)(TaggedPtr p);
+extern void BAL_LIB_IO_NAME(println)(TaggedPtr p);
+
 static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
     return (uint64_t)(char *)p;
 }
@@ -232,10 +282,18 @@ static READNONE inline UntypedPtr taggedToPtr(TaggedPtr p) {
     return _bal_tagged_to_ptr(p);
 }
 
+static READNONE inline UntypedPtr taggedToPtrExact(TaggedPtr p) {
+    return _bal_tagged_to_ptr_exact(p);
+}
+
+static READNONE inline PanicCode storePanicCode(TaggedPtr p, PanicCode code) {
+    // If the exact bit is set, then these will be unequal and the error should not occur.
+    return taggedToPtr(p) == taggedToPtrExact(p) ? code :  PANIC_INTERNAL_ERROR;
+}
+
 static READONLY inline int64_t taggedToInt(TaggedPtr p) {
-    int t = getTag(p);
-    if (likely(t & FLAG_INT_ON_HEAP) == 0) {
-        uint64_t n = taggedPtrBits(p);
+    uint64_t n = taggedPtrBits(p);
+    if (likely((n & IMMEDIATE_FLAG) != 0)) {
         n &= POINTER_MASK;
         // sign extend
         n <<= 8;
@@ -247,9 +305,85 @@ static READONLY inline int64_t taggedToInt(TaggedPtr p) {
     }
 }
 
+static READONLY inline int64_t taggedPrimitiveCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
+    if (lhs == rhs) {
+        return COMPARE_EQ;
+    }
+    if (!lhs || !rhs) {
+        return COMPARE_UN;
+    }
+    return (*comparator)(lhs, rhs);
+}
+
+static READONLY inline int64_t taggedIntComparator(TaggedPtr lhs, TaggedPtr rhs) {
+    int64_t lhsVal = taggedToInt(lhs);
+    int64_t rhsVal = taggedToInt(rhs);
+    if (lhsVal == rhsVal) {
+        return COMPARE_EQ;
+    }
+    if (lhsVal < rhsVal) {
+        return COMPARE_LT;
+    }
+    if (lhsVal > rhsVal) {
+        return COMPARE_GT;
+    }
+    return COMPARE_UN;
+}
+
+static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    return taggedPrimitiveCompare(lhs, rhs, &taggedIntComparator);
+}
+
 static READONLY inline double taggedToFloat(TaggedPtr p) {
     GC double *np = taggedToPtr(p);
     return *np;
+}
+
+static READONLY inline int64_t taggedFloatComparator(TaggedPtr lhs, TaggedPtr rhs) {
+    double lhsVal = taggedToFloat(lhs);
+    double rhsVal = taggedToFloat(rhs);
+    if (lhsVal == rhsVal) {
+        return COMPARE_EQ;
+    }
+    if (lhsVal < rhsVal) {
+        return COMPARE_LT;
+    }
+    if (lhsVal > rhsVal) {
+        return COMPARE_GT;
+    }
+    return COMPARE_UN;
+}
+
+static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    return taggedPrimitiveCompare(lhs, rhs, &taggedFloatComparator);
+}
+
+static READONLY inline int64_t taggedBooleanComparator(TaggedPtr lhs, TaggedPtr rhs) {
+    int lhsVal = taggedToBoolean(lhs);
+    int rhsVal = taggedToBoolean(rhs);
+    if (lhsVal == rhsVal) {
+        return COMPARE_EQ;
+    }
+    if (lhsVal < rhsVal) {
+        return COMPARE_LT;
+    }
+    else {
+        return COMPARE_GT;
+    }
+}
+
+static READONLY inline int64_t taggedBooleanCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    return taggedPrimitiveCompare(lhs, rhs, &taggedBooleanComparator);
+}
+
+static READONLY inline int64_t taggedStringCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    if (lhs == rhs) {
+        return COMPARE_EQ;
+    }
+    if (!lhs || !rhs) {
+        return COMPARE_UN;
+    }
+    return _bal_string_cmp(lhs, rhs) + 1;
 }
 
 static READNONE inline StringLength immediateStringLength(uint64_t bits) {
@@ -333,7 +467,7 @@ static READONLY inline bool taggedPtrEqual(TaggedPtr tp1, TaggedPtr tp2) {
     switch (tag1) {
         case TAG_STRING:
             return taggedStringEqual(tp1, tp2);
-        case (TAG_INT|FLAG_INT_ON_HEAP):
+        case TAG_INT:
             {
                 IntPtr p1 = taggedToPtr(tp1);
                 IntPtr p2 = taggedToPtr(tp2);
@@ -368,10 +502,55 @@ static inline TaggedPtr ptrAddShiftedTag(UntypedPtr tp, uint64_t shiftedTag) {
     return (TaggedPtr)p;
 }
 
+static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
+    if (lhs == rhs) {
+        return COMPARE_EQ;
+    }
+    if (!lhs || !rhs) {
+        return COMPARE_UN;
+    }
+    ListPtr lhsListPtr = taggedToPtr(lhs);
+    ListPtr rhsListPtr = taggedToPtr(rhs);
+    int64_t lhsLen = lhsListPtr->tpArray.length;
+    int64_t rhsLen = rhsListPtr->tpArray.length;
+    int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
+    GC TaggedPtr *lhsArr = lhsListPtr->tpArray.members;
+    GC TaggedPtr *rhsArr = rhsListPtr->tpArray.members;
+    for (int64_t i = 0; i < length; i++) {
+        int64_t result = (*comparator)(lhsArr[i], rhsArr[i]);
+        if (result != COMPARE_EQ) {
+            return result;
+        }
+    }
+    if (lhsLen == rhsLen) {
+        return COMPARE_EQ;
+    }
+    return (lhsLen < rhsLen) ? COMPARE_LT : COMPARE_GT;
+}
 
+static READONLY inline int64_t intArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedIntCompare);
+}
 
+static READONLY inline int64_t floatArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedFloatCompare);
+}
 
+static READONLY inline int64_t stringArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedStringCompare);
+}
 
+static READONLY inline int64_t booleanArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedBooleanCompare);
+}
 
-
-
+static inline void initGenericArray(GC GenericArray *ap, int64_t capacity, int shift) {
+    ap->length = 0;
+    ap->capacity = capacity;
+    if (capacity == 0) {
+        ap->members = 0;
+    }
+    else {
+        ap->members = _bal_alloc(capacity << shift);
+    }
+}

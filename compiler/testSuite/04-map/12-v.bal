@@ -1,3 +1,4 @@
+// @productions map-type-descriptor mapping-constructor-expr string string-literal type-cast-expr return-stmt any function-call-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

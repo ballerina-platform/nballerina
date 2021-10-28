@@ -1,3 +1,4 @@
+// @productions is-expr continue-stmt while-stmt break-stmt equality if-else-stmt equality-expr boolean-literal additive-expr any function-call-expr assign-stmt local-var-decl-stmt int-literal
 public function main() {
    foo(1);
 }

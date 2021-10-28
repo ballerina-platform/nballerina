@@ -21,7 +21,7 @@
 17. ~~integer singleton type~~
 18. ~~integer subtypes with specific width/signedness~~
 19. ~~float singletons~~
-20. decimal singletons
+20. ~~decimal singletons~~
 21. objects (without member qualifiers or object qualifiers)
 22. typedesc subtypes
 23. future subtypes
@@ -33,7 +33,7 @@
 29. client, service remote qualifiers
 30. ~~error detail subtypes~~
 31. distinct error types
-32. string:Char type
+32. ~~string:Char type~~
 33. xml subtypes
 34. isolated qualifier
 35. transactional qualifier

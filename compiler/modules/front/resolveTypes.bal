@@ -5,9 +5,9 @@ import wso2/nballerina.err;
 
 type ResolveTypeError err:Semantic|err:Unimplemented;
 
-function createTypeMap(ModuleTable mod) returns map<t:SemType> {
+function createTypeMap(ModuleSymbols mod) returns map<t:SemType> {
     map<t:SemType> defns = {};
-    foreach var defn in mod {
+    foreach var defn in mod.defns {
         t:SemType t;
         if defn is s:TypeDefn {
             t = <t:SemType>defn.semType;
@@ -23,60 +23,52 @@ function createTypeMap(ModuleTable mod) returns map<t:SemType> {
     return defns;
 }
 
-function resolveTypes(t:Env env, ModuleTable mod) returns ResolveTypeError? {
-    foreach var defn in mod {
+function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
+    foreach var defn in mod.defns {
         if defn is s:TypeDefn {
-            _ = check resolveTypeDefn(env, mod, defn, 0);
+            _ = check resolveTypeDefn(mod, defn, 0);
         }
         else if defn is s:ConstDefn {
-            _ = check resolveConstDefn(env, mod, defn);
+            _ = check resolveConstDefn(mod, defn);
         }
         else {
             // it's a FunctionDefn
-            defn.signature = check resolveFunctionSignature(env, mod, defn);
+            defn.signature = check resolveFunctionSignature(mod, defn);
         }
     }
 }
 
-function resolveFunctionSignature(t:Env env, ModuleTable mod, s:FunctionDefn defn) returns bir:FunctionSignature|ResolveTypeError {
+function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) returns bir:FunctionSignature|ResolveTypeError {
     s:FunctionTypeDesc td = defn.typeDesc;  
-    t:SemType[] params = [];
-    // JBUG if this is done with a select, then it gets a bad, sad at runtime if the check gets an error
-    foreach var x in td.args {
-        params.push(check resolveSubsetTypeDesc(env, mod, defn, x));
-    }
-    t:SemType ret = check resolveSubsetTypeDesc(env, mod, defn, td.ret);
+    t:SemType[] params = from var x in td.args select check resolveSubsetTypeDesc(mod, defn, x);
+    t:SemType ret = check resolveSubsetTypeDesc(mod, defn, td.ret);
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
 
-function resolveSubsetTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn defn, s:TypeDesc td) returns t:SemType|ResolveTypeError {
-    t:SemType ty = check resolveTypeDesc(env, mod, defn, 0, td);
-    if ty is t:UniformTypeBitSet
-       && (t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL))
-           || (ty == t:ANY || ty == t:TOP)) {
-        return ty;
+function resolveSubsetTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn defn, s:TypeDesc td) returns t:SemType|ResolveTypeError {
+    t:SemType ty = check resolveTypeDesc(mod, defn, 0, td);
+    if t:isEmpty(mod.tc, ty) {
+        return err:unimplemented("intersection equivalent to never is not implemented", s:locationInDefn(defn, td.startPos));
     }
-    t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(env, ty, strict=true);
-    if memberTy != () {
-        return ty;
-    }
-    memberTy = t:simpleMapMemberType(env, ty, strict=true);
-    if memberTy != () {
-        return ty;
-    }
-    return err:unimplemented("unimplemented type descriptor", s:defnLocation(defn));
+    return ty;
 }
 
-function resolveTypeDefn(t:Env env, ModuleTable mod, s:TypeDefn defn, int depth) returns t:SemType|ResolveTypeError {
+function isSubsetUnionType(t:SemType ty) returns boolean {
+    return (ty is t:UniformTypeBitSet
+            && ((t:isSubtypeSimple(ty, <t:UniformTypeBitSet>(t:ERROR|t:FLOAT|t:STRING|t:INT|t:BOOLEAN|t:NIL)) && ty != t:NEVER)
+                || (ty == t:ANY || ty == t:TOP)));
+}
+
+function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns t:SemType|ResolveTypeError {
     t:SemType? t = defn.semType;
-    if t is () {
+    if t == () {
         if depth == defn.cycleDepth {
             return err:semantic(`invalid cycle detected for ${defn.name}`, s:defnLocation(defn));
         }
         defn.cycleDepth = depth;
-        t:SemType s = check resolveTypeDesc(env, mod, defn, depth, defn.td);
+        t:SemType s = check resolveTypeDesc(mod, defn, depth, defn.td);
         t = defn.semType;
-        if t is () {
+        if t == () {
             defn.semType = s;
             defn.cycleDepth = -1;
             return s;
@@ -93,40 +85,55 @@ function resolveTypeDefn(t:Env env, ModuleTable mod, s:TypeDefn defn, int depth)
     }
 }
 
-function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
-    match td {
-        // These are easy
-        "any" => { return t:ANY; }
-        "boolean" => { return t:BOOLEAN; }
-        "decimal" => { return t:DECIMAL; }
-        "error" => { return t:ERROR; }
-        "float" => { return t:FLOAT; }
-        "handle" => { return t:HANDLE; }
-        "int" => { return t:INT; }
-        "never" => { return t:NEVER; }
-        "readonly" => { return t:READONLY; }
-        "string" => { return t:STRING; }
-        "typedesc" => { return t:TYPEDESC; }
-        "xml" => { return t:XML; }
-        "sint8" => { return t:intWidthSigned(8); }
-        "sint16" => { return t:intWidthSigned(16); }
-        "sint32" => { return t:intWidthSigned(32); }
-        "uint8" => { return t:BYTE; }
-        "uint16" => { return t:intWidthUnsigned(16); }
-        "uint32" => { return t:intWidthUnsigned(32); }
-        "json" => { return t:createJson(env); }
-        "()" => { return t:NIL; }
+function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
+    if td is s:BuiltinTypeDesc {
+        match td.builtinTypeName {
+            // These are easy
+            "any" => { return t:ANY; }
+            "boolean" => { return t:BOOLEAN; }
+            "decimal" => { return t:DECIMAL; }
+            "error" => { return t:ERROR; }
+            "float" => { return t:FLOAT; }
+            "int" => { return t:INT; }
+            "null" => { return t:NIL; }
+            "string" => { return t:STRING; }
+        }
+        if !mod.allowAllTypes {
+            return err:unimplemented(`type ${td.builtinTypeName} is not implemented`, s:locationInDefn(modDefn, td.startPos));
+        }
+        match td.builtinTypeName {
+            "byte" => { return t:BYTE; }
+            "handle" => { return t:HANDLE; }
+            "json" => { return t:createJson(mod.tc.env); }
+            "never" => { return t:NEVER; }
+            "readonly" => { return t:READONLY; }
+            "typedesc" => { return t:TYPEDESC; }
+            "xml" => { return t:XML; }
+        }
     }
-    // JBUG would like to use match patterns here, but #30718 prevents it
+    final t:Env env = mod.tc.env;
+    if td is s:BinaryTypeDesc {
+        // NB depth does not increase here
+        t:SemType l = check resolveTypeDesc(mod, modDefn, depth, td.left);
+        t:SemType r = check resolveTypeDesc(mod, modDefn, depth, td.right);
+        if td.op == "|" {
+            return t:union(l, r);
+        }
+        else {
+            return t:intersect(l, r);
+        }
+    }
+    // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
     if td is s:ListTypeDesc {
         t:ListDefinition? defn = td.defn;
-        if defn is () {
+        if defn == () {
+            if !mod.allowAllTypes && td.members.length() > 0 {
+                return err:unimplemented("tuple types not implemented", s:locationInDefn(modDefn, td.startPos));
+            }
             t:ListDefinition d = new;
             td.defn = d;
-            // JBUG temp variable `m` is to avoid compiler bug #30736
-            s:TypeDesc[] m = td.members;
-            t:SemType[] members = from var x in m select check resolveTypeDesc(env, mod, modDefn, depth + 1, x);
-            t:SemType rest = check resolveTypeDesc(env, mod, modDefn, depth + 1, td.rest);
+            t:SemType[] members = from var x in td.members select check resolveMemberTypeDesc(mod, modDefn, depth + 1, x);
+            t:SemType rest = check resolveMemberTypeDesc(mod, modDefn, depth + 1, td.rest);
             return d.define(env, members, rest);
         }
         else {
@@ -135,47 +142,89 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, 
     }
     if td is s:MappingTypeDesc {
         t:MappingDefinition? defn = td.defn;
-        if defn is () {
+        if defn == () {
             t:MappingDefinition d = new;
             td.defn = d;
-            // JBUG temp variable `f` is to avoid compiler bug #30736
-            s:FieldDesc[] f = td.fields;
-            t:Field[] fields = from var { name, typeDesc } in f select [name, check resolveTypeDesc(env, mod, modDefn, depth + 1, typeDesc)];
-            t:SemType rest = check resolveTypeDesc(env, mod, modDefn, depth + 1, td.rest);
+            // JBUG this panics if done with `from` and there's an error is resolveMemberTypeDesc
+            t:Field[] fields = [];
+            foreach var { name, typeDesc } in td.fields {
+                fields.push([name, check resolveMemberTypeDesc(mod, modDefn, depth + 1, typeDesc)]);
+            }
+            map<s:FieldDesc> fieldsByName = {};
+            foreach var fd in td.fields {
+                if fieldsByName[fd.name] != () {
+                    return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn));
+                }
+                fieldsByName[fd.name] = fd;
+            }
+            s:TypeDesc? restTd = td.rest;
+            t:SemType rest;
+            if restTd == () {
+                rest = t:NEVER;
+            }
+            else {
+                if !mod.allowAllTypes && td.fields.length() > 0 {
+                    return err:unimplemented("open record types not implemented", s:locationInDefn(modDefn, td.startPos));
+                }
+                rest = check resolveMemberTypeDesc(mod, modDefn, depth + 1, restTd);
+            }
             return d.define(env, fields, rest);
         }
         else {
             return defn.getSemType(env);
         }
     }
-     if td is s:FunctionTypeDesc {
+    if td is s:TypeDescRef {
+        string? prefix = td.prefix;
+        if prefix == () {
+            s:ModuleLevelDefn? defn = mod.defns[td.typeName];
+            if defn == () {
+                return err:semantic(`reference to undefined type ${td.typeName}`, s:locationInDefn(modDefn, td.pos));
+            }
+            else if defn is s:TypeDefn {
+                return check resolveTypeDefn(mod, defn, depth);
+            }
+            else if defn is s:ConstDefn {
+                var [t, _] = check resolveConstDefn(mod, defn);
+                return t;
+            }
+            return err:semantic(`reference to non-type ${td.typeName} in type-descriptor`, s:locationInDefn(modDefn, td.pos));
+        }
+        else {
+            ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix)).defns[td.typeName];
+            if defn is t:SemType {
+                return defn;
+            }
+            else if defn is s:ResolvedConst {
+                return defn[0];
+            }
+            else {
+                string qName = prefix + ":" + td.typeName;
+                err:Location loc =  s:locationInDefn(modDefn, td.pos);
+                if defn == () {
+                    return err:semantic(`no public definition of ${qName}`, loc=loc);
+                }
+                else {
+                    return err:semantic(`reference to a function ${qName} where a type is required`, loc=loc);
+                }
+            }
+        }
+    }
+    if !mod.allowAllTypes {
+        return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, td.startPos));
+    }
+    if td is s:FunctionTypeDesc {
         t:FunctionDefinition? defn = td.defn;
-        if defn is () {
+        if defn == () {
             t:FunctionDefinition d = new(env);
             td.defn = d;
             s:TypeDesc[] a = td.args;
-            t:SemType[] args = from var x in a select check resolveTypeDesc(env, mod, modDefn, depth + 1, x);
-            t:SemType ret = check resolveTypeDesc(env, mod, modDefn, depth + 1, td.ret);
+            t:SemType[] args = from var x in a select check resolveTypeDesc(mod, modDefn, depth + 1, x);
+            t:SemType ret = check resolveTypeDesc(mod, modDefn, depth + 1, td.ret);
             return d.define(env, t:tuple(env, ...args), ret);
         }
         else {
             return defn.getSemType(env);
-        }
-    }
-    if td is s:TypeDescRef {
-        s:ModuleLevelDefn? defn = mod[td.ref];
-        if defn is () {
-            return err:semantic(`reference to undefined type ${td.ref}`, err:location(modDefn.part.file, td.pos));
-        }
-        else if defn is s:TypeDefn {
-            return check resolveTypeDefn(env, mod, defn, depth);
-        }
-        else if defn is s:ConstDefn {
-            var [t, _] = check resolveConstDefn(env, mod, defn);
-            return t;
-        }
-        else {
-            return err:semantic(`reference to non-type ${td.ref} in type-descriptor`, err:location(modDefn.part.file, td.pos));
         }
     }
     if td is s:SingletonTypeDesc {
@@ -189,29 +238,33 @@ function resolveTypeDesc(t:Env env, ModuleTable mod, s:ModuleLevelDefn modDefn, 
         else if value is int {
             return t:intConst(value);
         }
+        else if value is decimal {
+            return t:decimalConst(value);
+        }
         else {
             return t:floatConst(value);
         }
     }
     if td is s:ErrorTypeDesc {
-        return t:errorDetail(check resolveTypeDesc(env, mod, modDefn, depth, td.detail));
+        return t:errorDetail(check resolveTypeDesc(mod, modDefn, depth, td.detail));
     }
-    if td is s:BinaryTypeDesc {
-        // NB depth does not increase here
-        t:SemType l = check resolveTypeDesc(env, mod, modDefn, depth, td.left);
-        t:SemType r = check resolveTypeDesc(env, mod, modDefn, depth, td.right);
-        if td.op == "|" {
-            return t:union(l, r);
-        }
-        else {
-            return t:intersect(l, r);
-        }
+    if td is s:UnaryTypeDesc {
+        t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td.td);
+        return t:complement(ty);
     }
     panic error("unimplemented type-descriptor");
 }
 
-function resolveInlineBuiltinTypeDesc(s:InlineBuiltinTypeDesc td) returns t:UniformTypeBitSet {
-    match td {
+function resolveMemberTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
+    t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td);
+    if !mod.allowAllTypes && !isSubsetUnionType(ty) {
+        return err:unimplemented("type not implemented as member type", s:locationInDefn(modDefn, td.startPos));
+    }
+    return ty;
+}
+
+function resolveBuiltinTypeDesc(s:SubsetBuiltinTypeDesc td) returns t:UniformTypeBitSet {
+    match td.builtinTypeName {
         "any" => { return t:ANY; }
         "boolean" => { return t:BOOLEAN; }
         "int" => { return t:INT; }

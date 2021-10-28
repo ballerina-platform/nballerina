@@ -7,24 +7,29 @@ import wso2/nballerina.front.syntax as s;
 type ConstEvalTest [string,SimpleConst];
 
 class TestFoldContext {
-    // JBUG error if next line uncommented
+    // JBUG #33394 error if next line uncommented
     // *FoldContext;
-    t:Env env = new;
-    function lookupConst(string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
+    t:Context tc;
+
+    function init() {
+        self.tc = t:typeContext(new);
+    }
+    function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         return ();
     }
     function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, cause=cause);
+        return err:semantic(msg, location("testConst.bal"), cause=cause);
     }
-    function typeEnv() returns t:Env {
-        return self.env;
+    function typeContext() returns t:Context {
+        return self.tc;
     }
     function resolveTypeDesc(s:TypeDesc td) returns err:Semantic|t:SemType {
-        if td is s:InlineBuiltinTypeDesc {
-            return resolveInlineBuiltinTypeDesc(td);
+        if td is s:SubsetBuiltinTypeDesc {
+            return resolveBuiltinTypeDesc(td);
         }
-        return err:semantic("TestFoldContext cannot resolve TypeDesc");
+        return err:semantic("TestFoldContext cannot resolve TypeDesc", location("testConst.bal"));
     }
+    function isConstDefn() returns boolean => true;
 }
 
 @test:Config{ dataProvider: validConstExprs }
@@ -62,4 +67,12 @@ function validConstExprs() returns map<ConstEvalTest> {
         m[t[0]] = t;
     }
     return m;
+}
+
+function location(string filename) returns err:Location {
+    return {
+        filename: filename,
+        startPos: (),
+        endPos: ()
+    };
 }

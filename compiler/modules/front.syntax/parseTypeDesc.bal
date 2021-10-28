@@ -1,80 +1,6 @@
 // Parsing of type descriptors
 import wso2/nballerina.err;
 
-// This is for the subset we currently support in the compiler
-function parseInlineTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
-    Token? t = tok.current();
-    if t is [IDENTIFIER, string] {
-        TypeDescRef refTypeDesc = { ref: t[1], pos: tok.currentPos() };
-        return refTypeDesc;
-    }
-    else if t is "map" {
-        check tok.advance();
-        check tok.expect("<");
-        MappingTypeDesc mapTypeDesc = { fields: [], rest: check parseInlineUnionTypeDesc(tok) };
-        check tok.expect(">");
-        return mapTypeDesc;
-    }
-    if t is InlineBuiltinTypeDesc {
-        check tok.advance();
-        return finishInlineTypeDesc(tok, t);
-    }
-    return parseError(tok, "expected type descriptor");    
-}
-
-function parseInlineUnionTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
-    Token? t = tok.current();
-    if t is InlineBuiltinTypeDesc {
-        check tok.advance();
-        return finishInlineUnionTypeDesc(tok, check parseInlineOptionalTypeDesc(tok, t));
-    }
-    return parseError(tok, "expected built-in type name");
-}
-
-function finishInlineTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc first) returns TypeDesc|err:Syntax {
-    TypeDesc td = check parseInlineOptionalTypeDesc(tok, first);
-    Token? t = tok.current();
-    if t == "[" {
-        check tok.advance();
-        check tok.expect("]");
-        ListTypeDesc arrayTypeDesc = { members: [], rest: td };
-        return arrayTypeDesc;
-    }
-    return finishInlineUnionTypeDesc(tok, td);
-}
-
-function finishInlineUnionTypeDesc(Tokenizer tok, TypeDesc first) returns TypeDesc|err:Syntax {
-    TypeDesc left = first;
-    while true {
-        Token? t = tok.current();
-        if t != "|" {
-            break;
-        }
-        check tok.advance();
-        t = tok.current();
-        if !(t is InlineBuiltinTypeDesc) {
-            return parseError(tok, "expected built-in type name after |");
-        }
-        else {
-            check tok.advance();
-            var right = check parseInlineOptionalTypeDesc(tok, t);
-            BinaryTypeDesc u = { op: "|", left, right };
-            left = u;
-        }
-    }
-    return left;
-}
-
-function parseInlineOptionalTypeDesc(Tokenizer tok, InlineBuiltinTypeDesc td) returns TypeDesc|err:Syntax {
-    Token? t = tok.current();
-    if t == "?" {
-        check tok.advance();
-        BinaryTypeDesc u = { op: "|", left: td, right: "()" };
-        return u;
-    }
-    return td;
-}
-
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     if tok.current() == "function" {
         check tok.advance();
@@ -84,39 +10,67 @@ function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 }
 
 function parseUnion(Tokenizer tok) returns TypeDesc|err:Syntax {
+    Position startPos = tok.currentStartPos();
     TypeDesc td = check parseIntersection(tok);
     while tok.current() == "|" {
+        Position opPos = tok.currentStartPos();
         check tok.advance();
         TypeDesc right = check parseIntersection(tok);
-        BinaryTypeDesc bin = { op: "|", left: td, right };
+        Position endPos = tok.previousEndPos();
+        BinaryTypeDesc bin = { startPos, endPos, opPos, op: "|", left: td, right };
         td = bin;
     }
     return td;
 }
 
 function parseIntersection(Tokenizer tok) returns TypeDesc|err:Syntax {
-    TypeDesc td = check parsePostfixTypeDesc(tok);
+    Position startPos = tok.currentStartPos();
+    TypeDesc td = check parseUnaryTypeDesc(tok);
     while tok.current() == "&" {
+        Position opPos = tok.currentStartPos();
         check tok.advance();
-        TypeDesc right = check parsePostfixTypeDesc(tok);
-        BinaryTypeDesc bin = { op: "&", left: td, right };
+        TypeDesc right = check parseUnaryTypeDesc(tok);
+        Position endPos = tok.previousEndPos();
+        BinaryTypeDesc bin = { startPos, endPos, opPos, op: "&", left: td, right };
         td = bin;
     }
     return td;
 }
 
+function parseUnaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
+    if tok.current() == "!" {
+        Position startPos = tok.currentStartPos();
+        check tok.advance();
+        TypeDesc td = check parseUnaryTypeDesc(tok);
+        Position endPos = tok.previousEndPos();
+        UnaryTypeDesc unary = { startPos, endPos, op: "!", td };
+        return unary;
+    }
+    return parsePostfixTypeDesc(tok);
+}
+
 function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
+    Position startPos = tok.currentStartPos();
     TypeDesc td = check parsePrimaryTypeDesc(tok);
     while true {
         if tok.current() == "?" {
+            Position opPos = tok.currentStartPos();
+            Position endPos = tok.currentEndPos();
             check tok.advance();
-            BinaryTypeDesc bin =  { op: "|", left: td, right: "()" };
+            BinaryTypeDesc bin =  {
+                startPos,
+                endPos,
+                opPos,
+                op: "|",
+                left: td,
+                right: { startPos: endPos, endPos, builtinTypeName: "null"} // start and end position of right is same because its single character
+            };
             td = bin;
         }
         else if tok.current() == "[" {
             check tok.advance();
-            check tok.expect("]");
-            ListTypeDesc list = { members: [], rest: td };
+            Position endPos = check tok.expectEnd("]");
+            ListTypeDesc list = { startPos, endPos, members: [], rest: td };
             td = list;
         }
         else {
@@ -126,34 +80,33 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     return td;
 }
 
-final map<BuiltinIntSubtypeDesc> BUILTIN_INT_SUBTYPES = {
-    Signed8: "sint8",
-    Signed16: "sint16",
-    Signed32: "sint32",
-    Unsigned8: "uint8",
-    Unsigned16: "uint16",
-    Unsigned32: "uint32"
-};
-
 // Tokenizer is on first token of the type descriptor
 // Afterwards it is on the token immediately following the type descriptor
 function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     Token? cur = tok.current();
+    Position startPos = tok.currentStartPos();
     match cur {
         "(" => {
             check tok.advance();
+            Position endPos;
             if tok.current() == ")" {
+                endPos = tok.currentEndPos();
                 check tok.advance();
-                return "()";
+                return { startPos, endPos, builtinTypeName: "null" };
             }
             TypeDesc td = check parseTypeDesc(tok);
-            check tok.expect(")");
+            endPos = check tok.expectEnd(")");
+            // extend the position to cover parenthesis
+            if td is BuiltinTypeDesc {
+                return { startPos, endPos, builtinTypeName: td.builtinTypeName };
+            }
+            td.startPos = startPos;
+            td.endPos = endPos;
             return td;
         }
         "boolean"
         | "decimal"
         | "float"
-        | "string"
         | "xml"
         | "typedesc"
         | "handle"
@@ -161,57 +114,63 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         | "never"
         | "json"
         |  "readonly" => {
+            Position endPos = tok.currentEndPos();
             check tok.advance();
             // JBUG should not need cast #30191
-            return <LeafTypeDesc>cur;
+            return { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
+        }
+        "string"
+        |"int" => {
+            Position pos = tok.currentStartPos();
+            Position endPos = tok.currentEndPos();
+            check tok.advance();
+            if tok.current() != ":" {
+                // JBUG should not need cast #30191
+                return { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
+            }
+            check tok.advance();
+            string typeName = check tok.expectIdentifier();
+            endPos = tok.previousEndPos();
+            return { startPos, endPos, prefix: <string>cur, typeName, pos };
         }
         "byte" => {
+            Position endPos = tok.currentEndPos();
             check tok.advance();
-            return "uint8";
+            return { startPos, endPos, builtinTypeName: "byte" };
         }
         "[" => {
             return parseTupleTypeDesc(tok);
         }
         "map" => {
             check tok.advance();
-            return <MappingTypeDesc>{ rest: check parseTypeParam(tok), fields: [] };
+            var rest = check parseTypeParam(tok);
+            Position endPos = tok.previousEndPos();
+            return { startPos, endPos, rest, fields: [] };
         }
         "error" => {
+            Position endPos = tok.currentEndPos();
             check tok.advance();
             if tok.current() != "<" {
-                return "error";
+                return { startPos, endPos, builtinTypeName: "error" };
             }
-            return <ErrorTypeDesc>{ detail: check parseTypeParam(tok) };
-        }        
+            var detail = check parseTypeParam(tok);
+            endPos = tok.previousEndPos();
+            return { startPos, endPos, detail };
+        }
         "record" => {
-            return parseRecordTypeDesc(tok);         
+            return parseRecordTypeDesc(tok, startPos);
         }
-        "int" => {
+        [IDENTIFIER, var identifier] => {
+            Position pos = tok.currentStartPos();
             check tok.advance();
-            if tok.current() != ":" {
-                return "int";
-            }
-            check tok.advance();
-            Token? t = tok.current();
-            if t is [IDENTIFIER, string] {
-                var name = t[1];
-                BuiltinIntSubtypeDesc? desc = BUILTIN_INT_SUBTYPES[name];
-                if !(desc is ()) {
-                    check tok.advance();
-                    return desc;
-                }
-                return tok.err("unrecognized integer subtype '" + name + "'");
-            }
-            // match falls through to parseError
-        }
-        [IDENTIFIER, var ref] => {
-            TypeDescRef r = { ref, pos: tok.currentPos() };
-            check tok.advance();
-            return r;
+            var [prefix, typeName] = check parseOptQualIdentifier(tok, identifier);
+            Position endPos = tok.previousEndPos();
+            return { startPos, endPos, prefix, typeName, pos };
         }
         [STRING_LITERAL, var str] => {
+            Position endPos = tok.currentEndPos();
             check tok.advance();
-            return <SingletonTypeDesc>{ value: str };
+            return { startPos, endPos, value: str };
         }
         [DECIMAL_NUMBER, _]
         | [HEX_INT_LITERAL, _]
@@ -219,17 +178,19 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             return parseNumericLiteralTypeDesc(tok, ());
         }
         "-" => {
-            Position signPos = tok.currentPos();
+            Position signPos = tok.currentStartPos();
             check tok.advance();
             return parseNumericLiteralTypeDesc(tok, signPos);
         }
         "true" => {
+            Position endPos = tok.currentEndPos();
             check tok.advance();
-            return <SingletonTypeDesc>{ value: true };
+            return <SingletonTypeDesc>{ startPos, endPos, value: true };
         }
         "false" => {
+            Position endPos = tok.currentEndPos();
             check tok.advance();
-            return <SingletonTypeDesc>{ value: false };
+            return <SingletonTypeDesc>{ startPos, endPos, value: false };
         }
     }
     return parseError(tok);
@@ -241,18 +202,34 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 // Another approach would be to have a kind of TypeDesc that refers to an NumericLiteralExpr and then convert in resolveTypes.
 // XXX Revisit when floats (and maybe decimals) are fully incorporated in the front-end.
 function parseNumericLiteralTypeDesc(Tokenizer tok, Position? signPos = ()) returns SingletonTypeDesc|err:Syntax {
+    Position startPos = signPos != () ? signPos : tok.currentStartPos();
     NumericLiteralExpr expr = check parseNumericLiteralExpr(tok);
     if expr is FpLiteralExpr {
-        var f = float:fromString(expr.untypedLiteral);
-        if f is error {
-            return tok.err(`invalid float literal ${expr.untypedLiteral}`); // don't think this should happen
+        if expr.typeSuffix == "d" {
+            var f = decimal:fromString(expr.untypedLiteral);
+            if f is error {
+                return tok.err(`invalid decimal literal ${expr.untypedLiteral}`);
+            }
+            else {
+                decimal value = f;
+                if signPos != () {
+                    value = -value;
+                }
+                return { startPos, endPos: expr.endPos, value };
+            }
         }
         else {
-            float value = f;
-            if signPos != () {
-                value = -value;
+            var f = float:fromString(expr.untypedLiteral);
+            if f is error {
+                return tok.err(`invalid float literal ${expr.untypedLiteral}`); // don't think this should happen
             }
-            return { value };
+            else {
+                float value = f;
+                if signPos != () {
+                    value = -value;
+                }
+                return { startPos, endPos: expr.endPos, value };
+            }
         }
     }
     else {
@@ -271,7 +248,7 @@ function parseNumericLiteralTypeDesc(Tokenizer tok, Position? signPos = ()) retu
             else {
                 value = -n;
             }
-            return { value };
+            return { startPos, endPos: expr.endPos, value };
         }
     }
 }
@@ -288,6 +265,7 @@ function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
 // current token should be "("
 function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns FunctionTypeDesc|err:Syntax {
     // skip "function"
+    Position startPos = tok.currentStartPos();
     check tok.expect("(");
     TypeDesc[] args = [];
     while true {
@@ -297,13 +275,13 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
         args.push(check parseTypeDesc(tok));
         match tok.current() {
             [IDENTIFIER, var paramName] => {
-                if !(paramNames is ()) {
+                if paramNames != () {
                     paramNames.push(paramName);
                 }
                 check tok.advance();
             }
             _ => {
-                if !(paramNames is ()) {
+                if paramNames != () {
                     return parseError(tok);
                 }
             }
@@ -312,6 +290,7 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
             check tok.advance();
         }
     }
+    Position endPos = tok.previousEndPos();
     // on ")"
     check tok.advance();
     TypeDesc ret;
@@ -320,16 +299,19 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
         ret = check parseTypeDesc(tok);
     }
     else {
-        ret = "()";
+        ret = { startPos: tok.currentStartPos(), endPos, builtinTypeName: "null" };
     }
-    return <FunctionTypeDesc>{ args, ret };
+    endPos = tok.previousEndPos();
+    return { startPos, endPos, args, ret };
 }
 
 // current token is []
 function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
     TypeDesc[] members = [];
-    TypeDesc rest = "never";
+    Position startPos = tok.currentStartPos();
     check tok.advance();
+    Position endPos = tok.currentEndPos();
+    TypeDesc rest = { startPos, endPos, builtinTypeName: "never"};
     if tok.current() != "]" {
         while true {
             TypeDesc td = check parseTypeDesc(tok);
@@ -350,17 +332,18 @@ function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
             return parseError(tok);
         }
     }
+    endPos = tok.currentEndPos();
     check tok.advance();
-    return {members, rest};
+    return { startPos, endPos, members, rest};
 }
 
-function parseRecordTypeDesc(Tokenizer tok) returns MappingTypeDesc|err:Syntax {
+function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {
     check tok.advance();
     check tok.expect("{|");
     FieldDesc[] fields = [];
     TypeDesc? rest = ();
     while tok.current() != "|}" {
-        if !(rest is ()) {
+        if rest != () {
             return parseError(tok);
         }
         TypeDesc td = check parseTypeDesc(tok);
@@ -379,6 +362,7 @@ function parseRecordTypeDesc(Tokenizer tok) returns MappingTypeDesc|err:Syntax {
         }
         check tok.expect(";");
     }
+    Position endPos = tok.currentEndPos();
     check tok.advance();
-    return { fields, rest: rest ?: "never" };
+    return { startPos, endPos, fields, rest };
 }

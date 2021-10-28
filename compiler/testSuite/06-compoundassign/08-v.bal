@@ -1,3 +1,4 @@
+// @productions compound-assignment-stmt string-literal additive-expr local-var-decl-stmt
 import ballerina/io;
 
 public function main() {

@@ -39,6 +39,12 @@ function test1() {
     test:assertEquals(tokenization("x>>=1; y>>>=2; z>=3;"), [[IDENTIFIER, "x"], ">>=", [DECIMAL_NUMBER, "1"], ";", [IDENTIFIER, "y"], ">>>=", [DECIMAL_NUMBER, "2"], ";", [IDENTIFIER, "z"], ">=", [DECIMAL_NUMBER, "3"], ";"]);
     test:assertEquals(tokenization("1 => {x>>=1}"), [[DECIMAL_NUMBER, "1"], "=>", "{", [IDENTIFIER, "x"], ">>=", [DECIMAL_NUMBER, "1"], "}"]);
     test:assertEquals(tokenization("x !is int"), [[IDENTIFIER, "x"], "!", "is", "int"]);
+    test:assertEquals(tokenization("_ = x"), ["_", "=", [IDENTIFIER, "x"]]);
+    test:assertEquals(tokenization("_ => {"), ["_", "=>", "{"]);
+    test:assertEquals(tokenization("int _ = x"), ["int", "_", "=", [IDENTIFIER, "x"]]);
+    test:assertEquals(tokenization("_x = x"), [[IDENTIFIER, "_x"], "=", [IDENTIFIER, "x"]]);
+    test:assertEquals(tokenization("__ = x"), [[IDENTIFIER, "__"], "=", [IDENTIFIER, "x"]]);
+    test:assertEquals(tokenization("int _x = x"), ["int", [IDENTIFIER, "_x"], "=", [IDENTIFIER, "x"]]);
 }
 
 @test:Config{}
@@ -47,13 +53,13 @@ function test2() {
 }
 
 function tokenization(string str) returns Token[]|error {
-    SourceFile file = new({ filename: "<internal>" });
-    Tokenizer tok = new([str], file);
+    SourceFile file = createSourceFile([str], { filename: "<internal>" });
+    Tokenizer tok = new(file);
     Token[] tokens = [];
     while true {
         check tok.advance();
         Token? t = tok.current();
-        if t is () {
+        if t == () {
             break;
         }
         else {

@@ -1,8 +1,8 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-define void @_B_main() {
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
+define void @_B04rootmain() !dbg !5 {
   %INT_MAX = alloca i64
   %1 = alloca i64
   %2 = alloca i8 addrspace(1)*
@@ -21,7 +21,7 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %11)
   unreachable
 12:
-  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 260)
+  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 516), !dbg !7
   call void @_bal_panic(i8 addrspace(1)* %13)
   unreachable
 14:
@@ -31,7 +31,17 @@ define void @_B_main() {
   store i64 %16, i64* %INT_MAX
   ret void
 17:
-  %18 = call i8 addrspace(1)* @_bal_panic_construct(i64 769)
+  %18 = call i8 addrspace(1)* @_bal_panic_construct(i64 1025), !dbg !7
   store i8 addrspace(1)* %18, i8 addrspace(1)** %2
   br label %10
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/06-compoundassign/05-p.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 2, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = !DILocation(line: 0, column: 0, scope: !5)

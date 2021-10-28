@@ -5,7 +5,7 @@ public type Message string|Template;
 public type Template object {
     *object:RawTemplate;
     public (readonly & string[]) strings;
-    public (string|int)[] insertions;
+    public (string|int|float)[] insertions;
 };
 
 const QUOTE = "'";
@@ -38,7 +38,6 @@ public type Detail record {
 public type Any Syntax|Semantic|Unimplemented;
 
 // Grammatical inconsistency here is reluctantly intentional
-// JBUG defining these as `error<Detail> & distinct error` results in these errors not being distinct
 public type Syntax distinct error<Detail>;
 public type Semantic distinct error<Detail>;
 public type Unimplemented distinct error<Detail>;
@@ -53,15 +52,15 @@ public function location(File file, Position? startPos = (), Position? endPos = 
     };
 }
 
-public function syntax(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Syntax {
+public function syntax(Message m, Location loc, string? functionName = (), error? cause = ()) returns Syntax {
     return error Syntax(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
-public function semantic(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Semantic {
+public function semantic(Message m, Location loc, string? functionName = (), error? cause = ()) returns Semantic {
     return error Semantic(messageToString(m), cause, location=loc, functionName=functionName);
 }
 
-public function unimplemented(Message m, Location? loc = (), string? functionName = (), error? cause = ()) returns Unimplemented {
+public function unimplemented(Message m, Location loc, string? functionName = (), error? cause = ()) returns Unimplemented {
     return error Unimplemented(messageToString(m), cause, location=loc, functionName=functionName);
 }
 

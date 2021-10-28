@@ -1,3 +1,4 @@
+// @productions exact-equality boolean equality-expr boolean-literal return-stmt any function-call-expr int-literal
 import ballerina/io;
 
 public function main() {

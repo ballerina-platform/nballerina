@@ -1,3 +1,4 @@
+// @productions function-call-expr int-literal
 import ballerina/io;
 
 type Int int;

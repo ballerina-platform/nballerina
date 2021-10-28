@@ -9,13 +9,13 @@ const CASE_START = "// @case";
 final int CASE_START_LENGTH = CASE_START.length();
 const CASE_END = "// @end";
 
-// JBUG #31673 can't specify the first type to be "V"|"E"|ect
-type ParserTestCase [string, string, string[], string[]];
-type SingleStringParserTestCase [string, string, string, string];
+type Kind "V"|"E"|"U"|"UE";
+type ParserTestCase [Kind, string, string[], string[]];
+type SingleStringParserTestCase [Kind, string, string, string];
 @test:Config {
     dataProvider: validTokenSourceFragments
 }
-function testParser(string k, string rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
+function testParser(Kind k, string rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
     if k.includes("U") {
         // XXX validate unimplemented error is being returned
         return;
@@ -34,7 +34,7 @@ function testParser(string k, string rule, string[] subject, string[] expected) 
         panic err:impossible("kind must be FE or FV but was '" + k + "'");
     }
     if k.includes("E") {
-        if !(parsed is error) {
+        if parsed !is error {
             test:assertFail("expected a syntax error but got " + "\n".'join(...wordsToLines(parsed)));
         }
         return;
@@ -49,12 +49,12 @@ type SingleStringTokenizerTestCase [string, string];
     dataProvider: sourceFragments
 }
 function testTokenizer(string k, string[] lines) returns error? {
-    SourceFile file = new({ filename: k });
-    Tokenizer tok = new (lines, file);
+    SourceFile file = createSourceFile(lines, { filename: k });
+    Tokenizer tok = new (file);
     while true {
         err:Syntax|Token? t = advance(tok, k, lines);
         if t is Token {
-            err:LineColumn lc = file.lineColumn(tok.currentPos());
+            err:LineColumn lc = file.lineColumn(tok.currentStartPos());
             string src = lines[lc[0] - 1];
             int tStart = lc[1];
             string tStr = tokenToString(t);
@@ -116,11 +116,11 @@ function tokenToString(Token t) returns string {
 function reduceToWords(string k, string rule, string[] fragment) returns err:Syntax|Word[] {
     Word[] w = [];
     if rule == "mod" {
-        modulePartToWords(w, check parseModulePart(fragment, { filename: k }, 0));
+        modulePartToWords(w, check scanAndParseModulePart(fragment, { filename: k }, 0));
     }
     else {
-        SourceFile file = new({ filename: k });
-        Tokenizer tok = new (fragment, file);
+        SourceFile file = createSourceFile(fragment, { filename: k });
+        Tokenizer tok = new (file);
         check tok.advance();
         match rule {
             "expr" => {
@@ -137,11 +137,12 @@ function reduceToWords(string k, string rule, string[] fragment) returns err:Syn
             }
         }
         if tok.current() != () {
-            return err:syntax("superfluous input at end");
+            return err:syntax("superfluous input at end", location(k));
         }
     }
     return w;
 }
+
 
 function sourceFragments() returns map<TokenizerTestCase>|error {
      map<TokenizerTestCase> all = check invalidTokenSourceFragments();
@@ -159,23 +160,22 @@ function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
         ["OE", "`"],
         ["OE", string`"\"`],
         ["OE", string`"\a"`],
-        // JBUG ballerina-plugin-vscode/#104 can't use string `\`
-        ["OE", "\\"],
-        ["OE", "\"\n\""],
-        ["OE", "\"\r\""],
-        ["E", "\"\n\""],
-        ["E", "\"\r\""],
-        ["E", "\"\\"],
-         // JBUG #31444 #31713 #31717 can't write below literals in a simpler way
-        ["E", "\"\\" + "u{}\""],
+        ["OE", string`\`],
+        ["OE", string`"\n"`],
+        ["OE", string`"\r"`],
+        ["E", string`"\n"`],
+        ["E", string`"\r"`],
+        ["E", string`"\\`],
+        ["E", string`"\u{}"`],
+        // JBUG #33390 using template string complains about invalid unicodes
         ["E", "\"\\" + "u{D800}\""],
         ["E", "\"\\" + "u{DFFF}\""],
         ["E", "\"\\" + "u{110000}\""],
-        ["E", "\"\\" + "u{X}\""],
-        ["E", "\"\\" + "u{-6A}\""],
-        ["E", "\"\\" + "u\""],
-        ["E", "\"\\" + "u{\""],
-        ["E", "\"\\" + "u{0\""]
+        ["E", string`"\u{X}"`],
+        ["E", string`"\u{-6A}"`],
+        ["E", string`"\u"`],
+        ["E", string`"\u{"`],
+        ["E", string`"\u{0"`]
     ];
 
     map<TokenizerTestCase> tests = {};
@@ -228,18 +228,20 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", string`"\r"`, string `"\r"`],
          ["V", "expr", string`"\\"`, string `"\\"`],
          ["V", "expr", string`"\""`, string`"\""`],
-         // JBUG #31444 #31713 #31717 can't write below literals in a simpler way
-         ["V", "expr", "\"\\" + "u{0}\"", "\"\\" + "u{0}\""],
-         ["V", "expr", "\"\\" + "u{41}\"", string `"A"`],
-         ["V", "expr", "\"\\" + "u{6A}\"", string `"j"`],
-         ["V", "expr", "\"\\" + "u{6a}\"", string `"j"`],
-         ["V", "expr", "\"\\" + "u{0000000041}\"", string `"A"`],
-         ["V", "expr", "\"\\" + "u{d7fF}\"", "\"\\" + "u{D7FF}\""],
-         ["V", "expr", "\"\\" + "u{E000}\"", "\"\\" + "u{E000}\""],
-         ["V", "expr", "\"\\" + "u{FFFE}\"", "\"\\" + "u{FFFE}\""],
-         ["V", "expr", "\"\\" + "u{FFFF}\"", "\"\\" + "u{FFFF}\""],
-         ["V", "expr", "\"\\" + "u{10FFFF}\"", "\"\\" + "u{10FFFF}\""],
-         ["V", "expr", "\"\\\\" + "u{41}\"", "\"\\\\" + "u{41}\""],
+         ["V", "expr", string`"\u{0}"`, string`"\u{0}"`],
+         ["V", "expr", string`"\u{41}"`, string`"A"`],
+         ["V", "expr", string`"\u{6A}"`, string`"j"`],
+         ["V", "expr", string`"\u{6a}"`, string`"j"`],
+         ["V", "expr", string`"\u{0000000041}"`, string`"A"`],
+         ["V", "expr", string`"\u{d7fF}"`, string`"\u{D7FF}"`],
+         ["V", "expr", string`"\u{E000}"`, string`"\u{E000}"`],
+         ["V", "expr", string`"\u{FFFE}"`, string`"\u{FFFE}"`],
+         ["V", "expr", string`"\u{FFFF}"`, string`"\u{FFFF}"`],
+         ["V", "expr", string`"\u{10FFFF}"`, string`"\u{10FFFF}"`],
+         ["V", "expr", string`"\\u{41}"`, string`"\\u{41}"`],
+         // var ref
+         ["V", "expr", "a:b", "a:b"],
+         ["E", "expr", "a:1", ""],
          // unary op
          ["E", "expr", "!", ""],
          ["E", "expr", "!-", ""],
@@ -271,6 +273,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "x !is int", "x ! is int"],
          ["V", "expr", "x[1] is map<any>", "(x[1]) is map<any>"],
          ["V", "expr", "x is int == true", "(x is int) == true"],
+         ["V", "expr", "v is a:b", "v is a:b"],
          // binary op
          ["V", "expr", "1 + 1", "1 + 1"],
          ["V", "expr", "2 - a2", "2 - a2"],
@@ -366,6 +369,9 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "expr", "x(a,)", ""],
          ["E", "expr", "x(a b)", ""],
          ["V", "expr", "xxx(123, 12 + 2)", "xxx(123, 12 + 2)"],
+         ["V", "expr", "x:f()", "x:f()"],
+         ["V", "expr", "a:b().x()", "a:b().x()"],
+         ["V", "expr", "x:y.f()", "x:y.f()"],
          // list constructor
          ["V", "expr", "[ ]", "[]"],
          ["V", "expr", "[foo(42)]", "[foo(42)]"],
@@ -391,6 +397,17 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "expr", "false.length()", "false.length()"],
          ["V", "expr", "-1.hexStr()", "-(1.hexStr())"],
          ["V", "expr", "-0xf.max()", "-(0xF.max())"],
+        // field access
+         ["V", "expr", "a.b", "a.b"],
+         ["V", "expr", "a.b.c", "(a.b).c"],
+         ["V", "expr", "a.b().c", "(a.b()).c"],
+         ["V", "expr", "a.b.c()", "(a.b).c()"],
+         ["V", "expr", "a[n].b.c(m)", "((a[n]).b).c(m)"],
+         ["V", "expr", "a(x).b.c[y]", "((a(x).b).c)[y]"],
+         ["V", "expr", "a[b.c]", "a[b.c]"],
+         ["E", "expr", "a.1", ""],
+         // may get allowed under  ballerina-spec#34
+         ["E", "expr", "a.map", ""],
          // XXX Output is illegal in 2021R1 but will be addressed in ballerina-spec#905
          ["V", "expr", "42 .length()", "42.length()"],
          ["V", "expr", "x.foo().bar()", "(x.foo()).bar()"],
@@ -455,6 +472,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["E", "stmt", "int x = a =! b;", ""],
          ["E", "stmt", "int i = 0xBABE1F1SH;", ""],
          ["V", "stmt", "int i = 10;", "int i = 10;"],
+         ["V", "stmt", "a:b i = 10;", "a:b i = 10;"],
          ["V", "stmt", "boolean i = 10;", "boolean i = 10;"],
          ["E", "stmt", "int i = a ... b ... c;", ""],
          ["V", "stmt", "final int i = 1;", "final int i = 1;"],
@@ -464,16 +482,43 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
          ["V", "stmt", "any [ ] v = [1];", "any[] v = [1];"],
          ["E", "stmt", "any [x ] v = [1];", ""],
          ["V", "stmt", "map<any> v = {x:1};", string`map<any> v = { "x": 1 };`],
+         ["V", "stmt", "a:b();", "a:b();"],
+         ["V", "stmt", "a:b().x();", "a:b().x();"],
+         ["V", "stmt", "a:b((j), k).x();", "a:b(j, k).x();"],
+         ["V", "stmt", "a:b.m();", "a:b.m();"],
+         ["V", "stmt", "error e = error(\"\");", "error e = error(\"\");"],
+         // statement method call
+         ["V", "stmt", "error(\"\").message();", "error(\"\").message();"], // not semantically valid
+         // statement field access lvalue
+         ["V", "stmt", "a.b = c;", "a.b = c;"],
+         ["V", "stmt", "a.b += c;", "a.b += c;"],
+         ["E", "stmt", "a.1 = b;", ""],
          // statement assign
          ["E", "stmt", "a = b = d;", ""],
          ["V", "stmt", "a = 0;", "a = 0;"],
          ["V", "stmt", "a = 0 == 1;", "a = 0 == 1;"],
          ["E", "stmt", "a + b = c + d;", ""],
          ["V", "stmt", "a = 0 != 1;", "a = 0 != 1;"],
+         // statement destructuring assign
+         ["V", "stmt", "_ = a;", "_ = a;"],
+         ["E", "stmt", "_ equals 1;", ""],
          // statement if else
          ["E", "stmt", "if a noOp(1);", ""],
          ["E", "stmt", "if a {} else return;", ""],
          ["E", "stmt", "if a = b {}", ""],
+         // check
+         ["V", "stmt", "check a();", "check a();"],
+         ["V", "stmt", "check check a();", "check check a();"],
+         ["E", "stmt", "check (a());"],
+         ["E", "stmt", "check check (a());"],
+         ["V", "stmt", "check ().clone();", "check ().clone();"],
+         ["E", "stmt", "check a;"],
+         ["E", "stmt", "check a() + b();"],
+         ["E", "stmt", "check a[1];"],
+         ["V", "stmt", "check a.b();", "check a.b();"],
+         ["E", "stmt", "check (a.b());"],
+         ["V", "stmt", "check ((a)).b();", "check a.b();"],
+         ["V", "stmt", "check a[1].b();", "check (a[1]).b();"],
          // module parts
          ["U", "mod", "type ER error<map<readonly>>;", ""],
          ["E", "mod", "import;", ""],
@@ -500,19 +545,22 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
             expected = src;
         }
 
-        string[] baseParts = splitTestName(base);
+        [Kind, string] baseParts = check splitTestName(base);
         tests["file:" + base] = [baseParts[0], baseParts[1], src, expected];
     }
     return tests;
 }
-function splitTestName(string base) returns [string, string] {
+function splitTestName(string base) returns [Kind, string]|error {
     int len = base.length();
     int kindPos = base.indexOf("-") ?: 0;
     string kind = base.substring(0, kindPos);
-    int afterKindPos = min(kindPos + 1, len);
-    int rulePos = base.indexOf("-", afterKindPos) ?: afterKindPos;
-    string rule = base.substring(afterKindPos, rulePos);
-    return [kind, rule];
+    if kind is Kind {
+        int afterKindPos = min(kindPos + 1, len);
+        int rulePos = base.indexOf("-", afterKindPos) ?: afterKindPos;
+        string rule = base.substring(afterKindPos, rulePos);
+        return [kind, rule];
+    }
+    return error("invalid test kind");
 }
 
 function min(int a, int b) returns int {
@@ -547,4 +595,12 @@ function readCase(string path) returns string[]|error {
 function canonFileName(string base) returns string{
     string sansExt = base.substring(0, base.length() - SOURCE_EXTENSION.length());
     return sansExt + "-canon" + SOURCE_EXTENSION;
+}
+
+function location(string filename) returns err:Location {
+    return {
+        filename: filename,
+        startPos: (),
+        endPos: ()
+    };
 }

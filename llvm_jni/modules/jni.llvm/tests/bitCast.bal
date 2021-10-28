@@ -8,7 +8,7 @@ function bitCast() returns Module {
     BasicBlock fooBB = foo.appendBasicBlock();
     builder.positionAtEnd(fooBB);
     Value arg = foo.getParam(0);
-    Value third = builder.bitCast(arg, pointerType("i64"));
+    Value third = builder.bitCast(<PointerValue>arg, pointerType("i64"));
     builder.ret(third);
     return m;
 }

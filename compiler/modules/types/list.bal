@@ -20,7 +20,7 @@ public class ListDefinition {
 
     public function getSemType(Env env) returns ComplexSemType {
         ComplexSemType? s = self.semType;
-        if s is () {
+        if s == () {
             RecAtom ro = env.recListAtom();
             RecAtom rw = env.recListAtom();
             self.roRec = ro;
@@ -44,7 +44,8 @@ public class ListDefinition {
             rw = env.listAtom(rwType);
         }
         Atom ro;
-        if typeListIsReadOnly(rwType.members) && isReadOnly(rwType.rest) {
+        ListAtomicType roType = readOnlyListAtomicType(rwType);
+        if roType === rwType {
             RecAtom? roRec = self.roRec;
             if roRec == () {
                 // share the definitions
@@ -56,10 +57,6 @@ public class ListDefinition {
             }
         }
         else {
-            ListAtomicType roType = {
-                members: readOnlyTypeList(rwType.members),
-                rest: intersect(rwType.rest, READONLY)
-            };
             ro = env.listAtom(roType);
             RecAtom? roRec = self.roRec;
             if roRec != () {
@@ -85,27 +82,37 @@ public class ListDefinition {
     }       
 }
 
+function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
+    if typeListIsReadOnly(ty.members) && isReadOnly(ty.rest) {
+        return ty;
+    }
+    return {
+        members: readOnlyTypeList(ty.members),
+        rest: intersect(ty.rest, READONLY)
+    };   
+}
+
 public function tuple(Env env, SemType... members) returns SemType {
     ListDefinition def = new;
     return def.define(env, members, NEVER);
 }
 
-function listRoSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
-    return listSubtypeIsEmpty(tc, bddFixReadOnly(<Bdd>t));
+function listRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
+    return listSubtypeIsEmpty(cx, bddFixReadOnly(<Bdd>t));
 }
 
-function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean {
+function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     Bdd b = <Bdd>t;
-    BddMemo? mm = tc.listMemo[b];
+    BddMemo? mm = cx.listMemo[b];
     BddMemo m;
-    if mm is () {
+    if mm == () {
         m = { bdd: b };
-        tc.listMemo.add(m);
+        cx.listMemo.add(m);
     }
     else {
         m = mm;
         boolean? res = m.isEmpty;
-        if res is () {
+        if res == () {
             // we've got a loop
             // XXX is this right???
             return true;
@@ -114,21 +121,21 @@ function listSubtypeIsEmpty(TypeCheckContext tc, SubtypeData t) returns boolean 
             return res;
         }
     }
-    boolean isEmpty = bddEvery(tc, b, (), (), listFormulaIsEmpty);
+    boolean isEmpty = bddEvery(cx, b, (), (), listFormulaIsEmpty);
     m.isEmpty = isEmpty;
     return isEmpty;    
 }
 
-function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? neg) returns boolean {
+function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
     SemType[] members;
     SemType rest;
-    if pos is () {
+    if pos == () {
         members = [];
         rest = TOP;
     }
     else {
         // combine all the positive tuples using intersection
-        ListAtomicType lt = tc.listAtomType(pos.atom);
+        ListAtomicType lt = cx.listAtomType(pos.atom);
         members = lt.members;
         rest = lt.rest;
         Conjunction? p = pos.next;
@@ -137,13 +144,13 @@ function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? 
             members = shallowCopyTypes(members);
         }
         while true {
-            if p is () {
+            if p == () {
                 break;
             }
             else {
                 Atom d = p.atom;
                 p = p.next; 
-                lt = tc.listAtomType(d);
+                lt = cx.listAtomType(d);
                 int newLen = int:max(members.length(), lt.members.length());
                 if members.length() < newLen {
                     if isNever(rest) {
@@ -168,12 +175,16 @@ function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? 
             }
         }
         foreach var m in members {
-            if isEmpty(tc, m) {
+            if isEmpty(cx, m) {
                 return true;
             }
         }
+        // Ensure that we can use isNever on rest in listInhabited
+        if rest !== NEVER && isEmpty(cx, rest) {
+            rest = NEVER;
+        }
     }
-    return !listInhabited(tc, members, rest, neg);
+    return !listInhabited(cx, members, rest, neg);
 }
 
 // This function returns true if there is a list shape v such that
@@ -183,17 +194,17 @@ function listFormulaIsEmpty(TypeCheckContext tc, Conjunction? pos, Conjunction? 
 // Precondition is that each of `members` is not empty.
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
-function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Conjunction? neg) returns boolean {
-    if neg is () {
+function listInhabited(Context cx, SemType[] members, SemType rest, Conjunction? neg) returns boolean {
+    if neg == () {
         return true;
     }
     else {
         int len = members.length();
-        ListAtomicType nt = tc.listAtomType(neg.atom);
+        ListAtomicType nt = cx.listAtomType(neg.atom);
         int negLen = nt.members.length();
         if len < negLen {
             if isNever(rest) {
-                return listInhabited(tc, members, rest, neg.next);
+                return listInhabited(cx, members, rest, neg.next);
             }            
             foreach int i in len ..< negLen {
                 members.push(rest);
@@ -201,7 +212,7 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Con
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
-            return listInhabited(tc, members, rest, neg.next);
+            return listInhabited(cx, members, rest, neg.next);
         }
         // now we have nt.members.length() <= len
 
@@ -214,7 +225,7 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Con
         // We must then find a [v0,v1] satisfying the remaining negated tuples,
         // such that v0 is in d0.
         // SemType d0 = diff(s[0], t[0]);
-        // if !isEmpty(tc, d0) && tupleInhabited(tc, [d0, s[1]], neg.rest) {
+        // if !isEmpty(cx, d0) && tupleInhabited(cx, [d0, s[1]], neg.rest) {
         //     return true;
         // }
         // Case (2)
@@ -222,26 +233,56 @@ function listInhabited(TypeCheckContext tc, SemType[] members, SemType rest, Con
         // We must then find a [v0,v1] satisfying the remaining negated tuples,
         // such that v1 is in d1.
         // SemType d1 = diff(s[1], t[1]);
-        // return !isEmpty(tc, d1) &&  tupleInhabited(tc, [s[0], d1], neg.rest);
+        // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
         foreach int i in 0 ..< len {
             SemType ntm = i < negLen ? nt.members[i] : nt.rest;
             SemType d = diff(members[i], ntm);
-            if !isEmpty(tc, d) {
+            if !isEmpty(cx, d) {
                 SemType[] s = shallowCopyTypes(members);
                 s[i] = d;
-                if listInhabited(tc, s, rest, neg.next) {
+                if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
             }     
         }
-        if !isEmpty(tc, diff(rest, nt.rest)) {
+        if !isEmpty(cx, diff(rest, nt.rest)) {
             return true;
         }
         // This is correct for length 0, because we know that the length of the
         // negative is 0, and [] - [] is empty.
         return false;
     }
+}
+
+function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns SemType {
+    if b is boolean {
+        return b ? accum : NEVER;
+    }
+    else {
+        return union(bddListMemberType(cx, b.left, key,
+                                       intersect(listAtomicMemberType(cx.listAtomType(b.atom), key),
+                                                 accum)),
+                     union(bddListMemberType(cx, b.middle, key, accum),
+                           bddListMemberType(cx, b.right, key, accum)));
+    }
+}
+
+function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
+    if key != () {
+        if key < 0 {
+            return NEVER;
+        }
+        else if key < atomic.members.length() {
+            return atomic.members[key];
+        }
+        return atomic.rest;
+    }
+    SemType m = atomic.rest;
+    foreach var ty in atomic.members {
+        m = union(m, ty);
+    }
+    return m;
 }
 
 final UniformTypeOps listRoOps = {

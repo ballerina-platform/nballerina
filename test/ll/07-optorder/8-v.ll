@@ -1,9 +1,9 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i64 @_bal_string_cmp(i8 addrspace(1)*, i8 addrspace(1)*) readonly
-declare void @_Bio__println(i8 addrspace(1)*)
-define void @_B_main() {
+declare i64 @_bal_string_compare(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
+define void @_B04rootmain() !dbg !5 {
   %a = alloca i8 addrspace(1)*
   %1 = alloca i1
   %2 = alloca i8 addrspace(1)*
@@ -24,180 +24,110 @@ define void @_B_main() {
   %17 = alloca i8
   %18 = load i8*, i8** @_bal_stack_guard
   %19 = icmp ult i8* %17, %18
-  br i1 %19, label %25, label %20
+  br i1 %19, label %77, label %20
 20:
   store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620637281), i8 addrspace(1)** %a
   %21 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %22 = icmp eq i8 addrspace(1)* %21, null
-  %23 = icmp eq i8 addrspace(1)* null, null
-  %24 = or i1 %22, %23
-  br i1 %24, label %27, label %29
-25:
-  %26 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
-  call void @_bal_panic(i8 addrspace(1)* %26)
-  unreachable
-27:
-  %28 = and i1 %22, %23
-  store i1 %28, i1* %1
-  br label %32
-29:
-  %30 = call i64 @_bal_string_cmp(i8 addrspace(1)* %21, i8 addrspace(1)* null)
-  %31 = icmp sle i64 %30, 0
-  store i1 %31, i1* %1
-  br label %32
-32:
-  %33 = load i1, i1* %1
-  %34 = zext i1 %33 to i64
-  %35 = or i64 %34, 72057594037927936
-  %36 = getelementptr i8, i8 addrspace(1)* null, i64 %35
-  call void @_Bio__println(i8 addrspace(1)* %36)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %38 = icmp eq i8 addrspace(1)* %37, null
-  %39 = icmp eq i8 addrspace(1)* null, null
-  %40 = or i1 %38, %39
-  br i1 %40, label %41, label %43
-41:
-  %42 = and i1 %38, %39
-  store i1 0, i1* %3
-  br label %46
-43:
-  %44 = call i64 @_bal_string_cmp(i8 addrspace(1)* %37, i8 addrspace(1)* null)
-  %45 = icmp slt i64 %44, 0
-  store i1 %45, i1* %3
-  br label %46
-46:
-  %47 = load i1, i1* %3
-  %48 = zext i1 %47 to i64
-  %49 = or i64 %48, 72057594037927936
-  %50 = getelementptr i8, i8 addrspace(1)* null, i64 %49
-  call void @_Bio__println(i8 addrspace(1)* %50)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %4
-  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %52 = icmp eq i8 addrspace(1)* %51, null
-  %53 = icmp eq i8 addrspace(1)* null, null
-  %54 = or i1 %52, %53
-  br i1 %54, label %55, label %57
-55:
-  %56 = and i1 %52, %53
-  store i1 %56, i1* %5
-  br label %60
-57:
-  %58 = call i64 @_bal_string_cmp(i8 addrspace(1)* %51, i8 addrspace(1)* null)
-  %59 = icmp sge i64 %58, 0
-  store i1 %59, i1* %5
-  br label %60
-60:
-  %61 = load i1, i1* %5
-  %62 = zext i1 %61 to i64
-  %63 = or i64 %62, 72057594037927936
-  %64 = getelementptr i8, i8 addrspace(1)* null, i64 %63
-  call void @_Bio__println(i8 addrspace(1)* %64)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %6
-  %65 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %66 = icmp eq i8 addrspace(1)* %65, null
-  %67 = icmp eq i8 addrspace(1)* null, null
-  %68 = or i1 %66, %67
-  br i1 %68, label %69, label %71
-69:
-  %70 = and i1 %66, %67
-  store i1 0, i1* %7
-  br label %74
-71:
-  %72 = call i64 @_bal_string_cmp(i8 addrspace(1)* %65, i8 addrspace(1)* null)
-  %73 = icmp sgt i64 %72, 0
-  store i1 %73, i1* %7
-  br label %74
-74:
-  %75 = load i1, i1* %7
-  %76 = zext i1 %75 to i64
-  %77 = or i64 %76, 72057594037927936
-  %78 = getelementptr i8, i8 addrspace(1)* null, i64 %77
-  call void @_Bio__println(i8 addrspace(1)* %78)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %8
-  %79 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %80 = icmp eq i8 addrspace(1)* null, null
-  %81 = icmp eq i8 addrspace(1)* %79, null
-  %82 = or i1 %80, %81
-  br i1 %82, label %83, label %85
-83:
-  %84 = and i1 %80, %81
-  store i1 %84, i1* %9
-  br label %88
-85:
-  %86 = call i64 @_bal_string_cmp(i8 addrspace(1)* null, i8 addrspace(1)* %79)
-  %87 = icmp sle i64 %86, 0
-  store i1 %87, i1* %9
-  br label %88
-88:
-  %89 = load i1, i1* %9
-  %90 = zext i1 %89 to i64
-  %91 = or i64 %90, 72057594037927936
-  %92 = getelementptr i8, i8 addrspace(1)* null, i64 %91
-  call void @_Bio__println(i8 addrspace(1)* %92)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %10
-  %93 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %94 = icmp eq i8 addrspace(1)* null, null
-  %95 = icmp eq i8 addrspace(1)* %93, null
-  %96 = or i1 %94, %95
-  br i1 %96, label %97, label %99
-97:
-  %98 = and i1 %94, %95
-  store i1 0, i1* %11
-  br label %102
-99:
-  %100 = call i64 @_bal_string_cmp(i8 addrspace(1)* null, i8 addrspace(1)* %93)
-  %101 = icmp slt i64 %100, 0
-  store i1 %101, i1* %11
-  br label %102
-102:
-  %103 = load i1, i1* %11
-  %104 = zext i1 %103 to i64
-  %105 = or i64 %104, 72057594037927936
-  %106 = getelementptr i8, i8 addrspace(1)* null, i64 %105
-  call void @_Bio__println(i8 addrspace(1)* %106)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %12
-  %107 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %108 = icmp eq i8 addrspace(1)* null, null
-  %109 = icmp eq i8 addrspace(1)* %107, null
-  %110 = or i1 %108, %109
-  br i1 %110, label %111, label %113
-111:
-  %112 = and i1 %108, %109
-  store i1 %112, i1* %13
-  br label %116
-113:
-  %114 = call i64 @_bal_string_cmp(i8 addrspace(1)* null, i8 addrspace(1)* %107)
-  %115 = icmp sge i64 %114, 0
-  store i1 %115, i1* %13
-  br label %116
-116:
-  %117 = load i1, i1* %13
-  %118 = zext i1 %117 to i64
-  %119 = or i64 %118, 72057594037927936
-  %120 = getelementptr i8, i8 addrspace(1)* null, i64 %119
-  call void @_Bio__println(i8 addrspace(1)* %120)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %14
-  %121 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %122 = icmp eq i8 addrspace(1)* null, null
-  %123 = icmp eq i8 addrspace(1)* %121, null
-  %124 = or i1 %122, %123
-  br i1 %124, label %125, label %127
-125:
-  %126 = and i1 %122, %123
-  store i1 0, i1* %15
-  br label %130
-127:
-  %128 = call i64 @_bal_string_cmp(i8 addrspace(1)* null, i8 addrspace(1)* %121)
-  %129 = icmp sgt i64 %128, 0
-  store i1 %129, i1* %15
-  br label %130
-130:
-  %131 = load i1, i1* %15
-  %132 = zext i1 %131 to i64
-  %133 = or i64 %132, 72057594037927936
-  %134 = getelementptr i8, i8 addrspace(1)* null, i64 %133
-  call void @_Bio__println(i8 addrspace(1)* %134)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %16
+  %22 = call i64 @_bal_string_compare(i8 addrspace(1)* %21, i8 addrspace(1)* null)
+  %23 = icmp ule i64 %22, 1
+  store i1 %23, i1* %1
+  %24 = load i1, i1* %1, !dbg !8
+  %25 = zext i1 %24 to i64, !dbg !8
+  %26 = or i64 %25, 72057594037927936, !dbg !8
+  %27 = getelementptr i8, i8 addrspace(1)* null, i64 %26, !dbg !8
+  call void @_Bb02ioprintln(i8 addrspace(1)* %27), !dbg !8
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !8
+  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %29 = call i64 @_bal_string_compare(i8 addrspace(1)* %28, i8 addrspace(1)* null)
+  %30 = icmp eq i64 %29, 0
+  store i1 %30, i1* %3
+  %31 = load i1, i1* %3, !dbg !9
+  %32 = zext i1 %31 to i64, !dbg !9
+  %33 = or i64 %32, 72057594037927936, !dbg !9
+  %34 = getelementptr i8, i8 addrspace(1)* null, i64 %33, !dbg !9
+  call void @_Bb02ioprintln(i8 addrspace(1)* %34), !dbg !9
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !9
+  %35 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %36 = call i64 @_bal_string_compare(i8 addrspace(1)* %35, i8 addrspace(1)* null)
+  %37 = icmp sge i64 %36, 1
+  store i1 %37, i1* %5
+  %38 = load i1, i1* %5, !dbg !10
+  %39 = zext i1 %38 to i64, !dbg !10
+  %40 = or i64 %39, 72057594037927936, !dbg !10
+  %41 = getelementptr i8, i8 addrspace(1)* null, i64 %40, !dbg !10
+  call void @_Bb02ioprintln(i8 addrspace(1)* %41), !dbg !10
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !10
+  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %43 = call i64 @_bal_string_compare(i8 addrspace(1)* %42, i8 addrspace(1)* null)
+  %44 = icmp eq i64 %43, 2
+  store i1 %44, i1* %7
+  %45 = load i1, i1* %7, !dbg !11
+  %46 = zext i1 %45 to i64, !dbg !11
+  %47 = or i64 %46, 72057594037927936, !dbg !11
+  %48 = getelementptr i8, i8 addrspace(1)* null, i64 %47, !dbg !11
+  call void @_Bb02ioprintln(i8 addrspace(1)* %48), !dbg !11
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !11
+  %49 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %50 = call i64 @_bal_string_compare(i8 addrspace(1)* null, i8 addrspace(1)* %49)
+  %51 = icmp ule i64 %50, 1
+  store i1 %51, i1* %9
+  %52 = load i1, i1* %9, !dbg !12
+  %53 = zext i1 %52 to i64, !dbg !12
+  %54 = or i64 %53, 72057594037927936, !dbg !12
+  %55 = getelementptr i8, i8 addrspace(1)* null, i64 %54, !dbg !12
+  call void @_Bb02ioprintln(i8 addrspace(1)* %55), !dbg !12
+  store i8 addrspace(1)* null, i8 addrspace(1)** %10, !dbg !12
+  %56 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %57 = call i64 @_bal_string_compare(i8 addrspace(1)* null, i8 addrspace(1)* %56)
+  %58 = icmp eq i64 %57, 0
+  store i1 %58, i1* %11
+  %59 = load i1, i1* %11, !dbg !13
+  %60 = zext i1 %59 to i64, !dbg !13
+  %61 = or i64 %60, 72057594037927936, !dbg !13
+  %62 = getelementptr i8, i8 addrspace(1)* null, i64 %61, !dbg !13
+  call void @_Bb02ioprintln(i8 addrspace(1)* %62), !dbg !13
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !13
+  %63 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %64 = call i64 @_bal_string_compare(i8 addrspace(1)* null, i8 addrspace(1)* %63)
+  %65 = icmp sge i64 %64, 1
+  store i1 %65, i1* %13
+  %66 = load i1, i1* %13, !dbg !14
+  %67 = zext i1 %66 to i64, !dbg !14
+  %68 = or i64 %67, 72057594037927936, !dbg !14
+  %69 = getelementptr i8, i8 addrspace(1)* null, i64 %68, !dbg !14
+  call void @_Bb02ioprintln(i8 addrspace(1)* %69), !dbg !14
+  store i8 addrspace(1)* null, i8 addrspace(1)** %14, !dbg !14
+  %70 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %71 = call i64 @_bal_string_compare(i8 addrspace(1)* null, i8 addrspace(1)* %70)
+  %72 = icmp eq i64 %71, 2
+  store i1 %72, i1* %15
+  %73 = load i1, i1* %15, !dbg !15
+  %74 = zext i1 %73 to i64, !dbg !15
+  %75 = or i64 %74, 72057594037927936, !dbg !15
+  %76 = getelementptr i8, i8 addrspace(1)* null, i64 %75, !dbg !15
+  call void @_Bb02ioprintln(i8 addrspace(1)* %76), !dbg !15
+  store i8 addrspace(1)* null, i8 addrspace(1)** %16, !dbg !15
   ret void
+77:
+  %78 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
+  call void @_bal_panic(i8 addrspace(1)* %78)
+  unreachable
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/07-optorder/8-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = !DILocation(line: 0, column: 0, scope: !5)
+!8 = !DILocation(line: 6, column: 4, scope: !5)
+!9 = !DILocation(line: 7, column: 4, scope: !5)
+!10 = !DILocation(line: 8, column: 4, scope: !5)
+!11 = !DILocation(line: 9, column: 4, scope: !5)
+!12 = !DILocation(line: 11, column: 4, scope: !5)
+!13 = !DILocation(line: 12, column: 4, scope: !5)
+!14 = !DILocation(line: 13, column: 4, scope: !5)
+!15 = !DILocation(line: 14, column: 4, scope: !5)

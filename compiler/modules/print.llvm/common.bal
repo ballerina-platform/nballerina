@@ -46,11 +46,7 @@ public function structType(Type[] elementTypes) returns StructType {
     return { elementTypes: elementTypes.cloneReadOnly() };
 }
 
-function getTypeAtIndex(StructType ty, int index) returns Type {
-    return ty.elementTypes[index];
-}
-
-public type Type IntType|FloatType|PointerType|StructType|ArrayType;
+public type Type IntType|FloatType|PointerType|StructType|ArrayType|FunctionType;
 
 // A RetType is valid only as the return type of a function
 public type RetType Type|"void";
@@ -61,10 +57,14 @@ public type FunctionType readonly & record {|
     Type[] paramTypes;
 |};
 
+public function functionType(RetType returnType, Type[] paramTypes) returns FunctionType {
+    return { returnType, paramTypes: paramTypes.cloneReadOnly() };
+}
+
 // Corresponds to LLVMLinkage enum
 public type Linkage "internal"|"external";
 
-public type FunctionEnumAttribute "noreturn"|"cold"|"nounwind"|"readnone"|"readonly"|"speculatable"|"willreturn";
+public type FunctionEnumAttribute "nofree"|"nosync"|"readnone"|"noreturn"|"cold"|"nounwind"|"readnone"|"readonly"|"speculatable"|"willreturn";
 public type ParamEnumAttribute "signext"|"zeroext";
 public type ReturnEnumAttribute "signext"|"zeroext"|"noalias";
 public type EnumAttribute FunctionEnumAttribute | (readonly & [int, ParamEnumAttribute]) | (readonly & ["return", ReturnEnumAttribute]);
@@ -94,13 +94,17 @@ public type IntrinsicFunctionName IntegerArithmeticIntrinsicName|GeneralIntrinsi
 
 public type TargetTriple string;
 
-public type GlobalProperties record {|
-    boolean isConstant = false;
-    int? align = ();
+public type GlobalSymbolProperties record {|
     boolean unnamedAddr = false;
     int addressSpace = 0;
-    ConstValue? initializer = ();
     Linkage linkage = "external";
+|};
+
+public type GlobalProperties record {|
+    *GlobalSymbolProperties;
+    boolean isConstant = false;
+    int? align = ();
+    ConstValue|Function? initializer = ();
 |};
 
 // Corresponds to LLVMDWARFSourceLanguage

@@ -1,3 +1,4 @@
+// @productions is-expr match-stmt string-literal if-else-stmt return-stmt unary-expr any function-call-expr int-literal
 import ballerina/io;
 
 public function main() {

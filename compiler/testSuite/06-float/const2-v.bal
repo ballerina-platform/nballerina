@@ -1,3 +1,4 @@
+// @productions module-const-decl multiplicative-expr floating-point-literal unary-expr additive-expr
 import ballerina/io;
 
 const A = -3f;

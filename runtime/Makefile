@@ -1,4 +1,4 @@
-LLVM_SUFFIX?=-11
+LLVM_SUFFIX?=-12
 export CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
 LLC ?= llc$(LLVM_SUFFIX)
@@ -9,7 +9,7 @@ VALGRIND ?= valgrind
 BT_WARN_FLAGS=-W -Wall -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition -Wmissing-format-attribute -Wcast-qual
 BT_OBJS=$(addprefix third-party/libbacktrace/, atomic.o dwarf.o fileline.o posix.o sort.o state.o backtrace.o simple.o obj.o mmapio.o mmap.o)
 OBJS=alloc.o error.o list.o main.o mapping.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o tagged_inline.o $(BT_OBJS)
-C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc
+C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc boolean_inline.bc
 LL_BCS=float_ir_inline.bc tagged_inline.bc
 BCS=$(C_BCS) $(LL_BCS)
 INCLUDES=tag.h balrt.h balrt_inline.h

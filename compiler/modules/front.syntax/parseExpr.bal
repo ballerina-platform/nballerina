@@ -2,16 +2,19 @@ import wso2/nballerina.err;
 
 function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
+    Position startPos = tok.currentStartPos();
     if t == "[" {
         check tok.advance();
         Expr[] members = check parseExprList(tok, "]");
-        ListConstructorExpr expr = { members };
+        Position endPos = tok.previousEndPos();
+        ListConstructorExpr expr = { startPos, endPos, members };
         return expr;
     }
     else if t == "{" {
         check tok.advance();
         Field[] fields = check parseFields(tok);
-        MappingConstructorExpr expr = { fields };
+        Position endPos = tok.previousEndPos();
+        MappingConstructorExpr expr = { startPos, endPos, fields };
         return expr;
     }
     return parseInnerExpr(tok);
@@ -22,15 +25,17 @@ function parseInnerExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseBitwiseOrExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
     Expr expr = check parseBitwiseXorExpr(tok);
     while true {
         Token? t = tok.current();
         if t == "|" {
             check tok.advance();
             Expr right = check parseBitwiseXorExpr(tok);
-            BinaryBitwiseExpr bin = { bitwiseOp: t, left: expr, right };
+            Position endPos = tok.previousEndPos();
+            BinaryBitwiseExpr bin = { startPos, endPos,  bitwiseOp: t, left: expr, right };
             expr = bin;
-        } 
+        }
         else {
             break;
         }
@@ -39,15 +44,17 @@ function parseBitwiseOrExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseBitwiseXorExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
     Expr expr = check parseBitwiseAndExpr(tok);
     while true {
         Token? t = tok.current();
         if t == "^" {
             check tok.advance();
             Expr right = check parseBitwiseAndExpr(tok);
-            BinaryBitwiseExpr bin = { bitwiseOp: t, left: expr, right };
+            Position endPos = tok.previousEndPos();
+            BinaryBitwiseExpr bin = { startPos, endPos, bitwiseOp: t, left: expr, right };
             expr = bin;
-        } 
+        }
         else {
             break;
         }
@@ -56,15 +63,17 @@ function parseBitwiseXorExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseBitwiseAndExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
     Expr expr = check parseEqualityExpr(tok);
     while true {
         Token? t = tok.current();
         if t == "&" {
             check tok.advance();
             Expr right = check parseEqualityExpr(tok);
-            BinaryBitwiseExpr bin = { bitwiseOp: t, left: expr, right };
+            Position endPos = tok.previousEndPos();
+            BinaryBitwiseExpr bin = { startPos, endPos, bitwiseOp: t, left: expr, right };
             expr = bin;
-        } 
+        }
         else {
             break;
         }
@@ -73,15 +82,17 @@ function parseBitwiseAndExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseEqualityExpr(Tokenizer tok)  returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
     Expr expr = check parseRelationalExpr(tok);
     while true {
         Token? t = tok.current();
         if t is BinaryEqualityOp {
             check tok.advance();
             Expr right = check parseRelationalExpr(tok);
-            BinaryEqualityExpr bin = { equalityOp: t, left: expr, right };
+            Position endPos = tok.previousEndPos();
+            BinaryEqualityExpr bin = { startPos, endPos, equalityOp: t, left: expr, right };
             expr = bin;
-        } 
+        }
         else {
             break;
         }
@@ -90,53 +101,60 @@ function parseEqualityExpr(Tokenizer tok)  returns Expr|err:Syntax {
 }
 
 function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
     Expr expr = check parseShiftExpr(tok);
     Token? t = tok.current();
     if t is BinaryRelationalOp {
         check tok.advance();
         Expr right = check parseShiftExpr(tok);
-        BinaryRelationalExpr bin = { relationalOp: t, left: expr, right };
+        Position endPos = tok.previousEndPos();
+        BinaryRelationalExpr bin = { startPos, endPos, relationalOp: t, left: expr, right };
         return bin;
     }
     else if t == "is" {
-        return finishTypeTestExpr(tok, expr, false);
+        return finishTypeTestExpr(tok, expr, false, startPos);
     }
     if t == "!" {
         check tok.advance();
         Token? t2 = tok.current();
         if t2 is "is" {
-            return finishTypeTestExpr(tok, expr, true);
+            return finishTypeTestExpr(tok, expr, true, startPos);
         }
-        return err:syntax("invalid operator");
+        return tok.err("invalid operator");
     }
     else {
         return expr;
     }
 }
 
-function finishTypeTestExpr(Tokenizer tok, Expr expr, boolean negated) returns TypeTestExpr|err:Syntax {
+function finishTypeTestExpr(Tokenizer tok, Expr expr, boolean negated, Position startPos) returns TypeTestExpr|err:Syntax {
     tok.setMode(MODE_TYPE_DESC);
     check tok.advance();
     TypeDesc td = check parseTypeDesc(tok);
+    Position endPos = tok.previousEndPos();
     tok.setMode(MODE_NORMAL);
-    return { td, left: expr, negated };
+    return { startPos, endPos, td, left: expr, negated };
 }
 
 function parseRangeExpr(Tokenizer tok) returns RangeExpr|err:Syntax {
+    Position startPos = tok.currentStartPos();
     Expr lower = check parseAdditiveExpr(tok);
     check tok.expect("..<");
     Expr upper = check parseAdditiveExpr(tok);
-    return { lower, upper };
+    Position endPos = tok.previousEndPos();
+    return { startPos, endPos, lower, upper };
 }
 
 function parseShiftExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
     Expr expr = check parseAdditiveExpr(tok);
     while true {
         Token? t = tok.current();
         if t is ("<<"|">>>"|">>") {
             check tok.advance();
             Expr right = check parseAdditiveExpr(tok);
-            BinaryBitwiseExpr shift = { bitwiseOp: t, left: expr, right };
+            Position endPos = tok.previousEndPos();
+            BinaryBitwiseExpr shift = { startPos, endPos, bitwiseOp: t, left: expr, right };
             expr = shift;
         }
         else {
@@ -147,16 +165,18 @@ function parseShiftExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
     Expr expr = check parseMultiplicativeExpr(tok);
     while true {
         Token? t = tok.current();
         if t is ("+"|"-") {
-            Position pos = tok.currentPos();
+            Position pos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseMultiplicativeExpr(tok);
-            BinaryArithmeticExpr bin = { arithmeticOp: t, left: expr, right, pos };
+            Position endPos = tok.previousEndPos();
+            BinaryArithmeticExpr bin = { startPos, endPos, arithmeticOp: t, left: expr, right, pos };
             expr = bin;
-        } 
+        }
         else {
             break;
         }
@@ -165,16 +185,18 @@ function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
     Expr expr = check parseUnaryExpr(tok);
     while true {
         Token? t = tok.current();
         if t is ("*"|"/"|"%") {
-            Position pos = tok.currentPos();
+            Position pos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseUnaryExpr(tok);
-            BinaryArithmeticExpr bin = { arithmeticOp: t, left: expr, right, pos };
+            Position endPos = tok.previousEndPos();
+            BinaryArithmeticExpr bin = { startPos, endPos, arithmeticOp: t, left: expr, right, pos };
             expr = bin;
-        } 
+        }
         else {
             break;
         }
@@ -184,149 +206,157 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
 
 function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
+    Position startPos = tok.currentStartPos();
     if t is "-"|"!"|"~" {
-        Position pos = tok.currentPos();
+        Position pos = tok.currentStartPos();
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
-        UnaryExpr expr = { op: t, operand, pos };
+        Position endPos = tok.previousEndPos();
+        UnaryExpr expr = { startPos, endPos, op: t, operand, pos };
+        return expr;
+    }
+    else if t is CheckingKeyword {
+        check tok.advance();
+        Expr operand = check parseUnaryExpr(tok);
+        Position endPos = tok.previousEndPos();
+        CheckingExpr expr = { startPos, endPos, checkingKeyword: t, operand };
         return expr;
     }
     else if t is "<" {
-        return parseTypeCastExpr(tok);
+        return parseTypeCastExpr(tok, startPos);
     }
     return parsePrimaryExpr(tok);
 }
 
-function parseTypeCastExpr(Tokenizer tok) returns Expr|err:Syntax {
+function parseTypeCastExpr(Tokenizer tok, Position startPos) returns Expr|err:Syntax {
     tok.setMode(MODE_TYPE_DESC);
-    Position pos = tok.currentPos();
+    Position pos = tok.currentStartPos();
     check tok.advance();
     TypeDesc td = check parseTypeDesc(tok);
     check tok.expect(">");
     tok.setMode(MODE_NORMAL);
     Expr operand = check parseUnaryExpr(tok);
-    TypeCastExpr expr = { pos, td, operand };
+    Position endPos = tok.previousEndPos();
+    TypeCastExpr expr = { startPos, endPos, pos, td, operand };
     return expr;
 }
 
 function parsePrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
-    return finishPrimaryExpr(tok, check startPrimaryExpr(tok));
+    Position startPos = tok.currentStartPos();
+    return finishPrimaryExpr(tok, check startPrimaryExpr(tok), startPos);
 }
 
 function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
+    Position startPos = tok.currentStartPos();
+    Position endPos = tok.currentEndPos();
     if t is [IDENTIFIER, string] {
-        Position pos = tok.currentPos();
-        string identifier = t[1];
-        VarRefExpr expr = { varName: identifier };
+        Position pos = tok.currentStartPos();
         check tok.advance();
-        t = tok.current();
-        if t == "(" {
+        var [prefix, varName] = check parseOptQualIdentifier(tok, t[1]);
+        if tok.current() == "(" {
             check tok.advance();
-            return finishFunctionCallExpr(tok, (), identifier, pos);
+            return finishFunctionCallExpr(tok, prefix, varName, pos, startPos);
         }
-        return expr;
+        endPos = tok.previousEndPos();
+        return { startPos, endPos, prefix, varName };
     }
     else if t is [DECIMAL_NUMBER, string] {
-        IntLiteralExpr expr = { base: 10, digits: t[1], pos: tok.currentPos() };
+        IntLiteralExpr expr = { startPos, endPos, base: 10, digits: t[1] };
         check tok.advance();
         return expr;
     }
     else if t is [DECIMAL_FP_NUMBER, string, FLOAT_TYPE_SUFFIX|()] {
-        FpLiteralExpr expr = { untypedLiteral: t[1], typeSuffix: t[2], pos: tok.currentPos() };
+        FpLiteralExpr expr = { startPos, endPos, untypedLiteral: t[1], typeSuffix: t[2] };
         check tok.advance();
         return expr;
     }
     else if t is [HEX_INT_LITERAL, string] {
-        IntLiteralExpr expr = { base: 16, digits: t[1], pos: tok.currentPos() };
+        IntLiteralExpr expr = { startPos, endPos, base: 16, digits: t[1] };
         check tok.advance();
         return expr;
     }
     else if t is [STRING_LITERAL, string] {
-        ConstValueExpr expr = { value: t[1] };
+        ConstValueExpr expr = { startPos, endPos, value: t[1] };
         check tok.advance();
         return expr;
     }
     else if t == "(" {
         check tok.advance();
         if tok.current() == ")" {
+            endPos = tok.currentEndPos();
             check tok.advance();
-            ConstValueExpr expr = { value: () };
+            ConstValueExpr expr = { startPos, endPos, value: () };
             return expr;
         }
         Expr expr = check parseInnerExpr(tok);
-        check tok.expect(")");
+        endPos = check tok.expectEnd(")");
+        expr.startPos = startPos;
+        expr.endPos = endPos;
         return expr;
     }
     else if t is "true"|"false" {
         check tok.advance();
-        ConstValueExpr expr = { value: t == "true" };
+        ConstValueExpr expr = { startPos, endPos, value: t == "true" };
         return expr;
     }
     else if t is "null" {
         check tok.advance();
-        ConstValueExpr expr = { value: () };
+        ConstValueExpr expr = { startPos, endPos, value: () };
         return expr;
     }
     else if t is "error" {
-        Position pos = tok.currentPos();
+        Position pos = tok.currentStartPos();
         check tok.advance();
         check tok.expect("(");
-        return finishErrorConstructorExpr(tok, pos);
+        Expr message  = check parseExpr(tok);
+        endPos = check tok.expectEnd(")");
+        return { startPos, endPos, message, pos };
     }
     else {
         return parseError(tok);
     }
 }
 
-function finishPrimaryExpr(Tokenizer tok, Expr expr) returns Expr|err:Syntax {
+function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns Expr|err:Syntax {
     Token? t = tok.current();
+    Position pos = tok.currentStartPos();
     if t == "[" {
-        Position pos = tok.currentPos();
         check tok.advance();
         Expr index = check parseInnerExpr(tok);
-        check tok.expect("]");
-        MemberAccessExpr accessExpr = { container: expr, index, pos };
-        return finishPrimaryExpr(tok, accessExpr);
+        Position accessEndPos = check tok.expectEnd("]");
+        MemberAccessExpr accessExpr = { startPos, endPos: accessEndPos, container: expr, index, pos };
+        return finishPrimaryExpr(tok, accessExpr, startPos);
     }
     else if t == "." {
-        MethodCallExpr methodCallExpr = check finishMethodCallExpr(tok, expr);
-        return finishPrimaryExpr(tok, methodCallExpr);
+        check tok.advance();
+        string name = check tok.expectIdentifier();
+        if tok.current() == "(" {
+            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, pos, startPos), startPos);
+        }
+        else {
+            Position endPos = tok.previousEndPos();
+            FieldAccessExpr fieldAccessExpr = { startPos, endPos, container: expr, fieldName: name, pos };
+            return finishPrimaryExpr(tok, fieldAccessExpr, startPos);
+        }
     }
     else {
         return expr;
     }
 }
 
-// Called after consuming `error(`
-function finishErrorConstructorExpr(Tokenizer tok, Position pos) returns ErrorConstructorExpr|err:Syntax {
-    Expr message  = check parseExpr(tok);
-    check tok.expect(")");
-    return { message, pos };
-}
-
-// Called with current token as "."
-function finishMethodCallExpr(Tokenizer tok, Expr target) returns MethodCallExpr|err:Syntax {
-    Position pos = tok.currentPos();
+// Called with current token as "("
+function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Position pos, Position startPos) returns MethodCallExpr|err:Syntax {
     check tok.advance();
-    Token? t = tok.current();
-    if t is [IDENTIFIER, string] {
-        string name = t[1];
-        check tok.advance();
-        t = tok.current();
-        if t == "(" {
-            check tok.advance();
-            Expr[] args = check parseExprList(tok, ")");
-            MethodCallExpr methodCallExpr = { methodName: name, target, pos, args };
-            return methodCallExpr;
-        }
-    }
-    return parseError(tok, "expected method call after dot");
+    Expr[] args = check parseExprList(tok, ")");
+    Position endPos = tok.previousEndPos();
+    return { startPos, endPos, target, methodName, args, pos };
 }
 
-function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position pos) returns FunctionCallExpr|err:Syntax {
+function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position pos, Position startPos) returns FunctionCallExpr|err:Syntax {
     Expr[] args = check parseExprList(tok, ")");
-    return { funcName, pos, args, prefix };
+    Position endPos = tok.previousEndPos();
+    return { startPos, endPos, funcName, pos, args, prefix };
 }
 
 function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syntax {
@@ -381,7 +411,7 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
             // Don't report an error for duplicates here
             // (it's not a syntax error)
             // Instead save the position and report during codeGen
-            Position pos = tok.currentPos();
+            Position pos = tok.currentStartPos();
             check tok.advance();
             check tok.expect(":");
             Expr value = check parseExpr(tok);
@@ -389,7 +419,7 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
             return f;
         }
     }
-    return err:syntax("expected field name");
+    return tok.err("expected field name");
 }
 
 // This is simple-const-expr in the spec
@@ -397,33 +427,41 @@ function parseField(Tokenizer tok) returns Field|err:Syntax {
 // Will also be used for type descriptors
 function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax {
     Token? t = tok.current();
+    Position startPos = tok.currentStartPos();
     if t == "-" {
-        Position pos = tok.currentPos();
+        Position pos = tok.currentStartPos();
         check tok.advance();
         IntLiteralExpr operand = check parseIntLiteralExpr(tok);
-        SimpleConstNegateExpr expr = { operand, pos };
+        Position endPos = tok.previousEndPos();
+        SimpleConstNegateExpr expr = { startPos, endPos, operand, pos };
         return expr;
     }
     match t {
-        [IDENTIFIER, var varName] => {
-            VarRefExpr expr = { varName };
+        [IDENTIFIER, var identifier] => {
             check tok.advance();
-            return expr;
+            var [prefix, varName] = check parseOptQualIdentifier(tok, identifier);
+            Position endPos = tok.currentEndPos();
+            if prefix != () {
+                endPos = tok.previousEndPos();
+            }
+            return { startPos, endPos, prefix, varName };
         }
         [STRING_LITERAL, var value] => {
-            ConstValueExpr expr = { value };
+            Position endPos = tok.currentEndPos();
+            ConstValueExpr expr = { startPos, endPos, value };
             check tok.advance();
             return expr;
         }
         "("  => {
             check tok.advance();
-            check tok.expect(")");
-            ConstValueExpr expr = { value: () };
+            Position endPos = check tok.expectEnd(")");
+            ConstValueExpr expr = { startPos, endPos, value: () };
             return expr;
         }
         "true"|"false"  => {
+            Position endPos = tok.currentEndPos();
             check tok.advance();
-            ConstValueExpr expr = { value: t == "true" };
+            ConstValueExpr expr = {  startPos, endPos, value: t == "true" };
             return expr;
         }
         [DECIMAL_NUMBER, _]
@@ -434,17 +472,28 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     return parseError(tok);
 }
 
+function parseOptQualIdentifier(Tokenizer tok, string identifier) returns [string?, string]|err:Syntax {
+    if tok.current() == ":" {
+        check tok.advance();
+        return [identifier, check tok.expectIdentifier()];
+    }
+    else {
+        return [(), identifier];
+    }
+}
+
 function parseNumericLiteralExpr(Tokenizer tok) returns NumericLiteralExpr|err:Syntax {
     Token? t = tok.current();
-    Position pos = tok.currentPos();
+    Position startPos = tok.currentStartPos();
     match t {
         [DECIMAL_NUMBER, _]
         | [HEX_INT_LITERAL, _] => {
             return parseIntLiteralExpr(tok);
         }
         [DECIMAL_FP_NUMBER, var untypedLiteral, var typeSuffix] => {
+            Position endPos = tok.currentEndPos();
             check tok.advance();
-            return { untypedLiteral, typeSuffix, pos };
+            return { startPos, endPos, untypedLiteral, typeSuffix };
         }
     }
     return parseError(tok, "expected numeric literal");
@@ -454,15 +503,16 @@ function parseNumericLiteralExpr(Tokenizer tok) returns NumericLiteralExpr|err:S
 // outside types
 function parseIntLiteralExpr(Tokenizer tok) returns IntLiteralExpr|err:Syntax {
     Token? t = tok.current();
-    Position pos = tok.currentPos();
+    Position startPos = tok.currentStartPos();
+    Position endPos = tok.currentEndPos();
     match t {
         [DECIMAL_NUMBER, var digits] => {
             check tok.advance();
-            return { base: 10, digits, pos };
+            return { startPos, endPos, base: 10, digits };
         }
         [HEX_INT_LITERAL, var digits] => {
             check tok.advance();
-            return { base: 16, digits, pos };
+            return { startPos, endPos, base: 16, digits };
         }
     }
     return parseError(tok, "expected integer literal");

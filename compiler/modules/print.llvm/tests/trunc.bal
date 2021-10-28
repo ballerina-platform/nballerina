@@ -37,7 +37,7 @@ function testTruncSameType() returns error? {
     builder.positionAtEnd(fooBB);
     Value arg = foo.getParam(0);
     Value|error v1 = trap builder.trunc(arg, "i64");
-    if !(v1 is error){
+    if v1 !is error{
 	    test:assertFail("Same type trunc must not be allowed");
     }
 }

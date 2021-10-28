@@ -1,6 +1,6 @@
+// @productions string-literal list-type-descriptor list-constructor-expr any local-var-decl-stmt
 public function main() {
     any[] v = [];  // @error
-    ignore(v["foo"]);
+    _ = v["foo"];
 }
 
-function ignore(any x) { }

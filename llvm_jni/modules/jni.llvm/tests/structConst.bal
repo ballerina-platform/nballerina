@@ -11,7 +11,8 @@ function structConst() returns Module {
     Value const3 = context.constStruct([const1, const2]);
     Type const3Ty = structType([const1Ty, const2Ty]);
 
-    FunctionDefn test = m.addFunctionDefn("test", {returnType: const1Ty, paramTypes: []});
+    FunctionType testTy = {returnType: const1Ty, paramTypes: []};
+    FunctionDefn test = m.addFunctionDefn("test", testTy);
     BasicBlock initBlock = test.appendBasicBlock();
     builder.positionAtEnd(initBlock);
     builder.ret(const1);
@@ -20,6 +21,13 @@ function structConst() returns Module {
     BasicBlock initBlock2 = test2.appendBasicBlock();
     builder.positionAtEnd(initBlock2);
     builder.ret(const3);
+
+    Value constFnStruct = context.constStruct([test]);
+    Type constFnStructTy = structType([pointerType(testTy)]);
+    FunctionDefn test3 = m.addFunctionDefn("test3", {returnType:constFnStructTy, paramTypes: []});
+    BasicBlock bb = test3.appendBasicBlock();
+    builder.positionAtEnd(bb);
+    builder.ret(constFnStruct);
     return m;
 }
 

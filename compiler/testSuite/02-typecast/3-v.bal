@@ -1,3 +1,4 @@
+// @productions type-cast-expr boolean boolean-literal any int-literal
 import ballerina/io;
 
 public function main() {

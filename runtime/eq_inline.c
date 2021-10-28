@@ -17,7 +17,7 @@ bool READONLY _bal_exact_eq(TaggedPtr tp1, TaggedPtr tp2) {
     switch (tag1) {
         case TAG_STRING:
             return taggedStringEqual(tp1, tp2);
-        case (TAG_INT|FLAG_INT_ON_HEAP):
+        case TAG_INT:
             {
                 IntPtr p1 = taggedToPtr(tp1);
                 IntPtr p2 = taggedToPtr(tp2);
@@ -28,6 +28,12 @@ bool READONLY _bal_exact_eq(TaggedPtr tp1, TaggedPtr tp2) {
                 FloatPtr p1 = taggedToPtr(tp1);
                 FloatPtr p2 = taggedToPtr(tp2);
                 return _bal_float_exact_eq(*p1, *p2);
+            }
+        case TAG_LIST_RW:
+        case TAG_MAPPING_RW:
+            {
+                // This is needed to ignore the exact bit.
+                return taggedToPtr(tp1) == taggedToPtr(tp2);
             }
     }   
     return 0;

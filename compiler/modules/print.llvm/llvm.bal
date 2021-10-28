@@ -11,8 +11,10 @@ import ballerina/io;
 // Operand of an unnamed variable/basic block
 type Unnamed int;
 
-# Corresponds to LLVMValueRef 
-public readonly distinct class Value {
+# Corresponds to LLVMValueRef
+public type Value DataValue|Function;
+
+public readonly distinct class DataValue {
     string|Unnamed operand;
     Type ty;
     function init(Type ty, string|Unnamed operand) {
@@ -24,7 +26,7 @@ public readonly distinct class Value {
 # Subtype of Value that refers to a pointer
 # Ensures compile-time checking that stores and loads use the right kinds of Value
 public readonly class PointerValue {
-    *Value;
+    *DataValue;
     string|Unnamed operand;
     PointerType ty;
     function init(PointerType ty, string|Unnamed operand) {
@@ -35,7 +37,7 @@ public readonly class PointerValue {
 
 # Subtype of Value that refers to a constant
 public readonly class ConstValue {
-    *Value;
+    *DataValue;
     string operand;
     Type ty;
     function init(Type ty, string operand) {
@@ -111,9 +113,10 @@ public function constNull(PointerType ty) returns ConstPointerValue {
 
 // Corresponds to LLVMContextRef
 public class Context {
+    private final map<[StructType,boolean]> namedStructTypes = {};
+    private final map<Type[]> namedStructTypeBody = {};
     // Corresponds to LLVMContextCreate
     public function init() {
-        
     }
 
     public function createModule() returns Module {
@@ -133,7 +136,7 @@ public class Context {
             if i > 0 {
                 structBody.push(",");
             }
-            structBody.push(typeToString(element.ty));
+            structBody.push(typeToString(element.ty, self));
             if element.operand is Unnamed {
                 panic err:illegalArgument("All elements must be constants");
             } else {
@@ -144,6 +147,21 @@ public class Context {
         structBody.push("}");
         Type structTy = structType(elemTypes);
         return new(structTy, concat(...structBody));
+    }
+
+    // Corresponds to LLVMConstArray
+    public function constArray(Type elementType, ConstValue[] values) returns ConstValue {
+        ArrayType ty = arrayType(elementType, values.length());
+        string[] body = ["["];
+        foreach int i in 0 ..< values.length() {
+            final ConstValue element = values[i];
+            if i > 0 {
+                body.push(",");
+            }
+            body.push(typeToString(element.ty, self), element.operand);
+        }
+        body.push("]");
+        return new(ty, concat(...body));
     }
 
     // Corresponds to LLVMConstStringInContext
@@ -161,7 +179,7 @@ public class Context {
             words.push(inbounds);
         }
         words.push("(");
-        PointerType destTy = gepArgs(words, ptr, indices, inbounds);
+        PointerType destTy = gepArgs(words, ptr, indices, inbounds, self);
         words.push(")");
         return constValueWithBody(destTy, words);
     }
@@ -170,7 +188,7 @@ public class Context {
     public function constBitCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
         string[] words = [];
         words.push("bitcast", "(");
-        bitCastArgs(words, ptr, destTy);
+        bitCastArgs(words, ptr, destTy, self);
         words.push(")");
         return constValueWithBody(destTy, words);
     }
@@ -179,9 +197,57 @@ public class Context {
     public function constAddrSpaceCast(ConstPointerValue ptr, PointerType destTy) returns ConstPointerValue {
         string[] words = [];
         words.push("addrspacecast", "(");
-        addrSpaceCastArgs(words, ptr, destTy);
+        addrSpaceCastArgs(words, ptr, destTy, self);
         words.push(")");
         return constValueWithBody(destTy, words);
+    }
+
+    // Corresponds to LLVMStructCreateNamed
+    public function structCreateNamed(string name) returns StructType {
+        string structName = "%" + escapeIdent(name);
+        if self.namedStructTypes.hasKey(structName) {
+            panic err:illegalArgument("this context already has a struct type by that name");
+        }
+        StructType ty = { elementTypes: [] };
+        self.namedStructTypes[structName] = [ty, false];
+        self.namedStructTypeBody[name] = [];
+        return ty;
+    }
+
+    // Corresponds to LLVMStructSetBody
+    public function structSetBody(StructType namedStructTy, Type[] elementTypes) {
+        foreach var entry in self.namedStructTypes.entries() {
+            var data = entry[1];
+            string name = entry[0];
+            StructType ty = data[0];
+            if ty === namedStructTy {
+                self.namedStructTypeBody[name] = elementTypes;
+                return;
+            }
+        }
+        panic err:illegalArgument("no such named struct type");
+    }
+
+    function output(Output out){
+        foreach var entry in self.namedStructTypes.entries() {
+            var data = entry[1];
+            if data[1] {
+                string[] words = [entry[0], "=", "type", typeToString(data[0], self, true)];
+                out.push(concat(...words));
+            }
+        }
+    }
+
+    function getStructName(StructType ty) returns [string, Type[]]? {
+        foreach var entry in self.namedStructTypes.entries() {
+            var data = entry[1];
+            if data[0] === ty {
+                data[1] = true;
+                string name = entry[0];
+                Type[] elements = self.namedStructTypeBody.get(name);
+                return [name, elements];
+            }
+        }
     }
 }
 
@@ -192,6 +258,7 @@ public class Module {
     private [PointerValue, GlobalProperties][] globalVariables = [];
     private FunctionDecl[] functionDecls = [];
     private FunctionDefn[] functionDefns = [];
+    private [ConstPointerValue, ConstValue, GlobalSymbolProperties][] aliases = [];
     Metadata[] metadata = [];
     Metadata[] moduleFlags = [];
 
@@ -249,19 +316,19 @@ public class Module {
     // Corresponds to LLVMGetIntrinsicDeclaration
     public function getIntrinsicDeclaration(IntrinsicFunctionName name) returns FunctionDecl {
         FunctionDecl? fnExisting = <FunctionDecl?>self.globals[name];
-        if !(fnExisting is ()) {
+        if fnExisting != () {
             return fnExisting;
         }
         if name is IntegerArithmeticIntrinsicName {
             return self.addIntrinsic(name,
                                      { returnType: structType(["i64", "i1"]), paramTypes: ["i64", "i64"] },
-                                     ["nounwind", "readnone", "speculatable", "willreturn"]);
+                                     ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
 
         }
         else if name == "ptrmask.p1i8.i64" {
             return self.addIntrinsic(name,
                                      { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] },
-                                     ["readnone", "speculatable"]);
+                                     ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
         }
         else {
             panic err:impossible();
@@ -287,6 +354,16 @@ public class Module {
         self.globalVariables.push([val, props]);
         return val;
     }
+
+    // Corresponds to LLVMAddAlias
+    public function addAlias(Type aliasTy, ConstValue aliasee, string name, *GlobalSymbolProperties props) returns ConstPointerValue {
+        string aliasName = self.escapeGlobalIdent(name);
+        ConstPointerValue alias = new (pointerType(aliasTy, props.addressSpace), "@" + aliasName);
+        self.globals[aliasName] = alias;
+        self.aliases.push([alias, aliasee, props]);
+        return alias;
+    }
+
 
     private function escapeGlobalIdent(string name) returns string {
         string varName = escapeIdent(name);
@@ -318,8 +395,12 @@ public class Module {
             string[] words = ["target", "triple", "=", "\"", <TargetTriple>self.target, "\""];
             out.push(createLine(words));
         }
+        self.context.output(out);
         foreach var val in self.globalVariables {
             self.outputGlobalVar(val[0], val[1], out);
+        }
+        foreach var val in self.aliases {
+            self.outputAlias(val[0], val[1], val[2], out);
         }
         foreach var fn in self.functionDecls {
             fn.output(out);
@@ -337,10 +418,22 @@ public class Module {
         }
     }
 
+    private function outputAlias(ConstPointerValue alias, ConstValue aliasee, GlobalSymbolProperties props, Output out) {
+        string[] line = [alias.operand, "="];
+        if props.linkage == "internal" {
+            line.push("internal");
+        }
+        if props.unnamedAddr {
+            line.push("unnamed_addr");
+        }
+        line.push("alias", typeToString(alias.ty.pointsTo, self.context), ",", typeToString(aliasee.ty, self.context), aliasee.operand);
+        out.push(concat(...line));
+    }
+
     function outputGlobalVar(PointerValue val, GlobalProperties prop, Output out){
         string[] words = [];
         words.push(<string> val.operand, "=");
-        if prop.initializer is Value {
+        if !(prop.initializer == ()) {
             if prop.linkage == "internal"{
                 words.push(prop.linkage);
             }
@@ -358,10 +451,13 @@ public class Module {
         } else {
             words.push("global");
         }
-        words.push(typeToString(val.ty.pointsTo));
-        ConstValue? initializer = prop.initializer;
+        words.push(typeToString(val.ty.pointsTo, self.context));
+        var initializer = prop.initializer;
         if initializer is ConstValue {
             words.push(<string>initializer.operand);
+        }
+        else if initializer is Function {
+            words.push("@" + initializer.functionName);
         }
         if prop.align is int {
             words.push(",", "align", prop.align.toString());
@@ -387,16 +483,24 @@ public class FunctionDecl {
     final false isDefn = false;
     final FunctionType functionType;
     final string functionName;
+    final Context context;
     string? gcName = ();
     final FunctionEnumAttribute[] functionAttributes = [];
     final ReturnEnumAttribute[] returnAttributes = [];
     final ParamEnumAttribute[][] paramAttributes = [];
     Metadata? metadata = ();
 
+    final string operand;
+    final PointerType ty;
+
     function init(Context context, string functionName, FunctionType functionType) {
         self.functionName = functionName;
         self.functionType = functionType;
         self.paramAttributes.setLength(functionType.paramTypes.length());
+        self.context = context;
+        // We will be using operand and ty only when function is used as value (ie. function pointer)
+        self.operand = "@" + self.functionName;
+        self.ty = pointerType(self.functionType);
     }
 
     function output(Output out) {
@@ -447,15 +551,18 @@ public class FunctionDefn {
     final FunctionEnumAttribute[] functionAttributes = [];
     final ReturnEnumAttribute[] returnAttributes = [];
     final ParamEnumAttribute[][] paramAttributes = [];
+    final Context context;
     string? gcName = ();
     Metadata? metadata = ();
+
+    final string operand;
+    final PointerType ty;
 
     private BasicBlock[] basicBlocks = [];
     private map<int> variableNames = {};
     private int unnamedLabelCount = 0;
     private Value[] paramValues;
     private Linkage linkage = "external";
-    private final Context context;
     private string[] nameTranslation = [];
     private int nameCounter;
     private final boolean[] isBasicBlock = [];
@@ -473,6 +580,9 @@ public class FunctionDefn {
             self.paramValues.push(arg);
         }
         self.paramAttributes.setLength(functionType.paramTypes.length());
+        // We will be using operand and ty only when function is used as value (ie. function pointer)
+        self.operand = "@" + self.functionName;
+        self.ty = pointerType(self.functionType);
     }
 
     // Correspond to LLVMGetParam
@@ -780,7 +890,7 @@ public class DIBuilder {
         }
         if props.isDefinition {
             self.addMetadataToWords(words, self.compileUnit, "unit");
-            if self.compileUnit is () {
+            if self.compileUnit == () {
                 panic error("No compile unit is defined");
             }
         }
@@ -856,9 +966,12 @@ public class DIBuilder {
 public class Builder {
     private BasicBlock? currentBlock = ();
     private Metadata? dbLocation = ();
+    private final Context context;
 
     // Corresponds to LLVMCreateBuilder
-    public function init(Context context) { }
+    public function init(Context context) {
+        self.context = context;
+    }
 
     // Corresponds to LLVMPositionBuilderAtEnd
     public function positionAtEnd(BasicBlock block) {
@@ -870,7 +983,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         PointerType ptrTy = pointerType(ty);
-        addInsnWithAlign(bb, [reg, "=", "alloca", typeToString(ty)], align, self.dbLocation);
+        addInsnWithAlign(bb, [reg, "=", "alloca", typeToString(ty, self.context)], align, self.dbLocation);
         return new PointerValue(ptrTy, reg);
     }
 
@@ -879,7 +992,7 @@ public class Builder {
         BasicBlock bb = self.bb();
         Type ty = ptr.ty.pointsTo;
         string|Unnamed reg = bb.func.genReg(name);
-        addInsnWithAlign(bb, [reg, "=", "load", typeToString(ty), ",", typeToString(ptr.ty), ptr.operand], align, self.dbLocation);
+        addInsnWithAlign(bb, [reg, "=", "load", typeToString(ty, self.context), ",", typeToString(ptr.ty, self.context), ptr.operand], align, self.dbLocation);
         return new Value(ty, reg);
     }
 
@@ -887,9 +1000,10 @@ public class Builder {
     public function store(Value val, PointerValue ptr, Alignment? align=()) {
         Type ty = ptr.ty.pointsTo;
         if ty != val.ty {
-            panic err:illegalArgument("store type mismatch: " + typeToString(val.ty) + ", " + typeToString(ptr.ty));
+            panic err:illegalArgument("store type mismatch: " + typeToString(val.ty, self.context) + ", " + typeToString(ptr.ty, self.context));
         }
-        addInsnWithAlign(self.bb(), ["store", typeToString(ty), val.operand, ",", typeToString(ptr.ty), ptr.operand], align, self.dbLocation);
+        addInsnWithAlign(self.bb(), ["store", typeToString(ty, self.context), val.operand, ",",
+                         typeToString(ptr.ty, self.context), ptr.operand], align, self.dbLocation);
     }
 
     // Corresponds to LLVMBuild{FAdd,FSub,FMul,FDiv,FRem}
@@ -934,8 +1048,8 @@ public class Builder {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
         IntegralType ty = sameIntegralType(lhs, rhs);
-        addInsnWithDbLocation(bb, [reg, "=", "icmp", op, typeToString(ty), lhs.operand, ",", rhs.operand], self.dbLocation);
-        return new Value("i1", reg);
+        addInsnWithDbLocation(bb, [reg, "=", "icmp", op, typeToString(ty, self.context), lhs.operand, ",", rhs.operand], self.dbLocation);
+        return new DataValue("i1", reg);
     }
 
     // Corresponds to LLVMBuildFCmp
@@ -944,8 +1058,8 @@ public class Builder {
         string|Unnamed reg = bb.func.genReg(name);
         IntType|FloatType ty = sameNumberType(lhs, rhs);
         if ty is FloatType {
-            addInsnWithDbLocation(bb, [reg, "=", "fcmp", op, typeToString(ty), lhs.operand, ",", rhs.operand], self.dbLocation);
-            return new Value("i1", reg);
+            addInsnWithDbLocation(bb, [reg, "=", "fcmp", op, typeToString(ty, self.context), lhs.operand, ",", rhs.operand], self.dbLocation);
+            return new DataValue("i1", reg);
         }
         else {
             panic err:illegalArgument("values must be a real type");
@@ -958,7 +1072,7 @@ public class Builder {
         string|Unnamed reg = bb.func.genReg(name);
         (string|Unnamed)[] words = [reg, "="];
         words.push("bitcast");
-        bitCastArgs(words, val, destTy);
+        bitCastArgs(words, val, destTy, self.context);
         addInsnWithDbLocation(bb, words, self.dbLocation);
         return new (destTy, reg);
     }
@@ -967,11 +1081,11 @@ public class Builder {
     // value of () represents void return value
     public function ret(Value? value=()) {
         BasicBlock bb = self.bb();
-        if value is () {
+        if value == () {
             addInsnWithDbLocation(bb, ["ret", "void"], self.dbLocation);
         }
         else {
-            addInsnWithDbLocation(bb, ["ret", typeToString(value.ty), value.operand], self.dbLocation);
+            addInsnWithDbLocation(bb, ["ret", typeToString(value.ty, self.context), value.operand], self.dbLocation);
         }
     }
 
@@ -979,7 +1093,8 @@ public class Builder {
     public function ptrToInt(PointerValue ptr, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        addInsnWithDbLocation(bb, [reg, "=", "ptrtoint", typeToString(ptr.ty), ptr.operand, "to", typeToString(destTy)], self.dbLocation);
+        addInsnWithDbLocation(bb, [reg, "=", "ptrtoint", typeToString(ptr.ty, self.context), ptr.operand, "to",
+                                   typeToString(destTy, self.context)], self.dbLocation);
         return new Value(destTy, reg);
     }
 
@@ -987,7 +1102,8 @@ public class Builder {
     public function zExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        addInsnWithDbLocation(bb, [reg, "=", "zext", typeToString(val.ty), val.operand, "to", typeToString(destTy)], self.dbLocation);
+        addInsnWithDbLocation(bb, [reg, "=", "zext", typeToString(val.ty, self.context), val.operand, "to",
+                              typeToString(destTy, self.context)], self.dbLocation);
         return new Value(destTy, reg);
     }
 
@@ -995,21 +1111,24 @@ public class Builder {
     public function sExt(Value val, IntType destTy, string? name=()) returns Value {
         BasicBlock bb = self.bb();
         string|Unnamed reg = bb.func.genReg(name);
-        addInsnWithDbLocation(bb, [reg, "=", "sext", typeToString(val.ty), val.operand, "to", typeToString(destTy)], self.dbLocation);
+        addInsnWithDbLocation(bb, [reg, "=", "sext", typeToString(val.ty, self.context), val.operand, "to",
+                                   typeToString(destTy, self.context)], self.dbLocation);
         return new Value(destTy, reg);
     }
 
     // Corresponds to LLVMBuildTrunc
     public function trunc(Value val, IntType destinationType, string? name=()) returns Value {
-        if val.ty is IntType {
-            if val.ty == destinationType {
+        Type valueType = val.ty;
+        if valueType is IntType {
+            if valueType == destinationType {
                 panic err:illegalArgument("equal sized types are not allowed");
             }
             BasicBlock bb = self.bb();
             string|Unnamed reg = bb.func.genReg(name);
-            addInsnWithDbLocation(bb, [reg, "=", "trunc", typeToString(val.ty), val.operand, "to", typeToString(destinationType)], self.dbLocation);
+            addInsnWithDbLocation(bb, [reg, "=", "trunc", typeToString(val.ty, self.context), val.operand, "to",
+                                       typeToString(destinationType, self.context)], self.dbLocation);
             return new Value(destinationType, reg);
-        } 
+        }
         else {
             panic err:illegalArgument("value must be an integer type");
         }
@@ -1017,10 +1136,11 @@ public class Builder {
 
     // Corresponds to LLVMBuildFNeg
     public function fNeg(Value val, string? name=()) returns Value {
-        if val.ty is FloatType {
+        Type valTy = val.ty;
+        if valTy is FloatType {
             BasicBlock bb = self.bb();
             string|Unnamed reg = bb.func.genReg(name);
-            addInsnWithDbLocation(bb, [reg, "=", "fneg", typeToString(val.ty), val.operand], self.dbLocation);
+            addInsnWithDbLocation(bb, [reg, "=", "fneg", typeToString(val.ty, self.context), val.operand], self.dbLocation);
             return new Value(val.ty, reg);
         }
         else {
@@ -1030,10 +1150,12 @@ public class Builder {
 
     // Corresponds to LLVMBuildSIToFP
     public function sIToFP(Value val, FloatType destTy, string? name=()) returns Value {
-        if val.ty is IntType {
+        Type valTy = val.ty;
+        if valTy is IntType {
             BasicBlock bb = self.bb();
             string|Unnamed reg = bb.func.genReg(name);
-            addInsnWithDbLocation(bb, [reg, "=", "sitofp", typeToString(val.ty), val.operand, "to", typeToString(destTy)], self.dbLocation);
+            addInsnWithDbLocation(bb, [reg, "=", "sitofp", typeToString(val.ty, self.context), val.operand,
+                                       "to", typeToString(destTy, self.context)], self.dbLocation);
             return new Value(destTy, reg);
         }
         else {
@@ -1048,29 +1170,29 @@ public class Builder {
 
     // Corresponds to LLVMBuildCall
     // Returns () if there is no result i.e. function return type is void
-    public function call(Function fn, Value[] args, string? name=()) returns Value? {
-        if fn.functionType.paramTypes.length() != args.length() {
-            panic err:illegalArgument(`number of arguments is invalid for function ${fn.functionName}`);
-        }
+    public function call(Function|PointerValue fn, Value[] args, string? name=()) returns Value? {
+        (string|Unnamed)[] insnWords;
+        RetType retType;
         BasicBlock bb = self.bb();
-        (string|Unnamed)[] insnWords = [];
-        RetType retType = fn.functionType.returnType;
-        if retType != "void" {
-            insnWords.push("=");
-        }
-        insnWords.push("call");
-        insnWords.push(typeToString(retType));
-        insnWords.push("@" + fn.functionName);
-        insnWords.push("(");
-        foreach int i in 0 ..< args.length() {
-            final Value arg = args[i];
-            if i > 0 {
-                insnWords.push(",");
+        if fn is PointerValue {
+            Type fnTy = fn.ty.pointsTo;
+            if fnTy is FunctionType {
+                retType = fnTy.returnType;
+                var fnName = fn.operand;
+                insnWords = self.buildFunctionCallBody(retType, fnName, args);
             }
-            insnWords.push(typeToString(arg.ty));
-            insnWords.push(arg.operand);
+            else {
+                panic err:illegalArgument("not a function pointer");
+            }
         }
-        insnWords.push(")");
+        else {
+            if fn.functionType.paramTypes.length() != args.length() {
+                panic err:illegalArgument(`number of arguments is invalid for function ${fn.functionName}`);
+            }
+            retType = fn.functionType.returnType;
+            string functionName = "@" + fn.functionName;
+            insnWords = self.buildFunctionCallBody(retType, functionName, args );
+        }
         if retType != "void" {
             string|Unnamed reg = bb.func.genReg(name);
             (string|Unnamed)[] words = [reg];
@@ -1082,13 +1204,35 @@ public class Builder {
         }
     }
 
+    function buildFunctionCallBody(RetType retType, string|Unnamed functionName, Value[] args) returns (string|Unnamed)[] {
+        (string|Unnamed)[] insnWords = [];
+        if retType != "void" {
+            insnWords.push("=");
+        }
+        insnWords.push("call");
+        insnWords.push(typeToString(retType, self.context));
+        insnWords.push(functionName);
+        insnWords.push("(");
+        foreach int i in 0 ..< args.length() {
+            final Value arg = args[i];
+            if i > 0 {
+                insnWords.push(",");
+            }
+            insnWords.push(typeToString(arg.ty, self.context));
+            insnWords.push(arg.operand);
+        }
+        insnWords.push(")");
+        return insnWords;
+    }
+
     // Corresponds to LLVMBuildExtractValue
     public function extractValue(Value value, int index, string? name=()) returns Value {
         if value.ty is StructType {
             BasicBlock bb = self.bb();
             string|Unnamed reg = bb.func.genReg(name);
-            addInsnWithDbLocation(bb, [reg, "=", "extractvalue", typeToString(value.ty), value.operand, ",", index.toString()], self.dbLocation);
-            Type elementType = getTypeAtIndex(<StructType>value.ty, index);
+            addInsnWithDbLocation(bb, [reg, "=", "extractvalue", typeToString(value.ty, self.context),
+                                       value.operand, ",", index.toString()], self.dbLocation);
+            Type elementType = getTypeAtIndex(<StructType>value.ty, index, self.context);
             return new Value(elementType, reg);
         }
         else {
@@ -1104,10 +1248,11 @@ public class Builder {
 
     // Corresponds to LLVMBuildCondBr
     public function condBr(Value condition, BasicBlock ifTrue, BasicBlock ifFalse) {
-        if condition.ty is "i1" {
+        Type condTy = condition.ty;
+        if condTy is "i1" {
             BasicBlock bb = self.bb();
             addInsnWithDbLocation(bb, ["br", "i1", condition.operand, ",", "label", ifTrue.ref(), ",", "label", ifFalse.ref()], self.dbLocation);
-        } 
+        }
         else {
             panic err:illegalArgument("Condition must be a u1");
         }
@@ -1123,7 +1268,7 @@ public class Builder {
         if inbounds != () {
             words.push(inbounds);
         }
-        PointerType destTy = gepArgs(words, ptr, indices, inbounds);
+        PointerType destTy = gepArgs(words, ptr, indices, inbounds, self.context);
         addInsnWithDbLocation(bb, words, self.dbLocation);
         return new PointerValue(destTy, reg);
     }
@@ -1134,14 +1279,14 @@ public class Builder {
         string|Unnamed reg = bb.func.genReg(name);
         (string|Unnamed)[] words = [];
         words.push(reg, "=", "addrspacecast");
-        addrSpaceCastArgs(words, val, destTy);
+        addrSpaceCastArgs(words, val, destTy, self.context);
         addInsnWithDbLocation(bb, words, self.dbLocation);
         return new PointerValue(destTy, reg);
     }
 
     private function bb() returns BasicBlock {
         BasicBlock? tem = self.currentBlock;
-        if tem is () {
+        if tem == () {
             panic err:impossible("no current basic block");
         }
         else {
@@ -1156,7 +1301,7 @@ public class Builder {
 }
 
 function addInsnWithAlign(BasicBlock bb, (string|Unnamed)[] words, Alignment? align, Metadata? dbLocation) {
-    if !(align is ()) {
+    if align != () {
         words.push(",", "align", align.toString());
     }
     addInsnWithDbLocation(bb, words, dbLocation);
@@ -1273,41 +1418,62 @@ function sameNumberType(Value v1, Value v2) returns IntType|FloatType {
     panic err:illegalArgument("expected a number type");
 }
 
-function typeToString(RetType ty) returns string {
-    string typeTag;
+function typeToString(RetType ty, Context context, boolean forceInline=false) returns string {
     if ty is PointerType {
         if ty.addressSpace == 0 {
-            typeTag = typeToString(ty.pointsTo) + "*";
+            return typeToString(ty.pointsTo, context) + "*";
         } else {
-            typeTag = createLine([typeToString(ty.pointsTo), "addrspace", "(", ty.addressSpace.toString(), ")", "*"]);
+            return createLine([typeToString(ty.pointsTo, context), "addrspace", "(", ty.addressSpace.toString(), ")", "*"]);
         }
     }
     else if ty is StructType {
+        var data = context.getStructName(ty);
+        Type[] elementTypes = ty.elementTypes;
+        if data != () {
+            elementTypes = data[1];
+        }
+        if !forceInline {
+            if data != () {
+                return data[0];
+            }
+        }
         string[] typeStringBody = [];
         typeStringBody.push("{");
-        foreach int i in 0 ..< ty.elementTypes.length() {
-            final Type elementType = ty.elementTypes[i];
+        foreach int i in 0 ..< elementTypes.length() {
+            final Type elementType = elementTypes[i];
             if i > 0 {
                 typeStringBody.push(",");
             }
-            typeStringBody.push(typeToString(elementType));
+            typeStringBody.push(typeToString(elementType, context));
         }
         typeStringBody.push("}");
-        typeTag = createLine(typeStringBody, "");
+        return createLine(typeStringBody, "");
     }
     else if ty is ArrayType {
         string[] typeStringBody = [];
         typeStringBody.push("[");
         typeStringBody.push(ty.elementCount.toString());
         typeStringBody.push("x");
-        typeStringBody.push(typeToString(ty.elementType));
+        typeStringBody.push(typeToString(ty.elementType, context));
         typeStringBody.push("]");
-        typeTag = createLine(typeStringBody, "");
+        return createLine(typeStringBody, "");
+    }
+    else if ty is FunctionType {
+        string[] typeStringBody = [];
+        typeStringBody.push(typeToString(ty.returnType, context), "(");
+        foreach int i in 0 ..< ty.paramTypes.length() {
+            final Type paramType = ty.paramTypes[i];
+            if i > 0 {
+                typeStringBody.push(",");
+            }
+            typeStringBody.push(typeToString(paramType, context));
+        }
+        typeStringBody.push(")");
+        return createLine(typeStringBody, "");
     }
     else {
-        typeTag = ty;
+        return ty;
     }
-    return typeTag;
 }
 
 class Output {
@@ -1344,7 +1510,7 @@ function functionHeader(Function fn) returns string {
     foreach int i in 0 ..< fn.returnAttributes.length() {
         words.push(fn.returnAttributes[i]);
     }
-    words.push(typeToString(fn.functionType.returnType));
+    words.push(typeToString(fn.functionType.returnType, fn.context));
     words.push("@" + fn.functionName);
     words.push("(");
     foreach int i in 0 ..< fn.functionType.paramTypes.length() {
@@ -1352,7 +1518,7 @@ function functionHeader(Function fn) returns string {
         if i > 0 {
             words.push(",");
         }
-        words.push(typeToString(ty));
+        words.push(typeToString(ty, fn.context));
         foreach int j in 0 ..< fn.paramAttributes[i].length() {
             words.push(fn.paramAttributes[i][j]);
         }
@@ -1404,8 +1570,7 @@ function escapeIdent(string name) returns string {
         return name;
     }
     string escaped = "\"";
-    foreach int i in 0 ..< name.length() { // JBUG issue:#31767
-        string:Char ch = <string:Char>name[i];
+    foreach var ch in name {
         escaped += escapeIdentChar(ch);
     }
     escaped += "\"";
@@ -1421,10 +1586,9 @@ function escapeIdentChar(string:Char ch) returns string {
         byte[] bytes = ch.toBytes();
         string result = "";
         foreach byte b in bytes {
-            // JBUG #31776 int cast should not be required
             // UTF-8 representation of a code point >= 0x80 consists of bytes >= 0x80
             // so toHexString here will always produce two bytes
-            result += "\\" + (<int>b).toHexString().toUpperAscii();
+            result += "\\" + b.toHexString().toUpperAscii();
         } 
         return result;
     }
@@ -1437,28 +1601,28 @@ function escapeIdentChar(string:Char ch) returns string {
     }
 }
 
-function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds"? inbounds) returns PointerType {
+function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds"? inbounds, Context context) returns PointerType {
     Type ptrTy = ptr.ty;
     if ptrTy is PointerType {
-        words.push(typeToString(ptrTy.pointsTo));
+        words.push(typeToString(ptrTy.pointsTo, context));
     } else {
         panic err:illegalArgument("GEP on non-pointer type value"); 
     }
-    words.push(",", typeToString(ptr.ty), ptr.operand);
+    words.push(",", typeToString(ptr.ty, context), ptr.operand);
     Type resultType = ptr.ty;
     int resultAddressSpace = 0;
     foreach var index in indices {
         words.push(",");
-        words.push(typeToString(index.ty));
+        words.push(typeToString(index.ty, context));
         words.push(index.operand);
         if resultType is PointerType {
             resultAddressSpace = resultType.addressSpace;
             resultType = resultType.pointsTo;
-        } 
+        }
         else {
             if resultType is ArrayType {
                 resultType = resultType.elementType;
-            } 
+            }
             else if resultType is StructType {
                 int i;
                 if index.operand is Unnamed {
@@ -1466,44 +1630,51 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
                 } else {
                     i = checkpanic int:fromString(<string>index.operand);
                 }
-                if index.ty != "i32" {
+                Type indexTy = index.ty;
+                if indexTy !is "i32" {
                     panic err:illegalArgument("structures can be index only using i32 constants"); 
-                } 
-                else {
-                    resultType = getTypeAtIndex(resultType, i);
                 }
-            } 
+                else {
+                    resultType = getTypeAtIndex(resultType, i, context);
+                }
+            }
             else {
-                panic err:illegalArgument(string `type  ${typeToString(resultType)} can't be indexed`);
+                panic err:illegalArgument(string `type  ${typeToString(resultType, context)} can't be indexed`);
             }
         }
     }
     return pointerType(resultType, resultAddressSpace);
 }
 
-function bitCastArgs((string|Unnamed)[] words, Value val, PointerType destTy) {
-    words.push(typeToString(val.ty), val.operand, "to", typeToString(destTy));
+function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
+    var data = context.getStructName(ty);
+    Type[] elementTypes = ty.elementTypes;
+    if data != () {
+        elementTypes = data[1];
+    }
+    return elementTypes[index];
 }
 
-function addrSpaceCastArgs((string|Unnamed)[] words, Value val, PointerType destTy) {
-    words.push(typeToString(val.ty), val.operand, "to", typeToString(destTy));
+function bitCastArgs((string|Unnamed)[] words, Value val, PointerType destTy, Context context) {
+    words.push(typeToString(val.ty, context), val.operand, "to", typeToString(destTy, context));
 }
 
-// JBUG #31777 cast should not be necessary
-final int CP_DOUBLE_QUOTE = (<string:Char>"\"").toCodePointInt();
-final int CP_BACKSLASH = (<string:Char>"\\").toCodePointInt();
+function addrSpaceCastArgs((string|Unnamed)[] words, Value val, PointerType destTy, Context context) {
+    words.push(typeToString(val.ty, context), val.operand, "to", typeToString(destTy, context));
+}
+
+final int CP_DOUBLE_QUOTE = "\"".toCodePointInt();
+final int CP_BACKSLASH = "\\".toCodePointInt();
 
 function charArray(byte[] bytes) returns string {
     string result = "c\"";
     foreach var b in bytes {
-        // JBUG 31700 incorrect code generated if 32 is in hex
-        if b >= 32 && b < 127 && b != CP_DOUBLE_QUOTE && b != CP_BACKSLASH {
+        if b >= 0x20 && b < 0x7F && b != CP_DOUBLE_QUOTE && b != CP_BACKSLASH {
             result += checkpanic string:fromBytes([b]);
         }
         else {
             result += "\\";
-            // JBUG #31776 cast should not be necessary
-            string hex = (<int>b).toHexString().toUpperAscii();
+            string hex = b.toHexString().toUpperAscii();
             if hex.length() == 1 {
                 result += "0" + hex;
             }
@@ -1520,13 +1691,11 @@ function isIdent(string name) returns boolean {
     if name.length() == 0 {
         return false;
     }
-    // JBUG #31758 type of name[0] is string:Char
-    if isDigit(<string:Char>name[0]) {
+    if isDigit(name[0]) {
         return false;
     }
 
-    foreach int i in 0 ..< name.length() {// JBUG issue:#31767
-        string:Char ch = <string:Char>name[i];
+    foreach var ch in name {
         if !isIdentFollow(ch) {
             return false;
         }

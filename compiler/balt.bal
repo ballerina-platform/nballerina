@@ -1,10 +1,12 @@
 import wso2/nballerina.err;
-
+import wso2/nballerina.types as t;
+import wso2/nballerina.bir;
+import wso2/nballerina.front;
+import wso2/nballerina.nback;
 import ballerina/io;
 import ballerina/file;
 
 type TestKind "output" | "panic" | "error";
-
 
 type BaltTestHeader record {|
     TestKind 'Test\-Case;
@@ -26,6 +28,37 @@ enum State {
 // " " is a good approximation
 // http://www.bitdance.com/blog/2011/04/11_01_Email6_Rewriting_Header_Folding/
 const CONTINUATION_WS = " ";
+
+function compileBaltFile(string filename, string outDir, nback:Options nbackOptions, Options options) returns error? {
+    BaltTestCase[] tests = check parseBalt(filename);
+    foreach var [i, t] in tests.enumerate() {
+        if t.header.Test\-Case == "error" || t.header["Fail-Issue"] != () {
+            continue;
+        }
+        string outBasename = chooseBaltCaseOutputFilename(t, i);
+        string outFilename = check file:joinPath(outDir, outBasename) + OUTPUT_EXTENSION;
+        string[] lines = t.content;
+        check compileAndOutputModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], nbackOptions, options, outFilename);
+        string? expectOutDir = options.expectOutDir;
+        string expectFilename = check file:joinPath(expectOutDir ?: outDir, outBasename) + ".txt";
+        check io:fileWriteLines(expectFilename, expect(t.content));
+    }
+}
+
+function compileAndOutputModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions, OutputOptions outOptions, string? outFilename) returns CompileError? {
+    LlvmModule llMod = check compileModule(modId, sources, nbackOptions);
+    if outFilename != () {
+        check outputModule(llMod, outFilename, outOptions);
+    }
+}
+
+function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Options nbackOptions) returns LlvmModule|CompileError {
+    t:Env env = new;
+    front:ScannedModule scanned = check front:scanModule(sources, modId);
+    bir:Module birMod = check front:resolveModule(scanned, env, []);
+    var [llMod, _] = check nback:buildModule(birMod, nbackOptions);
+    return llMod;
+}
 
 function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Any {
     BaltTestCase[] tests = [];
@@ -78,17 +111,17 @@ function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:
         }
         else if s == BOF {
             // xxx add file path
-            return err:syntax("file should start with 'Test-Case:' header field");
+            return error("file should start with 'Test-Case:' header field");
         }
         else {
             panic err:impossible("balt parser illegal state");
         }
     }
     if s == HEADER {
-        return err:syntax("header without content at EOF ");
+        return error("header without content at EOF ");
     }
     else if s == BOF {
-        return err:syntax("empty file");
+        return error("empty file");
     }
     else {
         BaltTestHeader header = <BaltTestHeader>maybeHeader;
@@ -142,8 +175,7 @@ function chooseBaltCaseOutputFilename(BaltTestCase t, int i) returns string {
    return pad4(i.toString()) + "L" + pad4(t.offset.toString()) + "-" + testKindToLetter(t.header.Test\-Case);
 }
 
-// JBUG: can't use Char gives "'string' value 'x' cannot be converted to 'lang.string:Char'
-function testKindToLetter(TestKind k) returns string {
+function testKindToLetter(TestKind k) returns string:Char {
     match k {
         "error" => {
             return "e";

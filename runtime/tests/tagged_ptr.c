@@ -45,7 +45,7 @@ void testTaggedToInt() {
     // int on stack
     for(int64_t i=0; i <= NTESTS; i ++) {
         int64_t val = rand();
-        TaggedPtr ptr = bitsToTaggedPtr(val);
+        TaggedPtr ptr = bitsToTaggedPtr(val | IMMEDIATE_FLAG);
         int64_t prtVal = taggedToInt(ptr); //? work only with positive values
         assert(prtVal == val);
     }
@@ -56,7 +56,6 @@ void testTaggedToInt() {
 	int expectedValue = rand();
         *val = expectedValue;
         uint64_t addr = (uint64_t) val;
-        addr = addr | ((uint64_t)FLAG_INT_ON_HEAP << TAG_SHIFT);
         TaggedPtr ptr = bitsToTaggedPtr(addr);
         uint64_t ptrVal = taggedToInt(ptr);
         assert(ptrVal == expectedValue);

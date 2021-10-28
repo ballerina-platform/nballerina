@@ -1,3 +1,4 @@
+// @productions boolean if-else-stmt relational-expr boolean-literal return-stmt function-call-expr int-literal
 import ballerina/io;
 
 public function main() {

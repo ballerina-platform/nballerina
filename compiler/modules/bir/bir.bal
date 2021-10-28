@@ -9,10 +9,10 @@ public type Module object {
     public function getId() returns ModuleId;
     // A SemType of a potentially recursive type uses integers to refer to definitions
     // which are in arrays in this.
-    public function getTypeCheckContext() returns t:TypeCheckContext;
+    public function getTypeContext() returns t:Context;
     public function getFunctionDefns() returns readonly & FunctionDefn[];
     public function generateFunctionCode(int i) returns FunctionCode|err:Semantic|err:Unimplemented;
-    public function getPrefixForModuleId(ModuleId id, int partIndex) returns string?;
+    public function symbolToString(int partIndex, Symbol sym) returns string;
     // Get the File for a give part index
     public function getPartFile(int partIndex) returns File;
     public function getPartFiles() returns File[];
@@ -20,7 +20,7 @@ public type Module object {
 };
 
 public type ModuleId readonly & record {|
-    string? organization = ();
+    string org;
     [string, string...] names;
     // this omits the version, because programs cannot have two versions of the same module
 |};
@@ -58,26 +58,6 @@ public type InternalSymbol readonly & record {|
 |};
 
 public type Symbol InternalSymbol|ExternalSymbol;
-
-public function symbolToString(Module mod, int partIndex, Symbol sym) returns string {
-    string prefix;
-    if sym is InternalSymbol {
-        prefix = "";
-    }
-    else {
-        ModuleId modId = sym.module;
-        string? importPrefix = mod.getPrefixForModuleId(modId, partIndex);
-        if importPrefix == () {
-            string? org = modId.organization;
-            string orgString = org == () ? "" : org + "/";
-            prefix = "{" + orgString  + ".".'join(...sym.module.names) + "}";
-        }
-        else {
-            prefix = importPrefix + ":";
-        }
-    }
-    return prefix + sym.identifier;
-}
 
 public type FunctionRef readonly & record {|
     Symbol symbol;
@@ -352,8 +332,7 @@ public type ListConstructInsn readonly & record {|
 public type ListGetInsn readonly & record {|
     INSN_LIST_GET name = INSN_LIST_GET;
     Register result;
-    Register list;
-    IntOperand operand;
+    [Register, IntOperand] operands;
     Position position;
 |};
 
@@ -361,10 +340,7 @@ public type ListGetInsn readonly & record {|
 # This is a PPI (since the index may be out of bounds).
 public type ListSetInsn readonly & record {|
     INSN_LIST_SET name = INSN_LIST_SET;
-    Register list;
-    IntOperand index;
-    // operand is the value to store in the list
-    Operand operand;
+    [Register, IntOperand, Operand] operands;
     Position position;
 |};
 

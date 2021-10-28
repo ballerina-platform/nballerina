@@ -1,3 +1,4 @@
+// @productions is-expr while-stmt equality if-else-stmt equality-expr return-stmt unary-expr any function-call-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
 public function main() {

@@ -1,10 +1,10 @@
 @_bal_stack_guard = external global i8*
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare void @_Bio__println(i8 addrspace(1)*)
-define void @_B_main() {
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
+define void @_B04rootmain() !dbg !5 {
   %i6 = alloca i64
   %i5 = alloca i64
   %i3 = alloca i64
@@ -65,7 +65,7 @@ define void @_B_main() {
   call void @_bal_panic(i8 addrspace(1)* %41)
   unreachable
 42:
-  %43 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %43 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
   call void @_bal_panic(i8 addrspace(1)* %43)
   unreachable
 44:
@@ -76,7 +76,7 @@ define void @_B_main() {
   %48 = extractvalue {i64, i1} %47, 1
   br i1 %48, label %60, label %51
 49:
-  %50 = call i8 addrspace(1)* @_bal_panic_construct(i64 2817)
+  %50 = call i8 addrspace(1)* @_bal_panic_construct(i64 3073), !dbg !9
   store i8 addrspace(1)* %50, i8 addrspace(1)** %32
   br label %40
 51:
@@ -86,15 +86,15 @@ define void @_B_main() {
   %54 = load i64, i64* %3
   %55 = icmp eq i64 %53, %54
   store i1 %55, i1* %1
-  %56 = load i1, i1* %1
-  call void @_B_printBoolean(i1 %56)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  %56 = load i1, i1* %1, !dbg !10
+  call void @_B_printBoolean(i1 %56), !dbg !10
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !10
   %57 = load i64, i64* %i5
   %58 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %57, i64 2)
   %59 = extractvalue {i64, i1} %58, 1
   br i1 %59, label %80, label %62
 60:
-  %61 = call i8 addrspace(1)* @_bal_panic_construct(i64 2817)
+  %61 = call i8 addrspace(1)* @_bal_panic_construct(i64 3073), !dbg !9
   store i8 addrspace(1)* %61, i8 addrspace(1)** %32
   br label %40
 62:
@@ -104,9 +104,9 @@ define void @_B_main() {
   %65 = load i64, i64* %6
   %66 = icmp ne i64 %64, %65
   store i1 %66, i1* %5
-  %67 = load i1, i1* %5
-  call void @_B_printBoolean(i1 %67)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %7
+  %67 = load i1, i1* %5, !dbg !11
+  call void @_B_printBoolean(i1 %67), !dbg !11
+  store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !11
   %68 = load i64, i64* %i5
   %69 = icmp slt i64 %68, 9
   store i1 %69, i1* %9
@@ -117,16 +117,16 @@ define void @_B_main() {
   %73 = load i1, i1* %10
   %74 = icmp eq i1 %72, %73
   store i1 %74, i1* %8
-  %75 = load i1, i1* %8
-  call void @_B_printBoolean(i1 %75)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %11
+  %75 = load i1, i1* %8, !dbg !12
+  call void @_B_printBoolean(i1 %75), !dbg !12
+  store i8 addrspace(1)* null, i8 addrspace(1)** %11, !dbg !12
   %76 = load i64, i64* %i1
   %77 = load i64, i64* %i3
   %78 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %76, i64 %77)
   %79 = extractvalue {i64, i1} %78, 1
   br i1 %79, label %87, label %82
 80:
-  %81 = call i8 addrspace(1)* @_bal_panic_construct(i64 3073)
+  %81 = call i8 addrspace(1)* @_bal_panic_construct(i64 3329), !dbg !9
   store i8 addrspace(1)* %81, i8 addrspace(1)** %32
   br label %40
 82:
@@ -137,7 +137,7 @@ define void @_B_main() {
   %86 = extractvalue {i64, i1} %85, 1
   br i1 %86, label %101, label %89
 87:
-  %88 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585)
+  %88 = call i8 addrspace(1)* @_bal_panic_construct(i64 3841), !dbg !9
   store i8 addrspace(1)* %88, i8 addrspace(1)** %32
   br label %40
 89:
@@ -147,9 +147,9 @@ define void @_B_main() {
   %92 = load i64, i64* %14
   %93 = icmp sle i64 %91, %92
   store i1 %93, i1* %12
-  %94 = load i1, i1* %12
-  call void @_B_printBoolean(i1 %94)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %15
+  %94 = load i1, i1* %12, !dbg !13
+  call void @_B_printBoolean(i1 %94), !dbg !13
+  store i8 addrspace(1)* null, i8 addrspace(1)** %15, !dbg !13
   %95 = load i64, i64* %i1
   %96 = load i64, i64* %i5
   %97 = icmp sge i64 %95, %96
@@ -159,7 +159,7 @@ define void @_B_main() {
   %100 = extractvalue {i64, i1} %99, 1
   br i1 %100, label %118, label %103
 101:
-  %102 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585)
+  %102 = call i8 addrspace(1)* @_bal_panic_construct(i64 3841), !dbg !9
   store i8 addrspace(1)* %102, i8 addrspace(1)** %32
   br label %40
 103:
@@ -177,15 +177,15 @@ define void @_B_main() {
   %112 = load i1, i1* %f
   %113 = icmp ne i1 %111, %112
   store i1 %113, i1* %16
-  %114 = load i1, i1* %16
-  call void @_B_printBoolean(i1 %114)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %21
+  %114 = load i1, i1* %16, !dbg !14
+  call void @_B_printBoolean(i1 %114), !dbg !14
+  store i8 addrspace(1)* null, i8 addrspace(1)** %21, !dbg !14
   %115 = load i64, i64* %i1
   %116 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 7, i64 %115)
   %117 = extractvalue {i64, i1} %116, 1
   br i1 %117, label %140, label %120
 118:
-  %119 = call i8 addrspace(1)* @_bal_panic_construct(i64 3841)
+  %119 = call i8 addrspace(1)* @_bal_panic_construct(i64 4097), !dbg !9
   store i8 addrspace(1)* %119, i8 addrspace(1)** %32
   br label %40
 120:
@@ -198,9 +198,9 @@ define void @_B_main() {
   %125 = load i1, i1* %f
   %126 = icmp ne i1 %124, %125
   store i1 %126, i1* %22
-  %127 = load i1, i1* %22
-  call void @_B_printBoolean(i1 %127)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %25
+  %127 = load i1, i1* %22, !dbg !15
+  call void @_B_printBoolean(i1 %127), !dbg !15
+  store i8 addrspace(1)* null, i8 addrspace(1)** %25, !dbg !15
   %128 = load i1, i1* %t
   %129 = xor i1 1, %128
   store i1 %129, i1* %27
@@ -208,9 +208,9 @@ define void @_B_main() {
   %131 = load i1, i1* %f
   %132 = icmp eq i1 %130, %131
   store i1 %132, i1* %26
-  %133 = load i1, i1* %26
-  call void @_B_printBoolean(i1 %133)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %28
+  %133 = load i1, i1* %26, !dbg !16
+  call void @_B_printBoolean(i1 %133), !dbg !16
+  store i8 addrspace(1)* null, i8 addrspace(1)** %28, !dbg !16
   %134 = load i1, i1* %t
   %135 = xor i1 1, %134
   store i1 %135, i1* %30
@@ -218,16 +218,16 @@ define void @_B_main() {
   %137 = load i1, i1* %30
   %138 = icmp eq i1 %136, %137
   store i1 %138, i1* %29
-  %139 = load i1, i1* %29
-  call void @_B_printBoolean(i1 %139)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %31
+  %139 = load i1, i1* %29, !dbg !17
+  call void @_B_printBoolean(i1 %139), !dbg !17
+  store i8 addrspace(1)* null, i8 addrspace(1)** %31, !dbg !17
   ret void
 140:
-  %141 = call i8 addrspace(1)* @_bal_panic_construct(i64 4097)
+  %141 = call i8 addrspace(1)* @_bal_panic_construct(i64 4353), !dbg !9
   store i8 addrspace(1)* %141, i8 addrspace(1)** %32
   br label %40
 }
-define internal void @_B_printBoolean(i1 %0) {
+define internal void @_B_printBoolean(i1 %0) !dbg !7 {
   %x = alloca i1
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
@@ -240,19 +240,42 @@ define internal void @_B_printBoolean(i1 %0) {
   %8 = load i1, i1* %x
   br i1 %8, label %9, label %11
 9:
-  %10 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  call void @_Bio__println(i8 addrspace(1)* %10)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %2
+  %10 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1), !dbg !19
+  call void @_Bb02ioprintln(i8 addrspace(1)* %10), !dbg !19
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !19
   br label %13
 11:
-  %12 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
-  call void @_Bio__println(i8 addrspace(1)* %12)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  %12 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0), !dbg !20
+  call void @_Bb02ioprintln(i8 addrspace(1)* %12), !dbg !20
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !20
   br label %13
 13:
   ret void
 14:
-  %15 = call i8 addrspace(1)* @_bal_panic_construct(i64 5636)
+  %15 = call i8 addrspace(1)* @_bal_panic_construct(i64 5892), !dbg !18
   call void @_bal_panic(i8 addrspace(1)* %15)
   unreachable
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/01-int/op2-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = distinct !DISubprogram(name:"printBoolean", linkageName:"_B_printBoolean", scope: !1, file: !1, line: 23, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
+!8 = !{}
+!9 = !DILocation(line: 0, column: 0, scope: !5)
+!10 = !DILocation(line: 12, column: 2, scope: !5)
+!11 = !DILocation(line: 13, column: 2, scope: !5)
+!12 = !DILocation(line: 14, column: 2, scope: !5)
+!13 = !DILocation(line: 15, column: 2, scope: !5)
+!14 = !DILocation(line: 16, column: 2, scope: !5)
+!15 = !DILocation(line: 17, column: 2, scope: !5)
+!16 = !DILocation(line: 18, column: 2, scope: !5)
+!17 = !DILocation(line: 19, column: 2, scope: !5)
+!18 = !DILocation(line: 0, column: 0, scope: !7)
+!19 = !DILocation(line: 25, column: 4, scope: !7)
+!20 = !DILocation(line: 27, column: 4, scope: !7)

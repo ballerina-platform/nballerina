@@ -1,3 +1,4 @@
+// @productions boolean-literal assign-stmt local-var-decl-stmt
 import ballerina/io;
 
 public function main() {

@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-TaggedPtr _Bint__toHexString(int64_t i) {
+TaggedPtr BAL_LANG_INT_NAME(toHexString)(int64_t i) {
     // allow for sign, 2 hex digits for each byte and the nul byte
     char buf[1 + 2*8 + 1]; 
     int len;

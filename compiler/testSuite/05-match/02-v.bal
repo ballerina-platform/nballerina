@@ -1,3 +1,4 @@
+// @productions module-const-decl match-stmt string-literal function-call-expr int-literal
 import ballerina/io;
 
 public function main() {

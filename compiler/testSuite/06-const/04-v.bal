@@ -1,3 +1,4 @@
+// @productions is-not-expr module-const-decl is-expr boolean-literal int-literal
 import ballerina/io;
 
 const T = false !is int;

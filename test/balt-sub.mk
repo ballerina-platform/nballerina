@@ -1,7 +1,7 @@
 COMPILER_JAR=../../../compiler/target/bin/nballerina.jar
 JAVA ?= $(shell ../../findJava.sh)
 TARGETS=all test testll compile
-LLVM_SUFFIX ?=-11
+LLVM_SUFFIX ?=-12
 CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 CFLAGS ?= -O2

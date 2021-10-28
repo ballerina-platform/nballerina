@@ -1,3 +1,4 @@
+// @productions equality equality-expr relational-expr unary-expr additive-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 public function main() {
     int x = 1;

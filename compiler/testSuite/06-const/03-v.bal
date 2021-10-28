@@ -1,3 +1,4 @@
+// @productions module-const-decl floating-point-literal int-literal
 import ballerina/io;
 
 const float N1 = 42;

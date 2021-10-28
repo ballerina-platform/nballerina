@@ -64,7 +64,7 @@ function parseType(t:Env env, Binding? b, json j, Path path) returns t:SemType|P
             }
             else {
                 json k = js[0];
-                if !(k is string) {
+                if k !is string {
                     return parseError("expected array to begin with string", path, 0);
                 }
                 else {
@@ -93,7 +93,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
         }
         "tuple" => {
             t:SemType? s = lookupDef(env, b, jlist);
-            if !(s is ()) {
+            if s != () {
                 return s;
             }
             t:ListDefinition def = new;
@@ -102,7 +102,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
         }
         "list" => {
             t:SemType? s = lookupDef(env, b, jlist);
-            if !(s is ()) {
+            if s != () {
                 return s;
             }
             t:ListDefinition def = new;
@@ -118,7 +118,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
         }
         "record" => {
             t:SemType? s = lookupDef(env, b, jlist);
-            if !(s is ()) {
+            if s != () {
                 return s;
             }
             t:MappingDefinition def = new;
@@ -127,7 +127,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
         }
         "map" => {
             t:SemType? s = lookupDef(env, b, jlist);
-            if !(s is ()) {
+            if s != () {
                 return s;
             }
             if jlist.length() == 1 {
@@ -141,7 +141,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
         }
         "function" => {
             t:SemType? s = lookupDef(env, b, jlist);
-            if !(s is ()) {
+            if s != () {
                 return s;
             }
             t:FunctionDefinition def = new(env);
@@ -164,7 +164,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
                 return parseError("'string' must be followed by a string", parent, 0);
             }
             final json value = jlist[1];
-            if !(value is string) {
+            if value !is string {
                 return parseError("'string' must be followed by a string", parent, 1);
             }
             else {
@@ -219,7 +219,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
                 return parseError("'rec' must be followed by a string and a type", parent, 0);
             }
             final json name = jlist[1];
-            if !(name is string) {
+            if name !is string {
                 return parseError("'rec' must be followed by a string", parent, 1);
             }
             else {
@@ -237,12 +237,12 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
                 return parseError("'ref' must be followed by a string", parent, 0);
             }
             final json name = jlist[1];
-            if !(name is string) {
+            if name !is string {
                 return parseError("'ref' must be followed by a string", parent, 1);
             }
             else {
                 var res = lookupBinding(b, name);
-                if res is () {
+                if res == () {
                     return parseError("no binding for '" + name + "'", parent, 1);
                 }
                 else if res is "loop" {
@@ -259,7 +259,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
 }
 
 function consDefBinding(json desc, t:Definition def, Binding? next) returns Binding? {
-    if next is () {
+    if next == () {
         return next;
     }
     DefBinding db = { desc, def, next };
@@ -277,12 +277,12 @@ function parseFields(t:Env env, Binding? b, json[] jlist, Path parent, int start
 
 
 function parseField(t:Env env, Binding? b, json j, Path path) returns t:Field|ParseError {
-    if !(j is json[]) || j.length() != 2 {
+    if j !is json[] || j.length() != 2 {
         return parseError("field must be 2-tuple", path);
     }
     else {
         json name = j[0];
-        if !(name is string) {
+        if name !is string {
             return parseError("first member of field must be a string", path, 0);
         }
         else {
@@ -296,7 +296,7 @@ function lookupBinding(Binding? b, string name) returns [json, Path]|"loop"? {
     Binding? tem = b;
     boolean loop = true;
     while true {
-        if tem is () {
+        if tem == () {
            break;
         }
         else if tem is NameBinding {
@@ -319,7 +319,7 @@ function lookupBinding(Binding? b, string name) returns [json, Path]|"loop"? {
 function lookupDef(t:Env env, Binding? b, json desc) returns t:SemType? {
     Binding? tem = b;
     while true {
-        if tem is () {
+        if tem == () {
             break;
         }
         else if tem is DefBinding {
@@ -350,7 +350,7 @@ function parseTypes(t:Env env, Binding? b, json[] js, Path parent, int startInde
 }
 
 function parseError(string message, Path path, int? step = ()) returns ParseError {
-    if !(step is ()) {
+    if step != () {
         path.push(step);
     }
     return error ParseError(message, path=path);

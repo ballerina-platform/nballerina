@@ -3,10 +3,10 @@ declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone speculatable willreturn
-declare void @_Bio__println(i8 addrspace(1)*)
+declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
+declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)*, i8 addrspace(1)*)
-define void @_B_main() {
+define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
@@ -15,23 +15,23 @@ define void @_B_main() {
   %6 = icmp ult i8* %4, %5
   br i1 %6, label %12, label %7
 7:
-  %8 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2)
-  call void @_B_foo(i8 addrspace(1)* %8)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %1
-  call void @_B_foo(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504))
-  store i8 addrspace(1)* null, i8 addrspace(1)** %2
-  %9 = zext i1 1 to i64
-  %10 = or i64 %9, 72057594037927936
-  %11 = getelementptr i8, i8 addrspace(1)* null, i64 %10
-  call void @_B_foo(i8 addrspace(1)* %11)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3
+  %8 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 2), !dbg !10
+  call void @_B_foo(i8 addrspace(1)* %8), !dbg !10
+  store i8 addrspace(1)* null, i8 addrspace(1)** %1, !dbg !10
+  call void @_B_foo(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504)), !dbg !11
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !11
+  %9 = zext i1 1 to i64, !dbg !12
+  %10 = or i64 %9, 72057594037927936, !dbg !12
+  %11 = getelementptr i8, i8 addrspace(1)* null, i64 %10, !dbg !12
+  call void @_B_foo(i8 addrspace(1)* %11), !dbg !12
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !12
   ret void
 12:
-  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 772)
+  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
   call void @_bal_panic(i8 addrspace(1)* %13)
   unreachable
 }
-define internal void @_B_foo(i8 addrspace(1)* %0) {
+define internal void @_B_foo(i8 addrspace(1)* %0) !dbg !7 {
   %x = alloca i8 addrspace(1)*
   %2 = alloca i1
   %x.1 = alloca i64
@@ -94,9 +94,9 @@ define internal void @_B_foo(i8 addrspace(1)* %0) {
   %43 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
   %44 = call i8 addrspace(1)* @_bal_string_concat(i8 addrspace(1)* %42, i8 addrspace(1)* %43)
   store i8 addrspace(1)* %44, i8 addrspace(1)** %7
-  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %7
-  call void @_Bio__println(i8 addrspace(1)* %45)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %8
+  %45 = load i8 addrspace(1)*, i8 addrspace(1)** %7, !dbg !15
+  call void @_Bb02ioprintln(i8 addrspace(1)* %45), !dbg !15
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !15
   br label %69
 46:
   %47 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
@@ -118,19 +118,19 @@ define internal void @_B_foo(i8 addrspace(1)* %0) {
   %59 = load i1, i1* %x.5
   %60 = xor i1 1, %59
   store i1 %60, i1* %10
-  %61 = load i1, i1* %10
-  %62 = zext i1 %61 to i64
-  %63 = or i64 %62, 72057594037927936
-  %64 = getelementptr i8, i8 addrspace(1)* null, i64 %63
-  call void @_Bio__println(i8 addrspace(1)* %64)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %11
+  %61 = load i1, i1* %10, !dbg !16
+  %62 = zext i1 %61 to i64, !dbg !16
+  %63 = or i64 %62, 72057594037927936, !dbg !16
+  %64 = getelementptr i8, i8 addrspace(1)* null, i64 %63, !dbg !16
+  call void @_Bb02ioprintln(i8 addrspace(1)* %64), !dbg !16
+  store i8 addrspace(1)* null, i8 addrspace(1)** %11, !dbg !16
   br label %68
 65:
   %66 = load i8 addrspace(1)*, i8 addrspace(1)** %x.4
   store i8 addrspace(1)* %66, i8 addrspace(1)** %x.6
-  %67 = load i8 addrspace(1)*, i8 addrspace(1)** %x.6
-  call void @_Bio__println(i8 addrspace(1)* %67)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %12
+  %67 = load i8 addrspace(1)*, i8 addrspace(1)** %x.6, !dbg !17
+  call void @_Bb02ioprintln(i8 addrspace(1)* %67), !dbg !17
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !17
   br label %68
 68:
   br label %69
@@ -143,19 +143,39 @@ define internal void @_B_foo(i8 addrspace(1)* %0) {
   call void @_bal_panic(i8 addrspace(1)* %72)
   unreachable
 73:
-  %74 = call i8 addrspace(1)* @_bal_panic_construct(i64 2308)
+  %74 = call i8 addrspace(1)* @_bal_panic_construct(i64 2564), !dbg !13
   call void @_bal_panic(i8 addrspace(1)* %74)
   unreachable
 75:
   %76 = extractvalue {i64, i1} %28, 0
   store i64 %76, i64* %3
-  %77 = load i64, i64* %3
-  %78 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %77)
-  call void @_Bio__println(i8 addrspace(1)* %78)
-  store i8 addrspace(1)* null, i8 addrspace(1)** %4
+  %77 = load i64, i64* %3, !dbg !14
+  %78 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %77), !dbg !14
+  call void @_Bb02ioprintln(i8 addrspace(1)* %78), !dbg !14
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !14
   br label %70
 79:
-  %80 = call i8 addrspace(1)* @_bal_panic_construct(i64 2817)
+  %80 = call i8 addrspace(1)* @_bal_panic_construct(i64 3073), !dbg !13
   store i8 addrspace(1)* %80, i8 addrspace(1)** %13
   br label %71
 }
+!llvm.module.flags = !{!0}
+!llvm.dbg.cu = !{!2}
+!0 = !{i32 1, !"Debug Info Version", i32 3}
+!1 = !DIFile(filename:"../../../compiler/testSuite/05-narrow/02-v.bal", directory:"")
+!2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
+!3 = !DISubroutineType(types: !4)
+!4 = !{}
+!5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
+!6 = !{}
+!7 = distinct !DISubprogram(name:"foo", linkageName:"_B_foo", scope: !1, file: !1, line: 10, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
+!8 = !{}
+!9 = !DILocation(line: 0, column: 0, scope: !5)
+!10 = !DILocation(line: 5, column: 4, scope: !5)
+!11 = !DILocation(line: 6, column: 4, scope: !5)
+!12 = !DILocation(line: 7, column: 4, scope: !5)
+!13 = !DILocation(line: 0, column: 0, scope: !7)
+!14 = !DILocation(line: 12, column: 8, scope: !7)
+!15 = !DILocation(line: 15, column: 8, scope: !7)
+!16 = !DILocation(line: 18, column: 8, scope: !7)
+!17 = !DILocation(line: 21, column: 8, scope: !7)

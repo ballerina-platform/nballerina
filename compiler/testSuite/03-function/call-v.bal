@@ -1,3 +1,4 @@
+// @productions list-type-descriptor list-constructor-expr return-stmt any function-call-expr local-var-decl-stmt int-literal
 import ballerina/io;
 
 // This is really testing parsing of call statements.

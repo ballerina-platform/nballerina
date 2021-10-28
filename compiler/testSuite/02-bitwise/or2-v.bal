@@ -1,3 +1,4 @@
+// @productions bitwise-or-expr unary-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 public function main() {
     int i = 5;

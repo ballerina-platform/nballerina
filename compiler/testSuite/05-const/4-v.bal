@@ -1,3 +1,4 @@
+// @productions module-const-decl unary-expr int-literal
 import ballerina/io;
 
 const MINUS1 = -1;

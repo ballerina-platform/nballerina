@@ -9,6 +9,11 @@
 #define NRANDOM 2
 #define NTESTS 2*1024
 
+typedef struct {
+    const char *function;
+    const char *filename;
+} ExpectedTrace;
+
 static int min(int n1, int n2) {
     return (n1 > n2 ) ? n2 : n1;
 }
@@ -39,4 +44,38 @@ double randDouble(bool isNan) {
     double result = *((double*)&randDoubleBits);
     assert(isnan(result) == isNan);
     return result;
+}
+
+TaggedPtr getNil() {
+    GC char *ptr = NULL;
+    return ptr;
+}
+
+void compareBacktrace(FILE *actualTrace, const ExpectedTrace expectedTrace[]) {
+    int nChars = 0;
+    int nLines = 0;
+    while (true) {
+        char c = fgetc(actualTrace);
+        if (c == EOF) {
+            break;
+        }
+        const char *expectedFunction = expectedTrace[nLines].function;
+        if (nChars < strlen(expectedFunction)) {
+            assert(c == expectedFunction[nChars]);
+        }
+        if (c == '\n') {
+            // Compare filename
+            const char *expectedFilename = expectedTrace[nLines].filename;
+            int expectedFileNameLength = strlen(expectedFilename);
+            assert(fseek(actualTrace, -1 - expectedFileNameLength, SEEK_CUR) == 0);
+            for (int i = 0; i < expectedFileNameLength; i++) {
+                assert(expectedFilename[i] == fgetc(actualTrace));
+            }
+            fgetc(actualTrace);
+            nLines++;
+            nChars = 0;
+            continue;
+        }
+        nChars++;
+    }
 }

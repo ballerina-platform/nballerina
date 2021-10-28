@@ -1,3 +1,4 @@
+// @productions range-expr foreach-stmt function-call-expr int-literal
 import ballerina/io;
 
 public function main() {

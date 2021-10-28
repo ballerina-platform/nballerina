@@ -1,6 +1,9 @@
 import ballerina/test;
 import ballerina/file;
+import wso2/nballerina.front;
 import ballerina/io;
+import wso2/nballerina.types as t;
+import wso2/nballerina.front.syntax as s;
 
 import wso2/nballerina.err;
 
@@ -10,7 +13,7 @@ type TestSuiteCases map<[string, string]>;
     dataProvider: listSourcesVPO
 }
 function testCompileVPO(string path, string kind) returns io:Error? {
-    CompileError? err = compileFile(path);
+    CompileError? err = testCompileFile(path);
     if err is io:Error {
         return err;
     }
@@ -28,10 +31,18 @@ function testCompileVPO(string path, string kind) returns io:Error? {
 }
 
 @test:Config {
+    dataProvider: listSourcesT
+}
+function testSemTypes(string path, string kind) returns error? {
+    SubtypeTestCase res = check readSubtypeTests(path);
+    return testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
+}
+
+@test:Config {
     dataProvider: listSourcesEU
 }
 function testCompileEU(string path, string kind) returns file:Error|io:Error? {
-    CompileError? err = compileFile(path);
+    CompileError? err = testCompileFile(path);
     if err is err:Any? {
         if err is () {
             test:assertNotExactEquals(err, (), "expected an error " + path);
@@ -40,15 +51,26 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             string base = check file:basename(path);
             boolean isE = kind[0] == "e";
             if isE {
+                if err is err:Unimplemented {
+                    io:println(err);
+                }
                 test:assertFalse(err is err:Unimplemented, "unimplemented error on E test" + path);
             }
             // io:println U errors are reported as semantic errors
             else if !err.message().includes("'io:println'") {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
-            int? lineNumber = compileErrorLineNumber(err);
-            if lineNumber != () && (isE || kind[1] == "e") {
-                test:assertEquals(lineNumber, check errorLine(path), "wrong line number in error " + path);
+            if kind == "e" || kind == "ue" {
+                var [expectedFilename, expectedLineNo] = <FilenameLine> check expectedErrorLocation(err, path);
+                // JBUG #31334 cast needed
+                err:Detail detail = <err:Detail> err.detail();
+                test:assertTrue(detail.location is err:Location, "error without location");
+                string filename =(<err:Location>detail.location).filename;
+                test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
+                err:LineColumn? lc = detail.location?.startPos;
+                if lc is err:LineColumn {
+                    test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
+                }
             }
         }
     }
@@ -57,21 +79,48 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
     }
 }
 
-function compileErrorLineNumber(CompileError err) returns int? {
-    if err is io:Error {
-        return ();
+type FilenameLine [string, int];
+
+function expectedErrorLocation(CompileError err, string path) returns FilenameLine|file:Error|io:Error? {
+    string? modulePath = check moduleDir(path);
+    FilenameLine? errorLocation = ();
+    if modulePath is string {
+        foreach var md in check file:readDir(modulePath) {
+            if md.dir {
+                foreach var file in check file:readDir(md.absPath) {
+                    errorLocation = check findErrorLine(file.absPath, errorLocation);
+                }
+            }
+        }
+    }
+    errorLocation = check findErrorLine(path, errorLocation);
+    test:assertFalse(errorLocation is (), "failed to find any files with error annotation for " + path);
+    return errorLocation;
+}
+
+function moduleDir(string filePath) returns string|file:Error? {
+    string subModPath = filePath.substring(0, filePath.length()-4) + ".modules";
+    if check file:test(subModPath, file:IS_DIR) {
+        return check file:normalizePath(subModPath, file:CLEAN);
+    }
+}
+
+function findErrorLine(string filePath, FilenameLine? currentErrorLocation) returns FilenameLine|io:Error? {
+    int? fileErrorLine = check errorLine(filePath);
+    if fileErrorLine is int {
+        test:assertTrue(currentErrorLocation is (), "multiple files with error annotations found");
+        return [filePath, fileErrorLine];
     }
     else {
-        // JBUG #31334 cast needed
-        err:Detail detail = <err:Detail>err.detail();
-        err:LineColumn? lc = detail.location?.startPos;
-        return lc == () ? () : lc[0];
+        return currentErrorLocation;
     }
 }
 
 function listSourcesVPO() returns TestSuiteCases|error => listSources("vpo");
 
 function listSourcesEU() returns TestSuiteCases|error => listSources("eu");
+
+function listSourcesT() returns TestSuiteCases|error => listSources("t");
 
 function listSources(string initialChars) returns TestSuiteCases|io:Error|file:Error {
     TestSuiteCases cases = {};
@@ -111,19 +160,102 @@ function includePath(string path, string initialChars) returns boolean|file:Erro
     return extension == SOURCE_EXTENSION && initialChars.includes(base[0].toUpperAscii());
 }
 
-function errorLine(string path) returns int|io:Error {
+function errorLine(string path) returns int|io:Error? {
     string[] lines = check io:fileReadLines(path);
+    int? lineNo = ();
     foreach var i in 0 ..< lines.length() {
         if lines[i].indexOf("// @error") != () {
-            return i + 1;
+            test:assertTrue(lineNo is (), "multiple error annotations in file " + path);
+            lineNo = i + 1;
         }
     }
-    test:assertFail("Test with 'E' prefix missing error annotation : " + path);
-    // JBUG #31338 panic with function returning never here cases a bytecode error
-    panic err:impossible();
+    return lineNo;
 }
 
 // This outputs nothing
-function compileFile(string filename) returns CompileError? {
-    return compileModule(dummyModuleId(filename), [{ filename }], {}, {});
+function testCompileFile(string filename) returns CompileError? {
+    var [basename, _] = basenameExtension(filename);
+    return compileBalFile(filename, basename, (), {}, {});
+}
+
+function testSubtypes(front:SourcePart[] sources, string[] expected) returns error? {
+    var [env, m] = check front:typesFromString(sources);
+    var tc = t:typeContext(env);
+    foreach var item in expected {
+        s:TypeTest test = check s:parseTypeTest(item);
+        t:SemType left = resolveTestSemtype(tc, m, test.left);
+        t:SemType right = resolveTestSemtype(tc, m, test.right);
+        
+        boolean lsr = t:isSubtype(tc, left, right);
+        boolean rsl = t:isSubtype(tc, right, left);
+        boolean[2] testPair = [lsr, rsl]; 
+        match test.op { 
+            "<" => {
+                test:assertEquals(testPair, [true, false], "LHS is not a proper subtype of RHS");
+            }
+            "<>" => {
+                test:assertEquals(testPair, [false, false], "LHS and RHS are subtypes");
+            }
+            "=" => {
+                test:assertEquals(testPair, [true, true], "LHS is not equivalent to RHS");
+            }
+        }
+    }
+}
+
+function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeProjection tn) returns t:SemType {
+    if tn is s:Identifier {
+        return lookupSemtype(m, tn);
+    }
+    else {
+        t:SemType t = lookupSemtype(m, tn.identifier);
+        int|s:Identifier index = tn.index;
+        if t:isSubtypeSimple(t, t:LIST) {
+            if index is int {
+                return t:listMemberType(tc, t, index);
+                //return t:listProj(tc, t, index);
+            }
+            else {
+                t:SemType k = lookupSemtype(m, index);
+                if k == t:INT {
+                    return t:listMemberType(tc, t, ());
+                }
+                t:Value? val = t:singleShape(k);
+                if val is t:Value && val.value is int {
+                    return t:listMemberType(tc, t, <int> val.value);
+                }
+                test:assertFail("index for list projection must be an int");
+            }
+        }
+        else if t:isSubtypeSimple(t, t:MAPPING) {
+            if index is s:Identifier {
+                t:SemType k = lookupSemtype(m, index);
+                if k == t:STRING {
+                    return t:mappingMemberType(tc, t, ());
+                }
+                t:Value? val = t:singleShape(k);
+                if val is t:Value && val.value is string {
+                    return t:mappingMemberType(tc, t, <string> val.value);
+                }
+            }
+            test:assertFail("index for mapping projection must be a string");
+        }
+        else {
+            test:assertFail(tn.identifier + " is not a list or a mapping type");
+        } 
+    }
+    // JBUG: #31642 function must return a call
+    panic error("unreachable");
+}
+
+function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
+    t:SemType? t = m[id];
+    if t is () {
+        test:assertFail(id + " is not declared");
+    }
+    else {
+        return t;
+    }
+    // JBUG: #31642 function must return a call
+    panic error("unreachable");
 }

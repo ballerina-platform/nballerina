@@ -8,10 +8,10 @@ function builderStoreTypeCheck() {
     BasicBlock bb = f.appendBasicBlock();
     Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
-    Value s = new ("i64", "s");
+    DataValue s = new ("i64", "s");
     PointerValue d = new (pointerType("i1"), "d");
     error? e = trap builder.store(s, d);
-    if !(e is error) {
+    if e !is error {
         test:assertFail("invalid store allowed");
     }
 }
@@ -24,9 +24,9 @@ function builderCallTypeCheck() {
     BasicBlock bb = f.appendBasicBlock();
     Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
-    Value s = new ("i64", "s");
+    DataValue s = new ("i64", "s");
     Value?|error e = trap builder.call(f, [s]);
-    if !(e is error) {
+    if e !is error {
         test:assertFail("invalid call allowed");
     }
 }
@@ -39,9 +39,9 @@ function builderExtractValueCheck() {
     BasicBlock bb = f.appendBasicBlock();
     Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
-    Value s = new ("i64", "s");
+    DataValue s = new ("i64", "s");
     Value?|error e = trap builder.extractValue(s, 0);
-    if !(e is error) {
+    if e !is error {
         test:assertFail("invalid extract value allowed");
     }
 }
@@ -54,9 +54,9 @@ function builderCondBrCheck() {
     BasicBlock bb = f.appendBasicBlock();
     Builder builder = context.createBuilder();
     builder.positionAtEnd(bb);
-    Value s = new ("i64", "s");
+    DataValue s = new ("i64", "s");
     error? e = trap builder.condBr(s,bb,bb);
-    if !(e is error) {
+    if e !is error {
         test:assertFail("invalid cond br allowed");
     }
 }

@@ -5,44 +5,33 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.err;
 
-type ModuleTable table<s:ModuleLevelDefn> key(name);
-
-type Import record {|
-    s:ImportDecl decl;
-    bir:ModuleId moduleId;
-    boolean used = false;
-|};
-
-type ModulePart record {|
-    bir:File file;
-    map<Import> imports;
-|};
+public type ResolvedModule object {
+    *bir:Module;
+    public function getExports() returns ModuleExports;
+    public function validMain() returns err:Any?;
+};
 
 class Module {
-    *bir:Module;
+    *ResolvedModule;
     final bir:ModuleId id;
-    final ModulePart[] parts;
-    final ModuleTable defns;
-    final t:Env env;
-    final t:TypeCheckContext tc;
+    final s:SourceFile[] files;
+    final ModuleSymbols syms;
     final s:FunctionDefn[] functionDefnSource = [];
     final readonly & bir:FunctionDefn[] functionDefns;
 
-    function init(bir:ModuleId id, ModulePart[] parts, ModuleTable defns, t:Env env) {
+    function init(bir:ModuleId id, s:SourceFile[] files, ModuleSymbols syms) {
         self.id = id;
-        self.parts = parts;
-        self.defns = defns;
-        self.env = env;
-        self.tc = t:typeCheckContext(env);
+        self.files = files;
+        self.syms = syms;
         final bir:FunctionDefn[] functionDefns = [];
-        foreach var defn in defns {
+        foreach var defn in syms.defns {
             if defn is s:FunctionDefn {
                 self.functionDefnSource.push(defn);
                 functionDefns.push({
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`
                     signature: <bir:FunctionSignature>defn.signature,
-                    position: defn.pos,
+                    position: defn.namePos,
                     partIndex: defn.part.partIndex
                 });
             }
@@ -52,17 +41,18 @@ class Module {
 
     public function getId() returns bir:ModuleId => self.id;
 
-    public function getTypeCheckContext() returns t:TypeCheckContext => self.tc;
+    public function getTypeContext() returns t:Context => self.syms.tc;
 
     public function generateFunctionCode(int i) returns bir:FunctionCode|err:Semantic|err:Unimplemented {
-        return codeGenFunction(self, self.functionDefnSource[i], self.functionDefns[i].signature);
+        return codeGenFunction(self.syms, self.functionDefnSource[i], self.functionDefns[i].signature);
     }
    
     public function finish() returns err:Semantic? {
-        foreach var part in self.parts {
-            foreach var [prefix, { decl, used }] in part.imports.entries() {
+        map<Import>[] partPrefixes = self.syms.partPrefixes;
+        foreach int i in 0 ..< partPrefixes.length() {
+            foreach var [prefix, { decl, used }] in partPrefixes[i].entries() {
                 if !used {
-                    return err:semantic(`import ${prefix} unused`, loc=err:location(part.file, decl.pos));
+                    return err:semantic(`import ${prefix} unused`, loc=err:location(self.files[i], decl.namePos));
                 }
             }
         }
@@ -72,22 +62,26 @@ class Module {
         return self.functionDefns;
     }
 
-    public function getPrefixForModuleId(bir:ModuleId id, int partIndex) returns string? {
-        foreach var [prefix, { moduleId }] in self.parts[partIndex].imports.entries() {
-            if moduleId == id {
-                return prefix;
-            }
-        }
-        return ();
-    }
-
     public function getPartFile(int partIndex) returns bir:File {
-        return self.parts[partIndex].file;
+        return self.files[partIndex];
     }
 
     public function getPartFiles() returns bir:File[] {
-        return from var part in self.parts select part.file;
+        return from var f in self.files select f;
     }
+
+    public function symbolToString(int partIndex, bir:Symbol sym) returns string {
+        return symbolToString(self.syms, partIndex, sym);
+    }
+
+    public function getExports() returns ModuleExports {
+        return createExports(self.syms);
+    }
+
+    public function validMain() returns err:Any? {
+        return validEntryPoint(self.syms.defns);
+    }
+
 }
 
 public type SourcePart record {|
@@ -97,90 +91,170 @@ public type SourcePart record {|
     string[] lines?;
 |};
 
-type LoadedSourcePart record {|
-    s:FilePath path;
-    string[] lines;
+type ModuleIdImports record {|
+    readonly bir:ModuleId id;
+    s:ImportDecl[] imports;
 |};
 
-public function loadModule(t:Env env, SourcePart[] sourceParts, bir:ModuleId id) returns bir:Module|err:Any|io:Error {
-    ModuleTable mod = table [];
-    ModulePart[] parts = [];
-    foreach int i in 0 ..< sourceParts.length() {
-        var loaded = check loadSourcePart(sourceParts[i], i);
-        s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.path, i);
-        check addModulePart(mod, part);
-        parts.push({ file: part.file, imports: imports(part) }); 
+public readonly class ScannedModule {
+    s:ScannedModulePart[] parts;
+    bir:ModuleId id;
+    ModuleIdImports[] importsById;
+
+    function init(s:ScannedModulePart[] parts, bir:ModuleId id) {
+        self.parts = parts.cloneReadOnly();
+        self.id = id;
+        self.importsById = groupImports(parts, id).cloneReadOnly();
     }
-    
-    check resolveTypes(env, mod);
-    // XXX Should have an option that controls whether we perform this check
-    check validEntryPoint(mod);
-    // XXX to support multiple source parts we need to deal with separate imports per part
-    return new Module(id, parts, mod, env);
+
+    public function getImports() returns bir:ModuleId[] {
+        return from var mi in self.importsById select mi.id;
+    }
 }
 
-function loadSourcePart(SourcePart part, int i) returns LoadedSourcePart|io:Error {
+function groupImports(s:ScannedModulePart[] parts, bir:ModuleId modId) returns ModuleIdImports[] {
+    table<ModuleIdImports> key(id) miTable = table [];
+    foreach var part in parts {
+        foreach var decl in part.importDecls {
+            bir:ModuleId id = { org: decl.org ?: modId.org, names: decl.names };
+            if !miTable.hasKey(id) {
+                miTable.add({ id, imports: [decl] });
+            }
+            else {
+                miTable.get(id).imports.push(decl);
+            }
+        }
+    }
+    return from var mi in miTable select mi;
+}
+
+public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|string?)[] resolvedImports) returns ResolvedModule|err:Any|io:Error {
+    ModuleSymbols syms = { tc: t:typeContext(env) };
+    s:SourceFile[] files = from var p in scanned.parts select p.sourceFile();
+    syms.partPrefixes.setLength(scanned.parts.length());
+    check importPartPrefixes(scanned, resolvedImports, files, syms.partPrefixes);    
+    foreach var scannedPart in scanned.parts {
+        s:ModulePart part = check s:parseModulePart(scannedPart);
+        check addModulePart(syms.defns, part);
+    }
+    check resolveTypes(syms);
+    check validInit(syms.defns);
+    return new Module(scanned.id, files, syms);
+}
+
+public function scanModule(SourcePart[] sourceParts, bir:ModuleId id) returns ScannedModule|err:Any|io:Error {
+    s:ScannedModulePart[] parts = [];
+    foreach int i in 0 ..< sourceParts.length() {
+        s:SourceFile file = check loadSourcePart(sourceParts[i], i);
+        parts.push(check s:scanModulePart(file, i));
+    }
+    return new(parts, id);
+}
+
+function loadSourcePart(SourcePart part, int i) returns s:SourceFile|io:Error {
     string? directory = part?.directory;
     string? filename = part?.filename;
     string[]? lines = part?.lines;
     if lines != () {
-        return { lines, path: { filename: filename ?: "<part" + (i + 1).toString() + ">", directory } };
+        return s:createSourceFile(lines, { filename: filename ?: "<part" + (i + 1).toString() + ">", directory });
     }
     else if filename != () {
-        return { lines: check io:fileReadLines(filename), path: { filename, directory } };
+        return s:createSourceFile(check io:fileReadLines(filename), { filename, directory });
     }
     panic err:illegalArgument("neither filename nor lines were specified");
 }
 
-function imports(s:ModulePart part) returns map<Import> {
-    s:ImportDecl? decl = part.importDecl;
-    if decl == () {
-        return {};
-    }
-    else {
-        return {
-            [decl.module]: {
-                decl,
-                moduleId: { organization: decl.org, names: [decl.module]}
+final bir:ModuleId BALLERINA_IO = { org: "ballerina", names: ["io"] };
+
+function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] resolvedImports, s:SourceFile[] files, map<Import>[] partPrefixes) returns err:Any? {
+    ModuleIdImports[] importsById = scanned.importsById;
+    foreach int i in 0 ..< importsById.length() {
+        var moduleId = importsById[i].id;
+        ModuleExports|string? resolved;
+        boolean partial;
+        if moduleId == BALLERINA_IO {
+            resolved = ioLibFunctions;
+            partial = true;
+        }
+        else {
+            resolved = i < resolvedImports.length() ? resolvedImports[i] : ();
+            partial = false;
+        }
+        foreach var decl in importsById[i].imports {
+            if resolved == () {
+                err:Message msg = `unsupported module ${moduleIdToString(moduleId)}`;
+                return err:unimplemented(msg, loc=err:location(files[decl.partIndex], decl.namePos));
             }
-        };
+            else if resolved is string {
+                return err:semantic(resolved, loc=err:location(files[decl.partIndex], decl.namePos));
+            }
+            else {
+                string? declPrefix = decl.prefix;
+                string prefix = declPrefix == () ? moduleIdDefaultPrefix(moduleId) : declPrefix;
+                partPrefixes[decl.partIndex][prefix] = { decl, moduleId, defns: resolved, partial };
+            }
+        }
     }
 }
 
-function validEntryPoint(ModuleTable mod) returns err:Any? {
+function validEntryPoint(ModuleDefns mod) returns err:Any? {
     s:ModuleLevelDefn? defn = mod["main"];
     if defn is s:FunctionDefn {
         if defn.vis != "public" {
             return err:semantic(`${"main"} is not public`, s:defnLocation(defn));
         }
+        check validInitReturnType(defn);
         if defn.paramNames.length() > 0 {
             return err:unimplemented(`parameters for ${"main"} not yet implemented`, s:defnLocation(defn));
         }
-        if (<bir:FunctionSignature>defn.signature).returnType !== t:NIL {
-            return err:semantic(`return type for ${"main"} must be subtype of ${"error?"}`, s:defnLocation(defn));
+        if !t:isNever(t:intersect((<bir:FunctionSignature>defn.signature).returnType, t:ERROR)) {
+            return err:unimplemented(`returning an error from ${"main"} function is not implemented`, s:defnLocation(defn));
         }
     }
 }
 
-function addModulePart(ModuleTable mod, s:ModulePart part) returns err:Semantic? {
+function validInit(ModuleDefns defns) returns err:Any? {
+    s:ModuleLevelDefn? defn = defns["init"];
+    if defn is s:FunctionDefn {
+        if defn.vis == "public" {
+            return err:semantic(`${"init"} function must not be public`, s:defnLocation(defn));
+        }
+        if defn.paramNames.length() > 0 {
+            return err:semantic(`${"init"} function must not have parameters`, s:defnLocation(defn));
+        }
+        check validInitReturnType(defn);
+        return err:unimplemented(`${"init"} function is not implemented`, s:defnLocation(defn));
+    }
+}
+
+function validInitReturnType(s:FunctionDefn defn) returns err:Semantic? {
+    t:SemType returnType = (<bir:FunctionSignature>defn.signature).returnType;
+    if t:intersect(returnType, t:NIL) != t:NIL {
+        return err:semantic(`return type of ${defn.name} function must allow nil`, s:defnLocation(defn));
+    }
+    if !t:isSubtypeSimple(returnType, t:uniformTypeUnion((1 << t:UT_NIL) | (1 << t:UT_ERROR))) {
+        return err:semantic(`return type of ${defn.name} function must be a subtype of ${"error?"}`, s:defnLocation(defn));
+    }
+}
+
+function addModulePart(ModuleDefns mod, s:ModulePart part) returns err:Semantic? {
     foreach s:ModuleLevelDefn defn in part.defns {
         if mod.hasKey(defn.name) {
-            return err:semantic(`duplicate definition if ${defn.name}`);
+            return err:semantic(`duplicate definition in ${defn.name}`, s:defnLocation(defn));
         }
-        mod.add(defn); 
+        mod.add(defn);
     }
 }
 
 // This is old interface for showTypes
 public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:SemType>]|err:Any|io:Error {
-    ModuleTable mod = table [];
+    t:Env env = new;
+    ModuleSymbols syms = { tc: t:typeContext(env), allowAllTypes: true };
     foreach int i in 0 ..< sourceParts.length() {
         var loaded = check loadSourcePart(sourceParts[i], 0);
-        s:ModulePart part = check s:parseModulePart(loaded.lines, loaded.path, i);
-        check addModulePart(mod, part);
+        s:ScannedModulePart part = check s:scanModulePart(loaded, i);
+        check addModulePart(syms.defns, check s:parseModulePart(part));
     }
-    t:Env env = new;
-    check resolveTypes(env, mod);
-    return [env, createTypeMap(mod)];
+    check resolveTypes(syms);
+    return [env, createTypeMap(syms)];
 }
-

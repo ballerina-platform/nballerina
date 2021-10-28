@@ -1,3 +1,4 @@
+// @productions list-type-descriptor list-constructor-expr while-stmt equality multiplicative-expr if-else-stmt equality-expr relational-expr boolean-literal return-stmt additive-expr any function-call-expr assign-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 public function main() {
     printMersenne(findPrimes());
