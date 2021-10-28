@@ -354,6 +354,26 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         test:assertTrue((startPos == td.startPos) || (startPos > lastEnd), "overlapping type descriptions");
         lastEnd = endPos;
     }
+    check validateTypeDescOpPos(td, tok);
+}
+
+function validateTypeDescOpPos(TypeDesc td, Tokenizer tok) returns err:Syntax? {
+    if td is BinaryTypeDesc {
+        check tok.moveToPos(td.opPos, MODE_NORMAL);
+        Token? curTok = tok.curTok;
+        if td.op == "&" {
+            test:assertEquals(curTok, "&");
+        }
+        else {
+            TypeDesc right = td.right;
+            if right is BuiltinTypeDesc && right.builtinTypeName is "null" {
+                test:assertEquals(curTok, "?");
+            }
+            else {
+                test:assertEquals(curTok, "|");
+            }
+        }
+    }
 }
 
 function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) returns boolean {
