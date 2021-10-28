@@ -75,7 +75,6 @@ public type CompoundAssignStmt record {|
     Expr expr;
     BinaryArithmeticOp|BinaryBitwiseOp op;
     Position opPos;
-    Position pos;
 |};
 
 // L-value expression
@@ -186,7 +185,6 @@ public type BinaryRelationalExpr record {|
 public type BinaryArithmeticExpr record {|
     *BinaryExprBase;
     BinaryArithmeticOp arithmeticOp;
-    Position pos;
 |};
 
 public type BinaryBitwiseExpr record {|

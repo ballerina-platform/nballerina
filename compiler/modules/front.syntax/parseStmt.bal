@@ -250,9 +250,8 @@ function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp o
     Expr expr = check parseExpr(tok);
     string opStr = op;
     BinaryArithmeticOp|BinaryBitwiseOp binOp = <BinaryArithmeticOp|BinaryBitwiseOp> opStr.substring(0, opStr.length() - 1);
-    Position pos = tok.currentStartPos();
     Position endPos = check tok.expectEnd(";");
-    CompoundAssignStmt stmt = { startPos, endPos, opPos, lValue, expr , op: binOp, pos: pos };
+    CompoundAssignStmt stmt = { startPos, endPos, opPos, lValue, expr, op: binOp };
     return stmt;
 }
 

@@ -330,7 +330,7 @@ function verifyCompareOperandTypeArray(VerifyContext vc, CompareInsn insn, t:Sem
 function verifyCompareOperandTypeBase(VerifyContext vc, CompareInsn insn, t:SemType operandType,
                                       t:UniformTypeBitSet expectType) returns err:Semantic?{
     if !t:isSubtypeSimple(operandType, expectType) {
-        return vc.err(`operand of ${insn.op} at ${insn.opPos} does not match order type`);
+        return vc.err(`operand of ${insn.op} at ${insn.pos} does not match order type`);
     }
 }
 
@@ -342,7 +342,7 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
             t:SemType intersectType = t:intersect(lhs.semType, rhs.semType);
             if !vc.isEmpty(intersectType) {
                 if insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
-                    return vc.err(`at least one operand of an == or !=  at ${insn.opPos} expression must be a subtype of anydata`);
+                    return vc.err(`at least one operand of an == or !=  at ${insn.pos} expression must be a subtype of anydata`);
                 }
                 return;
             }
@@ -359,7 +359,7 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
     else if isEqual(lhs, rhs) {
         return;
     }
-    return vc.err(`intersection of operands of operator ${insn.op} at ${insn.opPos} is empty`);
+    return vc.err(`intersection of operands of operator ${insn.op} at ${insn.pos} is empty`);
 }
 
 // After JBUG #17977, #32245 is fixed, replace by ==

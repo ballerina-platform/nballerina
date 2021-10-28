@@ -216,7 +216,7 @@ public type IntArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_ARITHMETIC_BINARY name = INSN_INT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Position opPos;
+    Position pos;
     Register result;
     IntOperand[2] operands;
 |};
@@ -236,7 +236,7 @@ public type IntNoPanicArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_NO_PANIC_ARITHMETIC_BINARY name = INSN_INT_NO_PANIC_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Position opPos;
+    Position pos;
     Register result;
     IntOperand[2] operands;
 |};
@@ -245,7 +245,7 @@ public type IntBitwiseBinaryInsn readonly & record {|
     *InsnBase;
     INSN_INT_BITWISE_BINARY name = INSN_INT_BITWISE_BINARY;
     BitwiseBinaryOp op;
-    Position opPos;
+    Position pos;
     Register result;
     IntOperand[2] operands;
 |};
@@ -253,7 +253,7 @@ public type IntBitwiseBinaryInsn readonly & record {|
 # Perform logical not operation on a boolean.
 public type BooleanNotInsn readonly & record {|
     *InsnBase;
-    Position opPos;
+    Position pos;
     INSN_BOOLEAN_NOT name = INSN_BOOLEAN_NOT;
     Register result;
     Register operand;
@@ -264,14 +264,14 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_FLOAT_ARITHMETIC_BINARY name = INSN_FLOAT_ARITHMETIC_BINARY;
     ArithmeticBinaryOp op;
-    Position opPos;
+    Position pos;
     Register result;
     FloatOperand[2] operands;
 |};
 
 public type FloatNegateInsn readonly & record {|
     *InsnBase;
-    Position opPos;
+    Position pos;
     INSN_FLOAT_NEGATE name = INSN_FLOAT_NEGATE;
     Register result;
     Register operand;
@@ -318,7 +318,7 @@ public type CompareInsn readonly & record {|
     *InsnBase;
     INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
-    Position opPos;
+    Position pos;
     OrderType orderType;
     Register result;
     Operand[2] operands;
@@ -394,7 +394,7 @@ public type EqualityInsn readonly & record {|
     *InsnBase;
     INSN_EQUALITY name = INSN_EQUALITY;
     EqualityOp op;
-    Position opPos;
+    Position pos;
     Register result;
     Operand[2] operands;
 |};

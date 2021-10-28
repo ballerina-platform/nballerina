@@ -177,11 +177,10 @@ function parseAdditiveExpr(Tokenizer tok) returns Expr|err:Syntax {
         Token? t = tok.current();
         if t is ("+"|"-") {
             Position opPos = tok.currentStartPos();
-            Position pos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseMultiplicativeExpr(tok);
             Position endPos = tok.previousEndPos();
-            BinaryArithmeticExpr bin = { startPos, endPos, opPos, arithmeticOp: t, left: expr, right, pos };
+            BinaryArithmeticExpr bin = { startPos, endPos, opPos, arithmeticOp: t, left: expr, right };
             expr = bin;
         }
         else {
@@ -198,11 +197,10 @@ function parseMultiplicativeExpr(Tokenizer tok) returns Expr|err:Syntax {
         Token? t = tok.current();
         if t is ("*"|"/"|"%") {
             Position opPos = tok.currentStartPos();
-            Position pos = tok.currentStartPos();
             check tok.advance();
             Expr right = check parseUnaryExpr(tok);
             Position endPos = tok.previousEndPos();
-            BinaryArithmeticExpr bin = { startPos, endPos, opPos, arithmeticOp: t, left: expr, right, pos };
+            BinaryArithmeticExpr bin = { startPos, endPos, opPos, arithmeticOp: t, left: expr, right };
             expr = bin;
         }
         else {
@@ -439,7 +437,6 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     Position startPos = tok.currentStartPos();
     if t == "-" {
         Position opPos = tok.currentStartPos();
-        Position pos = tok.currentStartPos();
         check tok.advance();
         IntLiteralExpr operand = check parseIntLiteralExpr(tok);
         Position endPos = tok.previousEndPos();
