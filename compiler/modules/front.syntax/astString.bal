@@ -247,6 +247,18 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         return;
     }
     else if td is MappingTypeDesc {
+        if td.fields.length() > 0 {
+            w.push("record", "{|");
+            boolean firstInBlock = true;
+            foreach var f in td.fields {
+                w.push(<Word>(firstInBlock ? LF_INDENT : LF));
+                firstInBlock = false;
+                typeDescToWords(w, f.typeDesc);
+                w.push(f.name, CLING, ";");
+            }
+            w.push(<Word>(firstInBlock ? LF : LF_OUTDENT), "|}");
+            return;
+        }
         w.push("map", CLING, "<", CLING);
         TypeDesc? rest = td.rest;
         if rest == () {
