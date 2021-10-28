@@ -10,4 +10,5 @@
 /error_backtrace1
 /error_backtrace2
 /demangle
+/list_construct
 *.stamp

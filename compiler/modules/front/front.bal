@@ -249,7 +249,7 @@ function addModulePart(ModuleDefns mod, s:ModulePart part) returns err:Semantic?
 // This is old interface for showTypes
 public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:SemType>]|err:Any|io:Error {
     t:Env env = new;
-    ModuleSymbols syms = { tc: t:typeContext(env) };
+    ModuleSymbols syms = { tc: t:typeContext(env), allowAllTypes: true };
     foreach int i in 0 ..< sourceParts.length() {
         var loaded = check loadSourcePart(sourceParts[i], 0);
         s:ScannedModulePart part = check s:scanModulePart(loaded, i);

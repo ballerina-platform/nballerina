@@ -419,8 +419,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
             if value is float {
                 int|error converted = trap <int>value;
                 if converted is error {
-                    // JBUG toString should not be required
-                    return cx.semanticErr(`cannot convert ${value.toString()} to int`, pos = expr.pos);
+                    return cx.semanticErr(`cannot convert ${value} to int`, pos = expr.pos);
                 }
                 else {
                     value = converted;

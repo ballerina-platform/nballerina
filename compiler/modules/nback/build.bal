@@ -225,36 +225,6 @@ function buildTaggedPtr(llvm:Builder builder, llvm:PointerValue mem, int tag) re
     return builder.getElementPtr(mem, [llvm:constInt(LLVM_INT, tag)]);
 }
 
-function buildTypedAlloc(llvm:Builder builder, Scaffold scaffold, llvm:Type ty) returns llvm:PointerValue {
-    return builder.bitCast(buildUntypedAlloc(builder, scaffold, ty), heapPointerType(ty));
-}
-
-function buildUntypedAlloc(llvm:Builder builder, Scaffold scaffold, llvm:Type ty) returns llvm:PointerValue {
-    return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(allocFunction),
-                                           [llvm:constInt(LLVM_INT, typeSize(ty))]);
-}
-
-// XXX this should go in llvm module, because it needs to know about alignment
-function typeSize(llvm:Type ty) returns int {
-    if ty is llvm:PointerType || ty == "i64" {
-        return 8;
-    }
-    else if ty is llvm:StructType {
-        int size = 0;
-        foreach var elemTy in ty.elementTypes {
-            size += typeSize(elemTy);
-        }
-        return size;
-    }
-    else if ty is llvm:ArrayType {
-        if ty.elementCount == 0 {
-            panic error("cannot take size of 0-length array");
-        }
-        return ty.elementCount * typeSize(ty.elementType);
-    }
-    panic error("size of unsized type");
-}
-
 function buildHasTag(llvm:Builder builder, llvm:PointerValue tagged, int tag) returns llvm:Value {
     return buildTestTag(builder, tagged, tag, TAG_MASK);    
 }

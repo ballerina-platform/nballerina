@@ -155,7 +155,9 @@ type CompoundAssignOp  "+=" | "-=" | "/=" | "*=" | "&=" | "|=" | "^=" | "<<=" | 
 
 public type BinaryExprOp BinaryArithmeticOp|BinaryRelationalOp|BinaryEqualityOp;
 
-public type UnaryExprOp "-" | "!" | "~";
+const NegateOp = "-";
+
+public type UnaryExprOp NegateOp | "!" | "~";
 
 public type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr;
 
@@ -200,8 +202,8 @@ public type UnaryExpr record {|
 
 public type SimpleConstNegateExpr record {|
     *UnaryExpr;
-    // JBUG #32099 should be "-" 
-    UnaryExprOp op = "-";
+    // JBUG #33369 should be able to do `"-" op = "-";`
+    NegateOp op = "-";
     IntLiteralExpr|ConstValueExpr operand;
 |};
 
@@ -264,7 +266,7 @@ public type ListConstructorExpr record {|
     Position startPos;
     Position endPos;
     Expr[] members;
-    // JBUG adding this field makes match statement in codeGenExpr fail 
+    // JBUG #33309 adding this field makes match statement in codeGenExpr fail
     t:SemType? expectedType = ();
 |};
 
@@ -410,7 +412,7 @@ public type TypeDefn record {|
     int cycleDepth = -1;
 |};
 
-public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc;
+public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
 public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc;
 
@@ -455,12 +457,20 @@ public type ErrorTypeDesc record {|
 |};
 
 public type BinaryTypeOp "|" | "&";
+public const UnaryTypeOp = "!";
 
 public type BinaryTypeDesc record {|
     *PositionFields;
     BinaryTypeOp op;
+    Position opPos;
     TypeDesc left;
     TypeDesc right;
+|};
+
+public type UnaryTypeDesc record {|
+    *PositionFields;
+    UnaryTypeOp op;
+    TypeDesc td;
 |};
 
 public type XmlSequenceTypeDesc record {|

@@ -151,17 +151,6 @@ static void growTable(MappingPtr mp) {
 
 // This part does not know about the table
 
-static void initArray(GC GenericArray *ap, int64_t capacity, int shift) {
-    ap->length = 0;
-    ap->capacity = capacity;
-    if (capacity == 0) {
-        ap->members = 0;
-    }
-    else {
-        ap->members = _bal_alloc(capacity << shift);
-    }
-}
-
 static void mappingGrow(MappingPtr m) {
     growTable(m);
     GC MapField *fields = m->fArray.members;
@@ -175,7 +164,7 @@ static void mappingGrow(MappingPtr m) {
 TaggedPtr _bal_mapping_construct(MappingDescPtr desc, int64_t capacity) {
     MappingPtr mp = _bal_alloc(sizeof(struct Mapping));
     mp->desc = desc;
-    initArray(&(mp->gArray), capacity, MAP_FIELD_SHIFT);
+    initGenericArray(&(mp->gArray), capacity, MAP_FIELD_SHIFT);
     initTable(mp, capacity);
     return ptrAddFlags(mp, ((uint64_t)TAG_MAPPING_RW << TAG_SHIFT)|EXACT_FLAG);
 }

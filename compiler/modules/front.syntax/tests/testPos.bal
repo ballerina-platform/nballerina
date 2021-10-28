@@ -102,16 +102,11 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
 type RecursiveBinaryExpr BinaryBitwiseExpr|BinaryEqualityExpr|BinaryArithmeticExpr;
 
 function findMatchingChildExpr(RecursiveBinaryExpr expected, RecursiveBinaryExpr actual) returns Expr {
-    if (expected is BinaryBitwiseExpr && actual is BinaryBitwiseExpr)
-    || (expected is BinaryEqualityExpr && actual is BinaryEqualityExpr)
-    || (expected is BinaryArithmeticExpr && actual is BinaryArithmeticExpr) {
-        Expr matchingChild = actual.left;
-        while matchingChild.endPos != expected.endPos && matchingChild is RecursiveBinaryExpr {
-            matchingChild = matchingChild.left;
-        }
-        return matchingChild;
+    Expr matchingChild = actual.left;
+    while matchingChild.endPos != expected.endPos && matchingChild is RecursiveBinaryExpr {
+        matchingChild = matchingChild.left;
     }
-    panic error("expected and actual expression are not same type");
+    return matchingChild;
 }
 
 type PrimaryExpr ConstValueExpr|VarRefExpr|FunctionCallExpr|MethodCallExpr|NumericLiteralExpr|ErrorConstructorExpr|FieldAccessExpr;
@@ -119,21 +114,24 @@ type PrimaryExpr ConstValueExpr|VarRefExpr|FunctionCallExpr|MethodCallExpr|Numer
 function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(expr.startPos, MODE_NORMAL);
     test:assertEquals(tok.currentStartPos(), expr.startPos, "moved to wrong position");
-    Expr newExpr;
-    boolean usedSimpleConstExprParser = true;
+    Expr? newExpr = ();
+    boolean usedSimpleConstExprParser = false;
     if expr is SimpleConstExpr {
-        if expr is ConstValueExpr && expr.value == () {
-            newExpr = check parseExpr(tok);
-        }
-        else {
-            newExpr = check parseSimpleConstExpr(tok);
-        }
-        if tok.currentEndPos() != expr.endPos && expr is PrimaryExpr {
+        if expr is PrimaryExpr {
             // these expressions can be parsed by both parseSimpleConstExpr and parsePrimaryExpr
-            // parseSimpleConstExpr don't advance to the next token
+            // we first try to parse as primaryExpr (this is to deal with "("expr")" cases)
             usedSimpleConstExprParser = false;
-            check tok.moveToPos(expr.startPos, MODE_NORMAL);
             newExpr = check parsePrimaryExpr(tok);
+        }
+        if newExpr == () || newExpr.endPos != expr.endPos {
+            usedSimpleConstExprParser = true;
+            check tok.moveToPos(expr.startPos, MODE_NORMAL);
+            if expr is ConstValueExpr && expr.value == () {
+                newExpr = check parseExpr(tok);
+            }
+            else {
+                newExpr = check parseSimpleConstExpr(tok);
+            }
         }
     }
     else if expr is BinaryBitwiseExpr {
@@ -174,88 +172,96 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         newExpr = check parsePrimaryExpr(tok);
     }
     else if expr is TypeCastExpr {
-        newExpr = check parseTypeCastExpr(tok, expr.startPos);
+        if tok.current() == "(" && tok.peek() != ")" {
+            newExpr = check parsePrimaryExpr(tok);
+        }
+        else {
+            newExpr = check parseTypeCastExpr(tok, expr.startPos);
+        }
     }
     else {
         newExpr = check parseExpr(tok);
     }
-
-    Position actualEnd;
-    if expr is ListConstructorExpr
-              |MemberAccessExpr
-              |PrimaryExpr
-              |TypeTestExpr
-              |MappingConstructorExpr
-              |SimpleConstExpr
-              |BinaryExpr
-              |UnaryExpr
-              |CheckingExpr
-              |TypeCastExpr {
-        if expr is SimpleConstExpr && usedSimpleConstExprParser {
-            if expr is SimpleConstNegateExpr {
-                actualEnd = tok.previousEndPos();
+    if newExpr is Expr {
+        Position actualEnd;
+        if expr is ListConstructorExpr
+                |MemberAccessExpr
+                |PrimaryExpr
+                |TypeTestExpr
+                |MappingConstructorExpr
+                |SimpleConstExpr
+                |BinaryExpr
+                |UnaryExpr
+                |CheckingExpr
+                |TypeCastExpr {
+            if expr is SimpleConstExpr && usedSimpleConstExprParser {
+                if expr is SimpleConstNegateExpr {
+                    actualEnd = tok.previousEndPos();
+                }
+                else {
+                    actualEnd = tok.currentEndPos();
+                }
             }
             else {
-                actualEnd = tok.currentEndPos();
+                actualEnd = tok.previousEndPos();
             }
         }
         else {
-            actualEnd = tok.previousEndPos();
+            actualEnd = tok.currentEndPos();
         }
+
+        if (expr.endPos != newExpr.endPos) && (expr is RecursiveBinaryExpr && newExpr is RecursiveBinaryExpr) {
+            // These are left recursive expression that can't be separately parsed
+            Expr matchingChild = findMatchingChildExpr(expr, newExpr);
+            // We are validating tokenizer ends in the correct position only for the parent node
+            actualEnd = matchingChild.endPos;
+            newExpr = matchingChild;
+        }
+        test:assertEquals(expr.endPos, actualEnd);
+        if newExpr is MethodCallExpr|FunctionCallExpr {
+            // pos depends on whether original was parsed as a stmt or expr but for testing we always treat it as expr
+            newExpr.pos = (<MethodCallExpr|FunctionCallExpr>expr).pos;
+        }
+        test:assertEquals(expr.toString(), newExpr.toString());
+        test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
+        test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
+        test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), "end position is invalid");
+        [err:Position, err:Position][] childNodePos = [];
+        if expr is BinaryExpr {
+            check validateExpressionPos(expr.left, tok, expr.startPos, expr.endPos);
+            childNodePos.push([expr.left.startPos, expr.left.endPos]);
+            check validateExpressionPos(expr.right, tok, expr.startPos, expr.endPos);
+            childNodePos.push([expr.right.startPos, expr.right.endPos]);
+        }
+        else if expr is UnaryExpr|SimpleConstNegateExpr {
+            check validateExpressionPos(expr.operand, tok, expr.startPos, expr.endPos);
+            childNodePos.push([expr.operand.startPos, expr.operand.endPos]);
+        }
+        else if expr is ErrorConstructorExpr {
+            check validateExpressionPos(expr.message, tok, expr.startPos, expr.endPos);
+            childNodePos.push([expr.message.startPos, expr.message.endPos]);
+        }
+        else if expr is FunctionCallExpr {
+            foreach var arg in expr.args {
+                check validateExpressionPos(arg, tok, expr.startPos, expr.endPos);
+                childNodePos.push([arg.startPos, arg.endPos]);
+            }
+        }
+
+        err:Position lastEnd = expr.startPos;
+        foreach var [startPos, endPos] in childNodePos {
+            test:assertTrue(startPos <= endPos, "invalid start and end positions"); // single character expressions get same start and end pos
+            test:assertTrue((startPos == expr.startPos) || (startPos > lastEnd), "overlapping statements");
+            if lastEnd != expr.startPos {
+                test:assertTrue(testValidInterExpressionRange(tok.file, lastEnd, startPos), "invalid token between expressions");
+            }
+            lastEnd = endPos;
+        }
+        check validateChildTypeDesc(expr, tok);
     }
     else {
-        actualEnd = tok.currentEndPos();
+        panic err:impossible("failed to find a parser for expression");
     }
-
-    if (expr.endPos != newExpr.endPos) && (expr is RecursiveBinaryExpr && newExpr is RecursiveBinaryExpr) {
-        // These are left recursive expression that can't be separately parsed
-        Expr matchingChild = findMatchingChildExpr(expr, newExpr);
-        // We are validating tokenizer ends in the correct position only for the parent node
-        actualEnd = matchingChild.endPos;
-        newExpr = matchingChild;
-    }
-
-    test:assertEquals(expr.endPos, actualEnd);
-    if newExpr is MethodCallExpr|FunctionCallExpr {
-        // pos depends on whether original was parsed as a stmt or expr but for testing we always treat it as expr
-        newExpr.pos = (<MethodCallExpr|FunctionCallExpr>expr).pos;
-    }
-    test:assertEquals(expr.toString(), newExpr.toString());
-    test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
-    test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
-    test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), "end position is invalid");
-    [err:Position, err:Position][] childNodePos = [];
-    if expr is BinaryExpr {
-        check validateExpressionPos(expr.left, tok, expr.startPos, expr.endPos);
-        childNodePos.push([expr.left.startPos, expr.left.endPos]);
-        check validateExpressionPos(expr.right, tok, expr.startPos, expr.endPos);
-        childNodePos.push([expr.right.startPos, expr.right.endPos]);
-    }
-    else if expr is UnaryExpr|SimpleConstNegateExpr {
-        check validateExpressionPos(expr.operand, tok, expr.startPos, expr.endPos);
-        childNodePos.push([expr.operand.startPos, expr.operand.endPos]);
-    }
-    else if expr is ErrorConstructorExpr {
-        check validateExpressionPos(expr.message, tok, expr.startPos, expr.endPos);
-        childNodePos.push([expr.message.startPos, expr.message.endPos]);
-    }
-    else if expr is FunctionCallExpr {
-        foreach var arg in expr.args {
-            check validateExpressionPos(arg, tok, expr.startPos, expr.endPos);
-            childNodePos.push([arg.startPos, arg.endPos]);
-        }
-    }
-
-    err:Position lastEnd = expr.startPos;
-    foreach var [startPos, endPos] in childNodePos {
-        test:assertTrue(startPos <= endPos, "invalid start and end positions"); // single character expressions get same start and end pos
-        test:assertTrue((startPos == expr.startPos) || (startPos > lastEnd), "overlapping statements");
-        if lastEnd != expr.startPos {
-            test:assertTrue(testValidInterExpressionRange(tok.file, lastEnd, startPos), "invalid token between expressions");
-        }
-        lastEnd = endPos;
-    }
-    check validateChildTypeDesc(expr, tok);
 }
 
 function validateChildTypeDesc(Stmt|Expr parent, Tokenizer tok) returns err:Syntax? {
@@ -348,6 +354,26 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         test:assertTrue((startPos == td.startPos) || (startPos > lastEnd), "overlapping type descriptions");
         lastEnd = endPos;
     }
+    check validateTypeDescOpPos(td, tok);
+}
+
+function validateTypeDescOpPos(TypeDesc td, Tokenizer tok) returns err:Syntax? {
+    if td is BinaryTypeDesc {
+        check tok.moveToPos(td.opPos, MODE_NORMAL);
+        Token? curTok = tok.curTok;
+        if td.op == "&" {
+            test:assertEquals(curTok, "&");
+        }
+        else {
+            TypeDesc right = td.right;
+            if right is BuiltinTypeDesc && right.builtinTypeName is "null" {
+                test:assertEquals(curTok, "?");
+            }
+            else {
+                test:assertEquals(curTok, "|");
+            }
+        }
+    }
 }
 
 function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) returns boolean {
@@ -377,8 +403,7 @@ final readonly & FragCode[] interExpressionCodes = [
     CP_PLUS,
     CP_MINUS,
     CP_ASTERISK,
-    CP_BACKSLASH,
-    CP_LEFT_PAREN
+    CP_BACKSLASH
 ];
 
 function testValidInterExpressionRange(SourceFile file, Position startPos, Position endPos) returns boolean {

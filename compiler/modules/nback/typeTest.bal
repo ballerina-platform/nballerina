@@ -164,7 +164,7 @@ function buildHasTagInSet(llvm:Builder builder, llvm:PointerValue tagged, t:Unif
     }
     t:UniformTypeBitSet roBitSet = <t:UniformTypeBitSet>(bitSet & t:UT_READONLY);
     utCode = t:uniformTypeCode(roBitSet);
-    // JBUG crash if 16 is 0xF
+    // JBUG #33399 crash if 16 is 0xF
     if utCode != () && bitSet == (roBitSet | 16) {
         return buildTestTag(builder, tagged, utCode, TAG_BASIC_TYPE_MASK);
     }

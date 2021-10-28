@@ -290,10 +290,12 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
             }
         }
     }
+    else if td is SingletonTypeDesc {
+        valueToWords(w, td.value);
+    }
     else {
         panic err:impossible(`typedesc not implemented in typeDescToWords: ${td.toString()}`);
-    }
-   
+    }   
 }
 
 function exprsToWords(Word[] w, Expr[] exprs) {
@@ -330,16 +332,7 @@ function lExprToWords(Word[] w, LExpr expr) {
 
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     if expr is ConstValueExpr {
-        var val = expr.value;
-        if val == () {
-            w.push("(", ")");
-        }
-        else if val is string {
-            w.push(stringLiteral(val));
-        }
-        else {
-            w.push(val.toString());
-        }
+        valueToWords(w, expr.value);      
     }
     else if expr is FloatZeroExpr {
         exprToWords(w, expr.expr, wrap);
@@ -499,6 +492,18 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push(prefix, ":", CLING);
         }
         w.push(expr.varName);
+    }
+}
+
+function valueToWords(Word[] w, boolean|int|string|float|decimal|() val) {
+    if val == () {
+        w.push("(", ")");
+    }
+    else if val is string {
+        w.push(stringLiteral(val));
+    }
+    else {
+        w.push(val.toString());
     }
 }
 

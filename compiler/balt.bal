@@ -175,8 +175,7 @@ function chooseBaltCaseOutputFilename(BaltTestCase t, int i) returns string {
    return pad4(i.toString()) + "L" + pad4(t.offset.toString()) + "-" + testKindToLetter(t.header.Test\-Case);
 }
 
-// JBUG: can't use Char gives "'string' value 'x' cannot be converted to 'lang.string:Char'
-function testKindToLetter(TestKind k) returns string {
+function testKindToLetter(TestKind k) returns string:Char {
     match k {
         "error" => {
             return "e";

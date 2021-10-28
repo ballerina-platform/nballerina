@@ -6,6 +6,13 @@
 
 const double F0 = +0.0;
 
+ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
+    ListPtr lp = _bal_alloc(sizeof(struct List));
+    lp->desc = desc;
+    initGenericArray(&(lp->gArray), capacity, TAGGED_PTR_SHIFT);
+    return lp;
+}
+
 static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
     uint64_t bits;
     switch (desc->bitSet) {

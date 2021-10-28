@@ -786,9 +786,8 @@ public function widenUnsigned(SemType t) returns SemType {
 
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
-// When `strict`, require ro and rw to be consistent; otherwise just consider rw.
-public function simpleArrayMemberType(Context cx, SemType t, boolean strict = false) returns UniformTypeBitSet? {
-    return listAtomicSimpleArrayMemberType(listAtomicTypeRw(cx, t, strict));
+public function simpleArrayMemberType(Context cx, SemType t) returns UniformTypeBitSet? {
+    return listAtomicSimpleArrayMemberType(listAtomicTypeRw(cx, t));
 }
 
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns UniformTypeBitSet? {
@@ -804,23 +803,16 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 final ListAtomicType LIST_ATOMIC_TOP = { members: [], rest: TOP };
 final ListAtomicType LIST_ATOMIC_READONLY = { members: [], rest: READONLY };
 
-public function listAtomicTypeRw(Context cx, SemType t, boolean strict = false) returns ListAtomicType? {
+public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is UniformTypeBitSet {
-        return t == LIST || (t == LIST_RW && !strict) ? LIST_ATOMIC_TOP : ();
+        return t == LIST || t == LIST_RW ? LIST_ATOMIC_TOP : ();
     }
     else {
         Env env = cx.env;
         if !isSubtypeSimple(t, LIST) {
             return ();
         }
-        ListAtomicType? rw = bddListAtomicType(env, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), LIST_ATOMIC_TOP);
-        if rw != () && strict {
-            ListAtomicType? ro = bddListAtomicType(env, <Bdd>getComplexSubtypeData(t, UT_LIST_RO), LIST_ATOMIC_READONLY);
-            if ro == () || ro != readOnlyListAtomicType(rw) {
-                return ();
-            }
-        }
-        return rw;
+        return bddListAtomicType(env, <Bdd>getComplexSubtypeData(t, UT_LIST_RW), LIST_ATOMIC_TOP);       
     }
 }
 
@@ -852,8 +844,8 @@ public function listMemberType(Context cx, SemType t, int? key = ()) returns Sem
 
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
-public function simpleMapMemberType(Context cx, SemType t, boolean strict = false) returns UniformTypeBitSet? {
-    return mappingAtomicSimpleArrayMemberType(mappingAtomicTypeRw(cx, t, strict));
+public function simpleMapMemberType(Context cx, SemType t) returns UniformTypeBitSet? {
+    return mappingAtomicSimpleArrayMemberType(mappingAtomicTypeRw(cx, t));
 }
 
 public function mappingAtomicSimpleArrayMemberType(MappingAtomicType? atomic) returns UniformTypeBitSet? {
@@ -869,23 +861,16 @@ public function mappingAtomicSimpleArrayMemberType(MappingAtomicType? atomic) re
 final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: TOP };
 final MappingAtomicType MAPPING_ATOMIC_READONLY = { names: [], types: [], rest: READONLY };
 
-public function mappingAtomicTypeRw(Context cx, SemType t, boolean strict = false) returns MappingAtomicType? {
+public function mappingAtomicTypeRw(Context cx, SemType t) returns MappingAtomicType? {
     if t is UniformTypeBitSet {
-        return t == MAPPING || (t == MAPPING_RW && !strict) ? MAPPING_ATOMIC_TOP : ();
+        return t == MAPPING || t == MAPPING_RW ? MAPPING_ATOMIC_TOP : ();
     }
     else {
         Env env = cx.env;
         if !isSubtypeSimple(t, MAPPING) {
             return ();
         }
-        MappingAtomicType? rw = bddMappingAtomicType(env, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), MAPPING_ATOMIC_TOP);
-        if rw != () && strict {
-            MappingAtomicType? ro = bddMappingAtomicType(env, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), MAPPING_ATOMIC_READONLY);
-            if ro == () || ro != readOnlyMappingAtomicType(rw) {
-                return ();
-            }
-        }
-        return rw;
+        return bddMappingAtomicType(env, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), MAPPING_ATOMIC_TOP);
     }
 }
 

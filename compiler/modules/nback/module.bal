@@ -83,7 +83,7 @@ function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
 
 function createModuleDI(llvm:Module mod, bir:File[] partFiles) returns ModuleDI {
     DIBuilder builder = mod.createDIBuilder();
-    mod.addModuleFlag("error", ["Debug Info Version", 3]);
+    mod.addModuleFlag("warning", ["Debug Info Version", 3]);
     DIFile[] files = from var f in partFiles select builder.createFile(f.filename(), f.directory() ?: "");
     DICompileUnit compileUnit = builder.createCompileUnit(file=files[0]);
     DISubroutineType funcType = builder.createSubroutineType(files[0]);
