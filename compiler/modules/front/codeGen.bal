@@ -1894,7 +1894,7 @@ function operandOrderType(CodeGenContext cx, bir:Operand operand) returns bir:Or
         }
         t:UniformTypeBitSet arrTy = t:LIST;
         if t:isSubtypeSimple(operandTy, arrTy) {
-            t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(cx.mod.tc, operandTy, true);
+            t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(cx.mod.tc, operandTy);
             if memberTy is t:UniformTypeBitSet {
                 bir:OrderType? ot = operandUniformOrderType(memberTy);
                 if ot is bir:UniformOrderType {

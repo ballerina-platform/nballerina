@@ -10,6 +10,7 @@ type ModuleSymbols record {|
     ModuleDefns defns = table [];
     map<Import>[] partPrefixes = [];
     t:Context tc;
+    boolean allowAllTypes = false;
 |};
 
 type Import record {|
