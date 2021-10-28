@@ -33,3 +33,8 @@ type XE xml<P|E>;
 
 // @type XEU = X
 type XEU xml|E;
+
+type T xml:Text;
+
+// @type T = XT
+type XT xml<T>;

@@ -366,7 +366,7 @@ public final SemType BYTE = intWidthUnsigned(8);
 public final SemType STRING_CHAR = stringChar();
 public final SemType XML_PRIMITIVE_ELEMENT = xmlSingleton(XML_PRIMITIVE_ELEMENT_RO_BIT | XML_PRIMITIVE_ELEMENT_RW_BIT);
 public final SemType XML_PRIMITIVE_COMMENT = xmlSingleton(XML_PRIMITIVE_COMMENT_RO_BIT | XML_PRIMITIVE_COMMENT_RW_BIT);
-public final SemType XML_PRIMITIVE_TEXT = xmlSingleton(XML_PRIMITIVE_NEVER_BIT | XML_PRIMITIVE_TEXT_BIT);
+public final SemType XML_PRIMITIVE_TEXT = xmlSequence(xmlSingleton(XML_PRIMITIVE_TEXT_BIT));
 public final SemType XML_PRIMITIVE_PI = xmlSingleton(XML_PRIMITIVE_PI_RO_BIT | XML_PRIMITIVE_PI_RW_BIT);
 
 // Need this type to workaround slalpha4 bug.
