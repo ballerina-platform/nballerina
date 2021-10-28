@@ -24,15 +24,27 @@ function parseUnion(Tokenizer tok) returns TypeDesc|err:Syntax {
 
 function parseIntersection(Tokenizer tok) returns TypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
-    TypeDesc td = check parsePostfixTypeDesc(tok);
+    TypeDesc td = check parseUnaryTypeDesc(tok);
     while tok.current() == "&" {
         check tok.advance();
-        TypeDesc right = check parsePostfixTypeDesc(tok);
+        TypeDesc right = check parseUnaryTypeDesc(tok);
         Position endPos = tok.previousEndPos();
         BinaryTypeDesc bin = { startPos, endPos, op: "&", left: td, right };
         td = bin;
     }
     return td;
+}
+
+function parseUnaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
+    if tok.current() == "!" {
+        Position startPos = tok.currentStartPos();
+        check tok.advance();
+        TypeDesc td = check parseUnaryTypeDesc(tok);
+        Position endPos = tok.previousEndPos();
+        UnaryTypeDesc unary = { startPos, endPos, op: "!", td };
+        return unary;
+    }
+    return parsePostfixTypeDesc(tok);
 }
 
 function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {

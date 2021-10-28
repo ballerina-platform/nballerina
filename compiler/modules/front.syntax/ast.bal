@@ -412,7 +412,7 @@ public type TypeDefn record {|
     int cycleDepth = -1;
 |};
 
-public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc;
+public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
 public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc;
 
@@ -457,12 +457,19 @@ public type ErrorTypeDesc record {|
 |};
 
 public type BinaryTypeOp "|" | "&";
+public const UnaryTypeOp = "!";
 
 public type BinaryTypeDesc record {|
     *PositionFields;
     BinaryTypeOp op;
     TypeDesc left;
     TypeDesc right;
+|};
+
+public type UnaryTypeDesc record {|
+    *PositionFields;
+    UnaryTypeOp op;
+    TypeDesc td;
 |};
 
 public type TypeDescRef record {|
