@@ -405,17 +405,18 @@ function parseFields(Tokenizer tok) returns Field[]|err:Syntax {
 
 function parseField(Tokenizer tok) returns Field|err:Syntax {
     Token? t = tok.current();
+    Position startPos = tok.currentStartPos();
     match t {
         [IDENTIFIER, var name]
         | [STRING_LITERAL, var name] => {
             // Don't report an error for duplicates here
             // (it's not a syntax error)
             // Instead save the position and report during codeGen
-            Position pos = tok.currentStartPos();
             check tok.advance();
             check tok.expect(":");
             Expr value = check parseExpr(tok);
-            Field f = { pos, name, value };
+            Position endPos = tok.previousEndPos();
+            Field f = { startPos, endPos, name, value };
             return f;
         }
     }

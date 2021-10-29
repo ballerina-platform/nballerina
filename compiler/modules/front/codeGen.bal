@@ -1246,13 +1246,13 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
     bir:Operand[] operands = [];
     string[] fieldNames= [];
     map<s:Position> fieldPos = {};
-    foreach var { pos, name, value } in expr.fields {
+    foreach var { startPos, endPos , name, value } in expr.fields {
         s:Position? prevPos = fieldPos[name];
         if prevPos == () {
-            fieldPos[name] = pos;
+            fieldPos[name] = startPos;
         }
         else {
-            return cx.semanticErr(`duplicate field ${name}`, pos=pos);
+            return cx.semanticErr(`duplicate field ${name}`, pos=startPos);
         }
         bir:Operand operand;
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, value);
