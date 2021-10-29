@@ -2,6 +2,15 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
+final RuntimeFunction typeContainsFunction = {
+    name: "type_contains",
+    ty: {
+        returnType: LLVM_BOOLEAN,
+        paramTypes: [llvm:pointerType(llTypeTestType), LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
 final RuntimeFunction listExactifyFunction = {
     name: "list_exactify",
     ty: {
@@ -108,11 +117,7 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
 }
 
 function buildHasComplexSemType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:ComplexSemType targetType) returns llvm:Value|BuildError {
-    llvm:ConstPointerValue tt = scaffold.getTypeTest(targetType);
-    // return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFunction), [tt, tagged]);
-    llvm:PointerValue funcPtrPtr = builder.getElementPtr(tt, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]);
-    llvm:PointerValue funcPtr = <llvm:PointerValue>builder.load(funcPtrPtr, ALIGN_HEAP);
-    return <llvm:Value>builder.call(funcPtr, [tt, tagged]);      
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFunction), [scaffold.getTypeTest(targetType), tagged]);
 }
 
 function buildMappingExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {

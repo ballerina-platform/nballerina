@@ -906,6 +906,23 @@ public function mappingMemberRequired(Context cx, SemType t, string k) returns b
     }
 }
 
+public type SplitSemType record {|
+    UniformTypeBitSet all;
+    [UniformTypeCode, SemType][] some;
+|};
+
+public function split(SemType t) returns SplitSemType  {
+    if t is UniformTypeBitSet {
+        return { all: t, some: [] };
+    }
+    else {
+        return {
+            all: t.all,
+            some: from var [code, sd] in unpackComplexSemType(t) select [code, createComplexSemType(0, [[code, sd]])]
+        };
+    }
+}
+
 public type Value readonly & record {|
     string|int|float|boolean|() value;
 |};

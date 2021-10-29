@@ -274,7 +274,7 @@ class Scaffold {
         if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_TYPE_TEST, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(self.initTypes().typeTestVTable, symbol, isConstant = true);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llTypeTestType, symbol, isConstant = true);
             used.typeTest = v;
             return v;
         }

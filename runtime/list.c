@@ -133,10 +133,7 @@ bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
     return true;
 }
 
-bool _bal_array_type_contains(TypeTestPtr ttp, TaggedPtr p) {
-    if ((getTag(p) & UT_MASK) != TAG_LIST_RW) {
-        return false;
-    }
+bool _bal_array_subtype_contains(SubtypeTestPtr stp, TaggedPtr p) {
     ListPtr lp = taggedToPtr(p);   
-    return (lp->desc->bitSet & ~((ArrayTypeTestPtr)ttp)->bitSet) == 0;
+    return (lp->desc->bitSet & ~((ArraySubtypeTestPtr)stp)->bitSet) == 0;
 }

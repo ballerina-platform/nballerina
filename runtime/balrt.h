@@ -136,25 +136,31 @@ typedef GC struct Mapping {
     uint8_t tableLengthShift;
 } *MappingPtr;
 
-typedef struct TypeTest {
-    bool (*contains)(struct TypeTest *, TaggedPtr);
-} TypeTest, *TypeTestPtr;
+typedef struct SubtypeTest {
+    bool (*contains)(struct SubtypeTest *, TaggedPtr);
+} SubtypeTest, *SubtypeTestPtr;
 
 typedef struct {
     TaggedPtr fieldName;
     uint32_t fieldBitSet;
-} RecordTypeTestField;
+} RecordSubtypeTestField;
 
 typedef struct {
-    TypeTest typeTest;
+    SubtypeTest typeTest;
     uint32_t nFields;
-    RecordTypeTestField fields[];
-} *RecordTypeTestPtr;
+    RecordSubtypeTestField fields[];
+} *RecordSubtypeTestPtr;
 
 typedef struct {
-    TypeTest typeTest;
+    SubtypeTest typeTest;
     uint32_t bitSet;
-} *MapTypeTestPtr, *ArrayTypeTestPtr;
+} *MapSubtypeTestPtr, *ArraySubtypeTestPtr;
+
+typedef struct {
+   uint32_t all;
+   uint32_t some;
+   SubtypeTestPtr subtypes[];
+} TypeTest, *TypeTestPtr;
 
 typedef GC struct Error {
     TaggedPtr message;

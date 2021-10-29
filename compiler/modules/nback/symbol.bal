@@ -64,3 +64,7 @@ function mangleInternalSymbol(bir:ModuleId modId, bir:InternalSymbol symbol) ret
 function stringDefnSymbol(int n) returns string {
     return ".str" + n.toString();
 }
+
+function subtypeDefnSymbol(int n) returns string {
+    return ".subtype" + n.toString();
+}

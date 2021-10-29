@@ -9,6 +9,10 @@ const USED_TYPE_TEST = 0x2;
 const LLVM_BITSET = "i32";
 
 final llvm:StructType llInherentType = llvm:structType([LLVM_BITSET]);
+
+// This is an approximation, but close enough since we are only accessing the pointer in C.
+final llvm:StructType llTypeTestType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
+
 final llvm:Type llListType = llvm:structType([heapPointerType(llInherentType),                       // *desc
                                               LLVM_INT,                                              // length
                                               LLVM_INT,                                              // capacity
@@ -23,25 +27,25 @@ public type TypeUsage readonly & record {|
 |};
 
 type InitTypes readonly & record {|
-    llvm:StructType typeTestVTable;
-    llvm:PointerType typeTestVTablePtr;
-    llvm:FunctionType typeTestFunction;
-    llvm:PointerType typeTestFunctionPtr;
+    llvm:StructType subtypeTestVTable;
+    llvm:PointerType subtypeTestVTablePtr;
+    llvm:FunctionType subtypeTestFunction;
+    llvm:PointerType subtypeTestFunctionPtr;
 |};
 
-// struct TypeTestVTable { bool (*func)(struct TypeTestVTable *, TaggedPtr); }
-// struct TypeTestVTable *p;
+// struct SubtypeTestVTable { bool (*func)(struct SubtypeTestVTable *, TaggedPtr); }
+// struct SubtypeTestVTable *p;
 // (p->func)(p, taggedPtr);
-// struct FooVTable { bool (*func)(struct TypeTestVTable *, TaggedPtr); int32_t bitSet; }
-// extern bool _bal_has_record_type(struct TypeTestVTable *, TaggedPtr);
-// struct FooVTable typeTest1 = { _bal_record_type_contains, 256 };
+// struct FooVTable { bool (*func)(struct SubtypeTestVTable *, TaggedPtr); int32_t bitSet; }
+// extern bool _bal_has_record_type(struct SubtypeTestVTable *, TaggedPtr);
+// struct FooVTable subtypeTest1 = { _bal_record_subtype_contains, 256 };
 function createInitTypes(llvm:Context cx) returns InitTypes {
-    llvm:StructType typeTestVTable = cx.structCreateNamed("TypeTestVTable");
-    llvm:PointerType typeTestVTablePtr = llvm:pointerType(typeTestVTable);
-    llvm:FunctionType typeTestFunction = llvm:functionType(LLVM_BOOLEAN, [typeTestVTablePtr, LLVM_TAGGED_PTR]);
-    llvm:PointerType typeTestFunctionPtr = llvm:pointerType(typeTestFunction);
-    cx.structSetBody(typeTestVTable, [typeTestFunctionPtr]);
-    return { typeTestVTable, typeTestVTablePtr, typeTestFunction, typeTestFunctionPtr };
+    llvm:StructType subtypeTestVTable = cx.structCreateNamed("TypeTestVTable");
+    llvm:PointerType subtypeTestVTablePtr = llvm:pointerType(subtypeTestVTable);
+    llvm:FunctionType subtypeTestFunction = llvm:functionType(LLVM_BOOLEAN, [subtypeTestVTablePtr, LLVM_TAGGED_PTR]);
+    llvm:PointerType subtypeTestFunctionPtr = llvm:pointerType(subtypeTestFunction);
+    cx.structSetBody(subtypeTestVTable, [subtypeTestFunctionPtr]);
+    return { subtypeTestVTable, subtypeTestVTablePtr, subtypeTestFunction, subtypeTestFunctionPtr };
 }
 
 function mangleTypeSymbol(bir:ModuleId modId, TypeHowUsed howUsed, int index) returns string {
