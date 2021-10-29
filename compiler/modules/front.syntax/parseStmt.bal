@@ -21,6 +21,20 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
     Position startPos = tok.currentStartPos();
     match cur {
         [IDENTIFIER, var identifier] => {
+            var peeked = tok.peek(skipQualIdent=true);
+            if peeked is "|" | "?" | "&" | IDENTIFIER {
+                TypeDesc td = check parseTypeDesc(tok);
+                return finishVarDeclStmt(tok, td, startPos);
+            }
+            else if peeked == "[" {
+                TokenizerState state = tok.save();
+                boolean isTypeDesc = check preparseIndexedTypeDesc(tok);
+                tok.restore(state);
+
+                if isTypeDesc {
+                    return parseVarDeclStmt(tok, startPos);
+                }
+            }
             Position pos = tok.currentStartPos();
             check tok.advance();
             return finishIdentifierStmt(tok, identifier, pos, startPos);
@@ -103,6 +117,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 }
 
 
+// statement must not start with a type desc.
 function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Position startPos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
@@ -119,6 +134,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
         VarRefExpr varRef = { startPos, endPos, varName: identifier };
         Position bracketPos = tok.currentStartPos();
         check tok.advance();
+        // type-desc case is handled before
         Expr index = check parseInnerExpr(tok);
         Position memberAccessEndPos = check tok.expectEnd("]");
         cur = tok.current();
@@ -142,10 +158,6 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
     else if cur == ":" {
         check tok.advance();
         return finishOptQualIdentifierStmt(tok, identifier, check tok.expectIdentifier(), pos, startPos);
-    }
-    else if cur is [IDENTIFIER, string] {
-        TypeDescRef ref = { startPos, endPos, typeName: identifier, pos };
-        return finishVarDeclStmt(tok, ref, startPos);
     }
     return finishOptQualIdentifierStmt(tok, (), identifier, pos, startPos);
 }
@@ -180,10 +192,6 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
             // SUBSET handle "["
         }
         // falls through to end
-    }
-    else if cur is [IDENTIFIER, string] {
-        TypeDescRef ref = { startPos, endPos, prefix, typeName: identifier, pos };
-        return finishVarDeclStmt(tok, ref, startPos);
     }
     return parseError(tok, "invalid statement");
 }
