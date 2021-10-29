@@ -144,10 +144,10 @@ function finishTypeTestExpr(Tokenizer tok, Expr expr, boolean negated, Position 
 function parseRangeExpr(Tokenizer tok) returns RangeExpr|err:Syntax {
     Position startPos = tok.currentStartPos();
     Expr lower = check parseAdditiveExpr(tok);
-    check tok.expect("..<");
+    Position opPos = check tok.expectEnd("..<");
     Expr upper = check parseAdditiveExpr(tok);
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, lower, upper };
+    return { startPos, endPos, opPos, lower, upper };
 }
 
 function parseShiftExpr(Tokenizer tok) returns Expr|err:Syntax {

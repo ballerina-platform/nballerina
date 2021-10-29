@@ -104,6 +104,7 @@ public type MatchStmt record {|
 |};
 
 public type MatchClause record {|
+    *PositionFields;
     MatchPattern[] patterns;
     Stmt[] block;
     Position opPos;
@@ -320,6 +321,7 @@ public type FieldAccessLExpr record {|
 
 public type RangeExpr record {|
     *PositionFields;
+    Position opPos;
     Expr lower;
     Expr upper;
 |};

@@ -113,7 +113,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
     else if cur is CompoundAssignOp {
         Position opPos = tok.currentStartPos();
         VarRefExpr lValue = { startPos, endPos, varName: identifier };
-        return parseCompoundAssignStmt(tok, lValue, cur, opPos, startPos);
+        return parseCompoundAssignStmt(tok, lValue, cur, startPos, opPos);
     }
     else if cur == "[" {
         VarRefExpr varRef = { startPos, endPos, varName: identifier };
@@ -129,7 +129,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
         else if cur is CompoundAssignOp {
             Position opPos = tok.currentStartPos();
             MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
-            return parseCompoundAssignStmt(tok, lValue, cur, opPos, startPos);
+            return parseCompoundAssignStmt(tok, lValue, cur, startPos, opPos);
         }
         MemberAccessExpr memberAccess = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
         Expr expr = check finishPrimaryExpr(tok, memberAccess, startPos);
@@ -175,7 +175,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
             }
             else if t is CompoundAssignOp {
                 Position opPos = tok.currentStartPos();
-                return parseCompoundAssignStmt(tok, lValue, t, opPos, startPos);
+                return parseCompoundAssignStmt(tok, lValue, t, startPos, opPos);
             }
             // SUBSET handle "["
         }
@@ -245,7 +245,7 @@ function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue, Position startPo
     return stmt;
 }
 
-function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp op, Position opPos, Position startPos) returns CompoundAssignStmt|err:Syntax {
+function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp op, Position startPos, Position opPos) returns CompoundAssignStmt|err:Syntax {
     check tok.advance();
     Expr expr = check parseExpr(tok);
     string opStr = op;
@@ -361,10 +361,12 @@ function parseMatchStmt(Tokenizer tok, Position startPos) returns MatchStmt|err:
 }
 
 function parseMatchClause(Tokenizer tok) returns MatchClause|err:Syntax {
+    Position startPos = tok.currentStartPos();
     MatchPattern[] patterns = check parseMatchPatternList(tok);
     Position opPos = check tok.expectEnd("=>");
     Stmt[] block = check parseStmtBlock(tok);
-    return { patterns, block, opPos };
+    Position endPos = tok.previousEndPos();
+    return { startPos, endPos, patterns, block, opPos };
 }
 
 function parseMatchPatternList(Tokenizer tok) returns MatchPattern[]|err:Syntax {

@@ -392,7 +392,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label };
     initLoopVar.insns.push(branchToLoopHead);
     bir:Register condition = cx.createRegister(t:BOOLEAN);
-    bir:CompareInsn compare = { op: "<", pos: stmt.range.upper.startPos, orderType: t:UT_INT, operands: [loopVar, upper], result: condition };
+    bir:CompareInsn compare = { op: "<", pos: stmt.range.opPos, orderType: t:UT_INT, operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
     bir:BasicBlock loopBody = cx.createBasicBlock();
     bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: loopBody.label };
