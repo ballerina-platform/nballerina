@@ -6,7 +6,7 @@ function parseStmtBlock(Tokenizer tok) returns StmtBlock|err:Syntax {
         Position startPos = tok.currentStartPos();
         Stmt[] stmts = [];
         check tok.advance();
-        cur = tok.current();
+        Token? cur = tok.current();
         while cur != "}" {
             stmts.push(check parseStmt(tok));
             cur = tok.current();
