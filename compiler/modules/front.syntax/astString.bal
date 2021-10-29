@@ -247,6 +247,7 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         return;
     }
     else if td is MappingTypeDesc {
+        TypeDesc? rest = td.rest;
         if td.fields.length() > 0 {
             w.push("record", "{|");
             boolean firstInBlock = true;
@@ -256,19 +257,23 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
                 typeDescToWords(w, f.typeDesc);
                 w.push(f.name, CLING, ";");
             }
+            if rest != () {
+                w.push(<Word> LF);
+                typeDescToWords(w, rest);
+                w.push("...", CLING, ";");
+            }
             w.push(<Word>(firstInBlock ? LF : LF_OUTDENT), "|}");
-            return;
-        }
-        w.push("map", CLING, "<", CLING);
-        TypeDesc? rest = td.rest;
-        if rest == () {
-            typeDescToWords(w, { startPos: td.startPos, endPos: td.endPos, builtinTypeName: "never" });
         }
         else {
-            typeDescToWords(w, rest);
+            w.push("map", CLING, "<", CLING);
+            if rest == () {
+                typeDescToWords(w, { startPos: td.startPos, endPos: td.endPos, builtinTypeName: "never" });
+            }
+            else {
+                typeDescToWords(w, rest);
+            }
+            w.push(CLING, ">");
         }
-        w.push(CLING, ">");
-        return;
     }
     else if td is ListTypeDesc {
         if wrap != false {
