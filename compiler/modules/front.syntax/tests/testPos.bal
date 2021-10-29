@@ -258,10 +258,24 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             lastEnd = endPos;
         }
         check validateChildTypeDesc(expr, tok);
+        if expr is MappingConstructorExpr {
+            foreach Field f in expr.fields {
+                check validateFieldPos(f, tok, expr.startPos, expr.endPos);
+            }
+        }
     }
     else {
         panic err:impossible("failed to find a parser for expression");
     }
+}
+
+function validateFieldPos(Field f, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(f.startPos, MODE_NORMAL);
+    test:assertEquals(tok.currentStartPos(), f.startPos, "moved to wrong position");
+    Field newField = check parseField(tok);
+    test:assertEquals(tok.previousEndPos(), f.endPos);
+    test:assertFalse(checkPosFragCode(tok.file, f.endPos, FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON), "invalid endPos");
+    test:assertTrue(f.startPos > parentStartPos && f.endPos < parentEndPos, "field outside of MappingConstructorExpr");
 }
 
 function validateChildTypeDesc(Stmt|Expr parent, Tokenizer tok) returns err:Syntax? {
@@ -355,6 +369,18 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         lastEnd = endPos;
     }
     check validateTypeDescOpPos(td, tok);
+    if td is MappingTypeDesc {
+        foreach FieldDesc fd in td.fields {
+            check validateFieldDescPos(fd, tok, td.startPos, td.endPos);
+        }
+    }
+}
+
+function validateFieldDescPos(FieldDesc fd, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(fd.startPos, MODE_NORMAL);
+    test:assertTrue(tok.current() is [IDENTIFIER, string], "invalid startPos");
+    check tok.moveToPos(fd.endPos, MODE_NORMAL);
+    test:assertTrue(tok.current() == ";", "invalid endPos");
 }
 
 function validateTypeDescOpPos(TypeDesc td, Tokenizer tok) returns err:Syntax? {

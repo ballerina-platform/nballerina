@@ -277,7 +277,10 @@ public type MappingConstructorExpr record {|
 |};
 
 public type Field record {|
-    Position pos; // position of name for now
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     string name;
     Expr value;
 |};
@@ -426,6 +429,7 @@ public type ListTypeDesc record {|
 |};
 
 public type FieldDesc record {|
+    *PositionFields;
     string name;
     TypeDesc typeDesc;
 |};
