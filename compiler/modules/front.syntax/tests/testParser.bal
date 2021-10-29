@@ -146,25 +146,25 @@ function reduceToWords(string k, string rule, string[] fragment) returns err:Syn
 
 function sourceFragments() returns map<TokenizerTestCase>|error {
      map<TokenizerTestCase> all = check invalidTokenSourceFragments();
+     int invalidCases = all.length();
      map<ParserTestCase> valid = check validTokenSourceFragments();
      foreach var [k, v] in valid.entries() {
          all[k] = ["V", v[2]];
      }
+     test:assertEquals(all.length(), invalidCases + valid.length(), "duplicate test");
      return all;
 }
 
 function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
     SingleStringTokenizerTestCase[] sources = [
-        ["OE", string`"`],
-        ["OE", "'"],
-        ["OE", "`"],
-        ["OE", string`"\"`],
-        ["OE", string`"\a"`],
-        ["OE", string`\`],
-        ["OE", string`"\n"`],
-        ["OE", string`"\r"`],
-        ["E", string`"\n"`],
-        ["E", string`"\r"`],
+        ["E", string`"`],
+        ["E", "'"],
+        ["E", "`"],
+        ["E", string`"\"`],
+        ["E", string`"\a"`],
+        ["E", string`\`],
+        ["E", string`"${ "\n" }"`],
+        ["E", string`"${ "\r" }"`],
         ["E", string`"\\`],
         ["E", string`"\u{}"`],
         // JBUG #33390 using template string complains about invalid unicodes
@@ -182,6 +182,7 @@ function invalidTokenSourceFragments() returns map<TokenizerTestCase>|error {
     foreach var s in sources {
         tests[s[1]] = [s[0], splitIntoLines(s[1])];
     }
+    test:assertEquals(sources.length(), tests.length(), "duplicate test");
     return tests;
 }
 
@@ -528,6 +529,7 @@ function validTokenSourceFragments() returns map<ParserTestCase>|error {
     foreach var s in sources {
         tests[s[2]] = [s[0], s[1], splitIntoLines(s[2]), [s[3]]];
     }
+    test:assertEquals(sources.length(), tests.length(), "duplicate test");
     var testFiles = check file:readDir("modules/front.syntax/tests/data");
     foreach var f in testFiles {
         string path = f.absPath;
