@@ -109,12 +109,10 @@ function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:
         else if s == CONTENT {
             content.push(l);
         }
-        else if s == BOF {
+        else {
+            BOF _ = s;
             // xxx add file path
             return error("file should start with 'Test-Case:' header field");
-        }
-        else {
-            panic err:impossible("balt parser illegal state");
         }
     }
     if s == HEADER {
