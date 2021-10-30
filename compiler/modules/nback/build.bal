@@ -102,6 +102,16 @@ final RuntimeFunction taggedToFloatFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction taggedClearExactFunction = {
+    name: "tagged_clear_exact",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR]
+    },
+    attrs: ["readnone"]
+};
+
+
 final bir:ModuleId runtimeModule = {
     org: "ballerinai",
     names: ["runtime"]
@@ -168,16 +178,20 @@ function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand oper
         if !t:isNever(targetStructType) && !t:isNever(sourceStructType) {
             // Is the sourceStructType a proper subtype of the targetStructType?
             if sourceStructType != targetStructType && !t:isSubtype(scaffold.typeContext(), targetStructType, sourceStructType) {
-                value = buildClearExact(builder, scaffold, value, targetRepr);
+                value = buildClearExact(builder, scaffold, value, operand.semType);
             }
         }
     }
     return value;
 }
 
-function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value value, Repr targetRepr) returns llvm:Value {
-    // SUBSET need to use targetRepr to handle unions including mappings and lists
-    return <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [value, llvm:constInt(LLVM_INT, ~FLAG_EXACT)]);
+function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value tagged, t:SemType sourceType) returns llvm:Value {
+    if t:isNever(t:intersect(sourceType, t:union(t:STRING,t:INT))) {
+        return <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [tagged, llvm:constInt(LLVM_INT, ~FLAG_EXACT)]);
+    }
+    else {
+        return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(taggedClearExactFunction), [tagged]);
+    }
 }
 
 function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {

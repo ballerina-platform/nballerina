@@ -47,7 +47,9 @@ $(BT_OBJS): %.o: %.c
 	set -o pipefail; \
 	$(CLANG) -c $(CFLAGS) -emit-llvm -o - $< | \
 	$(LLVM_LINK) $(LL_BCS) - -o - -S | \
-	sed -e '/define .*@_bal_tagged_to_ptr/s/^define /define linkonce_odr /' -e '/define .*@_bal_float_/s/^define /define linkonce_odr /' | \
+	sed -e '/define .*@_bal_tagged_to_ptr/s/^define /define linkonce_odr /' \
+		-e '/define .*@_bal_tagged_clear_exact/s/^define /define linkonce_odr /' \
+		-e '/define .*@_bal_float_/s/^define /define linkonce_odr /' | \
 	$(OPT) -O2 - -o - -S | \
 	$(LLVM_AS) >$@
 
