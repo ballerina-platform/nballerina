@@ -79,7 +79,10 @@ typedef struct {
     GC TaggedPtr *members;
 } TaggedPtrArray;
 
+typedef uint32_t Tid;
+
 typedef struct {
+    Tid tid;
     uint32_t bitSet;
 } ListDesc, *ListDescPtr;
 
@@ -105,10 +108,12 @@ typedef struct {
 } MapFieldArray;
 
 typedef struct {
+    Tid tid;
     uint32_t bitSet;
 } MappingDesc, *MappingDescPtr;
 
 typedef struct {
+    Tid tid;
     uint32_t bitSet; // zero
     uint32_t nFields;
     uint32_t fieldBitSets[];

@@ -7,8 +7,10 @@ const USED_INHERENT_TYPE = 0x1;
 const USED_TYPE_TEST = 0x2;
 
 const LLVM_BITSET = "i32";
+const LLVM_TID = "i32";
 
-final llvm:StructType llInherentType = llvm:structType([LLVM_BITSET]);
+
+final llvm:StructType llInherentType = llvm:structType([LLVM_TID, LLVM_BITSET]);
 
 // This is an approximation, but close enough since we are only accessing the pointer in C.
 final llvm:StructType llTypeTestType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
