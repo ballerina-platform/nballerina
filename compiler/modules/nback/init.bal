@@ -11,11 +11,19 @@ public type ProgramModule readonly & record {|
 |};
 
 type TypeDefn record {|
+    *TypeTestDefn;
+    int tid?;
+|};
+
+type TypeTestDefn record {|
     readonly t:SemType semType;
-    readonly TypeHowUsed howUsed;
     llvm:ConstPointerValue ptr;
     llvm:Type llType;
-    int? tid = ();
+|};
+
+type InherentTypeDefn record {|
+    *TypeTestDefn;
+    int tid;
 |};
 
 type SubtypeDefn record {|
@@ -38,12 +46,12 @@ type InitModuleContext record {|
     llvm:Module llMod;
     t:Context tc;
     int stringCount = 0;
-    table<TypeDefn> key(semType, howUsed) typeDefns = table [];
+    table<InherentTypeDefn> key(semType) listTypeDefns = table [];
+    table<InherentTypeDefn> key(semType) mappingTypeDefns = table [];
+    table<TypeTestDefn> key(semType) typeTestDefns = table [];
     table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
     InitTypes llTypes;
     llvm:FunctionDecl?[TYPE_KIND_COUNT] typeTestFuncs = [];
-    int nListTid = 0;
-    int nMappingTid = 0;
 |};
 
 public function buildInitModule(t:Env env, ProgramModule[] modules, map<bir:FunctionSignature> publicFuncs) returns llvm:Module|BuildError {
@@ -78,61 +86,64 @@ function buildInitTypes(llvm:Context llContext, llvm:Module llMod, t:Env env, Pr
         tc: t:typeContext(env),
         llTypes
     };
+    buildInitTypesForUsage(cx, modules, USED_INHERENT_TYPE);
+    buildInitTypesForUsage(cx, modules, USED_TYPE_TEST);
+}
+
+function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, TypeHowUsed howUsed) {
     foreach var mod in modules {
         var { types, uses } = mod.typeUsage;
         bir:ModuleId id = mod.id;
         foreach int i in 0 ..< types.length() {
-            byte use = uses[i];
-            t:SemType ty = types[i];
-            foreach var howUsed in <TypeHowUsed[]>[USED_INHERENT_TYPE, USED_TYPE_TEST] {
-                if (<int>use & <int>howUsed) != 0 {
-                    addTypeGlobal(cx, id, i, ty, howUsed);
+            if (uses[i] & howUsed) != 0 {
+                t:SemType ty = types[i];
+                string sym = mangleTypeSymbol(id, howUsed, i);
+                if howUsed == USED_INHERENT_TYPE {
+                    addInherentTypeDefn(cx, sym, ty);
                 }
-            }
+                else {
+                    addTypeTestTypeDefn(cx, sym, ty);
+                }
+            }       
         }
-    }
-}
-
-function addTypeGlobal(InitModuleContext cx, bir:ModuleId id, int i, t:SemType semType, TypeHowUsed howUsed) {
-    string sym = mangleTypeSymbol(id, howUsed, i);
-    TypeDefn? existingDefn = cx.typeDefns[semType, howUsed];
-    if existingDefn == () {
-        if  howUsed == USED_INHERENT_TYPE {
-            addInherentTypeDefn(cx, sym, semType);
-        }
-        else {
-            addTypeTestTypeDefn(cx, sym, semType);
-        } 
-    }
-    else {
-        addTypeAlias(cx, sym, existingDefn);
-    }
+    }    
 }
 
 function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semType)  {
-    llvm:StructType llType;
-    llvm:ConstPointerValue ptr;
-    int tid;
+    table<InherentTypeDefn> key(semType) defns;
+    boolean isList;
     if t:isSubtypeSimple(semType, t:LIST) {
-        tid = cx.nListTid;
-        cx.nListTid += 1;
-        [llType, ptr] = addArrayMapInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, semType));
+        isList = true;
+        defns = cx.listTypeDefns;
     }
     else if t:isSubtypeSimple(semType, t:MAPPING) {
-        tid = cx.nMappingTid;
-        cx.nMappingTid += 1;
+        isList = false;
+        defns = cx.mappingTypeDefns;
+    }
+    else {
+        panic err:impossible("unexpected SemType while building inherent type definition in init module");
+    }
+    InherentTypeDefn? existingDefn = defns[semType];
+    if existingDefn != () {
+        addTypeAlias(cx, symbol, existingDefn);
+        return;
+    }
+    int tid = defns.length();
+    llvm:StructType llType;
+    llvm:ConstPointerValue ptr;
+    if isList {
+        [llType, ptr] = addArrayMapInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, semType));
+    }
+    else {
         t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType);
         if mat.rest != t:NEVER {
             [llType, ptr] = addArrayMapInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>mat.rest);
         }
         else {
-            [llType, ptr] = addRecordInherentTypeDefn(cx, symbol,tid, mat.names, mat.types);
+            [llType, ptr] = addRecordInherentTypeDefn(cx, symbol, tid, mat.names, mat.types);
         }
     }
-    else {
-        panic err:impossible("unexpected SemType while building inherent type definition in init module");
-    }
-    cx.typeDefns.add({ llType, ptr, howUsed: USED_INHERENT_TYPE, semType, tid });
+    defns.add({ llType, ptr, semType, tid });
 }
 
 function addArrayMapInherentTypeDefn(InitModuleContext cx, string symbol, int tid, t:UniformTypeBitSet bitSet) returns [llvm:StructType, llvm:ConstPointerValue] {
@@ -153,6 +164,11 @@ function addRecordInherentTypeDefn(InitModuleContext cx, string symbol, int tid,
 }
 
 function addTypeTestTypeDefn(InitModuleContext cx, string symbol, t:SemType semType) {
+    TypeDefn? existingDefn = cx.typeTestDefns[semType];
+    if existingDefn != () {
+        addTypeAlias(cx, symbol, existingDefn);
+        return;
+    }
     t:SplitSemType { all, some } = t:split(semType);
     int someBits = 0;
     llvm:ConstValue[] llSubtypes = [];
@@ -168,7 +184,7 @@ function addTypeTestTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
     llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt("i32", all), llvm:constInt("i32", someBits), subtypeArray]);
     llvm:StructType llType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(cx.llTypes.subtypeTestVTablePtr, llSubtypes.length())]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true);
-    cx.typeDefns.add( { llType, ptr, howUsed: USED_TYPE_TEST, semType });
+    cx.typeTestDefns.add( { llType, ptr, semType });
 }
 
 function getSubtypeTest(InitModuleContext cx, t:UniformTypeCode typeCode, t:SemType semType) returns llvm:ConstPointerValue {
