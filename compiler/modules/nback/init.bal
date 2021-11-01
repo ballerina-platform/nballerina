@@ -3,8 +3,6 @@ import wso2/nballerina.err;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-import ballerina/io;
-
 const USER_MAIN_NAME = "main";
 
 public type ProgramModule readonly & record {|
@@ -221,7 +219,6 @@ function getSubtypeTest(InitModuleContext cx, t:UniformTypeCode typeCode, t:SemT
 }
 
 function addPrecomputedSubtypeTestDefn(InitModuleContext cx, string symbol, table<InherentTypeDefn> inherentTypeDefns, t:SemType ty) returns llvm:ConstPointerValue {
-    io:println("number of inherentTypeDefns =", inherentTypeDefns.length());
     llvm:ConstValue[] tids = from var itd in inherentTypeDefns where t:isSubtype(cx.tc, itd.semType, ty) select llvm:constInt(LLVM_TID, itd.tid);
     final llvm:StructType llStructTy = llvm:structType([cx.llTypes.subtypeTestFunctionPtr, "i32", llvm:arrayType(LLVM_TID, tids.length())]);
     llvm:ConstValue initValue = cx.llContext.constStruct([getSubtypeTestFunc(cx, TYPE_KIND_PRECOMPUTED), llvm:constInt("i32", tids.length()),
