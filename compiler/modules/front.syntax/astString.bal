@@ -247,16 +247,33 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         return;
     }
     else if td is MappingTypeDesc {
-        w.push("map", CLING, "<", CLING);
         TypeDesc? rest = td.rest;
-        if rest == () {
-            typeDescToWords(w, { startPos: td.startPos, endPos: td.endPos, builtinTypeName: "never" });
+        if td.fields.length() > 0 {
+            w.push("record", "{|");
+            boolean firstInBlock = true;
+            foreach var f in td.fields {
+                w.push(<Word>(firstInBlock ? LF_INDENT : LF));
+                firstInBlock = false;
+                typeDescToWords(w, f.typeDesc);
+                w.push(f.name, CLING, ";");
+            }
+            if rest != () {
+                w.push(<Word> LF);
+                typeDescToWords(w, rest);
+                w.push("...", CLING, ";");
+            }
+            w.push(<Word>LF_OUTDENT, "|}");
         }
         else {
-            typeDescToWords(w, rest);
+            w.push("map", CLING, "<", CLING);
+            if rest == () {
+                w.push("never");
+            }
+            else {
+                typeDescToWords(w, rest);
+            }
+            w.push(CLING, ">");
         }
-        w.push(CLING, ">");
-        return;
     }
     else if td is ListTypeDesc {
         if wrap != false {
