@@ -190,9 +190,16 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
 
 function parseMethodCallStmt(Tokenizer tok) returns CallStmt|err:Syntax {
     Position startPos = tok.currentStartPos();
-    MethodCallExpr expr = check parseMethodCallExpr(tok);
-    Position endPos = tok.previousEndPos();
-    return { startPos, endPos, expr };
+    Expr expr = check startPrimaryExpr(tok);
+    Token? cur = tok.current();
+    if cur == "." || cur == "[" {
+        expr = check finishPrimaryExpr(tok, expr, startPos);
+        if expr is MethodCallExpr {
+            Position endPos = check tok.expectEnd(";");
+            return { startPos, endPos, expr };
+        }
+    }
+    return parseError(tok, "expression not allowed as a statement");
 }
 
 function finishCallStmt(Tokenizer tok, CallExpr expr, Position startPos) returns Stmt|err:Syntax {
@@ -217,13 +224,11 @@ function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, 
         Position checkStartPos = tok.currentStartPos();
         check tok.advance();
         CallStmt operandStmt = check finishCheckingCallStmt(tok, t, checkStartPos);
-        CheckingCallExpr expr = { startPos, endPos: operandStmt.expr.endPos, checkingKeyword, operand: operandStmt.expr };
-        return { startPos, endPos: tok.previousEndPos(), expr };
+        return wrapCallStmtWithCheck(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
     }
     else if t == "(" {
-        MethodCallExpr operand = check parseMethodCallExpr(tok);
-        CheckingCallExpr expr = { startPos, endPos: operand.endPos, checkingKeyword, operand };
-        return { startPos, endPos: tok.previousEndPos(), expr };
+        CallStmt operandStmt = check parseMethodCallStmt(tok);
+        return wrapCallStmtWithCheck(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
     }
     Expr operand = check parsePrimaryExpr(tok);
     if operand is FunctionCallExpr|MethodCallExpr {
@@ -232,6 +237,11 @@ function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, 
         return { startPos, endPos, expr };
     }
     return parseError(tok, "function call, method call or checking expression expected");
+}
+
+function wrapCallStmtWithCheck(Position startPos, Position endPos, CallStmt stmt, CheckingKeyword checkingKeyword) returns CallStmt {
+    CheckingCallExpr expr = { startPos, endPos: stmt.expr.endPos, checkingKeyword, operand: stmt.expr };
+    return { startPos, endPos, expr };
 }
 
 function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue, Position startPos) returns AssignStmt|err:Syntax {

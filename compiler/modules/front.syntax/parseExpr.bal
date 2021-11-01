@@ -530,17 +530,3 @@ public function intFromIntLiteral(IntLiteralBase base, string digits) returns in
     return base == 10 ? int:fromString(digits) : int:fromHexString(digits);
 }
 
-function parseMethodCallExpr(Tokenizer tok) returns MethodCallExpr|err:Syntax {
-    Position startPos = tok.currentStartPos();
-    Expr expr = check startPrimaryExpr(tok);
-    Token? cur = tok.current();
-    if cur == "." || cur == "[" {
-        expr = check finishPrimaryExpr(tok, expr, startPos);
-        if expr is MethodCallExpr {
-            check tok.expect(";");
-            return expr;
-        }
-    }
-    return parseError(tok, "expression not allowed as a statement");
-}
-
