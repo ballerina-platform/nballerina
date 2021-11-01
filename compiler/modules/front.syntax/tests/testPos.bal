@@ -22,9 +22,6 @@ function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns
 
 function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(stmt.startPos, MODE_NORMAL);
-    if stmt is MethodCallExpr|FunctionCallExpr {
-        return check validateExpressionPos(stmt, tok, parentStartPos, parentEndPos);
-    }
     test:assertEquals(tok.currentStartPos(), stmt.startPos, "moved to wrong position");
     Stmt newStmt = check parseStmt(tok);
     test:assertEquals(stmt.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
@@ -115,6 +112,9 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
     else if stmt is VarDeclStmt {
         check validateExpressionPos(stmt.initExpr, tok, stmt.startPos, stmt.endPos);
     }
+    else if stmt is CallStmt {
+        check validateExpressionPos(stmt.expr, tok, stmt.startPos, stmt.endPos);
+    }
 }
 
 function validateMatchClausePos(MatchClause clause, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
@@ -146,6 +146,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     test:assertEquals(tok.currentStartPos(), expr.startPos, "moved to wrong position");
     Expr? newExpr = ();
     boolean usedSimpleConstExprParser = false;
+    int parser = -1;
     if expr is SimpleConstExpr {
         if expr is PrimaryExpr {
             // these expressions can be parsed by both parseSimpleConstExpr and parsePrimaryExpr
@@ -210,6 +211,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         }
     }
     else {
+        parser = 11;
         newExpr = check parseExpr(tok);
     }
     if newExpr is Expr {
@@ -252,7 +254,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             // pos depends on whether original was parsed as a stmt or expr but for testing we always treat it as expr
             newExpr.pos = (<MethodCallExpr|FunctionCallExpr>expr).pos;
         }
-        test:assertEquals(expr.toString(), newExpr.toString());
+        test:assertEquals(expr.toString(), newExpr.toString(), parser.toString());
         test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
         test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
         test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), "end position is invalid");
