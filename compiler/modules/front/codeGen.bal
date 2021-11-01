@@ -883,11 +883,11 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
                     return cx.semanticErr("can only apply field access in lvalue to mapping", pos=pos);
                 }
                 else {
-                    return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, opPos, pos);
+                    return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, pos);
                 }
             }
             else if t:isSubtypeSimple(container.semType, t:MAPPING) {
-                return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, opPos, pos);
+                return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, pos);
             }
         }
         return cx.semanticErr("can only apply member access in lvalue to list or mapping", pos=pos);
@@ -900,15 +900,15 @@ function codeGenCompoundAssignToVar(CodeGenContext cx,
                                     s:VarRefExpr lValue,
                                     s:Expr rexpr,
                                     s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
-                                    err:Position opPos) returns CodeGenError|StmtEffect {
+                                    err:Position pos) returns CodeGenError|StmtEffect {
     s:Expr expr;
     s:Position startPos = rexpr.startPos;
     s:Position endPos = rexpr.endPos;
     if op is s:BinaryArithmeticOp {
-        expr = { startPos, endPos, opPos, arithmeticOp: op, left: lValue, right: rexpr };
+        expr = { startPos, endPos, opPos: pos, arithmeticOp: op, left: lValue, right: rexpr };
     }
     else {
-        expr = { startPos, endPos, opPos, bitwiseOp: op, left: lValue, right: rexpr };
+        expr = { startPos, endPos, opPos: pos, bitwiseOp: op, left: lValue, right: rexpr };
     }
     return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr, pos);
 }
@@ -1532,7 +1532,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
     else {
         func = check genImportedFunctionRef(cx, env, prefix, expr.funcName);
     }
-    check validArgumentCount(cx, func, expr.args.length(), expr.pos);
+    check validArgumentCount(cx, func, expr.args.length(), expr.opPos);
     t:SemType[] paramTypes = func.signature.paramTypes;
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
@@ -1547,8 +1547,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func,
         result,
         args: args.cloneReadOnly(),
-        opPos: expr.opPos,
-        position: expr.pos
+        pos: expr.opPos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };
@@ -1557,7 +1556,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
 function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MethodCallExpr expr) returns CodeGenError|RegExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, expr.target, ()));
     bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName);
-    check validArgumentCount(cx, func, expr.args.length() + 1, expr.pos);
+    check validArgumentCount(cx, func, expr.args.length() + 1, expr.opPos);
 
     t:SemType[] paramTypes = func.signature.paramTypes;
     bir:Operand[] args = [target];
@@ -1572,8 +1571,7 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env
         func,
         result,
         args: args.cloneReadOnly(),
-        opPos: expr.opPos,
-        position: expr.pos
+        pos: expr.opPos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };

@@ -79,6 +79,7 @@ function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
         check tok.moveToPos(rangeExpr.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;
         test:assertTrue(opToken == "..<");
+    }
     else if stmt is CheckingStmt {
         check tok.moveToPos(stmt.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;
