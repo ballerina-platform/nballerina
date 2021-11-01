@@ -195,7 +195,13 @@ function getSubtypeTest(InitModuleContext cx, t:UniformTypeCode typeCode, t:SemT
     string symbol = subtypeDefnSymbol(cx.subtypeDefns.length());
     // JBUG if we use a match statement for this, then we get an error for `ptr` being uninitialized
     if typeCode == t:UT_LIST_RW {
-        ptr = addArrayMapSubtypeTestDefn(cx, symbol, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, semType), TYPE_KIND_ARRAY);
+        t:ListAtomicType? lat = t:listAtomicTypeRw(cx.tc, semType);
+        if lat == () {
+            ptr = addPrecomputedSubtypeTestDefn(cx, symbol, cx.listTypeDefns, semType);
+        }
+        else {
+            ptr = addArrayMapSubtypeTestDefn(cx, symbol, <t:UniformTypeBitSet>lat.rest, TYPE_KIND_ARRAY);
+        }
     }
     else if typeCode == t:UT_MAPPING_RW {
         t:MappingAtomicType? mat = t:mappingAtomicTypeRw(cx.tc, semType);
