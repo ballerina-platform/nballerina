@@ -207,7 +207,7 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
     }
     t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
     if !vc.isSameType(memberType, insn.result.semType) {
-        return vc.err("bad BIR: ListGet result type is not same as member type", pos=insn.opPos);
+        return vc.err("bad BIR: ListGet result type is not same as member type", pos=insn.pos);
     }
 }
 

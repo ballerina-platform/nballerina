@@ -331,7 +331,7 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         else if expr is MappingConstructorExpr {
             test:assertEquals(opToken, "{");
         }
-        else if expr is FieldAccessExpr|FieldAccessLExpr {
+        else {
             test:assertEquals(opToken, ".");
         }
     }

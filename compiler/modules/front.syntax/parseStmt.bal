@@ -128,7 +128,7 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
         }
         else if cur is CompoundAssignOp {
             Position opPos = tok.currentStartPos();
-            MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
+            MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, opPos };
             return parseCompoundAssignStmt(tok, lValue, cur, startPos, opPos);
         }
         MemberAccessExpr memberAccess = { startPos, endPos: memberAccessEndPos, container: varRef, index, opPos: bracketPos };

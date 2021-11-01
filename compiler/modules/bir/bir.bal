@@ -330,7 +330,7 @@ public type ListConstructInsn readonly & record {|
     // The type of the result gives the inherent type of the constructed list
     Register result;
     Operand[] operands;
-    Position opPos;
+    Position pos;
 |};
 
 # Gets a member of a list at a specified index.
@@ -339,7 +339,7 @@ public type ListGetInsn readonly & record {|
     INSN_LIST_GET name = INSN_LIST_GET;
     Register result;
     [Register, IntOperand] operands;
-    Position opPos;
+    Position pos;
 |};
 
 # Sets a member of a list at a specified index.
@@ -347,7 +347,7 @@ public type ListGetInsn readonly & record {|
 public type ListSetInsn readonly & record {|
     INSN_LIST_SET name = INSN_LIST_SET;
     [Register, IntOperand, Operand] operands;
-    Position opPos;
+    Position pos;
 |};
 
 # Constructs a new mutable list value.
@@ -357,7 +357,7 @@ public type MappingConstructInsn readonly & record {|
     Register result;
     string[] fieldNames;
     Operand[] operands;
-    Position opPos;
+    Position pos;
 |};
 
 # Gets a member of a mapping with a specified key.
@@ -367,7 +367,7 @@ public type MappingGetInsn readonly & record {|
     INSN_MAPPING_GET name = INSN_MAPPING_GET;
     Register result;
     [Register, StringOperand] operands;
-    Position opPos;
+    Position pos;
 |};
 
 # Sets a member of a mapping with a specified key.
@@ -375,7 +375,7 @@ public type MappingGetInsn readonly & record {|
 public type MappingSetInsn readonly & record {|
     INSN_MAPPING_SET name = INSN_MAPPING_SET;
     [Register, StringOperand, Operand] operands;
-    Position opPos;
+    Position pos;
 |};
 
 # Constructs an error value.
@@ -384,7 +384,7 @@ public type ErrorConstructInsn readonly & record {|
     INSN_ERROR_CONSTRUCT name = INSN_ERROR_CONSTRUCT;
     Register result;
     StringOperand operand;
-    Position opPos;
+    Position pos;
 |};
 
 # This does equality expressions.
