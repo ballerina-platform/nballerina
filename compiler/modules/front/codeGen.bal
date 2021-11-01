@@ -883,11 +883,11 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
                     return cx.semanticErr("can only apply field access in lvalue to mapping", pos=pos);
                 }
                 else {
-                    return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, pos);
+                    return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, opPos, pos);
                 }
             }
             else if t:isSubtypeSimple(container.semType, t:MAPPING) {
-                return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, pos);
+                return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, opPos, pos);
             }
         }
         return cx.semanticErr("can only apply member access in lvalue to list or mapping", pos=pos);
@@ -900,15 +900,15 @@ function codeGenCompoundAssignToVar(CodeGenContext cx,
                                     s:VarRefExpr lValue,
                                     s:Expr rexpr,
                                     s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
-                                    err:Position pos) returns CodeGenError|StmtEffect {
+                                    err:Position opPos) returns CodeGenError|StmtEffect {
     s:Expr expr;
     s:Position startPos = rexpr.startPos;
     s:Position endPos = rexpr.endPos;
     if op is s:BinaryArithmeticOp {
-        expr = { startPos, endPos, opPos: pos, arithmeticOp: op, left: lValue, right: rexpr };
+        expr = { startPos, endPos, opPos, arithmeticOp: op, left: lValue, right: rexpr };
     }
     else {
-        expr = { startPos, endPos, opPos: pos, bitwiseOp: op, left: lValue, right: rexpr };
+        expr = { startPos, endPos, opPos, bitwiseOp: op, left: lValue, right: rexpr };
     }
     return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr, pos);
 }
@@ -1229,7 +1229,7 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
     }
     else {
         return cx.semanticErr(`${op} not supported for operand types`, pos);
-    } 
+    }
     return { result, block: bb };
 }
 
@@ -1547,6 +1547,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func,
         result,
         args: args.cloneReadOnly(),
+        opPos: expr.opPos,
         position: expr.pos
     };
     curBlock.insns.push(call);
@@ -1571,6 +1572,7 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env
         func,
         result,
         args: args.cloneReadOnly(),
+        opPos: expr.opPos,
         position: expr.pos
     };
     curBlock.insns.push(call);

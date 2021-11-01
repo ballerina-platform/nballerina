@@ -345,6 +345,11 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
             test:assertEquals(opToken, ".");
         }
     }
+    else if expr is FunctionCallExpr|MethodCallExpr {
+        check tok.moveToPos(expr.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        test:assertTrue(opToken == "(");
+    }
 }
 
 function validateFieldPos(Field f, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {

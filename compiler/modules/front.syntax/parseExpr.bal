@@ -262,7 +262,6 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         var [prefix, varName] = check parseOptQualIdentifier(tok, t[1]);
         if tok.current() == "(" {
-            check tok.advance();
             return finishFunctionCallExpr(tok, prefix, varName, pos, startPos);
         }
         endPos = tok.previousEndPos();
@@ -354,16 +353,19 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
 
 // Called with current token as "("
 function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Position pos, Position startPos) returns MethodCallExpr|err:Syntax {
+    Position opPos = tok.currentStartPos();
     check tok.advance();
     Expr[] args = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, target, methodName, args, pos };
+    return { startPos, endPos, opPos, target, methodName, args, pos };
 }
 
 function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position pos, Position startPos) returns FunctionCallExpr|err:Syntax {
+    Position opPos = tok.currentStartPos();
+    check tok.advance();
     Expr[] args = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, funcName, pos, args, prefix };
+    return { startPos, endPos, opPos, funcName, pos, args, prefix };
 }
 
 function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syntax {

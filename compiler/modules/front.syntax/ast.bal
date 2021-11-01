@@ -230,6 +230,7 @@ public type FunctionCallExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     string? prefix = ();
     string funcName;
     Expr[] args;
@@ -242,6 +243,7 @@ public type MethodCallExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     string methodName;
     Expr target;
     Expr[] args;
