@@ -74,7 +74,7 @@ function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
         foreach var clause in stmt.clauses {
             check tok.moveToPos(clause.opPos, MODE_NORMAL);
             Token? opToken = tok.curTok;
-            test:assertTrue(opToken == "=>");
+            test:assertEquals(opToken, "=>");
         }
     }
     else if stmt is ForeachStmt {
@@ -82,6 +82,16 @@ function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
         check tok.moveToPos(rangeExpr.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;
         test:assertTrue(opToken == "..<");
+    }
+    else if stmt is VarDeclStmt|AssignStmt {
+        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        test:assertEquals(opToken, "=");
+    }
+    else if stmt is CompoundAssignStmt {
+        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        test:assertTrue(opToken is CompoundAssignOp);
     }
 }
 

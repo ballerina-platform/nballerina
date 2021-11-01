@@ -65,6 +65,7 @@ public const WILDCARD = ();
 
 public type AssignStmt record {|
     *PositionFields;
+    Position opPos;
     LExpr|WILDCARD lValue;
     Expr expr;
 |};
@@ -141,6 +142,7 @@ public type BreakContinueStmt record {|
 
 public type VarDeclStmt record {|
     *PositionFields;
+    Position opPos;
     TypeDesc td;
     string|WILDCARD varName;
     Expr initExpr;

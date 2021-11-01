@@ -385,7 +385,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     var { result: lower, block: evalUpper } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, range.lower, t:INT));
     var { result: upper, block: initLoopVar } = check codeGenExprForInt(cx, evalUpper, env, check cx.foldExpr(env, range.upper, t:INT));
     bir:Register loopVar = cx.createRegister(t:INT, varName);
-    bir:AssignInsn init = { result: loopVar, operand: lower };
+    bir:AssignInsn init = { pos: stmt.startPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
@@ -764,7 +764,7 @@ function codeGenPanicStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
 function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarDeclStmt stmt) returns CodeGenError|StmtEffect {
     var { varName, initExpr, td, isFinal } = stmt;
     if varName is s:WILDCARD {
-        return codeGenWildcardDeclStmt(cx, startBlock, env, initExpr, td);
+        return codeGenWildcardDeclStmt(cx, startBlock, env, initExpr, td, stmt.opPos);
     }
     else {
         if lookup(varName, env) !== () {
@@ -772,27 +772,27 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         }
         t:SemType semType = check cx.resolveTypeDesc(td);
         bir:Register result = cx.createRegister(semType, varName);
-        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType);
+        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType, stmt.opPos);
         return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
     }
 }
 
-function codeGenWildcardDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:Expr expr, s:TypeDesc td) returns CodeGenError|StmtEffect {
+function codeGenWildcardDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:Expr expr, s:TypeDesc td, err:Position pos) returns CodeGenError|StmtEffect {
     t:SemType semType = check cx.resolveTypeDesc(td);
     if !t:isSubtype(cx.mod.tc, semType, t:ANY) {
         return cx.semanticErr("type descriptor of wildcard should be a subtype of any");
     }
-    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(semType, "_"), expr, semType);
+    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(semType, "_"), expr, semType, pos);
     return { block: nextBlock };
 }
 
 function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:AssignStmt stmt) returns CodeGenError|StmtEffect {
     var { lValue, expr } = stmt;
     if lValue is s:VarRefExpr {
-        return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
+        return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr, stmt.opPos);
     }
     else if lValue is s:WILDCARD {
-        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(t:ANY, "_"), expr, t:ANY);
+        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(t:ANY, "_"), expr, t:ANY, stmt.opPos);
         return { block: nextBlock };
     }
     else {
@@ -800,7 +800,7 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     }
 }
 
-function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr) returns CodeGenError|StmtEffect {
+function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr, err:Position pos) returns CodeGenError|StmtEffect {
     Binding binding = check lookupVarRefBinding(cx, varName, env);
     if binding.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`);
@@ -819,14 +819,14 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         unnarrowedReg = unnarrowedBinding.reg;
         assignments = [ unnarrowedReg.number ];
     }
-    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, unnarrowedReg, expr, unnarrowedReg.semType);
+    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, unnarrowedReg, expr, unnarrowedReg.semType, pos);
     return { block: nextBlock, assignments };
 }
 
-function codeGenAssign(CodeGenContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType) returns CodeGenError|bir:BasicBlock {
+function codeGenAssign(CodeGenContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType, err:Position pos) returns CodeGenError|bir:BasicBlock {
     s:Expr foldedExpr = check cx.foldExpr(env, expr, semType);
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, block, env, foldedExpr);
-    bir:AssignInsn insn = { result, operand };
+    bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
     return nextBlock;
 }
@@ -910,7 +910,7 @@ function codeGenCompoundAssignToVar(CodeGenContext cx,
     else {
         expr = { startPos, endPos, opPos: pos, bitwiseOp: op, left: lValue, right: rexpr };
     }
-    return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr);
+    return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr, pos);
 }
 
 function codeGenCompoundAssignToListMember(CodeGenContext cx,
@@ -1306,7 +1306,7 @@ function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env
     }
     else {
         bir:Register reg = cx.createRegister(multiSemType);
-        bir:AssignInsn insn = { operand: value, result: reg };
+        bir:AssignInsn insn = { operand: value, result: reg, pos: cvExpr.startPos };
         bb.insns.push(insn);
         return { result: reg, block: bb };
     }

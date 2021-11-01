@@ -422,6 +422,7 @@ public type CallInsn readonly & record {|
 # typeof(operand) <: typeof(result)
 public type AssignInsn readonly & record {|
     *InsnBase;
+    Position pos;
     INSN_ASSIGN name = INSN_ASSIGN;
     Register result;
     Operand operand;
