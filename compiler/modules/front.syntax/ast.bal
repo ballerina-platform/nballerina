@@ -73,8 +73,8 @@ public type CompoundAssignStmt record {|
     *PositionFields;
     LExpr lValue;
     Expr expr;
-    BinaryArithmeticOp|BinaryBitwiseOp op; 
-    Position pos;
+    BinaryArithmeticOp|BinaryBitwiseOp op;
+    Position opPos;
 |};
 
 // L-value expression
@@ -104,8 +104,10 @@ public type MatchStmt record {|
 |};
 
 public type MatchClause record {|
+    *PositionFields;
     MatchPattern[] patterns;
     Stmt[] block;
+    Position opPos;
 |};
 
 public type MatchPattern ConstPattern|WildcardMatchPattern;
@@ -166,6 +168,7 @@ public type BinaryExprBase record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     Expr left;
     Expr right;
 |};
@@ -183,21 +186,20 @@ public type BinaryRelationalExpr record {|
 public type BinaryArithmeticExpr record {|
     *BinaryExprBase;
     BinaryArithmeticOp arithmeticOp;
-    Position pos;
 |};
 
 public type BinaryBitwiseExpr record {|
     *BinaryExprBase;
-    BinaryBitwiseOp bitwiseOp; 
+    BinaryBitwiseOp bitwiseOp;
 |};
 
 public type UnaryExpr record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     UnaryExprOp op;
     Expr operand;
-    Position pos;
 |};
 
 public type SimpleConstNegateExpr record {|
@@ -322,6 +324,7 @@ public type FieldAccessLExpr record {|
 
 public type RangeExpr record {|
     *PositionFields;
+    Position opPos;
     Expr lower;
     Expr upper;
 |};

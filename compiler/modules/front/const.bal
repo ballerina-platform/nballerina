@@ -182,7 +182,7 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
                 return foldedBinaryConstExpr(result, t:INT, leftExpr, rightExpr);
             }
             else {
-                return cx.semanticErr(`evaluation of int constant ${expr.arithmeticOp} expression failed`, pos=expr.pos, cause=result);
+                return cx.semanticErr(`evaluation of int constant ${expr.arithmeticOp} expression failed`, pos=expr.opPos, cause=result);
             }
         }
         else if left is string && right is string && expr.arithmeticOp == "+" {
@@ -378,7 +378,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
                 SimpleConst operand = subExpr.value;
                 if operand is int {
                     if operand == int:MIN_VALUE {
-                        return cx.semanticErr(`${"-"} applied to minimum integer value`, pos=expr.pos);
+                        return cx.semanticErr(`${"-"} applied to minimum integer value`, pos=expr.opPos);
                     }
                     return foldedUnaryConstExpr(-operand, t:INT, subExpr);
                 }

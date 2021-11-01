@@ -66,6 +66,23 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     }
     check validateChildExpressions(stmt, tok);
     check validateChildTypeDesc(stmt, tok);
+    check validateStmtOpPos(stmt, tok);
+}
+
+function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
+    if stmt is MatchStmt {
+        foreach var clause in stmt.clauses {
+            check tok.moveToPos(clause.opPos, MODE_NORMAL);
+            Token? opToken = tok.curTok;
+            test:assertTrue(opToken == "=>");
+        }
+    }
+    else if stmt is ForeachStmt {
+        RangeExpr rangeExpr = stmt.range;
+        check tok.moveToPos(rangeExpr.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        test:assertTrue(opToken == "..<");
+    }
 }
 
 function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? {
@@ -78,6 +95,7 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
                         check validateExpressionPos(matchPattern.expr, tok, stmt.startPos, stmt.endPos);
                     }
                 }
+                check validateMatchClausePos(clause, tok, stmt.startPos, stmt.endPos);
             }
         }
     }
@@ -97,6 +115,18 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
     else if stmt is VarDeclStmt {
         check validateExpressionPos(stmt.initExpr, tok, stmt.startPos, stmt.endPos);
     }
+}
+
+function validateMatchClausePos(MatchClause clause, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(clause.startPos, MODE_NORMAL);
+    test:assertEquals(tok.currentStartPos(), clause.startPos, "moved to wrong position");
+    MatchClause newClause = check parseMatchClause(tok);
+    test:assertEquals(tok.previousEndPos(), clause.endPos);
+    test:assertEquals(newClause.toString(), clause.toString());
+    test:assertTrue(clause.startPos > parentStartPos && clause.endPos < parentEndPos, "match caluse outside of match stmt");
+    check tok.moveToPos(clause.endPos, MODE_NORMAL);
+    Token? endTok = tok.curTok;
+    test:assertEquals(endTok, "}", "invalid end pos");
 }
 
 type RecursiveBinaryExpr BinaryBitwiseExpr|BinaryEqualityExpr|BinaryArithmeticExpr;
@@ -266,6 +296,32 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     }
     else {
         panic err:impossible("failed to find a parser for expression");
+    }
+    check validateChildTypeDesc(expr, tok);
+    check validateExprOpPos(expr, tok);
+}
+
+type ExprOpPos BinaryExpr|UnaryExpr;
+
+function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
+    if expr is ExprOpPos {
+        check tok.moveToPos(expr.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        if expr is BinaryRelationalExpr {
+            test:assertTrue(opToken is BinaryRelationalOp);
+        }
+        else if expr is BinaryEqualityExpr {
+            test:assertTrue(opToken is BinaryEqualityOp);
+        }
+        else if expr is BinaryArithmeticExpr {
+            test:assertTrue(opToken is BinaryArithmeticOp);
+        }
+        else if expr is BinaryBitwiseExpr {
+            test:assertTrue(opToken is BinaryBitwiseOp);
+        }
+        else {
+            test:assertTrue(opToken is UnaryExprOp);
+        }
     }
 }
 
