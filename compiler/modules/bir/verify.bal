@@ -151,10 +151,10 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
     if nSuppliedArgs != nExpectedArgs {
         string name = vc.symbolToString(func.symbol);
         if nSuppliedArgs < nExpectedArgs {
-            return vc.err(`too few arguments for call to function ${name}`);
+            return vc.err(`too few arguments for call to function ${name} at ${insn.opPos}`);
         }
         else {
-            return vc.err(`too many arguments for call to function ${name}`);
+            return vc.err(`too many arguments for call to function ${name} at ${insn.opPos}`);
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
