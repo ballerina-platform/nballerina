@@ -320,8 +320,11 @@ class MappingPairing {
     }
 
     function index1(string name) returns int? {
-        int i1Prev = self.i1 - 1;
-        return i1Prev >= 0 && self.names1[i1Prev] == name ? i1Prev : ();
+        // int i1Prev = self.i1 - 1;
+        // return i1Prev >= 0 && self.names1[i1Prev] == name ? i1Prev : ();
+        // JBUG above doesn't work because `next` is called too soon
+        // On first iteration of foreach loop, `next` has been called twice
+        return self.names1.indexOf(name);
     }
 
     function reset() {
