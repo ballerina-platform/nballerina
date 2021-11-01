@@ -855,7 +855,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
         else {
             var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, lValue.index, indexType));
             { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
-            bir:ListSetInsn insn = { operands: [reg, index, operand], opPos: lValue.opPos };
+            bir:ListSetInsn insn = { operands: [reg, index, operand], pos: lValue.opPos };
             nextBlock.insns.push(insn);
             return { block: nextBlock };
         }
@@ -863,7 +863,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
     else {
         var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, startBlock, env, lValue, reg.semType);
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
-        bir:MappingSetInsn insn =  { operands: [ reg, index, operand], opPos: lValue.opPos };
+        bir:MappingSetInsn insn =  { operands: [ reg, index, operand], pos: lValue.opPos };
         nextBlock.insns.push(insn);
         return { block: nextBlock };
     }
@@ -883,11 +883,11 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
                     return cx.semanticErr("can only apply field access in lvalue to mapping", pos=pos);
                 }
                 else {
-                    return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, opPos, pos);
+                    return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, pos);
                 }
             }
             else if t:isSubtypeSimple(container.semType, t:MAPPING) {
-                return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, opPos, pos);
+                return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, pos);
             }
         }
         return cx.semanticErr("can only apply member access in lvalue to list or mapping", pos=pos);
@@ -927,10 +927,10 @@ function codeGenCompoundAssignToListMember(CodeGenContext cx,
         return cx.semanticErr("type of member access is never", pos);
     }
     bir:Register member = cx.createRegister(memberType);
-    bir:ListGetInsn getInsn = { result: member, operands: [list, index], opPos: pos };
+    bir:ListGetInsn getInsn = { result: member, operands: [list, index], pos: lValue.opPos };
     nextBlock.insns.push(getInsn);
     var { result, block } = check codeGenCompoundableBinaryExpr(cx, nextBlock, env, op, pos, member, rexpr);
-    bir:ListSetInsn setInsn = { operands: [list, index, result], position: lValue.pos };
+    bir:ListSetInsn setInsn = { operands: [list, index, result], pos: lValue.opPos };
     block.insns.push(setInsn);
     return { block };
 }
@@ -946,7 +946,7 @@ function codeGenCompoundAssignToMappingMember(CodeGenContext cx,
     var { result: k, block: block1 } = check codeGenLExprMappingKey(cx, bb, env, lValue, mapping.semType);
     var { result: member, block: block2 } = check codeGenMappingGet(cx, block1, mapping, "[", k, pos);
     var { result, block } = check codeGenCompoundableBinaryExpr(cx, block2, env, op, pos, member, rexpr);
-    bir:MappingSetInsn setInsn = { operands:[ mapping, k, result], position: lValue.pos };
+    bir:MappingSetInsn setInsn = { operands:[ mapping, k, result], pos: lValue.opPos };
     block.insns.push(setInsn);
     return { block };
 }
@@ -1119,7 +1119,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             }
         }
         // Member access E[i]
-        var { container, index, opPos } => {
+        var { container, index, opPos: pos } => {
             // Do constant folding here since these expressions are not allowed in const definitions
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
             if l is bir:Register {
@@ -1130,27 +1130,27 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                         return cx.semanticErr("type of member access is never");
                     }
                     bir:Register result = cx.createRegister(memberType);
-                    bir:ListGetInsn insn = { result, operands: [l, r], opPos };
+                    bir:ListGetInsn insn = { result, operands: [l, r], pos };
                     nextBlock.insns.push(insn);
                     return { result, block: nextBlock };
                 }
                 else if t:isSubtypeSimple(l.semType, t:MAPPING) {
                     var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
-                    return codeGenMappingGet(cx, nextBlock, l, "[", r, opPos);
+                    return codeGenMappingGet(cx, nextBlock, l, "[", r, pos);
                 }
                 else if t:isSubtypeSimple(l.semType, t:STRING) {
-                    return cx.unimplementedErr("not implemented: member access on string", pos=opPos);
+                    return cx.unimplementedErr("not implemented: member access on string", pos=pos);
                 }
             }
-            return cx.semanticErr("can only apply member access to list or mapping", pos=opPos);
+            return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
         }
         // Field access
-        var { container, fieldName, opPos } => {
+        var { container, fieldName, opPos: pos } => {
             var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
             if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
-                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, opPos);
+                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
             }
-            return cx.semanticErr("can only apply field access to mapping", pos=opPos);
+            return cx.semanticErr("can only apply field access to mapping", pos=pos);
         }
         // List construct
         // JBUG #33309 should be able to use just `var { members }`
@@ -1162,8 +1162,8 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenMappingConstructor(cx, bb, env, mappingConstructorExpr);  
         }
         // Error construct
-        var { message, opPos } => {
-            return codeGenErrorConstructor(cx, bb, env, message, opPos);
+        var { message, opPos: pos } => {
+            return codeGenErrorConstructor(cx, bb, env, message, pos);
         }
         var { digits } => {
             panic err:impossible(`failed to fold int literal ${digits}`);
@@ -1175,7 +1175,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
 type MappingAccessType "."|"[";
 
 // if accessType is ".", k must be a string
-function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, err:Position opPos) returns CodeGenError|RegExprEffect {
+function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, err:Position pos) returns CodeGenError|RegExprEffect {
     string? kVal = k is string ? k : ();
     boolean keyRequired = false;
     if kVal != () {
@@ -1183,7 +1183,7 @@ function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register
             keyRequired = true;
         }
         else if accessType == "." {
-            return cx.semanticErr(`field access to ${kVal} is invalid because field may not be present`, pos=opPos);
+            return cx.semanticErr(`field access to ${kVal} is invalid because field may not be present`, pos=pos);
         }
     }
     t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, kVal);
@@ -1191,7 +1191,7 @@ function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register
         memberType = t:union(memberType, t:NIL);
     }
     bir:Register result = cx.createRegister(memberType);
-    bir:MappingGetInsn insn = { result, operands: [mapping, k], opPos };
+    bir:MappingGetInsn insn = { result, operands: [mapping, k], pos };
     block.insns.push(insn);
     return { result, block };
 }
@@ -1256,7 +1256,7 @@ function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environmen
         return cx.semanticErr("list now allowed in this context");
     }
     bir:Register result = cx.createRegister(resultType);
-    bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, opPos: expr.opPos };
+    bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
 }
@@ -1284,16 +1284,16 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
         return cx.semanticErr("mapping not allowed in this context");
     }
     bir:Register result = cx.createRegister(resultType);
-    bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result, opPos: expr.opPos };
+    bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
 }
 
-function codeGenErrorConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr message, s:Position opPos) returns CodeGenError|ExprEffect {
+function codeGenErrorConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr message, s:Position pos) returns CodeGenError|ExprEffect {
     s:Expr folded = check cx.foldExpr(env, message, t:STRING);
     var { result: operand, block } = check codeGenExprForString(cx, bb, env, folded);
     bir:Register result = cx.createRegister(t:ERROR);
-    bir:ErrorConstructInsn insn = { result, operand, opPos };
+    bir:ErrorConstructInsn insn = { result, operand, pos };
     block.insns.push(insn);
     return { result, block };
 }
