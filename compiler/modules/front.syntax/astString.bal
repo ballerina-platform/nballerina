@@ -262,12 +262,12 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
                 typeDescToWords(w, rest);
                 w.push("...", CLING, ";");
             }
-            w.push(<Word>(firstInBlock ? LF : LF_OUTDENT), "|}");
+            w.push(<Word>LF_OUTDENT, "|}");
         }
         else {
             w.push("map", CLING, "<", CLING);
             if rest == () {
-                typeDescToWords(w, { startPos: td.startPos, endPos: td.endPos, builtinTypeName: "never" });
+                w.push("never");
             }
             else {
                 typeDescToWords(w, rest);
