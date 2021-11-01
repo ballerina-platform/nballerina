@@ -3,6 +3,8 @@ import wso2/nballerina.err;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
+import ballerina/io;
+
 const USER_MAIN_NAME = "main";
 
 public type ProgramModule readonly & record {|
@@ -35,9 +37,10 @@ type SubtypeDefn record {|
 const TYPE_KIND_ARRAY = "array";
 const TYPE_KIND_MAP = "map";
 const TYPE_KIND_RECORD = "record";
+const TYPE_KIND_PRECOMPUTED = "precomputed";
 
 type TypeKindArrayOrMap TYPE_KIND_ARRAY|TYPE_KIND_MAP;
-type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD;
+type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED;
 
 type InitModuleContext record {|
     llvm:Context llContext;
@@ -197,8 +200,11 @@ function getSubtypeTest(InitModuleContext cx, t:UniformTypeCode typeCode, t:SemT
         ptr = addArrayMapSubtypeTestDefn(cx, symbol, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, semType), TYPE_KIND_ARRAY);
     }
     else if typeCode == t:UT_MAPPING_RW {
-        t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType);
-        if mat.rest != t:NEVER {
+        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(cx.tc, semType);
+        if mat == () {
+            ptr = addPrecomputedSubtypeTestDefn(cx, symbol, cx.mappingTypeDefns, semType);
+        }
+        else if mat.rest != t:NEVER {
             ptr = addArrayMapSubtypeTestDefn(cx, symbol, <t:UniformTypeBitSet>mat.rest, TYPE_KIND_MAP);
         }
         else {
@@ -212,6 +218,15 @@ function getSubtypeTest(InitModuleContext cx, t:UniformTypeCode typeCode, t:SemT
     SubtypeDefn newDefn = { typeCode, semType, ptr };
     cx.subtypeDefns.add(newDefn);
     return ptr;
+}
+
+function addPrecomputedSubtypeTestDefn(InitModuleContext cx, string symbol, table<InherentTypeDefn> inherentTypeDefns, t:SemType ty) returns llvm:ConstPointerValue {
+    io:println("number of inherentTypeDefns =", inherentTypeDefns.length());
+    llvm:ConstValue[] tids = from var itd in inherentTypeDefns where t:isSubtype(cx.tc, itd.semType, ty) select llvm:constInt(LLVM_TID, itd.tid);
+    final llvm:StructType llStructTy = llvm:structType([cx.llTypes.subtypeTestFunctionPtr, "i32", llvm:arrayType(LLVM_TID, tids.length())]);
+    llvm:ConstValue initValue = cx.llContext.constStruct([getSubtypeTestFunc(cx, TYPE_KIND_PRECOMPUTED), llvm:constInt("i32", tids.length()),
+                                                          cx.llContext.constArray(LLVM_TID, tids)]);
+    return cx.llMod.addGlobal(llStructTy, symbol, initializer=initValue, isConstant=true, linkage="internal");
 }
 
 function addArrayMapSubtypeTestDefn(InitModuleContext cx, string symbol, t:UniformTypeBitSet bitSet, TypeKindArrayOrMap arrayOrMap) returns llvm:ConstPointerValue {

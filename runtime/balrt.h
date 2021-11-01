@@ -81,11 +81,24 @@ typedef struct {
 
 typedef uint32_t Tid;
 
+// All mapping and list descriptors start with this.
+typedef struct {
+    Tid tid;
+} StructureDesc, *StructureDescPtr;
+
+// All mapping and list values start with this
+typedef GC struct {
+    StructureDescPtr desc;
+} Structure, *StructurePtr;
+
+// This extends StructureDesc
+// i.e must start with tid
 typedef struct {
     Tid tid;
     uint32_t bitSet;
 } ListDesc, *ListDescPtr;
 
+// Extends Structure
 typedef GC struct List {
     ListDescPtr desc;
     // This isn't strictly portable because void* and TaggedPtr* might have different alignments/sizes
@@ -107,11 +120,14 @@ typedef struct {
     GC MapField *members;
 } MapFieldArray;
 
+// This extends StructureDesc
+// i.e must start with tid
 typedef struct {
     Tid tid;
     uint32_t bitSet;
 } MappingDesc, *MappingDescPtr;
 
+// This extends MappingDesc
 typedef struct {
     Tid tid;
     uint32_t bitSet; // zero
@@ -119,6 +135,7 @@ typedef struct {
     uint32_t fieldBitSets[];
 } *RecordDescPtr;
 
+// Extends Structure
 typedef GC struct Mapping {
     MappingDescPtr desc;
     union {
@@ -160,6 +177,12 @@ typedef struct {
     SubtypeTest typeTest;
     uint32_t bitSet;
 } *MapSubtypeTestPtr, *ArraySubtypeTestPtr;
+
+typedef struct {
+    SubtypeTest typeTest;
+    uint32_t nTids;
+    uint32_t tids[];
+} *PrecomputedSubtypeTestPtr;
 
 typedef struct {
    uint32_t all;
