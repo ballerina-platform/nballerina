@@ -5,8 +5,8 @@ import ballerina/io;
 
 import wso2/nballerina.err;
 
-@test:Config{
-    // temporarily disabled until `end position` error is fixed
+// JBUG the `enable: false` fails to work if there is a comment on the line before it
+@test:Config {
     enable: false
 }
 function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
