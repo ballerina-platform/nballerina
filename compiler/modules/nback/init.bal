@@ -32,11 +32,9 @@ type SubtypeDefn record {|
     llvm:ConstPointerValue ptr;
 |};
 
-const TYPE_KIND_ARRAY = 0;
-const TYPE_KIND_MAP = 1;
-const TYPE_KIND_RECORD = 2;
-const TYPE_KIND_COUNT = 3;
-final readonly & string[] typeKindNames = ["array", "map", "record"];
+const TYPE_KIND_ARRAY = "array";
+const TYPE_KIND_MAP = "map";
+const TYPE_KIND_RECORD = "record";
 
 type TypeKindArrayOrMap TYPE_KIND_ARRAY|TYPE_KIND_MAP;
 type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD;
@@ -51,7 +49,7 @@ type InitModuleContext record {|
     table<TypeTestDefn> key(semType) typeTestDefns = table [];
     table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
     InitTypes llTypes;
-    llvm:FunctionDecl?[TYPE_KIND_COUNT] typeTestFuncs = [];
+    map<llvm:FunctionDecl> typeTestFuncs = {};
 |};
 
 public function buildInitModule(t:Env env, ProgramModule[] modules, map<bir:FunctionSignature> publicFuncs) returns llvm:Module|BuildError {
@@ -239,7 +237,7 @@ function addRecordSubtypeTestDefn(InitModuleContext cx, string symbol, string[] 
 function getSubtypeTestFunc(InitModuleContext cx, TypeKind tk) returns llvm:FunctionDecl {
     llvm:FunctionDecl? existing = cx.typeTestFuncs[tk];
     if existing == () {
-        llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol(typeKindNames[tk] + "_subtype_contains"), cx.llTypes.subtypeTestFunction);
+        llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol(tk + "_subtype_contains"), cx.llTypes.subtypeTestFunction);
         cx.typeTestFuncs[tk] = decl;
         return decl;
     }
