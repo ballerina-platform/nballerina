@@ -146,7 +146,6 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     test:assertEquals(tok.currentStartPos(), expr.startPos, "moved to wrong position");
     Expr? newExpr = ();
     boolean usedSimpleConstExprParser = false;
-    int parser = -1;
     if expr is SimpleConstExpr {
         if expr is PrimaryExpr {
             // these expressions can be parsed by both parseSimpleConstExpr and parsePrimaryExpr
@@ -211,7 +210,6 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         }
     }
     else {
-        parser = 11;
         newExpr = check parseExpr(tok);
     }
     if newExpr is Expr {
@@ -254,7 +252,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             // pos depends on whether original was parsed as a stmt or expr but for testing we always treat it as expr
             newExpr.pos = (<MethodCallExpr|FunctionCallExpr>expr).pos;
         }
-        test:assertEquals(expr.toString(), newExpr.toString(), parser.toString());
+        test:assertEquals(expr.toString(), newExpr.toString());
         test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
         test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
         test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), "end position is invalid");
