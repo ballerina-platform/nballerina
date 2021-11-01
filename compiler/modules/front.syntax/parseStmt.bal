@@ -154,7 +154,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
     if cur == "(" {
-        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, pos, startPos);
+        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, startPos);
         return finishCallStmt(tok, expr, startPos);
     }
     else if cur == "." {
@@ -162,7 +162,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
         check tok.advance();
         string name = check tok.expectIdentifier();
         if tok.current() == "(" {
-            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, pos, startPos), startPos);
+            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, startPos), startPos);
         }
         else {
             endPos = tok.previousEndPos();

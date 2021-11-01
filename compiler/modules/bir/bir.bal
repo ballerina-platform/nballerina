@@ -410,8 +410,7 @@ public type EqualityInsn readonly & record {|
 public type CallInsn readonly & record {|
     *InsnBase;
     # Position in the source that resulted in the instruction
-    Position position;
-    Position opPos;
+    Position pos;
     INSN_CALL name = INSN_CALL;
     Register result;
     FunctionOperand func;
