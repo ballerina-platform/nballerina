@@ -218,18 +218,17 @@ function mappingInhabited(Context cx, TempMappingSubtype pos, Conjunction? negLi
         if !isEmpty(cx, diff(pos.rest, neg.rest)) {
             return true;
         }
-        foreach var {name, type1: posType, type2: negType} in pairing {
+        foreach var { name, index1, type1: posType, type2: negType } in pairing {
             SemType d = diff(posType, negType);
             if !isEmpty(cx, d) {
                 TempMappingSubtype mt;
-                int? i = pairing.index1(name);
-                if i == () {
+                if index1 == () {
                     // the posType came from the rest type
                     mt = insertField(pos, name, d);
                 }
                 else {
                     SemType[] posTypes = shallowCopyTypes(pos.types);
-                    posTypes[i] = d;
+                    posTypes[index1] = d;
                     mt = { types: posTypes, names: pos.names, rest: pos.rest };
                 }
                 if mappingInhabited(cx, mt, negList.next) {
@@ -284,6 +283,8 @@ type FieldPair record {|
     string name;
     SemType type1;
     SemType type2;
+    int? index1 = ();
+    int? index2 = ();
 |};
 
 public type MappingPairIterator object {
@@ -319,14 +320,6 @@ class MappingPairing {
         return self;
     }
 
-    function index1(string name) returns int? {
-        // int i1Prev = self.i1 - 1;
-        // return i1Prev >= 0 && self.names1[i1Prev] == name ? i1Prev : ();
-        // JBUG above doesn't work because `next` is called too soon
-        // On first iteration of foreach loop, `next` has been called twice
-        return self.names1.indexOf(name);
-    }
-
     function reset() {
         self.i1 = 0;
         self.i2 = 0;
@@ -341,7 +334,8 @@ class MappingPairing {
             p = {
                 name: self.curName2(),
                 type1: self.rest1,
-                type2: self.curType2()
+                type2: self.curType2(),
+                index2: self.i2
             };
             self.i2 += 1;
         }
@@ -349,7 +343,8 @@ class MappingPairing {
             p = {
                 name: self.curName1(),
                 type1: self.curType1(),
-                type2: self.rest2
+                type2: self.rest2,
+                index1: self.i1
             };
             self.i1 += 1;
         }
@@ -360,7 +355,8 @@ class MappingPairing {
                 p = {
                     name: name1,
                     type1: self.curType1(),
-                    type2: self.rest2
+                    type2: self.rest2,
+                    index1: self.i1
                 };
                 self.i1 += 1;
             }          
@@ -368,7 +364,8 @@ class MappingPairing {
                 p = {
                     name: name2,
                     type1: self.rest1,
-                    type2: self.curType2()
+                    type2: self.curType2(),
+                    index2: self.i2
                 };
                 self.i2 += 1;
             }
@@ -376,7 +373,9 @@ class MappingPairing {
                 p = {
                     name: name1,
                     type1: self.curType1(),
-                    type2: self.curType2()
+                    type2: self.curType2(),
+                    index1: self.i1,
+                    index2: self.i2
                 };
                 self.i1 += 1;
                 self.i2 += 1;
