@@ -223,11 +223,11 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         return expr;
     }
     else if t is CheckingKeyword {
-        Position opPos = tok.currentStartPos();
+        Position kwPos = tok.currentStartPos();
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
         Position endPos = tok.previousEndPos();
-        CheckingExpr expr = { startPos, endPos, opPos, checkingKeyword: t, operand };
+        CheckingExpr expr = { startPos, endPos, kwPos, checkingKeyword: t, operand };
         return expr;
     }
     else if t is "<" {

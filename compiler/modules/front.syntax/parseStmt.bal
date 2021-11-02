@@ -223,16 +223,16 @@ function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, 
         Position operandStartPos = tok.currentStartPos();
         check tok.advance();
         CallStmt operand = check finishCheckingCallStmt(tok, t, operandStartPos);
-        return { startPos, endPos: operand.endPos, opPos: startPos, checkingKeyword, operand };
+        return { startPos, endPos: operand.endPos, kwPos: startPos, checkingKeyword, operand };
     }
     else if t == "(" {
         MethodCallExpr operand = check parseMethodCallStmt(tok);
-        return { startPos, endPos: operand.endPos, opPos: startPos, checkingKeyword, operand };
+        return { startPos, endPos: operand.endPos, kwPos: startPos, checkingKeyword, operand };
     }
     Expr operand = check parsePrimaryExpr(tok);
     if operand is FunctionCallExpr|MethodCallExpr {
         Position endPos = check tok.expectEnd(";");
-        return { startPos, endPos, opPos: startPos, checkingKeyword, operand };
+        return { startPos, endPos, kwPos: startPos, checkingKeyword, operand };
     }
     return parseError(tok, "function call, method call or checking expression expected");
 }

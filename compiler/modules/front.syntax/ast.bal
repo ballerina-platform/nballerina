@@ -247,7 +247,7 @@ public type CheckingExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
-    Position opPos;
+    Position kwPos;
     CheckingKeyword checkingKeyword;
     Expr operand;
 |};
@@ -259,7 +259,7 @@ public type CheckingStmt record {|
     CheckingKeyword checkingKeyword;
     Position startPos;
     Position endPos;
-    Position opPos;
+    Position kwPos;
     CallStmt operand;
 |};
 
