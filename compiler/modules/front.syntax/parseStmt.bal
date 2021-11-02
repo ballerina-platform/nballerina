@@ -217,11 +217,11 @@ function finishCallStmt(Tokenizer tok, CallExpr expr, Position startPos) returns
     return stmt;
 }
 
-// This function is called with token after the checkingKeword as the current token
+// This function is called with the token after the checkingKeyword as the current token
 function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, Position kwPos) returns CallStmt|err:Syntax {
     Token? t = tok.current();
     if t is "check"|"checkpanic" {
-        // multiple checkingKewords in the statement call (ex: check check fn();)
+        // multiple checkingKeywords in the statement call (ex: check check fn();)
         Position innerKwPos = tok.currentStartPos();
         check tok.advance();
         CallStmt operand = check finishCheckingCallStmt(tok, t, innerKwPos);
