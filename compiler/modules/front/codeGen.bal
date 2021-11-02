@@ -965,17 +965,17 @@ function codeGenCompoundableBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, Env
 }
 
 function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CallStmt stmt) returns CodeGenError|StmtEffect {
-    // stmt is FunctionCallExpr, s:MethodCallExpr or s:CheckingStmt
     bir:Register reg;
     bir:BasicBlock nextBlock;
-    if stmt is s:FunctionCallExpr {
-        { result: reg, block: nextBlock } = check codeGenFunctionCall(cx, startBlock, env, stmt);
+    s:CallExpr expr = stmt.expr;
+    if expr is s:FunctionCallExpr {
+        { result: reg, block: nextBlock } = check codeGenFunctionCall(cx, startBlock, env, expr);
     }
-    else if stmt is s:MethodCallExpr {
-        { result: reg, block: nextBlock } = check codeGenMethodCall(cx, startBlock, env, stmt);
+    else if expr is s:MethodCallExpr {
+        { result: reg, block: nextBlock } = check codeGenMethodCall(cx, startBlock, env, expr);
     }
     else {
-        return check codeGenCheckingStmt(cx, startBlock, env, stmt.checkingKeyword, stmt.operand);
+        return check codeGenCheckingStmt(cx, startBlock, env, expr.checkingKeyword, expr.operand);
     }
     if reg.semType !== t:NIL {
         return cx.semanticErr("return type of function or method in call statement must be nil");

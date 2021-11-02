@@ -22,9 +22,6 @@ function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns
 
 function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(stmt.startPos, MODE_NORMAL);
-    if stmt is MethodCallExpr|FunctionCallExpr {
-        return check validateExpressionPos(stmt, tok, parentStartPos, parentEndPos);
-    }
     test:assertEquals(tok.currentStartPos(), stmt.startPos, "moved to wrong position");
     Stmt newStmt = check parseStmt(tok);
     test:assertEquals(stmt.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
@@ -124,6 +121,9 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
     }
     else if stmt is VarDeclStmt {
         check validateExpressionPos(stmt.initExpr, tok, stmt.startPos, stmt.endPos);
+    }
+    else if stmt is CallStmt {
+        check validateExpressionPos(stmt.expr, tok, stmt.startPos, stmt.endPos);
     }
 }
 

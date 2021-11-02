@@ -208,14 +208,9 @@ function stmtToWords(Word[] w, Stmt stmt) {
     else if stmt is BreakContinueStmt {
         w.push(stmt.breakContinue, ";");
     }
-    else if stmt is CheckingStmt {
-        w.push(stmt.checkingKeyword);
-        exprToWords(w, stmt.operand);
-        w.push(";");
-    }
     else {
-        // This deals with function call and method call
-        exprToWords(w, stmt);
+        CallExpr expr = stmt.expr;
+        exprToWords(w, expr);
         w.push(";");
     }
 }
@@ -389,7 +384,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push("(");
         }
         w.push(expr.checkingKeyword);
-        exprToWords(w, expr.operand, true);
+        exprToWords(w, expr.operand);
         if wrap {
             w.push(")");
         }
@@ -500,7 +495,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         }
     }
     else if expr is MethodCallExpr {
-         if wrap {
+        if wrap {
             w.push("(");
         }
         exprToWords(w, expr.target, true);

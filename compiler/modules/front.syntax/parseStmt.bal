@@ -134,8 +134,8 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
         MemberAccessExpr memberAccess = { startPos, endPos: memberAccessEndPos, container: varRef, index, pos: bracketPos };
         Expr expr = check finishPrimaryExpr(tok, memberAccess, startPos);
         if expr is MethodCallExpr {
-            check tok.expect(";");
-            return expr;
+            endPos = check tok.expectEnd(";");
+            return { startPos, endPos, expr };
         }
         return parseError(tok, "member access expr not allowed as a statement"); 
     }
@@ -188,53 +188,62 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
     return parseError(tok, "invalid statement");
 }
 
-function parseMethodCallStmt(Tokenizer tok) returns MethodCallExpr|err:Syntax {
+function parseMethodCallStmt(Tokenizer tok) returns CallStmt|err:Syntax {
     Position startPos = tok.currentStartPos();
     Expr expr = check startPrimaryExpr(tok);
     Token? cur = tok.current();
     if cur == "." || cur == "[" {
         expr = check finishPrimaryExpr(tok, expr, startPos);
         if expr is MethodCallExpr {
-            check tok.expect(";");
-            return expr;
+            Position endPos = check tok.expectEnd(";");
+            return { startPos, endPos, expr };
         }
     }
     return parseError(tok, "expression not allowed as a statement");
 }
 
-function finishCallStmt(Tokenizer tok, CallStmt expr, Position startPos) returns Stmt|err:Syntax {
+function finishCallStmt(Tokenizer tok, CallExpr expr, Position startPos) returns Stmt|err:Syntax {
     Expr primary = check finishPrimaryExpr(tok, expr, startPos);
+    Position endPos = check tok.expectEnd(";");
     CallStmt stmt;
     if primary === expr {
-        stmt = expr;
+        stmt = { startPos, endPos, expr };
     }
     else if primary is MethodCallExpr {
-        stmt = primary;
+        stmt = { startPos, endPos, expr: primary };
     }
     else {
         return parseError(tok, "member access expr not allowed as a statement");
     }
-    check tok.expect(";");
     return stmt;
 }
 
 function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, Position startPos) returns CallStmt|err:Syntax {
     Token? t = tok.current();
     if t is "check"|"checkpanic" {
+        Position checkStartPos = tok.currentStartPos();
         check tok.advance();
-        CallStmt operand = check finishCheckingCallStmt(tok, t, startPos);
-        return { startPos, endPos: operand.endPos, checkingKeyword, operand };
+        CallStmt operandStmt = check finishCheckingCallStmt(tok, t, checkStartPos);
+        callStmtAddChecking(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
+        return operandStmt;
     }
     else if t == "(" {
-        MethodCallExpr operand = check parseMethodCallStmt(tok);
-        return { startPos, endPos: operand.endPos, checkingKeyword, operand };
+        CallStmt operandStmt = check parseMethodCallStmt(tok);
+        callStmtAddChecking(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
+        return operandStmt;
     }
     Expr operand = check parsePrimaryExpr(tok);
     if operand is FunctionCallExpr|MethodCallExpr {
+        CheckingCallExpr expr = { startPos, endPos: operand.endPos, checkingKeyword, operand};
         Position endPos = check tok.expectEnd(";");
-        return { startPos, endPos, checkingKeyword, operand };
+        return { startPos, endPos, expr };
     }
     return parseError(tok, "function call, method call or checking expression expected");
+}
+
+function callStmtAddChecking(Position startPos, Position endPos, CallStmt stmt, CheckingKeyword checkingKeyword) {
+    stmt.expr = { startPos, endPos: stmt.expr.endPos, checkingKeyword, operand: stmt.expr };
+    stmt.startPos = startPos;
 }
 
 function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue, Position startPos) returns AssignStmt|err:Syntax {

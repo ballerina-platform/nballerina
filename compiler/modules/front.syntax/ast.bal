@@ -55,13 +55,18 @@ public type ConstDefn record {|
 |};
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakContinueStmt|CompoundAssignStmt|PanicStmt;
-public type CallStmt FunctionCallExpr|MethodCallExpr|CheckingStmt;
-public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|VarRefExpr|CompoundExpr;
+public type CallExpr FunctionCallExpr|MethodCallExpr|CheckingCallExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
 public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
 public const WILDCARD = ();
+
+public type CallStmt record {|
+    *PositionFields;
+    CallExpr expr;
+|};
 
 public type AssignStmt record {|
     *PositionFields;
@@ -254,14 +259,14 @@ public type CheckingExpr record {|
     Expr operand;
 |};
 
-public type CheckingStmt record {|
+public type CheckingCallExpr record {|
     // JBUG #32617 can't include CheckingExpr
     // *CheckingExpr;
     // *PositionFields
-    CheckingKeyword checkingKeyword;
     Position startPos;
     Position endPos;
-    CallStmt operand;
+    CheckingKeyword checkingKeyword;
+    CallExpr operand;
 |};
 
 public type ListConstructorExpr record {|
