@@ -7,7 +7,7 @@ import wso2/nballerina.err;
 
 // JBUG the `enable: false` fails to work if there is a comment on the line before it
 @test:Config {
-    enable: false
+    enable: true
 }
 function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
     foreach var dir in check file:readDir("./testSuite") {
