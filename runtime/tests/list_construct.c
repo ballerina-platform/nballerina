@@ -1,7 +1,7 @@
 #include "string_utils.h"
 
-ListDesc DESC_INT = { 0, 129 };
-ListDesc DESC_STRING = { 1, 1025 };
+ListDesc DESC_INT = { 0, _bal_list_get, _bal_list_set, 129 };
+ListDesc DESC_STRING = { 1, _bal_list_get, _bal_list_set, 1025 };
 
 HASH_DEFINE_KEY;
 

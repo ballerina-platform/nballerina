@@ -39,6 +39,13 @@ static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
     return false;
 }
 
+// must be called with index less than lp->gArray.length
+TaggedPtr _bal_list_get(TaggedPtr p, int64_t index) {
+    ListPtr lp = taggedToPtr(p);
+    GC TaggedPtrArray *ap = &(lp->tpArray);
+    return ap->members[index];
+}
+
 PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
     ListDescPtr ldp = lp->desc;

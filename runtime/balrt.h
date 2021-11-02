@@ -95,6 +95,8 @@ typedef GC struct {
 // i.e must start with tid
 typedef struct {
     Tid tid;
+    TaggedPtr (*get)(TaggedPtr lp, int64_t index);
+    PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
     uint32_t bitSet;
 } ListDesc, *ListDescPtr;
 
@@ -262,6 +264,7 @@ extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoin
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
 extern ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity);
+extern TaggedPtr _bal_list_get(TaggedPtr p, int64_t index);
 extern PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
 extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 
