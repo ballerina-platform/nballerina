@@ -86,6 +86,7 @@ function buildInitTypes(llvm:Context llContext, llvm:Module llMod, t:Env env, Pr
         llTypes
     };
     buildInitTypesForUsage(cx, modules, USED_INHERENT_TYPE);
+    buildInitTypesForUsage(cx, modules, USED_EXACTIFY);
     buildInitTypesForUsage(cx, modules, USED_TYPE_TEST);
 }
 
@@ -99,6 +100,9 @@ function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, T
                 string sym = mangleTypeSymbol(id, howUsed, i);
                 if howUsed == USED_INHERENT_TYPE {
                     addInherentTypeDefn(cx, sym, ty);
+                }
+                else if howUsed == USED_EXACTIFY {
+                    addExactifyTypeDefn(cx, sym, ty);
                 }
                 else {
                     addTypeTestTypeDefn(cx, sym, ty);
@@ -162,6 +166,25 @@ function addRecordInherentTypeDefn(InitModuleContext cx, string symbol, int tid,
     return [llType, ptr];  
 }
 
+function addExactifyTypeDefn(InitModuleContext cx, string symbol, t:SemType semType) {
+    table<InherentTypeDefn> key(semType) defns;
+    boolean isList;
+    if t:isSubtypeSimple(semType, t:LIST) {
+        isList = true;
+        defns = cx.listTypeDefns;
+    }
+    else if t:isSubtypeSimple(semType, t:MAPPING) {
+        isList = false;
+        defns = cx.mappingTypeDefns;
+    }
+    else {
+        panic err:impossible("unexpected SemType while building exact type definition in init module");
+    }
+    InherentTypeDefn? existingDefn = defns[semType];
+    llvm:ConstValue initValue = llvm:constInt(LLVM_TID, existingDefn == () ? -1 : existingDefn.tid);
+    _ = cx.llMod.addGlobal(LLVM_TID, symbol, initializer=initValue, isConstant=true);
+}
+
 function addTypeTestTypeDefn(InitModuleContext cx, string symbol, t:SemType semType) {
     TypeDefn? existingDefn = cx.typeTestDefns[semType];
     if existingDefn != () {
@@ -183,7 +206,7 @@ function addTypeTestTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
     llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt("i32", all), llvm:constInt("i32", someBits), subtypeArray]);
     llvm:StructType llType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(cx.llTypes.subtypeTestVTablePtr, llSubtypes.length())]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true);
-    cx.typeTestDefns.add( { llType, ptr, semType });
+    cx.typeTestDefns.add({ llType, ptr, semType });
 }
 
 function getSubtypeTest(InitModuleContext cx, t:UniformTypeCode typeCode, t:SemType semType) returns llvm:ConstPointerValue {

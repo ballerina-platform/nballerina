@@ -97,6 +97,7 @@ type UsedSemType record {|
     readonly int index;
     llvm:ConstPointerValue? inherentType = ();
     llvm:ConstPointerValue? typeTest = ();
+    llvm:ConstPointerValue? exactify = ();
 |};
 
 type ModuleDI record {|
@@ -291,6 +292,21 @@ class Scaffold {
             string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
             llvm:ConstPointerValue v = m.llMod.addGlobal(llInherentType, symbol, isConstant = true);
             used.inherentType = v;
+            return v;
+        }
+        else {
+            return value;
+        }
+    }
+
+    function getExactify(t:SemType ty) returns llvm:ConstPointerValue {
+        UsedSemType used = self.getUsedSemType(ty);
+        llvm:ConstPointerValue? value = used.exactify;
+        if value == () {
+            Module m = self.mod;
+            string symbol = mangleTypeSymbol(m.modId, USED_EXACTIFY, used.index);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(LLVM_TID, symbol, isConstant = true);
+            used.exactify = v;
             return v;
         }
         else {

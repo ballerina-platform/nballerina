@@ -4,7 +4,8 @@ import wso2/nballerina.bir;
 import wso2/nballerina.print.llvm;
 
 const USED_INHERENT_TYPE = 0x1;
-const USED_TYPE_TEST = 0x2;
+const USED_EXACTIFY = 0x2;
+const USED_TYPE_TEST = 0x4;
 
 const LLVM_BITSET = "i32";
 const LLVM_TID = "i32";
@@ -20,7 +21,7 @@ final llvm:Type llListType = llvm:structType([heapPointerType(llInherentType),  
                                               LLVM_INT,                                              // capacity
                                               heapPointerType(llvm:arrayType(LLVM_TAGGED_PTR, 0))]); // *members
 
-type TypeHowUsed USED_INHERENT_TYPE|USED_TYPE_TEST;
+type TypeHowUsed USED_INHERENT_TYPE|USED_EXACTIFY|USED_TYPE_TEST;
 
 public type TypeUsage readonly & record {|
     t:SemType[] types;
@@ -51,7 +52,16 @@ function createInitTypes(llvm:Context cx) returns InitTypes {
 }
 
 function mangleTypeSymbol(bir:ModuleId modId, TypeHowUsed howUsed, int index) returns string {
-    string result = howUsed == USED_INHERENT_TYPE ? "_Bi" : "_Bt";
+    string result = "_B";
+    if howUsed == USED_INHERENT_TYPE {
+        result += "i";
+    }
+    else if howUsed == USED_EXACTIFY {
+        result += "e";
+    }
+    else {
+        result += "t";
+    }    
     result += mangleOrg(modId.org);
     result += mangleModuleNames(modId.names);
     result += index.toString();

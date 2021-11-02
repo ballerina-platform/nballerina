@@ -3,7 +3,9 @@
 @_Bi04root0 = external constant {i32, i32}
 @_Bi04root1 = external constant {i32, i32}
 @_Bt04root2 = external constant {i32, i32, [0 x i8*]}
+@_Be04root0 = external constant i32
 @_Bt04root3 = external constant {i32, i32, [0 x i8*]}
+@_Be04root1 = external constant i32
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
@@ -13,8 +15,7 @@ declare i8 addrspace(1)* @_bal_mapping_construct({i32, i32}*, i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare i1 @_bal_type_contains({i32, i32, [0 x i8*]}*, i8 addrspace(1)*) readonly
-declare i8 addrspace(1)* @_bal_list_exactify(i8 addrspace(1)*, {i32, i32}*) readonly
-declare i8 addrspace(1)* @_bal_mapping_exactify(i8 addrspace(1)*, {i32, i32}*) readonly
+declare i8 addrspace(1)* @_bal_structure_exactify(i8 addrspace(1)*, i32*) readonly
 define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
@@ -164,7 +165,7 @@ define internal void @_B_p(i8 addrspace(1)* %0) !dbg !7 {
   br i1 %49, label %50, label %53
 50:
   %51 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %52 = call i8 addrspace(1)* @_bal_list_exactify(i8 addrspace(1)* %51, {i32, i32}* @_Bi04root0)
+  %52 = call i8 addrspace(1)* @_bal_structure_exactify(i8 addrspace(1)* %51, i32* @_Be04root0)
   store i8 addrspace(1)* %52, i8 addrspace(1)** %v.4
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475965445206625)), !dbg !22
   store i8 addrspace(1)* null, i8 addrspace(1)** %9, !dbg !22
@@ -177,7 +178,7 @@ define internal void @_B_p(i8 addrspace(1)* %0) !dbg !7 {
   br i1 %56, label %57, label %60
 57:
   %58 = load i8 addrspace(1)*, i8 addrspace(1)** %v
-  %59 = call i8 addrspace(1)* @_bal_mapping_exactify(i8 addrspace(1)* %58, {i32, i32}* @_Bi04root1)
+  %59 = call i8 addrspace(1)* @_bal_structure_exactify(i8 addrspace(1)* %58, i32* @_Be04root1)
   store i8 addrspace(1)* %59, i8 addrspace(1)** %v.5
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621489005)), !dbg !23
   store i8 addrspace(1)* null, i8 addrspace(1)** %11, !dbg !23

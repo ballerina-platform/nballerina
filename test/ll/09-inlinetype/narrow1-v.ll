@@ -1,14 +1,15 @@
 @_bal_stack_guard = external global i8*
 @_Bi04root0 = external constant {i32, i32}
 @_Bt04root1 = external constant {i32, i32, [0 x i8*]}
-@_Bi04root2 = external constant {i32, i32}
+@_Be04root2 = external constant i32
 @.str2 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"all ints\00\00\00\00"}, align 8
+@_Be04root0 = external constant i32
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}*, i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i1 @_bal_type_contains({i32, i32, [0 x i8*]}*, i8 addrspace(1)*) readonly
-declare i8 addrspace(1)* @_bal_list_exactify(i8 addrspace(1)*, {i32, i32}*) readonly
+declare i8 addrspace(1)* @_bal_structure_exactify(i8 addrspace(1)*, i32*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
   %arr = alloca i8 addrspace(1)*
@@ -49,14 +50,14 @@ define void @_B04rootmain() !dbg !5 {
   br i1 %23, label %24, label %27
 24:
   %25 = load i8 addrspace(1)*, i8 addrspace(1)** %arr
-  %26 = call i8 addrspace(1)* @_bal_list_exactify(i8 addrspace(1)* %25, {i32, i32}* @_Bi04root2)
+  %26 = call i8 addrspace(1)* @_bal_structure_exactify(i8 addrspace(1)* %25, i32* @_Be04root2)
   store i8 addrspace(1)* %26, i8 addrspace(1)** %arr.1
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str2 to i8*) to i8 addrspace(1)*), i64 720575940379279360)), !dbg !8
   store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !8
   br label %36
 27:
   %28 = load i8 addrspace(1)*, i8 addrspace(1)** %arr
-  %29 = call i8 addrspace(1)* @_bal_list_exactify(i8 addrspace(1)* %28, {i32, i32}* @_Bi04root0)
+  %29 = call i8 addrspace(1)* @_bal_structure_exactify(i8 addrspace(1)* %28, i32* @_Be04root0)
   store i8 addrspace(1)* %29, i8 addrspace(1)** %arr.2
   %30 = load i8 addrspace(1)*, i8 addrspace(1)** %arr.2
   %31 = call i1 @_bal_type_contains({i32, i32, [0 x i8*]}* @_Bt04root1, i8 addrspace(1)* %30)

@@ -1,6 +1,8 @@
 %TypeTestVTable = type {i1(%TypeTestVTable*, i8 addrspace(1)*)*}
 @_Bi04root0 = constant {i32, i32} {i32 0, i32 8386559}
 @_Bi04root1 = constant {i32, i32} {i32 0, i32 8386559}
+@_Be04root0 = constant i32 0
+@_Be04root1 = constant i32 0
 @.subtype0 = internal constant {i1(%TypeTestVTable*, i8 addrspace(1)*)*, i32} {i1(%TypeTestVTable*, i8 addrspace(1)*)* @_bal_array_subtype_contains, i32 8386559}
 @_Bt04root2 = constant {i32, i32, [1 x %TypeTestVTable*]} {i32 0, i32 262144, [1 x %TypeTestVTable*] [%TypeTestVTable* bitcast({i1(%TypeTestVTable*, i8 addrspace(1)*)*, i32}* @.subtype0 to %TypeTestVTable*)]}
 @.subtype1 = internal constant {i1(%TypeTestVTable*, i8 addrspace(1)*)*, i32} {i1(%TypeTestVTable*, i8 addrspace(1)*)* @_bal_map_subtype_contains, i32 8386559}

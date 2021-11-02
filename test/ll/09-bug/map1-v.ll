@@ -1,6 +1,7 @@
 @_bal_stack_guard = external global i8*
 @_Bi04root0 = external constant {i32, i32}
 @_Bt04root1 = external constant {i32, i32, [0 x i8*]}
+@_Be04root0 = external constant i32
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_mapping_construct({i32, i32}*, i64)
@@ -8,7 +9,7 @@ declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 ad
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i1 @_bal_type_contains({i32, i32, [0 x i8*]}*, i8 addrspace(1)*) readonly
-declare i8 addrspace(1)* @_bal_mapping_exactify(i8 addrspace(1)*, {i32, i32}*) readonly
+declare i8 addrspace(1)* @_bal_structure_exactify(i8 addrspace(1)*, i32*) readonly
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
@@ -41,7 +42,7 @@ define void @_B04rootmain() !dbg !5 {
   br i1 %16, label %17, label %24
 17:
   %18 = load i8 addrspace(1)*, i8 addrspace(1)** %m2
-  %19 = call i8 addrspace(1)* @_bal_mapping_exactify(i8 addrspace(1)* %18, {i32, i32}* @_Bi04root0)
+  %19 = call i8 addrspace(1)* @_bal_structure_exactify(i8 addrspace(1)* %18, i32* @_Be04root0)
   store i8 addrspace(1)* %19, i8 addrspace(1)** %m2.1
   %20 = load i8 addrspace(1)*, i8 addrspace(1)** %m2.1
   %21 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %20, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112))
