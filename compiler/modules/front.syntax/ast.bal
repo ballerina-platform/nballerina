@@ -221,7 +221,7 @@ public type ErrorConstructorExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
-    Position opPos;
+    Position kwPos;
     Expr message;
 |};
 

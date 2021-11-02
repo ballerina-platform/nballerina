@@ -1162,7 +1162,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenMappingConstructor(cx, bb, env, mappingConstructorExpr);  
         }
         // Error construct
-        var { message, opPos: pos } => {
+        var { message, kwPos: pos } => {
             return codeGenErrorConstructor(cx, bb, env, message, pos);
         }
         var { digits } => {

@@ -312,8 +312,8 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     check validateExprOpPos(expr, tok);
 }
 
-type ExprOpPos BinaryExpr|UnaryExpr|ErrorConstructorExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr|FunctionCallExpr|MethodCallExpr;
-type ExprKwPos CheckingExpr;
+type ExprOpPos BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr;
+type ExprKwPos CheckingExpr|ErrorConstructorExpr;
 
 function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
     if expr is ExprOpPos|ExprKwPos {

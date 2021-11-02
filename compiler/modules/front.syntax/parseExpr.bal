@@ -313,12 +313,12 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         return expr;
     }
     else if t is "error" {
-        Position opPos = tok.currentStartPos();
+        Position kwPos = tok.currentStartPos();
         check tok.advance();
         check tok.expect("(");
         Expr message  = check parseExpr(tok);
         endPos = check tok.expectEnd(")");
-        return { startPos, endPos, message, opPos };
+        return { startPos, endPos, message, kwPos };
     }
     else {
         return parseError(tok);
