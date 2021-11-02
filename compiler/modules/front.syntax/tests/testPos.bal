@@ -265,7 +265,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         test:assertEquals(expr.toString(), newExpr.toString());
         test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
         test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
-        test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), "end position is invalid");
+        test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), endPosErrorMessage(tok, expr.endPos));
         [err:Position, err:Position][] childNodePos = [];
         if expr is BinaryExpr {
             check validateExpressionPos(expr.left, tok, expr.startPos, expr.endPos);
@@ -340,7 +340,7 @@ function validateFieldPos(Field f, Tokenizer tok, Position parentStartPos, Posit
     test:assertEquals(tok.currentStartPos(), f.startPos, "moved to wrong position");
     Field newField = check parseField(tok);
     test:assertEquals(tok.previousEndPos(), f.endPos);
-    test:assertFalse(checkPosFragCode(tok.file, f.endPos, FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON), "invalid endPos");
+    test:assertFalse(checkPosFragCode(tok.file, f.endPos, FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON), endPosErrorMessage(tok, f.endPos));
     test:assertTrue(f.startPos > parentStartPos && f.endPos < parentEndPos, "field outside of MappingConstructorExpr");
 }
 
@@ -394,7 +394,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     test:assertEquals(td.toString(), newTd.toString());
     test:assertTrue(td.startPos >= parentStartPos && td.endPos <= parentEndPos, "child node outside of parent");
     test:assertFalse(testPositionIsWhiteSpace(tok.file, td.startPos), "start position is a white space");
-    test:assertTrue(testValidTypeDescEnd(tok.file, td.endPos, td), "end position is invalid");
+    test:assertTrue(testValidTypeDescEnd(tok.file, td.endPos, td), endPosErrorMessage(tok, td.endPos));
     [err:Position, err:Position][] childNodePos = [];
     if td is ListTypeDesc {
         foreach var member in td.members {
@@ -446,7 +446,7 @@ function validateFieldDescPos(FieldDesc fd, Tokenizer tok, Position parentStartP
     check tok.moveToPos(fd.startPos, MODE_NORMAL);
     test:assertTrue(tok.current() is [IDENTIFIER, string], "invalid startPos");
     check tok.moveToPos(fd.endPos, MODE_NORMAL);
-    test:assertTrue(tok.current() == ";", "invalid endPos");
+    test:assertTrue(tok.current() == ";", endPosErrorMessage(tok, fd.endPos));
 }
 
 function validateTypeDescOpPos(TypeDesc td, Tokenizer tok) returns err:Syntax? {
@@ -472,6 +472,20 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
     FragCode[] base = [FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON];
     if td is ListTypeDesc || (td is FunctionTypeDesc && td.ret is ListTypeDesc) {
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
+    }
+    else if td is BinaryTypeDesc {
+        // check if any type in the union can be a list-type-desc
+        TypeDesc left = td.left;
+        while left is BinaryTypeDesc {
+            left = left.left;
+            if left is ListTypeDesc || (left is FunctionTypeDesc && left.ret is ListTypeDesc) {
+                return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
+            }
+        }
+        if left is ListTypeDesc || (left is FunctionTypeDesc && left.ret is ListTypeDesc) {
+            return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
+        }
+        return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
     }
     return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
 }
@@ -536,3 +550,12 @@ function sourceFileFragIndex(SourceFile file, Position pos) returns [int, int] {
     ScannedLine line = file.scannedLine(lineNumber);
     return [lineNumber, scanLineFragIndex(line, codePointIndex)[0]];
 }
+
+function endPosErrorMessage(Tokenizer tok, Position endPos) returns string {
+    string[] body = [string `invalid end token in file ${tok.file.filename()} at ${unpackPosition(endPos).toString()}`];
+    checkpanic tok.moveToPos(endPos, MODE_NORMAL);
+    Token? endTok = tok.current();
+    body.push(string `End token: ${endTok.toString()}`);
+    return "\n".'join(...body);
+}
+
