@@ -358,7 +358,7 @@ function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Pos
     check tok.advance();
     Expr[] args = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, opPos, target, methodName, args, pos: opPos };
+    return { startPos, endPos, opPos, target, methodName, args };
 }
 
 function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position startPos) returns FunctionCallExpr|err:Syntax {
@@ -366,7 +366,7 @@ function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, 
     check tok.advance();
     Expr[] args = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, opPos, funcName, args, prefix, pos: opPos };
+    return { startPos, endPos, opPos, funcName, args, prefix };
 }
 
 function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syntax {
