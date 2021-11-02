@@ -838,22 +838,6 @@ public function listMemberType(Context cx, SemType t, int? key = ()) returns Sem
     }
 }
 
-// This is a temporary API that identifies when a SemType corresponds to a type T[]
-// where T is a union of complete basic types.
-public function simpleMapMemberType(Context cx, SemType t) returns UniformTypeBitSet? {
-    return mappingAtomicSimpleArrayMemberType(mappingAtomicTypeRw(cx, t));
-}
-
-public function mappingAtomicSimpleArrayMemberType(MappingAtomicType? atomic) returns UniformTypeBitSet? {
-    if atomic != () && atomic.names.length() == 0 {
-        SemType memberType = atomic.rest;
-        if memberType is UniformTypeBitSet {
-            return memberType;
-        }
-    }
-    return ();   
-}
-
 final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: TOP };
 final MappingAtomicType MAPPING_ATOMIC_READONLY = { names: [], types: [], rest: READONLY };
 
