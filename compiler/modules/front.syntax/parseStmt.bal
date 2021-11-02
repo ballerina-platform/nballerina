@@ -218,27 +218,24 @@ function finishCallStmt(Tokenizer tok, CallExpr expr, Position startPos) returns
 }
 
 // This function is called with token after the checkingKeword as the current token
-// startPos is the position of the checkingKeyword
-function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, Position startPos) returns CallStmt|err:Syntax {
+function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, Position kwPos) returns CallStmt|err:Syntax {
     Token? t = tok.current();
     if t is "check"|"checkpanic" {
-        // multiple checkingKewords call (ex: check check fn();)
-        Position checkStartPos = tok.currentStartPos(); // startPos for the inner checking call stmt
+        // multiple checkingKewords in the statement call (ex: check check fn();)
+        Position innerKwPos = tok.currentStartPos();
         check tok.advance();
-        CallStmt operandStmt = check finishCheckingCallStmt(tok, t, checkStartPos);
-        callStmtAddChecking(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
-        return operandStmt;
+        CallStmt operand = check finishCheckingCallStmt(tok, t, innerKwPos);
+        return { startPos: kwPos, endPos: operand.endPos, kwPos, checkingKeyword, operand };
     }
     else if t == "(" {
-        CallStmt operandStmt = check parseMethodCallStmt(tok);
-        callStmtAddChecking(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
-        return operandStmt;
+        MethodCallExpr operand = check parseMethodCallStmt(tok);
+        return { startPos: kwPos, endPos: operand.endPos, kwPos, checkingKeyword, operand };
     }
     Expr operand = check parsePrimaryExpr(tok);
     if operand is FunctionCallExpr|MethodCallExpr {
         CheckingCallExpr expr = { startPos, endPos: operand.endPos, checkingKeyword, operand};
         Position endPos = check tok.expectEnd(";");
-        return { startPos, endPos, expr };
+        return { startPos: kwPos, endPos, kwPos, checkingKeyword, operand };
     }
     return parseError(tok, "function call, method call or checking expression expected");
 }
