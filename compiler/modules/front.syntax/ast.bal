@@ -234,8 +234,6 @@ public type FunctionCallExpr record {|
     string? prefix = ();
     string funcName;
     Expr[] args;
-    // We can get public type/defn mismatch errors here
-    Position pos;
 |};
 
 public type MethodCallExpr record {|
@@ -247,7 +245,6 @@ public type MethodCallExpr record {|
     string methodName;
     Expr target;
     Expr[] args;
-    Position pos;
 |};
 
 public type CheckingKeyword "check"|"checkpanic";

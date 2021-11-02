@@ -263,10 +263,6 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             newExpr = matchingChild;
         }
         test:assertEquals(expr.endPos, actualEnd);
-        if newExpr is MethodCallExpr|FunctionCallExpr {
-            // pos depends on whether original was parsed as a stmt or expr but for testing we always treat it as expr
-            newExpr.pos = (<MethodCallExpr|FunctionCallExpr>expr).pos;
-        }
         test:assertEquals(expr.toString(), newExpr.toString());
         test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
         test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
