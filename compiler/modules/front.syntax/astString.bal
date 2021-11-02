@@ -207,13 +207,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
     }
     else {
         CallExpr expr = stmt.expr;
-        if expr is CheckingCallExpr {
-            w.push(expr.checkingKeyword);
-            exprToWords(w, expr.operand);
-        }
-        else {
-            exprToWords(w, expr);
-        }
+        exprToWords(w, expr);
         w.push(";");
     }
 }
@@ -381,7 +375,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push("(");
         }
         w.push(expr.checkingKeyword);
-        exprToWords(w, expr.operand, true);
+        exprToWords(w, expr.operand);
         if wrap {
             w.push(")");
         }
