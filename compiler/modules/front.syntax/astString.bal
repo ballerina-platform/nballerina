@@ -13,12 +13,13 @@ type Word string|LF_INDENT|LF_OUTDENT|LF|CLING;
 
 function modulePartToWords(Word[] w, ModulePart mod) {
     ImportDecl[] importDecls = mod.importDecls;
-    foreach int i in 0 ..< importDecls.length() {
-        ImportDecl decl = importDecls[i];
-        if i > 0 {
+    boolean first = true;
+    foreach var decl in importDecls {
+        if !first {
             // JBUG #33335 cast
             w.push(<Word>LF);
         }
+        first = false;
         w.push("import");
         if decl.org is string {
             w.push(decl.org, CLING, "/", CLING);
@@ -36,6 +37,12 @@ function modulePartToWords(Word[] w, ModulePart mod) {
         w.push(";");
     }
     foreach var defn in mod.defns {
+        if !first {
+            // JBUG #33335 cast
+            w.push(<Word>LF);
+        }
+        first = false;
+
         if defn is FunctionDefn {
             functionDefnToWords(w, defn);
         }
@@ -79,8 +86,6 @@ function constDefnToWords(Word[] w, ConstDefn defn) {
     w.push("const", defn.name, "=");
     exprToWords(w, defn.expr);
     w.push(";");
-    // JBUG #33335 cast
-    w.push(<Word>LF);
 }
 
 function typeDefnToWords(Word[] w, TypeDefn defn) {
@@ -90,8 +95,6 @@ function typeDefnToWords(Word[] w, TypeDefn defn) {
     w.push("type", defn.name);
     typeDescToWords(w, defn.td);
     w.push(";");
-    // JBUG #33335 cast
-    w.push(<Word>LF);
 }
 
 function stmtToWords(Word[] w, Stmt stmt) {
@@ -274,6 +277,12 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
             }
             w.push(CLING, ">");
         }
+    }
+    else if td is ErrorTypeDesc {
+        w.push("error", CLING, "<", CLING);
+        typeDescToWords(w, td.detail);
+        w.push(CLING, ">");
+        return;
     }
     else if td is ListTypeDesc {
         if wrap != false {
