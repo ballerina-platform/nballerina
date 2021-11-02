@@ -217,11 +217,13 @@ function finishCallStmt(Tokenizer tok, CallExpr expr, Position startPos) returns
     return stmt;
 }
 
-// call after ingesting checkingKeyword startPos set to position of checkingKeyword
+// This function is called with token after the checkingKeword as the current token
+// startPos is the position of the checkingKeyword
 function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, Position startPos) returns CallStmt|err:Syntax {
     Token? t = tok.current();
     if t is "check"|"checkpanic" {
-        Position checkStartPos = tok.currentStartPos();
+        // multiple checkingKewords call (ex: check check fn();)
+        Position checkStartPos = tok.currentStartPos(); // startPos for the inner checking call stmt
         check tok.advance();
         CallStmt operandStmt = check finishCheckingCallStmt(tok, t, checkStartPos);
         callStmtAddChecking(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
