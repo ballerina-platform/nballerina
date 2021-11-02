@@ -224,11 +224,13 @@ function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, 
         Position checkStartPos = tok.currentStartPos();
         check tok.advance();
         CallStmt operandStmt = check finishCheckingCallStmt(tok, t, checkStartPos);
-        return wrapCallStmtWithCheck(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
+        callStmtAddChecking(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
+        return operandStmt;
     }
     else if t == "(" {
         CallStmt operandStmt = check parseMethodCallStmt(tok);
-        return wrapCallStmtWithCheck(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
+        callStmtAddChecking(startPos, tok.previousEndPos(), operandStmt, checkingKeyword);
+        return operandStmt;
     }
     Expr operand = check parsePrimaryExpr(tok);
     if operand is FunctionCallExpr|MethodCallExpr {
@@ -239,9 +241,9 @@ function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, 
     return parseError(tok, "function call, method call or checking expression expected");
 }
 
-function wrapCallStmtWithCheck(Position startPos, Position endPos, CallStmt stmt, CheckingKeyword checkingKeyword) returns CallStmt {
-    CheckingCallExpr expr = { startPos, endPos: stmt.expr.endPos, checkingKeyword, operand: stmt.expr };
-    return { startPos, endPos, expr };
+function callStmtAddChecking(Position startPos, Position endPos, CallStmt stmt, CheckingKeyword checkingKeyword) {
+    stmt.expr = { startPos, endPos: stmt.expr.endPos, checkingKeyword, operand: stmt.expr };
+    stmt.startPos = startPos;
 }
 
 function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue, Position startPos) returns AssignStmt|err:Syntax {

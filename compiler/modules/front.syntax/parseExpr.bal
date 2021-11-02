@@ -529,4 +529,3 @@ function parseIntLiteralExpr(Tokenizer tok) returns IntLiteralExpr|err:Syntax {
 public function intFromIntLiteral(IntLiteralBase base, string digits) returns int|error {
     return base == 10 ? int:fromString(digits) : int:fromHexString(digits);
 }
-
