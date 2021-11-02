@@ -217,6 +217,7 @@ function finishCallStmt(Tokenizer tok, CallExpr expr, Position startPos) returns
     return stmt;
 }
 
+// call after ingesting checkingKeyword startPos set to position of checkingKeyword
 function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, Position startPos) returns CallStmt|err:Syntax {
     Token? t = tok.current();
     if t is "check"|"checkpanic" {
