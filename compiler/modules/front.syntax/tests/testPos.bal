@@ -80,11 +80,6 @@ function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
         Token? opToken = tok.curTok;
         test:assertTrue(opToken == "..<");
     }
-    else if stmt is CheckingStmt {
-        check tok.moveToPos(stmt.kwPos, MODE_NORMAL);
-        Token? opToken = tok.curTok;
-        test:assertTrue(opToken is CheckingKeyword);
-    }
     else if stmt is VarDeclStmt|AssignStmt {
         check tok.moveToPos(stmt.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;

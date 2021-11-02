@@ -224,25 +224,27 @@ function finishCheckingCallStmt(Tokenizer tok, CheckingKeyword checkingKeyword, 
         // multiple checkingKeywords in the statement call (ex: check check fn();)
         Position innerKwPos = tok.currentStartPos();
         check tok.advance();
-        CallStmt operand = check finishCheckingCallStmt(tok, t, innerKwPos);
-        return { startPos: kwPos, endPos: operand.endPos, kwPos, checkingKeyword, operand };
+        CallStmt operandStmt = check finishCheckingCallStmt(tok, t, innerKwPos);
+        callStmtAddChecking(kwPos, tok.previousEndPos(), operandStmt, checkingKeyword);
+        return operandStmt;
     }
     else if t == "(" {
-        MethodCallExpr operand = check parseMethodCallStmt(tok);
-        return { startPos: kwPos, endPos: operand.endPos, kwPos, checkingKeyword, operand };
+        CallStmt operandStmt = check parseMethodCallStmt(tok);
+        callStmtAddChecking(kwPos, tok.previousEndPos(), operandStmt, checkingKeyword);
+        return operandStmt;
     }
     Expr operand = check parsePrimaryExpr(tok);
     if operand is FunctionCallExpr|MethodCallExpr {
-        CheckingCallExpr expr = { startPos, endPos: operand.endPos, checkingKeyword, operand};
+        CheckingCallExpr expr = { startPos: kwPos, endPos: operand.endPos, checkingKeyword, kwPos, operand};
         Position endPos = check tok.expectEnd(";");
-        return { startPos: kwPos, endPos, kwPos, checkingKeyword, operand };
+        return { startPos: kwPos, endPos, expr };
     }
     return parseError(tok, "function call, method call or checking expression expected");
 }
 
-function callStmtAddChecking(Position startPos, Position endPos, CallStmt stmt, CheckingKeyword checkingKeyword) {
-    stmt.expr = { startPos, endPos: stmt.expr.endPos, checkingKeyword, operand: stmt.expr };
-    stmt.startPos = startPos;
+function callStmtAddChecking(Position kwPos, Position endPos, CallStmt stmt, CheckingKeyword checkingKeyword) {
+    stmt.expr = { startPos: kwPos, endPos: stmt.expr.endPos, checkingKeyword, kwPos, operand: stmt.expr };
+    stmt.startPos = kwPos;
 }
 
 function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue, Position startPos) returns AssignStmt|err:Syntax {
