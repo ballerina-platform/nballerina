@@ -157,17 +157,47 @@ function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:List
 
 function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:MappingConstructorExpr expr) returns s:Expr|FoldError {
     // SUBSET always have contextually expected type for mapping constructor
-    t:SemType expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING_RW);
-    // SUBSET with unions of maps we will need to select from possibilities based on the field names
-    if t:mappingAtomicTypeRw(cx.typeContext(), expectedMappingType) == () {
-        return cx.semanticErr("no applicable inherent type for mapping constructor");
+    t:SemType? inherentType = selectMappingInherentType(cx.typeContext(), <t:SemType>expectedType, expr.fields);
+    if inherentType == () {
+        return cx.semanticErr("no applicable inherent type for mapping constructor", pos=expr.startPos);
     }
-    expr.expectedType = expectedMappingType;
-    foreach s:Field f in expr.fields {
-        t:SemType memberType = t:mappingMemberType(cx.typeContext(), expectedMappingType, f.name);
-        f.value = check foldExpr(cx, memberType, f.value);
+    else {
+        expr.expectedType = inherentType;
+        foreach s:Field f in expr.fields {
+            t:SemType memberType = t:mappingMemberType(cx.typeContext(), inherentType, f.name);
+            f.value = check foldExpr(cx, memberType, f.value);
+        }
+        return expr;
     }
-    return expr;
+}
+
+function selectMappingInherentType(t:Context tc, t:SemType expectedType, s:Field[] fields) returns t:SemType? {
+    t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING_RW);
+    if t:mappingAtomicTypeRw(tc, expectedMappingType) != () {
+        return expectedMappingType; // easy case
+    }
+    t:MappingAlternative[] alts =
+        from var alt in t:mappingAlternativesRw(tc, expectedMappingType)
+        where mappingAlternativeAllowsFields(alt, fields)
+        select alt;
+    if alts.length() != 1 {
+        return ();
+    }
+    t:MappingAlternative alt = alts[0];
+    return alt.pos.length() <= 1 && alt.neg.length() == 0 ? alt.semType : ();
+}
+
+function mappingAlternativeAllowsFields(t:MappingAlternative alt, s:Field[] fields) returns boolean {
+    foreach t:MappingAtomicType a in alt.pos {
+        if a.rest == t:NEVER {
+            foreach var { name } in fields {
+                if a.names.indexOf(name) == () {
+                    return false; 
+                }
+            }
+        }
+    }
+    return true;
 }
 
 function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:BinaryArithmeticExpr expr) returns s:Expr|FoldError {

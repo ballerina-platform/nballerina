@@ -890,6 +890,44 @@ public function mappingMemberRequired(Context cx, SemType t, string k) returns b
     }
 }
 
+public type MappingAlternative record {|
+    SemType semType;
+    MappingAtomicType[] pos;
+    MappingAtomicType[] neg;
+|};
+
+public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlternative[] {
+    if t is UniformTypeBitSet {
+        if (t & MAPPING_RW) == 0 {
+            return [];
+        }
+        else {
+            return [
+                {
+                    semType: MAPPING_RW,
+                    pos: [],
+                    neg: []
+                }
+            ];
+        }
+    }
+    else {
+        BddPath[] paths = [];
+        bddPaths(<Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), paths, {});
+        /// JBUG runtime error on construct1-v.bal if done as from/select
+        MappingAlternative[] alts = [];
+        foreach var { bdd, pos, neg } in paths {
+            alts.push({
+                semType: createComplexSemType(0, [[UT_MAPPING_RW, bdd]]),
+                // JBUG parse error without parentheses
+                pos: (from var atom in pos select cx.mappingAtomType(atom)),
+                neg: (from var atom in neg select cx.mappingAtomType(atom))
+            });
+        }
+        return alts;
+    }
+}
+
 public type SplitSemType record {|
     UniformTypeBitSet all;
     [UniformTypeCode, SemType][] some;
