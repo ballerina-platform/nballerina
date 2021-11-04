@@ -552,10 +552,10 @@ static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_
     int64_t lhsLen = lhsListPtr->tpArray.length;
     int64_t rhsLen = rhsListPtr->tpArray.length;
     int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
-    GC TaggedPtr *lhsArr = lhsListPtr->tpArray.members;
-    GC TaggedPtr *rhsArr = rhsListPtr->tpArray.members;
+    TaggedPtr (*lhsGet)(TaggedPtr lp, int64_t index) = lhsListPtr->desc->get;
+    TaggedPtr (*rhsGet)(TaggedPtr lp, int64_t index) = rhsListPtr->desc->get;
     for (int64_t i = 0; i < length; i++) {
-        int64_t result = (*comparator)(lhsArr[i], rhsArr[i]);
+        int64_t result = (*comparator)(lhsGet(lhs, i), rhsGet(rhs, i));
         if (result != COMPARE_EQ) {
             return result;
         }

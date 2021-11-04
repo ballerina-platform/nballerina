@@ -39,7 +39,7 @@ static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
     return false;
 }
 
-// must be called with index less than lp->gArray.length
+// Must be called with an index such that, 0 <= index < lp->gArray.length
 TaggedPtr _bal_list_get(TaggedPtr p, int64_t index) {
     ListPtr lp = taggedToPtr(p);
     GC TaggedPtrArray *ap = &(lp->tpArray);
@@ -132,8 +132,10 @@ bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
     if (ap2->length != len) {
         return false;
     }
+    TaggedPtr (*get1)(TaggedPtr lp, int64_t index) = lp1->desc->get;
+    TaggedPtr (*get2)(TaggedPtr lp, int64_t index) = lp2->desc->get;
     for (int64_t i = 0; i < len; i++) {
-        if (!taggedPtrEqual(ap1->members[i], ap2->members[i])) {
+        if (!taggedPtrEqual(get1(p1, i), get2(p2, i))) {
             return false;
         }
     }
