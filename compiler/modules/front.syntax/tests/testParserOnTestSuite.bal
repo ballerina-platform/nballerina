@@ -44,7 +44,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                     topLevelDefnPos.push([defn.startPos, defn.endPos]);
                     check validateModuleLevelDefnPos(defn, tok);
                     if defn is FunctionDefn {
-                        foreach Stmt stmt in defn.body {
+                        foreach Stmt stmt in defn.body.stmts {
                             check validateStatementPos(stmt, tok, defn.startPos, defn.endPos);
                         }
                         check validateTypeDescPos(defn.typeDesc, tok, defn.startPos, defn.endPos);

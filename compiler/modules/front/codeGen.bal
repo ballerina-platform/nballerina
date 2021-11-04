@@ -300,11 +300,11 @@ function codeGenOnPanic(CodeGenContext cx, err:Position pos) {
     }
 }
 
-function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialEnv, s:Stmt[] stmts) returns CodeGenError|StmtEffect {
+function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialEnv, s:StmtBlock block) returns CodeGenError|StmtEffect {
     bir:BasicBlock? curBlock = bb;
     Environment env = environmentCopy(initialEnv);
     final int startRegister = cx.nextRegisterNumber();
-    foreach var stmt in stmts {
+    foreach var stmt in block.stmts {
         StmtEffect effect;
         if curBlock == () {
             return cx.semanticErr("unreachable code");
@@ -641,8 +641,8 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     var { condition, ifTrue, ifFalse } = stmt;
     var { result: operand, block: branchBlock, narrowing } = check codeGenConditionalExpr(cx, startBlock, env, condition);
     if operand is boolean {
-        s:Stmt[] taken;
-        s:Stmt[] notTaken;
+        s:StmtBlock? taken;
+        s:StmtBlock? notTaken;
         if operand {
             taken = ifTrue;
             notTaken = ifFalse;
@@ -651,18 +651,23 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
             taken = ifFalse;
             notTaken = ifTrue;
         }
-        if notTaken.length() > 0 {
+        if notTaken is s:StmtBlock && notTaken.stmts.length() > 0 {
             // XXX position should come from first member of notTaken
             return cx.semanticErr("unreachable code");
         }
-        return codeGenStmts(cx, branchBlock, env, taken);
+        if taken is s:StmtBlock {
+            return codeGenStmts(cx, branchBlock, env, taken);
+        }
+        else {
+            return cx.semanticErr("if else without a body");
+        }
     }
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
         Environment ifEnv = narrowing == () ? env : codeGenIfElseNarrowing(cx, ifBlock, env, narrowing, true, stmt.condition.startPos);
         var { block: ifContBlock, assignments } = check codeGenStmts(cx, ifBlock, ifEnv, ifTrue);
         bir:BasicBlock contBlock;
-        if ifFalse.length() == 0 {
+        if ifFalse == () {
             // just an if branch
             contBlock = cx.createBasicBlock();
             bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: contBlock.label, pos: stmt.condition.startPos };

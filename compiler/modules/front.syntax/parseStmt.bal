@@ -1,8 +1,9 @@
 import wso2/nballerina.err;
 
-function parseStmtBlock(Tokenizer tok) returns Stmt[]|err:Syntax {
+function parseStmtBlock(Tokenizer tok) returns StmtBlock|err:Syntax {
     Token? cur = tok.current();
     if cur == "{" {
+        Position startPos = tok.currentStartPos();
         Stmt[] stmts = [];
         check tok.advance();
         cur = tok.current();
@@ -10,8 +11,9 @@ function parseStmtBlock(Tokenizer tok) returns Stmt[]|err:Syntax {
             stmts.push(check parseStmt(tok));
             cur = tok.current();
         }
+        Position endPos = tok.currentEndPos();
         check tok.advance();
-        return stmts;
+        return { startPos, endPos, stmts };
     }
     return parseError(tok, "unhandled condition in statement block");
 }
@@ -318,9 +320,9 @@ function parsePanicStmt(Tokenizer tok, Position startPos) returns PanicStmt|err:
 }
 
 function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|err:Syntax {
-    Stmt[] ifFalse;
+    StmtBlock? ifFalse;
     Expr condition = check parseExpr(tok);
-    Stmt[] ifTrue = check parseStmtBlock(tok);
+    StmtBlock ifTrue = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
     Token? cur = tok.current();
     if cur == "else" {
@@ -329,7 +331,11 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
         if tok.current() == "if" {
             Position ifFalseStartPos = tok.currentStartPos();
             check tok.advance();
-            ifFalse = [check parseIfElseStmt(tok, ifFalseStartPos)];
+            IfElseStmt elseIfStmt = check parseIfElseStmt(tok, ifFalseStartPos);
+            Position blockStartPos = elseIfStmt.ifTrue.startPos;
+            StmtBlock? elseIfFalseBlock = elseIfStmt.ifFalse;
+            Position blockEndPos = (elseIfFalseBlock is StmtBlock)? (elseIfFalseBlock.endPos) : elseIfStmt.ifTrue.startPos;
+            ifFalse = { startPos: blockStartPos, endPos: blockEndPos, stmts: [elseIfStmt] };
         }
         // if exp1 { } else { }
         else if tok.current() == "{" {
@@ -340,14 +346,14 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
         }
         endPos = tok.previousEndPos();
     } else {
-        ifFalse = [];
+        ifFalse = ();
     }
     return { startPos, endPos, condition, ifTrue, ifFalse };
 }
 
 function parseWhileStmt(Tokenizer tok, Position startPos) returns WhileStmt|err:Syntax {
     Expr condition = check parseExpr(tok);
-    Stmt[] body = check parseStmtBlock(tok);
+    StmtBlock body = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
     return { startPos, endPos, condition, body };
 }
@@ -361,7 +367,7 @@ function parseForeachStmt(Tokenizer tok, Position startPos) returns ForeachStmt|
     string varName = check tok.expectIdentifier();
     check tok.expect("in");
     RangeExpr range = check parseRangeExpr(tok);
-    Stmt[] body = check parseStmtBlock(tok);
+    StmtBlock body = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
     return { startPos, endPos, varName, range, body };
 }
@@ -383,7 +389,7 @@ function parseMatchClause(Tokenizer tok) returns MatchClause|err:Syntax {
     Position startPos = tok.currentStartPos();
     MatchPattern[] patterns = check parseMatchPatternList(tok);
     Position opPos = check tok.expectEnd("=>");
-    Stmt[] block = check parseStmtBlock(tok);
+    StmtBlock block = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
     return { startPos, endPos, patterns, block, opPos };
 }

@@ -29,25 +29,28 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     test:assertTrue(stmt.startPos >= parentStartPos && stmt.endPos <= parentEndPos, "child node outside of parent");
     [err:Position, err:Position][] childNodePos = [];
     if stmt is IfElseStmt {
-        foreach Stmt trueStmt in stmt.ifTrue {
+        foreach Stmt trueStmt in stmt.ifTrue.stmts {
             check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
         }
-        foreach Stmt falseStmt in stmt.ifFalse {
-            check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
-            childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
+        StmtBlock? ifFalse = stmt.ifFalse;
+        if ifFalse is StmtBlock {
+            foreach Stmt falseStmt in ifFalse.stmts {
+                check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
+                childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
+            }
         }
     }
     else if stmt is MatchStmt {
         foreach var clause in stmt.clauses {
-            foreach var matchStmt in clause.block {
+            foreach var matchStmt in clause.block.stmts {
                 check validateStatementPos(matchStmt, tok, stmt.startPos, stmt.endPos);
                 childNodePos.push([matchStmt.startPos, matchStmt.endPos]);
             }
         }
     }
     else if stmt is (WhileStmt|ForeachStmt) {
-        foreach var bodyStmt in <Stmt[]>stmt.body {
+        foreach var bodyStmt in stmt.body.stmts {
             check validateStatementPos(bodyStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([bodyStmt.startPos, bodyStmt.endPos]);
         }
@@ -150,6 +153,17 @@ function validateMatchClausePos(MatchClause clause, Tokenizer tok, Position pare
     check tok.moveToPos(clause.endPos, MODE_NORMAL);
     Token? endTok = tok.curTok;
     test:assertEquals(endTok, "}", "invalid end pos");
+}
+
+function validateStmtBlockPos(StmtBlock block, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(block.startPos, MODE_NORMAL);
+    test:assertEquals(tok.current(), "{", "invalid start token for StmtBlock");
+    StmtBlock newBlock = check parseStmtBlock(tok);
+    test:assertEquals(newBlock.toString(), block.toString());
+    test:assertEquals(tok.previousEndPos(), block.endPos, "invalid endPos value");
+    check tok.moveToPos(block.endPos, MODE_NORMAL);
+    test:assertEquals(tok.current(), "}", "invalid end token for StmtBlock");
+    test:assertTrue(block.startPos > parentStartPos && block.endPos <= parentEndPos, "stmt block outside of parent");
 }
 
 type RecursiveBinaryExpr BinaryBitwiseExpr|BinaryEqualityExpr|BinaryArithmeticExpr;
