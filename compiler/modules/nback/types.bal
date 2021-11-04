@@ -9,6 +9,7 @@ const USED_TYPE_TEST = 0x4;
 
 const LLVM_BITSET = "i32";
 const LLVM_TID = "i32";
+const LLVM_PANIC_CODE = "i64";
 
 
 final llvm:StructType llInherentType = llvm:structType([LLVM_TID, LLVM_BITSET]);
@@ -16,7 +17,10 @@ final llvm:StructType llInherentType = llvm:structType([LLVM_TID, LLVM_BITSET]);
 // This is an approximation, but close enough since we are only accessing the pointer in C.
 final llvm:StructType llTypeTestType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
 
-final llvm:Type llListType = llvm:structType([heapPointerType(llInherentType),                       // *desc
+final llvm:FunctionType llListSetFuncType = llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_TAGGED_PTR]);
+final llvm:FunctionType llListGetFuncType = llvm:functionType(LLVM_TAGGED_PTR, [LLVM_TAGGED_PTR, LLVM_INT]);
+final llvm:StructType llListDescType = llvm:structType([LLVM_TID, llvm:pointerType(llListGetFuncType), llvm:pointerType(llListSetFuncType), LLVM_BITSET]);
+final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType),                      // *desc
                                               LLVM_INT,                                              // length
                                               LLVM_INT,                                              // capacity
                                               heapPointerType(llvm:arrayType(LLVM_TAGGED_PTR, 0))]); // *members

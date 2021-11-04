@@ -95,6 +95,8 @@ typedef GC struct {
 // i.e must start with tid
 typedef struct {
     Tid tid;
+    TaggedPtr (*get)(TaggedPtr lp, int64_t index);
+    PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
     uint32_t bitSet;
 } ListDesc, *ListDescPtr;
 
@@ -262,6 +264,7 @@ extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoin
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
 extern ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity);
+extern TaggedPtr _bal_list_get(TaggedPtr p, int64_t index);
 extern PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
 extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 
@@ -549,10 +552,10 @@ static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_
     int64_t lhsLen = lhsListPtr->tpArray.length;
     int64_t rhsLen = rhsListPtr->tpArray.length;
     int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
-    GC TaggedPtr *lhsArr = lhsListPtr->tpArray.members;
-    GC TaggedPtr *rhsArr = rhsListPtr->tpArray.members;
+    TaggedPtr (*lhsGet)(TaggedPtr lp, int64_t index) = lhsListPtr->desc->get;
+    TaggedPtr (*rhsGet)(TaggedPtr lp, int64_t index) = rhsListPtr->desc->get;
     for (int64_t i = 0; i < length; i++) {
-        int64_t result = (*comparator)(lhsArr[i], rhsArr[i]);
+        int64_t result = (*comparator)(lhsGet(lhs, i), rhsGet(rhs, i));
         if (result != COMPARE_EQ) {
             return result;
         }

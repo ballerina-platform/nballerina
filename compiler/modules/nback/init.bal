@@ -51,6 +51,8 @@ type InitModuleContext record {|
     table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
     InitTypes llTypes;
     map<llvm:FunctionDecl> typeTestFuncs = {};
+    llvm:FunctionDecl? listSetFunc = ();
+    llvm:FunctionDecl? listGetFunc = ();
 |};
 
 public function buildInitModule(t:Env env, ProgramModule[] modules, map<bir:FunctionSignature> publicFuncs) returns llvm:Module|BuildError {
@@ -135,12 +137,12 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
     llvm:StructType llType;
     llvm:ConstPointerValue ptr;
     if isList {
-        [llType, ptr] = addArrayMapInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, semType));
+        [llType, ptr] = addArrayInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, semType));
     }
     else {
         t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType);
         if mat.rest != t:NEVER {
-            [llType, ptr] = addArrayMapInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>mat.rest);
+            [llType, ptr] = addMapInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>mat.rest);
         }
         else {
             [llType, ptr] = addRecordInherentTypeDefn(cx, symbol, tid, mat.names, mat.types);
@@ -149,7 +151,13 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
     defns.add({ llType, ptr, semType, tid });
 }
 
-function addArrayMapInherentTypeDefn(InitModuleContext cx, string symbol, int tid, t:UniformTypeBitSet bitSet) returns [llvm:StructType, llvm:ConstPointerValue] {
+function addArrayInherentTypeDefn(InitModuleContext cx, string symbol, int tid, t:UniformTypeBitSet bitSet) returns [llvm:StructType, llvm:ConstPointerValue] {
+    llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt(LLVM_TID, tid), getListGetFunc(cx), getListSetFunc(cx), llvm:constInt(LLVM_BITSET, bitSet)]);
+    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llListDescType, symbol, initializer=initValue, isConstant=true);
+    return [llListDescType, ptr];
+}
+
+function addMapInherentTypeDefn(InitModuleContext cx, string symbol, int tid, t:UniformTypeBitSet bitSet) returns [llvm:StructType, llvm:ConstPointerValue] {
     llvm:StructType ty = llInherentType;
     llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt(LLVM_TID, tid), llvm:constInt(LLVM_BITSET, bitSet)]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(ty, symbol, initializer=initValue, isConstant=true);
@@ -273,6 +281,30 @@ function addRecordSubtypeTestDefn(InitModuleContext cx, string symbol, string[] 
     }
     llvm:ConstValue initValue = cx.llContext.constStruct([getSubtypeTestFunc(cx, TYPE_KIND_RECORD), llvm:constInt("i32", nFields), cx.llContext.constArray(llFieldType, llFields)]);
     return cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true, linkage="internal");
+}
+
+function getListSetFunc(InitModuleContext cx) returns llvm:FunctionDecl {
+    llvm:FunctionDecl? existing = cx.listSetFunc;
+    if existing == () {
+        llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol("list_set"), llListSetFuncType);
+        cx.listSetFunc = decl;
+        return decl;
+    }
+    else {
+        return existing;
+    }
+}
+
+function getListGetFunc(InitModuleContext cx) returns llvm:FunctionDecl {
+    llvm:FunctionDecl? existing = cx.listGetFunc;
+    if existing == () {
+        llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol("list_get"), llListGetFuncType);
+        cx.listGetFunc = decl;
+        return decl;
+    }
+    else {
+        return existing;
+    }
 }
 
 function getSubtypeTestFunc(InitModuleContext cx, TypeKind tk) returns llvm:FunctionDecl {
