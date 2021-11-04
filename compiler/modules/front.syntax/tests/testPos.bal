@@ -258,10 +258,6 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             newExpr = matchingChild;
         }
         test:assertEquals(expr.endPos, actualEnd);
-        if newExpr is MethodCallExpr|FunctionCallExpr {
-            // pos depends on whether original was parsed as a stmt or expr but for testing we always treat it as expr
-            newExpr.pos = (<MethodCallExpr|FunctionCallExpr>expr).pos;
-        }
         test:assertEquals(expr.toString(), newExpr.toString());
         test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
         test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
@@ -311,26 +307,50 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     check validateExprOpPos(expr, tok);
 }
 
-type ExprOpPos BinaryExpr|UnaryExpr;
+type ExprOpPos BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr;
+type ExprKwPos CheckingExpr|ErrorConstructorExpr;
 
 function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
-    if expr is ExprOpPos {
-        check tok.moveToPos(expr.opPos, MODE_NORMAL);
-        Token? opToken = tok.curTok;
-        if expr is BinaryRelationalExpr {
-            test:assertTrue(opToken is BinaryRelationalOp);
-        }
-        else if expr is BinaryEqualityExpr {
-            test:assertTrue(opToken is BinaryEqualityOp);
-        }
-        else if expr is BinaryArithmeticExpr {
-            test:assertTrue(opToken is BinaryArithmeticOp);
-        }
-        else if expr is BinaryBitwiseExpr {
-            test:assertTrue(opToken is BinaryBitwiseOp);
+    if expr is ExprOpPos|ExprKwPos {
+        if expr is ExprKwPos {
+            check tok.moveToPos(expr.kwPos, MODE_NORMAL);
         }
         else {
-            test:assertTrue(opToken is UnaryExprOp);
+            check tok.moveToPos(expr.opPos, MODE_NORMAL);
+        }
+        Token? token = tok.curTok;
+        if expr is BinaryRelationalExpr {
+            test:assertTrue(token is BinaryRelationalOp);
+        }
+        else if expr is BinaryEqualityExpr {
+            test:assertTrue(token is BinaryEqualityOp);
+        }
+        else if expr is BinaryArithmeticExpr {
+            test:assertTrue(token is BinaryArithmeticOp);
+        }
+        else if expr is BinaryBitwiseExpr {
+            test:assertTrue(token is BinaryBitwiseOp);
+        }
+        else if expr is UnaryExpr {
+            test:assertTrue(token is UnaryExprOp);
+        }
+        else if expr is ErrorConstructorExpr {
+            test:assertEquals(token, "error");
+        }
+        else if expr is ListConstructorExpr|MemberAccessExpr|MemberAccessLExpr {
+            test:assertEquals(token, "[");
+        }
+        else if expr is MappingConstructorExpr {
+            test:assertEquals(token, "{");
+        }
+        else if expr is FunctionCallExpr|MethodCallExpr {
+            test:assertTrue(token == "(");
+        }
+        else if expr is CheckingExpr {
+            test:assertTrue(token is CheckingKeyword);
+        }
+        else {
+            test:assertEquals(token, ".");
         }
     }
 }
