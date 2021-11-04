@@ -157,45 +157,48 @@ function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:List
 
 function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:MappingConstructorExpr expr) returns s:Expr|FoldError {
     // SUBSET always have contextually expected type for mapping constructor
-    t:SemType? inherentType = selectMappingInherentType(cx.typeContext(), <t:SemType>expectedType, expr.fields);
-    if inherentType == () {
-        return cx.semanticErr("no applicable inherent type for mapping constructor", pos=expr.startPos);
+    t:SemType inherentType = check selectMappingInherentType(cx, <t:SemType>expectedType, expr); 
+    expr.expectedType = inherentType;
+    foreach s:Field f in expr.fields {
+        t:SemType memberType = t:mappingMemberType(cx.typeContext(), inherentType, f.name);
+        f.value = check foldExpr(cx, memberType, f.value);
     }
-    else {
-        expr.expectedType = inherentType;
-        foreach s:Field f in expr.fields {
-            t:SemType memberType = t:mappingMemberType(cx.typeContext(), inherentType, f.name);
-            f.value = check foldExpr(cx, memberType, f.value);
-        }
-        return expr;
-    }
+    return expr;
 }
 
-function selectMappingInherentType(t:Context tc, t:SemType expectedType, s:Field[] fields) returns t:SemType? {
+function selectMappingInherentType(FoldContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns t:SemType|FoldError {
     t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING_RW);
+    t:Context tc = cx.typeContext();
     if t:mappingAtomicTypeRw(tc, expectedMappingType) != () {
         return expectedMappingType; // easy case
     }
+    string[] fieldNames = from var f in expr.fields order by f.name select f.name;
     t:MappingAlternative[] alts =
         from var alt in t:mappingAlternativesRw(tc, expectedMappingType)
-        where mappingAlternativeAllowsFields(alt, fields)
+        where mappingAlternativeAllowsFields(alt, fieldNames)
         select alt;
-    if alts.length() != 1 {
-        return ();
+    if alts.length() == 0 {
+        return cx.semanticErr("no applicable inherent type for mapping constructor", pos=expr.startPos);
     }
-    t:MappingAlternative alt = alts[0];
-    return alt.pos.length() <= 1 && alt.neg.length() == 0 ? alt.semType : ();
+    else if alts.length() > 1 {
+        return cx.semanticErr("ambiguous inherent type for mapping constructor", pos=expr.startPos);
+    }
+    t:SemType semType = alts[0].semType;
+    if t:mappingAtomicTypeRw(tc, semType) == () {
+        return cx.semanticErr("appplicable type for mapping constructor is not atomic", pos=expr.startPos);
+    }
+    return semType;
 }
 
-function mappingAlternativeAllowsFields(t:MappingAlternative alt, s:Field[] fields) returns boolean {
+function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] fieldNames) returns boolean {
     foreach t:MappingAtomicType a in alt.pos {
+        // SUBSET won't be right with record defaults
         if a.rest == t:NEVER {
-            foreach var { name } in fields {
-                if a.names.indexOf(name) == () {
-                    return false; 
-                }
+            if a.names != fieldNames {
+                return false;
             }
         }
+        // SUBSET `...` in records will need to check all required fields are present
     }
     return true;
 }
