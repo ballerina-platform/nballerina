@@ -70,7 +70,7 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
 }
 
 type OpStmt VarDeclStmt|AssignStmt|CompoundAssignStmt;
-type KwStmt ReturnStmt|PanicStmt;
+type KwStmt ReturnStmt|PanicStmt|ForeachStmt;
 
 function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
     if stmt is MatchStmt {
@@ -95,6 +95,9 @@ function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
         check tok.moveToPos(rangeExpr.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;
         test:assertTrue(opToken == "..<");
+        check tok.moveToPos(stmt.kwPos, MODE_NORMAL);
+        Token? kwToken = tok.curTok;
+        test:assertTrue(kwToken == "in");
     }
     else if stmt is KwStmt {
         check tok.moveToPos(stmt.kwPos, MODE_NORMAL);
@@ -102,7 +105,7 @@ function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
         if stmt is ReturnStmt {
             test:assertEquals(kwToken, "return");
         }
-        else {
+        if stmt is PanicStmt {
             test:assertEquals(kwToken, "panic");
         }
     }

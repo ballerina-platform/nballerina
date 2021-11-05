@@ -385,17 +385,17 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     var { result: lower, block: evalUpper } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, range.lower, t:INT));
     var { result: upper, block: initLoopVar } = check codeGenExprForInt(cx, evalUpper, env, check cx.foldExpr(env, range.upper, t:INT));
     bir:Register loopVar = cx.createRegister(t:INT, varName);
-    bir:AssignInsn init = { pos: stmt.startPos, result: loopVar, operand: lower };
+    bir:AssignInsn init = { pos: stmt.kwPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
-    bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.endPos };
+    bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     initLoopVar.insns.push(branchToLoopHead);
     bir:Register condition = cx.createRegister(t:BOOLEAN);
     bir:CompareInsn compare = { op: "<", pos: stmt.range.opPos, orderType: t:UT_INT, operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
     bir:BasicBlock loopBody = cx.createBasicBlock();
-    bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: loopBody.label, pos: stmt.startPos };
+    bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: loopBody.label, pos: stmt.range.opPos };
     loopHead.insns.push(branch);
     cx.pushLoopContext(exit, ());
     Binding loopBindings = { name: varName, reg: loopVar, prev: env.bindings, isFinal: true };
@@ -404,7 +404,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     bir:BasicBlock? loopStep = cx.loopContinueBlock();
     if loopEnd != () {
         loopStep = loopStep ?: cx.createBasicBlock();
-        bir:BranchInsn branchToLoopStep = { dest: (<bir:BasicBlock>loopStep).label, pos: stmt.startPos };
+        bir:BranchInsn branchToLoopStep = { dest: (<bir:BasicBlock>loopStep).label, pos: stmt.kwPos };
         loopEnd.insns.push(branchToLoopStep);
         check validLoopAssignments(cx, assignments);
     }
@@ -412,7 +412,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     assignments.push(...cx.onContinueAssignments());
     assignments.push(...cx.onBreakAssignments());
     if loopStep != () {
-        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.startPos, operands: [loopVar, 1], result: loopVar };
+        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, 1], result: loopVar };
         loopStep.insns.push(increment);
         loopStep.insns.push(branchToLoopHead);
     }
@@ -423,7 +423,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
 
 function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:WhileStmt stmt) returns CodeGenError|StmtEffect {
     bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
-    bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.startPos };
+    bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     startBlock.insns.push(branchToLoopHead);
     bir:BasicBlock loopBody = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
@@ -432,16 +432,16 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     var { result: condition, block: afterCondition } = check codeGenConditionalExpr(cx, loopHead, env, stmt.condition);
     bir:Insn branch;
     if condition is bir:Register {
-        branch = <bir:CondBranchInsn>{ operand: condition, ifFalse: exit.label, ifTrue: loopBody.label, pos: stmt.startPos };
+        branch = <bir:CondBranchInsn>{ operand: condition, ifFalse: exit.label, ifTrue: loopBody.label, pos: stmt.condition.startPos };
         exitReachable = true;
     }
     else if condition is true {
-        branch = <bir:BranchInsn>{ dest: loopBody.label, pos: stmt.startPos };
+        branch = <bir:BranchInsn>{ dest: loopBody.label, pos: stmt.body.startPos };
     }
     else if stmt.body.length() == 0 {
         // this is `while false { }`
         // need to put something in loopHead
-        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.startPos };
+        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.body.endPos };
         exitReachable = true;
     }
     else {

@@ -140,6 +140,7 @@ public type WhileStmt record {|
 
 public type ForeachStmt record {|
     *PositionFields;
+    Position kwPos;
     string varName;
     RangeExpr range;
     StmtBlock body;

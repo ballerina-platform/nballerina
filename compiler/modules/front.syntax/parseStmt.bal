@@ -365,11 +365,11 @@ function parseForeachStmt(Tokenizer tok, Position startPos) returns ForeachStmt|
     check tok.advance();
     Token? cur = tok.current();
     string varName = check tok.expectIdentifier();
-    check tok.expect("in");
+    Position kwPos = check tok.expectEnd("in");
     RangeExpr range = check parseRangeExpr(tok);
     StmtBlock body = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, varName, range, body };
+    return { startPos, endPos, kwPos, varName, range, body };
 }
 
 function parseMatchStmt(Tokenizer tok, Position startPos) returns MatchStmt|err:Syntax {
