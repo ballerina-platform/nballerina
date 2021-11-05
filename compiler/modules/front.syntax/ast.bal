@@ -36,7 +36,7 @@ public type FunctionDefn record {|
     Visibility vis;
     FunctionTypeDesc typeDesc;
     string[] paramNames;
-    Stmt[] body;
+    StmtBlock body;
     Position namePos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
@@ -63,6 +63,11 @@ public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConst
 
 public const WILDCARD = ();
 
+public type StmtBlock record {|
+    *PositionFields;
+    Stmt[] stmts;
+|};
+
 public type CallStmt record {|
     *PositionFields;
     CallExpr expr;
@@ -88,19 +93,21 @@ public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
 
 public type ReturnStmt record {|
     *PositionFields;
+    Position kwPos;
     Expr? returnExpr;
 |};
 
 public type PanicStmt record {|
     *PositionFields;
+    Position kwPos;
     Expr panicExpr;
 |};
 
 public type IfElseStmt record {|
     *PositionFields;
     Expr condition;
-    Stmt[] ifTrue;
-    Stmt[] ifFalse;
+    StmtBlock ifTrue;
+    StmtBlock? ifFalse;
 |};
 
 public type MatchStmt record {|
@@ -112,7 +119,7 @@ public type MatchStmt record {|
 public type MatchClause record {|
     *PositionFields;
     MatchPattern[] patterns;
-    Stmt[] block;
+    StmtBlock block;
     Position opPos;
 |};
 
@@ -128,14 +135,15 @@ public type ConstPattern record {|
 public type WhileStmt record {|
     *PositionFields;
     Expr condition;
-    Stmt[] body;
+    StmtBlock body;
 |};
 
 public type ForeachStmt record {|
     *PositionFields;
+    Position kwPos;
     string varName;
     RangeExpr range;
-    Stmt[] body;
+    StmtBlock body;
 |};
 
 public type BreakContinue "break"|"continue";
@@ -352,7 +360,7 @@ public type TypeCastExpr record {|
     Position endPos;
     TypeDesc td;
     Expr operand;
-    Position pos;
+    Position opPos;
 |};
 
 public type TypeTestExpr record {|
@@ -364,6 +372,7 @@ public type TypeTestExpr record {|
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
     boolean negated;
+    Position kwPos;
 |};
 
 public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;

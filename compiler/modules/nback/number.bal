@@ -152,7 +152,7 @@ function buildConvertFloatToInt(llvm:Builder builder, Scaffold scaffold, llvm:Va
     llvm:BasicBlock errBlock = scaffold.addBasicBlock();
     builder.condBr(builder.extractValue(resultWithErr, 1), errBlock, continueBlock);
     builder.positionAtEnd(errBlock);
-    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
+    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_TYPE_CAST, insn.pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
     llvm:Value result = builder.extractValue(resultWithErr, 0);

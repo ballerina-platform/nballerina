@@ -149,13 +149,16 @@ function stmtToWords(Word[] w, Stmt stmt) {
         w.push("if");
         exprToWords(w, stmt.condition);
         blockToWords(w, stmt.ifTrue);
-        if stmt.ifFalse.length() == 1 &&  stmt.ifFalse[0] is IfElseStmt{
-            w.push(<Word>LF, "else");
-            stmtToWords(w, stmt.ifFalse[0]);
-        }
-        else if stmt.ifFalse.length() > 0 {
-            w.push(<Word>LF, "else");
-            blockToWords(w, stmt.ifFalse);
+        StmtBlock? ifFalse = stmt.ifFalse;
+        if ifFalse is StmtBlock {
+            if ifFalse.stmts.length() == 1 &&  ifFalse.stmts[0] is IfElseStmt {
+                w.push(<Word>LF, "else");
+                stmtToWords(w, ifFalse.stmts[0]);
+            }
+            else if ifFalse.stmts.length() > 0 {
+                w.push(<Word>LF, "else");
+                blockToWords(w, ifFalse);
+            }
         }
     }
     else if stmt is MatchStmt {
@@ -215,10 +218,10 @@ function stmtToWords(Word[] w, Stmt stmt) {
     }
 }
 
-function blockToWords(Word[] w, Stmt[] body) {
+function blockToWords(Word[] w, StmtBlock body) {
     w.push("{");
     boolean firstInBlock = true;
-    foreach var stmt in body {
+    foreach var stmt in body.stmts {
         w.push(<Word>(firstInBlock ? LF_INDENT : LF));
         firstInBlock = false;
         stmtToWords(w, stmt);

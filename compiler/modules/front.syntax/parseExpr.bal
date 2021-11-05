@@ -133,12 +133,13 @@ function parseRelationalExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function finishTypeTestExpr(Tokenizer tok, Expr expr, boolean negated, Position startPos) returns TypeTestExpr|err:Syntax {
+    Position kwPos = tok.currentStartPos();
     tok.setMode(MODE_TYPE_DESC);
     check tok.advance();
     TypeDesc td = check parseTypeDesc(tok);
     Position endPos = tok.previousEndPos();
     tok.setMode(MODE_NORMAL);
-    return { startPos, endPos, td, left: expr, negated };
+    return { startPos, endPos, td, left: expr, negated, kwPos };
 }
 
 function parseRangeExpr(Tokenizer tok) returns RangeExpr|err:Syntax {
@@ -238,14 +239,14 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
 
 function parseTypeCastExpr(Tokenizer tok, Position startPos) returns Expr|err:Syntax {
     tok.setMode(MODE_TYPE_DESC);
-    Position pos = tok.currentStartPos();
+    Position opPos = tok.currentStartPos();
     check tok.advance();
     TypeDesc td = check parseTypeDesc(tok);
     check tok.expect(">");
     tok.setMode(MODE_NORMAL);
     Expr operand = check parseUnaryExpr(tok);
     Position endPos = tok.previousEndPos();
-    TypeCastExpr expr = { startPos, endPos, pos, td, operand };
+    TypeCastExpr expr = { startPos, endPos, opPos, td, operand };
     return expr;
 }
 

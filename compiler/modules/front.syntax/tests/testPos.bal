@@ -29,25 +29,28 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     test:assertTrue(stmt.startPos >= parentStartPos && stmt.endPos <= parentEndPos, "child node outside of parent");
     [err:Position, err:Position][] childNodePos = [];
     if stmt is IfElseStmt {
-        foreach Stmt trueStmt in stmt.ifTrue {
+        foreach Stmt trueStmt in stmt.ifTrue.stmts {
             check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
         }
-        foreach Stmt falseStmt in stmt.ifFalse {
-            check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
-            childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
+        StmtBlock? ifFalse = stmt.ifFalse;
+        if ifFalse is StmtBlock {
+            foreach Stmt falseStmt in ifFalse.stmts {
+                check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
+                childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
+            }
         }
     }
     else if stmt is MatchStmt {
         foreach var clause in stmt.clauses {
-            foreach var matchStmt in clause.block {
+            foreach var matchStmt in clause.block.stmts {
                 check validateStatementPos(matchStmt, tok, stmt.startPos, stmt.endPos);
                 childNodePos.push([matchStmt.startPos, matchStmt.endPos]);
             }
         }
     }
     else if stmt is (WhileStmt|ForeachStmt) {
-        foreach var bodyStmt in <Stmt[]>stmt.body {
+        foreach var bodyStmt in stmt.body.stmts {
             check validateStatementPos(bodyStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([bodyStmt.startPos, bodyStmt.endPos]);
         }
@@ -66,6 +69,9 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     check validateStmtOpPos(stmt, tok);
 }
 
+type OpStmt VarDeclStmt|AssignStmt|CompoundAssignStmt;
+type KwStmt ReturnStmt|PanicStmt|ForeachStmt;
+
 function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
     if stmt is MatchStmt {
         foreach var clause in stmt.clauses {
@@ -74,21 +80,34 @@ function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
             test:assertEquals(opToken, "=>");
         }
     }
+    else if stmt is OpStmt {
+        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        if stmt is VarDeclStmt|AssignStmt {
+            test:assertEquals(opToken, "=");
+        }
+        else {
+            test:assertTrue(opToken is CompoundAssignOp);
+        }
+    }
     else if stmt is ForeachStmt {
         RangeExpr rangeExpr = stmt.range;
         check tok.moveToPos(rangeExpr.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;
         test:assertTrue(opToken == "..<");
+        check tok.moveToPos(stmt.kwPos, MODE_NORMAL);
+        Token? kwToken = tok.curTok;
+        test:assertTrue(kwToken == "in");
     }
-    else if stmt is VarDeclStmt|AssignStmt {
-        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
-        Token? opToken = tok.curTok;
-        test:assertEquals(opToken, "=");
-    }
-    else if stmt is CompoundAssignStmt {
-        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
-        Token? opToken = tok.curTok;
-        test:assertTrue(opToken is CompoundAssignOp);
+    else if stmt is KwStmt {
+        check tok.moveToPos(stmt.kwPos, MODE_NORMAL);
+        Token? kwToken = tok.curTok;
+        if stmt is ReturnStmt {
+            test:assertEquals(kwToken, "return");
+        }
+        if stmt is PanicStmt {
+            test:assertEquals(kwToken, "panic");
+        }
     }
 }
 
@@ -137,6 +156,17 @@ function validateMatchClausePos(MatchClause clause, Tokenizer tok, Position pare
     check tok.moveToPos(clause.endPos, MODE_NORMAL);
     Token? endTok = tok.curTok;
     test:assertEquals(endTok, "}", "invalid end pos");
+}
+
+function validateStmtBlockPos(StmtBlock block, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(block.startPos, MODE_NORMAL);
+    test:assertEquals(tok.current(), "{", "invalid start token for StmtBlock");
+    StmtBlock newBlock = check parseStmtBlock(tok);
+    test:assertEquals(newBlock.toString(), block.toString());
+    test:assertEquals(tok.previousEndPos(), block.endPos, "invalid endPos value");
+    check tok.moveToPos(block.endPos, MODE_NORMAL);
+    test:assertEquals(tok.current(), "}", "invalid end token for StmtBlock");
+    test:assertTrue(block.startPos > parentStartPos && block.endPos <= parentEndPos, "stmt block outside of parent");
 }
 
 type RecursiveBinaryExpr BinaryBitwiseExpr|BinaryEqualityExpr|BinaryArithmeticExpr;
@@ -307,8 +337,8 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     check validateExprOpPos(expr, tok);
 }
 
-type ExprOpPos BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr;
-type ExprKwPos CheckingExpr|ErrorConstructorExpr;
+type ExprOpPos BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr|TypeCastExpr;
+type ExprKwPos CheckingExpr|ErrorConstructorExpr|TypeTestExpr;
 
 function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
     if expr is ExprOpPos|ExprKwPos {
@@ -348,6 +378,12 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         }
         else if expr is CheckingExpr {
             test:assertTrue(token is CheckingKeyword);
+        }
+        else if expr is TypeCastExpr {
+            test:assertEquals(token, "<");
+        }
+        else if expr is TypeTestExpr {
+            test:assertEquals(token, "is");
         }
         else {
             test:assertEquals(token, ".");
