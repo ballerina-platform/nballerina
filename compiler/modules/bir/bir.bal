@@ -320,65 +320,65 @@ public type CompareInsn readonly & record {|
 
 # Constructs a new mutable list value.
 public type ListConstructInsn readonly & record {|
+    *InsnBase;
     INSN_LIST_CONSTRUCT_RW name = INSN_LIST_CONSTRUCT_RW;
     // The type of the result gives the inherent type of the constructed list
     Register result;
     Operand[] operands;
-    Position pos;
 |};
 
 # Gets a member of a list at a specified index.
 # This is a PPI (since the index may be out of bounds).
 public type ListGetInsn readonly & record {|
+    *InsnBase;
     INSN_LIST_GET name = INSN_LIST_GET;
     Register result;
     [Register, IntOperand] operands;
-    Position pos;
 |};
 
 # Sets a member of a list at a specified index.
 # This is a PPI (since the index may be out of bounds).
 public type ListSetInsn readonly & record {|
+    *InsnBase;
     INSN_LIST_SET name = INSN_LIST_SET;
     [Register, IntOperand, Operand] operands;
-    Position pos;
 |};
 
 # Constructs a new mutable list value.
 public type MappingConstructInsn readonly & record {|
+    *InsnBase;
     INSN_MAPPING_CONSTRUCT_RW name = INSN_MAPPING_CONSTRUCT_RW;
     // The type of the result gives the inherent type of the constructed list
     Register result;
     string[] fieldNames;
     Operand[] operands;
-    Position pos;
 |};
 
 # Gets a member of a mapping with a specified key.
 # This returns nil if there is no such member.
 # So this is not a PPI
 public type MappingGetInsn readonly & record {|
+    *InsnBase;
     INSN_MAPPING_GET name = INSN_MAPPING_GET;
     Register result;
     [Register, StringOperand] operands;
-    Position pos;
 |};
 
 # Sets a member of a mapping with a specified key.
 # This is a PPI.
 public type MappingSetInsn readonly & record {|
+    *InsnBase;
     INSN_MAPPING_SET name = INSN_MAPPING_SET;
     [Register, StringOperand, Operand] operands;
-    Position pos;
 |};
 
 # Constructs an error value.
 # Operand must be of type string.
 public type ErrorConstructInsn readonly & record {|
+    *InsnBase;
     INSN_ERROR_CONSTRUCT name = INSN_ERROR_CONSTRUCT;
     Register result;
     StringOperand operand;
-    Position pos;
 |};
 
 # This does equality expressions.

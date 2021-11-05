@@ -272,7 +272,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
         bir:RetInsn ret = { operand: (), pos: defn.endPos };
         endBlock.insns.push(ret);
     }
-    codeGenOnPanic(cx, defn.startPos);
+    codeGenOnPanic(cx, defn.endPos);
     return cx.code;
 }
 
@@ -389,7 +389,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
-    bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.startPos };
+    bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.endPos };
     initLoopVar.insns.push(branchToLoopHead);
     bir:Register condition = cx.createRegister(t:BOOLEAN);
     bir:CompareInsn compare = { op: "<", pos: stmt.range.opPos, orderType: t:UT_INT, operands: [loopVar, upper], result: condition };
