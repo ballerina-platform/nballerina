@@ -173,10 +173,15 @@ function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand oper
     llvm:Value value = check buildRepr(builder, scaffold, operand, targetRepr);
     if targetRepr.base == BASE_REPR_TAGGED && operand is bir:Register {
         t:SemType listOrMappingRw = t:union(t:LIST_RW, t:MAPPING_RW);
-        t:SemType targetStructType = t:intersect(targetType, listOrMappingRw);
         t:SemType sourceStructType =  t:intersect(operand.semType, listOrMappingRw);
+        t:UniformTypeBitSet sourceStructUniformTypes = t:widenToUniformTypes(sourceStructType);
+        // Going from e.g. `int[]` to `int[]|map<any>` does not lose exactness,
+        // but going from e.g. `int[]|map<int>` to `int[]|map<any>` does.
+        t:SemType targetStructType = t:intersect(targetType, sourceStructUniformTypes);
         if !t:isNever(targetStructType) && !t:isNever(sourceStructType) {
-            // Is the sourceStructType a proper subtype of the targetStructType?
+            // Is the sourceStructType a _proper_ subtype of the targetStructType?
+            // Note that we already know that sourceStructType is a subtype of targetStructType,
+            // so we need to check that targetStructType is not a subtype of sourceStructType.
             if sourceStructType != targetStructType && !t:isSubtype(scaffold.typeContext(), targetStructType, sourceStructType) {
                 value = buildClearExact(builder, scaffold, value, operand.semType);
             }
