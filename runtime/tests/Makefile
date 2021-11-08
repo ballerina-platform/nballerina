@@ -19,7 +19,12 @@ testCoverage: $(TESTPROG_PROF_RAW) $(TESTPROG_PROF)
 $(TESTPROG_PROF): $(TESTPROG_PROF_RAW)
 	llvm-profdata merge -sparse $(TESTPROG_PROF_RAW) -o $@
 
-%.stamp: %
+$(filter error_backtrace%, $(TESTPROG_STAMPS)): error_backtrace%.stamp: error_backtrace%
+	./$<
+	@./$<.sh || { exit 1; }
+	touch $@ 
+
+$(filter-out error_backtrace%, $(TESTPROG_STAMPS)): %.stamp: %
 	./$<
 	touch $@
 
