@@ -212,8 +212,8 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
         int|s:Identifier index = tn.index;
         if t:isSubtypeSimple(t, t:LIST) {
             if index is int {
-                return t:listMemberType(tc, t, index);
-                //return t:listProj(tc, t, index);
+                //return t:listMemberType(tc, t, index);
+                return t:listProj(tc, t, index);
             }
             else {
                 t:SemType k = lookupSemtype(m, index);
@@ -222,7 +222,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
                 }
                 t:Value? val = t:singleShape(k);
                 if val is t:Value && val.value is int {
-                    return t:listMemberType(tc, t, <int> val.value);
+                    return t:listProj(tc, t, <int> val.value);
                 }
                 test:assertFail("index for list projection must be an int");
             }
