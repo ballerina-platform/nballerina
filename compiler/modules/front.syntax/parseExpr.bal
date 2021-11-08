@@ -289,11 +289,6 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         return expr;
     }
-    else if t is "null" {
-        check tok.advance();
-        ConstValueExpr expr = { startPos, endPos, value: () };
-        return expr;
-    }
     else if t == "(" {
         check tok.advance();
         if tok.current() == ")" {
@@ -311,6 +306,11 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     else if t is "true"|"false" {
         check tok.advance();
         ConstValueExpr expr = { startPos, endPos, value: t == "true" };
+        return expr;
+    }
+    else if t is "null" {
+        check tok.advance();
+        ConstValueExpr expr = { startPos, endPos, value: () };
         return expr;
     }
     else if t is "error" {
