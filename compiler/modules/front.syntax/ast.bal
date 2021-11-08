@@ -422,6 +422,7 @@ public type ListTypeDesc record {|
     Position endPos;
     TypeDesc[] members;
     TypeDesc rest;
+    SingletonTypeDesc? length = ();
     t:ListDefinition? defn = ();
 |};
 

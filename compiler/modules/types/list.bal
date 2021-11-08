@@ -1,8 +1,15 @@
 // Implementation specific to basic type list.
 
 public type ListAtomicType readonly & record {|
-    SemType[] members;
+    ListMemberType members;
     SemType rest;
+|};
+
+public type ListMemberType SemType[]|FixedLengthMembers;
+
+public type FixedLengthMembers record {|
+    SemType memberType;
+    int length;
 |};
 
 // This is atom index 0
@@ -32,7 +39,7 @@ public class ListDefinition {
         }
     }
 
-    public function define(Env env, SemType[] members, SemType rest) returns ComplexSemType {
+    public function define(Env env, ListMemberType members, SemType rest) returns ComplexSemType {
         ListAtomicType rwType = { members: members.cloneReadOnly(), rest };
         Atom rw;
         RecAtom? rwRec = self.rwRec;
@@ -82,12 +89,39 @@ public class ListDefinition {
     }       
 }
 
+function listMembersIsReadOnly(ListMemberType members, SemType rest) returns boolean {
+    if members is FixedLengthMembers {
+        return isReadOnly(members.memberType);
+    }
+    else {
+        return typeListIsReadOnly(members) && isReadOnly(rest);
+    }
+}
+
+function readOnlyListMembers(ListMemberType t) returns readonly & ListMemberType {
+    if t is FixedLengthMembers {
+        return { memberType: intersect(t.memberType, READONLY), length: t.length };
+    }
+    else {
+        return readOnlyTypeList(t);
+    }
+}
+
+function shallowCopyListMembersType(ListMemberType t) returns ListMemberType {
+    if t is FixedLengthMembers {
+        return t;
+    }
+    else {
+        return shallowCopyTypes(t);
+    }
+}
+
 function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
-    if typeListIsReadOnly(ty.members) && isReadOnly(ty.rest) {
+    if listMembersIsReadOnly(ty.members, ty.rest) {
         return ty;
     }
     return {
-        members: readOnlyTypeList(ty.members),
+        members: readOnlyListMembers(ty.members),
         rest: intersect(ty.rest, READONLY)
     };   
 }
@@ -126,8 +160,71 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return isEmpty;    
 }
 
+function nthMember(ListMemberType m, int i) returns SemType {
+    // JBUG m[1] crashes the compiler
+    if m is FixedLengthMembers {
+        FixedLengthMembers {memberType, length} = m;
+        if length > i {
+            return memberType;
+        }
+    }
+    else {
+        return m[i];
+    }
+    return NEVER; // or panic?
+}
+
+function listMembersLen(ListMemberType lt) returns int {
+    if (lt is FixedLengthMembers) {
+        return lt.length;
+    }
+    else {
+        return lt.length();
+    }
+}
+
+function fixLength(int newLen, ListMemberType members, SemType m) returns SemType[] {
+    if members is SemType[] {
+        foreach int i in members.length() ..< newLen {
+            members.push(m);
+        }
+        return members;
+    }
+    else {
+        FixedLengthMembers {memberType, length} = members;
+        SemType[] newMembers = [];
+        foreach int i in 0 ..< length {
+            newMembers.push(memberType);
+        }
+        foreach int i in length ..< newLen {
+            newMembers.push(m);
+        }
+        return newMembers;
+    }
+}
+
+function setMembers(int index, ListMemberType members, SemType t) returns SemType[] {
+    SemType[] m = fixLength(index, members, t);
+    m[index] = t;
+    return m;
+}
+
+function isAnyMemberEmpty(Context cx, ListMemberType members) returns boolean {
+    if members is FixedLengthMembers {
+        return members.length == 0 || isEmpty(cx, members.memberType);
+    }
+    else {
+        foreach var m in members {
+            if isEmpty(cx, m) {
+                return true;
+            }
+        }
+        return false;
+    }
+}
+
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    SemType[] members;
+    ListMemberType members;
     SemType rest;
     if pos == () {
         members = [];
@@ -141,7 +238,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
         Conjunction? p = pos.next;
         // the neg case is in case we grow the array in listInhabited
         if p != () || neg != () {
-            members = shallowCopyTypes(members);
+            members = shallowCopyListMembersType(members);
         }
         while true {
             if p == () {
@@ -151,33 +248,39 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                int newLen = int:max(members.length(), lt.members.length());
-                if members.length() < newLen {
+                int prevLen = listMembersLen(members);
+                int currentLen = listMembersLen(lt.members);
+                int newLen = int:max(prevLen, currentLen);
+
+                if prevLen == currentLen && members is FixedLengthMembers && lt.members is FixedLengthMembers {
+                    SemType t = intersect(members.memberType, (<FixedLengthMembers>lt.members).memberType);
+                    if isNever(t) {
+                        return true;
+                    }
+                    members = { memberType: t, length: currentLen };
+                }
+                if prevLen < newLen {
                     if isNever(rest) {
                         return true;
                     }
-                    foreach int i in members.length() ..< newLen {
-                        members.push(rest);
-                    }
+                    members = fixLength(newLen, members, rest);
                 }
-                foreach int i in 0 ..< lt.members.length() {
-                    members[i] = intersect(members[i], lt.members[i]);
+                foreach int i in 0 ..< currentLen {
+                    members = setMembers(i, members, intersect(nthMember(members, i), nthMember(lt.members, i)));
                 }
-                if lt.members.length() < newLen {
+                if currentLen < newLen {
                     if isNever(lt.rest) {
                         return true;
                     }
-                    foreach int i in lt.members.length() ..< newLen {
-                        members[i] = intersect(members[i], lt.rest);
+                    foreach int i in currentLen ..< newLen {
+                        members = setMembers(i, members, intersect(nthMember(members, i), lt.rest));
                     }
                 }
                 rest = intersect(rest, lt.rest);
             }
         }
-        foreach var m in members {
-            if isEmpty(cx, m) {
-                return true;
-            }
+        if isAnyMemberEmpty(cx, members) {
+            return true;
         }
         // Ensure that we can use isNever on rest in listInhabited
         if rest !== NEVER && isEmpty(cx, rest) {
@@ -194,24 +297,29 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
 // Precondition is that each of `members` is not empty.
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
-function listInhabited(Context cx, SemType[] members, SemType rest, Conjunction? neg) returns boolean {
+function listInhabited(Context cx, ListMemberType m, SemType rest, Conjunction? neg) returns boolean {
     if neg == () {
         return true;
     }
     else {
-        int len = members.length();
+        ListMemberType members = m;
+        int len = listMembersLen(members);
         ListAtomicType nt = cx.listAtomType(neg.atom);
-        int negLen = nt.members.length();
+        ListMemberType negMembers = nt.members;
+        int negLen = listMembersLen(nt.members);
+        if len == negLen && negMembers is FixedLengthMembers && members is FixedLengthMembers {
+            if isNever(diff(members.memberType, negMembers.memberType)) {
+                return listInhabited(cx, members, rest, neg.next);
+            }
+        }
         if len < negLen {
             if isNever(rest) {
                 return listInhabited(cx, members, rest, neg.next);
-            }            
-            foreach int i in len ..< negLen {
-                members.push(rest);
-            }
+            } 
+            members = fixLength(negLen, members, rest);
             len = negLen;
         }
-        else if negLen < len && isNever(nt.rest) {
+        else if negLen < len && isNever(nt.rest) { 
             return listInhabited(cx, members, rest, neg.next);
         }
         // now we have nt.members.length() <= len
@@ -236,11 +344,11 @@ function listInhabited(Context cx, SemType[] members, SemType rest, Conjunction?
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
         foreach int i in 0 ..< len {
-            SemType ntm = i < negLen ? nt.members[i] : nt.rest;
-            SemType d = diff(members[i], ntm);
+            SemType ntm = i < negLen ? nthMember(nt.members, i) : nt.rest;
+            SemType d = diff(nthMember(members, i), ntm);
             if !isEmpty(cx, d) {
-                SemType[] s = shallowCopyTypes(members);
-                s[i] = d;
+                ListMemberType s = shallowCopyListMembersType(members);
+                s = setMembers(i, s, d);
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
@@ -273,14 +381,20 @@ function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
         if key < 0 {
             return NEVER;
         }
-        else if key < atomic.members.length() {
-            return atomic.members[key];
+        else if key < listMembersLen(atomic.members) {
+            return nthMember(atomic.members, key);
         }
         return atomic.rest;
     }
     SemType m = atomic.rest;
-    foreach var ty in atomic.members {
-        m = union(m, ty);
+    ListMemberType members = atomic.members;
+    if (members is FixedLengthMembers) {
+        m = union(m, members.memberType);
+    }
+    else {
+        foreach var ty in members {
+            m = union(m, ty);
+        }
     }
     return m;
 }

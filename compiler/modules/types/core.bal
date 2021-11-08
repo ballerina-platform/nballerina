@@ -787,11 +787,15 @@ public function simpleArrayMemberType(Context cx, SemType t) returns UniformType
 }
 
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns UniformTypeBitSet? {
-    if atomic != () && atomic.members.length() == 0 {
-        SemType memberType = atomic.rest;
-        if memberType is UniformTypeBitSet {
-            return memberType;
+    if atomic != () {
+        ListMemberType mt = atomic.members;
+        if mt is SemType[] && mt.length() == 0 {
+            SemType memberType = atomic.rest;
+            if memberType is UniformTypeBitSet {
+                return memberType;
+            }
         }
+        
     }
     return ();   
 }
