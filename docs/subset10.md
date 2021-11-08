@@ -15,11 +15,13 @@
    * predefined basic type name: `boolean`, `float`, `int`, `string`, `error`
    * nil type `()`
    * `any` type
-   * optional type: `T?` where T is one of the above types
-   * union of the above types e.g. `int|string?`
-   * `map<M>` where M any of the above types
-   * `M[]` where `M` is either a type name `T` or `T?`, or a parenthesized union e.g. `(any|error)[]`
-   * closed record type descriptor
+   * optional type: `T?`
+   * unions: `T1|T2`
+   * structure types
+      * map type: `map<M>`
+      * array type: `M[]`
+      * closed record type: `record {| M1 f1; M2 f2; |}`
+      * the type descriptor `M` used for a member of a structure is restricted to a predefined type name `T`, `T?` or a union of these
    * a reference to a type defined by a type definition
 * Statements:
    * function/method call statement
@@ -87,35 +89,53 @@ const-defn = ["public"] "const" [builtin-type-name] identifier "=" const-expr ";
 
 type-defn = ["public"] "type" identifier type-desc ";"
 
-type-desc =
-  union-type-desc
+type-desc = union-type-desc
+
+union-type-desc =
+  postfix-type-desc
+  | union-type-desc "|" postfix-type-desc
+
+postfix-type-desc =
+  primary-type-desc
+  | optional-type-desc
   | array-type-desc
+
+optional-type-desc = postfix-type-desc [ "?" ]
+
+array-type-desc = optional-basic-type-desc "[" "]"
+
+primary-type-desc =
+  builtin-type-name
+  | nil-type-desc
+  | "(" type-desc ")"
+  | type-reference
   | map-type-desc
   | record-type-desc
-  | type-reference
-
-# corresponds to union of one or more complete basic types
-union-type-desc =
-  optional-type-desc
-  | union-type-desc "|" optional-type-desc
-
-optional-type-desc = basic-type-desc [ "?" ]
-
-basic-type-desc =
-   builtin-type-name
-   | nil-type-desc
-   | "(" union-type-desc ")"
 
 builtin-type-name = "any" | "boolean" | "int" | "float" | "string" | "error"
 
 nil-type-desc = "(" ")"
 
-array-type-desc = optional-type-desc "[" "]"
+# reference to a type definition
+type-reference = identifier | qualified-identifier
 
-map-type-desc = "map" "<" union-type-desc ">"
+map-type-desc = "map" "<" union-basic-type-desc ">"
 
 record-type-desc = "record" "{|" field-desc* "|}"
-field-desc = union-type-desc identifier ";"
+field-desc = union-basic-type-desc identifier ";"
+
+# type of a structure member is restricted to a union of one or more complete basic types
+
+union-basic-type-desc =
+   optional-basic-type-desc
+   | union-basic-type-desc "|" optional-basic-type-desc
+
+optional-basic-type-desc = basic-type-desc [ "?" ]
+
+basic-type-desc =
+   builtin-type-name
+   | nil-type-desc
+   | "(" union-basic-type-desc ")"
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -140,9 +160,6 @@ statement =
 local-var-decl-stmt = ["final"] type-desc binding-pattern "=" expression ";"
 
 binding-pattern = identifier | wildcard-binding-pattern
-
-# reference to a type definition
-type-reference = identifier | qualified-identifier
 
 call-stmt = call-expr ";"
 
@@ -362,7 +379,7 @@ Two kinds of `import` are supported.
 
 ## Additions from subset 9
 
-* TBD
+* A more expressive grammar is supported for type descriptors. In particular, the restrictions on union type descriptors have been removed. (There is still a restriction on the type of a member of a structure.)
 
 ## Implemented spec changes since 2021R1
 

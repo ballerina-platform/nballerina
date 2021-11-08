@@ -16,7 +16,7 @@ void testRandMapping(int len) {
         k[i] = randSmallString();
         v[i] = randSmallString();
     }
-    static MappingDesc inherentType = { 1 << TAG_STRING };
+    static MappingDesc inherentType = { 0, 1 << TAG_STRING };
     TaggedPtr m = _bal_mapping_construct(&inherentType, 0);
     for (int i = 0; i < len; i++) {
         bool dup = _bal_mapping_get(m, k[i]) != 0;

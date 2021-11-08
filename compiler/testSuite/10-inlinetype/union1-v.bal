@@ -5,5 +5,5 @@ type Int int;
 
 public function main() {
     Int|String x = 17;
-    io:println(x);
+    io:println(x); // @output 17
 }

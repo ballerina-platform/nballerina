@@ -1,10 +1,11 @@
 @_bal_stack_guard = external global i8*
+@_Bi04root0 = external constant {i32, i32}
 @.str5 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"greeting\00\00\00\00"}, align 8
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
-declare i8 addrspace(1)* @_bal_alloc(i64)
+declare {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}*, i64)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
@@ -29,7 +30,7 @@ define void @_B04rootmain() !dbg !5 {
   %18 = alloca i8
   %19 = load i8*, i8** @_bal_stack_guard
   %20 = icmp ult i8* %18, %19
-  br i1 %20, label %61, label %21
+  br i1 %20, label %57, label %21
 21:
   %22 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0), !dbg !10
   %23 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %22), !dbg !10
@@ -67,43 +68,36 @@ define void @_B04rootmain() !dbg !5 {
   %39 = load i8 addrspace(1)*, i8 addrspace(1)** %11, !dbg !21
   call void @_Bb02ioprintln(i8 addrspace(1)* %39), !dbg !21
   store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !21
-  %40 = call i8 addrspace(1)* @_bal_alloc(i64 8)
-  %41 = bitcast i8 addrspace(1)* %40 to [1 x i8 addrspace(1)*] addrspace(1)*
-  %42 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
-  %43 = getelementptr inbounds [1 x i8 addrspace(1)*], [1 x i8 addrspace(1)*] addrspace(1)* %41, i64 0, i64 0
-  store i8 addrspace(1)* %42, i8 addrspace(1)* addrspace(1)* %43
-  %44 = bitcast [1 x i8 addrspace(1)*] addrspace(1)* %41 to [0 x i8 addrspace(1)*] addrspace(1)*
-  %45 = call i8 addrspace(1)* @_bal_alloc(i64 32)
-  %46 = bitcast i8 addrspace(1)* %45 to {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %47 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 0
-  store i64 8388607, i64 addrspace(1)* %47
-  %48 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 1
-  store i64 1, i64 addrspace(1)* %48
-  %49 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 2
-  store i64 1, i64 addrspace(1)* %49
-  %50 = getelementptr inbounds {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {i64, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %46, i64 0, i32 3
-  store [0 x i8 addrspace(1)*] addrspace(1)* %44, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %50
-  %51 = getelementptr i8, i8 addrspace(1)* %45, i64 1297036692682702852
-  store i8 addrspace(1)* %51, i8 addrspace(1)** %13
-  %52 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !22
-  %53 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %52, i64 -5), !dbg !22
-  %54 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %53), !dbg !22
-  store i8 addrspace(1)* %54, i8 addrspace(1)** %14, !dbg !22
-  %55 = load i8 addrspace(1)*, i8 addrspace(1)** %14, !dbg !23
-  call void @_Bb02ioprintln(i8 addrspace(1)* %55), !dbg !23
+  %40 = call {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 1)
+  %41 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %40, i64 0, i32 3
+  %42 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %41, align 8
+  %43 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
+  %44 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %42, i64 0, i64 0
+  store i8 addrspace(1)* %43, i8 addrspace(1)* addrspace(1)* %44
+  %45 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %40, i64 0, i32 1
+  store i64 1, i64 addrspace(1)* %45
+  %46 = bitcast {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %40 to i8 addrspace(1)*
+  %47 = getelementptr i8, i8 addrspace(1)* %46, i64 1297036692682702852
+  store i8 addrspace(1)* %47, i8 addrspace(1)** %13
+  %48 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !22
+  %49 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %48, i64 -5), !dbg !22
+  %50 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %49), !dbg !22
+  store i8 addrspace(1)* %50, i8 addrspace(1)** %14, !dbg !22
+  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %14, !dbg !23
+  call void @_Bb02ioprintln(i8 addrspace(1)* %51), !dbg !23
   store i8 addrspace(1)* null, i8 addrspace(1)** %15, !dbg !23
-  %56 = zext i1 0 to i64, !dbg !24
-  %57 = or i64 %56, 72057594037927936, !dbg !24
-  %58 = getelementptr i8, i8 addrspace(1)* null, i64 %57, !dbg !24
-  %59 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %58), !dbg !24
-  store i8 addrspace(1)* %59, i8 addrspace(1)** %16, !dbg !24
-  %60 = load i8 addrspace(1)*, i8 addrspace(1)** %16, !dbg !25
-  call void @_Bb02ioprintln(i8 addrspace(1)* %60), !dbg !25
+  %52 = zext i1 0 to i64, !dbg !24
+  %53 = or i64 %52, 72057594037927936, !dbg !24
+  %54 = getelementptr i8, i8 addrspace(1)* null, i64 %53, !dbg !24
+  %55 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %54), !dbg !24
+  store i8 addrspace(1)* %55, i8 addrspace(1)** %16, !dbg !24
+  %56 = load i8 addrspace(1)*, i8 addrspace(1)** %16, !dbg !25
+  call void @_Bb02ioprintln(i8 addrspace(1)* %56), !dbg !25
   store i8 addrspace(1)* null, i8 addrspace(1)** %17, !dbg !25
   ret void
-61:
-  %62 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
-  call void @_bal_panic(i8 addrspace(1)* %62)
+57:
+  %58 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
+  call void @_bal_panic(i8 addrspace(1)* %58)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %0) !dbg !7 {
@@ -283,7 +277,7 @@ pattern.7:
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
-!0 = !{i32 1, !"Debug Info Version", i32 3}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename:"../../../compiler/testSuite/05-match/04-v.bal", directory:"")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !3 = !DISubroutineType(types: !4)

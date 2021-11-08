@@ -325,13 +325,11 @@ public class Module {
                                      ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
 
         }
-        else if name == "ptrmask.p1i8.i64" {
+        else {
+            GeneralIntrinsicName _ = name;
             return self.addIntrinsic(name,
                                      { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] },
                                      ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
-        }
-        else {
-            panic err:impossible();
         }
     }
 

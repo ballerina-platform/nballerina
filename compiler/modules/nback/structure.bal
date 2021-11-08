@@ -2,15 +2,6 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-final RuntimeFunction listSetFunction = {
-    name: "list_set",
-    ty: {
-        returnType: "i64",
-        paramTypes: [LLVM_TAGGED_PTR, "i64", LLVM_TAGGED_PTR]
-    },
-    attrs: []
-};
-
 final RuntimeFunction mappingSetFunction = {
     name: "mapping_set",
     ty: {
@@ -118,29 +109,31 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
                    continueBlock,
                    outOfBoundsBlock);
     builder.positionAtEnd(outOfBoundsBlock);
-    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_INDEX_OUT_OF_BOUNDS, insn.position), scaffold.panicAddress());
+    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_INDEX_OUT_OF_BOUNDS, insn.pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
-    // array is a pointer to the array
-    llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct,
-                                                                                    [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)], "inbounds"),
-                                                                                    ALIGN_HEAP);
-    buildStoreTagged(builder, scaffold,
-                     builder.load(builder.getElementPtr(array,
-                                                        [llvm:constInt(LLVM_INT, 0), index], "inbounds"),
-                                  ALIGN_HEAP),
-                     insn.result);
+    llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP);
+    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)]), ALIGN_HEAP);
+    llvm:Value? val = builder.call(func,
+                                   [builder.load(scaffold.address(insn.operands[0])),
+                                    buildInt(builder, scaffold, insn.operands[1])]);
+    buildStoreTagged(builder, scaffold, <llvm:Value>val, insn.result);
 }
 
 function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
+    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
+                                                                               [builder.load(scaffold.address(insn.operands[0])), llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                               heapPointerType(llListType));
+    llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP);
+    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 2)]), ALIGN_HEAP);
+
     t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
     // XXX listSetFunction must also clear the exact bit if the list is not exact?
-    llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(listSetFunction),
+    llvm:Value? err = builder.call(func,
                                    [builder.load(scaffold.address(insn.operands[0])),
                                     buildInt(builder, scaffold, insn.operands[1]),
                                     check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)]);
-    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
-   
+    buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
 }
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
@@ -216,7 +209,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
                                        k,
                                        check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)
                                    ]);
-    buildCheckError(builder, scaffold, <llvm:Value>err, insn.position);                                
+    buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
 }
 
 function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {

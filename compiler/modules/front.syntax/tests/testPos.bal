@@ -22,9 +22,6 @@ function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns
 
 function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(stmt.startPos, MODE_NORMAL);
-    if stmt is MethodCallExpr|FunctionCallExpr {
-        return check validateExpressionPos(stmt, tok, parentStartPos, parentEndPos);
-    }
     test:assertEquals(tok.currentStartPos(), stmt.startPos, "moved to wrong position");
     Stmt newStmt = check parseStmt(tok);
     test:assertEquals(stmt.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
@@ -32,25 +29,28 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     test:assertTrue(stmt.startPos >= parentStartPos && stmt.endPos <= parentEndPos, "child node outside of parent");
     [err:Position, err:Position][] childNodePos = [];
     if stmt is IfElseStmt {
-        foreach Stmt trueStmt in stmt.ifTrue {
+        foreach Stmt trueStmt in stmt.ifTrue.stmts {
             check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
         }
-        foreach Stmt falseStmt in stmt.ifFalse {
-            check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
-            childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
+        StmtBlock? ifFalse = stmt.ifFalse;
+        if ifFalse is StmtBlock {
+            foreach Stmt falseStmt in ifFalse.stmts {
+                check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
+                childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
+            }
         }
     }
     else if stmt is MatchStmt {
         foreach var clause in stmt.clauses {
-            foreach var matchStmt in clause.block {
+            foreach var matchStmt in clause.block.stmts {
                 check validateStatementPos(matchStmt, tok, stmt.startPos, stmt.endPos);
                 childNodePos.push([matchStmt.startPos, matchStmt.endPos]);
             }
         }
     }
     else if stmt is (WhileStmt|ForeachStmt) {
-        foreach var bodyStmt in <Stmt[]>stmt.body {
+        foreach var bodyStmt in stmt.body.stmts {
             check validateStatementPos(bodyStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([bodyStmt.startPos, bodyStmt.endPos]);
         }
@@ -66,6 +66,49 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     }
     check validateChildExpressions(stmt, tok);
     check validateChildTypeDesc(stmt, tok);
+    check validateStmtOpPos(stmt, tok);
+}
+
+type OpStmt VarDeclStmt|AssignStmt|CompoundAssignStmt;
+type KwStmt ReturnStmt|PanicStmt|ForeachStmt;
+
+function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
+    if stmt is MatchStmt {
+        foreach var clause in stmt.clauses {
+            check tok.moveToPos(clause.opPos, MODE_NORMAL);
+            Token? opToken = tok.curTok;
+            test:assertEquals(opToken, "=>");
+        }
+    }
+    else if stmt is OpStmt {
+        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        if stmt is VarDeclStmt|AssignStmt {
+            test:assertEquals(opToken, "=");
+        }
+        else {
+            test:assertTrue(opToken is CompoundAssignOp);
+        }
+    }
+    else if stmt is ForeachStmt {
+        RangeExpr rangeExpr = stmt.range;
+        check tok.moveToPos(rangeExpr.opPos, MODE_NORMAL);
+        Token? opToken = tok.curTok;
+        test:assertTrue(opToken == "..<");
+        check tok.moveToPos(stmt.kwPos, MODE_NORMAL);
+        Token? kwToken = tok.curTok;
+        test:assertTrue(kwToken == "in");
+    }
+    else if stmt is KwStmt {
+        check tok.moveToPos(stmt.kwPos, MODE_NORMAL);
+        Token? kwToken = tok.curTok;
+        if stmt is ReturnStmt {
+            test:assertEquals(kwToken, "return");
+        }
+        if stmt is PanicStmt {
+            test:assertEquals(kwToken, "panic");
+        }
+    }
 }
 
 function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? {
@@ -78,6 +121,7 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
                         check validateExpressionPos(matchPattern.expr, tok, stmt.startPos, stmt.endPos);
                     }
                 }
+                check validateMatchClausePos(clause, tok, stmt.startPos, stmt.endPos);
             }
         }
     }
@@ -97,6 +141,32 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
     else if stmt is VarDeclStmt {
         check validateExpressionPos(stmt.initExpr, tok, stmt.startPos, stmt.endPos);
     }
+    else if stmt is CallStmt {
+        check validateExpressionPos(stmt.expr, tok, stmt.startPos, stmt.endPos);
+    }
+}
+
+function validateMatchClausePos(MatchClause clause, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(clause.startPos, MODE_NORMAL);
+    test:assertEquals(tok.currentStartPos(), clause.startPos, "moved to wrong position");
+    MatchClause newClause = check parseMatchClause(tok);
+    test:assertEquals(tok.previousEndPos(), clause.endPos);
+    test:assertEquals(newClause.toString(), clause.toString());
+    test:assertTrue(clause.startPos > parentStartPos && clause.endPos < parentEndPos, "match caluse outside of match stmt");
+    check tok.moveToPos(clause.endPos, MODE_NORMAL);
+    Token? endTok = tok.curTok;
+    test:assertEquals(endTok, "}", "invalid end pos");
+}
+
+function validateStmtBlockPos(StmtBlock block, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(block.startPos, MODE_NORMAL);
+    test:assertEquals(tok.current(), "{", "invalid start token for StmtBlock");
+    StmtBlock newBlock = check parseStmtBlock(tok);
+    test:assertEquals(newBlock.toString(), block.toString());
+    test:assertEquals(tok.previousEndPos(), block.endPos, "invalid endPos value");
+    check tok.moveToPos(block.endPos, MODE_NORMAL);
+    test:assertEquals(tok.current(), "}", "invalid end token for StmtBlock");
+    test:assertTrue(block.startPos > parentStartPos && block.endPos <= parentEndPos, "stmt block outside of parent");
 }
 
 type RecursiveBinaryExpr BinaryBitwiseExpr|BinaryEqualityExpr|BinaryArithmeticExpr;
@@ -218,14 +288,10 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             newExpr = matchingChild;
         }
         test:assertEquals(expr.endPos, actualEnd);
-        if newExpr is MethodCallExpr|FunctionCallExpr {
-            // pos depends on whether original was parsed as a stmt or expr but for testing we always treat it as expr
-            newExpr.pos = (<MethodCallExpr|FunctionCallExpr>expr).pos;
-        }
         test:assertEquals(expr.toString(), newExpr.toString());
         test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
         test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
-        test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), "end position is invalid");
+        test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), endPosErrorMessage(tok, expr.endPos));
         [err:Position, err:Position][] childNodePos = [];
         if expr is BinaryExpr {
             check validateExpressionPos(expr.left, tok, expr.startPos, expr.endPos);
@@ -258,10 +324,80 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             lastEnd = endPos;
         }
         check validateChildTypeDesc(expr, tok);
+        if expr is MappingConstructorExpr {
+            foreach Field f in expr.fields {
+                check validateFieldPos(f, tok, expr.startPos, expr.endPos);
+            }
+        }
     }
     else {
         panic err:impossible("failed to find a parser for expression");
     }
+    check validateChildTypeDesc(expr, tok);
+    check validateExprOpPos(expr, tok);
+}
+
+type ExprOpPos BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr|TypeCastExpr;
+type ExprKwPos CheckingExpr|ErrorConstructorExpr|TypeTestExpr;
+
+function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
+    if expr is ExprOpPos|ExprKwPos {
+        if expr is ExprKwPos {
+            check tok.moveToPos(expr.kwPos, MODE_NORMAL);
+        }
+        else {
+            check tok.moveToPos(expr.opPos, MODE_NORMAL);
+        }
+        Token? token = tok.curTok;
+        if expr is BinaryRelationalExpr {
+            test:assertTrue(token is BinaryRelationalOp);
+        }
+        else if expr is BinaryEqualityExpr {
+            test:assertTrue(token is BinaryEqualityOp);
+        }
+        else if expr is BinaryArithmeticExpr {
+            test:assertTrue(token is BinaryArithmeticOp);
+        }
+        else if expr is BinaryBitwiseExpr {
+            test:assertTrue(token is BinaryBitwiseOp);
+        }
+        else if expr is UnaryExpr {
+            test:assertTrue(token is UnaryExprOp);
+        }
+        else if expr is ErrorConstructorExpr {
+            test:assertEquals(token, "error");
+        }
+        else if expr is ListConstructorExpr|MemberAccessExpr|MemberAccessLExpr {
+            test:assertEquals(token, "[");
+        }
+        else if expr is MappingConstructorExpr {
+            test:assertEquals(token, "{");
+        }
+        else if expr is FunctionCallExpr|MethodCallExpr {
+            test:assertTrue(token == "(");
+        }
+        else if expr is CheckingExpr {
+            test:assertTrue(token is CheckingKeyword);
+        }
+        else if expr is TypeCastExpr {
+            test:assertEquals(token, "<");
+        }
+        else if expr is TypeTestExpr {
+            test:assertEquals(token, "is");
+        }
+        else {
+            test:assertEquals(token, ".");
+        }
+    }
+}
+
+function validateFieldPos(Field f, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(f.startPos, MODE_NORMAL);
+    test:assertEquals(tok.currentStartPos(), f.startPos, "moved to wrong position");
+    Field newField = check parseField(tok);
+    test:assertEquals(tok.previousEndPos(), f.endPos);
+    test:assertFalse(checkPosFragCode(tok.file, f.endPos, FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON), endPosErrorMessage(tok, f.endPos));
+    test:assertTrue(f.startPos > parentStartPos && f.endPos < parentEndPos, "field outside of MappingConstructorExpr");
 }
 
 function validateChildTypeDesc(Stmt|Expr parent, Tokenizer tok) returns err:Syntax? {
@@ -314,7 +450,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     test:assertEquals(td.toString(), newTd.toString());
     test:assertTrue(td.startPos >= parentStartPos && td.endPos <= parentEndPos, "child node outside of parent");
     test:assertFalse(testPositionIsWhiteSpace(tok.file, td.startPos), "start position is a white space");
-    test:assertTrue(testValidTypeDescEnd(tok.file, td.endPos, td), "end position is invalid");
+    test:assertTrue(testValidTypeDescEnd(tok.file, td.endPos, td), endPosErrorMessage(tok, td.endPos));
     [err:Position, err:Position][] childNodePos = [];
     if td is ListTypeDesc {
         foreach var member in td.members {
@@ -355,6 +491,18 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         lastEnd = endPos;
     }
     check validateTypeDescOpPos(td, tok);
+    if td is MappingTypeDesc {
+        foreach FieldDesc fd in td.fields {
+            check validateFieldDescPos(fd, tok, td.startPos, td.endPos);
+        }
+    }
+}
+
+function validateFieldDescPos(FieldDesc fd, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    check tok.moveToPos(fd.startPos, MODE_NORMAL);
+    test:assertTrue(tok.current() is [IDENTIFIER, string], "invalid startPos");
+    check tok.moveToPos(fd.endPos, MODE_NORMAL);
+    test:assertTrue(tok.current() == ";", endPosErrorMessage(tok, fd.endPos));
 }
 
 function validateTypeDescOpPos(TypeDesc td, Tokenizer tok) returns err:Syntax? {
@@ -380,6 +528,20 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
     FragCode[] base = [FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON];
     if td is ListTypeDesc || (td is FunctionTypeDesc && td.ret is ListTypeDesc) {
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
+    }
+    else if td is BinaryTypeDesc {
+        // check if any type in the union can be a list-type-desc
+        TypeDesc left = td.left;
+        while left is BinaryTypeDesc {
+            left = left.left;
+            if left is ListTypeDesc || (left is FunctionTypeDesc && left.ret is ListTypeDesc) {
+                return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
+            }
+        }
+        if left is ListTypeDesc || (left is FunctionTypeDesc && left.ret is ListTypeDesc) {
+            return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
+        }
+        return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
     }
     return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
 }
@@ -444,3 +606,12 @@ function sourceFileFragIndex(SourceFile file, Position pos) returns [int, int] {
     ScannedLine line = file.scannedLine(lineNumber);
     return [lineNumber, scanLineFragIndex(line, codePointIndex)[0]];
 }
+
+function endPosErrorMessage(Tokenizer tok, Position endPos) returns string {
+    string[] body = [string `invalid end token in file ${tok.file.filename()} at ${unpackPosition(endPos).toString()}`];
+    checkpanic tok.moveToPos(endPos, MODE_NORMAL);
+    Token? endTok = tok.current();
+    body.push(string `End token: ${endTok.toString()}`);
+    return "\n".'join(...body);
+}
+

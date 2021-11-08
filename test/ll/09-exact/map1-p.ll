@@ -1,9 +1,9 @@
 @_bal_stack_guard = external global i8*
-@_Bi04root0 = external constant {i32}
-@_Bi04root1 = external constant {i32}
+@_Bi04root0 = external constant {i32, i32}
+@_Bi04root1 = external constant {i32, i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
+declare i8 addrspace(1)* @_bal_mapping_construct({i32, i32}*, i64)
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
@@ -21,11 +21,11 @@ define void @_B04rootmain() !dbg !5 {
   %8 = icmp ult i8* %6, %7
   br i1 %8, label %21, label %9
 9:
-  %10 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 0)
+  %10 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi04root0, i64 0)
   store i8 addrspace(1)* %10, i8 addrspace(1)** %1
   %11 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %11, i8 addrspace(1)** %m1
-  %12 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root1, i64 0)
+  %12 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi04root1, i64 0)
   store i8 addrspace(1)* %12, i8 addrspace(1)** %2
   %13 = load i8 addrspace(1)*, i8 addrspace(1)** %2
   store i8 addrspace(1)* %13, i8 addrspace(1)** %m2
@@ -86,7 +86,7 @@ define void @_B04rootmain() !dbg !5 {
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
-!0 = !{i32 1, !"Debug Info Version", i32 3}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename:"../../../compiler/testSuite/09-exact/map1-p.bal", directory:"")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !3 = !DISubroutineType(types: !4)

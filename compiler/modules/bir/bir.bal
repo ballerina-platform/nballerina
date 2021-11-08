@@ -188,6 +188,8 @@ public type InsnBase record {
     # Whether an instruction is a terminator or a PPI is determined
     # just by its name.
     InsnName name;
+    # Position based on the AST node that generated the instruction
+    Position pos;
 };
 
 public type Insn 
@@ -218,7 +220,6 @@ public type IntArithmeticBinaryInsn readonly & record {|
     ArithmeticBinaryOp op;
     Register result;
     IntOperand[2] operands;
-    Position position;
 |};
 
 # Concatenate strings, returns a new string
@@ -263,7 +264,6 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     ArithmeticBinaryOp op;
     Register result;
     FloatOperand[2] operands;
-    Position position;
 |};
 
 public type FloatNegateInsn readonly & record {|
@@ -285,7 +285,6 @@ public type ConvertToIntInsn readonly & record {|
     INSN_CONVERT_TO_INT name = INSN_CONVERT_TO_INT;
     Register result;
     Register operand;
-    Position position;
 |};
 
 # If the operand is an int or decimal, then convert it to a float.
@@ -321,6 +320,7 @@ public type CompareInsn readonly & record {|
 
 # Constructs a new mutable list value.
 public type ListConstructInsn readonly & record {|
+    *InsnBase;
     INSN_LIST_CONSTRUCT_RW name = INSN_LIST_CONSTRUCT_RW;
     // The type of the result gives the inherent type of the constructed list
     Register result;
@@ -330,22 +330,23 @@ public type ListConstructInsn readonly & record {|
 # Gets a member of a list at a specified index.
 # This is a PPI (since the index may be out of bounds).
 public type ListGetInsn readonly & record {|
+    *InsnBase;
     INSN_LIST_GET name = INSN_LIST_GET;
     Register result;
     [Register, IntOperand] operands;
-    Position position;
 |};
 
 # Sets a member of a list at a specified index.
 # This is a PPI (since the index may be out of bounds).
 public type ListSetInsn readonly & record {|
+    *InsnBase;
     INSN_LIST_SET name = INSN_LIST_SET;
     [Register, IntOperand, Operand] operands;
-    Position position;
 |};
 
 # Constructs a new mutable list value.
 public type MappingConstructInsn readonly & record {|
+    *InsnBase;
     INSN_MAPPING_CONSTRUCT_RW name = INSN_MAPPING_CONSTRUCT_RW;
     // The type of the result gives the inherent type of the constructed list
     Register result;
@@ -357,6 +358,7 @@ public type MappingConstructInsn readonly & record {|
 # This returns nil if there is no such member.
 # So this is not a PPI
 public type MappingGetInsn readonly & record {|
+    *InsnBase;
     INSN_MAPPING_GET name = INSN_MAPPING_GET;
     Register result;
     [Register, StringOperand] operands;
@@ -365,18 +367,18 @@ public type MappingGetInsn readonly & record {|
 # Sets a member of a mapping with a specified key.
 # This is a PPI.
 public type MappingSetInsn readonly & record {|
+    *InsnBase;
     INSN_MAPPING_SET name = INSN_MAPPING_SET;
     [Register, StringOperand, Operand] operands;
-    Position position;
 |};
 
 # Constructs an error value.
 # Operand must be of type string.
 public type ErrorConstructInsn readonly & record {|
+    *InsnBase;
     INSN_ERROR_CONSTRUCT name = INSN_ERROR_CONSTRUCT;
     Register result;
     StringOperand operand;
-    Position position;
 |};
 
 # This does equality expressions.
@@ -404,7 +406,6 @@ public type EqualityInsn readonly & record {|
 public type CallInsn readonly & record {|
     *InsnBase;
     # Position in the source that resulted in the instruction
-    Position position;
     INSN_CALL name = INSN_CALL;
     Register result;
     FunctionOperand func;
@@ -435,7 +436,6 @@ public type TypeCastInsn readonly & record {|
     Register result;
     Register operand;
     SemType semType;
-    Position position;
 |};
 
 

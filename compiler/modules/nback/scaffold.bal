@@ -97,6 +97,7 @@ type UsedSemType record {|
     readonly int index;
     llvm:ConstPointerValue? inherentType = ();
     llvm:ConstPointerValue? typeTest = ();
+    llvm:ConstPointerValue? exactify = ();
 |};
 
 type ModuleDI record {|
@@ -274,7 +275,7 @@ class Scaffold {
         if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_TYPE_TEST, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(self.initTypes().typeTestVTable, symbol, isConstant = true);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llTypeTestType, symbol, isConstant = true);
             used.typeTest = v;
             return v;
         }
@@ -291,6 +292,21 @@ class Scaffold {
             string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
             llvm:ConstPointerValue v = m.llMod.addGlobal(llInherentType, symbol, isConstant = true);
             used.inherentType = v;
+            return v;
+        }
+        else {
+            return value;
+        }
+    }
+
+    function getExactify(t:SemType ty) returns llvm:ConstPointerValue {
+        UsedSemType used = self.getUsedSemType(ty);
+        llvm:ConstPointerValue? value = used.exactify;
+        if value == () {
+            Module m = self.mod;
+            string symbol = mangleTypeSymbol(m.modId, USED_EXACTIFY, used.index);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(LLVM_TID, symbol, isConstant = true);
+            used.exactify = v;
             return v;
         }
         else {
@@ -438,9 +454,7 @@ function semTypeRepr(t:SemType ty) returns Repr {
     if w == t:NEVER {
         panic err:impossible("allocate register with never type");
     }
-    // subset07 does not allow unions of list/mapppings with other things
-    // apart from `any`
-    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:ERROR;
+    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:LIST|t:MAPPING|t:ERROR;
     // DECIMAL is here for ConvertToInt or ConvertToFloat 
     if (w | supported | t:DECIMAL) == t:TOP || (w & supported) == w {
         TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };

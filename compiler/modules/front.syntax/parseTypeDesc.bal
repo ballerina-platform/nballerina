@@ -364,16 +364,18 @@ function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTy
             "..." => {
                 rest = td;
                 check tok.advance();
+                check tok.expect(";");
             }
             [IDENTIFIER, var name] => {
+                Position fieldStartPos = tok.currentStartPos();
                 check tok.advance();
-                fields.push({name, typeDesc: td});
+                Position fieldEndPos = check tok.expectEnd(";");
+                fields.push({ startPos: fieldStartPos, endPos: fieldEndPos, name, typeDesc: td });
             }
             _ => {
                 return parseError(tok);
             }
         }
-        check tok.expect(";");
     }
     Position endPos = tok.currentEndPos();
     check tok.advance();

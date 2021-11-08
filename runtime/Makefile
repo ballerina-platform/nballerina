@@ -8,8 +8,8 @@ export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
 BT_WARN_FLAGS=-W -Wall -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition -Wmissing-format-attribute -Wcast-qual
 BT_OBJS=$(addprefix third-party/libbacktrace/, atomic.o dwarf.o fileline.o posix.o sort.o state.o backtrace.o simple.o obj.o mmapio.o mmap.o)
-OBJS=alloc.o error.o list.o main.o mapping.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o tagged_inline.o $(BT_OBJS)
-C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc boolean_inline.bc
+OBJS=alloc.o error.o list.o main.o mapping.o structure.o panic.o print.o string.o int.o third-party/dtoa/emyg_dtoa.o tagged_inline.o $(BT_OBJS)
+C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc boolean_inline.bc type_inline.bc structure_inline.bc
 LL_BCS=float_ir_inline.bc tagged_inline.bc
 BCS=$(C_BCS) $(LL_BCS)
 INCLUDES=tag.h balrt.h balrt_inline.h
@@ -47,7 +47,9 @@ $(BT_OBJS): %.o: %.c
 	set -o pipefail; \
 	$(CLANG) -c $(CFLAGS) -emit-llvm -o - $< | \
 	$(LLVM_LINK) $(LL_BCS) - -o - -S | \
-	sed -e '/define .*@_bal_tagged_to_ptr/s/^define /define linkonce_odr /' -e '/define .*@_bal_float_/s/^define /define linkonce_odr /' | \
+	sed -e '/define .*@_bal_tagged_to_ptr/s/^define /define linkonce_odr /' \
+		-e '/define .*@_bal_tagged_clear_exact/s/^define /define linkonce_odr /' \
+		-e '/define .*@_bal_float_/s/^define /define linkonce_odr /' | \
 	$(OPT) -O2 - -o - -S | \
 	$(LLVM_AS) >$@
 

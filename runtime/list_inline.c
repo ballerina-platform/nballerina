@@ -21,16 +21,6 @@ void BAL_LANG_ARRAY_NAME(push)(TaggedPtr p, TaggedPtr val) {
     lp->tpArray.length = len + 1;
 }
 
-TaggedPtr _bal_list_exactify(TaggedPtr p, ListDescPtr desc) {
-    ListPtr lp = taggedToPtr(p);
-    ListDescPtr ldp = lp->desc;
-    if (lp == taggedToPtrExact(p) && (ldp->bitSet == desc->bitSet)) {
-        // exact bit is not set, but should be
-        return p + EXACT_FLAG;
-    }
-    return p;
-}
-
 int64_t READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return intArrayCompare(lhs, rhs);
 }

@@ -2,20 +2,20 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-final RuntimeFunction listExactifyFunction = {
-    name: "list_exactify",
+final RuntimeFunction typeContainsFunction = {
+    name: "type_contains",
     ty: {
-        returnType: LLVM_TAGGED_PTR,
-        paramTypes: [LLVM_TAGGED_PTR, llvm:pointerType(llInherentType)]
+        returnType: LLVM_BOOLEAN,
+        paramTypes: [llvm:pointerType(llTypeTestType), LLVM_TAGGED_PTR]
     },
     attrs: ["readonly"]
 };
 
-final RuntimeFunction mappingExactifyFunction = {
-    name: "mapping_exactify",
+final RuntimeFunction structureExactifyFunction = {
+    name: "structure_exactify",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: [LLVM_TAGGED_PTR, llvm:pointerType(llInherentType)]
+        paramTypes: [LLVM_TAGGED_PTR, llvm:pointerType(LLVM_TID)]
     },
     attrs: ["readonly"]
 };
@@ -65,16 +65,10 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     else {
         builder.condBr(check buildHasComplexSemType(builder, scaffold, tagged, <t:ComplexSemType>semType), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
-        if t:isSubtypeSimple(semType, t:LIST) {
-            tagged = buildListExactify(builder, scaffold, tagged, insn.result.semType);
-        }
-        else if t:isSubtypeSimple(semType, t:MAPPING) {
-            tagged = buildMappingExactify(builder, scaffold, tagged, insn.result.semType);
-        }
-        builder.store(tagged, scaffold.address(insn.result));
+        builder.store(buildExactify(builder, scaffold, tagged, insn.result.semType), scaffold.address(insn.result));
     }
     builder.positionAtEnd(castFailBlock);
-    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_TYPE_CAST, insn.position), scaffold.panicAddress());
+    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_TYPE_CAST, insn.pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
 }
@@ -83,12 +77,7 @@ function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrow
     var [sourceRepr, value] = check buildReprValue(builder, scaffold, insn.operand);
     t:SemType semType = insn.result.semType;
     if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsUniformBitSet(scaffold.typeContext(), insn.operand.semType, semType) == () {
-        if t:isSubtypeSimple(semType, t:LIST) {
-            value = buildListExactify(builder, scaffold, <llvm:PointerValue>value, semType);
-        }
-        else if t:isSubtypeSimple(semType, t:MAPPING) {
-            value = buildMappingExactify(builder, scaffold, <llvm:PointerValue>value, semType);
-        }
+        value = buildExactify(builder, scaffold, <llvm:PointerValue>value, semType);
     }
     llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));
     builder.store(narrowed, scaffold.address(insn.result));
@@ -108,37 +97,16 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
 }
 
 function buildHasComplexSemType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:ComplexSemType targetType) returns llvm:Value|BuildError {
-    llvm:ConstPointerValue tt = scaffold.getTypeTest(targetType);
-    // return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFunction), [tt, tagged]);
-    llvm:PointerValue funcPtrPtr = builder.getElementPtr(tt, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]);
-    llvm:PointerValue funcPtr = <llvm:PointerValue>builder.load(funcPtrPtr, ALIGN_HEAP);
-    return <llvm:Value>builder.call(funcPtr, [tt, tagged]);      
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFunction), [scaffold.getTypeTest(targetType), tagged]);
 }
 
-function buildMappingExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {
-    t:UniformTypeBitSet? bitSet = t:simpleMapMemberType(scaffold.typeContext(), targetType);
-    if bitSet == () {
-        // This can happen when a narrowing creates a empty record type (e.g. `map<int> & map<string>`)
-        // XXX also with closed records
+function buildExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {
+    t:Context tc = scaffold.typeContext();
+    if t:mappingAtomicTypeRw(tc, targetType) == () && t:listAtomicTypeRw(tc, targetType) == () {
         return tagged;
     }
-    else {
-        return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(mappingExactifyFunction),
-                                               // XXX what we want here is just an index
-                                               [tagged, scaffold.getInherentType(t:intersect(targetType, t:MAPPING_RW))]); 
-    }
-}
-
-function buildListExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {
-    t:UniformTypeBitSet? bitSet = t:simpleArrayMemberType(scaffold.typeContext(), targetType);
-    if bitSet == () {
-        // This can happen when a narrowing creates a empty tuple type (e.g. `int[] & string[]`)
-        return tagged;
-    }
-    else {
-        return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(listExactifyFunction),
-                                               [tagged, scaffold.getInherentType(t:intersect(targetType, t:LIST_RW))]);
-    }
+    return <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(structureExactifyFunction),
+                                           [tagged, scaffold.getExactify(t:diff(targetType, t:READONLY))]);
 }
 
 // If we can perform the type test by testing whether the value belongs to a UniformTypeBitSet, then return that bit set.

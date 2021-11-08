@@ -236,12 +236,14 @@ class Tokenizer {
         }
     }
 
-    function peek() returns VariableTokenCode|FixedToken? {
+    // Peeks the next token. When skipQualIdent is passed, considers qualified identifier as a single token,
+    // ie if current token is the first identifier of a qualified identifier, returns the token after the second identifier.
+    function peek(boolean skipQualIdent=false) returns VariableTokenCode|FixedToken? {
         readonly & FragCode[] fragCodes = self.fragCodes;
         int fragCodeIndex = self.fragCodeIndex;
         int lineIndex = self.lineIndex;
         while true {
-            if fragCodeIndex > fragCodes.length() {
+            if fragCodeIndex >= fragCodes.length() {
                 if lineIndex >= self.lines.length() {
                     break;
                 }
@@ -292,6 +294,14 @@ class Tokenizer {
                     }
                     FRAG_DECIMAL_FP_NUMBER|FRAG_DECIMAL_FP_NUMBER_F|FRAG_DECIMAL_FP_NUMBER_D => {
                         return DECIMAL_FP_NUMBER;
+                    }
+                    CP_COLON => {
+                        if skipQualIdent && fragCodeIndex + 1 < fragCodes.length() && fragCodes[fragCodeIndex + 1] == FRAG_IDENTIFIER {
+                            fragCodeIndex += 2;
+                        }
+                        else {
+                            return ":";
+                        }
                     }
                     _ => {
                         // JBUG #33346 cast should not be needed
