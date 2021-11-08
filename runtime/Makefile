@@ -6,6 +6,7 @@ OPT ?= opt$(LLVM_SUFFIX)
 CFLAGS ?= -O2
 export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
+WARN_FLAGS=-Wextra -Wall
 BT_WARN_FLAGS=-W -Wall -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wold-style-definition -Wmissing-format-attribute -Wcast-qual
 BT_OBJS=$(addprefix third-party/libbacktrace/, atomic.o dwarf.o fileline.o posix.o sort.o state.o backtrace.o simple.o obj.o mmapio.o mmap.o)
 DN_OBJS=$(addprefix third-party/decNumber/, decQuad.o decContext.o)
@@ -55,7 +56,7 @@ $(DTOA_OBJS) $(DN_OBJS): %.o: %.c
 
 %.bc: %.c $(LL_BCS)
 	set -o pipefail; \
-	$(CLANG) -c $(CFLAGS) $(DEFINES) -emit-llvm -o - $< | \
+	$(CLANG) -c $(CFLAGS) $(DEFINES) $(WARN_FLAGS) -emit-llvm -o - $< | \
 	$(LLVM_LINK) $(LL_BCS) - -o - -S | \
 	sed -e '/define .*@_bal_tagged_to_ptr/s/^define /define linkonce_odr /' \
 		-e '/define .*@_bal_tagged_clear_exact/s/^define /define linkonce_odr /' \
@@ -71,7 +72,7 @@ $(DTOA_OBJS) $(DN_OBJS): %.o: %.c
 
 # we have to use -O2 here, otherwise the function will get a noinline attribute
 $(C_BCS): %.bc: %.c
-	$(CLANG) $(CFLAGS) -c -O2 -emit-llvm -o $@ $<
+	$(CLANG) $(CFLAGS) $(WARN_FLAGS) -c -O2 -emit-llvm -o $@ $<
 
 $(LL_BCS): %.bc: %.ll
 	set -o pipefail; \

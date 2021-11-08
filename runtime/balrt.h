@@ -32,6 +32,7 @@
 // LLVM readnone attribute corresponds to clang const
 #define READNONE __attribute__((const))
 #define ALIGNED(n) __attribute__((aligned(n)))
+#define UNUSED __attribute__((unused))
 #else
 #define NODEREF /* as nothing */
 #define NORETURN /* as nothing */
@@ -40,6 +41,7 @@
 #define READONLY /* as nothing */
 #define READNONE /* as nothing */
 #define ALIGNED(n) /* as nothing */
+#deifne UNUSED /* as nothing */
 #endif
 
 #define likely(x) __builtin_expect((x), 1)
@@ -304,7 +306,7 @@ static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
 }
 
 static inline TaggedPtr bitsToTaggedPtr(uint64_t bits) {
-    char *p = (char *)0 + bits;
+    char *p = (char *)bits;
     return (TaggedPtr)p;
 }
 

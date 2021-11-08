@@ -93,7 +93,7 @@ static int64_t lookupInsert(MappingPtr m, TaggedPtr key, uint64_t hash, int64_t 
 }
 
 // This is when we know it's not a duplicate
-static void insertInit(MappingPtr m, TaggedPtr key, uint64_t hash, int64_t insertMapIndex) {
+static void insertInit(MappingPtr m, uint64_t hash, int64_t insertMapIndex) {
     int tableElementShift = m->tableElementShift & 3;
     int tableIndexMax = (1 << m->tableLengthShift) - 1;
     int64_t i = hash & tableIndexMax;
@@ -157,7 +157,7 @@ static void mappingGrow(MappingPtr m) {
     int64_t nFields = m->fArray.length;
     for (int64_t i = 0; i < nFields; i++) {
         TaggedPtr key = fields[i].key;
-        insertInit(m, key, _bal_string_hash(key), i);
+        insertInit(m, _bal_string_hash(key), i);
     }
 }
 
@@ -198,7 +198,6 @@ PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     uint32_t flag = 1 << (getTag(value) & UT_MASK);
     int64_t len = mp->fArray.length;
    
-    uint64_t h = _bal_string_hash(key);
     // Here may insert something that is equal to the empty marker
     // But it doesn't matter because in this case we will rebuild anyway
     int64_t i = lookupInsert(mp, key, _bal_string_hash(key), len);

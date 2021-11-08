@@ -41,7 +41,7 @@ static inline void hashUpdate(HashState *hp, uint64_t data) {
 }
 
 // only the bottom nBytes (1 <= nBytes <= 7) have information
-static inline void hashUpdatePartial(HashState *hp, uint64_t data, int nBytes) {
+static inline void hashUpdatePartial(HashState *hp, uint64_t data, UNUSED int nBytes) {
     //printf("partial %d ", nBytes);
     // XXX don't yet understand what aHash does here
     hashUpdate(hp, data);
