@@ -212,8 +212,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
         int|s:Identifier index = tn.index;
         if t:isSubtypeSimple(t, t:LIST) {
             if index is int {
-                //return t:listMemberType(tc, t, index);
-                return t:listProj(tc, t, index);
+                return testListProj(tc, t, index);
             }
             else {
                 t:SemType k = lookupSemtype(m, index);
@@ -222,7 +221,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
                 }
                 t:Value? val = t:singleShape(k);
                 if val is t:Value && val.value is int {
-                    return t:listProj(tc, t, <int> val.value);
+                    return testListProj(tc, t, <int> val.value);
                 }
                 test:assertFail("index for list projection must be an int");
             }
@@ -246,6 +245,15 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
     }
     // JBUG: #31642 function must return a call
     panic error("unreachable");
+}
+
+function testListProj(t:Context tc, t:SemType t, int index) returns t:SemType {
+    t:SemType s1 = t:listProj(tc, t, index);
+    t:SemType s2 = t:listMemberType(tc, t, index);
+    if !t:isSubtype(tc, s1, s2) {
+        test:assertFail("listProj result is not a subtype of listMemberType");
+    }
+    return t:listProj(tc, t, index);
 }
 
 function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
