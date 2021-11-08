@@ -253,7 +253,7 @@ function testListProj(t:Context tc, t:SemType t, int index) returns t:SemType {
     if !t:isSubtype(tc, s1, s2) {
         test:assertFail("listProj result is not a subtype of listMemberType");
     }
-    return t:listProj(tc, t, index);
+    return s1;
 }
 
 function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
