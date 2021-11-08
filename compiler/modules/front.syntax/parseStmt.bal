@@ -98,6 +98,14 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         var td if td is SubsetBuiltinTypeName|"map"|"record" => {
             return parseVarDeclStmt(tok, startPos);
         }
+        "null" => {
+            if tok.peek() == "." {
+                return parseMethodCallStmt(tok);
+            }
+            else {
+                return parseVarDeclStmt(tok, startPos);
+            }
+        }
         "(" => {
             TokenizerState state = tok.save();
             check tok.advance();
@@ -111,7 +119,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
                 return parseMethodCallStmt(tok);
             }
         }
-        [DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false"|"null" => {
+        [DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false" => {
             return parseMethodCallStmt(tok);
         }
     }
