@@ -500,7 +500,6 @@ type ConstMatchValue record {|
 |};
 
 function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MatchStmt stmt) returns CodeGenError|StmtEffect {
-    final int startRegister = cx.nextRegisterNumber();
     int[] assignments = [];
     var { result: matched, block: testBlock, binding } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, stmt.expr, ()));
     // JBUG #33303 need parentheses
@@ -1959,4 +1958,5 @@ function operandUniformOrderType(t:SemType operandType) returns bir:OrderType? {
             return <bir:OptOrderType> { opt: tc };
         }
     }
+    return ();
 }

@@ -525,11 +525,13 @@ function parseIntLiteralExpr(Tokenizer tok) returns IntLiteralExpr|err:Syntax {
     match t {
         [DECIMAL_NUMBER, var digits] => {
             check tok.advance();
-            return { startPos, endPos, base: 10, digits };
+            IntLiteralExpr expr = { startPos, endPos, base: 10, digits };
+            return expr;
         }
         [HEX_INT_LITERAL, var digits] => {
             check tok.advance();
-            return { startPos, endPos, base: 16, digits };
+            IntLiteralExpr expr = { startPos, endPos, base: 16, digits };
+            return expr;
         }
     }
     return parseError(tok, "expected integer literal");

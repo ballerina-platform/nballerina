@@ -9,7 +9,7 @@ test:
 	$(BAL) build $(BAL_BUILD_FLAGS)
 
 $(COMPILER_JAR): $(COMPILER_SRC)
-	$(BAL) build $(BAL_BUILD_FLAGS)
+	$(BAL) build $(BAL_BUILD_FLAGS) --skip-tests
 
 clean:
 	$(BAL) clean

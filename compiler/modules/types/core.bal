@@ -405,7 +405,6 @@ class SubtypePairIteratorImpl {
                 }
             }
             else if self.i2 >= self.t2.length() {
-                // JBUG #33510 should be able to use variable `code`
                 var [code, data1] = self.get1();
                 self.i1 += 1;
                 if self.include(code) {

@@ -79,8 +79,10 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                     test:assertEquals(lines, canonSrc, "serialized ast can't be re-parsed");
                     panic err:impossible("if src is equal to canonSrc second parse can't fail");
                 }
-                string[] roundTripSrc = partToLines(part);
-                test:assertEquals(canonSrc, roundTripSrc);
+                else {
+                    string[] roundTripSrc = partToLines(part);
+                    test:assertEquals(canonSrc, roundTripSrc);
+                }
             }
         }
     }
