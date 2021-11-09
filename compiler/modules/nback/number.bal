@@ -120,7 +120,7 @@ function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertT
         return;
     }
     else if repr.base != BASE_REPR_TAGGED {
-        return scaffold.unimplementedErr("convert form decimal to int");
+        return scaffold.unimplementedErr("convert form decimal to int", insn.pos);
     }
     // convert to int form tagged pointer
 
@@ -166,7 +166,7 @@ function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:Conver
         return;
     }
     else if repr.base != BASE_REPR_TAGGED {
-        return scaffold.unimplementedErr("convert form decimal to float");
+        return scaffold.unimplementedErr("convert form decimal to float", insn.pos);
     }
     // convert to float form tagged pointer
 

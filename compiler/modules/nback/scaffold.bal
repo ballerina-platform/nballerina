@@ -262,8 +262,8 @@ class Scaffold {
         }
     }
 
-    function unimplementedErr(err:Message message) returns err:Unimplemented {
-        err:Location loc = err:location(self.file);
+    function unimplementedErr(err:Message message, err:Position pos) returns err:Unimplemented {
+        err:Location loc = err:location(self.file, pos);
         return err:unimplemented(message, loc);
     }
 

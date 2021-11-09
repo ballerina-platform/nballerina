@@ -24,7 +24,7 @@ function buildTypeTest(llvm:Builder builder, Scaffold scaffold, bir:TypeTestInsn
     var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
     if repr.base != BASE_REPR_TAGGED {
          // in subset 5 should be const true/false
-        return scaffold.unimplementedErr("test of untagged value");
+        return scaffold.unimplementedErr("test of untagged value", insn.pos);
     }
     t:SemType semType = insn.semType;
     t:UniformTypeBitSet? bitSet = testTypeAsUniformBitSet(scaffold.typeContext(), insn.operand.semType, insn.semType);
@@ -50,7 +50,7 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     var [repr, val] = check buildReprValue(builder, scaffold, insn.operand);
     if repr.base != BASE_REPR_TAGGED {
         // SUBSET no singleton types; no subtypes of simple basic types
-        return scaffold.unimplementedErr("cast from untagged value");
+        return scaffold.unimplementedErr("cast from untagged value", insn.pos);
     }
     llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
@@ -60,7 +60,7 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
     if bitSet != () {
         builder.condBr(buildHasTagInSet(builder, tagged, bitSet), continueBlock, castFailBlock);
         builder.positionAtEnd(continueBlock);
-        builder.store(check buildNarrowRepr(builder, scaffold, repr, val, scaffold.getRepr(insn.result)), scaffold.address(insn.result));
+        builder.store(check buildNarrowRepr(builder, scaffold, repr, val, scaffold.getRepr(insn.result), insn.pos), scaffold.address(insn.result));
     }
     else {
         builder.condBr(check buildHasComplexSemType(builder, scaffold, tagged, <t:ComplexSemType>semType), continueBlock, castFailBlock);
@@ -79,11 +79,11 @@ function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrow
     if sourceRepr.base == BASE_REPR_TAGGED && testTypeAsUniformBitSet(scaffold.typeContext(), insn.operand.semType, semType) == () {
         value = buildExactify(builder, scaffold, <llvm:PointerValue>value, semType);
     }
-    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result));
+    llvm:Value narrowed = check buildNarrowRepr(builder, scaffold, sourceRepr, value, scaffold.getRepr(insn.result), insn.pos);
     builder.store(narrowed, scaffold.address(insn.result));
 }
 
-function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value|BuildError {
+function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr, bir:Position pos) returns llvm:Value|BuildError {
     BaseRepr sourceBaseRepr = sourceRepr.base;
     BaseRepr targetBaseRepr = targetRepr.base;
     llvm:Value narrowed;
@@ -93,7 +93,7 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
     if sourceBaseRepr == BASE_REPR_TAGGED {
         return buildUntagged(builder, scaffold, <llvm:PointerValue>value, targetRepr);
     }
-    return scaffold.unimplementedErr("unimplemented narrowing conversion required");
+    return scaffold.unimplementedErr("unimplemented narrowing conversion required", pos);
 }
 
 function buildHasComplexSemType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:ComplexSemType targetType) returns llvm:Value|BuildError {

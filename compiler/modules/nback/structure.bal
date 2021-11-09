@@ -86,7 +86,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
         // Cases that are not UniformTypeBitSet should have been filtered out before
         t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), listType);
         foreach int i in 0 ..< length {
-            builder.store(check buildWideRepr(builder, scaffold, insn.operands[i], REPR_ANY, memberType),
+            builder.store(check buildWideRepr(builder, scaffold, insn.operands[i], REPR_ANY, memberType, insn.pos),
                           builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));
         }
         builder.store(llvm:constInt(LLVM_INT, length),
@@ -132,7 +132,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     llvm:Value? err = builder.call(func,
                                    [builder.load(scaffold.address(insn.operands[0])),
                                     buildInt(builder, scaffold, insn.operands[1]),
-                                    check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)]);
+                                    check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType, insn.pos)]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
 }
 
@@ -161,7 +161,7 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
                              m,
                              check buildConstString(builder, scaffold, fieldName),
                              check buildWideRepr(builder, scaffold, operand, REPR_ANY,
-                                                 t:mappingMemberType(tc, mappingType, fieldName))
+                                                 t:mappingMemberType(tc, mappingType, fieldName), insn.pos)
                          ]);
     }
     builder.store(m, scaffold.address(insn.result));
@@ -207,7 +207,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
                                    [
                                        builder.load(scaffold.address(mappingReg)),
                                        k,
-                                       check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)
+                                       check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType, insn.pos)
                                    ]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
 }
