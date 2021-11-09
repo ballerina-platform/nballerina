@@ -150,7 +150,7 @@ function buildCondBranch(llvm:Builder builder, Scaffold scaffold, bir:CondBranch
 
 function buildRet(llvm:Builder builder, Scaffold scaffold, bir:RetInsn insn) returns BuildError? {
     RetRepr repr = scaffold.getRetRepr();
-    builder.ret(repr is Repr ? check buildWideRepr(builder, scaffold, insn.operand, repr, scaffold.returnType, insn.pos) : ());
+    builder.ret(repr is Repr ? check buildWideRepr(builder, scaffold, insn.operand, repr, scaffold.returnType) : ());
 }
 
 function buildAbnormalRet(llvm:Builder builder, Scaffold scaffold, bir:AbnormalRetInsn insn) {
@@ -168,7 +168,7 @@ function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerVal
 }
 
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
-    builder.store(check buildWideRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType, insn.pos),
+    builder.store(check buildWideRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType),
                   scaffold.address(insn.result));
 }
 
@@ -181,7 +181,7 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     t:SemType[] paramTypes = signature.paramTypes;
     t:SemType[] instantiatedParamTypes = funcRef.signature.paramTypes;
     foreach int i in 0 ..< insn.args.length() {
-        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i], insn.pos));
+        args.push(check buildWideRepr(builder, scaffold, insn.args[i], semTypeRepr(paramTypes[i]), instantiatedParamTypes[i]));
     }
 
     bir:Symbol funcSymbol = funcRef.symbol;
@@ -194,12 +194,12 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     }  
     llvm:Value? retValue = builder.call(func, args);
     RetRepr retRepr = semTypeRetRepr(signature.returnType);
-    check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result, insn.pos);
+    buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
-function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg, bir:Position pos) returns BuildError? {
+function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) {
     if retRepr is Repr {
-        builder.store(check buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg), pos),
+        builder.store(buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
                       scaffold.address(reg));
     }
     else {

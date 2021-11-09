@@ -169,8 +169,8 @@ function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
     panic err:impossible("unreached in buildUntagged");
 }
 
-function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType, bir:Position pos) returns llvm:Value|BuildError {
-    llvm:Value value = check buildRepr(builder, scaffold, operand, targetRepr, pos);
+function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType) returns llvm:Value|BuildError {
+    llvm:Value value = check buildRepr(builder, scaffold, operand, targetRepr);
     if targetRepr.base == BASE_REPR_TAGGED && operand is bir:Register {
         t:SemType listOrMappingRw = t:union(t:LIST_RW, t:MAPPING_RW);
         t:SemType sourceStructType =  t:intersect(operand.semType, listOrMappingRw);
@@ -199,12 +199,12 @@ function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value tag
     }
 }
 
-function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr, bir:Position pos) returns llvm:Value|BuildError {
+function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
     var [sourceRepr, value] = check buildReprValue(builder, scaffold, operand);
-    return buildConvertRepr(builder, scaffold, sourceRepr, value, targetRepr, pos);
+    return buildConvertRepr(builder, scaffold, sourceRepr, value, targetRepr);
 }
 
-function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr, err:Position pos) returns llvm:Value|BuildError {
+function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value {
     BaseRepr sourceBaseRepr = sourceRepr.base;
     BaseRepr targetBaseRepr = targetRepr.base;
     if sourceBaseRepr == targetBaseRepr {
@@ -222,7 +222,7 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
         }
     }
     // this shouldn't ever happen I think
-    return scaffold.unimplementedErr("unimplemented conversion required", pos);
+    panic err:impossible("unimplemented conversion required");
 }
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
