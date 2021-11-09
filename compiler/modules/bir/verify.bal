@@ -144,6 +144,7 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
 }
 
 function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
+    // XXX verify insn.semType
     FunctionRef func = <FunctionRef>insn.func;
     FunctionSignature sig = func.signature;
     int nSuppliedArgs = insn.args.length();
@@ -164,6 +165,7 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
 
 function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic? {
     t:SemType ty = insn.result.semType;
+    // XXX verify ty exactly
     if !vc.isSubtype(ty, t:LIST_RW) {
         return vc.err("bad BIR: inherent type of list construct is not a mutable list", insn.pos);
     }
@@ -180,6 +182,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
 
 function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns err:Semantic? {
     t:SemType ty = insn.result.semType;
+    // XXX verify ty exactly
     if !vc.isSubtype(ty, t:MAPPING_RW) {
         return vc.err("bad BIR: inherent type of mapping construct is not a mutable mapping", insn.pos);
     }
