@@ -263,8 +263,7 @@ class Scaffold {
     }
 
     function unimplementedErr(err:Message message, err:Position pos) returns err:Unimplemented {
-        err:Location loc = err:location(self.file, pos);
-        return err:unimplemented(message, loc);
+        return err:unimplemented(message, err:location(self.file, pos));
     }
 
     function initTypes() returns InitTypes => self.mod.llInitTypes;
