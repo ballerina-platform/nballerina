@@ -135,7 +135,7 @@ function bddPaths(Bdd b, BddPath[] paths, BddPath accum) {
     }
 }
 
-// JBUG should be able to use clone
+// JBUG (33706) should be able to use clone
 // what happens is after clone, empty pos and neg, which were == but not ===, become ===
 function bddPathClone(BddPath path) returns BddPath {
     return { bdd: path.bdd, pos: path.pos.clone(), neg: path.neg.clone() };

@@ -914,12 +914,12 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
     else {
         BddPath[] paths = [];
         bddPaths(<Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), paths, {});
-        /// JBUG runtime error on construct1-v.bal if done as from/select
+        /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         MappingAlternative[] alts = [];
         foreach var { bdd, pos, neg } in paths {
             alts.push({
                 semType: createComplexSemType(0, [[UT_MAPPING_RW, bdd]]),
-                // JBUG parse error without parentheses
+                // JBUG parse error without parentheses (33707)
                 pos: (from var atom in pos select cx.mappingAtomType(atom)),
                 neg: (from var atom in neg select cx.mappingAtomType(atom))
             });
