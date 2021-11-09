@@ -6,6 +6,7 @@ TESTPROG_STAMPS=$(addsuffix .stamp, $(TESTPROGS) $(TESTINLINERTPROGS))
 TESTPROG_PROF_RAW=$(addsuffix .profraw, $(TESTPROGS))
 TESTPROG_PROF = test.profdata
 TESTPROG_EXE=$(addprefix -object ./, $(TESTPROGS))
+SHELL=/bin/bash
 
 all: $(TESTPROGS)
 
@@ -18,6 +19,11 @@ testCoverage: $(TESTPROG_PROF_RAW) $(TESTPROG_PROF)
 
 $(TESTPROG_PROF): $(TESTPROG_PROF_RAW)
 	llvm-profdata merge -sparse $(TESTPROG_PROF_RAW) -o $@
+
+error_backtrace%.stamp: error_backtrace%
+	set -o pipefail; \
+	./$< | ./error_backtrace.sh $<.txt
+	touch $@ 
 
 %.stamp: %
 	./$<
