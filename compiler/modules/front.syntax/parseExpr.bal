@@ -464,6 +464,11 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             check tok.advance();
             return expr;
         }
+        "null" => {
+            Position endPos = tok.currentEndPos();
+            ConstValueExpr expr = { startPos, endPos, value: () };
+            return expr;
+        }
         "("  => {
             check tok.advance();
             Position endPos = check tok.expectEnd(")");
