@@ -48,7 +48,8 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
 function resolveSubsetTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn defn, s:TypeDesc td) returns t:SemType|ResolveTypeError {
     t:SemType ty = check resolveTypeDesc(mod, defn, 0, td);
     if t:isEmpty(mod.tc, ty) {
-        return err:unimplemented("intersection equivalent to never is not implemented", s:locationInDefn(defn, td.startPos));
+        // SUBSET never disallowed
+        return err:semantic("intersection type does not allow any values", s:locationInDefn(defn, td.startPos));
     }
     return ty;
 }
