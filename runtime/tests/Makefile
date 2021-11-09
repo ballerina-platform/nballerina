@@ -22,7 +22,7 @@ $(TESTPROG_PROF): $(TESTPROG_PROF_RAW)
 
 error_backtrace%.stamp: error_backtrace%
 	set -o pipefail; \
-	./$< | ./$<.sh
+	./$< | ./error_backtrace.sh $<.txt
 	touch $@ 
 
 %.stamp: %
