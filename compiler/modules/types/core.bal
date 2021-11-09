@@ -39,8 +39,23 @@ public isolated class Env {
     private final ListAtomicType?[] recListAtoms = [ LIST_SUBTYPE_RO ];
     private final MappingAtomicType?[] recMappingAtoms = [ MAPPING_SUBTYPE_RO ];
     private final FunctionAtomicType?[] recFunctionAtoms = [];
+    // Count of the total number of non-nil members
+    // of recListAtoms, recMappingAtoms and recFunctionAtoms
+    private int recAtomCount = 2;
 
     public isolated function init() {
+    }
+
+    // Tests whether the Env is ready for use.
+    // It is ready only if all the recursive atoms that have been allocated
+    // have been defined.
+    public isolated function isReady() returns boolean {
+        lock {
+            return self.recAtomCount
+                   == (self.recListAtoms.length()
+                       + self.recMappingAtoms.length()
+                       + self.recFunctionAtoms.length());
+        }  
     }
 
     isolated function listAtom(ListAtomicType atomicType) returns TypeAtom {
@@ -110,18 +125,21 @@ public isolated class Env {
     isolated function setRecListAtomType(RecAtom ra, ListAtomicType atomicType) {
         lock {
             self.recListAtoms[ra] = atomicType;
+            self.recAtomCount += 1;
         }
     }
 
     isolated function setRecMappingAtomType(RecAtom ra, MappingAtomicType atomicType) {
         lock {
             self.recMappingAtoms[ra] = atomicType;
+            self.recAtomCount += 1;
         }
     }
 
     isolated function setRecFunctionAtomType(RecAtom ra, FunctionAtomicType atomicType) {
         lock {
             self.recFunctionAtoms[ra] = atomicType;
+            self.recAtomCount += 1;
         }
     }
 
