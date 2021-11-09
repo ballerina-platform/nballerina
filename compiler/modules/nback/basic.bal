@@ -194,12 +194,12 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     }  
     llvm:Value? retValue = builder.call(func, args);
     RetRepr retRepr = semTypeRetRepr(signature.returnType);
-    check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
+    buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
-function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
+function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) {
     if retRepr is Repr {
-        builder.store(check buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
+        builder.store(buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
                       scaffold.address(reg));
     }
     else {

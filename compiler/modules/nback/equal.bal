@@ -97,7 +97,7 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
             return buildEqualFloat(builder, scaffold, exact, op, lhsValue, rhsValue, result);
         }
     }
-    return scaffold.unimplementedErr("equality with two different untagged representations");
+    return scaffold.unimplementedErr("equality with two different untagged representations", insn.pos);
 }
 
 function buildEqualTaggedFloat(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged, llvm:Value untagged, bir:Register result) {

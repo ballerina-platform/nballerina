@@ -204,7 +204,7 @@ function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand,
     return buildConvertRepr(builder, scaffold, sourceRepr, value, targetRepr);
 }
 
-function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value|BuildError {
+function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value {
     BaseRepr sourceBaseRepr = sourceRepr.base;
     BaseRepr targetBaseRepr = targetRepr.base;
     if sourceBaseRepr == targetBaseRepr {
@@ -222,7 +222,7 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
         }
     }
     // this shouldn't ever happen I think
-    return scaffold.unimplementedErr("unimplemented conversion required");
+    panic err:impossible("unimplemented conversion required");
 }
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {
