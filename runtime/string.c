@@ -249,7 +249,7 @@ bool READONLY _bal_string_heap_eq(TaggedPtr tp1, TaggedPtr tp2) {
     uint64_t bits1 = taggedPtrBits(tp1);
     uint64_t bits2 = taggedPtrBits(tp2);
     // number of 64-bit units including the header
-    int nInts;
+    int64_t nInts;
     if (bits1 & STRING_LARGE_FLAG) {
         if (!(bits2 & STRING_LARGE_FLAG)) {
             return false;

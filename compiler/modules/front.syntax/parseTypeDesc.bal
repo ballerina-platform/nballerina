@@ -112,7 +112,8 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         | "any"
         | "never"
         | "json"
-        |  "readonly" => {
+        | "readonly"
+        | "null" => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
             // JBUG should not need cast #30191

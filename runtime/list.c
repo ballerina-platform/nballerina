@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#define ARRAY_LENGTH_MAX (INT64_MAX/sizeof(TaggedPtr))
+#define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
 
 const double F0 = +0.0;
 
@@ -14,7 +14,6 @@ ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
 }
 
 static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
-    uint64_t bits;
     switch (desc->bitSet) {
         case (1 << TAG_BOOLEAN):
             *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
@@ -54,11 +53,13 @@ PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     GC TaggedPtrArray *ap = &(lp->tpArray);
-    if (likely((uint64_t)index < ap->length)) {
+    // The cast makes this handle the negative case also in a single comparison
+    if (likely((uint64_t)index < (uint64_t)ap->length)) {
         ap->members[index] = val;
         return 0;
     }
-    if (unlikely((uint64_t)index >= ap->capacity)) {
+    // The cast makes this handle the negative case also in a single comparison
+    if (unlikely((uint64_t)index >= (uint64_t)ap->capacity)) {
         if (unlikely((uint64_t)index >= ARRAY_LENGTH_MAX)) {
             return index < 0 ? PANIC_INDEX_OUT_OF_BOUNDS : PANIC_LIST_TOO_LONG; 
         }

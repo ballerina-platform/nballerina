@@ -23,9 +23,9 @@ type NonEmptyRoSingletons ReadOnlyFlat & !N;
 // @type NonEmptyRoSingletons < UX
 type UX XE|XP|XC|T;
 
-// @type XNonEmptySingletons = RX
-// @type XNonEmptySingletons < X
-type XofNonEmptySingletons xml<NonEmptyRoSingletons>;
+// @type XNonEmptyRoSingletons = RX
+// @type XNonEmptyRoSingletons < X
+type XNonEmptyRoSingletons xml<NonEmptyRoSingletons>;
 
 // @type XUX = RX
 type XUX xml<UX>;

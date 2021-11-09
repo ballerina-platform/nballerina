@@ -56,7 +56,7 @@ const struct MediumString *panicMessageStrings[] = {
 TaggedPtr COLD _bal_panic_construct(PackedPanic err) {
     int code = err & 0xFF;
     int64_t lineNumber = err >> 8;
-    if (code <= 0 || code >= sizeof(panicMessageStrings)/sizeof(panicMessageStrings[0]))
+    if (code <= 0 || code >= (int)(sizeof(panicMessageStrings)/sizeof(panicMessageStrings[0])))
         abort();
     MediumStringPtr sp = (MediumStringPtr)panicMessageStrings[code];
     TaggedPtr msg = ptrAddFlags(sp, (uint64_t)TAG_STRING << TAG_SHIFT);
