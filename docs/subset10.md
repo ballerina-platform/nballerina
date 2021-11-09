@@ -114,7 +114,7 @@ primary-type-desc =
 
 builtin-type-name = "any" | "boolean" | "int" | "float" | "string" | "error"
 
-nil-type-desc = "(" ")"
+nil-type-desc = nil-literal
 
 # reference to a type definition
 type-reference = identifier | qualified-identifier
@@ -380,6 +380,7 @@ Two kinds of `import` are supported.
 ## Additions from subset 9
 
 * A more expressive grammar is supported for type descriptors. In particular, the restrictions on union type descriptors have been removed. (There is still a restriction on the type of a member of a structure.)
+* Allow `null` as synonym for `()`
 
 ## Implemented spec changes since 2021R1
 
@@ -391,3 +392,5 @@ Two kinds of `import` are supported.
 * [#902](https://github.com/ballerina-platform/ballerina-spec/issues/902) - expression has a singleton type when its subexpressions have singleton type
 * [#904](https://github.com/ballerina-platform/ballerina-spec/issues/904) - restrict assignment to type-narrowed variables within loops
 * [#905](https://github.com/ballerina-platform/ballerina-spec/issues/905) - disallow trailing dot in floating-point literals
+* [#991](https://github.com/ballerina-platform/ballerina-spec/issues/991) - clarify that `null` is allowed as a type descriptor
+
