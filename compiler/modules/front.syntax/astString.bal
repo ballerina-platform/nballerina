@@ -61,14 +61,12 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
     }
     w.push("function");
     w.push(func.name, CLING, "(");
-    boolean firstArg = true;
     foreach int i in 0 ..< func.typeDesc.args.length() {
         if i != 0 {
             w.push(",");
         }
         typeDescToWords(w, func.typeDesc.args[i]);
         w.push(func.paramNames[i]);
-        firstArg = false;
     }
     w.push(")");
     TypeDesc funcRetTd = func.typeDesc.ret;
@@ -587,7 +585,8 @@ function wordsToLines(Word[] s) returns string[] {
             firstInLine = true;
             lines.push("".'join(...buf));
             buf.setLength(0);
-            foreach int i in 0..<level {
+            // JBUG #33532 should use `_` here
+            foreach int i in 0 ..< level {
                 buf.push("    ");
             }
         }

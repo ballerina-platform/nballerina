@@ -216,7 +216,6 @@ function parseUnaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Position startPos = tok.currentStartPos();
     if t is "-"|"!"|"~" {
         Position opPos = tok.currentStartPos();
-        Position pos = tok.currentStartPos();
         check tok.advance();
         Expr operand = check parseUnaryExpr(tok);
         Position endPos = tok.previousEndPos();
@@ -260,7 +259,6 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Position startPos = tok.currentStartPos();
     Position endPos = tok.currentEndPos();
     if t is [IDENTIFIER, string] {
-        Position pos = tok.currentStartPos();
         check tok.advance();
         var [prefix, varName] = check parseOptQualIdentifier(tok, t[1]);
         if tok.current() == "(" {

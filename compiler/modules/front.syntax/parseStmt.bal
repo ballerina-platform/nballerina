@@ -350,7 +350,8 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
             return parseError(tok);
         }
         endPos = tok.previousEndPos();
-    } else {
+    }
+    else {
         ifFalse = ();
     }
     return { startPos, endPos, condition, ifTrue, ifFalse };
@@ -368,7 +369,6 @@ function parseForeachStmt(Tokenizer tok, Position startPos) returns ForeachStmt|
         return parseError(tok, "type of foreach variable must be int");
     }
     check tok.advance();
-    Token? cur = tok.current();
     string varName = check tok.expectIdentifier();
     Position kwPos = check tok.expectEnd("in");
     RangeExpr range = check parseRangeExpr(tok);
