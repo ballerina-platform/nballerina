@@ -19,13 +19,13 @@ const int XML_PRIMITIVE_ELEMENT_RW = 1 << 5;
 const int XML_PRIMITIVE_PI_RW      = 1 << 6;
 const int XML_PRIMITIVE_COMMENT_RW = 1 << 7;
 
-const int XML_PRIMITIVE_RO_SINGLETONS = XML_PRIMITIVE_TEXT | XML_PRIMITIVE_ELEMENT_RO | XML_PRIMITIVE_PI_RO | XML_PRIMITIVE_COMMENT_RO;
-const int XML_PRIMITIVE_RO_MASK = XML_PRIMITIVE_NEVER | XML_PRIMITIVE_RO_SINGLETONS;
+const int XML_PRIMITIVE_RO_SINGLETON = XML_PRIMITIVE_TEXT | XML_PRIMITIVE_ELEMENT_RO | XML_PRIMITIVE_PI_RO | XML_PRIMITIVE_COMMENT_RO;
+const int XML_PRIMITIVE_RO_MASK = XML_PRIMITIVE_NEVER | XML_PRIMITIVE_RO_SINGLETON;
 const int XML_PRIMITIVE_RW_MASK = XML_PRIMITIVE_ELEMENT_RW | XML_PRIMITIVE_PI_RW | XML_PRIMITIVE_COMMENT_RW;
-const int XML_RW_ATOM = XML_PRIMITIVE_RO_SINGLETONS | XML_PRIMITIVE_RW_MASK;
+const int XML_PRIMITIVE_SINGLETON = XML_PRIMITIVE_RO_SINGLETON | XML_PRIMITIVE_RW_MASK;
 
-final XmlSubtype xmlRoTop = { primitives: XML_PRIMITIVE_RO_MASK, sequence: bddAtom(XML_PRIMITIVE_RO_SINGLETONS) };
-final XmlSubtype xmlRwTop = { primitives: XML_PRIMITIVE_RW_MASK, sequence: bddAtom(XML_RW_ATOM) };
+final XmlSubtype xmlRoTop = { primitives: XML_PRIMITIVE_RO_MASK, sequence: bddAtom(XML_PRIMITIVE_RO_SINGLETON) };
+final XmlSubtype xmlRwTop = { primitives: XML_PRIMITIVE_RW_MASK, sequence: bddAtom(XML_PRIMITIVE_SINGLETON) };
 
 function xmlSingleton(int primitives) returns SemType {
     return createXmlSemtype(
@@ -54,7 +54,7 @@ public function xmlSequence(SemType constituentType) returns SemType {
 
 function makeSequence(boolean roPart, XmlSubtype d) returns SubtypeData {
     int primitives = XML_PRIMITIVE_NEVER | d.primitives;
-    int atom = d.primitives & (roPart ? XML_PRIMITIVE_RO_SINGLETONS : XML_RW_ATOM);
+    int atom = d.primitives & (roPart ? XML_PRIMITIVE_RO_SINGLETON : XML_PRIMITIVE_SINGLETON);
     Bdd sequence = bddUnion(bddAtom(atom), d.sequence);
     return createXmlSubtype(roPart, primitives, sequence);
 }
