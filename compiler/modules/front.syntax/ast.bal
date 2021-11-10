@@ -107,7 +107,7 @@ public type IfElseStmt record {|
     *PositionFields;
     Expr condition;
     StmtBlock ifTrue;
-    StmtBlock ifFalse;
+    StmtBlock? ifFalse;
 |};
 
 public type MatchStmt record {|

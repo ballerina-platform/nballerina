@@ -35,10 +35,13 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
             check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
         }
-        check validateStmtBlockPos(stmt.ifFalse, tok, parentStartPos, parentEndPos);
-        foreach Stmt falseStmt in stmt.ifFalse.stmts {
-            check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
-            childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
+        StmtBlock? ifFalse = stmt.ifFalse;
+        if ifFalse is StmtBlock {
+            check validateStmtBlockPos(ifFalse, tok, parentStartPos, parentEndPos);
+            foreach Stmt falseStmt in ifFalse.stmts {
+                check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
+                childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
+            }
         }
     }
     else if stmt is MatchStmt {
@@ -161,10 +164,6 @@ function validateMatchClausePos(MatchClause clause, Tokenizer tok, Position pare
 }
 
 function validateStmtBlockPos(StmtBlock block, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
-    if block.startPos == block.endPos && block.stmts.length() == 0 {
-        // null block added by us (ex if else stmt without else)
-        return;
-    }
     check tok.moveToPos(block.startPos, MODE_NORMAL);
     test:assertEquals(tok.current(), "{", "invalid start token for StmtBlock");
     check tok.moveToPos(block.endPos, MODE_NORMAL);

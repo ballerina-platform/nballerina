@@ -325,7 +325,7 @@ function parsePanicStmt(Tokenizer tok, Position startPos) returns PanicStmt|err:
 }
 
 function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|err:Syntax {
-    StmtBlock ifFalse;
+    StmtBlock? ifFalse;
     Expr condition = check parseExpr(tok);
     StmtBlock ifTrue = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
@@ -338,7 +338,8 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
             check tok.advance();
             IfElseStmt elseIfStmt = check parseIfElseStmt(tok, ifFalseStartPos);
             Position blockStartPos = elseIfStmt.ifTrue.startPos;
-            Position blockEndPos = elseIfStmt.ifFalse.endPos;
+            StmtBlock? elseIfFalseBlock = elseIfStmt.ifFalse;
+            Position blockEndPos = (elseIfFalseBlock is StmtBlock)? (elseIfFalseBlock.endPos) : elseIfStmt.ifTrue.endPos;
             ifFalse = { startPos: blockStartPos, endPos: blockEndPos, stmts: [elseIfStmt] };
         }
         // if exp1 { } else { }
@@ -351,7 +352,7 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
         endPos = tok.previousEndPos();
     }
     else {
-        ifFalse = { startPos: endPos, endPos, stmts: [] };
+        ifFalse = ();
     }
     return { startPos, endPos, condition, ifTrue, ifFalse };
 }
