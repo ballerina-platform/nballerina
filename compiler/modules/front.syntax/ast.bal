@@ -251,6 +251,7 @@ public type MethodCallExpr record {|
     Position startPos;
     Position endPos;
     Position opPos;
+    Position openParenPos;
     Position namePos;
     string methodName;
     Expr target;

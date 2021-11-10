@@ -340,14 +340,12 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
 type ExprOpPos BinaryExpr|UnaryExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr|TypeCastExpr;
 type ExprKwPos CheckingExpr|ErrorConstructorExpr|TypeTestExpr;
 type ExprNamePos FunctionCallExpr|MethodCallExpr;
+type ExprParanPos FunctionCallExpr|MethodCallExpr;
 
 function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
-    if expr is ExprOpPos|ExprKwPos|FunctionCallExpr {
+    if expr is ExprOpPos|ExprKwPos {
         if expr is ExprKwPos {
             check tok.moveToPos(expr.kwPos, MODE_NORMAL);
-        }
-        else if expr is FunctionCallExpr {
-            check tok.moveToPos(expr.openParenPos, MODE_NORMAL);
         }
         else {
             check tok.moveToPos(expr.opPos, MODE_NORMAL);
@@ -380,9 +378,6 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         else if expr is MethodCallExpr {
             test:assertTrue(token == ".");
         }
-        else if expr is FunctionCallExpr {
-            test:assertTrue(token == "(");
-        }
         else if expr is CheckingExpr {
             test:assertTrue(token is CheckingKeyword);
         }
@@ -405,6 +400,10 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         else {
             test:assertEquals(expr.funcName, newName);
         }
+    }
+    if expr is ExprParanPos {
+        check tok.moveToPos(expr.openParenPos, MODE_NORMAL);
+        test:assertEquals(tok.current(), "(");
     }
 }
 
