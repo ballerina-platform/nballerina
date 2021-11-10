@@ -269,6 +269,15 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td2.td);
         return t:complement(ty);
     }
+    if td is s:XmlSequenceTypeDesc {
+        t:SemType t = check resolveTypeDesc(mod, modDefn, depth, td.constituent);
+        err:Location loc =  err:location(modDefn.part.file, td.pos);
+        
+        if !t:isSubtypeSimple(t, t:XML) {
+            return err:semantic("type parameter for xml is not a subtype of xml", loc=loc);
+        }
+        return t:xmlSequence(t);
+    }
     panic error("unimplemented type-descriptor");
 }
 

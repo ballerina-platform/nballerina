@@ -107,7 +107,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         "boolean"
         | "decimal"
         | "float"
-        | "xml"
         | "typedesc"
         | "handle"
         | "any"
@@ -133,6 +132,20 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             string typeName = check tok.expectIdentifier();
             endPos = tok.previousEndPos();
             return { startPos, endPos, prefix: <string>cur, typeName, pos };
+        }
+        "xml" => {
+            Position pos = tok.currentStartPos();
+            Position endPos = tok.currentEndPos();
+            check tok.advance();
+            if tok.current() == ":" {
+                check tok.advance();
+                string typeName = check tok.expectIdentifier();
+                return { startPos, endPos, prefix: <string>cur, typeName, pos };
+            }
+            else if tok.current() == "<" {
+                return { startPos, endPos, constituent: check parseTypeParam(tok), pos };
+            }
+            return  { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
         }
         "byte" => {
             Position endPos = tok.currentEndPos();

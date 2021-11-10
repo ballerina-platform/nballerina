@@ -206,7 +206,7 @@ public class Context {
     }
 }
 
-type ProperSubtypeData StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype|BddNode;
+type ProperSubtypeData StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype|XmlSubtype|BddNode;
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData ProperSubtypeData|boolean;
 
@@ -382,6 +382,10 @@ public final UniformTypeBitSet SIMPLE_OR_STRING = uniformTypeUnion((1 << UT_NIL)
 public final UniformTypeBitSet NUMBER = uniformTypeUnion((1 << UT_INT) | (1 << UT_FLOAT) | (1 << UT_DECIMAL));
 public final SemType BYTE = intWidthUnsigned(8);
 public final SemType STRING_CHAR = stringChar();
+public final SemType XML_ELEMENT = xmlSingleton(XML_PRIMITIVE_ELEMENT_RO | XML_PRIMITIVE_ELEMENT_RW);
+public final SemType XML_COMMENT = xmlSingleton(XML_PRIMITIVE_COMMENT_RO | XML_PRIMITIVE_COMMENT_RW);
+public final SemType XML_TEXT = xmlSequence(xmlSingleton(XML_PRIMITIVE_TEXT));
+public final SemType XML_PI = xmlSingleton(XML_PRIMITIVE_PI_RO | XML_PRIMITIVE_PI_RW);
 
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
@@ -1171,7 +1175,7 @@ function init() {
         listRoOps, // RO list
         mappingRoOps, // RO mapping
         {}, // RO table
-        {}, // RO xml
+        xmlRoOps, // RO xml
         {}, // RO object
         intOps, // int
         floatOps, // float
@@ -1187,7 +1191,7 @@ function init() {
         listRwOps, // RW list
         mappingRwOps, // RW mapping
         {}, // RW table
-        {}, // RW xml
+        xmlRwOps, // RW xml
         {} // RW object
    ];
 }

@@ -439,7 +439,7 @@ public type TypeDefn record {|
 
 public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
-public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc;
+public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc;
 
 public type ListTypeDesc record {|
     // JBUG #32617 can't include PositionFields
@@ -497,6 +497,14 @@ public type UnaryTypeDesc record {|
     *PositionFields;
     UnaryTypeOp op;
     TypeDesc td;
+|};
+
+public type XmlSequenceTypeDesc record {|
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
+    Position pos;
+    TypeDesc constituent;
 |};
 
 public type TypeDescRef record {|
