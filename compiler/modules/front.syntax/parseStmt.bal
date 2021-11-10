@@ -179,13 +179,13 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
         return finishCallStmt(tok, expr, startPos);
     }
     else if cur == "." {
-        Position dotPos = tok.currentStartPos();
+        Position opPos = tok.currentStartPos();
         VarRefExpr varRef = { startPos, endPos:tok.previousEndPos(), varName: identifier, prefix };
         check tok.advance();
         Position newNamePos = tok.currentStartPos();
         string name = check tok.expectIdentifier();
         if tok.current() == "(" {
-            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, startPos, newNamePos, dotPos), startPos);
+            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, startPos, newNamePos, opPos), startPos);
         }
         else {
             endPos = tok.previousEndPos();
@@ -196,7 +196,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
                 return finishAssignStmt(tok, lValue, startPos);
             }
             else if t is CompoundAssignOp {
-                Position opPos = tok.currentStartPos();
+                opPos = tok.currentStartPos();
                 return parseCompoundAssignStmt(tok, lValue, t, startPos, opPos);
             }
             // SUBSET handle "["
