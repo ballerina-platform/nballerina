@@ -164,24 +164,27 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
     }
     else if cur == ":" {
         check tok.advance();
-        return finishOptQualIdentifierStmt(tok, identifier, check tok.expectIdentifier(), pos, startPos);
+        Position newNamePos = tok.currentStartPos();
+        string name = check tok.expectIdentifier();
+        return finishOptQualIdentifierStmt(tok, identifier, name, pos, startPos, newNamePos);
     }
-    return finishOptQualIdentifierStmt(tok, (), identifier, pos, startPos);
+    return finishOptQualIdentifierStmt(tok, (), identifier, pos, startPos, startPos);
 }
 
-function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string identifier, Position pos, Position startPos) returns Stmt|err:Syntax {
+function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string identifier, Position pos, Position startPos, Position namePos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
     if cur == "(" {
-        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, startPos);
+        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, startPos, namePos);
         return finishCallStmt(tok, expr, startPos);
     }
     else if cur == "." {
         VarRefExpr varRef = { startPos, endPos:tok.previousEndPos(), varName: identifier, prefix };
         check tok.advance();
+        Position newNamePos = tok.currentStartPos();
         string name = check tok.expectIdentifier();
         if tok.current() == "(" {
-            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, startPos), startPos);
+            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, startPos, newNamePos), startPos);
         }
         else {
             endPos = tok.previousEndPos();
