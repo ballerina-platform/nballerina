@@ -1,4 +1,5 @@
 import ballerina/test;
+import ballerina/io;
 
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
@@ -30,20 +31,20 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     test:assertTrue(stmt.startPos >= parentStartPos && stmt.endPos <= parentEndPos, "child node outside of parent");
     [d:Position, d:Position][] childNodePos = [];
     if stmt is IfElseStmt {
+        check validateStmtBlockPos(stmt.ifTrue, tok, parentStartPos, parentEndPos);
         foreach Stmt trueStmt in stmt.ifTrue.stmts {
             check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
         }
-        StmtBlock? ifFalse = stmt.ifFalse;
-        if ifFalse is StmtBlock {
-            foreach Stmt falseStmt in ifFalse.stmts {
-                check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
-                childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
-            }
+        check validateStmtBlockPos(stmt.ifFalse, tok, parentStartPos, parentEndPos);
+        foreach Stmt falseStmt in stmt.ifFalse.stmts {
+            check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
+            childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
         }
     }
     else if stmt is MatchStmt {
         foreach var clause in stmt.clauses {
+            check validateStmtBlockPos(clause.block, tok, parentStartPos, parentEndPos);
             foreach var matchStmt in clause.block.stmts {
                 check validateStatementPos(matchStmt, tok, stmt.startPos, stmt.endPos);
                 childNodePos.push([matchStmt.startPos, matchStmt.endPos]);
@@ -51,6 +52,7 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
         }
     }
     else if stmt is (WhileStmt|ForeachStmt) {
+        check validateStmtBlockPos(stmt.body, tok, parentStartPos, parentEndPos);
         foreach var bodyStmt in stmt.body.stmts {
             check validateStatementPos(bodyStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([bodyStmt.startPos, bodyStmt.endPos]);
@@ -160,12 +162,17 @@ function validateMatchClausePos(MatchClause clause, Tokenizer tok, Position pare
 }
 
 function validateStmtBlockPos(StmtBlock block, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
+    if block.startPos == block.endPos && block.stmts.length() == 0 {
+        // null block added by us (ex if else stmt without else)
+        return;
+    }
     check tok.moveToPos(block.startPos, MODE_NORMAL);
     test:assertEquals(tok.current(), "{", "invalid start token for StmtBlock");
-    StmtBlock newBlock = check parseStmtBlock(tok);
-    test:assertEquals(newBlock.toString(), block.toString());
-    test:assertEquals(tok.previousEndPos(), block.endPos, "invalid endPos value");
     check tok.moveToPos(block.endPos, MODE_NORMAL);
+    if tok.current() != "}" {
+        io:println(tok.file.filename());
+        io:println(block);
+    }
     test:assertEquals(tok.current(), "}", "invalid end token for StmtBlock");
     test:assertTrue(block.startPos > parentStartPos && block.endPos <= parentEndPos, "stmt block outside of parent");
 }
