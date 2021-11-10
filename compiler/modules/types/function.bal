@@ -68,8 +68,7 @@ function functionBddIsEmpty(Context cx, Bdd b, SemType s, Conjunction? pos, Conj
         }
     }
     else {
-        // XXX `sr`is unused here, which is strange: need to investigate whether this is a bug
-        SemType[2] [sd, sr] = cx.functionAtomType(b.atom);
+        SemType[2] [sd, _] = cx.functionAtomType(b.atom);
         return functionBddIsEmpty(cx, b.left, union(s, sd), and(b.atom, pos), neg)
             && functionBddIsEmpty(cx, b.middle, s, pos, neg)
             && functionBddIsEmpty(cx, b.right, s, pos, and(b.atom, neg));
