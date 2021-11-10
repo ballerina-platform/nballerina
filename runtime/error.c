@@ -11,12 +11,12 @@
 #define SUCCESS 0
 #define FAIL 1
 
-#define NO_DEBUG_INFO -1
+#define NO_DEBUG_INFO (-1)
 // The reason to pick these negative numbers is that 
 // the libstacktrace already has error codes starting from -1
-#define NO_ERROR -2
-#define EXCEEDS_MAX_PC_COUNT -3
-#define OUT_OF_MEMORY -4
+#define NO_ERROR (-2)
+#define EXCEEDS_MAX_PC_COUNT (-3)
+#define OUT_OF_MEMORY (-4)
 
 enum DemangleResult {
     PUBLIC_BALLERINA_NAME,
@@ -57,7 +57,7 @@ static void printBacktraceLine(const char *filename, int64_t lineNumber, const c
 static void getSimpleBacktrace(SimpleBacktrace *p);
 static char *saveMessage(const char *msg);
 static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNumber, BacktraceError *error);
-static void processInitialPC(PC pc, int64_t lineNumber, BacktraceStartLine *backtraceStartLine);
+static void processInitialPC(PC pc, BacktraceStartLine *backtraceStartLine);
 static enum DemangleResult demangle(const char *mangledName, const char **localName, FILE *fp);
 static bool demangleModules(const char **mangledModules, FILE *fp);
 static bool demangleCountedName(const char **pp, const char **name);
@@ -175,7 +175,7 @@ void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start, FILE *fp) {
 static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNumber, BacktraceError *error) {
     // Handle the starting pc seperately
     BacktraceStartLine backtraceStartLine = { { error->code, error->message, error->fp }, lineNumber };
-    processInitialPC(pcs[start], lineNumber, &backtraceStartLine);
+    processInitialPC(pcs[start], &backtraceStartLine);
     backtraceStartLine.lineNumber = 0;
     if (backtraceStartLine.error.code == NO_DEBUG_INFO) {
         for (uint32_t i = start + 1; i < nPCs; i++) {
@@ -192,7 +192,7 @@ static void processPCs(GC PC* pcs, uint32_t nPCs, uint32_t start, int64_t lineNu
     error->message = backtraceStartLine.error.message;
 }
 
-static void processInitialPC(PC pc, int64_t lineNumber, BacktraceStartLine *backtraceStartLine) {
+static void processInitialPC(PC pc, BacktraceStartLine *backtraceStartLine) {
     backtrace_pcinfo(state, pc, printBacktraceLineCB, storeBacktraceErrorCB, backtraceStartLine);
     if (backtraceStartLine->error.code == NO_DEBUG_INFO) {
         // We do not need to pass error_callback because, already we have an error
@@ -201,17 +201,15 @@ static void processInitialPC(PC pc, int64_t lineNumber, BacktraceStartLine *back
 }
 
 // Implementation of backtrace_full_callback
-static int printBacktraceLineCB(void *data, PC pc, const char *filename, int lineno, const char *function) {
+static int printBacktraceLineCB(void *data, UNUSED PC pc, const char *filename, int lineno, const char *function) {
     BacktraceStartLine *backtraceStartLine = data;
-    if (backtraceStartLine->lineNumber != 0) {
-        lineno = backtraceStartLine->lineNumber;
-    }
-    printBacktraceLine(filename, lineno, function, backtraceStartLine->error.fp);
+    int64_t lineNumber = backtraceStartLine->lineNumber != 0 ? backtraceStartLine->lineNumber : lineno;
+    printBacktraceLine(filename, lineNumber, function, backtraceStartLine->error.fp);
     return SUCCESS;
 }
 
 // Implementation of backtrace_syminfo_callback
-static void printMissingSymbolsCB(void *data, uintptr_t pc, const char *symname, uintptr_t symval, uintptr_t symsize) {
+static void printMissingSymbolsCB(void *data, UNUSED uintptr_t pc, const char *symname, UNUSED uintptr_t symval, UNUSED uintptr_t symsize) {
     BacktraceStartLine *backtraceStartLine = data;
     printBacktraceLine(NULL, backtraceStartLine->lineNumber, symname, backtraceStartLine->error.fp);
 }

@@ -32,6 +32,7 @@
 // LLVM readnone attribute corresponds to clang const
 #define READNONE __attribute__((const))
 #define ALIGNED(n) __attribute__((aligned(n)))
+#define UNUSED __attribute__((unused))
 #else
 #define NODEREF /* as nothing */
 #define NORETURN /* as nothing */
@@ -40,6 +41,7 @@
 #define READONLY /* as nothing */
 #define READNONE /* as nothing */
 #define ALIGNED(n) /* as nothing */
+#deifne UNUSED /* as nothing */
 #endif
 
 #define likely(x) __builtin_expect((x), 1)
@@ -79,10 +81,28 @@ typedef struct {
     GC TaggedPtr *members;
 } TaggedPtrArray;
 
+typedef uint32_t Tid;
+
+// All mapping and list descriptors start with this.
 typedef struct {
+    Tid tid;
+} StructureDesc, *StructureDescPtr;
+
+// All mapping and list values start with this
+typedef GC struct {
+    StructureDescPtr desc;
+} Structure, *StructurePtr;
+
+// This extends StructureDesc
+// i.e must start with tid
+typedef struct {
+    Tid tid;
+    TaggedPtr (*get)(TaggedPtr lp, int64_t index);
+    PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
     uint32_t bitSet;
 } ListDesc, *ListDescPtr;
 
+// Extends Structure
 typedef GC struct List {
     ListDescPtr desc;
     // This isn't strictly portable because void* and TaggedPtr* might have different alignments/sizes
@@ -104,16 +124,22 @@ typedef struct {
     GC MapField *members;
 } MapFieldArray;
 
+// This extends StructureDesc
+// i.e must start with tid
 typedef struct {
+    Tid tid;
     uint32_t bitSet;
 } MappingDesc, *MappingDescPtr;
 
+// This extends MappingDesc
 typedef struct {
+    Tid tid;
     uint32_t bitSet; // zero
     uint32_t nFields;
     uint32_t fieldBitSets[];
 } *RecordDescPtr;
 
+// Extends Structure
 typedef GC struct Mapping {
     MappingDescPtr desc;
     union {
@@ -136,25 +162,37 @@ typedef GC struct Mapping {
     uint8_t tableLengthShift;
 } *MappingPtr;
 
-typedef struct TypeTest {
-    bool (*contains)(struct TypeTest *, TaggedPtr);
-} TypeTest, *TypeTestPtr;
+typedef struct SubtypeTest {
+    bool (*contains)(struct SubtypeTest *, TaggedPtr);
+} SubtypeTest, *SubtypeTestPtr;
 
 typedef struct {
     TaggedPtr fieldName;
     uint32_t fieldBitSet;
-} RecordTypeTestField;
+} RecordSubtypeTestField;
 
 typedef struct {
-    TypeTest typeTest;
+    SubtypeTest typeTest;
     uint32_t nFields;
-    RecordTypeTestField fields[];
-} *RecordTypeTestPtr;
+    RecordSubtypeTestField fields[];
+} *RecordSubtypeTestPtr;
 
 typedef struct {
-    TypeTest typeTest;
+    SubtypeTest typeTest;
     uint32_t bitSet;
-} *MapTypeTestPtr, *ArrayTypeTestPtr;
+} *MapSubtypeTestPtr, *ArraySubtypeTestPtr;
+
+typedef struct {
+    SubtypeTest typeTest;
+    uint32_t nTids;
+    uint32_t tids[];
+} *PrecomputedSubtypeTestPtr;
+
+typedef struct {
+   uint32_t all;
+   uint32_t some;
+   SubtypeTestPtr subtypes[];
+} TypeTest, *TypeTestPtr;
 
 typedef GC struct Error {
     TaggedPtr message;
@@ -228,6 +266,7 @@ extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoin
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
 extern ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity);
+extern TaggedPtr _bal_list_get(TaggedPtr p, int64_t index);
 extern PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
 extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 
@@ -241,6 +280,7 @@ extern READONLY bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
+extern READNONE TaggedPtr _bal_tagged_clear_exact(TaggedPtr p);
 
 extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
 extern void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start, FILE *fp);
@@ -266,7 +306,7 @@ static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
 }
 
 static inline TaggedPtr bitsToTaggedPtr(uint64_t bits) {
-    char *p = (char *)0 + bits;
+    char *p = (char *)bits;
     return (TaggedPtr)p;
 }
 
@@ -514,10 +554,10 @@ static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_
     int64_t lhsLen = lhsListPtr->tpArray.length;
     int64_t rhsLen = rhsListPtr->tpArray.length;
     int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
-    GC TaggedPtr *lhsArr = lhsListPtr->tpArray.members;
-    GC TaggedPtr *rhsArr = rhsListPtr->tpArray.members;
+    TaggedPtr (*lhsGet)(TaggedPtr lp, int64_t index) = lhsListPtr->desc->get;
+    TaggedPtr (*rhsGet)(TaggedPtr lp, int64_t index) = rhsListPtr->desc->get;
     for (int64_t i = 0; i < length; i++) {
-        int64_t result = (*comparator)(lhsArr[i], rhsArr[i]);
+        int64_t result = (*comparator)(lhsGet(lhs, i), rhsGet(rhs, i));
         if (result != COMPARE_EQ) {
             return result;
         }

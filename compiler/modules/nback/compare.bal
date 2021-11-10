@@ -183,8 +183,31 @@ function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:Compare
     }
 }
 
-function buildCompareTaggedBasic(llvm:Builder builder, Scaffold scaffold, llvm:Value lhs, llvm:Value rhs, bir:Register result)
-    returns [llvm:BasicBlock, llvm:BasicBlock] {
+function buildCompareTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    llvm:BasicBlock bbJoin = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
+    llvm:Value lhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>lhs);
+    buildCompareInt(builder, scaffold, op, lhsUntagged, rhs, result);
+    builder.br(bbJoin);
+    builder.positionAtEnd(bbJoin);
+}
+
+function buildCompareTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    llvm:BasicBlock bbJoin = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
+    llvm:Value lhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>lhs);
+    buildCompareFloat(builder, scaffold, op, lhsUntagged, rhs, result);
+    builder.br(bbJoin);
+    builder.positionAtEnd(bbJoin);
+}
+
+function buildCompareTaggedBoolean(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    llvm:BasicBlock bbJoin = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
+    llvm:Value lhsUntagged = buildUntagBoolean(builder, <llvm:PointerValue>lhs);
+    buildCompareInt(builder, scaffold, op, lhsUntagged, rhs, result);
+    builder.br(bbJoin);
+    builder.positionAtEnd(bbJoin);
+}
+
+function buildCompareTaggedBasic(llvm:Builder builder, Scaffold scaffold, llvm:Value lhs, llvm:Value rhs, bir:Register result) returns llvm:BasicBlock {
     llvm:BasicBlock bbNil = scaffold.addBasicBlock();
     llvm:BasicBlock bbNotNil = scaffold.addBasicBlock();
     llvm:BasicBlock bbJoin = scaffold.addBasicBlock();
@@ -194,31 +217,7 @@ function buildCompareTaggedBasic(llvm:Builder builder, Scaffold scaffold, llvm:V
     buildStoreBoolean(builder, scaffold, llvm:constInt(LLVM_BOOLEAN, 0), result);
     builder.br(bbJoin);
     builder.positionAtEnd(bbNotNil);
-    return [bbNotNil, bbJoin];
-}
-
-function buildCompareTaggedInt(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
-    var [bbNotNil, bbJoin] = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
-    llvm:Value lhsUntagged = buildUntagInt(builder, scaffold, <llvm:PointerValue>lhs);
-    buildCompareInt(builder, scaffold, op, lhsUntagged, rhs, result);
-    builder.br(bbJoin);
-    builder.positionAtEnd(bbJoin);
-}
-
-function buildCompareTaggedFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
-    var [bbNotNil, bbJoin] = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
-    llvm:Value lhsUntagged = buildUntagFloat(builder, scaffold, <llvm:PointerValue>lhs);
-    buildCompareFloat(builder, scaffold, op, lhsUntagged, rhs, result);
-    builder.br(bbJoin);
-    builder.positionAtEnd(bbJoin);
-}
-
-function buildCompareTaggedBoolean(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
-    var [bbNotNil, bbJoin] = buildCompareTaggedBasic(builder, scaffold, lhs, rhs, result);
-    llvm:Value lhsUntagged = buildUntagBoolean(builder, <llvm:PointerValue>lhs);
-    buildCompareInt(builder, scaffold, op, lhsUntagged, rhs, result);
-    builder.br(bbJoin);
-    builder.positionAtEnd(bbJoin);
+    return bbJoin;
 }
 
 function buildCompareInt(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {

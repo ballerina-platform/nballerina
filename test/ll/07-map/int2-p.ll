@@ -1,8 +1,8 @@
 @_bal_stack_guard = external global i8*
-@_Bi04root0 = external constant {i32}
+@_Bi04root0 = external constant {i32, i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
+declare i8 addrspace(1)* @_bal_mapping_construct({i32, i32}*, i64)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
@@ -26,7 +26,7 @@ define void @_B04rootmain() !dbg !5 {
   %9 = icmp ult i8* %7, %8
   br i1 %9, label %30, label %10
 10:
-  %11 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 0)
+  %11 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi04root0, i64 0)
   store i8 addrspace(1)* %11, i8 addrspace(1)** %1
   %12 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %12, i8 addrspace(1)** %mi
@@ -89,7 +89,7 @@ define void @_B04rootmain() !dbg !5 {
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
-!0 = !{i32 1, !"Debug Info Version", i32 3}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename:"../../../compiler/testSuite/07-map/int2-p.bal", directory:"")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !3 = !DISubroutineType(types: !4)

@@ -97,6 +97,7 @@ type UsedSemType record {|
     readonly int index;
     llvm:ConstPointerValue? inherentType = ();
     llvm:ConstPointerValue? typeTest = ();
+    llvm:ConstPointerValue? exactify = ();
 |};
 
 type ModuleDI record {|
@@ -261,9 +262,8 @@ class Scaffold {
         }
     }
 
-    function unimplementedErr(err:Message message) returns err:Unimplemented {
-        err:Location loc = err:location(self.file);
-        return err:unimplemented(message, loc);
+    function unimplementedErr(err:Message message, err:Position pos) returns err:Unimplemented {
+        return err:unimplemented(message, err:location(self.file, pos));
     }
 
     function initTypes() returns InitTypes => self.mod.llInitTypes;
@@ -274,7 +274,7 @@ class Scaffold {
         if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_TYPE_TEST, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(self.initTypes().typeTestVTable, symbol, isConstant = true);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llTypeTestType, symbol, isConstant = true);
             used.typeTest = v;
             return v;
         }
@@ -291,6 +291,21 @@ class Scaffold {
             string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
             llvm:ConstPointerValue v = m.llMod.addGlobal(llInherentType, symbol, isConstant = true);
             used.inherentType = v;
+            return v;
+        }
+        else {
+            return value;
+        }
+    }
+
+    function getExactify(t:SemType ty) returns llvm:ConstPointerValue {
+        UsedSemType used = self.getUsedSemType(ty);
+        llvm:ConstPointerValue? value = used.exactify;
+        if value == () {
+            Module m = self.mod;
+            string symbol = mangleTypeSymbol(m.modId, USED_EXACTIFY, used.index);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(LLVM_TID, symbol, isConstant = true);
+            used.exactify = v;
             return v;
         }
         else {
@@ -376,6 +391,7 @@ function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolea
 function padBytes(byte[] bytes, int headerSize) returns int {
     int nBytes = bytes.length();
     int nBytesPadded = (((nBytes + headerSize + 7) >> 3) << 3) - headerSize;
+    // JBUG #33352 should be able to use `_` here
     foreach int i in 0 ..< nBytesPadded - nBytes {
         bytes.push(0);
     }
@@ -438,9 +454,7 @@ function semTypeRepr(t:SemType ty) returns Repr {
     if w == t:NEVER {
         panic err:impossible("allocate register with never type");
     }
-    // subset07 does not allow unions of list/mapppings with other things
-    // apart from `any`
-    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:ERROR;
+    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:LIST|t:MAPPING|t:ERROR;
     // DECIMAL is here for ConvertToInt or ConvertToFloat 
     if (w | supported | t:DECIMAL) == t:TOP || (w & supported) == w {
         TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };

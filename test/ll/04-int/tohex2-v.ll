@@ -83,7 +83,7 @@ define void @_B04rootmain() !dbg !5 {
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
-!0 = !{i32 1, !"Debug Info Version", i32 3}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename:"../../../compiler/testSuite/04-int/tohex2-v.bal", directory:"")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !3 = !DISubroutineType(types: !4)
@@ -91,18 +91,18 @@ define void @_B04rootmain() !dbg !5 {
 !5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
 !6 = !{}
 !7 = !DILocation(line: 0, column: 0, scope: !5)
-!8 = !DILocation(line: 6, column: 16, scope: !5)
+!8 = !DILocation(line: 6, column: 28, scope: !5)
 !9 = !DILocation(line: 7, column: 4, scope: !5)
 !10 = !DILocation(line: 8, column: 4, scope: !5)
-!11 = !DILocation(line: 10, column: 16, scope: !5)
+!11 = !DILocation(line: 10, column: 28, scope: !5)
 !12 = !DILocation(line: 10, column: 4, scope: !5)
-!13 = !DILocation(line: 11, column: 19, scope: !5)
+!13 = !DILocation(line: 11, column: 31, scope: !5)
 !14 = !DILocation(line: 11, column: 4, scope: !5)
-!15 = !DILocation(line: 13, column: 19, scope: !5)
+!15 = !DILocation(line: 13, column: 31, scope: !5)
 !16 = !DILocation(line: 13, column: 4, scope: !5)
-!17 = !DILocation(line: 14, column: 22, scope: !5)
+!17 = !DILocation(line: 14, column: 34, scope: !5)
 !18 = !DILocation(line: 14, column: 4, scope: !5)
-!19 = !DILocation(line: 16, column: 34, scope: !5)
+!19 = !DILocation(line: 16, column: 46, scope: !5)
 !20 = !DILocation(line: 16, column: 4, scope: !5)
-!21 = !DILocation(line: 17, column: 41, scope: !5)
+!21 = !DILocation(line: 17, column: 53, scope: !5)
 !22 = !DILocation(line: 17, column: 4, scope: !5)

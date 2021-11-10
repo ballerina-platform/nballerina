@@ -156,6 +156,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                     if isNever(rest) {
                         return true;
                     }
+                    // JBUG #33532 should be able to use `_` here
                     foreach int i in members.length() ..< newLen {
                         members.push(rest);
                     }
@@ -205,7 +206,8 @@ function listInhabited(Context cx, SemType[] members, SemType rest, Conjunction?
         if len < negLen {
             if isNever(rest) {
                 return listInhabited(cx, members, rest, neg.next);
-            }            
+            }
+            // JBUG #33532 should be able to use `_` here
             foreach int i in len ..< negLen {
                 members.push(rest);
             }

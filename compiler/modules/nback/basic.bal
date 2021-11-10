@@ -130,7 +130,7 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             buildFloatNegate(builder, scaffold, insn);
         }
         else {
-            bir:CatchInsn unused = insn;
+            bir:CatchInsn _ = insn;
             // nothing to do
             // scaffold.panicAddress uses this to figure out where to store the panic info
         }
@@ -173,7 +173,7 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.position);
+    scaffold.setDebugLocation(builder, insn.pos);
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
     llvm:Value[] args = [];
@@ -194,12 +194,12 @@ function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) r
     }  
     llvm:Value? retValue = builder.call(func, args);
     RetRepr retRepr = semTypeRetRepr(signature.returnType);
-    check buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
+    buildStoreRet(builder, scaffold, retRepr, retValue, insn.result);
 }
 
-function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) returns BuildError? {
+function buildStoreRet(llvm:Builder builder, Scaffold scaffold, RetRepr retRepr, llvm:Value? retValue, bir:Register reg) {
     if retRepr is Repr {
-        builder.store(check buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
+        builder.store(buildConvertRepr(builder, scaffold, retRepr, <llvm:Value>retValue, scaffold.getRepr(reg)),
                       scaffold.address(reg));
     }
     else {
@@ -222,11 +222,11 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
 }
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.position, "file");
+    scaffold.setDebugLocation(builder, insn.pos, "file");
     llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(errorConstructFunction),
                                                 [
                                                     check buildString(builder, scaffold, insn.operand),
-                                                    llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.position))
+                                                    llvm:constInt(LLVM_INT, scaffold.lineNumber(insn.pos))
                                                 ]);
     builder.store(value, scaffold.address(insn.result));
 }

@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#define ARRAY_LENGTH_MAX (INT64_MAX/sizeof(TaggedPtr))
+#define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
 
 const double F0 = +0.0;
 
@@ -14,7 +14,6 @@ ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
 }
 
 static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
-    uint64_t bits;
     switch (desc->bitSet) {
         case (1 << TAG_BOOLEAN):
             *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
@@ -39,6 +38,13 @@ static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
     return false;
 }
 
+// Must be called with an index such that, 0 <= index < lp->gArray.length
+TaggedPtr _bal_list_get(TaggedPtr p, int64_t index) {
+    ListPtr lp = taggedToPtr(p);
+    GC TaggedPtrArray *ap = &(lp->tpArray);
+    return ap->members[index];
+}
+
 PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
     ListDescPtr ldp = lp->desc;
@@ -47,11 +53,13 @@ PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     GC TaggedPtrArray *ap = &(lp->tpArray);
-    if (likely((uint64_t)index < ap->length)) {
+    // The cast makes this handle the negative case also in a single comparison
+    if (likely((uint64_t)index < (uint64_t)ap->length)) {
         ap->members[index] = val;
         return 0;
     }
-    if (unlikely((uint64_t)index >= ap->capacity)) {
+    // The cast makes this handle the negative case also in a single comparison
+    if (unlikely((uint64_t)index >= (uint64_t)ap->capacity)) {
         if (unlikely((uint64_t)index >= ARRAY_LENGTH_MAX)) {
             return index < 0 ? PANIC_INDEX_OUT_OF_BOUNDS : PANIC_LIST_TOO_LONG; 
         }
@@ -125,18 +133,17 @@ bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
     if (ap2->length != len) {
         return false;
     }
+    TaggedPtr (*get1)(TaggedPtr lp, int64_t index) = lp1->desc->get;
+    TaggedPtr (*get2)(TaggedPtr lp, int64_t index) = lp2->desc->get;
     for (int64_t i = 0; i < len; i++) {
-        if (!taggedPtrEqual(ap1->members[i], ap2->members[i])) {
+        if (!taggedPtrEqual(get1(p1, i), get2(p2, i))) {
             return false;
         }
     }
     return true;
 }
 
-bool _bal_array_type_contains(TypeTestPtr ttp, TaggedPtr p) {
-    if ((getTag(p) & UT_MASK) != TAG_LIST_RW) {
-        return false;
-    }
+bool _bal_array_subtype_contains(SubtypeTestPtr stp, TaggedPtr p) {
     ListPtr lp = taggedToPtr(p);   
-    return (lp->desc->bitSet & ~((ArrayTypeTestPtr)ttp)->bitSet) == 0;
+    return (lp->desc->bitSet & ~((ArraySubtypeTestPtr)stp)->bitSet) == 0;
 }

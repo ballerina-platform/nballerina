@@ -71,9 +71,9 @@ public function constInt(IntType ty, int val) returns ConstValue {
     return new ConstValue(ty, val.toString());
 }
 
-final string posInf = "0x" + (1.0/0.0).toBitsInt().toHexString().toUpperAscii();
-final string negInf = "0x" + (-1.0/0.0).toBitsInt().toHexString().toUpperAscii();
-final string NAN = "0x" + (0.0/0.0).toBitsInt().toHexString().toUpperAscii();
+final string posInf = floatBitsToHexString(1.0/0.0);
+final string negInf = floatBitsToHexString(-1.0/0.0);
+final string NAN = floatBitsToHexString(0.0/0.0);
 
 // Corresponds to LLVMConstReal
 public function constFloat(FloatType ty, float val) returns ConstValue {
@@ -94,8 +94,7 @@ public function constFloat(FloatType ty, float val) returns ConstValue {
         // General case
         if float:abs(val).toString().length() > 7 {
             // Resulting number has more than 7 digits so convert to hex format
-            int repInt = float:toBitsInt(val);
-            valRep = "0x" + int:toHexString(repInt).toUpperAscii();
+            valRep = floatBitsToHexString(val);
         }
         else {
             // Set number in decimal format
@@ -248,6 +247,7 @@ public class Context {
                 return [name, elements];
             }
         }
+        return ();
     }
 }
 
@@ -325,13 +325,11 @@ public class Module {
                                      ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
 
         }
-        else if name == "ptrmask.p1i8.i64" {
+        else {
+            GeneralIntrinsicName _ = name;
             return self.addIntrinsic(name,
                                      { returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"] },
                                      ["nofree", "nosync", "nounwind", "readnone", "speculatable", "willreturn"]);
-        }
-        else {
-            panic err:impossible();
         }
     }
 
@@ -818,7 +816,6 @@ public class DIBuilder {
     // Corresponds to LLVMDIBuilderCreateCompileUnit
     public function createCompileUnit(*CompileUnitProperties props) returns Metadata {
         Metadata metadata = self.m.addMetadata();
-        Metadata? file = props.file;
         string[] words = [];
         words.push(metadata.ref(), "=", "distinct", "!", "DICompileUnit", "(", "language",
                    ":", sourceLangToString.get(props.language));
@@ -1201,6 +1198,7 @@ public class Builder {
             return new Value(retType, reg);
         } else {
             addInsnWithDbLocation(bb, insnWords, self.dbLocation);
+            return ();
         }
     }
 
@@ -1729,4 +1727,19 @@ function omitSpaceBefore(string word) returns boolean {
 
 function omitSpaceAfter(string word) returns boolean {
     return word == "(" || word == "{" || word == "\"" || word == "[" || word == "." || word == "!";
+}
+
+function floatBitsToHexString(float f) returns string {
+    return "0x" + toUnsignedHexString(f.toBitsInt()).toUpperAscii();
+}
+
+function toUnsignedHexString(int i) returns string {
+    if i >= 0 {
+        return i.toHexString();
+    }
+    else {
+        // high 15 digits + low digit, this split is desirable
+        // since no need to pad when low is zero.
+        return (i >>> 4).toHexString() + (i & 0xF).toHexString();
+    }
 }

@@ -102,6 +102,16 @@ final RuntimeFunction taggedToFloatFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction taggedClearExactFunction = {
+    name: "tagged_clear_exact",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR]
+    },
+    attrs: ["readnone"]
+};
+
+
 final bir:ModuleId runtimeModule = {
     org: "ballerinai",
     names: ["runtime"]
@@ -163,21 +173,30 @@ function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand oper
     llvm:Value value = check buildRepr(builder, scaffold, operand, targetRepr);
     if targetRepr.base == BASE_REPR_TAGGED && operand is bir:Register {
         t:SemType listOrMappingRw = t:union(t:LIST_RW, t:MAPPING_RW);
-        t:SemType targetStructType = t:intersect(targetType, listOrMappingRw);
         t:SemType sourceStructType =  t:intersect(operand.semType, listOrMappingRw);
+        t:UniformTypeBitSet sourceStructUniformTypes = t:widenToUniformTypes(sourceStructType);
+        // Going from e.g. `int[]` to `int[]|map<any>` does not lose exactness,
+        // but going from e.g. `int[]|map<int>` to `int[]|map<any>` does.
+        t:SemType targetStructType = t:intersect(targetType, sourceStructUniformTypes);
         if !t:isNever(targetStructType) && !t:isNever(sourceStructType) {
-            // Is the sourceStructType a proper subtype of the targetStructType?
+            // Is the sourceStructType a _proper_ subtype of the targetStructType?
+            // Note that we already know that sourceStructType is a subtype of targetStructType,
+            // so we need to check that targetStructType is not a subtype of sourceStructType.
             if sourceStructType != targetStructType && !t:isSubtype(scaffold.typeContext(), targetStructType, sourceStructType) {
-                value = buildClearExact(builder, scaffold, value, targetRepr);
+                value = buildClearExact(builder, scaffold, value, operand.semType);
             }
         }
     }
     return value;
 }
 
-function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value value, Repr targetRepr) returns llvm:Value {
-    // SUBSET need to use targetRepr to handle unions including mappings and lists
-    return <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [value, llvm:constInt(LLVM_INT, ~FLAG_EXACT)]);
+function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value tagged, t:SemType sourceType) returns llvm:Value {
+    if t:isNever(t:intersect(sourceType, t:union(t:STRING,t:INT))) {
+        return <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [tagged, llvm:constInt(LLVM_INT, ~FLAG_EXACT)]);
+    }
+    else {
+        return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(taggedClearExactFunction), [tagged]);
+    }
 }
 
 function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
@@ -185,7 +204,7 @@ function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand,
     return buildConvertRepr(builder, scaffold, sourceRepr, value, targetRepr);
 }
 
-function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value|BuildError {
+function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr) returns llvm:Value {
     BaseRepr sourceBaseRepr = sourceRepr.base;
     BaseRepr targetBaseRepr = targetRepr.base;
     if sourceBaseRepr == targetBaseRepr {
@@ -203,7 +222,7 @@ function buildConvertRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRe
         }
     }
     // this shouldn't ever happen I think
-    return scaffold.unimplementedErr("unimplemented conversion required");
+    panic err:impossible("unimplemented conversion required");
 }
 
 function buildTaggedBoolean(llvm:Builder builder, llvm:Value value) returns llvm:Value {

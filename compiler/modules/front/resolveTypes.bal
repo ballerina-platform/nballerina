@@ -39,8 +39,13 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
 }
 
 function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) returns bir:FunctionSignature|ResolveTypeError {
-    s:FunctionTypeDesc td = defn.typeDesc;  
-    t:SemType[] params = from var x in td.args select check resolveSubsetTypeDesc(mod, defn, x);
+    s:FunctionTypeDesc td = defn.typeDesc;
+    // JBUG doing this as a from/select panics if resolveSubsetTypeDesc returns an error
+    // e.g.10-intersect/never2-e.bal
+    t:SemType[] params = [];
+    foreach var x in td.args {
+        params.push(check resolveSubsetTypeDesc(mod, defn, x));
+    }
     t:SemType ret = check resolveSubsetTypeDesc(mod, defn, td.ret);
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
@@ -48,7 +53,8 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
 function resolveSubsetTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn defn, s:TypeDesc td) returns t:SemType|ResolveTypeError {
     t:SemType ty = check resolveTypeDesc(mod, defn, 0, td);
     if t:isEmpty(mod.tc, ty) {
-        return err:unimplemented("intersection equivalent to never is not implemented", s:locationInDefn(defn, td.startPos));
+        // SUBSET never disallowed
+        return err:semantic("intersection must not be empty", s:locationInDefn(defn, td.startPos));
     }
     return ty;
 }
@@ -120,7 +126,16 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return t:union(l, r);
         }
         else {
-            return t:intersect(l, r);
+            t:SemType result = t:intersect(l, r);
+            // This can fail to detect that the intersection is empty when the env is not ready
+            // (i.e. there's a recursive type still under construction).
+            // To solve this, we would need to build a list of intersections to be checked later.
+            // But this is very unlikely to be a problem in practice.
+            if t:isNever(result)
+               || (result !is t:UniformTypeBitSet && env.isReady() && t:isEmpty(mod.tc, result)) {
+                return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPos)); 
+            }
+            return result;
         }
     }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
@@ -248,8 +263,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     if td is s:ErrorTypeDesc {
         return t:errorDetail(check resolveTypeDesc(mod, modDefn, depth, td.detail));
     }
-    if td is s:UnaryTypeDesc {
-        t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td.td);
+    // JBUG #33722 work around incorrect type narrowing
+    s:TypeDesc td2 = td;
+    if td2 is s:UnaryTypeDesc {
+        t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td2.td);
         return t:complement(ty);
     }
     panic error("unimplemented type-descriptor");

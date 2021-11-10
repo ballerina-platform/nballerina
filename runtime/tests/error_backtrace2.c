@@ -1,49 +1,31 @@
 #include <assert.h>
 #include <stdio.h>
-
 #include "string_utils.h"
 
 HASH_DEFINE_KEY;
 
-// We have to check the function and filename seperately
-// because filepath is not a constant
-static const ExpectedTrace expectedTrace[] = {
-    { "    func2 ", "error_backtrace2.c:36" },
-    { "    func1 ", "error_backtrace2.c:28" },
-    { "    func2 ", "error_backtrace2.c:33" },
-    { "    func1 ", "error_backtrace2.c:28" },
-    { "    func2 ", "error_backtrace2.c:33" },
-    { "    func1 ", "error_backtrace2.c:28" },
-    { "    main ", "error_backtrace2.c:45" }
-};
-
-void func2(int, FILE *fp);
-void func1(int, FILE *fp);
+void func2(int);
+void func1(int);
 
 int decrement(int i) {
     return --i;
 }
 
-void func1(int j, FILE *fp) {
-    func2(decrement(j), fp);
+void func1(int j) {
+    func2(decrement(j));
 }
 
-void func2(int j, FILE *fp) {
+void func2(int j) {
     if (j >= 0) {
-        func1(decrement(j), fp);
+        func1(decrement(j));
     } 
     else {
-        TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"), 36);
+        TaggedPtr taggedErr = _bal_error_construct(makeString("Func1 error"), 23);
         ErrorPtr ep = (ErrorPtr)taggedToPtr(taggedErr);
-        _bal_error_backtrace_print(ep, 1, fp);
+        _bal_error_backtrace_print(ep, 1, stdout);
     }
 }
 
 int main() {
-    FILE *fp = tmpfile();
-    assert(fp != NULL);
-    func1(3, fp);
-    rewind(fp);
-    compareBacktrace(fp, expectedTrace);
-    fclose(fp);
+    func1(3);
 }

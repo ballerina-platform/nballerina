@@ -38,7 +38,6 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
     t:Env env = new;
     boolean firstOk = false;
     do {
-        boolean ok = true;
         t:SemType t1 = check j:parse(env, j1);
         firstOk = true;
         t:SemType t2 = check j:parse(env, j2);

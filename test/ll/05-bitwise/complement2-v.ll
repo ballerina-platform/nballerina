@@ -216,7 +216,7 @@ define i64 @_B04rootaddTwo(i64 %0) !dbg !11 {
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
-!0 = !{i32 1, !"Debug Info Version", i32 3}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename:"../../../compiler/testSuite/05-bitwise/complement2-v.bal", directory:"")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !3 = !DISubroutineType(types: !4)
@@ -235,7 +235,7 @@ define i64 @_B04rootaddTwo(i64 %0) !dbg !11 {
 !16 = !DILocation(line: 6, column: 4, scope: !5)
 !17 = !DILocation(line: 7, column: 16, scope: !5)
 !18 = !DILocation(line: 7, column: 4, scope: !5)
-!19 = !DILocation(line: 8, column: 36, scope: !5)
+!19 = !DILocation(line: 8, column: 48, scope: !5)
 !20 = !DILocation(line: 8, column: 4, scope: !5)
 !21 = !DILocation(line: 9, column: 4, scope: !5)
 !22 = !DILocation(line: 11, column: 15, scope: !5)

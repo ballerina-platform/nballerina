@@ -157,17 +157,50 @@ function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:List
 
 function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:MappingConstructorExpr expr) returns s:Expr|FoldError {
     // SUBSET always have contextually expected type for mapping constructor
-    t:SemType expectedMappingType = t:intersect(<t:SemType>expectedType, t:MAPPING_RW);
-    // SUBSET with unions of maps we will need to select from possibilities based on the field names
-    if t:mappingAtomicTypeRw(cx.typeContext(), expectedMappingType) == () {
-        return cx.semanticErr("no applicable inherent type for mapping constructor");
-    }
-    expr.expectedType = expectedMappingType;
+    t:SemType inherentType = check selectMappingInherentType(cx, <t:SemType>expectedType, expr); 
+    expr.expectedType = inherentType;
     foreach s:Field f in expr.fields {
-        t:SemType memberType = t:mappingMemberType(cx.typeContext(), expectedMappingType, f.name);
+        t:SemType memberType = t:mappingMemberType(cx.typeContext(), inherentType, f.name);
         f.value = check foldExpr(cx, memberType, f.value);
     }
     return expr;
+}
+
+function selectMappingInherentType(FoldContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns t:SemType|FoldError {
+    t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING_RW);
+    t:Context tc = cx.typeContext();
+    if t:mappingAtomicTypeRw(tc, expectedMappingType) != () {
+        return expectedMappingType; // easy case
+    }
+    string[] fieldNames = from var f in expr.fields order by f.name select f.name;
+    t:MappingAlternative[] alts =
+        from var alt in t:mappingAlternativesRw(tc, expectedMappingType)
+        where mappingAlternativeAllowsFields(alt, fieldNames)
+        select alt;
+    if alts.length() == 0 {
+        return cx.semanticErr("no applicable inherent type for mapping constructor", pos=expr.startPos);
+    }
+    else if alts.length() > 1 {
+        return cx.semanticErr("ambiguous inherent type for mapping constructor", pos=expr.startPos);
+    }
+    t:SemType semType = alts[0].semType;
+    if t:mappingAtomicTypeRw(tc, semType) == () {
+        return cx.semanticErr("appplicable type for mapping constructor is not atomic", pos=expr.startPos);
+    }
+    return semType;
+}
+
+function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] fieldNames) returns boolean {
+    foreach t:MappingAtomicType a in alt.pos {
+        // SUBSET won't be right with record defaults
+        if a.rest == t:NEVER {
+            if a.names != fieldNames {
+                return false;
+            }
+        }
+        // SUBSET `...` in records will need to check all required fields are present
+    }
+    return true;
 }
 
 function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:BinaryArithmeticExpr expr) returns s:Expr|FoldError {
@@ -182,7 +215,7 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
                 return foldedBinaryConstExpr(result, t:INT, leftExpr, rightExpr);
             }
             else {
-                return cx.semanticErr(`evaluation of int constant ${expr.arithmeticOp} expression failed`, pos=expr.pos, cause=result);
+                return cx.semanticErr(`evaluation of int constant ${expr.arithmeticOp} expression failed`, pos=expr.opPos, cause=result);
             }
         }
         else if left is string && right is string && expr.arithmeticOp == "+" {
@@ -378,7 +411,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
                 SimpleConst operand = subExpr.value;
                 if operand is int {
                     if operand == int:MIN_VALUE {
-                        return cx.semanticErr(`${"-"} applied to minimum integer value`, pos=expr.pos);
+                        return cx.semanticErr(`${"-"} applied to minimum integer value`, pos=expr.opPos);
                     }
                     return foldedUnaryConstExpr(-operand, t:INT, subExpr);
                 }
@@ -419,7 +452,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
             if value is float {
                 int|error converted = trap <int>value;
                 if converted is error {
-                    return cx.semanticErr(`cannot convert ${value} to int`, pos = expr.pos);
+                    return cx.semanticErr(`cannot convert ${value} to int`, pos = expr.opPos);
                 }
                 else {
                     value = converted;
@@ -432,7 +465,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
             }
         }
         if !t:containsConst(semType, value) {
-            return cx.semanticErr(`type cast will always fail`, pos=expr.pos);
+            return cx.semanticErr(`type cast will always fail`, pos=expr.opPos);
         }
         if toNumType != () && value != subExpr.value {
             return foldedUnaryConstExpr(value, toNumType, subExpr);

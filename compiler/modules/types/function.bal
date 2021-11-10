@@ -12,7 +12,6 @@ public class FunctionDefinition {
     private SemType semType;
    
     public function init(Env env) {
-        FunctionAtomicType dummy = [NEVER, NEVER];
         self.atom = env.recFunctionAtom();
         self.semType = uniformSubtype(UT_FUNCTION, bddAtom(self.atom));
     }
@@ -69,7 +68,7 @@ function functionBddIsEmpty(Context cx, Bdd b, SemType s, Conjunction? pos, Conj
         }
     }
     else {
-        SemType[2] [sd, sr] = cx.functionAtomType(b.atom);
+        SemType[2] [sd, _] = cx.functionAtomType(b.atom);
         return functionBddIsEmpty(cx, b.left, union(s, sd), and(b.atom, pos), neg)
             && functionBddIsEmpty(cx, b.middle, s, pos, neg)
             && functionBddIsEmpty(cx, b.right, s, pos, and(b.atom, neg));

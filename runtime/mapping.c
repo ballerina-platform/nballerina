@@ -93,7 +93,7 @@ static int64_t lookupInsert(MappingPtr m, TaggedPtr key, uint64_t hash, int64_t 
 }
 
 // This is when we know it's not a duplicate
-static void insertInit(MappingPtr m, TaggedPtr key, uint64_t hash, int64_t insertMapIndex) {
+static void insertInit(MappingPtr m, uint64_t hash, int64_t insertMapIndex) {
     int tableElementShift = m->tableElementShift & 3;
     int tableIndexMax = (1 << m->tableLengthShift) - 1;
     int64_t i = hash & tableIndexMax;
@@ -157,7 +157,7 @@ static void mappingGrow(MappingPtr m) {
     int64_t nFields = m->fArray.length;
     for (int64_t i = 0; i < nFields; i++) {
         TaggedPtr key = fields[i].key;
-        insertInit(m, key, _bal_string_hash(key), i);
+        insertInit(m, _bal_string_hash(key), i);
     }
 }
 
@@ -198,7 +198,6 @@ PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     uint32_t flag = 1 << (getTag(value) & UT_MASK);
     int64_t len = mp->fArray.length;
    
-    uint64_t h = _bal_string_hash(key);
     // Here may insert something that is equal to the empty marker
     // But it doesn't matter because in this case we will rebuild anyway
     int64_t i = lookupInsert(mp, key, _bal_string_hash(key), len);
@@ -243,7 +242,7 @@ PanicCode _bal_mapping_indexed_set(TaggedPtr mapping, int64_t i, TaggedPtr value
     return 0;
 }
 
-bool _bal_record_type_contains(TypeTestPtr ttp, TaggedPtr p) {
+bool _bal_record_subtype_contains(SubtypeTestPtr stp, TaggedPtr p) {
     if ((getTag(p) & UT_MASK) != TAG_MAPPING_RW) {
         return false;
     }
@@ -254,13 +253,13 @@ bool _bal_record_type_contains(TypeTestPtr ttp, TaggedPtr p) {
         // inherent type of value is a map type, so it's not a subtype of any closed record type
         return false;
     }
-    RecordTypeTestPtr rttp = (RecordTypeTestPtr)ttp;
-    uint32_t nFields = rttp->nFields;
+    RecordSubtypeTestPtr rstp = (RecordSubtypeTestPtr)stp;
+    uint32_t nFields = rstp->nFields;
     if (nFields != mp->fArray.length) {
         return false;
     }
     for (uint32_t i = 0; i < nFields; i++) {
-        RecordTypeTestField *tf = rttp->fields + i;
+        RecordSubtypeTestField *tf = rstp->fields + i;
         if (!taggedStringEqual(tf->fieldName, mp->fArray.members[i].key)) {
             return false;
         }
@@ -272,14 +271,14 @@ bool _bal_record_type_contains(TypeTestPtr ttp, TaggedPtr p) {
     return true;    
 }
 
-bool _bal_map_type_contains(TypeTestPtr ttp, TaggedPtr p) {
+bool _bal_map_subtype_contains(SubtypeTestPtr stp, TaggedPtr p) {
     if ((getTag(p) & UT_MASK) != TAG_MAPPING_RW) {
         return false;
     }
     MappingPtr mp = taggedToPtr(p);
     MappingDescPtr mdp = mp->desc;
     uint32_t bitSet = mdp->bitSet;
-    uint32_t typeBitSet = ((MapTypeTestPtr)ttp)->bitSet;
+    uint32_t typeBitSet = ((MapSubtypeTestPtr)stp)->bitSet;
     if (bitSet != 0) {
         // Does map type contains map value?
         // Look at member type bit sets

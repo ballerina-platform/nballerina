@@ -89,7 +89,7 @@ define internal void @_B_concatTest(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i8
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
-!0 = !{i32 1, !"Debug Info Version", i32 3}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename:"../../../compiler/testSuite/04-string/15-v.bal", directory:"")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !3 = !DISubroutineType(types: !4)
@@ -106,6 +106,6 @@ define internal void @_B_concatTest(i8 addrspace(1)* %0, i8 addrspace(1)* %1, i8
 !14 = !DILocation(line: 20, column: 4, scope: !5)
 !15 = !DILocation(line: 0, column: 0, scope: !7)
 !16 = !DILocation(line: 27, column: 4, scope: !7)
-!17 = !DILocation(line: 28, column: 16, scope: !7)
+!17 = !DILocation(line: 28, column: 23, scope: !7)
 !18 = !DILocation(line: 28, column: 4, scope: !7)
 !19 = !DILocation(line: 29, column: 4, scope: !7)

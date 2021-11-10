@@ -39,8 +39,23 @@ public isolated class Env {
     private final ListAtomicType?[] recListAtoms = [ LIST_SUBTYPE_RO ];
     private final MappingAtomicType?[] recMappingAtoms = [ MAPPING_SUBTYPE_RO ];
     private final FunctionAtomicType?[] recFunctionAtoms = [];
+    // Count of the total number of non-nil members
+    // of recListAtoms, recMappingAtoms and recFunctionAtoms
+    private int recAtomCount = 2;
 
     public isolated function init() {
+    }
+
+    // Tests whether the Env is ready for use.
+    // It is ready only if all the recursive atoms that have been allocated
+    // have been defined.
+    public isolated function isReady() returns boolean {
+        lock {
+            return self.recAtomCount
+                   == (self.recListAtoms.length()
+                       + self.recMappingAtoms.length()
+                       + self.recFunctionAtoms.length());
+        }  
     }
 
     isolated function listAtom(ListAtomicType atomicType) returns TypeAtom {
@@ -110,18 +125,21 @@ public isolated class Env {
     isolated function setRecListAtomType(RecAtom ra, ListAtomicType atomicType) {
         lock {
             self.recListAtoms[ra] = atomicType;
+            self.recAtomCount += 1;
         }
     }
 
     isolated function setRecMappingAtomType(RecAtom ra, MappingAtomicType atomicType) {
         lock {
             self.recMappingAtoms[ra] = atomicType;
+            self.recAtomCount += 1;
         }
     }
 
     isolated function setRecFunctionAtomType(RecAtom ra, FunctionAtomicType atomicType) {
         lock {
             self.recFunctionAtoms[ra] = atomicType;
+            self.recAtomCount += 1;
         }
     }
 
@@ -838,22 +856,6 @@ public function listMemberType(Context cx, SemType t, int? key = ()) returns Sem
     }
 }
 
-// This is a temporary API that identifies when a SemType corresponds to a type T[]
-// where T is a union of complete basic types.
-public function simpleMapMemberType(Context cx, SemType t) returns UniformTypeBitSet? {
-    return mappingAtomicSimpleArrayMemberType(mappingAtomicTypeRw(cx, t));
-}
-
-public function mappingAtomicSimpleArrayMemberType(MappingAtomicType? atomic) returns UniformTypeBitSet? {
-    if atomic != () && atomic.names.length() == 0 {
-        SemType memberType = atomic.rest;
-        if memberType is UniformTypeBitSet {
-            return memberType;
-        }
-    }
-    return ();   
-}
-
 final MappingAtomicType MAPPING_ATOMIC_TOP = { names: [], types: [], rest: TOP };
 final MappingAtomicType MAPPING_ATOMIC_READONLY = { names: [], types: [], rest: READONLY };
 
@@ -903,6 +905,61 @@ public function mappingMemberRequired(Context cx, SemType t, string k) returns b
     else {
         return bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), k, false)
                && bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), k, false);
+    }
+}
+
+public type MappingAlternative record {|
+    SemType semType;
+    MappingAtomicType[] pos;
+    MappingAtomicType[] neg;
+|};
+
+public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlternative[] {
+    if t is UniformTypeBitSet {
+        if (t & MAPPING_RW) == 0 {
+            return [];
+        }
+        else {
+            return [
+                {
+                    semType: MAPPING_RW,
+                    pos: [],
+                    neg: []
+                }
+            ];
+        }
+    }
+    else {
+        BddPath[] paths = [];
+        bddPaths(<Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), paths, {});
+        /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
+        MappingAlternative[] alts = [];
+        foreach var { bdd, pos, neg } in paths {
+            alts.push({
+                semType: createComplexSemType(0, [[UT_MAPPING_RW, bdd]]),
+                // JBUG parse error without parentheses (33707)
+                pos: (from var atom in pos select cx.mappingAtomType(atom)),
+                neg: (from var atom in neg select cx.mappingAtomType(atom))
+            });
+        }
+        return alts;
+    }
+}
+
+public type SplitSemType record {|
+    UniformTypeBitSet all;
+    [UniformTypeCode, SemType][] some;
+|};
+
+public function split(SemType t) returns SplitSemType  {
+    if t is UniformTypeBitSet {
+        return { all: t, some: [] };
+    }
+    else {
+        return {
+            all: t.all,
+            some: from var [code, sd] in unpackComplexSemType(t) select [code, createComplexSemType(0, [[code, sd]])]
+        };
     }
 }
 

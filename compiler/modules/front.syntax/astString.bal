@@ -13,12 +13,13 @@ type Word string|LF_INDENT|LF_OUTDENT|LF|CLING;
 
 function modulePartToWords(Word[] w, ModulePart mod) {
     ImportDecl[] importDecls = mod.importDecls;
-    foreach int i in 0 ..< importDecls.length() {
-        ImportDecl decl = importDecls[i];
-        if i > 0 {
+    boolean first = true;
+    foreach var decl in importDecls {
+        if !first {
             // JBUG #33335 cast
             w.push(<Word>LF);
         }
+        first = false;
         w.push("import");
         if decl.org is string {
             w.push(decl.org, CLING, "/", CLING);
@@ -36,6 +37,12 @@ function modulePartToWords(Word[] w, ModulePart mod) {
         w.push(";");
     }
     foreach var defn in mod.defns {
+        if !first {
+            // JBUG #33335 cast
+            w.push(<Word>LF);
+        }
+        first = false;
+
         if defn is FunctionDefn {
             functionDefnToWords(w, defn);
         }
@@ -54,14 +61,12 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
     }
     w.push("function");
     w.push(func.name, CLING, "(");
-    boolean firstArg = true;
     foreach int i in 0 ..< func.typeDesc.args.length() {
         if i != 0 {
             w.push(",");
         }
         typeDescToWords(w, func.typeDesc.args[i]);
         w.push(func.paramNames[i]);
-        firstArg = false;
     }
     w.push(")");
     TypeDesc funcRetTd = func.typeDesc.ret;
@@ -79,8 +84,6 @@ function constDefnToWords(Word[] w, ConstDefn defn) {
     w.push("const", defn.name, "=");
     exprToWords(w, defn.expr);
     w.push(";");
-    // JBUG #33335 cast
-    w.push(<Word>LF);
 }
 
 function typeDefnToWords(Word[] w, TypeDefn defn) {
@@ -90,8 +93,6 @@ function typeDefnToWords(Word[] w, TypeDefn defn) {
     w.push("type", defn.name);
     typeDescToWords(w, defn.td);
     w.push(";");
-    // JBUG #33335 cast
-    w.push(<Word>LF);
 }
 
 function stmtToWords(Word[] w, Stmt stmt) {
@@ -146,13 +147,16 @@ function stmtToWords(Word[] w, Stmt stmt) {
         w.push("if");
         exprToWords(w, stmt.condition);
         blockToWords(w, stmt.ifTrue);
-        if stmt.ifFalse.length() == 1 &&  stmt.ifFalse[0] is IfElseStmt{
-            w.push(<Word>LF, "else");
-            stmtToWords(w, stmt.ifFalse[0]);
-        }
-        else if stmt.ifFalse.length() > 0 {
-            w.push(<Word>LF, "else");
-            blockToWords(w, stmt.ifFalse);
+        StmtBlock? ifFalse = stmt.ifFalse;
+        if ifFalse is StmtBlock {
+            if ifFalse.stmts.length() == 1 &&  ifFalse.stmts[0] is IfElseStmt {
+                w.push(<Word>LF, "else");
+                stmtToWords(w, ifFalse.stmts[0]);
+            }
+            else if ifFalse.stmts.length() > 0 {
+                w.push(<Word>LF, "else");
+                blockToWords(w, ifFalse);
+            }
         }
     }
     else if stmt is MatchStmt {
@@ -205,22 +209,17 @@ function stmtToWords(Word[] w, Stmt stmt) {
     else if stmt is BreakContinueStmt {
         w.push(stmt.breakContinue, ";");
     }
-    else if stmt is CheckingStmt {
-        w.push(stmt.checkingKeyword);
-        exprToWords(w, stmt.operand);
-        w.push(";");
-    }
     else {
-        // This deals with function call and method call
-        exprToWords(w, stmt);
+        CallExpr expr = stmt.expr;
+        exprToWords(w, expr);
         w.push(";");
     }
 }
 
-function blockToWords(Word[] w, Stmt[] body) {
+function blockToWords(Word[] w, StmtBlock body) {
     w.push("{");
     boolean firstInBlock = true;
-    foreach var stmt in body {
+    foreach var stmt in body.stmts {
         w.push(<Word>(firstInBlock ? LF_INDENT : LF));
         firstInBlock = false;
         stmtToWords(w, stmt);
@@ -247,14 +246,37 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         return;
     }
     else if td is MappingTypeDesc {
-        w.push("map", CLING, "<", CLING);
         TypeDesc? rest = td.rest;
-        if rest == () {
-            typeDescToWords(w, { startPos: td.startPos, endPos: td.endPos, builtinTypeName: "never" });
+        if td.fields.length() > 0 {
+            w.push("record", "{|");
+            boolean firstInBlock = true;
+            foreach var f in td.fields {
+                w.push(<Word>(firstInBlock ? LF_INDENT : LF));
+                firstInBlock = false;
+                typeDescToWords(w, f.typeDesc);
+                w.push(f.name, CLING, ";");
+            }
+            if rest != () {
+                w.push(<Word> LF);
+                typeDescToWords(w, rest);
+                w.push("...", CLING, ";");
+            }
+            w.push(<Word>LF_OUTDENT, "|}");
         }
         else {
-            typeDescToWords(w, rest);
+            w.push("map", CLING, "<", CLING);
+            if rest == () {
+                w.push("never");
+            }
+            else {
+                typeDescToWords(w, rest);
+            }
+            w.push(CLING, ">");
         }
+    }
+    else if td is ErrorTypeDesc {
+        w.push("error", CLING, "<", CLING);
+        typeDescToWords(w, td.detail);
         w.push(CLING, ">");
         return;
     }
@@ -363,7 +385,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             w.push("(");
         }
         w.push(expr.checkingKeyword);
-        exprToWords(w, expr.operand, true);
+        exprToWords(w, expr.operand);
         if wrap {
             w.push(")");
         }
@@ -474,7 +496,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         }
     }
     else if expr is MethodCallExpr {
-         if wrap {
+        if wrap {
             w.push("(");
         }
         exprToWords(w, expr.target, true);
@@ -563,7 +585,8 @@ function wordsToLines(Word[] s) returns string[] {
             firstInLine = true;
             lines.push("".'join(...buf));
             buf.setLength(0);
-            foreach int i in 0..<level {
+            // JBUG #33532 should use `_` here
+            foreach int i in 0 ..< level {
                 buf.push("    ");
             }
         }

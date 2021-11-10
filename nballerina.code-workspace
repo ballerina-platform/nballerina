@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "compiler"
+		},
+		{
+			"path": "runtime"
+		},
+		{
+			"path": "test"
+		},
+		{
+			"path": "docs"
+		},
+		{
+			"path": "llvm_jni"
+		}
+	],
+	"settings": {}
+}

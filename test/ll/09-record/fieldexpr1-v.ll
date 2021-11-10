@@ -1,8 +1,8 @@
 @_bal_stack_guard = external global i8*
-@_Bi04root0 = external constant {i32}
+@_Bi04root0 = external constant {i32, i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
+declare i8 addrspace(1)* @_bal_mapping_construct({i32, i32}*, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_mapping_indexed_get(i8 addrspace(1)*, i64) readonly
@@ -19,7 +19,7 @@ define void @_B04rootmain() !dbg !5 {
   %6 = icmp ult i8* %4, %5
   br i1 %6, label %18, label %7
 7:
-  %8 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 2)
+  %8 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi04root0, i64 2)
   %9 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 44)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %8, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)* %9)
   %10 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 88)
@@ -45,7 +45,7 @@ define void @_B04rootmain() !dbg !5 {
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
-!0 = !{i32 1, !"Debug Info Version", i32 3}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename:"../../../compiler/testSuite/09-record/fieldexpr1-v.bal", directory:"")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !3 = !DISubroutineType(types: !4)

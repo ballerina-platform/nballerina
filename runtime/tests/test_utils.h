@@ -51,7 +51,7 @@ TaggedPtr getNil() {
     return ptr;
 }
 
-void compareBacktrace(FILE *actualTrace, const ExpectedTrace expectedTrace[]) {
+bool cmpTrace(FILE *actualTrace, const ExpectedTrace expectedTrace[]) {
     int nChars = 0;
     int nLines = 0;
     while (true) {
@@ -61,15 +61,21 @@ void compareBacktrace(FILE *actualTrace, const ExpectedTrace expectedTrace[]) {
         }
         const char *expectedFunction = expectedTrace[nLines].function;
         if (nChars < strlen(expectedFunction)) {
-            assert(c == expectedFunction[nChars]);
+            if (c != expectedFunction[nChars]) {
+                return false;
+            }
         }
         if (c == '\n') {
             // Compare filename
             const char *expectedFilename = expectedTrace[nLines].filename;
             int expectedFileNameLength = strlen(expectedFilename);
-            assert(fseek(actualTrace, -1 - expectedFileNameLength, SEEK_CUR) == 0);
+            if (fseek(actualTrace, -1 - expectedFileNameLength, SEEK_CUR) != 0) {
+                return false;
+            }
             for (int i = 0; i < expectedFileNameLength; i++) {
-                assert(expectedFilename[i] == fgetc(actualTrace));
+                if (expectedFilename[i] != fgetc(actualTrace)) {
+                    return false;
+                }
             }
             fgetc(actualTrace);
             nLines++;
@@ -78,4 +84,5 @@ void compareBacktrace(FILE *actualTrace, const ExpectedTrace expectedTrace[]) {
         }
         nChars++;
     }
+    return true;
 }

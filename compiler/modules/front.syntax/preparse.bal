@@ -70,4 +70,18 @@ function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Synta
             }
         }  
     }
+    return ();
+}
+
+// Returns `true` if a statement that starts with an identifier followed by `[` begins a type descriptor rather than an expression
+function preparseIndexedTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
+    _ = check tok.expectIdentifier();
+    if tok.current() == ":" {
+        check tok.advance();
+        _ = check tok.expectIdentifier();
+    }
+    check tok.expect("[");
+
+    // SUBSET fixed length array types / tuples are not supported, is a td only if no token between `[` `]`
+    return tok.current() == "]";
 }
