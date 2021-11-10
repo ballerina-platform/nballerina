@@ -288,7 +288,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             newExpr = matchingChild;
         }
         test:assertEquals(expr.endPos, actualEnd);
-        test:assertEquals(expr.toString(), newExpr.toString(), tok.file.filename());
+        test:assertEquals(expr.toString(), newExpr.toString());
         test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
         test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
         test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), endPosErrorMessage(tok, expr.endPos));
