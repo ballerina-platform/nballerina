@@ -33,15 +33,6 @@ type XUX xml<UX>;
 type NEVER never;
 type RWX X & !readonly;
 
-// @type RX_MINUS_RO = NEVER
-type RX_MINUS_RO RX & RWX;
-
 // @type RX_UNION_RO = X
 type RX_UNION_RO RX | RWX;
-
-// @type NonReadonlyRoElementSeq = NEVER
-type NonReadonlyRoElementSeq xml<E> & !readonly;
-
-// @type NonReadonlyEmptySeq = NEVER
-type NonReadonlyEmptySeq N & !readonly;
 
