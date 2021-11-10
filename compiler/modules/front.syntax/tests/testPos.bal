@@ -1,5 +1,4 @@
 import ballerina/test;
-import ballerina/io;
 
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
@@ -169,10 +168,6 @@ function validateStmtBlockPos(StmtBlock block, Tokenizer tok, Position parentSta
     check tok.moveToPos(block.startPos, MODE_NORMAL);
     test:assertEquals(tok.current(), "{", "invalid start token for StmtBlock");
     check tok.moveToPos(block.endPos, MODE_NORMAL);
-    if tok.current() != "}" {
-        io:println(tok.file.filename());
-        io:println(block);
-    }
     test:assertEquals(tok.current(), "}", "invalid end token for StmtBlock");
     test:assertTrue(block.startPos > parentStartPos && block.endPos <= parentEndPos, "stmt block outside of parent");
 }
