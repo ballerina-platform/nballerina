@@ -97,7 +97,8 @@ type TokenizerState readonly & record {
     int fragmentIndex;
     int tokenStartCodePointIndex;
     int prevTokenEndCodePointIndex;
-    int prevTokenEndLineIndex;
+    int prevTokenStartCodePointIndex;
+    int prevTokenLineIndex;
     Mode mode;
     Token? curTok;
 };
@@ -113,7 +114,8 @@ class Tokenizer {
     private int fragmentIndex = 0;
     private int tokenStartCodePointIndex = 0;
     private int prevTokenEndCodePointIndex = 0;
-    private int prevTokenEndLineIndex = 0;
+    private int prevTokenLineIndex = 0;
+    private int prevTokenStartCodePointIndex = 0;
     private Mode mode = MODE_NORMAL;
     final SourceFile file;
 
@@ -126,9 +128,10 @@ class Tokenizer {
 
     function advance() returns err:Syntax? {
         string str = "";
+        self.prevTokenStartCodePointIndex = self.tokenStartCodePointIndex;
         self.tokenStartCodePointIndex = self.codePointIndex;
         self.prevTokenEndCodePointIndex = self.codePointIndex;
-        self.prevTokenEndLineIndex = self.lineIndex;
+        self.prevTokenLineIndex = self.lineIndex;
         while true {
             int fragCodeIndex = self.fragCodeIndex;
             FragCode[] fragCodes = self.fragCodes;
@@ -345,12 +348,16 @@ class Tokenizer {
         return createPosition(self.lineIndex, self.tokenStartCodePointIndex);
     }
 
+    function previousStartPos() returns Position {
+        return createPosition(self.prevTokenLineIndex, self.prevTokenStartCodePointIndex);
+    }
+
     function currentEndPos() returns Position {
         return createPosition(self.lineIndex, self.codePointIndex-1);
     }
 
     function previousEndPos() returns Position {
-        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex-1);
+        return createPosition(self.prevTokenLineIndex, self.prevTokenEndCodePointIndex-1);
     }
 
     private function getFragment() returns string {
@@ -427,7 +434,8 @@ class Tokenizer {
             fragmentIndex: self.fragmentIndex,
             tokenStartCodePointIndex: self.tokenStartCodePointIndex,
             prevTokenEndCodePointIndex: self.prevTokenEndCodePointIndex,
-            prevTokenEndLineIndex: self.prevTokenEndLineIndex,
+            prevTokenStartCodePointIndex: self.prevTokenStartCodePointIndex,
+            prevTokenLineIndex: self.prevTokenLineIndex,
             mode: self.mode,
             curTok: self.curTok
         };
@@ -443,7 +451,8 @@ class Tokenizer {
         self.fragmentIndex = s.fragmentIndex;
         self.tokenStartCodePointIndex = s.tokenStartCodePointIndex;
         self.prevTokenEndCodePointIndex = s.prevTokenEndCodePointIndex;
-        self.prevTokenEndLineIndex = s.prevTokenEndLineIndex;
+        self.prevTokenStartCodePointIndex = s.prevTokenStartCodePointIndex;
+        self.prevTokenLineIndex = s.prevTokenLineIndex;
         self.mode = s.mode;
         self.curTok = s.curTok;
         if self.lineIndex == 0 {
