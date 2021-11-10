@@ -102,7 +102,7 @@ define void @_B04rootmain() !dbg !5 {
 !6 = !{}
 !7 = !DILocation(line: 0, column: 0, scope: !5)
 !8 = !DILocation(line: 6, column: 4, scope: !5)
-!9 = !DILocation(line: 7, column: 19, scope: !5)
+!9 = !DILocation(line: 7, column: 26, scope: !5)
 !10 = !DILocation(line: 7, column: 4, scope: !5)
 !11 = !DILocation(line: 9, column: 4, scope: !5)
 !12 = !DILocation(line: 10, column: 4, scope: !5)

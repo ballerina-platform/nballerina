@@ -58,7 +58,7 @@ define internal void @_B_printIfTrue(i1 %0) !dbg !9 {
   %3 = alloca i8
   %4 = load i8*, i8** @_bal_stack_guard
   %5 = icmp ult i8* %3, %4
-  br i1 %5, label %11, label %6
+  br i1 %5, label %12, label %6
 6:
   store i1 %0, i1* %b
   %7 = load i1, i1* %b
@@ -67,12 +67,14 @@ define internal void @_B_printIfTrue(i1 %0) !dbg !9 {
   %9 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1), !dbg !19
   call void @_Bb02ioprintln(i8 addrspace(1)* %9), !dbg !19
   store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !19
-  br label %10
+  br label %11
 10:
-  ret void
+  br label %11
 11:
-  %12 = call i8 addrspace(1)* @_bal_panic_construct(i64 5124), !dbg !18
-  call void @_bal_panic(i8 addrspace(1)* %12)
+  ret void
+12:
+  %13 = call i8 addrspace(1)* @_bal_panic_construct(i64 5124), !dbg !18
+  call void @_bal_panic(i8 addrspace(1)* %13)
   unreachable
 }
 !llvm.module.flags = !{!0}

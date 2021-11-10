@@ -2,7 +2,7 @@
 @_Bi04root0 = external constant {i32, i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}*, i64)
+declare {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}*, i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
@@ -58,8 +58,8 @@ define void @_B04rootmain() !dbg !5 {
   store i64 16807, i64* %a
   store i64 2147483647, i64* %m
   store i64 17, i64* %x
-  %31 = call {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 0)
-  %32 = bitcast {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %31 to i8 addrspace(1)*
+  %31 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 0)
+  %32 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %31 to i8 addrspace(1)*
   %33 = getelementptr i8, i8 addrspace(1)* %32, i64 1297036692682702852
   store i8 addrspace(1)* %33, i8 addrspace(1)** %1
   %34 = load i8 addrspace(1)*, i8 addrspace(1)** %1
@@ -146,11 +146,11 @@ define void @_B04rootmain() !dbg !5 {
   %88 = load i64, i64* %i.1
   %89 = load i8 addrspace(1)*, i8 addrspace(1)** %s
   %90 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %89, i64 72057594037927928)
-  %91 = bitcast i8 addrspace(1)* %90 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %92 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %91, i64 0, i32 1
+  %91 = bitcast i8 addrspace(1)* %90 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %92 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %91, i64 0, i32 1
   %93 = load i64, i64 addrspace(1)* %92, align 8
   %94 = icmp ult i64 %88, %93
-  br i1 %94, label %129, label %139
+  br i1 %94, label %129, label %142
 95:
   %96 = zext i1 0 to i64, !dbg !22
   %97 = or i64 %96, 72057594037927936, !dbg !22
@@ -214,123 +214,129 @@ define void @_B04rootmain() !dbg !5 {
   store i64 %128, i64* %x
   br label %67
 129:
-  %130 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %91, i64 0, i32 3
-  %131 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %130, align 8
-  %132 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %131, i64 0, i64 %88
-  %133 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %132, align 8
-  store i8 addrspace(1)* %133, i8 addrspace(1)** %14
-  %134 = load i8 addrspace(1)*, i8 addrspace(1)** %14
-  %135 = addrspacecast i8 addrspace(1)* %134 to i8*
-  %136 = ptrtoint i8* %135 to i64
-  %137 = and i64 %136, 2233785415175766016
-  %138 = icmp eq i64 %137, 576460752303423488
-  br i1 %138, label %147, label %151
-139:
-  %140 = call i8 addrspace(1)* @_bal_panic_construct(i64 5125), !dbg !13
-  store i8 addrspace(1)* %140, i8 addrspace(1)** %26
+  %130 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %91, i64 0, i32 0
+  %131 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %130, align 8
+  %132 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %131, i64 0, i32 1
+  %133 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %132, align 8
+  %134 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %135 = load i64, i64* %i.1
+  %136 = call i8 addrspace(1)* %133(i8 addrspace(1)* %134, i64 %135)
+  store i8 addrspace(1)* %136, i8 addrspace(1)** %14
+  %137 = load i8 addrspace(1)*, i8 addrspace(1)** %14
+  %138 = addrspacecast i8 addrspace(1)* %137 to i8*
+  %139 = ptrtoint i8* %138 to i64
+  %140 = and i64 %139, 2233785415175766016
+  %141 = icmp eq i64 %140, 576460752303423488
+  br i1 %141, label %150, label %154
+142:
+  %143 = call i8 addrspace(1)* @_bal_panic_construct(i64 5125), !dbg !13
+  store i8 addrspace(1)* %143, i8 addrspace(1)** %26
   br label %103
-141:
-  %142 = load i8 addrspace(1)*, i8 addrspace(1)** %15
-  %143 = addrspacecast i8 addrspace(1)* %142 to i8*
-  %144 = ptrtoint i8* %143 to i64
-  %145 = and i64 %144, 2233785415175766016
-  %146 = icmp eq i64 %145, 504403158265495552
-  br i1 %146, label %157, label %162
-147:
-  %148 = call double @_bal_tagged_to_float(i8 addrspace(1)* %134)
-  %149 = call {i64, i1} @_bal_float_to_int(double %148)
-  %150 = extractvalue {i64, i1} %149, 1
-  br i1 %150, label %155, label %152
-151:
-  store i8 addrspace(1)* %134, i8 addrspace(1)** %15
-  br label %141
-152:
-  %153 = extractvalue {i64, i1} %149, 0
-  %154 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %153)
-  store i8 addrspace(1)* %154, i8 addrspace(1)** %15
-  br label %141
+144:
+  %145 = load i8 addrspace(1)*, i8 addrspace(1)** %15
+  %146 = addrspacecast i8 addrspace(1)* %145 to i8*
+  %147 = ptrtoint i8* %146 to i64
+  %148 = and i64 %147, 2233785415175766016
+  %149 = icmp eq i64 %148, 504403158265495552
+  br i1 %149, label %160, label %165
+150:
+  %151 = call double @_bal_tagged_to_float(i8 addrspace(1)* %137)
+  %152 = call {i64, i1} @_bal_float_to_int(double %151)
+  %153 = extractvalue {i64, i1} %152, 1
+  br i1 %153, label %158, label %155
+154:
+  store i8 addrspace(1)* %137, i8 addrspace(1)** %15
+  br label %144
 155:
-  %156 = call i8 addrspace(1)* @_bal_panic_construct(i64 5123), !dbg !13
-  store i8 addrspace(1)* %156, i8 addrspace(1)** %26
+  %156 = extractvalue {i64, i1} %152, 0
+  %157 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %156)
+  store i8 addrspace(1)* %157, i8 addrspace(1)** %15
+  br label %144
+158:
+  %159 = call i8 addrspace(1)* @_bal_panic_construct(i64 5123), !dbg !13
+  store i8 addrspace(1)* %159, i8 addrspace(1)** %26
   br label %103
-157:
-  %158 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %142)
-  store i64 %158, i64* %16
-  %159 = load i64, i64* %i.1
-  %160 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %159, i64 1)
-  %161 = extractvalue {i64, i1} %160, 1
-  br i1 %161, label %173, label %164
-162:
-  %163 = call i8 addrspace(1)* @_bal_panic_construct(i64 5123), !dbg !13
-  store i8 addrspace(1)* %163, i8 addrspace(1)** %26
+160:
+  %161 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %145)
+  store i64 %161, i64* %16
+  %162 = load i64, i64* %i.1
+  %163 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %162, i64 1)
+  %164 = extractvalue {i64, i1} %163, 1
+  br i1 %164, label %176, label %167
+165:
+  %166 = call i8 addrspace(1)* @_bal_panic_construct(i64 5123), !dbg !13
+  store i8 addrspace(1)* %166, i8 addrspace(1)** %26
   br label %103
-164:
-  %165 = extractvalue {i64, i1} %160, 0
-  store i64 %165, i64* %17
-  %166 = load i64, i64* %17
-  %167 = load i8 addrspace(1)*, i8 addrspace(1)** %s
-  %168 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %167, i64 72057594037927928)
-  %169 = bitcast i8 addrspace(1)* %168 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %170 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %169, i64 0, i32 1
-  %171 = load i64, i64 addrspace(1)* %170, align 8
-  %172 = icmp ult i64 %166, %171
-  br i1 %172, label %175, label %185
-173:
-  %174 = call i8 addrspace(1)* @_bal_panic_construct(i64 5121), !dbg !13
-  store i8 addrspace(1)* %174, i8 addrspace(1)** %26
+167:
+  %168 = extractvalue {i64, i1} %163, 0
+  store i64 %168, i64* %17
+  %169 = load i64, i64* %17
+  %170 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %171 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %170, i64 72057594037927928)
+  %172 = bitcast i8 addrspace(1)* %171 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %173 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %172, i64 0, i32 1
+  %174 = load i64, i64 addrspace(1)* %173, align 8
+  %175 = icmp ult i64 %169, %174
+  br i1 %175, label %178, label %191
+176:
+  %177 = call i8 addrspace(1)* @_bal_panic_construct(i64 5121), !dbg !13
+  store i8 addrspace(1)* %177, i8 addrspace(1)** %26
   br label %103
-175:
-  %176 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %169, i64 0, i32 3
-  %177 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %176, align 8
-  %178 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %177, i64 0, i64 %166
-  %179 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %178, align 8
-  store i8 addrspace(1)* %179, i8 addrspace(1)** %18
-  %180 = load i8 addrspace(1)*, i8 addrspace(1)** %18
-  %181 = addrspacecast i8 addrspace(1)* %180 to i8*
-  %182 = ptrtoint i8* %181 to i64
-  %183 = and i64 %182, 2233785415175766016
-  %184 = icmp eq i64 %183, 576460752303423488
-  br i1 %184, label %193, label %197
-185:
-  %186 = call i8 addrspace(1)* @_bal_panic_construct(i64 5125), !dbg !13
-  store i8 addrspace(1)* %186, i8 addrspace(1)** %26
+178:
+  %179 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %172, i64 0, i32 0
+  %180 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %179, align 8
+  %181 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %180, i64 0, i32 1
+  %182 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %181, align 8
+  %183 = load i8 addrspace(1)*, i8 addrspace(1)** %s
+  %184 = load i64, i64* %17
+  %185 = call i8 addrspace(1)* %182(i8 addrspace(1)* %183, i64 %184)
+  store i8 addrspace(1)* %185, i8 addrspace(1)** %18
+  %186 = load i8 addrspace(1)*, i8 addrspace(1)** %18
+  %187 = addrspacecast i8 addrspace(1)* %186 to i8*
+  %188 = ptrtoint i8* %187 to i64
+  %189 = and i64 %188, 2233785415175766016
+  %190 = icmp eq i64 %189, 576460752303423488
+  br i1 %190, label %199, label %203
+191:
+  %192 = call i8 addrspace(1)* @_bal_panic_construct(i64 5125), !dbg !13
+  store i8 addrspace(1)* %192, i8 addrspace(1)** %26
   br label %103
-187:
-  %188 = load i8 addrspace(1)*, i8 addrspace(1)** %19
-  %189 = addrspacecast i8 addrspace(1)* %188 to i8*
-  %190 = ptrtoint i8* %189 to i64
-  %191 = and i64 %190, 2233785415175766016
-  %192 = icmp eq i64 %191, 504403158265495552
-  br i1 %192, label %203, label %209
 193:
-  %194 = call double @_bal_tagged_to_float(i8 addrspace(1)* %180)
-  %195 = call {i64, i1} @_bal_float_to_int(double %194)
-  %196 = extractvalue {i64, i1} %195, 1
-  br i1 %196, label %201, label %198
-197:
-  store i8 addrspace(1)* %180, i8 addrspace(1)** %19
-  br label %187
-198:
-  %199 = extractvalue {i64, i1} %195, 0
-  %200 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %199)
-  store i8 addrspace(1)* %200, i8 addrspace(1)** %19
-  br label %187
-201:
-  %202 = call i8 addrspace(1)* @_bal_panic_construct(i64 5123), !dbg !13
-  store i8 addrspace(1)* %202, i8 addrspace(1)** %26
-  br label %103
+  %194 = load i8 addrspace(1)*, i8 addrspace(1)** %19
+  %195 = addrspacecast i8 addrspace(1)* %194 to i8*
+  %196 = ptrtoint i8* %195 to i64
+  %197 = and i64 %196, 2233785415175766016
+  %198 = icmp eq i64 %197, 504403158265495552
+  br i1 %198, label %209, label %215
+199:
+  %200 = call double @_bal_tagged_to_float(i8 addrspace(1)* %186)
+  %201 = call {i64, i1} @_bal_float_to_int(double %200)
+  %202 = extractvalue {i64, i1} %201, 1
+  br i1 %202, label %207, label %204
 203:
-  %204 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %188)
-  store i64 %204, i64* %20
-  %205 = load i64, i64* %16
-  %206 = load i64, i64* %20
-  %207 = icmp sgt i64 %205, %206
-  store i1 %207, i1* %13
-  %208 = load i1, i1* %13
-  br i1 %208, label %95, label %99
+  store i8 addrspace(1)* %186, i8 addrspace(1)** %19
+  br label %193
+204:
+  %205 = extractvalue {i64, i1} %201, 0
+  %206 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %205)
+  store i8 addrspace(1)* %206, i8 addrspace(1)** %19
+  br label %193
+207:
+  %208 = call i8 addrspace(1)* @_bal_panic_construct(i64 5123), !dbg !13
+  store i8 addrspace(1)* %208, i8 addrspace(1)** %26
+  br label %103
 209:
-  %210 = call i8 addrspace(1)* @_bal_panic_construct(i64 5123), !dbg !13
-  store i8 addrspace(1)* %210, i8 addrspace(1)** %26
+  %210 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %194)
+  store i64 %210, i64* %20
+  %211 = load i64, i64* %16
+  %212 = load i64, i64* %20
+  %213 = icmp sgt i64 %211, %212
+  store i1 %213, i1* %13
+  %214 = load i1, i1* %13
+  br i1 %214, label %95, label %99
+215:
+  %216 = call i8 addrspace(1)* @_bal_panic_construct(i64 5123), !dbg !13
+  store i8 addrspace(1)* %216, i8 addrspace(1)** %26
   br label %103
 }
 define internal i64 @_B_checksum(i8 addrspace(1)* %0) !dbg !7 {
@@ -371,11 +377,11 @@ define internal i64 @_B_checksum(i8 addrspace(1)* %0) !dbg !7 {
   %24 = load i64, i64* %i
   %25 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   %26 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %25, i64 72057594037927928)
-  %27 = bitcast i8 addrspace(1)* %26 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %28 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %27, i64 0, i32 1
+  %27 = bitcast i8 addrspace(1)* %26 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %28 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %27, i64 0, i32 1
   %29 = load i64, i64 addrspace(1)* %28, align 8
   %30 = icmp ult i64 %24, %29
-  br i1 %30, label %38, label %48
+  br i1 %30, label %38, label %51
 31:
   %32 = load i64, i64* %i
   %33 = add nsw i64 %32, 1
@@ -390,58 +396,61 @@ define internal i64 @_B_checksum(i8 addrspace(1)* %0) !dbg !7 {
   call void @_bal_panic(i8 addrspace(1)* %37)
   unreachable
 38:
-  %39 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %27, i64 0, i32 3
-  %40 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %39, align 8
-  %41 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %40, i64 0, i64 %24
-  %42 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %41, align 8
-  store i8 addrspace(1)* %42, i8 addrspace(1)** %4
-  %43 = load i8 addrspace(1)*, i8 addrspace(1)** %4
-  %44 = addrspacecast i8 addrspace(1)* %43 to i8*
-  %45 = ptrtoint i8* %44 to i64
-  %46 = and i64 %45, 2233785415175766016
-  %47 = icmp eq i64 %46, 576460752303423488
-  br i1 %47, label %56, label %60
-48:
-  %49 = call i8 addrspace(1)* @_bal_panic_construct(i64 7685), !dbg !23
-  store i8 addrspace(1)* %49, i8 addrspace(1)** %8
+  %39 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %27, i64 0, i32 0
+  %40 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %39, align 8
+  %41 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %40, i64 0, i32 1
+  %42 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %41, align 8
+  %43 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %44 = load i64, i64* %i
+  %45 = call i8 addrspace(1)* %42(i8 addrspace(1)* %43, i64 %44)
+  store i8 addrspace(1)* %45, i8 addrspace(1)** %4
+  %46 = load i8 addrspace(1)*, i8 addrspace(1)** %4
+  %47 = addrspacecast i8 addrspace(1)* %46 to i8*
+  %48 = ptrtoint i8* %47 to i64
+  %49 = and i64 %48, 2233785415175766016
+  %50 = icmp eq i64 %49, 576460752303423488
+  br i1 %50, label %59, label %63
+51:
+  %52 = call i8 addrspace(1)* @_bal_panic_construct(i64 7685), !dbg !23
+  store i8 addrspace(1)* %52, i8 addrspace(1)** %8
   br label %34
-50:
-  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %5
-  %52 = addrspacecast i8 addrspace(1)* %51 to i8*
-  %53 = ptrtoint i8* %52 to i64
-  %54 = and i64 %53, 2233785415175766016
-  %55 = icmp eq i64 %54, 504403158265495552
-  br i1 %55, label %66, label %72
-56:
-  %57 = call double @_bal_tagged_to_float(i8 addrspace(1)* %43)
-  %58 = call {i64, i1} @_bal_float_to_int(double %57)
-  %59 = extractvalue {i64, i1} %58, 1
-  br i1 %59, label %64, label %61
-60:
-  store i8 addrspace(1)* %43, i8 addrspace(1)** %5
-  br label %50
-61:
-  %62 = extractvalue {i64, i1} %58, 0
-  %63 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %62)
-  store i8 addrspace(1)* %63, i8 addrspace(1)** %5
-  br label %50
+53:
+  %54 = load i8 addrspace(1)*, i8 addrspace(1)** %5
+  %55 = addrspacecast i8 addrspace(1)* %54 to i8*
+  %56 = ptrtoint i8* %55 to i64
+  %57 = and i64 %56, 2233785415175766016
+  %58 = icmp eq i64 %57, 504403158265495552
+  br i1 %58, label %69, label %75
+59:
+  %60 = call double @_bal_tagged_to_float(i8 addrspace(1)* %46)
+  %61 = call {i64, i1} @_bal_float_to_int(double %60)
+  %62 = extractvalue {i64, i1} %61, 1
+  br i1 %62, label %67, label %64
+63:
+  store i8 addrspace(1)* %46, i8 addrspace(1)** %5
+  br label %53
 64:
-  %65 = call i8 addrspace(1)* @_bal_panic_construct(i64 7683), !dbg !23
-  store i8 addrspace(1)* %65, i8 addrspace(1)** %8
+  %65 = extractvalue {i64, i1} %61, 0
+  %66 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %65)
+  store i8 addrspace(1)* %66, i8 addrspace(1)** %5
+  br label %53
+67:
+  %68 = call i8 addrspace(1)* @_bal_panic_construct(i64 7683), !dbg !23
+  store i8 addrspace(1)* %68, i8 addrspace(1)** %8
   br label %34
-66:
-  %67 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %51)
-  store i64 %67, i64* %6
-  %68 = load i64, i64* %c
-  %69 = load i64, i64* %6
-  %70 = xor i64 %68, %69
-  store i64 %70, i64* %7
-  %71 = load i64, i64* %7
-  store i64 %71, i64* %c
+69:
+  %70 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %54)
+  store i64 %70, i64* %6
+  %71 = load i64, i64* %c
+  %72 = load i64, i64* %6
+  %73 = xor i64 %71, %72
+  store i64 %73, i64* %7
+  %74 = load i64, i64* %7
+  store i64 %74, i64* %c
   br label %31
-72:
-  %73 = call i8 addrspace(1)* @_bal_panic_construct(i64 7683), !dbg !23
-  store i8 addrspace(1)* %73, i8 addrspace(1)** %8
+75:
+  %76 = call i8 addrspace(1)* @_bal_panic_construct(i64 7683), !dbg !23
+  store i8 addrspace(1)* %76, i8 addrspace(1)** %8
   br label %34
 }
 define internal i8 addrspace(1)* @_B_sort(i8 addrspace(1)* %0) !dbg !9 {
@@ -506,8 +515,8 @@ define internal i8 addrspace(1)* @_B_sort(i8 addrspace(1)* %0) !dbg !9 {
   %45 = load i1, i1* %7
   br i1 %45, label %55, label %46
 46:
-  %47 = call {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 0)
-  %48 = bitcast {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %47 to i8 addrspace(1)*
+  %47 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 0)
+  %48 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %47 to i8 addrspace(1)*
   %49 = getelementptr i8, i8 addrspace(1)* %48, i64 1297036692682702852
   store i8 addrspace(1)* %49, i8 addrspace(1)** %12
   %50 = load i8 addrspace(1)*, i8 addrspace(1)** %12
@@ -523,11 +532,11 @@ define internal i8 addrspace(1)* @_B_sort(i8 addrspace(1)* %0) !dbg !9 {
   %56 = load i64, i64* %i
   %57 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   %58 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %57, i64 72057594037927928)
-  %59 = bitcast i8 addrspace(1)* %58 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %60 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %59, i64 0, i32 1
+  %59 = bitcast i8 addrspace(1)* %58 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %60 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %59, i64 0, i32 1
   %61 = load i64, i64 addrspace(1)* %60, align 8
   %62 = icmp ult i64 %56, %61
-  br i1 %62, label %110, label %120
+  br i1 %62, label %110, label %123
 63:
   %64 = load i64, i64* %i
   %65 = add nsw i64 %64, 1
@@ -557,11 +566,11 @@ define internal i8 addrspace(1)* @_B_sort(i8 addrspace(1)* %0) !dbg !9 {
   %81 = load i64, i64* %i.1
   %82 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   %83 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %82, i64 72057594037927928)
-  %84 = bitcast i8 addrspace(1)* %83 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %85 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %84, i64 0, i32 1
+  %84 = bitcast i8 addrspace(1)* %83 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %85 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %84, i64 0, i32 1
   %86 = load i64, i64 addrspace(1)* %85, align 8
   %87 = icmp ult i64 %81, %86
-  br i1 %87, label %145, label %155
+  br i1 %87, label %148, label %161
 88:
   %89 = load i64, i64* %i.1
   %90 = add nsw i64 %89, 1
@@ -589,8 +598,8 @@ define internal i8 addrspace(1)* @_B_sort(i8 addrspace(1)* %0) !dbg !9 {
   store i64 %102, i64* %5
   %103 = load i64, i64* %5
   store i64 %103, i64* %mid
-  %104 = call {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 0)
-  %105 = bitcast {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %104 to i8 addrspace(1)*
+  %104 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 0)
+  %105 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %104 to i8 addrspace(1)*
   %106 = getelementptr i8, i8 addrspace(1)* %105, i64 1297036692682702852
   store i8 addrspace(1)* %106, i8 addrspace(1)** %6
   %107 = load i8 addrspace(1)*, i8 addrspace(1)** %6
@@ -602,110 +611,116 @@ define internal i8 addrspace(1)* @_B_sort(i8 addrspace(1)* %0) !dbg !9 {
   store i8 addrspace(1)* %109, i8 addrspace(1)** %22
   br label %91
 110:
-  %111 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %59, i64 0, i32 3
-  %112 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %111, align 8
-  %113 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %112, i64 0, i64 %56
-  %114 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %113, align 8
-  store i8 addrspace(1)* %114, i8 addrspace(1)** %8
-  %115 = load i8 addrspace(1)*, i8 addrspace(1)** %8
-  %116 = addrspacecast i8 addrspace(1)* %115 to i8*
-  %117 = ptrtoint i8* %116 to i64
-  %118 = and i64 %117, 2233785415175766016
-  %119 = icmp eq i64 %118, 576460752303423488
-  br i1 %119, label %128, label %132
-120:
-  %121 = call i8 addrspace(1)* @_bal_panic_construct(i64 11013), !dbg !25
-  store i8 addrspace(1)* %121, i8 addrspace(1)** %22
+  %111 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %59, i64 0, i32 0
+  %112 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %111, align 8
+  %113 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %112, i64 0, i32 1
+  %114 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %113, align 8
+  %115 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %116 = load i64, i64* %i
+  %117 = call i8 addrspace(1)* %114(i8 addrspace(1)* %115, i64 %116)
+  store i8 addrspace(1)* %117, i8 addrspace(1)** %8
+  %118 = load i8 addrspace(1)*, i8 addrspace(1)** %8
+  %119 = addrspacecast i8 addrspace(1)* %118 to i8*
+  %120 = ptrtoint i8* %119 to i64
+  %121 = and i64 %120, 2233785415175766016
+  %122 = icmp eq i64 %121, 576460752303423488
+  br i1 %122, label %131, label %135
+123:
+  %124 = call i8 addrspace(1)* @_bal_panic_construct(i64 11013), !dbg !25
+  store i8 addrspace(1)* %124, i8 addrspace(1)** %22
   br label %91
-122:
-  %123 = load i8 addrspace(1)*, i8 addrspace(1)** %9
-  %124 = addrspacecast i8 addrspace(1)* %123 to i8*
-  %125 = ptrtoint i8* %124 to i64
-  %126 = and i64 %125, 2233785415175766016
-  %127 = icmp eq i64 %126, 504403158265495552
-  br i1 %127, label %138, label %143
-128:
-  %129 = call double @_bal_tagged_to_float(i8 addrspace(1)* %115)
-  %130 = call {i64, i1} @_bal_float_to_int(double %129)
-  %131 = extractvalue {i64, i1} %130, 1
-  br i1 %131, label %136, label %133
-132:
-  store i8 addrspace(1)* %115, i8 addrspace(1)** %9
-  br label %122
-133:
-  %134 = extractvalue {i64, i1} %130, 0
-  %135 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %134)
-  store i8 addrspace(1)* %135, i8 addrspace(1)** %9
-  br label %122
+125:
+  %126 = load i8 addrspace(1)*, i8 addrspace(1)** %9
+  %127 = addrspacecast i8 addrspace(1)* %126 to i8*
+  %128 = ptrtoint i8* %127 to i64
+  %129 = and i64 %128, 2233785415175766016
+  %130 = icmp eq i64 %129, 504403158265495552
+  br i1 %130, label %141, label %146
+131:
+  %132 = call double @_bal_tagged_to_float(i8 addrspace(1)* %118)
+  %133 = call {i64, i1} @_bal_float_to_int(double %132)
+  %134 = extractvalue {i64, i1} %133, 1
+  br i1 %134, label %139, label %136
+135:
+  store i8 addrspace(1)* %118, i8 addrspace(1)** %9
+  br label %125
 136:
-  %137 = call i8 addrspace(1)* @_bal_panic_construct(i64 11011), !dbg !25
-  store i8 addrspace(1)* %137, i8 addrspace(1)** %22
+  %137 = extractvalue {i64, i1} %133, 0
+  %138 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %137)
+  store i8 addrspace(1)* %138, i8 addrspace(1)** %9
+  br label %125
+139:
+  %140 = call i8 addrspace(1)* @_bal_panic_construct(i64 11011), !dbg !25
+  store i8 addrspace(1)* %140, i8 addrspace(1)** %22
   br label %91
-138:
-  %139 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %123)
-  store i64 %139, i64* %10
-  %140 = load i8 addrspace(1)*, i8 addrspace(1)** %list1, !dbg !29
-  %141 = load i64, i64* %10, !dbg !29
-  %142 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %141), !dbg !29
-  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %140, i8 addrspace(1)* %142), !dbg !29
+141:
+  %142 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %126)
+  store i64 %142, i64* %10
+  %143 = load i8 addrspace(1)*, i8 addrspace(1)** %list1, !dbg !29
+  %144 = load i64, i64* %10, !dbg !29
+  %145 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %144), !dbg !29
+  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %143, i8 addrspace(1)* %145), !dbg !29
   store i8 addrspace(1)* null, i8 addrspace(1)** %11, !dbg !29
   br label %63
-143:
-  %144 = call i8 addrspace(1)* @_bal_panic_construct(i64 11011), !dbg !25
-  store i8 addrspace(1)* %144, i8 addrspace(1)** %22
+146:
+  %147 = call i8 addrspace(1)* @_bal_panic_construct(i64 11011), !dbg !25
+  store i8 addrspace(1)* %147, i8 addrspace(1)** %22
   br label %91
-145:
-  %146 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %84, i64 0, i32 3
-  %147 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %146, align 8
-  %148 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %147, i64 0, i64 %81
-  %149 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %148, align 8
-  store i8 addrspace(1)* %149, i8 addrspace(1)** %15
-  %150 = load i8 addrspace(1)*, i8 addrspace(1)** %15
-  %151 = addrspacecast i8 addrspace(1)* %150 to i8*
-  %152 = ptrtoint i8* %151 to i64
-  %153 = and i64 %152, 2233785415175766016
-  %154 = icmp eq i64 %153, 576460752303423488
-  br i1 %154, label %163, label %167
-155:
-  %156 = call i8 addrspace(1)* @_bal_panic_construct(i64 12037), !dbg !25
-  store i8 addrspace(1)* %156, i8 addrspace(1)** %22
+148:
+  %149 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %84, i64 0, i32 0
+  %150 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %149, align 8
+  %151 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %150, i64 0, i32 1
+  %152 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %151, align 8
+  %153 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  %154 = load i64, i64* %i.1
+  %155 = call i8 addrspace(1)* %152(i8 addrspace(1)* %153, i64 %154)
+  store i8 addrspace(1)* %155, i8 addrspace(1)** %15
+  %156 = load i8 addrspace(1)*, i8 addrspace(1)** %15
+  %157 = addrspacecast i8 addrspace(1)* %156 to i8*
+  %158 = ptrtoint i8* %157 to i64
+  %159 = and i64 %158, 2233785415175766016
+  %160 = icmp eq i64 %159, 576460752303423488
+  br i1 %160, label %169, label %173
+161:
+  %162 = call i8 addrspace(1)* @_bal_panic_construct(i64 12037), !dbg !25
+  store i8 addrspace(1)* %162, i8 addrspace(1)** %22
   br label %91
-157:
-  %158 = load i8 addrspace(1)*, i8 addrspace(1)** %16
-  %159 = addrspacecast i8 addrspace(1)* %158 to i8*
-  %160 = ptrtoint i8* %159 to i64
-  %161 = and i64 %160, 2233785415175766016
-  %162 = icmp eq i64 %161, 504403158265495552
-  br i1 %162, label %173, label %178
 163:
-  %164 = call double @_bal_tagged_to_float(i8 addrspace(1)* %150)
-  %165 = call {i64, i1} @_bal_float_to_int(double %164)
-  %166 = extractvalue {i64, i1} %165, 1
-  br i1 %166, label %171, label %168
-167:
-  store i8 addrspace(1)* %150, i8 addrspace(1)** %16
-  br label %157
-168:
-  %169 = extractvalue {i64, i1} %165, 0
-  %170 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %169)
-  store i8 addrspace(1)* %170, i8 addrspace(1)** %16
-  br label %157
-171:
-  %172 = call i8 addrspace(1)* @_bal_panic_construct(i64 12035), !dbg !25
-  store i8 addrspace(1)* %172, i8 addrspace(1)** %22
-  br label %91
+  %164 = load i8 addrspace(1)*, i8 addrspace(1)** %16
+  %165 = addrspacecast i8 addrspace(1)* %164 to i8*
+  %166 = ptrtoint i8* %165 to i64
+  %167 = and i64 %166, 2233785415175766016
+  %168 = icmp eq i64 %167, 504403158265495552
+  br i1 %168, label %179, label %184
+169:
+  %170 = call double @_bal_tagged_to_float(i8 addrspace(1)* %156)
+  %171 = call {i64, i1} @_bal_float_to_int(double %170)
+  %172 = extractvalue {i64, i1} %171, 1
+  br i1 %172, label %177, label %174
 173:
-  %174 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %158)
-  store i64 %174, i64* %17
-  %175 = load i8 addrspace(1)*, i8 addrspace(1)** %list2, !dbg !33
-  %176 = load i64, i64* %17, !dbg !33
-  %177 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %176), !dbg !33
-  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %175, i8 addrspace(1)* %177), !dbg !33
+  store i8 addrspace(1)* %156, i8 addrspace(1)** %16
+  br label %163
+174:
+  %175 = extractvalue {i64, i1} %171, 0
+  %176 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %175)
+  store i8 addrspace(1)* %176, i8 addrspace(1)** %16
+  br label %163
+177:
+  %178 = call i8 addrspace(1)* @_bal_panic_construct(i64 12035), !dbg !25
+  store i8 addrspace(1)* %178, i8 addrspace(1)** %22
+  br label %91
+179:
+  %180 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %164)
+  store i64 %180, i64* %17
+  %181 = load i8 addrspace(1)*, i8 addrspace(1)** %list2, !dbg !33
+  %182 = load i64, i64* %17, !dbg !33
+  %183 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %182), !dbg !33
+  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %181, i8 addrspace(1)* %183), !dbg !33
   store i8 addrspace(1)* null, i8 addrspace(1)** %18, !dbg !33
   br label %88
-178:
-  %179 = call i8 addrspace(1)* @_bal_panic_construct(i64 12035), !dbg !25
-  store i8 addrspace(1)* %179, i8 addrspace(1)** %22
+184:
+  %185 = call i8 addrspace(1)* @_bal_panic_construct(i64 12035), !dbg !25
+  store i8 addrspace(1)* %185, i8 addrspace(1)** %22
   br label %91
 }
 define internal i8 addrspace(1)* @_B_merge(i8 addrspace(1)* %0, i8 addrspace(1)* %1) !dbg !11 {
@@ -750,8 +765,8 @@ define internal i8 addrspace(1)* @_B_merge(i8 addrspace(1)* %0, i8 addrspace(1)*
 33:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v1
   store i8 addrspace(1)* %1, i8 addrspace(1)** %v2
-  %34 = call {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 0)
-  %35 = bitcast {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %34 to i8 addrspace(1)*
+  %34 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 0)
+  %35 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %34 to i8 addrspace(1)*
   %36 = getelementptr i8, i8 addrspace(1)* %35, i64 1297036692682702852
   store i8 addrspace(1)* %36, i8 addrspace(1)** %3
   %37 = load i8 addrspace(1)*, i8 addrspace(1)** %3
@@ -793,29 +808,29 @@ define internal i8 addrspace(1)* @_B_merge(i8 addrspace(1)* %0, i8 addrspace(1)*
   %59 = load i64, i64* %i1
   %60 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
   %61 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %60, i64 72057594037927928)
-  %62 = bitcast i8 addrspace(1)* %61 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %63 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %62, i64 0, i32 1
+  %62 = bitcast i8 addrspace(1)* %61 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %63 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %62, i64 0, i32 1
   %64 = load i64, i64 addrspace(1)* %63, align 8
   %65 = icmp ult i64 %59, %64
-  br i1 %65, label %118, label %128
+  br i1 %65, label %118, label %131
 66:
   %67 = load i64, i64* %i1
   %68 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
   %69 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %68, i64 72057594037927928)
-  %70 = bitcast i8 addrspace(1)* %69 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %71 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %70, i64 0, i32 1
+  %70 = bitcast i8 addrspace(1)* %69 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %71 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %70, i64 0, i32 1
   %72 = load i64, i64 addrspace(1)* %71, align 8
   %73 = icmp ult i64 %67, %72
-  br i1 %73, label %193, label %203
+  br i1 %73, label %199, label %212
 74:
   %75 = load i64, i64* %i2
   %76 = load i8 addrspace(1)*, i8 addrspace(1)** %v2
   %77 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %76, i64 72057594037927928)
-  %78 = bitcast i8 addrspace(1)* %77 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %79 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %78, i64 0, i32 1
+  %78 = bitcast i8 addrspace(1)* %77 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %79 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %78, i64 0, i32 1
   %80 = load i64, i64 addrspace(1)* %79, align 8
   %81 = icmp ult i64 %75, %80
-  br i1 %81, label %210, label %220
+  br i1 %81, label %219, label %232
 82:
   br label %46
 83:
@@ -833,11 +848,11 @@ define internal i8 addrspace(1)* @_B_merge(i8 addrspace(1)* %0, i8 addrspace(1)*
   %91 = load i64, i64* %i1
   %92 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
   %93 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %92, i64 72057594037927928)
-  %94 = bitcast i8 addrspace(1)* %93 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %95 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %94, i64 0, i32 1
+  %94 = bitcast i8 addrspace(1)* %93 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %95 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %94, i64 0, i32 1
   %96 = load i64, i64 addrspace(1)* %95, align 8
   %97 = icmp ult i64 %91, %96
-  br i1 %97, label %227, label %237
+  br i1 %97, label %239, label %252
 98:
   br label %99
 99:
@@ -851,11 +866,11 @@ define internal i8 addrspace(1)* @_B_merge(i8 addrspace(1)* %0, i8 addrspace(1)*
   %105 = load i64, i64* %i2
   %106 = load i8 addrspace(1)*, i8 addrspace(1)** %v2
   %107 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %106, i64 72057594037927928)
-  %108 = bitcast i8 addrspace(1)* %107 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %109 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %108, i64 0, i32 1
+  %108 = bitcast i8 addrspace(1)* %107 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %109 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %108, i64 0, i32 1
   %110 = load i64, i64 addrspace(1)* %109, align 8
   %111 = icmp ult i64 %105, %110
-  br i1 %111, label %244, label %254
+  br i1 %111, label %259, label %272
 112:
   %113 = load i8 addrspace(1)*, i8 addrspace(1)** %result
   ret i8 addrspace(1)* %113
@@ -868,224 +883,242 @@ define internal i8 addrspace(1)* @_B_merge(i8 addrspace(1)* %0, i8 addrspace(1)*
   call void @_bal_panic(i8 addrspace(1)* %117)
   unreachable
 118:
-  %119 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %62, i64 0, i32 3
-  %120 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %119, align 8
-  %121 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %120, i64 0, i64 %59
-  %122 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %121, align 8
-  store i8 addrspace(1)* %122, i8 addrspace(1)** %9
-  %123 = load i8 addrspace(1)*, i8 addrspace(1)** %9
-  %124 = addrspacecast i8 addrspace(1)* %123 to i8*
-  %125 = ptrtoint i8* %124 to i64
-  %126 = and i64 %125, 2233785415175766016
-  %127 = icmp eq i64 %126, 576460752303423488
-  br i1 %127, label %136, label %140
-128:
-  %129 = call i8 addrspace(1)* @_bal_panic_construct(i64 15621), !dbg !34
-  store i8 addrspace(1)* %129, i8 addrspace(1)** %29
+  %119 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %62, i64 0, i32 0
+  %120 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %119, align 8
+  %121 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %120, i64 0, i32 1
+  %122 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %121, align 8
+  %123 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
+  %124 = load i64, i64* %i1
+  %125 = call i8 addrspace(1)* %122(i8 addrspace(1)* %123, i64 %124)
+  store i8 addrspace(1)* %125, i8 addrspace(1)** %9
+  %126 = load i8 addrspace(1)*, i8 addrspace(1)** %9
+  %127 = addrspacecast i8 addrspace(1)* %126 to i8*
+  %128 = ptrtoint i8* %127 to i64
+  %129 = and i64 %128, 2233785415175766016
+  %130 = icmp eq i64 %129, 576460752303423488
+  br i1 %130, label %139, label %143
+131:
+  %132 = call i8 addrspace(1)* @_bal_panic_construct(i64 15621), !dbg !34
+  store i8 addrspace(1)* %132, i8 addrspace(1)** %29
   br label %114
-130:
-  %131 = load i8 addrspace(1)*, i8 addrspace(1)** %10
-  %132 = addrspacecast i8 addrspace(1)* %131 to i8*
-  %133 = ptrtoint i8* %132 to i64
-  %134 = and i64 %133, 2233785415175766016
-  %135 = icmp eq i64 %134, 504403158265495552
-  br i1 %135, label %146, label %155
-136:
-  %137 = call double @_bal_tagged_to_float(i8 addrspace(1)* %123)
-  %138 = call {i64, i1} @_bal_float_to_int(double %137)
-  %139 = extractvalue {i64, i1} %138, 1
-  br i1 %139, label %144, label %141
-140:
-  store i8 addrspace(1)* %123, i8 addrspace(1)** %10
-  br label %130
-141:
-  %142 = extractvalue {i64, i1} %138, 0
-  %143 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %142)
-  store i8 addrspace(1)* %143, i8 addrspace(1)** %10
-  br label %130
+133:
+  %134 = load i8 addrspace(1)*, i8 addrspace(1)** %10
+  %135 = addrspacecast i8 addrspace(1)* %134 to i8*
+  %136 = ptrtoint i8* %135 to i64
+  %137 = and i64 %136, 2233785415175766016
+  %138 = icmp eq i64 %137, 504403158265495552
+  br i1 %138, label %149, label %158
+139:
+  %140 = call double @_bal_tagged_to_float(i8 addrspace(1)* %126)
+  %141 = call {i64, i1} @_bal_float_to_int(double %140)
+  %142 = extractvalue {i64, i1} %141, 1
+  br i1 %142, label %147, label %144
+143:
+  store i8 addrspace(1)* %126, i8 addrspace(1)** %10
+  br label %133
 144:
-  %145 = call i8 addrspace(1)* @_bal_panic_construct(i64 15619), !dbg !34
-  store i8 addrspace(1)* %145, i8 addrspace(1)** %29
+  %145 = extractvalue {i64, i1} %141, 0
+  %146 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %145)
+  store i8 addrspace(1)* %146, i8 addrspace(1)** %10
+  br label %133
+147:
+  %148 = call i8 addrspace(1)* @_bal_panic_construct(i64 15619), !dbg !34
+  store i8 addrspace(1)* %148, i8 addrspace(1)** %29
   br label %114
-146:
-  %147 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %131)
-  store i64 %147, i64* %11
-  %148 = load i64, i64* %i2
-  %149 = load i8 addrspace(1)*, i8 addrspace(1)** %v2
-  %150 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %149, i64 72057594037927928)
-  %151 = bitcast i8 addrspace(1)* %150 to {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
-  %152 = getelementptr {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %151, i64 0, i32 1
-  %153 = load i64, i64 addrspace(1)* %152, align 8
-  %154 = icmp ult i64 %148, %153
-  br i1 %154, label %157, label %167
-155:
-  %156 = call i8 addrspace(1)* @_bal_panic_construct(i64 15619), !dbg !34
-  store i8 addrspace(1)* %156, i8 addrspace(1)** %29
+149:
+  %150 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %134)
+  store i64 %150, i64* %11
+  %151 = load i64, i64* %i2
+  %152 = load i8 addrspace(1)*, i8 addrspace(1)** %v2
+  %153 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %152, i64 72057594037927928)
+  %154 = bitcast i8 addrspace(1)* %153 to {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)*
+  %155 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %154, i64 0, i32 1
+  %156 = load i64, i64 addrspace(1)* %155, align 8
+  %157 = icmp ult i64 %151, %156
+  br i1 %157, label %160, label %173
+158:
+  %159 = call i8 addrspace(1)* @_bal_panic_construct(i64 15619), !dbg !34
+  store i8 addrspace(1)* %159, i8 addrspace(1)** %29
   br label %114
-157:
-  %158 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %151, i64 0, i32 3
-  %159 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %158, align 8
-  %160 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %159, i64 0, i64 %148
-  %161 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %160, align 8
-  store i8 addrspace(1)* %161, i8 addrspace(1)** %12
-  %162 = load i8 addrspace(1)*, i8 addrspace(1)** %12
-  %163 = addrspacecast i8 addrspace(1)* %162 to i8*
-  %164 = ptrtoint i8* %163 to i64
-  %165 = and i64 %164, 2233785415175766016
-  %166 = icmp eq i64 %165, 576460752303423488
-  br i1 %166, label %175, label %179
-167:
-  %168 = call i8 addrspace(1)* @_bal_panic_construct(i64 15621), !dbg !34
-  store i8 addrspace(1)* %168, i8 addrspace(1)** %29
+160:
+  %161 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %154, i64 0, i32 0
+  %162 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %161, align 8
+  %163 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %162, i64 0, i32 1
+  %164 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %163, align 8
+  %165 = load i8 addrspace(1)*, i8 addrspace(1)** %v2
+  %166 = load i64, i64* %i2
+  %167 = call i8 addrspace(1)* %164(i8 addrspace(1)* %165, i64 %166)
+  store i8 addrspace(1)* %167, i8 addrspace(1)** %12
+  %168 = load i8 addrspace(1)*, i8 addrspace(1)** %12
+  %169 = addrspacecast i8 addrspace(1)* %168 to i8*
+  %170 = ptrtoint i8* %169 to i64
+  %171 = and i64 %170, 2233785415175766016
+  %172 = icmp eq i64 %171, 576460752303423488
+  br i1 %172, label %181, label %185
+173:
+  %174 = call i8 addrspace(1)* @_bal_panic_construct(i64 15621), !dbg !34
+  store i8 addrspace(1)* %174, i8 addrspace(1)** %29
   br label %114
-169:
-  %170 = load i8 addrspace(1)*, i8 addrspace(1)** %13
-  %171 = addrspacecast i8 addrspace(1)* %170 to i8*
-  %172 = ptrtoint i8* %171 to i64
-  %173 = and i64 %172, 2233785415175766016
-  %174 = icmp eq i64 %173, 504403158265495552
-  br i1 %174, label %185, label %191
 175:
-  %176 = call double @_bal_tagged_to_float(i8 addrspace(1)* %162)
-  %177 = call {i64, i1} @_bal_float_to_int(double %176)
-  %178 = extractvalue {i64, i1} %177, 1
-  br i1 %178, label %183, label %180
-179:
-  store i8 addrspace(1)* %162, i8 addrspace(1)** %13
-  br label %169
-180:
-  %181 = extractvalue {i64, i1} %177, 0
-  %182 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %181)
-  store i8 addrspace(1)* %182, i8 addrspace(1)** %13
-  br label %169
-183:
-  %184 = call i8 addrspace(1)* @_bal_panic_construct(i64 15619), !dbg !34
-  store i8 addrspace(1)* %184, i8 addrspace(1)** %29
-  br label %114
+  %176 = load i8 addrspace(1)*, i8 addrspace(1)** %13
+  %177 = addrspacecast i8 addrspace(1)* %176 to i8*
+  %178 = ptrtoint i8* %177 to i64
+  %179 = and i64 %178, 2233785415175766016
+  %180 = icmp eq i64 %179, 504403158265495552
+  br i1 %180, label %191, label %197
+181:
+  %182 = call double @_bal_tagged_to_float(i8 addrspace(1)* %168)
+  %183 = call {i64, i1} @_bal_float_to_int(double %182)
+  %184 = extractvalue {i64, i1} %183, 1
+  br i1 %184, label %189, label %186
 185:
-  %186 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %170)
-  store i64 %186, i64* %14
-  %187 = load i64, i64* %11
-  %188 = load i64, i64* %14
-  %189 = icmp sle i64 %187, %188
-  store i1 %189, i1* %8
-  %190 = load i1, i1* %8
-  br i1 %190, label %66, label %74
+  store i8 addrspace(1)* %168, i8 addrspace(1)** %13
+  br label %175
+186:
+  %187 = extractvalue {i64, i1} %183, 0
+  %188 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %187)
+  store i8 addrspace(1)* %188, i8 addrspace(1)** %13
+  br label %175
+189:
+  %190 = call i8 addrspace(1)* @_bal_panic_construct(i64 15619), !dbg !34
+  store i8 addrspace(1)* %190, i8 addrspace(1)** %29
+  br label %114
 191:
-  %192 = call i8 addrspace(1)* @_bal_panic_construct(i64 15619), !dbg !34
-  store i8 addrspace(1)* %192, i8 addrspace(1)** %29
+  %192 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %176)
+  store i64 %192, i64* %14
+  %193 = load i64, i64* %11
+  %194 = load i64, i64* %14
+  %195 = icmp sle i64 %193, %194
+  store i1 %195, i1* %8
+  %196 = load i1, i1* %8
+  br i1 %196, label %66, label %74
+197:
+  %198 = call i8 addrspace(1)* @_bal_panic_construct(i64 15619), !dbg !34
+  store i8 addrspace(1)* %198, i8 addrspace(1)** %29
   br label %114
-193:
-  %194 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %70, i64 0, i32 3
-  %195 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %194, align 8
-  %196 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %195, i64 0, i64 %67
-  %197 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %196, align 8
-  store i8 addrspace(1)* %197, i8 addrspace(1)** %15
-  %198 = load i8 addrspace(1)*, i8 addrspace(1)** %result, !dbg !37
-  %199 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !37
-  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %198, i8 addrspace(1)* %199), !dbg !37
+199:
+  %200 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %70, i64 0, i32 0
+  %201 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %200, align 8
+  %202 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %201, i64 0, i32 1
+  %203 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %202, align 8
+  %204 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
+  %205 = load i64, i64* %i1
+  %206 = call i8 addrspace(1)* %203(i8 addrspace(1)* %204, i64 %205)
+  store i8 addrspace(1)* %206, i8 addrspace(1)** %15
+  %207 = load i8 addrspace(1)*, i8 addrspace(1)** %result, !dbg !37
+  %208 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !37
+  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %207, i8 addrspace(1)* %208), !dbg !37
   store i8 addrspace(1)* null, i8 addrspace(1)** %16, !dbg !37
-  %200 = load i64, i64* %i1
-  %201 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %200, i64 1)
-  %202 = extractvalue {i64, i1} %201, 1
-  br i1 %202, label %208, label %205
-203:
-  %204 = call i8 addrspace(1)* @_bal_panic_construct(i64 15877), !dbg !34
-  store i8 addrspace(1)* %204, i8 addrspace(1)** %29
+  %209 = load i64, i64* %i1
+  %210 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %209, i64 1)
+  %211 = extractvalue {i64, i1} %210, 1
+  br i1 %211, label %217, label %214
+212:
+  %213 = call i8 addrspace(1)* @_bal_panic_construct(i64 15877), !dbg !34
+  store i8 addrspace(1)* %213, i8 addrspace(1)** %29
   br label %114
-205:
-  %206 = extractvalue {i64, i1} %201, 0
-  store i64 %206, i64* %17
-  %207 = load i64, i64* %17
-  store i64 %207, i64* %i1
+214:
+  %215 = extractvalue {i64, i1} %210, 0
+  store i64 %215, i64* %17
+  %216 = load i64, i64* %17
+  store i64 %216, i64* %i1
   br label %82
-208:
-  %209 = call i8 addrspace(1)* @_bal_panic_construct(i64 16129), !dbg !34
-  store i8 addrspace(1)* %209, i8 addrspace(1)** %29
+217:
+  %218 = call i8 addrspace(1)* @_bal_panic_construct(i64 16129), !dbg !34
+  store i8 addrspace(1)* %218, i8 addrspace(1)** %29
   br label %114
-210:
-  %211 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %78, i64 0, i32 3
-  %212 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %211, align 8
-  %213 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %212, i64 0, i64 %75
-  %214 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %213, align 8
-  store i8 addrspace(1)* %214, i8 addrspace(1)** %18
-  %215 = load i8 addrspace(1)*, i8 addrspace(1)** %result, !dbg !38
-  %216 = load i8 addrspace(1)*, i8 addrspace(1)** %18, !dbg !38
-  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %215, i8 addrspace(1)* %216), !dbg !38
+219:
+  %220 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %78, i64 0, i32 0
+  %221 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %220, align 8
+  %222 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %221, i64 0, i32 1
+  %223 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %222, align 8
+  %224 = load i8 addrspace(1)*, i8 addrspace(1)** %v2
+  %225 = load i64, i64* %i2
+  %226 = call i8 addrspace(1)* %223(i8 addrspace(1)* %224, i64 %225)
+  store i8 addrspace(1)* %226, i8 addrspace(1)** %18
+  %227 = load i8 addrspace(1)*, i8 addrspace(1)** %result, !dbg !38
+  %228 = load i8 addrspace(1)*, i8 addrspace(1)** %18, !dbg !38
+  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %227, i8 addrspace(1)* %228), !dbg !38
   store i8 addrspace(1)* null, i8 addrspace(1)** %19, !dbg !38
-  %217 = load i64, i64* %i2
-  %218 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %217, i64 1)
-  %219 = extractvalue {i64, i1} %218, 1
-  br i1 %219, label %225, label %222
-220:
-  %221 = call i8 addrspace(1)* @_bal_panic_construct(i64 16901), !dbg !34
-  store i8 addrspace(1)* %221, i8 addrspace(1)** %29
+  %229 = load i64, i64* %i2
+  %230 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %229, i64 1)
+  %231 = extractvalue {i64, i1} %230, 1
+  br i1 %231, label %237, label %234
+232:
+  %233 = call i8 addrspace(1)* @_bal_panic_construct(i64 16901), !dbg !34
+  store i8 addrspace(1)* %233, i8 addrspace(1)** %29
   br label %114
-222:
-  %223 = extractvalue {i64, i1} %218, 0
-  store i64 %223, i64* %20
-  %224 = load i64, i64* %20
-  store i64 %224, i64* %i2
+234:
+  %235 = extractvalue {i64, i1} %230, 0
+  store i64 %235, i64* %20
+  %236 = load i64, i64* %20
+  store i64 %236, i64* %i2
   br label %82
-225:
-  %226 = call i8 addrspace(1)* @_bal_panic_construct(i64 17153), !dbg !34
-  store i8 addrspace(1)* %226, i8 addrspace(1)** %29
-  br label %114
-227:
-  %228 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %94, i64 0, i32 3
-  %229 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %228, align 8
-  %230 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %229, i64 0, i64 %91
-  %231 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %230, align 8
-  store i8 addrspace(1)* %231, i8 addrspace(1)** %22
-  %232 = load i8 addrspace(1)*, i8 addrspace(1)** %result, !dbg !39
-  %233 = load i8 addrspace(1)*, i8 addrspace(1)** %22, !dbg !39
-  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %232, i8 addrspace(1)* %233), !dbg !39
-  store i8 addrspace(1)* null, i8 addrspace(1)** %23, !dbg !39
-  %234 = load i64, i64* %i1
-  %235 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %234, i64 1)
-  %236 = extractvalue {i64, i1} %235, 1
-  br i1 %236, label %242, label %239
 237:
-  %238 = call i8 addrspace(1)* @_bal_panic_construct(i64 19205), !dbg !34
+  %238 = call i8 addrspace(1)* @_bal_panic_construct(i64 17153), !dbg !34
   store i8 addrspace(1)* %238, i8 addrspace(1)** %29
   br label %114
 239:
-  %240 = extractvalue {i64, i1} %235, 0
-  store i64 %240, i64* %24
-  %241 = load i64, i64* %24
-  store i64 %241, i64* %i1
-  br label %85
-242:
-  %243 = call i8 addrspace(1)* @_bal_panic_construct(i64 19457), !dbg !34
-  store i8 addrspace(1)* %243, i8 addrspace(1)** %29
+  %240 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %94, i64 0, i32 0
+  %241 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %240, align 8
+  %242 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %241, i64 0, i32 1
+  %243 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %242, align 8
+  %244 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
+  %245 = load i64, i64* %i1
+  %246 = call i8 addrspace(1)* %243(i8 addrspace(1)* %244, i64 %245)
+  store i8 addrspace(1)* %246, i8 addrspace(1)** %22
+  %247 = load i8 addrspace(1)*, i8 addrspace(1)** %result, !dbg !39
+  %248 = load i8 addrspace(1)*, i8 addrspace(1)** %22, !dbg !39
+  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %247, i8 addrspace(1)* %248), !dbg !39
+  store i8 addrspace(1)* null, i8 addrspace(1)** %23, !dbg !39
+  %249 = load i64, i64* %i1
+  %250 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %249, i64 1)
+  %251 = extractvalue {i64, i1} %250, 1
+  br i1 %251, label %257, label %254
+252:
+  %253 = call i8 addrspace(1)* @_bal_panic_construct(i64 19205), !dbg !34
+  store i8 addrspace(1)* %253, i8 addrspace(1)** %29
   br label %114
-244:
-  %245 = getelementptr inbounds {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %108, i64 0, i32 3
-  %246 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %245, align 8
-  %247 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %246, i64 0, i64 %105
-  %248 = load i8 addrspace(1)*, i8 addrspace(1)* addrspace(1)* %247, align 8
-  store i8 addrspace(1)* %248, i8 addrspace(1)** %26
-  %249 = load i8 addrspace(1)*, i8 addrspace(1)** %result, !dbg !40
-  %250 = load i8 addrspace(1)*, i8 addrspace(1)** %26, !dbg !40
-  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %249, i8 addrspace(1)* %250), !dbg !40
-  store i8 addrspace(1)* null, i8 addrspace(1)** %27, !dbg !40
-  %251 = load i64, i64* %i2
-  %252 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %251, i64 1)
-  %253 = extractvalue {i64, i1} %252, 1
-  br i1 %253, label %259, label %256
 254:
-  %255 = call i8 addrspace(1)* @_bal_panic_construct(i64 20229), !dbg !34
-  store i8 addrspace(1)* %255, i8 addrspace(1)** %29
+  %255 = extractvalue {i64, i1} %250, 0
+  store i64 %255, i64* %24
+  %256 = load i64, i64* %24
+  store i64 %256, i64* %i1
+  br label %85
+257:
+  %258 = call i8 addrspace(1)* @_bal_panic_construct(i64 19457), !dbg !34
+  store i8 addrspace(1)* %258, i8 addrspace(1)** %29
   br label %114
-256:
-  %257 = extractvalue {i64, i1} %252, 0
-  store i64 %257, i64* %28
-  %258 = load i64, i64* %28
-  store i64 %258, i64* %i2
-  br label %99
 259:
-  %260 = call i8 addrspace(1)* @_bal_panic_construct(i64 20481), !dbg !34
-  store i8 addrspace(1)* %260, i8 addrspace(1)** %29
+  %260 = getelementptr {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %108, i64 0, i32 0
+  %261 = load {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* addrspace(1)* %260, align 8
+  %262 = getelementptr {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}, {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}* %261, i64 0, i32 1
+  %263 = load i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i8 addrspace(1)*(i8 addrspace(1)*, i64)** %262, align 8
+  %264 = load i8 addrspace(1)*, i8 addrspace(1)** %v2
+  %265 = load i64, i64* %i2
+  %266 = call i8 addrspace(1)* %263(i8 addrspace(1)* %264, i64 %265)
+  store i8 addrspace(1)* %266, i8 addrspace(1)** %26
+  %267 = load i8 addrspace(1)*, i8 addrspace(1)** %result, !dbg !40
+  %268 = load i8 addrspace(1)*, i8 addrspace(1)** %26, !dbg !40
+  call void @_Bb0m4lang5arraypush(i8 addrspace(1)* %267, i8 addrspace(1)* %268), !dbg !40
+  store i8 addrspace(1)* null, i8 addrspace(1)** %27, !dbg !40
+  %269 = load i64, i64* %i2
+  %270 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %269, i64 1)
+  %271 = extractvalue {i64, i1} %270, 1
+  br i1 %271, label %277, label %274
+272:
+  %273 = call i8 addrspace(1)* @_bal_panic_construct(i64 20229), !dbg !34
+  store i8 addrspace(1)* %273, i8 addrspace(1)** %29
+  br label %114
+274:
+  %275 = extractvalue {i64, i1} %270, 0
+  store i64 %275, i64* %28
+  %276 = load i64, i64* %28
+  store i64 %276, i64* %i2
+  br label %99
+277:
+  %278 = call i8 addrspace(1)* @_bal_panic_construct(i64 20481), !dbg !34
+  store i8 addrspace(1)* %278, i8 addrspace(1)** %29
   br label %114
 }
 !llvm.module.flags = !{!0}
@@ -1106,28 +1139,28 @@ define internal i8 addrspace(1)* @_B_merge(i8 addrspace(1)* %0, i8 addrspace(1)*
 !13 = !DILocation(line: 0, column: 0, scope: !5)
 !14 = !DILocation(line: 12, column: 4, scope: !5)
 !15 = !DILocation(line: 17, column: 14, scope: !5)
-!16 = !DILocation(line: 18, column: 16, scope: !5)
+!16 = !DILocation(line: 18, column: 23, scope: !5)
 !17 = !DILocation(line: 18, column: 4, scope: !5)
-!18 = !DILocation(line: 14, column: 8, scope: !5)
+!18 = !DILocation(line: 14, column: 14, scope: !5)
 !19 = !DILocation(line: 24, column: 15, scope: !5)
 !20 = !DILocation(line: 24, column: 30, scope: !5)
 !21 = !DILocation(line: 24, column: 4, scope: !5)
 !22 = !DILocation(line: 21, column: 12, scope: !5)
 !23 = !DILocation(line: 0, column: 0, scope: !7)
-!24 = !DILocation(line: 29, column: 28, scope: !7)
+!24 = !DILocation(line: 29, column: 35, scope: !7)
 !25 = !DILocation(line: 0, column: 0, scope: !9)
-!26 = !DILocation(line: 37, column: 8, scope: !9)
-!27 = !DILocation(line: 40, column: 15, scope: !9)
-!28 = !DILocation(line: 46, column: 30, scope: !9)
-!29 = !DILocation(line: 43, column: 8, scope: !9)
+!26 = !DILocation(line: 37, column: 15, scope: !9)
+!27 = !DILocation(line: 40, column: 22, scope: !9)
+!28 = !DILocation(line: 46, column: 37, scope: !9)
+!29 = !DILocation(line: 43, column: 18, scope: !9)
 !30 = !DILocation(line: 49, column: 17, scope: !9)
 !31 = !DILocation(line: 49, column: 30, scope: !9)
 !32 = !DILocation(line: 49, column: 11, scope: !9)
-!33 = !DILocation(line: 47, column: 8, scope: !9)
+!33 = !DILocation(line: 47, column: 18, scope: !9)
 !34 = !DILocation(line: 0, column: 0, scope: !11)
-!35 = !DILocation(line: 56, column: 17, scope: !11)
-!36 = !DILocation(line: 57, column: 17, scope: !11)
-!37 = !DILocation(line: 62, column: 20, scope: !11)
-!38 = !DILocation(line: 66, column: 20, scope: !11)
-!39 = !DILocation(line: 75, column: 8, scope: !11)
-!40 = !DILocation(line: 79, column: 8, scope: !11)
+!35 = !DILocation(line: 56, column: 24, scope: !11)
+!36 = !DILocation(line: 57, column: 24, scope: !11)
+!37 = !DILocation(line: 62, column: 31, scope: !11)
+!38 = !DILocation(line: 66, column: 31, scope: !11)
+!39 = !DILocation(line: 75, column: 19, scope: !11)
+!40 = !DILocation(line: 79, column: 19, scope: !11)

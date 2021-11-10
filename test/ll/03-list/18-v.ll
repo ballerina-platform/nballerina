@@ -2,7 +2,7 @@
 @_Bi04root0 = external constant {i32, i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}*, i64)
+declare {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}*, i64)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb0m4lang5arraypush(i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
@@ -21,8 +21,8 @@ define void @_B04rootmain() !dbg !5 {
   %10 = icmp ult i8* %8, %9
   br i1 %10, label %29, label %11
 11:
-  %12 = call {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 0)
-  %13 = bitcast {{i32, i32} addrspace(1)*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %12 to i8 addrspace(1)*
+  %12 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 0)
+  %13 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %12 to i8 addrspace(1)*
   %14 = getelementptr i8, i8 addrspace(1)* %13, i64 1297036692682702852
   store i8 addrspace(1)* %14, i8 addrspace(1)** %1
   %15 = load i8 addrspace(1)*, i8 addrspace(1)** %1
@@ -68,9 +68,9 @@ define void @_B04rootmain() !dbg !5 {
 !5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 3, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
 !6 = !{}
 !7 = !DILocation(line: 0, column: 0, scope: !5)
-!8 = !DILocation(line: 5, column: 4, scope: !5)
-!9 = !DILocation(line: 6, column: 4, scope: !5)
-!10 = !DILocation(line: 7, column: 4, scope: !5)
-!11 = !DILocation(line: 8, column: 4, scope: !5)
-!12 = !DILocation(line: 9, column: 4, scope: !5)
+!8 = !DILocation(line: 5, column: 10, scope: !5)
+!9 = !DILocation(line: 6, column: 10, scope: !5)
+!10 = !DILocation(line: 7, column: 10, scope: !5)
+!11 = !DILocation(line: 8, column: 10, scope: !5)
+!12 = !DILocation(line: 9, column: 10, scope: !5)
 !13 = !DILocation(line: 10, column: 4, scope: !5)
