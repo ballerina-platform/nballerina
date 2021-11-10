@@ -57,6 +57,7 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                     if isNever(rest) {
                         return NEVER;
                     }
+                    // JBUG #33532 should be able to use `_` here
                     foreach int i in members.length() ..< newLen {
                         members.push(rest);
                     }
@@ -104,7 +105,8 @@ function listProjExclude(Context cx, int k, SemType[] members, SemType rest, Con
         if len < negLen {
             if isNever(rest) {
                 return listProjExclude(cx, k, members, rest, neg.next);
-            }            
+            }
+            // JBUG #33532 should be able to use `_` here
             foreach int i in len ..< negLen {
                 members.push(rest);
             }

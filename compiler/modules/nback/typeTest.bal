@@ -86,7 +86,6 @@ function buildCondNarrow(llvm:Builder builder, Scaffold scaffold, bir:CondNarrow
 function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRepr, llvm:Value value, Repr targetRepr, bir:Position pos) returns llvm:Value|BuildError {
     BaseRepr sourceBaseRepr = sourceRepr.base;
     BaseRepr targetBaseRepr = targetRepr.base;
-    llvm:Value narrowed;
     if sourceBaseRepr == targetBaseRepr {
         return value;
     }

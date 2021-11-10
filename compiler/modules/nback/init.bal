@@ -176,13 +176,10 @@ function addRecordInherentTypeDefn(InitModuleContext cx, string symbol, int tid,
 
 function addExactifyTypeDefn(InitModuleContext cx, string symbol, t:SemType semType) {
     table<InherentTypeDefn> key(semType) defns;
-    boolean isList;
     if t:isSubtypeSimple(semType, t:LIST) {
-        isList = true;
         defns = cx.listTypeDefns;
     }
     else if t:isSubtypeSimple(semType, t:MAPPING) {
-        isList = false;
         defns = cx.mappingTypeDefns;
     }
     else {

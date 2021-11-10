@@ -18,7 +18,6 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     llvm:FunctionType[] llFuncTypes = [];
     map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
-        bir:File defnFile = partFiles[defn.partIndex];
         llvm:FunctionType ty = buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;

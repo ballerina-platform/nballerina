@@ -816,7 +816,6 @@ public class DIBuilder {
     // Corresponds to LLVMDIBuilderCreateCompileUnit
     public function createCompileUnit(*CompileUnitProperties props) returns Metadata {
         Metadata metadata = self.m.addMetadata();
-        Metadata? file = props.file;
         string[] words = [];
         words.push(metadata.ref(), "=", "distinct", "!", "DICompileUnit", "(", "language",
                    ":", sourceLangToString.get(props.language));

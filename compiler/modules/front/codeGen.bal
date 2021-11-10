@@ -875,7 +875,6 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
 
 function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CompoundAssignStmt stmt) returns CodeGenError|StmtEffect {
     var { lValue, expr, op, opPos: pos } = stmt;
-    s:Expr binExpr;
     if lValue is s:VarRefExpr {
         return codeGenCompoundAssignToVar(cx, startBlock, env, lValue, expr, op, pos);
     }
@@ -1092,7 +1091,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 return cx.semanticErr("operands of relational operator do not belong to an ordered type");
             }
         }
-        var { td, operand: _ } => {
+        var { td: _, operand: _ } => {
             // JBUG #31782 cast needed
             return codeGenTypeCast(cx, bb, env, <s:TypeCastExpr>expr);
         }
@@ -1270,7 +1269,7 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
     bir:Operand[] operands = [];
     string[] fieldNames= [];
     map<s:Position> fieldPos = {};
-    foreach var { startPos, endPos , name, value } in expr.fields {
+    foreach var { startPos, name, value } in expr.fields {
         s:Position? prevPos = fieldPos[name];
         if prevPos == () {
             fieldPos[name] = startPos;
@@ -1475,8 +1474,6 @@ function codeGenCheckingExpr(CodeGenContext cx, bir:BasicBlock bb, Environment e
     // Constants should be resolved during constant folding
     bir:Register operand = <bir:Register>o;
     t:SemType errorType =  t:intersect(operand.semType, t:ERROR);
-    bir:BasicBlock block;
-    bir:Register result;
     if t:isNever(errorType) {
         return { result: operand, block: nextBlock };
     }

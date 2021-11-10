@@ -76,8 +76,6 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 
     if length > 0 {
         // de-refer the member array from the list struct
-        final llvm:Type sizedArrayType = llvm:arrayType(LLVM_TAGGED_PTR, length);
-        final llvm:PointerType ptrSizedArrayType = heapPointerType(sizedArrayType);
         llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct,
                                                                                         [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)],
                                                                                         "inbounds"),

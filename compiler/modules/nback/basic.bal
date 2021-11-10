@@ -130,7 +130,7 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
             buildFloatNegate(builder, scaffold, insn);
         }
         else {
-            bir:CatchInsn unused = insn;
+            bir:CatchInsn _ = insn;
             // nothing to do
             // scaffold.panicAddress uses this to figure out where to store the panic info
         }
