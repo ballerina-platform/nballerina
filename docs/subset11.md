@@ -1,4 +1,4 @@
-# Language subset 10
+# Language subset 11
 
 ## Summary
 
@@ -19,10 +19,9 @@
    * unions: `T1|T2`
    * intersections: `T1&T2`
    * structure types
-      * map type: `map<M>`
-      * array type: `M[]`
-      * closed record type: `record {| M1 f1; M2 f2; |}`
-      * the type descriptor `M` used for a member of a structure is restricted to a predefined type name `T`, `T?` or a union of these
+      * map type: `map<T>`
+      * array type: `T[]`
+      * closed record type: `record {| T1 f1; T2 f2; |}`
    * a reference to a type defined by a type definition
 * Statements:
    * function/method call statement
@@ -107,7 +106,7 @@ postfix-type-desc =
 
 optional-type-desc = postfix-type-desc [ "?" ]
 
-array-type-desc = optional-basic-type-desc "[" "]"
+array-type-desc = optional-type-desc "[" "]"
 
 primary-type-desc =
   builtin-type-name
@@ -124,23 +123,10 @@ nil-type-desc = nil-literal
 # reference to a type definition
 type-reference = identifier | qualified-identifier
 
-map-type-desc = "map" "<" union-basic-type-desc ">"
+map-type-desc = "map" "<" type-desc ">"
 
 record-type-desc = "record" "{|" field-desc* "|}"
-field-desc = union-basic-type-desc identifier ";"
-
-# type of a structure member is restricted to a union of one or more complete basic types
-
-union-basic-type-desc =
-   optional-basic-type-desc
-   | union-basic-type-desc "|" optional-basic-type-desc
-
-optional-basic-type-desc = basic-type-desc [ "?" ]
-
-basic-type-desc =
-   builtin-type-name
-   | nil-type-desc
-   | "(" union-basic-type-desc ")"
+field-desc = type-desc identifier ";"
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -382,11 +368,9 @@ Two kinds of `import` are supported.
 * The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
 
-## Additions from subset 9
+## Additions from subset 10
 
-* A more expressive grammar is supported for type descriptors. In particular, the restrictions on union type descriptors have been removed. (There is still a restriction on the type of a member of a structure.)
-* Intersection types: `T1 & T2`
-* Allow `null` as synonym for `()`
+* Restrictions on unions have been removed.
 
 ## Implemented spec changes since 2021R1
 
