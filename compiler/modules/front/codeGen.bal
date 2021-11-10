@@ -1537,7 +1537,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
     else {
         func = check genImportedFunctionRef(cx, env, prefix, expr.funcName);
     }
-    check validArgumentCount(cx, func, expr.args.length(), expr.opPos);
+    check validArgumentCount(cx, func, expr.args.length(), expr.openParenPos);
     t:SemType[] paramTypes = func.signature.paramTypes;
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
@@ -1552,7 +1552,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func,
         result,
         args: args.cloneReadOnly(),
-        pos: expr.startPos
+        pos: expr.namePos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };
@@ -1576,7 +1576,7 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env
         func,
         result,
         args: args.cloneReadOnly(),
-        pos: expr.opPos
+        pos: expr.namePos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };

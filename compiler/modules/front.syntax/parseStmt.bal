@@ -179,12 +179,13 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
         return finishCallStmt(tok, expr, startPos);
     }
     else if cur == "." {
+        Position dotPos = tok.currentStartPos();
         VarRefExpr varRef = { startPos, endPos:tok.previousEndPos(), varName: identifier, prefix };
         check tok.advance();
         Position newNamePos = tok.currentStartPos();
         string name = check tok.expectIdentifier();
         if tok.current() == "(" {
-            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, startPos, newNamePos), startPos);
+            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, startPos, newNamePos, dotPos), startPos);
         }
         else {
             endPos = tok.previousEndPos();
