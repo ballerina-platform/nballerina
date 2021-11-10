@@ -1550,7 +1550,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func,
         result,
         args: args.cloneReadOnly(),
-        pos: expr.opPos
+        pos: expr.startPos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };
