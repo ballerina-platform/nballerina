@@ -32,6 +32,7 @@ primary-td :=
   | map-td
   | record-td
   | tuple-td
+  | xml-td
   | error-td
   | function-td
   | nil-td
@@ -41,8 +42,8 @@ primary-td :=
     
 nil-td := "(" ")"
 int-td := "int" [ ":" identifier ]
-map-td := "map" "<" type-desc ">"
-error-td := "error" ["<" type-desc ">"]
+map-td := "map" type-param
+error-td := "error" [type-param]
 // XXX handle "..." in tuple-td and record-td
 tuple-td := "[" opt-td-list "]"
 
@@ -54,14 +55,23 @@ td-list :=
 record-td := "record" "{|" field-desc* "|}"
 field-desc := type-desc identifier ";"
 
-td-ref := identifier // can also refer to const definition
+xml-rd := "xml" [type-param]
+
+type-param := "<" type-desc ">"
+
+td-ref := qualified-identifier | identifier // can also refer to const definition
+
+qualified-identifier = module-prefix ":" identifier
+
+module-prefix = identifier | predeclared-prefix
+
+predeclared-prefix = "string" | "int" | "xml"
 
 predefined-td :=
     "boolean"
     | "decimal"
     | "float"
     | "string"
-    | "xml"
     | "typedesc"
     | "handle"
     | "any"

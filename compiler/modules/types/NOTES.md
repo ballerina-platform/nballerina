@@ -33,6 +33,39 @@ These work quite similarly to rest type for tuples, except that keys are strings
 
 We can represent the subtype of error as single Bdd, in the same way as a subtype of readonly mapping.
 
+### XML
+
+We have:
+* Empty XML sequence
+* Singleton. One of
+    1. Text item, which is always readonly
+    2. Readonly element item
+    3. Mutable element item
+    4. Readonly processing instruction item
+    5. Mutable processing instruction item
+    6. Readonly comment item
+    7. Mutable comment item
+* Concatenation of two or more singletons
+
+Concatenation is mutable iff any of its constituent singletons is mutable.
+ 
+We split xml into readonly/mutable parts.
+
+We need to accomodate this sort of thing:
+
+```
+xml<xml:Element|(readonly & xml:Comment)>
+```
+
+Note that `xml<xml:Element>|xml<xml:Text>` is not the same as `xml<xml:Element|xml:Text>`.
+
+We represent an XML subtype with the following:
+1. a flag saying whether the empty sequence is allowed
+2. a bit vector with one bit for each of the 7 singleton subtypes, saying whether a singleton of that type is allowed
+3. a Bdd for the concatenation of two or more items, where the atom is the bit vector for the singleton subtypes
+
+1 and 2 are combined into a single bit vector.
+
 ## Not yet done
 
 ### Optional fields
@@ -101,44 +134,6 @@ Can be recursive:
 ```
 type S stream<S?>;
 ```
-
-### XML
-
-We have:
-* Empty XML sequence
-* Singleton. One of
-    1. Text item, which is always readonly
-    2. Readonly element item
-    3. Mutable element item
-    4. Readonly processing instruction item
-    5. Mutable processing instruction item
-    6. Readonly comment item
-    7. Mutable comment item
-* Concatenation of two or more singletons
-
-Concatenation is mutable iff any of its constituent singletons is mutable.
- 
-We need to split into readonly/mutable parts.
-
-We need to generalize what we have in the language to be closed under difference.
-
-In JSON syntax:
-* `["xml", "element", "text"]` can mean `xml<xml:Element|xml:Text>`.
-* `"xml"` can mean `xml`.
-* `["xml"]` can mean `xml<never>`
-
-We need to accomodate this sort of thing:
-
-```
-xml<xml:Element|(readonly & xml:Comment)>
-```
-
-Note that `xml<xml:Element>|xml<xml:Text>` is not the same as `xml<xml:Element|xml:Text>`.
-
-We can, I think, represent an XML subtype with the following:
-* a flag saying whether the empty sequence is allowed
-* a bit vector with one bit for each of the 7 singleton subtypes, saying whether a singleton of that type is allowed
-* a Bdd for the concatenation of two or more items, where the atom is the bit vector for the singleton subtypes
 
 ### string:Char
 
