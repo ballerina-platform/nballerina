@@ -17,6 +17,7 @@
    * `any` type
    * optional type: `T?`
    * unions: `T1|T2`
+   * intersections: `T1&T2`
    * structure types
       * map type: `map<M>`
       * array type: `M[]`
@@ -92,8 +93,12 @@ type-defn = ["public"] "type" identifier type-desc ";"
 type-desc = union-type-desc
 
 union-type-desc =
+  intersection-type-desc
+  | union-type-desc "|" intersection-type-desc
+
+intersection-type-desc =
   postfix-type-desc
-  | union-type-desc "|" postfix-type-desc
+  | intersection-type-desc "&" postfix-type-desc
 
 postfix-type-desc =
   primary-type-desc
@@ -380,6 +385,7 @@ Two kinds of `import` are supported.
 ## Additions from subset 9
 
 * A more expressive grammar is supported for type descriptors. In particular, the restrictions on union type descriptors have been removed. (There is still a restriction on the type of a member of a structure.)
+* Intersection types: `T1 & T2`
 * Allow `null` as synonym for `()`
 
 ## Implemented spec changes since 2021R1
