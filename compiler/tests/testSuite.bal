@@ -103,6 +103,7 @@ function moduleDir(string filePath) returns string|file:Error? {
     if check file:test(subModPath, file:IS_DIR) {
         return check file:normalizePath(subModPath, file:CLEAN);
     }
+    return ();
 }
 
 function findErrorLine(string filePath, FilenameLine? currentErrorLocation) returns FilenameLine|io:Error? {

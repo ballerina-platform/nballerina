@@ -1,6 +1,6 @@
 import wso2/nballerina.err;
 
-type Token FixedToken|readonly & VariableLengthToken;
+type Token FixedToken|VariableLengthToken;
 type FixedToken SingleCharDelim|MultiCharDelim|Keyword;
 
 const IDENTIFIER = 0;
@@ -14,7 +14,12 @@ const N_VARIABLE_TOKENS = 5;
 type VariableTokenCode IDENTIFIER|DECIMAL_NUMBER|STRING_LITERAL|HEX_INT_LITERAL|DECIMAL_FP_NUMBER;
 
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
-type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string]|[DECIMAL_FP_NUMBER, string, FpTypeSuffix?];
+// JBUG #33694 can't factor `readonly` out
+type VariableLengthToken readonly & [IDENTIFIER, string] |
+                         readonly & [DECIMAL_NUMBER, string] |
+                         readonly & [STRING_LITERAL, string] |
+                         readonly & [HEX_INT_LITERAL, string] |
+                         readonly & [DECIMAL_FP_NUMBER, string, FpTypeSuffix?];
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=" | "." | "~";

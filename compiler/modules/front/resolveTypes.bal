@@ -263,8 +263,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     if td is s:ErrorTypeDesc {
         return t:errorDetail(check resolveTypeDesc(mod, modDefn, depth, td.detail));
     }
-    if td is s:UnaryTypeDesc {
-        t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td.td);
+    // XXX remove td2 and panic when migrated to jballerina beta4
+    s:TypeDesc td2 = td;
+    if td2 is s:UnaryTypeDesc {
+        t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td2.td);
         return t:complement(ty);
     }
     panic error("unimplemented type-descriptor");

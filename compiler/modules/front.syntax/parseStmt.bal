@@ -1,15 +1,12 @@
 import wso2/nballerina.err;
 
 function parseStmtBlock(Tokenizer tok) returns StmtBlock|err:Syntax {
-    Token? cur = tok.current();
-    if cur == "{" {
+    if tok.current() == "{" {
         Position startPos = tok.currentStartPos();
         Stmt[] stmts = [];
         check tok.advance();
-        cur = tok.current();
-        while cur != "}" {
+        while tok.current() != "}" {
             stmts.push(check parseStmt(tok));
-            cur = tok.current();
         }
         Position endPos = tok.currentEndPos();
         check tok.advance();

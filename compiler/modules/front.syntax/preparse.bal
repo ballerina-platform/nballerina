@@ -61,7 +61,8 @@ function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Synta
             ")" | "]" | "}" | "|}" => {
                 if t == close {
                     check tok.advance();
-                    break;
+                    // not enough info to decide
+                    return ();
                 }
                 return tok.err(`mismatched close bracket: expected ${close}`);
             }
@@ -70,6 +71,8 @@ function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Synta
             }
         }  
     }
+    // JBUG #33725, warning if removed, will never reach here.
+    return ();
 }
 
 // Returns `true` if a statement that starts with an identifier followed by `[` begins a type descriptor rather than an expression
