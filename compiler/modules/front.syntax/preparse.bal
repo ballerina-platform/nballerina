@@ -61,8 +61,7 @@ function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Synta
             ")" | "]" | "}" | "|}" => {
                 if t == close {
                     check tok.advance();
-                    // not enough info to decide
-                    return ();
+                    break;
                 }
                 return tok.err(`mismatched close bracket: expected ${close}`);
             }
@@ -71,7 +70,6 @@ function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Synta
             }
         }  
     }
-    // JBUG #33725, warning if removed, will never reach here.
     return ();
 }
 
