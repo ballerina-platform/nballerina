@@ -49,3 +49,17 @@ TaggedPtrPanicCode _bal_decimal_add(TaggedPtr tp1, TaggedPtr tp2) {
 
 
 
+static inline decQuad *balDecToDecQuad(GC decimal128 *dp);
+
+TaggedPtr _bal_decimal_const(const char *decString) {
+    GC decimal128 *dp = _bal_alloc(sizeof(decimal128));
+
+    decContext ctx;
+    decContextDefault(&ctx, DEC_INIT_DECQUAD);
+    decQuadFromString(balDecToDecQuad(dp), decString, &ctx);
+    return ptrAddFlags(dp, (uint64_t)TAG_DECIMAL << TAG_SHIFT);
+}
+
+static inline decQuad *balDecToDecQuad(GC decimal128 *dp) {
+    return (decQuad *)dp;
+}

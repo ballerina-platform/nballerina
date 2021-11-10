@@ -70,6 +70,10 @@ typedef uint64_t PackedPanic;
 typedef uintptr_t PC;
 
 typedef struct {
+    uint64_t longs[2];
+} decimal128;
+
+typedef struct {
     int64_t length;
     int64_t capacity;
     GC void *members;
@@ -288,6 +292,8 @@ extern void _bal_print_mangled_name(const char *mangledName, FILE *fp);
 // Returns an error value
 extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
 extern NORETURN COLD void _bal_panic_internal(PanicCode code);
+
+extern TaggedPtr _bal_decimal_const(const char *decString);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
