@@ -238,7 +238,7 @@ public type FunctionCallExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
-    Position opPos;
+    Position openParenPos;
     Position namePos;
     string? prefix = ();
     string funcName;

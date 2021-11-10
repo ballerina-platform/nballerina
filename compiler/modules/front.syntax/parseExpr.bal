@@ -336,11 +336,12 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         return finishPrimaryExpr(tok, accessExpr, startPos);
     }
     else if t == "." {
+        opPos = tok.currentStartPos();
         check tok.advance();
         Position namePos = tok.currentStartPos();
         string name = check tok.expectIdentifier();
         if tok.current() == "(" {
-            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, namePos), startPos);
+            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, namePos, opPos), startPos);
         }
         else {
             Position endPos = tok.previousEndPos();
@@ -354,8 +355,7 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
 }
 
 // Called with current token as "("
-function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Position startPos, Position namePos) returns MethodCallExpr|err:Syntax {
-    Position opPos = tok.currentStartPos();
+function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Position startPos, Position namePos, Position opPos) returns MethodCallExpr|err:Syntax {
     check tok.advance();
     Expr[] args = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
@@ -363,11 +363,11 @@ function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Pos
 }
 
 function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position startPos, Position namePos) returns FunctionCallExpr|err:Syntax {
-    Position opPos = tok.currentStartPos();
+    Position openParenPos = tok.currentStartPos();
     check tok.advance();
     Expr[] args = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, opPos, namePos, funcName, args, prefix };
+    return { startPos, endPos, openParenPos, namePos, funcName, args, prefix };
 }
 
 function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syntax {
