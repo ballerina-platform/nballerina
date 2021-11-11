@@ -139,26 +139,29 @@ public distinct readonly class Register {
     }
 }
 
+public type RegisterIdentity [string, Position];
 public distinct readonly class NamedRegister {
     *Register;
     public final int number;
     public final SemType semType;
     public final string varName;
-    function init(int number, SemType semType, string varName) {
+    public final Position pos;
+    function init(int number, SemType semType, RegisterIdentity identity) {
         self.number = number;
         self.semType = semType;
-        self.varName = varName;
+        self.varName = identity[0];
+        self.pos = identity[1];
     }
 }
 
-public function createRegister(FunctionCode code, SemType semType, string? varName = ()) returns Register {
+public function createRegister(FunctionCode code, SemType semType, RegisterIdentity? identity = ()) returns Register {
     int number = code.registers.length();
     Register r;
-    if varName == () {
+    if identity == () {
         r = new (code.registers.length(), semType);
     }
     else {
-        r = new NamedRegister(code.registers.length(), semType, varName);
+        r = new NamedRegister(code.registers.length(), semType, identity);
     }
     code.registers.push(r);
     return r;

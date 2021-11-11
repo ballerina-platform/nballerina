@@ -36,6 +36,7 @@ public type FunctionDefn record {|
     Visibility vis;
     FunctionTypeDesc typeDesc;
     string[] paramNames;
+    Position[] paramPos;
     StmtBlock body;
     Position namePos;
     // This is filled in during analysis
@@ -141,6 +142,7 @@ public type WhileStmt record {|
 public type ForeachStmt record {|
     *PositionFields;
     Position kwPos;
+    Position varPos;
     string varName;
     RangeExpr range;
     StmtBlock body;
@@ -157,7 +159,7 @@ public type VarDeclStmt record {|
     *PositionFields;
     Position opPos;
     TypeDesc td;
-    string|WILDCARD varName;
+    [string, Position]|WILDCARD varIdentity;
     Expr initExpr;
     boolean isFinal;
 |};

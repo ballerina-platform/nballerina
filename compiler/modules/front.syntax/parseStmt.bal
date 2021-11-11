@@ -288,19 +288,21 @@ function parseVarDeclStmt(Tokenizer tok, Position startPos, boolean isFinal = fa
 
 function finishVarDeclStmt(Tokenizer tok, TypeDesc td, Position startPos, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
     Token? cur = tok.current();
-    string? varName;
+    [string, Position]|WILDCARD varIdentity;
     if cur == "_" {
-        varName = WILDCARD;
+        varIdentity = WILDCARD;
         check tok.advance();
     }
     else {
-        varName = check tok.expectIdentifier();
+        Position pos = tok.currentStartPos();
+        string name = check tok.expectIdentifier();
+        varIdentity = [name, pos];
     }
     // initExpr is required in the subset
     Position opPos = check tok.expectEnd("=");
     Expr initExpr = check parseExpr(tok);
     Position endPos = check tok.expectEnd(";");
-    return { startPos, endPos, opPos, td, varName, initExpr, isFinal };
+    return { startPos, endPos, opPos, td, varIdentity, initExpr, isFinal };
 }
 
 function parseReturnStmt(Tokenizer tok, Position startPos) returns ReturnStmt|err:Syntax {
@@ -369,12 +371,13 @@ function parseForeachStmt(Tokenizer tok, Position startPos) returns ForeachStmt|
         return parseError(tok, "type of foreach variable must be int");
     }
     check tok.advance();
+    Position varPos = tok.currentStartPos();
     string varName = check tok.expectIdentifier();
     Position kwPos = check tok.expectEnd("in");
     RangeExpr range = check parseRangeExpr(tok);
     StmtBlock body = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, kwPos, varName, range, body };
+    return { startPos, endPos, varPos, kwPos, varName, range, body };
 }
 
 function parseMatchStmt(Tokenizer tok, Position startPos) returns MatchStmt|err:Syntax {
