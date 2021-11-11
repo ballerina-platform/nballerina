@@ -13,7 +13,7 @@ type Environment record {|
 
 type Binding record {|
     string name;
-    bir:Register reg;
+    bir:NamedRegister reg;
     boolean isFinal;
     boolean used = false;
     Binding? prev;
@@ -265,7 +265,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     Binding? bindings = ();
     string[] paramNames = defn.paramNames;
     foreach int i in 0 ..< paramNames.length() {
-        bir:Register reg = cx.createRegister(signature.paramTypes[i], paramNames[i]);
+        bir:NamedRegister reg = <bir:NamedRegister> cx.createRegister(signature.paramTypes[i], paramNames[i]);
         bindings = { name: paramNames[i], reg, prev: bindings, isFinal: true };
     }
     var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
@@ -385,7 +385,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     s:RangeExpr range = stmt.range;
     var { result: lower, block: evalUpper } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, range.lower, t:INT));
     var { result: upper, block: initLoopVar } = check codeGenExprForInt(cx, evalUpper, env, check cx.foldExpr(env, range.upper, t:INT));
-    bir:Register loopVar = cx.createRegister(t:INT, varName);
+    bir:NamedRegister loopVar = <bir:NamedRegister>cx.createRegister(t:INT, varName);
     bir:AssignInsn init = { pos: stmt.kwPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
@@ -715,7 +715,7 @@ function codeGenIfElseNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environmen
 }
 
 function codeGenNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Binding binding, t:SemType narrowedType, bir:Result basis, d:Position pos) returns Environment {
-    bir:Register narrowed = cx.createRegister(narrowedType, binding.name);
+    bir:NamedRegister narrowed = <bir:NamedRegister> cx.createRegister(narrowedType, binding.name);
     bir:CondNarrowInsn insn = {
         result: narrowed,
         operand: binding.reg,
@@ -777,7 +777,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
             return cx.semanticErr(`duplicate declaration of ${varName}`);
         }
         t:SemType semType = check cx.resolveTypeDesc(td);
-        bir:Register result = cx.createRegister(semType, varName);
+        bir:NamedRegister result = <bir:NamedRegister>cx.createRegister(semType, varName);
         bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType, stmt.opPos);
         return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
     }

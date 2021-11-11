@@ -128,17 +128,38 @@ public function lastInsnRef(BasicBlock bb) returns InsnRef {
     return { block: bb.label, index: bb.insns.length() - 1 };
 }
 
-public type Register readonly & record {|
+public distinct readonly class Register {
     # Unique identifier within a function
     # Always >= 0
-    int number;
-    SemType semType;
-    string? varName;
-|};
+    public final int number;
+    public final SemType semType;
+    function init(int number, SemType semType) {
+        self.number = number;
+        self.semType = semType;
+    }
+}
+
+public distinct readonly class NamedRegister {
+    *Register;
+    public final int number;
+    public final SemType semType;
+    public final string varName;
+    function init(int number, SemType semType, string varName) {
+        self.number = number;
+        self.semType = semType;
+        self.varName = varName;
+    }
+}
 
 public function createRegister(FunctionCode code, SemType semType, string? varName = ()) returns Register {
     int number = code.registers.length();
-    Register r = { number, semType, varName };
+    Register r;
+    if varName == () {
+        r = new (code.registers.length(), semType);
+    }
+    else {
+        r = new NamedRegister(code.registers.length(), semType, varName);
+    }
     code.registers.push(r);
     return r;
 }
