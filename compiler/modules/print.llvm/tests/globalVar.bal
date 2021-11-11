@@ -14,6 +14,8 @@ function globalVar() returns Module {
     PointerValue g5 = m.addGlobal("i64", "g5", isConstant=true, addressSpace=3);
     PointerValue g6 = m.addGlobal("i64", "g6", addressSpace=3, align=8);
 
+    ConstPointerValue g7 = m.addGlobal(const1Ty, "g7");
+    m.setInitializer(g7, const1);
     FunctionDefn testFn = m.addFunctionDefn("testFn", {returnType: "i64", paramTypes: []});
     BasicBlock initBlock = testFn.appendBasicBlock();
     builder.positionAtEnd(initBlock);
