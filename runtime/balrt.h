@@ -70,10 +70,6 @@ typedef uint64_t PackedPanic;
 typedef uintptr_t PC;
 
 typedef struct {
-    uint64_t longs[2];
-} decimal128;
-
-typedef struct {
     int64_t length;
     int64_t capacity;
     GC void *members;
@@ -249,6 +245,11 @@ typedef struct {
     GC char *bytes;
 } StringData;
 
+typedef struct {
+    TaggedPtr ptr;
+    PanicCode panicCode;
+} TaggedPtrPanicCode;
+
 #define ALIGN_HEAP 8
 
 // Don't declare functions here if they are balrt_inline.c
@@ -294,6 +295,7 @@ extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
 extern NORETURN COLD void _bal_panic_internal(PanicCode code);
 
 extern TaggedPtr _bal_decimal_const(const char *decString);
+extern TaggedPtrPanicCode _bal_decimal_add(TaggedPtr tp1, TaggedPtr tp2);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym

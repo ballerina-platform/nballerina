@@ -3,11 +3,6 @@
 
 typedef GC decQuad *DecimalPtr;
 
-typedef struct {
-    TaggedPtr ptr;
-    PanicCode panicCode;
-} TaggedPtrPanicCode;
-
 // Status flags that we should treat as failure
 // XXX need to investigate DEC_Underflow
 #define DECIMAL_STATUS_FAIL (DEC_Errors|DEC_Subnormal)
@@ -23,12 +18,17 @@ static inline PanicCode statusPanicCode(uint32_t status) {
 static inline TaggedPtr createDecimal(decQuad *dq) {
     DecimalPtr dp = _bal_alloc(sizeof(decQuad));
     *dp = *dq;
-    return ptrAddFlags(dp, (uint64_t)TAG_DECIMAL);
+    return ptrAddFlags(dp, (uint64_t)TAG_DECIMAL << TAG_SHIFT);
 }
 
 static inline decQuad *taggedToDecQuad(TaggedPtr tp) {
     UntypedPtr p = taggedToPtr(tp);
     return (void *)p;
+}
+
+static inline void initContext(decContext *cx) {
+    cx->status = 0;
+    cx->round = DEC_ROUND_HALF_EVEN;
 }
 
 TaggedPtrPanicCode _bal_decimal_add(TaggedPtr tp1, TaggedPtr tp2) {
@@ -47,19 +47,10 @@ TaggedPtrPanicCode _bal_decimal_add(TaggedPtr tp1, TaggedPtr tp2) {
     return result;    
 }
 
-
-
-static inline decQuad *balDecToDecQuad(GC decimal128 *dp);
-
 TaggedPtr _bal_decimal_const(const char *decString) {
-    GC decimal128 *dp = _bal_alloc(sizeof(decimal128));
-
-    decContext ctx;
-    decContextDefault(&ctx, DEC_INIT_DECQUAD);
-    decQuadFromString(balDecToDecQuad(dp), decString, &ctx);
-    return ptrAddFlags(dp, (uint64_t)TAG_DECIMAL << TAG_SHIFT);
-}
-
-static inline decQuad *balDecToDecQuad(GC decimal128 *dp) {
-    return (decQuad *)dp;
+    decContext cx;
+    initContext(&cx);
+    decQuad dq;
+    decQuadFromString(&dq, decString, &cx);
+    return createDecimal(&dq);
 }
