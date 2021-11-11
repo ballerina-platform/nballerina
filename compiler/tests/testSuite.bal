@@ -31,11 +31,17 @@ function testCompileVPO(string path, string kind) returns io:Error? {
 }
 
 @test:Config {
-    dataProvider: listSourcesT
+    dataProvider: listSourcesTVE
 }
 function testSemTypes(string path, string kind) returns error? {
     SubtypeTestCase res = check readSubtypeTests(path);
-    return testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
+    error? err =  testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
+    if kind == "te" {
+        test:assertNotExactEquals(err, (), "expected an error " + path);
+    }
+    else {
+        return err;
+    }
 }
 
 @test:Config {
@@ -121,7 +127,7 @@ function listSourcesVPO() returns TestSuiteCases|error => listSources("vpo");
 
 function listSourcesEU() returns TestSuiteCases|error => listSources("eu");
 
-function listSourcesT() returns TestSuiteCases|error => listSources("t");
+function listSourcesTVE() returns TestSuiteCases|error => listSources("t");
 
 function listSources(string initialChars) returns TestSuiteCases|io:Error|file:Error {
     TestSuiteCases cases = {};
