@@ -353,6 +353,17 @@ public class Module {
         return val;
     }
 
+    // Corresponds to LLVMSetInitializer
+    public function setInitializer(ConstPointerValue global, ConstValue|Function initializer) {
+        foreach var [globalVar, props] in self.globalVariables {
+            if globalVar === global {
+                props.initializer = initializer;
+                return;
+            }
+        }
+        panic err:illegalArgument("no such global variable in this module");
+    }
+
     // Corresponds to LLVMAddAlias
     public function addAlias(Type aliasTy, ConstValue aliasee, string name, *GlobalSymbolProperties props) returns ConstPointerValue {
         string aliasName = self.escapeGlobalIdent(name);
