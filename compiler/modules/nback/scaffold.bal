@@ -148,8 +148,9 @@ class Scaffold {
         self.addresses = [];
         foreach int i in 0 ..< reprs.length() {
             bir:Register register = code.registers[i];
-            if register is bir:NamedRegister {
-                self.addresses.push(builder.alloca(reprs[i].llvm, (), register.varName));
+            bir:PositionString? varName = register.varName;
+            if varName is bir:PositionString {
+                self.addresses.push(builder.alloca(reprs[i].llvm, (), varName[1]));
             }
             else {
                 self.addresses.push(builder.alloca(reprs[i].llvm));
