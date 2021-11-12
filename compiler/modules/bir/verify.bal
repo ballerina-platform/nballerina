@@ -39,7 +39,7 @@ class VerifyContext {
     }
 
     function err(d:Message msg, Position pos) returns err:Semantic {
-        return err:semantic(msg, loc=d:location(self.mod.getPartFile(self.defn.partIndex), pos), functionName=self.defn.symbol.identifier);
+        return err:semantic(msg, loc=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;

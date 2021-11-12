@@ -38,7 +38,7 @@ class ConstFoldContext {
     }
     
     function semanticErr(d:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, functionName=self.defn.name);
+        return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, defnName=self.defn.name);
     }
 
     function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {

@@ -22,9 +22,9 @@ function testCompileVPO(string path, string kind) returns io:Error? {
         string msg = "compilation error";
         if err is err:Any {
             // JBUG #31334 cast
-            string? functionName = (<err:Detail>err.detail()).functionName;
-            if functionName is string {
-                msg += " :function " + functionName;
+            string? defnName = (<err:Detail>err.detail()).defnName;
+            if defnName != () {
+                msg += " :definition " + defnName;
             }
         }
         test:assertEquals(err, (), msg);

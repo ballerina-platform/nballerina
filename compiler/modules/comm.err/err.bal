@@ -3,7 +3,7 @@ import wso2/nballerina.comm.diagnostic as d;
 
 public type Detail record {
     d:Location? location;
-    string? functionName;
+    string? defnName;
 };
 
 public type Any Syntax|Semantic|Unimplemented;
@@ -15,16 +15,16 @@ public type Unimplemented distinct error<Detail>;
 
 public type Panic distinct error;
 
-public function syntax(d:Message m, d:Location loc, string? functionName = (), error? cause = ()) returns Syntax {
-    return error Syntax(d:messageToString(m), cause, location=loc, functionName=functionName);
+public function syntax(d:Message m, d:Location loc, string? defnName = (), error? cause = ()) returns Syntax {
+    return error Syntax(d:messageToString(m), cause, location=loc, defnName=defnName);
 }
 
-public function semantic(d:Message m, d:Location loc, string? functionName = (), error? cause = ()) returns Semantic {
-    return error Semantic(d:messageToString(m), cause, location=loc, functionName=functionName);
+public function semantic(d:Message m, d:Location loc, string? defnName = (), error? cause = ()) returns Semantic {
+    return error Semantic(d:messageToString(m), cause, location=loc, defnName=defnName);
 }
 
-public function unimplemented(d:Message m, d:Location loc, string? functionName = (), error? cause = ()) returns Unimplemented {
-    return error Unimplemented(d:messageToString(m), cause, location=loc, functionName=functionName);
+public function unimplemented(d:Message m, d:Location loc, string? defnName = (), error? cause = ()) returns Unimplemented {
+    return error Unimplemented(d:messageToString(m), cause, location=loc, defnName=defnName);
 }
 
 // This is intended to be used with `panic`.

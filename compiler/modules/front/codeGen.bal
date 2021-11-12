@@ -121,11 +121,11 @@ class CodeGenContext {
     }
 
     function semanticErr(d:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=self.location(pos), cause=cause, functionName=self.functionDefn.name);
+        return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
     }
 
     function unimplementedErr(d:Message msg, s:Position? pos = (), error? cause = ()) returns err:Unimplemented {
-        return err:unimplemented(msg, loc=self.location(pos), cause=cause, functionName=self.functionDefn.name);
+        return err:unimplemented(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
     }
     
     private function location(s:Position? pos) returns d:Location {

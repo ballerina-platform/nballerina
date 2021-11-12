@@ -99,7 +99,7 @@ function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefi
     }
     Import? imported = mod.partPrefixes[modDefn.part.partIndex][prefix];
     if imported == () {
-        return err:semantic(`no import declaration for ${prefix}`, loc=s:locationInDefn(modDefn), functionName=modDefn.name);
+        return err:semantic(`no import declaration for ${prefix}`, loc=s:locationInDefn(modDefn), defnName=modDefn.name);
     }
     else {
         imported.used = true;
@@ -112,5 +112,5 @@ function lookupImportedConst(ModuleSymbols mod, s:ModuleLevelDefn modDefn, strin
     if defn is s:ResolvedConst {
         return defn[1];
     }
-    return err:semantic(`${prefix + ":" + varName} is not defined as a public const`, loc=s:locationInDefn(modDefn), functionName=modDefn.name);
+    return err:semantic(`${prefix + ":" + varName} is not defined as a public const`, loc=s:locationInDefn(modDefn), defnName=modDefn.name);
 }
