@@ -337,10 +337,10 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     check validateExprOpPos(expr, tok);
 }
 
-type ExprOpPos BinaryExpr|UnaryExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr|TypeCastExpr;
+type ExprOpPos BinaryExpr|UnaryExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|MemberAccessLExpr|FieldAccessExpr|FieldAccessLExpr|TypeCastExpr;
 type ExprKwPos CheckingExpr|ErrorConstructorExpr|TypeTestExpr;
 type ExprNamePos FunctionCallExpr|MethodCallExpr;
-type ExprParanPos FunctionCallExpr|MethodCallExpr;
+type ExprParenPos FunctionCallExpr|MethodCallExpr;
 
 function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
     if expr is ExprOpPos|ExprKwPos {
@@ -401,7 +401,7 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
             test:assertEquals(expr.funcName, newName);
         }
     }
-    if expr is ExprParanPos {
+    if expr is ExprParenPos {
         check tok.moveToPos(expr.openParenPos, MODE_NORMAL);
         test:assertEquals(tok.current(), "(");
     }

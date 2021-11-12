@@ -261,7 +261,8 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     if t is [IDENTIFIER, string] {
         Position namePos = tok.currentStartPos();
         check tok.advance();
-        var [prefix, varName, varNamePos] = check parseOptQualIdentifier(tok, t[1]);
+        var [prefixNamePos, varName] = check parseOptQualIdentifier(tok, t[1]);
+        [string?, Position?] [prefix, varNamePos] = prefixNamePos == () ? [(), ()] : prefixNamePos;
         if varNamePos != () {
             namePos = varNamePos;
         }
@@ -455,7 +456,8 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     match t {
         [IDENTIFIER, var identifier] => {
             check tok.advance();
-            var [prefix, varName, varNamePos] = check parseOptQualIdentifier(tok, identifier);
+            var [prefixNamePos, varName] = check parseOptQualIdentifier(tok, identifier);
+            [string?, Position?] [prefix, varNamePos] = prefixNamePos == () ? [(), ()] : prefixNamePos;
             Position endPos = tok.currentEndPos();
             if prefix != () {
                 endPos = tok.previousEndPos();
@@ -493,14 +495,14 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     return parseError(tok);
 }
 
-function parseOptQualIdentifier(Tokenizer tok, string identifier) returns [string?, string, Position?]|err:Syntax {
+function parseOptQualIdentifier(Tokenizer tok, string identifier) returns [[string, Position]?, string]|err:Syntax {
     if tok.current() == ":" {
         check tok.advance();
         Position namePos = tok.currentStartPos();
-        return [identifier, check tok.expectIdentifier(), namePos];
+        return [[identifier, namePos], check tok.expectIdentifier()];
     }
     else {
-        return [(), identifier, ()];
+        return [(), identifier];
     }
 }
 
