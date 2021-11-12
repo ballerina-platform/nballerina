@@ -259,13 +259,9 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Position startPos = tok.currentStartPos();
     Position endPos = tok.currentEndPos();
     if t is [IDENTIFIER, string] {
-        Position namePos = tok.currentStartPos();
+        Position identifierPos = tok.currentStartPos();
         check tok.advance();
-        var [prefixNamePos, varName] = check parseOptQualIdentifier(tok, t[1]);
-        [string?, Position?] [prefix, varNamePos] = prefixNamePos == () ? [(), ()] : prefixNamePos;
-        if varNamePos != () {
-            namePos = varNamePos;
-        }
+        var [prefix, varName, namePos] = check parseOptQualIdentifier(tok, t[1], identifierPos);
         if tok.current() == "(" {
             return finishFunctionCallExpr(tok, prefix, varName, startPos, namePos);
         }
@@ -455,9 +451,9 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     }
     match t {
         [IDENTIFIER, var identifier] => {
+            Position identifierPos = tok.currentStartPos();
             check tok.advance();
-            var [prefixNamePos, varName] = check parseOptQualIdentifier(tok, identifier);
-            [string?, Position?] [prefix, varNamePos] = prefixNamePos == () ? [(), ()] : prefixNamePos;
+            var [prefix, varName, _] = check parseOptQualIdentifier(tok, identifier, identifierPos);
             Position endPos = tok.currentEndPos();
             if prefix != () {
                 endPos = tok.previousEndPos();
@@ -495,14 +491,14 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     return parseError(tok);
 }
 
-function parseOptQualIdentifier(Tokenizer tok, string identifier) returns [[string, Position]?, string]|err:Syntax {
+function parseOptQualIdentifier(Tokenizer tok, string identifier, Position identifierPos) returns [string?, string, Position]|err:Syntax {
     if tok.current() == ":" {
         check tok.advance();
         Position namePos = tok.currentStartPos();
-        return [[identifier, namePos], check tok.expectIdentifier()];
+        return [identifier, check tok.expectIdentifier(), namePos];
     }
     else {
-        return [(), identifier];
+        return [(), identifier, identifierPos];
     }
 }
 
