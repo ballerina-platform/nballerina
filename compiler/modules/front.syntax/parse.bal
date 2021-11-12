@@ -50,8 +50,7 @@ public function parseModulePart(ScannedModulePart scanned) returns ModulePart|er
     return part;
 }
 
-public function parseExpression(string[] lines, FilePath path) returns Expr|err:Syntax {
-    SourceFile file = createSourceFile(lines, path);
+public function parseExpression(SourceFile file) returns Expr|err:Syntax {
     Tokenizer tok = new (file);
     check tok.advance();
     Expr expr = check parseExpr(tok);

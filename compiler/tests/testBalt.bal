@@ -25,9 +25,8 @@ function testBalt(string baltName, int offset, BaltTestHeader header, string[] l
     }
     else {
         string msg = "compilation error";
-        if err is err:Any {
-            // JBUG #31334 cast
-            string? defnName = (<err:Detail>err.detail()).defnName;
+        if err is err:Diagnostic {
+            string? defnName = err.detail().defnName;
             if defnName != () {
                 msg += ": definition " + defnName;
             }

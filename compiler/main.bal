@@ -6,7 +6,7 @@ import wso2/nballerina.comm.diagnostic as d;
 import ballerina/io;
 import ballerina/file;
 
-type CompileError err:Any|io:Error|file:Error;
+type CompileError err:Diagnostic|io:Error|file:Error;
 
 public type Options record {
     boolean testJsonTypes = false;
@@ -39,7 +39,7 @@ public function main(string[] filenames, *Options opts) returns error? {
         if filenames.length() > 1 {
             return error("multiple input files not supported with --showTypes");
         }
-        check showTypes([{ filename: filenames[0] }]);
+        check printDiagnostic(showTypes([{ filename: filenames[0] }]));
         return;
     }
     nback:Options nbackOptions = {
@@ -49,7 +49,7 @@ public function main(string[] filenames, *Options opts) returns error? {
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            check compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            check printDiagnostic(compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts));
         }
         else if ext == TEST_EXTENSION {
             check compileBaltFile(filename, opts.outDir ?: check file:parentPath(filename), nbackOptions, opts);
@@ -58,8 +58,21 @@ public function main(string[] filenames, *Options opts) returns error? {
             return error("input filename must have a .bal or .balt extension");
         }
         else {
-            return error(d:format(`unsupported extension ${ext}`));
+            return error(d:messageFormat(`unsupported extension ${ext}`));
         }
+    }
+}
+
+function printDiagnostic(CompileError? err) returns error? {
+    if err is err:Diagnostic {
+        foreach string line in d:format(err.detail()) {
+            io:fprintln(io:stderr, line);
+        }
+        // Don't want details to be displayed twice
+        return error(err.message());
+    }
+    else {
+        return err;
     }
 }
 

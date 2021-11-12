@@ -60,7 +60,7 @@ function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Opt
     return llMod;
 }
 
-function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Any {
+function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Diagnostic {
     BaltTestCase[] tests = [];
     string[] lines = check io:fileReadLines(path);
 

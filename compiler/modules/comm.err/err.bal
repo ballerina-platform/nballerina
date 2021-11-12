@@ -1,30 +1,25 @@
 // Names here are chosen so they work with `err:` prefix.
 import wso2/nballerina.comm.diagnostic as d;
 
-public type Detail record {
-    d:Location? location;
-    string? defnName;
-};
+public type Diagnostic error<d:Diagnostic>;
 
-public type Any Syntax|Semantic|Unimplemented;
-
-// Grammatical inconsistency here is reluctantly intentional
-public type Syntax distinct error<Detail>;
-public type Semantic distinct error<Detail>;
-public type Unimplemented distinct error<Detail>;
+public type Syntax error<d:SyntaxDiagnostic>;
+public type Semantic error<d:SemanticDiagnostic>;
+public type Unimplemented error<d:UnimplementedDiagnostic>;
 
 public type Panic distinct error;
 
+// XXX the `cause` argument here is not really right: we just it for errors from numeric conversion functions
 public function syntax(d:Message m, d:Location loc, string? defnName = (), error? cause = ()) returns Syntax {
-    return error Syntax(d:messageToString(m), cause, location=loc, defnName=defnName);
-}
+    return error Syntax("syntax error", cause, message=d:messageToString(m), location=loc, defnName=defnName);
+} 
 
 public function semantic(d:Message m, d:Location loc, string? defnName = (), error? cause = ()) returns Semantic {
-    return error Semantic(d:messageToString(m), cause, location=loc, defnName=defnName);
+    return error Semantic("semantic error", cause, message=d:messageToString(m), location=loc, defnName=defnName);
 }
 
 public function unimplemented(d:Message m, d:Location loc, string? defnName = (), error? cause = ()) returns Unimplemented {
-    return error Unimplemented(d:messageToString(m), cause, location=loc, defnName=defnName);
+    return error Unimplemented("unimplemented error", cause, message=d:messageToString(m), location=loc, defnName=defnName);
 }
 
 // This is intended to be used with `panic`.

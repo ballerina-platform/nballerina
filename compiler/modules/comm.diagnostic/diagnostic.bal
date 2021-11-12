@@ -14,6 +14,11 @@ const QUOTE = "'";
 // is consistent with the ordering of positions.
 public type Position int;
 
+public type Range readonly & record {|
+    Position startPos;
+    Position endPos;
+|};
+
 public type LineColumn readonly & [int, int];
 
 public type File readonly & object {
@@ -23,17 +28,62 @@ public type File readonly & object {
 };
 
 public type Location readonly & record {|
-    string filename;
-    LineColumn? startPos;
-    LineColumn? endPos;  
+    File file;
+    // If the `range` is just a position, then the end position is the end of the token.
+    Range|Position? range; 
+|};
+
+public function locationLineColumn(Location loc) returns LineColumn? {
+    var range = loc.range;
+    if range == () {
+        return ();
+    }
+    else {
+        Position startPos = range is Position ? range : range.startPos;
+        return loc.file.lineColumn(startPos);
+    }
+}
+
+public enum Category {
+    SYNTAX = "syntax",
+    SEMANTIC = "semantic",
+    UNIMPLEMENTED = "unimplemented"
+}
+
+// JBUG if this is readonly, then jBallerina rejects `error<Diagnostic>`
+// also err.detail() does not produce the right type
+// Probably #31334 is related
+public type Diagnostic record {|
+    Category category;
+    Location location;
+    string message;
+    string? defnName = ();
+|};
+
+public type SyntaxDiagnostic record {|
+    *Diagnostic;
+    SYNTAX category = SYNTAX;
+|};
+
+public type SemanticDiagnostic record {|
+    *Diagnostic;
+    SEMANTIC category = SEMANTIC;
+|};
+
+public type UnimplementedDiagnostic record {|
+    *Diagnostic;
+    UNIMPLEMENTED category = UNIMPLEMENTED;
 |};
 
 public function location(File file, Position? startPos = (), Position? endPos = ()) returns Location {
-    return {
-        filename: file.filename(),
-        startPos: startPos == () ? () : file.lineColumn(startPos),
-        endPos: endPos == () ? () : file.lineColumn(endPos)
-    };
+    Range|Position? range;
+    if startPos != () && endPos != () {
+        range = { startPos, endPos };
+    }
+    else {
+        range = startPos;
+    }
+    return { file, range };
 }
 
 public function messageToString(Message m) returns string {
@@ -41,12 +91,12 @@ public function messageToString(Message m) returns string {
         return m;
     }
     else {
-        return format(m);
+        return messageFormat(m);
     }
 }
 
 // string arguments are quoted; numbers are not
-public function format(Template t) returns string {
+public function messageFormat(Template t) returns string {
     string[] strs = [];
     int i = 0;
     foreach var ins in t.insertions {
@@ -63,4 +113,16 @@ public function format(Template t) returns string {
     }
     strs.push(t.strings[i]);
     return string:concat(...strs);
+}
+
+public function format(Diagnostic d) returns string[] {
+    Location loc = d.location;
+    string line = "error:" + loc.file.filename() + ":";
+    LineColumn? lc = locationLineColumn(loc);
+    if lc != () {
+        // lineColumn returns 0-based lines currently
+        line += lc[0].toString() + ":" + (lc[1] + 1).toString() + ":";
+    }
+    line += " " + d.message;
+    return [line];
 }

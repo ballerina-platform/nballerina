@@ -9,7 +9,7 @@ import wso2/nballerina.comm.diagnostic as d;
 public type ResolvedModule object {
     *bir:Module;
     public function getExports() returns ModuleExports;
-    public function validMain() returns err:Any?;
+    public function validMain() returns err:Diagnostic?;
 };
 
 class Module {
@@ -79,7 +79,7 @@ class Module {
         return createExports(self.syms);
     }
 
-    public function validMain() returns err:Any? {
+    public function validMain() returns err:Diagnostic? {
         return validEntryPoint(self.syms.defns);
     }
 
@@ -129,7 +129,7 @@ function groupImports(s:ScannedModulePart[] parts, bir:ModuleId modId) returns M
     return from var mi in miTable select mi;
 }
 
-public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|string?)[] resolvedImports) returns ResolvedModule|err:Any|io:Error {
+public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|string?)[] resolvedImports) returns ResolvedModule|err:Diagnostic|io:Error {
     ModuleSymbols syms = { tc: t:typeContext(env) };
     s:SourceFile[] files = from var p in scanned.parts select p.sourceFile();
     syms.partPrefixes.setLength(scanned.parts.length());
@@ -143,7 +143,7 @@ public function resolveModule(ScannedModule scanned, t:Env env, (ModuleExports|s
     return new Module(scanned.id, files, syms);
 }
 
-public function scanModule(SourcePart[] sourceParts, bir:ModuleId id) returns ScannedModule|err:Any|io:Error {
+public function scanModule(SourcePart[] sourceParts, bir:ModuleId id) returns ScannedModule|err:Diagnostic|io:Error {
     s:ScannedModulePart[] parts = [];
     foreach int i in 0 ..< sourceParts.length() {
         s:SourceFile file = check loadSourcePart(sourceParts[i], i);
@@ -167,7 +167,7 @@ function loadSourcePart(SourcePart part, int i) returns s:SourceFile|io:Error {
 
 final bir:ModuleId BALLERINA_IO = { org: "ballerina", names: ["io"] };
 
-function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] resolvedImports, s:SourceFile[] files, map<Import>[] partPrefixes) returns err:Any? {
+function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] resolvedImports, s:SourceFile[] files, map<Import>[] partPrefixes) returns err:Diagnostic? {
     ModuleIdImports[] importsById = scanned.importsById;
     foreach int i in 0 ..< importsById.length() {
         var moduleId = importsById[i].id;
@@ -198,7 +198,7 @@ function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] res
     }
 }
 
-function validEntryPoint(ModuleDefns mod) returns err:Any? {
+function validEntryPoint(ModuleDefns mod) returns err:Diagnostic? {
     s:ModuleLevelDefn? defn = mod["main"];
     if defn is s:FunctionDefn {
         if defn.vis != "public" {
@@ -214,7 +214,7 @@ function validEntryPoint(ModuleDefns mod) returns err:Any? {
     }
 }
 
-function validInit(ModuleDefns defns) returns err:Any? {
+function validInit(ModuleDefns defns) returns err:Diagnostic? {
     s:ModuleLevelDefn? defn = defns["init"];
     if defn is s:FunctionDefn {
         if defn.vis == "public" {
@@ -248,7 +248,7 @@ function addModulePart(ModuleDefns mod, s:ModulePart part) returns err:Semantic?
 }
 
 // This is old interface for showTypes
-public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:SemType>]|err:Any|io:Error {
+public function typesFromString(SourcePart[] sourceParts) returns [t:Env, map<t:SemType>]|err:Diagnostic|io:Error {
     t:Env env = new;
     ModuleSymbols syms = { tc: t:typeContext(env), allowAllTypes: true };
     foreach int i in 0 ..< sourceParts.length() {

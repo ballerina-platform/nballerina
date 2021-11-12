@@ -5,7 +5,7 @@ import wso2/nballerina.comm.err;
 import wso2/nballerina.types as t;
 // import wso2/nballerina.types.bdd;
 
-public function showTypes(front:SourcePart[] sources) returns err:Any|io:Error? {
+public function showTypes(front:SourcePart[] sources) returns err:Diagnostic|io:Error? {
     string[] results = check subtypeRels(sources);
     foreach var line in results {
         io:println(line);
@@ -13,7 +13,7 @@ public function showTypes(front:SourcePart[] sources) returns err:Any|io:Error? 
     // io:println("Total BDDs ", bddGetCount());
 }
 
-function subtypeRels(front:SourcePart[] sources) returns string[]|err:Any|io:Error {
+function subtypeRels(front:SourcePart[] sources) returns string[]|err:Diagnostic|io:Error {
     
     var [env, m] = check front:typesFromString(sources);
 

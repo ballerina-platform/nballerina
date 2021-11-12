@@ -133,7 +133,7 @@ function reduceToWords(string k, string rule, string[] fragment) returns err:Syn
             }
         }
         if tok.current() != () {
-            return err:syntax("superfluous input at end", location(k));
+            return err:syntax("superfluous input at end", d:location(file));
         }
     }
     return w;
@@ -277,12 +277,4 @@ function readCase(string path) returns string[]|error {
 function canonFileName(string base) returns string{
     string sansExt = base.substring(0, base.length() - SOURCE_EXTENSION.length());
     return sansExt + "-canon" + SOURCE_EXTENSION;
-}
-
-function location(string filename) returns d:Location {
-    return {
-        filename: filename,
-        startPos: (),
-        endPos: ()
-    };
 }
