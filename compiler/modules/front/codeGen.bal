@@ -660,7 +660,7 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
         }
         else {
             // if false whithout else block
-            return { block: branchBlock, assignments: [] };
+            return { block: branchBlock };
         }
     }
     else {
