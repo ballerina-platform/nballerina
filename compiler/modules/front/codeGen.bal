@@ -13,7 +13,7 @@ type Environment record {|
 
 type Binding record {|
     string name;
-    bir:NamedRegister reg;
+    bir:Register reg;
     boolean isFinal;
     boolean used = false;
     Binding? prev;
@@ -103,10 +103,10 @@ class CodeGenContext {
         self.returnType = returnType;
     }
 
-    function createRegister(bir:SemType t, bir:RegisterIdentity? identity = ()) returns bir:Register {
-        bir:Register reg = bir:createRegister(self.code, t, identity);
-        if identity != () {
-            self.registerVarNames[reg.number] = identity[0];
+    function createRegister(bir:SemType t, bir:PositionString? varName = ()) returns bir:Register {
+        bir:Register reg = bir:createRegister(self.code, t, varName);
+        if varName != () {
+            self.registerVarNames[reg.number] = varName[1];
         }
         return reg;
     }
@@ -268,7 +268,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     string[] paramNames = defn.paramNames;
     bir:Position[] paramPos = defn.paramPos;
     foreach int i in 0 ..< paramNames.length() {
-        bir:NamedRegister reg = <bir:NamedRegister> cx.createRegister(signature.paramTypes[i], [paramNames[i], paramPos[i]]);
+        bir:Register reg = cx.createRegister(signature.paramTypes[i], [paramPos[i], paramNames[i]]);
         bindings = { name: paramNames[i], reg, prev: bindings, isFinal: true };
     }
     var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
@@ -388,7 +388,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     s:RangeExpr range = stmt.range;
     var { result: lower, block: evalUpper } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, range.lower, t:INT));
     var { result: upper, block: initLoopVar } = check codeGenExprForInt(cx, evalUpper, env, check cx.foldExpr(env, range.upper, t:INT));
-    bir:NamedRegister loopVar = <bir:NamedRegister>cx.createRegister(t:INT, [varName, stmt.varPos]);
+    bir:Register loopVar = cx.createRegister(t:INT, [stmt.varPos, varName]);
     bir:AssignInsn init = { pos: stmt.kwPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
@@ -718,7 +718,7 @@ function codeGenIfElseNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environmen
 }
 
 function codeGenNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Binding binding, t:SemType narrowedType, bir:Result basis, d:Position pos) returns Environment {
-    bir:NamedRegister narrowed = <bir:NamedRegister> cx.createRegister(narrowedType, [binding.name, pos]);
+    bir:Register narrowed = cx.createRegister(narrowedType, [pos, binding.name]);
     bir:CondNarrowInsn insn = {
         result: narrowed,
         operand: binding.reg,
@@ -782,7 +782,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
             return cx.semanticErr(`duplicate declaration of ${varName}`, varPos);
         }
         t:SemType semType = check cx.resolveTypeDesc(td);
-        bir:NamedRegister result = <bir:NamedRegister>cx.createRegister(semType, [varName, varPos]);
+        bir:Register result = cx.createRegister(semType, [varPos, varName]);
         bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType, stmt.opPos);
         return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
     }
@@ -793,7 +793,7 @@ function codeGenWildcardDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, E
     if !t:isSubtype(cx.mod.tc, semType, t:ANY) {
         return cx.semanticErr("type descriptor of wildcard should be a subtype of any");
     }
-    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(semType, ["_", pos]), expr, semType, pos);
+    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(semType, [pos, "_"]), expr, semType, pos);
     return { block: nextBlock };
 }
 
@@ -803,7 +803,7 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
         return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr, stmt.opPos);
     }
     else if lValue is s:WILDCARD {
-        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(t:ANY, ["_", stmt.opPos]), expr, t:ANY, stmt.opPos);
+        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(t:ANY, [stmt.opPos, "_"]), expr, t:ANY, stmt.opPos);
         return { block: nextBlock };
     }
     else {
