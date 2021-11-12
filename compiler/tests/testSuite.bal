@@ -5,7 +5,8 @@ import ballerina/io;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 type TestSuiteCases map<[string, string]>;
 
@@ -64,11 +65,11 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
                 var [expectedFilename, expectedLineNo] = <FilenameLine> check expectedErrorLocation(err, path);
                 // JBUG #31334 cast needed
                 err:Detail detail = <err:Detail> err.detail();
-                test:assertTrue(detail.location is err:Location, "error without location");
-                string filename =(<err:Location>detail.location).filename;
+                test:assertTrue(detail.location is d:Location, "error without location");
+                string filename =(<d:Location>detail.location).filename;
                 test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
-                err:LineColumn? lc = detail.location?.startPos;
-                if lc is err:LineColumn {
+                d:LineColumn? lc = detail.location?.startPos;
+                if lc is d:LineColumn {
                     test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
                 }
             }

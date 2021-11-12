@@ -1,9 +1,10 @@
 import wso2/nballerina.types as t;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 public type SemType t:SemType;
-public type Position err:Position;
-public type File err:File;
+public type Position d:Position;
+public type File d:File;
 
 public type Module object {
     public function getId() returns ModuleId;

@@ -5,7 +5,7 @@
 // private members that are handles referring to the
 // C void* values.
 
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 import ballerina/io;
 
 // Operand of an unnamed variable/basic block

@@ -1,6 +1,7 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.nback;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 import ballerina/io;
 import ballerina/file;
@@ -57,7 +58,7 @@ public function main(string[] filenames, *Options opts) returns error? {
             return error("input filename must have a .bal or .balt extension");
         }
         else {
-            return error(err:format(`unsupported extension ${ext}`));
+            return error(d:format(`unsupported extension ${ext}`));
         }
     }
 }

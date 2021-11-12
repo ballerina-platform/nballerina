@@ -1,7 +1,7 @@
 import ballerina/io;
 
 import wso2/nballerina.front;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 import wso2/nballerina.types as t;
 // import wso2/nballerina.types.bdd;
 

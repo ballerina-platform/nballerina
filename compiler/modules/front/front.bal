@@ -3,7 +3,8 @@ import ballerina/io;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 public type ResolvedModule object {
     *bir:Module;
@@ -52,7 +53,7 @@ class Module {
         foreach int i in 0 ..< partPrefixes.length() {
             foreach var [prefix, { decl, used }] in partPrefixes[i].entries() {
                 if !used {
-                    return err:semantic(`import ${prefix} unused`, loc=err:location(self.files[i], decl.namePos));
+                    return err:semantic(`import ${prefix} unused`, loc=d:location(self.files[i], decl.namePos));
                 }
             }
         }
@@ -182,11 +183,11 @@ function importPartPrefixes(ScannedModule scanned, (ModuleExports|string?)[] res
         }
         foreach var decl in importsById[i].imports {
             if resolved == () {
-                err:Message msg = `unsupported module ${moduleIdToString(moduleId)}`;
-                return err:unimplemented(msg, loc=err:location(files[decl.partIndex], decl.namePos));
+                d:Message msg = `unsupported module ${moduleIdToString(moduleId)}`;
+                return err:unimplemented(msg, loc=d:location(files[decl.partIndex], decl.namePos));
             }
             else if resolved is string {
-                return err:semantic(resolved, loc=err:location(files[decl.partIndex], decl.namePos));
+                return err:semantic(resolved, loc=d:location(files[decl.partIndex], decl.namePos));
             }
             else {
                 string? declPrefix = decl.prefix;

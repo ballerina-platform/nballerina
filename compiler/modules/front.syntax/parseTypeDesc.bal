@@ -1,5 +1,5 @@
 // Parsing of type descriptors
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     if tok.current() == "function" {

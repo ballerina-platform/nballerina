@@ -1,7 +1,8 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.bir;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 type ResolveTypeError err:Semantic|err:Unimplemented;
 
@@ -215,7 +216,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
             else {
                 string qName = prefix + ":" + td.typeName;
-                err:Location loc =  s:locationInDefn(modDefn, td.pos);
+                d:Location loc =  s:locationInDefn(modDefn, td.pos);
                 if defn == () {
                     return err:semantic(`no public definition of ${qName}`, loc=loc);
                 }
@@ -271,7 +272,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     if td is s:XmlSequenceTypeDesc {
         t:SemType t = check resolveTypeDesc(mod, modDefn, depth, td.constituent);
-        err:Location loc =  err:location(modDefn.part.file, td.pos);
+        d:Location loc =  d:location(modDefn.part.file, td.pos);
         
         if !t:isSubtypeSimple(t, t:XML) {
             return err:semantic("type parameter for xml is not a subtype of xml", loc=loc);

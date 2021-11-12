@@ -1,5 +1,6 @@
 import ballerina/test;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 
@@ -17,7 +18,7 @@ class TestFoldContext {
     function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
         return ();
     }
-    function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
+    function semanticErr(d:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
         return err:semantic(msg, location("testConst.bal"), cause=cause);
     }
     function typeContext() returns t:Context {
@@ -69,7 +70,7 @@ function validConstExprs() returns map<ConstEvalTest> {
     return m;
 }
 
-function location(string filename) returns err:Location {
+function location(string filename) returns d:Location {
     return {
         filename: filename,
         startPos: (),

@@ -1,4 +1,4 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 const PREPARSE_TYPE_DESC = true;
 const PREPARSE_EXPR = false;

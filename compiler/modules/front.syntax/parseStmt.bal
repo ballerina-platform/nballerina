@@ -1,4 +1,4 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 function parseStmtBlock(Tokenizer tok) returns StmtBlock|err:Syntax {
     if tok.current() == "{" {

@@ -2,7 +2,7 @@
 // Spec bug float suffix after hex makes no sense
 // _ can be followed by identifier
 
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 //import ballerina/io;
 

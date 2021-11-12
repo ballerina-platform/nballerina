@@ -3,7 +3,8 @@ import ballerina/test;
 import ballerina/file;
 import ballerina/io;
 
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 // JBUG the `enable: false` fails to work if there is a comment on the line before it
 @test:Config {
@@ -31,7 +32,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
             else {
                 SourceFile file = part.file;
                 Tokenizer tok = new(file);
-                [err:Position, err:Position][] topLevelDefnPos = [];
+                [d:Position, d:Position][] topLevelDefnPos = [];
                 foreach ImportDecl decl in part.importDecls {
                     topLevelDefnPos.push([decl.startPos, decl.endPos]);
                     check tok.moveToPos(decl.startPos, MODE_NORMAL);
@@ -61,7 +62,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                     }
                 }
                 topLevelDefnPos = topLevelDefnPos.sort();
-                err:Position lastEnd = 1<<32;
+                d:Position lastEnd = 1<<32;
                 foreach var [startPos, endPos] in topLevelDefnPos {
                     test:assertTrue((startPos == (1<<32)) || (startPos > lastEnd), "overlapping top level definitions");
                     test:assertTrue(startPos < endPos, "invalid start and end positions");
