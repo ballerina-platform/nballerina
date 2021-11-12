@@ -659,7 +659,8 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
             return codeGenStmts(cx, branchBlock, env, taken);
         }
         else {
-            return cx.semanticErr("if else without a body");
+            // if false whithout else block
+            return { block: branchBlock };
         }
     }
     else {
