@@ -22,8 +22,6 @@ static inline TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
     }
     else {
         result.panicCode = 0;
-    }
-    if (result.panicCode == 0) {
         if (decQuadClass(dq) == DEC_CLASS_NEG_ZERO) {
             decQuadZero(dq);
         }
