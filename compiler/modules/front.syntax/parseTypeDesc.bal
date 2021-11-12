@@ -177,7 +177,8 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         [IDENTIFIER, var identifier] => {
             Position pos = tok.currentStartPos();
             check tok.advance();
-            var [prefix, typeName, varNamePose] = check parseOptQualIdentifier(tok, identifier);
+            var [prefixNamePos, typeName] = check parseOptQualIdentifier(tok, identifier);
+            [string?, Position?] [prefix, varNamePos] = prefixNamePos == () ? [(), ()] : prefixNamePos;
             Position endPos = tok.previousEndPos();
             return { startPos, endPos, prefix, typeName, pos };
         }

@@ -250,7 +250,7 @@ public type MethodCallExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
-    Position opPos;
+    Position opPos; // position of .
     Position openParenPos;
     Position namePos;
     string methodName;

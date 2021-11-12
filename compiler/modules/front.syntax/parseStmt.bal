@@ -34,9 +34,8 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
                     return parseVarDeclStmt(tok, startPos);
                 }
             }
-            Position pos = tok.currentStartPos();
             check tok.advance();
-            return finishIdentifierStmt(tok, identifier, pos, startPos);
+            return finishIdentifierStmt(tok, identifier, startPos);
         }
         "_" => {
             check tok.advance();
@@ -125,7 +124,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 
 
 // statement must not start with a type desc.
-function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Position startPos) returns Stmt|err:Syntax {
+function finishIdentifierStmt(Tokenizer tok, string identifier, Position startPos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
     if cur == "=" {
@@ -160,18 +159,18 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position pos, Po
             endPos = check tok.expectEnd(";");
             return { startPos, endPos, expr };
         }
-        return parseError(tok, "member access expr not allowed as a statement"); 
+        return parseError(tok, "member access expr not allowed as a statement");
     }
     else if cur == ":" {
         check tok.advance();
-        Position newNamePos = tok.currentStartPos();
+        Position namePos = tok.currentStartPos();
         string name = check tok.expectIdentifier();
-        return finishOptQualIdentifierStmt(tok, identifier, name, pos, startPos, newNamePos);
+        return finishOptQualIdentifierStmt(tok, identifier, name, startPos, namePos);
     }
-    return finishOptQualIdentifierStmt(tok, (), identifier, pos, startPos, startPos);
+    return finishOptQualIdentifierStmt(tok, (), identifier, startPos, startPos);
 }
 
-function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string identifier, Position pos, Position startPos, Position namePos) returns Stmt|err:Syntax {
+function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string identifier, Position startPos, Position namePos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
     if cur == "(" {
@@ -190,7 +189,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
         else {
             endPos = tok.previousEndPos();
             VarRefExpr container = { startPos, endPos, varName: identifier };
-            FieldAccessLExpr lValue = { startPos, endPos, fieldName: name, container, opPos: pos };
+            FieldAccessLExpr lValue = { startPos, endPos, fieldName: name, container, opPos };
             Token? t = tok.current();
             if t == "=" {
                 return finishAssignStmt(tok, lValue, startPos);
