@@ -93,7 +93,7 @@ class CodeGenContext {
     final bir:FunctionCode code;
     final t:SemType returnType;
     LoopContext? loopContext = ();
-    private final string?[] registerVarNames = [];
+    private final bir:PositionString?[] registerVarNames = [];
 
     function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
         self.mod = mod;
@@ -106,7 +106,7 @@ class CodeGenContext {
     function createRegister(bir:SemType t, bir:PositionString? varName = ()) returns bir:Register {
         bir:Register reg = bir:createRegister(self.code, t, varName);
         if varName != () {
-            self.registerVarNames[reg.number] = varName[1];
+            self.registerVarNames[reg.number] = varName;
         }
         return reg;
     }
@@ -115,9 +115,19 @@ class CodeGenContext {
         return self.code.registers.length();
     }
     function registerVarName(int registerNumber) returns string? {
-        return self.registerVarNames[registerNumber];
+        bir:PositionString? posString = self.registerVarNames[registerNumber];
+        if posString != () {
+            return posString[1];
+        }
     }
-    
+
+    function registerPosition(int registerNumber) returns bir:Position? {
+        bir:PositionString? posString = self.registerVarNames[registerNumber];
+        if posString != () {
+            return posString[0];
+        }
+    }
+
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {
         return bir:createBasicBlock(self.code, name);
     }
