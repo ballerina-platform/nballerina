@@ -163,33 +163,32 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position startPo
     }
     else if cur == ":" {
         check tok.advance();
-        Position namePos = tok.currentStartPos();
-        string name = check tok.expectIdentifier();
-        return finishOptQualIdentifierStmt(tok, identifier, name, startPos, namePos);
+        Position localNamePos = tok.currentStartPos();
+        return finishOptQualIdentifierStmt(tok, identifier, check tok.expectIdentifier(), startPos, localNamePos);
     }
     return finishOptQualIdentifierStmt(tok, (), identifier, startPos, startPos);
 }
 
-function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string identifier, Position startPos, Position namePos) returns Stmt|err:Syntax {
+function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string identifier, Position startPos, Position identifierPos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
     if cur == "(" {
-        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, startPos, namePos);
+        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, startPos, identifierPos);
         return finishCallStmt(tok, expr, startPos);
     }
     else if cur == "." {
         Position opPos = tok.currentStartPos();
         VarRefExpr varRef = { startPos, endPos:tok.previousEndPos(), varName: identifier, prefix };
         check tok.advance();
-        Position newNamePos = tok.currentStartPos();
-        string name = check tok.expectIdentifier();
+        Position localNamePos = tok.currentStartPos();
+        string localName = check tok.expectIdentifier();
         if tok.current() == "(" {
-            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, name, startPos, newNamePos, opPos), startPos);
+            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, localName, startPos, localNamePos, opPos), startPos);
         }
         else {
             endPos = tok.previousEndPos();
             VarRefExpr container = { startPos, endPos, varName: identifier };
-            FieldAccessLExpr lValue = { startPos, endPos, fieldName: name, container, opPos };
+            FieldAccessLExpr lValue = { startPos, endPos, fieldName: localName, container, opPos };
             Token? t = tok.current();
             if t == "=" {
                 return finishAssignStmt(tok, lValue, startPos);
