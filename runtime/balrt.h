@@ -245,6 +245,11 @@ typedef struct {
     GC char *bytes;
 } StringData;
 
+typedef struct {
+    TaggedPtr ptr;
+    PanicCode panicCode;
+} TaggedPtrPanicCode;
+
 #define ALIGN_HEAP 8
 
 // Don't declare functions here if they are balrt_inline.c
@@ -288,6 +293,10 @@ extern void _bal_print_mangled_name(const char *mangledName, FILE *fp);
 // Returns an error value
 extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
 extern NORETURN COLD void _bal_panic_internal(PanicCode code);
+
+extern TaggedPtr _bal_decimal_const(const char *decString);
+extern TaggedPtrPanicCode _bal_decimal_add(TaggedPtr tp1, TaggedPtr tp2);
+extern TaggedPtrPanicCode _bal_decimal_sub(TaggedPtr tp1, TaggedPtr tp2);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym

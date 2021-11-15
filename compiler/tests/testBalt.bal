@@ -1,4 +1,4 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 import ballerina/test;
 import ballerina/file;
@@ -25,11 +25,10 @@ function testBalt(string baltName, int offset, BaltTestHeader header, string[] l
     }
     else {
         string msg = "compilation error";
-        if err is err:Any {
-            // JBUG #31334 cast
-            string? functionName = (<err:Detail>err.detail()).functionName;
-            if functionName is string {
-                msg += ": function " + functionName;
+        if err is err:Diagnostic {
+            string? defnName = err.detail().defnName;
+            if defnName != () {
+                msg += ": definition " + defnName;
             }
         }
         test:assertEquals(err, (), msg);

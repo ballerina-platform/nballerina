@@ -1,4 +1,4 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 // join words without space
 const CLING = ();

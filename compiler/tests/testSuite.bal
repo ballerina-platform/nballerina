@@ -5,7 +5,8 @@ import ballerina/io;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 type TestSuiteCases map<[string, string]>;
 
@@ -19,11 +20,10 @@ function testCompileVPO(string path, string kind) returns io:Error? {
     }
     else {
         string msg = "compilation error";
-        if err is err:Any {
-            // JBUG #31334 cast
-            string? functionName = (<err:Detail>err.detail()).functionName;
-            if functionName is string {
-                msg += " :function " + functionName;
+        if err is err:Diagnostic {
+            string? defnName = err.detail().defnName;
+            if defnName != () {
+                msg += " :definition " + defnName;
             }
         }
         test:assertEquals(err, (), msg);
@@ -50,7 +50,7 @@ function testSemTypes(string path, string kind) returns error? {
 }
 function testCompileEU(string path, string kind) returns file:Error|io:Error? {
     CompileError? err = testCompileFile(path);
-    if err is err:Any? {
+    if err is err:Diagnostic? {
         if err is () {
             test:assertNotExactEquals(err, (), "expected an error " + path);
         }
@@ -64,18 +64,16 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
                 test:assertFalse(err is err:Unimplemented, "unimplemented error on E test" + path);
             }
             // io:println U errors are reported as semantic errors
-            else if !err.message().includes("'io:println'") {
+            else if !err.detail().message.includes("'io:println'") {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
             if kind == "e" || kind == "ue" {
                 var [expectedFilename, expectedLineNo] = <FilenameLine> check expectedErrorLocation(err, path);
-                // JBUG #31334 cast needed
-                err:Detail detail = <err:Detail> err.detail();
-                test:assertTrue(detail.location is err:Location, "error without location");
-                string filename =(<err:Location>detail.location).filename;
+                d:Location loc = err.detail().location;
+                string filename = loc.file.filename();
                 test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
-                err:LineColumn? lc = detail.location?.startPos;
-                if lc is err:LineColumn {
+                d:LineColumn? lc = d:locationLineColumn(loc);
+                if lc is d:LineColumn {
                     test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
                 }
             }

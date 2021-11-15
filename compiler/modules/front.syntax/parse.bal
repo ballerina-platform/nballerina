@@ -1,5 +1,6 @@
 // Parse one file in a module
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 public type FilePath record {|
     string filename;
@@ -49,8 +50,7 @@ public function parseModulePart(ScannedModulePart scanned) returns ModulePart|er
     return part;
 }
 
-public function parseExpression(string[] lines, FilePath path) returns Expr|err:Syntax {
-    SourceFile file = createSourceFile(lines, path);
+public function parseExpression(SourceFile file) returns Expr|err:Syntax {
     Tokenizer tok = new (file);
     check tok.advance();
     Expr expr = check parseExpr(tok);
@@ -206,10 +206,10 @@ function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
     return tok.err(message);
 }
 
-public function defnLocation(ModuleLevelDefn defn) returns err:Location {
-    return err:location(defn.part.file, defn.namePos);
+public function defnLocation(ModuleLevelDefn defn) returns d:Location {
+    return d:location(defn.part.file, defn.namePos);
 }
 
-public function locationInDefn(ModuleLevelDefn defn, Position? pos = ()) returns err:Location {
-    return err:location(defn.part.file, pos);
+public function locationInDefn(ModuleLevelDefn defn, Position? pos = ()) returns d:Location {
+    return d:location(defn.part.file, pos);
 }

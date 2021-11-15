@@ -11,9 +11,6 @@
 		},
 		{
 			"path": "docs"
-		},
-		{
-			"path": "llvm_jni"
 		}
 	],
 	"settings": {}

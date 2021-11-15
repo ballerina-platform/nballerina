@@ -9,7 +9,8 @@
 // - the type of an === expression is boolean, even if the operands have singleton type (i.e. foldable for purpose 
 // does not imply foldable for purpose 2)
 // These lead to cascading effects in expressions that contain them.
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.types as t;
 
@@ -18,7 +19,7 @@ type SimpleConst string|int|float|boolean|();
 type FoldError ResolveTypeError;
 
 type FoldContext object {
-    function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic;
+    function semanticErr(d:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
     function typeContext() returns t:Context;
@@ -36,8 +37,8 @@ class ConstFoldContext {
         self.mod = mod;
     }
     
-    function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=err:location(self.defn.part.file, pos), cause=cause, functionName=self.defn.name);
+    function semanticErr(d:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, defnName=self.defn.name);
     }
 
     function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {

@@ -1,4 +1,4 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 function parseStmtBlock(Tokenizer tok) returns StmtBlock|err:Syntax {
     if tok.current() == "{" {
@@ -339,7 +339,7 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
             IfElseStmt elseIfStmt = check parseIfElseStmt(tok, ifFalseStartPos);
             Position blockStartPos = elseIfStmt.ifTrue.startPos;
             StmtBlock? elseIfFalseBlock = elseIfStmt.ifFalse;
-            Position blockEndPos = (elseIfFalseBlock is StmtBlock)? (elseIfFalseBlock.endPos) : elseIfStmt.ifTrue.startPos;
+            Position blockEndPos = (elseIfFalseBlock ?: elseIfStmt.ifTrue).endPos;
             ifFalse = { startPos: blockStartPos, endPos: blockEndPos, stmts: [elseIfStmt] };
         }
         // if exp1 { } else { }

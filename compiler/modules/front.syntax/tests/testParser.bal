@@ -1,7 +1,8 @@
 import ballerina/test;
 import ballerina/io;
 
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 import ballerina/file;
 
 const SOURCE_EXTENSION = ".bal";
@@ -49,7 +50,7 @@ function testTokenizer(string k, string[] lines) returns error? {
     while true {
         err:Syntax|Token? t = advance(tok, k, lines);
         if t is Token {
-            err:LineColumn lc = file.lineColumn(tok.currentStartPos());
+            d:LineColumn lc = file.lineColumn(tok.currentStartPos());
             string src = lines[lc[0] - 1];
             int tStart = lc[1];
             string tStr = tokenToString(t);
@@ -132,7 +133,7 @@ function reduceToWords(string k, string rule, string[] fragment) returns err:Syn
             }
         }
         if tok.current() != () {
-            return err:syntax("superfluous input at end", location(k));
+            return err:syntax("superfluous input at end", d:location(file));
         }
     }
     return w;
@@ -276,12 +277,4 @@ function readCase(string path) returns string[]|error {
 function canonFileName(string base) returns string{
     string sansExt = base.substring(0, base.length() - SOURCE_EXTENSION.length());
     return sansExt + "-canon" + SOURCE_EXTENSION;
-}
-
-function location(string filename) returns err:Location {
-    return {
-        filename: filename,
-        startPos: (),
-        endPos: ()
-    };
 }

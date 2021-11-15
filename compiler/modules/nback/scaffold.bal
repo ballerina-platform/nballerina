@@ -1,4 +1,5 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
@@ -229,8 +230,8 @@ class Scaffold {
 
     function typeContext() returns t:Context => self.mod.typeContext;
 
-    function location(bir:Position pos) returns err:Location {
-        return err:location(self.file, pos);
+    function location(bir:Position pos) returns d:Location {
+        return d:location(self.file, pos);
     }
 
     function setDebugLocation(llvm:Builder builder, bir:Position pos, "file"? fileOnly = ()) {
@@ -262,8 +263,8 @@ class Scaffold {
         }
     }
 
-    function unimplementedErr(err:Message message, err:Position pos) returns err:Unimplemented {
-        return err:unimplemented(message, err:location(self.file, pos));
+    function unimplementedErr(d:Message message, d:Position pos) returns err:Unimplemented {
+        return err:unimplemented(message, d:location(self.file, pos));
     }
 
     function initTypes() returns InitTypes => self.mod.llInitTypes;

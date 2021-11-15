@@ -1,6 +1,7 @@
 import ballerina/test;
 
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 function validateModuleLevelDefnPos(ModuleLevelDefn defn, Tokenizer tok) returns err:Syntax? {
     check tok.moveToPos(defn.startPos, MODE_NORMAL);
@@ -27,14 +28,16 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     test:assertEquals(stmt.endPos, tok.previousEndPos()); // parser advances to next token after parsing the import
     test:assertEquals(stmt.toString(), newStmt.toString());
     test:assertTrue(stmt.startPos >= parentStartPos && stmt.endPos <= parentEndPos, "child node outside of parent");
-    [err:Position, err:Position][] childNodePos = [];
+    [d:Position, d:Position][] childNodePos = [];
     if stmt is IfElseStmt {
+        check validateStmtBlockPos(stmt.ifTrue, tok, parentStartPos, parentEndPos);
         foreach Stmt trueStmt in stmt.ifTrue.stmts {
             check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
         }
         StmtBlock? ifFalse = stmt.ifFalse;
         if ifFalse is StmtBlock {
+            check validateStmtBlockPos(ifFalse, tok, parentStartPos, parentEndPos);
             foreach Stmt falseStmt in ifFalse.stmts {
                 check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
                 childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
@@ -43,6 +46,7 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
     }
     else if stmt is MatchStmt {
         foreach var clause in stmt.clauses {
+            check validateStmtBlockPos(clause.block, tok, parentStartPos, parentEndPos);
             foreach var matchStmt in clause.block.stmts {
                 check validateStatementPos(matchStmt, tok, stmt.startPos, stmt.endPos);
                 childNodePos.push([matchStmt.startPos, matchStmt.endPos]);
@@ -50,13 +54,14 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
         }
     }
     else if stmt is (WhileStmt|ForeachStmt) {
+        check validateStmtBlockPos(stmt.body, tok, parentStartPos, parentEndPos);
         foreach var bodyStmt in stmt.body.stmts {
             check validateStatementPos(bodyStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([bodyStmt.startPos, bodyStmt.endPos]);
         }
     }
     childNodePos = childNodePos.sort();
-    err:Position lastEnd = stmt.startPos;
+    d:Position lastEnd = stmt.startPos;
     foreach var [startPos, endPos] in childNodePos {
         test:assertTrue(startPos < endPos, "invalid start and end positions");
         test:assertTrue((startPos == stmt.startPos) || (startPos > lastEnd), "overlapping statements");
@@ -161,9 +166,6 @@ function validateMatchClausePos(MatchClause clause, Tokenizer tok, Position pare
 function validateStmtBlockPos(StmtBlock block, Tokenizer tok, Position parentStartPos, Position parentEndPos) returns err:Syntax? {
     check tok.moveToPos(block.startPos, MODE_NORMAL);
     test:assertEquals(tok.current(), "{", "invalid start token for StmtBlock");
-    StmtBlock newBlock = check parseStmtBlock(tok);
-    test:assertEquals(newBlock.toString(), block.toString());
-    test:assertEquals(tok.previousEndPos(), block.endPos, "invalid endPos value");
     check tok.moveToPos(block.endPos, MODE_NORMAL);
     test:assertEquals(tok.current(), "}", "invalid end token for StmtBlock");
     test:assertTrue(block.startPos > parentStartPos && block.endPos <= parentEndPos, "stmt block outside of parent");
@@ -292,7 +294,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
         test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
         test:assertTrue(testValidExprEnd(tok.file, expr.endPos, expr), endPosErrorMessage(tok, expr.endPos));
-        [err:Position, err:Position][] childNodePos = [];
+        [d:Position, d:Position][] childNodePos = [];
         if expr is BinaryExpr {
             check validateExpressionPos(expr.left, tok, expr.startPos, expr.endPos);
             childNodePos.push([expr.left.startPos, expr.left.endPos]);
@@ -314,7 +316,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             }
         }
 
-        err:Position lastEnd = expr.startPos;
+        d:Position lastEnd = expr.startPos;
         foreach var [startPos, endPos] in childNodePos {
             test:assertTrue(startPos <= endPos, "invalid start and end positions"); // single character expressions get same start and end pos
             test:assertTrue((startPos == expr.startPos) || (startPos > lastEnd), "overlapping statements");
@@ -451,7 +453,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     test:assertTrue(td.startPos >= parentStartPos && td.endPos <= parentEndPos, "child node outside of parent");
     test:assertFalse(testPositionIsWhiteSpace(tok.file, td.startPos), "start position is a white space");
     test:assertTrue(testValidTypeDescEnd(tok.file, td.endPos, td), endPosErrorMessage(tok, td.endPos));
-    [err:Position, err:Position][] childNodePos = [];
+    [d:Position, d:Position][] childNodePos = [];
     if td is ListTypeDesc {
         foreach var member in td.members {
             check validateTypeDescPos(member, tok, td.startPos, td.endPos);
@@ -484,7 +486,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         }
     }
     childNodePos = childNodePos.sort();
-    err:Position lastEnd = td.startPos;
+    d:Position lastEnd = td.startPos;
     foreach var [startPos, endPos] in childNodePos {
         test:assertTrue(startPos <= endPos, "invalid start and end positions"); // single character td get same start and end pos
         test:assertTrue((startPos == td.startPos) || (startPos > lastEnd), "overlapping type descriptions");

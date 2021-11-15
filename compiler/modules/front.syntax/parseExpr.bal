@@ -1,4 +1,4 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();

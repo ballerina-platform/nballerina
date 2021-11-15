@@ -1,4 +1,5 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 type Token FixedToken|VariableLengthToken;
 type FixedToken SingleCharDelim|MultiCharDelim|Keyword;
@@ -381,7 +382,7 @@ class Tokenizer {
             return t[1];
         }
         else {
-            err:Template msg;
+            d:Message msg;
             if t is string {
                 msg = `expected an identifier; got ${t}`;
             }
@@ -400,7 +401,7 @@ class Tokenizer {
 
     function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns err:Syntax? {
         if self.curTok != tok {
-            err:Template msg;
+            d:Message msg;
             Token? t = self.curTok;
             if t is string {
                 msg = `expected ${tok}; got ${t}`;
@@ -413,8 +414,8 @@ class Tokenizer {
         check self.advance();
     }
 
-    function err(err:Message msg) returns err:Syntax {
-        return err:syntax(msg, loc=err:location(self.file, self.currentStartPos()));
+    function err(d:Message msg) returns err:Syntax {
+        return err:syntax(msg, loc=d:location(self.file, self.currentStartPos()));
     }
 
     function save() returns TokenizerState {
@@ -467,7 +468,7 @@ function unpackPosition(Position pos) returns [int, int] & readonly {
 }
 
 public readonly class SourceFile {
-    *err:File;
+    *d:File;
     private ScannedLine[] lines;
     private string fn;
     private string? dir;
@@ -482,7 +483,7 @@ public readonly class SourceFile {
 
     public function directory() returns string? => self.dir;
 
-    public function lineColumn(Position pos) returns err:LineColumn {
+    public function lineColumn(Position pos) returns d:LineColumn {
         return unpackPosition(pos);
     }
 

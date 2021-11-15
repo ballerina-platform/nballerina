@@ -1,4 +1,4 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
 import wso2/nballerina.front;
@@ -60,7 +60,7 @@ function compileModule(bir:ModuleId modId, front:SourcePart[] sources, nback:Opt
     return llMod;
 }
 
-function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Any {
+function parseBalt(string path) returns  BaltTestCase[]|io:Error|file:Error|err:Diagnostic {
     BaltTestCase[] tests = [];
     string[] lines = check io:fileReadLines(path);
 

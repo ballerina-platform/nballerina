@@ -5,7 +5,7 @@
 // private members that are handles referring to the
 // C void* values.
 
-import nballerina.err;
+import wso2/nballerina.comm.err;
 import ballerina/io;
 
 // Operand of an unnamed variable/basic block
@@ -351,6 +351,17 @@ public class Module {
         self.globals[varName] = val;
         self.globalVariables.push([val, props]);
         return val;
+    }
+
+    // Corresponds to LLVMSetInitializer
+    public function setInitializer(ConstPointerValue global, ConstValue|Function initializer) {
+        foreach var [globalVar, props] in self.globalVariables {
+            if globalVar === global {
+                props.initializer = initializer;
+                return;
+            }
+        }
+        panic err:illegalArgument("no such global variable in this module");
     }
 
     // Corresponds to LLVMAddAlias

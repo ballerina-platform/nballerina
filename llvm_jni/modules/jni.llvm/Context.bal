@@ -1,5 +1,5 @@
 import ballerina/jballerina.java;
-import nballerina.err;
+import nballerina.comm.err as err;
 
 public distinct class Context {
     handle LLVMContext;

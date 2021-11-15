@@ -1,7 +1,8 @@
 // Use the types module to type-check the BIR
 
 import wso2/nballerina.types as t;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 class VerifyContext {
     private final Module mod;
@@ -37,8 +38,8 @@ class VerifyContext {
         return self.tc;
     }
 
-    function err(err:Message msg, Position pos) returns err:Semantic {
-        return err:semantic(msg, loc=err:location(self.mod.getPartFile(self.defn.partIndex), pos), functionName=self.defn.symbol.identifier);
+    function err(d:Message msg, Position pos) returns err:Semantic {
+        return err:semantic(msg, loc=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
@@ -370,7 +371,7 @@ function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
     return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
 }
 
-function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, err:Message msg, Position pos) returns err:Semantic? {
+function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position pos) returns err:Semantic? {
     if operand is Register {
         if !vc.isSubtype(operand.semType, semType) {
             return vc.err(msg, pos);
