@@ -117,12 +117,12 @@ public function messageFormat(Template t) returns string {
 
 public function format(Diagnostic d) returns string[] {
     Location loc = d.location;
-    string line = "error:" + loc.file.filename() + ":";
+    string line = loc.file.filename();
     LineColumn? lc = locationLineColumn(loc);
     if lc != () {
         // lineColumn returns 0-based lines currently
-        line += lc[0].toString() + ":" + (lc[1] + 1).toString() + ":";
+        line += ":" + lc[0].toString() + ":" + (lc[1] + 1).toString();
     }
-    line += " " + d.message;
+    line += ": error: " + d.message;
     return [line];
 }
