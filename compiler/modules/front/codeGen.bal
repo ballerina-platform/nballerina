@@ -93,7 +93,6 @@ class CodeGenContext {
     final bir:FunctionCode code;
     final t:SemType returnType;
     LoopContext? loopContext = ();
-    private final bir:PositionString?[] registerVarNames = [];
 
     function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
         self.mod = mod;
@@ -103,11 +102,13 @@ class CodeGenContext {
         self.returnType = returnType;
     }
 
-    function createRegister(bir:SemType t, bir:PositionString? varName = ()) returns bir:Register {
-        bir:Register reg = bir:createRegister(self.code, t, varName);
-        if varName != () {
-            self.registerVarNames[reg.number] = varName;
-        }
+    function createVarRegister(bir:SemType t, string varName, bir:Position pos) returns bir:Register {
+        bir:Register reg = bir:createRegister(self.code, t, varName, pos);
+        return reg;
+    }
+
+    function createTmpRegister(bir:SemType t, bir:Position? pos = ()) returns bir:Register {
+        bir:Register reg = bir:createRegister(self.code, t, (), pos);
         return reg;
     }
 
@@ -115,17 +116,11 @@ class CodeGenContext {
         return self.code.registers.length();
     }
     function registerVarName(int registerNumber) returns string? {
-        bir:PositionString? posString = self.registerVarNames[registerNumber];
-        if posString != () {
-            return posString[1];
-        }
+        return bir:getRegister(self.code, registerNumber).varName;
     }
 
     function registerPosition(int registerNumber) returns bir:Position? {
-        bir:PositionString? posString = self.registerVarNames[registerNumber];
-        if posString != () {
-            return posString[0];
-        }
+        return bir:getRegister(self.code, registerNumber).pos;
     }
 
     function createBasicBlock(string? name = ()) returns bir:BasicBlock {
@@ -278,7 +273,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     string[] paramNames = defn.paramNames;
     bir:Position[] paramPos = defn.paramPos;
     foreach int i in 0 ..< paramNames.length() {
-        bir:Register reg = cx.createRegister(signature.paramTypes[i], [paramPos[i], paramNames[i]]);
+        bir:Register reg = cx.createVarRegister(signature.paramTypes[i], paramNames[i], paramPos[i]);
         bindings = { name: paramNames[i], reg, prev: bindings, isFinal: true };
     }
     var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
@@ -307,7 +302,7 @@ function codeGenOnPanic(CodeGenContext cx, d:Position pos) {
         }
     }
     if onPanicBlock != () {
-        bir:Register reg = cx.createRegister(t:ERROR);
+        bir:Register reg = cx.createTmpRegister(t:ERROR, pos);
         bir:CatchInsn catch = { result: reg, pos };
         onPanicBlock.insns.push(catch);
         onPanicBlock.insns.push(<bir:AbnormalRetInsn>{ operand: reg, pos });
@@ -398,14 +393,14 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     s:RangeExpr range = stmt.range;
     var { result: lower, block: evalUpper } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, range.lower, t:INT));
     var { result: upper, block: initLoopVar } = check codeGenExprForInt(cx, evalUpper, env, check cx.foldExpr(env, range.upper, t:INT));
-    bir:Register loopVar = cx.createRegister(t:INT, [stmt.varPos, varName]);
+    bir:Register loopVar = cx.createVarRegister(t:INT, varName, stmt.varPos);
     bir:AssignInsn init = { pos: stmt.kwPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
     bir:BasicBlock exit = cx.createBasicBlock();
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     initLoopVar.insns.push(branchToLoopHead);
-    bir:Register condition = cx.createRegister(t:BOOLEAN);
+    bir:Register condition = cx.createTmpRegister(t:BOOLEAN, stmt.range.opPos);
     bir:CompareInsn compare = { op: "<", pos: stmt.range.opPos, orderType: t:UT_INT, operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
     bir:BasicBlock loopBody = cx.createBasicBlock();
@@ -569,7 +564,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         if clauseIndex == wildcardClauseIndex {
             break;
         }
-        bir:Register testResult = cx.createRegister(t:BOOLEAN);
+        bir:Register testResult = cx.createTmpRegister(t:BOOLEAN, mv.pos);
         bir:EqualityInsn eq = { op: "==", pos: mv.pos, result: testResult, operands: [matched, mv.value] };
         testBlock.insns.push(eq);
         clauseTestInsns[clauseIndex].push(bir:lastInsnRef(testBlock));
@@ -728,7 +723,7 @@ function codeGenIfElseNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environmen
 }
 
 function codeGenNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Binding binding, t:SemType narrowedType, bir:Result basis, d:Position pos) returns Environment {
-    bir:Register narrowed = cx.createRegister(narrowedType, [pos, binding.name]);
+    bir:Register narrowed = cx.createVarRegister(narrowedType, binding.name, pos);
     bir:CondNarrowInsn insn = {
         result: narrowed,
         operand: binding.reg,
@@ -792,7 +787,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
             return cx.semanticErr(`duplicate declaration of ${varName}`, varPos);
         }
         t:SemType semType = check cx.resolveTypeDesc(td);
-        bir:Register result = cx.createRegister(semType, [varPos, varName]);
+        bir:Register result = cx.createVarRegister(semType, varName, varPos);
         bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType, stmt.opPos);
         return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
     }
@@ -803,7 +798,7 @@ function codeGenWildcardDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, E
     if !t:isSubtype(cx.mod.tc, semType, t:ANY) {
         return cx.semanticErr("type descriptor of wildcard should be a subtype of any");
     }
-    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(semType, [pos, "_"]), expr, semType, pos);
+    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createVarRegister(semType, "_", pos), expr, semType, pos);
     return { block: nextBlock };
 }
 
@@ -813,7 +808,7 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
         return codeGenAssignToVar(cx, startBlock, env, lValue.varName, expr, stmt.opPos);
     }
     else if lValue is s:WILDCARD {
-        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createRegister(t:ANY, [stmt.opPos, "_"]), expr, t:ANY, stmt.opPos);
+        bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createVarRegister(t:ANY, "_", stmt.opPos), expr, t:ANY, stmt.opPos);
         return { block: nextBlock };
     }
     else {
@@ -946,7 +941,7 @@ function codeGenCompoundAssignToListMember(CodeGenContext cx,
     if t:isEmpty(cx.mod.tc, memberType) {
         return cx.semanticErr("type of member access is never", pos);
     }
-    bir:Register member = cx.createRegister(memberType);
+    bir:Register member = cx.createTmpRegister(memberType, lValue.opPos);
     bir:ListGetInsn getInsn = { result: member, operands: [list, index], pos: lValue.opPos };
     nextBlock.insns.push(getInsn);
     var { result, block } = check codeGenCompoundableBinaryExpr(cx, nextBlock, env, op, pos, member, rexpr);
@@ -1049,11 +1044,11 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             bir:Register result;
             bir:Insn insn;
             if typed is ["int", bir:IntOperand] {
-                result = cx.createRegister(t:INT);
+                result = cx.createTmpRegister(t:INT, pos);
                 insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [0, typed[1]], result };
             }
             else if typed is ["float", bir:FloatOperand] {
-                result = cx.createRegister(t:FLOAT);
+                result = cx.createTmpRegister(t:FLOAT, pos);
                 insn = <bir:FloatNegateInsn> { operand: <bir:Register>typed[1], result, pos };
             }
             else {
@@ -1065,7 +1060,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         // Bitwise complement
         { opPos: var pos, op: "~",  operand: var o } => {
             var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, o);
-            bir:Register result = cx.createRegister(t:INT);
+            bir:Register result = cx.createTmpRegister(t:INT, pos);
             bir:IntBitwiseBinaryInsn insn = { op: "^", pos, operands: [-1, operand], result };
             nextBlock.insns.push(insn);
             return { result, block: nextBlock };
@@ -1074,7 +1069,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, env, o);
             // Should have been resolved during constant folding
             bir:Register reg = <bir:Register>operand;
-            bir:Register result = cx.createRegister(t:BOOLEAN);
+            bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
             bir:BooleanNotInsn insn = { operand: reg, result, pos };
             nextBlock.insns.push(insn);
             if narrowing != () {
@@ -1095,7 +1090,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenEquality(cx, bb, env, op, pos, left, right);
         }
         var { opPos: pos, relationalOp: op, left, right } => {
-            bir:Register result = cx.createRegister(t:BOOLEAN);
+            bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
             var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
             bir:OrderType? ot = operandPairOrderType(cx, l, r);
@@ -1149,7 +1144,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                     if t:isEmpty(cx.mod.tc, memberType) {
                         return cx.semanticErr("type of member access is never");
                     }
-                    bir:Register result = cx.createRegister(memberType);
+                    bir:Register result = cx.createTmpRegister(memberType, pos);
                     bir:ListGetInsn insn = { result, operands: [l, r], pos };
                     nextBlock.insns.push(insn);
                     return { result, block: nextBlock };
@@ -1210,7 +1205,7 @@ function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register
     if !keyRequired {
         memberType = t:union(memberType, t:NIL);
     }
-    bir:Register result = cx.createRegister(memberType);
+    bir:Register result = cx.createTmpRegister(memberType, pos);
     bir:MappingGetInsn insn = { result, operands: [mapping, k], pos };
     block.insns.push(insn);
     return { result, block };
@@ -1233,17 +1228,17 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
     TypedOperandPair? pair = typedOperandPair(lhs, rhs);
     bir:Register result;
     if pair is IntOperandPair {
-        result = cx.createRegister(t:INT);
+        result = cx.createTmpRegister(t:INT, pos);
         bir:IntArithmeticBinaryInsn insn = { op, pos, operands: pair[1], result };
         bb.insns.push(insn);
     }
     else if pair is FloatOperandPair {
-        result = cx.createRegister(t:FLOAT);
+        result = cx.createTmpRegister(t:FLOAT, pos);
         bir:FloatArithmeticBinaryInsn insn = { op, pos, operands: pair[1], result };
         bb.insns.push(insn);
     }
     else if pair is StringOperandPair && op == "+" {
-        result = cx.createRegister(t:STRING);
+        result = cx.createTmpRegister(t:STRING, pos);
         bir:StringConcatInsn insn = { operands: pair[1], result, pos };
         bb.insns.push(insn);
     }
@@ -1257,7 +1252,7 @@ function codeGenBitwiseBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, s:Binary
     t:SemType lt = bitwiseOperandType(lhs);
     t:SemType rt = bitwiseOperandType(rhs);
     t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
-    bir:Register result = cx.createRegister(resultType);
+    bir:Register result = cx.createTmpRegister(resultType, pos);
     bir:IntBitwiseBinaryInsn insn = { op, pos, operands: [lhs, rhs], result };
     bb.insns.push(insn);
     return { result, block: bb };
@@ -1275,7 +1270,7 @@ function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environmen
     if t:isEmpty(cx.mod.tc, resultType) {
         return cx.semanticErr("list now allowed in this context");
     }
-    bir:Register result = cx.createRegister(resultType);
+    bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
@@ -1303,7 +1298,7 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
     if t:isEmpty(cx.mod.tc, resultType) {
         return cx.semanticErr("mapping not allowed in this context");
     }
-    bir:Register result = cx.createRegister(resultType);
+    bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
     bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
@@ -1312,7 +1307,7 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
 function codeGenErrorConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr message, s:Position pos) returns CodeGenError|ExprEffect {
     s:Expr folded = check cx.foldExpr(env, message, t:STRING);
     var { result: operand, block } = check codeGenExprForString(cx, bb, env, folded);
-    bir:Register result = cx.createRegister(t:ERROR);
+    bir:Register result = cx.createTmpRegister(t:ERROR, pos);
     bir:ErrorConstructInsn insn = { result, operand, pos };
     block.insns.push(insn);
     return { result, block };
@@ -1325,7 +1320,7 @@ function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env
         return { result: value, block: bb };
     }
     else {
-        bir:Register reg = cx.createRegister(multiSemType);
+        bir:Register reg = cx.createTmpRegister(multiSemType, cvExpr.startPos);
         bir:AssignInsn insn = { operand: value, result: reg, pos: cvExpr.startPos };
         bb.insns.push(insn);
         return { result: reg, block: bb };
@@ -1333,7 +1328,7 @@ function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env
 }
 
 function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryEqualityOp op, d:Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
-    bir:Register result = cx.createRegister(t:BOOLEAN);
+    bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
     var { result: l, block: block1, binding: lBinding } = check codeGenExpr(cx, bb, env, left);
     var { result: r, block: nextBlock, binding: rBinding } = check codeGenExpr(cx, block1, env, right);
     // Type checking is done in the verifier
@@ -1396,7 +1391,7 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     if toNumType != () && !t:isSubtypeSimple(t:intersect(reg.semType, t:NUMBER), toNumType) {
         toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
 
-        bir:Register result = cx.createRegister(t:union(t:diff(reg.semType, t:NUMBER), toNumType));
+        bir:Register result = cx.createTmpRegister(t:union(t:diff(reg.semType, t:NUMBER), toNumType), tcExpr.opPos);
         if toNumType == t:INT {
             bir:ConvertToIntInsn insn = { operand: reg, result, pos: tcExpr.opPos };
             nextBlock.insns.push(insn);
@@ -1415,7 +1410,7 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
         return { result: reg, block: nextBlock };
     }
     t:SemType resultType = t:intersect(reg.semType, toType);
-    bir:Register result = cx.createRegister(resultType);
+    bir:Register result = cx.createTmpRegister(resultType, tcExpr.opPos);
     bir:TypeCastInsn insn = { operand: reg, semType: toType, pos: tcExpr.opPos, result };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
@@ -1440,7 +1435,7 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     if t:isEmpty(cx.mod.tc, intersect) {
         return { result: negated, block: bb };
     }
-    bir:Register result = cx.createRegister(t:BOOLEAN);
+    bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
     bir:TypeTestInsn insn = { operand: reg, semType, result, negated, pos };
     nextBlock.insns.push(insn);
     if negated {
@@ -1504,7 +1499,7 @@ function codeGenCheckingExpr(CodeGenContext cx, bir:BasicBlock bb, Environment e
 }
 
 function codeGenCheckingCond(CodeGenContext cx, bir:BasicBlock bb, bir:Register operand, t:SemType errorType, s:CheckingKeyword checkingKeyword, t:SemType okType, d:Position pos) returns CodeGenError|RegExprEffect {
-    bir:Register isError = cx.createRegister(t:BOOLEAN);
+    bir:Register isError = cx.createTmpRegister(t:BOOLEAN, pos);
     bir:TypeTestInsn typeTest = { operand, semType: t:ERROR, result: isError, negated: false, pos };
     bb.insns.push(typeTest);
     bir:InsnRef testInsnRef = bir:lastInsnRef(bb);
@@ -1512,7 +1507,7 @@ function codeGenCheckingCond(CodeGenContext cx, bir:BasicBlock bb, bir:Register 
     bir:BasicBlock errorBlock = cx.createBasicBlock();
     bir:CondBranchInsn condBranch = { operand: isError, ifTrue: errorBlock.label, ifFalse: okBlock.label, pos };
     bb.insns.push(condBranch);
-    bir:Register errorReg = cx.createRegister(errorType);
+    bir:Register errorReg = cx.createTmpRegister(errorType, pos);
     bir:CondNarrowInsn narrowToError = {
         result: errorReg,
         operand,
@@ -1521,7 +1516,7 @@ function codeGenCheckingCond(CodeGenContext cx, bir:BasicBlock bb, bir:Register 
     };
     errorBlock.insns.push(narrowToError);
     codeGenCheckingTerminator(errorBlock, checkingKeyword, errorReg, pos);
-    bir:Register result = cx.createRegister(okType);
+    bir:Register result = cx.createTmpRegister(okType, pos);
     bir:CondNarrowInsn narrowToOk = {
         result,
         operand,
@@ -1562,7 +1557,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         curBlock = nextBlock;
         args.push(arg);
     }
-    bir:Register result = cx.createRegister(func.signature.returnType);
+    bir:Register result = cx.createTmpRegister(func.signature.returnType, expr.startPos);
     bir:CallInsn call = {
         func,
         result,
@@ -1586,7 +1581,7 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env
         curBlock = nextBlock;
         args.push(arg);
     }
-    bir:Register result = cx.createRegister(func.signature.returnType);
+    bir:Register result = cx.createTmpRegister(func.signature.returnType, expr.opPos);
     bir:CallInsn call = {
         func,
         result,

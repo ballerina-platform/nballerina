@@ -128,21 +128,24 @@ public function lastInsnRef(BasicBlock bb) returns InsnRef {
     return { block: bb.label, index: bb.insns.length() - 1 };
 }
 
-public type PositionString readonly & [Position, string];
-
 public type Register readonly & record {|
     # Unique identifier within a function
     # Always >= 0
     int number;
     SemType semType;
-    PositionString? varName;
+    string? varName;
+    Position? pos;
 |};
 
-public function createRegister(FunctionCode code, SemType semType, PositionString? varName = ()) returns Register {
+public function createRegister(FunctionCode code, SemType semType, string? varName = (), Position? pos = ()) returns Register {
     int number = code.registers.length();
-    Register r = { number, semType, varName };
+    Register r = { number, semType, varName, pos };
     code.registers.push(r);
     return r;
+}
+
+public function getRegister(FunctionCode code, int registerNo) returns Register {
+    return code.registers[registerNo];
 }
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
