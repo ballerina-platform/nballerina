@@ -24,10 +24,10 @@ function createTypeMap(ModuleSymbols mod) returns map<t:SemType> {
     return defns;
 }
 
-function resolveTypes(ModuleSymbols mod, boolean semErr = false) returns ResolveTypeError? {
+function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
     foreach var defn in mod.defns {
         if defn is s:TypeDefn {
-            _ = check resolveTypeDefn(mod, defn, 0, semErr);
+            _ = check resolveTypeDefn(mod, defn, 0);
         }
         else if defn is s:ConstDefn {
             _ = check resolveConstDefn(mod, defn);
@@ -66,14 +66,14 @@ function isSubsetUnionType(t:SemType ty) returns boolean {
                 || (ty == t:ANY || ty == t:TOP)));
 }
 
-function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth, boolean semErr = false) returns t:SemType|ResolveTypeError {
+function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns t:SemType|ResolveTypeError {
     t:SemType? t = defn.semType;
     if t == () {
         if depth == defn.cycleDepth {
             return err:semantic(`invalid cycle detected for ${defn.name}`, s:defnLocation(defn));
         }
         defn.cycleDepth = depth;
-        t:SemType s = check resolveTypeDesc(mod, defn, depth, defn.td, semErr);
+        t:SemType s = check resolveTypeDesc(mod, defn, depth, defn.td);
         t = defn.semType;
         if t == () {
             defn.semType = s;
@@ -92,7 +92,7 @@ function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth, boolean 
     }
 }
 
-function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td, boolean semErr = false) returns t:SemType|ResolveTypeError {
+function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
     if td is s:BuiltinTypeDesc {
         match td.builtinTypeName {
             // These are easy
@@ -132,9 +132,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             // (i.e. there's a recursive type still under construction).
             // To solve this, we would need to build a list of intersections to be checked later.
             // But this is very unlikely to be a problem in practice.
-            if semErr {
-                return result;
-            }
             if t:isNever(result)
                || (result !is t:UniformTypeBitSet && env.isReady() && t:isEmpty(mod.tc, result)) {
                 return err:semantic("intersection must not be empty", s:locationInDefn(modDefn, td.opPos)); 

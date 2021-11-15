@@ -4,6 +4,4 @@ type NEVER never;
 
 type RWX X & !readonly;
 
-// @type RX_MINUS_RO = NEVER
-type RX_MINUS_RO RX & RWX;
-
+type RX_MINUS_RO RX & RWX; // @error

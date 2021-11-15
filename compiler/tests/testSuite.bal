@@ -35,12 +35,15 @@ function testCompileVPO(string path, string kind) returns io:Error? {
 }
 function testSemTypes(string path, string kind) returns error? {
     SubtypeTestCase res = check readSubtypeTests(path);
-    error? err;
+    error? err =  testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
     if kind == "te" {
-        err =  testSubtypes([{ lines : res[1], filename : res[0] }], res[2], true);
-    }
-    else {
-        err =  testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
+        if err is () {
+            test:assertNotExactEquals(err, (), "expected an error " + path);
+        }
+        else if err is err:Diagnostic {
+            check checkErrorLocation(err, path);
+            return;
+        }
     }
     return err;
 }
@@ -68,14 +71,7 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
             if kind == "e" || kind == "ue" {
-                var [expectedFilename, expectedLineNo] = <FilenameLine> check expectedErrorLocation(err, path);
-                d:Location loc = err.detail().location;
-                string filename = loc.file.filename();
-                test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
-                d:LineColumn? lc = d:locationLineColumn(loc);
-                if lc is d:LineColumn {
-                    test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
-                }
+                check checkErrorLocation(err, path);
             }
         }
     }
@@ -85,6 +81,17 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
 }
 
 type FilenameLine [string, int];
+
+function checkErrorLocation(err:Diagnostic err, string path) returns file:Error|io:Error? {
+    var [expectedFilename, expectedLineNo] = <FilenameLine> check expectedErrorLocation(err, path);
+    d:Location loc = err.detail().location;
+    string filename = loc.file.filename();
+    test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
+    d:LineColumn? lc = d:locationLineColumn(loc);
+    if lc is d:LineColumn {
+        test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
+    }
+}
 
 function expectedErrorLocation(CompileError err, string path) returns FilenameLine|file:Error|io:Error? {
     string? modulePath = check moduleDir(path);
@@ -184,8 +191,8 @@ function testCompileFile(string filename) returns CompileError? {
     return compileBalFile(filename, basename, (), {}, {});
 }
 
-function testSubtypes(front:SourcePart[] sources, string[] expected, boolean semErr = false) returns error? {
-    var [env, m] = check front:typesFromString(sources, semErr);
+function testSubtypes(front:SourcePart[] sources, string[] expected) returns error? {
+    var [env, m] = check front:typesFromString(sources);
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:TypeTest test = check s:parseTypeTest(item);
