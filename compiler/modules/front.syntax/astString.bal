@@ -101,12 +101,12 @@ function stmtToWords(Word[] w, Stmt stmt) {
             w.push("final");
         }
         typeDescToWords(w, stmt.td);
-        string? varName = stmt.varName;
-        if varName is WILDCARD {
+        var varIdentity = stmt.varIdentity;
+        if varIdentity is WILDCARD {
             w.push("_");
         }
         else {
-            w.push(varName);
+            w.push(varIdentity[0]);
         }
         w.push("=");
         exprToWords(w, stmt.initExpr);
