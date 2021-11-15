@@ -115,6 +115,24 @@ void testMul() {
     genAndValidateDecMul("-9.999999999999999999999999999999999E6144", "2", "", PANIC_ARITHMETIC_OVERFLOW);
     genAndValidateDecMul("1E-6143", "1E6143", "1.00000000000000000000000000000000", 0);
     genAndValidateDecMul("9.999999999999999999999999999999999E-6001", "0.2E-143", "0", 0);
+    genAndValidateDecMul("9.999999999999999999999999999999999E6144", "9.999999999999999999999999999999999E6144", "", PANIC_ARITHMETIC_OVERFLOW);
+    genAndValidateDecMul("1E-6143", "1E-6143", "0", 0);
+}
+
+void genAndValidateDecDiv(const char *decStr1, const char *decStr2, const char *div, PanicCode code) {
+    TaggedPtrPanicCode tp = _bal_decimal_div(_bal_decimal_const(decStr1), _bal_decimal_const(decStr2));
+    validate(tp, div, code);    
+}
+
+void testDiv() {
+    genAndValidateDecDiv("1", "1", "1", 0);
+    genAndValidateDecDiv("-1", "1", "-1", 0);
+    genAndValidateDecDiv("1", "0", "", PANIC_DIVIDE_BY_ZERO);
+    genAndValidateDecDiv("9.999999999999999999999999999999999E6144", "0", "", PANIC_DIVIDE_BY_ZERO);
+    genAndValidateDecDiv("0", "-1", "0", 0);
+    genAndValidateDecDiv("1E6144", "1E-1", "", PANIC_ARITHMETIC_OVERFLOW);
+    genAndValidateDecDiv("9.999999999999999999999999999999999E6144", "9.999999999999999999999999999999999E6144", "1", 0);
+    genAndValidateDecDiv("9.999999999999999999999999999999999E-6001", "0.5E143", "2.000000000000000000000000000000000E-6143", 0);
 }
 
 int main() {
@@ -122,4 +140,5 @@ int main() {
     testAdd();
     testSub();
     testMul();
+    testDiv();
 }
