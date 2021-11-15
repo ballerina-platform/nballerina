@@ -40,15 +40,13 @@ void testConst() {
 }
 
 void genAndValidateDecAdd(const char *decStr1, const char *decStr2, const char *sum, PanicCode code) {
-    TaggedPtr tp1 = _bal_decimal_const(decStr1);
-    TaggedPtr tp2 = _bal_decimal_const(decStr2);
-    TaggedPtrPanicCode tp = _bal_decimal_add(tp1, tp2);
+    TaggedPtrPanicCode tp = _bal_decimal_add(_bal_decimal_const(decStr1), _bal_decimal_const(decStr2));
     validate(tp, sum, code);
 }
 
 // Max = 9.999999999999999999999999999999999E6144
 // Min = -9.999999999999999999999999999999999E6144
-// Min Magnitude = 1E-6176
+// Min Magnitude = 1E-6143 (normal)
 void testAdd() {
     genAndValidateDecAdd("1", "1", "2", 0);
     genAndValidateDecAdd("1000", "1", "1001", 0);
@@ -64,15 +62,15 @@ void testAdd() {
     genAndValidateDecAdd("-9.999999999999999999999999999999998E6144", "-0.000000000000000000000000000000001E6144", "-9.999999999999999999999999999999999E+6144", 0);
     genAndValidateDecAdd("-9.999999999999999999999999999999999E6144", "-0.000000000000000000000000000000001E6144", "", PANIC_ARITHMETIC_OVERFLOW);
     genAndValidateDecAdd("-9.999999999999999999999999999999999E6144", "0.000000000000000000000000000000001E6144", "-9.999999999999999999999999999999998E+6144", 0);
-    genAndValidateDecAdd("2E-6176", "1E-6176", "3E-6176", 0);
-    genAndValidateDecAdd("0.000000000000000000000000000000001E-6143", "0.000000000000000000000000000000002E-6143", "3E-6176", 0);
-    genAndValidateDecAdd("2E-6176", "-1E-6176", "1E-6176", 0);
+    genAndValidateDecAdd("2E-6143", "1E-6143", "3E-6143", 0);
+    genAndValidateDecAdd("0.000000000000000000000000000000001E-6110", "0.000000000000000000000000000000002E-6110", "3E-6143", 0);
+    genAndValidateDecAdd("2E-6143", "-1E-6143", "1E-6143", 0);
+    genAndValidateDecAdd("9E-6143", "1E-6143", "1.0E-6142", 0);
+    genAndValidateDecAdd("1E-6143", "-1E-6143", "0", 0);
 }
 
 void genAndValidateDecSub(const char *decStr1, const char *decStr2, const char *sub, PanicCode code) {
-    TaggedPtr tp1 = _bal_decimal_const(decStr1);
-    TaggedPtr tp2 = _bal_decimal_const(decStr2);
-    TaggedPtrPanicCode tp = _bal_decimal_sub(tp1, tp2);
+    TaggedPtrPanicCode tp = _bal_decimal_sub(_bal_decimal_const(decStr1), _bal_decimal_const(decStr2));
     validate(tp, sub, code);
 }
 
@@ -88,7 +86,7 @@ void testSub() {
     genAndValidateDecSub("9.999999999999999999999999999999998E6144", "-0.000000000000000000000000000000001E6144", "9.999999999999999999999999999999999E+6144", 0);
     genAndValidateDecSub("-9.999999999999999999999999999999998E6144", "0.000000000000000000000000000000001E6144", "-9.999999999999999999999999999999999E+6144", 0);
     genAndValidateDecSub("-9.999999999999999999999999999999999E6144", "0.000000000000000000000000000000001E6144", "", PANIC_ARITHMETIC_OVERFLOW);
-    genAndValidateDecSub("2E-6176", "1E-6176", "1E-6176", 0);
+    genAndValidateDecSub("2E-6143", "1E-6143", "1E-6143", 0);
 }
 
 int main() {

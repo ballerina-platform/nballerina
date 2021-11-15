@@ -5,7 +5,7 @@ typedef GC decQuad *DecimalPtr;
 
 // Status flags that we should treat as failure
 // XXX need to investigate DEC_Underflow
-#define DECIMAL_STATUS_FAIL (DEC_Errors|DEC_Subnormal)
+#define DECIMAL_STATUS_FAIL DEC_Errors
 
 static TaggedPtrPanicCode finish(decQuad *dq, decContext *cx);
 
@@ -54,7 +54,11 @@ TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
     }
     else {
         result.panicCode = 0;
-        if (decQuadClass(dq) == DEC_CLASS_NEG_ZERO) {
+        enum decClass class = decQuadClass(dq);
+        if (class == DEC_CLASS_POS_ZERO || 
+            class == DEC_CLASS_NEG_ZERO || 
+            class == DEC_CLASS_POS_SUBNORMAL || 
+            class == DEC_CLASS_NEG_SUBNORMAL) {
             decQuadZero(dq);
         }
         result.ptr = createDecimal(dq);
