@@ -89,8 +89,37 @@ void testSub() {
     genAndValidateDecSub("2E-6143", "1E-6143", "1E-6143", 0);
 }
 
+void genAndValidateDecMul(const char *decStr1, const char *decStr2, const char *mul, PanicCode code) {
+    TaggedPtrPanicCode tp = _bal_decimal_mul(_bal_decimal_const(decStr1), _bal_decimal_const(decStr2));
+    validate(tp, mul, code);
+}
+
+void testMul() {
+    genAndValidateDecMul("1", "1", "1", 0);
+    genAndValidateDecMul("-1", "1", "-1", 0);
+    genAndValidateDecMul("-1", "0", "0", 0);
+    genAndValidateDecMul("1E-6000", "1E-143", "1E-6143", 0);
+    genAndValidateDecMul("1E6000", "1E144", "1.000000000000000000000000000000000E+6144", 0);
+    genAndValidateDecMul("9.999999999999999999999999999999999E6000", "1E144", "9.999999999999999999999999999999999E+6144", 0);
+    genAndValidateDecMul("9.999999999999999999999999999999999E6000", "-1E144", "-9.999999999999999999999999999999999E+6144", 0);
+    genAndValidateDecMul("9.999999999999999999999999999999999E6000", "-2E143", "-2.000000000000000000000000000000000E+6144", 0);
+    genAndValidateDecMul("-1E-6143", "0", "0", 0);
+    genAndValidateDecMul("1E-6143", "0", "0", 0);
+    genAndValidateDecMul("0", "0", "0", 0);
+    genAndValidateDecMul("1E-6001", "1E-143", "0", 0);
+    genAndValidateDecMul("9.999999999999999999999999999999999E-6001", "1E-143", "0", 0);
+    genAndValidateDecMul("9.999999999999999999999999999999999E-6001", "2E-143", "2.000000000000000000000000000000000E-6143", 0);
+    genAndValidateDecMul("1E6144", "1E1", "", PANIC_ARITHMETIC_OVERFLOW);
+    genAndValidateDecMul("1E6143", "1E2", "", PANIC_ARITHMETIC_OVERFLOW);
+    genAndValidateDecMul("1E-6143", "1E-1", "0", 0);
+    genAndValidateDecMul("-9.999999999999999999999999999999999E6144", "2", "", PANIC_ARITHMETIC_OVERFLOW);
+    genAndValidateDecMul("1E-6143", "1E6143", "1.00000000000000000000000000000000", 0);
+    genAndValidateDecMul("9.999999999999999999999999999999999E-6001", "0.2E-143", "0", 0);
+}
+
 int main() {
     testConst();
     testAdd();
     testSub();
+    testMul();
 }
