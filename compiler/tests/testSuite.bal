@@ -35,13 +35,14 @@ function testCompileVPO(string path, string kind) returns io:Error? {
 }
 function testSemTypes(string path, string kind) returns error? {
     SubtypeTestCase res = check readSubtypeTests(path);
-    error? err =  testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
+    error? err;
     if kind == "te" {
-        test:assertNotExactEquals(err, (), "expected an error " + path);
+        err =  testSubtypes([{ lines : res[1], filename : res[0] }], res[2], true);
     }
     else {
-        return err;
+        err =  testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
     }
+    return err;
 }
 
 @test:Config {
@@ -185,8 +186,8 @@ function testCompileFile(string filename) returns CompileError? {
     return compileBalFile(filename, basename, (), {}, {});
 }
 
-function testSubtypes(front:SourcePart[] sources, string[] expected) returns error? {
-    var [env, m] = check front:typesFromString(sources);
+function testSubtypes(front:SourcePart[] sources, string[] expected, boolean semErr = false) returns error? {
+    var [env, m] = check front:typesFromString(sources, semErr);
     var tc = t:typeContext(env);
     foreach var item in expected {
         s:TypeTest test = check s:parseTypeTest(item);
