@@ -45,25 +45,47 @@ TaggedPtrPanicCode _bal_decimal_sub(TaggedPtr tp1, TaggedPtr tp2) {
     return finish(&d, &cx);    
 }
 
+TaggedPtrPanicCode _bal_decimal_mul(TaggedPtr tp1, TaggedPtr tp2) {
+    const decQuad *dq1 = taggedToDecQuad(tp1);
+    const decQuad *dq2 = taggedToDecQuad(tp2);
+    decQuad d;
+    decContext cx;
+    initContext(&cx);   
+    decQuadMultiply(&d, dq1, dq2, &cx);
+    return finish(&d, &cx); 
+}
+
 TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
     TaggedPtrPanicCode result;
+    enum decClass class = decQuadClass(dq);
+    if (class == DEC_CLASS_POS_ZERO || 
+        class == DEC_CLASS_NEG_ZERO || 
+        class == DEC_CLASS_POS_SUBNORMAL || 
+        class == DEC_CLASS_NEG_SUBNORMAL) {
+        decQuadZero(dq);
+        result.panicCode = 0;
+        result.ptr = createDecimal(dq);
+        return result;
+    }
     uint32_t status = cx->status;
     if (status & DECIMAL_STATUS_FAIL) {
-        // XXX decide what panic codes to use 
-        result.panicCode = (status & DEC_Division_by_zero) ? PANIC_DIVIDE_BY_ZERO : PANIC_ARITHMETIC_OVERFLOW;
+        if (status & DEC_Division_by_zero) {
+            result.panicCode = PANIC_DIVIDE_BY_ZERO;
+        }
+        else if (status & DEC_Underflow) {
+            decQuadZero(dq);
+            result.panicCode = 0;
+            result.ptr = createDecimal(dq);
+        }
+        else {
+            result.panicCode = PANIC_ARITHMETIC_OVERFLOW;
+        }
     }
     else {
         result.panicCode = 0;
-        enum decClass class = decQuadClass(dq);
-        if (class == DEC_CLASS_POS_ZERO || 
-            class == DEC_CLASS_NEG_ZERO || 
-            class == DEC_CLASS_POS_SUBNORMAL || 
-            class == DEC_CLASS_NEG_SUBNORMAL) {
-            decQuadZero(dq);
-        }
         result.ptr = createDecimal(dq);
     }
-    return result;  
+    return result;
 }
 
 TaggedPtr _bal_decimal_const(const char *decString) {
