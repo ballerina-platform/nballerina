@@ -259,9 +259,11 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Position startPos = tok.currentStartPos();
     Position endPos = tok.currentEndPos();
     if t is [IDENTIFIER, string] {
-        Position identifierPos = tok.currentStartPos();
+        Position namePos = tok.currentStartPos();
+        string? prefix;
+        string varName;
         check tok.advance();
-        var [prefix, varName, namePos] = check parseOptQualIdentifier(tok, t[1], identifierPos);
+        [prefix, varName, namePos] = check parseOptQualIdentifier(tok, t[1], namePos);
         if tok.current() == "(" {
             return finishFunctionCallExpr(tok, prefix, varName, startPos, namePos);
         }
@@ -494,8 +496,8 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
 function parseOptQualIdentifier(Tokenizer tok, string identifier, Position identifierPos) returns [string?, string, Position]|err:Syntax {
     if tok.current() == ":" {
         check tok.advance();
-        Position namePos = tok.currentStartPos();
-        return [identifier, check tok.expectIdentifier(), namePos];
+        Position localNamePos = tok.currentStartPos();
+        return [identifier, check tok.expectIdentifier(), localNamePos];
     }
     else {
         return [(), identifier, identifierPos];
