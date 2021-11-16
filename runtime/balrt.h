@@ -82,6 +82,12 @@ typedef struct {
 } TaggedPtrArray;
 
 typedef uint32_t Tid;
+// Represents the type of a member of a structure
+// Currerntly a bit-vector.
+// Will change to a uint64_t that is either a pointer or bit-vector.
+typedef uint32_t MemberType;
+
+#define INVALID_MEMBER_TYPE ((MemberType)0)
 
 // All mapping and list descriptors start with this.
 typedef struct {
@@ -99,7 +105,7 @@ typedef struct {
     Tid tid;
     TaggedPtr (*get)(TaggedPtr lp, int64_t index);
     PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
-    uint32_t bitSet;
+    MemberType memberType;
 } ListDesc, *ListDescPtr;
 
 // Extends Structure
@@ -128,15 +134,15 @@ typedef struct {
 // i.e must start with tid
 typedef struct {
     Tid tid;
-    uint32_t bitSet;
+    MemberType memberType;
 } MappingDesc, *MappingDescPtr;
 
 // This extends MappingDesc
 typedef struct {
     Tid tid;
-    uint32_t bitSet; // zero
+    MemberType memberType; // zero
     uint32_t nFields;
-    uint32_t fieldBitSets[];
+    MemberType fieldMemberTypes[];
 } *RecordDescPtr;
 
 // Extends Structure
@@ -162,37 +168,37 @@ typedef GC struct Mapping {
     uint8_t tableLengthShift;
 } *MappingPtr;
 
-typedef struct SubtypeTest {
-    bool (*contains)(struct SubtypeTest *, TaggedPtr);
-} SubtypeTest, *SubtypeTestPtr;
+typedef struct UniformSubtype {
+    bool (*contains)(struct UniformSubtype *, TaggedPtr);
+} UniformSubtype, *UniformSubtypePtr;
 
 typedef struct {
     TaggedPtr fieldName;
     uint32_t fieldBitSet;
-} RecordSubtypeTestField;
+} RecordSubtypeField;
 
 typedef struct {
-    SubtypeTest typeTest;
+    UniformSubtype uniform;
     uint32_t nFields;
-    RecordSubtypeTestField fields[];
-} *RecordSubtypeTestPtr;
+    RecordSubtypeField fields[];
+} *RecordSubtypePtr;
 
 typedef struct {
-    SubtypeTest typeTest;
+    UniformSubtype uniform;
     uint32_t bitSet;
-} *MapSubtypeTestPtr, *ArraySubtypeTestPtr;
+} *MapSubtypePtr, *ArraySubtypePtr;
 
 typedef struct {
-    SubtypeTest typeTest;
+    UniformSubtype uniform;
     uint32_t nTids;
     uint32_t tids[];
-} *PrecomputedSubtypeTestPtr;
+} *PrecomputedSubtypePtr;
 
 typedef struct {
    uint32_t all;
    uint32_t some;
-   SubtypeTestPtr subtypes[];
-} TypeTest, *TypeTestPtr;
+   UniformSubtypePtr subtypes[];
+} ComplexType, *ComplexTypePtr;
 
 typedef GC struct Error {
     TaggedPtr message;
@@ -333,6 +339,16 @@ static READNONE inline UntypedPtr taggedToPtr(TaggedPtr p) {
 
 static READNONE inline UntypedPtr taggedToPtrExact(TaggedPtr p) {
     return _bal_tagged_to_ptr_exact(p);
+}
+
+// These are actually READNONE now, but will become READONLY
+static READONLY inline bool memberTypeIsSubtypeSimple(MemberType memberType, uint32_t bitSet) {
+    return (memberType & ~(uint64_t)bitSet) == 0;
+}
+
+static READONLY inline bool memberTypeContainsTagged(MemberType memberType, TaggedPtr tp) {
+    uint32_t flag =  1 << (getTag(tp) & UT_MASK);
+    return (memberType & flag) != 0;
 }
 
 static READNONE inline PanicCode storePanicCode(TaggedPtr p, PanicCode code) {

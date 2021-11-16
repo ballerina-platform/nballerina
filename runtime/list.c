@@ -14,7 +14,7 @@ ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
 }
 
 static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
-    switch (desc->bitSet) {
+    switch (desc->memberType) {
         case (1 << TAG_BOOLEAN):
             *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
             return true;
@@ -31,7 +31,7 @@ static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
             _bal_string_alloc(0, 0, valuePtr);
             return true;
     }
-    if (desc->bitSet & (1 << TAG_NIL)) {
+    if (desc->memberType & (1 << TAG_NIL)) {
         *valuePtr = 0;
         return true;
     }
@@ -48,8 +48,7 @@ TaggedPtr _bal_list_get(TaggedPtr p, int64_t index) {
 PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
     ListDescPtr ldp = lp->desc;
-    uint32_t bitSet = ldp->bitSet;
-    if ((bitSet & (1 << (getTag(val) & UT_MASK))) == 0) {
+    if (!memberTypeContainsTagged(lp->desc->memberType, val)) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     GC TaggedPtrArray *ap = &(lp->tpArray);
@@ -143,7 +142,7 @@ bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
     return true;
 }
 
-bool _bal_array_subtype_contains(SubtypeTestPtr stp, TaggedPtr p) {
+bool _bal_array_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     ListPtr lp = taggedToPtr(p);   
-    return (lp->desc->bitSet & ~((ArraySubtypeTestPtr)stp)->bitSet) == 0;
+    return memberTypeIsSubtypeSimple(lp->desc->memberType, ((ArraySubtypePtr)stp)->bitSet);
 }

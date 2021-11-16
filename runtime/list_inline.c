@@ -7,9 +7,7 @@ int64_t BAL_LANG_ARRAY_NAME(length)(TaggedPtr p) {
 
 void BAL_LANG_ARRAY_NAME(push)(TaggedPtr p, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
-    ListDescPtr ldp = lp->desc;
-    uint32_t bitSet = ldp->bitSet;
-    if ((bitSet & (1 << (getTag(val) & UT_MASK))) == 0) {
+    if (!memberTypeContainsTagged(lp->desc->memberType, val)) {
         _bal_panic_internal(storePanicCode(p, PANIC_LIST_STORE));
     }
     int64_t len = lp->tpArray.length;
