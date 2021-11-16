@@ -167,7 +167,10 @@ function addMappingInherentTypeDefn(InitModuleContext cx, string symbol, int tid
 }
 
 function getMemberType(InitModuleContext cx, t:SemType memberType) returns llvm:ConstValue {
-    return llvm:constInt(LLVM_BITSET, <t:UniformTypeBitSet>memberType);
+    if memberType is t:UniformTypeBitSet {
+        return llvm:constInt(LLVM_MEMBER_TYPE, (memberType << 1)|1);
+    }
+    panic err:impossible("complex member types still being implemented");
 }
 
 function addExactifyTypeDefn(InitModuleContext cx, string symbol, t:SemType semType) {

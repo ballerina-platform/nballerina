@@ -83,9 +83,11 @@ typedef struct {
 
 typedef uint32_t Tid;
 // Represents the type of a member of a structure
-// Currently a bit-vector.
-// Will change to a uint64_t that is either a pointer or bit-vector.
-typedef uint32_t MemberType;
+// Either a ComplexTypePtr or a shifted bitset
+// Shifted bitSet is shifted 1 and or'ed with 1
+typedef uint64_t MemberType;
+
+#define BITSET_MEMBER_TYPE(bitSet) (((uint64_t)(bitSet) << 1)|1)
 
 // All mapping and list descriptors start with this.
 typedef struct {
@@ -333,14 +335,39 @@ static READNONE inline UntypedPtr taggedToPtrExact(TaggedPtr p) {
     return _bal_tagged_to_ptr_exact(p);
 }
 
-// These are actually READNONE now, but will become READONLY
 static READONLY inline bool memberTypeIsSubtypeSimple(MemberType memberType, uint32_t bitSet) {
-    return (memberType & ~(uint64_t)bitSet) == 0;
+    uint32_t memberBitSet;
+    if (memberType & 1) {
+        memberBitSet = (uint32_t)(memberType >> 1);
+    }
+    else {
+        ComplexTypePtr ctp = (ComplexTypePtr)memberType;
+        memberBitSet = ctp->all | ctp->some; 
+    }
+    return (memberBitSet & ~(uint64_t)bitSet) == 0;
+}
+
+static READONLY inline bool complexTypeContainsTagged(ComplexTypePtr ctp, TaggedPtr p) {
+    int flag = 1 << ((getTag(p) & UT_MASK));
+    if (ctp->all & flag) {
+        return true;
+    }
+    if (!(ctp->some & flag)) {
+        return false;
+    }
+    int i = __builtin_popcount(ctp->some & (flag - 1));
+    UniformSubtypePtr vp = ctp->subtypes[i];
+    return (vp->contains)(vp, p);
 }
 
 static READONLY inline bool memberTypeContainsTagged(MemberType memberType, TaggedPtr tp) {
-    uint32_t flag =  1 << (getTag(tp) & UT_MASK);
-    return (memberType & flag) != 0;
+    if (memberType & 1) {
+        uint64_t flag =  (uint64_t)1 << (1 + (getTag(tp) & UT_MASK));
+        return (memberType & flag) != 0;
+    }
+    else {
+        return complexTypeContainsTagged((ComplexTypePtr)memberType, tp);
+    }   
 }
 
 static READNONE inline PanicCode storePanicCode(TaggedPtr p, PanicCode code) {

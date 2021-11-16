@@ -19,7 +19,7 @@ void testRandMapping(int len) {
     static MappingDesc inherentType = {
         0, // tid
         0, // nFields
-        1 << TAG_STRING // restType
+        BITSET_MEMBER_TYPE(1 << TAG_STRING) // restType
     };
     TaggedPtr m = _bal_mapping_construct(&inherentType, 0);
     for (int i = 0; i < len; i++) {

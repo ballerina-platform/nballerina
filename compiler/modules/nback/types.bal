@@ -9,7 +9,7 @@ const USED_TYPE_TEST = 0x4;
 
 const LLVM_BITSET = "i32";
 const LLVM_TID = "i32";
-const LLVM_MEMBER_TYPE = "i32";
+const LLVM_MEMBER_TYPE = "i64";
 const LLVM_PANIC_CODE = "i64";
 
 final llvm:StructType llStructureDescType = llvm:structType([LLVM_TID]);

@@ -13,25 +13,33 @@ ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
     return lp;
 }
 
-static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
-    switch (desc->memberType) {
-        case (1 << TAG_BOOLEAN):
-            *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
-            return true;
-        case (1 << TAG_INT):
-            *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
-            return true;
-        case (1 << TAG_FLOAT):
-            {
-                GC double *fp = (GC double *)&F0;
-                *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
-                return true;
-            }
-        case (1 << TAG_STRING):
-            _bal_string_alloc(0, 0, valuePtr);
-            return true;
+static bool getArrayFiller(MemberType memberType, TaggedPtr *valuePtr) {
+    uint32_t bitSet;
+    if ((memberType & 1) == 0) {
+        // XXX need to handle array or map here
+        bitSet = ((ComplexTypePtr)memberType)->all;
     }
-    if (desc->memberType & (1 << TAG_NIL)) {
+    else {
+        bitSet = (uint32_t)(memberType >> 1);
+        switch (bitSet) {
+            case (1 << TAG_BOOLEAN):
+                *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
+                return true;
+            case (1 << TAG_INT):
+                *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
+                return true;
+            case (1 << TAG_FLOAT):
+                {
+                    GC double *fp = (GC double *)&F0;
+                    *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
+                    return true;
+                }
+            case (1 << TAG_STRING):
+                _bal_string_alloc(0, 0, valuePtr);
+                return true;
+        }
+    }
+    if (bitSet & (1 << TAG_NIL)) {
         *valuePtr = 0;
         return true;
     }
@@ -69,7 +77,7 @@ PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
         // we have a gap to fill
         // from length..<index
         TaggedPtr filler;
-        if (!getFiller(ldp, &filler)) {
+        if (!getArrayFiller(ldp->memberType, &filler)) {
             return PANIC_NO_FILLER;
         }
         for (int64_t i = ap->length; i < index; i++) {
