@@ -491,7 +491,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     }
     else if td is FunctionTypeDesc {
         foreach var arg in td.args {
-            check validateTypeDescPos(arg, tok, td.startPos, td.endPos);
+            check validateTypeDescPos(arg.td, tok, td.startPos, td.endPos);
             childNodePos.push([arg.startPos, arg.endPos]);
         }
         TypeDesc ret = td.ret;

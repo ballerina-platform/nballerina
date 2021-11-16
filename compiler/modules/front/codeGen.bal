@@ -270,11 +270,10 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     CodeGenContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Binding? bindings = ();
-    string[] paramNames = defn.paramNames;
-    bir:Position[] paramPos = defn.paramPos;
-    foreach int i in 0 ..< paramNames.length() {
-        bir:Register reg = cx.createVarRegister(signature.paramTypes[i], paramNames[i], paramPos[i]);
-        bindings = { name: paramNames[i], reg, prev: bindings, isFinal: true };
+    foreach int i in 0 ..< defn.args.length() {
+        s:FunctionDefnParam param = defn.args[i];
+        bir:Register reg = cx.createVarRegister(signature.paramTypes[i], <string>param.name, <bir:Position>param.namePos);
+        bindings = { name: <string>param.name, reg, prev: bindings, isFinal: true };
     }
     var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
     if endBlock != () {
@@ -386,14 +385,14 @@ function environmentCopy(Environment env) returns Environment {
 }
 
 function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:ForeachStmt stmt) returns CodeGenError|StmtEffect {
-    string varName = stmt.varName;
+    string varName = stmt.name;
     if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`);
     }
     s:RangeExpr range = stmt.range;
     var { result: lower, block: evalUpper } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, range.lower, t:INT));
     var { result: upper, block: initLoopVar } = check codeGenExprForInt(cx, evalUpper, env, check cx.foldExpr(env, range.upper, t:INT));
-    bir:Register loopVar = cx.createVarRegister(t:INT, varName, stmt.varPos);
+    bir:Register loopVar = cx.createVarRegister(t:INT, varName, stmt.namePos);
     bir:AssignInsn init = { pos: stmt.kwPos, result: loopVar, operand: lower };
     initLoopVar.insns.push(init);
     bir:BasicBlock loopHead = cx.createBasicBlock();
@@ -776,20 +775,18 @@ function codeGenPanicStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
 }
 
 function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:VarDeclStmt stmt) returns CodeGenError|StmtEffect {
-    var { varIdentity, initExpr, td, isFinal } = stmt;
-    if varIdentity is s:WILDCARD {
+    var { name, namePos, initExpr, td, isFinal } = stmt;
+    if name is s:WILDCARD {
         return codeGenWildcardDeclStmt(cx, startBlock, env, initExpr, td, stmt.opPos);
     }
     else {
-        string varName = varIdentity[0];
-        bir:Position varPos = varIdentity[1];
-        if lookup(varName, env) !== () {
-            return cx.semanticErr(`duplicate declaration of ${varName}`, varPos);
+        if lookup(name, env) !== () {
+            return cx.semanticErr(`duplicate declaration of ${name}`, namePos);
         }
         t:SemType semType = check cx.resolveTypeDesc(td);
-        bir:Register result = cx.createVarRegister(semType, varName, varPos);
+        bir:Register result = cx.createVarRegister(semType, name, namePos);
         bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, result, initExpr, semType, stmt.opPos);
-        return { block: nextBlock, bindings: { name: varName, reg: result, prev: env.bindings, isFinal } };  
+        return { block: nextBlock, bindings: { name, reg: result, prev: env.bindings, isFinal } };  
     }
 }
 

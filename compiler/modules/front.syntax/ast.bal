@@ -30,13 +30,11 @@ public type ImportDecl record {|
 |};
 
 public type FunctionDefn record {|
-    *PositionFields;
+    *FunctionTypeDesc;
+    FunctionDefnParam[] args;
     readonly string name;
     ModulePart part;
     Visibility vis;
-    FunctionTypeDesc typeDesc;
-    string[] paramNames;
-    Position[] paramPos;
     StmtBlock body;
     Position namePos;
     // This is filled in during analysis
@@ -142,8 +140,9 @@ public type WhileStmt record {|
 public type ForeachStmt record {|
     *PositionFields;
     Position kwPos;
-    Position varPos;
-    string varName;
+    // name and position of the variable
+    Position namePos;
+    string name;
     RangeExpr range;
     StmtBlock body;
 |};
@@ -159,7 +158,8 @@ public type VarDeclStmt record {|
     *PositionFields;
     Position opPos;
     TypeDesc td;
-    [string, Position]|WILDCARD varIdentity;
+    string|WILDCARD name;
+    Position namePos;
     Expr initExpr;
     boolean isFinal;
 |};
@@ -470,12 +470,25 @@ public type MappingTypeDesc record {|
     t:MappingDefinition? defn = ();
 |};
 
+public type FunctionTypeParam record {|
+    *PositionFields;
+    string? name;
+    Position? namePos;
+    TypeDesc td;
+|};
+
+public type FunctionDefnParam record {|
+    *FunctionTypeParam;
+    string name;
+    Position namePos;
+|};
+
 public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
-    TypeDesc[] args;
+    (FunctionTypeParam|FunctionDefnParam)[] args;
     TypeDesc ret;
     t:FunctionDefinition? defn = ();
 |};

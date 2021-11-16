@@ -40,14 +40,13 @@ function resolveTypes(ModuleSymbols mod) returns ResolveTypeError? {
 }
 
 function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) returns bir:FunctionSignature|ResolveTypeError {
-    s:FunctionTypeDesc td = defn.typeDesc;
     // JBUG doing this as a from/select panics if resolveSubsetTypeDesc returns an error
     // e.g.10-intersect/never2-e.bal
     t:SemType[] params = [];
-    foreach var x in td.args {
-        params.push(check resolveSubsetTypeDesc(mod, defn, x));
+    foreach var x in defn.args {
+        params.push(check resolveSubsetTypeDesc(mod, defn, x.td));
     }
-    t:SemType ret = check resolveSubsetTypeDesc(mod, defn, td.ret);
+    t:SemType ret = check resolveSubsetTypeDesc(mod, defn, defn.ret);
     return { paramTypes: params.cloneReadOnly(), returnType: ret };
 }
 
@@ -234,7 +233,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         if defn == () {
             t:FunctionDefinition d = new(env);
             td.defn = d;
-            s:TypeDesc[] a = td.args;
+            s:TypeDesc[] a = [];
+            foreach var arg in td.args {
+                a.push(arg.td);
+            }
             t:SemType[] args = from var x in a select check resolveTypeDesc(mod, modDefn, depth + 1, x);
             t:SemType ret = check resolveTypeDesc(mod, modDefn, depth + 1, td.ret);
             return d.define(env, t:tuple(env, ...args), ret);

@@ -61,18 +61,18 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
     }
     w.push("function");
     w.push(func.name, CLING, "(");
-    foreach int i in 0 ..< func.typeDesc.args.length() {
+    foreach int i in 0 ..< func.args.length() {
         if i != 0 {
             w.push(",");
         }
-        typeDescToWords(w, func.typeDesc.args[i]);
-        w.push(func.paramNames[i]);
+        typeDescToWords(w, func.args[i].td);
+        w.push(func.args[i].name);
     }
     w.push(")");
-    TypeDesc funcRetTd = func.typeDesc.ret;
+    TypeDesc funcRetTd = func.ret;
     if !(funcRetTd is BuiltinTypeDesc && funcRetTd.builtinTypeName == "null") {
         w.push("returns");
-        typeDescToWords(w, func.typeDesc.ret);
+        typeDescToWords(w, func.ret);
     }
     blockToWords(w, func.body);
 }
@@ -101,12 +101,12 @@ function stmtToWords(Word[] w, Stmt stmt) {
             w.push("final");
         }
         typeDescToWords(w, stmt.td);
-        var varIdentity = stmt.varIdentity;
-        if varIdentity is WILDCARD {
+        var varName = stmt.name;
+        if varName is WILDCARD {
             w.push("_");
         }
         else {
-            w.push(varIdentity[0]);
+            w.push(varName);
         }
         w.push("=");
         exprToWords(w, stmt.initExpr);
@@ -199,7 +199,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
     }
     else if stmt is ForeachStmt {
         w.push("foreach", "int");
-        w.push(stmt.varName);
+        w.push(stmt.name);
         w.push("in");
         exprToWords(w, stmt.range.lower, true);
         w.push("..<");
