@@ -74,7 +74,7 @@ define internal i8 addrspace(1)* @_B_double(i8 addrspace(1)* %0) !dbg !7 {
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
-!0 = !{i32 1, !"Debug Info Version", i32 3}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename:"../../../compiler/testSuite/04-string/16-v.bal", directory:"")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !3 = !DISubroutineType(types: !4)
@@ -84,7 +84,7 @@ define internal i8 addrspace(1)* @_B_double(i8 addrspace(1)* %0) !dbg !7 {
 !7 = distinct !DISubprogram(name:"double", linkageName:"_B_double", scope: !1, file: !1, line: 11, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
 !8 = !{}
 !9 = !DILocation(line: 0, column: 0, scope: !5)
-!10 = !DILocation(line: 8, column: 18, scope: !5)
+!10 = !DILocation(line: 8, column: 25, scope: !5)
 !11 = !DILocation(line: 8, column: 4, scope: !5)
 !12 = !DILocation(line: 6, column: 14, scope: !5)
 !13 = !DILocation(line: 0, column: 0, scope: !7)

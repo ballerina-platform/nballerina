@@ -1,5 +1,5 @@
 // Parsing of type descriptors
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     if tok.current() == "function" {
@@ -113,13 +113,13 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         "boolean"
         | "decimal"
         | "float"
-        | "xml"
         | "typedesc"
         | "handle"
         | "any"
         | "never"
         | "json"
-        |  "readonly" => {
+        | "readonly"
+        | "null" => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
             // JBUG should not need cast #30191
@@ -138,6 +138,20 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             string typeName = check tok.expectIdentifier();
             endPos = tok.previousEndPos();
             return { startPos, endPos, prefix: <string>cur, typeName, pos };
+        }
+        "xml" => {
+            Position pos = tok.currentStartPos();
+            Position endPos = tok.currentEndPos();
+            check tok.advance();
+            if tok.current() == ":" {
+                check tok.advance();
+                string typeName = check tok.expectIdentifier();
+                return { startPos, endPos, prefix: <string>cur, typeName, pos };
+            }
+            else if tok.current() == "<" {
+                return { startPos, endPos, constituent: check parseTypeParam(tok), pos };
+            }
+            return  { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
         }
         "byte" => {
             Position endPos = tok.currentEndPos();
@@ -357,16 +371,18 @@ function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTy
             "..." => {
                 rest = td;
                 check tok.advance();
+                check tok.expect(";");
             }
             [IDENTIFIER, var name] => {
+                Position fieldStartPos = tok.currentStartPos();
                 check tok.advance();
-                fields.push({name, typeDesc: td});
+                Position fieldEndPos = check tok.expectEnd(";");
+                fields.push({ startPos: fieldStartPos, endPos: fieldEndPos, name, typeDesc: td });
             }
             _ => {
                 return parseError(tok);
             }
         }
-        check tok.expect(";");
     }
     Position endPos = tok.currentEndPos();
     check tok.advance();

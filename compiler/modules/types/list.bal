@@ -315,11 +315,11 @@ function listInhabited(Context cx, ListMemberType m, SemType rest, Conjunction? 
         if len < negLen {
             if isNever(rest) {
                 return listInhabited(cx, members, rest, neg.next);
-            } 
+            } // JBUG #33532 should be able to use `_` here
             members = fixLength(negLen, members, rest);
             len = negLen;
         }
-        else if negLen < len && isNever(nt.rest) { 
+        else if negLen < len && isNever(nt.rest) {
             return listInhabited(cx, members, rest, neg.next);
         }
         // now we have nt.members.length() <= len

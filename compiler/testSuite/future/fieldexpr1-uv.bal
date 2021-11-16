@@ -1,21 +1,21 @@
 import ballerina/io;
 
-type A record {|
+type A readonly & record {|
     int|string a;
 |};
 
-type B record {|
+type B readonly & record {|
     int|boolean a;
 |};
 
 public function main() {
     B x = { a : true };
     A|B y = x;
-    if x is A {
+    if y is A {
         // ignore
     }
     else {
-        boolean b = x.a;
+        boolean b = y.a;
         io:println(b); // @output true
     }
 }

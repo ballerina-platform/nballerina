@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"path": "compiler"
+		},
+		{
+			"path": "runtime"
+		},
+		{
+			"path": "test"
+		},
+		{
+			"path": "docs"
+		}
+	],
+	"settings": {}
+}

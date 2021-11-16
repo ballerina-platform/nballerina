@@ -1,8 +1,8 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.diagnostic as d;
 
-public type Position err:Position;
+public type Position d:Position;
 
 type PositionFields record {|
    Position startPos;
@@ -36,7 +36,7 @@ public type FunctionDefn record {|
     Visibility vis;
     FunctionTypeDesc typeDesc;
     string[] paramNames;
-    Stmt[] body;
+    StmtBlock body;
     Position namePos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
@@ -55,16 +55,27 @@ public type ConstDefn record {|
 |};
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakContinueStmt|CompoundAssignStmt|PanicStmt;
-public type CallStmt FunctionCallExpr|MethodCallExpr|CheckingStmt;
-public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|VarRefExpr|CompoundExpr;
+public type CallExpr FunctionCallExpr|MethodCallExpr|CheckingCallExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
 public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
 
 public const WILDCARD = ();
 
+public type StmtBlock record {|
+    *PositionFields;
+    Stmt[] stmts;
+|};
+
+public type CallStmt record {|
+    *PositionFields;
+    CallExpr expr;
+|};
+
 public type AssignStmt record {|
     *PositionFields;
+    Position opPos;
     LExpr|WILDCARD lValue;
     Expr expr;
 |};
@@ -73,8 +84,8 @@ public type CompoundAssignStmt record {|
     *PositionFields;
     LExpr lValue;
     Expr expr;
-    BinaryArithmeticOp|BinaryBitwiseOp op; 
-    Position pos;
+    BinaryArithmeticOp|BinaryBitwiseOp op;
+    Position opPos;
 |};
 
 // L-value expression
@@ -82,19 +93,21 @@ public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
 
 public type ReturnStmt record {|
     *PositionFields;
+    Position kwPos;
     Expr? returnExpr;
 |};
 
 public type PanicStmt record {|
     *PositionFields;
+    Position kwPos;
     Expr panicExpr;
 |};
 
 public type IfElseStmt record {|
     *PositionFields;
     Expr condition;
-    Stmt[] ifTrue;
-    Stmt[] ifFalse;
+    StmtBlock ifTrue;
+    StmtBlock? ifFalse;
 |};
 
 public type MatchStmt record {|
@@ -104,8 +117,10 @@ public type MatchStmt record {|
 |};
 
 public type MatchClause record {|
+    *PositionFields;
     MatchPattern[] patterns;
-    Stmt[] block;
+    StmtBlock block;
+    Position opPos;
 |};
 
 public type MatchPattern ConstPattern|WildcardMatchPattern;
@@ -120,14 +135,15 @@ public type ConstPattern record {|
 public type WhileStmt record {|
     *PositionFields;
     Expr condition;
-    Stmt[] body;
+    StmtBlock body;
 |};
 
 public type ForeachStmt record {|
     *PositionFields;
+    Position kwPos;
     string varName;
     RangeExpr range;
-    Stmt[] body;
+    StmtBlock body;
 |};
 
 public type BreakContinue "break"|"continue";
@@ -139,6 +155,7 @@ public type BreakContinueStmt record {|
 
 public type VarDeclStmt record {|
     *PositionFields;
+    Position opPos;
     TypeDesc td;
     string|WILDCARD varName;
     Expr initExpr;
@@ -166,6 +183,7 @@ public type BinaryExprBase record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     Expr left;
     Expr right;
 |};
@@ -183,21 +201,20 @@ public type BinaryRelationalExpr record {|
 public type BinaryArithmeticExpr record {|
     *BinaryExprBase;
     BinaryArithmeticOp arithmeticOp;
-    Position pos;
 |};
 
 public type BinaryBitwiseExpr record {|
     *BinaryExprBase;
-    BinaryBitwiseOp bitwiseOp; 
+    BinaryBitwiseOp bitwiseOp;
 |};
 
 public type UnaryExpr record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     UnaryExprOp op;
     Expr operand;
-    Position pos;
 |};
 
 public type SimpleConstNegateExpr record {|
@@ -212,8 +229,8 @@ public type ErrorConstructorExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position kwPos;
     Expr message;
-    Position pos;
 |};
 
 public type FunctionCallExpr record {|
@@ -221,11 +238,10 @@ public type FunctionCallExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     string? prefix = ();
     string funcName;
     Expr[] args;
-    // We can get public type/defn mismatch errors here
-    Position pos;
 |};
 
 public type MethodCallExpr record {|
@@ -233,10 +249,10 @@ public type MethodCallExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     string methodName;
     Expr target;
     Expr[] args;
-    Position pos;
 |};
 
 public type CheckingKeyword "check"|"checkpanic";
@@ -246,18 +262,20 @@ public type CheckingExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position kwPos;
     CheckingKeyword checkingKeyword;
     Expr operand;
 |};
 
-public type CheckingStmt record {|
+public type CheckingCallExpr record {|
     // JBUG #32617 can't include CheckingExpr
     // *CheckingExpr;
     // *PositionFields
-    CheckingKeyword checkingKeyword;
     Position startPos;
     Position endPos;
-    CallStmt operand;
+    Position kwPos;
+    CheckingKeyword checkingKeyword;
+    CallExpr operand;
 |};
 
 public type ListConstructorExpr record {|
@@ -265,6 +283,7 @@ public type ListConstructorExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     Expr[] members;
     // JBUG #33309 adding this field makes match statement in codeGenExpr fail
     t:SemType? expectedType = ();
@@ -272,12 +291,16 @@ public type ListConstructorExpr record {|
 
 public type MappingConstructorExpr record {|
     *PositionFields;
+    Position opPos;
     Field[] fields;
     t:SemType? expectedType = ();
 |};
 
 public type Field record {|
-    Position pos; // position of name for now
+    // JBUG #32617 can't include PositionFields
+    // *PositionFields
+    Position startPos;
+    Position endPos;
     string name;
     Expr value;
 |};
@@ -287,17 +310,17 @@ public type MemberAccessExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     Expr container;
     Expr index;
-    Position pos;
 |};
 
 // JBUG #32617 gets a bad, sad if this uses *MemberAccessExpr and overrides container
 public type MemberAccessLExpr record {|
     *PositionFields;
+    Position opPos;
     VarRefExpr container;
     Expr index;
-    Position pos;
 |};
 
 public type FieldAccessExpr record {|
@@ -305,20 +328,21 @@ public type FieldAccessExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position opPos;
     Expr container;
     string fieldName;
-    Position pos;
 |};
 
 public type FieldAccessLExpr record {|
     *PositionFields;
+    Position opPos;
     VarRefExpr container;
     string fieldName;
-    Position pos;
 |};
 
 public type RangeExpr record {|
     *PositionFields;
+    Position opPos;
     Expr lower;
     Expr upper;
 |};
@@ -336,7 +360,7 @@ public type TypeCastExpr record {|
     Position endPos;
     TypeDesc td;
     Expr operand;
-    Position pos;
+    Position opPos;
 |};
 
 public type TypeTestExpr record {|
@@ -348,6 +372,7 @@ public type TypeTestExpr record {|
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
     boolean negated;
+    Position kwPos;
 |};
 
 public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
@@ -414,7 +439,7 @@ public type TypeDefn record {|
 
 public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
-public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc;
+public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc;
 
 public type ListTypeDesc record {|
     // JBUG #32617 can't include PositionFields
@@ -427,6 +452,7 @@ public type ListTypeDesc record {|
 |};
 
 public type FieldDesc record {|
+    *PositionFields;
     string name;
     TypeDesc typeDesc;
 |};
@@ -472,6 +498,14 @@ public type UnaryTypeDesc record {|
     *PositionFields;
     UnaryTypeOp op;
     TypeDesc td;
+|};
+
+public type XmlSequenceTypeDesc record {|
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
+    Position pos;
+    TypeDesc constituent;
 |};
 
 public type TypeDescRef record {|

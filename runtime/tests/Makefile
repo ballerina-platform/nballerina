@@ -1,11 +1,12 @@
 # Make sure these are in .gitignore
-TESTPROGS=string_hash string_cmp string_concat string_len immediate_string tagged_ptr float_print error_print error_backtrace1 error_backtrace2 demangle list_construct
+TESTPROGS=string_hash string_cmp string_concat string_len immediate_string tagged_ptr float_print error_print error_backtrace1 error_backtrace2 demangle list_construct decimal_arith
 # following will test balrt_inline, and must be named inlinert_*
 TESTINLINERTPROGS=inlinert_float inlinert_int inlinert_string inlinert_list
 TESTPROG_STAMPS=$(addsuffix .stamp, $(TESTPROGS) $(TESTINLINERTPROGS))
 TESTPROG_PROF_RAW=$(addsuffix .profraw, $(TESTPROGS))
 TESTPROG_PROF = test.profdata
 TESTPROG_EXE=$(addprefix -object ./, $(TESTPROGS))
+SHELL=/bin/bash
 
 all: $(TESTPROGS)
 
@@ -18,6 +19,11 @@ testCoverage: $(TESTPROG_PROF_RAW) $(TESTPROG_PROF)
 
 $(TESTPROG_PROF): $(TESTPROG_PROF_RAW)
 	llvm-profdata merge -sparse $(TESTPROG_PROF_RAW) -o $@
+
+error_backtrace%.stamp: error_backtrace%
+	set -o pipefail; \
+	./$< | ./error_backtrace.sh $<.txt
+	touch $@ 
 
 %.stamp: %
 	./$<

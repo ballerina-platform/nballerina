@@ -18,7 +18,6 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     llvm:FunctionType[] llFuncTypes = [];
     map<llvm:FunctionDefn> llFuncMap = {};
     foreach var defn in functionDefns {
-        bir:File defnFile = partFiles[defn.partIndex];
         llvm:FunctionType ty = buildFunctionSignature(defn.signature);
         llFuncTypes.push(ty);
         bir:InternalSymbol symbol = defn.symbol;
@@ -70,11 +69,14 @@ function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
     foreach var used in usedSemTypes {
         types.push(used.semType);
         byte use = 0;
-        if !(used.inherentType == ()) {
+        if used.inherentType != () {
             use = USED_INHERENT_TYPE;
         }
-        if !(used.typeTest == ()) {
+        if used.typeTest != () {
             use |= USED_TYPE_TEST;
+        }
+        if used.exactify != () {
+            use |= USED_EXACTIFY;
         }
         uses.push(use);
     }

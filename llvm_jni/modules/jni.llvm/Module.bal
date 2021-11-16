@@ -157,6 +157,10 @@ public distinct class Module {
         return val;
     }
 
+    public function setInitializer(ConstPointerValue global, ConstValue|Function initializer) {
+        jLLVMSetInitializer(global.LLVMValueRef, initializer.LLVMValueRef);
+    }
+
     public function addAlias(Type aliasTy, ConstValue aliasee, string name, *GlobalSymbolProperties props) returns ConstPointerValue {
         Type aliasInternalType = pointerType(aliasTy, props.addressSpace);
         ConstPointerValue val = new(jLLVMAddAlias(self.LLVMModule, typeToLLVMType(aliasInternalType, self.context), aliasee.LLVMValueRef, java:fromString(name)));

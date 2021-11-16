@@ -1,6 +1,7 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
-type Token FixedToken|readonly & VariableLengthToken;
+type Token FixedToken|VariableLengthToken;
 type FixedToken SingleCharDelim|MultiCharDelim|Keyword;
 
 const IDENTIFIER = 0;
@@ -14,7 +15,12 @@ const N_VARIABLE_TOKENS = 5;
 type VariableTokenCode IDENTIFIER|DECIMAL_NUMBER|STRING_LITERAL|HEX_INT_LITERAL|DECIMAL_FP_NUMBER;
 
 // Use string for DECIMAL_NUMBER so we don't get overflow on -int:MAX_VALUE
-type VariableLengthToken [IDENTIFIER, string]|[DECIMAL_NUMBER, string]|[STRING_LITERAL, string]|[HEX_INT_LITERAL, string]|[DECIMAL_FP_NUMBER, string, FpTypeSuffix?];
+// JBUG #33694 can't factor `readonly` out
+type VariableLengthToken readonly & [IDENTIFIER, string] |
+                         readonly & [DECIMAL_NUMBER, string] |
+                         readonly & [STRING_LITERAL, string] |
+                         readonly & [HEX_INT_LITERAL, string] |
+                         readonly & [DECIMAL_FP_NUMBER, string, FpTypeSuffix?];
 
 // Some of these are not yet used by the grammar
 type SingleCharDelim ";" | "+" | "-" | "*" |"(" | ")" | "[" | "]" | "{" | "}" | "<" | ">" | "?" | "&" | "^" | "|" | "!" | ":" | "," | "/" | "%" | "=" | "." | "~";
@@ -236,12 +242,14 @@ class Tokenizer {
         }
     }
 
-    function peek() returns VariableTokenCode|FixedToken? {
+    // Peeks the next token. When skipQualIdent is passed, considers qualified identifier as a single token,
+    // ie if current token is the first identifier of a qualified identifier, returns the token after the second identifier.
+    function peek(boolean skipQualIdent=false) returns VariableTokenCode|FixedToken? {
         readonly & FragCode[] fragCodes = self.fragCodes;
         int fragCodeIndex = self.fragCodeIndex;
         int lineIndex = self.lineIndex;
         while true {
-            if fragCodeIndex > fragCodes.length() {
+            if fragCodeIndex >= fragCodes.length() {
                 if lineIndex >= self.lines.length() {
                     break;
                 }
@@ -292,6 +300,14 @@ class Tokenizer {
                     }
                     FRAG_DECIMAL_FP_NUMBER|FRAG_DECIMAL_FP_NUMBER_F|FRAG_DECIMAL_FP_NUMBER_D => {
                         return DECIMAL_FP_NUMBER;
+                    }
+                    CP_COLON => {
+                        if skipQualIdent && fragCodeIndex + 1 < fragCodes.length() && fragCodes[fragCodeIndex + 1] == FRAG_IDENTIFIER {
+                            fragCodeIndex += 2;
+                        }
+                        else {
+                            return ":";
+                        }
                     }
                     _ => {
                         // JBUG #33346 cast should not be needed
@@ -366,7 +382,7 @@ class Tokenizer {
             return t[1];
         }
         else {
-            err:Template msg;
+            d:Message msg;
             if t is string {
                 msg = `expected an identifier; got ${t}`;
             }
@@ -385,7 +401,7 @@ class Tokenizer {
 
     function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns err:Syntax? {
         if self.curTok != tok {
-            err:Template msg;
+            d:Message msg;
             Token? t = self.curTok;
             if t is string {
                 msg = `expected ${tok}; got ${t}`;
@@ -398,8 +414,8 @@ class Tokenizer {
         check self.advance();
     }
 
-    function err(err:Message msg) returns err:Syntax {
-        return err:syntax(msg, loc=err:location(self.file, self.currentStartPos()));
+    function err(d:Message msg) returns err:Syntax {
+        return err:syntax(msg, loc=d:location(self.file, self.currentStartPos()));
     }
 
     function save() returns TokenizerState {
@@ -452,7 +468,7 @@ function unpackPosition(Position pos) returns [int, int] & readonly {
 }
 
 public readonly class SourceFile {
-    *err:File;
+    *d:File;
     private ScannedLine[] lines;
     private string fn;
     private string? dir;
@@ -467,7 +483,7 @@ public readonly class SourceFile {
 
     public function directory() returns string? => self.dir;
 
-    public function lineColumn(Position pos) returns err:LineColumn {
+    public function lineColumn(Position pos) returns d:LineColumn {
         return unpackPosition(pos);
     }
 

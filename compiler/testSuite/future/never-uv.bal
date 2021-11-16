@@ -1,7 +1,6 @@
 import ballerina/io;
 
-type Never string & int;
-function foo() returns Never {
+function foo() returns never {
     panic error("never returns");
 }
 

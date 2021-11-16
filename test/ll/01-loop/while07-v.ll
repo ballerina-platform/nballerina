@@ -188,7 +188,7 @@ define internal i1 @_B_isSquareNumber(i64 %0) !dbg !9 {
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
-!0 = !{i32 1, !"Debug Info Version", i32 3}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DIFile(filename:"../../../compiler/testSuite/01-loop/while07-v.bal", directory:"")
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false)
 !3 = !DISubroutineType(types: !4)
@@ -205,6 +205,6 @@ define internal i1 @_B_isSquareNumber(i64 %0) !dbg !9 {
 !14 = !DILocation(line: 7, column: 4, scope: !5)
 !15 = !DILocation(line: 8, column: 4, scope: !5)
 !16 = !DILocation(line: 0, column: 0, scope: !7)
-!17 = !DILocation(line: 14, column: 12, scope: !7)
+!17 = !DILocation(line: 14, column: 11, scope: !7)
 !18 = !DILocation(line: 15, column: 12, scope: !7)
 !19 = !DILocation(line: 0, column: 0, scope: !9)

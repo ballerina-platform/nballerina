@@ -2,9 +2,9 @@
 #include "../balrt_inline.h"
 #include <stdio.h>
 
-ListDesc DESC_INT = { 129 };
-ListDesc DESC_FLOAT = { 257 };
-ListDesc DESC_STRING = { 1025 };
+ListDesc DESC_INT = { 0, _bal_list_get, _bal_list_set, BITSET_MEMBER_TYPE(129) };
+ListDesc DESC_FLOAT = { 1, _bal_list_get, _bal_list_set, BITSET_MEMBER_TYPE(257) };
+ListDesc DESC_STRING = { 2, _bal_list_get, _bal_list_set, BITSET_MEMBER_TYPE(1025) };
 
 TaggedPtr getArr(ListDescPtr desc) {
     GC TaggedPtr *members =  _bal_alloc(sizeof(TaggedPtr));

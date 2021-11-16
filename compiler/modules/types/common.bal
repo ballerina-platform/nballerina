@@ -108,6 +108,38 @@ function bddSubtypeComplement(SubtypeData t) returns SubtypeData {
     return bddComplement(<Bdd>t);
 }
 
+// Represents path from root to leaf (ending with true)
+// bdd gets the Bdd for this path
+type BddPath record {|
+    Bdd bdd = true;
+    Atom[] pos = [];
+    Atom[] neg = [];
+|};
+
+function bddPaths(Bdd b, BddPath[] paths, BddPath accum) {
+    if b is boolean {
+        if b {
+            paths.push(accum);
+        }
+    }
+    else {
+        BddPath left = bddPathClone(accum);
+        BddPath right = bddPathClone(accum);
+        left.pos.push(b.atom);
+        left.bdd = bddIntersect(left.bdd, bddAtom(b.atom));
+        bddPaths(b.left, paths, left);
+        bddPaths(b.middle, paths, accum);
+        right.neg.push(b.atom);
+        right.bdd = bddDiff(right.bdd, bddAtom(b.atom));
+        bddPaths(b.right, paths, right);
+    }
+}
+
+// JBUG (33706) should be able to use clone
+// what happens is after clone, empty pos and neg, which were == but not ===, become ===
+function bddPathClone(BddPath path) returns BddPath {
+    return { bdd: path.bdd, pos: path.pos.clone(), neg: path.neg.clone() };
+}
 
 // Feels like this should be a lang library function.
 function shallowCopyTypes(SemType[] v) returns SemType[] {

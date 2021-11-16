@@ -50,6 +50,7 @@ function stringSubtypeSingleValue(SubtypeData d) returns string? {
     if charCount + nonCharCount == 1 {
         return charCount != 0 ? char.values[0] : nonChar.values[0];
     }
+    return ();
 }
 
 function stringSubtypeContains(SubtypeData d, string s) returns boolean {

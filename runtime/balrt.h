@@ -32,6 +32,7 @@
 // LLVM readnone attribute corresponds to clang const
 #define READNONE __attribute__((const))
 #define ALIGNED(n) __attribute__((aligned(n)))
+#define UNUSED __attribute__((unused))
 #else
 #define NODEREF /* as nothing */
 #define NORETURN /* as nothing */
@@ -40,6 +41,7 @@
 #define READONLY /* as nothing */
 #define READNONE /* as nothing */
 #define ALIGNED(n) /* as nothing */
+#deifne UNUSED /* as nothing */
 #endif
 
 #define likely(x) __builtin_expect((x), 1)
@@ -79,10 +81,34 @@ typedef struct {
     GC TaggedPtr *members;
 } TaggedPtrArray;
 
+typedef uint32_t Tid;
+// Represents the type of a member of a structure
+// Either a ComplexTypePtr or a shifted bitset
+// Shifted bitSet is shifted 1 and or'ed with 1
+typedef uint64_t MemberType;
+
+#define BITSET_MEMBER_TYPE(bitSet) (((uint64_t)(bitSet) << 1)|1)
+
+// All mapping and list descriptors start with this.
 typedef struct {
-    uint32_t bitSet;
+    Tid tid;
+} StructureDesc, *StructureDescPtr;
+
+// All mapping and list values start with this
+typedef GC struct {
+    StructureDescPtr desc;
+} Structure, *StructurePtr;
+
+// This extends StructureDesc
+// i.e must start with tid
+typedef struct {
+    Tid tid;
+    TaggedPtr (*get)(TaggedPtr lp, int64_t index);
+    PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
+    MemberType memberType;
 } ListDesc, *ListDescPtr;
 
+// Extends Structure
 typedef GC struct List {
     ListDescPtr desc;
     // This isn't strictly portable because void* and TaggedPtr* might have different alignments/sizes
@@ -104,16 +130,16 @@ typedef struct {
     GC MapField *members;
 } MapFieldArray;
 
+// This extends StructureDesc
+// i.e must start with tid
 typedef struct {
-    uint32_t bitSet;
+    Tid tid;
+    uint32_t nFields;
+    MemberType restType;
+    MemberType fieldTypes[];
 } MappingDesc, *MappingDescPtr;
 
-typedef struct {
-    uint32_t bitSet; // zero
-    uint32_t nFields;
-    uint32_t fieldBitSets[];
-} *RecordDescPtr;
-
+// Extends Structure
 typedef GC struct Mapping {
     MappingDescPtr desc;
     union {
@@ -136,25 +162,37 @@ typedef GC struct Mapping {
     uint8_t tableLengthShift;
 } *MappingPtr;
 
-typedef struct TypeTest {
-    bool (*contains)(struct TypeTest *, TaggedPtr);
-} TypeTest, *TypeTestPtr;
+typedef struct UniformSubtype {
+    bool (*contains)(struct UniformSubtype *, TaggedPtr);
+} UniformSubtype, *UniformSubtypePtr;
 
 typedef struct {
     TaggedPtr fieldName;
     uint32_t fieldBitSet;
-} RecordTypeTestField;
+} RecordSubtypeField;
 
 typedef struct {
-    TypeTest typeTest;
+    UniformSubtype uniform;
     uint32_t nFields;
-    RecordTypeTestField fields[];
-} *RecordTypeTestPtr;
+    RecordSubtypeField fields[];
+} *RecordSubtypePtr;
 
 typedef struct {
-    TypeTest typeTest;
+    UniformSubtype uniform;
     uint32_t bitSet;
-} *MapTypeTestPtr, *ArrayTypeTestPtr;
+} *MapSubtypePtr, *ArraySubtypePtr;
+
+typedef struct {
+    UniformSubtype uniform;
+    uint32_t nTids;
+    uint32_t tids[];
+} *PrecomputedSubtypePtr;
+
+typedef struct {
+   uint32_t all;
+   uint32_t some;
+   UniformSubtypePtr subtypes[];
+} ComplexType, *ComplexTypePtr;
 
 typedef GC struct Error {
     TaggedPtr message;
@@ -207,6 +245,11 @@ typedef struct {
     GC char *bytes;
 } StringData;
 
+typedef struct {
+    TaggedPtr ptr;
+    PanicCode panicCode;
+} TaggedPtrPanicCode;
+
 #define ALIGN_HEAP 8
 
 // Don't declare functions here if they are balrt_inline.c
@@ -228,6 +271,7 @@ extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoin
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
 extern ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity);
+extern TaggedPtr _bal_list_get(TaggedPtr p, int64_t index);
 extern PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
 extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 
@@ -241,6 +285,7 @@ extern READONLY bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
+extern READNONE TaggedPtr _bal_tagged_clear_exact(TaggedPtr p);
 
 extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
 extern void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start, FILE *fp);
@@ -248,6 +293,10 @@ extern void _bal_print_mangled_name(const char *mangledName, FILE *fp);
 // Returns an error value
 extern TaggedPtr COLD _bal_panic_construct(PackedPanic err);
 extern NORETURN COLD void _bal_panic_internal(PanicCode code);
+
+extern TaggedPtr _bal_decimal_const(const char *decString);
+extern TaggedPtrPanicCode _bal_decimal_add(TaggedPtr tp1, TaggedPtr tp2);
+extern TaggedPtrPanicCode _bal_decimal_sub(TaggedPtr tp1, TaggedPtr tp2);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
@@ -266,7 +315,7 @@ static READNONE inline uint64_t taggedPtrBits(TaggedPtr p) {
 }
 
 static inline TaggedPtr bitsToTaggedPtr(uint64_t bits) {
-    char *p = (char *)0 + bits;
+    char *p = (char *)bits;
     return (TaggedPtr)p;
 }
 
@@ -284,6 +333,41 @@ static READNONE inline UntypedPtr taggedToPtr(TaggedPtr p) {
 
 static READNONE inline UntypedPtr taggedToPtrExact(TaggedPtr p) {
     return _bal_tagged_to_ptr_exact(p);
+}
+
+static READONLY inline bool memberTypeIsSubtypeSimple(MemberType memberType, uint32_t bitSet) {
+    uint32_t memberBitSet;
+    if (memberType & 1) {
+        memberBitSet = (uint32_t)(memberType >> 1);
+    }
+    else {
+        ComplexTypePtr ctp = (ComplexTypePtr)memberType;
+        memberBitSet = ctp->all | ctp->some; 
+    }
+    return (memberBitSet & ~(uint64_t)bitSet) == 0;
+}
+
+static READONLY inline bool complexTypeContainsTagged(ComplexTypePtr ctp, TaggedPtr p) {
+    int flag = 1 << ((getTag(p) & UT_MASK));
+    if (ctp->all & flag) {
+        return true;
+    }
+    if (!(ctp->some & flag)) {
+        return false;
+    }
+    int i = __builtin_popcount(ctp->some & (flag - 1));
+    UniformSubtypePtr vp = ctp->subtypes[i];
+    return (vp->contains)(vp, p);
+}
+
+static READONLY inline bool memberTypeContainsTagged(MemberType memberType, TaggedPtr tp) {
+    if (memberType & 1) {
+        uint64_t flag =  (uint64_t)1 << (1 + (getTag(tp) & UT_MASK));
+        return (memberType & flag) != 0;
+    }
+    else {
+        return complexTypeContainsTagged((ComplexTypePtr)memberType, tp);
+    }   
 }
 
 static READNONE inline PanicCode storePanicCode(TaggedPtr p, PanicCode code) {
@@ -514,10 +598,10 @@ static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_
     int64_t lhsLen = lhsListPtr->tpArray.length;
     int64_t rhsLen = rhsListPtr->tpArray.length;
     int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
-    GC TaggedPtr *lhsArr = lhsListPtr->tpArray.members;
-    GC TaggedPtr *rhsArr = rhsListPtr->tpArray.members;
+    TaggedPtr (*lhsGet)(TaggedPtr lp, int64_t index) = lhsListPtr->desc->get;
+    TaggedPtr (*rhsGet)(TaggedPtr lp, int64_t index) = rhsListPtr->desc->get;
     for (int64_t i = 0; i < length; i++) {
-        int64_t result = (*comparator)(lhsArr[i], rhsArr[i]);
+        int64_t result = (*comparator)(lhsGet(lhs, i), rhsGet(rhs, i));
         if (result != COMPARE_EQ) {
             return result;
         }

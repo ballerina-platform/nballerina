@@ -2,7 +2,7 @@
 
 #include <string.h>
 
-#define ARRAY_LENGTH_MAX (INT64_MAX/sizeof(TaggedPtr))
+#define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
 
 const double F0 = +0.0;
 
@@ -13,45 +13,60 @@ ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
     return lp;
 }
 
-static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
-    uint64_t bits;
-    switch (desc->bitSet) {
-        case (1 << TAG_BOOLEAN):
-            *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
-            return true;
-        case (1 << TAG_INT):
-            *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
-            return true;
-        case (1 << TAG_FLOAT):
-            {
-                GC double *fp = (GC double *)&F0;
-                *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
-                return true;
-            }
-        case (1 << TAG_STRING):
-            _bal_string_alloc(0, 0, valuePtr);
-            return true;
+static bool getArrayFiller(MemberType memberType, TaggedPtr *valuePtr) {
+    uint32_t bitSet;
+    if ((memberType & 1) == 0) {
+        // XXX need to handle array or map here
+        bitSet = ((ComplexTypePtr)memberType)->all;
     }
-    if (desc->bitSet & (1 << TAG_NIL)) {
+    else {
+        bitSet = (uint32_t)(memberType >> 1);
+        switch (bitSet) {
+            case (1 << TAG_BOOLEAN):
+                *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
+                return true;
+            case (1 << TAG_INT):
+                *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
+                return true;
+            case (1 << TAG_FLOAT):
+                {
+                    GC double *fp = (GC double *)&F0;
+                    *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
+                    return true;
+                }
+            case (1 << TAG_STRING):
+                _bal_string_alloc(0, 0, valuePtr);
+                return true;
+        }
+    }
+    if (bitSet & (1 << TAG_NIL)) {
         *valuePtr = 0;
         return true;
     }
     return false;
 }
 
+// Must be called with an index such that, 0 <= index < lp->gArray.length
+TaggedPtr _bal_list_get(TaggedPtr p, int64_t index) {
+    ListPtr lp = taggedToPtr(p);
+    GC TaggedPtrArray *ap = &(lp->tpArray);
+    return ap->members[index];
+}
+
 PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
     ListDescPtr ldp = lp->desc;
-    uint32_t bitSet = ldp->bitSet;
-    if ((bitSet & (1 << (getTag(val) & UT_MASK))) == 0) {
+    if (!memberTypeContainsTagged(lp->desc->memberType, val)) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     GC TaggedPtrArray *ap = &(lp->tpArray);
-    if (likely((uint64_t)index < ap->length)) {
+    // The cast makes this handle the negative case also in a single comparison
+    if (likely((uint64_t)index < (uint64_t)ap->length)) {
         ap->members[index] = val;
         return 0;
     }
-    if (unlikely((uint64_t)index >= ap->capacity)) {
+    // The cast makes this handle the negative case also in a single comparison
+    if (unlikely((uint64_t)index >= (uint64_t)ap->capacity)) {
         if (unlikely((uint64_t)index >= ARRAY_LENGTH_MAX)) {
             return index < 0 ? PANIC_INDEX_OUT_OF_BOUNDS : PANIC_LIST_TOO_LONG; 
         }
@@ -62,7 +77,7 @@ PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
         // we have a gap to fill
         // from length..<index
         TaggedPtr filler;
-        if (!getFiller(ldp, &filler)) {
+        if (!getArrayFiller(ldp->memberType, &filler)) {
             return PANIC_NO_FILLER;
         }
         for (int64_t i = ap->length; i < index; i++) {
@@ -125,18 +140,17 @@ bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
     if (ap2->length != len) {
         return false;
     }
+    TaggedPtr (*get1)(TaggedPtr lp, int64_t index) = lp1->desc->get;
+    TaggedPtr (*get2)(TaggedPtr lp, int64_t index) = lp2->desc->get;
     for (int64_t i = 0; i < len; i++) {
-        if (!taggedPtrEqual(ap1->members[i], ap2->members[i])) {
+        if (!taggedPtrEqual(get1(p1, i), get2(p2, i))) {
             return false;
         }
     }
     return true;
 }
 
-bool _bal_array_type_contains(TypeTestPtr ttp, TaggedPtr p) {
-    if ((getTag(p) & UT_MASK) != TAG_LIST_RW) {
-        return false;
-    }
+bool _bal_array_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     ListPtr lp = taggedToPtr(p);   
-    return (lp->desc->bitSet & ~((ArrayTypeTestPtr)ttp)->bitSet) == 0;
+    return memberTypeIsSubtypeSimple(lp->desc->memberType, ((ArraySubtypePtr)stp)->bitSet);
 }

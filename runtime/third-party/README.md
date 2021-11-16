@@ -10,8 +10,9 @@ This is currently a manual step. You may checkout this orphan branch to a tempor
 git clone --branch third-party <repo-url> nballerina-third-party
 cd nballerina-third-party
 git submodule update --init --recursive
+for f in */update.sh; do (cd `dirname $f`; sh update.sh); done
 ```
-Above command should update the git submodules. Commits you make here will not appear in the main branch, so you may also manually update files in this branch from a third-party upstream. But do not make any modifications that are not present in third-party upstream.
+Above commands should update the git submodules and downloaded files. Commits you make here will not appear in the main branch, so you may also manually update files in this branch from a third-party upstream. But do not make any modifications that are not present in third-party upstream.
  
 Update `mapping.txt` file if needed.
  
