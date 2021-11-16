@@ -227,6 +227,11 @@ public class Context {
         panic err:illegalArgument("no such named struct type");
     }
 
+    // Corresponds to LLVMConstPtrToInt
+    public function constPtrToInt(ConstPointerValue constantValue, IntType toType) returns ConstValue {
+        return new ConstValue(toType, concat("ptrtoint", "(", typeToString(constantValue.ty, self), constantValue.operand, "to", typeToString(toType, self), ")"));
+    }
+
     function output(Output out){
         foreach var entry in self.namedStructTypes.entries() {
             var data = entry[1];
