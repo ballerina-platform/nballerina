@@ -83,11 +83,9 @@ typedef struct {
 
 typedef uint32_t Tid;
 // Represents the type of a member of a structure
-// Currerntly a bit-vector.
+// Currently a bit-vector.
 // Will change to a uint64_t that is either a pointer or bit-vector.
 typedef uint32_t MemberType;
-
-#define INVALID_MEMBER_TYPE ((MemberType)0)
 
 // All mapping and list descriptors start with this.
 typedef struct {
@@ -134,16 +132,10 @@ typedef struct {
 // i.e must start with tid
 typedef struct {
     Tid tid;
-    MemberType memberType;
-} MappingDesc, *MappingDescPtr;
-
-// This extends MappingDesc
-typedef struct {
-    Tid tid;
-    MemberType memberType; // zero
     uint32_t nFields;
-    MemberType fieldMemberTypes[];
-} *RecordDescPtr;
+    MemberType restType;
+    MemberType fieldTypes[];
+} MappingDesc, *MappingDescPtr;
 
 // Extends Structure
 typedef GC struct Mapping {

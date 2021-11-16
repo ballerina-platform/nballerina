@@ -144,13 +144,7 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
         [llType, ptr] = addArrayInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, semType));
     }
     else {
-        t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType);
-        if mat.rest != t:NEVER {
-            [llType, ptr] = addMapInherentTypeDefn(cx, symbol, tid, mat.rest);
-        }
-        else {
-            [llType, ptr] = addRecordInherentTypeDefn(cx, symbol, tid, mat.names, mat.types);
-        }
+        [llType, ptr] = addMappingInherentTypeDefn(cx, symbol, tid, <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType));
     }
     defns.add({ llType, ptr, semType, tid });
 }
@@ -161,19 +155,13 @@ function addArrayInherentTypeDefn(InitModuleContext cx, string symbol, int tid, 
     return [llListDescType, ptr];
 }
 
-function addMapInherentTypeDefn(InitModuleContext cx, string symbol, int tid, t:SemType memberType) returns [llvm:StructType, llvm:ConstPointerValue] {
-    llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt(LLVM_TID, tid), getMemberType(cx, memberType)]);
-    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llMapDescType, symbol, initializer=initValue, isConstant=true);
-    return [llMapDescType, ptr];
-}
-
-function addRecordInherentTypeDefn(InitModuleContext cx, string symbol, int tid, string[] fieldNames, t:SemType[] fieldTypes) returns [llvm:StructType, llvm:ConstPointerValue] {
-    final int nFields = fieldNames.length();
-    // tid, 0, fieldCount, fields
-    final llvm:StructType llType = llvm:structType([LLVM_TID, LLVM_MEMBER_TYPE, "i32", llvm:arrayType(LLVM_MEMBER_TYPE, nFields)]);
-    llvm:ConstValue[] llFields = from var ty in fieldTypes select getMemberType(cx, ty);
+function addMappingInherentTypeDefn(InitModuleContext cx, string symbol, int tid, t:MappingAtomicType mat) returns [llvm:StructType, llvm:ConstPointerValue] {
+    final int nFields = mat.names.length();
+    // tid, fieldCount, restField, individualFields...
+    final llvm:StructType llType = llvm:structType([LLVM_TID, "i32", LLVM_MEMBER_TYPE, llvm:arrayType(LLVM_MEMBER_TYPE, nFields)]);
+    llvm:ConstValue[] llFields = from var ty in mat.types select getMemberType(cx, ty);
     llvm:ConstValue initValue = cx.llContext.constStruct(
-        [llvm:constInt(LLVM_TID, tid), llInvalidMemberType, llvm:constInt("i32", nFields), cx.llContext.constArray(LLVM_MEMBER_TYPE, llFields)]);
+        [llvm:constInt(LLVM_TID, tid), llvm:constInt("i32", nFields), getMemberType(cx, mat.rest), cx.llContext.constArray(LLVM_MEMBER_TYPE, llFields)]);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true);
     return [llType, ptr];  
 }

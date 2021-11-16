@@ -194,26 +194,21 @@ void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr value)
 PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
     MappingDescPtr mdp = mp->desc;
-    MemberType memberType = mdp->memberType;
     int64_t len = mp->fArray.length;
+    bool isRecord = mdp->nFields > 0;
    
     // Here may insert something that is equal to the empty marker
     // But it doesn't matter because in this case we will rebuild anyway
     int64_t i = lookupInsert(mp, key, _bal_string_hash(key), len);
     if (i >= 0) {
-        if (memberType == INVALID_MEMBER_TYPE) {
-            // it's a closed record type
-            memberType = ((RecordDescPtr)mdp)->fieldMemberTypes[i];
-        }
+        MemberType memberType = isRecord ? mdp->fieldTypes[i] : mdp->restType;
         if (!memberTypeContainsTagged(memberType, value)) {
             return storePanicCode(mapping, PANIC_MAPPING_STORE);
         }
         mp->fArray.members[i].value = value;
         return 0;
     }
-    if (!memberTypeContainsTagged(memberType, value)) {
-        // This catches both adding a field to a closed record type
-        // and adding a value of the wrong type.
+    if (isRecord || !memberTypeContainsTagged(mdp->restType, value)) {
         return storePanicCode(mapping, PANIC_MAPPING_STORE);
     }
     if (unlikely(len >= mp->fArray.capacity)) {
@@ -232,7 +227,7 @@ PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
 
 PanicCode _bal_mapping_indexed_set(TaggedPtr mapping, int64_t i, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
-    MemberType memberType = ((RecordDescPtr)(mp->desc))->fieldMemberTypes[i];
+    MemberType memberType = ((MappingDescPtr)(mp->desc))->fieldTypes[i];
     if (!memberTypeContainsTagged(memberType, value))  {
         return storePanicCode(mapping, PANIC_MAPPING_STORE);
     }
@@ -246,8 +241,7 @@ bool _bal_record_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     }
     MappingPtr mp = taggedToPtr(p);
     MappingDescPtr mdp = mp->desc;
-    MemberType memberType = mdp->memberType;
-    if (memberType != INVALID_MEMBER_TYPE) {
+    if (mdp->nFields == 0) {
         // inherent type of value is a map type, so it's not a subtype of any closed record type
         return false;
     }
@@ -261,7 +255,7 @@ bool _bal_record_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
         if (!taggedStringEqual(tf->fieldName, mp->fArray.members[i].key)) {
             return false;
         }
-        if (!memberTypeIsSubtypeSimple(((RecordDescPtr)mdp)->fieldMemberTypes[i], tf->fieldBitSet)) {
+        if (!memberTypeIsSubtypeSimple(mdp->fieldTypes[i], tf->fieldBitSet)) {
             return false;
         }
     }
@@ -274,18 +268,17 @@ bool _bal_map_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     }
     MappingPtr mp = taggedToPtr(p);
     MappingDescPtr mdp = mp->desc;
-    MemberType memberType = mdp->memberType;
     uint32_t typeBitSet = ((MapSubtypePtr)stp)->bitSet;
-    if (memberType != INVALID_MEMBER_TYPE) {
+    if (mdp->nFields == 0) {
         // Does map type contains map value?
         // Look at member type bit sets
-        return memberTypeIsSubtypeSimple(memberType, typeBitSet);
+        return memberTypeIsSubtypeSimple(mdp->restType, typeBitSet);
     }
     // Does map type contain record value?
     // Inherent type of each field must be subtype of map member type.
     int64_t nFields = mp->fArray.length;
     for (int64_t i = 0; i < nFields; i++) {
-        if (!memberTypeIsSubtypeSimple(((RecordDescPtr)mdp)->fieldMemberTypes[i], typeBitSet)) {
+        if (!memberTypeIsSubtypeSimple(mdp->fieldTypes[i], typeBitSet)) {
             return false;
         }
     }

@@ -12,8 +12,6 @@ const LLVM_TID = "i32";
 const LLVM_MEMBER_TYPE = "i32";
 const LLVM_PANIC_CODE = "i64";
 
-final llvm:ConstValue llInvalidMemberType = llvm:constInt(LLVM_MEMBER_TYPE, 0);
-
 final llvm:StructType llStructureDescType = llvm:structType([LLVM_TID]);
 
 // This is an approximation, but close enough since we are only accessing the pointer in C.
