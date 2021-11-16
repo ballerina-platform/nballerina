@@ -6,7 +6,7 @@ final RuntimeFunction typeContainsFunction = {
     name: "type_contains",
     ty: {
         returnType: LLVM_BOOLEAN,
-        paramTypes: [llvm:pointerType(llTypeTestType), LLVM_TAGGED_PTR]
+        paramTypes: [llvm:pointerType(llComplexType), LLVM_TAGGED_PTR]
     },
     attrs: ["readonly"]
 };

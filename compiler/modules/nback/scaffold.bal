@@ -275,7 +275,7 @@ class Scaffold {
         if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_TYPE_TEST, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(llTypeTestType, symbol, isConstant = true);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llComplexType, symbol, isConstant = true);
             used.typeTest = v;
             return v;
         }
@@ -290,7 +290,7 @@ class Scaffold {
         if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(llInherentType, symbol, isConstant = true);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llStructureDescType, symbol, isConstant = true);
             used.inherentType = v;
             return v;
         }
