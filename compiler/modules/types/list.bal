@@ -160,8 +160,7 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return isEmpty;    
 }
 
-function nthMember(ListMemberType m, int i) returns SemType {
-    // JBUG m[1] crashes the compiler
+function memberAt(ListMemberType m, int i) returns SemType {
     if m is FixedLengthMembers {
         FixedLengthMembers {memberType, length} = m;
         if length > i {
@@ -174,7 +173,7 @@ function nthMember(ListMemberType m, int i) returns SemType {
     return NEVER; // or panic?
 }
 
-function listMembersLen(ListMemberType lt) returns int {
+function listMemberLen(ListMemberType lt) returns int {
     if (lt is FixedLengthMembers) {
         return lt.length;
     }
@@ -203,7 +202,7 @@ function fixLength(int newLen, ListMemberType members, SemType m) returns SemTyp
     }
 }
 
-function setMembers(int index, ListMemberType members, SemType t) returns SemType[] {
+function setMemberAt(int index, ListMemberType members, SemType t) returns SemType[] {
     SemType[] m = fixLength(index, members, t);
     m[index] = t;
     return m;
@@ -248,8 +247,8 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                int prevLen = listMembersLen(members);
-                int currentLen = listMembersLen(lt.members);
+                int prevLen = listMemberLen(members);
+                int currentLen = listMemberLen(lt.members);
                 int newLen = int:max(prevLen, currentLen);
 
                 if prevLen == currentLen && members is FixedLengthMembers && lt.members is FixedLengthMembers {
@@ -266,14 +265,14 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                     members = fixLength(newLen, members, rest);
                 }
                 foreach int i in 0 ..< currentLen {
-                    members = setMembers(i, members, intersect(nthMember(members, i), nthMember(lt.members, i)));
+                    members = setMemberAt(i, members, intersect(memberAt(members, i), memberAt(lt.members, i)));
                 }
                 if currentLen < newLen {
                     if isNever(lt.rest) {
                         return true;
                     }
                     foreach int i in currentLen ..< newLen {
-                        members = setMembers(i, members, intersect(nthMember(members, i), lt.rest));
+                        members = setMemberAt(i, members, intersect(memberAt(members, i), lt.rest));
                     }
                 }
                 rest = intersect(rest, lt.rest);
@@ -303,10 +302,10 @@ function listInhabited(Context cx, ListMemberType m, SemType rest, Conjunction? 
     }
     else {
         ListMemberType members = m;
-        int len = listMembersLen(members);
+        int len = listMemberLen(members);
         ListAtomicType nt = cx.listAtomType(neg.atom);
         ListMemberType negMembers = nt.members;
-        int negLen = listMembersLen(nt.members);
+        int negLen = listMemberLen(nt.members);
         if len == negLen && negMembers is FixedLengthMembers && members is FixedLengthMembers {
             if isNever(diff(members.memberType, negMembers.memberType)) {
                 return listInhabited(cx, members, rest, neg.next);
@@ -344,11 +343,11 @@ function listInhabited(Context cx, ListMemberType m, SemType rest, Conjunction? 
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
         foreach int i in 0 ..< len {
-            SemType ntm = i < negLen ? nthMember(nt.members, i) : nt.rest;
-            SemType d = diff(nthMember(members, i), ntm);
+            SemType ntm = i < negLen ? memberAt(nt.members, i) : nt.rest;
+            SemType d = diff(memberAt(members, i), ntm);
             if !isEmpty(cx, d) {
                 ListMemberType s = shallowCopyListMembersType(members);
-                s = setMembers(i, s, d);
+                s = setMemberAt(i, s, d);
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
@@ -381,8 +380,8 @@ function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
         if key < 0 {
             return NEVER;
         }
-        else if key < listMembersLen(atomic.members) {
-            return nthMember(atomic.members, key);
+        else if key < listMemberLen(atomic.members) {
+            return memberAt(atomic.members, key);
         }
         return atomic.rest;
     }
