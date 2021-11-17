@@ -135,10 +135,48 @@ void testDiv() {
     genAndValidateDecDiv("9.999999999999999999999999999999999E-6001", "0.5E143", "2.000000000000000000000000000000000E-6143", 0);
 }
 
+void genAndValidateDecNeg(const char *dec, const char *decMinus) {
+    TaggedPtr tp = _bal_decimal_neg(_bal_decimal_const(dec));
+    validateDec(tp, decMinus);
+}
+
+void testNeg() {
+    genAndValidateDecNeg("0", "0");
+    genAndValidateDecNeg("0.0", "0.0");
+    genAndValidateDecNeg("1", "-1");
+    genAndValidateDecNeg("-1", "1");
+    genAndValidateDecNeg("1E-6143", "-1E-6143");
+    genAndValidateDecNeg("99999999999999999999999999999999999", "-1.000000000000000000000000000000000E+35");
+    genAndValidateDecNeg("9.999999999999999999999999999999998E6144", "-9.999999999999999999999999999999998E+6144");
+}
+
+void genAndValidateDecRem(const char *decStr1, const char *decStr2, const char *rem, PanicCode code) {
+    TaggedPtrPanicCode tp = _bal_decimal_rem(_bal_decimal_const(decStr1), _bal_decimal_const(decStr2));
+    validate(tp, rem, code);
+}
+
+void testRem() {
+    genAndValidateDecRem("1", "1", "0", 0);
+    genAndValidateDecRem("1", "2", "1", 0);
+    genAndValidateDecRem("-1", "2", "-1", 0);
+    genAndValidateDecRem("-10", "3", "-1", 0);
+    genAndValidateDecRem("1E-6143", "1E-6143", "0", 0);
+    genAndValidateDecRem("1E-6143", "1E-6142", "1E-6143", 0);
+    genAndValidateDecRem("1E-3", "1E-2", "0.001", 0);
+    genAndValidateDecRem("9.999999999999999999999999999999998E6144", "1E-2", "", PANIC_IMPOSSIBLE_DIVIDE);
+    genAndValidateDecRem("9.05", "0.1", "0.05", 0);
+    genAndValidateDecRem("9.0E31", "1E-2", "0", 0);
+    genAndValidateDecRem("9.0E32", "1E-2", "0", PANIC_IMPOSSIBLE_DIVIDE);
+    genAndValidateDecRem("9.05E-6142", "0.1E-6142", "0", 0);
+    genAndValidateDecRem("9.00005", "0.0001", "0.00005", 0);
+}
+
 int main() {
     testConst();
     testAdd();
     testSub();
     testMul();
     testDiv();
+    testNeg();
+    testRem();
 }

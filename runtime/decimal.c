@@ -57,6 +57,14 @@ TaggedPtrPanicCode _bal_decimal_div(TaggedPtr tp1, TaggedPtr tp2) {
     return finish(&d, &cx); 
 }
 
+TaggedPtrPanicCode _bal_decimal_rem(TaggedPtr tp1, TaggedPtr tp2) {
+    decQuad d;
+    decContext cx;
+    initContext(&cx);
+    decQuadRemainder(&d, taggedToDecQuad(tp1), taggedToDecQuad(tp2), &cx);
+    return finish(&d, &cx);    
+}
+
 TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
     TaggedPtrPanicCode result;
     enum decClass class = decQuadClass(dq);
@@ -96,6 +104,9 @@ TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
             result.panicCode = 0;
             result.ptr = createDecimal(dq);
         }
+        else if (status & DEC_Division_impossible) {
+            result.panicCode = PANIC_IMPOSSIBLE_DIVIDE;
+        }
         else {
             result.panicCode = PANIC_ARITHMETIC_OVERFLOW;
         }
@@ -105,6 +116,14 @@ TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
         result.ptr = createDecimal(dq);
     }
     return result;
+}
+
+TaggedPtr _bal_decimal_neg(TaggedPtr tp) {
+    decQuad d;
+    decContext cx;
+    initContext(&cx);
+    decQuadMinus(&d, taggedToDecQuad(tp), &cx);
+    return createDecimal(&d);
 }
 
 TaggedPtr _bal_decimal_const(const char *decString) {
