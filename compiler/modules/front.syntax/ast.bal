@@ -31,7 +31,6 @@ public type ImportDecl record {|
 
 public type FunctionDefn record {|
     *FunctionTypeDesc;
-    FunctionDefnParam[] args;
     readonly string name;
     ModulePart part;
     Visibility vis;
@@ -477,18 +476,12 @@ public type FunctionTypeParam record {|
     TypeDesc td;
 |};
 
-public type FunctionDefnParam record {|
-    *FunctionTypeParam;
-    string name;
-    Position namePos;
-|};
-
 public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
-    (FunctionTypeParam|FunctionDefnParam)[] args;
+    FunctionTypeParam[] args;
     TypeDesc ret;
     t:FunctionDefinition? defn = ();
 |};

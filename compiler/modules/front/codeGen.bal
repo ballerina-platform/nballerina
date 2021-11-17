@@ -271,7 +271,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Binding? bindings = ();
     foreach int i in 0 ..< defn.args.length() {
-        s:FunctionDefnParam param = defn.args[i];
+        var param = defn.args[i];
         bir:Register reg = cx.createVarRegister(signature.paramTypes[i], <string>param.name, <bir:Position>param.namePos);
         bindings = { name: <string>param.name, reg, prev: bindings, isFinal: true };
     }
