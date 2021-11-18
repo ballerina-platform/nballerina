@@ -242,13 +242,14 @@ public class Context {
         }
     }
 
-    function getStructName(StructType ty) returns [string, Type[]]? {
+    function getStructName(StructType ty) returns [string, Type[]?]? {
         foreach var entry in self.namedStructTypes.entries() {
             var data = entry[1];
             if data[0] === ty {
                 data[1] = true;
                 string name = entry[0];
-                Type[] elements = self.namedStructTypeBody.get(name);
+                // The body may not yet have been set
+                Type[]? elements = self.namedStructTypeBody[name];
                 return [name, elements];
             }
         }
@@ -1442,15 +1443,16 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
     }
     else if ty is StructType {
         var data = context.getStructName(ty);
-        Type[] elementTypes = ty.elementTypes;
-        if data != () {
-            elementTypes = data[1];
-        }
         if !forceInline {
             if data != () {
                 return data[0];
             }
         }
+        Type[] elementTypes = ty.elementTypes;
+        if data != () {
+            elementTypes = <Type[]>data[1];
+        }
+       
         string[] typeStringBody = [];
         typeStringBody.push("{");
         foreach int i in 0 ..< elementTypes.length() {
@@ -1664,7 +1666,7 @@ function getTypeAtIndex(StructType ty, int index, Context context) returns Type 
     var data = context.getStructName(ty);
     Type[] elementTypes = ty.elementTypes;
     if data != () {
-        elementTypes = data[1];
+        elementTypes = <Type[]>data[1];
     }
     return elementTypes[index];
 }
