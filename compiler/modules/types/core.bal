@@ -952,7 +952,7 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
 
 public type SplitSemType record {|
     UniformTypeBitSet all;
-    [UniformTypeCode, SemType][] some;
+    [UniformTypeCode, ComplexSemType][] some;
 |};
 
 public function split(SemType t) returns SplitSemType  {

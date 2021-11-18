@@ -32,6 +32,7 @@ type TypeHowUsed USED_INHERENT_TYPE|USED_EXACTIFY|USED_TYPE_TEST;
 public type TypeUsage readonly & record {|
     t:SemType[] types;
     // or'ed from TypeHowUsed
+    // for a USED_TYPE_TEST, the SemType must be complex
     byte[] uses;
 |};
 
