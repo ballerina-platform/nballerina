@@ -81,8 +81,8 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
                                                                                         "inbounds"),
                                                                   ALIGN_HEAP);
 
-        // Cases that are not UniformTypeBitSet should have been filtered out before
-        t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), listType);
+        // Cases that are not arrays should have been filtered out before
+        t:SemType memberType = <t:SemType>t:arrayMemberType(scaffold.typeContext(), listType);
         foreach int i in 0 ..< length {
             builder.store(check buildWideRepr(builder, scaffold, insn.operands[i], REPR_ANY, memberType),
                           builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));

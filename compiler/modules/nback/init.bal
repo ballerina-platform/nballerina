@@ -153,7 +153,7 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
     llvm:StructType llType;
     llvm:ConstPointerValue ptr;
     if isList {
-        [llType, ptr] = addArrayInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, semType));
+        [llType, ptr] = addArrayInherentTypeDefn(cx, symbol, tid, <t:SemType>t:arrayMemberType(cx.tc, semType));
     }
     else {
         [llType, ptr] = addMappingInherentTypeDefn(cx, symbol, tid, <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType));

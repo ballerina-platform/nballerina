@@ -170,13 +170,16 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
     if !vc.isSubtype(ty, t:LIST_RW) {
         return vc.err("bad BIR: inherent type of list construct is not a mutable list", insn.pos);
     }
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeContext(), ty);
-    if memberType == () {
-        return vc.err("bad BIR: inherent type of list is of an unsupported type", insn.pos);
+    t:ListAtomicType? lat = t:listAtomicTypeRw(vc.typeContext(), ty);
+    if lat == () {
+        return vc.err("bad BIR: inherent type of list is not atomic", insn.pos);
     }
     else {
+        if lat.members.length() > 0 {
+            return vc.err("bad BIR: tuples not supported as list inherent type", insn.pos);
+        }
         foreach var operand in insn.operands {
-            check verifyOperandType(vc, operand, memberType, "list constructor member of not a subtype of array member type", insn.pos);
+            check verifyOperandType(vc, operand, lat.rest, "list constructor member of not a subtype of array member type", insn.pos);
         }
     }
 }
@@ -197,7 +200,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
                                 "type of mapping constructor member of not a subtype of mapping member type", insn.pos);
     }
     if mat == () {
-        return vc.err("bad BIR: inherent type of map is of an unsupported type", insn.pos);
+        return vc.err("bad BIR: inherent type of map is not atomic", insn.pos);
     }
     else if insn.operands.length() < mat.names.length() {
         return vc.err("missing record fields in mapping constructor", insn.pos);

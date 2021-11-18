@@ -147,7 +147,7 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
 function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:ListConstructorExpr expr) returns s:Expr|FoldError {
     // SUBSET always have contextually expected type for list constructor
     t:SemType expectedListType = t:intersect(<t:SemType>expectedType, t:LIST_RW);
-    t:SemType? memberType = t:simpleArrayMemberType(cx.typeContext(), expectedListType);
+    t:SemType? memberType = t:arrayMemberType(cx.typeContext(), expectedListType);
     s:Expr[] members = expr.members;
     foreach int i in 0 ..< members.length() {
         members[i] = check foldExpr(cx, memberType, members[i]);
