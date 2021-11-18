@@ -270,9 +270,9 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     CodeGenContext cx = new(mod, defn, signature.returnType);
     bir:BasicBlock startBlock = cx.createBasicBlock();
     Binding? bindings = ();
-    foreach int i in 0 ..< defn.args.length() {
-        var param = defn.args[i];
-        bir:Register reg = cx.createVarRegister(signature.paramTypes[i], <string>param.name, <bir:Position>param.namePos);
+    foreach int i in 0 ..< defn.params.length() {
+        var param = defn.params[i];
+        bir:Register reg = cx.createVarRegister(signature.paramTypes[i], param.name, param.namePos);
         bindings = { name: <string>param.name, reg, prev: bindings, isFinal: true };
     }
     var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);

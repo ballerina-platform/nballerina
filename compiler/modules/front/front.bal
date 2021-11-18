@@ -205,7 +205,7 @@ function validEntryPoint(ModuleDefns mod) returns err:Diagnostic? {
             return err:semantic(`${"main"} is not public`, s:defnLocation(defn));
         }
         check validInitReturnType(defn);
-        if defn.args.length() > 0 {
+        if defn.params.length() > 0 {
             return err:unimplemented(`parameters for ${"main"} not yet implemented`, s:defnLocation(defn));
         }
         if !t:isNever(t:intersect((<bir:FunctionSignature>defn.signature).returnType, t:ERROR)) {
@@ -220,7 +220,7 @@ function validInit(ModuleDefns defns) returns err:Diagnostic? {
         if defn.vis == "public" {
             return err:semantic(`${"init"} function must not be public`, s:defnLocation(defn));
         }
-        if defn.args.length() > 0 {
+        if defn.params.length() > 0 {
             return err:semantic(`${"init"} function must not have parameters`, s:defnLocation(defn));
         }
         check validInitReturnType(defn);

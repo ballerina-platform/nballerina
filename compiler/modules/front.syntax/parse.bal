@@ -188,7 +188,11 @@ function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis,
     FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, true);
     StmtBlock body = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
-    FunctionDefn defn = { startPos, endPos, args: typeDesc.args, ret: typeDesc.ret, name, vis, namePos, body, part };
+    FunctionParam [] params = [];
+    foreach var param in typeDesc.params {
+        params.push({ startPos: param.startPos, endPos: param.endPos, td: param.td, name: <string>param.name, namePos: <Position>param.namePos });
+    }
+    FunctionDefn defn = { startPos, endPos, params, typeDesc, name, vis, namePos, body, part };
     return defn;
 }
 

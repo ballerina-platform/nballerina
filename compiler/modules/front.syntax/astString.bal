@@ -61,18 +61,18 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
     }
     w.push("function");
     w.push(func.name, CLING, "(");
-    foreach int i in 0 ..< func.args.length() {
+    foreach int i in 0 ..< func.params.length() {
         if i != 0 {
             w.push(",");
         }
-        typeDescToWords(w, func.args[i].td);
-        w.push(func.args[i].name);
+        typeDescToWords(w, func.params[i].td);
+        w.push(func.params[i].name);
     }
     w.push(")");
-    TypeDesc funcRetTd = func.ret;
+    TypeDesc funcRetTd = func.typeDesc.ret;
     if !(funcRetTd is BuiltinTypeDesc && funcRetTd.builtinTypeName == "null") {
         w.push("returns");
-        typeDescToWords(w, func.ret);
+        typeDescToWords(w, func.typeDesc.ret);
     }
     blockToWords(w, func.body);
 }
