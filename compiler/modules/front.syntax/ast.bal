@@ -29,11 +29,20 @@ public type ImportDecl record {|
     int partIndex;
 |};
 
+public type FunctionParam record {|
+    *PositionFields;
+    string name;
+    Position namePos;
+    TypeDesc td;
+|};
+
 public type FunctionDefn record {|
-    *FunctionTypeDesc;
+    *PositionFields;
     readonly string name;
     ModulePart part;
     Visibility vis;
+    FunctionTypeDesc typeDesc;
+    FunctionParam[] params;
     StmtBlock body;
     Position namePos;
     // This is filled in during analysis
@@ -481,7 +490,7 @@ public type FunctionTypeDesc record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
-    FunctionTypeParam[] args;
+    FunctionTypeParam[] params;
     TypeDesc ret;
     t:FunctionDefinition? defn = ();
 |};

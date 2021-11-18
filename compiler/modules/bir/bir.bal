@@ -144,8 +144,8 @@ public function createRegister(FunctionCode code, SemType semType, string? varNa
     return r;
 }
 
-public function getRegister(FunctionCode code, int registerNo) returns Register {
-    return code.registers[registerNo];
+public function getRegister(FunctionCode code, int registerNum) returns Register {
+    return code.registers[registerNum];
 }
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
