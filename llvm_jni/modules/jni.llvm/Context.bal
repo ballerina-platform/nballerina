@@ -51,6 +51,10 @@ public distinct class Context {
         return new (jLLVMConstAddrSpaceCast(ptr.LLVMValueRef, typeToLLVMType(destTy, self)));
     }
 
+    public function constPtrToInt(ConstPointerValue constantValue, IntType toType) returns ConstValue {
+        return new (jLLVMConstPtrToInt(constantValue.LLVMValueRef, typeToLLVMType(toType, self)));
+    }
+
     public function structCreateNamed(string name) returns StructType {
         if self.namedStructTypes.hasKey(name) {
             panic err:illegalArgument("type by that name already exists");
@@ -180,4 +184,10 @@ function jLLVMStructSetBody(handle ty, handle elements, int elementCount, int pa
     name: "LLVMStructSetBody",
     'class: "org.bytedeco.llvm.global.LLVM",
     paramTypes: ["org.bytedeco.llvm.LLVM.LLVMTypeRef", "org.bytedeco.javacpp.PointerPointer", "int", "int"]
+} external;
+
+function jLLVMConstPtrToInt(handle constValue, handle toType) returns handle = @java:Method {
+    name: "LLVMConstPtrToInt",
+    'class: "org.bytedeco.llvm.global.LLVM",
+    paramTypes: ["org.bytedeco.llvm.LLVM.LLVMValueRef", "org.bytedeco.llvm.LLVM.LLVMTypeRef"]
 } external;
