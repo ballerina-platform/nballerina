@@ -209,7 +209,7 @@ public class Context {
         }
         StructType ty = { elementTypes: [] };
         self.namedStructTypes[structName] = [ty, false];
-        self.namedStructTypeBody[name] = [];
+        self.namedStructTypeBody[structName] = [];
         return ty;
     }
 
@@ -1454,15 +1454,20 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
         }
        
         string[] typeStringBody = [];
-        typeStringBody.push("{");
-        foreach int i in 0 ..< elementTypes.length() {
-            final Type elementType = elementTypes[i];
-            if i > 0 {
-                typeStringBody.push(",");
-            }
-            typeStringBody.push(typeToString(elementType, context));
+        if elementTypes.length() == 0 {
+            typeStringBody.push("opaque");
         }
-        typeStringBody.push("}");
+        else {
+            typeStringBody.push("{");
+            foreach int i in 0 ..< elementTypes.length() {
+                final Type elementType = elementTypes[i];
+                if i > 0 {
+                    typeStringBody.push(",");
+                }
+                typeStringBody.push(typeToString(elementType, context));
+            }
+            typeStringBody.push("}");
+        }
         return createLine(typeStringBody, "");
     }
     else if ty is ArrayType {
