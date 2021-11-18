@@ -112,8 +112,7 @@ public function constNull(PointerType ty) returns ConstPointerValue {
 
 // Corresponds to LLVMContextRef
 public class Context {
-    private final map<[StructType,boolean]> namedStructTypes = {};
-    private final map<Type[]> namedStructTypeBody = {};
+    private final map<[NamedStructType, Type[], boolean]> namedStructTypeData = {};
     // Corresponds to LLVMContextCreate
     public function init() {
     }
@@ -204,23 +203,27 @@ public class Context {
     // Corresponds to LLVMStructCreateNamed
     public function structCreateNamed(string name) returns StructType {
         string structName = "%" + escapeIdent(name);
-        if self.namedStructTypes.hasKey(structName) {
+        if self.namedStructTypeData.hasKey(structName) {
             panic err:illegalArgument("this context already has a struct type by that name");
         }
-        StructType ty = { elementTypes: [], name: structName };
-        self.namedStructTypes[structName] = [ty, false];
-        self.namedStructTypeBody[structName] = [];
+        NamedStructType ty = { name: structName };
+        self.namedStructTypeData[structName] = [ty, [], false];
         return ty;
     }
 
     // Corresponds to LLVMStructSetBody
     public function structSetBody(StructType namedStructTy, Type[] elementTypes) {
-        string? tyName = namedStructTy.name;
-        if tyName is string && self.namedStructTypes.hasKey(tyName) {
-            self.namedStructTypeBody[tyName] = elementTypes;
+        if namedStructTy is NamedStructType {
+            string tyName = namedStructTy.name;
+            if self.namedStructTypeData.hasKey(tyName) {
+                self.namedStructTypeData[tyName][1] = elementTypes;
+            }
+            else {
+                panic err:illegalArgument("no such named struct type");
+            }
         }
         else {
-            panic err:illegalArgument("no such named struct type");
+            panic err:illegalArgument("not a named struct type");
         }
     }
 
@@ -230,26 +233,21 @@ public class Context {
     }
 
     function output(Output out){
-        foreach var entry in self.namedStructTypes.entries() {
-            var data = entry[1];
-            if data[1] {
-                string[] words = [entry[0], "=", "type", typeToString(data[0], self, true)];
+        foreach var [ty, _, used] in self.namedStructTypeData {
+            if used {
+                string[] words = [ty.name, "=", "type", typeToString(ty, self, true)];
                 out.push(concat(...words));
             }
         }
     }
 
+    function setUsed(NamedStructType ty) {
+        self.namedStructTypeData[ty.name][2] = true;
+    }
+
     function getNamedStructBody(StructType ty) returns Type[] {
-        string? tyName = ty.name;
-        if tyName is string {
-            var data = self.namedStructTypes[tyName];
-            if data != () {
-                data[1] = true;
-            }
-            else {
-                panic err:illegalArgument("no such named struct type");
-            }
-            return self.namedStructTypeBody.get(tyName);
+        if ty is NamedStructType {
+            return self.namedStructTypeData.get(ty.name)[1];
         }
         panic err:illegalArgument("not a named struct type");
     }
@@ -1440,15 +1438,16 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
         }
     }
     else if ty is StructType {
-        string? tyName = ty.name;
-        Type[] elementTypes = ty.elementTypes;
-        if tyName != () {
+        Type[] elementTypes;
+        if ty is NamedStructType {
+            context.setUsed(ty);
+            if !forceInline {
+                return ty.name;
+            }
             elementTypes = context.getNamedStructBody(ty);
         }
-        if !forceInline {
-            if tyName != () {
-                return tyName;
-            }
+        else {
+            elementTypes = ty.elementTypes;
         }
         string[] typeStringBody = [];
         if elementTypes.length() == 0 {
@@ -1665,10 +1664,12 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
 }
 
 function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
-    boolean isNamed = ty.name != ();
-    Type[] elementTypes = ty.elementTypes;
-    if isNamed {
+    Type[] elementTypes;
+    if ty is NamedStructType {
         elementTypes = context.getNamedStructBody(ty);
+    }
+    else {
+        elementTypes = ty.elementTypes;
     }
     return elementTypes[index];
 }
