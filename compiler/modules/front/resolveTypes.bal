@@ -148,8 +148,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
             t:ListDefinition d = new;
             td.defn = d;
-            t:SemType[] members = from var x in td.members select check resolveMemberTypeDesc(mod, modDefn, depth + 1, x);
-            t:SemType rest = check resolveMemberTypeDesc(mod, modDefn, depth + 1, td.rest);
+            t:SemType[] members = from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);
+            t:SemType rest = check resolveTypeDesc(mod, modDefn, depth + 1, td.rest);
             return d.define(env, members, rest);
         }
         else {
@@ -161,10 +161,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         if defn == () {
             t:MappingDefinition d = new;
             td.defn = d;
-            // JBUG this panics if done with `from` and there's an error is resolveMemberTypeDesc
+            // JBUG this panics if done with `from` and there's an error is resolveTypeDesc
             t:Field[] fields = [];
             foreach var { name, typeDesc } in td.fields {
-                fields.push([name, check resolveMemberTypeDesc(mod, modDefn, depth + 1, typeDesc)]);
+                fields.push([name, check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc)]);
             }
             map<s:FieldDesc> fieldsByName = {};
             foreach var fd in td.fields {
@@ -182,7 +182,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 if !mod.allowAllTypes && td.fields.length() > 0 {
                     return err:unimplemented("open record types not implemented", s:locationInDefn(modDefn, td.startPos));
                 }
-                rest = check resolveMemberTypeDesc(mod, modDefn, depth + 1, restTd);
+                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
             return d.define(env, fields, rest);
         }
@@ -280,14 +280,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         return t:xmlSequence(t);
     }
     panic error("unimplemented type-descriptor");
-}
-
-function resolveMemberTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
-    t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td);
-    if !mod.allowAllTypes && !isSubsetUnionType(ty) {
-        return err:unimplemented("type not implemented as member type", s:locationInDefn(modDefn, td.startPos));
-    }
-    return ty;
 }
 
 function resolveBuiltinTypeDesc(s:SubsetBuiltinTypeDesc td) returns t:UniformTypeBitSet {
