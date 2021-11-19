@@ -438,6 +438,9 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     if td is FunctionTypeDesc {
         newTd = check parseFunctionTypeDesc(tok);
     }
+    else if td is BuiltinTypeDesc {
+        newTd = check parsePrimaryTypeDesc(tok);
+    }
     else {
         newTd = check parseTypeDesc(tok);
     }
