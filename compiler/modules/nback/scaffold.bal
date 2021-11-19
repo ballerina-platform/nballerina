@@ -269,7 +269,7 @@ class Scaffold {
 
     function initTypes() returns InitTypes => self.mod.llInitTypes;
 
-    function getTypeTest(t:SemType ty) returns llvm:ConstPointerValue {
+    function getTypeTest(t:ComplexSemType ty) returns llvm:ConstPointerValue {
         UsedSemType used = self.getUsedSemType(ty);
         llvm:ConstPointerValue? value = used.typeTest;
         if value == () {

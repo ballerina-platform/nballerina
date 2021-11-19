@@ -207,24 +207,21 @@ public class Context {
         if self.namedStructTypes.hasKey(structName) {
             panic err:illegalArgument("this context already has a struct type by that name");
         }
-        StructType ty = { elementTypes: [] };
+        StructType ty = { elementTypes: [], name: structName };
         self.namedStructTypes[structName] = [ty, false];
-        self.namedStructTypeBody[name] = [];
+        self.namedStructTypeBody[structName] = [];
         return ty;
     }
 
     // Corresponds to LLVMStructSetBody
     public function structSetBody(StructType namedStructTy, Type[] elementTypes) {
-        foreach var entry in self.namedStructTypes.entries() {
-            var data = entry[1];
-            string name = entry[0];
-            StructType ty = data[0];
-            if ty === namedStructTy {
-                self.namedStructTypeBody[name] = elementTypes;
-                return;
-            }
+        string? tyName = namedStructTy.name;
+        if tyName is string && self.namedStructTypes.hasKey(tyName) {
+            self.namedStructTypeBody[tyName] = elementTypes;
         }
-        panic err:illegalArgument("no such named struct type");
+        else {
+            panic err:illegalArgument("no such named struct type");
+        }
     }
 
     // Corresponds to LLVMConstPtrToInt
@@ -242,17 +239,19 @@ public class Context {
         }
     }
 
-    function getStructName(StructType ty) returns [string, Type[]]? {
-        foreach var entry in self.namedStructTypes.entries() {
-            var data = entry[1];
-            if data[0] === ty {
+    function getNamedStructBody(StructType ty) returns Type[] {
+        string? tyName = ty.name;
+        if tyName is string {
+            var data = self.namedStructTypes[tyName];
+            if data != () {
                 data[1] = true;
-                string name = entry[0];
-                Type[] elements = self.namedStructTypeBody.get(name);
-                return [name, elements];
             }
+            else {
+                panic err:illegalArgument("no such named struct type");
+            }
+            return self.namedStructTypeBody.get(tyName);
         }
-        return ();
+        panic err:illegalArgument("not a named struct type");
     }
 }
 
@@ -1441,26 +1440,31 @@ function typeToString(RetType ty, Context context, boolean forceInline=false) re
         }
     }
     else if ty is StructType {
-        var data = context.getStructName(ty);
+        string? tyName = ty.name;
         Type[] elementTypes = ty.elementTypes;
-        if data != () {
-            elementTypes = data[1];
+        if tyName != () {
+            elementTypes = context.getNamedStructBody(ty);
         }
         if !forceInline {
-            if data != () {
-                return data[0];
+            if tyName != () {
+                return tyName;
             }
         }
         string[] typeStringBody = [];
-        typeStringBody.push("{");
-        foreach int i in 0 ..< elementTypes.length() {
-            final Type elementType = elementTypes[i];
-            if i > 0 {
-                typeStringBody.push(",");
-            }
-            typeStringBody.push(typeToString(elementType, context));
+        if elementTypes.length() == 0 {
+            typeStringBody.push("opaque");
         }
-        typeStringBody.push("}");
+        else {
+            typeStringBody.push("{");
+            foreach int i in 0 ..< elementTypes.length() {
+                final Type elementType = elementTypes[i];
+                if i > 0 {
+                    typeStringBody.push(",");
+                }
+                typeStringBody.push(typeToString(elementType, context));
+            }
+            typeStringBody.push("}");
+        }
         return createLine(typeStringBody, "");
     }
     else if ty is ArrayType {
@@ -1661,10 +1665,10 @@ function gepArgs((string|Unnamed)[] words, Value ptr, Value[] indices, "inbounds
 }
 
 function getTypeAtIndex(StructType ty, int index, Context context) returns Type {
-    var data = context.getStructName(ty);
+    boolean isNamed = ty.name != ();
     Type[] elementTypes = ty.elementTypes;
-    if data != () {
-        elementTypes = data[1];
+    if isNamed {
+        elementTypes = context.getNamedStructBody(ty);
     }
     return elementTypes[index];
 }

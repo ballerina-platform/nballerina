@@ -1673,7 +1673,7 @@ type Counter record {|
 |};
 
 function instantiateArrayFunctionSignature(t:Context tc, bir:FunctionSignature sig, t:SemType arrayType) returns bir:FunctionSignature {
-    t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(tc, arrayType);
+    t:SemType memberType = <t:SemType>t:arrayMemberType(tc, arrayType);
     Counter counter = {};
     bir:FunctionSignature inst = instantiateSignature(sig, memberType, arrayType, counter);
     if counter.n > 1 {
@@ -1682,7 +1682,7 @@ function instantiateArrayFunctionSignature(t:Context tc, bir:FunctionSignature s
     return sig;
 }
 
-function instantiateSignature(bir:FunctionSignature sig, t:UniformTypeBitSet memberType, t:SemType containerType, Counter counter) returns bir:FunctionSignature {
+function instantiateSignature(bir:FunctionSignature sig, t:SemType memberType, t:SemType containerType, Counter counter) returns bir:FunctionSignature {
     bir:SemType? restParamType = sig.restParamType;
     bir:SemType[] paramTypes = from var ty in sig.paramTypes select instantiateType(ty, memberType, containerType, counter);
     return {
@@ -1692,7 +1692,7 @@ function instantiateSignature(bir:FunctionSignature sig, t:UniformTypeBitSet mem
     };
 }
 
-function instantiateType(t:SemType ty, t:UniformTypeBitSet memberType, t:SemType containerType, Counter counter) returns t:SemType {
+function instantiateType(t:SemType ty, t:SemType memberType, t:SemType containerType, Counter counter) returns t:SemType {
     if ty == t:LIST {
         counter.n += 1;
         return containerType;
