@@ -1,9 +1,7 @@
 import ballerina/io;
 
-type FloatArray float[];
-
 public function main() {
-    FloatArray[] vv = [
+    float[][] vv = [
         [1, 2],
         [3, 4, 5, 0],
         [0.5],
