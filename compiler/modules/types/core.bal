@@ -364,6 +364,8 @@ public final UniformTypeBitSet LIST_RW = uniformType(UT_LIST_RW);
 public final UniformTypeBitSet LIST = uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW));
 public final UniformTypeBitSet MAPPING_RW = uniformType(UT_MAPPING_RW);
 public final UniformTypeBitSet MAPPING = uniformTypeUnion((1 << UT_MAPPING_RO) | (1 << UT_MAPPING_RW));
+public final UniformTypeBitSet TABLE_RW = uniformType(UT_TABLE_RW);
+public final UniformTypeBitSet TABLE = uniformTypeUnion((1 << UT_TABLE_RO) | (1 << UT_TABLE_RW));
 
 // matches all functions
 public final UniformTypeBitSet FUNCTION = uniformType(UT_FUNCTION);
@@ -1173,6 +1175,17 @@ public function createJson(Env env) returns SemType {
     _ = listDef.define(env, [], j);
     _ = mapDef.define(env, [], j);
     return j;
+}
+
+// This is an approximation, because we don't have table subtypes yet.
+// SUBSET table subtypes
+public function createAnydata(Env env) returns SemType {
+    ListDefinition listDef = new;
+    MappingDefinition mapDef = new;
+    SemType ad = union(union(SIMPLE_OR_STRING, union(XML, TABLE)), union(listDef.getSemType(env), mapDef.getSemType(env)));
+    _ = listDef.define(env, [], ad);
+    _ = mapDef.define(env, [], ad);
+    return ad;
 }
 
 final readonly & UniformTypeOps[] ops;
