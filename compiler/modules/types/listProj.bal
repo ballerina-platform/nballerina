@@ -52,8 +52,8 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                int prevLen = listMemberLen(members);
-                int currentLen = listMemberLen(lt.members);
+                int prevLen = listMemberLength(members);
+                int currentLen = listMemberLength(lt.members);
                 int newLen = int:max(prevLen, currentLen);
                 if prevLen < newLen {
                     if isNever(rest) {
@@ -75,7 +75,7 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                 rest = intersect(rest, lt.rest);
             }
         }
-            if isAnyMemberEmpty(cx, members) {
+            if isAnyListMemberEmpty(cx, members) {
                 return NEVER;
             }
         // Ensure that we can use isNever on rest in listInhabited
@@ -93,13 +93,13 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
 // Corresponds to phi^x in AMK tutorial generalized for list types.
 function listProjExclude(Context cx, int k, ListMemberType m, SemType rest, Conjunction? neg) returns SemType {
     if neg == () {
-        return k < listMemberLen(m) ? memberAt(m, k) : rest;
+        return k < listMemberLength(m) ? memberAt(m, k) : rest;
     }
     else {
         ListMemberType members = m;
-        int len = listMemberLen(members);
+        int len = listMemberLength(members);
         ListAtomicType nt = cx.listAtomType(neg.atom);
-        int negLen = listMemberLen(nt.members);
+        int negLen = listMemberLength(nt.members);
         if len < negLen {
             if isNever(rest) {
                 return listProjExclude(cx, k, members, rest, neg.next);

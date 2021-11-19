@@ -175,7 +175,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
         return vc.err("bad BIR: inherent type of list is not atomic", insn.pos);
     }
     else {
-        if lat.members.length() > 0 {
+        if t:listMemberLength(lat.members) > 0 {
             return vc.err("bad BIR: tuples not supported as list inherent type", insn.pos);
         }
         foreach var operand in insn.operands {

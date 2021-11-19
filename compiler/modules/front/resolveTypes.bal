@@ -155,7 +155,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 t:SemType rest = check resolveTypeDesc(mod, modDefn, depth + 1, td.rest);
                 return d.define(env, members, rest);
             } else {
-                t:SemType memberType = check resolveMemberTypeDesc(mod, modDefn, depth + 1, td.rest);
+                t:SemType memberType = check resolveTypeDesc(mod, modDefn, depth + 1, td.rest);
                 return d.define(env, { memberType, length }, t:NEVER);
             }
         }

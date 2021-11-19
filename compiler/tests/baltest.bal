@@ -17,7 +17,7 @@ function subtypeCaseProvider() returns map<SubtypeTestCase>|error {
     check from var entry in check file:readDir("tests/data")
         let string path = entry.absPath
         let string base = check file:basename(path)
-        where path.endsWith("fixed.bal")
+        where path.endsWith(".bal")
         let SubtypeTestCase|error res = readTestCase(path)
         // skip files with no subtype lines on them
         where res is SubtypeTestCase && res[1].length() > 0

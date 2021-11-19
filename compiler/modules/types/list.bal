@@ -162,24 +162,15 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 
 function memberAt(ListMemberType m, int i) returns SemType {
     if m is FixedLengthMembers {
-        FixedLengthMembers {memberType, length} = m;
-        if length > i {
-            return memberType;
-        }
+        return m.length > i ? m.memberType : NEVER;
     }
     else {
         return m[i];
     }
-    return NEVER; // or panic?
 }
 
-function listMemberLen(ListMemberType lt) returns int {
-    if (lt is FixedLengthMembers) {
-        return lt.length;
-    }
-    else {
-        return lt.length();
-    }
+public function listMemberLength(ListMemberType lt) returns int {
+    return lt is FixedLengthMembers ? lt.length : lt.length();
 }
 
 function fixLength(int newLen, ListMemberType members, SemType m) returns SemType[] {
@@ -208,7 +199,7 @@ function setMemberAt(int index, ListMemberType members, SemType t) returns SemTy
     return m;
 }
 
-function isAnyMemberEmpty(Context cx, ListMemberType members) returns boolean {
+function isAnyListMemberEmpty(Context cx, ListMemberType members) returns boolean {
     if members is FixedLengthMembers {
         return members.length == 0 || isEmpty(cx, members.memberType);
     }
@@ -247,8 +238,8 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                int prevLen = listMemberLen(members);
-                int currentLen = listMemberLen(lt.members);
+                int prevLen = listMemberLength(members);
+                int currentLen = listMemberLength(lt.members);
                 int newLen = int:max(prevLen, currentLen);
 
                 if prevLen == currentLen && members is FixedLengthMembers && lt.members is FixedLengthMembers {
@@ -278,7 +269,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 rest = intersect(rest, lt.rest);
             }
         }
-        if isAnyMemberEmpty(cx, members) {
+        if isAnyListMemberEmpty(cx, members) {
             return true;
         }
         // Ensure that we can use isNever on rest in listInhabited
@@ -302,10 +293,10 @@ function listInhabited(Context cx, ListMemberType m, SemType rest, Conjunction? 
     }
     else {
         ListMemberType members = m;
-        int len = listMemberLen(members);
+        int len = listMemberLength(members);
         ListAtomicType nt = cx.listAtomType(neg.atom);
         ListMemberType negMembers = nt.members;
-        int negLen = listMemberLen(nt.members);
+        int negLen = listMemberLength(nt.members);
         if len == negLen && negMembers is FixedLengthMembers && members is FixedLengthMembers {
             if isNever(diff(members.memberType, negMembers.memberType)) {
                 return listInhabited(cx, members, rest, neg.next);
@@ -380,7 +371,7 @@ function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
         if key < 0 {
             return NEVER;
         }
-        else if key < listMemberLen(atomic.members) {
+        else if key < listMemberLength(atomic.members) {
             return memberAt(atomic.members, key);
         }
         return atomic.rest;
