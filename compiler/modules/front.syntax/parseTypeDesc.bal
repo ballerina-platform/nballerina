@@ -277,7 +277,7 @@ function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
 }
 
 // current token should be "("
-function parseFunctionTypeDesc(Tokenizer tok, boolean expectParamNames = false) returns FunctionTypeDesc|err:Syntax {
+function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? fnParams = ()) returns FunctionTypeDesc|err:Syntax {
     // skip "function"
     Position startPos = tok.currentStartPos();
     check tok.expect("(");
@@ -294,11 +294,15 @@ function parseFunctionTypeDesc(Tokenizer tok, boolean expectParamNames = false) 
             [IDENTIFIER, var paramName] => {
                 name = paramName;
                 namePos = tok.currentStartPos();
-                params.push({ startPos: paramStartPos, endPos: tok.currentEndPos(), name, namePos, td });
+                FunctionParam param = { startPos: paramStartPos, endPos: tok.currentEndPos(), name: <string>name, namePos: <Position>namePos, td };
+                params.push(param);
+                if fnParams != () {
+                    fnParams.push(param);
+                }
                 check tok.advance();
             }
             _ => {
-                if expectParamNames {
+                if fnParams != () {
                     return parseError(tok);
                 }
                 params.push({ startPos: paramStartPos, endPos: tok.currentEndPos(), name, namePos, td });

@@ -29,13 +29,6 @@ public type ImportDecl record {|
     int partIndex;
 |};
 
-public type FunctionParam record {|
-    *PositionFields;
-    string name;
-    Position namePos;
-    TypeDesc td;
-|};
-
 public type FunctionDefn record {|
     *PositionFields;
     readonly string name;
@@ -47,6 +40,13 @@ public type FunctionDefn record {|
     Position namePos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
+|};
+
+public type FunctionParam record {|
+    *PositionFields;
+    string name;
+    Position namePos;
+    TypeDesc td;
 |};
 
 public type ResolvedConst readonly & [t:SemType, t:Value];
@@ -478,13 +478,6 @@ public type MappingTypeDesc record {|
     t:MappingDefinition? defn = ();
 |};
 
-public type FunctionTypeParam record {|
-    *PositionFields;
-    string? name;
-    Position? namePos;
-    TypeDesc td;
-|};
-
 public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
     // JBUG #32617 can't include PositionFields
@@ -493,6 +486,13 @@ public type FunctionTypeDesc record {|
     FunctionTypeParam[] params;
     TypeDesc ret;
     t:FunctionDefinition? defn = ();
+|};
+
+public type FunctionTypeParam record {|
+    *PositionFields;
+    string? name;
+    Position? namePos;
+    TypeDesc td;
 |};
 
 public type ErrorTypeDesc record {|
