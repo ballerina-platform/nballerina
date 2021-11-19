@@ -1,0 +1,29 @@
+type IntArray int[];
+
+// @type Int5 < IntArray
+type Int5 int[5];
+
+// @type Int5 = Int5AndIntArray
+// @type Int5AndIntArray < IntArray
+type Int5AndIntArray Int5 & IntArray;
+
+// @type IntArray <> ArrayOfIntArray
+type ArrayOfIntArray int[][];
+
+// @type ArrayOfInt5 < ArrayOfIntArray
+// @type Int5 <> ArrayOfInt5
+type ArrayOfInt5 int[][5];
+
+// @type Array5OfInt5 < ArrayOfInt5
+// @type Array5OfInt5 < ArrayOfIntArray
+type Array5OfInt5 int[5][5];
+
+type ROIntArray readonly & IntArray;
+
+// @type ROInt5 < Int5
+// @type ROInt5 < ROIntArray
+type ROInt5 readonly & int[5];
+
+// @type ArrayExcept5 <> Int5;
+// @type ArrayExcept5 < IntArray;
+type ArrayExcept5 IntArray & !Int5;
