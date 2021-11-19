@@ -277,11 +277,11 @@ function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
 }
 
 // current token should be "("
-function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? params = ()) returns FunctionTypeDesc|err:Syntax {
+function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ()) returns FunctionTypeDesc|err:Syntax {
     // skip "function"
     Position startPos = tok.currentStartPos();
     check tok.expect("(");
-    FunctionTypeParam[] typeParams = params ?: [];
+    FunctionTypeParam[] params = namedParams ?: [];
     while true {
         if tok.current() == ")" {
             break;
@@ -293,14 +293,14 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? params = ()) retu
                 string name = paramName;
                 Position namePos = tok.currentStartPos();
                 FunctionParam param = { startPos: paramStartPos, endPos: tok.currentEndPos(), name, namePos, td };
-                typeParams.push(param);
+                params.push(param);
                 check tok.advance();
             }
             _ => {
-                if params != () {
+                if namedParams != () {
                     return parseError(tok);
                 }
-                typeParams.push({ startPos: paramStartPos, endPos: tok.currentEndPos(), name: (), namePos: (), td });
+                params.push({ startPos: paramStartPos, endPos: tok.currentEndPos(), name: (), namePos: (), td });
             }
         }
         if tok.current() == "," {
@@ -319,7 +319,7 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? params = ()) retu
         ret = { startPos: tok.currentStartPos(), endPos, builtinTypeName: "null" };
     }
     endPos = tok.previousEndPos();
-    return { startPos, endPos, params: typeParams , ret };
+    return { startPos, endPos, params, ret };
 }
 
 // current token is []
