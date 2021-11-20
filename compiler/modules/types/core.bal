@@ -1,3 +1,5 @@
+import wso2/nballerina.comm.lib;
+
 // There is an integer for each uniform type.
 // Uniform types are like basic types except that each selectively immutable
 // basic type is split into two uniform types, one immutable and on mutable.
@@ -273,7 +275,7 @@ function unpackComplexSemType(ComplexSemType t) returns UniformSubtype[] {
     int some = t.some;
     UniformSubtype[] subtypeList = [];
     foreach var data in t.subtypeDataList {
-        var code = <UniformTypeCode>numberOfTrailingZeros(some);
+        var code = <UniformTypeCode>lib:numberOfTrailingZeros(some);
         subtypeList.push([code, data]);
         int c = code;
         some ^= (1 << c);
@@ -291,40 +293,7 @@ function getComplexSubtypeData(ComplexSemType t, UniformTypeCode code) returns S
         return false;
     }
     int loBits = t.some & (c - 1);
-    return t.subtypeDataList[loBits == 0 ? 0 : bitCount(loBits)];
-}
-
-// Count number of bits set in bits.
-// This is the Brian Kernighan algorithm.
-// There's usually a hardware instruction for this
-// typically called PopCpount
-// This is __builtin_popcount in GCC and clang
-// This won't work if bits is < 0.
-function bitCount(int bits) returns int {
-    int n = 0;
-    int v = bits;
-    while v != 0 {
-        v &= v - 1;
-        n += 1;
-    }
-    return n;
-}
-
-
-// This should be a function in lang.int
-// Modern CPUs have a hardware instruction for this
-// This is __builtin_ctz in GCC and clang
-function numberOfTrailingZeros(int bits) returns int {
-    if bits == 0 {
-        return 64;
-    }
-    int flag = 1;
-    int n = 0;
-    while (bits & flag) == 0 {
-        n += 1;
-        flag <<= 1;
-    }
-    return n;
+    return t.subtypeDataList[loBits == 0 ? 0 : lib:bitCount(loBits)];
 }
 
 public function uniformType(UniformTypeCode code) returns UniformTypeBitSet {
@@ -778,10 +747,10 @@ public function widenToUniformTypes(SemType t) returns UniformTypeBitSet {
 }
 
 public function uniformTypeCode(UniformTypeBitSet bitSet) returns UniformTypeCode? {
-    if bitCount(bitSet) != 1 {
+    if lib:bitCount(bitSet) != 1 {
         return ();
     }
-    return <UniformTypeCode>numberOfTrailingZeros(bitSet);
+    return <UniformTypeCode>lib:numberOfTrailingZeros(bitSet);
 }
 
 // If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),
