@@ -35,11 +35,18 @@ public type FunctionDefn record {|
     ModulePart part;
     Visibility vis;
     FunctionTypeDesc typeDesc;
-    string[] paramNames;
+    FunctionParam[] params;
     StmtBlock body;
     Position namePos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
+|};
+
+public type FunctionParam record {|
+    *PositionFields;
+    string name;
+    Position namePos;
+    TypeDesc td;
 |};
 
 public type ResolvedConst readonly & [t:SemType, t:Value];
@@ -141,7 +148,9 @@ public type WhileStmt record {|
 public type ForeachStmt record {|
     *PositionFields;
     Position kwPos;
-    string varName;
+    // name and position of the variable
+    Position namePos;
+    string name;
     RangeExpr range;
     StmtBlock body;
 |};
@@ -157,7 +166,8 @@ public type VarDeclStmt record {|
     *PositionFields;
     Position opPos;
     TypeDesc td;
-    string|WILDCARD varName;
+    string|WILDCARD name;
+    Position namePos;
     Expr initExpr;
     boolean isFinal;
 |};
@@ -238,7 +248,8 @@ public type FunctionCallExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
-    Position opPos;
+    Position openParenPos;
+    Position namePos;
     string? prefix = ();
     string funcName;
     Expr[] args;
@@ -249,7 +260,9 @@ public type MethodCallExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
-    Position opPos;
+    Position opPos; // position of .
+    Position openParenPos;
+    Position namePos;
     string methodName;
     Expr target;
     Expr[] args;
@@ -470,9 +483,16 @@ public type FunctionTypeDesc record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
-    TypeDesc[] args;
+    FunctionTypeParam[] params;
     TypeDesc ret;
     t:FunctionDefinition? defn = ();
+|};
+
+public type FunctionTypeParam record {|
+    *PositionFields;
+    string? name;
+    Position? namePos;
+    TypeDesc td;
 |};
 
 public type ErrorTypeDesc record {|

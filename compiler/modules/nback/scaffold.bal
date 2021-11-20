@@ -147,8 +147,9 @@ class Scaffold {
         builder.positionAtEnd(entry);
         self.addresses = [];
         foreach int i in 0 ..< reprs.length() {
-            self.addresses.push(builder.alloca(reprs[i].llvm, (), code.registers[i].varName));
-        } 
+            bir:Register register = code.registers[i];
+            self.addresses.push(builder.alloca(reprs[i].llvm, (), register.varName));
+        }
     }
 
     function saveParams(llvm:Builder builder) {

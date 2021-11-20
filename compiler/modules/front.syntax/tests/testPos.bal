@@ -339,8 +339,10 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
     check validateExprOpPos(expr, tok);
 }
 
-type ExprOpPos BinaryExpr|UnaryExpr|FunctionCallExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|FieldAccessExpr|TypeCastExpr;
+type ExprOpPos BinaryExpr|UnaryExpr|MethodCallExpr|ListConstructorExpr|MappingConstructorExpr|MemberAccessExpr|MemberAccessLExpr|FieldAccessExpr|FieldAccessLExpr|TypeCastExpr;
 type ExprKwPos CheckingExpr|ErrorConstructorExpr|TypeTestExpr;
+type ExprNamePos FunctionCallExpr|MethodCallExpr;
+type ExprParenPos FunctionCallExpr|MethodCallExpr;
 
 function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
     if expr is ExprOpPos|ExprKwPos {
@@ -375,8 +377,8 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         else if expr is MappingConstructorExpr {
             test:assertEquals(token, "{");
         }
-        else if expr is FunctionCallExpr|MethodCallExpr {
-            test:assertTrue(token == "(");
+        else if expr is MethodCallExpr {
+            test:assertTrue(token == ".");
         }
         else if expr is CheckingExpr {
             test:assertTrue(token is CheckingKeyword);
@@ -390,6 +392,20 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         else {
             test:assertEquals(token, ".");
         }
+    }
+    if expr is ExprNamePos {
+        check tok.moveToPos(expr.namePos, MODE_NORMAL);
+        string newName = check tok.expectIdentifier();
+        if expr is MethodCallExpr {
+            test:assertEquals(expr.methodName, newName);
+        }
+        else {
+            test:assertEquals(expr.funcName, newName);
+        }
+    }
+    if expr is ExprParenPos {
+        check tok.moveToPos(expr.openParenPos, MODE_NORMAL);
+        test:assertEquals(tok.current(), "(");
     }
 }
 
@@ -477,9 +493,9 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         }
     }
     else if td is FunctionTypeDesc {
-        foreach var arg in td.args {
-            check validateTypeDescPos(arg, tok, td.startPos, td.endPos);
-            childNodePos.push([arg.startPos, arg.endPos]);
+        foreach var param in td.params {
+            check validateTypeDescPos(param.td, tok, td.startPos, td.endPos);
+            childNodePos.push([param.startPos, param.endPos]);
         }
         TypeDesc ret = td.ret;
         if !(ret is BuiltinTypeDesc && ret.builtinTypeName is "null") {
