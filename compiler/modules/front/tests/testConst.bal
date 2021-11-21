@@ -17,11 +17,11 @@ class TestFoldContext {
         self.tc = t:typeContext(new);
         self.file = file;
     }
-    function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
+    function lookupConst(string? prefix, string varName, s:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError {
         return ();
     }
-    function semanticErr(d:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, d:location(self.file), cause=cause);
+    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, d:location(self.file, pos), cause=cause);
     }
     function typeContext() returns t:Context {
         return self.tc;
@@ -30,7 +30,7 @@ class TestFoldContext {
         if td is s:SubsetBuiltinTypeDesc {
             return resolveBuiltinTypeDesc(td);
         }
-        return err:semantic("TestFoldContext cannot resolve TypeDesc", d:location(self.file));
+        return err:semantic("TestFoldContext cannot resolve TypeDesc", d:location(self.file, td.startPos));
     }
     function isConstDefn() returns boolean => true;
 }

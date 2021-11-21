@@ -133,7 +133,7 @@ function reduceToWords(string k, string rule, string[] fragment) returns err:Syn
             }
         }
         if tok.current() != () {
-            return err:syntax("superfluous input at end", d:location(file));
+            return err:syntax("superfluous input at end", d:location(file, tok.currentStartPos()));
         }
     }
     return w;

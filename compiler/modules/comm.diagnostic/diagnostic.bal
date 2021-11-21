@@ -30,18 +30,13 @@ public type File readonly & object {
 public type Location readonly & record {|
     File file;
     // If the `range` is just a position, then the end position is the end of the token.
-    Range|Position? range; 
+    Range|Position range;
 |};
 
 public function locationLineColumn(Location loc) returns LineColumn? {
     var range = loc.range;
-    if range == () {
-        return ();
-    }
-    else {
-        Position startPos = range is Position ? range : range.startPos;
-        return loc.file.lineColumn(startPos);
-    }
+    Position startPos = range is Position ? range : range.startPos;
+    return loc.file.lineColumn(startPos);
 }
 
 public enum Category {
@@ -75,9 +70,9 @@ public type UnimplementedDiagnostic record {|
     UNIMPLEMENTED category = UNIMPLEMENTED;
 |};
 
-public function location(File file, Position? startPos = (), Position? endPos = ()) returns Location {
-    Range|Position? range;
-    if startPos != () && endPos != () {
+public function location(File file, Position startPos, Position? endPos = ()) returns Location {
+    Range|Position range;
+    if endPos != () {
         range = { startPos, endPos };
     }
     else {
