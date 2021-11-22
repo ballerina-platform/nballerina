@@ -325,11 +325,14 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else {
         w.push("function(", CLING);
         boolean comma = false;
-        foreach var arg in td.args {
+        foreach var param in td.params {
             if comma {
                 w.push(",");
             }
-            typeDescToWords(w, arg);
+            typeDescToWords(w, param.td);
+            if param.name != null {
+                w.push(param.name, CLING);
+            }
             comma = true;
         }
         w.push(")");
