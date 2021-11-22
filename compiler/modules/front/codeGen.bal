@@ -454,7 +454,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     }
     else {
         // condition is false and body is non-empty
-        return cx.semanticErr("unreachable code", stmt.body.startPos);
+        return cx.semanticErr("unreachable code", stmt.body.stmts[0].startPos);
     }
     afterCondition.insns.push(branch);
     cx.pushLoopContext(exit, loopHead);
@@ -660,7 +660,15 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
         }
         if notTaken is s:StmtBlock && notTaken.stmts.length() > 0 {
             // XXX position should come from first member of notTaken
-            return cx.semanticErr("unreachable code", notTaken.startPos);
+            s:Stmt firstStmt = notTaken.stmts[0];
+            bir:Position errPos;
+            if firstStmt is s:IfElseStmt {
+                errPos = firstStmt.ifTrue.stmts[0].startPos;
+            }
+            else {
+                errPos = notTaken.stmts[0].startPos;
+            }
+            return cx.semanticErr("unreachable code", errPos);
         }
         if taken is s:StmtBlock {
             return codeGenStmts(cx, branchBlock, env, taken);
@@ -816,7 +824,7 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr, d:Position pos) returns CodeGenError|StmtEffect {
     Binding binding = check lookupVarRefBinding(cx, varName, env, pos);
     if binding.isFinal {
-        return cx.semanticErr(`cannot assign to ${varName}`, <bir:Position>binding.reg.pos);
+        return cx.semanticErr(`cannot assign to ${varName}`, pos);
     }
     bir:Register unnarrowedReg;
     int[] assignments;
@@ -1139,7 +1147,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                     var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, index, t:INT));
                     t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r is int ? r : ());
                     if t:isEmpty(cx.mod.tc, memberType) {
-                        return cx.semanticErr("type of member access is never", <bir:Position>l.pos);
+                        return cx.semanticErr("type of member access is never", pos);
                     }
                     bir:Register result = cx.createTmpRegister(memberType, pos);
                     bir:ListGetInsn insn = { result, operands: [l, r], pos };
