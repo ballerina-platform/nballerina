@@ -33,7 +33,7 @@ public type Location readonly & record {|
     Range|Position range;
 |};
 
-public function locationLineColumn(Location loc) returns LineColumn? {
+public function locationLineColumn(Location loc) returns LineColumn {
     var range = loc.range;
     Position startPos = range is Position ? range : range.startPos;
     return loc.file.lineColumn(startPos);
@@ -113,11 +113,9 @@ public function messageFormat(Template t) returns string {
 public function format(Diagnostic d) returns string[] {
     Location loc = d.location;
     string line = loc.file.filename();
-    LineColumn? lc = locationLineColumn(loc);
-    if lc != () {
-        // lineColumn returns 0-based lines currently
-        line += ":" + lc[0].toString() + ":" + (lc[1] + 1).toString();
-    }
+    LineColumn lc = locationLineColumn(loc);
+    // lineColumn returns 0-based lines currently
+    line += ":" + lc[0].toString() + ":" + (lc[1] + 1).toString();
     line += ": error: " + d.message;
     return [line];
 }

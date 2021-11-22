@@ -65,14 +65,12 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
                 d:Location loc = err.detail().location;
                 string filename = loc.file.filename();
                 test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
-                d:LineColumn? lc = d:locationLineColumn(loc);
-                if lc is d:LineColumn {
-                    if err is err:Semantic && err.message().startsWith("assignment to narrowed variable") {
-                        // these errors currently have the position of the variable creation not assignment
-                        return;
-                    }
-                    test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
+                d:LineColumn lc = d:locationLineColumn(loc);
+                if err is err:Semantic && err.detail().message.startsWith("assignment to narrowed variable") {
+                    // these errors currently have the position of the variable creation not assignment
+                    return;
                 }
+                test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
             }
         }
     }
