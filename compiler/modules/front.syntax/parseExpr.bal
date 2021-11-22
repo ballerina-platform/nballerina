@@ -261,14 +261,14 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     if t is [IDENTIFIER, string] {
         Position namePos = tok.currentStartPos();
         string? prefix;
-        string varName;
+        string name;
         check tok.advance();
-        [prefix, varName, namePos] = check parseOptQualIdentifier(tok, t[1], namePos);
+        [prefix, name, namePos] = check parseOptQualIdentifier(tok, t[1], namePos);
         if tok.current() == "(" {
-            return finishFunctionCallExpr(tok, prefix, varName, startPos, namePos);
+            return finishFunctionCallExpr(tok, prefix, name, startPos, namePos);
         }
         endPos = tok.previousEndPos();
-        return { startPos, endPos, prefix, varName };
+        return { startPos, endPos, prefix, name, namePos };
     }
     else if t is [DECIMAL_NUMBER, string] {
         IntLiteralExpr expr = { startPos, endPos, base: 10, digits: t[1] };
@@ -455,12 +455,12 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
         [IDENTIFIER, var identifier] => {
             Position identifierPos = tok.currentStartPos();
             check tok.advance();
-            var [prefix, varName, _] = check parseOptQualIdentifier(tok, identifier, identifierPos);
+            var [prefix, name, namePos] = check parseOptQualIdentifier(tok, identifier, identifierPos);
             Position endPos = tok.currentEndPos();
             if prefix != () {
                 endPos = tok.previousEndPos();
             }
-            return { startPos, endPos, prefix, varName };
+            return { startPos, endPos, prefix, name, namePos };
         }
         [STRING_LITERAL, var value] => {
             Position endPos = tok.currentEndPos();

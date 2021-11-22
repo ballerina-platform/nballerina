@@ -35,7 +35,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
                 }
             }
             check tok.advance();
-            return finishIdentifierStmt(tok, identifier, startPos);
+            return finishIdentifierStmt(tok, identifier, startPos, startPos);
         }
         "_" => {
             check tok.advance();
@@ -124,20 +124,20 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 
 
 // statement must not start with a type desc.
-function finishIdentifierStmt(Tokenizer tok, string identifier, Position startPos) returns Stmt|err:Syntax {
+function finishIdentifierStmt(Tokenizer tok, string name, Position startPos, Position namePos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
     if cur == "=" {
-        VarRefExpr lValue = { startPos, endPos, varName: identifier };
+        VarRefExpr lValue = { startPos, endPos, name, namePos };
         return finishAssignStmt(tok, lValue, startPos);
     }
     else if cur is CompoundAssignOp {
         Position opPos = tok.currentStartPos();
-        VarRefExpr lValue = { startPos, endPos, varName: identifier };
+        VarRefExpr lValue = { startPos, endPos, name, namePos };
         return parseCompoundAssignStmt(tok, lValue, cur, startPos, opPos);
     }
     else if cur == "[" {
-        VarRefExpr varRef = { startPos, endPos, varName: identifier };
+        VarRefExpr varRef = { startPos, endPos, name, namePos };
         Position bracketPos = tok.currentStartPos();
         check tok.advance();
         // type-desc case is handled before
@@ -164,21 +164,21 @@ function finishIdentifierStmt(Tokenizer tok, string identifier, Position startPo
     else if cur == ":" {
         check tok.advance();
         Position localNamePos = tok.currentStartPos();
-        return finishOptQualIdentifierStmt(tok, identifier, check tok.expectIdentifier(), startPos, localNamePos);
+        return finishOptQualIdentifierStmt(tok, name, check tok.expectIdentifier(), startPos, localNamePos);
     }
-    return finishOptQualIdentifierStmt(tok, (), identifier, startPos, startPos);
+    return finishOptQualIdentifierStmt(tok, (), name, startPos, startPos);
 }
 
-function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string identifier, Position startPos, Position identifierPos) returns Stmt|err:Syntax {
+function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name, Position startPos, Position namePos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
     if cur == "(" {
-        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, identifier, startPos, identifierPos);
+        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, name, startPos, namePos);
         return finishCallStmt(tok, expr, startPos);
     }
     else if cur == "." {
         Position opPos = tok.currentStartPos();
-        VarRefExpr varRef = { startPos, endPos:tok.previousEndPos(), varName: identifier, prefix };
+        VarRefExpr varRef = { startPos, endPos:tok.previousEndPos(), name, namePos, prefix };
         check tok.advance();
         Position localNamePos = tok.currentStartPos();
         string localName = check tok.expectIdentifier();
@@ -187,7 +187,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string ident
         }
         else {
             endPos = tok.previousEndPos();
-            VarRefExpr container = { startPos, endPos, varName: identifier };
+            VarRefExpr container = { startPos, endPos, name, namePos };
             FieldAccessLExpr lValue = { startPos, endPos, fieldName: localName, container, opPos };
             Token? t = tok.current();
             if t == "=" {

@@ -503,7 +503,7 @@ function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, 
 }
 
 function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr expr) returns s:Expr|FoldError {
-    s:FLOAT_ZERO|t:Value? constValue = check cx.lookupConst(expr.prefix, expr.varName, expr.startPos);
+    s:FLOAT_ZERO|t:Value? constValue = check cx.lookupConst(expr.prefix, expr.name, expr.namePos);
     if constValue == () {
         return expr;
     }
