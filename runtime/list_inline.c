@@ -7,16 +7,11 @@ int64_t BAL_LANG_ARRAY_NAME(length)(TaggedPtr p) {
 
 void BAL_LANG_ARRAY_NAME(push)(TaggedPtr p, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
-    if (!memberTypeContainsTagged(lp->desc->memberType, val)) {
-        _bal_panic_internal(storePanicCode(p, PANIC_LIST_STORE));
-    }
     int64_t len = lp->tpArray.length;
-    if (unlikely(len >= lp->tpArray.capacity)) {
-        _bal_array_grow(&(lp->gArray), 0, TAGGED_PTR_SHIFT);
+    PanicCode err = lp->desc->set(p, len, val);
+    if (err != 0) {
+        _bal_panic_internal(err);
     }
-    // note that array_grow does not change length
-    lp->tpArray.members[len] = val;
-    lp->tpArray.length = len + 1;
 }
 
 int64_t READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {

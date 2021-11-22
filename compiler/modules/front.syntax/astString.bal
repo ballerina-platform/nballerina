@@ -59,12 +59,12 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
     }
     w.push("function");
     w.push(func.name, CLING, "(");
-    foreach int i in 0 ..< func.typeDesc.args.length() {
+    foreach int i in 0 ..< func.params.length() {
         if i != 0 {
             w.push(",");
         }
-        typeDescToWords(w, func.typeDesc.args[i]);
-        w.push(func.paramNames[i]);
+        typeDescToWords(w, func.params[i].td);
+        w.push(func.params[i].name);
     }
     w.push(")");
     TypeDesc funcRetTd = func.typeDesc.ret;
@@ -99,7 +99,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
             w.push("final");
         }
         typeDescToWords(w, stmt.td);
-        string? varName = stmt.varName;
+        var varName = stmt.name;
         if varName is WILDCARD {
             w.push("_");
         }
@@ -197,7 +197,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
     }
     else if stmt is ForeachStmt {
         w.push("foreach", "int");
-        w.push(stmt.varName);
+        w.push(stmt.name);
         w.push("in");
         exprToWords(w, stmt.range.lower, true);
         w.push("..<");

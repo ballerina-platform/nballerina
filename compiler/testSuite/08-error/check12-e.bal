@@ -5,8 +5,8 @@ public function main() {
 }
 
 function errorViaCheck() returns error? {
-    check newError(); // @error
-    io:print("unreachable");
+    check newError(); // the checkpanic will always panic, but that's not an error
+    io:print("unreachable"); // @error
 }
 
 function newError() returns error {

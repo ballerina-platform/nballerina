@@ -55,6 +55,10 @@
 #endif
 #endif
 
+#define IMMEDIATE_INT_MIN -((int64_t)1 << (TAG_SHIFT - 1))
+#define IMMEDIATE_INT_MAX  (((int64_t)1 << (TAG_SHIFT - 1)) - 1)
+#define IMMEDIATE_INT_TRUNCATE(n) (n & (((int64_t)1 << TAG_SHIFT) - 1))
+
 extern char *_bal_stack_guard;
 
 typedef GC char NODEREF *TaggedPtr;
@@ -62,7 +66,7 @@ typedef GC void *UntypedPtr;
 typedef GC int64_t *IntPtr;
 typedef GC double *FloatPtr;
 
-typedef int PanicCode;
+typedef uint64_t PanicCode;
 // An internally-generated panic is currently represented as int with the error code in the lo byte
 // and line number right-shifted 8.
 typedef uint64_t PackedPanic;
@@ -80,6 +84,18 @@ typedef struct {
     int64_t capacity;
     GC TaggedPtr *members;
 } TaggedPtrArray;
+
+typedef struct {
+    int64_t length;
+    int64_t capacity;
+    GC int64_t *members;
+} IntArray;
+
+typedef struct {
+    int64_t length;
+    int64_t capacity;
+    GC double *members;
+} FloatArray;
 
 typedef uint32_t Tid;
 // Represents the type of a member of a structure
@@ -105,6 +121,10 @@ typedef struct {
     Tid tid;
     TaggedPtr (*get)(TaggedPtr lp, int64_t index);
     PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
+    int64_t (*getInt)(TaggedPtr lp, int64_t index);
+    PanicCode (*setInt)(TaggedPtr lp, int64_t index, int64_t val);
+    double (*getFloat)(TaggedPtr lp, int64_t index);
+    PanicCode (*setFloat)(TaggedPtr lp, int64_t index, double val);
     MemberType memberType;
 } ListDesc, *ListDescPtr;
 
@@ -116,6 +136,8 @@ typedef GC struct List {
     union {
         GenericArray gArray;
         TaggedPtrArray tpArray;
+        IntArray iArray;
+        FloatArray fArray;
     };
 } *ListPtr;
 
@@ -194,6 +216,12 @@ typedef struct {
    UniformSubtypePtr subtypes[];
 } ComplexType, *ComplexTypePtr;
 
+typedef struct EqStack {
+    TaggedPtr p1;
+    TaggedPtr p2;
+    struct EqStack *next;
+} EqStack;
+
 typedef GC struct Error {
     TaggedPtr message;
     int64_t lineNumber;
@@ -271,9 +299,28 @@ extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoin
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
 extern ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity);
-extern TaggedPtr _bal_list_get(TaggedPtr p, int64_t index);
-extern PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
+
+extern TaggedPtr _bal_list_generic_get_tagged(TaggedPtr p, int64_t index);
+extern int64_t _bal_list_generic_get_int(TaggedPtr p, int64_t index);
+double _bal_list_generic_get_float(TaggedPtr p, int64_t index);
+extern PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
+extern PanicCode _bal_list_generic_set_int(TaggedPtr p, int64_t index, int64_t val);
+PanicCode _bal_list_generic_set_float(TaggedPtr p, int64_t index, double val);
+
+extern TaggedPtr _bal_list_int_array_get_tagged(TaggedPtr p, int64_t index);
+extern int64_t _bal_list_int_array_get_int(TaggedPtr p, int64_t index);
+extern PanicCode _bal_list_int_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
+extern PanicCode _bal_list_int_array_set_int(TaggedPtr p, int64_t index, int64_t val);
+extern PanicCode _bal_list_int_array_set_float(TaggedPtr p, int64_t index, double val);
+
+extern TaggedPtr _bal_list_float_array_get_tagged(TaggedPtr p, int64_t index);
+extern double _bal_list_float_array_get_float(TaggedPtr p, int64_t index);
+extern PanicCode _bal_list_float_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
+extern PanicCode _bal_list_float_array_set_int(TaggedPtr p, int64_t index, int64_t val);
+extern PanicCode _bal_list_float_array_set_float(TaggedPtr p, int64_t index, double val);
+
 extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
+extern READONLY bool _bal_list_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp);
 
 #define MAP_FIELD_SHIFT (TAGGED_PTR_SHIFT*2)
 
@@ -282,6 +329,7 @@ extern void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr
 extern PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr val);
 extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
 extern READONLY bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2);
+extern READONLY bool _bal_mapping_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp);
 
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
@@ -297,6 +345,8 @@ extern NORETURN COLD void _bal_panic_internal(PanicCode code);
 extern TaggedPtr _bal_decimal_const(const char *decString);
 extern TaggedPtrPanicCode _bal_decimal_add(TaggedPtr tp1, TaggedPtr tp2);
 extern TaggedPtrPanicCode _bal_decimal_sub(TaggedPtr tp1, TaggedPtr tp2);
+extern TaggedPtrPanicCode _bal_decimal_mul(TaggedPtr tp1, TaggedPtr tp2);
+extern TaggedPtrPanicCode _bal_decimal_div(TaggedPtr tp1, TaggedPtr tp2);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
@@ -539,14 +589,14 @@ static READONLY inline bool taggedStringEqual(TaggedPtr tp1, TaggedPtr tp2) {
     return _bal_string_heap_eq(tp1, tp2);
 }
 
-static READONLY inline bool taggedPtrEqual(TaggedPtr tp1, TaggedPtr tp2) {
+static READONLY inline bool taggedPtrEq(TaggedPtr tp1, TaggedPtr tp2, EqStack *stackPtr) {
     if (tp1 == tp2) {
-        return 1;
+        return true;
     }
     int tag1 = getTag(tp1);
     int tag2 = getTag(tp2);
     if (tag1 != tag2) {
-        return 0;
+        return false;
     }
     switch (tag1) {
         case TAG_STRING:
@@ -564,11 +614,23 @@ static READONLY inline bool taggedPtrEqual(TaggedPtr tp1, TaggedPtr tp2) {
                 return _bal_float_eq(*p1, *p2);
             }
         case TAG_LIST_RW:
-            return _bal_list_eq(tp1, tp2);
         case TAG_MAPPING_RW:
-            return _bal_mapping_eq(tp1, tp2);
+            {  
+                EqStack stack;
+                for (EqStack *sp = stackPtr; sp; sp = sp->next) {
+                    if (tp1 == sp->p1 && tp2 == sp->p2) {
+                        return true;
+                    }
+                }
+                stack.p1 = tp1;
+                stack.p2 = tp2;
+                stack.next = stackPtr;
+                return (tag1 == TAG_LIST_RW
+                        ? _bal_list_eq_internal(tp1, tp2, &stack)
+                        : _bal_mapping_eq_internal(tp1, tp2, &stack));
+            }
     }
-    return 0;
+    return false;
 }
 
 static READNONE inline TaggedPtr ptrAddFlags(UntypedPtr p, uint64_t flags)  {
@@ -636,5 +698,22 @@ static inline void initGenericArray(GC GenericArray *ap, int64_t capacity, int s
     }
     else {
         ap->members = _bal_alloc(capacity << shift);
+    }
+}
+
+static inline TaggedPtr floatToTagged(double n) {
+    GC double *p = _bal_alloc(sizeof(double));
+    *p = n;
+    return ptrAddShiftedTag(p, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
+}
+
+static inline TaggedPtr intToTagged(int64_t n) {
+    if (likely(n >= IMMEDIATE_INT_MIN & n <= IMMEDIATE_INT_MAX)) {
+        return bitsToTaggedPtr(IMMEDIATE_INT_TRUNCATE(n) | IMMEDIATE_FLAG | (((uint64_t)TAG_INT) << TAG_SHIFT));
+    }
+    else {
+        GC int64_t *p = _bal_alloc(sizeof(int64_t));
+        *p = n;
+        return ptrAddShiftedTag(p, ((uint64_t)TAG_INT) << TAG_SHIFT);
     }
 }
