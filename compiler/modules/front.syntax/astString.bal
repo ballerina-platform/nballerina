@@ -330,14 +330,14 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
                 w.push(",");
             }
             typeDescToWords(w, param.td);
-            if param.name != null {
+            if param.name != () {
                 w.push(param.name, CLING);
             }
             comma = true;
         }
         w.push(")");
         TypeDesc ret = td.ret;
-        if !(ret is BuiltinTypeDesc && ret.builtinTypeName is "null") {
+        if ret !is BuiltinTypeDesc || ret.builtinTypeName != "null" {
             w.push("returns");
             typeDescToWords(w, ret);
         }
