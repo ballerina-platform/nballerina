@@ -1,5 +1,3 @@
-import wso2/nballerina.comm.err;
-
 // join words without space
 const CLING = ();
 // line feed
@@ -315,9 +313,32 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is SingletonTypeDesc {
         valueToWords(w, td.value);
     }
+    else if td is UnaryTypeDesc {
+        w.push(td.op, CLING);
+        typeDescToWords(w, td.td);
+    }
+    else if td is XmlSequenceTypeDesc {
+        w.push("xml<", CLING);
+        typeDescToWords(w, td.constituent);
+        w.push(CLING, ">");
+    }
     else {
-        panic err:impossible(`typedesc not implemented in typeDescToWords: ${td.toString()}`);
-    }   
+        w.push("function(", CLING);
+        boolean comma = false;
+        foreach var arg in td.args {
+            if comma {
+                w.push(",");
+            }
+            typeDescToWords(w, arg);
+            comma = true;
+        }
+        w.push(")");
+        TypeDesc ret = td.ret;
+        if !(ret is BuiltinTypeDesc && ret.builtinTypeName is "null") {
+            w.push("returns");
+            typeDescToWords(w, ret);
+        }
+    }
 }
 
 function exprsToWords(Word[] w, Expr[] exprs) {
