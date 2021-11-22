@@ -132,6 +132,10 @@ void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift) {
 }
 
 bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
+    return _bal_list_eq_internal(p1, p2, 0);
+}
+
+bool _bal_list_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp) {
     ListPtr lp1 = taggedToPtr(p1);
     GC TaggedPtrArray *ap1 = &(lp1->tpArray);
     ListPtr lp2 = taggedToPtr(p2);
@@ -143,7 +147,7 @@ bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
     TaggedPtr (*get1)(TaggedPtr lp, int64_t index) = lp1->desc->get;
     TaggedPtr (*get2)(TaggedPtr lp, int64_t index) = lp2->desc->get;
     for (int64_t i = 0; i < len; i++) {
-        if (!taggedPtrEqual(get1(p1, i), get2(p2, i))) {
+        if (!taggedPtrEq(get1(p1, i), get2(p2, i), sp)) {
             return false;
         }
     }

@@ -286,6 +286,10 @@ bool _bal_map_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
 }
 
 bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2) {
+    return _bal_mapping_eq_internal(p1, p2, 0);
+}
+
+bool _bal_mapping_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp) {
     MappingPtr mp1 = taggedToPtr(p1);
     int64_t len = mp1->fArray.length;
     MappingPtr mp2 = taggedToPtr(p2);
@@ -295,10 +299,9 @@ bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2) {
     for (int64_t i = 0; i < len; i++) {
         TaggedPtr key = mp1->fArray.members[i].key;
         int64_t j = lookup(mp2, key, _bal_string_hash(key));
-        if (j < 0 || !taggedPtrEqual(mp1->fArray.members[i].value, mp2->fArray.members[j].value)) {
+        if (j < 0 || !taggedPtrEq(mp1->fArray.members[i].value, mp2->fArray.members[j].value, sp)) {
             return false;
         }
     }
     return true;
 }
-
