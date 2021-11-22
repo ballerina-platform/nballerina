@@ -55,6 +55,10 @@
 #endif
 #endif
 
+#define IMMEDIATE_INT_MIN -((int64_t)1 << (TAG_SHIFT - 1))
+#define IMMEDIATE_INT_MAX  (((int64_t)1 << (TAG_SHIFT - 1)) - 1)
+#define IMMEDIATE_INT_TRUNCATE(n) (n & (((int64_t)1 << TAG_SHIFT) - 1))
+
 extern char *_bal_stack_guard;
 
 typedef GC char NODEREF *TaggedPtr;
@@ -62,7 +66,7 @@ typedef GC void *UntypedPtr;
 typedef GC int64_t *IntPtr;
 typedef GC double *FloatPtr;
 
-typedef int PanicCode;
+typedef uint64_t PanicCode;
 // An internally-generated panic is currently represented as int with the error code in the lo byte
 // and line number right-shifted 8.
 typedef uint64_t PackedPanic;
@@ -80,6 +84,18 @@ typedef struct {
     int64_t capacity;
     GC TaggedPtr *members;
 } TaggedPtrArray;
+
+typedef struct {
+    int64_t length;
+    int64_t capacity;
+    GC int64_t *members;
+} IntArray;
+
+typedef struct {
+    int64_t length;
+    int64_t capacity;
+    GC double *members;
+} FloatArray;
 
 typedef uint32_t Tid;
 // Represents the type of a member of a structure
@@ -105,6 +121,10 @@ typedef struct {
     Tid tid;
     TaggedPtr (*get)(TaggedPtr lp, int64_t index);
     PanicCode (*set)(TaggedPtr lp, int64_t index, TaggedPtr val);
+    int64_t (*getInt)(TaggedPtr lp, int64_t index);
+    PanicCode (*setInt)(TaggedPtr lp, int64_t index, int64_t val);
+    double (*getFloat)(TaggedPtr lp, int64_t index);
+    PanicCode (*setFloat)(TaggedPtr lp, int64_t index, double val);
     MemberType memberType;
 } ListDesc, *ListDescPtr;
 
@@ -116,6 +136,8 @@ typedef GC struct List {
     union {
         GenericArray gArray;
         TaggedPtrArray tpArray;
+        IntArray iArray;
+        FloatArray fArray;
     };
 } *ListPtr;
 
@@ -277,8 +299,26 @@ extern char *_bal_string_alloc(uint64_t lengthInBytes, uint64_t lengthInCodePoin
 
 extern void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift);
 extern ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity);
-extern TaggedPtr _bal_list_get(TaggedPtr p, int64_t index);
-extern PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val);
+
+extern TaggedPtr _bal_list_generic_get_tagged(TaggedPtr p, int64_t index);
+extern int64_t _bal_list_generic_get_int(TaggedPtr p, int64_t index);
+double _bal_list_generic_get_float(TaggedPtr p, int64_t index);
+extern PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
+extern PanicCode _bal_list_generic_set_int(TaggedPtr p, int64_t index, int64_t val);
+PanicCode _bal_list_generic_set_float(TaggedPtr p, int64_t index, double val);
+
+extern TaggedPtr _bal_list_int_array_get_tagged(TaggedPtr p, int64_t index);
+extern int64_t _bal_list_int_array_get_int(TaggedPtr p, int64_t index);
+extern PanicCode _bal_list_int_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
+extern PanicCode _bal_list_int_array_set_int(TaggedPtr p, int64_t index, int64_t val);
+extern PanicCode _bal_list_int_array_set_float(TaggedPtr p, int64_t index, double val);
+
+extern TaggedPtr _bal_list_float_array_get_tagged(TaggedPtr p, int64_t index);
+extern double _bal_list_float_array_get_float(TaggedPtr p, int64_t index);
+extern PanicCode _bal_list_float_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val);
+extern PanicCode _bal_list_float_array_set_int(TaggedPtr p, int64_t index, int64_t val);
+extern PanicCode _bal_list_float_array_set_float(TaggedPtr p, int64_t index, double val);
+
 extern READONLY bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2);
 extern READONLY bool _bal_list_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp);
 
@@ -658,5 +698,22 @@ static inline void initGenericArray(GC GenericArray *ap, int64_t capacity, int s
     }
     else {
         ap->members = _bal_alloc(capacity << shift);
+    }
+}
+
+static inline TaggedPtr floatToTagged(double n) {
+    GC double *p = _bal_alloc(sizeof(double));
+    *p = n;
+    return ptrAddShiftedTag(p, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
+}
+
+static inline TaggedPtr intToTagged(int64_t n) {
+    if (likely(n >= IMMEDIATE_INT_MIN & n <= IMMEDIATE_INT_MAX)) {
+        return bitsToTaggedPtr(IMMEDIATE_INT_TRUNCATE(n) | IMMEDIATE_FLAG | (((uint64_t)TAG_INT) << TAG_SHIFT));
+    }
+    else {
+        GC int64_t *p = _bal_alloc(sizeof(int64_t));
+        *p = n;
+        return ptrAddShiftedTag(p, ((uint64_t)TAG_INT) << TAG_SHIFT);
     }
 }

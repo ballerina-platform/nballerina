@@ -17,13 +17,29 @@ final llvm:StructType llStructureDescType = llvm:structType([LLVM_TID]);
 // This is an approximation, but close enough since we are only accessing the pointer in C.
 final llvm:StructType llComplexType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
 
-final llvm:FunctionType llListSetFuncType = llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_TAGGED_PTR]);
-final llvm:FunctionType llListGetFuncType = llvm:functionType(LLVM_TAGGED_PTR, [LLVM_TAGGED_PTR, LLVM_INT]);
-final llvm:StructType llListDescType = llvm:structType([LLVM_TID, llvm:pointerType(llListGetFuncType), llvm:pointerType(llListSetFuncType), LLVM_MEMBER_TYPE]);
-final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType),                      // *desc
-                                              LLVM_INT,                                              // length
-                                              LLVM_INT,                                              // capacity
-                                              heapPointerType(llvm:arrayType(LLVM_TAGGED_PTR, 0))]); // *members
+final llvm:FunctionType[6] llListDescFuncs = [
+            llvm:functionType(LLVM_TAGGED_PTR, [LLVM_TAGGED_PTR, LLVM_INT]),
+            llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_TAGGED_PTR]),
+            llvm:functionType(LLVM_INT, [LLVM_TAGGED_PTR, LLVM_INT]),
+            llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_INT]),
+            llvm:functionType(LLVM_DOUBLE, [LLVM_TAGGED_PTR, LLVM_INT]),
+            llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_DOUBLE])];
+final llvm:PointerType[] llListDescFuncPtrs = from var desc in llListDescFuncs select llvm:pointerType(desc);
+function createLlListDescType() returns llvm:StructType {
+    llvm:Type[] types = [LLVM_TID];
+    foreach var funcPtr in llListDescFuncPtrs {
+        types.push(funcPtr);
+    }
+    // JBUG cast
+    types.push(<llvm:Type>LLVM_MEMBER_TYPE);
+    return llvm:structType(types);
+}
+// JBUG use [LLVM_TID, ...llListDescFuncPtrs, LLVM_MEMBER_TYPE] instead createLlListDescType
+final llvm:StructType llListDescType = createLlListDescType();
+final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType),          // ListDesc *desc
+                                              LLVM_INT,                                  // int64_t length
+                                              LLVM_INT,                                  // int64_t capacity
+                                              heapPointerType(llvm:pointerType("i8"))]); // union {TaggedPtr, int64_t, float} *members
 
 final llvm:StructType llMapDescType = llvm:structType([LLVM_TID, LLVM_MEMBER_TYPE]);
 
