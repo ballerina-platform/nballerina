@@ -363,7 +363,8 @@ public type RangeExpr record {|
 public type VarRefExpr record {|
     *PositionFields;
     string? prefix = ();
-    string varName;
+    string name;
+    Position namePos;
 |};
 
 public type TypeCastExpr record {|

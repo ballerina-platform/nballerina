@@ -1,10 +1,5 @@
 // @productions equality if-else-stmt equality-expr boolean-literal unary-expr
 public function main() {
-    if !true == true {
-        foo(); // @error
+    if !true == true { // @error
     }
-}
-
-function foo() {
-
 }

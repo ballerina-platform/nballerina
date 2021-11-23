@@ -30,18 +30,13 @@ public type File readonly & object {
 public type Location readonly & record {|
     File file;
     // If the `range` is just a position, then the end position is the end of the token.
-    Range|Position? range; 
+    Range|Position range;
 |};
 
-public function locationLineColumn(Location loc) returns LineColumn? {
+public function locationLineColumn(Location loc) returns LineColumn {
     var range = loc.range;
-    if range == () {
-        return ();
-    }
-    else {
-        Position startPos = range is Position ? range : range.startPos;
-        return loc.file.lineColumn(startPos);
-    }
+    Position startPos = range is Position ? range : range.startPos;
+    return loc.file.lineColumn(startPos);
 }
 
 public enum Category {
@@ -75,9 +70,9 @@ public type UnimplementedDiagnostic record {|
     UNIMPLEMENTED category = UNIMPLEMENTED;
 |};
 
-public function location(File file, Position? startPos = (), Position? endPos = ()) returns Location {
-    Range|Position? range;
-    if startPos != () && endPos != () {
+public function location(File file, Position startPos, Position? endPos = ()) returns Location {
+    Range|Position range;
+    if endPos != () {
         range = { startPos, endPos };
     }
     else {
@@ -117,12 +112,7 @@ public function messageFormat(Template t) returns string {
 
 public function format(Diagnostic d) returns string[] {
     Location loc = d.location;
-    string line = loc.file.filename();
-    LineColumn? lc = locationLineColumn(loc);
-    if lc != () {
-        // lineColumn returns 0-based lines currently
-        line += ":" + lc[0].toString() + ":" + (lc[1] + 1).toString();
-    }
-    line += ": error: " + d.message;
-    return [line];
+    LineColumn lc = locationLineColumn(loc);
+    // lineColumn returns 0-based lines currently
+    return [loc.file.filename() + ":" + lc[0].toString() + ":" + (lc[1] + 1).toString() + ": error: " + d.message];
 }
