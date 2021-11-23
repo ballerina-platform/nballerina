@@ -3,7 +3,6 @@ import ballerina/test;
 function exprBinaryMul() returns Module {
     Context context = new;
     Module m = context.createModule();
-    StructType addReturnType = structType(["i64", "i1"]);
     FunctionDecl mul = m.getIntrinsicDeclaration("smul.with.overflow.i64");
     Function abort = m.addFunctionDefn("abort", {returnType:"void", paramTypes:[]});
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});
