@@ -487,6 +487,22 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
+    public function getRange(d:Position|d:Range range) returns string[] {
+        if range is d:Position {
+            int lineIndex = self.lineColumn(range)[0];
+            return ["".'join(...self.scannedLine(lineIndex).fragments)];
+        }
+        else {
+            int startLineIndex = self.lineColumn(range.startPos)[0];
+            int endLineIndex = self.lineColumn(range.endPos)[0];
+            string[] lines = [];
+            foreach int lineIndex in startLineIndex ... endLineIndex + 1 {
+                lines.push("".'join(...self.scannedLine(lineIndex).fragments));
+            }
+            return lines;
+        }
+    }
+
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
 
     function scannedLine(int lineNumber) returns ScannedLine {

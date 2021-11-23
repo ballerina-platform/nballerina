@@ -25,6 +25,7 @@ public type File readonly & object {
     public function filename() returns string;
     public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
+    public function getRange(Range|Position range) returns string[];
 };
 
 public type Location readonly & record {|
@@ -112,7 +113,54 @@ public function messageFormat(Template t) returns string {
 
 public function format(Diagnostic d) returns string[] {
     Location loc = d.location;
+    string [] errMessage = [];
+    string line = loc.file.filename();
     LineColumn lc = locationLineColumn(loc);
     // lineColumn returns 0-based lines currently
-    return [loc.file.filename() + ":" + lc[0].toString() + ":" + (lc[1] + 1).toString() + ": error: " + d.message];
+    line += ":" + lc[0].toString() + ":" + (lc[1] + 1).toString();
+    line += ": error: " + d.message;
+    errMessage.push(line);
+    Range|Position range = loc.range;
+    errMessage.push(...fileLines(loc.file, range));
+    return errMessage;
+}
+
+function fileLines(File file, Range|Position range) returns string[] {
+    string[] lines = file.getRange(range);
+    string[] errMessage = [];
+    if range is Position {
+        errMessage.push(lines[0]);
+        int column = file.lineColumn(range)[1];
+        errMessage.push(caretLine(column));
+    }
+    else {
+        if lines.length() == 1 {
+            errMessage.push(lines[0]);
+            int startColumn = file.lineColumn(range.startPos)[1];
+            int endColumn = file.lineColumn(range.endPos)[1];
+            int caretLen = endColumn - startColumn;
+            errMessage.push(caretLine(startColumn, caretLen));
+        }
+        else {
+            // multiline err
+            errMessage.push(lines[0]);
+            var [startLine, startColumn] = file.lineColumn(range.startPos);
+            var [endLine, endColumn] = file.lineColumn(range.endPos);
+            errMessage.push(caretLine(startColumn, lines[0].length() - startColumn));
+            foreach int i in startLine+1 ..< endLine {
+                string line = lines[i-(startLine+1)];
+                errMessage.push(line);
+                errMessage.push(caretLine(0, line.length()));
+            }
+            errMessage.push(lines[lines.length()-1]);
+            errMessage.push(caretLine(0, endColumn));
+        }
+    }
+    return errMessage;
+}
+
+function caretLine(int startIndex, int len = 1) returns string {
+    string padding = "".'join(from var _ in 0 ..<startIndex select " ");
+    string carets = "".'join(from var _ in 0 ..<len select "^");
+    return padding + carets;
 }
