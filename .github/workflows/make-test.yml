@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     env:
-      JBAL_VERSION: swan-lake-beta3
+      JBAL_VERSION: swan-lake-beta4
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -33,7 +33,7 @@ jobs:
       - name: Download jBallerina deb
         if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: |
-          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/vswan-lake-beta3/ballerina-linux-installer-x64-$JBAL_VERSION.deb" > $HOME/ballerina-linux-installer-x64-$JBAL_VERSION.deb
+          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/v$JBAL_VERSION/ballerina-linux-installer-x64-$JBAL_VERSION.deb" > $HOME/ballerina-linux-installer-x64-$JBAL_VERSION.deb
       - name: Install jBallerina deb
         if: runner.os == 'Linux'
         run: |
@@ -43,7 +43,7 @@ jobs:
       - name: Download jBallerina pkg
         if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'macOs'
         run: |
-          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/vswan-lake-beta3/ballerina-macos-installer-x64-$JBAL_VERSION.pkg" > $HOME/ballerina-macos-installer-x64-$JBAL_VERSION.pkg
+          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/v$JBAL_VERSION/ballerina-macos-installer-x64-$JBAL_VERSION.pkg" > $HOME/ballerina-macos-installer-x64-$JBAL_VERSION.pkg
       - name: Install jBallerina pkg
         if: runner.os == 'macOs'
         run: |
@@ -65,14 +65,14 @@ jobs:
 
   test-jni:
     env:
-      JBAL_VERSION: swan-lake-beta3
+      JBAL_VERSION: swan-lake-beta4
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Download jBallerina deb
         if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: |
-          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/vswan-lake-beta3/ballerina-linux-installer-x64-$JBAL_VERSION.deb" > $HOME/ballerina-linux-installer-x64-$JBAL_VERSION.deb
+          curl -L "https://github.com/ballerina-platform/ballerina-distribution/releases/download/v$JBAL_VERSION/ballerina-linux-installer-x64-$JBAL_VERSION.deb" > $HOME/ballerina-linux-installer-x64-$JBAL_VERSION.deb
       - name: Install jBallerina deb
         if: runner.os == 'Linux'
         run: |

@@ -48,7 +48,6 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             test:assertNotExactEquals(err, (), "expected an error " + path);
         }
         else {
-            string base = check file:basename(path);
             boolean isE = kind[0] == "e";
             if isE {
                 if err is err:Unimplemented {
