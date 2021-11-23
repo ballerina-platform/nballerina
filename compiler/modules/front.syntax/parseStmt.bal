@@ -297,7 +297,6 @@ function finishVarDeclStmt(Tokenizer tok, TypeDesc td, Position startPos, boolea
         check tok.advance();
     }
     else {
-        Position pos = tok.currentStartPos();
         name = check tok.expectIdentifier();
     }
     // initExpr is required in the subset
