@@ -178,6 +178,61 @@ void testRem() {
     genAndValidateDecRem("9.00005", "0.0001", "0.00005", 0);
 }
 
+void cmpDecsAndValidate(const char *decStr1, const char *decStr2, int64_t res) {
+    assert(_bal_decimal_cmp(_bal_decimal_const(decStr1), _bal_decimal_const(decStr2)) == res);
+}
+
+void testCmp() {
+    cmpDecsAndValidate("1", "1", 0);
+    cmpDecsAndValidate("-1", "1", -1);
+    cmpDecsAndValidate("1", "-1", 1);
+    cmpDecsAndValidate("0", "0", 0);
+    cmpDecsAndValidate("9.999999999999999999999999999999999E6144", "0.000000000000000000000000000000001E6144", 1);
+    cmpDecsAndValidate("9.999999999999999999999999999999999E6144", "-0.000000000000000000000000000000001E6144", 1);
+    cmpDecsAndValidate("-9.999999999999999999999999999999999E6144", "0.000000000000000000000000000000001E6144", -1);
+    cmpDecsAndValidate("0.999999999999999999999999999999999E6144", "9.999999999999999999999999999999999E6143", -1);
+    cmpDecsAndValidate("0.999999999999999999999999999999999E6144", "9.999999999999999999999999999999990E6143", 0);
+    cmpDecsAndValidate("9.999999999999999999999999999999999E6144", "9.999999999999999999999999999999999E6144", 0);
+    cmpDecsAndValidate("-9.999999999999999999999999999999999E6144", "-9.999999999999999999999999999999998E6144", -1);
+    cmpDecsAndValidate("0", "1E-6143", -1);
+    cmpDecsAndValidate("0", "-1E-6143", 1);
+    cmpDecsAndValidate("1E-6143", "1E-6143", 0);
+    cmpDecsAndValidate("1E-6142", "1E-6143", 1);
+    cmpDecsAndValidate("9.999999999999999999999999999999999E6144", "1E-6143", 1);
+}
+
+void exactEq(const char *decStr1, const char *decStr2) {
+    assert(_bal_decimal_exact_eq(_bal_decimal_const(decStr1), _bal_decimal_const(decStr2)));
+}
+
+void notExactEq(const char *decStr1, const char *decStr2) {
+    assert(!_bal_decimal_exact_eq(_bal_decimal_const(decStr1), _bal_decimal_const(decStr2)));
+}
+
+void testExactEq() {
+    exactEq("1.0", "1.0");
+    exactEq("9.999999999999999999999999999999999E6144", "9.999999999999999999999999999999999E6144");
+    exactEq("-9.999999999999999999999999999999999E6144", "-9.999999999999999999999999999999999E6144");
+    exactEq("1E-6143", "1E-6143");
+    exactEq("-1E-6143", "-1E-6143");
+    exactEq("0", "0");
+    exactEq("01", "1");
+    exactEq("0.000001", "0.000001");
+    exactEq("00000123", "123");
+    exactEq("100E3", "0100E3");
+    exactEq("0.1E-6142", "1E-6143");
+    exactEq("0.1", "1E-1");
+    notExactEq("1.0", "1.00");
+    notExactEq("0.0", "0");
+    notExactEq("1.0", "01.00");
+    notExactEq("0.00000100", "0.000001");
+    notExactEq("9.999999999999999999999999999999999E6143", "0.999999999999999999999999999999999E6144");
+    notExactEq("-9.999999999999999999999999999999999E6143", "-0.999999999999999999999999999999999E6144");
+    notExactEq("9.999999999999999999999999999999999E6144", "9.999999999999999999999999999999998E6144");
+    notExactEq("100E3", "10E30");
+    notExactEq("1E-6142", "1E-6143");
+}
+
 int main() {
     testConst();
     testAdd();
@@ -186,4 +241,6 @@ int main() {
     testDiv();
     testNeg();
     testRem();
+    testCmp();
+    testExactEq();
 }
