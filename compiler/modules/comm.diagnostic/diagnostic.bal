@@ -160,7 +160,7 @@ function fileLines(File file, Range|Position range) returns string[] {
 }
 
 function caretLine(int startIndex, int len = 1) returns string {
-    string padding = "".'join(from var _ in 0 ..<startIndex select " ");
-    string carets = "".'join(from var _ in 0 ..<len select "^");
+    string padding = "".'join(from var i in 0 ..<startIndex select " ");
+    string carets = "".'join(from var j in 0 ..<len select "^");
     return padding + carets;
 }
