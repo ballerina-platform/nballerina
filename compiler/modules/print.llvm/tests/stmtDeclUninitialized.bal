@@ -7,7 +7,7 @@ function stmtDeclUninitialized() returns Module {
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes:[]});
     BasicBlock initBlock = foo.appendBasicBlock();
     builder.positionAtEnd(initBlock);
-    Value _ = builder.alloca("i64");
+    _ = builder.alloca("i64");
     builder.ret();
     return m;
 }

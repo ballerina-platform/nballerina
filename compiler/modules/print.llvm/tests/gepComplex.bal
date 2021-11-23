@@ -18,9 +18,9 @@ function gepComplex() returns Module {
     PointerValue v1 = builder.getElementPtr(v0, [constInt("i32", 0), constInt("i32", 2)]);
     PointerValue v2 = builder.getElementPtr(v1, [constInt("i32", 0), constInt("i32", 1)]);
     PointerValue v3 = builder.getElementPtr(v2, [constInt("i64", 0), constInt("i64", 5)]);
-    PointerValue _ = builder.getElementPtr(v3, [constInt("i64", 0), constInt("i64", 13)]);
+    _ = builder.getElementPtr(v3, [constInt("i64", 0), constInt("i64", 13)]);
     builder.ret();
-    
+
     Type arrTy3 = arrayType(pointerType("i64", 1), 10);
     Type rtTy2 = structType([ "i32", arrTy3, "i32" ]);
     Type stTy2 = structType(["i8", "i8", rtTy2]);
@@ -48,7 +48,7 @@ function gepComplexInbounds() returns Module {
     BasicBlock bb = foo.appendBasicBlock();
     builder.positionAtEnd(bb);
 
-    PointerValue _ = builder.getElementPtr(g1, [constInt("i32", 1)], "inbounds");
+    _ = builder.getElementPtr(g1, [constInt("i32", 1)], "inbounds");
     builder.ret();
     return m;
 }

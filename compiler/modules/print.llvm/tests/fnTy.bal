@@ -9,9 +9,9 @@ function fnTy() returns Module {
     FunctionDecl fn = m.addFunctionDecl("otherFn", otherFnTy);
     PointerType fnPointerTy = pointerType(fnTy, 0);
     StructType structTy = structType(["i32", fnPointerTy]);
-    ConstPointerValue _ = m.addGlobal(structTy, "g1");
-    ConstPointerValue _ = m.addGlobal(fnPointerTy, "g2");
-    ConstPointerValue _ = m.addGlobal(otherFnPtrTy, "g3", initializer=fn);
+    _ = m.addGlobal(structTy, "g1");
+    _ = m.addGlobal(fnPointerTy, "g2");
+    _ = m.addGlobal(otherFnPtrTy, "g3", initializer=fn);
     return m;
 }
 
