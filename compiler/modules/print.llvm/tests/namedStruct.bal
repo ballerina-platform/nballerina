@@ -11,7 +11,7 @@ function namedStruct() returns Module {
     context.structSetBody(notUsed, ["i32", "i32", structTy]);
 
     ConstPointerValue g = m.addGlobal(structTy, "g");
-    ConstPointerValue g1 = m.addGlobal(structTy, "g1", addressSpace=1);
+    ConstPointerValue _ = m.addGlobal(structTy, "g1", addressSpace=1);
 
     FunctionDefn foo = m.addFunctionDefn("foo", { returnType: structTy, paramTypes: [] });
     BasicBlock fooBB = foo.appendBasicBlock();
@@ -21,7 +21,7 @@ function namedStruct() returns Module {
     FunctionDefn bar = m.addFunctionDefn("bar", { returnType: "void", paramTypes: [structTy] });
     BasicBlock barBB = bar.appendBasicBlock();
     builder.positionAtEnd(barBB);
-    Value v = <Value> builder.call(foo, []);
+    var _ = builder.call(foo, []);
     builder.ret();
     return m;
 }

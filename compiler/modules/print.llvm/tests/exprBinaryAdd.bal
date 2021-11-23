@@ -4,7 +4,6 @@ function exprBinaryAdd() returns Module {
     Context context = new;
     Builder builder = context.createBuilder();
     Module m = context.createModule();
-    StructType addReturnType = structType(["i64", "i1"]);
     FunctionDecl add = m.getIntrinsicDeclaration("sadd.with.overflow.i64");
     FunctionDefn abort = m.addFunctionDefn("abort", {returnType: "void", paramTypes: []});
     FunctionDefn foo = m.addFunctionDefn("foo", {returnType: "i64", paramTypes: ["i64", "i64"]});

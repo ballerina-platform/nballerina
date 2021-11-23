@@ -8,10 +8,10 @@ function constExp() returns Module {
     ConstValue init = context.constGetElementPtr(g1, [constInt("i32", 0), constInt("i32", 0)], "inbounds");
     ConstPointerValue g2 = m.addGlobal(pointerType("i64", 0), "g2", initializer=init);
     ConstValue init2 = context.constBitCast(g2, pointerType("i32", 0));
-    PointerValue g3 = m.addGlobal(pointerType("i32", 0), "g3", initializer=init2);
+    PointerValue _ = m.addGlobal(pointerType("i32", 0), "g3", initializer=init2);
     ConstPointerValue g4 = m.addGlobal(pointerType("i32", 0), "g4", isConstant=true);
     ConstValue init3 = context.constAddrSpaceCast(g4, pointerType("i32", 1));
-    PointerValue g5 = m.addGlobal(pointerType("i32", 1), "g5", initializer=init3);
+    PointerValue _ = m.addGlobal(pointerType("i32", 1), "g5", initializer=init3);
     return m;
 }
 

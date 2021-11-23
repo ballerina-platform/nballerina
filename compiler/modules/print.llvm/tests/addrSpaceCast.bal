@@ -6,7 +6,7 @@ function addrSpaceCast() returns Module {
     Module m = context.createModule();
     FunctionDecl genFn = m.addFunctionDecl("genFn", {returnType: pointerType("i64", 3), paramTypes:[]});
     PointerType pty0 = pointerType("i64", 0);
-    PointerType pty1 = pointerType("i64", 1);
+    PointerType _ = pointerType("i64", 1);
     FunctionDefn mainFunction = m.addFunctionDefn("main", {returnType: pty0, paramTypes: []});
     BasicBlock initBlock = mainFunction.appendBasicBlock();
     builder.positionAtEnd(initBlock);
