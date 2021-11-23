@@ -502,10 +502,10 @@ public readonly class SourceFile {
             int startLineIndex = self.lineColumn(range.startPos)[0];
             int endLineIndex = self.lineColumn(range.endPos)[0];
             string[] selectedLines = [];
-            foreach int lineIndex in startLineIndex ... endLineIndex + 1 {
+            foreach int lineIndex in startLineIndex ... endLineIndex {
                 selectedLines.push(lines[lineIndex-1]);
             }
-            return lines;
+            return selectedLines;
         }
     }
 

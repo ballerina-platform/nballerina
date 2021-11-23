@@ -344,6 +344,7 @@ public type FieldAccessExpr record {|
     Position opPos;
     Expr container;
     string fieldName;
+    Position namePos;
 |};
 
 public type FieldAccessLExpr record {|
@@ -351,6 +352,7 @@ public type FieldAccessLExpr record {|
     Position opPos;
     VarRefExpr container;
     string fieldName;
+    Position namePos;
 |};
 
 public type RangeExpr record {|

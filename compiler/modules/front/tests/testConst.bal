@@ -20,8 +20,8 @@ class TestFoldContext {
     function lookupConst(string? prefix, string varName, s:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError {
         return ();
     }
-    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, d:location(self.file, pos), cause=cause);
+    function semanticErr(d:Message msg, s:Position startPos, s:Position? endPos = (), error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, d:location(self.file, startPos, endPos), cause=cause);
     }
     function typeContext() returns t:Context {
         return self.tc;

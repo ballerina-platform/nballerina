@@ -138,7 +138,7 @@ function fileLines(File file, Range|Position range) returns string[] {
             errMessage.push(lines[0]);
             int startColumn = file.lineColumn(range.startPos)[1];
             int endColumn = file.lineColumn(range.endPos)[1];
-            int caretLen = endColumn - startColumn;
+            int caretLen = endColumn - startColumn + 1;
             errMessage.push(caretLine(startColumn, caretLen));
         }
         else {

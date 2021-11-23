@@ -129,16 +129,16 @@ class CodeGenContext {
         return bir:createBasicBlock(self.code, name);
     }
 
-    function semanticErr(d:Message msg, Position pos, error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
+    function semanticErr(d:Message msg, Position startPos, Position? endPos = (), error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, loc=self.location(startPos, endPos), cause=cause, defnName=self.functionDefn.name);
     }
 
-    function unimplementedErr(d:Message msg, Position pos, error? cause = ()) returns err:Unimplemented {
-        return err:unimplemented(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
+    function unimplementedErr(d:Message msg, Position startPos, Position? endPos = (), error? cause = ()) returns err:Unimplemented {
+        return err:unimplemented(msg, loc=self.location(startPos, endPos), cause=cause, defnName=self.functionDefn.name);
     }
 
-    private function location(Position pos) returns d:Location {
-        return d:location(self.file, pos);
+    private function location(Position startPos, Position? endPos) returns d:Location {
+        return d:location(self.file, startPos, endPos);
     }
 
     function pushLoopContext(bir:BasicBlock onBreak, bir:BasicBlock? onContinue) {
@@ -245,8 +245,8 @@ class CodeGenFoldContext {
         }
     }
 
-    function semanticErr(d:Message msg, Position pos, error? cause = ()) returns err:Semantic {
-        return self.cx.semanticErr(msg, pos=pos, cause=cause);
+    function semanticErr(d:Message msg, s:Position startPos, s:Position? endPos = (), error? cause = ()) returns err:Semantic {
+        return self.cx.semanticErr(msg, startPos, endPos, cause=cause);
     }
 
     function typeContext() returns t:Context {
@@ -317,7 +317,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
     foreach var stmt in block.stmts {
         StmtEffect effect;
         if curBlock == () {
-            return cx.semanticErr("unreachable code", stmt.startPos);
+            return cx.semanticErr("unreachable code", stmt.startPos, stmt.endPos);
         }
         else if stmt is s:IfElseStmt {
             effect = check codeGenIfElseStmt(cx, curBlock, env, stmt);
@@ -456,7 +456,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     }
     else {
         // condition is false and body is non-empty
-        return cx.semanticErr("unreachable code", stmt.body.stmts[0].startPos);
+        return cx.semanticErr("unreachable code", stmt.body.stmts[0].startPos, stmt.body.stmts[0].endPos);
     }
     afterCondition.insns.push(branch);
     cx.pushLoopContext(exit, loopHead);
@@ -531,17 +531,17 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         foreach var pattern in clause.patterns {
             if pattern is s:ConstPattern {
                 if wildcardClauseIndex != () && i > wildcardClauseIndex {
-                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.pos);
+                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", startPos=pattern.pos);
                 }
                 s:Expr patternExpr = pattern.expr;
                 s:ConstValueExpr cv = <s:ConstValueExpr> check cx.foldExpr(env, patternExpr, matchedType);
                 ConstMatchValue mv = { value: cv.value, clauseIndex: i, pos: clause.opPos };
                 if constMatchValues.hasKey(mv.value) {
-                    return cx.semanticErr("duplicate const match pattern", pos=pattern.pos);
+                    return cx.semanticErr("duplicate const match pattern", startPos=pattern.pos);
                 }
                 constMatchValues.add(mv);    
                 if !t:containsConst(matchedType, cv.value) {
-                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.pos);
+                    return cx.semanticErr("match pattern cannot match value of expression", startPos=pattern.pos);
                 }
                 clausePatternUnion = t:union(clausePatternUnion, t:singleton(mv.value));
             }
@@ -663,14 +663,17 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
         if notTaken is s:StmtBlock && notTaken.stmts.length() > 0 {
             // XXX position should come from first member of notTaken
             s:Stmt firstStmt = notTaken.stmts[0];
-            Position errPos;
+            Position errStartPos;
+            Position errEndPos;
             if firstStmt is s:IfElseStmt {
-                errPos = firstStmt.ifTrue.stmts[0].startPos;
+                errStartPos = firstStmt.ifTrue.stmts[0].startPos;
+                errEndPos = firstStmt.ifTrue.stmts[0].endPos;
             }
             else {
-                errPos = notTaken.stmts[0].startPos;
+                errStartPos = notTaken.stmts[0].startPos;
+                errEndPos = notTaken.stmts[0].endPos;
             }
-            return cx.semanticErr("unreachable code", errPos);
+            return cx.semanticErr("unreachable code", errStartPos, errEndPos);
         }
         if taken is s:StmtBlock {
             return codeGenStmts(cx, branchBlock, env, taken);
@@ -803,7 +806,7 @@ function codeGenVarDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
 function codeGenWildcardDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:Expr expr, s:TypeDesc td, Position pos) returns CodeGenError|StmtEffect {
     t:SemType semType = check cx.resolveTypeDesc(td);
     if !t:isSubtype(cx.mod.tc, semType, t:ANY) {
-        return cx.semanticErr("type descriptor of wildcard should be a subtype of any", pos);
+        return cx.semanticErr("type descriptor of wildcard should be a subtype of any", td.startPos, td.endPos);
     }
     bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createVarRegister(semType, "_", pos), expr, semType, pos);
     return { block: nextBlock };
@@ -812,7 +815,7 @@ function codeGenWildcardDeclStmt(CodeGenContext cx, bir:BasicBlock startBlock, E
 function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:AssignStmt stmt) returns CodeGenError|StmtEffect {
     var { lValue, expr } = stmt;
     if lValue is s:VarRefExpr {
-        return codeGenAssignToVar(cx, startBlock, env, lValue.name, expr, stmt.opPos);
+        return codeGenAssignToVar(cx, startBlock, env, lValue.name, expr, stmt.opPos, lValue.namePos);
     }
     else if lValue is s:WILDCARD {
         bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, cx.createVarRegister(t:ANY, "_", stmt.opPos), expr, t:ANY, stmt.opPos);
@@ -823,10 +826,10 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     }
 }
 
-function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr, Position pos) returns CodeGenError|StmtEffect {
-    Binding binding = check lookupVarRefBinding(cx, varName, env, pos);
+function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr, Position opPos, Position namePos) returns CodeGenError|StmtEffect {
+    Binding binding = check lookupVarRefBinding(cx, varName, env, opPos);
     if binding.isFinal {
-        return cx.semanticErr(`cannot assign to ${varName}`, pos);
+        return cx.semanticErr(`cannot assign to ${varName}`, namePos);
     }
     bir:Register unnarrowedReg;
     int[] assignments;
@@ -842,7 +845,7 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         unnarrowedReg = unnarrowedBinding.reg;
         assignments = [ unnarrowedReg.number ];
     }
-    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, unnarrowedReg, expr, unnarrowedReg.semType, pos);
+    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, unnarrowedReg, expr, unnarrowedReg.semType, opPos);
     return { block: nextBlock, assignments };
 }
 
@@ -867,13 +870,13 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
         memberType = t:listMemberType(cx.mod.tc, reg.semType);
     }
     else {
-        return cx.semanticErr("member access can only be applied to mapping or list", pos=lValue.opPos);
+        return cx.semanticErr("member access can only be applied to mapping or list", startPos=lValue.opPos);
     }
     s:Expr foldedExpr = check cx.foldExpr(env, expr, memberType);
     bir:Operand operand;
     if indexType == t:INT {
         if lValue is s:FieldAccessLExpr {
-            return cx.semanticErr("can only apply field access in lvalue to mapping", lValue.opPos);
+            return cx.semanticErr("can only apply field access in lvalue to mapping", lValue.namePos);
         }
         else {
             var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, lValue.index, indexType));
@@ -902,7 +905,7 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
         if container is bir:Register {
             if t:isSubtypeSimple(container.semType, t:LIST) {
                 if lValue is s:FieldAccessLExpr {
-                    return cx.semanticErr("can only apply field access in lvalue to mapping", pos=pos);
+                    return cx.semanticErr("can only apply field access in lvalue to mapping", startPos=pos);
                 }
                 else {
                     return codeGenCompoundAssignToListMember(cx, nextBlock, env, lValue, container, expr, op, pos);
@@ -912,7 +915,7 @@ function codeGenCompoundAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock,
                 return codeGenCompoundAssignToMappingMember(cx, nextBlock, env, lValue, container, expr, op, pos);
             }
         }
-        return cx.semanticErr("can only apply member access in lvalue to list or mapping", pos=pos);
+        return cx.semanticErr("can only apply member access in lvalue to list or mapping", startPos=pos);
     }
 }
 
@@ -932,7 +935,7 @@ function codeGenCompoundAssignToVar(CodeGenContext cx,
     else {
         expr = { startPos, endPos, opPos: pos, bitwiseOp: op, left: lValue, right: rexpr };
     }
-    return codeGenAssignToVar(cx, startBlock, env, lValue.name, expr, pos);
+    return codeGenAssignToVar(cx, startBlock, env, lValue.name, expr, pos, lValue.namePos);
 }
 
 function codeGenCompoundAssignToListMember(CodeGenContext cx,
@@ -1059,7 +1062,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 insn = <bir:FloatNegateInsn> { operand: <bir:Register>typed[1], result, pos };
             }
             else {
-                return cx.semanticErr(`operand of ${"-"} must be int or float`, pos);
+                return cx.semanticErr(`operand of ${"-"} must be int or float`, o.startPos, o.endPos);
             }
             nextBlock.insns.push(insn);
             return { result, block: nextBlock };
@@ -1161,18 +1164,18 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                     return codeGenMappingGet(cx, nextBlock, l, "[", r, pos);
                 }
                 else if t:isSubtypeSimple(l.semType, t:STRING) {
-                    return cx.unimplementedErr("not implemented: member access on string", pos=pos);
+                    return cx.unimplementedErr("not implemented: member access on string", startPos=pos);
                 }
             }
-            return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
+            return cx.semanticErr("can only apply member access to list or mapping", startPos=pos);
         }
         // Field access
-        var { container, fieldName, opPos: pos } => {
+        var { container, fieldName, namePos } => {
             var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
             if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
-                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
+                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, namePos);
             }
-            return cx.semanticErr("can only apply field access to mapping", pos=pos);
+            return cx.semanticErr("can only apply field access to mapping", startPos=namePos);
         }
         // List construct
         // JBUG #33309 should be able to use just `var { members }`
@@ -1205,7 +1208,7 @@ function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register
             keyRequired = true;
         }
         else if accessType == "." {
-            return cx.semanticErr(`field access to ${kVal} is invalid because field may not be present`, pos=pos);
+            return cx.semanticErr(`field access to ${kVal} is invalid because field may not be present`, startPos=pos);
         }
     }
     t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, kVal);
@@ -1222,7 +1225,7 @@ function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environ
     if mappingLValue is s:FieldAccessLExpr {
         string fieldName = mappingLValue.fieldName;
         if !t:mappingMemberRequired(cx.mod.tc, mappingType, fieldName) {
-            return cx.semanticErr(`${fieldName} must be a required key`, pos=mappingLValue.opPos);
+            return cx.semanticErr(`${fieldName} must be a required key`, startPos=mappingLValue.namePos);
         }
         return { result: fieldName, block };
     }
@@ -1294,7 +1297,7 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
             fieldPos[name] = startPos;
         }
         else {
-            return cx.semanticErr(`duplicate field ${name}`, pos=startPos);
+            return cx.semanticErr(`duplicate field ${name}`, startPos=startPos);
         }
         bir:Operand operand;
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, value);
@@ -1482,7 +1485,7 @@ function codeGenCheckingStmt(CodeGenContext cx, bir:BasicBlock bb, Environment e
     }
     // resultType === NEVER case is already handled
     if resultType !== t:NIL {
-        return cx.semanticErr(`operand of ${checkingKeyword} statement must be a subtype of error?`, pos);
+        return cx.semanticErr(`operand of ${checkingKeyword} statement must be a subtype of error?`, expr.startPos, expr.endPos);
     }
     return { block };
 }
@@ -1499,7 +1502,7 @@ function codeGenCheckingExpr(CodeGenContext cx, bir:BasicBlock bb, Environment e
     else {
         t:SemType resultType = t:diff(operand.semType, t:ERROR);
         if t:isNever(resultType) {
-            return cx.semanticErr(`operand of ${checkingKeyword} expression is always an error`, pos);
+            return cx.semanticErr(`operand of ${checkingKeyword} expression is always an error`, expr.startPos, expr.endPos);
         }
         return check codeGenCheckingCond(cx, nextBlock, operand, errorType, checkingKeyword, resultType, pos);
     }
@@ -1552,7 +1555,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func =  check genLocalFunctionRef(cx, env, expr.funcName, expr.namePos);
     }
     else {
-        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.namePos);
+        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.startPos, expr.openParenPos, expr.namePos);
     }
     check validArgumentCount(cx, func, expr.args.length(), expr.openParenPos);
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1637,8 +1640,8 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
     }  
 }
 
-function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
-    Import mod = check lookupPrefix(cx.mod, cx.functionDefn, prefix, pos);
+function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier, Position startPos, Position endPos, Position namePos) returns bir:FunctionRef|CodeGenError {
+    Import mod = check lookupPrefix(cx.mod, cx.functionDefn, prefix, namePos);
     var defn = mod.defns[identifier];
     if defn is bir:FunctionSignature {
         return {
@@ -1649,14 +1652,14 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
     }
     else if defn == () {
         if mod.partial {
-            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, pos);
+            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, startPos, endPos);
         }
         else {
-            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, pos);
+            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, startPos, endPos);
         }
     }
     else {
-        return cx.semanticErr("reference to non-function where function required", pos);
+        return cx.semanticErr("reference to non-function where function required", startPos, endPos);
     }
 }
 
