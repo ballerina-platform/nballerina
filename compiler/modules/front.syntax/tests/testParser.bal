@@ -85,7 +85,7 @@ function advance(Tokenizer tok, string k, string[] lines) returns err:Syntax|Tok
 
 function tokenToString(Token t) returns string {
     match t {
-        [STRING_LITERAL, var str] => {
+        [STRING_LITERAL, var _] => {
             // can't recover original string, so
             // lets just return a minimal expectation
             return "\"";
