@@ -413,6 +413,7 @@ function validateFieldPos(Field f, Tokenizer tok, Position parentStartPos, Posit
     check tok.moveToPos(f.startPos, MODE_NORMAL);
     test:assertEquals(tok.currentStartPos(), f.startPos, "moved to wrong position");
     Field newField = check parseField(tok);
+    test:assertEquals(f.toString(), newField.toString());
     test:assertEquals(tok.previousEndPos(), f.endPos);
     test:assertFalse(checkPosFragCode(tok.file, f.endPos, FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON), endPosErrorMessage(tok, f.endPos));
     test:assertTrue(f.startPos > parentStartPos && f.endPos < parentEndPos, "field outside of MappingConstructorExpr");
@@ -598,10 +599,9 @@ function testIsWhitespace(SourceFile file, Position startPos, Position endPos) r
 }
 
 function testValidRange(SourceFile file, Position startPos, Position endPos, FragCode[] allowedCodes) returns boolean {
-    var [startLineIndex, startFragIndex] = sourceFileFragIndex(file, startPos);
+    var [startLineIndex, i] = unpackPosition(startPos);
     var [endLineIndex, endFragIndex] = sourceFileFragIndex(file, endPos);
     int lineIndex = startLineIndex;
-    int i = unpackPosition(startPos)[1];
     while lineIndex <= endLineIndex {
         ScannedLine line = file.scannedLine(lineIndex);
         while i < line.fragments.length() {
