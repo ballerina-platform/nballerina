@@ -1,3 +1,6 @@
+import ballerina/file;
+import ballerina/io;
+
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
 
@@ -487,17 +490,20 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
-    public function getRange(d:Position|d:Range range) returns string[] {
+    public function getRange(d:Position|d:Range range) returns string[]{
+        string? dir = self.dir;
+        string filePath = dir != () ? checkpanic file:joinPath(dir, self.fn) : self.fn;
+        string[] lines = checkpanic io:fileReadLines(filePath);
         if range is d:Position {
             int lineIndex = self.lineColumn(range)[0];
-            return ["".'join(...self.scannedLine(lineIndex).fragments)];
+            return [lines[lineIndex-1]];
         }
         else {
             int startLineIndex = self.lineColumn(range.startPos)[0];
             int endLineIndex = self.lineColumn(range.endPos)[0];
-            string[] lines = [];
+            string[] selectedLines = [];
             foreach int lineIndex in startLineIndex ... endLineIndex + 1 {
-                lines.push("".'join(...self.scannedLine(lineIndex).fragments));
+                selectedLines.push(lines[lineIndex-1]);
             }
             return lines;
         }
