@@ -140,10 +140,13 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             if tok.current() == ":" {
                 check tok.advance();
                 string typeName = check tok.expectIdentifier();
+                endPos = tok.previousEndPos();
                 return { startPos, endPos, prefix: <string>cur, typeName, pos };
             }
             else if tok.current() == "<" {
-                return { startPos, endPos, constituent: check parseTypeParam(tok), pos };
+                TypeDesc constituent = check parseTypeParam(tok);
+                endPos = tok.previousEndPos();
+                return { startPos, endPos, constituent, pos };
             }
             return  { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
         }

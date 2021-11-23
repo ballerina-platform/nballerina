@@ -20,10 +20,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 continue;
             }
             string filename = test.absPath;
-            // XXX remove after fixing #555
-            if filename.endsWith("-t.bal") {
-                continue;
-            }
+            
             string[] lines = check io:fileReadLines(filename);
             ModulePart|err:Syntax part = scanAndParseModulePart(lines, { filename }, 0);
             if part is error {
