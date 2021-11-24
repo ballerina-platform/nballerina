@@ -26,6 +26,7 @@ function getLogPaths() returns string[]|io:Error|file:Error {
     return paths;
 }
 
+// Import errors don't fallow the current formatting so we are skipping those
 final string[] IGNORED_LOGS = [
   "error: unsupported extension '.modules' {}",
   "error: java.lang.StackOverflowError",
@@ -36,6 +37,7 @@ function filterLogs(string filePath) returns boolean|io:Error {
     string log = check io:fileReadString(filePath);
     foreach var each in IGNORED_LOGS {
        if log.startsWith(each) {
+            io:println("skipped log: ", filePath);
             return false;
        }
     }

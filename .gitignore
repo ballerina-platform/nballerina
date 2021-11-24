@@ -60,3 +60,6 @@ heap-dump.hprof
 
 # nballerina is to use the latest versions of dependencies at this stage
 compiler/Dependencies.toml
+
+# Error information
+*.html
