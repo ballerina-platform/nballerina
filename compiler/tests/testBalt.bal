@@ -11,7 +11,6 @@ type TestCaseMap map<[string, int, BaltTestHeader, string[]]>;
 //     dataProvider: parseBalts
 // }
 function testBalt(string baltName, int offset, BaltTestHeader header, string[] lines) returns error? {
-    string fakeFilename = baltName + ":" + offset.toString();
     LlvmModule|CompileError compileResult = compileModule(DEFAULT_ROOT_MODULE_ID, [{ lines }], {});
     CompileError? err = compileResult is error ? compileResult : ();
 
