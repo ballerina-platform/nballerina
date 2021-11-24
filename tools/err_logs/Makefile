@@ -4,7 +4,10 @@ bal_files = $(wildcard ../../compiler/testSuite/*/*-[e].bal)
 TDIRS= $(sort $(basename $(notdir $(wildcard ../../compiler/testSuite/*))))
 test_logs = $(addsuffix .log, $(subst ../../compiler/testSuite, logs, $(bal_files)))
 
-log: $(TDIRS) $(test_logs)
+log: output.html
+
+output.html: $(TDIRS) $(test_logs) main.bal
+	bal run main.bal
 
 $(TDIRS):
 	mkdir -p logs/$@
@@ -14,3 +17,4 @@ logs/%.log: ../../compiler/testSuite/%
 
 clean:
 	rm -rf logs
+	rm -f output.html
