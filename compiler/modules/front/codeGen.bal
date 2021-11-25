@@ -876,7 +876,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
     bir:Operand operand;
     if indexType == t:INT {
         if lValue is s:FieldAccessLExpr {
-            return cx.semanticErr("can only apply field access in lvalue to mapping", lValue.namePos);
+            return cx.semanticErr("can only apply field access in lvalue to mapping", lValue.opPos);
         }
         else {
             var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, lValue.index, indexType));
@@ -1170,12 +1170,12 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return cx.semanticErr("can only apply member access to list or mapping", startPos=pos);
         }
         // Field access
-        var { container, fieldName, namePos } => {
+        var { container, fieldName, opPos: pos } => {
             var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
             if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
-                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, namePos);
+                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
             }
-            return cx.semanticErr("can only apply field access to mapping", startPos=namePos);
+            return cx.semanticErr("can only apply field access to mapping", startPos=pos);
         }
         // List construct
         // JBUG #33309 should be able to use just `var { members }`
@@ -1225,7 +1225,7 @@ function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environ
     if mappingLValue is s:FieldAccessLExpr {
         string fieldName = mappingLValue.fieldName;
         if !t:mappingMemberRequired(cx.mod.tc, mappingType, fieldName) {
-            return cx.semanticErr(`${fieldName} must be a required key`, startPos=mappingLValue.namePos);
+            return cx.semanticErr(`${fieldName} must be a required key`, startPos=mappingLValue.opPos);
         }
         return { result: fieldName, block };
     }
@@ -1555,7 +1555,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func =  check genLocalFunctionRef(cx, env, expr.funcName, expr.namePos);
     }
     else {
-        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.startPos, expr.openParenPos, expr.namePos);
+        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.startPos, expr.namePos);
     }
     check validArgumentCount(cx, func, expr.args.length(), expr.openParenPos);
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1640,7 +1640,7 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
     }  
 }
 
-function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier, Position startPos, Position endPos, Position namePos) returns bir:FunctionRef|CodeGenError {
+function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier, Position startPos, Position namePos) returns bir:FunctionRef|CodeGenError {
     Import mod = check lookupPrefix(cx.mod, cx.functionDefn, prefix, namePos);
     var defn = mod.defns[identifier];
     if defn is bir:FunctionSignature {
@@ -1652,14 +1652,14 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
     }
     else if defn == () {
         if mod.partial {
-            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, startPos, endPos);
+            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, startPos);
         }
         else {
-            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, startPos, endPos);
+            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, startPos);
         }
     }
     else {
-        return cx.semanticErr("reference to non-function where function required", startPos, endPos);
+        return cx.semanticErr("reference to non-function where function required", startPos);
     }
 }
 

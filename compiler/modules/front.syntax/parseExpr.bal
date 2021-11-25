@@ -347,7 +347,7 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         }
         else {
             Position endPos = tok.previousEndPos();
-            FieldAccessExpr fieldAccessExpr = { startPos, endPos, opPos, container: expr, fieldName: name, namePos };
+            FieldAccessExpr fieldAccessExpr = { startPos, endPos, opPos, container: expr, fieldName: name };
             return finishPrimaryExpr(tok, fieldAccessExpr, startPos);
         }
     }

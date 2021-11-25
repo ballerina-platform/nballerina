@@ -188,7 +188,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name,
         else {
             endPos = tok.previousEndPos();
             VarRefExpr container = { startPos, endPos, name, namePos };
-            FieldAccessLExpr lValue = { startPos, endPos, fieldName: localName, container, opPos, namePos: localNamePos };
+            FieldAccessLExpr lValue = { startPos, endPos, fieldName: localName, container, opPos };
             Token? t = tok.current();
             if t == "=" {
                 return finishAssignStmt(tok, lValue, startPos);
