@@ -52,7 +52,7 @@ class VerifyContext {
 // approximation for subset07
 function createAnydata(t:Env env) returns t:SemType {
     t:ListDefinition listDef = new;
-    t:SemType arrayType = listDef.define(env, [], t:SIMPLE_OR_STRING);
+    t:SemType arrayType = listDef.define(env, [], 0, t:SIMPLE_OR_STRING);
     t:MappingDefinition mapDef = new;
     t:SemType mapType = mapDef.define(env, [], t:SIMPLE_OR_STRING);
     return t:union(t:SIMPLE_OR_STRING, t:union(arrayType, mapType));
@@ -175,7 +175,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
         return vc.err("bad BIR: inherent type of list is not atomic", insn.pos);
     }
     else {
-        if t:listMemberLength(lat.members) > 0 {
+        if t:listMemberLength(lat) > 0 {
             return vc.err("bad BIR: tuples not supported as list inherent type", insn.pos);
         }
         foreach var operand in insn.operands {

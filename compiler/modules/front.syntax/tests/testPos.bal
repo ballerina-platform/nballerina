@@ -462,8 +462,11 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
             check validateTypeDescPos(member, tok, td.startPos, td.endPos);
             childNodePos.push([member.startPos, member.endPos]);
         }
-        check validateTypeDescPos(td.rest, tok, td.startPos, td.endPos);
-        childNodePos.push([td.rest.startPos, td.rest.endPos]);
+        TypeDesc? rest = td.rest;
+        if (rest != ()) {
+            check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
+            childNodePos.push([rest.startPos, rest.endPos]);
+        }
     }
     else if td is MappingTypeDesc {
         foreach var f in td.fields {

@@ -79,23 +79,28 @@ function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:Resolve
     }
     else {
         defn.resolved = false;
-        ConstFoldContext cx = new ConstFoldContext(defn, mod);
         s:SubsetBuiltinTypeDesc? td = defn.td;
         t:SemType? expectedType = td == () ? () : resolveBuiltinTypeDesc(td);
-        s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
-        if expr is s:ConstValueExpr {
-            if expectedType == () || t:containsConst(expectedType, expr.value) {
-                s:ResolvedConst r = [t:singleton(expr.value), { value: expr.value }];
-                defn.resolved = r;
-                return r;
-            }
-            else {
-                return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
-            }
+        s:ResolvedConst resolvedConst = check resolveConst(mod, defn, defn.expr, expectedType);
+        defn.resolved = resolvedConst;
+        return resolvedConst;
+    }
+}
+
+function resolveConst(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr origExpr, t:SemType? expectedType) returns s:ResolvedConst|FoldError {
+    ConstFoldContext cx = new ConstFoldContext(defn, mod);
+    s:Expr expr = check foldExpr(cx, expectedType, origExpr);
+    if expr is s:ConstValueExpr {
+        if expectedType == () || t:containsConst(expectedType, expr.value) {
+            s:ResolvedConst r = [t:singleton(expr.value), { value: expr.value }];
+            return r;
         }
         else {
-            return err:semantic(`initializer of ${defn.name} is not constant`, s:defnLocation(defn));
+            return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
         }
+    }
+    else {
+        return err:semantic(`initializer of ${defn.name} is not constant`, s:defnLocation(defn));
     }
 }
 

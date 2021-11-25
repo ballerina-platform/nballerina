@@ -69,14 +69,19 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         else if tok.current() == "[" {
             check tok.advance();
-            Token? c = tok.current();
-            SingletonTypeDesc? length = ();
-            // todo: this only allow int literals to be within brackets, should be allow any numeric literal and then show appropriate error later?
-            if c is [DECIMAL_NUMBER, string] {
-                length = check parseNumericLiteralTypeDesc(tok, ());
+            SimpleConstExpr? length = ();
+            TypeDesc[] members = [];
+            TypeDesc? rest = ();
+            if tok.current() != "]" {
+                length = check parseSimpleConstExpr(tok);
+                members.push(td);
+            }
+            else {
+                length = ();
+                rest = td;
             }
             Position endPos = check tok.expectEnd("]");
-            ListTypeDesc list = { startPos, endPos, members: [], rest: td, length};
+            ListTypeDesc list = { startPos, endPos, members, rest, length };
             td = list;
         }
         else {

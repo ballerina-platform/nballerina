@@ -135,6 +135,9 @@ function listSources(string initialChars) returns TestSuiteCases|io:Error|file:E
             if ext != ".bal" {
                 continue;
             }
+            // if !base.endsWith("e-t") {
+            //     continue;
+            // }
             int? dash = base.lastIndexOf("-");
             test:assertTrue(dash is int, "test file name must be in <name>-<kind>.bal format");
             string testKind = base.substring(1 + <int>dash);
@@ -184,19 +187,22 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
         s:TypeTest test = check s:parseTypeTest(item);
         t:SemType left = resolveTestSemtype(tc, m, test.left);
         t:SemType right = resolveTestSemtype(tc, m, test.right);
+
+        string lhsStr = test.left.toString();
+        string rhsStr = test.right.toString();
         
         boolean lsr = t:isSubtype(tc, left, right);
         boolean rsl = t:isSubtype(tc, right, left);
         boolean[2] testPair = [lsr, rsl]; 
         match test.op { 
             "<" => {
-                test:assertEquals(testPair, [true, false], "LHS is not a proper subtype of RHS");
+                test:assertEquals(testPair, [true, false], string `${lhsStr} is not a proper subtype of ${rhsStr}`);
             }
             "<>" => {
-                test:assertEquals(testPair, [false, false], "LHS and RHS are subtypes");
+                test:assertEquals(testPair, [false, false], string `${lhsStr} and ${rhsStr} are subtypes`);
             }
             "=" => {
-                test:assertEquals(testPair, [true, true], "LHS is not equivalent to RHS");
+                test:assertEquals(testPair, [true, true], string `${lhsStr} is not equivalent to ${rhsStr}`);
             }
         }
     }

@@ -284,7 +284,10 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         if wrap != false {
             w.push("(");
         }
-        typeDescToWords(w, td.rest, true);
+        TypeDesc? rest = td.rest;
+        if rest != () {
+            typeDescToWords(w, rest, true);
+        }
         w.push(CLING);
         w.push("[", "]");
         if wrap != false {

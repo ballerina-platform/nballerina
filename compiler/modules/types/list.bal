@@ -1,20 +1,17 @@
 // Implementation specific to basic type list.
 
 public type ListAtomicType readonly & record {|
-    ListMemberType members;
+    SemType[] members;
+    // Repeat the last member of `members` this number of times more.
+    // { members: [int], repeatLastMember: 2, rest: NEVER } is same as { members: [int, int, int], repeatLastMember: 0, rest: NEVER }
+    // Must be zero, if members array is empty.
+    int repeatLastMember;
     SemType rest;
-|};
-
-public type ListMemberType SemType[]|FixedLengthMembers;
-
-public type FixedLengthMembers record {|
-    SemType memberType;
-    int length;
 |};
 
 // This is atom index 0
 // Used by bddFixReadOnly
-final ListAtomicType LIST_SUBTYPE_RO = { members: [], rest: READONLY };
+final ListAtomicType LIST_SUBTYPE_RO = { members: [], repeatLastMember: 0, rest: READONLY };
 
 public class ListDefinition {
     *Definition;
@@ -39,8 +36,8 @@ public class ListDefinition {
         }
     }
 
-    public function define(Env env, ListMemberType members, SemType rest) returns ComplexSemType {
-        ListAtomicType rwType = { members: members.cloneReadOnly(), rest };
+    public function define(Env env, SemType[] members, int repeatLastMember, SemType rest) returns ComplexSemType {
+        ListAtomicType rwType = { members: members.cloneReadOnly(), repeatLastMember, rest };
         Atom rw;
         RecAtom? rwRec = self.rwRec;
         if rwRec != () {
@@ -89,46 +86,20 @@ public class ListDefinition {
     }       
 }
 
-function listMembersIsReadOnly(ListMemberType members, SemType rest) returns boolean {
-    if members is FixedLengthMembers {
-        return isReadOnly(members.memberType);
-    }
-    else {
-        return typeListIsReadOnly(members) && isReadOnly(rest);
-    }
-}
-
-function readOnlyListMembers(ListMemberType t) returns readonly & ListMemberType {
-    if t is FixedLengthMembers {
-        return { memberType: intersect(t.memberType, READONLY), length: t.length };
-    }
-    else {
-        return readOnlyTypeList(t);
-    }
-}
-
-function shallowCopyListMembersType(ListMemberType t) returns ListMemberType {
-    if t is FixedLengthMembers {
-        return t;
-    }
-    else {
-        return shallowCopyTypes(t);
-    }
-}
-
 function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
-    if listMembersIsReadOnly(ty.members, ty.rest) {
+    if typeListIsReadOnly(ty.members) && isReadOnly(ty.rest) {
         return ty;
     }
     return {
-        members: readOnlyListMembers(ty.members),
+        members: readOnlyTypeList(ty.members),
+        repeatLastMember: ty.repeatLastMember,
         rest: intersect(ty.rest, READONLY)
     };   
 }
 
 public function tuple(Env env, SemType... members) returns SemType {
     ListDefinition def = new;
-    return def.define(env, members, NEVER);
+    return def.define(env, members, 0, NEVER);
 }
 
 function listRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -160,75 +131,78 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return isEmpty;    
 }
 
-function memberAt(ListMemberType m, int i) returns SemType {
-    if m is FixedLengthMembers {
-        return m.length > i ? m.memberType : NEVER;
+function listMemberAt(SemType[] members, int i) returns SemType {
+    return members[int:min(i, members.length() - 1)];
+}
+
+function fixLength(int newAllowedIndex, SemType[] members, int repeatCount, SemType withNewMember) returns int {
+    int memberLen = members.length();
+    boolean lastMemberRepeats = repeatCount != 0;
+    if lastMemberRepeats {        
+        if newAllowedIndex < memberLen - 2 {
+            return repeatCount;
+        }
     }
     else {
-        return m[i];
-    }
-}
-
-public function listMemberLength(ListMemberType lt) returns int {
-    return lt is FixedLengthMembers ? lt.length : lt.length();
-}
-
-function fixLength(int newLen, ListMemberType members, SemType m) returns SemType[] {
-    if members is SemType[] {
-        foreach int i in members.length() ..< newLen {
-            members.push(m);
+        if newAllowedIndex < memberLen - 1 {
+            return repeatCount;
         }
-        return members;
     }
-    else {
-        FixedLengthMembers {memberType, length} = members;
-        SemType[] newMembers = [];
-        foreach int i in 0 ..< length {
-            newMembers.push(memberType);
-        }
-        foreach int i in length ..< newLen {
-            newMembers.push(m);
-        }
-        return newMembers;
-    }
-}
+        
+    if lastMemberRepeats {
+        SemType lastMember = members[memberLen - 1]; 
+        int uncompressedLen = memberLen + repeatCount;
+        int newRepeatCount = repeatCount;
 
-function setMemberAt(int index, ListMemberType members, SemType t) returns SemType[] {
-    SemType[] m = fixLength(index, members, t);
-    m[index] = t;
-    return m;
-}
+        int endIndex = lastMemberRepeats ? newAllowedIndex + 1 : newAllowedIndex;
 
-function isAnyListMemberEmpty(Context cx, ListMemberType members) returns boolean {
-    if members is FixedLengthMembers {
-        return members.length == 0 || isEmpty(cx, members.memberType);
-    }
-    else {
-        foreach var m in members {
-            if isEmpty(cx, m) {
-                return true;
+        foreach int i in memberLen ..< endIndex {
+            newRepeatCount -= 1;
+            if i < uncompressedLen {
+                members.push(lastMember);
+            }
+            else {
+                members.push(withNewMember);                                                                                  
             }
         }
-        return false;
+        return int:max(0, newRepeatCount);
     }
+    else {
+        foreach int i in memberLen ..< newAllowedIndex {
+            members.push(withNewMember);
+        }
+        return repeatCount;
+    }
+}
+
+function isAnyListMemberEmpty(Context cx, SemType[] members) returns boolean {
+    foreach var m in members {
+        if isEmpty(cx, m) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    ListMemberType members;
+    SemType[] members;
+    int repeatLastMember;
     SemType rest;
     if pos == () {
         members = [];
+        repeatLastMember = 0;
         rest = TOP;
     }
     else {
         // combine all the positive tuples using intersection
         ListAtomicType lt = cx.listAtomType(pos.atom);
         members = lt.members;
+        repeatLastMember = lt.repeatLastMember;
         rest = lt.rest;
         Conjunction? p = pos.next;
         // the neg case is in case we grow the array in listInhabited
         if p != () || neg != () {
-            members = shallowCopyListMembersType(members);
+            members = shallowCopyTypes(members);
         }
         while true {
             if p == () {
@@ -238,32 +212,38 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                int prevLen = listMemberLength(members);
-                int currentLen = listMemberLength(lt.members);
+                int prevLen = members.length() + repeatLastMember;
+                int currentLen = lt.members.length() + lt.repeatLastMember;
                 int newLen = int:max(prevLen, currentLen);
 
-                if prevLen == currentLen && members is FixedLengthMembers && lt.members is FixedLengthMembers {
-                    SemType t = intersect(members.memberType, (<FixedLengthMembers>lt.members).memberType);
-                    if isNever(t) {
-                        return true;
+                // intersect similar compressed representations without decompressing
+                if members.length() == lt.members.length() && repeatLastMember == lt.repeatLastMember {
+                    foreach int i in 0 ..< members.length() {
+                        SemType m = intersect(members[i], lt.members[i]);
+                        if (isNever(m)) {
+                            return true;
+                        }
+                        members[i] = m;
                     }
-                    members = { memberType: t, length: currentLen };
+                    rest = intersect(rest, lt.rest);
+                    continue;  
                 }
+
                 if prevLen < newLen {
                     if isNever(rest) {
                         return true;
                     }
-                    members = fixLength(newLen, members, rest);
+                    repeatLastMember = fixLength(newLen, members, repeatLastMember, rest);
                 }
                 foreach int i in 0 ..< currentLen {
-                    members = setMemberAt(i, members, intersect(memberAt(members, i), memberAt(lt.members, i)));
+                    members[i] = intersect(listMemberAt(members, i), listMemberAt(lt.members, i));
                 }
                 if currentLen < newLen {
                     if isNever(lt.rest) {
                         return true;
                     }
                     foreach int i in currentLen ..< newLen {
-                        members = setMemberAt(i, members, intersect(memberAt(members, i), lt.rest));
+                        members[i] = intersect(listMemberAt(members, i), lt.rest);
                     }
                 }
                 rest = intersect(rest, lt.rest);
@@ -277,7 +257,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             rest = NEVER;
         }
     }
-    return !listInhabited(cx, members, rest, neg);
+    return !listInhabited(cx, members, repeatLastMember, rest, neg);
 }
 
 // This function returns true if there is a list shape v such that
@@ -287,30 +267,26 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
 // Precondition is that each of `members` is not empty.
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
-function listInhabited(Context cx, ListMemberType m, SemType rest, Conjunction? neg) returns boolean {
+function listInhabited(Context cx, SemType[] m, int repeatLastMember, SemType rest, Conjunction? neg) returns boolean {
     if neg == () {
         return true;
     }
     else {
-        ListMemberType members = m;
-        int len = listMemberLength(members);
+        SemType[] members = m;
+        int len = members.length() + repeatLastMember;
+        int repeatLen = repeatLastMember;
         ListAtomicType nt = cx.listAtomType(neg.atom);
-        ListMemberType negMembers = nt.members;
-        int negLen = listMemberLength(nt.members);
-        if len == negLen && negMembers is FixedLengthMembers && members is FixedLengthMembers {
-            if isNever(diff(members.memberType, negMembers.memberType)) {
-                return listInhabited(cx, members, rest, neg.next);
-            }
-        }
+        int negLen = nt.members.length() + nt.repeatLastMember;
+
         if len < negLen {
             if isNever(rest) {
-                return listInhabited(cx, members, rest, neg.next);
-            } // JBUG #33532 should be able to use `_` here
-            members = fixLength(negLen, members, rest);
+                return listInhabited(cx, members, repeatLen, rest, neg.next);
+            }
+            repeatLen = fixLength(negLen, members, repeatLen, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
-            return listInhabited(cx, members, rest, neg.next);
+            return listInhabited(cx, members, repeatLen, rest, neg.next);
         }
         // now we have nt.members.length() <= len
 
@@ -334,12 +310,12 @@ function listInhabited(Context cx, ListMemberType m, SemType rest, Conjunction? 
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
         foreach int i in 0 ..< len {
-            SemType ntm = i < negLen ? memberAt(nt.members, i) : nt.rest;
-            SemType d = diff(memberAt(members, i), ntm);
+            SemType ntm = i < negLen ? listMemberAt(nt.members, i) : nt.rest;
+            SemType d = diff(listMemberAt(members, i), ntm);
             if !isEmpty(cx, d) {
-                ListMemberType s = shallowCopyListMembersType(members);
-                s = setMemberAt(i, s, d);
-                if listInhabited(cx, s, rest, neg.next) {
+                SemType[] s = shallowCopyTypes(members);
+                s[i] = d;
+                if listInhabited(cx, s, repeatLastMember, rest, neg.next) {
                     return true;
                 }
             }     
@@ -371,21 +347,16 @@ function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
         if key < 0 {
             return NEVER;
         }
-        else if key < listMemberLength(atomic.members) {
-            return memberAt(atomic.members, key);
+        else if key < atomic.members.length() + atomic.repeatLastMember {
+            return listMemberAt(atomic.members, key);
         }
         return atomic.rest;
     }
     SemType m = atomic.rest;
-    ListMemberType members = atomic.members;
-    if (members is FixedLengthMembers) {
-        m = union(m, members.memberType);
+    foreach var ty in atomic.members {
+        m = union(m, ty);
     }
-    else {
-        foreach var ty in members {
-            m = union(m, ty);
-        }
-    }
+    
     return m;
 }
 

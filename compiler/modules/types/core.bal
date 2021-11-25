@@ -811,27 +811,24 @@ public function simpleArrayMemberType(Context cx, SemType t) returns UniformType
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 public function arrayMemberType(Context cx, SemType t) returns SemType? {
     ListAtomicType? atomic = listAtomicTypeRw(cx, t);
-    if atomic != () && listMemberLength(atomic.members) == 0 {
+    if atomic != () && atomic.members.length() == 0 {
         return atomic.rest;
     }
     return ();
 }
 
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns UniformTypeBitSet? {
-    if atomic != () {
-        ListMemberType mt = atomic.members;
-        if mt is SemType[] && mt.length() == 0 {
-            SemType memberType = atomic.rest;
-            if memberType is UniformTypeBitSet {
-                return memberType;
-            }
+    if atomic != () && atomic.members.length() == 0 {
+        SemType memberType = atomic.rest;
+        if memberType is UniformTypeBitSet {
+            return memberType;
         }
     }
     return ();   
 }
 
-final ListAtomicType LIST_ATOMIC_TOP = { members: [], rest: TOP };
-final ListAtomicType LIST_ATOMIC_READONLY = { members: [], rest: READONLY };
+final ListAtomicType LIST_ATOMIC_TOP = { members: [], repeatLastMember: 0, rest: TOP };
+final ListAtomicType LIST_ATOMIC_READONLY = { members: [],  repeatLastMember: 0, rest: READONLY };
 
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is UniformTypeBitSet {
@@ -1173,7 +1170,7 @@ public function createJson(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, [], j);
+    _ = listDef.define(env, [], 0, j);
     _ = mapDef.define(env, [], j);
     return j;
 }
