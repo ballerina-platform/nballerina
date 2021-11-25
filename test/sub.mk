@@ -42,7 +42,7 @@ errorOutput:$(err_logs)
 
 err_logs/%.log: ../../../compiler/testSuite/$(tdir)/%.bal
 	mkdir -p err_logs
-	$(JAVA) -Xmx100m -jar $(COMPILER_JAR) $? 2> $@ || true
+	$(JAVA) -jar $(COMPILER_JAR) $? 2> $@ || true
 
 compile: compile.stamp
 

@@ -31,15 +31,29 @@ type ErrorLog record {|
     string filePath;
     string[] lines;
     string errorMessage;
+    string[] errorLines;
 |};
 
-function parseLog(string logPath) returns ErrorLog|io:Error|file:Error {
+function parseLog(string logPath) returns ErrorLog|error {
     string[] lines = check io:fileReadLines(logPath);
     string[] data = regex:split(lines[0], ":");
     string errorMessage = "".'join(...data.slice(4, data.length()));
-    string filePath = regex:replaceAll(check file:normalizePath(logPath, file:CLEAN), "/tools/err_logs/logs", "/compiler/testSuite");
-    filePath = filePath.substring(0, filePath.length()-4);
-    return { filePath, lines, errorMessage };
+    string filePath = check parseFilePath(data[0]);
+    Location startLoc = [check int:fromString(data[1]), check int:fromString(data[2])];
+    string[] errorLines = check getErrorLines(filePath, startLoc);
+    return { filePath, lines, errorMessage, errorLines };
+}
+
+function parseFilePath(string relativePath) returns string|file:Error {
+    string filePath = check file:normalizePath((check file:joinPath(file:getCurrentDir(), relativePath.substring(5))), file:CLEAN);
+    return filePath;
+}
+
+type Location [int, int];
+
+function getErrorLines(string filePath, Location startLoc) returns [string]|io:Error {
+    string[] lines = check io:fileReadLines(filePath);
+    return [lines[startLoc[0]-1].trim()];
 }
 
 isolated function errMessage(ErrorLog log) returns string {
@@ -59,7 +73,7 @@ function generateOutput(ErrorLog[] logs) returns string[]|error {
 
 function addLog(string[] body, ErrorLog log) returns error? {
     body.push("<tr>");
-    body.push(string `<td>${log.errorMessage}</td>`);
+    body.push(string `<td><pre>${"<br>".'join(...log.errorLines)}</pre></td>`);
     string fileName = check file:basename(log.filePath);
     body.push(string `<td><a href="file:///${log.filePath}">${fileName}</a></td>`);
     body.push(string `<td><pre>${"<br>".'join(...log.lines)}</pre></td>`);
@@ -76,7 +90,7 @@ function addPrefix(string[] body) {
     body.push("<table>");
 
     body.push("<tr>");
-    body.push("<th>ErrorMessage</th>");
+    body.push("<th>Error source</th>");
     body.push("<th>File</th>");
     body.push("<th>Log</th>");
     body.push("</tr>");
@@ -84,6 +98,7 @@ function addPrefix(string[] body) {
 
 function addStyles(string[] body) {
     body.push("<style>");
+    body.push("table { width: 100%; padding: 10px }");
     body.push("td,th { border: 1px solid #969393; padding: 4px; }");
     body.push("tr:nth-child(even){background-color: #f2f2f2;}");
     body.push("th { padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #874c4c; color: white;}");
