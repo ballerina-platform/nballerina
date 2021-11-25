@@ -197,14 +197,21 @@ TaggedPtrPanicCode _bal_decimal_from_float(double val) {
         result.panicCode = PANIC_ARITHMETIC_OVERFLOW;
         return result;
     }
+    result.panicCode = 0;
+    decQuad d;
+    if (val == 0.0) {
+        decQuadZero(&d);
+        result.ptr = createDecimal(&d);
+        return result;
+    }
     char str[EMYG_DTOA_BUFFER_LEN];
     emyg_dtoa_non_special(val, str);
-    decQuad d;
     decContext cx;
     initContext(&cx);
     decQuadFromString(&d, str, &cx);
-    result.panicCode = 0;
-    result.ptr = createDecimal(&d);
+    decQuad dTrim;
+    decQuadReduce(&dTrim, &d, &cx);
+    result.ptr = createDecimal(&dTrim);
     return result;
 }
 
