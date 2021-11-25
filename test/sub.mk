@@ -13,6 +13,7 @@ COMPILER_JAR=../../../build/bin/nballerina.jar
 # This is used in phase 2
 JAVA ?= $(shell ../../findJava.sh)
 bal_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*-[vpo].bal)
+error_bal_files = $(wildcard ../../../compiler/testSuite/$(tdir)/*-[e].bal)
 # These are usd in phase 3
 LLVM_SUFFIX ?=-12
 CLANG ?= clang$(LLVM_SUFFIX)
@@ -22,9 +23,11 @@ ll_files = $(wildcard ll/*.ll)
 mod_ll_files = $(wildcard ll/*-[vpo].*.ll)
 mod_bc_files = $(addsuffix .bc, $(addprefix result/, $(basename $(notdir $(mod_ll_files)))))
 test_cases = $(basename $(notdir $(bal_files)))
+err_cases = $(basename $(notdir $(error_bal_files)))
 expect_files = $(addsuffix .txt, $(addprefix expect/, $(test_cases)))
 diff_files = $(addsuffix .diff, $(addprefix result/, $(test_cases)))
 exe_files = $(addsuffix .exe, $(addprefix result/, $(test_cases)))
+err_logs = $(addsuffix .log, $(addprefix err_logs/, $(err_cases)))
 RT=../../../runtime/balrt.a
 RT_INLINE=../../../runtime/balrt_inline.bc
 
@@ -34,6 +37,12 @@ test: all
 all:
 	if test $(COMPILER_JAR) -nt compile.stamp; then rm -f compile.stamp; fi
 	$(MAKE) -f ../../sub.mk tdir=$(tdir) compile
+
+errorOutput:$(err_logs)
+
+err_logs/%.log: ../../../compiler/testSuite/$(tdir)/%.bal
+	mkdir -p err_logs
+	$(JAVA) -Xmx100m -jar $(COMPILER_JAR) $? 2> $@ || true
 
 compile: compile.stamp
 

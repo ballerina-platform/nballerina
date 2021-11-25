@@ -11,6 +11,7 @@ $(TDIRS):
 
 clean:
 	-rm -fr out
+	-rm -f errorOutput.html
 
 update:
 	mkdir -p out
@@ -29,4 +30,9 @@ diff:
 		[ -e $$ll ] && cmp -s $$f $$ll || echo $$f; \
 	done
 
-.PHONY: $(TARGETS) $(TDIRS) clean update diff
+errorOutput: errorOutput.html
+
+errorOutput.html: $(TDIRS) $(test_logs) errorOutput.bal
+	bal run errorOutput.bal
+
+.PHONY: $(TARGETS) $(TDIRS) clean update diff errorOutput
