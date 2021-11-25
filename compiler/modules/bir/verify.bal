@@ -22,8 +22,8 @@ class VerifyContext {
         return t:isSubtype(self.tc, s, t);
     }
 
-    function isSameType(t:SemType s, t:SemType t) returns boolean {
-        return s == t || (t:isSubtype(self.tc, s, t) && t:isSubtype(self.tc, t, s));
+    function isSameType(t:SemType t1, t:SemType t2) returns boolean {
+        return t:isSameType(self.tc, t1, t2);
     }
 
     function isEmpty(t:SemType t) returns boolean {

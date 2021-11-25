@@ -1,9 +1,8 @@
 LLVM_SUFFIX?=-12
 export CLANG ?= clang$(LLVM_SUFFIX)
 LLVM_AS ?= llvm-as$(LLVM_SUFFIX)
-LLC ?= llc$(LLVM_SUFFIX)
 OPT ?= opt$(LLVM_SUFFIX)
-CFLAGS ?= -O2
+export CFLAGS ?= -O2
 export LLVM_LINK ?= llvm-link$(LLVM_SUFFIX)
 VALGRIND ?= valgrind
 WARN_FLAGS=-Wextra -Wall
@@ -14,11 +13,12 @@ DN_OBJS=$(addprefix third-party/decNumber/, decQuad.o decContext.o)
 DN_DEFINES=-DHAVE_STDBOOL_H -DHAVE_STDINT_H -DDECPRINT=0
 DTOA_OBJS=third-party/dtoa/emyg_dtoa.o
 THIRD_PARTY_OBJS=$(DTOA_OBJS) $(BT_OBJS) $(DN_OBJS)
-RT_OBJS=alloc.o error.o list.o main.o mapping.o structure.o panic.o print.o string.o int.o tagged_inline.o decimal.o
+RT_OBJS=alloc.o error.o list.o main.o mapping.o structure.o panic.o print.o string.o int.o decimal.o
 OBJS=$(RT_OBJS) $(THIRD_PARTY_OBJS)
 DEFINES=$(DN_DEFINES)
-C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc boolean_inline.bc type_inline.bc structure_inline.bc
-LL_BCS=float_ir_inline.bc tagged_inline.bc
+C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc \
+  boolean_inline.bc type_inline.bc structure_inline.bc tagged_inline.bc
+export LL_BCS=float_ll_inline.bc tagged_ll_inline.bc
 BCS=$(C_BCS) $(LL_BCS)
 INCLUDES=tag.h balrt.h balrt_inline.h
 AR=ar
@@ -42,7 +42,9 @@ $(LIB): $(OBJS)
 $(BCLIB): $(BCS)
 	set -o pipefail; \
 	$(LLVM_LINK) -o - -S $^ | \
-	sed -e '/define .*@_[Bb][a-zA-Z]/s/^define /define linkonce_odr /' -e '/target datalayout/ s/"$$/-ni:1"/' | \
+	sed -e '/target datalayout/ s/"$$/-ni:1"/' | \
+	$(OPT) -O3 -S | \
+	sed -e '/define .*@_[Bb][a-zA-Z]/s/^define /define linkonce_odr /' | \
 	$(LLVM_AS) >$@ 
 
 $(BT_OBJS): %.o: %.c
@@ -58,8 +60,7 @@ $(DTOA_OBJS) $(DN_OBJS): %.o: %.c
 	set -o pipefail; \
 	$(CLANG) -c $(CFLAGS) $(DEFINES) $(WARN_FLAGS) -emit-llvm -o - $< | \
 	$(LLVM_LINK) $(LL_BCS) - -o - -S | \
-	sed -e '/define .*@_bal_tagged_to_ptr/s/^define /define linkonce_odr /' \
-		-e '/define .*@_bal_tagged_clear_exact/s/^define /define linkonce_odr /' \
+	sed -e '/define .*@_bal_ptr_mask/s/^define /define linkonce_odr /' \
 		-e '/define .*@_bal_float_/s/^define /define linkonce_odr /' | \
 	$(OPT) -O2 - -o - -S | \
 	$(LLVM_AS) >$@
