@@ -24,7 +24,7 @@ final RuntimeFunction listConstructFunction = {
     name: "list_construct",
     ty: {
         returnType: heapPointerType(llListType),
-        paramTypes: [llvm:pointerType(llInherentType), LLVM_INT]
+        paramTypes: [llvm:pointerType(llStructureDescType), LLVM_INT]
     },
     attrs: []
 };
@@ -60,12 +60,92 @@ final RuntimeFunction mappingConstructFunction = {
     name: "mapping_construct",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: [llvm:pointerType(llInherentType), "i64"]
+        paramTypes: [llvm:pointerType(llStructureDescType), "i64"]
     },
     attrs: []
 };
 
+final RuntimeFunction taggedMemberClearExactAnyFunction = {
+    name: "tagged_member_clear_exact_any",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readnone"]
+};
+
+final RuntimeFunction taggedMemberClearExactPtrFunction = {
+    name: "tagged_member_clear_exact_ptr",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readnone"]
+};
+
 const LLVM_INDEX = "i32";
+
+type ListRepr readonly & object {
+    llvm:Type memberType;
+    string?[] rtFuncSuffix;
+    int listDescGetIndex;
+    int listDescSetIndex;
+    boolean isSpecialized;
+    function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError;
+    function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg);
+};
+
+final ListRepr listGenericRepr = object {
+    llvm:Type memberType = LLVM_TAGGED_PTR;
+    string?[] rtFuncSuffix = ["generic_get_tagged", "generic_set_tagged", "generic_get_int", "generic_set_int", "generic_get_float", "generic_set_float"];
+    int listDescGetIndex = 1;
+    int listDescSetIndex = 2;
+    boolean isSpecialized = false;
+    function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
+        return buildWideRepr(builder, scaffold, member, REPR_ANY, memberType);
+    }
+    function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+        return buildStoreTagged(builder, scaffold, value, reg);
+    }
+};
+
+final ListRepr listIntArrayRepr = object {
+    llvm:Type memberType = LLVM_INT;
+    string?[] rtFuncSuffix = ["int_array_get_tagged", "int_array_set_tagged", "int_array_get_int", "int_array_set_int", (), "int_array_set_float"];
+    int listDescGetIndex = 3;
+    int listDescSetIndex = 4;
+    boolean isSpecialized = true;
+    function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
+        return buildInt(builder, scaffold, <bir:IntOperand>member);
+    }
+    function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+        return buildStoreInt(builder, scaffold, value, reg);
+    }
+};
+
+final ListRepr listFloatArrayRepr = object {
+    llvm:Type memberType = LLVM_DOUBLE;
+    string?[] rtFuncSuffix = ["float_array_get_tagged", "float_array_set_tagged", (), "float_array_set_int", "float_array_get_float", "float_array_set_float"];
+    int listDescGetIndex = 5;
+    int listDescSetIndex = 6;
+    boolean isSpecialized = true;
+    function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
+        return buildFloat(builder, scaffold, <bir:FloatOperand>member);
+    }
+    function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+        return buildStoreFloat(builder, scaffold, value, reg);
+    }
+};
+
+function typeToListRepr(t:SemType bitSet) returns ListRepr {
+    if bitSet == t:INT {
+        return listIntArrayRepr;
+    }
+    else if bitSet == t:FLOAT {
+        return listFloatArrayRepr;
+    }
+    return listGenericRepr;
+}
 
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
     final int length = insn.operands.length();
@@ -81,10 +161,12 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
                                                                                         "inbounds"),
                                                                   ALIGN_HEAP);
 
-        // Cases that are not UniformTypeBitSet should have been filtered out before
-        t:UniformTypeBitSet memberType = <t:UniformTypeBitSet>t:simpleArrayMemberType(scaffold.typeContext(), listType);
+        // Cases that are not arrays should have been filtered out before
+        t:SemType memberType = <t:SemType>t:arrayMemberType(scaffold.typeContext(), listType);
+        ListRepr repr = typeToListRepr(memberType);
+        array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberType, 0)));
         foreach int i in 0 ..< length {
-            builder.store(check buildWideRepr(builder, scaffold, insn.operands[i], REPR_ANY, memberType),
+            builder.store(check repr.buildMember(builder, scaffold, insn.operands[i], memberType),
                           builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INT, i)], "inbounds"));
         }
         builder.store(llvm:constInt(LLVM_INT, length),
@@ -94,10 +176,11 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 }
 
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
+    llvm:Value taggedStruct = builder.load(scaffold.address(insn.operands[0]));
     llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
     // struct is the untagged pointer to the struct
     llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
-                                                                               [builder.load(scaffold.address(insn.operands[0])), llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                                                               [taggedStruct, llvm:constInt(LLVM_INT, POINTER_MASK)]),
                                                heapPointerType(llListType));
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
@@ -110,28 +193,89 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_INDEX_OUT_OF_BOUNDS, insn.pos), scaffold.panicAddress());
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
+
+    llvm:BasicBlock? bbJoin = ();
+    t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
+    ListRepr repr = typeToListRepr(memberType);
+    if repr.isSpecialized {
+        bbJoin = buildSpecializedListGet(builder, scaffold, taggedStruct, struct, index, repr, insn.result);
+    }
     llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP);
-    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)]), ALIGN_HEAP);
-    llvm:Value? val = builder.call(func,
-                                   [builder.load(scaffold.address(insn.operands[0])),
-                                    buildInt(builder, scaffold, insn.operands[1])]);
-    buildStoreTagged(builder, scaffold, <llvm:Value>val, insn.result);
+    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, repr.listDescGetIndex)]), ALIGN_HEAP);
+    repr.buildMemberStore(builder, scaffold, <llvm:Value>builder.call(func, [taggedStruct, index]), insn.result);
+    if bbJoin != () {
+        builder.br(bbJoin);
+        builder.positionAtEnd(bbJoin);
+    }
+}
+
+function buildSpecializedListGet(llvm:Builder builder, Scaffold scaffold, llvm:Value taggedStruct, llvm:PointerValue struct, llvm:Value index, ListRepr repr, bir:Register result) returns llvm:BasicBlock {
+    llvm:BasicBlock bbExact = scaffold.addBasicBlock();
+    llvm:BasicBlock bbInexact = scaffold.addBasicBlock();
+    llvm:BasicBlock bbJoin = scaffold.addBasicBlock();
+    llvm:Value isExact = builder.iCmp("ne",
+                                      <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [taggedStruct, llvm:constInt(LLVM_INT, FLAG_EXACT)]),
+                                      llvm:constNull(llvm:pointerType("i8", 1)));
+    builder.condBr(isExact, bbExact, bbInexact);
+    builder.positionAtEnd(bbExact);
+    llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)]), ALIGN_HEAP);
+    array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberType, 0)));
+    repr.buildMemberStore(builder, scaffold, builder.load(builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), index], "inbounds"), ALIGN_HEAP), result);
+    builder.br(bbJoin);
+    builder.positionAtEnd(bbInexact);
+    return bbJoin;
 }
 
 function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn insn) returns BuildError? {
+    llvm:Value taggedStruct = builder.load(scaffold.address(insn.operands[0]));
     llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
-                                                                               [builder.load(scaffold.address(insn.operands[0])), llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                                                               [taggedStruct, llvm:constInt(LLVM_INT, POINTER_MASK)]),
                                                heapPointerType(llListType));
-    llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP);
-    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 2)]), ALIGN_HEAP);
-
+    llvm:BasicBlock? bbJoin = ();
     t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
+    llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
+    ListRepr repr = typeToListRepr(memberType);
+    if repr.isSpecialized {
+        llvm:Value val = check repr.buildMember(builder, scaffold, insn.operands[2], memberType);
+        bbJoin = check buildSpecializedListSet(builder, scaffold, taggedStruct, struct, index, repr.memberType, val);
+    }
+
+    llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP);
+    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, repr.listDescSetIndex)]), ALIGN_HEAP);
     // XXX listSetFunction must also clear the exact bit if the list is not exact?
-    llvm:Value? err = builder.call(func,
-                                   [builder.load(scaffold.address(insn.operands[0])),
-                                    buildInt(builder, scaffold, insn.operands[1]),
-                                    check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)]);
+    llvm:Value? err = builder.call(func, [taggedStruct, index, check repr.buildMember(builder, scaffold, insn.operands[2], memberType)]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
+    if bbJoin != () {
+        builder.br(bbJoin);
+        builder.positionAtEnd(bbJoin);
+    }
+}
+
+function buildSpecializedListSet(llvm:Builder builder, Scaffold scaffold, llvm:Value taggedStruct, llvm:PointerValue struct, llvm:Value index, llvm:Type memberTy, llvm:Value val)
+                                returns llvm:BasicBlock|BuildError {
+    llvm:BasicBlock bbExact = scaffold.addBasicBlock();
+    llvm:BasicBlock bbTaggedSet = scaffold.addBasicBlock();
+    llvm:BasicBlock bbJoin = scaffold.addBasicBlock();
+    llvm:Value isExact = builder.iCmp("ne",
+                                      <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [taggedStruct, llvm:constInt(LLVM_INT, FLAG_EXACT)]),
+                                      llvm:constNull(llvm:pointerType("i8", 1)));
+    builder.condBr(isExact, bbExact, bbTaggedSet);
+    builder.positionAtEnd(bbExact);
+
+    llvm:BasicBlock bbSpecializedSet = scaffold.addBasicBlock();
+    builder.condBr(builder.iCmp("ult",
+                                index,
+                                builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)]), ALIGN_HEAP)),
+                   bbSpecializedSet,
+                   bbTaggedSet);
+    builder.positionAtEnd(bbSpecializedSet);
+    llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)]), ALIGN_HEAP);
+    array = builder.bitCast(array, heapPointerType(llvm:arrayType(memberTy, 0)));
+
+    builder.store(val, builder.getElementPtr(array, [llvm:constInt(LLVM_INT, 0), index], "inbounds"));
+    builder.br(bbJoin);
+    builder.positionAtEnd(bbTaggedSet);
+    return bbJoin;
 }
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
@@ -179,10 +323,39 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
         rf = mappingIndexedGetFunction;
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
-    // SUBSET this can widen leading to inexactness when mapping member types are not bitsets
-    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf),
-                                                [builder.load(scaffold.address(mappingReg)), k]);
-    buildStoreTagged(builder, scaffold, value, insn.result);
+    llvm:Value mapping = builder.load(scaffold.address(mappingReg));
+    llvm:Value member = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [mapping, k]);
+    t:SemType resultType = insn.result.semType;
+    if isPotentiallyExact(resultType) {
+        if !isMappingMemberTypeExact(scaffold.typeContext(), mappingReg.semType, keyOperand, resultType) {
+            member = buildClearExact(builder, scaffold, member, resultType);
+        }
+        else {
+            member = buildMemberClearExact(builder, scaffold, mapping, member, resultType);
+        }
+    }
+    buildStoreTagged(builder, scaffold, member, insn.result);
+}
+
+function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:StringOperand keyOperand, t:SemType resultType) returns boolean {
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
+    if mat == () {
+        return false;
+    }
+    else {
+        if keyOperand is string || mat.names.length() == 0 {
+            return true;
+        }
+        // SUBSET singleton types
+        t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
+        foreach t:SemType ty in mat.types {
+            t:SemType peMember = t:intersect(ty, POTENTIALLY_EXACT);
+            if !t:isNever(peMember) && !t:isSameType(tc, peMember, peResult) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
@@ -218,6 +391,11 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
         }
     }
     return ();
+}
+
+function buildMemberClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value structure, llvm:Value member, t:SemType sourceType) returns llvm:Value {
+    RuntimeFunction rf = overloadsExactBit(sourceType) ? taggedMemberClearExactAnyFunction : taggedMemberClearExactPtrFunction;
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [structure, member]);
 }
 
 function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, bir:Position pos) {

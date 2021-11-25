@@ -1,7 +1,22 @@
 #include "string_utils.h"
 
-ListDesc DESC_INT = { 0, _bal_list_get, _bal_list_set, 129 };
-ListDesc DESC_STRING = { 1, _bal_list_get, _bal_list_set, 1025 };
+ListDesc DESC_INT = {10,
+                     _bal_list_int_array_get_tagged,
+                     _bal_list_int_array_set_tagged,
+                     _bal_list_int_array_get_int,
+                     _bal_list_int_array_set_int,
+                     NULL,
+                     _bal_list_int_array_set_float,
+                     BITSET_MEMBER_TYPE(1 << TAG_INT)};
+
+ListDesc DESC_STRING = {120,
+                        _bal_list_generic_get_tagged,
+                        _bal_list_generic_set_tagged,
+                        _bal_list_generic_get_int,
+                        _bal_list_generic_set_int,
+                        _bal_list_generic_get_float,
+                        _bal_list_generic_set_float,
+                        BITSET_MEMBER_TYPE(1 << TAG_STRING)};
 
 HASH_DEFINE_KEY;
 
@@ -33,7 +48,7 @@ void testListSet(int64_t capacity, int64_t length) {
     assert(lp->tpArray.capacity == capacity);
     TaggedPtr taggedLp = ptrAddFlags(lp, ((uint64_t)TAG_LIST_RW << TAG_SHIFT)|EXACT_FLAG);
     for (i = 0; i < length; i++) {
-        _bal_list_set(taggedLp, i, strs[i]);
+        _bal_list_generic_set_tagged(taggedLp, i, strs[i]);
     }
 
     assert(lp->desc == &DESC_STRING);

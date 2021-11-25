@@ -48,7 +48,6 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                         foreach Stmt stmt in defn.body.stmts {
                             check validateStatementPos(stmt, tok, defn.startPos, defn.endPos);
                         }
-                        check validateTypeDescPos(defn.typeDesc, tok, defn.startPos, defn.endPos);
                     }
                     else if defn is ConstDefn {
                         check validateExpressionPos(defn.expr, tok, defn.startPos, defn.endPos);

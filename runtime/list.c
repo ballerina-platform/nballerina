@@ -13,43 +13,91 @@ ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
     return lp;
 }
 
-static bool getFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
-    switch (desc->bitSet) {
-        case (1 << TAG_BOOLEAN):
-            *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
-            return true;
-        case (1 << TAG_INT):
-            *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
-            return true;
-        case (1 << TAG_FLOAT):
-            {
-                GC double *fp = (GC double *)&F0;
-                *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
-                return true;
-            }
-        case (1 << TAG_STRING):
-            _bal_string_alloc(0, 0, valuePtr);
-            return true;
+static bool getArrayFiller(MemberType memberType, TaggedPtr *valuePtr) {
+    uint32_t bitSet;
+    if ((memberType & 1) == 0) {
+        // XXX need to handle array or map here
+        bitSet = ((ComplexTypePtr)memberType)->all;
     }
-    if (desc->bitSet & (1 << TAG_NIL)) {
+    else {
+        bitSet = (uint32_t)(memberType >> 1);
+        switch (bitSet) {
+            case (1 << TAG_BOOLEAN):
+                *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
+                return true;
+            case (1 << TAG_INT):
+                *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
+                return true;
+            case (1 << TAG_FLOAT):
+                {
+                    GC double *fp = (GC double *)&F0;
+                    *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
+                    return true;
+                }
+            case (1 << TAG_STRING):
+                _bal_string_alloc(0, 0, valuePtr);
+                return true;
+        }
+    }
+    if (bitSet & (1 << TAG_NIL)) {
         *valuePtr = 0;
         return true;
     }
     return false;
 }
 
-// Must be called with an index such that, 0 <= index < lp->gArray.length
-TaggedPtr _bal_list_get(TaggedPtr p, int64_t index) {
+// _bal_list_*_get functions must be called with an index such that, 0 <= index < lp->gArray.length
+
+TaggedPtr _bal_list_generic_get_tagged(TaggedPtr p, int64_t index) {
     ListPtr lp = taggedToPtr(p);
     GC TaggedPtrArray *ap = &(lp->tpArray);
     return ap->members[index];
 }
 
-PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
+int64_t _bal_list_generic_get_int(TaggedPtr p, int64_t index) {
+    ListPtr lp = taggedToPtr(p);
+    GC TaggedPtrArray *ap = &(lp->tpArray);
+    return taggedToInt(ap->members[index]);
+}
+
+double _bal_list_generic_get_float(TaggedPtr p, int64_t index) {
+    ListPtr lp = taggedToPtr(p);
+    GC TaggedPtrArray *ap = &(lp->tpArray);
+    return taggedToFloat(ap->members[index]);
+}
+
+TaggedPtr _bal_list_int_array_get_tagged(TaggedPtr p, int64_t index) {
+    ListPtr lp = taggedToPtr(p);
+    GC IntArray *ap = &(lp->iArray);
+    return intToTagged(ap->members[index]);
+}
+
+int64_t _bal_list_int_array_get_int(TaggedPtr p, int64_t index) {
+    // SUBSET should only be called when subset supports int subtype arrays
+    fprintf(stderr, "warning: access int array via int type desc func pointer\n");
+    ListPtr lp = taggedToPtr(p);
+    GC IntArray *ap = &(lp->iArray);
+    return ap->members[index];
+}
+
+TaggedPtr _bal_list_float_array_get_tagged(TaggedPtr p, int64_t index) {
+    ListPtr lp = taggedToPtr(p);
+    GC FloatArray *ap = &(lp->fArray);
+    return floatToTagged(ap->members[index]);
+}
+
+double _bal_list_float_array_get_float(TaggedPtr p, int64_t index) {
+    // SUBSET should only be called when subset supports float subtype arrays
+    fprintf(stderr, "warning: access float array via float type desc func pointer\n");
+    ListPtr lp = taggedToPtr(p);
+    GC FloatArray *ap = &(lp->fArray);
+    return ap->members[index];
+}
+
+PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
     ListPtr lp = taggedToPtr(p);
     ListDescPtr ldp = lp->desc;
-    uint32_t bitSet = ldp->bitSet;
-    if ((bitSet & (1 << (getTag(val) & UT_MASK))) == 0) {
+    if (!memberTypeContainsTagged(lp->desc->memberType, val)) {
         return storePanicCode(p, PANIC_LIST_STORE);
     }
     GC TaggedPtrArray *ap = &(lp->tpArray);
@@ -70,12 +118,97 @@ PanicCode _bal_list_set(TaggedPtr p, int64_t index, TaggedPtr val) {
         // we have a gap to fill
         // from length..<index
         TaggedPtr filler;
-        if (!getFiller(ldp, &filler)) {
+        if (!getArrayFiller(ldp->memberType, &filler)) {
             return PANIC_NO_FILLER;
         }
         for (int64_t i = ap->length; i < index; i++) {
             ap->members[i] = filler;
-        }        
+        }
+    }
+    ap->members[index] = val;
+    ap->length = index + 1;
+    return 0;
+}
+
+PanicCode _bal_list_generic_set_float(TaggedPtr p, int64_t index, double val) {
+    return _bal_list_generic_set_tagged(p, index, floatToTagged(val));
+}
+
+PanicCode _bal_list_generic_set_int(TaggedPtr p, int64_t index, int64_t val) {
+    return _bal_list_generic_set_tagged(p, index, intToTagged(val));
+}
+
+PanicCode _bal_list_int_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
+    ListPtr lp = taggedToPtr(p);
+    if (!memberTypeContainsTagged(lp->desc->memberType, val)) {
+        return storePanicCode(p, PANIC_LIST_STORE);
+    }
+    return _bal_list_int_array_set_int(p, index, taggedToInt(val));
+}
+
+PanicCode _bal_list_int_array_set_int(TaggedPtr p, int64_t index, int64_t val) {
+    
+    ListPtr lp = taggedToPtr(p);
+    GC IntArray *ap = &(lp->iArray);
+    // The cast makes this handle the negative case also in a single comparison
+    if (likely((uint64_t)index < (uint64_t)ap->length)) {
+        ap->members[index] = val;
+        return 0;
+    }
+    // The cast makes this handle the negative case also in a single comparison
+    if (unlikely((uint64_t)index >= (uint64_t)ap->capacity)) {
+        if (unlikely((uint64_t)index >= ARRAY_LENGTH_MAX)) {
+            return index < 0 ? PANIC_INDEX_OUT_OF_BOUNDS : PANIC_LIST_TOO_LONG; 
+        }
+        _bal_array_grow(&(lp->gArray), index + 1, TAGGED_PTR_SHIFT);
+    }
+    // Know that: ap->length <= index < ap->capacity
+    if (index > ap->length) {
+        // we have a gap to fill
+        // from length..<index
+        memset(&(ap->members[ap->length]), 0, sizeof(int64_t) * (index - ap->length));
+    }
+    ap->members[index] = val;
+    ap->length = index + 1;
+    return 0;
+}
+
+PanicCode _bal_list_int_array_set_float(TaggedPtr p, UNUSED int64_t index, UNUSED double val) {
+    return storePanicCode(p, PANIC_LIST_STORE);
+}
+
+PanicCode _bal_list_float_array_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val) {
+    ListPtr lp = taggedToPtr(p);
+    if (!memberTypeContainsTagged(lp->desc->memberType, val)) {
+        return storePanicCode(p, PANIC_LIST_STORE);
+    }
+    return _bal_list_float_array_set_float(p, index, taggedToFloat(val));
+}
+
+PanicCode _bal_list_float_array_set_int(TaggedPtr p, UNUSED int64_t index, UNUSED int64_t val) {
+    return storePanicCode(p, PANIC_LIST_STORE);
+}
+
+PanicCode _bal_list_float_array_set_float(TaggedPtr p, int64_t index, double val) {
+    ListPtr lp = taggedToPtr(p);
+    GC FloatArray *ap = &(lp->fArray);
+    // The cast makes this handle the negative case also in a single comparison
+    if (likely((uint64_t)index < (uint64_t)ap->length)) {
+        ap->members[index] = val;
+        return 0;
+    }
+    // The cast makes this handle the negative case also in a single comparison
+    if (unlikely((uint64_t)index >= (uint64_t)ap->capacity)) {
+        if (unlikely((uint64_t)index >= ARRAY_LENGTH_MAX)) {
+            return index < 0 ? PANIC_INDEX_OUT_OF_BOUNDS : PANIC_LIST_TOO_LONG; 
+        }
+        _bal_array_grow(&(lp->gArray), index + 1, TAGGED_PTR_SHIFT);
+    }
+    // Know that: ap->length <= index < ap->capacity
+    if (index > ap->length) {
+        // we have a gap to fill
+        // from length..<index
+        memset(&(ap->members[ap->length]), 0, sizeof(int64_t) * (index - ap->length));
     }
     ap->members[index] = val;
     ap->length = index + 1;
@@ -125,6 +258,10 @@ void _bal_array_grow(GC GenericArray *ap, int64_t min_capacity, int shift) {
 }
 
 bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
+    return _bal_list_eq_internal(p1, p2, 0);
+}
+
+bool _bal_list_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp) {
     ListPtr lp1 = taggedToPtr(p1);
     GC TaggedPtrArray *ap1 = &(lp1->tpArray);
     ListPtr lp2 = taggedToPtr(p2);
@@ -136,14 +273,14 @@ bool _bal_list_eq(TaggedPtr p1, TaggedPtr p2) {
     TaggedPtr (*get1)(TaggedPtr lp, int64_t index) = lp1->desc->get;
     TaggedPtr (*get2)(TaggedPtr lp, int64_t index) = lp2->desc->get;
     for (int64_t i = 0; i < len; i++) {
-        if (!taggedPtrEqual(get1(p1, i), get2(p2, i))) {
+        if (!taggedPtrEq(get1(p1, i), get2(p2, i), sp)) {
             return false;
         }
     }
     return true;
 }
 
-bool _bal_array_subtype_contains(SubtypeTestPtr stp, TaggedPtr p) {
+bool _bal_array_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     ListPtr lp = taggedToPtr(p);   
-    return (lp->desc->bitSet & ~((ArraySubtypeTestPtr)stp)->bitSet) == 0;
+    return memberTypeIsSubtypeSimple(lp->desc->memberType, ((ArraySubtypePtr)stp)->bitSet);
 }

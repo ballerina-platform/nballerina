@@ -2,9 +2,9 @@
 
 static bool tidListContains(const Tid *start, const Tid *end, Tid tid);
 
-bool _bal_precomputed_subtype_contains(SubtypeTestPtr stp, TaggedPtr p) {
+bool _bal_precomputed_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     StructurePtr sp = taggedToPtr(p);
-    PrecomputedSubtypeTestPtr pstp = (PrecomputedSubtypeTestPtr)stp;
+    PrecomputedSubtypePtr pstp = (PrecomputedSubtypePtr)stp;
     return tidListContains(pstp->tids, pstp->tids + pstp->nTids, sp->desc->tid);
 }
 

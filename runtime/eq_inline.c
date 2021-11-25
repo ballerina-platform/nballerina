@@ -2,7 +2,7 @@
 #include "balrt_inline.h"
 
 bool READONLY _bal_eq(TaggedPtr tp1, TaggedPtr tp2) {
-    return taggedPtrEqual(tp1, tp2);
+    return taggedPtrEq(tp1, tp2, 0);
 }
 
 bool READONLY _bal_exact_eq(TaggedPtr tp1, TaggedPtr tp2) {

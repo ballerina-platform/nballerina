@@ -98,7 +98,7 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
                     if (i > 0) {
                         fputs(",", fp);
                     }
-                    printTagged(fp, lp->tpArray.members[i], STYLE_INFORMAL, &stack);
+                    printTagged(fp, lp->desc->get(p, i), STYLE_INFORMAL, &stack);
                 }
                 fputs("]", fp);
             }

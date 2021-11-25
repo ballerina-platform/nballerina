@@ -1,4 +1,4 @@
-COMPILER_JAR=../../../compiler/target/bin/nballerina.jar
+COMPILER_JAR=../../../build/bin/nballerina.jar
 JAVA ?= $(shell ../../findJava.sh)
 TARGETS=all test testll compile
 LLVM_SUFFIX ?=-12

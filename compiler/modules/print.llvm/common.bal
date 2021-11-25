@@ -40,6 +40,7 @@ public function arrayType(Type ty, int elementCount) returns ArrayType {
 // Corresponds to llvm::StructType
 public type StructType readonly & record {
     Type[] elementTypes;
+    string? name = ();
 };
 
 public function structType(Type[] elementTypes) returns StructType {

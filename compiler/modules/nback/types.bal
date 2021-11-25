@@ -9,50 +9,69 @@ const USED_TYPE_TEST = 0x4;
 
 const LLVM_BITSET = "i32";
 const LLVM_TID = "i32";
+const LLVM_MEMBER_TYPE = "i64";
 const LLVM_PANIC_CODE = "i64";
 
-
-final llvm:StructType llInherentType = llvm:structType([LLVM_TID, LLVM_BITSET]);
+final llvm:StructType llStructureDescType = llvm:structType([LLVM_TID]);
 
 // This is an approximation, but close enough since we are only accessing the pointer in C.
-final llvm:StructType llTypeTestType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
+final llvm:StructType llComplexType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);
 
-final llvm:FunctionType llListSetFuncType = llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_TAGGED_PTR]);
-final llvm:FunctionType llListGetFuncType = llvm:functionType(LLVM_TAGGED_PTR, [LLVM_TAGGED_PTR, LLVM_INT]);
-final llvm:StructType llListDescType = llvm:structType([LLVM_TID, llvm:pointerType(llListGetFuncType), llvm:pointerType(llListSetFuncType), LLVM_BITSET]);
-final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType),                      // *desc
-                                              LLVM_INT,                                              // length
-                                              LLVM_INT,                                              // capacity
-                                              heapPointerType(llvm:arrayType(LLVM_TAGGED_PTR, 0))]); // *members
+final llvm:FunctionType[6] llListDescFuncs = [
+            llvm:functionType(LLVM_TAGGED_PTR, [LLVM_TAGGED_PTR, LLVM_INT]),
+            llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_TAGGED_PTR]),
+            llvm:functionType(LLVM_INT, [LLVM_TAGGED_PTR, LLVM_INT]),
+            llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_INT]),
+            llvm:functionType(LLVM_DOUBLE, [LLVM_TAGGED_PTR, LLVM_INT]),
+            llvm:functionType(LLVM_PANIC_CODE, [LLVM_TAGGED_PTR, LLVM_INT, LLVM_DOUBLE])];
+final llvm:PointerType[] llListDescFuncPtrs = from var desc in llListDescFuncs select llvm:pointerType(desc);
+function createLlListDescType() returns llvm:StructType {
+    llvm:Type[] types = [LLVM_TID];
+    foreach var funcPtr in llListDescFuncPtrs {
+        types.push(funcPtr);
+    }
+    // JBUG cast
+    types.push(<llvm:Type>LLVM_MEMBER_TYPE);
+    return llvm:structType(types);
+}
+// JBUG use [LLVM_TID, ...llListDescFuncPtrs, LLVM_MEMBER_TYPE] instead createLlListDescType
+final llvm:StructType llListDescType = createLlListDescType();
+final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType),          // ListDesc *desc
+                                              LLVM_INT,                                  // int64_t length
+                                              LLVM_INT,                                  // int64_t capacity
+                                              heapPointerType(llvm:pointerType("i8"))]); // union {TaggedPtr, int64_t, float} *members
+
+final llvm:StructType llMapDescType = llvm:structType([LLVM_TID, LLVM_MEMBER_TYPE]);
 
 type TypeHowUsed USED_INHERENT_TYPE|USED_EXACTIFY|USED_TYPE_TEST;
 
 public type TypeUsage readonly & record {|
     t:SemType[] types;
     // or'ed from TypeHowUsed
+    // for a USED_TYPE_TEST, the SemType must be complex
     byte[] uses;
 |};
 
 type InitTypes readonly & record {|
-    llvm:StructType subtypeTestVTable;
-    llvm:PointerType subtypeTestVTablePtr;
-    llvm:FunctionType subtypeTestFunction;
-    llvm:PointerType subtypeTestFunctionPtr;
+    llvm:StructType uniformSubtype;
+    llvm:PointerType uniformSubtypePtr;
+    llvm:FunctionType subtypeContainsFunction;
+    llvm:PointerType subtypeContainsFunctionPtr;
 |};
 
-// struct SubtypeTestVTable { bool (*func)(struct SubtypeTestVTable *, TaggedPtr); }
-// struct SubtypeTestVTable *p;
-// (p->func)(p, taggedPtr);
-// struct FooVTable { bool (*func)(struct SubtypeTestVTable *, TaggedPtr); int32_t bitSet; }
-// extern bool _bal_has_record_type(struct SubtypeTestVTable *, TaggedPtr);
-// struct FooVTable subtypeTest1 = { _bal_record_subtype_contains, 256 };
+// struct UniformSubtype { bool (*contains)(struct UniformSubtype *, TaggedPtr); }
+// struct UniformSubtype *p;
+// (p->contains)(p, taggedPtr);
+// struct FooSubtype { bool (*contains)(struct UniformSubtype *, TaggedPtr); int32_t bitSet; }
+// extern bool _bal_record_subtype_contains(struct UniformSubtype *, TaggedPtr);
+// struct FooSubtype subtype1 = { _bal_record_subtype_contains, 256 };
 function createInitTypes(llvm:Context cx) returns InitTypes {
-    llvm:StructType subtypeTestVTable = cx.structCreateNamed("TypeTestVTable");
-    llvm:PointerType subtypeTestVTablePtr = llvm:pointerType(subtypeTestVTable);
-    llvm:FunctionType subtypeTestFunction = llvm:functionType(LLVM_BOOLEAN, [subtypeTestVTablePtr, LLVM_TAGGED_PTR]);
-    llvm:PointerType subtypeTestFunctionPtr = llvm:pointerType(subtypeTestFunction);
-    cx.structSetBody(subtypeTestVTable, [subtypeTestFunctionPtr]);
-    return { subtypeTestVTable, subtypeTestVTablePtr, subtypeTestFunction, subtypeTestFunctionPtr };
+    llvm:StructType uniformSubtype = cx.structCreateNamed("UniformSubtype");
+    llvm:PointerType uniformSubtypePtr = llvm:pointerType(uniformSubtype);
+    llvm:FunctionType subtypeContainsFunction = llvm:functionType(LLVM_BOOLEAN, [uniformSubtypePtr, LLVM_TAGGED_PTR]);
+    llvm:PointerType subtypeContainsFunctionPtr = llvm:pointerType(subtypeContainsFunction);
+    cx.structSetBody(uniformSubtype, [subtypeContainsFunctionPtr]);
+    return { uniformSubtype, uniformSubtypePtr, subtypeContainsFunction, subtypeContainsFunctionPtr };
 }
 
 function mangleTypeSymbol(bir:ModuleId modId, TypeHowUsed howUsed, int index) returns string {

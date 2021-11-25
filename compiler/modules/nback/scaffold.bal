@@ -147,8 +147,9 @@ class Scaffold {
         builder.positionAtEnd(entry);
         self.addresses = [];
         foreach int i in 0 ..< reprs.length() {
-            self.addresses.push(builder.alloca(reprs[i].llvm, (), code.registers[i].varName));
-        } 
+            bir:Register register = code.registers[i];
+            self.addresses.push(builder.alloca(reprs[i].llvm, (), register.varName));
+        }
     }
 
     function saveParams(llvm:Builder builder) {
@@ -269,13 +270,13 @@ class Scaffold {
 
     function initTypes() returns InitTypes => self.mod.llInitTypes;
 
-    function getTypeTest(t:SemType ty) returns llvm:ConstPointerValue {
+    function getTypeTest(t:ComplexSemType ty) returns llvm:ConstPointerValue {
         UsedSemType used = self.getUsedSemType(ty);
         llvm:ConstPointerValue? value = used.typeTest;
         if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_TYPE_TEST, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(llTypeTestType, symbol, isConstant = true);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llComplexType, symbol, isConstant = true);
             used.typeTest = v;
             return v;
         }
@@ -290,7 +291,7 @@ class Scaffold {
         if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(llInherentType, symbol, isConstant = true);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llStructureDescType, symbol, isConstant = true);
             used.inherentType = v;
             return v;
         }

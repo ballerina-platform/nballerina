@@ -42,6 +42,8 @@ const PANIC_MAPPING_STORE = 9;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
+final t:UniformTypeBitSet POTENTIALLY_EXACT = t:uniformTypeUnion(t:LIST_RW|t:MAPPING_RW);
+
 type RuntimeFunction readonly & record {|
     string name;
     llvm:FunctionType ty;
@@ -102,8 +104,8 @@ final RuntimeFunction taggedToFloatFunction = {
     attrs: ["readonly"]
 };
 
-final RuntimeFunction taggedClearExactFunction = {
-    name: "tagged_clear_exact",
+final RuntimeFunction taggedClearExactAnyFunction = {
+    name: "tagged_clear_exact_any",
     ty: {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_TAGGED_PTR]
@@ -111,6 +113,14 @@ final RuntimeFunction taggedClearExactFunction = {
     attrs: ["readnone"]
 };
 
+final RuntimeFunction taggedClearExactPtrFunction = {
+    name: "tagged_clear_exact_ptr",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR]
+    },
+    attrs: ["readnone"]
+};
 
 final bir:ModuleId runtimeModule = {
     org: "ballerinai",
@@ -172,8 +182,7 @@ function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValu
 function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr, t:SemType targetType) returns llvm:Value|BuildError {
     llvm:Value value = check buildRepr(builder, scaffold, operand, targetRepr);
     if targetRepr.base == BASE_REPR_TAGGED && operand is bir:Register {
-        t:SemType listOrMappingRw = t:union(t:LIST_RW, t:MAPPING_RW);
-        t:SemType sourceStructType =  t:intersect(operand.semType, listOrMappingRw);
+        t:SemType sourceStructType = t:intersect(operand.semType, POTENTIALLY_EXACT);
         t:UniformTypeBitSet sourceStructUniformTypes = t:widenToUniformTypes(sourceStructType);
         // Going from e.g. `int[]` to `int[]|map<any>` does not lose exactness,
         // but going from e.g. `int[]|map<int>` to `int[]|map<any>` does.
@@ -191,12 +200,18 @@ function buildWideRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand oper
 }
 
 function buildClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value tagged, t:SemType sourceType) returns llvm:Value {
-    if t:isNever(t:intersect(sourceType, t:union(t:STRING,t:INT))) {
-        return <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [tagged, llvm:constInt(LLVM_INT, ~FLAG_EXACT)]);
-    }
-    else {
-        return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(taggedClearExactFunction), [tagged]);
-    }
+    RuntimeFunction rf = overloadsExactBit(sourceType) ? taggedClearExactAnyFunction : taggedClearExactPtrFunction;
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [tagged]);
+}
+
+// Does the tagged representation of semType use the exact bit for other purposes
+// (i.e. as part of immediate variant)
+function overloadsExactBit(t:SemType semType) returns boolean {
+    return !t:isNever(t:intersect(semType, t:union(t:STRING, t:INT)));
+}
+
+function isPotentiallyExact(t:SemType semType) returns boolean {
+    return !t:isNever(t:intersect(semType, POTENTIALLY_EXACT));
 }
 
 function buildRepr(llvm:Builder builder, Scaffold scaffold, bir:Operand operand, Repr targetRepr) returns llvm:Value|BuildError {
@@ -254,7 +269,6 @@ function buildTestTag(llvm:Builder builder, llvm:PointerValue tagged, int tag, i
                               llvm:constInt(LLVM_INT, tag));
 
 }
-
 
 function buildUntagInt(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged) returns llvm:Value {
     return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(taggedToIntFunction), [tagged]);

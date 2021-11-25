@@ -58,7 +58,6 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
             test:assertNotExactEquals(err, (), "expected an error " + path);
         }
         else {
-            string base = check file:basename(path);
             boolean isE = kind[0] == "e";
             if isE {
                 if err is err:Unimplemented {
@@ -87,10 +86,12 @@ function checkErrorLocation(err:Diagnostic err, string path) returns file:Error|
     d:Location loc = err.detail().location;
     string filename = loc.file.filename();
     test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
-    d:LineColumn? lc = d:locationLineColumn(loc);
-    if lc is d:LineColumn {
-        test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
+    d:LineColumn lc = d:locationLineColumn(loc);
+    if err is err:Semantic && err.detail().message.startsWith("assignment to narrowed variable") {
+        // these errors currently have the position of the variable creation not assignment
+        return;
     }
+    test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);    
 }
 
 function expectedErrorLocation(CompileError err, string path) returns FilenameLine|file:Error|io:Error? {
@@ -225,8 +226,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
         int|s:Identifier index = tn.index;
         if t:isSubtypeSimple(t, t:LIST) {
             if index is int {
-                return t:listMemberType(tc, t, index);
-                //return t:listProj(tc, t, index);
+                return testListProj(tc, t, index);
             }
             else {
                 t:SemType k = lookupSemtype(m, index);
@@ -235,7 +235,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
                 }
                 t:Value? val = t:singleShape(k);
                 if val is t:Value && val.value is int {
-                    return t:listMemberType(tc, t, <int> val.value);
+                    return testListProj(tc, t, <int> val.value);
                 }
                 test:assertFail("index for list projection must be an int");
             }
@@ -259,6 +259,15 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
     }
     // JBUG: #31642 function must return a call
     panic error("unreachable");
+}
+
+function testListProj(t:Context tc, t:SemType t, int index) returns t:SemType {
+    t:SemType s1 = t:listProj(tc, t, index);
+    t:SemType s2 = t:listMemberType(tc, t, index);
+    if !t:isSubtype(tc, s1, s2) {
+        test:assertFail("listProj result is not a subtype of listMemberType");
+    }
+    return s1;
 }
 
 function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
