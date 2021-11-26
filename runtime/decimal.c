@@ -67,7 +67,7 @@ TaggedPtrPanicCode _bal_decimal_rem(TaggedPtr tp1, TaggedPtr tp2) {
     return finish(&d, &cx);    
 }
 
-TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
+static TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
     TaggedPtrPanicCode result;
     enum decClass class = decQuadClass(dq);
     if (class == DEC_CLASS_POS_ZERO || 
