@@ -21,7 +21,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
             }
             string filename = test.absPath;
             // XXX remove after fixing #555
-            if filename.endsWith("-t.bal") {
+            if filename.endsWith("-tv.bal") || filename.endsWith("-te.bal") {
                 continue;
             }
             string[] lines = check io:fileReadLines(filename);
