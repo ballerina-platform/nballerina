@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "balrt.h"
 #include "third-party/decNumber/decQuad.h"
 
@@ -127,6 +129,36 @@ TaggedPtr _bal_decimal_neg(TaggedPtr tp) {
     decQuad d;
     decQuadCopyNegate(&d, dq);
     return createDecimal(&d);
+}
+
+bool _bal_decimal_exact_eq(TaggedPtr tp1, TaggedPtr tp2) {
+    decQuad d1;
+    decQuad d2;
+    decQuadCanonical(&d1, taggedToDecQuad(tp1));
+    decQuadCanonical(&d2, taggedToDecQuad(tp2));
+    return memcmp(&d1, &d2, DECQUAD_Bytes) == 0;
+}
+
+int64_t _bal_decimal_cmp(TaggedPtr tp1, TaggedPtr tp2) {
+    decQuad d;
+    decContext cx;
+    initContext(&cx);  
+    decQuadCompare(&d, taggedToDecQuad(tp1), taggedToDecQuad(tp2), &cx);
+    // The return value of decQuadCompare can be 1, 0, -1 or NaN:
+    // since this is represented as a decQuad, decQuadClass is used to
+    // identify 1, 0, -1.
+    // NaN is returned only if lhs or rhs is a NaN.
+    // It is not an expected output because both arguments are valid decimals.
+    enum decClass class = decQuadClass(&d);
+    if (class == DEC_CLASS_POS_ZERO) {
+        return 0;        
+    }
+    else if (class == DEC_CLASS_POS_NORMAL) {
+        return 1;
+    }
+    else {
+        return -1;
+    }
 }
 
 TaggedPtr _bal_decimal_const(const char *decString) {
