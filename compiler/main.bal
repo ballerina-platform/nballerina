@@ -39,17 +39,29 @@ public function main(string[] filenames, *Options opts) returns error? {
         if filenames.length() > 1 {
             return error("multiple input files not supported with --showTypes");
         }
-        check printDiagnostic(showTypes([{ filename: filenames[0] }]));
-        return;
+        CompileError? err = showTypes([{ filename: filenames[0] }]);
+        if err is err:Diagnostic {
+            printDiagnostic(err);
+            return error(""); // we don't need to show any thing for this error because printDiagnostic already does it;
+        }
+        return err;
     }
     nback:Options nbackOptions = {
         gcName: check nback:validGcName(opts.gc),
         debugLevel: check nback:validDebugLevel(opts.debugLevel)
     };
+    int errorFileCount = 0;
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            check printDiagnostic(compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts));
+            CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            if err is err:Diagnostic {
+                printDiagnostic(err);
+                errorFileCount += 1;
+            }
+            else if err != () {
+                return err;
+            }
         }
         else if ext == TEST_EXTENSION {
             check compileBaltFile(filename, opts.outDir ?: check file:parentPath(filename), nbackOptions, opts);
@@ -61,19 +73,17 @@ public function main(string[] filenames, *Options opts) returns error? {
             return error(d:messageFormat(`unsupported extension ${ext}`));
         }
     }
+    if errorFileCount != 0 {
+        return error(string `compilation failed due to errors in ${errorFileCount} file(s)`);
+    }
 }
 
-function printDiagnostic(CompileError? err) returns error? {
-    if err is err:Diagnostic {
-        foreach string line in d:format(err.detail()) {
-            io:fprintln(io:stderr, line);
-        }
-        // Don't want details to be displayed twice
-        return error(err.message());
+function printDiagnostic(err:Diagnostic err) {
+    foreach string line in d:format(err.detail()) {
+        io:fprintln(io:stderr, line);
     }
-    else {
-        return err;
-    }
+    // Don't want details to be displayed twice
+    io:fprintln(io:stderr, err.message());
 }
 
 // Basename here means filename without extension
