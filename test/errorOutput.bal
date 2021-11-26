@@ -19,9 +19,9 @@ function parseLogs(string logPath) returns ErrorLog[]|error {
     int i = 0;
     while i < lines.length()-1 {
         string dataLine = lines[i];
-        i+=2; // skip the next line
         ErrorMessage m = check parseErrorMessage(dataLine);
         logs.push({ filePath: m.filePath, lines: lines.slice(i, i+1), errorMessage: m.body, errorLines: check getErrorLines(m.filePath, m.startLoc) });
+        i+=2; // skip the next line
     }
     return logs;
 }
@@ -37,10 +37,11 @@ function parseErrorMessage(string errMessage) returns ErrorMessage|error {
     string filePath = check parseFilePath(errMessage.substring(0, filePathEnd));
     int lineEnd = <int> errMessage.indexOf(":", filePathEnd+1);
     int line = check int:fromString(errMessage.substring(filePathEnd+1, lineEnd));
-    int ColumnEnd = <int> errMessage.indexOf(":", lineEnd+1);
-    int column = check int:fromString(errMessage.substring(lineEnd+1, ColumnEnd));
+    int columnEnd = <int> errMessage.indexOf(":", lineEnd+1);
+    int column = check int:fromString(errMessage.substring(lineEnd+1, columnEnd));
     Location startLoc = [line, column];
-    string body = errMessage.substring(ColumnEnd+1);
+    int errorTagEnd = <int> errMessage.indexOf(":", columnEnd+1);
+    string body = errMessage.substring(errorTagEnd+1).trim();
     return { filePath, body, startLoc };
 }
 
@@ -56,12 +57,12 @@ function getErrorLines(string filePath, Location startLoc) returns [string]|io:E
     return [lines[startLoc[0]-1].trim()];
 }
 
-isolated function errMessage(ErrorLog log) returns string {
+isolated function errorMessage(ErrorLog log) returns string {
     return log.errorMessage;
 }
 
 function generateOutput(ErrorLog[] logs) returns string[]|error {
-    ErrorLog[] sortedLogs = logs.sort("ascending", errMessage);
+    ErrorLog[] sortedLogs = logs.sort("ascending", errorMessage);
     string[] body = [];
     addPrefix(body);
     foreach var log in sortedLogs {
