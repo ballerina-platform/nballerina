@@ -57,6 +57,14 @@ TaggedPtrPanicCode _bal_decimal_div(TaggedPtr tp1, TaggedPtr tp2) {
     return finish(&d, &cx); 
 }
 
+TaggedPtrPanicCode _bal_decimal_rem(TaggedPtr tp1, TaggedPtr tp2) {
+    decQuad d;
+    decContext cx;
+    initContext(&cx);
+    decQuadRemainder(&d, taggedToDecQuad(tp1), taggedToDecQuad(tp2), &cx);
+    return finish(&d, &cx);    
+}
+
 TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
     TaggedPtrPanicCode result;
     enum decClass class = decQuadClass(dq);
@@ -73,6 +81,9 @@ TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
     if (status & DECIMAL_STATUS_FAIL) {
         if (status & DEC_Division_by_zero) {
             result.panicCode = PANIC_DIVIDE_BY_ZERO;
+        }
+        else if (status & DEC_Overflow) {
+            result.panicCode = PANIC_ARITHMETIC_OVERFLOW;
         }
         else if (status & DEC_Underflow) {
             // The reason to do this check is, there are subnormal cases 
@@ -97,7 +108,8 @@ TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
             result.ptr = createDecimal(dq);
         }
         else {
-            result.panicCode = PANIC_ARITHMETIC_OVERFLOW;
+            // status & DEC_IEEE_754_Invalid_operation = true
+            result.panicCode = PANIC_INVALID_DECIMAL;
         }
     }
     else {
@@ -105,6 +117,16 @@ TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
         result.ptr = createDecimal(dq);
     }
     return result;
+}
+
+TaggedPtr _bal_decimal_neg(TaggedPtr tp) {
+    const decQuad *dq = taggedToDecQuad(tp);
+    if (decQuadClass(dq) == DEC_CLASS_POS_ZERO) {
+        return tp;
+    } 
+    decQuad d;
+    decQuadCopyNegate(&d, dq);
+    return createDecimal(&d);
 }
 
 TaggedPtr _bal_decimal_const(const char *decString) {
