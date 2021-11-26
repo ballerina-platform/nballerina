@@ -59,15 +59,6 @@ final RuntimeFunction panicConstructFunction = {
     attrs: ["cold"]
 };
 
-final RuntimeFunction allocFunction = {
-    name: "alloc",
-    ty: {
-        returnType: LLVM_TAGGED_PTR,
-        paramTypes: ["i64"]
-    },
-    attrs: []
-};
-
 final RuntimeFunction intToTaggedFunction = {
     name: "int_to_tagged",
     ty: {
