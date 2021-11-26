@@ -490,23 +490,12 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
-    public function lineContent(d:Position|d:Range range) returns string[]{
+    public function lineContent(Position pos) returns string {
         string? dir = self.dir;
         string filePath = dir != () ? checkpanic file:joinPath(dir, self.fn) : self.fn;
         string[] lines = checkpanic io:fileReadLines(filePath);
-        if range is d:Position {
-            int lineIndex = self.lineColumn(range)[0];
-            return [lines[lineIndex-1]];
-        }
-        else {
-            int startLineIndex = self.lineColumn(range.startPos)[0];
-            int endLineIndex = self.lineColumn(range.endPos)[0];
-            string[] selectedLines = [];
-            foreach int lineIndex in startLineIndex ... endLineIndex {
-                selectedLines.push(lines[lineIndex-1]);
-            }
-            return selectedLines;
-        }
+        int lineIndex = self.lineColumn(pos)[0];
+        return lines[lineIndex-1];
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
