@@ -463,7 +463,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
             childNodePos.push([member.startPos, member.endPos]);
         }
         TypeDesc? rest = td.rest;
-        if (rest != ()) {
+        if rest != () {
             check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
             childNodePos.push([rest.startPos, rest.endPos]);
         }

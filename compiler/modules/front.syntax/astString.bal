@@ -289,7 +289,15 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
             typeDescToWords(w, rest, true);
         }
         w.push(CLING);
-        w.push("[", "]");
+        SimpleConstExpr? length = td.length;
+        if length != () {
+            w.push("[", CLING);
+            exprToWords(w, length);
+            w.push(CLING, "]");
+        }
+        else {
+            w.push("[", "]");
+        }
         if wrap != false {
             w.push(")");
         }

@@ -148,18 +148,18 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
             t:ListDefinition d = new;
             td.defn = d;
-            s:SimpleConstExpr? size = td.length;
-            int length = 0;
-            if size != () {
-                [t:SemType, t:Value] [_, value] = check resolveConst(mod, modDefn, size, t:INT);
-                length = <int>value.value;
-                length = length - 1; // the member in members array is alredy counted toward member length, we need to adjust for that.
-            }
             t:SemType[] members = from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);
             t:SemType rest = t:NEVER;
-            s:TypeDesc? restTd = td.rest;
-            if restTd != () {
-                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+            t:SemType t = check resolveTypeDesc(mod, modDefn, depth + 1, td.rest);
+            int length = 0;
+            s:SimpleConstExpr? lenExpr = td.length;
+            if lenExpr != () {
+                [t:SemType, t:Value] [_, resolved] = check resolveConst(mod, modDefn, lenExpr, t:INT);
+                length = <int>resolved.value - 1; // The member in members array is alredy counted toward member length.
+                members.push(t);
+            }
+            else {
+                rest = t;
             }
             return d.define(env, members, length, rest);
         }

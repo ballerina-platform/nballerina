@@ -18,6 +18,10 @@ type ArrayOfInt5 int[][5];
 // @type Array5OfInt5 < ArrayOfIntArray
 type Array5OfInt5 int[5][5];
 
+// @type Array5OfInt5 < Array5OfIntArray
+// @type Array5OfIntArray < ArrayOfIntArray
+type Array5OfIntArray int[5][];
+
 type ROIntArray readonly & IntArray;
 
 // @type ROInt5 < Int5

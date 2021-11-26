@@ -69,19 +69,15 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         else if tok.current() == "[" {
             check tok.advance();
-            SimpleConstExpr? length = ();
-            TypeDesc[] members = [];
-            TypeDesc? rest = ();
+            SimpleConstExpr? length;
             if tok.current() != "]" {
                 length = check parseSimpleConstExpr(tok);
-                members.push(td);
             }
             else {
                 length = ();
-                rest = td;
             }
             Position endPos = check tok.expectEnd("]");
-            ListTypeDesc list = { startPos, endPos, members, rest, length };
+            ListTypeDesc list = { startPos, endPos, members: [], rest: td, length };
             td = list;
         }
         else {

@@ -102,6 +102,10 @@ public function tuple(Env env, SemType... members) returns SemType {
     return def.define(env, members, 0, NEVER);
 }
 
+public function isFixedLengthList(ListAtomicType t) returns boolean {
+    return t.members.length() + t.repeatLastMember > 0;
+}
+
 function listRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
     return listSubtypeIsEmpty(cx, bddFixReadOnly(<Bdd>t));
 }
