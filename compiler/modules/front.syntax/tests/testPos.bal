@@ -282,7 +282,7 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             actualEnd = tok.currentEndPos();
         }
 
-        if (expr.endPos != newExpr.endPos) && (expr is RecursiveBinaryExpr && newExpr is RecursiveBinaryExpr) {
+        while (expr.endPos != newExpr.endPos) && (expr is RecursiveBinaryExpr && newExpr is RecursiveBinaryExpr) {
             // These are left recursive expression that can't be separately parsed
             Expr matchingChild = findMatchingChildExpr(expr, newExpr);
             // We are validating tokenizer ends in the correct position only for the parent node
@@ -462,14 +462,14 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         newTd = check parseTypeDesc(tok);
     }
     Position actualEnd = tok.previousEndPos();
-    if td.toString() != newTd.toString() && newTd is ListTypeDesc|MappingTypeDesc {
+    while td.toString() != newTd.toString() && newTd is ListTypeDesc|MappingTypeDesc {
         // These are left recursions which we can't separately parse
         TypeDesc rest = <TypeDesc> newTd.rest;
         actualEnd = rest.endPos;
         newTd = rest;
     }
-    test:assertEquals(td.endPos, actualEnd);
-    test:assertEquals(td.toString(), newTd.toString());
+    test:assertEquals(td.endPos, actualEnd, string`End position of ${td.toString()} is not the same as tokenizers endPos (${tok.file.filename()}, ${unpackPosition(actualEnd).toString()})`);
+    test:assertEquals(td.toString(), newTd.toString(), "failed to reparse type descriptor");
     test:assertTrue(td.startPos >= parentStartPos && td.endPos <= parentEndPos, "child node outside of parent");
     test:assertFalse(testPositionIsWhiteSpace(tok.file, td.startPos), "start position is a white space");
     test:assertTrue(testValidTypeDescEnd(tok.file, td.endPos, td), endPosErrorMessage(tok, td.endPos));
