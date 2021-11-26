@@ -484,6 +484,11 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
             check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
             childNodePos.push([rest.startPos, rest.endPos]);
         }
+        SimpleConstExpr? len = td.length;
+        if len != () {
+            check validateExpressionPos(len, tok, td.startPos, td.endPos);
+            childNodePos.push([len.startPos, len.endPos]);
+        }
     }
     else if td is MappingTypeDesc {
         foreach var f in td.fields {
@@ -563,7 +568,11 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
                 return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
             }
         }
-        if left is ListTypeDesc || (left is FunctionTypeDesc && left.ret is ListTypeDesc) {
+        TypeDesc right = td.right;
+        if left is ListTypeDesc 
+            || left is FunctionTypeDesc && left.ret is ListTypeDesc
+            || right is ListTypeDesc 
+            || right is FunctionTypeDesc && right.ret is ListTypeDesc {
             return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
         }
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);

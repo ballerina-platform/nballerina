@@ -1156,7 +1156,7 @@ public function createAnydata(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType ad = union(union(SIMPLE_OR_STRING, union(XML, TABLE)), union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, [], ad);
+    _ = listDef.define(env, [], 0, ad);
     _ = mapDef.define(env, [], ad);
     return ad;
 }

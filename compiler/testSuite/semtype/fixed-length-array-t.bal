@@ -31,3 +31,15 @@ type ROInt5 readonly & int[5];
 // @type ArrayExcept5 <> Int5;
 // @type ArrayExcept5 < IntArray;
 type ArrayExcept5 IntArray & !Int5;
+
+const FIVE = 5;
+
+// @type ArrayOfInt5 = ArrayOfIntFive
+type ArrayOfIntFive int[][FIVE];
+
+// @type Array5OfInt5 = ArrayFiveOfIntFive
+type ArrayFiveOfIntFive int[FIVE][FIVE];
+
+// @type ROArrayFiveOfIntFive < ArrayFiveOfIntFive
+// @type ROArrayFiveOfIntFive < Array5OfInt5
+type ROArrayFiveOfIntFive ArrayFiveOfIntFive & readonly;

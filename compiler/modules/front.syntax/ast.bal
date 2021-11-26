@@ -460,7 +460,7 @@ public type ListTypeDesc record {|
     Position startPos;
     Position endPos;
     TypeDesc[] members;
-    TypeDesc rest;
+    TypeDesc? rest;
     SimpleConstExpr? length = ();
     t:ListDefinition? defn = ();
 |};

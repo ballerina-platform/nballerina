@@ -149,8 +149,9 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             td.defn = d;
             t:SemType[] members = from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);
             t:SemType rest = t:NEVER;
-            t:SemType t = check resolveTypeDesc(mod, modDefn, depth + 1, td.rest);
             int length = 0;
+            s:TypeDesc? restTd = td.rest;
+            t:SemType t = restTd != () ? check resolveTypeDesc(mod, modDefn, depth + 1, restTd) : t:NEVER;
             s:SimpleConstExpr? lenExpr = td.length;
             if lenExpr != () {
                 [t:SemType, t:Value] [_, resolved] = check resolveConst(mod, modDefn, lenExpr, t:INT);

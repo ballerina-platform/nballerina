@@ -338,7 +338,7 @@ function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     check tok.advance();
     Position endPos = tok.currentEndPos();
-    TypeDesc rest = { startPos, endPos, builtinTypeName: "never"};
+    TypeDesc? rest = ();
     if tok.current() != "]" {
         while true {
             TypeDesc td = check parseTypeDesc(tok);
