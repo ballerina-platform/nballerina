@@ -37,7 +37,7 @@ Most cases where the exact bit needs clearing involve a type widening and are st
 
 It is a little more subtle with instructions that do a get or set on a list or mapping.
 
-## Structure get/set
+## Structure get
 
 Consider a list/mapping get instruction:
 
@@ -45,14 +45,7 @@ Consider a list/mapping get instruction:
 r3 = r1[r2];
 ```
 
-or a list/mapping set instruction
-
-```
-r1[r2] = r3
-```
-
-Clearing the exact bit here happens for the get before storing the tagged pointer in r3, and for the set before the value of r3 is stored.
-For both get and set, there are two cases when the exact bit needs to be cleared:
+Clearing the exact bit here happens for the get before storing the tagged pointer in r3. There are two cases when the exact bit needs to be cleared:
 
 - if the tagged pointer for r1 is not exact, or
 - if the type of r2 is not an _exact key type_ for the type of r1
@@ -115,7 +108,34 @@ But U3 is a subtype of E, which implies that
 
 as required.
 
-TBD Set case: I think it's very similar, but need to work it through. Note that the exact bit will also be cleared if there is a widening from the static type of r3 to the static type of r1[r2].
+## Structure set
+
+With a list/mapping set instruction
+
+```
+r1[r2] = r3
+```
+
+the exact bit obviously needs to be cleared if there is a widening from the static type of `r3` to the static type of `r1[r2]`.
+
+The question then is whether there are other cases where it needs to happen analogous to the get case i.e.
+
+- when r1 is not exact, or
+- when the key type is not exact.
+
+The answer is no.  The reason is that the only way a member can be inexact is if is too precise. For example, if we have a type
+
+```
+type R record {| int?[] k; |};
+```
+
+the `k` could be exact if it referred to a list with inherent type `int[]`.  But unlike the situation with variables, it is not possible for `k` to refer to something less precise than the inherent type, because that would not be allowed by the container's inherent type. For example, if you cannot assign a list with inherent type `any[]` to `k` because that would not be allowed by the inherent type of `R`.  Furthermore, in any case where you do
+
+```
+r.k = v;
+```
+
+and `v` is more precise than the inherent type of `r` requires, there will either be a widening in the assignment, or `v` will already be inexact.
 
 ## Readonly
 

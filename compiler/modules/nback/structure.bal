@@ -202,7 +202,13 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
     }
     llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP);
     llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, repr.listDescGetIndex)]), ALIGN_HEAP);
-    repr.buildMemberStore(builder, scaffold, <llvm:Value>builder.call(func, [taggedStruct, index]), insn.result);
+    llvm:Value member = <llvm:Value>builder.call(func, [taggedStruct, index]);
+    t:SemType resultType = insn.result.semType;
+    if isPotentiallyExact(resultType) {
+        // SUBSET tuples will need to do something analogous to`isMappingMemberTypeExact``
+        member = buildMemberClearExact(builder, scaffold, taggedStruct, member, resultType);
+    }
+    repr.buildMemberStore(builder, scaffold, member, insn.result);
     if bbJoin != () {
         builder.br(bbJoin);
         builder.positionAtEnd(bbJoin);
@@ -373,7 +379,9 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
     t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingReg.semType);
-    // SUBSET different field types can lead to inexact projection
+    // Note that we do not need to check the exactness of the mapping value, nor do we need
+    // to check the exactness of the member type: buildWideRepr does all that is necessary.
+    // See exact.md for more details.
     llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(rf),
                                    [
                                        builder.load(scaffold.address(mappingReg)),
