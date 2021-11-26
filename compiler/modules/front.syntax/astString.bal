@@ -318,12 +318,12 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         typeDescToWords(w, td.td);
     }
     else if td is XmlSequenceTypeDesc {
-        w.push("xml<", CLING);
+        w.push("xml", CLING, "<", CLING);
         typeDescToWords(w, td.constituent);
         w.push(CLING, ">");
     }
     else {
-        w.push("function(", CLING);
+        w.push("function", CLING, "(", CLING);
         boolean comma = false;
         foreach var param in td.params {
             if comma {
