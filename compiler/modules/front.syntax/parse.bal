@@ -210,6 +210,6 @@ public function defnLocation(ModuleLevelDefn defn) returns d:Location {
     return d:location(defn.part.file, defn.namePos);
 }
 
-public function locationInDefn(ModuleLevelDefn defn, Position? pos = ()) returns d:Location {
+public function locationInDefn(ModuleLevelDefn defn, Position pos) returns d:Location {
     return d:location(defn.part.file, pos);
 }

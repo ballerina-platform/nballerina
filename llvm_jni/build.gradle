@@ -86,7 +86,7 @@ testBuild.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyDriverOutput, copyLoc
 
 task balCompile(type: Exec) {
         workingDir tmpBuildDir
-        commandLine 'bal', 'build', '--offline' , '--skip-tests'
+        commandLine 'bal', 'build', '--offline'
 }
 balCompile.dependsOn(copyNbal, copyJNILLVM, copyDriver, copyDriverOutput, copyLocalDependencies, copyBalConfig)
 
@@ -115,7 +115,7 @@ cleanBuildArtificats.mustRunAfter(buildWithRuntime)
 
 task buildNBalCompilerBase(type: Exec) {
         workingDir compilerDir
-        commandLine 'bal', 'build', '--skip-tests'
+        commandLine 'bal', 'build'
 }
 
 

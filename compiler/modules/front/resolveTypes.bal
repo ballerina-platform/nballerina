@@ -168,7 +168,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             map<s:FieldDesc> fieldsByName = {};
             foreach var fd in td.fields {
                 if fieldsByName[fd.name] != () {
-                    return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn));
+                    return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn, fd.startPos));
                 }
                 fieldsByName[fd.name] = fd;
             }
@@ -206,7 +206,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return err:semantic(`reference to non-type ${td.typeName} in type-descriptor`, s:locationInDefn(modDefn, td.pos));
         }
         else {
-            ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix)).defns[td.typeName];
+            ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix, td.startPos)).defns[td.typeName];
             if defn is t:SemType {
                 return defn;
             }

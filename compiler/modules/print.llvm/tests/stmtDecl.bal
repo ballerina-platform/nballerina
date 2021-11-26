@@ -1,4 +1,3 @@
-import ballerina/file;
 import ballerina/test;
 
 function stmtDecl() returns Module {
@@ -21,6 +20,5 @@ function stmtDecl() returns Module {
 
 @test:Config {}
 function testStmtDecl() returns error? {
-    string expectedOutput = check file:joinPath(file:getCurrentDir(), "modules", "print.llvm", "tests", "testOutputs", "stmt_decl.ll");
     return runTest(stmtDecl, "stmt_decl.ll");
 }

@@ -361,7 +361,7 @@ function lExprToWords(Word[] w, LExpr expr) {
         if prefix != () {
             w.push(prefix, ":", CLING);
         }
-        w.push(expr.varName);
+        w.push(expr.name);
     }
     else if expr is MemberAccessLExpr {
         lExprToWords(w, expr.container);
@@ -537,7 +537,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         if prefix != () {
             w.push(prefix, ":", CLING);
         }
-        w.push(expr.varName);
+        w.push(expr.name);
     }
 }
 

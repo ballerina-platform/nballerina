@@ -25,6 +25,9 @@ hs_err_pid*
 # Ballerina build dir
 target
 
+# top level build dir
+build/
+
 # Emacs backup files
 *~
 

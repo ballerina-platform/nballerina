@@ -54,7 +54,7 @@ r1[r2] = r3
 Clearing the exact bit here happens for the get before storing the tagged pointer in r3, and for the set before the value of r3 is stored.
 For both get and set, there are two cases when the exact bit needs to be cleared:
 
-- if the tagged pointer for r1 is not exact, and
+- if the tagged pointer for r1 is not exact, or
 - if the type of r2 is not an _exact key type_ for the type of r1
 
 When S is a structure type and K is a key type for that structure type, define `S[K]` to be the projection of S for K i.e. the type of an expression `s[k]` when s has type S and k has type K.

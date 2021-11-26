@@ -65,6 +65,24 @@ final RuntimeFunction mappingConstructFunction = {
     attrs: []
 };
 
+final RuntimeFunction taggedMemberClearExactAnyFunction = {
+    name: "tagged_member_clear_exact_any",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readnone"]
+};
+
+final RuntimeFunction taggedMemberClearExactPtrFunction = {
+    name: "tagged_member_clear_exact_ptr",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readnone"]
+};
+
 const LLVM_INDEX = "i32";
 
 type ListRepr readonly & object {
@@ -305,10 +323,39 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
         rf = mappingIndexedGetFunction;
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
-    // SUBSET this can widen leading to inexactness when mapping member types are not bitsets
-    llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf),
-                                                [builder.load(scaffold.address(mappingReg)), k]);
-    buildStoreTagged(builder, scaffold, value, insn.result);
+    llvm:Value mapping = builder.load(scaffold.address(mappingReg));
+    llvm:Value member = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [mapping, k]);
+    t:SemType resultType = insn.result.semType;
+    if isPotentiallyExact(resultType) {
+        if !isMappingMemberTypeExact(scaffold.typeContext(), mappingReg.semType, keyOperand, resultType) {
+            member = buildClearExact(builder, scaffold, member, resultType);
+        }
+        else {
+            member = buildMemberClearExact(builder, scaffold, mapping, member, resultType);
+        }
+    }
+    buildStoreTagged(builder, scaffold, member, insn.result);
+}
+
+function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:StringOperand keyOperand, t:SemType resultType) returns boolean {
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
+    if mat == () {
+        return false;
+    }
+    else {
+        if keyOperand is string || mat.names.length() == 0 {
+            return true;
+        }
+        // SUBSET singleton types
+        t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
+        foreach t:SemType ty in mat.types {
+            t:SemType peMember = t:intersect(ty, POTENTIALLY_EXACT);
+            if !t:isNever(peMember) && !t:isSameType(tc, peMember, peResult) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
@@ -344,6 +391,11 @@ function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperan
         }
     }
     return ();
+}
+
+function buildMemberClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value structure, llvm:Value member, t:SemType sourceType) returns llvm:Value {
+    RuntimeFunction rf = overloadsExactBit(sourceType) ? taggedMemberClearExactAnyFunction : taggedMemberClearExactPtrFunction;
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [structure, member]);
 }
 
 function buildCheckError(llvm:Builder builder, Scaffold scaffold, llvm:Value err, bir:Position pos) {

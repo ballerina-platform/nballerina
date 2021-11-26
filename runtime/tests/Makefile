@@ -7,7 +7,7 @@ TESTPROG_PROF_RAW=$(addsuffix .profraw, $(TESTPROGS))
 TESTPROG_PROF = test.profdata
 TESTPROG_EXE=$(addprefix -object ./, $(TESTPROGS))
 SHELL=/bin/bash
-
+TESTLIB=$(addprefix ../,$(LL_BCS) $(LIB))
 all: $(TESTPROGS)
 
 test: $(TESTPROG_STAMPS)
@@ -43,14 +43,14 @@ inlinert_%: inlinert_%.bc
 	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)
 
 $(filter error%, $(TESTPROGS)): error%: error%.c
-	$(CLANG) -g -o ./$@ $< ../$(LIB)
+	$(CLANG) -g -o ./$@ $< $(TESTLIB)
 
 $(filter-out error%, $(TESTPROGS)): %: %.c
-	$(CLANG) $(CFLAGS) -o ./$@ $< ../$(LIB)	
+	$(CLANG) $(CFLAGS) -o ./$@ $< $(TESTLIB)
 
 clean:
 	-rm -f $(TESTPROGS) $(TESTPROG_STAMPS) $(TESTPROG_PROF_RAW) $(TESTPROG_PROF)
 
-$(TESTPROGS): ../balrt.h ../$(LIB)
+$(TESTPROGS): ../balrt.h $(TESTLIB)
 
 .PHONY: all test clean

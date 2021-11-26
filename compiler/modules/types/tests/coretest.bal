@@ -132,7 +132,6 @@ function tupleTest3() {
     Env env = new;
     SemType z1 = tuple(env);
     SemType z2 = tuple(env);
-    SemType t = tuple(env, INT);
     test:assertTrue(!isEmpty(typeContext(env), z1));
     test:assertTrue(isSubtype(typeContext(env), z1, z2));
     test:assertTrue(isEmpty(typeContext(env), diff(z1, z2)));
