@@ -13,7 +13,7 @@ $(COMPILER_JAR): $(COMPILER_SRC)
 
 clean:
 	$(BAL) clean
-	rm -rf $(COMPILER_OUT)
+	-rm -rf ../build
 
 .PHONY: all test clean
 
