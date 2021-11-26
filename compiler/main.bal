@@ -39,8 +39,12 @@ public function main(string[] filenames, *Options opts) returns error? {
         if filenames.length() > 1 {
             return error("multiple input files not supported with --showTypes");
         }
-        check printDiagnostic(showTypes([{ filename: filenames[0] }]));
-        return;
+        CompileError? err = showTypes([{ filename: filenames[0] }]);
+        if err is err:Diagnostic {
+            printDiagnostic(err);
+            return error(""); // we don't need to show any thing for this error because printDiagnostic already does i;
+        }
+        return err;
     }
     nback:Options nbackOptions = {
         gcName: check nback:validGcName(opts.gc),
