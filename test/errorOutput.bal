@@ -1,30 +1,9 @@
 import ballerina/io;
 import ballerina/file;
-import ballerina/regex;
 
 public function main() {
-    string[] logPaths = checkpanic getLogPaths();
-    ErrorLog[] logs = [];
-    foreach string path in logPaths {
-        logs.push(checkpanic  parseLog(path));
-    }
-    checkpanic io:fileWriteLines("errorOutput.html", checkpanic generateOutput(logs));
-}
-
-function getLogPaths() returns string[]|io:Error|file:Error {
-    string[] paths = [];
-    foreach var collection in check file:readDir("./out") {
-        if !check file:test(collection.absPath, file:IS_DIR) {
-            continue;
-        }
-        string errLogPath = check file:joinPath(collection.absPath, "err_logs");
-        if check file:test(errLogPath, file:IS_DIR) {
-            foreach var log in check file:readDir(errLogPath) {
-                paths.push(log.absPath);
-            }
-        }
-    }
-    return paths;
+    ErrorLog[] logs = checkpanic parseLogs("error_log.log");
+    checkpanic io:fileWriteLines("./out/errorOutput.html", checkpanic generateOutput(logs));
 }
 
 type ErrorLog record {|
@@ -34,18 +13,39 @@ type ErrorLog record {|
     string[] errorLines;
 |};
 
-function parseLog(string logPath) returns ErrorLog|error {
+function parseLogs(string logPath) returns ErrorLog[]|error {
     string[] lines = check io:fileReadLines(logPath);
-    string[] data = regex:split(lines[0], ":");
-    string errorMessage = "".'join(...data.slice(4, data.length()));
-    string filePath = check parseFilePath(data[0]);
-    Location startLoc = [check int:fromString(data[1]), check int:fromString(data[2])];
-    string[] errorLines = check getErrorLines(filePath, startLoc);
-    return { filePath, lines, errorMessage, errorLines };
+    ErrorLog[] logs = [];
+    int i = 0;
+    while i < lines.length()-1 {
+        string dataLine = lines[i];
+        i+=2; // skip the next line
+        ErrorMessage m = check parseErrorMessage(dataLine);
+        logs.push({ filePath: m.filePath, lines: lines.slice(i, i+1), errorMessage: m.body, errorLines: check getErrorLines(m.filePath, m.startLoc) });
+    }
+    return logs;
+}
+
+type ErrorMessage record {|
+    string filePath;
+    string body;
+    Location startLoc;
+|};
+
+function parseErrorMessage(string errMessage) returns ErrorMessage|error {
+    int filePathEnd = <int> errMessage.indexOf(":");
+    string filePath = check parseFilePath(errMessage.substring(0, filePathEnd));
+    int lineEnd = <int> errMessage.indexOf(":", filePathEnd+1);
+    int line = check int:fromString(errMessage.substring(filePathEnd+1, lineEnd));
+    int ColumnEnd = <int> errMessage.indexOf(":", lineEnd+1);
+    int column = check int:fromString(errMessage.substring(lineEnd+1, ColumnEnd));
+    Location startLoc = [line, column];
+    string body = errMessage.substring(ColumnEnd+1);
+    return { filePath, body, startLoc };
 }
 
 function parseFilePath(string relativePath) returns string|file:Error {
-    string filePath = check file:normalizePath((check file:joinPath(file:getCurrentDir(), relativePath.substring(5))), file:CLEAN);
+    string filePath = check file:normalizePath((check file:joinPath(file:getCurrentDir(), relativePath)), file:CLEAN);
     return filePath;
 }
 
