@@ -1,7 +1,7 @@
 // @productions is-expr string list-constructor-expr if-else-stmt local-var-decl-stmt int-literal
 import ballerina/io;
 
-type IS (int|string);
+type IS (int|string)[];
 
 public function main() {
     IS v = [1];

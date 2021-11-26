@@ -1,5 +1,3 @@
-import wso2/nballerina.comm.err;
-
 // join words without space
 const CLING = ();
 // line feed
@@ -61,12 +59,12 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
     }
     w.push("function");
     w.push(func.name, CLING, "(");
-    foreach int i in 0 ..< func.typeDesc.args.length() {
+    foreach int i in 0 ..< func.params.length() {
         if i != 0 {
             w.push(",");
         }
-        typeDescToWords(w, func.typeDesc.args[i]);
-        w.push(func.paramNames[i]);
+        typeDescToWords(w, func.params[i].td);
+        w.push(func.params[i].name);
     }
     w.push(")");
     TypeDesc funcRetTd = func.typeDesc.ret;
@@ -101,7 +99,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
             w.push("final");
         }
         typeDescToWords(w, stmt.td);
-        string? varName = stmt.varName;
+        var varName = stmt.name;
         if varName is WILDCARD {
             w.push("_");
         }
@@ -199,7 +197,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
     }
     else if stmt is ForeachStmt {
         w.push("foreach", "int");
-        w.push(stmt.varName);
+        w.push(stmt.name);
         w.push("in");
         exprToWords(w, stmt.range.lower, true);
         w.push("..<");
@@ -326,9 +324,35 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is SingletonTypeDesc {
         valueToWords(w, td.value);
     }
+    else if td is UnaryTypeDesc {
+        w.push(td.op, CLING);
+        typeDescToWords(w, td.td);
+    }
+    else if td is XmlSequenceTypeDesc {
+        w.push("xml", CLING, "<", CLING);
+        typeDescToWords(w, td.constituent);
+        w.push(CLING, ">");
+    }
     else {
-        panic err:impossible(`typedesc not implemented in typeDescToWords: ${td.toString()}`);
-    }   
+        w.push("function", CLING, "(", CLING);
+        boolean comma = false;
+        foreach var param in td.params {
+            if comma {
+                w.push(",");
+            }
+            typeDescToWords(w, param.td);
+            if param.name != () {
+                w.push(param.name, CLING);
+            }
+            comma = true;
+        }
+        w.push(")");
+        TypeDesc ret = td.ret;
+        if ret !is BuiltinTypeDesc || ret.builtinTypeName != "null" {
+            w.push("returns");
+            typeDescToWords(w, ret);
+        }
+    }
 }
 
 function exprsToWords(Word[] w, Expr[] exprs) {
@@ -348,7 +372,7 @@ function lExprToWords(Word[] w, LExpr expr) {
         if prefix != () {
             w.push(prefix, ":", CLING);
         }
-        w.push(expr.varName);
+        w.push(expr.name);
     }
     else if expr is MemberAccessLExpr {
         lExprToWords(w, expr.container);
@@ -524,7 +548,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         if prefix != () {
             w.push(prefix, ":", CLING);
         }
-        w.push(expr.varName);
+        w.push(expr.name);
     }
 }
 

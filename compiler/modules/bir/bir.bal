@@ -134,13 +134,18 @@ public type Register readonly & record {|
     int number;
     SemType semType;
     string? varName;
+    Position? pos;
 |};
 
-public function createRegister(FunctionCode code, SemType semType, string? varName = ()) returns Register {
+public function createRegister(FunctionCode code, SemType semType, string? varName = (), Position? pos = ()) returns Register {
     int number = code.registers.length();
-    Register r = { number, semType, varName };
+    Register r = { number, semType, varName, pos };
     code.registers.push(r);
     return r;
+}
+
+public function getRegister(FunctionCode code, int registerNum) returns Register {
+    return code.registers[registerNum];
 }
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";

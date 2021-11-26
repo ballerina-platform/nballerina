@@ -185,11 +185,11 @@ function parseFunctionDefinition(Tokenizer tok, ModulePart part, Visibility vis,
     check tok.advance();
     Position namePos = tok.currentStartPos();
     string name = check tok.expectIdentifier();
-    string[] paramNames = [];
-    FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, paramNames);
+    FunctionParam [] params = [];
+    FunctionTypeDesc typeDesc = check parseFunctionTypeDesc(tok, params);
     StmtBlock body = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
-    FunctionDefn defn = { startPos, endPos, name, vis, paramNames, typeDesc, namePos, body, part };
+    FunctionDefn defn = { startPos, endPos, params, typeDesc, name, vis, namePos, body, part };
     return defn;
 }
 
@@ -210,6 +210,6 @@ public function defnLocation(ModuleLevelDefn defn) returns d:Location {
     return d:location(defn.part.file, defn.namePos);
 }
 
-public function locationInDefn(ModuleLevelDefn defn, Position? pos = ()) returns d:Location {
+public function locationInDefn(ModuleLevelDefn defn, Position pos) returns d:Location {
     return d:location(defn.part.file, pos);
 }

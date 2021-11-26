@@ -50,6 +50,7 @@ const TYPE_KIND_PRECOMPUTED = "precomputed";
 type TypeKindArrayOrMap TYPE_KIND_ARRAY|TYPE_KIND_MAP;
 type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED;
 
+type ListAccessors (llvm:FunctionDecl|llvm:ConstPointerValue)[];
 type InitModuleContext record {|
     llvm:Context llContext;
     llvm:Module llMod;
@@ -61,8 +62,7 @@ type InitModuleContext record {|
     table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
     InitTypes llTypes;
     map<llvm:FunctionDecl> typeTestFuncs = {};
-    llvm:FunctionDecl? listSetFunc = ();
-    llvm:FunctionDecl? listGetFunc = ();
+    ListAccessors? genericListAccessors = ();
     // subtype definitions cannot be completed before inherent types are complete,
     // because precomputed subtypes need to know all inherent types
     boolean inherentTypesComplete;
@@ -162,7 +162,13 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
 }
 
 function addArrayInherentTypeDefn(InitModuleContext cx, string symbol, int tid, t:SemType memberType) returns [llvm:StructType, llvm:ConstPointerValue] {
-    llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt(LLVM_TID, tid), getListGetFunc(cx), getListSetFunc(cx), getMemberType(cx, memberType)]);
+    ListAccessors accessors = getListAccessors(cx, typeToListRepr(memberType));
+    llvm:Value[] initStructValues = [llvm:constInt(LLVM_TID, tid)];
+    foreach var funcDecl in accessors {
+        initStructValues.push(funcDecl);
+    }
+    initStructValues.push(getMemberType(cx, memberType));
+    llvm:ConstValue initValue = cx.llContext.constStruct(initStructValues);
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llListDescType, symbol, initializer=initValue, isConstant=true);
     return [llListDescType, ptr];
 }
@@ -358,28 +364,35 @@ function createRecordSubtypeStruct(InitModuleContext cx, string[] fieldNames, t:
     };
 }
 
-function getListSetFunc(InitModuleContext cx) returns llvm:FunctionDecl {
-    llvm:FunctionDecl? existing = cx.listSetFunc;
-    if existing == () {
-        llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol("list_set"), llListSetFuncType);
-        cx.listSetFunc = decl;
-        return decl;
+function getListAccessors(InitModuleContext cx, ListRepr repr) returns ListAccessors {
+    if repr.isSpecialized {
+        return createListAccessor(cx, repr.rtFuncSuffix);
     }
     else {
-        return existing;
+        ListAccessors? existing = cx.genericListAccessors;
+        if existing == () {
+            ListAccessors a = createListAccessor(cx, repr.rtFuncSuffix);
+            cx.genericListAccessors = a;
+            return a;
+        }
+        else {
+            return existing;
+        }
     }
 }
 
-function getListGetFunc(InitModuleContext cx) returns llvm:FunctionDecl {
-    llvm:FunctionDecl? existing = cx.listGetFunc;
-    if existing == () {
-        llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol("list_get"), llListGetFuncType);
-        cx.listGetFunc = decl;
-        return decl;
+function createListAccessor(InitModuleContext cx, string?[] rtFuncSuffix) returns ListAccessors {
+    ListAccessors result = [];
+    foreach int i in 0 ..< rtFuncSuffix.length() {
+        string? funcSuffix = rtFuncSuffix[i];
+        if funcSuffix != () {
+            result.push(cx.llMod.addFunctionDecl(mangleRuntimeSymbol("list_" + funcSuffix), llListDescFuncs[i]));
+        }
+        else {
+            result.push(llvm:constNull(llListDescFuncPtrs[i]));
+        }
     }
-    else {
-        return existing;
-    }
+    return result;
 }
 
 function getSubtypeContainsFunc(InitModuleContext cx, TypeKind tk) returns llvm:FunctionDecl {

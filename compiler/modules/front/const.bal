@@ -19,9 +19,9 @@ type SimpleConst string|int|float|boolean|();
 type FoldError ResolveTypeError;
 
 type FoldContext object {
-    function semanticErr(d:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic;
+    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
-    function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError;
+    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError;
     function typeContext() returns t:Context;
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
     function isConstDefn() returns boolean;
@@ -36,12 +36,12 @@ class ConstFoldContext {
         self.defn = defn;
         self.mod = mod;
     }
-    
-    function semanticErr(d:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
+
+    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic {
         return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, defnName=self.defn.name);
     }
 
-    function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
+    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError {
         if prefix != () {
             return lookupImportedConst(self.mod, self.defn, prefix, varName);
         }
@@ -51,10 +51,10 @@ class ConstFoldContext {
             return resolved[1];
         }
         else if defn == () {
-            return self.semanticErr(`${varName} is not defined`);
+            return self.semanticErr(`${varName} is not defined`, pos);
         }
         else {
-            return self.semanticErr(`reference to ${varName} not defined with const`);
+            return self.semanticErr(`reference to ${varName} not defined with const`, pos);
         }
     }
 
@@ -256,7 +256,7 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
             return foldedBinaryConstExpr(f, t:FLOAT, leftExpr, rightExpr);
         }
         else {
-            return cx.semanticErr(`invalid operand types for ${expr.arithmeticOp}`);
+            return cx.semanticErr(`invalid operand types for ${expr.arithmeticOp}`, expr.opPos);
         }
     }
     expr.left = leftExpr;
@@ -278,7 +278,7 @@ function foldBinaryBitwiseExpr(FoldContext cx, t:SemType? expectedType, s:Binary
                 multiSemType: foldedBinaryBitwiseType(expr.bitwiseOp, left, leftExpr.multiSemType, right, rightExpr.multiSemType)
             };
         }
-        return cx.semanticErr(`invalid operand types for ${expr.bitwiseOp}`);
+        return cx.semanticErr(`invalid operand types for ${expr.bitwiseOp}`, expr.opPos);
     }
     expr.left = leftExpr;
     expr.right = rightExpr;
@@ -304,7 +304,7 @@ function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:Binar
             boolean equal = isExactEqual(leftExpr.value, rightExpr.value);
             boolean value = positive == equal;
             if !equal && !isEqual(leftExpr.value, rightExpr.value) && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
-                return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`);
+                return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`, expr.opPos);
             }
             return <s:ConstValueExpr> { startPos: expr.startPos, endPos: expr.endPos, value, multiSemType: t:BOOLEAN };
         }
@@ -314,7 +314,7 @@ function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:Binar
             boolean equal = isEqual(leftExpr.value, rightExpr.value);
             boolean value = positive == equal;
             if !equal && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
-                return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`);
+                return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`, expr.opPos);
             }
             return foldedBinaryConstExpr(value, t:BOOLEAN, leftExpr, rightExpr);
         }
@@ -379,7 +379,7 @@ function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:Bin
             // () behaves like NaN
             return foldedBinaryConstExpr(false, t:BOOLEAN, leftExpr, rightExpr);
         }
-        return cx.semanticErr(`invalid operand types for ${expr.relationalOp}`);
+        return cx.semanticErr(`invalid operand types for ${expr.relationalOp}`, expr.opPos);
     }
     expr.left = leftExpr;
     expr.right = rightExpr;
@@ -437,7 +437,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
         }
     }
     if subExpr is s:ConstValueExpr {
-        return cx.semanticErr(`invalid operand type for ${expr.op}`);
+        return cx.semanticErr(`invalid operand type for ${expr.op}`, expr.opPos);
     }
     expr.operand = subExpr;
     return expr;
@@ -508,7 +508,7 @@ function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, 
 }
 
 function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr expr) returns s:Expr|FoldError {
-    s:FLOAT_ZERO|t:Value? constValue = check cx.lookupConst(expr.prefix, expr.varName);
+    s:FLOAT_ZERO|t:Value? constValue = check cx.lookupConst(expr.prefix, expr.name, expr.namePos);
     if constValue == () {
         return expr;
     }

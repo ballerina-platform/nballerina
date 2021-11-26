@@ -15,15 +15,15 @@ class VerifyContext {
         t:Context tc  = mod.getTypeContext();
         self.tc = tc;
         self.defn = defn;
-        self.anydataType = createAnydata(tc.env);
+        self.anydataType = t:createAnydata(tc.env);
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
         return t:isSubtype(self.tc, s, t);
     }
 
-    function isSameType(t:SemType s, t:SemType t) returns boolean {
-        return s == t || (t:isSubtype(self.tc, s, t) && t:isSubtype(self.tc, t, s));
+    function isSameType(t:SemType t1, t:SemType t2) returns boolean {
+        return t:isSameType(self.tc, t1, t2);
     }
 
     function isEmpty(t:SemType t) returns boolean {
@@ -47,15 +47,6 @@ class VerifyContext {
     function symbolToString(Symbol sym) returns string {
         return self.mod.symbolToString(self.defn.partIndex, sym);
     }
-}
-
-// approximation for subset07
-function createAnydata(t:Env env) returns t:SemType {
-    t:ListDefinition listDef = new;
-    t:SemType arrayType = listDef.define(env, [], 0, t:SIMPLE_OR_STRING);
-    t:MappingDefinition mapDef = new;
-    t:SemType mapType = mapDef.define(env, [], t:SIMPLE_OR_STRING);
-    return t:union(t:SIMPLE_OR_STRING, t:union(arrayType, mapType));
 }
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns err:Semantic? {

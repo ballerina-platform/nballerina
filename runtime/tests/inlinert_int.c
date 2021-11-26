@@ -1,9 +1,6 @@
 #include "test_utils.h"
 #include "../balrt_inline.h"
 
-#define IMMEDIATE_INT_MIN -(1L << (TAG_SHIFT - 1))
-#define IMMEDIATE_INT_MAX  ((1L << (TAG_SHIFT - 1)) - 1)
-
 void testIntNilCmp() {
     TaggedPtr a = _bal_int_to_tagged(5);
     TaggedPtr b = _bal_int_to_tagged(IMMEDIATE_INT_MAX + 1);

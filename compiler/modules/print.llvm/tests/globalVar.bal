@@ -9,10 +9,10 @@ function globalVar() returns Module {
 
     PointerValue g = m.addGlobal("i64", "g1");
     PointerValue g2 = m.addGlobal("i64", "g2", addressSpace=2);
-    PointerValue g3 = m.addGlobal(const1Ty, "g3", isConstant=true, align=8, unnamedAddr=true, addressSpace=3, initializer=const1, linkage="internal");
-    PointerValue g4 = m.addGlobal("i64", "g4", isConstant=true, align=8, unnamedAddr=true, addressSpace=3, linkage="internal");
-    PointerValue g5 = m.addGlobal("i64", "g5", isConstant=true, addressSpace=3);
-    PointerValue g6 = m.addGlobal("i64", "g6", addressSpace=3, align=8);
+    _ = m.addGlobal(const1Ty, "g3", isConstant=true, align=8, unnamedAddr=true, addressSpace=3, initializer=const1, linkage="internal");
+    _ = m.addGlobal("i64", "g4", isConstant=true, align=8, unnamedAddr=true, addressSpace=3, linkage="internal");
+    _ = m.addGlobal("i64", "g5", isConstant=true, addressSpace=3);
+    _ = m.addGlobal("i64", "g6", addressSpace=3, align=8);
 
     ConstPointerValue g7 = m.addGlobal(const1Ty, "g7");
     m.setInitializer(g7, const1);
@@ -34,7 +34,6 @@ function testGlobalVar() returns error? {
 @test:Config {}
 function testRepeatedVarDecln() {
     Context context = new;
-    Builder builder = context.createBuilder();
     Module m = context.createModule();
     _ = m.addGlobal("i64", "g1");
     error|PointerValue e = trap m.addGlobal("i64", "g1");

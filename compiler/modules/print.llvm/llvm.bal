@@ -381,10 +381,10 @@ public class Module {
     private function escapeGlobalIdent(string name) returns string {
         string varName = escapeIdent(name);
         if varName is IntrinsicFunctionName {
-            panic err:illegalArgument("reserved intrinsic function name");
+            panic err:illegalArgument("reserved intrinsic function name : " + varName);
         }
         if self.globals.hasKey(varName) {
-            panic err:illegalArgument("this module already has a declaration by that name");
+            panic err:illegalArgument("this module already has a declaration by that name :" + varName);
         }
         return varName;
     }
