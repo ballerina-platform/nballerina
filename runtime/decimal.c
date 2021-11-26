@@ -1,5 +1,5 @@
 #include <string.h>
-
+#include <stdlib.h>
 #include "balrt.h"
 #include "third-party/decNumber/decQuad.h"
 
@@ -159,6 +159,12 @@ int64_t _bal_decimal_cmp(TaggedPtr tp1, TaggedPtr tp2) {
     else {
         return -1;
     }
+}
+
+double _bal_decimal_to_float(TaggedPtr tp) {
+    char dblStr[DECQUAD_String];
+    decQuadToString(taggedToDecQuad(tp), dblStr);
+    return strtod(dblStr, NULL);
 }
 
 TaggedPtr _bal_decimal_const(const char *decString) {
