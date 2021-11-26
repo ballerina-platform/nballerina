@@ -25,7 +25,7 @@ public type File readonly & object {
     public function filename() returns string;
     public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
-    public function getRange(Range|Position range) returns string[];
+    public function lineContent(Range|Position range) returns string[];
 };
 
 public type Location readonly & record {|
@@ -125,35 +125,27 @@ public function format(Diagnostic d) returns string[] {
     return errMessage;
 }
 
-function fileLines(File file, Range|Position range) returns string[] {
-    string[] lines = file.getRange(range);
-    string[] errMessage = [];
+function fileLines(File file, Range|Position range) returns [string, string] {
+    string[] lines = file.lineContent(range);
+    [string, string] errMessage = [];
     if range is Position {
-        errMessage.push(lines[0]);
+        errMessage[0] = lines[0];
         int column = file.lineColumn(range)[1];
-        errMessage.push(caretLine(column));
+        errMessage[1] = caretLine(column);
     }
     else {
         if lines.length() == 1 {
-            errMessage.push(lines[0]);
+            errMessage[0] = lines[0];
             int startColumn = file.lineColumn(range.startPos)[1];
             int endColumn = file.lineColumn(range.endPos)[1];
             int caretLen = endColumn - startColumn + 1;
-            errMessage.push(caretLine(startColumn, caretLen));
+            errMessage[1] = caretLine(startColumn, caretLen);
         }
         else {
             // multiline err
-            errMessage.push(lines[0]);
-            var [startLine, startColumn] = file.lineColumn(range.startPos);
-            var [endLine, endColumn] = file.lineColumn(range.endPos);
-            errMessage.push(caretLine(startColumn, lines[0].length() - startColumn));
-            foreach int i in startLine+1 ..< endLine {
-                string line = lines[i-(startLine+1)];
-                errMessage.push(line);
-                errMessage.push(caretLine(0, line.length()));
-            }
-            errMessage.push(lines[lines.length()-1]);
-            errMessage.push(caretLine(0, endColumn));
+            errMessage[0] = lines[0];
+            int startColumn = file.lineColumn(range.startPos)[1];
+            errMessage[1] = caretLine(startColumn, lines[0].length() - startColumn);
         }
     }
     return errMessage;

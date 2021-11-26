@@ -490,7 +490,7 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
-    public function getRange(d:Position|d:Range range) returns string[]{
+    public function lineContent(d:Position|d:Range range) returns string[]{
         string? dir = self.dir;
         string filePath = dir != () ? checkpanic file:joinPath(dir, self.fn) : self.fn;
         string[] lines = checkpanic io:fileReadLines(filePath);
