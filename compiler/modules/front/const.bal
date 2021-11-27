@@ -698,3 +698,4 @@ function booleanRelationalEval(s:BinaryRelationalOp op, boolean left, boolean ri
     }
     panic err:impossible();
 }
+
