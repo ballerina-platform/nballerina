@@ -19,7 +19,7 @@ type SimpleConst string|int|float|boolean|();
 type FoldError ResolveTypeError;
 
 type FoldContext object {
-    function semanticErr(d:Message msg, s:Position startPos, s:Position? endPos = (), error? cause = ()) returns err:Semantic;
+    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError;
     function typeContext() returns t:Context;
@@ -37,8 +37,8 @@ class ConstFoldContext {
         self.mod = mod;
     }
 
-    function semanticErr(d:Message msg, s:Position startPos, s:Position? endPos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=d:location(self.defn.part.file, startPos, endPos), cause=cause, defnName=self.defn.name);
+    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, defnName=self.defn.name);
     }
 
     function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError {
@@ -179,14 +179,14 @@ function selectMappingInherentType(FoldContext cx, t:SemType expectedType, s:Map
         where mappingAlternativeAllowsFields(alt, fieldNames)
         select alt;
     if alts.length() == 0 {
-        return cx.semanticErr("no applicable inherent type for mapping constructor", expr.startPos, expr.endPos);
+        return cx.semanticErr("no applicable inherent type for mapping constructor", pos=expr.startPos);
     }
     else if alts.length() > 1 {
-        return cx.semanticErr("ambiguous inherent type for mapping constructor", expr.startPos, expr.endPos);
+        return cx.semanticErr("ambiguous inherent type for mapping constructor", pos=expr.startPos);
     }
     t:SemType semType = alts[0].semType;
     if t:mappingAtomicTypeRw(tc, semType) == () {
-        return cx.semanticErr("appplicable type for mapping constructor is not atomic", expr.startPos, expr.endPos);
+        return cx.semanticErr("appplicable type for mapping constructor is not atomic", pos=expr.startPos);
     }
     return semType;
 }
@@ -216,7 +216,7 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
                 return foldedBinaryConstExpr(result, t:INT, leftExpr, rightExpr);
             }
             else {
-                return cx.semanticErr(`evaluation of int constant ${expr.arithmeticOp} expression failed`, startPos=expr.opPos, cause=result);
+                return cx.semanticErr(`evaluation of int constant ${expr.arithmeticOp} expression failed`, pos=expr.opPos, cause=result);
             }
         }
         else if left is string && right is string && expr.arithmeticOp == "+" {
@@ -412,7 +412,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
                 SimpleConst operand = subExpr.value;
                 if operand is int {
                     if operand == int:MIN_VALUE {
-                        return cx.semanticErr(`${"-"} applied to minimum integer value`, expr.opPos);
+                        return cx.semanticErr(`${"-"} applied to minimum integer value`, pos=expr.opPos);
                     }
                     return foldedUnaryConstExpr(-operand, t:INT, subExpr);
                 }
@@ -453,7 +453,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
             if value is float {
                 int|error converted = trap <int>value;
                 if converted is error {
-                    return cx.semanticErr(`cannot convert ${value} to int`, expr.opPos);
+                    return cx.semanticErr(`cannot convert ${value} to int`, pos = expr.opPos);
                 }
                 else {
                     value = converted;
@@ -466,7 +466,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
             }
         }
         if !t:containsConst(semType, value) {
-            return cx.semanticErr(`type cast will always fail`, expr.opPos);
+            return cx.semanticErr(`type cast will always fail`, pos=expr.opPos);
         }
         if toNumType != () && value != subExpr.value {
             return foldedUnaryConstExpr(value, toNumType, subExpr);
@@ -524,7 +524,7 @@ function foldFloatLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiter
         return { startPos: expr.startPos, endPos: expr.endPos, value: result };
     }
     else {
-        return cx.semanticErr("invalid float literal", cause=result, startPos=expr.startPos);
+        return cx.semanticErr("invalid float literal", cause=result, pos=expr.startPos);
     }
 }
 
@@ -543,7 +543,7 @@ function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLitera
         return { startPos: expr.startPos, endPos: expr.endPos, value: result };
     }
     else {
-        return cx.semanticErr("invalid " + ty + " literal", cause=result, startPos=expr.startPos);
+        return cx.semanticErr("invalid " + ty + " literal", cause=result, pos=expr.startPos);
     }
 }
 
@@ -698,4 +698,3 @@ function booleanRelationalEval(s:BinaryRelationalOp op, boolean left, boolean ri
     }
     panic err:impossible();
 }
-
