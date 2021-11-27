@@ -11,6 +11,7 @@ type CompileError err:Diagnostic|io:Error|file:Error;
 public type Options record {
     boolean testJsonTypes = false;
     boolean showTypes = false;
+    boolean errorReport = false;
     int? debugLevel;
     // outDir also implies treating each file as a separate module
     string? outDir = ();
@@ -46,13 +47,19 @@ public function main(string[] filenames, *Options opts) returns error? {
         gcName: check nback:validGcName(opts.gc),
         debugLevel: check nback:validDebugLevel(opts.debugLevel)
     };
-    int errorFileCount = 0;
+    err:Diagnostic[] diagnosticErr = [];
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            CompileError? err = printDiagnostic(compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts));
+            CompileError? err;
+            if opts.errorReport {
+                err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            }
+            else {
+                err = printDiagnostic(compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts));
+            }
             if err is err:Diagnostic {
-                errorFileCount += 1;
+                diagnosticErr.push(err);
             }
             // JBUG: #34014
             // can't use else { check err; }
@@ -70,6 +77,10 @@ public function main(string[] filenames, *Options opts) returns error? {
             return error(d:messageFormat(`unsupported extension ${ext}`));
         }
     }
+    if opts.errorReport {
+        check outputErrorReport(diagnosticErr, "errorReport.html");
+    }
+    int errorFileCount = diagnosticErr.length();
     if errorFileCount != 0 {
         string files = errorFileCount == 1 ? "file" : "files";
         return error(string `compilation of ${errorFileCount} ${files} failed`);
