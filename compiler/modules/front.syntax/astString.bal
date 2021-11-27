@@ -289,9 +289,9 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         w.push(CLING);
         SimpleConstExpr? length = td.length;
         if length != () {
-            w.push("[", CLING);
+            w.push("[");
             exprToWords(w, length);
-            w.push(CLING, "]");
+            w.push("]");
         }
         else {
             w.push("[", "]");
