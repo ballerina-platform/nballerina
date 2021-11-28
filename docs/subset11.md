@@ -370,7 +370,7 @@ Two kinds of `import` are supported.
 
 ## Additions from subset 10
 
-* Restrictions on unions have been removed.
+* Types can be nested arbitrarily: any supported type descriptors can be used for a member of an array, record or mapping type descriptors. This includes recursive types.
 
 ## Implemented spec changes since 2021R1
 
