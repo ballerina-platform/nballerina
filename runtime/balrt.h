@@ -128,6 +128,7 @@ typedef struct {
     double (*getFloat)(TaggedPtr lp, int64_t index);
     PanicCode (*setFloat)(TaggedPtr lp, int64_t index, double val);
     MemberType memberType;
+    StructureDescPtr fillerDesc;
 } ListDesc, *ListDescPtr;
 
 // Extends Structure

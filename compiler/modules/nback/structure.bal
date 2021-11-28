@@ -87,7 +87,6 @@ const LLVM_INDEX = "i32";
 
 type ListRepr readonly & object {
     llvm:Type memberType;
-    string?[] rtFuncSuffix;
     int listDescGetIndex;
     int listDescSetIndex;
     boolean isSpecialized;
@@ -95,56 +94,47 @@ type ListRepr readonly & object {
     function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg);
 };
 
-final ListRepr listGenericRepr = object {
-    llvm:Type memberType = LLVM_TAGGED_PTR;
-    string?[] rtFuncSuffix = ["generic_get_tagged", "generic_set_tagged", "generic_get_int", "generic_set_int", "generic_get_float", "generic_set_float"];
-    int listDescGetIndex = 1;
-    int listDescSetIndex = 2;
-    boolean isSpecialized = false;
-    function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
-        return buildWideRepr(builder, scaffold, member, REPR_ANY, memberType);
-    }
-    function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
-        return buildStoreTagged(builder, scaffold, value, reg);
-    }
-};
-
-final ListRepr listIntArrayRepr = object {
-    llvm:Type memberType = LLVM_INT;
-    string?[] rtFuncSuffix = ["int_array_get_tagged", "int_array_set_tagged", "int_array_get_int", "int_array_set_int", (), "int_array_set_float"];
-    int listDescGetIndex = 3;
-    int listDescSetIndex = 4;
-    boolean isSpecialized = true;
-    function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
-        return buildInt(builder, scaffold, <bir:IntOperand>member);
-    }
-    function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
-        return buildStoreInt(builder, scaffold, value, reg);
-    }
-};
-
-final ListRepr listFloatArrayRepr = object {
-    llvm:Type memberType = LLVM_DOUBLE;
-    string?[] rtFuncSuffix = ["float_array_get_tagged", "float_array_set_tagged", (), "float_array_set_int", "float_array_get_float", "float_array_set_float"];
-    int listDescGetIndex = 5;
-    int listDescSetIndex = 6;
-    boolean isSpecialized = true;
-    function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
-        return buildFloat(builder, scaffold, <bir:FloatOperand>member);
-    }
-    function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
-        return buildStoreFloat(builder, scaffold, value, reg);
+final readonly & map<ListRepr> listReprs = {
+    generic: object {
+        llvm:Type memberType = LLVM_TAGGED_PTR;
+        int listDescGetIndex = 1;
+        int listDescSetIndex = 2;
+        boolean isSpecialized = false;
+        function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
+            return buildWideRepr(builder, scaffold, member, REPR_ANY, memberType);
+        }
+        function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+            return buildStoreTagged(builder, scaffold, value, reg);
+        }
+    },
+    int_array: object {
+        llvm:Type memberType = LLVM_INT;
+        int listDescGetIndex = 3;
+        int listDescSetIndex = 4;
+        boolean isSpecialized = true;
+        function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
+            return buildInt(builder, scaffold, <bir:IntOperand>member);
+        }
+        function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+            return buildStoreInt(builder, scaffold, value, reg);
+        }
+    },
+    float_array: object {
+        llvm:Type memberType = LLVM_DOUBLE;
+        int listDescGetIndex = 5;
+        int listDescSetIndex = 6;
+        boolean isSpecialized = true;
+        function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
+            return buildFloat(builder, scaffold, <bir:FloatOperand>member);
+        }
+        function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+            return buildStoreFloat(builder, scaffold, value, reg);
+        }
     }
 };
 
-function typeToListRepr(t:SemType bitSet) returns ListRepr {
-    if bitSet == t:INT {
-        return listIntArrayRepr;
-    }
-    else if bitSet == t:FLOAT {
-        return listFloatArrayRepr;
-    }
-    return listGenericRepr;
+function memberTypeToListRepr(t:SemType memberType) returns ListRepr {
+    return listReprs.get(memberTypeToListReprPrefix(memberType));
 }
 
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
@@ -163,7 +153,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 
         // Cases that are not arrays should have been filtered out before
         t:SemType memberType = <t:SemType>t:arrayMemberType(scaffold.typeContext(), listType);
-        ListRepr repr = typeToListRepr(memberType);
+        ListRepr repr = memberTypeToListRepr(memberType);
         array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberType, 0)));
         foreach int i in 0 ..< length {
             builder.store(check repr.buildMember(builder, scaffold, insn.operands[i], memberType),
@@ -196,7 +186,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
 
     llvm:BasicBlock? bbJoin = ();
     t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
-    ListRepr repr = typeToListRepr(memberType);
+    ListRepr repr = memberTypeToListRepr(memberType);
     if repr.isSpecialized {
         bbJoin = buildSpecializedListGet(builder, scaffold, taggedStruct, struct, index, repr, insn.result);
     }
@@ -240,7 +230,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     llvm:BasicBlock? bbJoin = ();
     t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
     llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
-    ListRepr repr = typeToListRepr(memberType);
+    ListRepr repr = memberTypeToListRepr(memberType);
     if repr.isSpecialized {
         llvm:Value val = check repr.buildMember(builder, scaffold, insn.operands[2], memberType);
         bbJoin = check buildSpecializedListSet(builder, scaffold, taggedStruct, struct, index, repr.memberType, val);
