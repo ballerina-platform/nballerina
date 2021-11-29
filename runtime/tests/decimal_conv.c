@@ -104,8 +104,46 @@ void testFloatToDec() {
     validateFloatToDecPanic(NAN, PANIC_INVALID_DECIMAL);
 }
 
+void validateDecToIntNonOverflow(const char *decStr, int64_t val) {
+    DecToIntResult res = _bal_decimal_to_int(_bal_decimal_const(decStr));
+    assert(res.val == val);
+    assert(!res.overflow);
+}
+
+void validateDecToIntOverflow(const char *decStr) {
+    DecToIntResult res = _bal_decimal_to_int(_bal_decimal_const(decStr));
+    assert(res.overflow);
+}
+
+void testDecToInt() {
+    validateDecToIntNonOverflow("1", 1);
+    validateDecToIntNonOverflow("0", 0);
+    validateDecToIntNonOverflow("-1", -1);
+    validateDecToIntNonOverflow("0.5", 0);
+    validateDecToIntNonOverflow("1.5", 2);
+    validateDecToIntNonOverflow("2.5", 2);
+    validateDecToIntNonOverflow("-0.5", 0);
+    validateDecToIntNonOverflow("-1.5", -2);
+    validateDecToIntNonOverflow("-2.5", -2);
+    validateDecToIntNonOverflow("1e2", 100);
+    validateDecToIntNonOverflow("1.5e2", 150);
+    validateDecToIntNonOverflow("-1.5e2", -150);
+    validateDecToIntNonOverflow("1.51e2", 151);
+    validateDecToIntNonOverflow("1.513e2", 151);
+    validateDecToIntNonOverflow("1.515e2", 152);
+    validateDecToIntNonOverflow("9223372036854775807", 9223372036854775807);
+    validateDecToIntNonOverflow("-9223372036854775808", -9223372036854775807L - 1);
+    validateDecToIntNonOverflow("1E-6143", 0);
+    validateDecToIntNonOverflow("-1E-6143", 0);
+    validateDecToIntOverflow("9223372036854775808");
+    validateDecToIntOverflow("-9223372036854775809");
+    validateDecToIntOverflow("9.999999999999999999999999999999999E6144");
+    validateDecToIntOverflow("-9.999999999999999999999999999999999E6144");
+}
+
 int main() {
     testDecToFloat();
     testIntToDec();
     testFloatToDec();
+    testDecToInt();
 }

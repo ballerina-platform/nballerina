@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -213,6 +214,35 @@ TaggedPtrPanicCode _bal_decimal_from_float(double val) {
     decQuadReduce(&dTrim, &d, &cx);
     result.ptr = createDecimal(&dTrim);
     return result;
+}
+
+DecToIntResult _bal_decimal_to_int(TaggedPtr tp) {
+    decQuad dQuantize;
+    decQuad dZero;
+    decQuadZero(&dZero);
+    decContext cx;
+    initContext(&cx);
+    decQuadQuantize(&dQuantize, taggedToDecQuad(tp), &dZero, &cx);
+    DecToIntResult res;
+    if (cx.status & DEC_Invalid_operation) {
+        // The invalid operation flag is raised 
+        // when 34 digits is not enough to represent quantized decQuad.
+        // This situation can be considered as an overflow scenario.
+        res.overflow = true;
+        return res;
+    }
+
+    char str[DECQUAD_String];
+    decQuadToString(&dQuantize, str);
+    errno = 0;
+    int64_t val = strtol(str, NULL, 0);
+    if (errno == ERANGE) {
+        res.overflow = true;
+        return res;
+    }
+    res.overflow = false;
+    res.val = val;
+    return res;
 }
 
 TaggedPtr _bal_decimal_const(const char *decString) {
