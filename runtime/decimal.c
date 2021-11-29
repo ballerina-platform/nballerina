@@ -171,15 +171,17 @@ TaggedPtr _bal_decimal_from_int(int64_t val) {
     decQuad d;
     if (INT32_MIN <= val && val <= INT32_MAX) {
         decQuadFromInt32(&d, (int32_t)val);
-        return createDecimal(&d);
+    } 
+    else {
+#define STR_CONVERT(x) #x
+#define STR(x) STR_CONVERT(x)
+#define INT64_MAX_LEN sizeof(STR(INT64_MIN))
+        char intStr[INT64_MAX_LEN];
+        sprintf(intStr, "%" PRId64, val);
+        decContext cx;
+        initContext(&cx);
+        decQuadFromString(&d, intStr, &cx);
     }
-    // The INT64_MIN(-9223372036854775808) has the maximum string length.
-    // It has 20 characters. Adding +1 for NULL terminator.
-    char intStr[21];
-    sprintf(intStr, "%" PRId64, val);
-    decContext cx;
-    initContext(&cx);
-    decQuadFromString(&d, intStr, &cx);
     return createDecimal(&d);
 }
 
