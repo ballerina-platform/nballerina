@@ -1,7 +1,4 @@
-#include <math.h>
-#include <assert.h>
-#include "../balrt.h"
-#include "../hash.h"
+#include "test_utils.h"
 
 HASH_DEFINE_KEY;
 
@@ -51,6 +48,27 @@ void testDecToFloat() {
     validatDecToFloat("-1.7976931348623156e+309", -INFINITY);
 }
 
+void validateIntToDec(int64_t val, const char *decStr) {
+    validateDec(_bal_decimal_from_int(val), decStr);
+}
+
+void testIntToDec() {
+    validateIntToDec(1, "1");
+    validateIntToDec(0, "0");
+    validateIntToDec(-1, "-1");
+    validateIntToDec(2147483647, "2147483647");
+    validateIntToDec(2147483646, "2147483646");
+    validateIntToDec(2147483648, "2147483648");
+    validateIntToDec(-2147483648, "-2147483648");
+    validateIntToDec(-2147483647, "-2147483647");
+    validateIntToDec(-2147483649, "-2147483649");
+    validateIntToDec(INT64_MAX, "9223372036854775807");
+    validateIntToDec(INT64_MAX - 1, "9223372036854775806");
+    validateIntToDec(INT64_MIN, "-9223372036854775808");
+    validateIntToDec(INT64_MIN + 1, "-9223372036854775807");
+}
+
 int main() {
     testDecToFloat();
+    testIntToDec();
 }

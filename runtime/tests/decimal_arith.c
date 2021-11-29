@@ -1,29 +1,10 @@
-#include <string.h>
-#include <assert.h>
-#include "../balrt.h"
-#include "../hash.h"
-#include "../third-party/decNumber/decQuad.h"
+#include "test_utils.h"
 
 HASH_DEFINE_KEY;
-
-void validateDec(TaggedPtr tp, const char *decStr) {
-    char str[DECQUAD_String];
-    decQuadToString((decQuad *)taggedToPtr(tp), str);
-    assert(strcmp(decStr, str) == 0);
-}
 
 void genAndValidateConstDec(const char *decStr, const char *dec) {
     TaggedPtr tp = _bal_decimal_const(decStr);
     validateDec(tp, dec);
-}
-
-void validate(TaggedPtrPanicCode tp, const char *decStr, PanicCode code) {
-    if (tp.panicCode > 0) {
-        assert(tp.panicCode == code);
-    }
-    else {
-        validateDec(tp.ptr, decStr);
-    }
 }
 
 void testConst() {
