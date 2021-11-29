@@ -37,7 +37,7 @@
 33. ~~xml subtypes~~
 34. isolated qualifier
 35. transactional qualifier
-36. fixed length array types (logically tuples, but implementation not scaleable)
+36. ~~fixed length array types (logically tuples, but implementation not scaleable)~~
 
 ## JSON syntax features
 
