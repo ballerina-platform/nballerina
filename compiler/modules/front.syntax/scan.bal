@@ -76,14 +76,10 @@ function scanLineToString(ScannedLine line) returns string {
             FixedToken? ft = fragTokens[<int>code];
             lineContent.push(<string>ft);
         }
-        else if code == FRAG_STRING_OPEN || code == FRAG_STRING_CLOSE {
-            lineContent.push("\"");
-        }
-        else if code == FRAG_GREATER_THAN {
-            lineContent.push(">");
-        }
-        else {
-            lineContent.push(" ");
+        else if code >= FRAG_FIXED && code <= FRAG_STRING_CLOSE {
+            // JBUG #33346 cast should not be needed
+            string:Char? token = fragFixed[<int>code];
+            lineContent.push(<string>token);
         }
     }
     return "".'join(...lineContent);
@@ -195,6 +191,15 @@ final readonly & Keyword[] keywords = [
     "while",
     "xml"
 ];
+
+final readonly & string:Char?[] fragFixed = createFragFixed();
+function createFragFixed () returns readonly & string:Char?[] {
+    string:Char?[] fragFixed = [];
+    fragFixed[<int>FRAG_GREATER_THAN] = ">";
+    fragFixed[<int>FRAG_STRING_OPEN] = "\"";
+    fragFixed[<int>FRAG_STRING_CLOSE] = "\"";
+    return fragFixed.cloneReadOnly();
+}
 
 // This maps a frag code to a string
 final readonly & FixedToken?[] fragTokens = createFragTokens();
