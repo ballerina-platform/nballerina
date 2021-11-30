@@ -216,18 +216,19 @@ TaggedPtrPanicCode _bal_decimal_from_float(double val) {
     return result;
 }
 
-DecToIntResult _bal_decimal_to_int(TaggedPtr tp) {
+IntWithOverflow _bal_decimal_to_int(TaggedPtr tp) {
     decQuad dQuantize;
     decQuad dZero;
     decQuadZero(&dZero);
     decContext cx;
     initContext(&cx);
     decQuadQuantize(&dQuantize, taggedToDecQuad(tp), &dZero, &cx);
-    DecToIntResult res;
+    IntWithOverflow res;
     if (cx.status & DEC_Invalid_operation) {
-        // The invalid operation flag is raised 
-        // when 34 digits is not enough to represent quantized decQuad.
-        // This situation can be considered as an overflow scenario.
+        // The invalid operation flag is raised,
+        // when maximum precision(34 digits) is not enough to represent quantized decimal value.
+        // This situation can be considered as an overflow scenario,
+        // because reaching maximum precision of decimal is an overflow of 64 bit integer(19 digits).
         res.overflow = true;
         return res;
     }
@@ -235,13 +236,13 @@ DecToIntResult _bal_decimal_to_int(TaggedPtr tp) {
     char str[DECQUAD_String];
     decQuadToString(&dQuantize, str);
     errno = 0;
-    int64_t val = strtol(str, NULL, 0);
+    int64_t value = strtol(str, NULL, 0);
     if (errno == ERANGE) {
         res.overflow = true;
         return res;
     }
     res.overflow = false;
-    res.val = val;
+    res.value = value;
     return res;
 }
 

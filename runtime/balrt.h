@@ -282,9 +282,9 @@ typedef struct {
 } TaggedPtrPanicCode;
 
 typedef struct {
-    int64_t val;
+    int64_t value;
     bool overflow;
-} DecToIntResult;
+} IntWithOverflow;
 
 #define ALIGN_HEAP 8
 
@@ -363,7 +363,7 @@ extern bool _bal_decimal_exact_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern double _bal_decimal_to_float(TaggedPtr tp);
 extern TaggedPtr _bal_decimal_from_int(int64_t val);
 extern TaggedPtrPanicCode _bal_decimal_from_float(double val);
-extern DecToIntResult _bal_decimal_to_int(TaggedPtr tp);
+extern IntWithOverflow _bal_decimal_to_int(TaggedPtr tp);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
