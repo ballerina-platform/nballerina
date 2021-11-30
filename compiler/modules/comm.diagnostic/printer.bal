@@ -24,6 +24,7 @@ public class HTMLPrinter {
     *Printer;
     private final DiagnosticError[] diagnostics = [];
     private final string outputFilename;
+
     public function init(string outputFilename) {
         self.outputFilename = outputFilename;
     }
@@ -42,7 +43,7 @@ public class HTMLPrinter {
         check io:fileWriteLines(self.outputFilename, body);
     }
 
-    function addErrorToReport(DiagnosticError err, string[] body) returns file:Error? {
+    private function addErrorToReport(DiagnosticError err, string[] body) returns file:Error? {
         string[] errorLog = format(err.detail());
         string dataLine = errorLog[0];
         int fileEnd = <int>dataLine.indexOf(":");
@@ -54,7 +55,6 @@ public class HTMLPrinter {
         body.push("</tr>");
     }
 
-    // Helper functions releated to error report generation
     private function addErrorReportPrefix(string[] body) {
         body.push("<html>");
         body.push("<head>");
