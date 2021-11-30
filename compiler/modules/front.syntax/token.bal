@@ -491,46 +491,42 @@ public readonly class SourceFile {
     public function lineContent((Position|d:Range) range) returns [string, string, string] {
         if range is Position {
             var [lineNum, columnNum] = self.lineColumn(range);
-            string line = scanLineToString(self.scannedLine(lineNum));
+            ScannedLine scanLine = self.scannedLine(lineNum);
+            readonly & FragCode[] fragCodes = scanLine.fragCodes;
+            var [fragCodeIndex, fragmentIndex] = scanLineFragIndex(scanLine, columnNum);
+            string line = scanLineToString(scanLine);
             string prefix = line.substring(0, columnNum);
-            int contentLength = self.tokenLength(range);
+            int contentLength = fragCodeLength(scanLine, fragCodeIndex, fragmentIndex);
             int contentEnd = columnNum + contentLength;
             string content = line.substring(columnNum, contentEnd);
             if columnNum == line.length() - 1 {
                 return [prefix, content, ""];
             }
             string postfix = line.substring(contentEnd);
-            if content == "\"" {
-                int? closingIndex = line.indexOf("\"", columnNum+1);
+            FragCode code = fragCodes[fragCodeIndex];
+            if code == FRAG_STRING_OPEN {
+                int? closingIndex = scanLine.fragCodes.indexOf(FRAG_STRING_CLOSE, fragCodeIndex + 1);
                 if closingIndex is int {
-                    content = line.substring(columnNum, closingIndex+1);
-                    postfix = line.substring(closingIndex+1);
+                    int strLen = 0;
+                    foreach int fIndex in fragmentIndex ..< (fragmentIndex + (closingIndex-fragCodeIndex)) {
+                        strLen += scanLine.fragments[fIndex].length();
+                    }
+                    content = line.substring(columnNum, columnNum + strLen + 1);
+                    postfix = line.substring(columnNum + strLen + 1);
                 }
                 else {
                     content = line.substring(columnNum, line.length());
                     postfix = "";
                 }
             }
-            else if content == ">" {
-                if columnNum + 1 < line.length() && line[columnNum + 1] == ">" {
-                    if columnNum + 2 < line.length() && line[columnNum + 2] == ">" {
+            else if code == FRAG_GREATER_THAN {
+                if fragCodeIndex + 1 < fragCodes.length() && fragCodes[fragCodeIndex + 1] == FRAG_GREATER_THAN {
+                    if fragCodeIndex + 2 < fragCodes.length() && fragCodes[fragCodeIndex + 2] == FRAG_GREATER_THAN {
                         content = ">>>";
                         postfix = line.substring(columnNum + 2);
                     }
                     else {
                         content = ">>";
-                        postfix = line.substring(columnNum + 1);
-                    }
-                }
-            }
-            else if content == "<" {
-                if columnNum + 1 < line.length() && line[columnNum + 1] == "<" {
-                    if columnNum + 2 < line.length() && line[columnNum + 2] == "<" {
-                        content = "<<<";
-                        postfix = line.substring(columnNum + 2);
-                    }
-                    else {
-                        content = "<<";
                         postfix = line.substring(columnNum + 1);
                     }
                 }
@@ -560,13 +556,6 @@ public readonly class SourceFile {
 
     function scannedLine(int lineNumber) returns ScannedLine {
         return self.lines[lineNumber - 1];
-    }
-
-    function tokenLength(Position startPos) returns int {
-        var [lineIndex, columnIndex] = unpackPosition(startPos);
-        ScannedLine line = self.scannedLine(lineIndex);
-        var [fragCodeIndex, fragmentIndex] = scanLineFragIndex(line, columnIndex);
-        return fragCodeLength(line, fragCodeIndex, fragmentIndex);
     }
 }
 
