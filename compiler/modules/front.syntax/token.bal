@@ -487,52 +487,76 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
-    // range is expected to;the start of a token
+    // range is expected to be the start of a token
     public function lineContent((Position|d:Range) range) returns [string, string, string] {
         if range is Position {
             var [lineNum, columnNum] = self.lineColumn(range);
-            ScannedLine scanLine = self.scannedLine(lineNum);
-            readonly & FragCode[] fragCodes = scanLine.fragCodes;
-            var [fragCodeIndex, fragmentIndex] = scanLineFragIndex(scanLine, columnNum);
-            string line = scanLineToString(scanLine);
-            string prefix = line.substring(0, columnNum);
-            int contentLength = fragCodeLength(scanLine, fragCodeIndex, fragmentIndex);
-            int contentEnd = columnNum + contentLength;
-            string content = line.substring(columnNum, contentEnd);
-            if columnNum == line.length() - 1 {
-                return [prefix, content, ""];
-            }
-            string postfix = line.substring(contentEnd);
-            FragCode code = fragCodes[fragCodeIndex];
-            if code == FRAG_STRING_OPEN {
-                int? closingIndex = scanLine.fragCodes.indexOf(FRAG_STRING_CLOSE, fragCodeIndex + 1);
-                if closingIndex is int {
-                    int strLen = 0;
-                    foreach int fIndex in fragmentIndex ..< (fragmentIndex + (closingIndex - fragCodeIndex) - 1) {
-                        strLen += scanLine.fragments[fIndex].length();
-                    }
-                    strLen += 1; // include the closing quote
-                    content = line.substring(columnNum, columnNum + strLen + 1);
-                    postfix = line.substring(columnNum + strLen + 1);
+            ScannedLine scannedLine = self.scannedLine(lineNum);
+            readonly & FragCode[] fragCodes = scannedLine.fragCodes;
+            string[] prefixBody = [];
+            int curCol = 0;
+            int fragmentIndex = 0;
+            int fragIndex = 0;
+            while curCol < columnNum {
+                FragCode code = fragCodes[fragIndex];
+                string fragString = fragmentToString(scannedLine, fragIndex, fragmentIndex);
+                curCol += fragString.length();
+                fragIndex += 1;
+                if code <= VAR_FRAG_MAX {
+                    fragmentIndex += 1;
                 }
-                else {
-                    content = line.substring(columnNum, line.length());
-                    postfix = "";
+                prefixBody.push(fragString);
+            }
+            string prefix = "".'join(...prefixBody);
+            string[] contentBody = [];
+            FragCode code = fragCodes[fragIndex];
+            if code == FRAG_STRING_OPEN {
+                int stringCloseIndex = fragCodes.indexOf(FRAG_STRING_CLOSE, fragIndex) ?: fragCodes.length();
+                while fragIndex <= stringCloseIndex {
+                    FragCode fragCode = fragCodes[fragIndex];
+                    contentBody.push(fragmentToString(scannedLine, fragIndex, fragmentIndex));
+                    fragIndex += 1;
+                    if fragCode <= VAR_FRAG_MAX {
+                        fragmentIndex += 1;
+                    }
                 }
             }
             else if code == FRAG_GREATER_THAN {
-                if fragCodeIndex + 1 < fragCodes.length() && fragCodes[fragCodeIndex + 1] == FRAG_GREATER_THAN {
-                    if fragCodeIndex + 2 < fragCodes.length() && fragCodes[fragCodeIndex + 2] == FRAG_GREATER_THAN {
-                        content = ">>>";
-                        postfix = line.substring(columnNum + 2);
+                if fragIndex + 1 < fragCodes.length() && fragCodes[fragIndex + 1] == FRAG_GREATER_THAN {
+                    if fragIndex + 2 < fragCodes.length() && fragCodes[fragIndex + 2] == FRAG_GREATER_THAN {
+                        fragIndex += 3;
+                        contentBody.push(">", ">", ">");
                     }
                     else {
-                        content = ">>";
-                        postfix = line.substring(columnNum + 1);
+                        fragIndex += 2;
+                        contentBody.push(">", ">");
                     }
                 }
+                else {
+                    fragIndex +=1;
+                    contentBody.push(">");
+                }
             }
-            return [prefix, content, postfix];
+            else {
+                code = fragCodes[fragIndex];
+                contentBody.push(fragmentToString(scannedLine, fragIndex, fragmentIndex));
+                fragIndex += 1;
+                if code <= VAR_FRAG_MAX {
+                    fragmentIndex += 1;
+                }
+            }
+            string content = "".'join(...contentBody);
+            string[] suffixBody = [];
+            while fragIndex < fragCodes.length() {
+                code = fragCodes[fragIndex];
+                suffixBody.push(fragmentToString(scannedLine, fragIndex, fragmentIndex));
+                fragIndex += 1;
+                if code <= VAR_FRAG_MAX {
+                    fragmentIndex += 1;
+                }
+            }
+            string suffix = "".'join(...suffixBody);
+            return [prefix, content, suffix];
         }
         else {
             var [startLine, startColumn] = unpackPosition(range.startPos);

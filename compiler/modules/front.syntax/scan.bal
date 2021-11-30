@@ -224,25 +224,30 @@ function fragCodeLength(ScannedLine line, int fragCodeIndex, int fragmentIndex) 
     }
 }
 
+function fragmentToString(ScannedLine line, int fragCodeIndex, int fragmentIndex) returns string {
+    FragCode code = line.fragCodes[fragCodeIndex];
+    if code <= VAR_FRAG_MAX {
+        return line.fragments[fragmentIndex];
+    }
+    else if code >= FRAG_FIXED_TOKEN {
+        // JBUG #33346 cast should not be needed
+        return <string>fragTokens[<int>code];
+    }
+    else {
+        // JBUG #33346 cast should not be needed
+        return <string>fragFixed[<int>code];
+    }
+}
+
 function scanLineToString(ScannedLine line) returns string {
     string[] lineContent = [];
     readonly & FragCode[] fragCodes = line.fragCodes;
-    readonly & string[] fragments = line.fragments;
     int fragmentIndex = 0;
-    foreach FragCode code in fragCodes {
+    foreach int fragCodeIndex in 0 ..< fragCodes.length() {
+        FragCode code = fragCodes[fragCodeIndex];
+        lineContent.push(fragmentToString(line, fragCodeIndex, fragmentIndex));
         if code <= VAR_FRAG_MAX {
-            lineContent.push(fragments[fragmentIndex]);
             fragmentIndex += 1;
-        }
-        else if code >= FRAG_FIXED_TOKEN {
-            // JBUG #33346 cast should not be needed
-            FixedToken? ft = fragTokens[<int>code];
-            lineContent.push(<string>ft);
-        }
-        else {
-            // JBUG #33346 cast should not be needed
-            string:Char? token = fragFixed[<int>code];
-            lineContent.push(<string>token);
         }
     }
     return "".'join(...lineContent);

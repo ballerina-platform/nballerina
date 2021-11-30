@@ -122,8 +122,7 @@ public function format(Diagnostic d) returns string[] {
     line += ": error: " + d.message;
     lines.push(line);
     Range|Position range = loc.range;
-    [string, string, string] sourceLine = range is Position ? loc.file.lineContent(range) : loc.file.lineContent(range.startPos);
-    lines.push("".'join(...sourceLine));
+    lines.push("".'join(...loc.file.lineContent(range)));
     lines.push(caretLine(loc.file, range));
     return lines;
 }
