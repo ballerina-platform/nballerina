@@ -128,14 +128,15 @@ public function format(Diagnostic d) returns string[] {
 }
 
 function caretLine(File file, Range|Position range) returns string {
-    string padding;
-    string carets = "^";
+    string carets;
+    int startColumn;
     if range is Position {
-        int column = file.lineColumn(range)[1];
-        padding = lib:stringRepeat(" ", column);
+        startColumn = file.lineColumn(range)[1];
+        carets = "^";
     }
     else {
-        var [startLine, startColumn] = file.lineColumn(range.startPos);
+        int startLine;
+        [startLine, startColumn] = file.lineColumn(range.startPos);
         var [endLine, endColumn] = file.lineColumn(range.endPos);
         int caretLen;
         if startLine == endLine {
@@ -146,8 +147,8 @@ function caretLine(File file, Range|Position range) returns string {
             string line = file.lineContent(range.startPos);
             caretLen = line.length() - startColumn;
         }
-        padding = lib:stringRepeat(" ", startColumn);
         carets = lib:stringRepeat("^", caretLen);
     }
+    string padding = lib:stringRepeat(" ", startColumn);
     return padding + carets;
 }
