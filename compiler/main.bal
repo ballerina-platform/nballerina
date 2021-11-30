@@ -80,7 +80,7 @@ public function main(string[] filenames, *Options opts) returns error? {
             return error(d:messageFormat(`unsupported extension ${ext}`));
         }
     }
-    check dPrinter.flushPrinter();
+    check dPrinter.close();
     if errorFileCount != 0 {
         string files = errorFileCount == 1 ? "file" : "files";
         return error(string `compilation of ${errorFileCount} ${files} failed`);
