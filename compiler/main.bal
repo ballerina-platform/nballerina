@@ -11,12 +11,12 @@ type CompileError err:Diagnostic|io:Error|file:Error;
 public type Options record {
     boolean testJsonTypes = false;
     boolean showTypes = false;
-    boolean errorReport = false;
     int? debugLevel;
     // outDir also implies treating each file as a separate module
     string? outDir = ();
     string? expectOutDir = ();
     string? gc = ();
+    string? htmlError = ();
     *OutputOptions;
 };
 
@@ -49,8 +49,9 @@ public function main(string[] filenames, *Options opts) returns error? {
     };
     int errorFileCount = 0;
     d:Printer dPrinter;
-    if opts.errorReport {
-        dPrinter = new d:HTMLPrinter("errorLog.html");
+    string? errorFilename = opts.htmlError;
+    if errorFilename != () {
+        dPrinter = new d:HtmlPrinter(errorFilename);
     }
     else {
         dPrinter = new d:StdErrorPrinter();

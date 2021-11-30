@@ -1,17 +1,17 @@
 import ballerina/io;
 import ballerina/file;
 
-public type DiagnosticError error<Diagnostic>;
+public type Error error<Diagnostic>;
 
 public type Printer object {
-    public function print(DiagnosticError diagnostic);
+    public function print(Error diagnostic);
     public function flushPrinter() returns (file:Error|io:Error)?;
 };
 
 public class StdErrorPrinter {
     *Printer;
 
-    public function print(DiagnosticError diagnostic) {
+    public function print(Error diagnostic) {
         foreach string line in format(diagnostic.detail()) {
             io:fprintln(io:stderr, line);
         }
@@ -20,30 +20,30 @@ public class StdErrorPrinter {
     public function flushPrinter() returns (file:Error|io:Error)? {}
 }
 
-public class HTMLPrinter {
+public class HtmlPrinter {
     *Printer;
-    private final DiagnosticError[] diagnostics = [];
+    private final Error[] diagnostics = [];
     private final string outputFilename;
 
     public function init(string outputFilename) {
         self.outputFilename = outputFilename;
     }
 
-    public function print(DiagnosticError diagnostic) {
+    public function print(Error diagnostic) {
        self.diagnostics.push(diagnostic);
     }
 
     public function flushPrinter() returns (file:Error|io:Error)? {
         string[] body = [];
         self.addErrorReportPrefix(body);
-        foreach DiagnosticError err in self.diagnostics {
+        foreach Error err in self.diagnostics {
             check self.addErrorToReport(err, body);
         }
         self.addErrorReportSuffix(body);
         check io:fileWriteLines(self.outputFilename, body);
     }
 
-    private function addErrorToReport(DiagnosticError err, string[] body) returns file:Error? {
+    private function addErrorToReport(Error err, string[] body) returns file:Error? {
         string[] errorLog = format(err.detail());
         string dataLine = errorLog[0];
         int fileEnd = <int>dataLine.indexOf(":");
