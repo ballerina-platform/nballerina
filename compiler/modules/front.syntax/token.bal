@@ -501,10 +501,7 @@ public readonly class SourceFile {
                 FragCode code = fragCodes[fragIndex];
                 string fragString = fragmentToString(scannedLine, fragIndex, fragmentIndex);
                 curCol += fragString.length();
-                fragIndex += 1;
-                if code <= VAR_FRAG_MAX {
-                    fragmentIndex += 1;
-                }
+                [fragIndex, fragmentIndex] = self.advanceFragmentIndex(scannedLine, fragIndex, fragmentIndex);
                 prefixBody.push(fragString);
             }
             string prefix = "".'join(...prefixBody);
@@ -515,10 +512,7 @@ public readonly class SourceFile {
                 while fragIndex <= stringCloseIndex {
                     FragCode fragCode = fragCodes[fragIndex];
                     contentBody.push(fragmentToString(scannedLine, fragIndex, fragmentIndex));
-                    fragIndex += 1;
-                    if fragCode <= VAR_FRAG_MAX {
-                        fragmentIndex += 1;
-                    }
+                    [fragIndex, fragmentIndex] = self.advanceFragmentIndex(scannedLine, fragIndex, fragmentIndex);
                 }
             }
             else if code == FRAG_GREATER_THAN {
@@ -540,20 +534,14 @@ public readonly class SourceFile {
             else {
                 code = fragCodes[fragIndex];
                 contentBody.push(fragmentToString(scannedLine, fragIndex, fragmentIndex));
-                fragIndex += 1;
-                if code <= VAR_FRAG_MAX {
-                    fragmentIndex += 1;
-                }
+                [fragIndex, fragmentIndex] = self.advanceFragmentIndex(scannedLine, fragIndex, fragmentIndex);
             }
             string content = "".'join(...contentBody);
             string[] suffixBody = [];
             while fragIndex < fragCodes.length() {
                 code = fragCodes[fragIndex];
                 suffixBody.push(fragmentToString(scannedLine, fragIndex, fragmentIndex));
-                fragIndex += 1;
-                if code <= VAR_FRAG_MAX {
-                    fragmentIndex += 1;
-                }
+                [fragIndex, fragmentIndex] = self.advanceFragmentIndex(scannedLine, fragIndex, fragmentIndex);
             }
             string suffix = "".'join(...suffixBody);
             return [prefix, content, suffix];
@@ -575,6 +563,14 @@ public readonly class SourceFile {
             }
             return [prefix, content, postfix];
         }
+    }
+
+    private function advanceFragmentIndex(ScannedLine line, int fragIndex, int fragmentIndex) returns [int, int] {
+        FragCode code = line.fragCodes[fragIndex];
+        if code <= VAR_FRAG_MAX {
+            return [fragIndex + 1, fragmentIndex + 1];
+        }
+        return [fragIndex + 1, fragmentIndex];
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
