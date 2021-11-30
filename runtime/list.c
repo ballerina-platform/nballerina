@@ -301,3 +301,83 @@ bool _bal_array_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     ListPtr lp = taggedToPtr(p);   
     return memberTypeIsSubtypeSimple(lp->desc->memberType, ((ArraySubtypePtr)stp)->bitSet);
 }
+
+int64_t READONLY _bal_array_exact_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    if (lhs == rhs) {
+        return COMPARE_EQ;
+    }
+    ListPtr lhsLp = taggedToPtr(lhs);
+    ListPtr rhsLp = taggedToPtr(rhs);
+    int64_t lhsLen = lhsLp->iArray.length;
+    int64_t rhsLen = rhsLp->iArray.length;
+    int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
+
+    GC int64_t *lhsArr = lhsLp->iArray.members;
+    GC int64_t *rhsArr = rhsLp->iArray.members;
+    for (int64_t i = 0; i < length; i++) {
+        int64_t l = lhsArr[i];
+        int64_t r = rhsArr[i];
+        if (l == r) {
+            continue;
+        }
+        else if (l > r) {
+            return COMPARE_GT;
+        }
+        else {
+            return COMPARE_LT;
+        }
+    }
+    return COMPARE(lhsLen, rhsLen);
+}
+
+typedef int64_t (*TaggedValueComparator)(TaggedPtr, TaggedPtr);
+
+static READONLY TaggedValueComparator getArrayComparator(MemberType memberType) {
+    uint32_t bitSet;
+    if ((memberType & 1) == 0) {
+        return &_bal_array_generic_compare;
+    }
+    else {
+        // Clear out the nil bit since comparators can handle both nillable and non-nillable of a given type
+        bitSet = (uint32_t)(memberType >> 1) & ~((uint32_t)1 << TAG_NIL);
+        switch (bitSet) {
+            case (1 << TAG_BOOLEAN):
+                return &taggedBooleanCompare;
+            case (1 << TAG_INT):
+                return &taggedIntCompare;
+            case (1 << TAG_FLOAT):
+                return &taggedFloatCompare;
+            case (1 << TAG_STRING):
+                return &taggedStringCompare;
+        }
+        unreachable();
+    }
+}
+
+int64_t READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    if (lhs == rhs) {
+        return COMPARE_EQ;
+    }
+    if (lhs == NIL || rhs == NIL) {
+        return COMPARE_UN;
+    }
+    ListPtr lhsLp = taggedToPtr(lhs);
+    ListPtr rhsLp = taggedToPtr(rhs);
+    ListDescPtr lhsLdp = lhsLp->desc;
+    ListDescPtr rhsLdp = rhsLp->desc;
+    ListDescPtr ldp;
+    if (lhsLdp->memberType == BITSET_MEMBER_TYPE(1 << TAG_NIL)) {
+        if (rhsLdp->memberType == BITSET_MEMBER_TYPE(1 << TAG_NIL)) {
+            int64_t lhsLen = lhsLp->gArray.length;
+            int64_t rhsLen = rhsLp->tpArray.length;
+            return COMPARE(lhsLen, rhsLen);
+        }
+        else{
+            ldp = rhsLdp;
+        }
+    }
+    else {
+        ldp = lhsLdp;
+    }
+    return arrayCompare(lhs, rhs, getArrayComparator(ldp->memberType));
+}

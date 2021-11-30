@@ -209,9 +209,7 @@ function buildSpecializedListGet(llvm:Builder builder, Scaffold scaffold, llvm:V
     llvm:BasicBlock bbExact = scaffold.addBasicBlock();
     llvm:BasicBlock bbInexact = scaffold.addBasicBlock();
     llvm:BasicBlock bbJoin = scaffold.addBasicBlock();
-    llvm:Value isExact = builder.iCmp("ne",
-                                      <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [taggedStruct, llvm:constInt(LLVM_INT, FLAG_EXACT)]),
-                                      llvm:constNull(llvm:pointerType("i8", 1)));
+    llvm:Value isExact = buildIsExact(builder, scaffold, taggedStruct);
     builder.condBr(isExact, bbExact, bbInexact);
     builder.positionAtEnd(bbExact);
     llvm:PointerValue array = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 3)]), ALIGN_HEAP);
@@ -252,9 +250,7 @@ function buildSpecializedListSet(llvm:Builder builder, Scaffold scaffold, llvm:V
     llvm:BasicBlock bbExact = scaffold.addBasicBlock();
     llvm:BasicBlock bbTaggedSet = scaffold.addBasicBlock();
     llvm:BasicBlock bbJoin = scaffold.addBasicBlock();
-    llvm:Value isExact = builder.iCmp("ne",
-                                      <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [taggedStruct, llvm:constInt(LLVM_INT, FLAG_EXACT)]),
-                                      llvm:constNull(llvm:pointerType("i8", 1)));
+    llvm:Value isExact = buildIsExact(builder, scaffold, taggedStruct);
     builder.condBr(isExact, bbExact, bbTaggedSet);
     builder.positionAtEnd(bbExact);
 
