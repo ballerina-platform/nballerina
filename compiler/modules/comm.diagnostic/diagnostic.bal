@@ -27,6 +27,7 @@ public type File readonly & object {
     public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
     public function lineContent(Position pos) returns string;
+    public function tokenLength(Position startPos) returns int;
 };
 
 public type Location readonly & record {|
@@ -128,17 +129,16 @@ public function format(Diagnostic d) returns string[] {
 }
 
 function caretLine(File file, Range|Position range) returns string {
-    string carets;
     int startColumn;
+    int caretLen;
     if range is Position {
         startColumn = file.lineColumn(range)[1];
-        carets = "^";
+        caretLen = file.tokenLength(range);
     }
     else {
         int startLine;
         [startLine, startColumn] = file.lineColumn(range.startPos);
         var [endLine, endColumn] = file.lineColumn(range.endPos);
-        int caretLen;
         if startLine == endLine {
             caretLen = endColumn - startColumn + 1;
         }
@@ -147,8 +147,9 @@ function caretLine(File file, Range|Position range) returns string {
             string line = file.lineContent(range.startPos);
             caretLen = line.length() - startColumn;
         }
-        carets = lib:stringRepeat("^", caretLen);
     }
     string padding = lib:stringRepeat(" ", startColumn);
+    string carets = lib:stringRepeat("^", caretLen);
+
     return padding + carets;
 }

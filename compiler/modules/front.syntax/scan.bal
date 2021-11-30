@@ -191,24 +191,15 @@ function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, i
         return  [0, 0];
     }
     readonly & FragCode[] fragCodes = line.fragCodes;
-    readonly & string[] fragments = line.fragments;
     int fragCodeIndex = 0;
     int fragmentIndex = 0;
     int i = 0;
     while i < codePointIndex {
         FragCode code = fragCodes[fragCodeIndex];
+        i += fragCodeLength(line, fragCodeIndex, fragmentIndex);
         fragCodeIndex += 1;
         if code <= VAR_FRAG_MAX {
-            i += fragments[fragmentIndex].length();
             fragmentIndex += 1;
-        }
-        else if code >= FRAG_FIXED_TOKEN {
-            // JBUG #33346 cast should not be needed
-            FixedToken? ft = fragTokens[<int>code];
-            i += (<string>ft).length();
-        }
-        else {
-            i += 1;
         }
     }
     if i > codePointIndex {
@@ -216,6 +207,21 @@ function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, i
         fragmentIndex -= 1;
     }
     return [fragCodeIndex, fragmentIndex];
+}
+
+function fragCodeLength(ScannedLine line, int fragCodeIndex, int fragmentIndex) returns int {
+    FragCode code = line.fragCodes[fragCodeIndex];
+    if code <= VAR_FRAG_MAX {
+        return line.fragments[fragmentIndex].length();
+    }
+    else if code >= FRAG_FIXED_TOKEN {
+        // JBUG #33346 cast should not be needed
+        FixedToken? ft = fragTokens[<int>code];
+        return (<string>ft).length();
+    }
+    else {
+        return 1;
+    }
 }
 
 function scanLineToString(ScannedLine line) returns string {

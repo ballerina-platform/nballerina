@@ -497,6 +497,13 @@ public readonly class SourceFile {
     function scannedLine(int lineNumber) returns ScannedLine {
         return self.lines[lineNumber - 1];
     }
+
+    public function tokenLength(Position startPos) returns int {
+        var [lineIndex, columnIndex] = unpackPosition(startPos);
+        ScannedLine line = self.scannedLine(lineIndex);
+        var [fragCodeIndex, fragmentIndex] = scanLineFragIndex(line, columnIndex);
+        return fragCodeLength(line, fragCodeIndex, fragmentIndex);
+    }
 }
 
 public function createSourceFile(string[] lines, FilePath path) returns SourceFile {
