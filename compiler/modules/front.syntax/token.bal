@@ -490,25 +490,7 @@ public readonly class SourceFile {
     public function lineContent(Position pos) returns string {
         int lineNum = self.lineColumn(pos)[0];
         ScannedLine scannedLine = self.scannedLine(lineNum);
-        string line = "";
-        readonly & FragCode[] fragCodes = scannedLine.fragCodes;
-        readonly & string[] fragments = scannedLine.fragments;
-        int fragmentIndex = 0;
-        foreach FragCode code in fragCodes {
-            if code <= VAR_FRAG_MAX {
-                line += fragments[fragmentIndex];
-                fragmentIndex += 1;
-            }
-            else if code >= FRAG_FIXED_TOKEN {
-                // JBUG #33346 cast should not be needed
-                FixedToken? ft = fragTokens[<int>code];
-                line += <string>ft;
-            }
-            else {
-                line += " ";
-            }
-        }
-        return line;
+        return scanLineToString(scannedLine);
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;

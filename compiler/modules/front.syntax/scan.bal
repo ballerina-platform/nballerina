@@ -61,6 +61,34 @@ function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, i
     return [fragCodeIndex, fragmentIndex];
 }
 
+function scanLineToString(ScannedLine line) returns string {
+    string[] lineContent = [];
+    readonly & FragCode[] fragCodes = line.fragCodes;
+    readonly & string[] fragments = line.fragments;
+    int fragmentIndex = 0;
+    foreach FragCode code in fragCodes {
+        if code <= VAR_FRAG_MAX {
+            lineContent.push(fragments[fragmentIndex]);
+            fragmentIndex += 1;
+        }
+        else if code >= FRAG_FIXED_TOKEN {
+            // JBUG #33346 cast should not be needed
+            FixedToken? ft = fragTokens[<int>code];
+            lineContent.push(<string>ft);
+        }
+        else if code == FRAG_STRING_OPEN || code == FRAG_STRING_CLOSE {
+            lineContent.push("\"");
+        }
+        else if code == FRAG_GREATER_THAN {
+            lineContent.push(">");
+        }
+        else {
+            lineContent.push(" ");
+        }
+    }
+    return "".'join(...lineContent);
+}
+
 type Scanned record {|
     FragCode[] fragCodes;
     int[] endIndex;

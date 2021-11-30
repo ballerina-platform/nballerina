@@ -4,6 +4,7 @@ import ballerina/file;
 import ballerina/io;
 
 import wso2/nballerina.comm.err;
+import ballerina/random;
 import wso2/nballerina.comm.diagnostic as d;
 
 // JBUG the `enable: false` fails to work if there is a comment on the line before it
@@ -21,7 +22,17 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
             }
             string filename = test.absPath;
             string[] lines = check io:fileReadLines(filename);
-            ModulePart|err:Syntax part = scanAndParseModulePart(lines, { filename }, 0);
+            SourceFile sourceFile = createSourceFile(lines, { filename });
+            foreach int lineNum in 0 ..< lines.length() {
+                string expectedLine = lines[lineNum];
+                if expectedLine.length() == 0 {
+                    continue;
+                }
+                int columnNum = checkpanic random:createIntInRange(0, expectedLine.length());
+                Position randomPos = createPosition(lineNum + 1, columnNum);
+                test:assertEquals(sourceFile.lineContent(randomPos), expectedLine);
+            }
+            ModulePart|err:Syntax part = scanAndParseModulePart(sourceFile, 0);
             if part is error {
                 continue;
             }
@@ -70,7 +81,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                     lastEnd = endPos;
                 }
                 string[] canonSrc = partToLines(part);
-                part = scanAndParseModulePart(canonSrc, { filename }, 0);
+                part = scanAndParseModulePart(createSourceFile(canonSrc, { filename }), 0);
                 if part is error {
                     test:assertEquals(lines, canonSrc, "serialized ast can't be re-parsed");
                     panic err:impossible("if src is equal to canonSrc second parse can't fail");
@@ -90,8 +101,8 @@ function partToLines(ModulePart part) returns string[] {
     return wordsToLines(w);
 }
 
-function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
-    return parseModulePart(check scanModulePart(createSourceFile(lines, path), partIndex));
+function scanAndParseModulePart(SourceFile sourceFile, int partIndex) returns ModulePart|err:Syntax {
+    return parseModulePart(check scanModulePart(sourceFile, partIndex));
 }
 
 function testPositionIsWhiteSpace(SourceFile file, Position pos) returns boolean {
