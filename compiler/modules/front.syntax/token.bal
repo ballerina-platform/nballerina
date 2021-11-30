@@ -502,6 +502,13 @@ public readonly class SourceFile {
         var [lineIndex, columnIndex] = unpackPosition(startPos);
         ScannedLine line = self.scannedLine(lineIndex);
         var [fragCodeIndex, fragmentIndex] = scanLineFragIndex(line, columnIndex);
+        if line.fragCodes[fragCodeIndex] == FRAG_STRING_OPEN {
+            if fragCodeIndex + 2 < line.fragCodes.length() && line.fragCodes[fragCodeIndex + 2] == FRAG_STRING_CLOSE {
+                return line.fragments[fragmentIndex].length() + 2;
+            }
+            // no closing quotes in this line
+            return line.fragments[fragmentIndex].length() + 1;
+        }
         return fragCodeLength(line, fragCodeIndex, fragmentIndex);
     }
 }
