@@ -275,25 +275,13 @@ function buildSpecializedListSet(llvm:Builder builder, Scaffold scaffold, llvm:V
 }
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
-    int length = insn.operands.length();
-    t:Context tc = scaffold.typeContext();
     t:SemType mappingType = insn.result.semType;
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
     llvm:PointerValue m = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(mappingConstructFunction),
-                                                          [inherentType, llvm:constInt(LLVM_INT, length)]);
-    // JBUG #31681 if I combine these statements into a single from/do, then it gives an assignment required error
-    // which is removed by a check; but it's only check failures in the query pipeline that should show up in the
-    // result of the from/do, not check failures in the do clause. (Code now changed a lot.)
-
-    // The sorting here is to ensure that required fields are in the same order here as in the type descriptor.
-    [string, bir:Operand][] members =
-        from int i in 0 ..< length select [insn.fieldNames[i], insn.operands[i]];    
-    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
-    if mat != () && mat.names.length() != 0 {
-        // JBUG #33300 This doesn't work with array:sort (complains about unordered type)
-        members = from var [k, v] in members order by k select [k, v];
-    } 
-    foreach var [fieldName, operand] in members {
+                                                          [inherentType, llvm:constInt(LLVM_INT, insn.operands.length())]);
+    t:Context tc = scaffold.typeContext();
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, mappingType);  
+    foreach var [fieldName, operand] in mappingOrderFields(mat, insn.fieldNames, insn.operands) {
         _ = builder.call(scaffold.getRuntimeFunctionDecl(mappingInitMemberFunction),
                          [
                              m,
@@ -303,6 +291,29 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
                          ]);
     }
     builder.store(m, scaffold.address(insn.result));
+}
+
+// When there are required fields, we need to reorder so that 
+// required fields are in the same order here as in the type descriptor.
+function mappingOrderFields(t:MappingAtomicType mat, string[] fieldNames, bir:Operand[] operands) returns [string, bir:Operand][] {
+    int length = fieldNames.length();
+    string[] requiredFieldNames = mat.names;
+    int nRequiredFields = requiredFieldNames.length();
+    if nRequiredFields != 0 {
+        map<int> requiredFieldIndex = {};
+        foreach int i in 0 ..< nRequiredFields {
+            requiredFieldIndex[requiredFieldNames[i]] = i;
+        }
+        return
+            from int i in 0 ..< length
+            let string fieldName = fieldNames[i]
+            let int sortIndex = requiredFieldIndex[fieldName] ?: nRequiredFields + i
+            order by sortIndex
+            select [fieldName, operands[i]];
+    }
+    else {
+        return from int i in 0 ..< length select [fieldNames[i], operands[i]];
+    }    
 }
 
 function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGetInsn insn) returns BuildError? {
@@ -384,7 +395,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
 function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {
     if k is string {
         t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
-        if mat != () {
+        if mat != () && mat.rest == t:NEVER {
             return mat.names.indexOf(k);
         }
     }
