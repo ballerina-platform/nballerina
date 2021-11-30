@@ -5,7 +5,7 @@ public type DiagnosticError error<Diagnostic>;
 
 public type Printer object {
     public function print(DiagnosticError diagnostic);
-    public function flushDiagnostics() returns (file:Error|io:Error)?;
+    public function flushPrinter() returns (file:Error|io:Error)?;
 };
 
 public class StdErrorPrinter {
@@ -17,7 +17,7 @@ public class StdErrorPrinter {
         }
     }
 
-    public function flushDiagnostics() returns (file:Error|io:Error)? {}
+    public function flushPrinter() returns (file:Error|io:Error)? {}
 }
 
 public class HTMLPrinter {
@@ -32,7 +32,7 @@ public class HTMLPrinter {
        self.diagnostics.push(diagnostic);
     }
 
-    public function flushDiagnostics() returns (file:Error|io:Error)? {
+    public function flushPrinter() returns (file:Error|io:Error)? {
         string[] body = [];
         self.addErrorReportPrefix(body);
         foreach DiagnosticError err in self.diagnostics {
