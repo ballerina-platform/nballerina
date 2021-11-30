@@ -1,19 +1,22 @@
 import ballerina/io;
 import ballerina/file;
 
-public type Error error<Diagnostic>;
-
 public type Printer object {
-    public function print(Error diagnostic);
+    public function print(Diagnostic diagnostic);
     public function close() returns (file:Error|io:Error)?;
 };
 
-public class StdErrorPrinter {
+public class ConsolePrinter {
     *Printer;
+    private final io:stderr|io:stdout outputStream;
 
-    public function print(Error diagnostic) {
-        foreach string line in format(diagnostic.detail()) {
-            io:fprintln(io:stderr, line);
+    public function init(io:stderr|io:stdout outputStream) {
+        self.outputStream = outputStream;
+    }
+
+    public function print(Diagnostic diagnostic) {
+        foreach string line in format(diagnostic) {
+            io:fprintln(self.outputStream, line);
         }
     }
 
@@ -22,29 +25,29 @@ public class StdErrorPrinter {
 
 public class HtmlPrinter {
     *Printer;
-    private final Error[] diagnostics = [];
+    private final Diagnostic[] diagnostics = [];
     private final string outputFilename;
 
     public function init(string outputFilename) {
         self.outputFilename = outputFilename;
     }
 
-    public function print(Error diagnostic) {
+    public function print(Diagnostic diagnostic) {
        self.diagnostics.push(diagnostic);
     }
 
     public function close() returns (file:Error|io:Error)? {
         string[] body = [];
         self.addErrorReportPrefix(body);
-        foreach Error err in self.diagnostics {
-            check self.addErrorToReport(err, body);
+        foreach Diagnostic diagnostic in self.diagnostics {
+            check self.addDiagnosticToReport(diagnostic, body);
         }
         self.addErrorReportSuffix(body);
         check io:fileWriteLines(self.outputFilename, body);
     }
 
-    private function addErrorToReport(Error err, string[] body) returns file:Error? {
-        string[] errorLog = format(err.detail());
+    private function addDiagnosticToReport(Diagnostic diagnostic, string[] body) returns file:Error? {
+        string[] errorLog = format(diagnostic);
         string dataLine = errorLog[0];
         int fileEnd = <int>dataLine.indexOf(":");
         string filePath = check file:getAbsolutePath(dataLine.substring(0, fileEnd));

@@ -13,6 +13,7 @@ public type Options record {
     boolean showTypes = false;
     int? debugLevel;
     // outDir also implies treating each file as a separate module
+    boolean redirectErrors = false;
     string? outDir = ();
     string? expectOutDir = ();
     string? gc = ();
@@ -54,7 +55,12 @@ public function main(string[] filenames, *Options opts) returns error? {
         dPrinter = new d:HtmlPrinter(errorFilename);
     }
     else {
-        dPrinter = new d:StdErrorPrinter();
+        if opts.redirectErrors {
+            dPrinter = new d:ConsolePrinter(io:stdout);
+        }
+        else {
+            dPrinter = new d:ConsolePrinter(io:stderr);
+        }
     }
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
@@ -62,7 +68,7 @@ public function main(string[] filenames, *Options opts) returns error? {
             CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
             if err is err:Diagnostic {
                 errorFileCount += 1;
-                dPrinter.print(err);
+                dPrinter.print(err.detail());
             }
             // JBUG: #34014
             // can't use else { check err; }
