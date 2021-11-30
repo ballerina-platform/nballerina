@@ -48,9 +48,9 @@ public function main(string[] filenames, *Options opts) returns error? {
         debugLevel: check nback:validDebugLevel(opts.debugLevel)
     };
     int errorFileCount = 0;
-    d:DiagnosticPrinter dPrinter;
+    d:Printer dPrinter;
     if opts.errorReport {
-        dPrinter = new d:HTMLErrorPrinter();
+        dPrinter = new d:HTMLPrinter("errorLog.html");
     }
     else {
         dPrinter = new d:StdErrorPrinter();
@@ -61,7 +61,7 @@ public function main(string[] filenames, *Options opts) returns error? {
             CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
             if err is err:Diagnostic {
                 errorFileCount += 1;
-                dPrinter.addDiagnostic(err);
+                dPrinter.print(err);
             }
             // JBUG: #34014
             // can't use else { check err; }
