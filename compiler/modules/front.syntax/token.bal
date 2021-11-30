@@ -1,6 +1,5 @@
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
-import ballerina/io;
 
 type Token FixedToken|VariableLengthToken;
 type FixedToken SingleCharDelim|MultiCharDelim|Keyword;
@@ -488,6 +487,7 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
+    // Currently range is expected to start at the beging of a token
     public function lineContent((Position|d:Range) range) returns [string, string, string] {
         if range is Position {
             var [lineNum, columnNum] = self.lineColumn(range);
@@ -495,16 +495,12 @@ public readonly class SourceFile {
             string prefix = line.substring(0, columnNum);
             int contentLength = self.tokenLength(range);
             int contentEnd = columnNum + contentLength;
-            if contentEnd > line.length() {
-                io:println(line, unpackPosition(range));
-            }
             string content = line.substring(columnNum, contentEnd);
             if columnNum == line.length() - 1 {
                 return [prefix, content, ""];
             }
             string postfix = line.substring(contentEnd);
             if content == "\"" {
-                // we assume pos is the starting positiong of the token
                 int? closingIndex = line.indexOf("\"", columnNum+1);
                 if closingIndex is int {
                     content = line.substring(columnNum, closingIndex+1);
@@ -546,17 +542,17 @@ public readonly class SourceFile {
             var [endLine, endColumn] = unpackPosition(range.endPos);
             string line = scanLineToString(self.scannedLine(startLine));
             string prefix = line.substring(0, startColumn);
-            string c;
+            string body;
             string postfix;
             if startLine == endLine {
-                c = line.substring(startColumn, endColumn);
+                body = line.substring(startColumn, endColumn);
                 postfix = line.substring(endColumn);
             }
             else {
-                c = line.substring(startColumn);
+                body = line.substring(startColumn);
                 postfix = "";
             }
-            return [prefix, c, postfix];
+            return [prefix, body, postfix];
         }
     }
 

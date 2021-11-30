@@ -27,7 +27,6 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 if expectedLine.length() == 0 {
                     continue;
                 }
-                io:println(filename, lineNum);
                 int columnNum = 0;
                 Position pos = createPosition(lineNum + 1, columnNum);
                 string actualLine = "".'join(...sourceFile.lineContent(pos));
