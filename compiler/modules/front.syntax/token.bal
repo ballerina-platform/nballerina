@@ -489,8 +489,7 @@ public readonly class SourceFile {
 
     public function lineContent(Position pos) returns string {
         int lineNum = self.lineColumn(pos)[0];
-        ScannedLine scannedLine = self.scannedLine(lineNum);
-        return scanLineToString(scannedLine);
+        return scanLineToString(self.scannedLine(lineNum));
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;

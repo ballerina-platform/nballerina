@@ -1,3 +1,4 @@
+import wso2/nballerina.comm.lib;
 public type Message string|Template;
 
 public type Template object {
@@ -121,35 +122,33 @@ public function format(Diagnostic d) returns string[] {
     line += ": error: " + d.message;
     lines.push(line);
     Range|Position range = loc.range;
-    lines.push(...fileLines(loc.file, range));
+    string sourceLine = range is Position ? loc.file.lineContent(range) : loc.file.lineContent(range.startPos);
+    lines.push(sourceLine);
+    lines.push(caretLine(loc.file, range));
     return lines;
 }
 
-function fileLines(File file, Range|Position range) returns [string, string] {
-    string line = range is Position ? file.lineContent(range) : file.lineContent(range.startPos);
-    [string, string] errMessage = [];
-    errMessage[0] = line;
+function caretLine(File file, Range|Position range) returns string {
+    string padding;
+    string carets = "^";
     if range is Position {
         int column = file.lineColumn(range)[1];
-        errMessage[1] = caretLine(column);
+        padding = lib:stringRepeat(" ", column);
     }
     else {
         var [startLine, startColumn] = file.lineColumn(range.startPos);
         var [endLine, endColumn] = file.lineColumn(range.endPos);
+        int caretLen;
         if startLine == endLine {
-            int caretLen = endColumn - startColumn + 1;
-            errMessage[1] = caretLine(startColumn, caretLen);
+            caretLen = endColumn - startColumn + 1;
         }
         else {
             // multiline err
-            errMessage[1] = caretLine(startColumn, line.length() - startColumn);
+            string line = file.lineContent(range.startPos);
+            caretLen = line.length() - startColumn;
         }
+        padding = lib:stringRepeat(" ", startColumn);
+        carets = lib:stringRepeat("^", caretLen);
     }
-    return errMessage;
-}
-
-function caretLine(int startIndex, int len = 1) returns string {
-    string padding = "".'join(from var i in 0 ..< startIndex select " ");
-    string carets = "".'join(from var j in 0 ..< len select "^");
     return padding + carets;
 }
