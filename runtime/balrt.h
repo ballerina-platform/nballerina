@@ -356,6 +356,7 @@ extern TaggedPtrPanicCode _bal_decimal_rem(TaggedPtr tp1, TaggedPtr tp2);
 extern int64_t _bal_decimal_cmp(TaggedPtr tp1, TaggedPtr tp2);
 extern bool _bal_decimal_exact_eq(TaggedPtr tp1, TaggedPtr tp2);
 extern double _bal_decimal_to_float(TaggedPtr tp);
+extern TaggedPtr _bal_decimal_from_int(int64_t val);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym

@@ -167,6 +167,24 @@ double _bal_decimal_to_float(TaggedPtr tp) {
     return strtod(dblStr, NULL);
 }
 
+TaggedPtr _bal_decimal_from_int(int64_t val) {
+    decQuad d;
+    if (INT32_MIN <= val && val <= INT32_MAX) {
+        decQuadFromInt32(&d, (int32_t)val);
+    } 
+    else {
+#define STR_CONVERT(x) #x
+#define STR(x) STR_CONVERT(x)
+#define INT64_MAX_LEN sizeof(STR(INT64_MIN))
+        char intStr[INT64_MAX_LEN];
+        sprintf(intStr, "%" PRId64, val);
+        decContext cx;
+        initContext(&cx);
+        decQuadFromString(&d, intStr, &cx);
+    }
+    return createDecimal(&d);
+}
+
 TaggedPtr _bal_decimal_const(const char *decString) {
     decContext cx;
     initContext(&cx);
