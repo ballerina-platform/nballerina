@@ -314,6 +314,8 @@ public type Field record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position colonPos;
+    boolean isIdentifier;
     string name;
     Expr value;
 |};
