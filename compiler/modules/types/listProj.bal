@@ -62,7 +62,7 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                     if isNever(rest) {
                         return NEVER;
                     }
-                    repeatLastMember = fixLength(newLen, members, repeatLastMember, rest);
+                    repeatLastMember = listDecompressMembersForSet(newLen, members, repeatLastMember, rest);
                 }
                 foreach int i in 0 ..< currentLen {
                     members[i] = intersect(listMemberAt(members, i), listMemberAt(lt.members, i));
@@ -78,7 +78,7 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                 rest = intersect(rest, lt.rest);
             }
         }
-            if isAnyListMemberEmpty(cx, members) {
+            if isAnyEmptySemType(cx, members) {
                 return NEVER;
             }
         // Ensure that we can use isNever on rest in listInhabited
@@ -113,7 +113,7 @@ function listProjExclude(Context cx,
             if isNever(rest) {
                 return listProjExclude(cx, k, members, repeatCount, rest, neg.next);
             }
-            repeatCount = fixLength(negLen, members, repeatCount, rest);
+            repeatCount = listDecompressMembersForSet(negLen, members, repeatCount, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {

@@ -102,8 +102,8 @@ public function tuple(Env env, SemType... members) returns SemType {
     return def.define(env, members, 0, NEVER);
 }
 
-public function isFixedLengthList(ListAtomicType t) returns boolean {
-    return t.members.length() + t.repeatLastMember > 0;
+public function listAtomicMinLength(ListAtomicType t) returns int {
+    return t.members.length() + t.repeatLastMember;
 }
 
 function listRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -139,7 +139,7 @@ function listMemberAt(SemType[] members, int i) returns SemType {
     return members[int:min(i, members.length() - 1)];
 }
 
-function fixLength(int newAllowedIndex, SemType[] members, int repeatCount, SemType withNewMember) returns int {
+function listDecompressMembersForSet(int newAllowedIndex, SemType[] members, int repeatCount, SemType withNewMember) returns int {
     int memberLen = members.length();
     boolean lastMemberRepeats = repeatCount != 0;
     if lastMemberRepeats {        
@@ -179,7 +179,7 @@ function fixLength(int newAllowedIndex, SemType[] members, int repeatCount, SemT
     }
 }
 
-function isAnyListMemberEmpty(Context cx, SemType[] members) returns boolean {
+function isAnyEmptySemType(Context cx, SemType[] members) returns boolean {
     foreach var m in members {
         if isEmpty(cx, m) {
             return true;
@@ -237,7 +237,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                     if isNever(rest) {
                         return true;
                     }
-                    repeatLastMember = fixLength(newLen, members, repeatLastMember, rest);
+                    repeatLastMember = listDecompressMembersForSet(newLen, members, repeatLastMember, rest);
                 }
                 foreach int i in 0 ..< currentLen {
                     members[i] = intersect(listMemberAt(members, i), listMemberAt(lt.members, i));
@@ -253,7 +253,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 rest = intersect(rest, lt.rest);
             }
         }
-        if isAnyListMemberEmpty(cx, members) {
+        if isAnyEmptySemType(cx, members) {
             return true;
         }
         // Ensure that we can use isNever on rest in listInhabited
@@ -286,7 +286,7 @@ function listInhabited(Context cx, SemType[] m, int repeatLastMember, SemType re
             if isNever(rest) {
                 return listInhabited(cx, members, repeatLen, rest, neg.next);
             }
-            repeatLen = fixLength(negLen, members, repeatLen, rest);
+            repeatLen = listDecompressMembersForSet(negLen, members, repeatLen, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
@@ -360,7 +360,6 @@ function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
     foreach var ty in atomic.members {
         m = union(m, ty);
     }
-    
     return m;
 }
 

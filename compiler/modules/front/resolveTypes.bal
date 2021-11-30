@@ -154,7 +154,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             t:SemType t = restTd != () ? check resolveTypeDesc(mod, modDefn, depth + 1, restTd) : t:NEVER;
             s:SimpleConstExpr? lenExpr = td.length;
             if lenExpr != () {
-                [t:SemType, t:Value] [_, resolved] = check resolveConst(mod, modDefn, lenExpr, t:INT);
+                [t:SemType, t:Value] [_, resolved] = check resolveConstExpr(mod, modDefn, lenExpr, t:INT);
                 length = <int>resolved.value - 1; // The member in members array is alredy counted toward member length.
                 members.push(t);
             }

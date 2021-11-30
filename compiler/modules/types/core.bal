@@ -803,7 +803,7 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
 }
 
 final ListAtomicType LIST_ATOMIC_TOP = { members: [], repeatLastMember: 0, rest: TOP };
-final ListAtomicType LIST_ATOMIC_READONLY = { members: [],  repeatLastMember: 0, rest: READONLY };
+final ListAtomicType LIST_ATOMIC_READONLY = { members: [], repeatLastMember: 0, rest: READONLY };
 
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is UniformTypeBitSet {

@@ -81,20 +81,20 @@ function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:Resolve
         defn.resolved = false;
         s:SubsetBuiltinTypeDesc? td = defn.td;
         t:SemType? expectedType = td == () ? () : resolveBuiltinTypeDesc(td);
-        s:ResolvedConst resolvedConst = check resolveConst(mod, defn, defn.expr, expectedType);
+        s:ResolvedConst resolvedConst = check resolveConstExpr(mod, defn, defn.expr, expectedType);
         defn.resolved = resolvedConst;
         return resolvedConst;
     }
 }
 
-function resolveConst(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr origExpr, t:SemType? expectedType) returns s:ResolvedConst|FoldError {
+function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, t:SemType? expectedType) returns s:ResolvedConst|FoldError {
     ConstFoldContext cx = new ConstFoldContext(defn, mod);
-    s:Expr expr = check foldExpr(cx, expectedType, origExpr);
-    if expr is s:ConstValueExpr {
-        if expectedType == () || t:containsConst(expectedType, expr.value) {
+    s:Expr foldedExpr = check foldExpr(cx, expectedType, expr);
+    if foldedExpr is s:ConstValueExpr {
+        if expectedType == () || t:containsConst(expectedType, foldedExpr.value) {
             return <s:ResolvedConst>[ 
-                t:singleton(expr.value), 
-                { value: expr.value } 
+                t:singleton(foldedExpr.value), 
+                { value: foldedExpr.value } 
             ];
         }
         else {

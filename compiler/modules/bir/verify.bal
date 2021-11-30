@@ -166,7 +166,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
         return vc.err("bad BIR: inherent type of list is not atomic", insn.pos);
     }
     else {
-        if t:isFixedLengthList(lat) {
+        if t:listAtomicMinLength(lat) > 0 {
             return vc.err("bad BIR: tuples and fixed length arrays not supported as list inherent type", insn.pos);
         }
         foreach var operand in insn.operands {
