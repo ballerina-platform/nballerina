@@ -508,9 +508,10 @@ public readonly class SourceFile {
                 int? closingIndex = scanLine.fragCodes.indexOf(FRAG_STRING_CLOSE, fragCodeIndex + 1);
                 if closingIndex is int {
                     int strLen = 0;
-                    foreach int fIndex in fragmentIndex ..< (fragmentIndex + (closingIndex-fragCodeIndex)) {
+                    foreach int fIndex in fragmentIndex ..< (fragmentIndex + (closingIndex - fragCodeIndex) - 1) {
                         strLen += scanLine.fragments[fIndex].length();
                     }
+                    strLen += 1; // include the closing quote
                     content = line.substring(columnNum, columnNum + strLen + 1);
                     postfix = line.substring(columnNum + strLen + 1);
                 }
