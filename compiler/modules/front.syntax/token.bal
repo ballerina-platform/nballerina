@@ -487,7 +487,7 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
-    // Currently range is expected to start at the beging of a token
+    // range is expected to;the start of a token
     public function lineContent((Position|d:Range) range) returns [string, string, string] {
         if range is Position {
             var [lineNum, columnNum] = self.lineColumn(range);
@@ -539,17 +539,17 @@ public readonly class SourceFile {
             var [endLine, endColumn] = unpackPosition(range.endPos);
             string line = scanLineToString(self.scannedLine(startLine));
             string prefix = line.substring(0, startColumn);
-            string body;
+            string content;
             string postfix;
             if startLine == endLine {
-                body = line.substring(startColumn, endColumn);
+                content = line.substring(startColumn, endColumn);
                 postfix = line.substring(endColumn);
             }
             else {
-                body = line.substring(startColumn);
+                content = line.substring(startColumn);
                 postfix = "";
             }
-            return [prefix, body, postfix];
+            return [prefix, content, postfix];
         }
     }
 
