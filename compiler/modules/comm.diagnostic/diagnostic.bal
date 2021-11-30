@@ -150,6 +150,5 @@ function caretLine(File file, Range|Position range) returns string {
     }
     string padding = lib:stringRepeat(" ", startColumn);
     string carets = lib:stringRepeat("^", caretLen);
-
     return padding + carets;
 }
