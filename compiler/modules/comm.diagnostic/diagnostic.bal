@@ -26,8 +26,7 @@ public type File readonly & object {
     public function filename() returns string;
     public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
-    public function lineContent(Position pos) returns string;
-    public function tokenLength(Position startPos) returns int;
+    public function lineContent(Position|Range range) returns [string, string, string];
 };
 
 public type Location readonly & record {|
@@ -123,32 +122,24 @@ public function format(Diagnostic d) returns string[] {
     line += ": error: " + d.message;
     lines.push(line);
     Range|Position range = loc.range;
-    lines.push(range is Position ? loc.file.lineContent(range) : loc.file.lineContent(range.startPos));
+    [string, string, string] sourceLine = range is Position ? loc.file.lineContent(range) : loc.file.lineContent(range.startPos);
+    lines.push("".'join(...sourceLine));
     lines.push(caretLine(loc.file, range));
     return lines;
 }
 
 function caretLine(File file, Range|Position range) returns string {
-    int startColumn;
-    int caretLen;
-    if range is Position {
-        startColumn = file.lineColumn(range)[1];
-        caretLen = file.tokenLength(range);
-    }
-    else {
-        int startLine;
-        [startLine, startColumn] = file.lineColumn(range.startPos);
-        var [endLine, endColumn] = file.lineColumn(range.endPos);
-        if startLine == endLine {
-            caretLen = endColumn - startColumn + 1;
+    var [prefix, content, _] = file.lineContent(range);
+    string[] paddingContent = [];
+    foreach string:Char c in prefix {
+        if c == "\t" {
+            paddingContent.push(c);
         }
         else {
-            // multiline err
-            string line = file.lineContent(range.startPos);
-            caretLen = line.length() - startColumn;
+            paddingContent.push(" ");
         }
     }
-    string padding = lib:stringRepeat(" ", startColumn);
-    string carets = lib:stringRepeat("^", caretLen);
+    string padding = "".'join(...paddingContent);
+    string carets = lib:stringRepeat("^", content.length());
     return padding + carets;
 }

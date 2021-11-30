@@ -1,5 +1,6 @@
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
+import ballerina/io;
 
 type Token FixedToken|VariableLengthToken;
 type FixedToken SingleCharDelim|MultiCharDelim|Keyword;
@@ -487,9 +488,76 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
-    public function lineContent(Position pos) returns string {
-        int lineNum = self.lineColumn(pos)[0];
-        return scanLineToString(self.scannedLine(lineNum));
+    public function lineContent((Position|d:Range) range) returns [string, string, string] {
+        if range is Position {
+            var [lineNum, columnNum] = self.lineColumn(range);
+            string line = scanLineToString(self.scannedLine(lineNum));
+            string prefix = line.substring(0, columnNum);
+            int contentLength = self.tokenLength(range);
+            int contentEnd = columnNum + contentLength;
+            if contentEnd > line.length() {
+                io:println(line, unpackPosition(range));
+            }
+            string content = line.substring(columnNum, contentEnd);
+            if columnNum == line.length() - 1 {
+                return [prefix, content, ""];
+            }
+            string postfix = line.substring(contentEnd);
+            if content == "\"" {
+                // we assume pos is the starting positiong of the token
+                int? closingIndex = line.indexOf("\"", columnNum+1);
+                if closingIndex is int {
+                    content = line.substring(columnNum, closingIndex+1);
+                    postfix = line.substring(closingIndex+1);
+                }
+                else {
+                    content = line.substring(columnNum, line.length());
+                    postfix = "";
+                }
+            }
+            else if content == ">" {
+                if columnNum + 1 < line.length() && line[columnNum + 1] == ">" {
+                    if columnNum + 2 < line.length() && line[columnNum + 2] == ">" {
+                        content = ">>>";
+                        postfix = line.substring(columnNum + 2);
+                    }
+                    else {
+                        content = ">>";
+                        postfix = line.substring(columnNum + 1);
+                    }
+                }
+            }
+            else if content == "<" {
+                if columnNum + 1 < line.length() && line[columnNum + 1] == "<" {
+                    if columnNum + 2 < line.length() && line[columnNum + 2] == "<" {
+                        content = "<<<";
+                        postfix = line.substring(columnNum + 2);
+                    }
+                    else {
+                        content = "<<";
+                        postfix = line.substring(columnNum + 1);
+                    }
+                }
+            }
+            return [prefix, content, postfix];
+        }
+        else {
+            var [startLine, startColumn] = unpackPosition(range.startPos);
+            var [endLine, endColumn] = unpackPosition(range.endPos);
+            string line = scanLineToString(self.scannedLine(startLine));
+            string prefix = line.substring(0, startColumn);
+            string c;
+            string postfix;
+            if startLine == endLine {
+                c = line.substring(startColumn, endColumn);
+                postfix = line.substring(endColumn);
+            }
+            else {
+                c = line.substring(startColumn);
+                postfix = "";
+            }
+            return [prefix, c, postfix];
+        }
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
@@ -498,17 +566,10 @@ public readonly class SourceFile {
         return self.lines[lineNumber - 1];
     }
 
-    public function tokenLength(Position startPos) returns int {
+    function tokenLength(Position startPos) returns int {
         var [lineIndex, columnIndex] = unpackPosition(startPos);
         ScannedLine line = self.scannedLine(lineIndex);
         var [fragCodeIndex, fragmentIndex] = scanLineFragIndex(line, columnIndex);
-        if line.fragCodes[fragCodeIndex] == FRAG_STRING_OPEN {
-            if fragCodeIndex + 2 < line.fragCodes.length() && line.fragCodes[fragCodeIndex + 2] == FRAG_STRING_CLOSE {
-                return line.fragments[fragmentIndex].length() + 2;
-            }
-            // no closing quotes in this line
-            return line.fragments[fragmentIndex].length() + 1;
-        }
         return fragCodeLength(line, fragCodeIndex, fragmentIndex);
     }
 }
