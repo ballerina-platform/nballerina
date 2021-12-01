@@ -224,33 +224,30 @@ function fragCodeLength(ScannedLine line, int fragCodeIndex, int fragmentIndex) 
     }
 }
 
-function fragmentToString(ScannedLine line, int fragCodeIndex, int fragmentIndex) returns string {
-    FragCode code = line.fragCodes[fragCodeIndex];
-    if code <= VAR_FRAG_MAX {
-        return line.fragments[fragmentIndex];
-    }
-    else if code >= FRAG_FIXED_TOKEN {
-        // JBUG #33346 cast should not be needed
-        return <string>fragTokens[<int>code];
-    }
-    else {
-        // JBUG #33346 cast should not be needed
-        return <string>fragFixed[<int>code];
-    }
-}
-
-function scanLineToString(ScannedLine line) returns string {
+function scanLineContent(ScannedLine line) returns string[] {
     string[] lineContent = [];
     readonly & FragCode[] fragCodes = line.fragCodes;
     int fragmentIndex = 0;
     foreach int fragCodeIndex in 0 ..< fragCodes.length() {
         FragCode code = fragCodes[fragCodeIndex];
-        lineContent.push(fragmentToString(line, fragCodeIndex, fragmentIndex));
         if code <= VAR_FRAG_MAX {
+            lineContent.push(line.fragments[fragmentIndex]);
             fragmentIndex += 1;
         }
+        else if code >= FRAG_FIXED_TOKEN {
+            // JBUG #33346 cast should not be needed
+            lineContent.push(<string>fragTokens[<int>code]);
+        }
+        else {
+            // JBUG #33346 cast should not be needed
+            lineContent.push(<string>fragFixed[<int>code]);
+        }
     }
-    return "".'join(...lineContent);
+    return lineContent;
+}
+
+function scanLineToString(ScannedLine line) returns string {
+    return "".'join(...scanLineContent(line));
 }
 
 function unicodeEscapeValue(string fragment) returns string|error {
