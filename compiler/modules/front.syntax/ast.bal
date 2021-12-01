@@ -453,7 +453,7 @@ public type TypeDefn record {|
 
 public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
-public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc;
+public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc|TableTypeDesc;
 
 public type ListTypeDesc record {|
     // JBUG #32617 can't include PositionFields
@@ -533,6 +533,12 @@ public type TypeDescRef record {|
     string? prefix = ();
     string typeName;
     Position pos;
+|};
+
+public type TableTypeDesc record {|
+    Position startPos;
+    Position endPos;
+    TypeDesc row;
 |};
 
 public type SingletonTypeDesc record {|

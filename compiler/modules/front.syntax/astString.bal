@@ -315,6 +315,11 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is SingletonTypeDesc {
         valueToWords(w, td.value);
     }
+    else if td is TableTypeDesc {
+        w.push("table", CLING, "<", CLING);
+        typeDescToWords(w, td.row);
+        w.push(CLING, ">");
+    }
     else {
         panic err:impossible(`typedesc not implemented in typeDescToWords: ${td.toString()}`);
     }   

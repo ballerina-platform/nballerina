@@ -281,6 +281,15 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
         return t:xmlSequence(t);
     }
+    if td is s:TableTypeDesc {
+        t:SemType t = check resolveTypeDesc(mod, modDefn, depth, td.row);
+        d:Location loc =  d:location(modDefn.part.file, td.startPos, td.endPos);
+        
+        if !t:isSubtypeSimple(t, t:MAPPING) {
+            return err:semantic("type parameter for table is not a record", loc=loc);
+        }
+        return t:tableDef(t);
+    }
     panic error("unimplemented type-descriptor");
 }
 

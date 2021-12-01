@@ -68,6 +68,7 @@ type Keyword
     | "break"
     | "public"
     | "import"
+    | "table"
     ;
 
 type StringIterator object {

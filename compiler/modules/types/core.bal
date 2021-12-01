@@ -1165,7 +1165,7 @@ function init() {
         booleanOps, // boolean
         listRoOps, // RO list
         mappingRoOps, // RO mapping
-        {}, // RO table
+        tableRoOps, // RO table
         xmlRoOps, // RO xml
         {}, // RO object
         intOps, // int
@@ -1181,7 +1181,7 @@ function init() {
         {}, // RW stream
         listRwOps, // RW list
         mappingRwOps, // RW mapping
-        {}, // RW table
+        tableRwOps, // RW table
         xmlRwOps, // RW xml
         {} // RW object
    ];
