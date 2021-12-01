@@ -786,14 +786,14 @@ public function simpleArrayMemberType(Context cx, SemType t) returns UniformType
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 public function arrayMemberType(Context cx, SemType t) returns SemType? {
     ListAtomicType? atomic = listAtomicTypeRw(cx, t);
-    if atomic != () && atomic.members.length() == 0 {
+    if atomic != () && listMembersLength(atomic.members) == 0 {
         return atomic.rest;
     }
     return ();
 }
 
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns UniformTypeBitSet? {
-    if atomic != () && atomic.members.length() == 0 {
+    if atomic != () && listMembersLength(atomic.members) == 0 {
         SemType memberType = atomic.rest;
         if memberType is UniformTypeBitSet {
             return memberType;
@@ -802,8 +802,8 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
     return ();   
 }
 
-final ListAtomicType LIST_ATOMIC_TOP = { members: [], repeatLastMember: 0, rest: TOP };
-final ListAtomicType LIST_ATOMIC_READONLY = { members: [], repeatLastMember: 0, rest: READONLY };
+final ListAtomicType LIST_ATOMIC_TOP = createListAtomicType([], 0, TOP);
+final ListAtomicType LIST_ATOMIC_READONLY = createListAtomicType([], 0, READONLY);
 
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is UniformTypeBitSet {

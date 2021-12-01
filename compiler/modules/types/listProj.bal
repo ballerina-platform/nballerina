@@ -39,8 +39,8 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
     else {
         // combine all the positive tuples using intersection
         ListAtomicType lt = cx.listAtomType(pos.atom);
-        members = lt.members;
-        repeatLastMember = lt.repeatLastMember;
+        members = lt.members.initial;
+        repeatLastMember = lt.members.repeatLastCount;
         rest = lt.rest;
         Conjunction? p = pos.next;
         // the neg case is in case we grow the array in listInhabited
@@ -56,7 +56,7 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                 p = p.next; 
                 lt = cx.listAtomType(d);
                 int prevLen = members.length() + repeatLastMember;
-                int currentLen = lt.members.length() + lt.repeatLastMember;
+                int currentLen = listMembersLength(lt.members);
                 int newLen = int:max(prevLen, currentLen);
                 if prevLen < newLen {
                     if isNever(rest) {
@@ -65,7 +65,7 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                     repeatLastMember = listDecompressMembersForSet(newLen, members, repeatLastMember, rest);
                 }
                 foreach int i in 0 ..< currentLen {
-                    members[i] = intersect(listMemberAt(members, i), listMemberAt(lt.members, i));
+                    members[i] = intersect(listMemberAt(members, i), listMemberAt(lt.members.initial, i));
                 }
                 if currentLen < newLen {
                     if isNever(lt.rest) {
@@ -108,7 +108,7 @@ function listProjExclude(Context cx,
     else {
         SemType[] members = m;
         ListAtomicType nt = cx.listAtomType(neg.atom);
-        int negLen = nt.members.length() + nt.repeatLastMember;
+        int negLen = listMembersLength(nt.members);
         if len < negLen {
             if isNever(rest) {
                 return listProjExclude(cx, k, members, repeatCount, rest, neg.next);
@@ -122,7 +122,7 @@ function listProjExclude(Context cx,
         // now we have nt.members.length() <= len
         SemType p = NEVER;
         foreach int i in 0 ..< len {
-            SemType ntm = i < negLen ? listMemberAt(nt.members, i) : nt.rest;
+            SemType ntm = i < negLen ? listMemberAt(nt.members.initial, i) : nt.rest;
             SemType d = diff(listMemberAt(members, i), ntm);
             if !isEmpty(cx, d) {
                 SemType[] s = shallowCopyTypes(members);
