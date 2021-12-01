@@ -2,8 +2,8 @@
 
 HASH_DEFINE_KEY;
 
-void validatDecToFloat(const char *decStr, double value) {
-    assert(_bal_decimal_to_float(_bal_decimal_const(decStr)) == value);
+void validatDecToFloat(const char *decStr, double val) {
+    assert(_bal_decimal_to_float(_bal_decimal_const(decStr)) == val);
 }
 
 void testDecToFloat() {
@@ -48,8 +48,8 @@ void testDecToFloat() {
     validatDecToFloat("-1.7976931348623156e+309", -INFINITY);
 }
 
-void validateIntToDec(int64_t value, const char *decStr) {
-    validateDec(_bal_decimal_from_int(value), decStr);
+void validateIntToDec(int64_t val, const char *decStr) {
+    validateDec(_bal_decimal_from_int(val), decStr);
 }
 
 void testIntToDec() {
@@ -104,9 +104,9 @@ void testFloatToDec() {
     validateFloatToDecPanic(NAN, PANIC_INVALID_DECIMAL);
 }
 
-void validateDecToIntNonOverflow(const char *decStr, int64_t val) {
+void validateDecToIntNonOverflow(const char *decStr, int64_t i) {
     IntWithOverflow res = _bal_decimal_to_int(_bal_decimal_const(decStr));
-    assert(res.val == val);
+    assert(res.value == i);
     assert(!res.overflow);
 }
 
@@ -132,10 +132,12 @@ void testDecToInt() {
     validateDecToIntNonOverflow("1.513e2", 151);
     validateDecToIntNonOverflow("1.515e2", 152);
     validateDecToIntNonOverflow("9223372036854775807", 9223372036854775807);
+    validateDecToIntNonOverflow("9223372036854775807.0", 9223372036854775807);
     validateDecToIntNonOverflow("9223372036854775807.1", 9223372036854775807);
     validateDecToIntNonOverflow("9223372036854775807.4", 9223372036854775807);
     validateDecToIntNonOverflow("92233720368547758074e-1", 9223372036854775807);
     validateDecToIntNonOverflow("-9223372036854775808", -9223372036854775807L - 1);
+    validateDecToIntNonOverflow("-9223372036854775808.0", -9223372036854775807L - 1);
     validateDecToIntNonOverflow("-9223372036854775808.1", -9223372036854775807L - 1);
     validateDecToIntNonOverflow("-92233720368547758081e-1", -9223372036854775807L - 1);
     validateDecToIntNonOverflow("-9223372036854775808.5", -9223372036854775807L - 1);
