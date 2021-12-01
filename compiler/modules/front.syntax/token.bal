@@ -467,7 +467,54 @@ function unpackPosition(Position pos) returns [int, int] & readonly {
     return [pos >> 32, pos & 0xFFFFFFFF];
 }
 
-function linePrefix(string[] lineContent, int columnNum) returns [string, int] {
+public readonly class SourceFile {
+    *d:File;
+    private ScannedLine[] lines;
+    private string fn;
+    private string? dir;
+
+    function init(readonly & ScannedLine[] lines, FilePath path) {
+        self.lines = lines;
+        self.fn = path.filename;
+        self.dir = path.directory;
+    }
+
+    public function filename() returns string => self.fn;
+
+    public function directory() returns string? => self.dir;
+
+    public function lineColumn(Position pos) returns d:LineColumn {
+        return unpackPosition(pos);
+    }
+
+    // range is expected to be the start of a fragment
+    public function lineContent((Position|d:Range) range) returns [string, string, string] {
+        int lineNum = range is Position ? self.lineColumn(range)[0] : self.lineColumn(range.startPos)[0];
+        ScannedLine scannedLine = self.scannedLine(lineNum);
+        string[] lineContent = scanLineContent(scannedLine);
+        var[prefix, prefixEndIndex] = linePrefix(lineContent, range);
+        string content;
+        int contentEndIndex;
+        if range is Position {
+            [content, contentEndIndex] = lineToken(lineContent, prefixEndIndex);
+        }
+        else {
+            [content, contentEndIndex] = lineTokensInRange(lineContent, prefixEndIndex, range);
+        }
+        string suffix = lineSuffix(lineContent, contentEndIndex);
+        return [prefix, content, suffix];
+    }
+
+    function scannedLines() returns readonly & ScannedLine[] => self.lines;
+
+    function scannedLine(int lineNumber) returns ScannedLine {
+        return self.lines[lineNumber - 1];
+    }
+}
+
+function linePrefix(string[] lineContent, Position|d:Range end) returns [string, int] {
+    Position endPos = end is Position ? end : end.startPos;
+    int columnNum = unpackPosition(endPos)[1];
     string[] prefixBody = [];
     int curCol = 0;
     int contentIndex = 0;
@@ -511,69 +558,34 @@ function lineToken(string[] lineContent, int index) returns [string, int] {
         return ["".'join(...contentBody), contentIndex];
 }
 
+// index is the index of the starting fragment in the range
+function lineTokensInRange(string[] lineContent, int index, d:Range range) returns [string, int] {
+    string[] contentBody = [];
+    int contentIndex = index;
+    var[startLine, startColumn] = unpackPosition(range.startPos);
+    var[endLine, endColumn] = unpackPosition(range.endPos);
+    if startLine == endLine {
+        int curCol = startColumn;
+        while curCol < endColumn {
+            string fragmentString = lineContent[contentIndex];
+            contentIndex += 1;
+            curCol += fragmentString.length();
+            contentBody.push(fragmentString);
+        }
+    }
+    else {
+        contentBody = lineContent.slice(index);
+        contentIndex = lineContent.length();
+    }
+    return ["".'join(...contentBody), contentIndex];
+}
+
 function lineSuffix(string[] lineContent, int columnNum) returns string {
     string[] suffixBody = [];
     foreach int i in columnNum..<lineContent.length() {
         suffixBody.push(lineContent[i]);
     }
     return "".'join(...suffixBody);
-}
-
-public readonly class SourceFile {
-    *d:File;
-    private ScannedLine[] lines;
-    private string fn;
-    private string? dir;
-
-    function init(readonly & ScannedLine[] lines, FilePath path) {
-        self.lines = lines;
-        self.fn = path.filename;
-        self.dir = path.directory;
-    }
-
-    public function filename() returns string => self.fn;
-
-    public function directory() returns string? => self.dir;
-
-    public function lineColumn(Position pos) returns d:LineColumn {
-        return unpackPosition(pos);
-    }
-
-    // range is expected to be the start of a fragment
-    public function lineContent((Position|d:Range) range) returns [string, string, string] {
-        if range is Position {
-            var [lineNum, columnNum] = self.lineColumn(range);
-            ScannedLine scannedLine = self.scannedLine(lineNum);
-            string[] lineContent = scanLineContent(scannedLine);
-            var [prefix, prefixEndIndex] = linePrefix(lineContent, columnNum);
-            var [content, contentEndIndex] = lineToken(lineContent, prefixEndIndex);
-            string suffix = lineSuffix(lineContent, contentEndIndex);
-            return [prefix, content, suffix];
-        }
-        else {
-            var [startLine, startColumn] = unpackPosition(range.startPos);
-            var [endLine, endColumn] = unpackPosition(range.endPos);
-            string line = scanLineToString(self.scannedLine(startLine));
-            string prefix = line.substring(0, startColumn);
-            string content;
-            string postfix;
-            if startLine == endLine {
-                content = line.substring(startColumn, endColumn);
-                postfix = line.substring(endColumn);
-            }
-            else {
-                content = line.substring(startColumn);
-                postfix = "";
-            }
-            return [prefix, content, postfix];
-        }
-    }
-
-    function scannedLines() returns readonly & ScannedLine[] => self.lines;
-
-    function scannedLine(int lineNumber) returns ScannedLine {
-        return self.lines[lineNumber - 1];
-    }
 }
 
 public function createSourceFile(string[] lines, FilePath path) returns SourceFile {
