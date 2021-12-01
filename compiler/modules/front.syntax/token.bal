@@ -493,14 +493,8 @@ public readonly class SourceFile {
         ScannedLine scannedLine = self.scannedLine(lineNum);
         string[] lineContent = scanLineContent(scannedLine);
         var[prefix, prefixEndIndex] = linePrefix(lineContent, range);
-        string content;
-        int contentEndIndex;
-        if range is Position {
-            [content, contentEndIndex] = lineToken(lineContent, prefixEndIndex);
-        }
-        else {
-            [content, contentEndIndex] = lineTokensInRange(lineContent, prefixEndIndex, range);
-        }
+        int contentEndIndex = lineTokenEndIndex(lineContent, prefixEndIndex, range);
+        string content = "".'join(...lineContent.slice(prefixEndIndex, contentEndIndex));
         string suffix = lineSuffix(lineContent, contentEndIndex);
         return [prefix, content, suffix];
     }
@@ -527,57 +521,49 @@ function linePrefix(string[] lineContent, Position|d:Range end) returns [string,
     return ["".'join(...prefixBody), contentIndex];
 }
 
-// index is the index of starting fragment in lineContent
-function lineToken(string[] lineContent, int index) returns [string, int] {
-        string[] contentBody = [];
-        int contentIndex = index;
-        contentBody.push(lineContent[contentIndex]);
+// index is the index of starting fragment of range
+function lineTokenEndIndex(string[] lineContent, int index, (Position|d:Range) range) returns int {
+    int contentIndex = index;
+    if range is Position {
+        // we have to find the end of token
+        string startFragment = lineContent[contentIndex];
         contentIndex += 1;
-        if contentBody[0] == "\"" {
+        if startFragment == "\"" {
             while contentIndex < lineContent.length() && lineContent[contentIndex] != "\"" {
-                contentBody.push(lineContent[contentIndex]);
                 contentIndex += 1;
             }
             if contentIndex < lineContent.length() && lineContent[contentIndex] == "\"" {
-                contentBody.push(lineContent[contentIndex]);
                 contentIndex += 1;
             }
         }
-        else if contentBody[0] == ">" {
+        else if startFragment == ">" {
             if contentIndex < lineContent.length() && lineContent[contentIndex] == ">" {
                 if contentIndex + 1 < lineContent.length() && lineContent[contentIndex + 1] == ">" {
-                    contentBody.push(">", ">");
                     contentIndex += 2;
                 }
                 else {
-                    contentBody.push(">");
                     contentIndex += 1;
                 }
             }
         }
-        return ["".'join(...contentBody), contentIndex];
-}
-
-// index is the index of the starting fragment in the range
-function lineTokensInRange(string[] lineContent, int index, d:Range range) returns [string, int] {
-    string[] contentBody = [];
-    int contentIndex = index;
-    var[startLine, startColumn] = unpackPosition(range.startPos);
-    var[endLine, endColumn] = unpackPosition(range.endPos);
-    if startLine == endLine {
-        int curCol = startColumn;
-        while curCol < endColumn {
-            string fragmentString = lineContent[contentIndex];
-            contentIndex += 1;
-            curCol += fragmentString.length();
-            contentBody.push(fragmentString);
-        }
     }
     else {
-        contentBody = lineContent.slice(index);
-        contentIndex = lineContent.length();
+        // we only have to find the index corresponding to end of range
+        var[startLine, startColumn] = unpackPosition(range.startPos);
+        var[endLine, endColumn] = unpackPosition(range.endPos);
+        if startLine == endLine {
+            int curCol = startColumn;
+            while curCol < endColumn {
+                string fragmentString = lineContent[contentIndex];
+                contentIndex += 1;
+                curCol += fragmentString.length();
+            }
+        }
+        else {
+            contentIndex = lineContent.length();
+        }
     }
-    return ["".'join(...contentBody), contentIndex];
+    return contentIndex;
 }
 
 function lineSuffix(string[] lineContent, int columnNum) returns string {
