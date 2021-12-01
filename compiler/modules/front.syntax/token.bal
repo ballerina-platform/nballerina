@@ -467,6 +467,58 @@ function unpackPosition(Position pos) returns [int, int] & readonly {
     return [pos >> 32, pos & 0xFFFFFFFF];
 }
 
+function linePrefix(string[] lineContent, int columnNum) returns [string, int] {
+    string[] prefixBody = [];
+    int curCol = 0;
+    int contentIndex = 0;
+    while curCol < columnNum {
+        string fragmentString = lineContent[contentIndex];
+        contentIndex += 1;
+        curCol += fragmentString.length();
+        prefixBody.push(fragmentString);
+    }
+    return ["".'join(...prefixBody), contentIndex];
+}
+
+// index is the index of starting fragment in lineContent
+function lineToken(string[] lineContent, int index) returns [string, int] {
+        string[] contentBody = [];
+        int contentIndex = index;
+        contentBody.push(lineContent[contentIndex]);
+        contentIndex += 1;
+        if contentBody[0] == "\"" {
+            while contentIndex < lineContent.length() && lineContent[contentIndex] != "\"" {
+                contentBody.push(lineContent[contentIndex]);
+                contentIndex += 1;
+            }
+            if contentIndex < lineContent.length() && lineContent[contentIndex] == "\"" {
+                contentBody.push(lineContent[contentIndex]);
+                contentIndex += 1;
+            }
+        }
+        else if contentBody[0] == ">" {
+            if contentIndex < lineContent.length() && lineContent[contentIndex] == ">" {
+                if contentIndex + 1 < lineContent.length() && lineContent[contentIndex + 1] == ">" {
+                    contentBody.push(">", ">");
+                    contentIndex += 2;
+                }
+                else {
+                    contentBody.push(">");
+                    contentIndex += 1;
+                }
+            }
+        }
+        return ["".'join(...contentBody), contentIndex];
+}
+
+function lineSuffix(string[] lineContent, int columnNum) returns string {
+    string[] suffixBody = [];
+    foreach int i in columnNum..<lineContent.length() {
+        suffixBody.push(lineContent[i]);
+    }
+    return "".'join(...suffixBody);
+}
+
 public readonly class SourceFile {
     *d:File;
     private ScannedLine[] lines;
@@ -493,48 +545,9 @@ public readonly class SourceFile {
             var [lineNum, columnNum] = self.lineColumn(range);
             ScannedLine scannedLine = self.scannedLine(lineNum);
             string[] lineContent = scanLineContent(scannedLine);
-            string[] prefixBody = [];
-            int curCol = 0;
-            int contentIndex = 0;
-            while curCol < columnNum {
-                string fragmentString = lineContent[contentIndex];
-                contentIndex += 1;
-                curCol += fragmentString.length();
-                prefixBody.push(fragmentString);
-            }
-            string prefix = "".'join(...prefixBody);
-            string[] contentBody = [];
-            contentBody.push(lineContent[contentIndex]);
-            contentIndex += 1;
-            if contentBody[0] == "\"" {
-                while contentIndex < lineContent.length() && lineContent[contentIndex] != "\"" {
-                    contentBody.push(lineContent[contentIndex]);
-                    contentIndex += 1;
-                }
-                if contentIndex < lineContent.length() && lineContent[contentIndex] == "\"" {
-                    contentBody.push(lineContent[contentIndex]);
-                    contentIndex += 1;
-                }
-            }
-            else if contentBody[0] == ">" {
-                if contentIndex < lineContent.length() && lineContent[contentIndex] == ">" {
-                    if contentIndex + 1 < lineContent.length() && lineContent[contentIndex + 1] == ">" {
-                        contentBody.push(">", ">");
-                        contentIndex += 2;
-                    }
-                    else {
-                        contentBody.push(">");
-                        contentIndex += 1;
-                    }
-                }
-            }
-            string content = "".'join(...contentBody);
-            string[] suffixBody = [];
-            while contentIndex < lineContent.length() {
-                suffixBody.push(lineContent[contentIndex]);
-                contentIndex += 1;
-            }
-            string suffix = "".'join(...suffixBody);
+            var [prefix, prefixEndIndex] = linePrefix(lineContent, columnNum);
+            var [content, contentEndIndex] = lineToken(lineContent, prefixEndIndex);
+            string suffix = lineSuffix(lineContent, contentEndIndex);
             return [prefix, content, suffix];
         }
         else {
