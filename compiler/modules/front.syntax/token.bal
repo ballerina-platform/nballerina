@@ -487,7 +487,7 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
-    // range is expected to be the start of a token
+    // range is expected to be the start of a fragment
     public function lineContent((Position|d:Range) range) returns [string, string, string] {
         if range is Position {
             var [lineNum, columnNum] = self.lineColumn(range);
