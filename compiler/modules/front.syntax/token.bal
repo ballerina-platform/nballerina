@@ -415,7 +415,8 @@ class Tokenizer {
     }
 
     function err(d:Message msg) returns err:Syntax {
-        return err:syntax(msg, loc=d:location(self.file, self.currentStartPos()));
+        // XXX pass in endPos if we need to in order to be able to recreate the right endPos
+        return err:syntax(msg, loc=d:location(self.file, self.currentStartPos(), self.currentEndPos()));
     }
 
     function save() returns TokenizerState {
@@ -488,15 +489,36 @@ public readonly class SourceFile {
     }
 
     // range is expected to be the start of a fragment
-    public function lineContent((Position|d:Range) range) returns [string, string, string] {
-        int lineNum = range is Position ? self.lineColumn(range)[0] : self.lineColumn(range.startPos)[0];
-        ScannedLine scannedLine = self.scannedLine(lineNum);
-        string[] lineContent = scanLineContent(scannedLine);
-        var[prefix, prefixEndIndex] = linePrefix(lineContent, range);
-        int contentEndIndex = lineTokenEndIndex(lineContent, prefixEndIndex, range);
-        string content = "".'join(...lineContent.slice(prefixEndIndex, contentEndIndex));
-        string suffix = lineSuffix(lineContent, contentEndIndex);
-        return [prefix, content, suffix];
+    public function lineContent(Position|d:Range range) returns [string, string, string] {
+        Position startPos;
+        Position? endPos;
+        if range is d:Range {
+            { startPos, endPos } = range;
+        }
+        else {
+            startPos = range;
+            endPos = ();
+        }
+        var [startLineNum, startColumnNum] = self.lineColumn(startPos);
+        ScannedLine line = self.scannedLine(startLineNum);
+        string[] lineFragments = scanLineFragments(line);
+        string lineContent = "".'join(...lineFragments);
+        int endColumnNum;
+        if endPos != () {
+            int endLineNum;
+            [endLineNum, endColumnNum] = self.lineColumn(endPos);
+            if endLineNum != startLineNum {
+                endColumnNum = lineContent.length();
+            }
+        }
+        else {
+            endColumnNum = tokenEndCodePointIndex(lineFragments, line.fragCodes, startColumnNum);
+        }
+        return [
+            lineContent.substring(0, startColumnNum),
+            lineContent.substring(startColumnNum, endColumnNum),
+            lineContent.substring(endColumnNum)
+        ];
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
@@ -506,72 +528,55 @@ public readonly class SourceFile {
     }
 }
 
-function linePrefix(string[] lineContent, Position|d:Range end) returns [string, int] {
-    Position endPos = end is Position ? end : end.startPos;
-    int columnNum = unpackPosition(endPos)[1];
-    string[] prefixBody = [];
-    int curCol = 0;
-    int contentIndex = 0;
-    while curCol < columnNum {
-        string fragmentString = lineContent[contentIndex];
-        contentIndex += 1;
-        curCol += fragmentString.length();
-        prefixBody.push(fragmentString);
-    }
-    return ["".'join(...prefixBody), contentIndex];
+function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex) returns int {
+    int fragmentIndex = fragmentCountUpTo(fragments, startCodePointIndex);
+    return lineTokenEndIndex(fragments, fragCodes, startCodePointIndex, fragmentIndex);
 }
 
-// index is the index of starting fragment of range
-function lineTokenEndIndex(string[] lineContent, int index, (Position|d:Range) range) returns int {
-    int contentIndex = index;
-    if range is Position {
-        // we have to find the end of token
-        string startFragment = lineContent[contentIndex];
-        contentIndex += 1;
-        if startFragment == "\"" {
-            while contentIndex < lineContent.length() && lineContent[contentIndex] != "\"" {
-                contentIndex += 1;
-            }
-            if contentIndex < lineContent.length() && lineContent[contentIndex] == "\"" {
-                contentIndex += 1;
-            }
+function fragmentCountUpTo(string[] fragments, int startCodePointIndex) returns int {
+    int nCodePoints = 0;
+    int fragmentIndex = 0;
+    int nFragments = fragments.length();
+    while fragmentIndex < nFragments {
+        if nCodePoints >= startCodePointIndex {
+            break;
         }
-        else if startFragment == ">" {
-            if contentIndex < lineContent.length() && lineContent[contentIndex] == ">" {
-                if contentIndex + 1 < lineContent.length() && lineContent[contentIndex + 1] == ">" {
-                    contentIndex += 2;
-                }
-                else {
-                    contentIndex += 1;
-                }
-            }
-        }
+        nCodePoints += fragments[fragmentIndex].length();
+        fragmentIndex += 1;
     }
-    else {
-        // we only have to find the index corresponding to end of range
-        var[startLine, startColumn] = unpackPosition(range.startPos);
-        var[endLine, endColumn] = unpackPosition(range.endPos);
-        if startLine == endLine {
-            int curCol = startColumn;
-            while curCol < endColumn {
-                string fragmentString = lineContent[contentIndex];
-                contentIndex += 1;
-                curCol += fragmentString.length();
-            }
-        }
-        else {
-            contentIndex = lineContent.length();
-        }
-    }
-    return contentIndex;
+    return fragmentIndex;
 }
 
-function lineSuffix(string[] lineContent, int columnNum) returns string {
-    string[] suffixBody = [];
-    foreach int i in columnNum..<lineContent.length() {
-        suffixBody.push(lineContent[i]);
+// Return code-point index of end of token that starts in
+function lineTokenEndIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex, int startFragmentIndex) returns int {
+    match fragCodes[startFragmentIndex] {
+        FRAG_STRING_OPEN  => {
+            return stringTokenEndIndex(fragments, fragCodes, startCodePointIndex, startFragmentIndex);
+        }
+        FRAG_GREATER_THAN => {
+            // Assume not in type-desc mode
+            if startFragmentIndex + 1 < fragCodes.length() && fragCodes[startFragmentIndex+1] == FRAG_GREATER_THAN {
+                if startFragmentIndex + 2 < fragCodes.length() && fragCodes[startFragmentIndex+2] == FRAG_GREATER_THAN {
+                    return startCodePointIndex + 3; // >>>
+                }
+                return startCodePointIndex + 2; // >>
+            }
+            return startCodePointIndex + 1; // >
+        }
     }
-    return "".'join(...suffixBody);
+    return startCodePointIndex + fragments[startFragmentIndex].length();
+}
+
+function stringTokenEndIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex, int startFragmentIndex) returns int {
+    int endCodePointIndex = startCodePointIndex;
+    foreach int fragmentIndex in startFragmentIndex ..< fragments.length() {
+        endCodePointIndex += fragments[fragmentIndex].length();
+        FragCode fragCode = fragCodes[fragmentIndex];
+        if fragCode == FRAG_STRING_CLOSE {
+            break;
+        }
+    }
+    return endCodePointIndex;
 }
 
 public function createSourceFile(string[] lines, FilePath path) returns SourceFile {

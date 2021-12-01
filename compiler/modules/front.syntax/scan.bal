@@ -218,7 +218,7 @@ function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, i
     return [fragCodeIndex, fragmentIndex];
 }
 
-function scanLineContent(ScannedLine line) returns string[] {
+function scanLineFragments(ScannedLine line) returns string[] {
     string[] lineContent = [];
     readonly & FragCode[] fragCodes = line.fragCodes;
     int fragmentIndex = 0;
@@ -241,7 +241,7 @@ function scanLineContent(ScannedLine line) returns string[] {
 }
 
 function scanLineToString(ScannedLine line) returns string {
-    return "".'join(...scanLineContent(line));
+    return "".'join(...scanLineFragments(line));
 }
 
 function unicodeEscapeValue(string fragment) returns string|error {
