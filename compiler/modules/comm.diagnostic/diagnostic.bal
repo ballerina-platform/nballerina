@@ -1,3 +1,4 @@
+import wso2/nballerina.comm.lib;
 public type Message string|Template;
 
 public type Template object {
@@ -25,6 +26,7 @@ public type File readonly & object {
     public function filename() returns string;
     public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
+    public function lineContent(Position pos) returns string;
 };
 
 public type Location readonly & record {|
@@ -112,7 +114,41 @@ public function messageFormat(Template t) returns string {
 
 public function format(Diagnostic d) returns string[] {
     Location loc = d.location;
+    string[] lines = [];
+    string line = loc.file.filename();
     LineColumn lc = locationLineColumn(loc);
     // lineColumn returns 0-based lines currently
-    return [loc.file.filename() + ":" + lc[0].toString() + ":" + (lc[1] + 1).toString() + ": error: " + d.message];
+    line += ":" + lc[0].toString() + ":" + (lc[1] + 1).toString();
+    line += ": error: " + d.message;
+    lines.push(line);
+    Range|Position range = loc.range;
+    lines.push(range is Position ? loc.file.lineContent(range) : loc.file.lineContent(range.startPos));
+    lines.push(caretLine(loc.file, range));
+    return lines;
+}
+
+function caretLine(File file, Range|Position range) returns string {
+    string carets;
+    int startColumn;
+    if range is Position {
+        startColumn = file.lineColumn(range)[1];
+        carets = "^";
+    }
+    else {
+        int startLine;
+        [startLine, startColumn] = file.lineColumn(range.startPos);
+        var [endLine, endColumn] = file.lineColumn(range.endPos);
+        int caretLen;
+        if startLine == endLine {
+            caretLen = endColumn - startColumn + 1;
+        }
+        else {
+            // multiline err
+            string line = file.lineContent(range.startPos);
+            caretLen = line.length() - startColumn;
+        }
+        carets = lib:stringRepeat("^", caretLen);
+    }
+    string padding = lib:stringRepeat(" ", startColumn);
+    return padding + carets;
 }

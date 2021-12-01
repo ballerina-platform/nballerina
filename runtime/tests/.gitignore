@@ -12,4 +12,5 @@
 /demangle
 /list_construct
 /decimal_arith
+/decimal_conv
 *.stamp

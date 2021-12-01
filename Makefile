@@ -3,24 +3,19 @@ LLVM_SUFFIX?=-12
 CLANG?=clang$(LLVM_SUFFIX)
 CFLAGS=-O2
 JAVA?=$(shell test/findJava.sh)
-TARGETS=all clean
+TARGETS=all clean test
 export CLANG CFLAGS BAL JAVA LLVM_SUFFIX
+SUBDIRS=compiler.d runtime.d test.d
 
-test: allCompiler allRuntime
-	$(MAKE) testEach
+all:
+	$(MAKE) target=all compiler.d runtime.d
 
-testEach: testCompiler testRuntime testSuite
+test clean:
+	$(MAKE) target=$@ $(SUBDIRS)
 
-$(TARGETS): %: %Compiler %Runtime %Suite
+test: all
 
-%Compiler:
-	$(MAKE) -C compiler $*
+$(SUBDIRS):
+	$(MAKE) -C $(basename $@) $(target)
 
-%Runtime:
-	$(MAKE) -C runtime $*
-
-%Suite:
-	$(MAKE) -C test $*
-
-.PHONY: $(TARGETS) test
-
+.PHONY: $(TARGETS) $(SUBDIRS)

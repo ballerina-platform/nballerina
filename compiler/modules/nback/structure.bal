@@ -87,7 +87,6 @@ const LLVM_INDEX = "i32";
 
 type ListRepr readonly & object {
     llvm:Type memberType;
-    string?[] rtFuncSuffix;
     int listDescGetIndex;
     int listDescSetIndex;
     boolean isSpecialized;
@@ -95,56 +94,47 @@ type ListRepr readonly & object {
     function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg);
 };
 
-final ListRepr listGenericRepr = object {
-    llvm:Type memberType = LLVM_TAGGED_PTR;
-    string?[] rtFuncSuffix = ["generic_get_tagged", "generic_set_tagged", "generic_get_int", "generic_set_int", "generic_get_float", "generic_set_float"];
-    int listDescGetIndex = 1;
-    int listDescSetIndex = 2;
-    boolean isSpecialized = false;
-    function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
-        return buildWideRepr(builder, scaffold, member, REPR_ANY, memberType);
-    }
-    function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
-        return buildStoreTagged(builder, scaffold, value, reg);
-    }
-};
-
-final ListRepr listIntArrayRepr = object {
-    llvm:Type memberType = LLVM_INT;
-    string?[] rtFuncSuffix = ["int_array_get_tagged", "int_array_set_tagged", "int_array_get_int", "int_array_set_int", (), "int_array_set_float"];
-    int listDescGetIndex = 3;
-    int listDescSetIndex = 4;
-    boolean isSpecialized = true;
-    function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
-        return buildInt(builder, scaffold, <bir:IntOperand>member);
-    }
-    function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
-        return buildStoreInt(builder, scaffold, value, reg);
-    }
-};
-
-final ListRepr listFloatArrayRepr = object {
-    llvm:Type memberType = LLVM_DOUBLE;
-    string?[] rtFuncSuffix = ["float_array_get_tagged", "float_array_set_tagged", (), "float_array_set_int", "float_array_get_float", "float_array_set_float"];
-    int listDescGetIndex = 5;
-    int listDescSetIndex = 6;
-    boolean isSpecialized = true;
-    function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
-        return buildFloat(builder, scaffold, <bir:FloatOperand>member);
-    }
-    function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
-        return buildStoreFloat(builder, scaffold, value, reg);
+final readonly & map<ListRepr> listReprs = {
+    generic: object {
+        llvm:Type memberType = LLVM_TAGGED_PTR;
+        int listDescGetIndex = 1;
+        int listDescSetIndex = 2;
+        boolean isSpecialized = false;
+        function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
+            return buildWideRepr(builder, scaffold, member, REPR_ANY, memberType);
+        }
+        function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+            return buildStoreTagged(builder, scaffold, value, reg);
+        }
+    },
+    int_array: object {
+        llvm:Type memberType = LLVM_INT;
+        int listDescGetIndex = 3;
+        int listDescSetIndex = 4;
+        boolean isSpecialized = true;
+        function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
+            return buildInt(builder, scaffold, <bir:IntOperand>member);
+        }
+        function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+            return buildStoreInt(builder, scaffold, value, reg);
+        }
+    },
+    float_array: object {
+        llvm:Type memberType = LLVM_DOUBLE;
+        int listDescGetIndex = 5;
+        int listDescSetIndex = 6;
+        boolean isSpecialized = true;
+        function buildMember(llvm:Builder builder, Scaffold scaffold, bir:Operand member, t:SemType memberType) returns llvm:Value|BuildError {
+            return buildFloat(builder, scaffold, <bir:FloatOperand>member);
+        }
+        function buildMemberStore(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+            return buildStoreFloat(builder, scaffold, value, reg);
+        }
     }
 };
 
-function typeToListRepr(t:SemType bitSet) returns ListRepr {
-    if bitSet == t:INT {
-        return listIntArrayRepr;
-    }
-    else if bitSet == t:FLOAT {
-        return listFloatArrayRepr;
-    }
-    return listGenericRepr;
+function memberTypeToListRepr(t:SemType memberType) returns ListRepr {
+    return listReprs.get(memberTypeToListReprPrefix(memberType));
 }
 
 function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListConstructInsn insn) returns BuildError? {
@@ -163,7 +153,7 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 
         // Cases that are not arrays should have been filtered out before
         t:SemType memberType = <t:SemType>t:arrayMemberType(scaffold.typeContext(), listType);
-        ListRepr repr = typeToListRepr(memberType);
+        ListRepr repr = memberTypeToListRepr(memberType);
         array = builder.bitCast(array, heapPointerType(llvm:arrayType(repr.memberType, 0)));
         foreach int i in 0 ..< length {
             builder.store(check repr.buildMember(builder, scaffold, insn.operands[i], memberType),
@@ -196,7 +186,7 @@ function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn i
 
     llvm:BasicBlock? bbJoin = ();
     t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
-    ListRepr repr = typeToListRepr(memberType);
+    ListRepr repr = memberTypeToListRepr(memberType);
     if repr.isSpecialized {
         bbJoin = buildSpecializedListGet(builder, scaffold, taggedStruct, struct, index, repr, insn.result);
     }
@@ -240,7 +230,7 @@ function buildListSet(llvm:Builder builder, Scaffold scaffold, bir:ListSetInsn i
     llvm:BasicBlock? bbJoin = ();
     t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
     llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
-    ListRepr repr = typeToListRepr(memberType);
+    ListRepr repr = memberTypeToListRepr(memberType);
     if repr.isSpecialized {
         llvm:Value val = check repr.buildMember(builder, scaffold, insn.operands[2], memberType);
         bbJoin = check buildSpecializedListSet(builder, scaffold, taggedStruct, struct, index, repr.memberType, val);
@@ -285,25 +275,13 @@ function buildSpecializedListSet(llvm:Builder builder, Scaffold scaffold, llvm:V
 }
 
 function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:MappingConstructInsn insn) returns BuildError? {
-    int length = insn.operands.length();
-    t:Context tc = scaffold.typeContext();
     t:SemType mappingType = insn.result.semType;
     llvm:ConstPointerValue inherentType = scaffold.getInherentType(mappingType);
     llvm:PointerValue m = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(mappingConstructFunction),
-                                                          [inherentType, llvm:constInt(LLVM_INT, length)]);
-    // JBUG #31681 if I combine these statements into a single from/do, then it gives an assignment required error
-    // which is removed by a check; but it's only check failures in the query pipeline that should show up in the
-    // result of the from/do, not check failures in the do clause. (Code now changed a lot.)
-
-    // The sorting here is to ensure that required fields are in the same order here as in the type descriptor.
-    [string, bir:Operand][] members =
-        from int i in 0 ..< length select [insn.fieldNames[i], insn.operands[i]];    
-    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
-    if mat != () && mat.names.length() != 0 {
-        // JBUG #33300 This doesn't work with array:sort (complains about unordered type)
-        members = from var [k, v] in members order by k select [k, v];
-    } 
-    foreach var [fieldName, operand] in members {
+                                                          [inherentType, llvm:constInt(LLVM_INT, insn.operands.length())]);
+    t:Context tc = scaffold.typeContext();
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, mappingType);  
+    foreach var [fieldName, operand] in mappingOrderFields(mat, insn.fieldNames, insn.operands) {
         _ = builder.call(scaffold.getRuntimeFunctionDecl(mappingInitMemberFunction),
                          [
                              m,
@@ -313,6 +291,29 @@ function buildMappingConstruct(llvm:Builder builder, Scaffold scaffold, bir:Mapp
                          ]);
     }
     builder.store(m, scaffold.address(insn.result));
+}
+
+// When there are required fields, we need to reorder so that 
+// required fields are in the same order here as in the type descriptor.
+function mappingOrderFields(t:MappingAtomicType mat, string[] fieldNames, bir:Operand[] operands) returns [string, bir:Operand][] {
+    int length = fieldNames.length();
+    string[] requiredFieldNames = mat.names;
+    int nRequiredFields = requiredFieldNames.length();
+    if nRequiredFields != 0 {
+        map<int> requiredFieldIndex = {};
+        foreach int i in 0 ..< nRequiredFields {
+            requiredFieldIndex[requiredFieldNames[i]] = i;
+        }
+        return
+            from int i in 0 ..< length
+            let string fieldName = fieldNames[i]
+            let int sortIndex = requiredFieldIndex[fieldName] ?: nRequiredFields + i
+            order by sortIndex
+            select [fieldName, operands[i]];
+    }
+    else {
+        return from int i in 0 ..< length select [fieldNames[i], operands[i]];
+    }    
 }
 
 function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGetInsn insn) returns BuildError? {
@@ -394,7 +395,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
 function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {
     if k is string {
         t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
-        if mat != () {
+        if mat != () && mat.rest == t:NEVER {
             return mat.names.indexOf(k);
         }
     }

@@ -212,9 +212,9 @@
 
     { "comment" : "mapping constructor" },
     ["V", "expr", "{ }"],
-    ["V", "expr", "{x: 1, y: 2}", "{ \"x\": 1, \"y\": 2 }"],
-    ["V", "expr", "{x: 1, y: 2, \"z\": 3}", "{ \"x\": 1, \"y\": 2, \"z\": 3 }"],
-    ["V", "expr", "{value: 1+2}", "{ \"value\": 1 + 2 }"],
+    ["V", "expr", "{x: 1, y: 2}", "{ x: 1, y: 2 }"],
+    ["V", "expr", "{x: 1, y: 2, \"z\": 3}", "{ x: 1, y: 2, \"z\": 3 }"],
+    ["V", "expr", "{value: 1+2}", "{ value: 1 + 2 }"],
 
     { "comment" : "method call" },
     ["V", "expr", "obj.x(1)"],
@@ -338,7 +338,7 @@
     ["V", "stmt", "any [ ] v = [1];", "any[] v = [1];"],
     ["V", "stmt", "any [x ] v = [1];", "any[x] v = [1];"],
     ["V", "stmt", "any [2] v = [1];", "any[2] v = [1];"],
-    ["V", "stmt", "map<any> v = {x:1};", "map<any> v = { \"x\": 1 };"],
+    ["V", "stmt", "map<any> v = {x:1};", "map<any> v = { x: 1 };"],
     ["V", "stmt", "a:b();"],
     ["V", "stmt", "a:b().x();"],
     ["V", "stmt", "a:b((j), k).x();", "a:b(j, k).x();"],

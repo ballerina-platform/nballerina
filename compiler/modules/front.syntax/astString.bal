@@ -501,7 +501,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
             else {
                 w.push(",");
             }
-            w.push(stringLiteral(f.name), ":");
+            w.push(f.isIdentifier ? f.name : stringLiteral(f.name), ":");
             exprToWords(w, f.value);
         }
         w.push("}");

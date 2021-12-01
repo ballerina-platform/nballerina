@@ -195,20 +195,20 @@ PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
     MappingDescPtr mdp = mp->desc;
     int64_t len = mp->fArray.length;
-    bool isRecord = mdp->nFields > 0;
-   
+    int64_t nRequiredFields = mdp->nFields;
     // Here may insert something that is equal to the empty marker
     // But it doesn't matter because in this case we will rebuild anyway
     int64_t i = lookupInsert(mp, key, _bal_string_hash(key), len);
     if (i >= 0) {
-        MemberType memberType = isRecord ? mdp->fieldTypes[i] : mdp->restType;
+        MemberType memberType = i < nRequiredFields ? mdp->fieldTypes[i] : mdp->restType;
         if (!memberTypeContainsTagged(memberType, value)) {
             return storePanicCode(mapping, PANIC_MAPPING_STORE);
         }
         mp->fArray.members[i].value = value;
         return 0;
     }
-    if (isRecord || !memberTypeContainsTagged(mdp->restType, value)) {
+    // If the field does not exist yet, then it can be allowed only by the rest type.
+    if (!memberTypeContainsTagged(mdp->restType, value)) {
         return storePanicCode(mapping, PANIC_MAPPING_STORE);
     }
     if (unlikely(len >= mp->fArray.capacity)) {
@@ -241,13 +241,11 @@ bool _bal_record_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     }
     MappingPtr mp = taggedToPtr(p);
     MappingDescPtr mdp = mp->desc;
-    if (mdp->nFields == 0) {
-        // inherent type of value is a map type, so it's not a subtype of any closed record type
-        return false;
-    }
+    uint32_t nFields = mdp->nFields;
     RecordSubtypePtr rstp = (RecordSubtypePtr)stp;
-    uint32_t nFields = rstp->nFields;
-    if (nFields != mp->fArray.length) {
+    // RecordSubtype is a closed record type
+    // A subtype must be a closed record types with the same number of fields.
+    if (rstp->nFields != nFields) {
         return false;
     }
     for (uint32_t i = 0; i < nFields; i++) {
@@ -269,20 +267,13 @@ bool _bal_map_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     MappingPtr mp = taggedToPtr(p);
     MappingDescPtr mdp = mp->desc;
     uint32_t typeBitSet = ((MapSubtypePtr)stp)->bitSet;
-    if (mdp->nFields == 0) {
-        // Does map type contains map value?
-        // Look at member type bit sets
-        return memberTypeIsSubtypeSimple(mdp->restType, typeBitSet);
-    }
-    // Does map type contain record value?
-    // Inherent type of each field must be subtype of map member type.
-    int64_t nFields = mp->fArray.length;
-    for (int64_t i = 0; i < nFields; i++) {
+    uint32_t nRequiredFields = mdp->nFields;
+    for (int64_t i = 0; i < nRequiredFields; i++) {
         if (!memberTypeIsSubtypeSimple(mdp->fieldTypes[i], typeBitSet)) {
             return false;
         }
     }
-    return true;
+    return memberTypeIsSubtypeSimple(mdp->restType, typeBitSet);
 }
 
 bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2) {

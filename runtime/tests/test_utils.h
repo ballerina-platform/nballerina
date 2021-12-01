@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <math.h>
 #include "../hash.h"
+#include "../third-party/decNumber/decQuad.h"
 
 #define NRANDOM 2
 #define NTESTS 2*1024
@@ -85,4 +86,19 @@ bool cmpTrace(FILE *actualTrace, const ExpectedTrace expectedTrace[]) {
         nChars++;
     }
     return true;
+}
+
+void validateDec(TaggedPtr tp, const char *decStr) {
+    char str[DECQUAD_String];
+    decQuadToString((decQuad *)taggedToPtr(tp), str);
+    assert(strcmp(decStr, str) == 0);
+}
+
+void validate(TaggedPtrPanicCode tp, const char *decStr, PanicCode code) {
+    if (tp.panicCode > 0) {
+        assert(tp.panicCode == code);
+    }
+    else {
+        validateDec(tp.ptr, decStr);
+    }
 }

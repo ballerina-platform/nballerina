@@ -46,10 +46,19 @@ public function main(string[] filenames, *Options opts) returns error? {
         gcName: check nback:validGcName(opts.gc),
         debugLevel: check nback:validDebugLevel(opts.debugLevel)
     };
+    int errorFileCount = 0;
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            check printDiagnostic(compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts));
+            CompileError? err = printDiagnostic(compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts));
+            if err is err:Diagnostic {
+                errorFileCount += 1;
+            }
+            // JBUG: #34014
+            // can't use else { check err; }
+            else if err != () {
+                return err;
+            }
         }
         else if ext == TEST_EXTENSION {
             check compileBaltFile(filename, opts.outDir ?: check file:parentPath(filename), nbackOptions, opts);
@@ -61,19 +70,19 @@ public function main(string[] filenames, *Options opts) returns error? {
             return error(d:messageFormat(`unsupported extension ${ext}`));
         }
     }
+    if errorFileCount != 0 {
+        string files = errorFileCount == 1 ? "file" : "files";
+        return error(string `compilation of ${errorFileCount} ${files} failed`);
+    }
 }
 
-function printDiagnostic(CompileError? err) returns error? {
+function printDiagnostic(CompileError? err) returns CompileError? {
     if err is err:Diagnostic {
         foreach string line in d:format(err.detail()) {
             io:fprintln(io:stderr, line);
         }
-        // Don't want details to be displayed twice
-        return error(err.message());
     }
-    else {
-        return err;
-    }
+    return err;
 }
 
 // Basename here means filename without extension

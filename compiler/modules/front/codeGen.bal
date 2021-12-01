@@ -1284,26 +1284,34 @@ function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environmen
 }
 
 function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MappingConstructorExpr expr) returns CodeGenError|ExprEffect {
+    t:SemType resultType = <t:SemType>expr.expectedType;
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(cx.mod.tc, resultType);
+    if mat is () {
+        return cx.semanticErr("mapping not allowed in this context", expr.startPos);
+    }
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
-    string[] fieldNames= [];
+    string[] fieldNames = [];
     map<Position> fieldPos = {};
-    foreach var { startPos, name, value } in expr.fields {
+    foreach s:Field f in expr.fields {
+        string name = f.name;
         Position? prevPos = fieldPos[name];
-        if prevPos == () {
-            fieldPos[name] = startPos;
+        if prevPos != () {
+            return cx.semanticErr(`duplicate field ${name}`, pos=f.startPos);
         }
-        else {
-            return cx.semanticErr(`duplicate field ${name}`, pos=startPos);
+        fieldPos[name] = f.startPos;
+        if mat.names.indexOf(name) == () {
+            if mat.rest == t:NEVER {
+                return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
+            }
+            else if f.isIdentifier && mat.names.length() > 0 {
+                return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, pos=f.startPos);
+            }
         }
         bir:Operand operand;
-        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, value);
+        { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, f.value);
         operands.push(operand);
         fieldNames.push(name);
-    }
-    t:SemType resultType = <t:SemType>expr.expectedType;
-    if t:isEmpty(cx.mod.tc, resultType) {
-        return cx.semanticErr("mapping not allowed in this context", expr.startPos);
     }
     bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
     bir:MappingConstructInsn insn = { fieldNames: fieldNames.cloneReadOnly(), operands: operands.cloneReadOnly(), result, pos: expr.opPos };
