@@ -1,7 +1,9 @@
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 #include "balrt.h"
 #include "third-party/decNumber/decQuad.h"
+#include "third-party/dtoa/emyg_dtoa.h"
 
 typedef GC decQuad *DecimalPtr;
 
@@ -183,6 +185,34 @@ TaggedPtr _bal_decimal_from_int(int64_t val) {
         decQuadFromString(&d, intStr, &cx);
     }
     return createDecimal(&d);
+}
+
+TaggedPtrPanicCode _bal_decimal_from_float(double val) {
+    TaggedPtrPanicCode result;
+    if (isnan(val)) {
+        result.panicCode = PANIC_INVALID_DECIMAL;
+        return result;
+    }
+    if (isinf(val)) {
+        result.panicCode = PANIC_ARITHMETIC_OVERFLOW;
+        return result;
+    }
+    result.panicCode = 0;
+    decQuad d;
+    if (val == 0.0) {
+        decQuadZero(&d);
+        result.ptr = createDecimal(&d);
+        return result;
+    }
+    char str[EMYG_DTOA_BUFFER_LEN];
+    emyg_dtoa_non_special(val, str);
+    decContext cx;
+    initContext(&cx);
+    decQuadFromString(&d, str, &cx);
+    decQuad dTrim;
+    decQuadReduce(&dTrim, &d, &cx);
+    result.ptr = createDecimal(&dTrim);
+    return result;
 }
 
 TaggedPtr _bal_decimal_const(const char *decString) {

@@ -68,7 +68,44 @@ void testIntToDec() {
     validateIntToDec(INT64_MIN + 1, "-9223372036854775807");
 }
 
+void validateFloatToDecPanic(double val, PanicCode code) {
+    TaggedPtrPanicCode tp = _bal_decimal_from_float(val);
+    assert(tp.panicCode == code);
+}
+
+void validateFloatToDecNoPanic(double val, const char *decStr) {
+    TaggedPtrPanicCode tp = _bal_decimal_from_float(val);
+    validate(tp, decStr, 0);
+    double roundTrip = _bal_decimal_to_float(tp.ptr);
+    assert(roundTrip == val);
+}
+
+void testFloatToDec() {
+    validateFloatToDecNoPanic(0.0, "0");
+    validateFloatToDecNoPanic(1.0, "1");
+    validateFloatToDecNoPanic(1.00000, "1");
+    validateFloatToDecNoPanic(1234567891.0, "1234567891");
+    validateFloatToDecNoPanic(1234567890123456.0, "1234567890123456");
+    validateFloatToDecNoPanic(1234567890123456.1, "1234567890123456");
+    validateFloatToDecNoPanic(1234567890123456.2, "1234567890123456.3");
+    validateFloatToDecNoPanic(1234567890123456.9, "1234567890123457");
+    validateFloatToDecNoPanic(1.7976931348623157e+308, "1.7976931348623157E+308");
+    validateFloatToDecNoPanic(1.7976931348623156e+308, "1.7976931348623155E+308");
+    validateFloatToDecNoPanic(1.7976931348623157e+307, "1.7976931348623158E+307");
+    validateFloatToDecNoPanic(0.7976931348623157e+308, "7.976931348623157E+307");
+    validateFloatToDecNoPanic(0.0000000000000009e+308, "9E+292");
+    validateFloatToDecNoPanic(2.2250738585072014e-308, "2.2250738585072014E-308");
+    validateFloatToDecNoPanic(2.2250738585072014e-309, "2.225073858507203E-309");
+    validateFloatToDecNoPanic(0.0000000000000000000000000000000001, "1E-34");
+    validateFloatToDecNoPanic(0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001, "1E-323");
+    validateFloatToDecNoPanic(4.9406564584124654E-324, "5E-324");
+    validateFloatToDecPanic(INFINITY, PANIC_ARITHMETIC_OVERFLOW);
+    validateFloatToDecPanic(-INFINITY, PANIC_ARITHMETIC_OVERFLOW);
+    validateFloatToDecPanic(NAN, PANIC_INVALID_DECIMAL);
+}
+
 int main() {
     testDecToFloat();
     testIntToDec();
+    testFloatToDec();
 }
