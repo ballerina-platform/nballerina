@@ -146,16 +146,16 @@ function listMemberAt(SemType[] members, int i) returns SemType {
     return members[int:min(i, members.length() - 1)];
 }
 
-function listDecompressMembersForSet(int newAllowedIndex, SemType[] members, int repeatCount, SemType withNewMember) returns int {
+function listDecompressMembersForSet(int setIndex, SemType[] members, int repeatCount, SemType withNewMember) returns int {
     int memberLen = members.length();
     boolean lastMemberRepeats = repeatCount != 0;
     if lastMemberRepeats {        
-        if newAllowedIndex < memberLen - 2 {
+        if setIndex < memberLen - 2 {
             return repeatCount;
         }
     }
     else {
-        if newAllowedIndex < memberLen - 1 {
+        if setIndex < memberLen - 1 {
             return repeatCount;
         }
     }
@@ -163,23 +163,15 @@ function listDecompressMembersForSet(int newAllowedIndex, SemType[] members, int
     if lastMemberRepeats {
         SemType lastMember = members[memberLen - 1]; 
         int uncompressedLen = memberLen + repeatCount;
-        int newRepeatCount = repeatCount;
-
-        int endIndex = lastMemberRepeats ? newAllowedIndex + 1 : newAllowedIndex;
+        int endIndex = lastMemberRepeats ? setIndex + 1 : setIndex;
 
         foreach int i in memberLen ..< endIndex {
-            newRepeatCount -= 1;
-            if i < uncompressedLen {
-                members.push(lastMember);
-            }
-            else {
-                members.push(withNewMember);                                                                                  
-            }
+            members.push(i < uncompressedLen ? lastMember : withNewMember);
         }
-        return int:max(0, newRepeatCount);
+        return int:max(0, repeatCount - (endIndex - memberLen));
     }
     else {
-        foreach int i in memberLen ..< newAllowedIndex {
+        foreach int i in memberLen ..< setIndex {
             members.push(withNewMember);
         }
         return repeatCount;
