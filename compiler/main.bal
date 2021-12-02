@@ -13,7 +13,6 @@ public type Options record {
     boolean showTypes = false;
     int? debugLevel;
     // outDir also implies treating each file as a separate module
-    boolean redirectErrors = false;
     string? outDir = ();
     string? expectOutDir = ();
     string? gc = ();
@@ -55,12 +54,7 @@ public function main(string[] filenames, *Options opts) returns error? {
         dPrinter = new d:HtmlPrinter(errorFilename);
     }
     else {
-        if opts.redirectErrors {
-            dPrinter = new d:ConsolePrinter(io:stdout);
-        }
-        else {
-            dPrinter = new d:ConsolePrinter(io:stderr);
-        }
+        dPrinter = new d:ConsolePrinter(io:stderr);
     }
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
