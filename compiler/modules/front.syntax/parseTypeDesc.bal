@@ -176,9 +176,9 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         "table" => {
             check tok.advance();
-            var row = check parseTypeParam(tok);
+            TypeDesc row = check parseTypeParam(tok);
             Position endPos = tok.previousEndPos();
-            return { startPos, endPos, row};
+            return { startPos, endPos, row };
         }
         [IDENTIFIER, var identifier] => {
             Position pos = tok.currentStartPos();

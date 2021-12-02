@@ -1,6 +1,6 @@
-public function tableDef(SemType constituentType) returns SemType {
-    SubtypeData ro = subtypeData(constituentType, UT_MAPPING_RO);
-    SubtypeData rw = subtypeData(constituentType, UT_MAPPING_RW);
+public function tableContaining(SemType memberType) returns SemType {
+    SubtypeData ro = subtypeData(memberType, UT_MAPPING_RO);
+    SubtypeData rw = subtypeData(memberType, UT_MAPPING_RW);
     return createTableSemtype(ro, rw);
     
 }
@@ -17,39 +17,12 @@ function createTableSemtype(SubtypeData ro, SubtypeData rw) returns ComplexSemTy
     }
 }
 
-function tableRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    return tableSubtypeIsEmpty(cx, bddFixReadOnly(<Bdd>t));
-}
-
-function tableSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
-    Bdd b = <Bdd>t;
-    BddMemo? mm = cx.mappingMemo[b];
-    BddMemo m;
-    if mm == () {
-        m = { bdd: b };
-        cx.mappingMemo.add(m);
-    }
-    else {
-        m = mm;
-        boolean? res = m.isEmpty;
-        if res == () {
-            return true;
-        }
-        else {
-            return res;
-        }
-    }
-    boolean isEmpty = bddEvery(cx, b, (), (), mappingFormulaIsEmpty);
-    m.isEmpty = isEmpty;
-    return isEmpty;    
-}
-
 final UniformTypeOps tableRoOps = {
     union: bddSubtypeUnion,
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: tableRoSubtypeIsEmpty
+    isEmpty: mappingRoSubtypeIsEmpty
 };
 
 final UniformTypeOps tableRwOps = {
@@ -57,5 +30,5 @@ final UniformTypeOps tableRwOps = {
     intersect: bddSubtypeIntersect,
     diff: bddSubtypeDiff,
     complement: bddSubtypeComplement,
-    isEmpty: tableSubtypeIsEmpty
+    isEmpty: mappingSubtypeIsEmpty
 };

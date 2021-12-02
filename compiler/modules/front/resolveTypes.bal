@@ -288,7 +288,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         if !t:isSubtypeSimple(t, t:MAPPING) {
             return err:semantic("type parameter for table is not a record", loc=loc);
         }
-        return t:tableDef(t);
+        return t:tableContaining(t);
     }
     panic error("unimplemented type-descriptor");
 }
