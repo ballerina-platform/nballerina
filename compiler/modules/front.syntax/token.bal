@@ -530,15 +530,30 @@ public readonly class SourceFile {
 
 function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex) returns int {
     int fragmentIndex = fragmentCountUpTo(fragments, startCodePointIndex);
-    return lineTokenEndIndex(fragments, fragCodes, startCodePointIndex, fragmentIndex);
+    match fragCodes[fragmentIndex] {
+        FRAG_STRING_OPEN  => {
+            return stringTokenEndCodePointIndex(fragments, fragCodes, startCodePointIndex, fragmentIndex);
+        }
+        FRAG_GREATER_THAN => {
+            // Assume not in type-desc mode
+            if fragmentIndex + 1 < fragCodes.length() && fragCodes[fragmentIndex+1] == FRAG_GREATER_THAN {
+                if fragmentIndex + 2 < fragCodes.length() && fragCodes[fragmentIndex+2] == FRAG_GREATER_THAN {
+                    return startCodePointIndex + 3; // >>>
+                }
+                return startCodePointIndex + 2; // >>
+            }
+            return startCodePointIndex + 1; // >
+        }
+    }
+    return startCodePointIndex + fragments[fragmentIndex].length();
 }
 
-function fragmentCountUpTo(string[] fragments, int startCodePointIndex) returns int {
+function fragmentCountUpTo(string[] fragments, int codePointIndex) returns int {
     int nCodePoints = 0;
     int fragmentIndex = 0;
     int nFragments = fragments.length();
     while fragmentIndex < nFragments {
-        if nCodePoints >= startCodePointIndex {
+        if nCodePoints >= codePointIndex {
             break;
         }
         nCodePoints += fragments[fragmentIndex].length();
@@ -547,27 +562,7 @@ function fragmentCountUpTo(string[] fragments, int startCodePointIndex) returns 
     return fragmentIndex;
 }
 
-// Return code-point index of end of token that starts in
-function lineTokenEndIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex, int startFragmentIndex) returns int {
-    match fragCodes[startFragmentIndex] {
-        FRAG_STRING_OPEN  => {
-            return stringTokenEndIndex(fragments, fragCodes, startCodePointIndex, startFragmentIndex);
-        }
-        FRAG_GREATER_THAN => {
-            // Assume not in type-desc mode
-            if startFragmentIndex + 1 < fragCodes.length() && fragCodes[startFragmentIndex+1] == FRAG_GREATER_THAN {
-                if startFragmentIndex + 2 < fragCodes.length() && fragCodes[startFragmentIndex+2] == FRAG_GREATER_THAN {
-                    return startCodePointIndex + 3; // >>>
-                }
-                return startCodePointIndex + 2; // >>
-            }
-            return startCodePointIndex + 1; // >
-        }
-    }
-    return startCodePointIndex + fragments[startFragmentIndex].length();
-}
-
-function stringTokenEndIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex, int startFragmentIndex) returns int {
+function stringTokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex, int startFragmentIndex) returns int {
     int endCodePointIndex = startCodePointIndex;
     foreach int fragmentIndex in startFragmentIndex ..< fragments.length() {
         endCodePointIndex += fragments[fragmentIndex].length();

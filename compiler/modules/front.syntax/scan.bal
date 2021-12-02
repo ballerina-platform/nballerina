@@ -240,10 +240,6 @@ function scanLineFragments(ScannedLine line) returns string[] {
     return lineContent;
 }
 
-function scanLineToString(ScannedLine line) returns string {
-    return "".'join(...scanLineFragments(line));
-}
-
 function unicodeEscapeValue(string fragment) returns string|error {
     string hexDigits = fragment.substring(3, fragment.length() - 1);
     int codePoint = check int:fromHexString(hexDigits);
