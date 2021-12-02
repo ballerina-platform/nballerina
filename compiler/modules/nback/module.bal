@@ -55,7 +55,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
         check bir:verifyFunctionCode(birMod, defn, code);
         DISubprogram? diFunc = di == () ? () : diFuncs[i];
-        Scaffold scaffold = new(mod, llFuncs[i], diFunc, builder, defn, code);
+        Scaffold scaffold = new(mod, llFuncs[i], diFunc, builder, defn, code, options.debugLevel);
         buildPrologue(builder, scaffold, defn.position);
         check buildFunctionBody(builder, scaffold, code);
     }

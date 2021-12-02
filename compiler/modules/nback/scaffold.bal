@@ -115,6 +115,7 @@ class Scaffold {
     private final llvm:FunctionDefn llFunc;
     private final DISubprogram? diFunc;
     private DILocation? noLineLocation = ();
+    private final DebugLevel debugLevel;
 
     // Representation for each BIR register
     private final Repr[] reprs;
@@ -129,7 +130,7 @@ class Scaffold {
     private final int nParams;
     final t:SemType returnType;
 
-    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code) {
+    function init(Module mod, llvm:FunctionDefn llFunc, DISubprogram? diFunc, llvm:Builder builder, bir:FunctionDefn defn, bir:FunctionCode code, DebugLevel debugLevel) {
         self.mod = mod;
         self.file = mod.partFiles[defn.partIndex];
         self.llFunc = llFunc;
@@ -140,6 +141,7 @@ class Scaffold {
         self.returnType = defn.signature.returnType;
         self.retRepr = semTypeRetRepr(self.returnType);
         self.nParams = defn.signature.paramTypes.length();
+        self.debugLevel = debugLevel;
         llvm:BasicBlock entry = llFunc.appendBasicBlock();
 
         self.blocks = from var b in code.blocks select llFunc.appendBasicBlock(b.name);
@@ -171,6 +173,8 @@ class Scaffold {
     function getModule() returns llvm:Module => self.mod.llMod;
 
     function stackGuard() returns llvm:PointerValue => self.mod.stackGuard;
+
+    function getDebugLevel() returns DebugLevel => self.debugLevel;
 
     function getImportedFunction(bir:ExternalSymbol symbol) returns llvm:FunctionDecl? {
         ImportedFunction? fn = self.mod.importedFunctions[symbol];
