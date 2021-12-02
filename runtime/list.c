@@ -6,6 +6,11 @@
 
 const double F0 = +0.0;
 
+static inline TaggedPtr listConstruct(ListDescPtr desc, int64_t capacity) {
+    return ptrAddFlags(_bal_list_construct(desc, capacity),
+                       ((uint64_t)TAG_LIST_RW << TAG_SHIFT)|EXACT_FLAG);
+}
+
 ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
     ListPtr lp = _bal_alloc(sizeof(struct List));
     lp->desc = desc;
@@ -13,11 +18,23 @@ ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
     return lp;
 }
 
-static bool getArrayFiller(MemberType memberType, TaggedPtr *valuePtr) {
+static bool getArrayFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
+    MemberType memberType = desc->memberType;
     uint32_t bitSet;
     if ((memberType & 1) == 0) {
-        // XXX need to handle array or map here
-        bitSet = ((ComplexTypePtr)memberType)->all;
+        ComplexTypePtr ctp = (ComplexTypePtr)memberType;
+        bitSet = ctp->all | ctp->some;
+        StructureDescPtr fillerDesc = desc->fillerDesc;
+        if (fillerDesc != 0) {
+            switch (bitSet) {
+                case (1 << TAG_LIST_RW):
+                    *valuePtr = listConstruct((ListDescPtr)fillerDesc, 0);
+                    return true;
+                case (1 << TAG_MAPPING_RW):
+                    *valuePtr = _bal_mapping_construct((MappingDescPtr)fillerDesc, 0);
+                    return true;
+            }
+        }         
     }
     else {
         bitSet = (uint32_t)(memberType >> 1);
@@ -118,7 +135,7 @@ PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val
         // we have a gap to fill
         // from length..<index
         TaggedPtr filler;
-        if (!getArrayFiller(ldp->memberType, &filler)) {
+        if (!getArrayFiller(ldp, &filler)) {
             return PANIC_NO_FILLER;
         }
         for (int64_t i = ap->length; i < index; i++) {

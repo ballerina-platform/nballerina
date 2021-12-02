@@ -178,9 +178,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 rest = t:NEVER;
             }
             else {
-                if !mod.allowAllTypes && td.fields.length() > 0 {
-                    return err:unimplemented("open record types not implemented", s:locationInDefn(modDefn, td.startPos));
-                }
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
             return d.define(env, fields, rest);

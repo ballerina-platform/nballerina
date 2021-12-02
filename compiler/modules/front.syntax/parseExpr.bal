@@ -420,19 +420,19 @@ function parseFields(Tokenizer tok) returns Field[]|err:Syntax {
 function parseField(Tokenizer tok) returns Field|err:Syntax {
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
-    match t {
-        [IDENTIFIER, var name]
-        | [STRING_LITERAL, var name] => {
-            // Don't report an error for duplicates here
-            // (it's not a syntax error)
-            // Instead save the position and report during codeGen
-            check tok.advance();
-            check tok.expect(":");
-            Expr value = check parseExpr(tok);
-            Position endPos = tok.previousEndPos();
-            Field f = { startPos, endPos, name, value };
-            return f;
-        }
+    if t is [IDENTIFIER|STRING_LITERAL, string] {
+        boolean isIdentifier = t[0] == IDENTIFIER;
+        string name = t[1];
+        // Don't report an error for duplicates here
+        // (it's not a syntax error)
+        // Instead save the position and report during codeGen
+        check tok.advance();
+        Position colonPos = tok.currentStartPos();
+        check tok.expect(":");
+        Expr value = check parseExpr(tok);
+        Position endPos = tok.previousEndPos();
+        Field f = { startPos, endPos, colonPos, name, value, isIdentifier };
+        return f;
     }
     return tok.err("expected field name");
 }

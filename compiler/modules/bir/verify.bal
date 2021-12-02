@@ -22,8 +22,8 @@ class VerifyContext {
         return t:isSubtype(self.tc, s, t);
     }
 
-    function isSameType(t:SemType s, t:SemType t) returns boolean {
-        return s == t || (t:isSubtype(self.tc, s, t) && t:isSubtype(self.tc, t, s));
+    function isSameType(t:SemType t1, t:SemType t2) returns boolean {
+        return t:isSameType(self.tc, t1, t2);
     }
 
     function isEmpty(t:SemType t) returns boolean {
@@ -170,7 +170,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
             return vc.err("bad BIR: tuples not supported as list inherent type", insn.pos);
         }
         foreach var operand in insn.operands {
-            check verifyOperandType(vc, operand, lat.rest, "list constructor member of not a subtype of array member type", insn.pos);
+            check verifyOperandType(vc, operand, lat.rest, "type of list constructor member is not allowed by the list type", insn.pos);
         }
     }
 }
@@ -188,7 +188,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
             return vc.err(`field ${insn.fieldNames[i]} is not allowed by the type`, insn.pos);
         }
         check verifyOperandType(vc, insn.operands[i], memberType,
-                                "type of mapping constructor member of not a subtype of mapping member type", insn.pos);
+                                "type of mapping constructor member is not allowed by the mapping type", insn.pos);
     }
     if mat == () {
         return vc.err("bad BIR: inherent type of map is not atomic", insn.pos);

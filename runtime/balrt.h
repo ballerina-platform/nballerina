@@ -15,10 +15,12 @@
 #define COMPARE_EQ 1
 #define COMPARE_GT 2
 
-#define POINTER_MASK ((1L << TAG_SHIFT) - 1)
+#define HEAP_ALIGNMENT 8
+#define POINTER_MASK (((uint64_t)1 << TAG_SHIFT) - 1)
+#define ALIGN_MASK (~(uint64_t)(HEAP_ALIGNMENT - 1))
 
 #define IMMEDIATE_FLAG (((uint64_t)0x20) << TAG_SHIFT)
-#define EXACT_FLAG 0x4
+#define EXACT_FLAG ((uint64_t)0x4)
 
 #define STRING_LARGE_FLAG 1
 
@@ -126,6 +128,7 @@ typedef struct {
     double (*getFloat)(TaggedPtr lp, int64_t index);
     PanicCode (*setFloat)(TaggedPtr lp, int64_t index, double val);
     MemberType memberType;
+    StructureDescPtr fillerDesc;
 } ListDesc, *ListDescPtr;
 
 // Extends Structure
@@ -278,6 +281,11 @@ typedef struct {
     PanicCode panicCode;
 } TaggedPtrPanicCode;
 
+typedef struct {
+    int64_t value;
+    bool overflow;
+} IntWithOverflow;
+
 #define ALIGN_HEAP 8
 
 // Don't declare functions here if they are balrt_inline.c
@@ -334,6 +342,7 @@ extern READONLY bool _bal_mapping_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStac
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
 extern READNONE TaggedPtr _bal_tagged_clear_exact(TaggedPtr p);
+extern READNONE UntypedPtr _bal_ptr_mask(TaggedPtr ptr, uint64_t mask);
 
 extern TaggedPtr _bal_error_construct(TaggedPtr message, int64_t lineNumber);
 extern void _bal_error_backtrace_print(ErrorPtr ep, uint32_t start, FILE *fp);
@@ -347,6 +356,14 @@ extern TaggedPtrPanicCode _bal_decimal_add(TaggedPtr tp1, TaggedPtr tp2);
 extern TaggedPtrPanicCode _bal_decimal_sub(TaggedPtr tp1, TaggedPtr tp2);
 extern TaggedPtrPanicCode _bal_decimal_mul(TaggedPtr tp1, TaggedPtr tp2);
 extern TaggedPtrPanicCode _bal_decimal_div(TaggedPtr tp1, TaggedPtr tp2);
+extern TaggedPtr _bal_decimal_neg(TaggedPtr tp);
+extern TaggedPtrPanicCode _bal_decimal_rem(TaggedPtr tp1, TaggedPtr tp2);
+extern int64_t _bal_decimal_cmp(TaggedPtr tp1, TaggedPtr tp2);
+extern bool _bal_decimal_exact_eq(TaggedPtr tp1, TaggedPtr tp2);
+extern double _bal_decimal_to_float(TaggedPtr tp);
+extern TaggedPtr _bal_decimal_from_int(int64_t val);
+extern TaggedPtrPanicCode _bal_decimal_from_float(double val);
+extern IntWithOverflow _bal_decimal_to_int(TaggedPtr tp);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
@@ -378,11 +395,11 @@ static READNONE inline int taggedToBoolean(TaggedPtr p) {
 }
 
 static READNONE inline UntypedPtr taggedToPtr(TaggedPtr p) {
-    return _bal_tagged_to_ptr(p);
+    return _bal_ptr_mask(p, POINTER_MASK & ALIGN_MASK);
 }
 
 static READNONE inline UntypedPtr taggedToPtrExact(TaggedPtr p) {
-    return _bal_tagged_to_ptr_exact(p);
+    return _bal_ptr_mask(p, (POINTER_MASK & ALIGN_MASK)|EXACT_FLAG);
 }
 
 static READONLY inline bool memberTypeIsSubtypeSimple(MemberType memberType, uint32_t bitSet) {

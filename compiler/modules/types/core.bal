@@ -737,6 +737,10 @@ public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolea
     return (bits & ~<int>t2) == 0;
 }
 
+public function isSameType(Context cx, SemType t1, SemType t2) returns boolean {
+    return t1 == t2 || (isSubtype(cx, t1, t2) && isSubtype(cx, t2, t1));
+}
+
 public function widenToUniformTypes(SemType t) returns UniformTypeBitSet {
     if t is UniformTypeBitSet {
         return t;

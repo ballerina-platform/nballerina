@@ -1,5 +1,10 @@
+#include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <math.h>
 #include "balrt.h"
 #include "third-party/decNumber/decQuad.h"
+#include "third-party/dtoa/emyg_dtoa.h"
 
 typedef GC decQuad *DecimalPtr;
 
@@ -57,7 +62,15 @@ TaggedPtrPanicCode _bal_decimal_div(TaggedPtr tp1, TaggedPtr tp2) {
     return finish(&d, &cx); 
 }
 
-TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
+TaggedPtrPanicCode _bal_decimal_rem(TaggedPtr tp1, TaggedPtr tp2) {
+    decQuad d;
+    decContext cx;
+    initContext(&cx);
+    decQuadRemainder(&d, taggedToDecQuad(tp1), taggedToDecQuad(tp2), &cx);
+    return finish(&d, &cx);    
+}
+
+static TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
     TaggedPtrPanicCode result;
     enum decClass class = decQuadClass(dq);
     if (class == DEC_CLASS_POS_ZERO || 
@@ -73,6 +86,9 @@ TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
     if (status & DECIMAL_STATUS_FAIL) {
         if (status & DEC_Division_by_zero) {
             result.panicCode = PANIC_DIVIDE_BY_ZERO;
+        }
+        else if (status & DEC_Overflow) {
+            result.panicCode = PANIC_ARITHMETIC_OVERFLOW;
         }
         else if (status & DEC_Underflow) {
             // The reason to do this check is, there are subnormal cases 
@@ -97,7 +113,8 @@ TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
             result.ptr = createDecimal(dq);
         }
         else {
-            result.panicCode = PANIC_ARITHMETIC_OVERFLOW;
+            // status & DEC_IEEE_754_Invalid_operation = true
+            result.panicCode = PANIC_INVALID_DECIMAL;
         }
     }
     else {
@@ -105,6 +122,128 @@ TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
         result.ptr = createDecimal(dq);
     }
     return result;
+}
+
+TaggedPtr _bal_decimal_neg(TaggedPtr tp) {
+    const decQuad *dq = taggedToDecQuad(tp);
+    if (decQuadClass(dq) == DEC_CLASS_POS_ZERO) {
+        return tp;
+    } 
+    decQuad d;
+    decQuadCopyNegate(&d, dq);
+    return createDecimal(&d);
+}
+
+bool _bal_decimal_exact_eq(TaggedPtr tp1, TaggedPtr tp2) {
+    decQuad d1;
+    decQuad d2;
+    decQuadCanonical(&d1, taggedToDecQuad(tp1));
+    decQuadCanonical(&d2, taggedToDecQuad(tp2));
+    return memcmp(&d1, &d2, DECQUAD_Bytes) == 0;
+}
+
+int64_t _bal_decimal_cmp(TaggedPtr tp1, TaggedPtr tp2) {
+    decQuad d;
+    decContext cx;
+    initContext(&cx);  
+    decQuadCompare(&d, taggedToDecQuad(tp1), taggedToDecQuad(tp2), &cx);
+    // The return value of decQuadCompare can be 1, 0, -1 or NaN:
+    // since this is represented as a decQuad, decQuadClass is used to
+    // identify 1, 0, -1.
+    // NaN is returned only if lhs or rhs is a NaN.
+    // It is not an expected output because both arguments are valid decimals.
+    enum decClass class = decQuadClass(&d);
+    if (class == DEC_CLASS_POS_ZERO) {
+        return 0;        
+    }
+    else if (class == DEC_CLASS_POS_NORMAL) {
+        return 1;
+    }
+    else {
+        return -1;
+    }
+}
+
+double _bal_decimal_to_float(TaggedPtr tp) {
+    char dblStr[DECQUAD_String];
+    decQuadToString(taggedToDecQuad(tp), dblStr);
+    return strtod(dblStr, NULL);
+}
+
+TaggedPtr _bal_decimal_from_int(int64_t val) {
+    decQuad d;
+    if (INT32_MIN <= val && val <= INT32_MAX) {
+        decQuadFromInt32(&d, (int32_t)val);
+    } 
+    else {
+#define STR_CONVERT(x) #x
+#define STR(x) STR_CONVERT(x)
+#define INT64_MAX_LEN sizeof(STR(INT64_MIN))
+        char intStr[INT64_MAX_LEN];
+        sprintf(intStr, "%" PRId64, val);
+        decContext cx;
+        initContext(&cx);
+        decQuadFromString(&d, intStr, &cx);
+    }
+    return createDecimal(&d);
+}
+
+TaggedPtrPanicCode _bal_decimal_from_float(double val) {
+    TaggedPtrPanicCode result;
+    if (isnan(val)) {
+        result.panicCode = PANIC_INVALID_DECIMAL;
+        return result;
+    }
+    if (isinf(val)) {
+        result.panicCode = PANIC_ARITHMETIC_OVERFLOW;
+        return result;
+    }
+    result.panicCode = 0;
+    decQuad d;
+    if (val == 0.0) {
+        decQuadZero(&d);
+        result.ptr = createDecimal(&d);
+        return result;
+    }
+    char str[EMYG_DTOA_BUFFER_LEN];
+    emyg_dtoa_non_special(val, str);
+    decContext cx;
+    initContext(&cx);
+    decQuadFromString(&d, str, &cx);
+    decQuad dTrim;
+    decQuadReduce(&dTrim, &d, &cx);
+    result.ptr = createDecimal(&dTrim);
+    return result;
+}
+
+IntWithOverflow _bal_decimal_to_int(TaggedPtr tp) {
+    decQuad dQuantize;
+    decQuad dZero;
+    decQuadZero(&dZero);
+    decContext cx;
+    initContext(&cx);
+    decQuadQuantize(&dQuantize, taggedToDecQuad(tp), &dZero, &cx);
+    IntWithOverflow res;
+    if (cx.status & DEC_Invalid_operation) {
+        // The invalid operation flag is raised,
+        // when maximum precision(34 digits) is not enough to represent quantized decimal value.
+        // This situation can be considered as an overflow scenario,
+        // because reaching maximum precision of decimal is an overflow of 64 bit integer(19 digits).
+        res.overflow = true;
+        return res;
+    }
+
+    char str[DECQUAD_String];
+    decQuadToString(&dQuantize, str);
+    errno = 0;
+    int64_t value = strtol(str, NULL, 0);
+    if (errno == ERANGE) {
+        res.overflow = true;
+        return res;
+    }
+    res.overflow = false;
+    res.value = value;
+    return res;
 }
 
 TaggedPtr _bal_decimal_const(const char *decString) {

@@ -29,38 +29,6 @@ type ScannedLine readonly & record {|
     string[] fragments;
 |};
 
-function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, int] {
-    if codePointIndex == 0 {
-        return  [0, 0];
-    }
-    readonly & FragCode[] fragCodes = line.fragCodes;
-    readonly & string[] fragments = line.fragments;
-    int fragCodeIndex = 0;
-    int fragmentIndex = 0;
-    int i = 0;
-    while i < codePointIndex {
-        FragCode code = fragCodes[fragCodeIndex];
-        fragCodeIndex += 1;
-        if code <= VAR_FRAG_MAX {
-            i += fragments[fragmentIndex].length();
-            fragmentIndex += 1;
-        }
-        else if code >= FRAG_FIXED_TOKEN {
-            // JBUG #33346 cast should not be needed
-            FixedToken? ft = fragTokens[<int>code];
-            i += (<string>ft).length();
-        }
-        else {
-            i += 1;
-        }
-    }
-    if i > codePointIndex {
-        fragCodeIndex -= 1;
-        fragmentIndex -= 1;
-    }
-    return [fragCodeIndex, fragmentIndex];
-}
-
 type Scanned record {|
     FragCode[] fragCodes;
     int[] endIndex;
@@ -169,6 +137,15 @@ final readonly & Keyword[] keywords = [
     "table"
 ];
 
+final readonly & string:Char?[] fragFixed = createFragFixed();
+function createFragFixed () returns readonly & string:Char?[] {
+    string:Char?[] fragFixed = [];
+    fragFixed[<int>FRAG_GREATER_THAN] = ">";
+    fragFixed[<int>FRAG_STRING_OPEN] = "\"";
+    fragFixed[<int>FRAG_STRING_CLOSE] = "\"";
+    return fragFixed.cloneReadOnly();
+}
+
 // This maps a frag code to a string
 final readonly & FixedToken?[] fragTokens = createFragTokens();
 
@@ -208,6 +185,62 @@ function createFragTokens() returns readonly & FixedToken?[] {
         }
     }
     return ft.cloneReadOnly();
+}
+
+function scanLineFragIndex(ScannedLine line, int codePointIndex) returns [int, int] {
+    if codePointIndex == 0 {
+        return  [0, 0];
+    }
+    readonly & FragCode[] fragCodes = line.fragCodes;
+    readonly & string[] fragments = line.fragments;
+    int fragCodeIndex = 0;
+    int fragmentIndex = 0;
+    int i = 0;
+    while i < codePointIndex {
+        FragCode code = fragCodes[fragCodeIndex];
+        fragCodeIndex += 1;
+        if code <= VAR_FRAG_MAX {
+            i += fragments[fragmentIndex].length();
+            fragmentIndex += 1;
+        }
+        else if code >= FRAG_FIXED_TOKEN {
+            // JBUG #33346 cast should not be needed
+            FixedToken? ft = fragTokens[<int>code];
+            i += (<string>ft).length();
+        }
+        else {
+            i += 1;
+        }
+    }
+    if i > codePointIndex {
+        fragCodeIndex -= 1;
+        fragmentIndex -= 1;
+    }
+    return [fragCodeIndex, fragmentIndex];
+}
+
+function scanLineToString(ScannedLine line) returns string {
+    string[] lineContent = [];
+    readonly & FragCode[] fragCodes = line.fragCodes;
+    readonly & string[] fragments = line.fragments;
+    int fragmentIndex = 0;
+    foreach FragCode code in fragCodes {
+        if code <= VAR_FRAG_MAX {
+            lineContent.push(fragments[fragmentIndex]);
+            fragmentIndex += 1;
+        }
+        else if code >= FRAG_FIXED_TOKEN {
+            // JBUG #33346 cast should not be needed
+            FixedToken? ft = fragTokens[<int>code];
+            lineContent.push(<string>ft);
+        }
+        else {
+            // JBUG #33346 cast should not be needed
+            string:Char? token = fragFixed[<int>code];
+            lineContent.push(<string>token);
+        }
+    }
+    return "".'join(...lineContent);
 }
 
 function unicodeEscapeValue(string fragment) returns string|error {
