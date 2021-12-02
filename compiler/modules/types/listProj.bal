@@ -28,24 +28,21 @@ function listProjBdd(Context cx, int k, Bdd b, Conjunction? pos, Conjunction? ne
 
 // Based on listFormulaIsEmpty
 function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) returns SemType {
-    SemType[] members;
+    ListAtomicTypeMembers members;
     SemType rest;
-    int repeatLastMember;
     if pos == () {
-        members = [];
-        repeatLastMember = 0;
+        members = { initial: [], repeatLastCount: 0 };
         rest = TOP;
     }
     else {
         // combine all the positive tuples using intersection
         ListAtomicType lt = cx.listAtomType(pos.atom);
-        members = lt.members.initial;
-        repeatLastMember = lt.members.repeatLastCount;
+        members = lt.members;
         rest = lt.rest;
         Conjunction? p = pos.next;
         // the neg case is in case we grow the array in listInhabited
         if p != () || neg != () {
-            members = shallowCopyTypes(members);
+            members = shallowCopyListAtomicType(members);
         }
         while true {
             if p == () {
@@ -55,38 +52,40 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                int prevLen = members.length() + repeatLastMember;
+                int prevLen = listMembersLength(members);
                 int currentLen = listMembersLength(lt.members);
                 int newLen = int:max(prevLen, currentLen);
                 if prevLen < newLen {
                     if isNever(rest) {
                         return NEVER;
                     }
-                    repeatLastMember = listDecompressMembersForSet(newLen, members, repeatLastMember, rest);
+                    listDecompressMembersForSet(members, newLen, rest);
                 }
                 foreach int i in 0 ..< currentLen {
-                    members[i] = intersect(listMemberAt(members, i), listMemberAt(lt.members.initial, i));
+                    members.initial[i] = intersect(listMemberAt(members, i), listMemberAt(lt.members, i));
                 }
                 if currentLen < newLen {
                     if isNever(lt.rest) {
                         return NEVER;
                     }
                     foreach int i in currentLen ..< newLen {
-                        members[i] = intersect(listMemberAt(members, i), lt.rest);
+                        members.initial[i] = intersect(listMemberAt(members, i), lt.rest);
                     }
                 }
                 rest = intersect(rest, lt.rest);
             }
         }
-            if isAnyEmptySemType(cx, members) {
+        foreach var m in members.initial {
+            if isEmpty(cx, m) {
                 return NEVER;
             }
+        }
         // Ensure that we can use isNever on rest in listInhabited
         if rest !== NEVER && isEmpty(cx, rest) {
             rest = NEVER;
         }
     }
-    return listProjExclude(cx, k, members, repeatLastMember, rest, neg);
+    return listProjExclude(cx, k, members, rest, neg);
 }
 
 // Precondition k >= 0 and members[i] not empty for all i
@@ -96,43 +95,41 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
 // Corresponds to phi^x in AMK tutorial generalized for list types.
 function listProjExclude(Context cx, 
                         int k, 
-                        SemType[] m, 
-                        int repeatLastMember, 
+                        ListAtomicTypeMembers m, 
                         SemType rest, 
                         Conjunction? neg) returns SemType {
-    int repeatCount = repeatLastMember;
-    int len =  m.length() + repeatCount;
+    int len =  listMembersLength(m);
     if neg == () {
         return k < len ? listMemberAt(m, k) : rest;
     }
     else {
-        SemType[] members = m;
+        ListAtomicTypeMembers members = m;
         ListAtomicType nt = cx.listAtomType(neg.atom);
         int negLen = listMembersLength(nt.members);
         if len < negLen {
             if isNever(rest) {
-                return listProjExclude(cx, k, members, repeatCount, rest, neg.next);
+                return listProjExclude(cx, k, members, rest, neg.next);
             }
-            repeatCount = listDecompressMembersForSet(negLen, members, repeatCount, rest);
+            listDecompressMembersForSet(members, negLen, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
-            return listProjExclude(cx, k, members, repeatCount, rest, neg.next);
+            return listProjExclude(cx, k, members, rest, neg.next);
         }
         // now we have nt.members.length() <= len
         SemType p = NEVER;
         foreach int i in 0 ..< len {
-            SemType ntm = i < negLen ? listMemberAt(nt.members.initial, i) : nt.rest;
+            SemType ntm = i < negLen ? listMemberAt(nt.members, i) : nt.rest;
             SemType d = diff(listMemberAt(members, i), ntm);
             if !isEmpty(cx, d) {
-                SemType[] s = shallowCopyTypes(members);
-                s[i] = d;
-                p = union(p, listProjExclude(cx, k, s, repeatCount, rest, neg.next));
+                ListAtomicTypeMembers s = shallowCopyListAtomicType(members);
+                s.initial[i] = d;
+                p = union(p, listProjExclude(cx, k, s, rest, neg.next));
             }     
         }
         SemType rd = diff(rest, nt.rest);
         if !isEmpty(cx, rd) {
-            p = union(p, listProjExclude(cx, k, members, repeatCount, rd, neg.next));
+            p = union(p, listProjExclude(cx, k, members, rd, neg.next));
         }
         return p;
     }
