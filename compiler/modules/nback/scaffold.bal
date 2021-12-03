@@ -109,6 +109,10 @@ type ModuleDI record {|
     boolean debugFull;
 |};
 
+type DebugLocationConfiguration record {|
+    "fileOnly"? location = ();
+    "debugFull"? ifDebugLevel = ();
+|};
 
 class Scaffold {
     private final Module mod;
@@ -236,15 +240,15 @@ class Scaffold {
         return d:location(self.file, pos);
     }
 
-    function setDebugLocation(llvm:Builder builder, bir:Position pos, "file"|"fullDebug"? limitTo = ()) {
+    function setDebugLocation(llvm:Builder builder, bir:Position pos, *DebugLocationConfiguration config) {
         DISubprogram? diFunc = self.diFunc;
         if diFunc != () {
             ModuleDI di = <ModuleDI>self.mod.di;
-            if limitTo == "fullDebug" && !di.debugFull {
+            if config.ifDebugLevel == "fullDebug" && !di.debugFull {
                 return;
             }
             DILocation loc;
-            if limitTo != "file" {
+            if config.location != "fileOnly" {
                 var [line, column] = self.file.lineColumn(pos);
                 loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
             }
