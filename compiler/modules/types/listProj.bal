@@ -61,14 +61,14 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                     }
                 }
                 foreach int i in 0 ..< currentLen {
-                    listMembersSet(members, i, rest, intersect(listMembersGet(members, i, rest), listMembersGet(lt.members, i, lt.rest)));
+                    listMembersSet(members, rest, i, intersect(listMembersGet(members, rest, i), listMembersGet(lt.members, lt.rest, i)));
                 }
                 if currentLen < newLen {
                     if isNever(lt.rest) {
                         return NEVER;
                     }
                     foreach int i in currentLen ..< newLen {
-                        listMembersSet(members, i, rest, intersect(listMembersGet(members, i, rest), lt.rest));
+                        listMembersSet(members, rest, i, intersect(listMembersGet(members, rest, i), lt.rest));
                     }
                 }
                 rest = intersect(rest, lt.rest);
@@ -99,7 +99,7 @@ function listProjExclude(Context cx,
                         Conjunction? neg) returns SemType {
     int len =  listMembersLength(m);
     if neg == () {
-        return listMembersGet(m, k, rest);
+        return listMembersGet(m, rest, k);
     }
     else {
         ListAtomicTypeMembers members = m;
@@ -109,7 +109,7 @@ function listProjExclude(Context cx,
             if isNever(rest) {
                 return listProjExclude(cx, k, members, rest, neg.next);
             }
-            listMembersSet(members, negLen, rest, rest);
+            listMembersSet(members, rest, negLen, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
@@ -118,10 +118,10 @@ function listProjExclude(Context cx,
         // now we have nt.members.length() <= len
         SemType p = NEVER;
         foreach int i in 0 ..< len {
-            SemType ntm = listMembersGet(nt.members, i, nt.rest);
-            SemType d = diff(listMembersGet(members, i, rest), ntm);
+            SemType ntm = listMembersGet(nt.members, nt.rest, i);
+            SemType d = diff(listMembersGet(members, rest, i), ntm);
             if !isEmpty(cx, d) {
-                ListAtomicTypeMembers s = listMembersReplace(members, i, rest, d);
+                ListAtomicTypeMembers s = listMembersReplace(members, rest, i, d);
                 p = union(p, listProjExclude(cx, k, s, rest, neg.next));
             }     
         }

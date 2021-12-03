@@ -171,11 +171,11 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 // Intersect similar compressed representations without decompressing.
                 if listMembersIsSameStructure(members, lt.members) {
                     foreach int i in 0 ..< members.initial.length() {
-                        SemType m = intersect(listMembersGet(members, i, rest), listMembersGet(lt.members, i, lt.rest));
+                        SemType m = intersect(listMembersGet(members, rest, i), listMembersGet(lt.members, lt.rest, i));
                         if (isNever(m)) {
                             return true;
                         }
-                        listMembersSet(members, i, rest, m);
+                        listMembersSet(members, rest, i, m);
                     }
                     rest = intersect(rest, lt.rest);
                     continue;  
@@ -187,14 +187,14 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                     }
                 }
                 foreach int i in 0 ..< currentLen {
-                    listMembersSet(members, i, rest, intersect(listMembersGet(members, i, rest), listMembersGet(lt.members, i, lt.rest)));
+                    listMembersSet(members, rest, i, intersect(listMembersGet(members, rest, i), listMembersGet(lt.members, lt.rest, i)));
                 }
                 if currentLen < newLen {
                     if isNever(lt.rest) {
                         return true;
                     }
                     foreach int i in currentLen ..< newLen {
-                        listMembersSet(members, i, rest, intersect(listMembersGet(members, i, rest), lt.rest));
+                        listMembersSet(members, rest, i, intersect(listMembersGet(members, rest, i), lt.rest));
                     }
                 }
                 rest = intersect(rest, lt.rest);
@@ -234,7 +234,7 @@ function listInhabited(Context cx, ListAtomicTypeMembers m, SemType rest, Conjun
             if isNever(rest) {
                 return listInhabited(cx, members, rest, neg.next);
             }
-            listMembersSet(members, negLen, rest, rest);
+            listMembersSet(members, rest, negLen, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
@@ -262,10 +262,10 @@ function listInhabited(Context cx, ListAtomicTypeMembers m, SemType rest, Conjun
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
         foreach int i in 0 ..< len {
-            SemType ntm = i < negLen ? listMembersGet(nt.members, i, nt.rest) : nt.rest;
-            SemType d = diff(listMembersGet(members, i, rest), ntm);
+            SemType ntm = i < negLen ? listMembersGet(nt.members, nt.rest, i) : nt.rest;
+            SemType d = diff(listMembersGet(members, rest, i), ntm);
             if !isEmpty(cx, d) {
-                ListAtomicTypeMembers s = listMembersReplace(members, i, rest, d);
+                ListAtomicTypeMembers s = listMembersReplace(members, rest, i, d);
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
@@ -284,7 +284,7 @@ function listMembersIsSameStructure(ListAtomicTypeMembers v1, ListAtomicTypeMemb
     return v1.repeatLastCount == v2.repeatLastCount && v1.initial.length() == v2.initial.length();
 }
 
-function listMembersGet(ListAtomicTypeMembers members, int index, SemType rest) returns SemType {
+function listMembersGet(ListAtomicTypeMembers members, SemType rest, int index) returns SemType {
     int memberLen = members.initial.length();
     int i = int:min(index, memberLen - 1);
     if memberLen == 0 || members.initial.length() <= i {
@@ -293,7 +293,7 @@ function listMembersGet(ListAtomicTypeMembers members, int index, SemType rest) 
     return members.initial[i];
 }
 
-function listMembersSet(ListAtomicTypeMembers members, int setIndex, SemType rest, SemType t) {
+function listMembersSet(ListAtomicTypeMembers members, SemType rest, int setIndex, SemType t) {
     int memberLen = members.initial.length();
     boolean lastMemberRepeats = members.repeatLastCount != 0;
 
@@ -325,9 +325,9 @@ function listMembersSet(ListAtomicTypeMembers members, int setIndex, SemType res
     }
 }
 
-function listMembersReplace(ListAtomicTypeMembers members, int index, SemType rest, SemType t) returns ListAtomicTypeMembers {
+function listMembersReplace(ListAtomicTypeMembers members, SemType rest, int index, SemType t) returns ListAtomicTypeMembers {
     ListAtomicTypeMembers copy = listMembersShallowCopy(members);
-    listMembersSet(copy, index, rest, t);
+    listMembersSet(copy, rest, index, t);
     return copy;
 }
 
@@ -354,7 +354,7 @@ function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
             return NEVER;
         }
         else if key < listMembersLength(atomic.members) {
-            return listMembersGet(atomic.members, key, atomic.rest);
+            return listMembersGet(atomic.members, atomic.rest, key);
         }
         return atomic.rest;
     }
