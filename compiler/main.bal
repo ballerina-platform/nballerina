@@ -45,7 +45,8 @@ public function main(string[] filenames, *Options opts) returns error? {
     }
     nback:Options nbackOptions = {
         gcName: check nback:validGcName(opts.gc),
-        debugLevel: check nback:validDebugLevel(opts.debugLevel)
+        debugLevel: check nback:validDebugLevel(opts.debugLevel),
+        outDir: opts.outDir
     };
     int errorFileCount = 0;
     d:Printer dPrinter;
