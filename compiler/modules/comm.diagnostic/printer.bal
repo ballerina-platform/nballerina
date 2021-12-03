@@ -66,18 +66,18 @@ public class HtmlPrinter {
         self.addErrorReportStyles(body);
         body.push("<title> Error logs </title>", "</head>", "<body>");
 
-        final readonly & string[] TABLE_HEADER = [
+        string[] tableHeader = [
             "<table>",
             "<tr>",
             "<th>File</th>",
             "<th>Log</th>",
             "</tr>"
         ];
-        body.push(...TABLE_HEADER);
+        body.push(...tableHeader);
     }
 
     private function addErrorReportStyles(string[] body) {
-        final readonly & string[] STYLES = [
+        string[] styles = [
             "<style>",
             "table { width: 100%; padding: 10px }",
             "td,th { border: 1px solid #969393; padding: 4px; }",
@@ -85,16 +85,16 @@ public class HtmlPrinter {
             "th { padding-top: 12px; padding-bottom: 12px; text-align: left; background-color: #874c4c; color: white;}",
             "</style>"
         ];
-        body.push(...STYLES);
+        body.push(...styles);
     }
 
     private function addErrorReportSuffix(string[] body) {
-        final readonly & string[] SUFFIX = [
+        string[] suffix = [
             "</table>",
             "</body>",
             "</html>"
         ];
-        body.push(...SUFFIX);
+        body.push(...suffix);
     }
 }
 
