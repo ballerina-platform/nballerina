@@ -530,17 +530,17 @@ public type XmlSequenceTypeDesc record {|
     TypeDesc constituent;
 |};
 
+public type TableTypeDesc record {|
+    Position startPos;
+    Position endPos;
+    TypeDesc row;
+|};
+
 public type TypeDescRef record {|
     *PositionFields;
     string? prefix = ();
     string typeName;
     Position pos;
-|};
-
-public type TableTypeDesc record {|
-    Position startPos;
-    Position endPos;
-    TypeDesc row;
 |};
 
 public type SingletonTypeDesc record {|

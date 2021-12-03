@@ -1,3 +1,5 @@
+// Implementation specific to basic type table.
+
 public function tableContaining(SemType memberType) returns SemType {
     SubtypeData ro = subtypeData(memberType, UT_MAPPING_RO);
     SubtypeData rw = subtypeData(memberType, UT_MAPPING_RW);

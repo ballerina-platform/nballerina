@@ -129,12 +129,12 @@ final readonly & Keyword[] keywords = [
     "return",
     "returns",
     "string",
+    "table",
     "true",
     "type",
     "typedesc",
     "while",
-    "xml",
-    "table"
+    "xml"
 ];
 
 final readonly & string:Char?[] fragFixed = createFragFixed();
