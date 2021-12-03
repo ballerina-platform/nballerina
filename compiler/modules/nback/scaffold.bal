@@ -236,15 +236,15 @@ class Scaffold {
         return d:location(self.file, pos);
     }
 
-    function setDebugLocation(llvm:Builder builder, bir:Position pos, "file"? fileOnly = (), DebugLevel? ifLevel = ()) {
+    function setDebugLocation(llvm:Builder builder, bir:Position pos, "file"|"fullDebug"? limitTo = ()) {
         DISubprogram? diFunc = self.diFunc;
         if diFunc != () {
             ModuleDI di = <ModuleDI>self.mod.di;
-            if ifLevel == DEBUG_FULL && !di.debugFull {
+            if limitTo == "fullDebug" && !di.debugFull {
                 return;
             }
             DILocation loc;
-            if fileOnly == () {
+            if limitTo != "file" {
                 var [line, column] = self.file.lineColumn(pos);
                 loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
             }
