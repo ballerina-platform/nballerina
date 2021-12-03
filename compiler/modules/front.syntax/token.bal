@@ -415,7 +415,8 @@ class Tokenizer {
     }
 
     function err(d:Message msg) returns err:Syntax {
-        return err:syntax(msg, loc=d:location(self.file, self.currentStartPos()));
+        // XXX pass in endPos if we need to in order to be able to recreate the right endPos
+        return err:syntax(msg, loc=d:location(self.file, self.currentStartPos(), self.currentEndPos()));
     }
 
     function save() returns TokenizerState {
@@ -487,9 +488,37 @@ public readonly class SourceFile {
         return unpackPosition(pos);
     }
 
-    public function lineContent(Position pos) returns string {
-        int lineNum = self.lineColumn(pos)[0];
-        return scanLineToString(self.scannedLine(lineNum));
+    // range is expected to be the start of a fragment
+    public function lineContent(Position|d:Range range) returns [string, string, string] {
+        Position startPos;
+        Position? endPos;
+        if range is d:Range {
+            { startPos, endPos } = range;
+        }
+        else {
+            startPos = range;
+            endPos = ();
+        }
+        var [startLineNum, startColumnNum] = self.lineColumn(startPos);
+        ScannedLine line = self.scannedLine(startLineNum);
+        string[] lineFragments = scanLineFragments(line);
+        string lineContent = "".'join(...lineFragments);
+        int endColumnNum;
+        if endPos != () {
+            int endLineNum;
+            [endLineNum, endColumnNum] = self.lineColumn(endPos);
+            if endLineNum != startLineNum {
+                endColumnNum = lineContent.length();
+            }
+        }
+        else {
+            endColumnNum = tokenEndCodePointIndex(lineFragments, line.fragCodes, startColumnNum);
+        }
+        return [
+            lineContent.substring(0, startColumnNum),
+            lineContent.substring(startColumnNum, endColumnNum),
+            lineContent.substring(endColumnNum)
+        ];
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
@@ -497,6 +526,52 @@ public readonly class SourceFile {
     function scannedLine(int lineNumber) returns ScannedLine {
         return self.lines[lineNumber - 1];
     }
+}
+
+function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex) returns int {
+    int fragmentIndex = fragmentCountUpTo(fragments, startCodePointIndex);
+    match fragCodes[fragmentIndex] {
+        FRAG_STRING_OPEN  => {
+            return stringTokenEndCodePointIndex(fragments, fragCodes, startCodePointIndex, fragmentIndex);
+        }
+        FRAG_GREATER_THAN => {
+            // Assume not in type-desc mode
+            if fragmentIndex + 1 < fragCodes.length() && fragCodes[fragmentIndex+1] == FRAG_GREATER_THAN {
+                if fragmentIndex + 2 < fragCodes.length() && fragCodes[fragmentIndex+2] == FRAG_GREATER_THAN {
+                    return startCodePointIndex + 3; // >>>
+                }
+                return startCodePointIndex + 2; // >>
+            }
+            return startCodePointIndex + 1; // >
+        }
+    }
+    return startCodePointIndex + fragments[fragmentIndex].length();
+}
+
+function fragmentCountUpTo(string[] fragments, int codePointIndex) returns int {
+    int nCodePoints = 0;
+    int fragmentIndex = 0;
+    int nFragments = fragments.length();
+    while fragmentIndex < nFragments {
+        if nCodePoints >= codePointIndex {
+            break;
+        }
+        nCodePoints += fragments[fragmentIndex].length();
+        fragmentIndex += 1;
+    }
+    return fragmentIndex;
+}
+
+function stringTokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex, int startFragmentIndex) returns int {
+    int endCodePointIndex = startCodePointIndex;
+    foreach int fragmentIndex in startFragmentIndex ..< fragments.length() {
+        endCodePointIndex += fragments[fragmentIndex].length();
+        FragCode fragCode = fragCodes[fragmentIndex];
+        if fragCode == FRAG_STRING_CLOSE {
+            break;
+        }
+    }
+    return endCodePointIndex;
 }
 
 public function createSourceFile(string[] lines, FilePath path) returns SourceFile {
