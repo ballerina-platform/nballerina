@@ -42,7 +42,7 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
         Conjunction? p = pos.next;
         // the neg case is in case we grow the array in listInhabited
         if p != () || neg != () {
-            members = shallowCopyListAtomicType(members);
+            members = listMembersShallowCopy(members);
         }
         while true {
             if p == () {
@@ -59,17 +59,16 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                     if isNever(rest) {
                         return NEVER;
                     }
-                    listDecompressMembersForSet(members, newLen, rest);
                 }
                 foreach int i in 0 ..< currentLen {
-                    members.initial[i] = intersect(listMemberAt(members, i), listMemberAt(lt.members, i));
+                    listMembersSet(members, i, rest, intersect(listMembersGet(members, i, rest), listMembersGet(lt.members, i, lt.rest)));
                 }
                 if currentLen < newLen {
                     if isNever(lt.rest) {
                         return NEVER;
                     }
                     foreach int i in currentLen ..< newLen {
-                        members.initial[i] = intersect(listMemberAt(members, i), lt.rest);
+                        listMembersSet(members, i, rest, intersect(listMembersGet(members, i, rest), lt.rest));
                     }
                 }
                 rest = intersect(rest, lt.rest);
@@ -100,7 +99,7 @@ function listProjExclude(Context cx,
                         Conjunction? neg) returns SemType {
     int len =  listMembersLength(m);
     if neg == () {
-        return k < len ? listMemberAt(m, k) : rest;
+        return listMembersGet(m, k, rest);
     }
     else {
         ListAtomicTypeMembers members = m;
@@ -110,7 +109,7 @@ function listProjExclude(Context cx,
             if isNever(rest) {
                 return listProjExclude(cx, k, members, rest, neg.next);
             }
-            listDecompressMembersForSet(members, negLen, rest);
+            listMembersSet(members, negLen, rest, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
@@ -119,11 +118,10 @@ function listProjExclude(Context cx,
         // now we have nt.members.length() <= len
         SemType p = NEVER;
         foreach int i in 0 ..< len {
-            SemType ntm = i < negLen ? listMemberAt(nt.members, i) : nt.rest;
-            SemType d = diff(listMemberAt(members, i), ntm);
+            SemType ntm = listMembersGet(nt.members, i, nt.rest);
+            SemType d = diff(listMembersGet(members, i, rest), ntm);
             if !isEmpty(cx, d) {
-                ListAtomicTypeMembers s = shallowCopyListAtomicType(members);
-                s.initial[i] = d;
+                ListAtomicTypeMembers s = listMembersReplace(members, i, rest, d);
                 p = union(p, listProjExclude(cx, k, s, rest, neg.next));
             }     
         }

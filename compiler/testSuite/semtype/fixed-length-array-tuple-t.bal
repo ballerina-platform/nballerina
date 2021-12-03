@@ -21,7 +21,7 @@ type Int int;
 // @type Int = Int2Intersection[1]
 type Int2Intersection IntIntT & int[2];
 
-// @type Int2Intersection = Int2IntArrayIntersection
-// @type Int = Int2IntArrayIntersection[0]
-// @type Int = Int2IntArrayIntersection[1]
-type Int2IntArrayIntersection IntIntT & any[];
+// @type Int2Intersection = Int2AnyArrayIntersection
+// @type Int = Int2AnyArrayIntersection[0]
+// @type Int = Int2AnyArrayIntersection[1]
+type Int2AnyArrayIntersection IntIntT & any[];

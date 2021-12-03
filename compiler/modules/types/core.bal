@@ -802,8 +802,7 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
     return ();   
 }
 
-final ListAtomicType LIST_ATOMIC_TOP = createListAtomicType([], 0, TOP);
-final ListAtomicType LIST_ATOMIC_READONLY = createListAtomicType([], 0, READONLY);
+final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], repeatLastCount: 0 }, rest: TOP };
 
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is UniformTypeBitSet {
@@ -1145,7 +1144,7 @@ public function createJson(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, [], 0, j);
+    _ = listDef.define(env, { initial: [], repeatLastCount: 0 }, j);
     _ = mapDef.define(env, [], j);
     return j;
 }
@@ -1156,7 +1155,7 @@ public function createAnydata(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType ad = union(union(SIMPLE_OR_STRING, union(XML, TABLE)), union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, [], 0, ad);
+    _ = listDef.define(env, { initial: [], repeatLastCount: 0 }, ad);
     _ = mapDef.define(env, [], ad);
     return ad;
 }

@@ -161,7 +161,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             else {
                 rest = t;
             }
-            return d.define(env, members, length, rest);
+            return d.define(env, { initial: members, repeatLastCount: length }, rest);
         }
         else {
             return defn.getSemType(env);
