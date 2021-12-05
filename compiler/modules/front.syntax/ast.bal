@@ -472,7 +472,15 @@ public type FieldDesc record {|
     TypeDesc typeDesc;
 |};
 
-public type MappingTypeDesc record {|
+public type MappingTypeDesc MapTypeDesc|RecordTypeDesc;
+
+public type MapTypeDesc record {|
+    *PositionFields;
+    TypeDesc typeParam;
+    t:MappingDefinition? defn = ();
+|};
+
+public type RecordTypeDesc record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;

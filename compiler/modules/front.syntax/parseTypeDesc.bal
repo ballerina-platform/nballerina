@@ -160,9 +160,9 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         "map" => {
             check tok.advance();
-            var rest = check parseTypeParam(tok);
+            var typeParam = check parseTypeParam(tok);
             Position endPos = tok.previousEndPos();
-            return { startPos, endPos, rest, fields: [] };
+            return { startPos, endPos, typeParam };
         }
         "error" => {
             Position endPos = tok.currentEndPos();
@@ -357,7 +357,7 @@ function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
     return { startPos, endPos, members, rest};
 }
 
-function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {
+function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns RecordTypeDesc|err:Syntax {
     check tok.advance();
     check tok.expect("{|");
     FieldDesc[] fields = [];

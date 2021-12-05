@@ -155,24 +155,26 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return defn.getSemType(env);
         }   
     }
-    if td is s:MappingTypeDesc {
+    if td is s:RecordTypeDesc|s:MapTypeDesc {
         t:MappingDefinition? defn = td.defn;
         if defn == () {
             t:MappingDefinition d = new;
             td.defn = d;
             // JBUG this panics if done with `from` and there's an error is resolveTypeDesc
             t:Field[] fields = [];
-            foreach var { name, typeDesc } in td.fields {
-                fields.push([name, check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc)]);
-            }
-            map<s:FieldDesc> fieldsByName = {};
-            foreach var fd in td.fields {
-                if fieldsByName[fd.name] != () {
-                    return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn, fd.startPos));
+            if td is s:RecordTypeDesc {
+                foreach var { name, typeDesc } in td.fields {
+                    fields.push([name, check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc)]);
                 }
-                fieldsByName[fd.name] = fd;
+                map<s:FieldDesc> fieldsByName = {};
+                foreach var fd in td.fields {
+                    if fieldsByName[fd.name] != () {
+                        return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn, fd.startPos));
+                    }
+                    fieldsByName[fd.name] = fd;
+                }
             }
-            s:TypeDesc? restTd = td.rest;
+            s:TypeDesc? restTd = td is s:RecordTypeDesc ? td.rest : td.typeParam;
             t:SemType rest;
             if restTd == () {
                 rest = t:NEVER;
