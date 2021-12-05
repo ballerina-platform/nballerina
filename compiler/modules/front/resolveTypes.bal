@@ -188,7 +188,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 return d.define(env, fields, rest);
             }
             else if td is s:InclusiveRecordTypeDesc {
-                return d.define(env, fields, t:NEVER);
+                return d.define(env, fields, t:ANY);
             }
             else {
                 s:TypeDesc typeParamTd = td.typeParam;
