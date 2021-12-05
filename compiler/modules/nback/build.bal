@@ -127,7 +127,7 @@ function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value 
 }
 
 function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic, bir:Position pos) returns llvm:PointerValue {
-    scaffold.setDebugLocation(builder, pos, location="fileOnly");
+    scaffold.setDebugLocation(builder, pos, ERROR_CONSTRUCTOR);
     var err = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(panicConstructFunction), [packedPanic]);
     scaffold.clearDebugLocation(builder);
     return err;

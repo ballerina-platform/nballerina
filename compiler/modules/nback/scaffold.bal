@@ -109,10 +109,13 @@ type ModuleDI record {|
     boolean debugFull;
 |};
 
-type DebugLocationConfiguration record {|
-    "fileOnly"? location = ();
-    "debugFull"? ifDebugLevel = ();
-|};
+// Debug location will always be added
+public const int ERROR_CONSTRUCTOR = 0; // only include file name not position
+public const int CALL_INSTRUCTION = 1;
+// Debug locattion for these will be added only in full debug
+public const int OTHER_INSTRUCTION = 2;
+
+public type DebugLocationTarget ERROR_CONSTRUCTOR|CALL_INSTRUCTION|OTHER_INSTRUCTION;
 
 class Scaffold {
     private final Module mod;
@@ -240,19 +243,15 @@ class Scaffold {
         return d:location(self.file, pos);
     }
 
-    function setDebugLocation(llvm:Builder builder, bir:Position pos, *DebugLocationConfiguration config) {
+    function setDebugLocation(llvm:Builder builder, bir:Position pos, DebugLocationTarget target) {
         DISubprogram? diFunc = self.diFunc;
         if diFunc != () {
             ModuleDI di = <ModuleDI>self.mod.di;
-            if config.ifDebugLevel == "fullDebug" && !di.debugFull {
+            DILocation loc;
+            if target > CALL_INSTRUCTION && !di.debugFull {
                 return;
             }
-            DILocation loc;
-            if config.location != "fileOnly" {
-                var [line, column] = self.file.lineColumn(pos);
-                loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
-            }
-            else {
+            else if target < CALL_INSTRUCTION && !di.debugFull {
                 DILocation? noLineLoc = self.noLineLocation;
                 if noLineLoc == () {
                     loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
@@ -261,6 +260,10 @@ class Scaffold {
                 else {
                     loc = noLineLoc;
                 }
+            }
+            else {
+                var [line, column] = self.file.lineColumn(pos);
+                loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
             }
             builder.setCurrentDebugLocation(loc);
         }
