@@ -1,6 +1,5 @@
 import ballerina/io;
 
-
 public function main() {
     record {
         int aVeryLongFieldName;

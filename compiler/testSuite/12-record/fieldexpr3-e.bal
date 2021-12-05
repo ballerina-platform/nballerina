@@ -1,4 +1,3 @@
-
 import ballerina/io;
 
 type Point record {
