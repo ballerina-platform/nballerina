@@ -573,6 +573,9 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
         }
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
     }
+    else if td is RecordTypeDesc {
+        return !checkPosFragCode(file, endPos, CP_RIGHT_SQUARE, ...base);
+    }
     return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
 }
 

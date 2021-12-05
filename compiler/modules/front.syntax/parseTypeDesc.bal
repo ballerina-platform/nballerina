@@ -408,9 +408,8 @@ function parseInclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
     FieldDesc[] fields = [];
     while tok.current() != "}" {
         TypeDesc td = check parseTypeDesc(tok);
-        string name = check tok.expectIdentifier();
         Position fieldStartPos = tok.currentStartPos();
-        check tok.advance();
+        string name = check tok.expectIdentifier();
         Position fieldEndPos = check tok.expectEnd(";");
         fields.push({ startPos: fieldStartPos, endPos: fieldEndPos, name, typeDesc: td });
     }

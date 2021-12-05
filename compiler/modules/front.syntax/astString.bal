@@ -245,7 +245,13 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     }
     else if td is MappingTypeDesc {
         if td is RecordTypeDesc {
-            w.push("record", "{|");
+            w.push("record");
+            if td is ExclusiveRecordTypeDesc {
+                w.push("{|");
+            }
+            else {
+                w.push("{");
+            }
             boolean firstInBlock = true;
             // JBUG cast
             foreach var f in <FieldDesc[]>td.fields {
@@ -262,6 +268,9 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
                     w.push("...", CLING, ";");
                 }
                 w.push(<Word>LF_OUTDENT, "|}");
+            }
+            else {
+                w.push(<Word>LF_OUTDENT, "}");
             }
         }
         else {
