@@ -163,26 +163,38 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             // JBUG this panics if done with `from` and there's an error is resolveTypeDesc
             t:Field[] fields = [];
             if td is s:RecordTypeDesc {
-                foreach var { name, typeDesc } in td.fields {
+                // JBUG cast
+                foreach var { name, typeDesc } in <s:FieldDesc[]>td.fields {
                     fields.push([name, check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc)]);
                 }
                 map<s:FieldDesc> fieldsByName = {};
-                foreach var fd in td.fields {
+                // JBUG cast
+                foreach var fd in <s:FieldDesc[]>td.fields {
                     if fieldsByName[fd.name] != () {
                         return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn, fd.startPos));
                     }
                     fieldsByName[fd.name] = fd;
                 }
             }
-            s:TypeDesc? restTd = td is s:RecordTypeDesc ? td.rest : td.typeParam;
-            t:SemType rest;
-            if restTd == () {
-                rest = t:NEVER;
+            if td is s:ExclusiveRecordTypeDesc {
+                s:TypeDesc? restTd = td.rest;
+                t:SemType rest;
+                if restTd == () {
+                    rest = t:NEVER;
+                }
+                else {
+                    rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+                }
+                return d.define(env, fields, rest);
+            }
+            else if td is s:InclusiveRecordTypeDesc {
+                return d.define(env, fields, t:NEVER);
             }
             else {
-                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+                s:TypeDesc typeParamTd = td.typeParam;
+                t:SemType typeParam = check resolveTypeDesc(mod, modDefn, depth + 1, typeParamTd);
+                return d.define(env, fields, typeParam);
             }
-            return d.define(env, fields, rest);
         }
         else {
             return defn.getSemType(env);

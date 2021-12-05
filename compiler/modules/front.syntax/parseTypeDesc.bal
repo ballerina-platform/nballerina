@@ -359,7 +359,21 @@ function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
 
 function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns RecordTypeDesc|err:Syntax {
     check tok.advance();
-    check tok.expect("{|");
+    match tok.current() {
+        "{|" => {
+            return parseExclusiveRecordTypeDesc(tok, startPos);
+        }
+        "{" => {
+            return parseInclusiveRecordTypeDesc(tok, startPos);
+        }
+        _ => {
+            return parseError(tok);
+        }
+    }
+}
+
+function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns ExclusiveRecordTypeDesc|err:Syntax {
+    check tok.advance();
     FieldDesc[] fields = [];
     TypeDesc? rest = ();
     while tok.current() != "|}" {
@@ -387,4 +401,20 @@ function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns RecordTyp
     Position endPos = tok.currentEndPos();
     check tok.advance();
     return { startPos, endPos, fields, rest };
+}
+
+function parseInclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns InclusiveRecordTypeDesc|err:Syntax {
+    check tok.advance();
+    FieldDesc[] fields = [];
+    while tok.current() != "}" {
+        TypeDesc td = check parseTypeDesc(tok);
+        string name = check tok.expectIdentifier();
+        Position fieldStartPos = tok.currentStartPos();
+        check tok.advance();
+        Position fieldEndPos = check tok.expectEnd(";");
+        fields.push({ startPos: fieldStartPos, endPos: fieldEndPos, name, typeDesc: td });
+    }
+    Position endPos = tok.currentEndPos();
+    check tok.advance();
+    return { startPos, endPos, fields };
 }

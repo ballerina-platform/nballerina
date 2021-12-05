@@ -245,21 +245,24 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     }
     else if td is MappingTypeDesc {
         if td is RecordTypeDesc {
-            TypeDesc? rest = td.rest;
             w.push("record", "{|");
             boolean firstInBlock = true;
-            foreach var f in td.fields {
+            // JBUG cast
+            foreach var f in <FieldDesc[]>td.fields {
                 w.push(<Word>(firstInBlock ? LF_INDENT : LF));
                 firstInBlock = false;
                 typeDescToWords(w, f.typeDesc);
                 w.push(f.name, CLING, ";");
             }
-            if rest != () {
-                w.push(<Word> LF);
-                typeDescToWords(w, rest);
-                w.push("...", CLING, ";");
+            if td is ExclusiveRecordTypeDesc {
+                TypeDesc? rest = td.rest;
+                if rest != () {
+                    w.push(<Word> LF);
+                    typeDescToWords(w, rest);
+                    w.push("...", CLING, ";");
+                }
+                w.push(<Word>LF_OUTDENT, "|}");
             }
-            w.push(<Word>LF_OUTDENT, "|}");
         }
         else {
             w.push("map", CLING, "<", CLING);

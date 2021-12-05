@@ -462,7 +462,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         newTd = check parseTypeDesc(tok);
     }
     Position actualEnd = tok.previousEndPos();
-    while td.toString() != newTd.toString() && newTd is ListTypeDesc|RecordTypeDesc {
+    while td.toString() != newTd.toString() && newTd is ListTypeDesc|ExclusiveRecordTypeDesc {
         // These are left recursions which we can't separately parse
         TypeDesc rest = <TypeDesc> newTd.rest;
         actualEnd = rest.endPos;
@@ -483,14 +483,17 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         childNodePos.push([td.rest.startPos, td.rest.endPos]);
     }
     else if td is RecordTypeDesc {
-        foreach var f in td.fields {
+        // JBUG cast
+        foreach var f in <FieldDesc[]>td.fields {
             check validateTypeDescPos(f.typeDesc, tok, td.startPos, td.endPos);
             childNodePos.push([f.typeDesc.startPos, f.typeDesc.endPos]);
         }
-        TypeDesc? rest = td.rest;
-        if rest is TypeDesc {
-            childNodePos.push([rest.startPos, rest.endPos]);
-            check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
+        if td is ExclusiveRecordTypeDesc {
+            TypeDesc? rest = td.rest;
+            if rest is TypeDesc {
+                childNodePos.push([rest.startPos, rest.endPos]);
+                check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
+            }
         }
     }
     else if td is MapTypeDesc {
@@ -518,7 +521,8 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     }
     check validateTypeDescOpPos(td, tok);
     if td is RecordTypeDesc {
-        foreach FieldDesc fd in td.fields {
+        // JBUG cast
+        foreach FieldDesc fd in <FieldDesc[]>td.fields {
             check validateFieldDescPos(fd, tok, td.startPos, td.endPos);
         }
     }

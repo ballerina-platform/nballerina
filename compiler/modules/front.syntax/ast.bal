@@ -480,12 +480,22 @@ public type MapTypeDesc record {|
     t:MappingDefinition? defn = ();
 |};
 
-public type RecordTypeDesc record {|
+public type RecordTypeDesc ExclusiveRecordTypeDesc|InclusiveRecordTypeDesc;
+
+public type ExclusiveRecordTypeDesc record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     FieldDesc[] fields;
     TypeDesc? rest;
+    t:MappingDefinition? defn = ();
+|};
+
+public type InclusiveRecordTypeDesc record {|
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
+    FieldDesc[] fields;
     t:MappingDefinition? defn = ();
 |};
 
