@@ -169,13 +169,14 @@ destructuring-assign-stmt = wildcard-binding-pattern "=" expression ";"
 wildcard-binding-pattern = "_"
 
 lvexpr =
-   variable-reference-lvexpr
-   | field-access-lvexpr
-   | member-access-lvexpr 
+   chainable-lvexpr
+   | member-access-lvexpr
 
-member-access-lvexpr = variable-reference-lvexpr "[" expression "]"
+chainable-lvexpr = variable-reference-lvexpr | field-access-lvexpr
 
-field-access-lvexpr = variable-reference-lvexpr "." identifier
+member-access-lvexpr = chainable-lvexpr "[" expression "]"
+
+field-access-lvexpr = chainable-lvexpr "." identifier
 
 variable-reference-lvexpr = variable-reference
 
@@ -373,6 +374,7 @@ Two kinds of `import` are supported.
 
 * Types can be nested arbitrarily: any supported type descriptors can be used for a member of an array, record or mapping type descriptors. This includes recursive types.
 * Record types can have a record-rest-descriptor `T...;`
+* Chained field access lvalues.
 
 ## Implemented spec changes since 2021R1
 

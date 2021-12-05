@@ -188,8 +188,27 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name,
         else {
             endPos = tok.previousEndPos();
             VarRefExpr container = { startPos, endPos, name, namePos };
-            FieldAccessLExpr lValue = { startPos, endPos, fieldName: localName, container, opPos };
+            FieldAccessLExpr fieldAccessLValue = { startPos, endPos, fieldName: localName, container, opPos };
             Token? t = tok.current();
+            while t == "." {
+                Position dotPos = tok.currentStartPos();
+                check tok.advance();
+                string fieldName = check tok.expectIdentifier();
+                fieldAccessLValue = <FieldAccessLExpr>{ startPos, endPos, fieldName, container: fieldAccessLValue, opPos: dotPos };
+                t = tok.current();
+            }
+            FieldAccessLExpr|MemberAccessLExpr lValue;
+            if t == "[" {
+                Position bracketPos = tok.currentStartPos();
+                check tok.advance();
+                Expr index = check parseInnerExpr(tok);
+                Position memberAccessEndPos = check tok.expectEnd("]");
+                lValue = <MemberAccessLExpr>{ startPos, endPos: memberAccessEndPos, index, container: fieldAccessLValue, opPos: bracketPos };
+                t = tok.current();
+            }
+            else {
+                lValue = fieldAccessLValue;
+            }
             if t == "=" {
                 return finishAssignStmt(tok, lValue, startPos);
             }
@@ -197,7 +216,6 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name,
                 opPos = tok.currentStartPos();
                 return parseCompoundAssignStmt(tok, lValue, t, startPos, opPos);
             }
-            // SUBSET handle "["
         }
         // falls through to end
     }

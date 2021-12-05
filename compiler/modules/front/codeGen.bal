@@ -855,7 +855,23 @@ function codeGenAssign(CodeGenContext cx, Environment env, bir:BasicBlock block,
 }
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr|s:FieldAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
-    bir:Register reg = (check lookupVarRefBinding(cx, lValue.container.name, env, lValue.opPos)).reg;
+    s:VarRefExpr|s:FieldAccessLExpr container = lValue.container;
+    bir:Register reg;
+    bir:BasicBlock block1;
+    if container is s:VarRefExpr {
+        reg = (check lookupVarRefBinding(cx, container.name, env, lValue.opPos)).reg;
+        block1 = startBlock;
+    }
+    else {
+        var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, container, ()));
+        if operand is bir:Register && t:isSubtypeSimple(operand.semType, t:MAPPING)  {
+            reg = operand;
+            block1 = nextBlock;
+        }
+        else {
+            return cx.semanticErr("can only apply field access to mapping", pos=lValue.opPos);
+        }
+    }
     t:UniformTypeBitSet indexType;
     t:SemType memberType;
     if t:isSubtypeSimple(reg.semType, t:MAPPING) {
@@ -876,7 +892,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
             return cx.semanticErr("can only apply field access in lvalue to mapping", lValue.opPos);
         }
         else {
-            var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, lValue.index, indexType));
+            var { result: index, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, lValue.index, indexType));
             { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
             bir:ListSetInsn insn = { operands: [reg, index, operand], pos: lValue.opPos };
             nextBlock.insns.push(insn);
@@ -884,7 +900,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
         }
     }
     else {
-        var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, startBlock, env, lValue, reg.semType);
+        var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, block1, env, lValue, reg.semType);
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
         bir:MappingSetInsn insn =  { operands: [ reg, index, operand], pos: lValue.opPos };
         nextBlock.insns.push(insn);
