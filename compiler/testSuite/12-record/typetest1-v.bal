@@ -18,7 +18,7 @@ type R3 record {
 
 public function main() {
     R1 r1 = { n: 1, x: 1.5 };
-    map<int|float?> m = r1;
+    map<any?> m = r1;
     io:println(m is R1); // @output true
     io:println(m is R2); // @output true
     io:println(m is R3); // @output false
@@ -30,9 +30,9 @@ public function main() {
     io:println(m is R1); // @output false
     io:println(m is R2); // @output false
     any v = r1;
-    io:println(v is map<int|float>); // @output true
-    io:println(v is map<int|float?>); // @output true
+    io:println(v is map<any>); // @output true
+    io:println(v is map<any?>); // @output true
     v = r2;
-    io:println(v is map<int|float>); // @output false
-    io:println(v is map<int|float?>); // @output true
+    io:println(v is map<any>); // @output true
+    io:println(v is map<any?>); // @output true
 }

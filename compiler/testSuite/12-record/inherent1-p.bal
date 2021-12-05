@@ -11,6 +11,6 @@ public function main() {
     io:println(p["age"]);
 }
 
-function foo(map<string|int> m) {
-    m["dateOfBirth"] = "long ago"; // @panic bad mapping store
+function foo(map<any> m) {
+    m["age"] = "too old"; // @panic bad mapping store
 }
