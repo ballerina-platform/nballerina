@@ -545,23 +545,37 @@ function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr ex
 }
 
 function foldFpLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError {
-    // This will need to change when we support decimal
-    // TODO: Refactor this method
-    if (expr.typeSuffix is s:DECIMAL_TYPE_SUFFIX) {
-        decimal|error result = decimalFromFpLiteral(expr.untypedLiteral);
-        if result is decimal {
-            return { startPos: expr.startPos, endPos: expr.endPos, value: result };
+    float|decimal|error result;
+    string ty;
+    s:FpTypeSuffix? typeSuffix = expr.typeSuffix;
+    string untypedLiteral = expr.untypedLiteral;
+    if typeSuffix is s:DECIMAL_TYPE_SUFFIX {
+        result = decimalFromFpLiteral(untypedLiteral);
+        ty = "decimal";
+    }
+    else if typeSuffix is s:FLOAT_TYPE_SUFFIX {
+        result = floatFromFpLiteral(untypedLiteral);
+        ty = "float";
+    }
+    else {
+        if expectedType == () || t:isSubtypeSimple(expectedType, t:FLOAT) {
+            result = floatFromFpLiteral(untypedLiteral);
+            ty = "float";
+        }
+        else if t:isSubtypeSimple(expectedType, t:DECIMAL) {
+            result = decimalFromFpLiteral(untypedLiteral);
+            ty = "decimal";
         }
         else {
-            return cx.semanticErr("invalid decimal literal", cause=result, pos=expr.startPos);
+            result = floatFromFpLiteral(untypedLiteral);
+            ty = "float";            
         }
     }
-    float|error result = floatFromFpLiteral(expr.untypedLiteral);
-    if result is float {
+    if result is float|decimal {
         return { startPos: expr.startPos, endPos: expr.endPos, value: result };
     }
     else {
-        return cx.semanticErr("invalid float literal", cause=result, pos=expr.startPos);
+        return cx.semanticErr("invalid " + ty + " literal", cause=result, pos=expr.startPos);
     }
 }
 

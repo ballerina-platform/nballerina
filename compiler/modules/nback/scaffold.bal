@@ -21,6 +21,7 @@ const LLVM_VOID = "void";
 final llvm:PointerType LLVM_TAGGED_PTR = heapPointerType("i8");
 final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
 final llvm:PointerType LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
+final llvm:PointerType LLVM_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
 
 // A Repr is way of representing values.
 // It's a mapping from a SemType to an LLVM type.
@@ -220,23 +221,8 @@ class Scaffold {
         StringDefn? curDefn = self.mod.stringDefns[str];
         if curDefn != () {
             return curDefn;
-        }       
-        byte[] bytes = str.toBytes();
-        int nBytes = bytes.length();
-        int nBytesPadded = padBytes(bytes, 16); 
-        llvm:ConstValue val = self.mod.llContext.constStruct([llvm:constInt("i64", nBytes), llvm:constInt("i64", str.length()), self.mod.llContext.constString(bytes)]);
-        llvm:Type ty = llvm:structType(["i64", "i64", llvm:arrayType("i8", nBytesPadded)]);
-        llvm:ConstPointerValue ptr = self.mod.llMod.addGlobal(ty,
-                                               stringDefnSymbol(self.mod.stringDefns.length()),
-                                               initializer = val,
-                                               align = 8,
-                                               isConstant = true,
-                                               unnamedAddr = true,
-                                               linkage = "internal");
-        // StringDefn newDefn = self.mod.llContext.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE);
-        // self.mod.stringDefns[str] = newDefn;
-        // return newDefn;
-        StringDefn newDefn = self.mod.llContext.constBitCast(self.mod.llContext.constGetElementPtr(ptr, [llvm:constInt("i64", 0), llvm:constInt("i32", 2)]), LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE);
+        }
+        StringDefn newDefn = addDecimalStringDefn(self.mod.llContext, self.mod.llMod, self.mod.stringDefns.length(), str);
         self.mod.stringDefns[str] = newDefn;
         return newDefn;
     }
@@ -424,6 +410,22 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
                                       [llvm:constInt(LLVM_INT, TAG_STRING | <int>variant)]);
 }
 
+function addDecimalStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue {
+    byte[] bytes = str.toBytes();
+    int nBytes = bytes.length();
+    int nBytesPadded = padBytes(bytes, 16);
+    llvm:ConstValue val = context.constStruct([llvm:constInt("i64", nBytes), llvm:constInt("i64", str.length()), context.constString(bytes)]);
+    llvm:Type ty = llvm:structType(["i64", "i64", llvm:arrayType("i8", nBytesPadded)]);
+    llvm:ConstPointerValue ptr = mod.addGlobal(ty,
+                                               stringDefnSymbol(defnIndex),
+                                               initializer = val,
+                                               align = 8,
+                                               isConstant = true,
+                                               unnamedAddr = true,
+                                               linkage = "internal");
+    return context.constBitCast(context.constGetElementPtr(ptr, [llvm:constInt("i64", 0), llvm:constInt("i32", 2)]), LLVM_PTR_WITHOUT_ADDR_SPACE);
+}
+
 function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolean {
     return nCodePoints == 1 || (nBytes == nCodePoints && nBytes <= 7);
 }
@@ -453,7 +455,6 @@ final TaggedRepr REPR_LIST = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, su
 final TaggedRepr REPR_MAPPING_RW = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:MAPPING_RW };
 final TaggedRepr REPR_MAPPING = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:MAPPING };
 final TaggedRepr REPR_ERROR = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ERROR };
-// final TaggedRepr REPR_DECIMAL = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE, subtype: t:DECIMAL };
 final TaggedRepr REPR_DECIMAL = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:DECIMAL };
 
 final TaggedRepr REPR_TOP = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:TOP };

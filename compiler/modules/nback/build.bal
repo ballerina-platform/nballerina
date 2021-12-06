@@ -116,9 +116,8 @@ final RuntimeFunction taggedClearExactPtrFunction = {
 final RuntimeFunction decimalConstFunction = {
     name: "decimal_const",
     ty: {
-        // returnType: LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE,
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: [llvm:pointerType("i8")]
+        paramTypes: [LLVM_PTR_WITHOUT_ADDR_SPACE]
     },
     attrs: ["readnone"]
 };
@@ -306,8 +305,7 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else if operand is float {
         return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, operand)];
     }
-    else if operand is decimal { // TODO: should change this
-        // return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, <float>operand)];
+    else if operand is decimal {
         return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, operand)];
     }
     else if operand == () {
@@ -330,9 +328,7 @@ function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) re
 // Check whether the correct value is ConstPointerValue/PointerValue
 // TODO: check the names again
 function buildConstDecimal(llvm:Builder builder, Scaffold scaffold, decimal decimalValue) returns llvm:Value {
-    // return scaffold.getDecimalString(decimalValue.toString());
-    llvm:ConstPointerValue decimalPtr = scaffold.getDecimalString(decimalValue.toString());
-    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalConstFunction), [decimalPtr]);
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalConstFunction), [scaffold.getDecimalString(decimalValue.toString())]);
 }
 
 function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {
