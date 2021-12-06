@@ -21,7 +21,11 @@ const LLVM_VOID = "void";
 final llvm:PointerType LLVM_TAGGED_PTR = heapPointerType("i8");
 final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
 final llvm:PointerType LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
+<<<<<<< HEAD
 final llvm:PointerType LLVM_DECIMAL_CONST = llvm:pointerType("i8");
+=======
+final llvm:PointerType LLVM_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
+>>>>>>> Refactor code
 
 // A Repr is way of representing values.
 // It's a mapping from a SemType to an LLVM type.
