@@ -1838,6 +1838,7 @@ type TypedOperand readonly & (["array", bir:Register]
                               |["error", bir:Register]
                               |["string", bir:StringOperand]
                               |["float", bir:FloatOperand]
+                              |["decimal", bir:DecimalOperand]
                               |["int", bir:IntOperand]
                               |["boolean", bir:BooleanOperand]
                               |["nil", NilOperand]);
@@ -1898,6 +1899,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
     }
     else if operand is float {
         return ["float", operand];
+    }
+    else if operand is decimal {
+        return ["decimal", operand];
     }
     else if operand is boolean {
         return ["boolean", operand];

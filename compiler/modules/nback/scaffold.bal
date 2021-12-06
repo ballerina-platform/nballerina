@@ -216,6 +216,31 @@ class Scaffold {
         return newDefn;
     }
 
+    function getDecimalString(string str) returns StringDefn {
+        StringDefn? curDefn = self.mod.stringDefns[str];
+        if curDefn != () {
+            return curDefn;
+        }       
+        byte[] bytes = str.toBytes();
+        int nBytes = bytes.length();
+        int nBytesPadded = padBytes(bytes, 16); 
+        llvm:ConstValue val = self.mod.llContext.constStruct([llvm:constInt("i64", nBytes), llvm:constInt("i64", str.length()), self.mod.llContext.constString(bytes)]);
+        llvm:Type ty = llvm:structType(["i64", "i64", llvm:arrayType("i8", nBytesPadded)]);
+        llvm:ConstPointerValue ptr = self.mod.llMod.addGlobal(ty,
+                                               stringDefnSymbol(self.mod.stringDefns.length()),
+                                               initializer = val,
+                                               align = 8,
+                                               isConstant = true,
+                                               unnamedAddr = true,
+                                               linkage = "internal");
+        // StringDefn newDefn = self.mod.llContext.constBitCast(ptr, LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE);
+        // self.mod.stringDefns[str] = newDefn;
+        // return newDefn;
+        StringDefn newDefn = self.mod.llContext.constBitCast(self.mod.llContext.constGetElementPtr(ptr, [llvm:constInt("i64", 0), llvm:constInt("i32", 2)]), LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE);
+        self.mod.stringDefns[str] = newDefn;
+        return newDefn;
+    }
+
     function addBasicBlock() returns llvm:BasicBlock {
         return self.llFunc.appendBasicBlock();
     }
@@ -428,6 +453,8 @@ final TaggedRepr REPR_LIST = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, su
 final TaggedRepr REPR_MAPPING_RW = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:MAPPING_RW };
 final TaggedRepr REPR_MAPPING = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:MAPPING };
 final TaggedRepr REPR_ERROR = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ERROR };
+// final TaggedRepr REPR_DECIMAL = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE, subtype: t:DECIMAL };
+final TaggedRepr REPR_DECIMAL = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:DECIMAL };
 
 final TaggedRepr REPR_TOP = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:TOP };
 final TaggedRepr REPR_ANY = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: t:ANY };
@@ -440,6 +467,7 @@ final readonly & record {|
     // These are ordered from most to least specific
     { domain: t:INT, repr: REPR_INT },
     { domain: t:FLOAT, repr: REPR_FLOAT },
+    { domain: t:DECIMAL, repr: REPR_DECIMAL },
     { domain: t:BOOLEAN, repr: REPR_BOOLEAN },
     { domain: t:NIL, repr: REPR_NIL },
     { domain: t:STRING, repr: REPR_STRING },

@@ -146,7 +146,7 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
         return foldIntLiteralExpr(cx, expectedType, expr);
     }
     else if expr is s:FpLiteralExpr {
-        return foldFloatLiteralExpr(cx, expectedType, expr);
+        return foldFpLiteralExpr(cx, expectedType, expr);
     }
     else {
         return expr;
@@ -544,9 +544,19 @@ function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr ex
     }
 }
 
-function foldFloatLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError {
+function foldFpLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError {
     // This will need to change when we support decimal
-    float|error result = floatFromDecimalLiteral(expr.untypedLiteral);
+    // TODO: Refactor this method
+    if (expr.typeSuffix is s:DECIMAL_TYPE_SUFFIX) {
+        decimal|error result = decimalFromFpLiteral(expr.untypedLiteral);
+        if result is decimal {
+            return { startPos: expr.startPos, endPos: expr.endPos, value: result };
+        }
+        else {
+            return cx.semanticErr("invalid decimal literal", cause=result, pos=expr.startPos);
+        }
+    }
+    float|error result = floatFromFpLiteral(expr.untypedLiteral);
     if result is float {
         return { startPos: expr.startPos, endPos: expr.endPos, value: result };
     }
@@ -559,7 +569,7 @@ function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLitera
     float|int|error result;
     string ty;
     if expr.base == 10 && expectsFloat(expectedType) {
-        result = floatFromDecimalLiteral(expr.digits);
+        result = floatFromFpLiteral(expr.digits);
         ty = "float"; 
     }
     else {
@@ -583,8 +593,12 @@ function expectsFloat(t:SemType? semType) returns boolean {
     }
 }
 
-function floatFromDecimalLiteral(string digits) returns float|error {
+function floatFromFpLiteral(string digits) returns float|error {
     return float:fromString(digits);
+}
+
+function decimalFromFpLiteral(string decimalStr) returns decimal|error {
+    return decimal:fromString(decimalStr);
 }
 
 function intArithmeticEval(s:BinaryArithmeticOp op, int left, int right) returns int  {

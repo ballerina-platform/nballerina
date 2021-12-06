@@ -1007,7 +1007,7 @@ public function split(SemType t) returns SplitSemType  {
     }
 }
 
-public type SingleValue ()|boolean|int|float|string;
+public type SingleValue ()|boolean|int|float|decimal|string;
 
 // JBUG #34320 parentheses should not be necessary
 public type OptSingleValue (readonly & record {|

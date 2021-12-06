@@ -275,7 +275,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         check tok.advance();
         return expr;
     }
-    else if t is [DECIMAL_FP_NUMBER, string, FLOAT_TYPE_SUFFIX|()] {
+    else if t is [DECIMAL_FP_NUMBER, string, FLOAT_TYPE_SUFFIX|DECIMAL_TYPE_SUFFIX|()] {
         FpLiteralExpr expr = { startPos, endPos, untypedLiteral: t[1], typeSuffix: t[2] };
         check tok.advance();
         return expr;

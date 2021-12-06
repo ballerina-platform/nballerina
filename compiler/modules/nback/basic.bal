@@ -170,11 +170,12 @@ function buildCallPanic(llvm:Builder builder, Scaffold scaffold, llvm:PointerVal
     builder.unreachable();
 }
 
+///////////////////////////////////////////////
 function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn insn) returns BuildError? {
     builder.store(check buildWideRepr(builder, scaffold, insn.operand, scaffold.getRepr(insn.result), insn.result.semType),
                   scaffold.address(insn.result));
 }
-
+//////////////////////////////////////////////
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
     scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_CALL);
     // Handler indirect calls later
