@@ -110,12 +110,12 @@ type ModuleDI record {|
 |};
 
 // Debug location will always be added
-public const int ERROR_CONSTRUCTOR = 0; // only include file name not position
-public const int CALL_INSTRUCTION = 1;
+public const int DEBUG_ORIGIN_CONSTRUCTOR = 0;
+public const int DEBUG_ORIGIN_CALL = 1;
 // Debug locattion for these will be added only in full debug
-public const int OTHER_INSTRUCTION = 2;
+public const int DEBUG_ORIGIN_OTHER = 2;
 
-public type DebugLocationTarget ERROR_CONSTRUCTOR|CALL_INSTRUCTION|OTHER_INSTRUCTION;
+public type DebugLocationOrigin DEBUG_ORIGIN_CONSTRUCTOR|DEBUG_ORIGIN_CALL|DEBUG_ORIGIN_OTHER;
 
 class Scaffold {
     private final Module mod;
@@ -243,15 +243,16 @@ class Scaffold {
         return d:location(self.file, pos);
     }
 
-    function setDebugLocation(llvm:Builder builder, bir:Position pos, DebugLocationTarget target) {
+    function setDebugLocation(llvm:Builder builder, bir:Position pos, DebugLocationOrigin origin) {
         DISubprogram? diFunc = self.diFunc;
         if diFunc != () {
             ModuleDI di = <ModuleDI>self.mod.di;
             DILocation loc;
-            if target > CALL_INSTRUCTION && !di.debugFull {
-                return;
+            if di.debugFull || origin == DEBUG_ORIGIN_CALL {
+                var [line, column] = self.file.lineColumn(pos);
+                loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
             }
-            else if target < CALL_INSTRUCTION && !di.debugFull {
+            else if origin == DEBUG_ORIGIN_CONSTRUCTOR {
                 DILocation? noLineLoc = self.noLineLocation;
                 if noLineLoc == () {
                     loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
@@ -262,8 +263,7 @@ class Scaffold {
                 }
             }
             else {
-                var [line, column] = self.file.lineColumn(pos);
-                loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+                return;
             }
             builder.setCurrentDebugLocation(loc);
         }
