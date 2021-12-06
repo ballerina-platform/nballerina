@@ -610,6 +610,10 @@ function intFromLiteral(FoldContext cx, s:IntLiteralExpr expr) returns int|FoldE
     return i;
 }
 
+function decimalFromFpLiteral(string decimalStr) returns decimal|error {
+    return decimal:fromString(decimalStr);
+}
+
 function intArithmeticEval(s:BinaryArithmeticOp op, int left, int right) returns int  {
     match op {
         "+" => {
