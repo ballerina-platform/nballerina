@@ -6,9 +6,9 @@ type R record {
 };
 
 public function main() {
-    R r = { x: 17, y: 1 };
-    string s = "x";
-    io:println(r[s]); // @output 17
+    R r = { x: 17, y: 1, "z": 10 };
+    string s = "z";
+    io:println(r[s]); // @output 10
     s = "y";
     io:println(r[s]); // @output 1.0
 }

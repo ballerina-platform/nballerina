@@ -1,11 +1,10 @@
-// import ballerina/io;
-
 type R record {
-    float x;
+    int x;
     int n;
 };
 
 public function main() {
-    R r = { x: 1.5, n: 5 };
-    r["z"] += 1; // @error
+    R r = { x: 1, n: 5 };
+    string k = "x";
+    r[k] += 1; // @error
 }
