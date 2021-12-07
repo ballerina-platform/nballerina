@@ -282,51 +282,17 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
 }
 
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
-    t:SemType expectType = orderTypeToSemType(vc, insn.orderType);
-    foreach var operand in insn.operands {
-        t:SemType operandType;
-        if operand is Register {
-            operandType = operand.semType;
-        }
-        else {
-            operandType = t:constBasicType(operand);
-        }
-        if !vc.isSubtype(operandType, expectType) {
-            return vc.err(`operand of ${insn.op} does not match order type`, insn.pos);
-        }
+    if !t:comparable(vc.typeContext(), operandToSemType(insn.operands[0]), operandToSemType(insn.operands[1])) {
+        return vc.err(`operands of ${insn.op} do not belong to an ordered type`, insn.pos);
     }
 }
 
-function orderTypeToSemType(VerifyContext vc, OrderType ot) returns t:SemType {
-    if ot is ArrayOrderType {
-        var memberOrderType = ot.memberOrderType;
-        t:SemType memberType;
-        if memberOrderType is OrderType {
-            memberType = orderTypeToSemType(vc, memberOrderType);
-        }
-        else {
-            // ot is EMPTY_TUPLE_ORDER_TYPE
-            memberType = t:NEVER;
-        }
-        t:ListDefinition def = new;
-        return def.define(vc.typeContext().env, [], memberType);
+function operandToSemType(Operand operand) returns t:SemType {
+    if operand is Register {
+        return operand.semType;
     }
-    else if ot is OptOrderType {
-        var opt = ot.opt;
-        if opt is BasicOrderType {
-            return t:uniformTypeUnion((1 << t:UT_NIL) | (1 << opt ));
-        }
-        else if opt is OrderType {
-            return t:union(t:NIL, orderTypeToSemType(vc, opt));
-        }
-        else {
-            // ot is EMPTY_ORDER_TYPE
-            return t:NIL;
-        }
-    }
-    else  {
-        // ot is BasicOrderType
-        return t:uniformType(ot);
+    else {
+        return t:constBasicType(operand);
     }
 }
 
