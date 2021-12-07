@@ -68,16 +68,19 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             td = bin;
         }
         else if tok.current() == "[" {
-            check tok.advance();
-            SimpleConstExpr? length;
-            if tok.current() != "]" {
-                length = check parseSimpleConstExpr(tok);
+            SimpleConstExpr?[] arrayLen = [];
+            Position? endPos = (); // Init with nil as we can't proff to the compiler that first iteration will always run.
+            while tok.current() == "[" {
+                check tok.advance();
+                if tok.current() == "]" {
+                    arrayLen.push(());
+                } 
+                else {
+                    arrayLen.push(check parseSimpleConstExpr(tok));
+                }
+                endPos = check tok.expectEnd("]");
             }
-            else {
-                length = ();
-            }
-            Position endPos = check tok.expectEnd("]");
-            ListTypeDesc list = { startPos, endPos, members: [], rest: td, length };
+            ListTypeDesc list = { startPos, endPos: <int>endPos, members: [], rest: td, arrayLen };
             td = list;
         }
         else {

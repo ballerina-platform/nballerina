@@ -12,14 +12,21 @@ type ArrayOfIntArray int[][];
 
 // @type ArrayOfInt5 < ArrayOfIntArray
 // @type Int5 <> ArrayOfInt5
+// @type Int5 = ArrayOfInt5[0]
+// @type Int5 = ArrayOfInt5[5]
+// @type Int5 = ArrayOfInt5[6]
 type ArrayOfInt5 int[][5];
 
 // @type Array5OfInt5 < ArrayOfInt5
 // @type Array5OfInt5 < ArrayOfIntArray
 type Array5OfInt5 int[5][5];
 
+type INT int;
+
 // @type Array5OfInt5 < Array5OfIntArray
 // @type Array5OfIntArray < ArrayOfIntArray
+// @type IntArray = Array5OfIntArray[0]
+// @type IntArray = Array5OfIntArray[4]
 type Array5OfIntArray int[5][];
 
 type ROIntArray readonly & IntArray;
@@ -43,3 +50,9 @@ type ArrayFiveOfIntFive int[FIVE][FIVE];
 // @type ROArrayFiveOfIntFive < ArrayFiveOfIntFive
 // @type ROArrayFiveOfIntFive < Array5OfInt5
 type ROArrayFiveOfIntFive ArrayFiveOfIntFive & readonly;
+
+type N never;
+// @type ArrayOfInt5 = TwoArraysOfInt5[0]
+// @type ArrayOfInt5 = TwoArraysOfInt5[1]
+// @type N = TwoArraysOfInt5[2]
+type TwoArraysOfInt5 int[2][][5];

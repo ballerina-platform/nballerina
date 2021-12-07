@@ -463,7 +463,7 @@ public type ListTypeDesc record {|
     Position endPos;
     TypeDesc[] members;
     TypeDesc? rest;
-    SimpleConstExpr? length = ();
+    SimpleConstExpr?[] arrayLen = [];
     t:ListDefinition? defn = ();
 |};
 

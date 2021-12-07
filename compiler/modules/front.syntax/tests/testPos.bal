@@ -484,10 +484,11 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
             check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
             childNodePos.push([rest.startPos, rest.endPos]);
         }
-        SimpleConstExpr? len = td.length;
-        if len != () {
-            check validateExpressionPos(len, tok, td.startPos, td.endPos);
-            childNodePos.push([len.startPos, len.endPos]);
+        foreach var len in td.arrayLen {
+            if len != () {
+                check validateExpressionPos(len, tok, td.startPos, td.endPos);
+                childNodePos.push([len.startPos, len.endPos]);
+            }
         }
     }
     else if td is MappingTypeDesc {
