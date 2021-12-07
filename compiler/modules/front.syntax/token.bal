@@ -319,6 +319,28 @@ class Tokenizer {
         return ();   
     }
 
+    function currentIsNoSpaceColon() returns boolean {
+        return self.curTok == ":" && self.currentHasNoAdjacentSpace();
+    }
+
+    // Returns true if current token has non-whitespace tokens before and after it on the same line.
+    // Only allowed when current token is a fixed token.
+    private function currentHasNoAdjacentSpace() returns boolean {
+        int i = self.fragCodeIndex;
+        FragCode[] fragCodes = self.fragCodes;
+        if i <= 1 || i >= fragCodes.length() {
+            return false;
+        }
+        FragCode nextFragCode = fragCodes[i];
+        if nextFragCode == FRAG_COMMENT || nextFragCode == FRAG_WHITESPACE {
+            return false;
+        }
+        if fragCodes[i - 1] < FRAG_FIXED_TOKEN {
+            panic err:impossible("wrong fragment type for currentIsConnected");
+        }
+        return fragCodes[i - 2] != FRAG_WHITESPACE;
+    }
+    
     function current() returns Token? {
         return self.curTok;
     }

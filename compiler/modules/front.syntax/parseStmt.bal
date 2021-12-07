@@ -161,7 +161,7 @@ function finishIdentifierStmt(Tokenizer tok, string name, Position startPos, Pos
         }
         return parseError(tok, "member access expr not allowed as a statement");
     }
-    else if cur == ":" {
+    else if tok.currentIsNoSpaceColon() {
         check tok.advance();
         Position localNamePos = tok.currentStartPos();
         return finishOptQualIdentifierStmt(tok, name, check tok.expectIdentifier(), startPos, localNamePos);

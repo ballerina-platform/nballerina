@@ -494,7 +494,7 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
 }
 
 function parseOptQualIdentifier(Tokenizer tok, string identifier, Position identifierPos) returns [string?, string, Position]|err:Syntax {
-    if tok.current() == ":" {
+    if tok.currentIsNoSpaceColon() {
         check tok.advance();
         Position localNamePos = tok.currentStartPos();
         return [identifier, check tok.expectIdentifier(), localNamePos];
