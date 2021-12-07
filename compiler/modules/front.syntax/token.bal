@@ -368,11 +368,11 @@ class Tokenizer {
     }
 
     function currentEndPos() returns Position {
-        return createPosition(self.lineIndex, self.codePointIndex-1);
+        return createPosition(self.lineIndex, self.codePointIndex);
     }
 
     function previousEndPos() returns Position {
-        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex-1);
+        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex);
     }
 
     private function getFragment() returns string {
@@ -417,6 +417,12 @@ class Tokenizer {
 
     function expectEnd(SingleCharDelim|MultiCharDelim|Keyword tok) returns Position|err:Syntax {
         Position pos = self.currentEndPos();
+        check self.expect(tok);
+        return pos;
+    }
+
+    function expectStart(SingleCharDelim|MultiCharDelim|Keyword tok) returns Position|err:Syntax {
+        Position pos = self.currentStartPos();
         check self.expect(tok);
         return pos;
     }

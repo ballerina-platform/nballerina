@@ -77,7 +77,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                     string errorBody = string ` filename: ${file.filename()} between (${endLine}, ${endCol})  and (${stLine}, ${stCol})`;
                     test:assertTrue(testIsWhitespace(part.file, lastEnd, startPos), "none white space tokens between top level definition" + errorBody);
                     test:assertFalse(testPositionIsWhiteSpace(part.file, startPos), "start position is a white space");
-                    test:assertFalse(testPositionIsWhiteSpace(part.file, endPos), "end position is a white space");
+                    test:assertFalse(testPositionIsWhiteSpace(part.file, inclusiveEndPos(endPos)), "end position is a white space");
                     lastEnd = endPos;
                 }
                 string[] canonSrc = partToLines(part);
