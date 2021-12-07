@@ -411,11 +411,22 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
 }
 
 function addDecimalStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue {
+    int nCodePoints = str.length();
     byte[] bytes = str.toBytes();
     int nBytes = bytes.length();
-    int nBytesPadded = padBytes(bytes, 16);
-    llvm:ConstValue val = context.constStruct([llvm:constInt("i64", nBytes), llvm:constInt("i64", str.length()), context.constString(bytes)]);
-    llvm:Type ty = llvm:structType(["i64", "i64", llvm:arrayType("i8", nBytesPadded)]);
+
+    llvm:Type ty;
+    llvm:ConstValue val; 
+    if nBytes <= 0xFFFF {
+        int nBytesPadded = padBytes(bytes, 4);
+        val = context.constStruct([llvm:constInt("i16", nBytes), llvm:constInt("i16", nCodePoints), context.constString(bytes)]);
+        ty = llvm:structType(["i16", "i16", llvm:arrayType("i8", nBytesPadded)]);
+    }
+    else {
+        int nBytesPadded = padBytes(bytes, 16);
+        val = context.constStruct([llvm:constInt("i64", nBytes), llvm:constInt("i64", nCodePoints), context.constString(bytes)]);
+        ty = llvm:structType(["i64", "i64", llvm:arrayType("i8", nBytesPadded)]);
+    }
     llvm:ConstPointerValue ptr = mod.addGlobal(ty,
                                                stringDefnSymbol(defnIndex),
                                                initializer = val,

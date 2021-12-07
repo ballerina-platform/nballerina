@@ -446,6 +446,9 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
                 else if operand is float {
                     return foldedUnaryConstExpr(-operand, t:FLOAT, subExpr);
                 }
+                else if operand is decimal {
+                    return foldedUnaryConstExpr(-operand, t:DECIMAL, subExpr);
+                }
             }
             else if subExpr is s:FloatZeroExpr {
                 // lift up the FloatZero
