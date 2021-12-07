@@ -1,21 +1,23 @@
 // Implementation specific to basic type list.
 
 public type ListAtomicType readonly & record {|
-    readonly & ListAtomicTypeMembers members;
+    readonly & FixedLengthArray members;
     SemType rest;
 |};
 
-public type ListAtomicTypeMembers record {|
+// Represent a fixed length semtype member list similar to a tuple.
+// The length of the list is `fixedLength`, the last member of the `initial` is repeated to achive this semantic.
+// { initial: [int], fixedLength: 3, } is same as { initial: [int, int, int], fixedLength: 3 }
+// { initail: [string, int], fixedLength: 100 } means `int` is repeated 99 times to get a list of 100 members.
+// `fixedLength` must be at least `initial.length()`
+public type FixedLengthArray record {|
     SemType[] initial;
-    // Repeat the last member of `initial` this number of times more.
-    // { initial: [int], repeatLastCount: 2, } is same as { initial: [int, int, int], repeatLastCount: 0 }
-    // Must be zero, if members array is empty.
-    int repeatLastCount;
+    int fixedLength;
 |};
 
 // This is atom index 0
 // Used by bddFixReadOnly
-final ListAtomicType LIST_SUBTYPE_RO = { members: { initial: [], repeatLastCount: 0 }, rest: READONLY };
+final ListAtomicType LIST_SUBTYPE_RO = { members: { initial: [], fixedLength: 0 }, rest: READONLY };
 
 public class ListDefinition {
     *Definition;
@@ -40,7 +42,7 @@ public class ListDefinition {
         }
     }
 
-    public function define(Env env, ListAtomicTypeMembers members, SemType rest) returns ComplexSemType {
+    public function define(Env env, FixedLengthArray members, SemType rest) returns ComplexSemType {
         ListAtomicType rwType = { members: members.cloneReadOnly(), rest };
         Atom rw;
         RecAtom? rwRec = self.rwRec;
@@ -95,7 +97,7 @@ function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
         return ty;
     }
     return {
-        members: { initial: readOnlyTypeList(ty.members.initial), repeatLastCount: ty.members.repeatLastCount },
+        members: { initial: readOnlyTypeList(ty.members.initial), fixedLength: ty.members.fixedLength },
         rest: intersect(ty.rest, READONLY)
 
     };
@@ -103,11 +105,7 @@ function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
 
 public function tuple(Env env, SemType... members) returns SemType {
     ListDefinition def = new;
-    return def.define(env, { initial: members, repeatLastCount: 0 }, NEVER);
-}
-
-public function listMembersLength(ListAtomicTypeMembers members) returns int {
-    return members.initial.length() + members.repeatLastCount;
+    return def.define(env, { initial: members, fixedLength: members.length() }, NEVER);
 }
 
 function listRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
@@ -140,10 +138,10 @@ function listSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {
 }
 
 function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) returns boolean {
-    ListAtomicTypeMembers members;
+    FixedLengthArray members;
     SemType rest;
     if pos == () {
-        members = { initial: [], repeatLastCount: 0 };
+        members = { initial: [], fixedLength: 0 };
         rest = TOP;
     }
     else {
@@ -154,7 +152,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
         Conjunction? p = pos.next;
         // the neg case is in case we grow the array in listInhabited
         if p != () || neg != () {
-            members = listMembersShallowCopy(members);
+            members = fixedArrayShallowCopy(members);
         }
         while true {
             if p == () {
@@ -164,40 +162,11 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                int prevLen = listMembersLength(members);
-                int currentLen = listMembersLength(lt.members);
-                int newLen = int:max(prevLen, currentLen);
-
-                // Intersect similar compressed representations without decompressing.
-                if listMembersIsSameStructure(members, lt.members) {
-                    foreach int i in 0 ..< members.initial.length() {
-                        SemType m = intersect(listMembersGet(members, rest, i), listMembersGet(lt.members, lt.rest, i));
-                        if (isNever(m)) {
-                            return true;
-                        }
-                        listMembersSet(members, rest, i, m);
-                    }
-                    rest = intersect(rest, lt.rest);
-                    continue;  
+                var intersected = listIntersectWith(members, rest, lt);
+                if intersected is () {
+                    return true;
                 }
-
-                if prevLen < newLen {
-                    if isNever(rest) {
-                        return true;
-                    }
-                }
-                foreach int i in 0 ..< currentLen {
-                    listMembersSet(members, rest, i, intersect(listMembersGet(members, rest, i), listMembersGet(lt.members, lt.rest, i)));
-                }
-                if currentLen < newLen {
-                    if isNever(lt.rest) {
-                        return true;
-                    }
-                    foreach int i in currentLen ..< newLen {
-                        listMembersSet(members, rest, i, intersect(listMembersGet(members, rest, i), lt.rest));
-                    }
-                }
-                rest = intersect(rest, lt.rest);
+                [members, rest] = intersected;
             }
         }
         foreach var m in members.initial {
@@ -213,6 +182,49 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     return !listInhabited(cx, members, rest, neg);
 }
 
+function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicType lt) returns [FixedLengthArray, SemType]? {
+    int ltLen = lt.members.fixedLength;
+    int newLen = int:max(members.fixedLength, ltLen);    // Intersect similar compressed representations without decompressing.
+
+
+    //            if members.length() < newLen {
+    //                 if isNever(rest) {
+    //                     return true;
+    //                 }
+    //                 // JBUG #33532 should be able to use `_` here
+    //                 foreach int i in members.length() ..< newLen {
+    //                     members.push(rest);
+    //                 }
+    //             }
+    //             foreach int i in 0 ..< lt.members.length() {
+    //                 members[i] = intersect(members[i], lt.members[i]);
+    //             }
+    if members.fixedLength < newLen {
+        if isNever(rest) {
+            return ();
+        }
+        fixedLengthArrayFill(members, newLen, rest);
+    }
+    
+    int nonRepeatedLen = int:max(members.initial.length(), lt.members.initial.length());
+    foreach int i in 0 ..< nonRepeatedLen {
+        fixedArraySet(members, i, 
+            intersect(listMemberAt(members, rest, i), listMemberAt(lt.members, lt.rest, i)));
+    }
+    
+    // Stage 2 
+    if ltLen < newLen {
+        if isNever(lt.rest) {
+            return ();
+        }
+        foreach int i in ltLen ..< newLen { /// XXX
+            fixedArraySet(members, i, intersect(listMemberAt(members, rest, i), lt.rest));
+        }
+    }
+    return [members, intersect(rest, lt.rest)];
+}
+
+
 // This function returns true if there is a list shape v such that
 // is in the type described by `members` and `rest`, and
 // for each tuple t in `neg`, v is not in t.
@@ -220,21 +232,19 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
 // Precondition is that each of `members` is not empty.
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
-function listInhabited(Context cx, ListAtomicTypeMembers m, SemType rest, Conjunction? neg) returns boolean {
+function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conjunction? neg) returns boolean {
     if neg == () {
         return true;
     }
     else {
-        ListAtomicTypeMembers members = listMembersShallowCopy(m);
-        int len = listMembersLength(m);
+        int len = members.fixedLength;
         ListAtomicType nt = cx.listAtomType(neg.atom);
-        int negLen = listMembersLength(nt.members);
-
+        int negLen = nt.members.fixedLength;
         if len < negLen {
             if isNever(rest) {
                 return listInhabited(cx, members, rest, neg.next);
             }
-            listMembersSet(members, rest, negLen, rest);
+            fixedLengthArrayFill(members, negLen, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
@@ -262,10 +272,11 @@ function listInhabited(Context cx, ListAtomicTypeMembers m, SemType rest, Conjun
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
         foreach int i in 0 ..< len {
-            SemType ntm = i < negLen ? listMembersGet(nt.members, nt.rest, i) : nt.rest;
-            SemType d = diff(listMembersGet(members, rest, i), ntm);
+            // XXX do something here to avoid repeated doing the same thing
+            SemType ntm = i < negLen ? fixedArrayGet(nt.members, i) : nt.rest;
+            SemType d = diff(fixedArrayGet(members, i), ntm);
             if !isEmpty(cx, d) {
-                ListAtomicTypeMembers s = listMembersReplace(members, rest, i, d);
+                FixedLengthArray s = fixedArrayWith(members, i, d);
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
@@ -280,59 +291,53 @@ function listInhabited(Context cx, ListAtomicTypeMembers m, SemType rest, Conjun
     }
 }
 
-function listMembersIsSameStructure(ListAtomicTypeMembers v1, ListAtomicTypeMembers v2) returns boolean {
-    return v1.repeatLastCount == v2.repeatLastCount && v1.initial.length() == v2.initial.length();
+// fill out to length of newLen with filler
+function fixedLengthArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
+    SemType[] initial = arr.initial;
+    if arr.fixedLength == 0 || initial[initial.length() - 1] != filler {
+        initial.push(filler);
+    }
+    arr.fixedLength = newLen;
 }
 
-function listMembersGet(ListAtomicTypeMembers members, SemType rest, int index) returns SemType {
+function fixedArrayGet(FixedLengthArray members, int index) returns SemType {
     int memberLen = members.initial.length();
     int i = int:min(index, memberLen - 1);
-    if memberLen == 0 || members.initial.length() <= i {
-        return rest;
-    }
     return members.initial[i];
 }
 
-function listMembersSet(ListAtomicTypeMembers members, SemType rest, int setIndex, SemType t) {
-    int memberLen = members.initial.length();
-    boolean lastMemberRepeats = members.repeatLastCount != 0;
+function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
+    if index < fixedArray.fixedLength {
+        return fixedArrayGet(fixedArray, index);
+    }
+    return rest;
+} 
+
+function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
+    int initCount = members.initial.length();
+    boolean lastMemberRepeats = members.fixedLength > initCount;
 
     // No need to expand
-    if lastMemberRepeats && setIndex < memberLen - 2 || !lastMemberRepeats && setIndex < memberLen - 1 {
-            members.initial[setIndex] = t;
-            return;
+    if setIndex < initCount - (lastMemberRepeats ? 1 : 0) {
+        members.initial[setIndex] = m;
+        return;
     }
         
-    if lastMemberRepeats {
-        SemType lastMember = members.initial[memberLen - 1]; 
-        int uncompressedLen = listMembersLength(members);
-        int endIndex = lastMemberRepeats ? setIndex + 1 : setIndex;
-        foreach int i in memberLen ..< endIndex {
-            if i == setIndex {
-                members.initial.push(t);
-            }
-            else {
-                members.initial.push(i < uncompressedLen ? lastMember : rest);
-            }
-        }
-        members.repeatLastCount = int:max(0, members.repeatLastCount - (endIndex - memberLen));
+    SemType lastMember = members.initial[initCount - 1]; 
+    foreach int i in initCount ..< setIndex + 1 {
+        members.initial.push(lastMember);
     }
-    else {
-        foreach int i in memberLen ..< setIndex {
-            members.initial.push(rest);
-        }
-        members.initial[setIndex] = t;
-    }
+    members.initial[setIndex] = m;
 }
 
-function listMembersReplace(ListAtomicTypeMembers members, SemType rest, int index, SemType t) returns ListAtomicTypeMembers {
-    ListAtomicTypeMembers copy = listMembersShallowCopy(members);
-    listMembersSet(copy, rest, index, t);
+function fixedArrayWith(FixedLengthArray array, int index, SemType newMember) returns FixedLengthArray {
+    FixedLengthArray copy = fixedArrayShallowCopy(array);
+    fixedArraySet(copy, index, newMember);
     return copy;
 }
 
-function listMembersShallowCopy(ListAtomicTypeMembers members) returns ListAtomicTypeMembers {
-    return { initial: shallowCopyTypes(members.initial), repeatLastCount: members.repeatLastCount };
+function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray {
+    return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
 }
 
 function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns SemType {
@@ -353,8 +358,8 @@ function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
         if key < 0 {
             return NEVER;
         }
-        else if key < listMembersLength(atomic.members) {
-            return listMembersGet(atomic.members, atomic.rest, key);
+        else if key < atomic.members.fixedLength {
+            return fixedArrayGet(atomic.members, key);
         }
         return atomic.rest;
     }

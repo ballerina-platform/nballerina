@@ -78,7 +78,7 @@ function recursiveTuple(Env env, function(Env, SemType) returns SemType[] f) ret
     ListDefinition def = new; 
     SemType t = def.getSemType(env);
     SemType[] members = f(env, t);
-    return def.define(env, { initial: members, repeatLastCount: 0 }, NEVER);
+    return def.define(env, { initial: members, fixedLength: members.length() }, NEVER);
 }
 
 @test:Config{}
@@ -214,7 +214,7 @@ function roTest() {
     SemType t1 = uniformType(UT_LIST_RO);
     Env env = new;
     ListDefinition ld = new;
-    SemType t2 = ld.define(env, { initial: [], repeatLastCount: 0 }, TOP);
+    SemType t2 = ld.define(env, { initial: [], fixedLength: 0 }, TOP);
     SemType t = diff(t1, t2);
     Context cx = typeContext(env);
     boolean b = isEmpty(cx, t);
@@ -236,14 +236,14 @@ function simpleArrayMemberTypeTest() {
 
 function testArrayMemberTypeOk(Context cx, UniformTypeBitSet memberType) {
     ListDefinition def = new;
-    SemType t = def.define(cx.env, { initial: [], repeatLastCount: 0 }, memberType);
+    SemType t = def.define(cx.env, { initial: [], fixedLength: 0 }, memberType);
     UniformTypeBitSet? bits = simpleArrayMemberType(cx, t);
     test:assertTrue(bits == memberType);
 }
 
 function testArrayMemberTypeFail(Context cx, SemType memberType) {
     ListDefinition def = new;
-    SemType t = def.define(cx.env, { initial: [], repeatLastCount: 0 }, memberType);
+    SemType t = def.define(cx.env, { initial: [], fixedLength: 0 }, memberType);
     UniformTypeBitSet? bits = simpleArrayMemberType(cx, t);
     test:assertTrue(bits == ());
 }
