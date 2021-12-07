@@ -1,7 +1,10 @@
+#include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#include <math.h>
 #include "balrt.h"
 #include "third-party/decNumber/decQuad.h"
+#include "third-party/dtoa/emyg_dtoa.h"
 
 typedef GC decQuad *DecimalPtr;
 
@@ -183,6 +186,64 @@ TaggedPtr _bal_decimal_from_int(int64_t val) {
         decQuadFromString(&d, intStr, &cx);
     }
     return createDecimal(&d);
+}
+
+TaggedPtrPanicCode _bal_decimal_from_float(double val) {
+    TaggedPtrPanicCode result;
+    if (isnan(val)) {
+        result.panicCode = PANIC_INVALID_DECIMAL;
+        return result;
+    }
+    if (isinf(val)) {
+        result.panicCode = PANIC_ARITHMETIC_OVERFLOW;
+        return result;
+    }
+    result.panicCode = 0;
+    decQuad d;
+    if (val == 0.0) {
+        decQuadZero(&d);
+        result.ptr = createDecimal(&d);
+        return result;
+    }
+    char str[EMYG_DTOA_BUFFER_LEN];
+    emyg_dtoa_non_special(val, str);
+    decContext cx;
+    initContext(&cx);
+    decQuadFromString(&d, str, &cx);
+    decQuad dTrim;
+    decQuadReduce(&dTrim, &d, &cx);
+    result.ptr = createDecimal(&dTrim);
+    return result;
+}
+
+IntWithOverflow _bal_decimal_to_int(TaggedPtr tp) {
+    decQuad dQuantize;
+    decQuad dZero;
+    decQuadZero(&dZero);
+    decContext cx;
+    initContext(&cx);
+    decQuadQuantize(&dQuantize, taggedToDecQuad(tp), &dZero, &cx);
+    IntWithOverflow res;
+    if (cx.status & DEC_Invalid_operation) {
+        // The invalid operation flag is raised,
+        // when maximum precision(34 digits) is not enough to represent quantized decimal value.
+        // This situation can be considered as an overflow scenario,
+        // because reaching maximum precision of decimal is an overflow of 64 bit integer(19 digits).
+        res.overflow = true;
+        return res;
+    }
+
+    char str[DECQUAD_String];
+    decQuadToString(&dQuantize, str);
+    errno = 0;
+    int64_t value = strtol(str, NULL, 0);
+    if (errno == ERANGE) {
+        res.overflow = true;
+        return res;
+    }
+    res.overflow = false;
+    res.value = value;
+    return res;
 }
 
 TaggedPtr _bal_decimal_const(const char *decString) {

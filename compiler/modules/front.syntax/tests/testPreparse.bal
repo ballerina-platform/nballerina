@@ -33,7 +33,7 @@ function testPreparse(string src, PreparseTestResult expected, int minLookahead,
         return;
     }
 
-    int consumed = file.lineColumn(tok.currentEndPos())[1]+1;
+    int consumed = file.lineColumn(tok.currentEndPos())[1];
     if k == "W" {
         test:assertTrue(consumed > minLookahead);
     }

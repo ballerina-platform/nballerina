@@ -134,7 +134,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             Position pos = tok.currentStartPos();
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            if tok.current() != ":" {
+            if !tok.currentIsNoSpaceColon() {
                 // JBUG should not need cast #30191
                 return { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
             }
@@ -147,7 +147,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             Position pos = tok.currentStartPos();
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            if tok.current() == ":" {
+            if tok.currentIsNoSpaceColon() {
                 check tok.advance();
                 string typeName = check tok.expectIdentifier();
                 endPos = tok.previousEndPos();

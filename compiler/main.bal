@@ -16,6 +16,7 @@ public type Options record {
     string? outDir = ();
     string? expectOutDir = ();
     string? gc = ();
+    string? htmlError = ();
     *OutputOptions;
 };
 
@@ -47,12 +48,21 @@ public function main(string[] filenames, *Options opts) returns error? {
         debugLevel: check nback:validDebugLevel(opts.debugLevel)
     };
     int errorFileCount = 0;
+    d:Printer dPrinter;
+    string? errorFilename = opts.htmlError;
+    if errorFilename != () {
+        dPrinter = new d:HtmlPrinter(errorFilename);
+    }
+    else {
+        dPrinter = new d:ConsolePrinter(io:stderr);
+    }
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            CompileError? err = printDiagnostic(compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts));
+            CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
             if err is err:Diagnostic {
                 errorFileCount += 1;
+                dPrinter.print(err.detail());
             }
             // JBUG: #34014
             // can't use else { check err; }
@@ -70,6 +80,7 @@ public function main(string[] filenames, *Options opts) returns error? {
             return error(d:messageFormat(`unsupported extension ${ext}`));
         }
     }
+    check dPrinter.close();
     if errorFileCount != 0 {
         string files = errorFileCount == 1 ? "file" : "files";
         return error(string `compilation of ${errorFileCount} ${files} failed`);
