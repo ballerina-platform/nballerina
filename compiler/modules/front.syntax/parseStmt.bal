@@ -300,8 +300,7 @@ function finishVarDeclStmt(Tokenizer tok, TypeDesc td, Position startPos, boolea
         name = check tok.expectIdentifier();
     }
     // initExpr is required in the subset
-    Position opPos = tok.currentStartPos();
-    check tok.expect("=");
+    Position opPos = check tok.expectStart("=");
     Expr initExpr = check parseExpr(tok);
     Position endPos = check tok.expectEnd(";");
     return { startPos, endPos, opPos, td, name, namePos, initExpr, isFinal };
@@ -375,8 +374,7 @@ function parseForeachStmt(Tokenizer tok, Position startPos) returns ForeachStmt|
     check tok.advance();
     Position namePos = tok.currentStartPos();
     string name = check tok.expectIdentifier();
-    Position kwPos = tok.currentStartPos();
-    check tok.expect("in");
+    Position kwPos = check tok.expectStart("in");
     RangeExpr range = check parseRangeExpr(tok);
     StmtBlock body = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
@@ -399,8 +397,7 @@ function parseMatchStmt(Tokenizer tok, Position startPos) returns MatchStmt|err:
 function parseMatchClause(Tokenizer tok) returns MatchClause|err:Syntax {
     Position startPos = tok.currentStartPos();
     MatchPattern[] patterns = check parseMatchPatternList(tok);
-    Position opPos = tok.currentStartPos();
-    check tok.expect("=>");
+    Position opPos = check tok.expectStart("=>");
     StmtBlock block = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
     return { startPos, endPos, patterns, block, opPos };
