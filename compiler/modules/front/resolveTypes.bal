@@ -163,12 +163,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             // JBUG this panics if done with `from` and there's an error is resolveTypeDesc
             t:Field[] fields = [];
             if td is s:RecordTypeDesc {
-                // JBUG cast
                 foreach var { name, typeDesc } in <s:FieldDesc[]>td.fields {
                     fields.push([name, check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc)]);
                 }
                 map<s:FieldDesc> fieldsByName = {};
-                // JBUG cast
                 foreach var fd in <s:FieldDesc[]>td.fields {
                     if fieldsByName[fd.name] != () {
                         return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn, fd.startPos));

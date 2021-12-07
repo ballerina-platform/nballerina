@@ -483,7 +483,6 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         childNodePos.push([td.rest.startPos, td.rest.endPos]);
     }
     else if td is RecordTypeDesc {
-        // JBUG cast
         foreach var f in <FieldDesc[]>td.fields {
             check validateTypeDescPos(f.typeDesc, tok, td.startPos, td.endPos);
             childNodePos.push([f.typeDesc.startPos, f.typeDesc.endPos]);
@@ -521,7 +520,6 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     }
     check validateTypeDescOpPos(td, tok);
     if td is RecordTypeDesc {
-        // JBUG cast
         foreach FieldDesc fd in <FieldDesc[]>td.fields {
             check validateFieldDescPos(fd, tok, td.startPos, td.endPos);
         }

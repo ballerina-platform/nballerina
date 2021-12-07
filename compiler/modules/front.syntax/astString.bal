@@ -253,7 +253,6 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
                 w.push("{");
             }
             boolean firstInBlock = true;
-            // JBUG cast
             foreach var f in <FieldDesc[]>td.fields {
                 w.push(<Word>(firstInBlock ? LF_INDENT : LF));
                 firstInBlock = false;
