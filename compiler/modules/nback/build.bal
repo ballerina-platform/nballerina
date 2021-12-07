@@ -370,3 +370,8 @@ function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:Fu
     };
     return ty;
 }
+
+function buildIsExact(llvm:Builder builder, Scaffold scaffold, llvm:Value taggedPtr) returns llvm:Value {
+    llvm:Value masked = <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [taggedPtr, llvm:constInt(LLVM_INT, FLAG_EXACT)]);
+    return builder.iCmp("ne", masked, llvm:constNull(llvm:pointerType("i8", 1)));
+}

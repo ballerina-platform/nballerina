@@ -88,12 +88,18 @@ type LoopContext record {|
     int[] onContinueAssignments = [];
 |};
 
+type OrderTypeMemo record {|
+    readonly t:SemType semType;
+    bir:OrderType? orderType = ();
+|};
+
 class CodeGenContext {
     final ModuleSymbols mod;
     final s:SourceFile file;
     final s:FunctionDefn functionDefn;
     final bir:FunctionCode code;
     final t:SemType returnType;
+    final table<OrderTypeMemo> key(semType) orderTypeMemo = table[];
     LoopContext? loopContext = ();
 
     function init(ModuleSymbols mod, s:FunctionDefn functionDefn, t:SemType returnType) {
@@ -1897,86 +1903,138 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
 }
 
 function operandPairOrderType(CodeGenContext cx, bir:Operand left, bir:Operand right) returns bir:OrderType? {
-    if operandIsNil(left) {
-        return promoteToOptOrderType(operandOrderType(cx, right));
-    }
-    if operandIsNil(right) {
-        return promoteToOptOrderType(operandOrderType(cx, left));
-    }
-    bir:OrderType? lot = operandOrderType(cx, left);
-    bir:OrderType? rot = operandOrderType(cx, right);
-    if lot == rot {
-        return lot;
-    }
-    lot = promoteToOptOrderType(lot);
-    rot = promoteToOptOrderType(rot);
-    if lot == rot {
-        return lot;
-    }
-    return ();
-}
-
-function promoteToOptOrderType(bir:OrderType? ot) returns bir:OrderType? {
-    if ot is bir:UniformOrderType {
-        return { opt: ot };
+    bir:OrderType? lot = operandToOrderType(cx, left);
+    bir:OrderType? rot = operandToOrderType(cx, right);
+    if lot == () || rot == () {
+        return ();
     }
     else {
+        if lot == rot {
+            return lot;
+        }
+        [lot, rot] = tryEquateOptDeep(lot, rot);
+        if lot == rot {
+            return lot;
+        }
+        return ();
+    }
+}
+
+function tryEquateOptDeep(bir:OrderType lot, bir:OrderType rot) returns [bir:OrderType, bir:OrderType] {
+    [bir:OrderType, bir:OrderType] & readonly pair  = [lot, rot];
+    match pair {
+        // Both are { opt: bir:NO_ORDER_TYPE } case handled before
+        [{ opt: bir:NO_ORDER_TYPE }, var r] => {
+            bir:OrderType rOpt = optionalizeOrderType(r);
+            return [rOpt, rOpt];
+        }
+        [var l, { opt: bir:NO_ORDER_TYPE }] => {
+            bir:OrderType lOpt = optionalizeOrderType(l);
+            return [lOpt, lOpt];
+        }
+        // JBUG casts
+        [{ opt: var l }, { opt: var r }] => {
+            var [lOpt, rOpt] = tryEquateOptDeep(<bir:NonEmptyOrderType>l, <bir:NonEmptyOrderType>r);
+            return [optionalizeOrderType(lOpt), optionalizeOrderType(rOpt)];
+        }
+        [{ opt: var l }, var r] => {
+            var [lOpt, rOpt] = tryEquateOptDeep(<bir:NonEmptyOrderType>l, r);
+            return [optionalizeOrderType(lOpt), optionalizeOrderType(rOpt)];
+        }
+        [var l, { opt: var r }] => {
+            var [lOpt, rOpt] = tryEquateOptDeep(l, <bir:NonEmptyOrderType>r);
+            return [optionalizeOrderType(lOpt), optionalizeOrderType(rOpt)];
+        }
+        [{ memberOrderType: bir:NO_ORDER_TYPE }, var r] => {
+            return [r, r];
+        }
+        [var l, { memberOrderType: bir:NO_ORDER_TYPE }] => {
+            return [l, l];
+        }
+        [{ memberOrderType: var l }, { memberOrderType: var r }] => {
+            var [lOdr, rOdr] = tryEquateOptDeep(<bir:OrderType>l, <bir:OrderType>r);
+            bir:ArrayOrderType lArr = { memberOrderType: lOdr } ;
+            bir:ArrayOrderType rArr = { memberOrderType: rOdr } ;
+            return [lArr, rArr];
+        }
+        _ => {
+            return [lot, rot];
+        }
+    }
+}
+
+function optionalizeOrderType(bir:OrderType ot) returns bir:OptOrderType {
+    if ot is bir:OptOrderType {
         return ot;
     }
-}
-
-function operandIsNil(bir:Operand operand) returns boolean {
-    if operand is bir:Register {
-        return operand.semType === t:NIL;
-    }
     else {
-        return operand == ();
+        return { opt: ot };
     }
 }
 
-final readonly & bir:UniformOrderType[] UNIFORM_ORDER_TYPES = [t:UT_BOOLEAN, t:UT_INT, t:UT_FLOAT, t:UT_STRING];
-
-function operandOrderType(CodeGenContext cx, bir:Operand operand) returns bir:OrderType? {
+function operandToOrderType(CodeGenContext cx, bir:Operand operand) returns bir:OrderType? {
     if operand is bir:Register {
         t:SemType operandTy = operand.semType;
-        if operandTy === t:NIL {
-            return ();
-        }
-        t:UniformTypeBitSet arrTy = t:LIST;
-        if t:isSubtypeSimple(operandTy, arrTy) {
-            t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(cx.mod.tc, operandTy);
-            if memberTy is t:UniformTypeBitSet {
-                bir:OrderType? ot = operandUniformOrderType(memberTy);
-                if ot is bir:UniformOrderType {
-                    return <bir:ArrayOrderType> [{opt:ot}];
-                }
-                if ot is bir:OptOrderType {
-                    return <bir:ArrayOrderType> [ot];
-                }
-            }
-            else {
-                panic err:impossible("Failed to get array member type");
-            }
-        }
-        else {
-            return operandUniformOrderType(operandTy);
-        }
+        return semTypeToOrderTypeMemo(cx, operandTy);
     }
     else {
         var tc = t:constUniformTypeCode(operand);
-        if tc is bir:UniformOrderType {
+        if tc is t:UT_NIL {
+            return bir:EMPTY_ORDER_TYPE;
+        }
+        else if tc is bir:BasicOrderType {
             return tc;
         }
     }
     return ();
 }
 
-function operandUniformOrderType(t:SemType operandType) returns bir:OrderType? {
-    foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
+function semTypeToOrderTypeMemo(CodeGenContext cx, t:SemType semType) returns bir:OrderType? {
+    OrderTypeMemo? memoized = cx.orderTypeMemo[semType];
+    if memoized != () {
+        return memoized.orderType;
+    }
+    OrderTypeMemo memo = { semType: semType };
+    // XXX We assume recursive types can't be OrderType, reconsider after adding tuples.
+    cx.orderTypeMemo.add(memo);
+    bir:OrderType? result = semTypeToOrderType(cx, semType);
+    memo.orderType = result;
+    return result;
+}
+
+function semTypeToOrderType(CodeGenContext cx, t:SemType semType) returns bir:OrderType? {
+    if semType == t:NIL {
+        return bir:EMPTY_ORDER_TYPE;
+    }
+    else if t:isSubtypeSimple(semType, t:LIST) {
+        t:SemType? memberTy = t:listMemberType(cx.mod.tc, semType);
+        if memberTy == t:NEVER {
+            return bir:EMPTY_TUPLE_ORDER_TYPE;
+        }
+        else if memberTy is t:SemType {
+            bir:OrderType? memberOrderType = semTypeToOrderTypeMemo(cx, memberTy);
+            return memberOrderType == () ? () : { memberOrderType };
+        }
+        return ();
+    }
+    else if t:containsNil(semType) {
+        // Cast is valid since we exclude NIL, resulting a NonEmptyOrderType.
+        var opt = <bir:NonEmptyOrderType?>semTypeToOrderTypeMemo(cx, t:diff(semType, t:NIL));
+        return opt == () ? () : { opt };
+    }
+    else {
+        return uniformSubtypeToOrderType(semType);
+    }
+}
+
+final readonly & bir:BasicOrderType[] BASIC_ORDER_TYPES = [t:UT_BOOLEAN, t:UT_INT, t:UT_FLOAT, t:UT_STRING];
+
+function uniformSubtypeToOrderType(t:SemType semType) returns bir:OrderType? {
+    foreach bir:BasicOrderType tc in BASIC_ORDER_TYPES {
         t:UniformTypeBitSet optBasicType = t:uniformTypeUnion((1 << tc) | (1 << t:UT_NIL));
-        if t:isSubtypeSimple(operandType, optBasicType) {
+        if t:isSubtypeSimple(semType, optBasicType) {
             t:UniformTypeBitSet basicType = t:uniformType(tc);
-            if t:isSubtypeSimple(operandType, basicType) {
+            if t:isSubtypeSimple(semType, basicType) {
                 return tc;
             }
             return <bir:OptOrderType> { opt: tc };

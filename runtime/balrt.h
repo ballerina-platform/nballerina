@@ -10,10 +10,13 @@
 #define UT_MASK 0x1F
 #define TAG_SHIFT 56
 
+#define NIL ((TaggedPtr)0)
+
 #define COMPARE_UN -1
 #define COMPARE_LT 0
 #define COMPARE_EQ 1
 #define COMPARE_GT 2
+#define COMPARE(l, r) (((l) > (r)) ? COMPARE_GT : (((l) < (r)) ? COMPARE_LT : COMPARE_EQ))
 
 #define HEAP_ALIGNMENT 8
 #define POINTER_MASK (((uint64_t)1 << TAG_SHIFT) - 1)
@@ -48,6 +51,7 @@
 
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
+#define unreachable() __builtin_unreachable()
 
 #ifndef STACK_SIZE
 #ifdef STACK_DEBUG
@@ -364,6 +368,8 @@ extern double _bal_decimal_to_float(TaggedPtr tp);
 extern TaggedPtr _bal_decimal_from_int(int64_t val);
 extern TaggedPtrPanicCode _bal_decimal_from_float(double val);
 extern IntWithOverflow _bal_decimal_to_int(TaggedPtr tp);
+
+extern int64_t READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
