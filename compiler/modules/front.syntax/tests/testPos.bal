@@ -80,13 +80,13 @@ type KwStmt ReturnStmt|PanicStmt|ForeachStmt;
 function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
     if stmt is MatchStmt {
         foreach var clause in stmt.clauses {
-            check tok.moveToPos(inclusiveEndPos(clause.opPos), MODE_NORMAL);
+            check tok.moveToPos(clause.opPos, MODE_NORMAL);
             Token? opToken = tok.curTok;
             test:assertEquals(opToken, "=>");
         }
     }
     else if stmt is OpStmt {
-        check tok.moveToPos(inclusiveEndPos(stmt.opPos), MODE_NORMAL);
+        check tok.moveToPos(stmt.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;
         if stmt is VarDeclStmt|AssignStmt {
             test:assertEquals(opToken, "=");
@@ -97,10 +97,10 @@ function validateStmtOpPos(Stmt stmt, Tokenizer tok) returns err:Syntax? {
     }
     else if stmt is ForeachStmt {
         RangeExpr rangeExpr = stmt.range;
-        check tok.moveToPos(inclusiveEndPos(rangeExpr.opPos), MODE_NORMAL);
+        check tok.moveToPos(rangeExpr.opPos, MODE_NORMAL);
         Token? opToken = tok.curTok;
         test:assertTrue(opToken == "..<");
-        check tok.moveToPos(inclusiveEndPos(stmt.kwPos), MODE_NORMAL);
+        check tok.moveToPos(stmt.kwPos, MODE_NORMAL);
         Token? kwToken = tok.curTok;
         test:assertTrue(kwToken == "in");
     }
