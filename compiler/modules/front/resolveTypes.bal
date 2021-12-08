@@ -155,44 +155,35 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return defn.getSemType(env);
         }   
     }
-    if td is s:RecordTypeDesc|s:MapTypeDesc {
+    if td is s:MappingTypeDesc {
         t:MappingDefinition? defn = td.defn;
         if defn == () {
             t:MappingDefinition d = new;
             td.defn = d;
             // JBUG this panics if done with `from` and there's an error is resolveTypeDesc
             t:Field[] fields = [];
-            if td is s:RecordTypeDesc {
-                foreach var { name, typeDesc } in <s:FieldDesc[]>td.fields {
-                    fields.push([name, check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc)]);
-                }
-                map<s:FieldDesc> fieldsByName = {};
-                foreach var fd in <s:FieldDesc[]>td.fields {
-                    if fieldsByName[fd.name] != () {
-                        return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn, fd.startPos));
-                    }
-                    fieldsByName[fd.name] = fd;
-                }
+            foreach var { name, typeDesc } in td.fields {
+                fields.push([name, check resolveTypeDesc(mod, modDefn, depth + 1, typeDesc)]);
             }
-            if td is s:ExclusiveRecordTypeDesc {
-                s:TypeDesc? restTd = td.rest;
-                t:SemType rest;
-                if restTd == () {
-                    rest = t:NEVER;
+            map<s:FieldDesc> fieldsByName = {};
+            foreach var fd in td.fields {
+                if fieldsByName[fd.name] != () {
+                    return err:semantic(`duplicate field ${fd.name}`, s:locationInDefn(modDefn, fd.startPos));
                 }
-                else {
-                    rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
-                }
-                return d.define(env, fields, rest);
+                fieldsByName[fd.name] = fd;
             }
-            else if td is s:InclusiveRecordTypeDesc {
-                return d.define(env, fields, t:ANY);
+            s:TypeDesc|boolean restTd = td.rest;
+            t:SemType rest;
+            if restTd == true {
+                rest = t:ANY;
+            }
+            else if restTd == false {
+                rest = t:NEVER;
             }
             else {
-                s:TypeDesc typeParamTd = td.typeParam;
-                t:SemType typeParam = check resolveTypeDesc(mod, modDefn, depth + 1, typeParamTd);
-                return d.define(env, fields, typeParam);
+                rest = check resolveTypeDesc(mod, modDefn, depth + 1, <s:TypeDesc>restTd);
             }
+            return d.define(env, fields, rest);
         }
         else {
             return defn.getSemType(env);

@@ -472,30 +472,12 @@ public type FieldDesc record {|
     TypeDesc typeDesc;
 |};
 
-public type MappingTypeDesc MapTypeDesc|RecordTypeDesc;
-
-public type MapTypeDesc record {|
-    *PositionFields;
-    TypeDesc typeParam;
-    t:MappingDefinition? defn = ();
-|};
-
-public type RecordTypeDesc ExclusiveRecordTypeDesc|InclusiveRecordTypeDesc;
-
-public type ExclusiveRecordTypeDesc record {|
+public type MappingTypeDesc record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     FieldDesc[] fields;
-    TypeDesc? rest;
-    t:MappingDefinition? defn = ();
-|};
-
-public type InclusiveRecordTypeDesc record {|
-    // JBUG #32617 can't include PositionFields
-    Position startPos;
-    Position endPos;
-    FieldDesc[] fields;
+    TypeDesc|boolean rest; // true if inclusive false if rest is null
     t:MappingDefinition? defn = ();
 |};
 

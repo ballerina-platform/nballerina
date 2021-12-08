@@ -160,9 +160,9 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         "map" => {
             check tok.advance();
-            var typeParam = check parseTypeParam(tok);
+            var rest = check parseTypeParam(tok);
             Position endPos = tok.previousEndPos();
-            return { startPos, endPos, typeParam };
+            return { startPos, endPos, rest, fields: [] };
         }
         "error" => {
             Position endPos = tok.currentEndPos();
@@ -357,7 +357,7 @@ function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
     return { startPos, endPos, members, rest};
 }
 
-function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns RecordTypeDesc|err:Syntax {
+function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {
     check tok.advance();
     match tok.current() {
         "{|" => {
@@ -372,12 +372,12 @@ function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns RecordTyp
     }
 }
 
-function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns ExclusiveRecordTypeDesc|err:Syntax {
+function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {
     check tok.advance();
     FieldDesc[] fields = [];
-    TypeDesc? rest = ();
+    TypeDesc|boolean rest = false;
     while tok.current() != "|}" {
-        if rest != () {
+        if rest != false {
             return parseError(tok);
         }
         TypeDesc td = check parseTypeDesc(tok);
@@ -403,7 +403,7 @@ function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
     return { startPos, endPos, fields, rest };
 }
 
-function parseInclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns InclusiveRecordTypeDesc|err:Syntax {
+function parseInclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {
     check tok.advance();
     FieldDesc[] fields = [];
     while tok.current() != "}" {
@@ -415,5 +415,5 @@ function parseInclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
     }
     Position endPos = tok.currentEndPos();
     check tok.advance();
-    return { startPos, endPos, fields };
+    return { startPos, endPos, fields, rest: true };
 }

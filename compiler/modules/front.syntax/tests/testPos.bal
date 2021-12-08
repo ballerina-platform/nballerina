@@ -462,7 +462,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         newTd = check parseTypeDesc(tok);
     }
     Position actualEnd = tok.previousEndPos();
-    while td.toString() != newTd.toString() && newTd is ListTypeDesc|ExclusiveRecordTypeDesc {
+    while td.toString() != newTd.toString() && (newTd is ListTypeDesc || (newTd is MappingTypeDesc && newTd.rest is TypeDesc)) {
         // These are left recursions which we can't separately parse
         TypeDesc rest = <TypeDesc> newTd.rest;
         actualEnd = rest.endPos;
@@ -482,22 +482,16 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         check validateTypeDescPos(td.rest, tok, td.startPos, td.endPos);
         childNodePos.push([td.rest.startPos, td.rest.endPos]);
     }
-    else if td is RecordTypeDesc {
-        foreach var f in <FieldDesc[]>td.fields {
+    else if td is MappingTypeDesc {
+        foreach var f in td.fields {
             check validateTypeDescPos(f.typeDesc, tok, td.startPos, td.endPos);
             childNodePos.push([f.typeDesc.startPos, f.typeDesc.endPos]);
         }
-        if td is ExclusiveRecordTypeDesc {
-            TypeDesc? rest = td.rest;
-            if rest is TypeDesc {
-                childNodePos.push([rest.startPos, rest.endPos]);
-                check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
-            }
+        TypeDesc|boolean rest = td.rest;
+        if rest is TypeDesc {
+            childNodePos.push([rest.startPos, rest.endPos]);
+            check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
         }
-    }
-    else if td is MapTypeDesc {
-        childNodePos.push([td.typeParam.startPos, td.typeParam.endPos]);
-        check validateTypeDescPos(td.typeParam, tok, td.startPos, td.endPos);
     }
     else if td is FunctionTypeDesc {
         foreach var param in td.params {
@@ -519,8 +513,8 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         lastEnd = endPos;
     }
     check validateTypeDescOpPos(td, tok);
-    if td is RecordTypeDesc {
-        foreach FieldDesc fd in <FieldDesc[]>td.fields {
+    if td is MappingTypeDesc {
+        foreach FieldDesc fd in td.fields {
             check validateFieldDescPos(fd, tok, td.startPos, td.endPos);
         }
     }
@@ -571,7 +565,7 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
         }
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
     }
-    else if td is RecordTypeDesc {
+    else if td is MappingTypeDesc && td.rest == true {
         return !checkPosFragCode(file, endPos, CP_RIGHT_SQUARE, ...base);
     }
     return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);

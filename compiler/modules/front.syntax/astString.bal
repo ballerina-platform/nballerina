@@ -244,24 +244,24 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         return;
     }
     else if td is MappingTypeDesc {
-        if td is RecordTypeDesc {
+        TypeDesc|boolean rest = td.rest;
+        if td.fields.length() > 0 {
             w.push("record");
-            if td is ExclusiveRecordTypeDesc {
+            if rest != true {
                 w.push("{|");
             }
             else {
                 w.push("{");
             }
             boolean firstInBlock = true;
-            foreach var f in <FieldDesc[]>td.fields {
+            foreach var f in td.fields {
                 w.push(<Word>(firstInBlock ? LF_INDENT : LF));
                 firstInBlock = false;
                 typeDescToWords(w, f.typeDesc);
                 w.push(f.name, CLING, ";");
             }
-            if td is ExclusiveRecordTypeDesc {
-                TypeDesc? rest = td.rest;
-                if rest != () {
+            if rest != true {
+                if rest is TypeDesc {
                     w.push(<Word> LF);
                     typeDescToWords(w, rest);
                     w.push("...", CLING, ";");
@@ -274,12 +274,11 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         }
         else {
             w.push("map", CLING, "<", CLING);
-            TypeDesc? body = td.typeParam;
-            if body == () {
+            if rest is boolean {
                 w.push("never");
             }
             else {
-                typeDescToWords(w, body);
+                typeDescToWords(w, rest);
             }
             w.push(CLING, ">");
         }
