@@ -185,6 +185,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
 function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicType lt) returns [FixedLengthArray, SemType]? {
     int ltLen = lt.members.fixedLength;
     int newLen = int:max(members.fixedLength, ltLen);
+    // We can specifically handle the case where length of `initial` and `fixedLength` are the same 
     if members.fixedLength < newLen {
         if isNever(rest) {
             return ();
@@ -345,8 +346,10 @@ function listAtomicMemberType(ListAtomicType atomic, int? key) returns SemType {
         return atomic.rest;
     }
     SemType m = atomic.rest;
-    foreach var ty in atomic.members.initial {
-        m = union(m, ty);
+    if atomic.members.fixedLength > 0 {
+        foreach var ty in atomic.members.initial {
+            m = union(m, ty);
+        }
     }
     return m;
 }
