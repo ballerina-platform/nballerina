@@ -31,7 +31,7 @@ final RuntimeFunction stringConcatFunction = {
 };
 
 function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) {
-    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_OTHER);
+    scaffold.setDebugLocation(builder, pos);
     llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
     llvm:BasicBlock firstBlock = scaffold.basicBlock(0);
     builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(scaffold.stackGuard())),
@@ -47,7 +47,7 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
     scaffold.setBasicBlock(block);
     builder.positionAtEnd(scaffold.basicBlock(block.label));
     foreach var insn in block.insns {
-        scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_OTHER);
+        scaffold.setDebugLocation(builder, insn.pos);
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
         }
@@ -225,7 +225,7 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
 }
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_CONSTRUCTOR);
+    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_ERROR_CONSTRUCT);
     llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(errorConstructFunction),
                                                 [
                                                     check buildString(builder, scaffold, insn.operand),
