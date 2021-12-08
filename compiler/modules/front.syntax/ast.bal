@@ -477,7 +477,7 @@ public type MappingTypeDesc record {|
     Position startPos;
     Position endPos;
     FieldDesc[] fields;
-    TypeDesc|boolean rest; // true if inclusive false if rest is null
+    TypeDesc|boolean rest; // true if inclusive record type false if rest is nil
     t:MappingDefinition? defn = ();
 |};
 

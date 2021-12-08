@@ -174,14 +174,14 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
             s:TypeDesc|boolean restTd = td.rest;
             t:SemType rest;
-            if restTd == true {
+            if restTd is s:TypeDesc {
+                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+            }
+            else if restTd == true {
                 rest = t:ANY;
             }
-            else if restTd == false {
-                rest = t:NEVER;
-            }
             else {
-                rest = check resolveTypeDesc(mod, modDefn, depth + 1, <s:TypeDesc>restTd);
+                rest = t:NEVER;
             }
             return d.define(env, fields, rest);
         }

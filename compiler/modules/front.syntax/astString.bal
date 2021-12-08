@@ -274,11 +274,11 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         }
         else {
             w.push("map", CLING, "<", CLING);
-            if rest is boolean {
-                w.push("never");
+            if rest is TypeDesc {
+                typeDescToWords(w, rest);
             }
             else {
-                typeDescToWords(w, rest);
+                w.push("never");
             }
             w.push(CLING, ">");
         }
