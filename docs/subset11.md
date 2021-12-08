@@ -21,7 +21,7 @@
    * structure types
       * map type: `map<T>`
       * array type: `T[]`
-      * closed record type: `record {| T1 f1; T2 f2; |}`
+      * record types: `record {| T1 f1; T2 f2; R...; |}`
    * a reference to a type defined by a type definition
 * Statements:
    * function/method call statement
@@ -125,8 +125,9 @@ type-reference = identifier | qualified-identifier
 
 map-type-desc = "map" "<" type-desc ">"
 
-record-type-desc = "record" "{|" field-desc* "|}"
+record-type-desc = "record" "{|" field-desc* [rest-field-desc] "|}"
 field-desc = type-desc identifier ";"
+rest-field-desc = type-desc "..." ";"
 
 param-list = param ["," param]*
 param = type-desc identifier
@@ -370,7 +371,8 @@ Two kinds of `import` are supported.
 
 ## Additions from subset 10
 
-* Restrictions on unions have been removed.
+* Types can be nested arbitrarily: any supported type descriptors can be used for a member of an array, record or mapping type descriptors. This includes recursive types.
+* Record types can have a record-rest-descriptor `T...;`
 
 ## Implemented spec changes since 2021R1
 
@@ -382,5 +384,6 @@ Two kinds of `import` are supported.
 * [#902](https://github.com/ballerina-platform/ballerina-spec/issues/902) - expression has a singleton type when its subexpressions have singleton type
 * [#904](https://github.com/ballerina-platform/ballerina-spec/issues/904) - restrict assignment to type-narrowed variables within loops
 * [#905](https://github.com/ballerina-platform/ballerina-spec/issues/905) - disallow trailing dot in floating-point literals
+* [#970] (https://github.com/ballerina-platform/ballerina-spec/issues/970#issuecomment-952463711) - disallow white space in qualified identifier
 * [#991](https://github.com/ballerina-platform/ballerina-spec/issues/991) - clarify that `null` is allowed as a type descriptor
 

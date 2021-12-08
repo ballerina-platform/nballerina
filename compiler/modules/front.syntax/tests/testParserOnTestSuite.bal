@@ -3,7 +3,8 @@ import ballerina/test;
 import ballerina/file;
 import ballerina/io;
 
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 // JBUG the `enable: false` fails to work if there is a comment on the line before it
 @test:Config {
@@ -19,19 +20,26 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 continue;
             }
             string filename = test.absPath;
-            // XXX remove after fixing #555
-            if filename.endsWith("-t.bal") {
-                continue;
-            }
             string[] lines = check io:fileReadLines(filename);
-            ModulePart|err:Syntax part = scanAndParseModulePart(lines, { filename }, 0);
+            SourceFile sourceFile = createSourceFile(lines, { filename });
+            foreach int lineNum in 0 ..< lines.length() {
+                string expectedLine = lines[lineNum];
+                if expectedLine.length() == 0 {
+                    continue;
+                }
+                int columnNum = 0;
+                Position pos = createPosition(lineNum + 1, columnNum);
+                string actualLine = "".'join(...sourceFile.lineContent(pos));
+                test:assertEquals(actualLine, expectedLine);
+            }
+            ModulePart|err:Syntax part = scanAndParseModulePart(sourceFile, 0);
             if part is error {
                 continue;
             }
             else {
                 SourceFile file = part.file;
                 Tokenizer tok = new(file);
-                [err:Position, err:Position][] topLevelDefnPos = [];
+                [d:Position, d:Position][] topLevelDefnPos = [];
                 foreach ImportDecl decl in part.importDecls {
                     topLevelDefnPos.push([decl.startPos, decl.endPos]);
                     check tok.moveToPos(decl.startPos, MODE_NORMAL);
@@ -47,7 +55,6 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                         foreach Stmt stmt in defn.body.stmts {
                             check validateStatementPos(stmt, tok, defn.startPos, defn.endPos);
                         }
-                        check validateTypeDescPos(defn.typeDesc, tok, defn.startPos, defn.endPos);
                     }
                     else if defn is ConstDefn {
                         check validateExpressionPos(defn.expr, tok, defn.startPos, defn.endPos);
@@ -61,7 +68,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                     }
                 }
                 topLevelDefnPos = topLevelDefnPos.sort();
-                err:Position lastEnd = 1<<32;
+                d:Position lastEnd = 1<<32;
                 foreach var [startPos, endPos] in topLevelDefnPos {
                     test:assertTrue((startPos == (1<<32)) || (startPos > lastEnd), "overlapping top level definitions");
                     test:assertTrue(startPos < endPos, "invalid start and end positions");
@@ -70,11 +77,11 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                     string errorBody = string ` filename: ${file.filename()} between (${endLine}, ${endCol})  and (${stLine}, ${stCol})`;
                     test:assertTrue(testIsWhitespace(part.file, lastEnd, startPos), "none white space tokens between top level definition" + errorBody);
                     test:assertFalse(testPositionIsWhiteSpace(part.file, startPos), "start position is a white space");
-                    test:assertFalse(testPositionIsWhiteSpace(part.file, endPos), "end position is a white space");
+                    test:assertFalse(testPositionIsWhiteSpace(part.file, inclusiveEndPos(endPos)), "end position is a white space");
                     lastEnd = endPos;
                 }
                 string[] canonSrc = partToLines(part);
-                part = scanAndParseModulePart(canonSrc, { filename }, 0);
+                part = scanAndParseModulePart(createSourceFile(canonSrc, { filename }), 0);
                 if part is error {
                     test:assertEquals(lines, canonSrc, "serialized ast can't be re-parsed");
                     panic err:impossible("if src is equal to canonSrc second parse can't fail");
@@ -94,8 +101,8 @@ function partToLines(ModulePart part) returns string[] {
     return wordsToLines(w);
 }
 
-function scanAndParseModulePart(string[] lines, FilePath path, int partIndex) returns ModulePart|err:Syntax {
-    return parseModulePart(check scanModulePart(createSourceFile(lines, path), partIndex));
+function scanAndParseModulePart(SourceFile sourceFile, int partIndex) returns ModulePart|err:Syntax {
+    return parseModulePart(check scanModulePart(sourceFile, partIndex));
 }
 
 function testPositionIsWhiteSpace(SourceFile file, Position pos) returns boolean {

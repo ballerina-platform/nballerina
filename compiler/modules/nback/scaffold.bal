@@ -1,4 +1,5 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
@@ -146,8 +147,9 @@ class Scaffold {
         builder.positionAtEnd(entry);
         self.addresses = [];
         foreach int i in 0 ..< reprs.length() {
-            self.addresses.push(builder.alloca(reprs[i].llvm, (), code.registers[i].varName));
-        } 
+            bir:Register register = code.registers[i];
+            self.addresses.push(builder.alloca(reprs[i].llvm, (), register.varName));
+        }
     }
 
     function saveParams(llvm:Builder builder) {
@@ -229,8 +231,8 @@ class Scaffold {
 
     function typeContext() returns t:Context => self.mod.typeContext;
 
-    function location(bir:Position pos) returns err:Location {
-        return err:location(self.file, pos);
+    function location(bir:Position pos) returns d:Location {
+        return d:location(self.file, pos);
     }
 
     function setDebugLocation(llvm:Builder builder, bir:Position pos, "file"? fileOnly = ()) {
@@ -262,19 +264,19 @@ class Scaffold {
         }
     }
 
-    function unimplementedErr(err:Message message, err:Position pos) returns err:Unimplemented {
-        return err:unimplemented(message, err:location(self.file, pos));
+    function unimplementedErr(d:Message message, d:Position pos) returns err:Unimplemented {
+        return err:unimplemented(message, d:location(self.file, pos));
     }
 
     function initTypes() returns InitTypes => self.mod.llInitTypes;
 
-    function getTypeTest(t:SemType ty) returns llvm:ConstPointerValue {
+    function getTypeTest(t:ComplexSemType ty) returns llvm:ConstPointerValue {
         UsedSemType used = self.getUsedSemType(ty);
         llvm:ConstPointerValue? value = used.typeTest;
         if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_TYPE_TEST, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(llTypeTestType, symbol, isConstant = true);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llComplexType, symbol, isConstant = true);
             used.typeTest = v;
             return v;
         }
@@ -289,7 +291,7 @@ class Scaffold {
         if value == () {
             Module m = self.mod;
             string symbol = mangleTypeSymbol(m.modId, USED_INHERENT_TYPE, used.index);
-            llvm:ConstPointerValue v = m.llMod.addGlobal(llInherentType, symbol, isConstant = true);
+            llvm:ConstPointerValue v = m.llMod.addGlobal(llStructureDescType, symbol, isConstant = true);
             used.inherentType = v;
             return v;
         }

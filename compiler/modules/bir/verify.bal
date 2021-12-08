@@ -1,7 +1,8 @@
 // Use the types module to type-check the BIR
 
 import wso2/nballerina.types as t;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 class VerifyContext {
     private final Module mod;
@@ -14,15 +15,15 @@ class VerifyContext {
         t:Context tc  = mod.getTypeContext();
         self.tc = tc;
         self.defn = defn;
-        self.anydataType = createAnydata(tc.env);
+        self.anydataType = t:createAnydata(tc.env);
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
         return t:isSubtype(self.tc, s, t);
     }
 
-    function isSameType(t:SemType s, t:SemType t) returns boolean {
-        return s == t || (t:isSubtype(self.tc, s, t) && t:isSubtype(self.tc, t, s));
+    function isSameType(t:SemType t1, t:SemType t2) returns boolean {
+        return t:isSameType(self.tc, t1, t2);
     }
 
     function isEmpty(t:SemType t) returns boolean {
@@ -37,8 +38,8 @@ class VerifyContext {
         return self.tc;
     }
 
-    function err(err:Message msg, Position pos) returns err:Semantic {
-        return err:semantic(msg, loc=err:location(self.mod.getPartFile(self.defn.partIndex), pos), functionName=self.defn.symbol.identifier);
+    function err(d:Message msg, Position pos) returns err:Semantic {
+        return err:semantic(msg, loc=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
@@ -46,15 +47,6 @@ class VerifyContext {
     function symbolToString(Symbol sym) returns string {
         return self.mod.symbolToString(self.defn.partIndex, sym);
     }
-}
-
-// approximation for subset07
-function createAnydata(t:Env env) returns t:SemType {
-    t:ListDefinition listDef = new;
-    t:SemType arrayType = listDef.define(env, [], t:SIMPLE_OR_STRING);
-    t:MappingDefinition mapDef = new;
-    t:SemType mapType = mapDef.define(env, [], t:SIMPLE_OR_STRING);
-    return t:union(t:SIMPLE_OR_STRING, t:union(arrayType, mapType));
 }
 
 public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns err:Semantic? {
@@ -169,13 +161,16 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
     if !vc.isSubtype(ty, t:LIST_RW) {
         return vc.err("bad BIR: inherent type of list construct is not a mutable list", insn.pos);
     }
-    t:UniformTypeBitSet? memberType = t:simpleArrayMemberType(vc.typeContext(), ty);
-    if memberType == () {
-        return vc.err("bad BIR: inherent type of list is of an unsupported type", insn.pos);
+    t:ListAtomicType? lat = t:listAtomicTypeRw(vc.typeContext(), ty);
+    if lat == () {
+        return vc.err("bad BIR: inherent type of list is not atomic", insn.pos);
     }
     else {
+        if lat.members.length() > 0 {
+            return vc.err("bad BIR: tuples not supported as list inherent type", insn.pos);
+        }
         foreach var operand in insn.operands {
-            check verifyOperandType(vc, operand, memberType, "list constructor member of not a subtype of array member type", insn.pos);
+            check verifyOperandType(vc, operand, lat.rest, "type of list constructor member is not allowed by the list type", insn.pos);
         }
     }
 }
@@ -193,10 +188,10 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
             return vc.err(`field ${insn.fieldNames[i]} is not allowed by the type`, insn.pos);
         }
         check verifyOperandType(vc, insn.operands[i], memberType,
-                                "type of mapping constructor member of not a subtype of mapping member type", insn.pos);
+                                "type of mapping constructor member is not allowed by the mapping type", insn.pos);
     }
     if mat == () {
-        return vc.err("bad BIR: inherent type of map is of an unsupported type", insn.pos);
+        return vc.err("bad BIR: inherent type of map is not atomic", insn.pos);
     }
     else if insn.operands.length() < mat.names.length() {
         return vc.err("missing record fields in mapping constructor", insn.pos);
@@ -287,19 +282,7 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
 }
 
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
-    t:UniformTypeBitSet expectType;
-    t:UniformTypeBitSet? memberType = ();
-    OrderType ot = insn.orderType;
-    if ot is OptOrderType {
-        expectType = t:uniformTypeUnion((1 << t:UT_NIL) | (1 << ot.opt ));
-    }
-    else if ot is UniformOrderType {
-        expectType  = t:uniformType(ot);
-    }
-    else {
-        expectType = t:LIST;
-        memberType = t:uniformType(ot[0].opt);
-    }
+    t:SemType expectType = orderTypeToSemType(vc, insn.orderType);
     foreach var operand in insn.operands {
         t:SemType operandType;
         if operand is Register {
@@ -308,32 +291,42 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic?
         else {
             operandType = t:constBasicType(operand);
         }
-        if memberType == () {
-            check verifyCompareOperandTypeBase(vc, insn, operandType, expectType);
+        if !vc.isSubtype(operandType, expectType) {
+            return vc.err(`operand of ${insn.op} does not match order type`, insn.pos);
+        }
+    }
+}
+
+function orderTypeToSemType(VerifyContext vc, OrderType ot) returns t:SemType {
+    if ot is ArrayOrderType {
+        var memberOrderType = ot.memberOrderType;
+        t:SemType memberType;
+        if memberOrderType is OrderType {
+            memberType = orderTypeToSemType(vc, memberOrderType);
         }
         else {
-            check verifyCompareOperandTypeArray(vc, insn, operandType, expectType, memberType);
+            // ot is EMPTY_TUPLE_ORDER_TYPE
+            memberType = t:NEVER;
+        }
+        t:ListDefinition def = new;
+        return def.define(vc.typeContext().env, [], memberType);
+    }
+    else if ot is OptOrderType {
+        var opt = ot.opt;
+        if opt is BasicOrderType {
+            return t:uniformTypeUnion((1 << t:UT_NIL) | (1 << opt ));
+        }
+        else if opt is OrderType {
+            return t:union(t:NIL, orderTypeToSemType(vc, opt));
+        }
+        else {
+            // ot is EMPTY_ORDER_TYPE
+            return t:NIL;
         }
     }
-}
-
-function verifyCompareOperandTypeArray(VerifyContext vc, CompareInsn insn, t:SemType operandType,
-                                       t:UniformTypeBitSet expectType, t:UniformTypeBitSet expectMemberType) returns err:Semantic? {
-    check verifyCompareOperandTypeBase(vc, insn, operandType, expectType);
-    t:UniformTypeBitSet? operandMemberTy = t:simpleArrayMemberType(vc.typeContext(), operandType);
-    if operandMemberTy is t:UniformTypeBitSet {
-        t:UniformTypeBitSet optExpectedType = t:uniformTypeUnion(expectType | (1 << t:UT_NIL));
-        check verifyCompareOperandTypeBase(vc, insn, operandType, optExpectedType);
-    }
-    else {
-        panic err:impossible("failed to get array member type");
-    }
-}
-
-function verifyCompareOperandTypeBase(VerifyContext vc, CompareInsn insn, t:SemType operandType,
-                                      t:UniformTypeBitSet expectType) returns err:Semantic?{
-    if !t:isSubtypeSimple(operandType, expectType) {
-        return vc.err(`operand of ${insn.op} does not match order type`, insn.pos);
+    else  {
+        // ot is BasicOrderType
+        return t:uniformType(ot);
     }
 }
 
@@ -370,7 +363,7 @@ function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
     return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
 }
 
-function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, err:Message msg, Position pos) returns err:Semantic? {
+function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position pos) returns err:Semantic? {
     if operand is Register {
         if !vc.isSubtype(operand.semType, semType) {
             return vc.err(msg, pos);

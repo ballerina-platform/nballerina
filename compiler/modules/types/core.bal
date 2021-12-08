@@ -1,3 +1,5 @@
+import wso2/nballerina.comm.lib;
+
 // There is an integer for each uniform type.
 // Uniform types are like basic types except that each selectively immutable
 // basic type is split into two uniform types, one immutable and on mutable.
@@ -206,7 +208,7 @@ public class Context {
     }
 }
 
-type ProperSubtypeData StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype|BddNode;
+type ProperSubtypeData StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|BooleanSubtype|XmlSubtype|BddNode;
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData ProperSubtypeData|boolean;
 
@@ -273,7 +275,7 @@ function unpackComplexSemType(ComplexSemType t) returns UniformSubtype[] {
     int some = t.some;
     UniformSubtype[] subtypeList = [];
     foreach var data in t.subtypeDataList {
-        var code = <UniformTypeCode>numberOfTrailingZeros(some);
+        var code = <UniformTypeCode>lib:numberOfTrailingZeros(some);
         subtypeList.push([code, data]);
         int c = code;
         some ^= (1 << c);
@@ -291,40 +293,7 @@ function getComplexSubtypeData(ComplexSemType t, UniformTypeCode code) returns S
         return false;
     }
     int loBits = t.some & (c - 1);
-    return t.subtypeDataList[loBits == 0 ? 0 : bitCount(loBits)];
-}
-
-// Count number of bits set in bits.
-// This is the Brian Kernighan algorithm.
-// There's usually a hardware instruction for this
-// typically called PopCpount
-// This is __builtin_popcount in GCC and clang
-// This won't work if bits is < 0.
-function bitCount(int bits) returns int {
-    int n = 0;
-    int v = bits;
-    while v != 0 {
-        v &= v - 1;
-        n += 1;
-    }
-    return n;
-}
-
-
-// This should be a function in lang.int
-// Modern CPUs have a hardware instruction for this
-// This is __builtin_ctz in GCC and clang
-function numberOfTrailingZeros(int bits) returns int {
-    if bits == 0 {
-        return 64;
-    }
-    int flag = 1;
-    int n = 0;
-    while (bits & flag) == 0 {
-        n += 1;
-        flag <<= 1;
-    }
-    return n;
+    return t.subtypeDataList[loBits == 0 ? 0 : lib:bitCount(loBits)];
 }
 
 public function uniformType(UniformTypeCode code) returns UniformTypeBitSet {
@@ -364,6 +333,8 @@ public final UniformTypeBitSet LIST_RW = uniformType(UT_LIST_RW);
 public final UniformTypeBitSet LIST = uniformTypeUnion((1 << UT_LIST_RO) | (1 << UT_LIST_RW));
 public final UniformTypeBitSet MAPPING_RW = uniformType(UT_MAPPING_RW);
 public final UniformTypeBitSet MAPPING = uniformTypeUnion((1 << UT_MAPPING_RO) | (1 << UT_MAPPING_RW));
+public final UniformTypeBitSet TABLE_RW = uniformType(UT_TABLE_RW);
+public final UniformTypeBitSet TABLE = uniformTypeUnion((1 << UT_TABLE_RO) | (1 << UT_TABLE_RW));
 
 // matches all functions
 public final UniformTypeBitSet FUNCTION = uniformType(UT_FUNCTION);
@@ -382,6 +353,10 @@ public final UniformTypeBitSet SIMPLE_OR_STRING = uniformTypeUnion((1 << UT_NIL)
 public final UniformTypeBitSet NUMBER = uniformTypeUnion((1 << UT_INT) | (1 << UT_FLOAT) | (1 << UT_DECIMAL));
 public final SemType BYTE = intWidthUnsigned(8);
 public final SemType STRING_CHAR = stringChar();
+public final SemType XML_ELEMENT = xmlSingleton(XML_PRIMITIVE_ELEMENT_RO | XML_PRIMITIVE_ELEMENT_RW);
+public final SemType XML_COMMENT = xmlSingleton(XML_PRIMITIVE_COMMENT_RO | XML_PRIMITIVE_COMMENT_RW);
+public final SemType XML_TEXT = xmlSequence(xmlSingleton(XML_PRIMITIVE_TEXT));
+public final SemType XML_PI = xmlSingleton(XML_PRIMITIVE_PI_RO | XML_PRIMITIVE_PI_RW);
 
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
@@ -762,6 +737,10 @@ public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolea
     return (bits & ~<int>t2) == 0;
 }
 
+public function isSameType(Context cx, SemType t1, SemType t2) returns boolean {
+    return t1 == t2 || (isSubtype(cx, t1, t2) && isSubtype(cx, t2, t1));
+}
+
 public function widenToUniformTypes(SemType t) returns UniformTypeBitSet {
     if t is UniformTypeBitSet {
         return t;
@@ -772,10 +751,10 @@ public function widenToUniformTypes(SemType t) returns UniformTypeBitSet {
 }
 
 public function uniformTypeCode(UniformTypeBitSet bitSet) returns UniformTypeCode? {
-    if bitCount(bitSet) != 1 {
+    if lib:bitCount(bitSet) != 1 {
         return ();
     }
-    return <UniformTypeCode>numberOfTrailingZeros(bitSet);
+    return <UniformTypeCode>lib:numberOfTrailingZeros(bitSet);
 }
 
 // If t is a non-empty subtype of a built-in unsigned int subtype (Unsigned8/16/32),
@@ -802,6 +781,15 @@ public function widenUnsigned(SemType t) returns SemType {
 // where T is a union of complete basic types.
 public function simpleArrayMemberType(Context cx, SemType t) returns UniformTypeBitSet? {
     return listAtomicSimpleArrayMemberType(listAtomicTypeRw(cx, t));
+}
+
+// This is a temporary API that identifies when a SemType corresponds to a type T[]
+public function arrayMemberType(Context cx, SemType t) returns SemType? {
+    ListAtomicType? atomic = listAtomicTypeRw(cx, t);
+    if atomic != () && atomic.members.length() == 0 {
+        return atomic.rest;
+    }
+    return ();
 }
 
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns UniformTypeBitSet? {
@@ -948,7 +936,7 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
 
 public type SplitSemType record {|
     UniformTypeBitSet all;
-    [UniformTypeCode, SemType][] some;
+    [UniformTypeCode, ComplexSemType][] some;
 |};
 
 public function split(SemType t) returns SplitSemType  {
@@ -1162,6 +1150,17 @@ public function createJson(Env env) returns SemType {
     return j;
 }
 
+// This is an approximation, because we don't have table subtypes yet.
+// SUBSET table subtypes
+public function createAnydata(Env env) returns SemType {
+    ListDefinition listDef = new;
+    MappingDefinition mapDef = new;
+    SemType ad = union(union(SIMPLE_OR_STRING, union(XML, TABLE)), union(listDef.getSemType(env), mapDef.getSemType(env)));
+    _ = listDef.define(env, [], ad);
+    _ = mapDef.define(env, [], ad);
+    return ad;
+}
+
 final readonly & UniformTypeOps[] ops;
 
 function init() {
@@ -1171,7 +1170,7 @@ function init() {
         listRoOps, // RO list
         mappingRoOps, // RO mapping
         {}, // RO table
-        {}, // RO xml
+        xmlRoOps, // RO xml
         {}, // RO object
         intOps, // int
         floatOps, // float
@@ -1187,7 +1186,7 @@ function init() {
         listRwOps, // RW list
         mappingRwOps, // RW mapping
         {}, // RW table
-        {}, // RW xml
+        xmlRwOps, // RW xml
         {} // RW object
    ];
 }

@@ -1,5 +1,6 @@
 import ballerina/test;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 
@@ -10,15 +11,17 @@ class TestFoldContext {
     // JBUG #33394 error if next line uncommented
     // *FoldContext;
     t:Context tc;
+    d:File file;
 
-    function init() {
+    function init(d:File file) {
         self.tc = t:typeContext(new);
+        self.file = file;
     }
-    function lookupConst(string? prefix, string varName) returns s:FLOAT_ZERO|t:Value?|FoldError {
+    function lookupConst(string? prefix, string varName, s:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError {
         return ();
     }
-    function semanticErr(err:Message msg, s:Position? pos = (), error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, location("testConst.bal"), cause=cause);
+    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, d:location(self.file, pos), cause=cause);
     }
     function typeContext() returns t:Context {
         return self.tc;
@@ -27,15 +30,16 @@ class TestFoldContext {
         if td is s:SubsetBuiltinTypeDesc {
             return resolveBuiltinTypeDesc(td);
         }
-        return err:semantic("TestFoldContext cannot resolve TypeDesc", location("testConst.bal"));
+        return err:semantic("TestFoldContext cannot resolve TypeDesc", d:location(self.file, td.startPos));
     }
     function isConstDefn() returns boolean => true;
 }
 
 @test:Config{ dataProvider: validConstExprs }
 function testConstExpr(string src, SimpleConst expected) {
-    s:Expr parsed = checkpanic s:parseExpression([src], { filename: "<internal>" });
-    TestFoldContext cx = new;
+    s:SourceFile file = s:createSourceFile([src], { filename: "<internal>" });
+    s:Expr parsed = checkpanic s:parseExpression(file);
+    TestFoldContext cx = new(file);
     var result = foldExpr(cx, (), parsed);
     test:assertTrue(result is s:ConstValueExpr && result.value == expected, "got: " + (result is s:ConstValueExpr ? result.value.toString()  : "not constant"));
 }
@@ -67,12 +71,4 @@ function validConstExprs() returns map<ConstEvalTest> {
         m[t[0]] = t;
     }
     return m;
-}
-
-function location(string filename) returns err:Location {
-    return {
-        filename: filename,
-        startPos: (),
-        endPos: ()
-    };
 }

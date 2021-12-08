@@ -5,7 +5,8 @@ import ballerina/io;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 type TestSuiteCases map<[string, string]>;
 
@@ -19,11 +20,10 @@ function testCompileVPO(string path, string kind) returns io:Error? {
     }
     else {
         string msg = "compilation error";
-        if err is err:Any {
-            // JBUG #31334 cast
-            string? functionName = (<err:Detail>err.detail()).functionName;
-            if functionName is string {
-                msg += " :function " + functionName;
+        if err is err:Diagnostic {
+            string? defnName = err.detail().defnName;
+            if defnName != () {
+                msg += " :definition " + defnName;
             }
         }
         test:assertEquals(err, (), msg);
@@ -31,11 +31,21 @@ function testCompileVPO(string path, string kind) returns io:Error? {
 }
 
 @test:Config {
-    dataProvider: listSourcesT
+    dataProvider: listSourcesTVE
 }
 function testSemTypes(string path, string kind) returns error? {
     SubtypeTestCase res = check readSubtypeTests(path);
-    return testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
+    error? err =  testSubtypes([{ lines : res[1], filename : res[0] }], res[2]);
+    if kind == "te" {
+        if err is () {
+            test:assertNotExactEquals(err, (), "expected an error " + path);
+        }
+        else if err is err:Diagnostic {
+            check checkErrorLocation(err, path);
+            return;
+        }
+    }
+    return err;
 }
 
 @test:Config {
@@ -43,12 +53,11 @@ function testSemTypes(string path, string kind) returns error? {
 }
 function testCompileEU(string path, string kind) returns file:Error|io:Error? {
     CompileError? err = testCompileFile(path);
-    if err is err:Any? {
+    if err is err:Diagnostic? {
         if err is () {
             test:assertNotExactEquals(err, (), "expected an error " + path);
         }
         else {
-            string base = check file:basename(path);
             boolean isE = kind[0] == "e";
             if isE {
                 if err is err:Unimplemented {
@@ -57,20 +66,11 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
                 test:assertFalse(err is err:Unimplemented, "unimplemented error on E test" + path);
             }
             // io:println U errors are reported as semantic errors
-            else if !err.message().includes("'io:println'") {
+            else if !err.detail().message.includes("'io:println'") {
                 test:assertFalse(err is err:Semantic, "semantic error on U test" + path);
             }
             if kind == "e" || kind == "ue" {
-                var [expectedFilename, expectedLineNo] = <FilenameLine> check expectedErrorLocation(err, path);
-                // JBUG #31334 cast needed
-                err:Detail detail = <err:Detail> err.detail();
-                test:assertTrue(detail.location is err:Location, "error without location");
-                string filename =(<err:Location>detail.location).filename;
-                test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
-                err:LineColumn? lc = detail.location?.startPos;
-                if lc is err:LineColumn {
-                    test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);
-                }
+                check checkErrorLocation(err, path);
             }
         }
     }
@@ -80,6 +80,19 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
 }
 
 type FilenameLine [string, int];
+
+function checkErrorLocation(err:Diagnostic err, string path) returns file:Error|io:Error? {
+    var [expectedFilename, expectedLineNo] = <FilenameLine> check expectedErrorLocation(err, path);
+    d:Location loc = err.detail().location;
+    string filename = loc.file.filename();
+    test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
+    d:LineColumn lc = d:locationLineColumn(loc);
+    if err is err:Semantic && err.detail().message.startsWith("assignment to narrowed variable") {
+        // these errors currently have the position of the variable creation not assignment
+        return;
+    }
+    test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);    
+}
 
 function expectedErrorLocation(CompileError err, string path) returns FilenameLine|file:Error|io:Error? {
     string? modulePath = check moduleDir(path);
@@ -121,7 +134,7 @@ function listSourcesVPO() returns TestSuiteCases|error => listSources("vpo");
 
 function listSourcesEU() returns TestSuiteCases|error => listSources("eu");
 
-function listSourcesT() returns TestSuiteCases|error => listSources("t");
+function listSourcesTVE() returns TestSuiteCases|error => listSources("t");
 
 function listSources(string initialChars) returns TestSuiteCases|io:Error|file:Error {
     TestSuiteCases cases = {};
@@ -213,8 +226,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
         int|s:Identifier index = tn.index;
         if t:isSubtypeSimple(t, t:LIST) {
             if index is int {
-                return t:listMemberType(tc, t, index);
-                //return t:listProj(tc, t, index);
+                return testListProj(tc, t, index);
             }
             else {
                 t:SemType k = lookupSemtype(m, index);
@@ -223,7 +235,7 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
                 }
                 t:Value? val = t:singleShape(k);
                 if val is t:Value && val.value is int {
-                    return t:listMemberType(tc, t, <int> val.value);
+                    return testListProj(tc, t, <int> val.value);
                 }
                 test:assertFail("index for list projection must be an int");
             }
@@ -247,6 +259,15 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
     }
     // JBUG: #31642 function must return a call
     panic error("unreachable");
+}
+
+function testListProj(t:Context tc, t:SemType t, int index) returns t:SemType {
+    t:SemType s1 = t:listProj(tc, t, index);
+    t:SemType s2 = t:listMemberType(tc, t, index);
+    if !t:isSubtype(tc, s1, s2) {
+        test:assertFail("listProj result is not a subtype of listMemberType");
+    }
+    return s1;
 }
 
 function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {

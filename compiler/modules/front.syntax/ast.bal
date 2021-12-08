@@ -1,8 +1,8 @@
 import wso2/nballerina.types as t;
 import wso2/nballerina.bir;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.diagnostic as d;
 
-public type Position err:Position;
+public type Position d:Position;
 
 type PositionFields record {|
    Position startPos;
@@ -35,11 +35,18 @@ public type FunctionDefn record {|
     ModulePart part;
     Visibility vis;
     FunctionTypeDesc typeDesc;
-    string[] paramNames;
+    FunctionParam[] params;
     StmtBlock body;
     Position namePos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
+|};
+
+public type FunctionParam record {|
+    *PositionFields;
+    string name;
+    Position namePos;
+    TypeDesc td;
 |};
 
 public type ResolvedConst readonly & [t:SemType, t:Value];
@@ -141,7 +148,9 @@ public type WhileStmt record {|
 public type ForeachStmt record {|
     *PositionFields;
     Position kwPos;
-    string varName;
+    // name and position of the variable
+    Position namePos;
+    string name;
     RangeExpr range;
     StmtBlock body;
 |};
@@ -157,7 +166,8 @@ public type VarDeclStmt record {|
     *PositionFields;
     Position opPos;
     TypeDesc td;
-    string|WILDCARD varName;
+    string|WILDCARD name;
+    Position namePos;
     Expr initExpr;
     boolean isFinal;
 |};
@@ -238,7 +248,8 @@ public type FunctionCallExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
-    Position opPos;
+    Position openParenPos;
+    Position namePos;
     string? prefix = ();
     string funcName;
     Expr[] args;
@@ -249,7 +260,9 @@ public type MethodCallExpr record {|
     // *PositionFields
     Position startPos;
     Position endPos;
-    Position opPos;
+    Position opPos; // position of .
+    Position openParenPos;
+    Position namePos;
     string methodName;
     Expr target;
     Expr[] args;
@@ -301,6 +314,8 @@ public type Field record {|
     // *PositionFields
     Position startPos;
     Position endPos;
+    Position colonPos;
+    boolean isIdentifier;
     string name;
     Expr value;
 |};
@@ -350,7 +365,8 @@ public type RangeExpr record {|
 public type VarRefExpr record {|
     *PositionFields;
     string? prefix = ();
-    string varName;
+    string name;
+    Position namePos;
 |};
 
 public type TypeCastExpr record {|
@@ -439,7 +455,7 @@ public type TypeDefn record {|
 
 public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
-public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc;
+public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc;
 
 public type ListTypeDesc record {|
     // JBUG #32617 can't include PositionFields
@@ -470,9 +486,16 @@ public type FunctionTypeDesc record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
-    TypeDesc[] args;
+    FunctionTypeParam[] params;
     TypeDesc ret;
     t:FunctionDefinition? defn = ();
+|};
+
+public type FunctionTypeParam record {|
+    *PositionFields;
+    string? name;
+    Position? namePos;
+    TypeDesc td;
 |};
 
 public type ErrorTypeDesc record {|
@@ -497,6 +520,14 @@ public type UnaryTypeDesc record {|
     *PositionFields;
     UnaryTypeOp op;
     TypeDesc td;
+|};
+
+public type XmlSequenceTypeDesc record {|
+    // JBUG #32617 can't include PositionFields
+    Position startPos;
+    Position endPos;
+    Position pos;
+    TypeDesc constituent;
 |};
 
 public type TypeDescRef record {|

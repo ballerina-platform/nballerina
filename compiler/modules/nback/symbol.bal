@@ -68,3 +68,19 @@ function stringDefnSymbol(int n) returns string {
 function subtypeDefnSymbol(int n) returns string {
     return ".subtype" + n.toString();
 }
+
+function memberTypeSymbol(int n) returns string {
+    return ".member" + n.toString();
+}
+
+function memberListDescSymbol(int n) returns string {
+    return ".list" + n.toString();
+}
+
+function memberMappingDescSymbol(int n) returns string {
+    return ".mapping" + n.toString();
+}
+
+function subtypeTypeDefnSymbol(int n) returns string {
+    return "Type" + n.toString();
+}

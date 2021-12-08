@@ -1,7 +1,7 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 type ModuleDefns table<s:ModuleLevelDefn> key(name);
 
@@ -92,14 +92,14 @@ function moduleIdToString(bir:ModuleId id) returns string {
     }
 }
 
-function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix) returns Import|err:Semantic {
+function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix, bir:Position pos) returns Import|err:Semantic {
     Import? implicitImport = autoImportPrefixes[prefix];
     if implicitImport != () {
         return  implicitImport;
     }
     Import? imported = mod.partPrefixes[modDefn.part.partIndex][prefix];
     if imported == () {
-        return err:semantic(`no import declaration for ${prefix}`, loc=s:locationInDefn(modDefn), functionName=modDefn.name);
+        return err:semantic(`no import declaration for ${prefix}`, loc=s:locationInDefn(modDefn, pos), defnName=modDefn.name);
     }
     else {
         imported.used = true;
@@ -108,9 +108,9 @@ function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefi
 }
 
 function lookupImportedConst(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix, string varName) returns t:Value|err:Semantic {
-    ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix)).defns[varName];
+    ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix, modDefn.startPos)).defns[varName];
     if defn is s:ResolvedConst {
         return defn[1];
     }
-    return err:semantic(`${prefix + ":" + varName} is not defined as a public const`, loc=s:locationInDefn(modDefn), functionName=modDefn.name);
+    return err:semantic(`${prefix + ":" + varName} is not defined as a public const`, loc=s:locationInDefn(modDefn, modDefn.namePos), defnName=modDefn.name);
 }

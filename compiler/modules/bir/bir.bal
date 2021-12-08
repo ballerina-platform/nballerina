@@ -1,9 +1,10 @@
 import wso2/nballerina.types as t;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 public type SemType t:SemType;
-public type Position err:Position;
-public type File err:File;
+public type Position d:Position;
+public type File d:File;
 
 public type Module object {
     public function getId() returns ModuleId;
@@ -133,13 +134,18 @@ public type Register readonly & record {|
     int number;
     SemType semType;
     string? varName;
+    Position? pos;
 |};
 
-public function createRegister(FunctionCode code, SemType semType, string? varName = ()) returns Register {
+public function createRegister(FunctionCode code, SemType semType, string? varName = (), Position? pos = ()) returns Register {
     int number = code.registers.length();
-    Register r = { number, semType, varName };
+    Register r = { number, semType, varName, pos };
     code.registers.push(r);
     return r;
+}
+
+public function getRegister(FunctionCode code, int registerNum) returns Register {
+    return code.registers[registerNum];
 }
 
 public type ArithmeticBinaryOp "+" | "-" | "*" | "/" | "%";
@@ -300,14 +306,32 @@ public type ConvertToFloatInsn readonly & record {|
     Register operand;
 |};
 
-public type OrderType UniformOrderType|OptOrderType|ArrayOrderType;
-public type UniformOrderType t:UT_FLOAT|t:UT_INT|t:UT_BOOLEAN|t:UT_STRING;
-public type OptOrderType readonly & record {|
-    UniformOrderType opt;
-|};
-public type ArrayOrderType readonly & [OptOrderType];
+public type OrderType BasicOrderType|OptOrderType|ArrayOrderType;
 
-# This does ordered comparision
+public type BasicOrderType t:UT_FLOAT|t:UT_INT|t:UT_BOOLEAN|t:UT_STRING;
+
+public const NO_ORDER_TYPE = false;
+
+public type EmptyOrderType readonly & record {|
+   NO_ORDER_TYPE opt;
+|};
+
+public type NonEmptyOrderType ArrayOrderType|BasicOrderType;
+public type OptOrderType readonly & record {|
+    NonEmptyOrderType|NO_ORDER_TYPE opt;
+|};
+
+// Only used for t1 < t2 and t1 > t2  where t1, t2 are of static type `()`
+public final OptOrderType EMPTY_ORDER_TYPE = { opt: NO_ORDER_TYPE };
+
+// JBUG can't use [OrderType]
+public type ArrayOrderType readonly & record {| OrderType|NO_ORDER_TYPE memberOrderType; |};
+
+// Only used for t1 < t2 and t1 > t2 where t1, t2 are of static type `[]`
+public final ArrayOrderType EMPTY_TUPLE_ORDER_TYPE = { memberOrderType: NO_ORDER_TYPE };
+
+
+# This does ordered comparison
 # Equality and inequality are done by equal
 public type CompareInsn readonly & record {|
     *InsnBase;

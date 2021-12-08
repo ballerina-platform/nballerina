@@ -1,5 +1,5 @@
 // Parsing of type descriptors
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 function parseTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     if tok.current() == "function" {
@@ -107,7 +107,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         "boolean"
         | "decimal"
         | "float"
-        | "xml"
         | "typedesc"
         | "handle"
         | "any"
@@ -125,7 +124,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             Position pos = tok.currentStartPos();
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            if tok.current() != ":" {
+            if !tok.currentIsNoSpaceColon() {
                 // JBUG should not need cast #30191
                 return { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
             }
@@ -133,6 +132,23 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             string typeName = check tok.expectIdentifier();
             endPos = tok.previousEndPos();
             return { startPos, endPos, prefix: <string>cur, typeName, pos };
+        }
+        "xml" => {
+            Position pos = tok.currentStartPos();
+            Position endPos = tok.currentEndPos();
+            check tok.advance();
+            if tok.currentIsNoSpaceColon() {
+                check tok.advance();
+                string typeName = check tok.expectIdentifier();
+                endPos = tok.previousEndPos();
+                return { startPos, endPos, prefix: <string>cur, typeName, pos };
+            }
+            else if tok.current() == "<" {
+                TypeDesc constituent = check parseTypeParam(tok);
+                endPos = tok.previousEndPos();
+                return { startPos, endPos, constituent, pos };
+            }
+            return  { startPos, endPos, builtinTypeName: <BuiltinTypeName>cur };
         }
         "byte" => {
             Position endPos = tok.currentEndPos();
@@ -164,7 +180,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         [IDENTIFIER, var identifier] => {
             Position pos = tok.currentStartPos();
             check tok.advance();
-            var [prefix, typeName] = check parseOptQualIdentifier(tok, identifier);
+            var [prefix, typeName, _] = check parseOptQualIdentifier(tok, identifier, pos);
             Position endPos = tok.previousEndPos();
             return { startPos, endPos, prefix, typeName, pos };
         }
@@ -264,27 +280,30 @@ function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
 }
 
 // current token should be "("
-function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns FunctionTypeDesc|err:Syntax {
+function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ()) returns FunctionTypeDesc|err:Syntax {
     // skip "function"
     Position startPos = tok.currentStartPos();
     check tok.expect("(");
-    TypeDesc[] args = [];
+    FunctionTypeParam[] params = namedParams ?: [];
     while true {
         if tok.current() == ")" {
             break;
         }
-        args.push(check parseTypeDesc(tok));
+        Position paramStartPos = tok.currentStartPos();
+        TypeDesc td = check parseTypeDesc(tok);
         match tok.current() {
             [IDENTIFIER, var paramName] => {
-                if paramNames != () {
-                    paramNames.push(paramName);
-                }
+                string name = paramName;
+                Position namePos = tok.currentStartPos();
+                FunctionParam param = { startPos: paramStartPos, endPos: tok.currentEndPos(), name, namePos, td };
+                params.push(param);
                 check tok.advance();
             }
             _ => {
-                if paramNames != () {
+                if namedParams != () {
                     return parseError(tok);
                 }
+                params.push({ startPos: paramStartPos, endPos: tok.currentEndPos(), name: (), namePos: (), td });
             }
         }
         if tok.current() == "," {
@@ -303,7 +322,7 @@ function parseFunctionTypeDesc(Tokenizer tok, string[]? paramNames = ()) returns
         ret = { startPos: tok.currentStartPos(), endPos, builtinTypeName: "null" };
     }
     endPos = tok.previousEndPos();
-    return { startPos, endPos, args, ret };
+    return { startPos, endPos, params, ret };
 }
 
 // current token is []

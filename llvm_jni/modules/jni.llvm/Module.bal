@@ -157,6 +157,10 @@ public distinct class Module {
         return val;
     }
 
+    public function setInitializer(ConstPointerValue global, ConstValue|Function initializer) {
+        jLLVMSetInitializer(global.LLVMValueRef, initializer.LLVMValueRef);
+    }
+
     public function addAlias(Type aliasTy, ConstValue aliasee, string name, *GlobalSymbolProperties props) returns ConstPointerValue {
         Type aliasInternalType = pointerType(aliasTy, props.addressSpace);
         ConstPointerValue val = new(jLLVMAddAlias(self.LLVMModule, typeToLLVMType(aliasInternalType, self.context), aliasee.LLVMValueRef, java:fromString(name)));
@@ -178,13 +182,12 @@ public distinct class Module {
             PointerPointer paramTypes = PointerPointerFromTypes(fnType.paramTypes);
             return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, 2), fnType, self.context);
         }
-        if name is "ptrmask.p1i8.i64" {
+        else if name is "ptrmask.p1i8.i64" {
             FunctionType fnType = {returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"]};
             PointerPointer paramTypes = PointerPointerFromTypes(fnType.paramTypes);
             return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, 2), fnType, self.context);
 
         }
-        panic error(string `${<string>name} not implemented`);
     }
 
     public function setTarget(TargetTriple targetTriple) {

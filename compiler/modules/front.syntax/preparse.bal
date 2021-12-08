@@ -1,4 +1,4 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 
 const PREPARSE_TYPE_DESC = true;
 const PREPARSE_EXPR = false;
@@ -76,7 +76,7 @@ function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Synta
 // Returns `true` if a statement that starts with an identifier followed by `[` begins a type descriptor rather than an expression
 function preparseIndexedTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
     _ = check tok.expectIdentifier();
-    if tok.current() == ":" {
+    if tok.currentIsNoSpaceColon() {
         check tok.advance();
         _ = check tok.expectIdentifier();
     }

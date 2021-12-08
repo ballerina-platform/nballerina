@@ -1,35 +1,45 @@
 import wso2/nballerina.bir;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
 const USER_MAIN_NAME = "main";
+
+// Need to guarantee alignment for subtypes, so we can lo bit to distinguish betweem
+// bitsets and pointers to subtypes
+const SUBTYPE_ALIGN = 8;
 
 public type ProgramModule readonly & record {|
     bir:ModuleId id;
     TypeUsage typeUsage;
 |};
 
-type TypeDefn record {|
-    *TypeTestDefn;
-    int tid?;
-|};
-
-type TypeTestDefn record {|
+type TypeDefnFields record {|
     readonly t:SemType semType;
     llvm:ConstPointerValue ptr;
     llvm:Type llType;
 |};
 
+type TypeDefn record {|
+    *TypeDefnFields;
+    int tid?;
+|};
+
+type ComplexTypeDefn record {|
+    *TypeDefnFields;
+    readonly t:ComplexSemType semType;
+|};
+
 type InherentTypeDefn record {|
-    *TypeTestDefn;
+    *TypeDefnFields;
     int tid;
 |};
 
 type SubtypeDefn record {|
-    readonly t:SemType semType;
+    readonly t:ComplexSemType semType;
     readonly t:UniformTypeCode typeCode;
     llvm:ConstPointerValue ptr;
+    llvm:StructType? structType;
 |};
 
 const TYPE_KIND_ARRAY = "array";
@@ -37,22 +47,30 @@ const TYPE_KIND_MAP = "map";
 const TYPE_KIND_RECORD = "record";
 const TYPE_KIND_PRECOMPUTED = "precomputed";
 
+const STRUCTURE_LIST = 0;
+const STRUCTURE_MAPPING = 1;
+
+type StructureBasicType STRUCTURE_LIST|STRUCTURE_MAPPING;
+
 type TypeKindArrayOrMap TYPE_KIND_ARRAY|TYPE_KIND_MAP;
 type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED;
+
+type FunctionRef llvm:FunctionDecl|llvm:ConstPointerValue;
 
 type InitModuleContext record {|
     llvm:Context llContext;
     llvm:Module llMod;
     t:Context tc;
     int stringCount = 0;
-    table<InherentTypeDefn> key(semType) listTypeDefns = table [];
-    table<InherentTypeDefn> key(semType) mappingTypeDefns = table [];
-    table<TypeTestDefn> key(semType) typeTestDefns = table [];
+    table<InherentTypeDefn> key(semType)[2] inherentTypeDefns = [table [], table[]];
+    table<ComplexTypeDefn> key(semType) complexTypeDefns = table [];
     table<SubtypeDefn> key(typeCode, semType) subtypeDefns = table [];
     InitTypes llTypes;
     map<llvm:FunctionDecl> typeTestFuncs = {};
-    llvm:FunctionDecl? listSetFunc = ();
-    llvm:FunctionDecl? listGetFunc = ();
+    map<llvm:FunctionDecl> runtimeFuncs = {};
+    // subtype definitions cannot be completed before inherent types are complete,
+    // because precomputed subtypes need to know all inherent types
+    boolean inherentTypesComplete;
 |};
 
 public function buildInitModule(t:Env env, ProgramModule[] modules, map<bir:FunctionSignature> publicFuncs) returns llvm:Module|BuildError {
@@ -85,9 +103,12 @@ function buildInitTypes(llvm:Context llContext, llvm:Module llMod, t:Env env, Pr
         llContext,
         llMod,
         tc: t:typeContext(env),
-        llTypes
+        llTypes,
+        inherentTypesComplete: false
     };
     buildInitTypesForUsage(cx, modules, USED_INHERENT_TYPE);
+    cx.inherentTypesComplete = true;
+    finishSubtypeDefns(cx);
     buildInitTypesForUsage(cx, modules, USED_EXACTIFY);
     buildInitTypesForUsage(cx, modules, USED_TYPE_TEST);
 }
@@ -101,101 +122,150 @@ function buildInitTypesForUsage(InitModuleContext cx, ProgramModule[] modules, T
                 t:SemType ty = types[i];
                 string sym = mangleTypeSymbol(id, howUsed, i);
                 if howUsed == USED_INHERENT_TYPE {
-                    addInherentTypeDefn(cx, sym, ty);
+                    addInherentTypeSymbol(cx, sym, ty);
                 }
                 else if howUsed == USED_EXACTIFY {
-                    addExactifyTypeDefn(cx, sym, ty);
+                    addExactifyTypeSymbol(cx, sym, ty);
                 }
                 else {
-                    addTypeTestTypeDefn(cx, sym, ty);
+                    addTypeTestTypeSymbol(cx, sym, <t:ComplexSemType>ty);
                 }
             }       
         }
     }    
 }
 
-function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semType)  {
-    table<InherentTypeDefn> key(semType) defns;
-    boolean isList;
-    if t:isSubtypeSimple(semType, t:LIST) {
-        isList = true;
-        defns = cx.listTypeDefns;
-    }
-    else if t:isSubtypeSimple(semType, t:MAPPING) {
-        isList = false;
-        defns = cx.mappingTypeDefns;
-    }
-    else {
-        panic err:impossible("unexpected SemType while building inherent type definition in init module");
-    }
-    InherentTypeDefn? existingDefn = defns[semType];
+function addInherentTypeSymbol(InitModuleContext cx, string symbol, t:SemType semType)  {
+    StructureBasicType basic = <StructureBasicType>structureBasicType(semType);
+    InherentTypeDefn? existingDefn = cx.inherentTypeDefns[basic][semType];
     if existingDefn != () {
         addTypeAlias(cx, symbol, existingDefn);
-        return;
     }
+    else {
+        _ = addInherentTypeDefn(cx, symbol, semType, basic, "external");
+    }
+}
+
+function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semType, StructureBasicType basic, llvm:Linkage linkage) returns llvm:ConstPointerValue {
+    table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[basic];
     int tid = defns.length();
     llvm:StructType llType;
-    llvm:ConstPointerValue ptr;
-    if isList {
-        [llType, ptr] = addArrayInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>t:simpleArrayMemberType(cx.tc, semType));
+    llvm:ConstValue? initValue;
+    if basic == STRUCTURE_LIST {
+        llType = llListDescType;
+        // The initializer is set later, because of the possibility of
+        // recursion via `getFillerDesc`.
+        initValue = ();
     }
     else {
         t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType);
-        if mat.rest != t:NEVER {
-            [llType, ptr] = addMapInherentTypeDefn(cx, symbol, tid, <t:UniformTypeBitSet>mat.rest);
-        }
-        else {
-            [llType, ptr] = addRecordInherentTypeDefn(cx, symbol, tid, mat.names, mat.types);
-        }
+        llType = createMappingDescType(tid, mat);
+        // SUBSET move this later, when we do filling of mapping values
+        initValue = createMappingDescInit(cx, tid, mat);
     }
+    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true, linkage=linkage);
     defns.add({ llType, ptr, semType, tid });
-}
-
-function addArrayInherentTypeDefn(InitModuleContext cx, string symbol, int tid, t:UniformTypeBitSet bitSet) returns [llvm:StructType, llvm:ConstPointerValue] {
-    llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt(LLVM_TID, tid), getListGetFunc(cx), getListSetFunc(cx), llvm:constInt(LLVM_BITSET, bitSet)]);
-    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llListDescType, symbol, initializer=initValue, isConstant=true);
-    return [llListDescType, ptr];
-}
-
-function addMapInherentTypeDefn(InitModuleContext cx, string symbol, int tid, t:UniformTypeBitSet bitSet) returns [llvm:StructType, llvm:ConstPointerValue] {
-    llvm:StructType ty = llInherentType;
-    llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt(LLVM_TID, tid), llvm:constInt(LLVM_BITSET, bitSet)]);
-    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(ty, symbol, initializer=initValue, isConstant=true);
-    return [ty, ptr];
-}
-
-function addRecordInherentTypeDefn(InitModuleContext cx, string symbol, int tid, string[] fieldNames, t:SemType[] fieldTypes) returns [llvm:StructType, llvm:ConstPointerValue] {
-    final int nFields = fieldNames.length();
-    // tid, 0, fieldCount, fields
-    final llvm:StructType llType = llvm:structType([LLVM_TID, LLVM_BITSET, "i32", llvm:arrayType("i32", nFields)]);
-    llvm:ConstValue[] llFields = from var ty in fieldTypes select llvm:constInt("i32", <t:UniformTypeBitSet>ty);
-    llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt(LLVM_TID, tid), llvm:constInt(LLVM_BITSET, 0), llvm:constInt("i32", nFields), cx.llContext.constArray("i32", llFields)]);
-    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true);
-    return [llType, ptr];  
-}
-
-function addExactifyTypeDefn(InitModuleContext cx, string symbol, t:SemType semType) {
-    table<InherentTypeDefn> key(semType) defns;
-    if t:isSubtypeSimple(semType, t:LIST) {
-        defns = cx.listTypeDefns;
+    if basic == STRUCTURE_LIST {
+        cx.llMod.setInitializer(ptr, createListDescInit(cx, tid, <t:SemType>t:arrayMemberType(cx.tc, semType)));
     }
-    else if t:isSubtypeSimple(semType, t:MAPPING) {
-        defns = cx.mappingTypeDefns;
+    return ptr;
+}
+
+function createListDescInit(InitModuleContext cx, int tid, t:SemType memberType) returns llvm:ConstValue {
+    FunctionRef[] functionRefs = getListDescFunctionRefs(cx, memberType);
+    llvm:Value[] initStructValues = [llvm:constInt(LLVM_TID, tid)];
+    foreach FunctionRef fr in functionRefs {
+        initStructValues.push(fr);
+    }
+    initStructValues.push(getMemberType(cx, memberType));
+    initStructValues.push(getFillerDesc(cx, memberType)); 
+    return cx.llContext.constStruct(initStructValues);    
+}
+
+// Type of the value should be llStructureDescPtrType
+function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:ConstPointerValue {
+    StructureBasicType? basic = fillableStructureBasicType(cx.tc, memberType);
+    // JBUG narrowing does not work if you say `== ()`
+    if basic is () {
+        return llvm:constNull(llStructureDescPtrType);
+    }
+    table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[basic];
+    InherentTypeDefn? existingDefn = defns[memberType];
+    llvm:ConstPointerValue desc;
+    if existingDefn != () {
+        desc = existingDefn.ptr;
     }
     else {
-        panic err:impossible("unexpected SemType while building exact type definition in init module");
+        desc = addInherentTypeDefn(cx, fillerDescSymbol(basic, defns.length()), memberType, basic, "internal");
     }
-    InherentTypeDefn? existingDefn = defns[semType];
+    return cx.llContext.constBitCast(desc, llStructureDescPtrType);
+}
+
+function fillableStructureBasicType(t:Context tc, t:SemType semType) returns StructureBasicType? {
+    StructureBasicType? basic = structureBasicType(semType);
+    if basic == STRUCTURE_LIST {
+        if t:listAtomicTypeRw(tc, semType) != () {
+            return basic;
+        }
+    }
+    if basic == STRUCTURE_MAPPING {
+        if t:mappingAtomicTypeRw(tc, semType) != () {
+            return basic;
+        }
+    }
+    return ();
+}
+
+function createMappingDescType(int tid, t:MappingAtomicType mat) returns llvm:StructType {
+    // tid, fieldCount, restField, individualFields...
+    return llvm:structType([LLVM_TID, "i32", LLVM_MEMBER_TYPE, llvm:arrayType(LLVM_MEMBER_TYPE, mat.names.length())]);
+}
+
+function createMappingDescInit(InitModuleContext cx, int tid, t:MappingAtomicType mat) returns llvm:ConstValue {    
+    llvm:ConstValue[] llFields = from var ty in mat.types select getMemberType(cx, ty);
+    return cx.llContext.constStruct([
+        llvm:constInt(LLVM_TID, tid),
+        llvm:constInt("i32", llFields.length()),
+        getMemberType(cx, mat.rest),
+        cx.llContext.constArray(LLVM_MEMBER_TYPE, llFields)
+    ]);
+}
+
+function getMemberType(InitModuleContext cx, t:SemType memberType) returns llvm:ConstValue {
+    if memberType is t:UniformTypeBitSet {
+        return llvm:constInt(LLVM_MEMBER_TYPE, (memberType << 1)|1);
+    }
+    else {
+        llvm:ConstPointerValue ptr;
+        ComplexTypeDefn? existing = cx.complexTypeDefns[memberType];
+        if existing != () {
+            ptr = existing.ptr;
+        }
+        else {
+            ptr = addComplexTypeDefn(cx, memberTypeSymbol(cx.complexTypeDefns.length()), memberType, "internal");
+        }
+        return cx.llContext.constPtrToInt(ptr, LLVM_MEMBER_TYPE);
+    }
+}
+
+function addExactifyTypeSymbol(InitModuleContext cx, string symbol, t:SemType semType) {
+    StructureBasicType basic = <StructureBasicType>structureBasicType(semType);
+    InherentTypeDefn? existingDefn = cx.inherentTypeDefns[basic][semType];
     llvm:ConstValue initValue = llvm:constInt(LLVM_TID, existingDefn == () ? -1 : existingDefn.tid);
     _ = cx.llMod.addGlobal(LLVM_TID, symbol, initializer=initValue, isConstant=true);
 }
 
-function addTypeTestTypeDefn(InitModuleContext cx, string symbol, t:SemType semType) {
-    TypeDefn? existingDefn = cx.typeTestDefns[semType];
+function addTypeTestTypeSymbol(InitModuleContext cx, string symbol, t:ComplexSemType semType) {
+    ComplexTypeDefn? existingDefn = cx.complexTypeDefns[semType];
     if existingDefn != () {
         addTypeAlias(cx, symbol, existingDefn);
-        return;
     }
+    else {
+        _ = addComplexTypeDefn(cx, symbol, semType, "external");
+    }
+}
+
+function addComplexTypeDefn(InitModuleContext cx, string symbol, t:ComplexSemType semType, llvm:Linkage linkage) returns llvm:ConstPointerValue {
     t:SplitSemType { all, some } = t:split(semType);
     int someBits = 0;
     llvm:ConstValue[] llSubtypes = [];
@@ -205,109 +275,157 @@ function addTypeTestTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
             continue;
         }
         someBits |= 1 << code;
-        llSubtypes.push(getSubtypeTest(cx, code, subtype));
+        llSubtypes.push(getUniformSubtype(cx, code, subtype));
     }
-    llvm:ConstValue subtypeArray = cx.llContext.constArray(cx.llTypes.subtypeTestVTablePtr, llSubtypes);
-    llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt("i32", all), llvm:constInt("i32", someBits), subtypeArray]);
-    llvm:StructType llType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(cx.llTypes.subtypeTestVTablePtr, llSubtypes.length())]);
-    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true);
-    cx.typeTestDefns.add({ llType, ptr, semType });
-}
-
-function getSubtypeTest(InitModuleContext cx, t:UniformTypeCode typeCode, t:SemType semType) returns llvm:ConstPointerValue {
-    SubtypeDefn? existingDefn = cx.subtypeDefns[typeCode, semType];
-    if existingDefn != () {
-        return existingDefn.ptr;
-    }
-    llvm:ConstPointerValue ptr;
-    string symbol = subtypeDefnSymbol(cx.subtypeDefns.length());
-    // JBUG if we use a match statement for this, then we get an error for `ptr` being uninitialized
-    if typeCode == t:UT_LIST_RW {
-        t:ListAtomicType? lat = t:listAtomicTypeRw(cx.tc, semType);
-        if lat == () {
-            ptr = addPrecomputedSubtypeTestDefn(cx, symbol, cx.listTypeDefns, semType);
-        }
-        else {
-            ptr = addArrayMapSubtypeTestDefn(cx, symbol, <t:UniformTypeBitSet>lat.rest, TYPE_KIND_ARRAY);
-        }
-    }
-    else if typeCode == t:UT_MAPPING_RW {
-        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(cx.tc, semType);
-        if mat == () {
-            ptr = addPrecomputedSubtypeTestDefn(cx, symbol, cx.mappingTypeDefns, semType);
-        }
-        else if mat.rest != t:NEVER {
-            ptr = addArrayMapSubtypeTestDefn(cx, symbol, <t:UniformTypeBitSet>mat.rest, TYPE_KIND_MAP);
-        }
-        else {
-            ptr = addRecordSubtypeTestDefn(cx, symbol, mat.names, mat.types);
-        }
-    }
-    else {
-        panic err:impossible(`subtypes of uniform type ${typeCode} are not implemented`);
-    }
-    ptr = cx.llContext.constBitCast(ptr, cx.llTypes.subtypeTestVTablePtr);
-    SubtypeDefn newDefn = { typeCode, semType, ptr };
-    cx.subtypeDefns.add(newDefn);
+    llvm:ConstValue subtypeArray = cx.llContext.constArray(cx.llTypes.uniformSubtypePtr, llSubtypes);
+    llvm:ConstValue initValue = cx.llContext.constStruct([llvm:constInt(LLVM_BITSET, all), llvm:constInt(LLVM_BITSET, someBits), subtypeArray]);
+    llvm:StructType llType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(cx.llTypes.uniformSubtypePtr, llSubtypes.length())]);
+    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true, linkage=linkage);
+    cx.complexTypeDefns.add({ llType, ptr, semType });
     return ptr;
 }
 
-function addPrecomputedSubtypeTestDefn(InitModuleContext cx, string symbol, table<InherentTypeDefn> inherentTypeDefns, t:SemType ty) returns llvm:ConstPointerValue {
-    llvm:ConstValue[] tids = from var itd in inherentTypeDefns where t:isSubtype(cx.tc, itd.semType, ty) select llvm:constInt(LLVM_TID, itd.tid);
-    final llvm:StructType llStructTy = llvm:structType([cx.llTypes.subtypeTestFunctionPtr, "i32", llvm:arrayType(LLVM_TID, tids.length())]);
-    llvm:ConstValue initValue = cx.llContext.constStruct([getSubtypeTestFunc(cx, TYPE_KIND_PRECOMPUTED), llvm:constInt("i32", tids.length()),
-                                                          cx.llContext.constArray(LLVM_TID, tids)]);
-    return cx.llMod.addGlobal(llStructTy, symbol, initializer=initValue, isConstant=true, linkage="internal");
+type SubtypeStruct record {|
+    llvm:Type[] types;
+    llvm:Value[] values;
+|};
+
+function getUniformSubtype(InitModuleContext cx, t:UniformTypeCode typeCode, t:ComplexSemType semType) returns llvm:ConstPointerValue {
+    llvm:ConstPointerValue ptr;
+    SubtypeDefn? existingDefn = cx.subtypeDefns[typeCode, semType];
+    if existingDefn != () {
+        ptr = existingDefn.ptr;
+    }
+    else {
+        string symbol = subtypeDefnSymbol(cx.subtypeDefns.length());
+        llvm:ConstValue? init = ();
+        llvm:StructType llStructTy;
+        if cx.inherentTypesComplete {
+            SubtypeStruct sub = createSubtypeStruct(cx, typeCode, semType);
+            llStructTy = llvm:structType(sub.types);
+            init = cx.llContext.constStruct(sub.values);
+        }
+        else {
+            llStructTy = cx.llContext.structCreateNamed(subtypeTypeDefnSymbol(cx.subtypeDefns.length()));
+        }
+        ptr = cx.llMod.addGlobal(llStructTy, symbol, initializer=init, align=SUBTYPE_ALIGN, isConstant=true, linkage="internal");
+        SubtypeDefn newDefn = { typeCode, semType, ptr, structType: cx.inherentTypesComplete ? () : llStructTy };
+        cx.subtypeDefns.add(newDefn);
+    }
+    return cx.llContext.constBitCast(ptr, cx.llTypes.uniformSubtypePtr); 
 }
 
-function addArrayMapSubtypeTestDefn(InitModuleContext cx, string symbol, t:UniformTypeBitSet bitSet, TypeKindArrayOrMap arrayOrMap) returns llvm:ConstPointerValue {
-    final llvm:StructType ty = llvm:structType([cx.llTypes.subtypeTestFunctionPtr, LLVM_BITSET]);
-    llvm:ConstValue initValue = cx.llContext.constStruct([getSubtypeTestFunc(cx, arrayOrMap), llvm:constInt("i32", bitSet)]);
-    return cx.llMod.addGlobal(ty, symbol, initializer=initValue, isConstant=true, linkage="internal");
+function finishSubtypeDefns(InitModuleContext cx) {
+    foreach SubtypeDefn defn in cx.subtypeDefns {
+        llvm:StructType? structType = defn.structType;
+        if structType != () {
+            SubtypeStruct sub = createSubtypeStruct(cx, defn.typeCode, defn.semType);
+            cx.llContext.structSetBody(structType, sub.types);
+            cx.llMod.setInitializer(defn.ptr, cx.llContext.constStruct(sub.values));
+        }
+    }
 }
 
-function addRecordSubtypeTestDefn(InitModuleContext cx, string symbol, string[] fieldNames, t:SemType[] fieldTypes) returns llvm:ConstPointerValue {
+function createSubtypeStruct(InitModuleContext cx, t:UniformTypeCode typeCode, t:ComplexSemType semType) returns SubtypeStruct {
+    // JBUG if we use a match statement for this, then we get an error for `ptr` being uninitialized
+    if typeCode == t:UT_LIST_RW {
+        return createListSubtypeStruct(cx, semType); 
+    }
+    else if typeCode == t:UT_MAPPING_RW {
+        return createMappingSubtypeStruct(cx, semType); 
+    }
+    panic err:impossible(`subtypes of uniform type ${typeCode} are not implemented`);    
+}
+
+function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
+    t:ListAtomicType? lat = t:listAtomicTypeRw(cx.tc, semType);
+    if lat != () {
+        t:SemType rest = lat.rest;
+        if rest is t:UniformTypeBitSet {
+            return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_ARRAY);
+        }
+    }
+    return createPrecomputedSubtypeStruct(cx, STRUCTURE_LIST, semType);
+}
+
+function createMappingSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(cx.tc, semType);
+    if mat != () {
+        t:SemType rest = mat.rest;
+        if rest == t:NEVER {
+            t:UniformTypeBitSet[] fieldTypes = [];
+            foreach var ty in mat.types {
+                if ty is t:UniformTypeBitSet {
+                    fieldTypes.push(ty);
+                }
+                else {
+                    break;
+                }
+            }
+            if fieldTypes.length() == mat.types.length() {
+                // all bitsets
+                return createRecordSubtypeStruct(cx, mat.names, fieldTypes);     
+            }
+        }
+        else if rest is t:UniformTypeBitSet && mat.names.length() == 0 {
+            return createArrayMapSubtypeStruct(cx, rest, TYPE_KIND_MAP);
+        }
+    }
+    return createPrecomputedSubtypeStruct(cx, STRUCTURE_MAPPING, semType);
+}
+
+function createPrecomputedSubtypeStruct(InitModuleContext cx, StructureBasicType basic, t:ComplexSemType ty) returns SubtypeStruct {
+    llvm:ConstValue[] tids = from var itd in cx.inherentTypeDefns[basic] where t:isSubtype(cx.tc, itd.semType, ty) select llvm:constInt(LLVM_TID, itd.tid);
+    return {
+        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", llvm:arrayType(LLVM_TID, tids.length())],
+        values: [getSubtypeContainsFunc(cx, TYPE_KIND_PRECOMPUTED), llvm:constInt("i32", tids.length()), cx.llContext.constArray(LLVM_TID, tids)]
+    };
+}
+
+function createArrayMapSubtypeStruct(InitModuleContext cx, t:UniformTypeBitSet bitSet, TypeKindArrayOrMap arrayOrMap) returns SubtypeStruct {
+    return {
+        types: [cx.llTypes.subtypeContainsFunctionPtr, LLVM_BITSET],
+        values: [getSubtypeContainsFunc(cx, arrayOrMap), llvm:constInt("i32", bitSet)]
+    };
+}
+
+function createRecordSubtypeStruct(InitModuleContext cx, string[] fieldNames, t:UniformTypeBitSet[] fieldTypes) returns SubtypeStruct {
     // 0, fieldCount, fields
     final llvm:StructType llFieldType = llvm:structType([LLVM_TAGGED_PTR, LLVM_BITSET]);
     final int nFields = fieldNames.length();
-    final llvm:StructType llType = llvm:structType([cx.llTypes.subtypeTestFunctionPtr, "i32", llvm:arrayType(llFieldType, nFields)]);
     llvm:ConstValue[] llFields = [];
     foreach int i in 0 ..< fieldNames.length() {
-        llFields.push(cx.llContext.constStruct([addInitString(cx, fieldNames[i]),
-                                               llvm:constInt(LLVM_BITSET, <t:UniformTypeBitSet>fieldTypes[i])]));
+        llFields.push(cx.llContext.constStruct([addInitString(cx, fieldNames[i]), llvm:constInt(LLVM_BITSET, fieldTypes[i])]));
     }
-    llvm:ConstValue initValue = cx.llContext.constStruct([getSubtypeTestFunc(cx, TYPE_KIND_RECORD), llvm:constInt("i32", nFields), cx.llContext.constArray(llFieldType, llFields)]);
-    return cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true, linkage="internal");
+    return {
+        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", llvm:arrayType(llFieldType, nFields)],
+        values: [getSubtypeContainsFunc(cx, TYPE_KIND_RECORD), llvm:constInt("i32", nFields), cx.llContext.constArray(llFieldType, llFields)]
+    };
 }
 
-function getListSetFunc(InitModuleContext cx) returns llvm:FunctionDecl {
-    llvm:FunctionDecl? existing = cx.listSetFunc;
-    if existing == () {
-        llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol("list_set"), llListSetFuncType);
-        cx.listSetFunc = decl;
-        return decl;
+function getListDescFunctionRefs(InitModuleContext cx, t:SemType memberType) returns FunctionRef[] {
+    FunctionRef[] functionRefs = [];
+    string prefix = memberTypeToListReprPrefix(memberType);
+    foreach int i in 0 ..< listDescFuncSuffixes.length() {
+        string suffix = listDescFuncSuffixes[i];
+        string name = prefix + "_" + suffix;
+        llvm:FunctionType llType = llListDescFuncTypes[i];
+        FunctionRef ref;
+        if listDescNullFuncNames.indexOf(name) == () {
+            ref = getInitRuntimeFunction(cx, mangleRuntimeSymbol("list_" + name), llType);
+        }
+        else {
+            ref = llvm:constNull(llvm:pointerType(llType));
+        }
+        functionRefs.push(ref);
     }
-    else {
-        return existing;
-    }
+    return functionRefs;
 }
 
-function getListGetFunc(InitModuleContext cx) returns llvm:FunctionDecl {
-    llvm:FunctionDecl? existing = cx.listGetFunc;
-    if existing == () {
-        llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol("list_get"), llListGetFuncType);
-        cx.listGetFunc = decl;
-        return decl;
-    }
-    else {
-        return existing;
-    }
-}
-
-function getSubtypeTestFunc(InitModuleContext cx, TypeKind tk) returns llvm:FunctionDecl {
+function getSubtypeContainsFunc(InitModuleContext cx, TypeKind tk) returns llvm:FunctionDecl {
     llvm:FunctionDecl? existing = cx.typeTestFuncs[tk];
     if existing == () {
-        llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol(tk + "_subtype_contains"), cx.llTypes.subtypeTestFunction);
+        llvm:FunctionDecl decl = cx.llMod.addFunctionDecl(mangleRuntimeSymbol(tk + "_subtype_contains"), cx.llTypes.subtypeContainsFunction);
         cx.typeTestFuncs[tk] = decl;
         return decl;
     }
@@ -324,4 +442,35 @@ function addInitString(InitModuleContext cx, string str) returns llvm:ConstPoint
 
 function addTypeAlias(InitModuleContext cx, string sym, TypeDefn defn) {
     _ = cx.llMod.addAlias(defn.llType, defn.ptr, sym);
+}
+
+function structureBasicType(t:SemType semType) returns StructureBasicType? {
+    if t:isSubtypeSimple(semType, t:LIST) {
+        return STRUCTURE_LIST;
+    }
+    if t:isSubtypeSimple(semType, t:MAPPING) {
+        return STRUCTURE_MAPPING;
+    }
+    return ();
+}
+
+function fillerDescSymbol(StructureBasicType basic, int i) returns string {
+    if basic == STRUCTURE_LIST {
+        return memberListDescSymbol(i);
+    }
+    else {
+        return memberMappingDescSymbol(i);
+    }
+}
+
+function getInitRuntimeFunction(InitModuleContext cx, string symbol, llvm:FunctionType llType) returns llvm:FunctionDecl {
+    llvm:FunctionDecl? existingDecl = cx.runtimeFuncs[symbol];
+    if existingDecl != () {
+        return existingDecl;
+    }
+    else {
+        llvm:FunctionDecl newDecl = cx.llMod.addFunctionDecl(symbol, llType);
+        cx.runtimeFuncs[symbol] = newDecl;
+        return newDecl;
+    }
 }

@@ -1,4 +1,5 @@
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 type Token FixedToken|VariableLengthToken;
 type FixedToken SingleCharDelim|MultiCharDelim|Keyword;
@@ -318,6 +319,28 @@ class Tokenizer {
         return ();   
     }
 
+    function currentIsNoSpaceColon() returns boolean {
+        return self.curTok == ":" && self.currentHasNoAdjacentSpace();
+    }
+
+    // Returns true if current token has non-whitespace tokens before and after it on the same line.
+    // Only allowed when current token is a fixed token.
+    private function currentHasNoAdjacentSpace() returns boolean {
+        int i = self.fragCodeIndex;
+        FragCode[] fragCodes = self.fragCodes;
+        if i <= 1 || i >= fragCodes.length() {
+            return false;
+        }
+        FragCode nextFragCode = fragCodes[i];
+        if nextFragCode == FRAG_COMMENT || nextFragCode == FRAG_WHITESPACE {
+            return false;
+        }
+        if fragCodes[i - 1] < FRAG_FIXED_TOKEN {
+            panic err:impossible("wrong fragment type for currentIsConnected");
+        }
+        return fragCodes[i - 2] != FRAG_WHITESPACE;
+    }
+    
     function current() returns Token? {
         return self.curTok;
     }
@@ -345,11 +368,11 @@ class Tokenizer {
     }
 
     function currentEndPos() returns Position {
-        return createPosition(self.lineIndex, self.codePointIndex-1);
+        return createPosition(self.lineIndex, self.codePointIndex);
     }
 
     function previousEndPos() returns Position {
-        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex-1);
+        return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex);
     }
 
     private function getFragment() returns string {
@@ -381,7 +404,7 @@ class Tokenizer {
             return t[1];
         }
         else {
-            err:Template msg;
+            d:Message msg;
             if t is string {
                 msg = `expected an identifier; got ${t}`;
             }
@@ -398,9 +421,15 @@ class Tokenizer {
         return pos;
     }
 
+    function expectStart(SingleCharDelim|MultiCharDelim|Keyword tok) returns Position|err:Syntax {
+        Position pos = self.currentStartPos();
+        check self.expect(tok);
+        return pos;
+    }
+
     function expect(SingleCharDelim|MultiCharDelim|Keyword tok) returns err:Syntax? {
         if self.curTok != tok {
-            err:Template msg;
+            d:Message msg;
             Token? t = self.curTok;
             if t is string {
                 msg = `expected ${tok}; got ${t}`;
@@ -413,8 +442,9 @@ class Tokenizer {
         check self.advance();
     }
 
-    function err(err:Message msg) returns err:Syntax {
-        return err:syntax(msg, loc=err:location(self.file, self.currentStartPos()));
+    function err(d:Message msg) returns err:Syntax {
+        // XXX pass in endPos if we need to in order to be able to recreate the right endPos
+        return err:syntax(msg, loc=d:location(self.file, self.currentStartPos(), self.currentEndPos()));
     }
 
     function save() returns TokenizerState {
@@ -467,7 +497,7 @@ function unpackPosition(Position pos) returns [int, int] & readonly {
 }
 
 public readonly class SourceFile {
-    *err:File;
+    *d:File;
     private ScannedLine[] lines;
     private string fn;
     private string? dir;
@@ -482,8 +512,41 @@ public readonly class SourceFile {
 
     public function directory() returns string? => self.dir;
 
-    public function lineColumn(Position pos) returns err:LineColumn {
+    public function lineColumn(Position pos) returns d:LineColumn {
         return unpackPosition(pos);
+    }
+
+    // range is expected to be the start of a fragment
+    public function lineContent(Position|d:Range range) returns [string, string, string] {
+        Position startPos;
+        Position? endPos;
+        if range is d:Range {
+            { startPos, endPos } = range;
+        }
+        else {
+            startPos = range;
+            endPos = ();
+        }
+        var [startLineNum, startColumnNum] = self.lineColumn(startPos);
+        ScannedLine line = self.scannedLine(startLineNum);
+        string[] lineFragments = scanLineFragments(line);
+        string lineContent = "".'join(...lineFragments);
+        int endColumnNum;
+        if endPos != () {
+            int endLineNum;
+            [endLineNum, endColumnNum] = self.lineColumn(endPos);
+            if endLineNum != startLineNum {
+                endColumnNum = lineContent.length();
+            }
+        }
+        else {
+            endColumnNum = tokenEndCodePointIndex(lineFragments, line.fragCodes, startColumnNum);
+        }
+        return [
+            lineContent.substring(0, startColumnNum),
+            lineContent.substring(startColumnNum, endColumnNum),
+            lineContent.substring(endColumnNum)
+        ];
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
@@ -491,6 +554,52 @@ public readonly class SourceFile {
     function scannedLine(int lineNumber) returns ScannedLine {
         return self.lines[lineNumber - 1];
     }
+}
+
+function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex) returns int {
+    int fragmentIndex = fragmentCountUpTo(fragments, startCodePointIndex);
+    match fragCodes[fragmentIndex] {
+        FRAG_STRING_OPEN  => {
+            return stringTokenEndCodePointIndex(fragments, fragCodes, startCodePointIndex, fragmentIndex);
+        }
+        FRAG_GREATER_THAN => {
+            // Assume not in type-desc mode
+            if fragmentIndex + 1 < fragCodes.length() && fragCodes[fragmentIndex+1] == FRAG_GREATER_THAN {
+                if fragmentIndex + 2 < fragCodes.length() && fragCodes[fragmentIndex+2] == FRAG_GREATER_THAN {
+                    return startCodePointIndex + 3; // >>>
+                }
+                return startCodePointIndex + 2; // >>
+            }
+            return startCodePointIndex + 1; // >
+        }
+    }
+    return startCodePointIndex + fragments[fragmentIndex].length();
+}
+
+function fragmentCountUpTo(string[] fragments, int codePointIndex) returns int {
+    int nCodePoints = 0;
+    int fragmentIndex = 0;
+    int nFragments = fragments.length();
+    while fragmentIndex < nFragments {
+        if nCodePoints >= codePointIndex {
+            break;
+        }
+        nCodePoints += fragments[fragmentIndex].length();
+        fragmentIndex += 1;
+    }
+    return fragmentIndex;
+}
+
+function stringTokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex, int startFragmentIndex) returns int {
+    int endCodePointIndex = startCodePointIndex;
+    foreach int fragmentIndex in startFragmentIndex ..< fragments.length() {
+        endCodePointIndex += fragments[fragmentIndex].length();
+        FragCode fragCode = fragCodes[fragmentIndex];
+        if fragCode == FRAG_STRING_CLOSE {
+            break;
+        }
+    }
+    return endCodePointIndex;
 }
 
 public function createSourceFile(string[] lines, FilePath path) returns SourceFile {

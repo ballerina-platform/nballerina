@@ -1,11 +1,12 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.nback;
-import wso2/nballerina.err;
+import wso2/nballerina.comm.err;
+import wso2/nballerina.comm.diagnostic as d;
 
 import ballerina/io;
 import ballerina/file;
 
-type CompileError err:Any|io:Error|file:Error;
+type CompileError err:Diagnostic|io:Error|file:Error;
 
 public type Options record {
     boolean testJsonTypes = false;
@@ -15,6 +16,7 @@ public type Options record {
     string? outDir = ();
     string? expectOutDir = ();
     string? gc = ();
+    string? htmlError = ();
     *OutputOptions;
 };
 
@@ -38,17 +40,35 @@ public function main(string[] filenames, *Options opts) returns error? {
         if filenames.length() > 1 {
             return error("multiple input files not supported with --showTypes");
         }
-        check showTypes([{ filename: filenames[0] }]);
+        check printDiagnostic(showTypes([{ filename: filenames[0] }]));
         return;
     }
     nback:Options nbackOptions = {
         gcName: check nback:validGcName(opts.gc),
         debugLevel: check nback:validDebugLevel(opts.debugLevel)
     };
+    int errorFileCount = 0;
+    d:Printer dPrinter;
+    string? errorFilename = opts.htmlError;
+    if errorFilename != () {
+        dPrinter = new d:HtmlPrinter(errorFilename);
+    }
+    else {
+        dPrinter = new d:ConsolePrinter(io:stderr);
+    }
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            check compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
+            if err is err:Diagnostic {
+                errorFileCount += 1;
+                dPrinter.print(err.detail());
+            }
+            // JBUG: #34014
+            // can't use else { check err; }
+            else if err != () {
+                return err;
+            }
         }
         else if ext == TEST_EXTENSION {
             check compileBaltFile(filename, opts.outDir ?: check file:parentPath(filename), nbackOptions, opts);
@@ -57,9 +77,23 @@ public function main(string[] filenames, *Options opts) returns error? {
             return error("input filename must have a .bal or .balt extension");
         }
         else {
-            return error(err:format(`unsupported extension ${ext}`));
+            return error(d:messageFormat(`unsupported extension ${ext}`));
         }
     }
+    check dPrinter.close();
+    if errorFileCount != 0 {
+        string files = errorFileCount == 1 ? "file" : "files";
+        return error(string `compilation of ${errorFileCount} ${files} failed`);
+    }
+}
+
+function printDiagnostic(CompileError? err) returns CompileError? {
+    if err is err:Diagnostic {
+        foreach string line in d:format(err.detail()) {
+            io:fprintln(io:stderr, line);
+        }
+    }
+    return err;
 }
 
 // Basename here means filename without extension
