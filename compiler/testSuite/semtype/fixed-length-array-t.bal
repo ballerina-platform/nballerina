@@ -56,3 +56,6 @@ type N never;
 // @type ArrayOfInt5 = TwoArraysOfInt5[1]
 // @type N = TwoArraysOfInt5[2]
 type TwoArraysOfInt5 int[2][][5];
+
+// @type EmptyIntArray < IntArray 
+type EmptyIntArray int[0];

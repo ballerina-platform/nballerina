@@ -184,40 +184,23 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
 
 function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicType lt) returns [FixedLengthArray, SemType]? {
     int ltLen = lt.members.fixedLength;
-    int newLen = int:max(members.fixedLength, ltLen);    // Intersect similar compressed representations without decompressing.
-
-
-    //            if members.length() < newLen {
-    //                 if isNever(rest) {
-    //                     return true;
-    //                 }
-    //                 // JBUG #33532 should be able to use `_` here
-    //                 foreach int i in members.length() ..< newLen {
-    //                     members.push(rest);
-    //                 }
-    //             }
-    //             foreach int i in 0 ..< lt.members.length() {
-    //                 members[i] = intersect(members[i], lt.members[i]);
-    //             }
+    int newLen = int:max(members.fixedLength, ltLen);
     if members.fixedLength < newLen {
         if isNever(rest) {
             return ();
         }
         fixedLengthArrayFill(members, newLen, rest);
     }
-    
     int nonRepeatedLen = int:max(members.initial.length(), lt.members.initial.length());
     foreach int i in 0 ..< nonRepeatedLen {
         fixedArraySet(members, i, 
             intersect(listMemberAt(members, rest, i), listMemberAt(lt.members, lt.rest, i)));
-    }
-    
-    // Stage 2 
+    } 
     if ltLen < newLen {
         if isNever(lt.rest) {
             return ();
         }
-        foreach int i in ltLen ..< newLen { /// XXX
+        foreach int i in ltLen ..< newLen {
             fixedArraySet(members, i, intersect(listMemberAt(members, rest, i), lt.rest));
         }
     }
@@ -272,9 +255,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
         foreach int i in 0 ..< len {
-            // XXX do something here to avoid repeated doing the same thing
-            SemType ntm = i < negLen ? fixedArrayGet(nt.members, i) : nt.rest;
-            SemType d = diff(fixedArrayGet(members, i), ntm);
+            SemType d = diff(fixedArrayGet(members, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayWith(members, i, d);
                 if listInhabited(cx, s, rest, neg.next) {

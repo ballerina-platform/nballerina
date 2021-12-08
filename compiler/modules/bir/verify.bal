@@ -309,7 +309,7 @@ function orderTypeToSemType(VerifyContext vc, OrderType ot) returns t:SemType {
             memberType = t:NEVER;
         }
         t:ListDefinition def = new;
-        return def.define(vc.typeContext().env, [], memberType);
+        return def.define(vc.typeContext().env, { initial: [], fixedLength: 0 }, memberType);
     }
     else if ot is OptOrderType {
         var opt = ot.opt;

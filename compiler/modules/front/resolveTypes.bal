@@ -156,7 +156,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
 
                 t:SemType t = rest;
                 foreach s:SimpleConstExpr? len in td.arrayLen.reverse() {
-                    if (len == ()) {
+                    if len == () {
                         t = d.define(env, { initial: [], fixedLength: 0 }, t);
                     }
                     else {
@@ -166,7 +166,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
                 return t;
             }
-
             t:SemType[] members = from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);
             return d.define(env, { initial: members, fixedLength: members.length() }, t:NEVER );
         }
