@@ -208,7 +208,6 @@ function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicTyp
     return [members, intersect(rest, lt.rest)];
 }
 
-
 // This function returns true if there is a list shape v such that
 // is in the type described by `members` and `rest`, and
 // for each tuple t in `neg`, v is not in t.
