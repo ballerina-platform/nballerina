@@ -56,7 +56,7 @@ function testTokenizer(string k, string[] lines) returns error? {
             string tStr = tokenToString(t);
             string srcAtPos = src.substring(tStart, tStart + tStr.length());
             if t is [HEX_INT_LITERAL, string] || t is [DECIMAL_FP_NUMBER, string, "f"|"d"?] {
-                // need to normalize `0x` vs `0X` and `f`
+                // Canonicalize `0X` `F` `D` in source as `0x` `f` `d`.
                 srcAtPos = srcAtPos.toLowerAscii();
             }
             test:assertEquals(srcAtPos, tStr, "token: '" + tStr + "' source: '" + srcAtPos + "'");

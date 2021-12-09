@@ -547,75 +547,84 @@ function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr ex
     }
 }
 
-function foldFpLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError {
-    float|decimal|error result;
-    string ty;
-    s:FpTypeSuffix? typeSuffix = expr.typeSuffix;
-    string untypedLiteral = expr.untypedLiteral;
-    if typeSuffix is s:DECIMAL_TYPE_SUFFIX {
-        result = decimalFromFpLiteral(untypedLiteral);
-        ty = "decimal";
+function foldFpLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError { 
+    t:Context tc = cx.typeContext();
+    var { typeSuffix, untypedLiteral, startPos } = expr;
+    float|decimal result;
+    if typeSuffix != () {
+        result = typeSuffix is s:FLOAT_TYPE_SUFFIX ? floatFromFpLiteral(untypedLiteral) : check decimalFromFpLiteral(cx, untypedLiteral, startPos);
     }
-    else if typeSuffix is s:FLOAT_TYPE_SUFFIX {
+    else if expectedType == () || expectsFloat(tc, expectedType) {
         result = floatFromFpLiteral(untypedLiteral);
-        ty = "float";
+    }
+    else if expectsDecimal(tc, expectedType) {
+        result = check decimalFromFpLiteral(cx, untypedLiteral, startPos);
     }
     else {
-        if expectedType == () || t:isSubtypeSimple(expectedType, t:FLOAT) {
-            result = floatFromFpLiteral(untypedLiteral);
-            ty = "float";
-        }
-        else if t:isSubtypeSimple(expectedType, t:DECIMAL) {
-            result = decimalFromFpLiteral(untypedLiteral);
-            ty = "decimal";
-        }
-        else {
-            result = floatFromFpLiteral(untypedLiteral);
-            ty = "float";            
-        }
+        result = floatFromFpLiteral(untypedLiteral);
     }
-    if result is float|decimal {
-        return { startPos: expr.startPos, endPos: expr.endPos, value: result };
-    }
-    else {
-        return cx.semanticErr("invalid " + ty + " literal", cause=result, pos=expr.startPos);
-    }
+    return { startPos: startPos, endPos: expr.endPos, value: result };
 }
 
 function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLiteralExpr expr) returns s:ConstValueExpr|FoldError {
-    float|int|error result;
-    string ty;
-    if expr.base == 10 && expectsFloat(expectedType) {
+    t:Context tc = cx.typeContext();
+    Position startPos = expr.startPos;
+    int|float|decimal result;
+    if expectedType == () || expectsInt(tc, expectedType) {
+        result = check intFromLiteral(cx, expr);
+    }  
+    else if expectsFloat(tc, expectedType) {
         result = floatFromFpLiteral(expr.digits);
-        ty = "float"; 
+    }
+    else if expectsDecimal(tc, expectedType) {
+        result = check decimalFromFpLiteral(cx, expr.digits, startPos);
     }
     else {
-        result = s:intFromIntLiteral(expr.base, expr.digits);
-        ty = "int";
+        result = check intFromLiteral(cx, expr);
     }
-    if result is int|float {
-        return { startPos: expr.startPos, endPos: expr.endPos, value: result };
-    }
-    else {
-        return cx.semanticErr("invalid " + ty + " literal", cause=result, pos=expr.startPos);
-    }
+    return { startPos: startPos, endPos: expr.endPos, value: result };
 }
 
-function expectsFloat(t:SemType? semType) returns boolean {
-    if semType == () {
-        return false;
-    }
-    else {
-        return t:isSubtypeSimple(t:intersect(semType, t:union(t:FLOAT, t:INT)), t:FLOAT);
-    }
+function expectsInt(t:Context cx, t:SemType semType) returns boolean {
+    return !t:isEmpty(cx, t:intersect(semType, t:INT));
 }
 
-function floatFromFpLiteral(string digits) returns float|error {
-    return float:fromString(digits);
+function expectsFloat(t:Context cx, t:SemType semType) returns boolean {
+    return !t:isEmpty(cx, t:intersect(semType, t:FLOAT));
 }
 
-function decimalFromFpLiteral(string decimalStr) returns decimal|error {
-    return decimal:fromString(decimalStr);
+function expectsDecimal(t:Context cx, t:SemType semType) returns boolean {
+    return !t:isEmpty(cx, t:intersect(semType, t:DECIMAL));
+}
+
+// Since the binary floating point literal is parsed correctly,
+// it is impossible to throw an error.
+function floatFromFpLiteral(string digits) returns float {
+    float|error f = float:fromString(digits);
+    if f is error {
+        panic err:impossible();
+    }
+    return f;
+}
+
+// Even if the decimal floating point literal is parsed correctly,
+// overflow should throw an error.
+function decimalFromFpLiteral(FoldContext cx, string decimalStr, Position pos) returns decimal|FoldError {
+    decimal|error d = decimal:fromString(decimalStr);
+    if d is error {
+        return cx.semanticErr("invalid decimal literal", pos);
+    }
+    return d;
+}
+
+// Even if the integer literal is parsed correctly,
+// overflow should throw an error.
+function intFromLiteral(FoldContext cx, s:IntLiteralExpr expr) returns int|FoldError {
+    int|error i = s:intFromIntLiteral(expr.base, expr.digits);
+    if i is error {
+        return cx.semanticErr("invalid int literal", expr.startPos);
+    }
+    return i;
 }
 
 function intArithmeticEval(s:BinaryArithmeticOp op, int left, int right) returns int  {

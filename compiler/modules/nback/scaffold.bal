@@ -219,7 +219,8 @@ class Scaffold {
         return newDefn;
     }
 
-    function getDecimalString(string str) returns DecimalStringDefn {
+    function getDecimalString(decimal val) returns DecimalStringDefn {
+        string str = val.toString();
         DecimalStringDefn? curDefn = self.mod.decimalStringDefns[str];
         if curDefn != () {
             return curDefn;
