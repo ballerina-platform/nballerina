@@ -30,7 +30,7 @@
    * assignment
       * to variable `v = E;`
       * to member of a list or mapping `v[E1] = E2;`
-      * to a field `v.f = E`
+      * to a field `v.x.y.z = E`
       * to wildcard binding pattern `_ = E`
       * compound assignment `op=`
    * `return` statement
@@ -373,8 +373,8 @@ Two kinds of `import` are supported.
 ## Additions from subset 10
 
 * Types can be nested arbitrarily: any supported type descriptors can be used for a member of an array, record or mapping type descriptors. This includes recursive types.
+* Multiple dots are allowed on the left-hand side of an assignment (e.g. `x.y.z = 17`).
 * Record types can have a record-rest-descriptor `T...;`
-* Chained field access lvalues.
 
 ## Implemented spec changes since 2021R1
 
