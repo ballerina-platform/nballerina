@@ -2,7 +2,6 @@ import wso2/nballerina.bir;
 import wso2/nballerina.print.llvm;
 import wso2/nballerina.types as t;
 
-import ballerina/file;
 
 public function buildModule(bir:Module birMod, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
     llvm:Context llContext = new;
@@ -11,7 +10,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     bir:File[] partFiles = birMod.getPartFiles();
     ModuleDI? di = ();
     if options.debugLevel > 0 {
-        di = createModuleDI(llMod, partFiles, options.debugLevel == DEBUG_FULL, options.outDir);
+        di = createModuleDI(llMod, partFiles, options.debugLevel == DEBUG_FULL);
     }
     bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
     llvm:FunctionDefn[] llFuncs = [];
@@ -84,17 +83,10 @@ function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
     return { types: types.cloneReadOnly(), uses: uses.cloneReadOnly() };
 }
 
-function createModuleDI(llvm:Module mod, bir:File[] partFiles, boolean debugFull, string? outDir) returns ModuleDI {
+function createModuleDI(llvm:Module mod, bir:File[] partFiles, boolean debugFull) returns ModuleDI {
     DIBuilder builder = mod.createDIBuilder();
     mod.addModuleFlag("warning", ["Debug Info Version", 3]);
-    DIFile[] files = [];
-    foreach var f in partFiles {
-        string dir = f.directory() ?: "";
-        if outDir != () {
-            dir = checkpanic file:relativePath(outDir, dir);
-        }
-        files.push(builder.createFile(f.filename(), dir));
-    }
+    DIFile[] files = from var f in partFiles select builder.createFile(f.filename(), f.directory() ?: "");
     DICompileUnit compileUnit = builder.createCompileUnit(file=files[0]);
     DISubroutineType funcType = builder.createSubroutineType(files[0]);
     return { builder, files, compileUnit, funcType, debugFull };

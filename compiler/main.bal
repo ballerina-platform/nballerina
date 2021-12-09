@@ -13,7 +13,6 @@ public type Options record {
     boolean showTypes = false;
     int? debugLevel;
     // outDir also implies treating each file as a separate module
-    string? outDir = ();
     string? expectOutDir = ();
     string? gc = ();
     string? htmlError = ();
@@ -45,8 +44,7 @@ public function main(string[] filenames, *Options opts) returns error? {
     }
     nback:Options nbackOptions = {
         gcName: check nback:validGcName(opts.gc),
-        debugLevel: check nback:validDebugLevel(opts.debugLevel),
-        outDir: opts.outDir
+        debugLevel: check nback:validDebugLevel(opts.debugLevel)
     };
     int errorFileCount = 0;
     d:Printer dPrinter;

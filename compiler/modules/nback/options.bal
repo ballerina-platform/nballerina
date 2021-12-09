@@ -11,7 +11,6 @@ public type DebugLevel DEBUG_NONE|DEBUG_BACKTRACE|DEBUG_FULL;
 public type Options record {|
     string? gcName = ();
     DebugLevel debugLevel = DEBUG_BACKTRACE;
-    string? outDir = ();
 |};
 
 public function validGcName(string? gcName) returns string?|error {
