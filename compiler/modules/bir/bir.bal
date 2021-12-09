@@ -218,6 +218,10 @@ public type FloatOperand float|Register;
 public type BooleanOperand boolean|Register;
 public type FunctionOperand FunctionRef|Register;
 
+public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
+    return operand is Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand);
+}
+
 # Perform a arithmetic operand on ints with two operands.
 # This is a PPI.
 public type IntArithmeticBinaryInsn readonly & record {|

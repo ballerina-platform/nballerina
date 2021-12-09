@@ -22,6 +22,10 @@ class VerifyContext {
         return t:isSubtype(self.tc, s, t);
     }
 
+    function operandHasType(Operand operand, t:SemType t) returns boolean {
+        return operandHasType(self.tc, operand, t);
+    }
+
     function isSameType(t:SemType t1, t:SemType t2) returns boolean {
         return t:isSameType(self.tc, t1, t2);
     }
@@ -364,12 +368,7 @@ function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position pos) returns err:Semantic? {
-    if operand is Register {
-        if !vc.isSubtype(operand.semType, semType) {
-            return vc.err(msg, pos);
-        }
-    }
-    else if !t:containsConst(semType, operand) {
+    if !vc.operandHasType(operand, semType) {
         return vc.err(msg, pos);
     }
 }
