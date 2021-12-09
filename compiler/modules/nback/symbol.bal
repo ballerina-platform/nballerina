@@ -65,6 +65,10 @@ function stringDefnSymbol(int n) returns string {
     return ".str" + n.toString();
 }
 
+function decimalStringDefnSymbol(int n) returns string {
+    return ".decstr" + n.toString();
+}
+
 function subtypeDefnSymbol(int n) returns string {
     return ".subtype" + n.toString();
 }
