@@ -23,7 +23,12 @@ public type Range readonly & record {|
 public type LineColumn readonly & [int, int];
 
 public type File readonly & object {
+    // If the filename is relative, it is relative to the compilation directory
+    // (i.e. the current directory at the time of compilation).
     public function filename() returns string;
+    // When the filename is relative, this gives the compilation directory,
+    // either absolutely or relative to the output directory.
+    // This is used for debug info in the compiled output.
     public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
     public function lineContent(Position|Range range) returns [string, string, string];

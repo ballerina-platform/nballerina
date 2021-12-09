@@ -245,25 +245,31 @@ class Scaffold {
 
     function setDebugLocation(llvm:Builder builder, bir:Position pos, DebugLocationOrigin origin = DEBUG_ORIGIN_OTHER) {
         DISubprogram? diFunc = self.diFunc;
-        ModuleDI? di = self.mod.di;
-        if diFunc != () && di != () && (origin < DEBUG_ORIGIN_OTHER || di.debugFull) {
-            DILocation loc;
-            if !di.debugFull && origin == DEBUG_ORIGIN_ERROR_CONSTRUCT {
-                DILocation? noLineLoc = self.noLineLocation;
-                if noLineLoc == () {
-                    loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
-                    self.noLineLocation = loc;
-                }
-                else {
-                    loc = noLineLoc;
-                }
+        if diFunc is () {
+            return;
+        }
+        ModuleDI di = <ModuleDI>self.mod.di;
+        // In the debugFull case, there is no need to do anything for DEBUG_ORIGIN_ERROR_CONSTRUCT
+        // because the full location will have been set earlier.
+        if origin == (di.debugFull ? DEBUG_ORIGIN_ERROR_CONSTRUCT : DEBUG_ORIGIN_OTHER) {
+            return;
+        }
+        DILocation loc;
+        if origin == DEBUG_ORIGIN_ERROR_CONSTRUCT {
+            DILocation? noLineLoc = self.noLineLocation;
+            if noLineLoc == () {
+                loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
+                self.noLineLocation = loc;
             }
             else {
-                var [line, column] = self.file.lineColumn(pos);
-                loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+                loc = noLineLoc;
             }
-            builder.setCurrentDebugLocation(loc);
         }
+        else {
+            var [line, column] = self.file.lineColumn(pos);
+            loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+        }
+        builder.setCurrentDebugLocation(loc);
     }
 
     function clearDebugLocation(llvm:Builder builder) {
