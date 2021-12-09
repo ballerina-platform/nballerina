@@ -350,8 +350,11 @@
 
     { "comment" : "statement field access lvalue" },
     ["V", "stmt", "a.b = c;"],
+    ["V", "stmt", "a.b.c.d = e;"],
     ["V", "stmt", "a.b += c;"],
+    ["V", "stmt", "a.b.c.d += e;"],
     ["E", "stmt", "a.1 = b;", ""],
+    ["V", "stmt", "a.b.c[x] += e;"],
 
     { "comment" : "statement assign" },
     ["E", "stmt", "a = b = d;", ""],
