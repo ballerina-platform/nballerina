@@ -12,6 +12,7 @@ type OutputOptions record {
     string? optLevel = ();
     string? relocMode = ();
     string? codeModel = ();
+    string? outDir = ();
 };
 
 function outputModule(LlvmModule llMod, string outFilename, OutputOptions options) returns io:Error? {
