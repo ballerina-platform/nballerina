@@ -48,11 +48,11 @@ function rwTableSubtypeComplement(SubtypeData t) returns SubtypeData {
     return {ro, rw};
 }
 
-function rwTableSubtypeEmpty(Context cx, SubtypeData t) returns SubtypeData {
+function rwTableSubtypeEmpty(Context cx, SubtypeData t) returns boolean {
     RWTableSubtype rwt = <RWTableSubtype> t;
-    Bdd ro = mappingRoSubtypeIsEmpty(cx, rwt.ro);
-    Bdd rw = mappingSubtypeIsEmpty(cx, rwt.rw);
-    return {ro, rw};
+    boolean ro = mappingRoSubtypeIsEmpty(cx, rwt.ro);
+    boolean rw = mappingSubtypeIsEmpty(cx, rwt.rw);
+    return ro && rw;
 }
 
 
