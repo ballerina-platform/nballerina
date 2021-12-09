@@ -75,11 +75,7 @@ const STRING_VARIANT_LARGE = 1;
 type StringVariant STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE; // STRING_VARIANT_SMALL|;
 
 type StringDefn llvm:ConstPointerValue;
-<<<<<<< HEAD
 type DecimalDefn llvm:ConstPointerValue;
-=======
-type DecimalStringDefn llvm:ConstPointerValue;
->>>>>>> Simply handle decimal string const
 
 type Module record {|
     llvm:Context llContext;
@@ -90,11 +86,7 @@ type Module record {|
     ImportedFunctionTable importedFunctions = table [];
     llvm:PointerValue stackGuard;
     map<StringDefn> stringDefns = {};
-<<<<<<< HEAD
     map<DecimalDefn> decimalDefns = {};
-=======
-    map<DecimalStringDefn> decimalStringDefns = {};
->>>>>>> Simply handle decimal string const
     t:Context typeContext;
     bir:Module bir;
     bir:ModuleId modId;
@@ -227,7 +219,6 @@ class Scaffold {
         return newDefn;
     }
 
-<<<<<<< HEAD
     function getDecimal(decimal val) returns DecimalDefn {
         string str = val.toString();
         DecimalDefn? curDefn = self.mod.decimalDefns[str];
@@ -236,15 +227,6 @@ class Scaffold {
         }
         DecimalDefn newDefn = addDecimalDefn(self.mod.llContext, self.mod.llMod, self.mod.decimalDefns.length(), str);
         self.mod.decimalDefns[str] = newDefn;
-=======
-    function getDecimalString(string str) returns DecimalStringDefn {
-        DecimalStringDefn? curDefn = self.mod.decimalStringDefns[str];
-        if curDefn != () {
-            return curDefn;
-        }
-        DecimalStringDefn newDefn = addDecimalStringDefn(self.mod.llContext, self.mod.llMod, self.mod.decimalStringDefns.length(), str);
-        self.mod.decimalStringDefns[str] = newDefn;
->>>>>>> Simply handle decimal string const
         return newDefn;
     }
 
