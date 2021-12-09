@@ -8,9 +8,8 @@ public function roTableContaining(SemType memberType) returns SemType {
 public function rwTableContaining(SemType memberType) returns SemType {
     SubtypeData ro = subtypeData(memberType, UT_MAPPING_RO);
     SubtypeData rw = subtypeData(memberType, UT_MAPPING_RW);
-    return createComplexSemType(0, [[UT_TABLE_RO, ro], [UT_TABLE_RW, rw]]);
+    return createComplexSemType(0, [[UT_TABLE_RW, ro], [UT_TABLE_RW, rw]]);
 }
-
 
 final UniformTypeOps tableRoOps = {
     union: bddSubtypeUnion,
