@@ -71,9 +71,9 @@ class CompileContext {
 }
 
 // basename is filename without extension
-function compileBalFile(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
+function compileBalFile(string filename, string basename, string? outputBasename, string? outDir, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
     CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions);
-    front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename, directory: check sourceDir(filename, outOptions.outDir) } ], cx.outputFilename());
+    front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename, directory: check sourceDir(filename, outDir) } ], cx.outputFilename());
     check mod.validMain();
     check generateInitModule(cx, mod);
 }

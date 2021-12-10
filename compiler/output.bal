@@ -8,7 +8,6 @@ const OUTPUT_EXTENSION = ".ll";
 
 type OutputOptions record {
     string? target = ();
-    string? outDir = ();
 };
 
 function outputModule(LlvmModule llMod, string outFilename, OutputOptions options) returns io:Error? {
