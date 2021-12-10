@@ -373,6 +373,11 @@ extern IntWithOverflow _bal_decimal_to_int(TaggedPtr tp);
 
 extern int64_t READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs);
 
+extern int64_t READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern int64_t READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern int64_t READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern int64_t READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs);
+
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
 #define BAL_LIB_IO_NAME(sym) _Bb02io ## sym

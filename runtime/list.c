@@ -1,5 +1,6 @@
 #include "balrt.h"
 
+#include <stdint.h>
 #include <string.h>
 
 #define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
@@ -403,4 +404,20 @@ int64_t READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs) {
         ldp = lhsLdp;
     }
     return arrayCompare(lhs, rhs, getArrayComparator(ldp->memberType));
+}
+
+int64_t READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedIntCompare);
+}
+
+int64_t READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedFloatCompare);
+}
+
+int64_t READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedStringCompare);
+}
+
+int64_t READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedBooleanCompare);
 }
