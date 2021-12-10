@@ -310,38 +310,12 @@ public type ConvertToFloatInsn readonly & record {|
     Register operand;
 |};
 
-public type OrderType BasicOrderType|OptOrderType|ArrayOrderType;
-
-public type BasicOrderType t:UT_FLOAT|t:UT_INT|t:UT_BOOLEAN|t:UT_STRING;
-
-public const NO_ORDER_TYPE = false;
-
-public type EmptyOrderType readonly & record {|
-   NO_ORDER_TYPE opt;
-|};
-
-public type NonEmptyOrderType ArrayOrderType|BasicOrderType;
-public type OptOrderType readonly & record {|
-    NonEmptyOrderType|NO_ORDER_TYPE opt;
-|};
-
-// Only used for t1 < t2 and t1 > t2  where t1, t2 are of static type `()`
-public final OptOrderType EMPTY_ORDER_TYPE = { opt: NO_ORDER_TYPE };
-
-// JBUG can't use [OrderType]
-public type ArrayOrderType readonly & record {| OrderType|NO_ORDER_TYPE memberOrderType; |};
-
-// Only used for t1 < t2 and t1 > t2 where t1, t2 are of static type `[]`
-public final ArrayOrderType EMPTY_TUPLE_ORDER_TYPE = { memberOrderType: NO_ORDER_TYPE };
-
-
 # This does ordered comparison
 # Equality and inequality are done by equal
 public type CompareInsn readonly & record {|
     *InsnBase;
     INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
-    OrderType orderType;
     Register result;
     Operand[2] operands;
 |};
