@@ -540,7 +540,14 @@ static READONLY inline int64_t taggedStringCompare(TaggedPtr lhs, TaggedPtr rhs)
     if (!lhs || !rhs) {
         return COMPARE_UN;
     }
-    return _bal_string_cmp(lhs, rhs) + 1;
+    int64_t compareResult = _bal_string_cmp(lhs, rhs);
+    if (compareResult < 0) {
+        return COMPARE_LT;
+    }
+    else if (compareResult == 0) {
+        return COMPARE_EQ;
+    }
+    return COMPARE_GT;
 }
 
 static READNONE inline StringLength immediateStringLength(uint64_t bits) {
