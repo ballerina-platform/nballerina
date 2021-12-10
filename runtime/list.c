@@ -358,7 +358,7 @@ static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_
     if (lhs == rhs) {
         return COMPARE_EQ;
     }
-    if (!lhs || !rhs) {
+    if (lhs == NIL || rhs == NIL) {
         return COMPARE_UN;
     }
     ListPtr lhsListPtr = taggedToPtr(lhs);
@@ -374,10 +374,7 @@ static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_
             return result;
         }
     }
-    if (lhsLen == rhsLen) {
-        return COMPARE_EQ;
-    }
-    return (lhsLen < rhsLen) ? COMPARE_LT : COMPARE_GT;
+    return COMPARE(lhsLen, rhsLen);
 }
 
 int64_t READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs) {

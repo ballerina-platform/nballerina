@@ -12,6 +12,8 @@
 
 #define NIL ((TaggedPtr)0)
 
+typedef int64_t CompareResult;
+
 #define COMPARE_UN -1
 #define COMPARE_LT 0
 #define COMPARE_EQ 1
@@ -462,29 +464,20 @@ static READONLY inline int64_t taggedToInt(TaggedPtr p) {
     }
 }
 
-static READONLY inline int64_t taggedPrimitiveCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
+static READONLY inline CompareResult taggedPrimitiveCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
     if (lhs == rhs) {
         return COMPARE_EQ;
     }
-    if (!lhs || !rhs) {
+    if (lhs == NIL || rhs == NIL) {
         return COMPARE_UN;
     }
     return (*comparator)(lhs, rhs);
 }
 
-static READONLY inline int64_t taggedIntComparator(TaggedPtr lhs, TaggedPtr rhs) {
+static READONLY inline CompareResult taggedIntComparator(TaggedPtr lhs, TaggedPtr rhs) {
     int64_t lhsVal = taggedToInt(lhs);
     int64_t rhsVal = taggedToInt(rhs);
-    if (lhsVal == rhsVal) {
-        return COMPARE_EQ;
-    }
-    if (lhsVal < rhsVal) {
-        return COMPARE_LT;
-    }
-    if (lhsVal > rhsVal) {
-        return COMPARE_GT;
-    }
-    return COMPARE_UN;
+    return COMPARE(lhsVal, rhsVal);
 }
 
 static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
@@ -496,58 +489,35 @@ static READONLY inline double taggedToFloat(TaggedPtr p) {
     return *np;
 }
 
-static READONLY inline int64_t taggedFloatComparator(TaggedPtr lhs, TaggedPtr rhs) {
+static READONLY inline CompareResult taggedFloatComparator(TaggedPtr lhs, TaggedPtr rhs) {
     double lhsVal = taggedToFloat(lhs);
     double rhsVal = taggedToFloat(rhs);
-    if (lhsVal == rhsVal) {
-        return COMPARE_EQ;
-    }
-    if (lhsVal < rhsVal) {
-        return COMPARE_LT;
-    }
-    if (lhsVal > rhsVal) {
-        return COMPARE_GT;
-    }
-    return COMPARE_UN;
+    return COMPARE(lhsVal, rhsVal);
 }
 
 static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) {
     return taggedPrimitiveCompare(lhs, rhs, &taggedFloatComparator);
 }
 
-static READONLY inline int64_t taggedBooleanComparator(TaggedPtr lhs, TaggedPtr rhs) {
+static READONLY inline CompareResult taggedBooleanComparator(TaggedPtr lhs, TaggedPtr rhs) {
     int lhsVal = taggedToBoolean(lhs);
     int rhsVal = taggedToBoolean(rhs);
-    if (lhsVal == rhsVal) {
-        return COMPARE_EQ;
-    }
-    if (lhsVal < rhsVal) {
-        return COMPARE_LT;
-    }
-    else {
-        return COMPARE_GT;
-    }
+    return COMPARE(lhsVal, rhsVal);
 }
 
 static READONLY inline int64_t taggedBooleanCompare(TaggedPtr lhs, TaggedPtr rhs) {
     return taggedPrimitiveCompare(lhs, rhs, &taggedBooleanComparator);
 }
 
-static READONLY inline int64_t taggedStringCompare(TaggedPtr lhs, TaggedPtr rhs) {
+static READONLY inline CompareResult taggedStringCompare(TaggedPtr lhs, TaggedPtr rhs) {
     if (lhs == rhs) {
         return COMPARE_EQ;
     }
-    if (!lhs || !rhs) {
+    if (lhs == NIL || rhs == NIL) {
         return COMPARE_UN;
     }
     int64_t compareResult = _bal_string_cmp(lhs, rhs);
-    if (compareResult < 0) {
-        return COMPARE_LT;
-    }
-    else if (compareResult == 0) {
-        return COMPARE_EQ;
-    }
-    return COMPARE_GT;
+    return COMPARE(compareResult, 0);
 }
 
 static READNONE inline StringLength immediateStringLength(uint64_t bits) {
