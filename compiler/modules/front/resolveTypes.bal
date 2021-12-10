@@ -142,7 +142,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     if td is s:ListTypeDesc {
         t:ListDefinition? defn = td.defn;
         if defn == () {
-            // todo: Ask James, what to do about this not implemented thing?
             if !mod.allowAllTypes && td.members.length() > 0 {
                 return err:unimplemented("tuple types not implemented", s:locationInDefn(modDefn, td.startPos));
             }

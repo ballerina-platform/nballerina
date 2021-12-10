@@ -8,8 +8,8 @@ public type ListAtomicType readonly & record {|
 // Represent a fixed length semtype member list similar to a tuple.
 // The length of the list is `fixedLength`, the last member of the `initial` is repeated to achive this semantic.
 // { initial: [int], fixedLength: 3, } is same as { initial: [int, int, int], fixedLength: 3 }
-// { initail: [string, int], fixedLength: 100 } means `int` is repeated 99 times to get a list of 100 members.
-// `fixedLength` must be at least `initial.length()`
+// { initial: [string, int], fixedLength: 100 } means `int` is repeated 99 times to get a list of 100 members.
+// `fixedLength` must be `0` when `inital` is empty and the `fixedLength` must be at least `initial.length()`
 public type FixedLengthArray record {|
     SemType[] initial;
     int fixedLength;
@@ -43,7 +43,7 @@ public class ListDefinition {
     }
 
     public function define(Env env, FixedLengthArray members, SemType rest) returns ComplexSemType {
-        ListAtomicType rwType = { members: members.cloneReadOnly(), rest };
+        ListAtomicType rwType = { members: fixedLengthNormalize(members).cloneReadOnly(), rest };
         Atom rw;
         RecAtom? rwRec = self.rwRec;
         if rwRec != () {
@@ -75,7 +75,7 @@ public class ListDefinition {
         }
         return self.createSemType(env, ro, rw);
     }
-    
+
     private function createSemType(Env env, Atom ro, Atom rw) returns ComplexSemType {
         BddNode roBdd = bddAtom(ro);
         BddNode rwBdd;
@@ -92,6 +92,23 @@ public class ListDefinition {
     }       
 }
 
+function fixedLengthNormalize(FixedLengthArray array) returns FixedLengthArray {
+    SemType[] initial = array.initial;
+    int i = initial.length() - 1;
+    if i <= 0 {
+        return array;
+    }
+    SemType last = initial[i];
+    i -= 1;
+    while i >= 0 {
+        if last != initial[i] {
+            break;
+        }
+        i -= 1;
+    }
+    return { initial: initial.slice(0, i+2), fixedLength: array.fixedLength };
+}
+    
 function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
     if typeListIsReadOnly(ty.members.initial) && isReadOnly(ty.rest) {
         return ty;
@@ -257,7 +274,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
         foreach int i in 0 ..< len {
             SemType d = diff(fixedArrayGet(members, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
-                FixedLengthArray s = fixedArrayWith(members, i, d);
+                FixedLengthArray s = fixedArrayShallowCopy(members);
+                fixedArraySet(s, i, d);
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
@@ -271,6 +289,13 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
         return false;
     }
 }
+
+function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
+    if index < fixedArray.fixedLength {
+        return fixedArrayGet(fixedArray, index);
+    }
+    return rest;
+} 
 
 // fill out to length of newLen with filler
 function fixedLengthArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
@@ -287,13 +312,6 @@ function fixedArrayGet(FixedLengthArray members, int index) returns SemType {
     return members.initial[i];
 }
 
-function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) returns SemType {
-    if index < fixedArray.fixedLength {
-        return fixedArrayGet(fixedArray, index);
-    }
-    return rest;
-} 
-
 function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
     int initCount = members.initial.length();
     boolean lastMemberRepeats = members.fixedLength > initCount;
@@ -309,12 +327,6 @@ function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
         members.initial.push(lastMember);
     }
     members.initial[setIndex] = m;
-}
-
-function fixedArrayWith(FixedLengthArray array, int index, SemType newMember) returns FixedLengthArray {
-    FixedLengthArray copy = fixedArrayShallowCopy(array);
-    fixedArraySet(copy, index, newMember);
-    return copy;
 }
 
 function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray {

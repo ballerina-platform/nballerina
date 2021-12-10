@@ -119,7 +119,8 @@ function listProjExclude(Context cx,
             SemType ntm = fixedArrayGet(nt.members, i);
             SemType d = diff(fixedArrayGet(members, i), ntm);
             if !isEmpty(cx, d) {
-                FixedLengthArray s = fixedArrayWith(members, i, d);
+                FixedLengthArray s = fixedArrayShallowCopy(members);
+                fixedArraySet(s, i, d);
                 p = union(p, listProjExclude(cx, k, s, rest, neg.next));
             }     
         }
