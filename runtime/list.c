@@ -354,6 +354,32 @@ static READONLY TaggedValueComparator getArrayComparator(MemberType memberType) 
     }
 }
 
+static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
+    if (lhs == rhs) {
+        return COMPARE_EQ;
+    }
+    if (!lhs || !rhs) {
+        return COMPARE_UN;
+    }
+    ListPtr lhsListPtr = taggedToPtr(lhs);
+    ListPtr rhsListPtr = taggedToPtr(rhs);
+    int64_t lhsLen = lhsListPtr->tpArray.length;
+    int64_t rhsLen = rhsListPtr->tpArray.length;
+    int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
+    TaggedPtr (*lhsGet)(TaggedPtr lp, int64_t index) = lhsListPtr->desc->get;
+    TaggedPtr (*rhsGet)(TaggedPtr lp, int64_t index) = rhsListPtr->desc->get;
+    for (int64_t i = 0; i < length; i++) {
+        int64_t result = (*comparator)(lhsGet(lhs, i), rhsGet(rhs, i));
+        if (result != COMPARE_EQ) {
+            return result;
+        }
+    }
+    if (lhsLen == rhsLen) {
+        return COMPARE_EQ;
+    }
+    return (lhsLen < rhsLen) ? COMPARE_LT : COMPARE_GT;
+}
+
 int64_t READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs) {
     if (lhs == rhs) {
         return COMPARE_EQ;

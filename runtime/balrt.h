@@ -671,48 +671,6 @@ static inline TaggedPtr ptrAddShiftedTag(UntypedPtr tp, uint64_t shiftedTag) {
     return (TaggedPtr)p;
 }
 
-static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
-    if (lhs == rhs) {
-        return COMPARE_EQ;
-    }
-    if (!lhs || !rhs) {
-        return COMPARE_UN;
-    }
-    ListPtr lhsListPtr = taggedToPtr(lhs);
-    ListPtr rhsListPtr = taggedToPtr(rhs);
-    int64_t lhsLen = lhsListPtr->tpArray.length;
-    int64_t rhsLen = rhsListPtr->tpArray.length;
-    int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
-    TaggedPtr (*lhsGet)(TaggedPtr lp, int64_t index) = lhsListPtr->desc->get;
-    TaggedPtr (*rhsGet)(TaggedPtr lp, int64_t index) = rhsListPtr->desc->get;
-    for (int64_t i = 0; i < length; i++) {
-        int64_t result = (*comparator)(lhsGet(lhs, i), rhsGet(rhs, i));
-        if (result != COMPARE_EQ) {
-            return result;
-        }
-    }
-    if (lhsLen == rhsLen) {
-        return COMPARE_EQ;
-    }
-    return (lhsLen < rhsLen) ? COMPARE_LT : COMPARE_GT;
-}
-
-static READONLY inline int64_t intArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedIntCompare);
-}
-
-static READONLY inline int64_t floatArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedFloatCompare);
-}
-
-static READONLY inline int64_t stringArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedStringCompare);
-}
-
-static READONLY inline int64_t booleanArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedBooleanCompare);
-}
-
 static inline void initGenericArray(GC GenericArray *ap, int64_t capacity, int shift) {
     ap->length = 0;
     ap->capacity = capacity;
