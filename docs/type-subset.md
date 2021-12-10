@@ -23,7 +23,7 @@ intersection-td :=
 
 postfix-td := 
   primary-td
-  | postfix-td "[" "]"
+  | postfix-td "[" array-len "]"
   | postfix-td "?"
 
 primary-td :=
@@ -46,6 +46,8 @@ map-td := "map" type-param
 error-td := "error" [type-param]
 // XXX handle "..." in tuple-td and record-td
 tuple-td := "[" opt-td-list "]"
+
+array-len := [ simple-const-expr ]
 
 opt-td-list := [ td-list ]
 td-list :=
