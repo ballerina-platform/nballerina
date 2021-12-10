@@ -45,7 +45,7 @@ type UniformRepr readonly & record {|
 
 // Maps any Ballerina value to a tagged pointer
 type TaggedRepr readonly & record {|
-    BaseRepr base;
+    BASE_REPR_TAGGED base;
     t:UniformTypeBitSet subtype;
     llvm:IntegralType llvm;
 |};

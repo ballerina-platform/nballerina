@@ -11,6 +11,15 @@ final RuntimeFunction mappingSetFunction = {
     attrs: []
 };
 
+final RuntimeFunction mappingInexactSetFunction = {
+    name: "mapping_inexact_set",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: []
+};
+
 final RuntimeFunction mappingIndexedSetFunction = {
     name: "mapping_indexed_set",
     ty: {
@@ -340,6 +349,7 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
     buildStoreTagged(builder, scaffold, member, insn.result);
 }
 
+// When this returns false, we need clear the exact bit on a member that we get from a mapping value.
 function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:StringOperand keyOperand, t:SemType resultType) returns boolean {
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
     if mat == () {
@@ -352,30 +362,43 @@ function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:Strin
         // SUBSET singleton types
         t:SemType peResult = t:intersect(resultType, POTENTIALLY_EXACT);
         foreach t:SemType ty in mat.types {
-            t:SemType peMember = t:intersect(ty, POTENTIALLY_EXACT);
-            if !t:isNever(peMember) && !t:isSameType(tc, peMember, peResult) {
+            if !isSameTypeWithin(tc, ty, POTENTIALLY_EXACT, peResult) {
                 return false;
             }
         }
+        // XXX need to handle rest here
         return true;
     }
 }
 
+function isSameTypeWithin(t:Context tc, t:SemType semType, t:SemType within, t:SemType targetType) returns boolean {
+    t:SemType ty = t:intersect(semType, within);
+    return t:isNever(ty) || t:isSameType(tc, ty, targetType);
+}
+
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
     bir:Register mappingReg = insn.operands[0];
+    bir:SemType mappingType = mappingReg.semType;
     bir:StringOperand keyOperand = insn.operands[1];
     int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
+    t:Context tc = scaffold.typeContext();
+    bir:Operand newMemberOperand = insn.operands[2];
     RuntimeFunction rf;
     llvm:Value k;
     if fieldIndex == () {
-        rf = mappingSetFunction;
+        if isMappingSetAlwaysInexact(tc, mappingType, newMemberOperand) {
+            rf = mappingInexactSetFunction;
+        }
+        else {
+            rf = mappingSetFunction;
+        }
         k = check buildString(builder, scaffold, keyOperand);
     }
     else {
         rf = mappingIndexedSetFunction;
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
-    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingReg.semType);
+    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingType);
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
@@ -383,9 +406,31 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
                                    [
                                        builder.load(scaffold.address(mappingReg)),
                                        k,
-                                       check buildWideRepr(builder, scaffold, insn.operands[2], REPR_ANY, memberType)
+                                       check buildWideRepr(builder, scaffold, newMemberOperand, REPR_ANY, memberType)
                                    ]);
     buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
+}
+
+// Returns true if it is possible for both the mapping type to be equal to the inherent type
+// (i.e. for the mapping value reference to be exact)
+// and for the mapping_set to panic at runtime.
+// In this case, we cannot optimize based on the exactness of the mapping value, and so
+// we have to do the same was what we would do if the mapping value was inexact.
+// This can only happen at the moment if the type of the key is string.
+// SUBSET more complex with string subtypes
+function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, bir:Operand operand) returns boolean {
+    t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
+    // JBUG == doesn't work
+    if mat is () {
+        // inherent type is atomic, so if mapping type isn't, they cannot be equal
+        return false;
+    }
+    foreach t:SemType ty in mat.types {
+        if !bir:operandHasType(tc, operand, ty) {
+            return true;
+        }
+    }
+    return !bir:operandHasType(tc, operand, mat.rest);
 }
 
 function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {
