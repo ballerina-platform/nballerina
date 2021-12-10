@@ -386,6 +386,6 @@ Two kinds of `import` are supported.
 * [#902](https://github.com/ballerina-platform/ballerina-spec/issues/902) - expression has a singleton type when its subexpressions have singleton type
 * [#904](https://github.com/ballerina-platform/ballerina-spec/issues/904) - restrict assignment to type-narrowed variables within loops
 * [#905](https://github.com/ballerina-platform/ballerina-spec/issues/905) - disallow trailing dot in floating-point literals
-* [#970] (https://github.com/ballerina-platform/ballerina-spec/issues/970#issuecomment-952463711) - disallow white space in qualified identifier
+* [#970](https://github.com/ballerina-platform/ballerina-spec/issues/970#issuecomment-952463711) - disallow white space in qualified identifier
 * [#991](https://github.com/ballerina-platform/ballerina-spec/issues/991) - clarify that `null` is allowed as a type descriptor
 
