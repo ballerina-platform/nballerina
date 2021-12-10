@@ -1,6 +1,5 @@
 #include "balrt.h"
 
-#include <stdint.h>
 #include <string.h>
 
 #define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
@@ -328,7 +327,7 @@ int64_t READONLY _bal_array_exact_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
             return COMPARE_LT;
         }
     }
-    return COMPARE(lhsLen, rhsLen);
+    return COMPARE_TOTAL(lhsLen, rhsLen);
 }
 
 typedef int64_t (*TaggedValueComparator)(TaggedPtr, TaggedPtr);
@@ -355,7 +354,7 @@ static READONLY TaggedValueComparator getArrayComparator(MemberType memberType) 
     }
 }
 
-static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
+static READONLY inline CompareResult arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
     if (lhs == rhs) {
         return COMPARE_EQ;
     }
@@ -375,10 +374,10 @@ static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_
             return result;
         }
     }
-    return COMPARE(lhsLen, rhsLen);
+    return COMPARE_TOTAL(lhsLen, rhsLen);
 }
 
-int64_t READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs) {
+CompareResult READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs) {
     if (lhs == rhs) {
         return COMPARE_EQ;
     }
@@ -394,7 +393,7 @@ int64_t READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs) {
         if (rhsLdp->memberType == BITSET_MEMBER_TYPE(1 << TAG_NIL)) {
             int64_t lhsLen = lhsLp->gArray.length;
             int64_t rhsLen = rhsLp->tpArray.length;
-            return COMPARE(lhsLen, rhsLen);
+            return COMPARE_TOTAL(lhsLen, rhsLen);
         }
         else{
             ldp = rhsLdp;
@@ -406,18 +405,18 @@ int64_t READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return arrayCompare(lhs, rhs, getArrayComparator(ldp->memberType));
 }
 
-int64_t READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
+CompareResult READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return arrayCompare(lhs, rhs, &taggedIntCompare);
 }
 
-int64_t READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs) {
+CompareResult READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return arrayCompare(lhs, rhs, &taggedFloatCompare);
 }
 
-int64_t READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
+CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return arrayCompare(lhs, rhs, &taggedStringCompare);
 }
 
-int64_t READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs) {
+CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return arrayCompare(lhs, rhs, &taggedBooleanCompare);
 }

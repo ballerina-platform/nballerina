@@ -18,7 +18,7 @@ typedef int64_t CompareResult;
 #define COMPARE_LT 0
 #define COMPARE_EQ 1
 #define COMPARE_GT 2
-#define COMPARE(l, r) (((l) > (r)) ? COMPARE_GT : (((l) < (r)) ? COMPARE_LT : COMPARE_EQ))
+#define COMPARE_TOTAL(l, r) (((l) > (r)) ? COMPARE_GT : (((l) < (r)) ? COMPARE_LT : COMPARE_EQ))
 
 #define HEAP_ALIGNMENT 8
 #define POINTER_MASK (((uint64_t)1 << TAG_SHIFT) - 1)
@@ -371,12 +371,12 @@ extern TaggedPtr _bal_decimal_from_int(int64_t val);
 extern TaggedPtrPanicCode _bal_decimal_from_float(double val);
 extern IntWithOverflow _bal_decimal_to_int(TaggedPtr tp);
 
-extern int64_t READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern CompareResult READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs);
 
-extern int64_t READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs);
-extern int64_t READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs);
-extern int64_t READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs);
-extern int64_t READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern CompareResult READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern CompareResult READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
@@ -482,7 +482,7 @@ static READONLY inline CompareResult taggedPrimitiveCompare(TaggedPtr lhs, Tagge
 static READONLY inline CompareResult taggedIntComparator(TaggedPtr lhs, TaggedPtr rhs) {
     int64_t lhsVal = taggedToInt(lhs);
     int64_t rhsVal = taggedToInt(rhs);
-    return COMPARE(lhsVal, rhsVal);
+    return COMPARE_TOTAL(lhsVal, rhsVal);
 }
 
 static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
@@ -497,7 +497,16 @@ static READONLY inline double taggedToFloat(TaggedPtr p) {
 static READONLY inline CompareResult taggedFloatComparator(TaggedPtr lhs, TaggedPtr rhs) {
     double lhsVal = taggedToFloat(lhs);
     double rhsVal = taggedToFloat(rhs);
-    return COMPARE(lhsVal, rhsVal);
+    if (lhsVal == rhsVal) {
+        return COMPARE_EQ;
+    }
+    if (lhsVal < rhsVal) {
+        return COMPARE_LT;
+    }
+    if (lhsVal > rhsVal) {
+        return COMPARE_GT;
+    }
+    return COMPARE_UN;
 }
 
 static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) {
@@ -507,7 +516,7 @@ static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) 
 static READONLY inline CompareResult taggedBooleanComparator(TaggedPtr lhs, TaggedPtr rhs) {
     int lhsVal = taggedToBoolean(lhs);
     int rhsVal = taggedToBoolean(rhs);
-    return COMPARE(lhsVal, rhsVal);
+    return COMPARE_TOTAL(lhsVal, rhsVal);
 }
 
 static READONLY inline int64_t taggedBooleanCompare(TaggedPtr lhs, TaggedPtr rhs) {
@@ -522,7 +531,7 @@ static READONLY inline CompareResult taggedStringCompare(TaggedPtr lhs, TaggedPt
         return COMPARE_UN;
     }
     int64_t compareResult = _bal_string_cmp(lhs, rhs);
-    return COMPARE(compareResult, 0);
+    return COMPARE_TOTAL(compareResult, 0);
 }
 
 static READNONE inline StringLength immediateStringLength(uint64_t bits) {
