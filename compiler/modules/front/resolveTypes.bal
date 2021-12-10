@@ -282,10 +282,11 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         t:SemType t = check resolveTypeDesc(mod, modDefn, depth, td.row);
         d:Location loc =  d:location(modDefn.part.file, td.startPos, td.endPos);
         
+        // Ensure the parameter type of table is a subtype of MAPPING
         if !t:isSubtypeSimple(t, t:MAPPING) {
             return err:semantic("type parameter for table is not a record", loc=loc);
         }
-        return t:rwTableContaining(t);
+        return t:tableContaining(t);
     }
     panic error("unimplemented type-descriptor");
 }
