@@ -9,9 +9,8 @@
 // left after passing through a node, then the node's atom is included
 // positively in the conjunction; when it goes right, the node's atom
 // is included negatively; when it goes through the middle, the node's
-// atom is not included. Bdds are constructed so that the atoms on
-// every path are in strictle decreasing order (ignoring nodes where
-// the path went throught the middle.
+// atom is not included. BDDs are constructed so that the atoms on
+// every path are in strictly increasing order.
 
 public type Bdd BddNode|boolean;
 
@@ -91,6 +90,7 @@ isolated function bddIntersect(Bdd b1, Bdd b2) returns Bdd {
         }
     }       
 }
+
 isolated function bddDiff(Bdd b1, Bdd b2) returns Bdd {
     if b1 === b2 {
         return false;
@@ -117,12 +117,23 @@ isolated function bddDiff(Bdd b1, Bdd b2) returns Bdd {
 
         }
         else {
-            // This is incorrect in the AMK tutorial 
-            // but correct in the Castagna paper
+            // We used to have this, following the Castagna paper:
+            // return bddCreate(b1.atom,
+            //             bddDiff(b1.left, b2.left),
+            //             bddDiff(b1.middle, b2.middle),
+            //             bddDiff(b1.right, b2.right));
+            // i.e. it does not materialize the union
+            // But that is not correct in a case like (a0|a1) - a0,
+            // when a0 and a1 are not disjoint.
+            //
+            // One workaround is to do it in terms of things we know work:
+            // return bddIntersect(b1, bddComplement(b2));
+            //
+            // This materializes the union like in the intersection case:
             return bddCreate(b1.atom,
-                          bddDiff(b1.left, b2.left),
-                          bddDiff(b1.middle, b2.middle),
-                          bddDiff(b1.right, b2.right));
+                          bddDiff(bddUnion(b1.left, b1.middle), bddUnion(b2.left, b2.middle)),
+                          false,
+                          bddDiff(bddUnion(b1.right, b1.middle), bddUnion(b2.right, b2.middle)));
         }
     }
 }
@@ -196,5 +207,29 @@ isolated function atomCmp(Atom a1, Atom a2) returns int {
     }
     else {
         return a1.index - a2.index;
+    }
+}
+
+// This is for debugging purposes.
+// It uses the Frisch/Castagna notation.
+isolated function bddToString(Bdd b, boolean inner = false) returns string {
+    if b is boolean {
+        return b ? "1" : "0";
+    }
+    else {
+        string str;
+        Atom a = b.atom;
+
+        if a is RecAtom {
+            str = "r" + a.toString();
+        }
+        else {
+            str = "a" + a.index.toString();
+        }
+        str += "?" + bddToString(b.left, true) + ":" + bddToString(b.middle, true) + ":" + bddToString(b.right, true);
+        if inner {
+            str = "(" + str + ")";
+        }
+        return str;
     }
 }

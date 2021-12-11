@@ -101,10 +101,55 @@ final RuntimeFunction arrayExactIntCompareFunction = {
     attrs: ["readonly"]
 };
 
+type TaggedCompareFunction readonly & record {|
+    t:UniformTypeCode utCode;
+    RuntimeFunction compareFunction;
+    RuntimeFunction arrayCompareFunction;
+|};
+
+final readonly & table<TaggedCompareFunction> key(utCode) compareFunctions = table [
+    { utCode: t:UT_INT, compareFunction: intCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
+    { utCode: t:UT_FLOAT, compareFunction: floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
+    { utCode: t:UT_BOOLEAN, compareFunction: booleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
+    { utCode: t:UT_STRING, compareFunction: stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction }
+];
+
 function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) returns BuildError? {
-    var [lhsRepr, lhsValue] = check buildReprValue(builder, scaffold, insn.operands[0]);
-    var [rhsRepr, rhsValue] = check buildReprValue(builder, scaffold, insn.operands[1]);
+    bir:Operand lhs = insn.operands[0];
+    bir:Operand rhs = insn.operands[1];
+    var [lhsRepr, lhsValue] = check buildReprValue(builder, scaffold, lhs);
+    var [rhsRepr, rhsValue] = check buildReprValue(builder, scaffold, rhs);
     bir:Register result = insn.result;
+
+    if lhsRepr is TaggedRepr && rhsRepr is TaggedRepr {
+        if lhsRepr.subtype == t:STRING && rhsRepr.subtype == t:STRING {
+            buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
+        }
+        else {
+            t:UniformTypeBitSet OrderTyMinusNil = (lhsRepr.subtype | rhsRepr.subtype) & ~t:NIL;
+            t:UniformTypeCode?  OrderTyMinusNilCode = t:uniformTypeCode(OrderTyMinusNil);
+            if OrderTyMinusNilCode is t:UT_STRING|t:UT_INT|t:UT_FLOAT|t:UT_BOOLEAN {
+                RuntimeFunction comparator = compareFunctions.get(OrderTyMinusNilCode).compareFunction;
+                buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, comparator);
+            }
+            else if OrderTyMinusNil == t:LIST {
+                t:Context tc = scaffold.typeContext();
+                if isOperandIntSubtypeArray(tc, lhs) && isOperandIntSubtypeArray(tc, rhs) {
+                    buildCompareSpecializedIntList(builder, scaffold, insn, lhsValue, rhsValue);
+                }
+                else {
+                    buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, arrayGenericCompareFunction);
+                }
+            }
+            else if OrderTyMinusNil == t:NEVER {
+                buildStoreBoolean(builder, scaffold,  llvm:constInt(LLVM_BOOLEAN, insn.op is "<="|">=" ? 1 : 0), insn.result);
+            }
+            else {
+                panic error("incomparable operands");
+            }
+        }
+        return;
+    }
 
     match [lhsRepr.base, rhsRepr.base] {
         [BASE_REPR_TAGGED, BASE_REPR_INT] => {
@@ -125,14 +170,6 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
         [BASE_REPR_BOOLEAN, BASE_REPR_TAGGED] => {
             buildCompareTaggedBoolean(builder, scaffold, buildBooleanCompareOp(flippedOrderOps.get(insn.op)), rhsValue, lhsValue, result);
         }
-        [BASE_REPR_TAGGED, BASE_REPR_TAGGED] => {
-            if insn.orderType is t:UT_STRING {
-                buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
-            }
-            else {
-                buildCompareTagged(builder, scaffold, insn, lhsValue, rhsValue);
-            }
-        }
         [BASE_REPR_INT, BASE_REPR_INT] => {
             buildCompareInt(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
         }
@@ -143,6 +180,10 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
             buildCompareFloat(builder, scaffold, buildFloatCompareOp(insn.op), lhsValue, rhsValue, result);
         }
     }
+}
+
+function isOperandIntSubtypeArray(t:Context tc, bir:Operand o) returns boolean {
+    return o is bir:Register && t:isSubtypeSimple(t:listMemberType(tc, o.semType ,()), t:INT);
 }
 
 final readonly & map<bir:OrderOp> flippedOrderOps = {
@@ -156,48 +197,6 @@ const COMPARE_UN = -1;
 const COMPARE_LT = 0;
 const COMPARE_EQ = 1;
 const COMPARE_GT = 2;
-
-type TaggedCompareFunction readonly & record {|
-    bir:BasicOrderType op;
-    RuntimeFunction compareFunction;
-    RuntimeFunction arrayCompareFunction;
-|};
-
-final readonly & table<TaggedCompareFunction> key(op) compareFunctions = table [
-    { op: t:UT_INT, compareFunction: intCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
-    { op: t:UT_FLOAT, compareFunction: floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
-    { op: t:UT_BOOLEAN, compareFunction: booleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
-    { op: t:UT_STRING, compareFunction: stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction }
-];
-
-function buildCompareTagged(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, llvm:Value lhs, llvm:Value rhs) {
-    bir:OrderType orderTy = insn.orderType;
-    RuntimeFunction? comparator = ();
-    if orderTy is bir:OptOrderType {
-        var opt = orderTy.opt;
-        if opt is t:UniformTypeBitSet {
-            comparator = compareFunctions.get(opt).compareFunction;
-        }
-        else {
-            comparator = arrayGenericCompareFunction;
-        }
-    }
-    else if orderTy is bir:ArrayOrderType {
-        if orderTy.memberOrderType == t:UT_INT {
-            buildCompareSpecializedIntList(builder, scaffold, insn, lhs, rhs);
-            return;
-        }
-        else {
-            comparator = arrayGenericCompareFunction;
-        }
-    }
-    if comparator == () {
-        panic error("failed to find runtime compare function");
-    }
-    else {
-        buildCompareStore(builder, scaffold, insn, lhs, rhs, comparator);
-    }
-}
 
 function buildCompareSpecializedIntList(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn, llvm:Value lhs, llvm:Value rhs) {
     llvm:BasicBlock bbExact = scaffold.addBasicBlock();

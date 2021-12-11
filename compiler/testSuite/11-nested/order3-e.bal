@@ -1,7 +1,8 @@
 import ballerina/io;
 
 public function main() {
-    boolean[]|int[] bi = [];
+    int[] ix = [];
+    boolean[]|int[] bi = ix;
     int[] i = [];
     io:println(bi < i); // @error
 }
