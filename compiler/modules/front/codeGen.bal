@@ -1587,7 +1587,9 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func,
         result,
         args: args.cloneReadOnly(),
-        pos: expr.namePos
+        // expr.namePos is currently the start of the local name
+        // which is not really what is wanted, so we use startPos instead
+        pos: expr.startPos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };
