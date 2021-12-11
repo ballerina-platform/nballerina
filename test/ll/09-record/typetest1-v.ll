@@ -1,19 +1,19 @@
 @_bal_stack_guard = external global i8*
-@_Bi04root0 = external constant {i32, i32}
+@_Bi04root0 = external constant {i32}
 @_Bt04root1 = external constant {i32, i32, [0 x i8*]}
 @_Bt04root2 = external constant {i32, i32, [0 x i8*]}
 @_Bt04root3 = external constant {i32, i32, [0 x i8*]}
-@_Bi04root4 = external constant {i32, i32}
-@_Bi04root5 = external constant {i32, i32}
+@_Bi04root4 = external constant {i32}
+@_Bi04root5 = external constant {i32}
 @_Bt04root6 = external constant {i32, i32, [0 x i8*]}
 @_Bt04root7 = external constant {i32, i32, [0 x i8*]}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct({i32, i32}*, i64)
+declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare i8 addrspace(1)* @_bal_float_to_tagged(double)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
+declare i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)*) readnone
 declare i1 @_bal_type_contains({i32, i32, [0 x i8*]}*, i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
@@ -51,7 +51,7 @@ define void @_B04rootmain() !dbg !5 {
   %28 = icmp ult i8* %26, %27
   br i1 %28, label %116, label %29
 29:
-  %30 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi04root0, i64 2)
+  %30 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 2)
   %31 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %30, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901102), i8 addrspace(1)* %31)
   %32 = call i8 addrspace(1)* @_bal_float_to_tagged(double 1.5)
@@ -60,7 +60,7 @@ define void @_B04rootmain() !dbg !5 {
   %33 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %33, i8 addrspace(1)** %r1
   %34 = load i8 addrspace(1)*, i8 addrspace(1)** %r1
-  %35 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %34, i64 -5)
+  %35 = call i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)* %34)
   store i8 addrspace(1)* %35, i8 addrspace(1)** %m
   %36 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %37 = call i1 @_bal_type_contains({i32, i32, [0 x i8*]}* @_Bt04root1, i8 addrspace(1)* %36)
@@ -89,7 +89,7 @@ define void @_B04rootmain() !dbg !5 {
   %53 = getelementptr i8, i8 addrspace(1)* null, i64 %52, !dbg !10
   call void @_Bb02ioprintln(i8 addrspace(1)* %53), !dbg !10
   store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !10
-  %54 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi04root4, i64 2)
+  %54 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root4, i64 2)
   %55 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %54, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901102), i8 addrspace(1)* %55)
   %56 = call i8 addrspace(1)* @_bal_float_to_tagged(double 1.5)
@@ -98,7 +98,7 @@ define void @_B04rootmain() !dbg !5 {
   %57 = load i8 addrspace(1)*, i8 addrspace(1)** %8
   store i8 addrspace(1)* %57, i8 addrspace(1)** %r2
   %58 = load i8 addrspace(1)*, i8 addrspace(1)** %r2
-  %59 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %58, i64 -5)
+  %59 = call i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)* %58)
   store i8 addrspace(1)* %59, i8 addrspace(1)** %m
   %60 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %61 = call i1 @_bal_type_contains({i32, i32, [0 x i8*]}* @_Bt04root1, i8 addrspace(1)* %60)
@@ -118,7 +118,7 @@ define void @_B04rootmain() !dbg !5 {
   %71 = getelementptr i8, i8 addrspace(1)* null, i64 %70, !dbg !12
   call void @_Bb02ioprintln(i8 addrspace(1)* %71), !dbg !12
   store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !12
-  %72 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi04root5, i64 2)
+  %72 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root5, i64 2)
   %73 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %72, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901102), i8 addrspace(1)* %73)
   %74 = call i8 addrspace(1)* @_bal_float_to_tagged(double 1.5)
@@ -145,7 +145,7 @@ define void @_B04rootmain() !dbg !5 {
   call void @_Bb02ioprintln(i8 addrspace(1)* %87), !dbg !14
   store i8 addrspace(1)* null, i8 addrspace(1)** %17, !dbg !14
   %88 = load i8 addrspace(1)*, i8 addrspace(1)** %r1
-  %89 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %88, i64 -5)
+  %89 = call i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)* %88)
   store i8 addrspace(1)* %89, i8 addrspace(1)** %v
   %90 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   %91 = call i1 @_bal_type_contains({i32, i32, [0 x i8*]}* @_Bt04root6, i8 addrspace(1)* %90)
@@ -166,7 +166,7 @@ define void @_B04rootmain() !dbg !5 {
   call void @_Bb02ioprintln(i8 addrspace(1)* %101), !dbg !16
   store i8 addrspace(1)* null, i8 addrspace(1)** %21, !dbg !16
   %102 = load i8 addrspace(1)*, i8 addrspace(1)** %r2
-  %103 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %102, i64 -5)
+  %103 = call i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)* %102)
   store i8 addrspace(1)* %103, i8 addrspace(1)** %v
   %104 = load i8 addrspace(1)*, i8 addrspace(1)** %v
   %105 = call i1 @_bal_type_contains({i32, i32, [0 x i8*]}* @_Bt04root6, i8 addrspace(1)* %104)
