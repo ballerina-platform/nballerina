@@ -459,8 +459,6 @@ public type ConstructorTypeDesc TupleTypeDesc|ArrayTypeDesc|MappingTypeDesc|Func
 
 public type TupleTypeDesc record {|
     *PositionFields;
-    Position startPos;
-    Position endPos;
     TypeDesc[] members;
     TypeDesc? rest;
     t:ListDefinition? defn = ();
@@ -468,8 +466,6 @@ public type TupleTypeDesc record {|
 
 public type ArrayTypeDesc record {|
     *PositionFields;
-    Position startPos;
-    Position endPos;
     TypeDesc elementTypeDesc;
     SimpleConstExpr?[] arrayLen = [];
     t:ListDefinition? defn = ();
