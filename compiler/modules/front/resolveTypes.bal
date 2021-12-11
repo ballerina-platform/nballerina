@@ -139,7 +139,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
-    if td is s:ListTypeDesc {
+    if td is s:TupleTypeDesc {
         t:ListDefinition? defn = td.defn;
         if defn == () {
             if !mod.allowAllTypes && td.members.length() > 0 {
@@ -147,26 +147,34 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
             t:ListDefinition d = new;
             td.defn = d;
-            if td.rest != () {
-                t:SemType rest = check resolveTypeDesc(mod, modDefn, depth + 1, <s:TypeDesc> td.rest);
-                if td.arrayLen.length() == 0 {
-                    return d.define(env, { initial: [], fixedLength: 0 }, rest);
-                }
-
-                t:SemType t = rest;
-                foreach s:SimpleConstExpr? len in td.arrayLen.reverse() {
-                    if len == () {
-                        t = d.define(env, { initial: [], fixedLength: 0 }, t);
-                    }
-                    else {
-                        [t:SemType, t:Value] [_, resolved] = check resolveConstExpr(mod, modDefn, len, t:INT);
-                        t = d.define(env, { initial: [t], fixedLength: <int>resolved.value }, t:NEVER );
-                    }
-                }
-                return t;
-            }
             t:SemType[] members = from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);
-            return d.define(env, { initial: members, fixedLength: members.length() }, t:NEVER );
+            t:SemType rest = t:NEVER;
+            s:TypeDesc? restTd = td.rest;
+            if restTd != () {
+                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+            }
+            return d.define(env, { initial: members, fixedLength: members.length() }, rest );
+        }
+        else {
+            return defn.getSemType(env);
+        }   
+    }    
+    if td is s:ArrayTypeDesc {
+        t:ListDefinition? defn = td.defn;
+        if defn == () {
+            t:ListDefinition d = new;
+            td.defn = d;
+            t:SemType t =  check resolveTypeDesc(mod, modDefn, depth + 1, td.elementTypeDesc);
+            foreach s:SimpleConstExpr? len in td.arrayLen.reverse() {
+                if len == () {
+                    t = d.define(env, { initial: [], fixedLength: 0 }, t);
+                }
+                else {
+                    [t:SemType, t:Value] [_, resolved] = check resolveConstExpr(mod, modDefn, len, t:INT);
+                    t = d.define(env, { initial: [t], fixedLength: <int>resolved.value }, t:NEVER );
+                }
+            }
+            return t;
         }
         else {
             return defn.getSemType(env);

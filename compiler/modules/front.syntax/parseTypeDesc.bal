@@ -69,7 +69,7 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         else if tok.current() == "[" {
             SimpleConstExpr?[] arrayLen = [];
-            Position? endPos = (); // Init with nil as we can't proff to the compiler that first iteration will always run.
+            Position? endPos = (); // Init with nil as we can't prove to the compiler that first iteration will always run.
             while tok.current() == "[" {
                 check tok.advance();
                 if tok.current() == "]" {
@@ -80,8 +80,8 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 }
                 endPos = check tok.expectEnd("]");
             }
-            ListTypeDesc list = { startPos, endPos: <int>endPos, members: [], rest: td, arrayLen };
-            td = list;
+            ArrayTypeDesc array = { startPos, endPos: <int>endPos, elementTypeDesc: td , arrayLen };
+            td = array;
         }
         else {
             break;
@@ -336,7 +336,7 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
 }
 
 // current token is []
-function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
+function parseTupleTypeDesc(Tokenizer tok) returns TupleTypeDesc|err:Syntax {
     TypeDesc[] members = [];
     Position startPos = tok.currentStartPos();
     check tok.advance();
