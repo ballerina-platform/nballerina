@@ -1,8 +1,8 @@
-# Language subset 11
+# Language subset 12
 
 ## Summary
 
-* Only values allowed are of basic type nil, boolean, int, float, string, list, mapping and error.
+* Only values allowed are of basic type nil, boolean, int, float, decimal, string, list, mapping and error.
 * At module level
    * function definitions
       * no default arguments
@@ -12,7 +12,7 @@
       * not of structured types
    * type definitions
 * Type descriptors:
-   * predefined basic type name: `boolean`, `float`, `int`, `string`, `error`
+   * predefined basic type name: `boolean`, `decimal, `error`, `float`, `int`, `string`
    * nil type `()`
    * `any` type
    * optional type: `T?`
@@ -326,7 +326,7 @@ variable-reference = identifier | qualified-identifier # can refer to parameter,
 
 // tokens
 int-literal = (as in Ballerina language spec)
-floating-point-literal = (as in Ballerina spec, except HexFloatingPointLiteral and DecimalTypeSuffix are not allowed)
+floating-point-literal = (as in Ballerina spec, except HexFloatingPointLiteral is not allowed)
 string-literal = (as in Ballerina language spec)
 identifier = [A-Za-z][A-Za-z0-9_]*
 CompoundAssignmentOperator = (as in Ballerina language spec)
@@ -370,11 +370,9 @@ Two kinds of `import` are supported.
 * The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
 
-## Additions from subset 10
+## Additions from subset 11
 
-* Types can be nested arbitrarily: any supported type descriptors can be used for a member of an array, record or mapping type descriptors. This includes recursive types.
-* Multiple dots are allowed on the left-hand side of an assignment (e.g. `x.y.z = 17`).
-* Record types can have a record-rest-descriptor `T...;`
+* `decimal` has been added
 
 ## Implemented spec changes since 2021R1
 
