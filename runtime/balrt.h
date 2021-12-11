@@ -12,12 +12,14 @@
 
 #define NIL ((TaggedPtr)0)
 
-typedef int64_t CompareResult;
-
 #define COMPARE_UN -1
 #define COMPARE_LT 0
 #define COMPARE_EQ 1
 #define COMPARE_GT 2
+
+// CompareResult is one of the above four COMPARE_* value.
+typedef int64_t CompareResult;
+
 #define COMPARE_TOTAL(l, r) (((l) > (r)) ? COMPARE_GT : (((l) < (r)) ? COMPARE_LT : COMPARE_EQ))
 
 #define HEAP_ALIGNMENT 8
