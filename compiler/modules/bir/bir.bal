@@ -160,6 +160,7 @@ public enum InsnName {
     INSN_INT_BITWISE_BINARY,
     INSN_FLOAT_ARITHMETIC_BINARY,
     INSN_FLOAT_NEGATE,
+    INSN_DECIMAL_ARITHMETIC_BINARY,
     INSN_CONVERT_TO_INT,
     INSN_CONVERT_TO_FLOAT,
     INSN_DECIMAL_NEGATE,
@@ -202,7 +203,7 @@ public type InsnBase record {
 public type Insn 
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |FloatArithmeticBinaryInsn|FloatNegateInsn
-    |DecimalNegateInsn
+    |DecimalArithmeticBinaryInsn|DecimalNegateInsn
     |ConvertToIntInsn|ConvertToFloatInsn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
@@ -276,6 +277,14 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     ArithmeticBinaryOp op;
     Register result;
     FloatOperand[2] operands;
+|};
+
+public type DecimalArithmeticBinaryInsn readonly & record {|
+    *InsnBase;
+    INSN_DECIMAL_ARITHMETIC_BINARY name = INSN_DECIMAL_ARITHMETIC_BINARY;
+    ArithmeticBinaryOp op;
+    Register result;
+    DecimalOperand[2] operands;
 |};
 
 public type FloatNegateInsn readonly & record {|
@@ -593,6 +602,7 @@ final readonly & map<true> PPI_INSNS = {
     // [INSN_CALL]: true,
     [INSN_PANIC]: true,
     [INSN_INT_ARITHMETIC_BINARY]: true,
+    [INSN_DECIMAL_ARITHMETIC_BINARY]: true,
     [INSN_CONVERT_TO_INT]: true,
     [INSN_TYPE_CAST]: true,
     [INSN_LIST_GET]: true,

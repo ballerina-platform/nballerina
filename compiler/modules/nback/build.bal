@@ -157,6 +157,10 @@ function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value v
                   scaffold.address(reg));
 }
 
+function buildStoreDecimal(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(value, scaffold.address(reg));
+}
+
 function buildStoreTagged(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
     return builder.store(buildUntagged(builder, scaffold, <llvm:PointerValue>value, scaffold.getRepr(reg)), scaffold.address(reg));
 }

@@ -281,6 +281,15 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
             }
             return foldedBinaryConstExpr(f, t:FLOAT, leftExpr, rightExpr);
         }
+        else if left is decimal && right is decimal {
+            decimal|error result = trap decimalArithmeticEval(expr.arithmeticOp, left, right);
+            if result is decimal {
+                return foldedBinaryConstExpr(result, t:DECIMAL, leftExpr, rightExpr);
+            }
+            else {
+                return cx.semanticErr(`evaluation of decimal constant ${expr.arithmeticOp} expression failed`, pos=expr.opPos, cause=result);
+            }            
+        }
         else {
             return cx.semanticErr(`invalid operand types for ${expr.arithmeticOp}`, expr.opPos);
         }
@@ -632,6 +641,27 @@ function intArithmeticEval(s:BinaryArithmeticOp op, int left, int right) returns
 }
 
 function floatArithmeticEval(s:BinaryArithmeticOp op, float left, float right) returns float  {
+    match op {
+        "+" => {
+            return left + right;
+        }
+        "-" => {
+            return left - right;
+        }
+        "*" => {
+            return left * right;
+        }
+        "/" => {
+            return left / right;
+        }
+        "%" => {
+            return left % right;
+        }
+    }
+    panic err:impossible();
+}
+
+function decimalArithmeticEval(s:BinaryArithmeticOp op, decimal left, decimal right) returns decimal  {
     match op {
         "+" => {
             return left + right;
