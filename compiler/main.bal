@@ -59,7 +59,7 @@ public function main(string[] filenames, *Options opts) returns error? {
     foreach string filename in filenames {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
-            CompileError? err = printDiagnostic(compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), opts.outDir, nbackOptions, opts));
+            CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
             if err is err:Diagnostic {
                 errorFileCount += 1;
                 dPrinter.print(err.detail());

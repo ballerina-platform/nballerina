@@ -71,9 +71,9 @@ class CompileContext {
 }
 
 // basename is filename without extension
-function compileBalFile(string filename, string basename, string? outputBasename, string? outDir, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
+function compileBalFile(string filename, string basename, string? outputBasename, nback:Options nbackOptions, OutputOptions outOptions) returns CompileError? {
     CompileContext cx = new(basename, outputBasename, nbackOptions, outOptions);
-    front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename, directory: check sourceDir(filename, outDir) } ], cx.outputFilename());
+    front:ResolvedModule mod = check processModule(cx, DEFAULT_ROOT_MODULE_ID, [ {filename} ], cx.outputFilename());
     check mod.validMain();
     check generateInitModule(cx, mod);
 }
@@ -167,13 +167,4 @@ function filterFuncs(front:ModuleExports defns) returns map<bir:FunctionSignatur
         }
     }
     return result;
-}
-
-function sourceDir(string filename, string? outDir) returns string|file:Error {
-    string sourceDir = check file:parentPath(filename);
-    if sourceDir == "" {
-        // file is in the current directory
-        sourceDir = file:getCurrentDir();
-    }
-    return file:relativePath(outDir ?: file:getCurrentDir(), sourceDir);
 }
