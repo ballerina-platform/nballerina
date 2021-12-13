@@ -478,7 +478,7 @@ public type MappingTypeDesc record {|
     Position startPos;
     Position endPos;
     FieldDesc[] fields;
-    TypeDesc|INCLUSIVE_RECORD_TYPE_DESC|() rest;
+    TypeDesc|INCLUSIVE_RECORD_TYPE_DESC? rest;
     t:MappingDefinition? defn = ();
 |};
 

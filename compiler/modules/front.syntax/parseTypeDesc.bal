@@ -387,7 +387,7 @@ function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
             check tok.expect(";");
         }
         else {
-            fields.push(check parseFiledDesc(tok, td));
+            fields.push(check parseFieldDesc(tok, td));
         }
     }
     Position endPos = tok.currentEndPos();
@@ -400,14 +400,14 @@ function parseInclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
     FieldDesc[] fields = [];
     while tok.current() != "}" {
         TypeDesc td = check parseTypeDesc(tok);
-        fields.push(check parseFiledDesc(tok, td));
+        fields.push(check parseFieldDesc(tok, td));
     }
     Position endPos = tok.currentEndPos();
     check tok.advance();
-    return { startPos, endPos, fields, rest: true };
+    return { startPos, endPos, fields, rest: INCLUSIVE_RECORD_TYPE_DESC };
 }
 
-function parseFiledDesc(Tokenizer tok, TypeDesc typeDesc) returns FieldDesc|err:Syntax {
+function parseFieldDesc(Tokenizer tok, TypeDesc typeDesc) returns FieldDesc|err:Syntax {
     Position startPos = tok.currentStartPos();
     string name = check tok.expectIdentifier();
     Position endPos = check tok.expectEnd(";");
