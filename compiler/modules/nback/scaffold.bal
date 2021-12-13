@@ -470,9 +470,11 @@ function semTypeRepr(t:SemType ty) returns Repr {
     if w == t:NEVER {
         panic err:impossible("allocate register with never type");
     }
-    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:DECIMAL|t:STRING|t:LIST|t:MAPPING|t:XML|t:TABLE|t:ERROR;
-    // DECIMAL is here for ConvertToInt or ConvertToFloat 
-    if (w | supported | t:DECIMAL) == t:TOP || (w & supported) == w {
+    int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:LIST|t:MAPPING|t:ERROR;
+    // DECIMAL is here for ConvertToInt or ConvertToFloat
+    // TABLE and XML are here for anydata
+    int maximized = w | supported | t:DECIMAL | t:TABLE | t:XML;
+    if maximized == t:TOP || maximized == (t:NON_BEHAVIORAL|t:ERROR) {
         TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };
         return repr;
     }
