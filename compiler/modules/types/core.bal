@@ -358,7 +358,10 @@ public final UniformTypeBitSet FUTURE = uniformType(UT_FUTURE);
 public final UniformTypeBitSet TOP = uniformTypeUnion(UT_MASK);
 public final UniformTypeBitSet ANY = uniformTypeUnion(UT_MASK & ~(1 << UT_ERROR));
 public final UniformTypeBitSet READONLY = uniformTypeUnion(UT_READONLY);
-public final UniformTypeBitSet SIMPLE_OR_STRING = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT)| (1 << UT_FLOAT)| (1 << UT_DECIMAL)| (1 << UT_STRING));
+public final UniformTypeBitSet SIMPLE_OR_STRING = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT) | (1 << UT_FLOAT) | (1 << UT_DECIMAL) | (1 << UT_STRING));
+public final UniformTypeBitSet NON_BEHAVIORAL = uniformTypeUnion((1 << UT_NIL) | (1 << UT_BOOLEAN) | (1 << UT_INT) | (1 << UT_FLOAT)| (1 << UT_DECIMAL) | (1 << UT_STRING)
+                                                                 | (1 << UT_XML_RO) | (1 << UT_LIST_RO) | (1 << UT_MAPPING_RO) | (1 << UT_TABLE_RO)
+                                                                 | (1 << UT_XML_RW) | (1 << UT_LIST_RW) | (1 << UT_MAPPING_RW) | (1 << UT_TABLE_RW));
 public final UniformTypeBitSet NUMBER = uniformTypeUnion((1 << UT_INT) | (1 << UT_FLOAT) | (1 << UT_DECIMAL));
 public final SemType BYTE = intWidthUnsigned(8);
 public final SemType STRING_CHAR = stringChar();
