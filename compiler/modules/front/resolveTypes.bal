@@ -178,7 +178,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
             else if restTd == s:INCLUSIVE_RECORD_TYPE_DESC {
-                // FIXME:
                 rest = t:createAnydata(env);
             }
             else {

@@ -113,8 +113,7 @@ primary-type-desc =
   | nil-type-desc
   | "(" type-desc ")"
   | type-reference
-  | map-type-desc
-  | record-type-desc
+  | mapping-type-desc
 
 builtin-type-name = "any" | "boolean" | "int" | "float" | "string" | "error"
 
