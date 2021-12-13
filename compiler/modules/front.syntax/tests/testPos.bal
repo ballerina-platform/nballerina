@@ -565,7 +565,7 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
         }
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
     }
-    else if td is MappingTypeDesc && td.rest == true {
+    else if td is MappingTypeDesc && td.rest == INCLUSIVE_RECORD_TYPE_DESC {
         return !checkPosFragCode(file, endPos, CP_RIGHT_SQUARE, ...base);
     }
     return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);

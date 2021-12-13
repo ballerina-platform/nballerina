@@ -172,7 +172,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
                 fieldsByName[fd.name] = fd;
             }
-            s:TypeDesc|s:INCLUSIVE_RECORD_TYPE_DESC|() restTd = td.rest;
+            s:TypeDesc|s:INCLUSIVE_RECORD_TYPE_DESC? restTd = td.rest;
             t:SemType rest;
             if restTd is s:TypeDesc {
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
