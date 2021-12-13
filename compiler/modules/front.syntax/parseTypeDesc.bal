@@ -375,9 +375,9 @@ function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTy
 function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {
     check tok.advance();
     FieldDesc[] fields = [];
-    TypeDesc|boolean rest = false;
+    TypeDesc? rest = ();
     while tok.current() != "|}" {
-        if rest != false {
+        if rest != () {
             return parseError(tok);
         }
         TypeDesc td = check parseTypeDesc(tok);

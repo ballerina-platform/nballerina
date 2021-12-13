@@ -472,12 +472,13 @@ public type FieldDesc record {|
     TypeDesc typeDesc;
 |};
 
+public const INCLUSIVE_RECORD_TYPE_DESC = true;
 public type MappingTypeDesc record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     FieldDesc[] fields;
-    TypeDesc|boolean rest; // true if inclusive record type false if rest is nil
+    TypeDesc|INCLUSIVE_RECORD_TYPE_DESC|() rest;
     t:MappingDefinition? defn = ();
 |};
 

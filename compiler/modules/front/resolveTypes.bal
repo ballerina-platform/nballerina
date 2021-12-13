@@ -172,13 +172,14 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
                 fieldsByName[fd.name] = fd;
             }
-            s:TypeDesc|boolean restTd = td.rest;
+            s:TypeDesc|s:INCLUSIVE_RECORD_TYPE_DESC|() restTd = td.rest;
             t:SemType rest;
             if restTd is s:TypeDesc {
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
-            else if restTd == true {
-                rest = t:ANY;
+            else if restTd == s:INCLUSIVE_RECORD_TYPE_DESC {
+                // FIXME:
+                rest = t:createAnydata(env);
             }
             else {
                 rest = t:NEVER;
