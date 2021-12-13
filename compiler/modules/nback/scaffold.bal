@@ -112,7 +112,7 @@ type ModuleDI record {|
 // Debug location will always be added
 public const int DEBUG_ORIGIN_ERROR_CONSTRUCT = 0;
 public const int DEBUG_ORIGIN_CALL = 1;
-// Debug locattion for these will be added only in full debug
+// Debug location for these will be added only in full debug
 public const int DEBUG_ORIGIN_OTHER = 2;
 
 public type DebugLocationOrigin DEBUG_ORIGIN_ERROR_CONSTRUCT|DEBUG_ORIGIN_CALL|DEBUG_ORIGIN_OTHER;
