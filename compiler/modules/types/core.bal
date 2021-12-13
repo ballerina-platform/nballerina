@@ -221,7 +221,7 @@ type ProperSubtypeData StringSubtype|DecimalSubtype|FloatSubtype|IntSubtype|Bool
 // true means everything and false means nothing (as with Bdd)
 type SubtypeData ProperSubtypeData|boolean;
 
-type UniformSubtype [UniformTypeCode, SubtypeData];
+type UniformSubtype [UniformTypeCode, ProperSubtypeData];
 
 type BinOp function(SubtypeData t1, SubtypeData t2) returns SubtypeData;
 type UnaryOp function(SubtypeData t) returns SubtypeData;
@@ -261,13 +261,13 @@ public type ComplexSemType readonly & record {|
     UniformTypeBitSet some;
     // There is one member of subtypes for each bit set in some.
     // Ordered in increasing order of UniformTypeCode
-    SubtypeData[] subtypeDataList;
+    ProperSubtypeData[] subtypeDataList;
 |};
 
 // subtypeList must be ordered
 function createComplexSemType(UniformTypeBitSet all, UniformSubtype[] subtypeList = []) returns ComplexSemType {
     int some = 0;
-    SubtypeData[] dataList = [];
+    ProperSubtypeData[] dataList = [];
     foreach var [code, data] in subtypeList {
         dataList.push(data);
         int c = code;
@@ -318,7 +318,7 @@ public function uniformTypeUnion(int bits) returns UniformTypeBitSet {
 }
 
 function uniformSubtype(UniformTypeCode code, ProperSubtypeData data) returns SemType {
-    return createComplexSemType(0, [[code,data]]);
+    return createComplexSemType(0, [[code, data]]);
 }
 
 function subtypeData(SemType s, UniformTypeCode code) returns SubtypeData {
@@ -370,7 +370,8 @@ public final SemType XML_PI = xmlSingleton(XML_PRIMITIVE_PI_RO | XML_PRIMITIVE_P
 // Need this type to workaround slalpha4 bug.
 // It has to be public to workaround another bug.
 public type SubtypePairIterator object {
-    public function next() returns record {| [UniformTypeCode, SubtypeData?, SubtypeData?] value; |}?;
+    // JBUG if `ProperSubtypeData` on the next line is changed to SubtypeData, jBallerina blows up
+    public function next() returns record {| [UniformTypeCode, ProperSubtypeData?, ProperSubtypeData?] value; |}?;
 };
 
 class SubtypePairIteratorImpl {
@@ -394,7 +395,7 @@ class SubtypePairIteratorImpl {
         return self;
     }
 
-    public function next() returns record {| [UniformTypeCode, SubtypeData?, SubtypeData?] value; |}? {
+    public function next() returns record {| [UniformTypeCode, ProperSubtypeData?, ProperSubtypeData?] value; |}? {
         while true {
             if self.i1 >= self.t1.length() {
                 if self.i2 >= self.t2.length() {
@@ -515,7 +516,8 @@ public function union(SemType t1, SemType t2) returns SemType {
             all |= <UniformTypeBitSet>(1 << c);
         }
         else {
-            subtypes.push([code, data]);
+            // data cannot be false since data1 and data2 are not both false
+            subtypes.push([code, <ProperSubtypeData>data]);
         }
     }
     if subtypes.length() == 0 {
@@ -579,7 +581,7 @@ public function intersect(SemType t1, SemType t2) returns SemType {
     foreach var [code, data1, data2] in new SubtypePairIteratorImpl(t1, t2, some) {
         SubtypeData data;
         if data1 == () {
-            data = <SubtypeData>data2;
+            data = <ProperSubtypeData>data2;
         }
         else if data2 == () {
             data = data1;
@@ -589,7 +591,8 @@ public function intersect(SemType t1, SemType t2) returns SemType {
             data = intersect(data1, data2);
         }
         if data != false {
-            subtypes.push([code, data]);
+            // data cannot be true since data1 and data2 are not both true
+            subtypes.push([code, <ProperSubtypeData>data]);
         }
     }
     if subtypes.length() == 0 {
@@ -689,12 +692,13 @@ function maybeRoDiff(SemType t1, SemType t2, Context? cx) returns SemType {
                 }
             }
         }
-        if data == true {
+        // JBUG `data` is not narrowed properly if you swap the order by doing `if data == true {} else if data != false {}`
+        if data !is boolean {
+            subtypes.push([code, data]);
+        }
+        else if data == true {
             int c = code;
             all |= <UniformTypeBitSet>(1 << c);
-        }
-        else if data != false {
-            subtypes.push([code, data]);
         }
     }
     if subtypes.length() == 0 {
@@ -960,14 +964,26 @@ public function mappingAlternativesRw(Context cx, SemType t) returns MappingAlte
         /// JBUG (33709) runtime error on construct1-v.bal if done as from/select
         MappingAlternative[] alts = [];
         foreach var { bdd, pos, neg } in paths {
-            alts.push({
-                semType: createComplexSemType(0, [[UT_MAPPING_RW, bdd]]),
-                // JBUG parse error without parentheses (33707)
-                pos: (from var atom in pos select cx.mappingAtomType(atom)),
-                neg: (from var atom in neg select cx.mappingAtomType(atom))
-            });
+            SemType semType = createUniformSemType(UT_MAPPING_RW, bdd);
+            if semType != NEVER {
+                alts.push({
+                    semType,
+                    // JBUG parse error without parentheses (33707)
+                    pos: (from var atom in pos select cx.mappingAtomType(atom)),
+                    neg: (from var atom in neg select cx.mappingAtomType(atom))
+                });
+            }          
         }
         return alts;
+    }
+}
+
+function createUniformSemType(UniformTypeCode typeCode, SubtypeData subtypeData) returns SemType {
+    if subtypeData is boolean {
+        return subtypeData ? <UniformTypeBitSet>(1 << typeCode) : 0;
+    }
+    else {
+        return createComplexSemType(0, [[typeCode, subtypeData]]);
     }
 }
 
