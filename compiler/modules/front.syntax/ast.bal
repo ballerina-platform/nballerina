@@ -531,8 +531,7 @@ public type XmlSequenceTypeDesc record {|
 |};
 
 public type TableTypeDesc record {|
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     TypeDesc row;
 |};
 
