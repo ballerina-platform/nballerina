@@ -42,8 +42,9 @@ public class ListDefinition {
         }
     }
 
-    public function define(Env env, FixedLengthArray members, SemType rest) returns ComplexSemType {
-        ListAtomicType rwType = { members: fixedLengthNormalize(members).cloneReadOnly(), rest };
+    public function define(Env env, SemType[] initial = [], int fixedLength = initial.length(), SemType rest = NEVER) returns ComplexSemType {
+        FixedLengthArray members = fixedLengthNormalize({ initial, fixedLength });
+        ListAtomicType rwType = { members: members.cloneReadOnly(), rest };
         Atom rw;
         RecAtom? rwRec = self.rwRec;
         if rwRec != () {
@@ -106,7 +107,7 @@ function fixedLengthNormalize(FixedLengthArray array) returns FixedLengthArray {
         }
         i -= 1;
     }
-    return { initial: initial.slice(0, i+2), fixedLength: array.fixedLength };
+    return { initial: initial.slice(0, i + 2), fixedLength: array.fixedLength };
 }
     
 function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
@@ -122,7 +123,7 @@ function readOnlyListAtomicType(ListAtomicType ty) returns ListAtomicType {
 
 public function tuple(Env env, SemType... members) returns SemType {
     ListDefinition def = new;
-    return def.define(env, { initial: members, fixedLength: members.length() }, NEVER);
+    return def.define(env, members);
 }
 
 function listRoSubtypeIsEmpty(Context cx, SubtypeData t) returns boolean {

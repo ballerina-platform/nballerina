@@ -91,13 +91,9 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
 // when the type of e is given by members and rest.
 // Based on listInhabited
 // Corresponds to phi^x in AMK tutorial generalized for list types.
-function listProjExclude(Context cx, 
-                        int k, 
-                        FixedLengthArray members, 
-                        SemType rest, 
-                        Conjunction? neg) returns SemType {
+function listProjExclude(Context cx, int k, FixedLengthArray members, SemType rest, Conjunction? neg) returns SemType {
     if neg == () {
-        return k < members.fixedLength ? fixedArrayGet(members, k) : rest;
+        return listMemberAt(members, rest, k);
     }
     else {
         int len = members.fixedLength;
@@ -107,7 +103,7 @@ function listProjExclude(Context cx,
             if isNever(rest) {
                 return listProjExclude(cx, k, members, rest, neg.next);
             }
-            fixedArraySet(members, negLen, rest);
+            fixedLengthArrayFill(members, negLen, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {

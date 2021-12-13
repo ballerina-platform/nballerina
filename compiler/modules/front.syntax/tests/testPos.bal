@@ -464,7 +464,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     Position actualEnd = tok.previousEndPos();
     while td.toString() != newTd.toString() && newTd is TupleTypeDesc|MappingTypeDesc|ArrayTypeDesc {
         // These are left recursions which we can't separately parse
-        TypeDesc rest = <TypeDesc> (newTd is ArrayTypeDesc ? newTd.elementTypeDesc : newTd.rest);
+        TypeDesc rest = <TypeDesc> (newTd is ArrayTypeDesc ? newTd.member : newTd.rest);
         actualEnd = rest.endPos;
         newTd = rest;
     }
@@ -486,13 +486,13 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         }
     }    
     if td is ArrayTypeDesc {
-        TypeDesc et = td.elementTypeDesc;
-        check validateTypeDescPos(et, tok, td.startPos, td.endPos);
-        childNodePos.push([et.startPos, et.endPos]);
-        foreach var len in td.arrayLen {
-            if len != () {
-                check validateExpressionPos(len, tok, td.startPos, td.endPos);
-                childNodePos.push([len.startPos, len.endPos]);
+        TypeDesc member = td.member;
+        check validateTypeDescPos(member, tok, td.startPos, td.endPos);
+        childNodePos.push([member.startPos, member.endPos]);
+        foreach var size in td.dimensions {
+            if size != () {
+                check validateExpressionPos(size, tok, td.startPos, td.endPos);
+                childNodePos.push([size.startPos, size.endPos]);
             }
         }
     }

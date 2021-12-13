@@ -68,19 +68,19 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             td = bin;
         }
         else if tok.current() == "[" {
-            SimpleConstExpr?[] arrayLen = [];
+            SimpleConstExpr?[] dimensions = [];
             Position? endPos = (); // Init with nil as we can't prove to the compiler that first iteration will always run.
             while tok.current() == "[" {
                 check tok.advance();
                 if tok.current() == "]" {
-                    arrayLen.push(());
+                    dimensions.push(());
                 } 
                 else {
-                    arrayLen.push(check parseSimpleConstExpr(tok));
+                    dimensions.push(check parseSimpleConstExpr(tok));
                 }
                 endPos = check tok.expectEnd("]");
             }
-            ArrayTypeDesc array = { startPos, endPos: <int>endPos, elementTypeDesc: td , arrayLen };
+            ArrayTypeDesc array = { startPos, endPos: <int>endPos, member: td , dimensions };
             td = array;
         }
         else {
@@ -364,7 +364,7 @@ function parseTupleTypeDesc(Tokenizer tok) returns TupleTypeDesc|err:Syntax {
     }
     endPos = tok.currentEndPos();
     check tok.advance();
-    return { startPos, endPos, members, rest};
+    return { startPos, endPos, members, rest };
 }
 
 function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {

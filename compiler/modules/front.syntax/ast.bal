@@ -466,8 +466,8 @@ public type TupleTypeDesc record {|
 
 public type ArrayTypeDesc record {|
     *PositionFields;
-    TypeDesc elementTypeDesc;
-    SimpleConstExpr?[] arrayLen = [];
+    TypeDesc member;
+    SimpleConstExpr?[] dimensions = [];
     t:ListDefinition? defn = ();
 |};
 

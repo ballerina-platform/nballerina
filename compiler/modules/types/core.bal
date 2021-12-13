@@ -1181,7 +1181,7 @@ public function createJson(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, { initial: [], fixedLength: 0 }, j);
+    _ = listDef.define(env, rest = j);
     _ = mapDef.define(env, [], j);
     return j;
 }
@@ -1192,7 +1192,7 @@ public function createAnydata(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType ad = union(union(SIMPLE_OR_STRING, union(XML, TABLE)), union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, { initial: [], fixedLength: 0 }, ad);
+    _ = listDef.define(env, rest = ad);
     _ = mapDef.define(env, [], ad);
     return ad;
 }

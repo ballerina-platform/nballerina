@@ -153,7 +153,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             if restTd != () {
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
-            return d.define(env, { initial: members, fixedLength: members.length() }, rest );
+            return d.define(env, initial = members, rest = rest);
         }
         else {
             return defn.getSemType(env);
@@ -164,14 +164,17 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         if defn == () {
             t:ListDefinition d = new;
             td.defn = d;
-            t:SemType t =  check resolveTypeDesc(mod, modDefn, depth + 1, td.elementTypeDesc);
-            foreach s:SimpleConstExpr? len in td.arrayLen.reverse() {
+            t:SemType t =  check resolveTypeDesc(mod, modDefn, depth + 1, td.member);
+            foreach s:SimpleConstExpr? len in td.dimensions.reverse() {
                 if len == () {
-                    t = d.define(env, { initial: [], fixedLength: 0 }, t);
+                    t = d.define(env, rest = t);
                 }
                 else {
+                    if !mod.allowAllTypes {
+                        return err:unimplemented("fixed length array types not implemented", s:locationInDefn(modDefn, td.startPos));
+                    }
                     [t:SemType, t:Value] [_, resolved] = check resolveConstExpr(mod, modDefn, len, t:INT);
-                    t = d.define(env, { initial: [t], fixedLength: <int>resolved.value }, t:NEVER );
+                    t = d.define(env, initial = [t], fixedLength = <int>resolved.value, rest = t:NEVER);
                 }
             }
             return t;

@@ -298,9 +298,9 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         if wrap != false {
             w.push("(");
         }
-        typeDescToWords(w, td.elementTypeDesc, true);
+        typeDescToWords(w, td.member, true);
         w.push(CLING);
-        foreach var len in td.arrayLen {
+        foreach var len in td.dimensions {
             w.push("[");
             if len != () {
                 exprToWords(w, len);

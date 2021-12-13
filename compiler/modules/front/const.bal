@@ -92,10 +92,7 @@ function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr
     s:Expr foldedExpr = check foldExpr(cx, expectedType, expr);
     if foldedExpr is s:ConstValueExpr {
         if expectedType == () || t:containsConst(expectedType, foldedExpr.value) {
-            return <s:ResolvedConst>[ 
-                t:singleton(foldedExpr.value), 
-                { value: foldedExpr.value } 
-            ];
+            return [t:singleton(foldedExpr.value), { value: foldedExpr.value }];
         }
         else {
             return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
