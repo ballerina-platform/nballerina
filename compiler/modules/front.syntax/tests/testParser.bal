@@ -55,7 +55,7 @@ function testTokenizer(string k, string[] lines) returns error? {
             int tStart = lc[1];
             string tStr = tokenToString(t);
             string srcAtPos = src.substring(tStart, tStart + tStr.length());
-            if t is [HEX_INT_LITERAL, string] || t is [DECIMAL_FP_NUMBER, string, "f"|"d"?] {
+            if t is [HEX_INT_LITERAL, string] || t is [DECIMAL_FP_NUMBER, string, FpTypeSuffix?] {
                 // Canonicalize `0X` `F` `D` in source as `0x` `f` `d`.
                 srcAtPos = srcAtPos.toLowerAscii();
             }

@@ -146,7 +146,7 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
         case TAG_DECIMAL:
             {
                 char decStr[DECQUAD_String];
-                decQuadToString((decQuad *)taggedToPtr(p), decStr);
+                decQuadToString((void *)taggedToPtr(p), decStr);
                 fprintf(fp, "%s", decStr);
             }
             break;

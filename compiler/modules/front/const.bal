@@ -600,11 +600,7 @@ function expectsDecimal(t:Context cx, t:SemType semType) returns boolean {
 // Since the binary floating point literal is parsed correctly,
 // it is impossible to throw an error.
 function floatFromFpLiteral(string digits) returns float {
-    float|error f = float:fromString(digits);
-    if f is error {
-        panic err:impossible();
-    }
-    return f;
+    return checkpanic float:fromString(digits);
 }
 
 // Even if the decimal floating point literal is parsed correctly,
@@ -612,7 +608,7 @@ function floatFromFpLiteral(string digits) returns float {
 function decimalFromFpLiteral(FoldContext cx, string decimalStr, Position pos) returns decimal|FoldError {
     decimal|error d = decimal:fromString(decimalStr);
     if d is error {
-        return cx.semanticErr("invalid decimal literal", pos);
+        return cx.semanticErr("invalid decimal floating point number", cause=d, pos=pos);
     }
     return d;
 }
@@ -622,7 +618,7 @@ function decimalFromFpLiteral(FoldContext cx, string decimalStr, Position pos) r
 function intFromLiteral(FoldContext cx, s:IntLiteralExpr expr) returns int|FoldError {
     int|error i = s:intFromIntLiteral(expr.base, expr.digits);
     if i is error {
-        return cx.semanticErr("invalid int literal", expr.startPos);
+        return cx.semanticErr("invalid int literal", cause=i, pos=expr.startPos);
     }
     return i;
 }

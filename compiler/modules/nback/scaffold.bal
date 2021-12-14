@@ -21,7 +21,7 @@ const LLVM_VOID = "void";
 final llvm:PointerType LLVM_TAGGED_PTR = heapPointerType("i8");
 final llvm:PointerType LLVM_NIL_TYPE = LLVM_TAGGED_PTR;
 final llvm:PointerType LLVM_TAGGED_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
-final llvm:PointerType LLVM_PTR_WITHOUT_ADDR_SPACE = llvm:pointerType("i8");
+final llvm:PointerType LLVM_DECIMAL_CONST = llvm:pointerType("i8");
 
 // A Repr is way of representing values.
 // It's a mapping from a SemType to an LLVM type.
@@ -75,7 +75,7 @@ const STRING_VARIANT_LARGE = 1;
 type StringVariant STRING_VARIANT_MEDIUM|STRING_VARIANT_LARGE; // STRING_VARIANT_SMALL|;
 
 type StringDefn llvm:ConstPointerValue;
-type DecimalStringDefn llvm:ConstPointerValue;
+type DecimalDefn llvm:ConstPointerValue;
 
 type Module record {|
     llvm:Context llContext;
@@ -86,7 +86,7 @@ type Module record {|
     ImportedFunctionTable importedFunctions = table [];
     llvm:PointerValue stackGuard;
     map<StringDefn> stringDefns = {};
-    map<DecimalStringDefn> decimalStringDefns = {};
+    map<DecimalDefn> decimalDefns = {};
     t:Context typeContext;
     bir:Module bir;
     bir:ModuleId modId;
@@ -219,14 +219,14 @@ class Scaffold {
         return newDefn;
     }
 
-    function getDecimalString(decimal val) returns DecimalStringDefn {
+    function getDecimal(decimal val) returns DecimalDefn {
         string str = val.toString();
-        DecimalStringDefn? curDefn = self.mod.decimalStringDefns[str];
+        DecimalDefn? curDefn = self.mod.decimalDefns[str];
         if curDefn != () {
             return curDefn;
         }
-        DecimalStringDefn newDefn = addDecimalStringDefn(self.mod.llContext, self.mod.llMod, self.mod.decimalStringDefns.length(), str);
-        self.mod.decimalStringDefns[str] = newDefn;
+        DecimalDefn newDefn = addDecimalDefn(self.mod.llContext, self.mod.llMod, self.mod.decimalDefns.length(), str);
+        self.mod.decimalDefns[str] = newDefn;
         return newDefn;
     }
 
@@ -413,19 +413,19 @@ function addStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, str
                                       [llvm:constInt(LLVM_INT, TAG_STRING | <int>variant)]);
 }
 
-function addDecimalStringDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue {
+function addDecimalDefn(llvm:Context context, llvm:Module mod, int defnIndex, string str) returns llvm:ConstPointerValue {
     byte[] bytes = str.toBytes();
     bytes.push(0);
     llvm:ConstValue val = context.constString(bytes);
     llvm:Type ty = llvm:arrayType("i8", bytes.length());
     llvm:ConstPointerValue ptr = mod.addGlobal(ty,
-                                               decimalStringDefnSymbol(defnIndex),
+                                               decimalDefnSymbol(defnIndex),
                                                initializer = val,
                                                align = 8,
                                                isConstant = true,
                                                unnamedAddr = true,
                                                linkage = "internal");
-    return context.constBitCast(ptr, LLVM_PTR_WITHOUT_ADDR_SPACE);
+    return context.constBitCast(ptr, LLVM_DECIMAL_CONST);
 }
 
 function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolean {

@@ -117,7 +117,7 @@ final RuntimeFunction decimalConstFunction = {
     name: "decimal_const",
     ty: {
         returnType: LLVM_TAGGED_PTR,
-        paramTypes: [LLVM_PTR_WITHOUT_ADDR_SPACE]
+        paramTypes: [LLVM_DECIMAL_CONST]
     },
     attrs: ["readnone"]
 };
@@ -328,7 +328,7 @@ function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) re
 // Check whether the correct value is ConstPointerValue/PointerValue
 // TODO: check the names again
 function buildConstDecimal(llvm:Builder builder, Scaffold scaffold, decimal decimalValue) returns llvm:Value {
-    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalConstFunction), [scaffold.getDecimalString(decimalValue)]);
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalConstFunction), [scaffold.getDecimal(decimalValue)]);
 }
 
 function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {
