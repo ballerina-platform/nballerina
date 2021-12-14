@@ -26,6 +26,8 @@ postfix-td :=
   | postfix-td array-dimension+
   | postfix-td "?"
 
+array-dimension := "[" [simple-const-expr] "]"
+
 primary-td :=
   predefined-td
   | int-td
@@ -46,8 +48,6 @@ map-td := "map" type-param
 error-td := "error" [type-param]
 // XXX handle "..." in tuple-td and record-td
 tuple-td := "[" opt-td-list "]"
-
-array-dimension := "[" [simple-const-expr] "]"
 
 opt-td-list := [ td-list ]
 td-list :=

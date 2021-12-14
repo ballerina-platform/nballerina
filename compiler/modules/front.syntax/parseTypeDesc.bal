@@ -80,7 +80,7 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 }
                 endPos = check tok.expectEnd("]");
             }
-            ArrayTypeDesc array = { startPos, endPos: <int>endPos, member: td , dimensions };
+            ArrayTypeDesc array = { startPos, endPos: <Position>endPos, member: td , dimensions };
             td = array;
         }
         else {

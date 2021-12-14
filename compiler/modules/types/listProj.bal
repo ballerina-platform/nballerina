@@ -52,25 +52,11 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                 Atom d = p.atom;
                 p = p.next; 
                 lt = cx.listAtomType(d);
-                int newLen = int:max(members.fixedLength, lt.members.fixedLength);
-                if members.fixedLength < newLen {
-                    if isNever(rest) {
-                        return NEVER;
-                    }
-                    fixedLengthArrayFill(members, newLen, rest);
+                var intersected = listIntersectWith(members, rest, lt);
+                if intersected is () {
+                    return NEVER;
                 }
-                foreach int i in 0 ..< lt.members.fixedLength {
-                    fixedArraySet(members, i, intersect(fixedArrayGet(members, i), listMemberAt(lt.members, lt.rest, i)));
-                }
-                if lt.members.fixedLength < newLen {
-                    if isNever(lt.rest) {
-                        return NEVER;
-                    }
-                    foreach int i in lt.members.fixedLength ..< newLen {
-                        fixedArraySet(members, i, intersect(fixedArrayGet(members, i), lt.rest));
-                    }
-                }
-                rest = intersect(rest, lt.rest);
+                [members, rest] = intersected;
             }
         }
         foreach var m in members.initial {
@@ -112,7 +98,7 @@ function listProjExclude(Context cx, int k, FixedLengthArray members, SemType re
         // now we have nt.members.length() <= len
         SemType p = NEVER;
         foreach int i in 0 ..< len {
-            SemType ntm = fixedArrayGet(nt.members, i);
+            SemType ntm = listMemberAt(nt.members, nt.rest, i);
             SemType d = diff(fixedArrayGet(members, i), ntm);
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayShallowCopy(members);

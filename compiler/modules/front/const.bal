@@ -103,6 +103,11 @@ function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr
     }
 }
 
+function resolveConstIntExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr) returns int|FoldError {
+    [t:SemType, t:Value] [_, resolved] = check resolveConstExpr(mod, defn, expr, t:INT);
+    return <int>resolved.value;
+}
+
 function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns s:Expr|FoldError {
     if expr is s:BinaryArithmeticExpr {
         return foldBinaryArithmeticExpr(cx, expectedType, expr);

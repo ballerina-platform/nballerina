@@ -59,3 +59,10 @@ type TwoArraysOfInt5 int[2][][5];
 
 // @type EmptyIntArray < IntArray 
 type EmptyIntArray int[0];
+
+type Array2OfInt5 Int5[2];
+
+type Array7OfArray2OfInt5 Array2OfInt5[7];
+
+// @type Array7x2x5 = Array7OfArray2OfInt5
+type Array7x2x5 int[7][2][5];
