@@ -325,8 +325,6 @@ function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) re
     return [scaffold.getRepr(reg), builder.load(scaffold.address(reg))];
 }
 
-// Check whether the correct value is ConstPointerValue/PointerValue
-// TODO: check the names again
 function buildConstDecimal(llvm:Builder builder, Scaffold scaffold, decimal decimalValue) returns llvm:Value {
     return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalConstFunction), [scaffold.getDecimal(decimalValue)]);
 }

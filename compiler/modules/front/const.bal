@@ -553,14 +553,11 @@ function foldFpLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralE
     if typeSuffix != () {
         result = typeSuffix is s:FLOAT_TYPE_SUFFIX ? floatFromFpLiteral(untypedLiteral) : check decimalFromFpLiteral(cx, untypedLiteral, startPos);
     }
-    else if expectedType == () || t:includesSome(expectedType, t:FLOAT) {
+    else if expectedType == () || t:includesSome(expectedType, t:FLOAT) || !t:includesSome(expectedType, t:DECIMAL) {
         result = floatFromFpLiteral(untypedLiteral);
-    }
-    else if t:includesSome(expectedType, t:DECIMAL) {
-        result = check decimalFromFpLiteral(cx, untypedLiteral, startPos);
     }
     else {
-        result = floatFromFpLiteral(untypedLiteral);
+        result = check decimalFromFpLiteral(cx, untypedLiteral, startPos);
     }
     return { startPos: startPos, endPos: expr.endPos, value: result };
 }
@@ -584,13 +581,13 @@ function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLitera
 }
 
 // Since the binary floating point literal is parsed correctly,
-// it is impossible to throw an error.
+// it is impossible to return an error.
 function floatFromFpLiteral(string digits) returns float {
     return checkpanic float:fromString(digits);
 }
 
 // Even if the decimal floating point literal is parsed correctly,
-// overflow should throw an error.
+// overflows should return an error.
 function decimalFromFpLiteral(FoldContext cx, string decimalStr, Position pos) returns decimal|FoldError {
     decimal|error d = decimal:fromString(decimalStr);
     if d is error {
@@ -600,7 +597,7 @@ function decimalFromFpLiteral(FoldContext cx, string decimalStr, Position pos) r
 }
 
 // Even if the integer literal is parsed correctly,
-// overflow should throw an error.
+// overflows should return an error.
 function intFromLiteral(FoldContext cx, s:IntLiteralExpr expr) returns int|FoldError {
     int|error i = s:intFromIntLiteral(expr.base, expr.digits);
     if i is error {

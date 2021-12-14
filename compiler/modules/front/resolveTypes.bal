@@ -330,6 +330,7 @@ function resolveBuiltinTypeDesc(t:Context tc, s:SubsetBuiltinTypeDesc td) return
         "boolean" => { return t:BOOLEAN; }
         "int" => { return t:INT; }
         "float" => { return t:FLOAT; }
+        "decimal" => { return t:DECIMAL; }
         "string" => { return t:STRING; }
         "error" => { return t:ERROR; }
     }
