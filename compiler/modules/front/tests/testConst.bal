@@ -17,7 +17,7 @@ class TestFoldContext {
         self.tc = t:typeContext(new);
         self.file = file;
     }
-    function lookupConst(string? prefix, string varName, s:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError {
+    function lookupConst(string? prefix, string varName, s:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
         return ();
     }
     function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic {

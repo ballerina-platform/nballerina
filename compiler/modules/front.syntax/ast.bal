@@ -49,7 +49,7 @@ public type FunctionParam record {|
     TypeDesc td;
 |};
 
-public type ResolvedConst readonly & [t:SemType, t:Value];
+public type ResolvedConst readonly & [t:SemType, t:SingleValue];
 public type ConstDefn record {|
     *PositionFields;
     readonly string name;
@@ -395,7 +395,7 @@ public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
 
 public type ConstValueExpr record {|
     *PositionFields;
-    ()|boolean|int|float|string value;
+    t:SingleValue value;
     // This is non-nil when the static public type of the expression
     // contains more than one shape.
     // When it contains exactly one shape, then the shape is
