@@ -548,16 +548,15 @@ function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr ex
 }
 
 function foldFpLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError { 
-    t:Context tc = cx.typeContext();
     var { typeSuffix, untypedLiteral, startPos } = expr;
     float|decimal result;
     if typeSuffix != () {
         result = typeSuffix is s:FLOAT_TYPE_SUFFIX ? floatFromFpLiteral(untypedLiteral) : check decimalFromFpLiteral(cx, untypedLiteral, startPos);
     }
-    else if expectedType == () || expectsFloat(tc, expectedType) {
+    else if expectedType == () || t:includesSome(expectedType, t:FLOAT) {
         result = floatFromFpLiteral(untypedLiteral);
     }
-    else if expectsDecimal(tc, expectedType) {
+    else if t:includesSome(expectedType, t:DECIMAL) {
         result = check decimalFromFpLiteral(cx, untypedLiteral, startPos);
     }
     else {
@@ -567,34 +566,21 @@ function foldFpLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralE
 }
 
 function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLiteralExpr expr) returns s:ConstValueExpr|FoldError {
-    t:Context tc = cx.typeContext();
     Position startPos = expr.startPos;
     int|float|decimal result;
-    if expectedType == () || expectsInt(tc, expectedType) {
+    if expectedType == () || t:includesSome(expectedType, t:INT) {
         result = check intFromLiteral(cx, expr);
     }  
-    else if expectsFloat(tc, expectedType) {
+    else if t:includesSome(expectedType, t:FLOAT) {
         result = floatFromFpLiteral(expr.digits);
     }
-    else if expectsDecimal(tc, expectedType) {
+    else if t:includesSome(expectedType, t:DECIMAL) {
         result = check decimalFromFpLiteral(cx, expr.digits, startPos);
     }
     else {
         result = check intFromLiteral(cx, expr);
     }
     return { startPos: startPos, endPos: expr.endPos, value: result };
-}
-
-function expectsInt(t:Context cx, t:SemType semType) returns boolean {
-    return !t:isEmpty(cx, t:intersect(semType, t:INT));
-}
-
-function expectsFloat(t:Context cx, t:SemType semType) returns boolean {
-    return !t:isEmpty(cx, t:intersect(semType, t:FLOAT));
-}
-
-function expectsDecimal(t:Context cx, t:SemType semType) returns boolean {
-    return !t:isEmpty(cx, t:intersect(semType, t:DECIMAL));
 }
 
 // Since the binary floating point literal is parsed correctly,

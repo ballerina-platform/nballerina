@@ -743,6 +743,10 @@ public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean {
     return isEmpty(cx, diff(t1, t2));
 }
 
+public function includesSome(SemType t1, SemType t2) returns boolean {
+    return !isNever(intersect(t1, t2));
+}
+
 public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolean {
     int bits;
     if t1 is UniformTypeBitSet {
