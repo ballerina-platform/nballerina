@@ -6,51 +6,47 @@ public type RwTableSubtype record {|
 |};
 
 public function tableContaining(SemType memberType) returns SemType {
-    Bdd ro = <Bdd> subtypeData(memberType, UT_MAPPING_RO);
-    Bdd rw = <Bdd> subtypeData(memberType, UT_MAPPING_RW);
-    SubtypeData rwt = createRwTableSubtype(ro, rw);
-    return createComplexSemType(0, [[UT_TABLE_RO, ro], [UT_TABLE_RW, rwt]]);
+    Bdd ro = <Bdd>subtypeData(memberType, UT_MAPPING_RO);
+    Bdd rw = <Bdd>subtypeData(memberType, UT_MAPPING_RW);
+    SemType roSemtype = createUniformSemType(UT_TABLE_RO, ro);
+    SemType rwSemtype = createUniformSemType(UT_TABLE_RW, createRwTableSubtype(ro, rw));
+    return union(roSemtype, rwSemtype);
 }
 
 function rwTableSubtypeUnion(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    RwTableSubtype rwt1 = <RwTableSubtype> t1;
-    RwTableSubtype rwt2 = <RwTableSubtype> t2;
-    Bdd ro = bddUnion(rwt1.ro, rwt2.ro);
-    Bdd rw = bddUnion(rwt1.rw, rwt2.rw);
-    return createRwTableSubtype(ro, rw);
+    RwTableSubtype rwt1 = <RwTableSubtype>t1;
+    RwTableSubtype rwt2 = <RwTableSubtype>t2;
+    return createRwTableSubtype(bddUnion(rwt1.ro, rwt2.ro), bddUnion(rwt1.rw, rwt2.rw));
 }
 
 function rwTableSubtypeIntersect(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    RwTableSubtype rwt1 = <RwTableSubtype> t1;
-    RwTableSubtype rwt2 = <RwTableSubtype> t2;
-    Bdd ro = bddIntersect(rwt1.ro, rwt2.ro);
-    Bdd rw = bddIntersect(rwt1.rw, rwt2.rw);
-    return createRwTableSubtype(ro, rw);
+    RwTableSubtype rwt1 = <RwTableSubtype>t1;
+    RwTableSubtype rwt2 = <RwTableSubtype>t2;
+    return createRwTableSubtype(bddIntersect(rwt1.ro, rwt2.ro), bddIntersect(rwt1.rw, rwt2.rw));
 }
 
 function rwTableSubtypeDiff(SubtypeData t1, SubtypeData t2) returns SubtypeData {
-    RwTableSubtype rwt1 = <RwTableSubtype> t1;
-    RwTableSubtype rwt2 = <RwTableSubtype> t2;
-    Bdd ro = bddDiff(rwt1.ro, rwt2.ro);
-    Bdd rw = bddDiff(rwt1.rw, rwt2.rw);
-    return createRwTableSubtype(ro, rw);
+    RwTableSubtype rwt1 = <RwTableSubtype>t1;
+    RwTableSubtype rwt2 = <RwTableSubtype>t2;
+    return createRwTableSubtype(bddDiff(rwt1.ro, rwt2.ro), bddDiff(rwt1.rw, rwt2.rw));
 }
 
 function rwTableSubtypeComplement(SubtypeData t) returns SubtypeData {
-    RwTableSubtype rwt = <RwTableSubtype> t;
-    Bdd ro = bddComplement(rwt.ro);
-    Bdd rw = bddComplement(rwt.rw);
-    return createRwTableSubtype(ro, rw);
+    RwTableSubtype rwt = <RwTableSubtype>t;
+    return createRwTableSubtype(bddComplement(rwt.ro), bddComplement(rwt.rw));
 }
 
 function rwTableSubtypeEmpty(Context cx, SubtypeData t) returns boolean {
-    RwTableSubtype rwt = <RwTableSubtype> t;
-    boolean ro = mappingRoSubtypeIsEmpty(cx, rwt.ro);
-    boolean rw = mappingSubtypeIsEmpty(cx, rwt.rw);
-    return ro && rw;
+    RwTableSubtype rwt = <RwTableSubtype>t;
+    return mappingRoSubtypeIsEmpty(cx, rwt.ro) && mappingSubtypeIsEmpty(cx, rwt.rw);
 }
 
 function createRwTableSubtype(Bdd ro, Bdd rw) returns SubtypeData {
+    if ro == false && rw == false {
+        return false;
+    } else if ro == true && rw == true {
+        return true;
+    }
     return {ro, rw};
 }
 
