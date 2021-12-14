@@ -402,7 +402,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     initLoopVar.insns.push(branchToLoopHead);
     bir:Register condition = cx.createTmpRegister(t:BOOLEAN, stmt.range.opPos);
-    bir:CompareInsn compare = { op: "<", pos: stmt.range.opPos, orderType: t:UT_INT, operands: [loopVar, upper], result: condition };
+    bir:CompareInsn compare = { op: "<", pos: stmt.range.opPos, operands: [loopVar, upper], result: condition };
     loopHead.insns.push(compare);
     bir:BasicBlock loopBody = cx.createBasicBlock();
     bir:CondBranchInsn branch = { operand: condition, ifFalse: exit.label, ifTrue: loopBody.label, pos: stmt.range.opPos };
@@ -855,7 +855,23 @@ function codeGenAssign(CodeGenContext cx, Environment env, bir:BasicBlock block,
 }
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr|s:FieldAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
-    bir:Register reg = (check lookupVarRefBinding(cx, lValue.container.name, env, lValue.opPos)).reg;
+    s:VarRefExpr|s:FieldAccessLExpr container = lValue.container;
+    bir:Register reg;
+    bir:BasicBlock block1;
+    if container is s:VarRefExpr {
+        reg = (check lookupVarRefBinding(cx, container.name, env, lValue.opPos)).reg;
+        block1 = startBlock;
+    }
+    else {
+        var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, container, ()));
+        if operand is bir:Register && t:isSubtypeSimple(operand.semType, t:MAPPING)  {
+            reg = operand;
+            block1 = nextBlock;
+        }
+        else {
+            return cx.semanticErr("can only apply field access to mapping", pos=lValue.opPos);
+        }
+    }
     t:UniformTypeBitSet indexType;
     t:SemType memberType;
     if t:isSubtypeSimple(reg.semType, t:MAPPING) {
@@ -876,7 +892,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
             return cx.semanticErr("can only apply field access in lvalue to mapping", lValue.opPos);
         }
         else {
-            var { result: index, block: nextBlock } = check codeGenExprForInt(cx, startBlock, env, check cx.foldExpr(env, lValue.index, indexType));
+            var { result: index, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, lValue.index, indexType));
             { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
             bir:ListSetInsn insn = { operands: [reg, index, operand], pos: lValue.opPos };
             nextBlock.insns.push(insn);
@@ -884,7 +900,7 @@ function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Env
         }
     }
     else {
-        var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, startBlock, env, lValue, reg.semType);
+        var { result: index, block: nextBlock } = check codeGenLExprMappingKey(cx, block1, env, lValue, reg.semType);
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, foldedExpr);
         bir:MappingSetInsn insn =  { operands: [ reg, index, operand], pos: lValue.opPos };
         nextBlock.insns.push(insn);
@@ -1100,15 +1116,9 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
             var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
-            bir:OrderType? ot = operandPairOrderType(cx, l, r);
-            if ot != () {
-                bir:CompareInsn insn = { op, pos, orderType: ot, operands: [l, r], result };
-                nextBlock.insns.push(insn);
-                return { result, block: nextBlock };
-            }
-            else {
-                return cx.semanticErr("operands of relational operator do not belong to an ordered type", pos);
-            }
+            bir:CompareInsn insn = { op, pos, operands: [l, r], result };
+            nextBlock.insns.push(insn);
+            return { result, block: nextBlock };
         }
         var { td: _, operand: _ } => {
             // JBUG #31782 cast needed
@@ -1577,7 +1587,9 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func,
         result,
         args: args.cloneReadOnly(),
-        pos: expr.namePos
+        // expr.namePos is currently the start of the local name
+        // which is not really what is wanted, so we use startPos instead
+        pos: expr.startPos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };
@@ -1892,95 +1904,6 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
     }
     else {
         return ["nil", operand];
-    }
-    return ();
-}
-
-function operandPairOrderType(CodeGenContext cx, bir:Operand left, bir:Operand right) returns bir:OrderType? {
-    if operandIsNil(left) {
-        return promoteToOptOrderType(operandOrderType(cx, right));
-    }
-    if operandIsNil(right) {
-        return promoteToOptOrderType(operandOrderType(cx, left));
-    }
-    bir:OrderType? lot = operandOrderType(cx, left);
-    bir:OrderType? rot = operandOrderType(cx, right);
-    if lot == rot {
-        return lot;
-    }
-    lot = promoteToOptOrderType(lot);
-    rot = promoteToOptOrderType(rot);
-    if lot == rot {
-        return lot;
-    }
-    return ();
-}
-
-function promoteToOptOrderType(bir:OrderType? ot) returns bir:OrderType? {
-    if ot is bir:UniformOrderType {
-        return { opt: ot };
-    }
-    else {
-        return ot;
-    }
-}
-
-function operandIsNil(bir:Operand operand) returns boolean {
-    if operand is bir:Register {
-        return operand.semType === t:NIL;
-    }
-    else {
-        return operand == ();
-    }
-}
-
-final readonly & bir:UniformOrderType[] UNIFORM_ORDER_TYPES = [t:UT_BOOLEAN, t:UT_INT, t:UT_FLOAT, t:UT_STRING];
-
-function operandOrderType(CodeGenContext cx, bir:Operand operand) returns bir:OrderType? {
-    if operand is bir:Register {
-        t:SemType operandTy = operand.semType;
-        if operandTy === t:NIL {
-            return ();
-        }
-        t:UniformTypeBitSet arrTy = t:LIST;
-        if t:isSubtypeSimple(operandTy, arrTy) {
-            t:UniformTypeBitSet? memberTy = t:simpleArrayMemberType(cx.mod.tc, operandTy);
-            if memberTy is t:UniformTypeBitSet {
-                bir:OrderType? ot = operandUniformOrderType(memberTy);
-                if ot is bir:UniformOrderType {
-                    return <bir:ArrayOrderType> [{opt:ot}];
-                }
-                if ot is bir:OptOrderType {
-                    return <bir:ArrayOrderType> [ot];
-                }
-            }
-            else {
-                panic err:impossible("Failed to get array member type");
-            }
-        }
-        else {
-            return operandUniformOrderType(operandTy);
-        }
-    }
-    else {
-        var tc = t:constUniformTypeCode(operand);
-        if tc is bir:UniformOrderType {
-            return tc;
-        }
-    }
-    return ();
-}
-
-function operandUniformOrderType(t:SemType operandType) returns bir:OrderType? {
-    foreach bir:UniformOrderType tc in UNIFORM_ORDER_TYPES {
-        t:UniformTypeBitSet optBasicType = t:uniformTypeUnion((1 << tc) | (1 << t:UT_NIL));
-        if t:isSubtypeSimple(operandType, optBasicType) {
-            t:UniformTypeBitSet basicType = t:uniformType(tc);
-            if t:isSubtypeSimple(operandType, basicType) {
-                return tc;
-            }
-            return <bir:OptOrderType> { opt: tc };
-        }
     }
     return ();
 }

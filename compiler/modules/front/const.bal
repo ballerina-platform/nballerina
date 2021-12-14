@@ -199,7 +199,25 @@ function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] field
                 return false;
             }
         }
-        // SUBSET `...` in records will need to check all required fields are present
+        // Check that all members of a.names are included in fieldNames
+        // Both a.names and fieldNames are ordered
+        int i = 0;
+        int len = fieldNames.length();
+        foreach string name in a.names {
+            while true {
+                if i >= len {
+                    return false;
+                }
+                if fieldNames[i] == name {
+                    i += 1;
+                    break;
+                }
+                if fieldNames[i] > name {
+                    return false;
+                }
+                i += 1;
+            }
+        }
     }
     return true;
 }
@@ -369,10 +387,10 @@ function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:Bin
         else if left is boolean && right is boolean {
             return foldedBinaryConstExpr(booleanRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
         }
-        else if (left == () && right is int|float|string|boolean)
-                || (right == () && left is int|float|string|boolean) {
-            // () behaves like NaN
-            return foldedBinaryConstExpr(false, t:BOOLEAN, leftExpr, rightExpr);
+        else if left == () || right == () {
+            // () behaves like NaN, EQ iff `left = right = ()`
+            boolean result = expr.relationalOp is "<="|">=" ? left == right : false;
+            return foldedBinaryConstExpr(result, t:BOOLEAN, leftExpr, rightExpr);
         }
         return cx.semanticErr(`invalid operand types for ${expr.relationalOp}`, expr.opPos);
     }
@@ -698,4 +716,3 @@ function booleanRelationalEval(s:BinaryRelationalOp op, boolean left, boolean ri
     }
     panic err:impossible();
 }
-

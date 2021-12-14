@@ -127,7 +127,7 @@ function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value 
 }
 
 function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic, bir:Position pos) returns llvm:PointerValue {
-    scaffold.setDebugLocation(builder, pos, "file");
+    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_ERROR_CONSTRUCT);
     var err = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(panicConstructFunction), [packedPanic]);
     scaffold.clearDebugLocation(builder);
     return err;
@@ -369,4 +369,9 @@ function buildFunctionSignature(bir:FunctionSignature signature) returns llvm:Fu
         paramTypes: paramTypes.cloneReadOnly()
     };
     return ty;
+}
+
+function buildIsExact(llvm:Builder builder, Scaffold scaffold, llvm:Value taggedPtr) returns llvm:Value {
+    llvm:Value masked = <llvm:Value>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"), [taggedPtr, llvm:constInt(LLVM_INT, FLAG_EXACT)]);
+    return builder.iCmp("ne", masked, llvm:constNull(llvm:pointerType("i8", 1)));
 }

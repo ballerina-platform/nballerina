@@ -334,7 +334,7 @@ public type MemberAccessExpr record {|
 public type MemberAccessLExpr record {|
     *PositionFields;
     Position opPos;
-    VarRefExpr container;
+    VarRefExpr|FieldAccessLExpr container;
     Expr index;
 |};
 
@@ -351,7 +351,7 @@ public type FieldAccessExpr record {|
 public type FieldAccessLExpr record {|
     *PositionFields;
     Position opPos;
-    VarRefExpr container;
+    VarRefExpr|FieldAccessLExpr container;
     string fieldName;
 |};
 

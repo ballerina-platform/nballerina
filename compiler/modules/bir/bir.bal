@@ -218,6 +218,10 @@ public type FloatOperand float|Register;
 public type BooleanOperand boolean|Register;
 public type FunctionOperand FunctionRef|Register;
 
+public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
+    return operand is Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand);
+}
+
 # Perform a arithmetic operand on ints with two operands.
 # This is a PPI.
 public type IntArithmeticBinaryInsn readonly & record {|
@@ -306,20 +310,12 @@ public type ConvertToFloatInsn readonly & record {|
     Register operand;
 |};
 
-public type OrderType UniformOrderType|OptOrderType|ArrayOrderType;
-public type UniformOrderType t:UT_FLOAT|t:UT_INT|t:UT_BOOLEAN|t:UT_STRING;
-public type OptOrderType readonly & record {|
-    UniformOrderType opt;
-|};
-public type ArrayOrderType readonly & [OptOrderType];
-
-# This does ordered comparision
+# This does ordered comparison
 # Equality and inequality are done by equal
 public type CompareInsn readonly & record {|
     *InsnBase;
     INSN_COMPARE name = INSN_COMPARE;
     OrderOp op;
-    OrderType orderType;
     Register result;
     Operand[2] operands;
 |};

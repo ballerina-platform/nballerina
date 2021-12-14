@@ -370,7 +370,7 @@ function lExprToWords(Word[] w, LExpr expr) {
     }
     else if expr is MemberAccessLExpr {
         lExprToWords(w, expr.container);
-        w.push("[");
+        w.push(CLING, "[");
         exprToWords(w, expr.index, true);
         w.push("]");
     }

@@ -1,11 +1,11 @@
 @_bal_stack_guard = external global i8*
-@_Bi0m4root6types10 = external constant {i32, i32}
+@_Bi0m4root6types10 = external constant {i32}
 @.str0 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 10, i16 10, [12 x i8] c"floatField\00\00"}, align 8
 @.str1 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"intField\00\00\00\00"}, align 8
 @_Bt0m4root6types11 = external constant {i32, i32, [0 x i8*]}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct({i32, i32}*, i64)
+declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_float_to_tagged(double)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
@@ -21,7 +21,7 @@ define i8 addrspace(1)* @_B0m4root6types1create(i64 %0, double %1) !dbg !5 {
 7:
   store i64 %0, i64* %i
   store double %1, double* %f
-  %8 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi0m4root6types10, i64 2)
+  %8 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi0m4root6types10, i64 2)
   %9 = load double, double* %f
   %10 = call i8 addrspace(1)* @_bal_float_to_tagged(double %9)
   call void @_bal_mapping_init_member(i8 addrspace(1)* %8, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), i8 addrspace(1)* %10)

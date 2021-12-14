@@ -4,7 +4,6 @@ import ballerina/file;
 import ballerina/io;
 
 import wso2/nballerina.comm.err;
-import ballerina/random;
 import wso2/nballerina.comm.diagnostic as d;
 
 // JBUG the `enable: false` fails to work if there is a comment on the line before it
@@ -28,9 +27,10 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 if expectedLine.length() == 0 {
                     continue;
                 }
-                int columnNum = checkpanic random:createIntInRange(0, expectedLine.length());
-                Position randomPos = createPosition(lineNum + 1, columnNum);
-                test:assertEquals(sourceFile.lineContent(randomPos), expectedLine);
+                int columnNum = 0;
+                Position pos = createPosition(lineNum + 1, columnNum);
+                string actualLine = "".'join(...sourceFile.lineContent(pos));
+                test:assertEquals(actualLine, expectedLine);
             }
             ModulePart|err:Syntax part = scanAndParseModulePart(sourceFile, 0);
             if part is error {
@@ -77,7 +77,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                     string errorBody = string ` filename: ${file.filename()} between (${endLine}, ${endCol})  and (${stLine}, ${stCol})`;
                     test:assertTrue(testIsWhitespace(part.file, lastEnd, startPos), "none white space tokens between top level definition" + errorBody);
                     test:assertFalse(testPositionIsWhiteSpace(part.file, startPos), "start position is a white space");
-                    test:assertFalse(testPositionIsWhiteSpace(part.file, endPos), "end position is a white space");
+                    test:assertFalse(testPositionIsWhiteSpace(part.file, inclusiveEndPos(endPos)), "end position is a white space");
                     lastEnd = endPos;
                 }
                 string[] canonSrc = partToLines(part);

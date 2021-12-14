@@ -45,7 +45,7 @@ type UniformRepr readonly & record {|
 
 // Maps any Ballerina value to a tagged pointer
 type TaggedRepr readonly & record {|
-    BaseRepr base;
+    BASE_REPR_TAGGED base;
     t:UniformTypeBitSet subtype;
     llvm:IntegralType llvm;
 |};
@@ -106,8 +106,16 @@ type ModuleDI record {|
     DIFile[] files;
     DICompileUnit compileUnit;
     DISubroutineType funcType;
+    boolean debugFull;
 |};
 
+// Debug location will always be added
+public const int DEBUG_ORIGIN_ERROR_CONSTRUCT = 0;
+public const int DEBUG_ORIGIN_CALL = 1;
+// Debug location for these will be added only in full debug
+public const int DEBUG_ORIGIN_OTHER = 2;
+
+public type DebugLocationOrigin DEBUG_ORIGIN_ERROR_CONSTRUCT|DEBUG_ORIGIN_CALL|DEBUG_ORIGIN_OTHER;
 
 class Scaffold {
     private final Module mod;
@@ -235,27 +243,33 @@ class Scaffold {
         return d:location(self.file, pos);
     }
 
-    function setDebugLocation(llvm:Builder builder, bir:Position pos, "file"? fileOnly = ()) {
+    function setDebugLocation(llvm:Builder builder, bir:Position pos, DebugLocationOrigin origin = DEBUG_ORIGIN_OTHER) {
         DISubprogram? diFunc = self.diFunc;
-        if diFunc != () {
-            ModuleDI di = <ModuleDI>self.mod.di;
-            DILocation loc;
-            if fileOnly == () {
-                var [line, column] = self.file.lineColumn(pos);
-                loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+        if diFunc is () {
+            return;
+        }
+        ModuleDI di = <ModuleDI>self.mod.di;
+        // In the debugFull case, there is no need to do anything for DEBUG_ORIGIN_ERROR_CONSTRUCT
+        // because the full location will have been set earlier.
+        if origin == (di.debugFull ? DEBUG_ORIGIN_ERROR_CONSTRUCT : DEBUG_ORIGIN_OTHER) {
+            return;
+        }
+        DILocation loc;
+        if origin == DEBUG_ORIGIN_ERROR_CONSTRUCT {
+            DILocation? noLineLoc = self.noLineLocation;
+            if noLineLoc == () {
+                loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
+                self.noLineLocation = loc;
             }
             else {
-                DILocation? noLineLoc = self.noLineLocation;
-                if noLineLoc == () {
-                    loc =  di.builder.createDebugLocation(self.mod.llContext, 0, 0, self.diFunc);
-                    self.noLineLocation = loc;
-                }
-                else {
-                    loc = noLineLoc;
-                }
+                loc = noLineLoc;
             }
-            builder.setCurrentDebugLocation(loc);
         }
+        else {
+            var [line, column] = self.file.lineColumn(pos);
+            loc = di.builder.createDebugLocation(self.mod.llContext, line, column, self.diFunc);
+        }
+        builder.setCurrentDebugLocation(loc);
     }
 
     function clearDebugLocation(llvm:Builder builder) {

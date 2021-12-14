@@ -1,10 +1,10 @@
 @_bal_stack_guard = external global i8*
-@_Bi04root0 = external constant {i32, i32}
-@_Bi04root1 = external constant {i32, i32}
+@_Bi04root0 = external constant {i32}
+@_Bi04root1 = external constant {i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}*, i64)
-declare i64 @_bal_array_string_compare(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* @_bal_list_construct({i32}*, i64)
+declare i64 @_bal_array_generic_compare(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
   %a = alloca i8 addrspace(1)*
@@ -56,280 +56,283 @@ define void @_B04rootmain() !dbg !5 {
   %44 = alloca i8
   %45 = load i8*, i8** @_bal_stack_guard
   %46 = icmp ult i8* %44, %45
-  br i1 %46, label %238, label %47
+  br i1 %46, label %241, label %47
 47:
-  %48 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 3)
-  %49 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %48, i64 0, i32 3
-  %50 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %49, align 8
-  %51 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %50, i64 0, i64 0
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620637281), i8 addrspace(1)* addrspace(1)* %51
-  %52 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %50, i64 0, i64 1
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620702817), i8 addrspace(1)* addrspace(1)* %52
-  %53 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %50, i64 0, i64 2
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541020168801), i8 addrspace(1)* addrspace(1)* %53
-  %54 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %48, i64 0, i32 1
-  store i64 3, i64 addrspace(1)* %54
-  %55 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %48 to i8 addrspace(1)*
-  %56 = getelementptr i8, i8 addrspace(1)* %55, i64 1297036692682702852
-  store i8 addrspace(1)* %56, i8 addrspace(1)** %1
-  %57 = load i8 addrspace(1)*, i8 addrspace(1)** %1
-  store i8 addrspace(1)* %57, i8 addrspace(1)** %a
-  %58 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root1, i64 3)
-  %59 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %58, i64 0, i32 3
-  %60 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %59, align 8
-  %61 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %60, i64 0, i64 0
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620637281), i8 addrspace(1)* addrspace(1)* %61
-  %62 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %60, i64 0, i64 1
-  store i8 addrspace(1)* null, i8 addrspace(1)* addrspace(1)* %62
-  %63 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %60, i64 0, i64 2
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541020168801), i8 addrspace(1)* addrspace(1)* %63
-  %64 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %58, i64 0, i32 1
-  store i64 3, i64 addrspace(1)* %64
-  %65 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %58 to i8 addrspace(1)*
-  %66 = getelementptr i8, i8 addrspace(1)* %65, i64 1297036692682702852
-  store i8 addrspace(1)* %66, i8 addrspace(1)** %2
-  %67 = load i8 addrspace(1)*, i8 addrspace(1)** %2
-  store i8 addrspace(1)* %67, i8 addrspace(1)** %b
-  %68 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root1, i64 3)
-  %69 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %68, i64 0, i32 3
-  %70 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %69, align 8
-  %71 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %70, i64 0, i64 0
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620637281), i8 addrspace(1)* addrspace(1)* %71
-  %72 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %70, i64 0, i64 1
-  store i8 addrspace(1)* null, i8 addrspace(1)* addrspace(1)* %72
-  %73 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %70, i64 0, i64 2
-  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543622150520), i8 addrspace(1)* addrspace(1)* %73
-  %74 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %68, i64 0, i32 1
-  store i64 3, i64 addrspace(1)* %74
-  %75 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %68 to i8 addrspace(1)*
-  %76 = getelementptr i8, i8 addrspace(1)* %75, i64 1297036692682702852
-  store i8 addrspace(1)* %76, i8 addrspace(1)** %3
-  %77 = load i8 addrspace(1)*, i8 addrspace(1)** %3
-  store i8 addrspace(1)* %77, i8 addrspace(1)** %c
-  %78 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %79 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %80 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %78, i8 addrspace(1)* %79)
-  %81 = icmp eq i64 %80, 0
-  store i1 %81, i1* %4
-  %82 = load i1, i1* %4, !dbg !8
-  %83 = zext i1 %82 to i64, !dbg !8
-  %84 = or i64 %83, 72057594037927936, !dbg !8
-  %85 = getelementptr i8, i8 addrspace(1)* null, i64 %84, !dbg !8
-  call void @_Bb02ioprintln(i8 addrspace(1)* %85), !dbg !8
+  %48 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* @_bal_list_construct({i32}* @_Bi04root0, i64 3)
+  %49 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %48, i64 0, i32 3
+  %50 = load i8* addrspace(1)*, i8* addrspace(1)* addrspace(1)* %49, align 8
+  %51 = bitcast i8* addrspace(1)* %50 to [0 x i8 addrspace(1)*] addrspace(1)*
+  %52 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %51, i64 0, i64 0
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620637281), i8 addrspace(1)* addrspace(1)* %52
+  %53 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %51, i64 0, i64 1
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620702817), i8 addrspace(1)* addrspace(1)* %53
+  %54 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %51, i64 0, i64 2
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541020168801), i8 addrspace(1)* addrspace(1)* %54
+  %55 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %48, i64 0, i32 1
+  store i64 3, i64 addrspace(1)* %55
+  %56 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %48 to i8 addrspace(1)*
+  %57 = getelementptr i8, i8 addrspace(1)* %56, i64 1297036692682702852
+  store i8 addrspace(1)* %57, i8 addrspace(1)** %1
+  %58 = load i8 addrspace(1)*, i8 addrspace(1)** %1
+  store i8 addrspace(1)* %58, i8 addrspace(1)** %a
+  %59 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* @_bal_list_construct({i32}* @_Bi04root1, i64 3)
+  %60 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %59, i64 0, i32 3
+  %61 = load i8* addrspace(1)*, i8* addrspace(1)* addrspace(1)* %60, align 8
+  %62 = bitcast i8* addrspace(1)* %61 to [0 x i8 addrspace(1)*] addrspace(1)*
+  %63 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %62, i64 0, i64 0
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620637281), i8 addrspace(1)* addrspace(1)* %63
+  %64 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %62, i64 0, i64 1
+  store i8 addrspace(1)* null, i8 addrspace(1)* addrspace(1)* %64
+  %65 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %62, i64 0, i64 2
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476541020168801), i8 addrspace(1)* addrspace(1)* %65
+  %66 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %59, i64 0, i32 1
+  store i64 3, i64 addrspace(1)* %66
+  %67 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %59 to i8 addrspace(1)*
+  %68 = getelementptr i8, i8 addrspace(1)* %67, i64 1297036692682702852
+  store i8 addrspace(1)* %68, i8 addrspace(1)** %2
+  %69 = load i8 addrspace(1)*, i8 addrspace(1)** %2
+  store i8 addrspace(1)* %69, i8 addrspace(1)** %b
+  %70 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* @_bal_list_construct({i32}* @_Bi04root1, i64 3)
+  %71 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %70, i64 0, i32 3
+  %72 = load i8* addrspace(1)*, i8* addrspace(1)* addrspace(1)* %71, align 8
+  %73 = bitcast i8* addrspace(1)* %72 to [0 x i8 addrspace(1)*] addrspace(1)*
+  %74 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %73, i64 0, i64 0
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543620637281), i8 addrspace(1)* addrspace(1)* %74
+  %75 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %73, i64 0, i64 1
+  store i8 addrspace(1)* null, i8 addrspace(1)* addrspace(1)* %75
+  %76 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %73, i64 0, i64 2
+  store i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543622150520), i8 addrspace(1)* addrspace(1)* %76
+  %77 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %70, i64 0, i32 1
+  store i64 3, i64 addrspace(1)* %77
+  %78 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %70 to i8 addrspace(1)*
+  %79 = getelementptr i8, i8 addrspace(1)* %78, i64 1297036692682702852
+  store i8 addrspace(1)* %79, i8 addrspace(1)** %3
+  %80 = load i8 addrspace(1)*, i8 addrspace(1)** %3
+  store i8 addrspace(1)* %80, i8 addrspace(1)** %c
+  %81 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %82 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %83 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %81, i8 addrspace(1)* %82)
+  %84 = icmp eq i64 %83, 0
+  store i1 %84, i1* %4
+  %85 = load i1, i1* %4, !dbg !8
+  %86 = zext i1 %85 to i64, !dbg !8
+  %87 = or i64 %86, 72057594037927936, !dbg !8
+  %88 = getelementptr i8, i8 addrspace(1)* null, i64 %87, !dbg !8
+  call void @_Bb02ioprintln(i8 addrspace(1)* %88), !dbg !8
   store i8 addrspace(1)* null, i8 addrspace(1)** %5, !dbg !8
-  %86 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %87 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %88 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %86, i8 addrspace(1)* %87)
-  %89 = icmp ule i64 %88, 1
-  store i1 %89, i1* %6
-  %90 = load i1, i1* %6, !dbg !9
-  %91 = zext i1 %90 to i64, !dbg !9
-  %92 = or i64 %91, 72057594037927936, !dbg !9
-  %93 = getelementptr i8, i8 addrspace(1)* null, i64 %92, !dbg !9
-  call void @_Bb02ioprintln(i8 addrspace(1)* %93), !dbg !9
+  %89 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %90 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %91 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %89, i8 addrspace(1)* %90)
+  %92 = icmp ule i64 %91, 1
+  store i1 %92, i1* %6
+  %93 = load i1, i1* %6, !dbg !9
+  %94 = zext i1 %93 to i64, !dbg !9
+  %95 = or i64 %94, 72057594037927936, !dbg !9
+  %96 = getelementptr i8, i8 addrspace(1)* null, i64 %95, !dbg !9
+  call void @_Bb02ioprintln(i8 addrspace(1)* %96), !dbg !9
   store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !9
-  %94 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %95 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %96 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %94, i8 addrspace(1)* %95)
-  %97 = icmp eq i64 %96, 2
-  store i1 %97, i1* %8
-  %98 = load i1, i1* %8, !dbg !10
-  %99 = zext i1 %98 to i64, !dbg !10
-  %100 = or i64 %99, 72057594037927936, !dbg !10
-  %101 = getelementptr i8, i8 addrspace(1)* null, i64 %100, !dbg !10
-  call void @_Bb02ioprintln(i8 addrspace(1)* %101), !dbg !10
+  %97 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %98 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %99 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %97, i8 addrspace(1)* %98)
+  %100 = icmp eq i64 %99, 2
+  store i1 %100, i1* %8
+  %101 = load i1, i1* %8, !dbg !10
+  %102 = zext i1 %101 to i64, !dbg !10
+  %103 = or i64 %102, 72057594037927936, !dbg !10
+  %104 = getelementptr i8, i8 addrspace(1)* null, i64 %103, !dbg !10
+  call void @_Bb02ioprintln(i8 addrspace(1)* %104), !dbg !10
   store i8 addrspace(1)* null, i8 addrspace(1)** %9, !dbg !10
-  %102 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %103 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %104 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %102, i8 addrspace(1)* %103)
-  %105 = icmp sge i64 %104, 1
-  store i1 %105, i1* %10
-  %106 = load i1, i1* %10, !dbg !11
-  %107 = zext i1 %106 to i64, !dbg !11
-  %108 = or i64 %107, 72057594037927936, !dbg !11
-  %109 = getelementptr i8, i8 addrspace(1)* null, i64 %108, !dbg !11
-  call void @_Bb02ioprintln(i8 addrspace(1)* %109), !dbg !11
+  %105 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %106 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %107 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %105, i8 addrspace(1)* %106)
+  %108 = icmp sge i64 %107, 1
+  store i1 %108, i1* %10
+  %109 = load i1, i1* %10, !dbg !11
+  %110 = zext i1 %109 to i64, !dbg !11
+  %111 = or i64 %110, 72057594037927936, !dbg !11
+  %112 = getelementptr i8, i8 addrspace(1)* null, i64 %111, !dbg !11
+  call void @_Bb02ioprintln(i8 addrspace(1)* %112), !dbg !11
   store i8 addrspace(1)* null, i8 addrspace(1)** %11, !dbg !11
-  %110 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %111 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %112 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %110, i8 addrspace(1)* %111)
-  %113 = icmp eq i64 %112, 0
-  store i1 %113, i1* %12
-  %114 = load i1, i1* %12, !dbg !12
-  %115 = zext i1 %114 to i64, !dbg !12
-  %116 = or i64 %115, 72057594037927936, !dbg !12
-  %117 = getelementptr i8, i8 addrspace(1)* null, i64 %116, !dbg !12
-  call void @_Bb02ioprintln(i8 addrspace(1)* %117), !dbg !12
+  %113 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %114 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %115 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %113, i8 addrspace(1)* %114)
+  %116 = icmp eq i64 %115, 0
+  store i1 %116, i1* %12
+  %117 = load i1, i1* %12, !dbg !12
+  %118 = zext i1 %117 to i64, !dbg !12
+  %119 = or i64 %118, 72057594037927936, !dbg !12
+  %120 = getelementptr i8, i8 addrspace(1)* null, i64 %119, !dbg !12
+  call void @_Bb02ioprintln(i8 addrspace(1)* %120), !dbg !12
   store i8 addrspace(1)* null, i8 addrspace(1)** %13, !dbg !12
-  %118 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %119 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %120 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %118, i8 addrspace(1)* %119)
-  %121 = icmp ule i64 %120, 1
-  store i1 %121, i1* %14
-  %122 = load i1, i1* %14, !dbg !13
-  %123 = zext i1 %122 to i64, !dbg !13
-  %124 = or i64 %123, 72057594037927936, !dbg !13
-  %125 = getelementptr i8, i8 addrspace(1)* null, i64 %124, !dbg !13
-  call void @_Bb02ioprintln(i8 addrspace(1)* %125), !dbg !13
+  %121 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %122 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %123 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %121, i8 addrspace(1)* %122)
+  %124 = icmp ule i64 %123, 1
+  store i1 %124, i1* %14
+  %125 = load i1, i1* %14, !dbg !13
+  %126 = zext i1 %125 to i64, !dbg !13
+  %127 = or i64 %126, 72057594037927936, !dbg !13
+  %128 = getelementptr i8, i8 addrspace(1)* null, i64 %127, !dbg !13
+  call void @_Bb02ioprintln(i8 addrspace(1)* %128), !dbg !13
   store i8 addrspace(1)* null, i8 addrspace(1)** %15, !dbg !13
-  %126 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %127 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %128 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %126, i8 addrspace(1)* %127)
-  %129 = icmp eq i64 %128, 2
-  store i1 %129, i1* %16
-  %130 = load i1, i1* %16, !dbg !14
-  %131 = zext i1 %130 to i64, !dbg !14
-  %132 = or i64 %131, 72057594037927936, !dbg !14
-  %133 = getelementptr i8, i8 addrspace(1)* null, i64 %132, !dbg !14
-  call void @_Bb02ioprintln(i8 addrspace(1)* %133), !dbg !14
+  %129 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %130 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %131 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %129, i8 addrspace(1)* %130)
+  %132 = icmp eq i64 %131, 2
+  store i1 %132, i1* %16
+  %133 = load i1, i1* %16, !dbg !14
+  %134 = zext i1 %133 to i64, !dbg !14
+  %135 = or i64 %134, 72057594037927936, !dbg !14
+  %136 = getelementptr i8, i8 addrspace(1)* null, i64 %135, !dbg !14
+  call void @_Bb02ioprintln(i8 addrspace(1)* %136), !dbg !14
   store i8 addrspace(1)* null, i8 addrspace(1)** %17, !dbg !14
-  %134 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %135 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %136 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %134, i8 addrspace(1)* %135)
-  %137 = icmp sge i64 %136, 1
-  store i1 %137, i1* %18
-  %138 = load i1, i1* %18, !dbg !15
-  %139 = zext i1 %138 to i64, !dbg !15
-  %140 = or i64 %139, 72057594037927936, !dbg !15
-  %141 = getelementptr i8, i8 addrspace(1)* null, i64 %140, !dbg !15
-  call void @_Bb02ioprintln(i8 addrspace(1)* %141), !dbg !15
+  %137 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %138 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %139 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %137, i8 addrspace(1)* %138)
+  %140 = icmp sge i64 %139, 1
+  store i1 %140, i1* %18
+  %141 = load i1, i1* %18, !dbg !15
+  %142 = zext i1 %141 to i64, !dbg !15
+  %143 = or i64 %142, 72057594037927936, !dbg !15
+  %144 = getelementptr i8, i8 addrspace(1)* null, i64 %143, !dbg !15
+  call void @_Bb02ioprintln(i8 addrspace(1)* %144), !dbg !15
   store i8 addrspace(1)* null, i8 addrspace(1)** %19, !dbg !15
-  %142 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %143 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %144 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %142, i8 addrspace(1)* %143)
-  %145 = icmp eq i64 %144, 0
-  store i1 %145, i1* %20
-  %146 = load i1, i1* %20, !dbg !16
-  %147 = zext i1 %146 to i64, !dbg !16
-  %148 = or i64 %147, 72057594037927936, !dbg !16
-  %149 = getelementptr i8, i8 addrspace(1)* null, i64 %148, !dbg !16
-  call void @_Bb02ioprintln(i8 addrspace(1)* %149), !dbg !16
+  %145 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %146 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %147 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %145, i8 addrspace(1)* %146)
+  %148 = icmp eq i64 %147, 0
+  store i1 %148, i1* %20
+  %149 = load i1, i1* %20, !dbg !16
+  %150 = zext i1 %149 to i64, !dbg !16
+  %151 = or i64 %150, 72057594037927936, !dbg !16
+  %152 = getelementptr i8, i8 addrspace(1)* null, i64 %151, !dbg !16
+  call void @_Bb02ioprintln(i8 addrspace(1)* %152), !dbg !16
   store i8 addrspace(1)* null, i8 addrspace(1)** %21, !dbg !16
-  %150 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %151 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %152 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %150, i8 addrspace(1)* %151)
-  %153 = icmp ule i64 %152, 1
-  store i1 %153, i1* %22
-  %154 = load i1, i1* %22, !dbg !17
-  %155 = zext i1 %154 to i64, !dbg !17
-  %156 = or i64 %155, 72057594037927936, !dbg !17
-  %157 = getelementptr i8, i8 addrspace(1)* null, i64 %156, !dbg !17
-  call void @_Bb02ioprintln(i8 addrspace(1)* %157), !dbg !17
+  %153 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %154 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %155 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %153, i8 addrspace(1)* %154)
+  %156 = icmp ule i64 %155, 1
+  store i1 %156, i1* %22
+  %157 = load i1, i1* %22, !dbg !17
+  %158 = zext i1 %157 to i64, !dbg !17
+  %159 = or i64 %158, 72057594037927936, !dbg !17
+  %160 = getelementptr i8, i8 addrspace(1)* null, i64 %159, !dbg !17
+  call void @_Bb02ioprintln(i8 addrspace(1)* %160), !dbg !17
   store i8 addrspace(1)* null, i8 addrspace(1)** %23, !dbg !17
-  %158 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %159 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %160 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %158, i8 addrspace(1)* %159)
-  %161 = icmp eq i64 %160, 2
-  store i1 %161, i1* %24
-  %162 = load i1, i1* %24, !dbg !18
-  %163 = zext i1 %162 to i64, !dbg !18
-  %164 = or i64 %163, 72057594037927936, !dbg !18
-  %165 = getelementptr i8, i8 addrspace(1)* null, i64 %164, !dbg !18
-  call void @_Bb02ioprintln(i8 addrspace(1)* %165), !dbg !18
+  %161 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %162 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %163 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %161, i8 addrspace(1)* %162)
+  %164 = icmp eq i64 %163, 2
+  store i1 %164, i1* %24
+  %165 = load i1, i1* %24, !dbg !18
+  %166 = zext i1 %165 to i64, !dbg !18
+  %167 = or i64 %166, 72057594037927936, !dbg !18
+  %168 = getelementptr i8, i8 addrspace(1)* null, i64 %167, !dbg !18
+  call void @_Bb02ioprintln(i8 addrspace(1)* %168), !dbg !18
   store i8 addrspace(1)* null, i8 addrspace(1)** %25, !dbg !18
-  %166 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %167 = load i8 addrspace(1)*, i8 addrspace(1)** %a
-  %168 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %166, i8 addrspace(1)* %167)
-  %169 = icmp sge i64 %168, 1
-  store i1 %169, i1* %26
-  %170 = load i1, i1* %26, !dbg !19
-  %171 = zext i1 %170 to i64, !dbg !19
-  %172 = or i64 %171, 72057594037927936, !dbg !19
-  %173 = getelementptr i8, i8 addrspace(1)* null, i64 %172, !dbg !19
-  call void @_Bb02ioprintln(i8 addrspace(1)* %173), !dbg !19
+  %169 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %170 = load i8 addrspace(1)*, i8 addrspace(1)** %a
+  %171 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %169, i8 addrspace(1)* %170)
+  %172 = icmp sge i64 %171, 1
+  store i1 %172, i1* %26
+  %173 = load i1, i1* %26, !dbg !19
+  %174 = zext i1 %173 to i64, !dbg !19
+  %175 = or i64 %174, 72057594037927936, !dbg !19
+  %176 = getelementptr i8, i8 addrspace(1)* null, i64 %175, !dbg !19
+  call void @_Bb02ioprintln(i8 addrspace(1)* %176), !dbg !19
   store i8 addrspace(1)* null, i8 addrspace(1)** %27, !dbg !19
-  %174 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %175 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %176 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %174, i8 addrspace(1)* %175)
-  %177 = icmp eq i64 %176, 0
-  store i1 %177, i1* %28
-  %178 = load i1, i1* %28, !dbg !20
-  %179 = zext i1 %178 to i64, !dbg !20
-  %180 = or i64 %179, 72057594037927936, !dbg !20
-  %181 = getelementptr i8, i8 addrspace(1)* null, i64 %180, !dbg !20
-  call void @_Bb02ioprintln(i8 addrspace(1)* %181), !dbg !20
+  %177 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %178 = load i8 addrspace(1)*, i8 addrspace(1)** %c
+  %179 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %177, i8 addrspace(1)* %178)
+  %180 = icmp eq i64 %179, 0
+  store i1 %180, i1* %28
+  %181 = load i1, i1* %28, !dbg !20
+  %182 = zext i1 %181 to i64, !dbg !20
+  %183 = or i64 %182, 72057594037927936, !dbg !20
+  %184 = getelementptr i8, i8 addrspace(1)* null, i64 %183, !dbg !20
+  call void @_Bb02ioprintln(i8 addrspace(1)* %184), !dbg !20
   store i8 addrspace(1)* null, i8 addrspace(1)** %29, !dbg !20
-  %182 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %183 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %184 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %182, i8 addrspace(1)* %183)
-  %185 = icmp ule i64 %184, 1
-  store i1 %185, i1* %30
-  %186 = load i1, i1* %30, !dbg !21
-  %187 = zext i1 %186 to i64, !dbg !21
-  %188 = or i64 %187, 72057594037927936, !dbg !21
-  %189 = getelementptr i8, i8 addrspace(1)* null, i64 %188, !dbg !21
-  call void @_Bb02ioprintln(i8 addrspace(1)* %189), !dbg !21
+  %185 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %186 = load i8 addrspace(1)*, i8 addrspace(1)** %c
+  %187 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %185, i8 addrspace(1)* %186)
+  %188 = icmp ule i64 %187, 1
+  store i1 %188, i1* %30
+  %189 = load i1, i1* %30, !dbg !21
+  %190 = zext i1 %189 to i64, !dbg !21
+  %191 = or i64 %190, 72057594037927936, !dbg !21
+  %192 = getelementptr i8, i8 addrspace(1)* null, i64 %191, !dbg !21
+  call void @_Bb02ioprintln(i8 addrspace(1)* %192), !dbg !21
   store i8 addrspace(1)* null, i8 addrspace(1)** %31, !dbg !21
-  %190 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %191 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %192 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %190, i8 addrspace(1)* %191)
-  %193 = icmp eq i64 %192, 2
-  store i1 %193, i1* %32
-  %194 = load i1, i1* %32, !dbg !22
-  %195 = zext i1 %194 to i64, !dbg !22
-  %196 = or i64 %195, 72057594037927936, !dbg !22
-  %197 = getelementptr i8, i8 addrspace(1)* null, i64 %196, !dbg !22
-  call void @_Bb02ioprintln(i8 addrspace(1)* %197), !dbg !22
+  %193 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %194 = load i8 addrspace(1)*, i8 addrspace(1)** %c
+  %195 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %193, i8 addrspace(1)* %194)
+  %196 = icmp eq i64 %195, 2
+  store i1 %196, i1* %32
+  %197 = load i1, i1* %32, !dbg !22
+  %198 = zext i1 %197 to i64, !dbg !22
+  %199 = or i64 %198, 72057594037927936, !dbg !22
+  %200 = getelementptr i8, i8 addrspace(1)* null, i64 %199, !dbg !22
+  call void @_Bb02ioprintln(i8 addrspace(1)* %200), !dbg !22
   store i8 addrspace(1)* null, i8 addrspace(1)** %33, !dbg !22
-  %198 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %199 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %200 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %198, i8 addrspace(1)* %199)
-  %201 = icmp sge i64 %200, 1
-  store i1 %201, i1* %34
-  %202 = load i1, i1* %34, !dbg !23
-  %203 = zext i1 %202 to i64, !dbg !23
-  %204 = or i64 %203, 72057594037927936, !dbg !23
-  %205 = getelementptr i8, i8 addrspace(1)* null, i64 %204, !dbg !23
-  call void @_Bb02ioprintln(i8 addrspace(1)* %205), !dbg !23
+  %201 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %202 = load i8 addrspace(1)*, i8 addrspace(1)** %c
+  %203 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %201, i8 addrspace(1)* %202)
+  %204 = icmp sge i64 %203, 1
+  store i1 %204, i1* %34
+  %205 = load i1, i1* %34, !dbg !23
+  %206 = zext i1 %205 to i64, !dbg !23
+  %207 = or i64 %206, 72057594037927936, !dbg !23
+  %208 = getelementptr i8, i8 addrspace(1)* null, i64 %207, !dbg !23
+  call void @_Bb02ioprintln(i8 addrspace(1)* %208), !dbg !23
   store i8 addrspace(1)* null, i8 addrspace(1)** %35, !dbg !23
-  %206 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %207 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %208 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %206, i8 addrspace(1)* %207)
-  %209 = icmp eq i64 %208, 0
-  store i1 %209, i1* %36
-  %210 = load i1, i1* %36, !dbg !24
-  %211 = zext i1 %210 to i64, !dbg !24
-  %212 = or i64 %211, 72057594037927936, !dbg !24
-  %213 = getelementptr i8, i8 addrspace(1)* null, i64 %212, !dbg !24
-  call void @_Bb02ioprintln(i8 addrspace(1)* %213), !dbg !24
+  %209 = load i8 addrspace(1)*, i8 addrspace(1)** %c
+  %210 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %211 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %209, i8 addrspace(1)* %210)
+  %212 = icmp eq i64 %211, 0
+  store i1 %212, i1* %36
+  %213 = load i1, i1* %36, !dbg !24
+  %214 = zext i1 %213 to i64, !dbg !24
+  %215 = or i64 %214, 72057594037927936, !dbg !24
+  %216 = getelementptr i8, i8 addrspace(1)* null, i64 %215, !dbg !24
+  call void @_Bb02ioprintln(i8 addrspace(1)* %216), !dbg !24
   store i8 addrspace(1)* null, i8 addrspace(1)** %37, !dbg !24
-  %214 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %215 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %216 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %214, i8 addrspace(1)* %215)
-  %217 = icmp ule i64 %216, 1
-  store i1 %217, i1* %38
-  %218 = load i1, i1* %38, !dbg !25
-  %219 = zext i1 %218 to i64, !dbg !25
-  %220 = or i64 %219, 72057594037927936, !dbg !25
-  %221 = getelementptr i8, i8 addrspace(1)* null, i64 %220, !dbg !25
-  call void @_Bb02ioprintln(i8 addrspace(1)* %221), !dbg !25
+  %217 = load i8 addrspace(1)*, i8 addrspace(1)** %c
+  %218 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %219 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %217, i8 addrspace(1)* %218)
+  %220 = icmp ule i64 %219, 1
+  store i1 %220, i1* %38
+  %221 = load i1, i1* %38, !dbg !25
+  %222 = zext i1 %221 to i64, !dbg !25
+  %223 = or i64 %222, 72057594037927936, !dbg !25
+  %224 = getelementptr i8, i8 addrspace(1)* null, i64 %223, !dbg !25
+  call void @_Bb02ioprintln(i8 addrspace(1)* %224), !dbg !25
   store i8 addrspace(1)* null, i8 addrspace(1)** %39, !dbg !25
-  %222 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %223 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %224 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %222, i8 addrspace(1)* %223)
-  %225 = icmp eq i64 %224, 2
-  store i1 %225, i1* %40
-  %226 = load i1, i1* %40, !dbg !26
-  %227 = zext i1 %226 to i64, !dbg !26
-  %228 = or i64 %227, 72057594037927936, !dbg !26
-  %229 = getelementptr i8, i8 addrspace(1)* null, i64 %228, !dbg !26
-  call void @_Bb02ioprintln(i8 addrspace(1)* %229), !dbg !26
+  %225 = load i8 addrspace(1)*, i8 addrspace(1)** %c
+  %226 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %227 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %225, i8 addrspace(1)* %226)
+  %228 = icmp eq i64 %227, 2
+  store i1 %228, i1* %40
+  %229 = load i1, i1* %40, !dbg !26
+  %230 = zext i1 %229 to i64, !dbg !26
+  %231 = or i64 %230, 72057594037927936, !dbg !26
+  %232 = getelementptr i8, i8 addrspace(1)* null, i64 %231, !dbg !26
+  call void @_Bb02ioprintln(i8 addrspace(1)* %232), !dbg !26
   store i8 addrspace(1)* null, i8 addrspace(1)** %41, !dbg !26
-  %230 = load i8 addrspace(1)*, i8 addrspace(1)** %c
-  %231 = load i8 addrspace(1)*, i8 addrspace(1)** %b
-  %232 = call i64 @_bal_array_string_compare(i8 addrspace(1)* %230, i8 addrspace(1)* %231)
-  %233 = icmp sge i64 %232, 1
-  store i1 %233, i1* %42
-  %234 = load i1, i1* %42, !dbg !27
-  %235 = zext i1 %234 to i64, !dbg !27
-  %236 = or i64 %235, 72057594037927936, !dbg !27
-  %237 = getelementptr i8, i8 addrspace(1)* null, i64 %236, !dbg !27
-  call void @_Bb02ioprintln(i8 addrspace(1)* %237), !dbg !27
+  %233 = load i8 addrspace(1)*, i8 addrspace(1)** %c
+  %234 = load i8 addrspace(1)*, i8 addrspace(1)** %b
+  %235 = call i64 @_bal_array_generic_compare(i8 addrspace(1)* %233, i8 addrspace(1)* %234)
+  %236 = icmp sge i64 %235, 1
+  store i1 %236, i1* %42
+  %237 = load i1, i1* %42, !dbg !27
+  %238 = zext i1 %237 to i64, !dbg !27
+  %239 = or i64 %238, 72057594037927936, !dbg !27
+  %240 = getelementptr i8, i8 addrspace(1)* null, i64 %239, !dbg !27
+  call void @_Bb02ioprintln(i8 addrspace(1)* %240), !dbg !27
   store i8 addrspace(1)* null, i8 addrspace(1)** %43, !dbg !27
   ret void
-238:
-  %239 = call i8 addrspace(1)* @_bal_panic_construct(i64 772), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %239)
+241:
+  %242 = call i8 addrspace(1)* @_bal_panic_construct(i64 772), !dbg !7
+  call void @_bal_panic(i8 addrspace(1)* %242)
   unreachable
 }
 !llvm.module.flags = !{!0}

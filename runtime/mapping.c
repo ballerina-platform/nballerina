@@ -191,6 +191,12 @@ void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr value)
     lookupInsert(mp, key, _bal_string_hash(key), len);
 }
 
+// We use this in the case where exactness does not guarantee that the set will succeed.
+PanicCode _bal_mapping_inexact_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
+    PanicCode code = _bal_mapping_set(mapping, key, value);
+    return code == 0 ? 0 : PANIC_MAPPING_STORE;
+}
+
 PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
     MappingDescPtr mdp = mp->desc;

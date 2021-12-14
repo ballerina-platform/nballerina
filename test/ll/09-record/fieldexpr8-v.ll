@@ -1,11 +1,11 @@
 @_bal_stack_guard = external global i8*
-@_Bi04root0 = external constant {i32, i32}
+@_Bi04root0 = external constant {i32}
 @.str0 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 12, i16 12, [12 x i8] c"booleanField"}, align 8
 @.str1 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 10, i16 10, [12 x i8] c"floatField\00\00"}, align 8
 @.str2 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"intField\00\00\00\00"}, align 8
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct({i32, i32}*, i64)
+declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare void @_bal_mapping_init_member(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_float_to_tagged(double)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
@@ -32,7 +32,7 @@ define void @_B04rootmain() !dbg !5 {
   %14 = icmp ult i8* %12, %13
   br i1 %14, label %49, label %15
 15:
-  %16 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi04root0, i64 3)
+  %16 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 3)
   %17 = zext i1 0 to i64
   %18 = or i64 %17, 72057594037927936
   %19 = getelementptr i8, i8 addrspace(1)* null, i64 %18

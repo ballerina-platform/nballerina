@@ -30,7 +30,7 @@
    * assignment
       * to variable `v = E;`
       * to member of a list or mapping `v[E1] = E2;`
-      * to a field `v.f = E`
+      * to a field `v.x.y.z = E`
       * to wildcard binding pattern `_ = E`
       * compound assignment `op=`
    * `return` statement
@@ -169,13 +169,14 @@ destructuring-assign-stmt = wildcard-binding-pattern "=" expression ";"
 wildcard-binding-pattern = "_"
 
 lvexpr =
-   variable-reference-lvexpr
-   | field-access-lvexpr
-   | member-access-lvexpr 
+   chainable-lvexpr
+   | member-access-lvexpr
 
-member-access-lvexpr = variable-reference-lvexpr "[" expression "]"
+chainable-lvexpr = variable-reference-lvexpr | field-access-lvexpr
 
-field-access-lvexpr = variable-reference-lvexpr "." identifier
+member-access-lvexpr = chainable-lvexpr "[" expression "]"
+
+field-access-lvexpr = chainable-lvexpr "." identifier
 
 variable-reference-lvexpr = variable-reference
 
@@ -372,6 +373,7 @@ Two kinds of `import` are supported.
 ## Additions from subset 10
 
 * Types can be nested arbitrarily: any supported type descriptors can be used for a member of an array, record or mapping type descriptors. This includes recursive types.
+* Multiple dots are allowed on the left-hand side of an assignment (e.g. `x.y.z = 17`).
 * Record types can have a record-rest-descriptor `T...;`
 
 ## Implemented spec changes since 2021R1
@@ -384,5 +386,6 @@ Two kinds of `import` are supported.
 * [#902](https://github.com/ballerina-platform/ballerina-spec/issues/902) - expression has a singleton type when its subexpressions have singleton type
 * [#904](https://github.com/ballerina-platform/ballerina-spec/issues/904) - restrict assignment to type-narrowed variables within loops
 * [#905](https://github.com/ballerina-platform/ballerina-spec/issues/905) - disallow trailing dot in floating-point literals
+* [#970](https://github.com/ballerina-platform/ballerina-spec/issues/970#issuecomment-952463711) - disallow white space in qualified identifier
 * [#991](https://github.com/ballerina-platform/ballerina-spec/issues/991) - clarify that `null` is allowed as a type descriptor
 

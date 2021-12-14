@@ -161,7 +161,7 @@ function finishIdentifierStmt(Tokenizer tok, string name, Position startPos, Pos
         }
         return parseError(tok, "member access expr not allowed as a statement");
     }
-    else if cur == ":" {
+    else if tok.currentIsNoSpaceColon() {
         check tok.advance();
         Position localNamePos = tok.currentStartPos();
         return finishOptQualIdentifierStmt(tok, name, check tok.expectIdentifier(), startPos, localNamePos);
@@ -188,8 +188,27 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name,
         else {
             endPos = tok.previousEndPos();
             VarRefExpr container = { startPos, endPos, name, namePos };
-            FieldAccessLExpr lValue = { startPos, endPos, fieldName: localName, container, opPos };
+            FieldAccessLExpr fieldAccessLValue = { startPos, endPos, fieldName: localName, container, opPos };
             Token? t = tok.current();
+            while t == "." {
+                Position dotPos = tok.currentStartPos();
+                check tok.advance();
+                string fieldName = check tok.expectIdentifier();
+                fieldAccessLValue = <FieldAccessLExpr>{ startPos, endPos, fieldName, container: fieldAccessLValue, opPos: dotPos };
+                t = tok.current();
+            }
+            FieldAccessLExpr|MemberAccessLExpr lValue;
+            if t == "[" {
+                Position bracketPos = tok.currentStartPos();
+                check tok.advance();
+                Expr index = check parseInnerExpr(tok);
+                Position memberAccessEndPos = check tok.expectEnd("]");
+                lValue = <MemberAccessLExpr>{ startPos, endPos: memberAccessEndPos, index, container: fieldAccessLValue, opPos: bracketPos };
+                t = tok.current();
+            }
+            else {
+                lValue = fieldAccessLValue;
+            }
             if t == "=" {
                 return finishAssignStmt(tok, lValue, startPos);
             }
@@ -197,7 +216,6 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name,
                 opPos = tok.currentStartPos();
                 return parseCompoundAssignStmt(tok, lValue, t, startPos, opPos);
             }
-            // SUBSET handle "["
         }
         // falls through to end
     }
@@ -300,7 +318,7 @@ function finishVarDeclStmt(Tokenizer tok, TypeDesc td, Position startPos, boolea
         name = check tok.expectIdentifier();
     }
     // initExpr is required in the subset
-    Position opPos = check tok.expectEnd("=");
+    Position opPos = check tok.expectStart("=");
     Expr initExpr = check parseExpr(tok);
     Position endPos = check tok.expectEnd(";");
     return { startPos, endPos, opPos, td, name, namePos, initExpr, isFinal };
@@ -374,7 +392,7 @@ function parseForeachStmt(Tokenizer tok, Position startPos) returns ForeachStmt|
     check tok.advance();
     Position namePos = tok.currentStartPos();
     string name = check tok.expectIdentifier();
-    Position kwPos = check tok.expectEnd("in");
+    Position kwPos = check tok.expectStart("in");
     RangeExpr range = check parseRangeExpr(tok);
     StmtBlock body = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
@@ -397,7 +415,7 @@ function parseMatchStmt(Tokenizer tok, Position startPos) returns MatchStmt|err:
 function parseMatchClause(Tokenizer tok) returns MatchClause|err:Syntax {
     Position startPos = tok.currentStartPos();
     MatchPattern[] patterns = check parseMatchPatternList(tok);
-    Position opPos = check tok.expectEnd("=>");
+    Position opPos = check tok.expectStart("=>");
     StmtBlock block = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
     return { startPos, endPos, patterns, block, opPos };

@@ -10,10 +10,17 @@
 #define UT_MASK 0x1F
 #define TAG_SHIFT 56
 
+#define NIL ((TaggedPtr)0)
+
 #define COMPARE_UN -1
 #define COMPARE_LT 0
 #define COMPARE_EQ 1
 #define COMPARE_GT 2
+
+// CompareResult is one of the above four COMPARE_* value.
+typedef int64_t CompareResult;
+
+#define COMPARE_TOTAL(l, r) (((l) > (r)) ? COMPARE_GT : (((l) < (r)) ? COMPARE_LT : COMPARE_EQ))
 
 #define HEAP_ALIGNMENT 8
 #define POINTER_MASK (((uint64_t)1 << TAG_SHIFT) - 1)
@@ -48,6 +55,7 @@
 
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
+#define unreachable() __builtin_unreachable()
 
 #ifndef STACK_SIZE
 #ifdef STACK_DEBUG
@@ -365,6 +373,13 @@ extern TaggedPtr _bal_decimal_from_int(int64_t val);
 extern TaggedPtrPanicCode _bal_decimal_from_float(double val);
 extern IntWithOverflow _bal_decimal_to_int(TaggedPtr tp);
 
+extern CompareResult READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs);
+
+extern CompareResult READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern CompareResult READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs);
+
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
 #define BAL_LIB_IO_NAME(sym) _Bb02io ## sym
@@ -456,29 +471,20 @@ static READONLY inline int64_t taggedToInt(TaggedPtr p) {
     }
 }
 
-static READONLY inline int64_t taggedPrimitiveCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
+static READONLY inline CompareResult taggedPrimitiveCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
     if (lhs == rhs) {
         return COMPARE_EQ;
     }
-    if (!lhs || !rhs) {
+    if (lhs == NIL || rhs == NIL) {
         return COMPARE_UN;
     }
     return (*comparator)(lhs, rhs);
 }
 
-static READONLY inline int64_t taggedIntComparator(TaggedPtr lhs, TaggedPtr rhs) {
+static READONLY inline CompareResult taggedIntComparator(TaggedPtr lhs, TaggedPtr rhs) {
     int64_t lhsVal = taggedToInt(lhs);
     int64_t rhsVal = taggedToInt(rhs);
-    if (lhsVal == rhsVal) {
-        return COMPARE_EQ;
-    }
-    if (lhsVal < rhsVal) {
-        return COMPARE_LT;
-    }
-    if (lhsVal > rhsVal) {
-        return COMPARE_GT;
-    }
-    return COMPARE_UN;
+    return COMPARE_TOTAL(lhsVal, rhsVal);
 }
 
 static READONLY inline int64_t taggedIntCompare(TaggedPtr lhs, TaggedPtr rhs) {
@@ -490,7 +496,7 @@ static READONLY inline double taggedToFloat(TaggedPtr p) {
     return *np;
 }
 
-static READONLY inline int64_t taggedFloatComparator(TaggedPtr lhs, TaggedPtr rhs) {
+static READONLY inline CompareResult taggedFloatComparator(TaggedPtr lhs, TaggedPtr rhs) {
     double lhsVal = taggedToFloat(lhs);
     double rhsVal = taggedToFloat(rhs);
     if (lhsVal == rhsVal) {
@@ -509,32 +515,25 @@ static READONLY inline int64_t taggedFloatCompare(TaggedPtr lhs, TaggedPtr rhs) 
     return taggedPrimitiveCompare(lhs, rhs, &taggedFloatComparator);
 }
 
-static READONLY inline int64_t taggedBooleanComparator(TaggedPtr lhs, TaggedPtr rhs) {
+static READONLY inline CompareResult taggedBooleanComparator(TaggedPtr lhs, TaggedPtr rhs) {
     int lhsVal = taggedToBoolean(lhs);
     int rhsVal = taggedToBoolean(rhs);
-    if (lhsVal == rhsVal) {
-        return COMPARE_EQ;
-    }
-    if (lhsVal < rhsVal) {
-        return COMPARE_LT;
-    }
-    else {
-        return COMPARE_GT;
-    }
+    return COMPARE_TOTAL(lhsVal, rhsVal);
 }
 
 static READONLY inline int64_t taggedBooleanCompare(TaggedPtr lhs, TaggedPtr rhs) {
     return taggedPrimitiveCompare(lhs, rhs, &taggedBooleanComparator);
 }
 
-static READONLY inline int64_t taggedStringCompare(TaggedPtr lhs, TaggedPtr rhs) {
+static READONLY inline CompareResult taggedStringCompare(TaggedPtr lhs, TaggedPtr rhs) {
     if (lhs == rhs) {
         return COMPARE_EQ;
     }
-    if (!lhs || !rhs) {
+    if (lhs == NIL || rhs == NIL) {
         return COMPARE_UN;
     }
-    return _bal_string_cmp(lhs, rhs) + 1;
+    int64_t compareResult = _bal_string_cmp(lhs, rhs);
+    return COMPARE_TOTAL(compareResult, 0);
 }
 
 static READNONE inline StringLength immediateStringLength(uint64_t bits) {
@@ -663,48 +662,6 @@ static inline TaggedPtr ptrAddShiftedTag(UntypedPtr tp, uint64_t shiftedTag) {
     bits |= shiftedTag;
     p = (char *)bits;
     return (TaggedPtr)p;
-}
-
-static READONLY inline int64_t arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
-    if (lhs == rhs) {
-        return COMPARE_EQ;
-    }
-    if (!lhs || !rhs) {
-        return COMPARE_UN;
-    }
-    ListPtr lhsListPtr = taggedToPtr(lhs);
-    ListPtr rhsListPtr = taggedToPtr(rhs);
-    int64_t lhsLen = lhsListPtr->tpArray.length;
-    int64_t rhsLen = rhsListPtr->tpArray.length;
-    int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
-    TaggedPtr (*lhsGet)(TaggedPtr lp, int64_t index) = lhsListPtr->desc->get;
-    TaggedPtr (*rhsGet)(TaggedPtr lp, int64_t index) = rhsListPtr->desc->get;
-    for (int64_t i = 0; i < length; i++) {
-        int64_t result = (*comparator)(lhsGet(lhs, i), rhsGet(rhs, i));
-        if (result != COMPARE_EQ) {
-            return result;
-        }
-    }
-    if (lhsLen == rhsLen) {
-        return COMPARE_EQ;
-    }
-    return (lhsLen < rhsLen) ? COMPARE_LT : COMPARE_GT;
-}
-
-static READONLY inline int64_t intArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedIntCompare);
-}
-
-static READONLY inline int64_t floatArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedFloatCompare);
-}
-
-static READONLY inline int64_t stringArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedStringCompare);
-}
-
-static READONLY inline int64_t booleanArrayCompare(TaggedPtr lhs, TaggedPtr rhs) {
-    return arrayCompare(lhs, rhs, &taggedBooleanCompare);
 }
 
 static inline void initGenericArray(GC GenericArray *ap, int64_t capacity, int shift) {

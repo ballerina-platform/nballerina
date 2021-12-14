@@ -22,6 +22,10 @@ class VerifyContext {
         return t:isSubtype(self.tc, s, t);
     }
 
+    function operandHasType(Operand operand, t:SemType t) returns boolean {
+        return operandHasType(self.tc, operand, t);
+    }
+
     function isSameType(t:SemType t1, t:SemType t2) returns boolean {
         return t:isSameType(self.tc, t1, t2);
     }
@@ -282,53 +286,17 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
 }
 
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
-    t:UniformTypeBitSet expectType;
-    t:UniformTypeBitSet? memberType = ();
-    OrderType ot = insn.orderType;
-    if ot is OptOrderType {
-        expectType = t:uniformTypeUnion((1 << t:UT_NIL) | (1 << ot.opt ));
-    }
-    else if ot is UniformOrderType {
-        expectType  = t:uniformType(ot);
-    }
-    else {
-        expectType = t:LIST;
-        memberType = t:uniformType(ot[0].opt);
-    }
-    foreach var operand in insn.operands {
-        t:SemType operandType;
-        if operand is Register {
-            operandType = operand.semType;
-        }
-        else {
-            operandType = t:constBasicType(operand);
-        }
-        if memberType == () {
-            check verifyCompareOperandTypeBase(vc, insn, operandType, expectType);
-        }
-        else {
-            check verifyCompareOperandTypeArray(vc, insn, operandType, expectType, memberType);
-        }
+    if !t:comparable(vc.typeContext(), operandToSemType(insn.operands[0]), operandToSemType(insn.operands[1])) {
+        return vc.err(`operands of ${insn.op} do not belong to an ordered type`, insn.pos);
     }
 }
 
-function verifyCompareOperandTypeArray(VerifyContext vc, CompareInsn insn, t:SemType operandType,
-                                       t:UniformTypeBitSet expectType, t:UniformTypeBitSet expectMemberType) returns err:Semantic? {
-    check verifyCompareOperandTypeBase(vc, insn, operandType, expectType);
-    t:UniformTypeBitSet? operandMemberTy = t:simpleArrayMemberType(vc.typeContext(), operandType);
-    if operandMemberTy is t:UniformTypeBitSet {
-        t:UniformTypeBitSet optExpectedType = t:uniformTypeUnion(expectType | (1 << t:UT_NIL));
-        check verifyCompareOperandTypeBase(vc, insn, operandType, optExpectedType);
+function operandToSemType(Operand operand) returns t:SemType {
+    if operand is Register {
+        return operand.semType;
     }
     else {
-        panic err:impossible("failed to get array member type");
-    }
-}
-
-function verifyCompareOperandTypeBase(VerifyContext vc, CompareInsn insn, t:SemType operandType,
-                                      t:UniformTypeBitSet expectType) returns err:Semantic?{
-    if !t:isSubtypeSimple(operandType, expectType) {
-        return vc.err(`operand of ${insn.op} does not match order type`, insn.pos);
+        return t:constBasicType(operand);
     }
 }
 
@@ -366,12 +334,7 @@ function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position pos) returns err:Semantic? {
-    if operand is Register {
-        if !vc.isSubtype(operand.semType, semType) {
-            return vc.err(msg, pos);
-        }
-    }
-    else if !t:containsConst(semType, operand) {
+    if !vc.operandHasType(operand, semType) {
         return vc.err(msg, pos);
     }
 }

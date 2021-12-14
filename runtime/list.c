@@ -301,3 +301,122 @@ bool _bal_array_subtype_contains(UniformSubtypePtr stp, TaggedPtr p) {
     ListPtr lp = taggedToPtr(p);   
     return memberTypeIsSubtypeSimple(lp->desc->memberType, ((ArraySubtypePtr)stp)->bitSet);
 }
+
+int64_t READONLY _bal_array_exact_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    if (lhs == rhs) {
+        return COMPARE_EQ;
+    }
+    ListPtr lhsLp = taggedToPtr(lhs);
+    ListPtr rhsLp = taggedToPtr(rhs);
+    int64_t lhsLen = lhsLp->iArray.length;
+    int64_t rhsLen = rhsLp->iArray.length;
+    int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
+
+    GC int64_t *lhsArr = lhsLp->iArray.members;
+    GC int64_t *rhsArr = rhsLp->iArray.members;
+    for (int64_t i = 0; i < length; i++) {
+        int64_t l = lhsArr[i];
+        int64_t r = rhsArr[i];
+        if (l == r) {
+            continue;
+        }
+        else if (l > r) {
+            return COMPARE_GT;
+        }
+        else {
+            return COMPARE_LT;
+        }
+    }
+    return COMPARE_TOTAL(lhsLen, rhsLen);
+}
+
+typedef int64_t (*TaggedValueComparator)(TaggedPtr, TaggedPtr);
+
+static READONLY TaggedValueComparator getArrayComparator(MemberType memberType) {
+    uint32_t bitSet;
+    if ((memberType & 1) == 0) {
+        return &_bal_array_generic_compare;
+    }
+    else {
+        // Clear out the nil bit since comparators can handle both nillable and non-nillable of a given type
+        bitSet = (uint32_t)(memberType >> 1) & ~((uint32_t)1 << TAG_NIL);
+        switch (bitSet) {
+            case (1 << TAG_BOOLEAN):
+                return &taggedBooleanCompare;
+            case (1 << TAG_INT):
+                return &taggedIntCompare;
+            case (1 << TAG_FLOAT):
+                return &taggedFloatCompare;
+            case (1 << TAG_STRING):
+                return &taggedStringCompare;
+        }
+        unreachable();
+    }
+}
+
+static READONLY inline CompareResult arrayCompare(TaggedPtr lhs, TaggedPtr rhs, int64_t(*comparator)(TaggedPtr, TaggedPtr)) {
+    if (lhs == rhs) {
+        return COMPARE_EQ;
+    }
+    if (lhs == NIL || rhs == NIL) {
+        return COMPARE_UN;
+    }
+    ListPtr lhsListPtr = taggedToPtr(lhs);
+    ListPtr rhsListPtr = taggedToPtr(rhs);
+    int64_t lhsLen = lhsListPtr->tpArray.length;
+    int64_t rhsLen = rhsListPtr->tpArray.length;
+    int64_t length = (lhsLen <= rhsLen) ? lhsLen : rhsLen;
+    TaggedPtr (*lhsGet)(TaggedPtr lp, int64_t index) = lhsListPtr->desc->get;
+    TaggedPtr (*rhsGet)(TaggedPtr lp, int64_t index) = rhsListPtr->desc->get;
+    for (int64_t i = 0; i < length; i++) {
+        int64_t result = (*comparator)(lhsGet(lhs, i), rhsGet(rhs, i));
+        if (result != COMPARE_EQ) {
+            return result;
+        }
+    }
+    return COMPARE_TOTAL(lhsLen, rhsLen);
+}
+
+CompareResult READONLY _bal_array_generic_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    if (lhs == rhs) {
+        return COMPARE_EQ;
+    }
+    if (lhs == NIL || rhs == NIL) {
+        return COMPARE_UN;
+    }
+    ListPtr lhsLp = taggedToPtr(lhs);
+    ListPtr rhsLp = taggedToPtr(rhs);
+    ListDescPtr lhsLdp = lhsLp->desc;
+    ListDescPtr rhsLdp = rhsLp->desc;
+    ListDescPtr ldp;
+    if (lhsLdp->memberType == BITSET_MEMBER_TYPE(1 << TAG_NIL)) {
+        if (rhsLdp->memberType == BITSET_MEMBER_TYPE(1 << TAG_NIL)) {
+            int64_t lhsLen = lhsLp->gArray.length;
+            int64_t rhsLen = rhsLp->tpArray.length;
+            return COMPARE_TOTAL(lhsLen, rhsLen);
+        }
+        else{
+            ldp = rhsLdp;
+        }
+    }
+    else {
+        ldp = lhsLdp;
+    }
+    return arrayCompare(lhs, rhs, getArrayComparator(ldp->memberType));
+}
+
+CompareResult READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedIntCompare);
+}
+
+CompareResult READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedFloatCompare);
+}
+
+CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedStringCompare);
+}
+
+CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedBooleanCompare);
+}

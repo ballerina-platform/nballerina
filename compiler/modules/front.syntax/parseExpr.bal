@@ -145,7 +145,7 @@ function finishTypeTestExpr(Tokenizer tok, Expr expr, boolean negated, Position 
 function parseRangeExpr(Tokenizer tok) returns RangeExpr|err:Syntax {
     Position startPos = tok.currentStartPos();
     Expr lower = check parseAdditiveExpr(tok);
-    Position opPos = check tok.expectEnd("..<");
+    Position opPos = check tok.expectStart("..<");
     Expr upper = check parseAdditiveExpr(tok);
     Position endPos = tok.previousEndPos();
     return { startPos, endPos, opPos, lower, upper };
@@ -494,7 +494,7 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
 }
 
 function parseOptQualIdentifier(Tokenizer tok, string identifier, Position identifierPos) returns [string?, string, Position]|err:Syntax {
-    if tok.current() == ":" {
+    if tok.currentIsNoSpaceColon() {
         check tok.advance();
         Position localNamePos = tok.currentStartPos();
         return [identifier, check tok.expectIdentifier(), localNamePos];
