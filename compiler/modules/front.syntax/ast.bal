@@ -136,7 +136,7 @@ const WildcardMatchPattern = "_";
 
 public type ConstPattern record {|
     SimpleConstExpr expr;
-    Position pos;
+    Position qnamePos;
 |};
 
 public type WhileStmt record {|
@@ -249,7 +249,7 @@ public type FunctionCallExpr record {|
     Position startPos;
     Position endPos;
     Position openParenPos;
-    Position namePos;
+    Position qnamePos;
     string? prefix = ();
     string funcName;
     Expr[] args;
@@ -262,7 +262,7 @@ public type MethodCallExpr record {|
     Position endPos;
     Position opPos; // position of .
     Position openParenPos;
-    Position namePos;
+    Position qnamePos;
     string methodName;
     Expr target;
     Expr[] args;
@@ -366,7 +366,7 @@ public type VarRefExpr record {|
     *PositionFields;
     string? prefix = ();
     string name;
-    Position namePos;
+    Position qnamePos;
 |};
 
 public type TypeCastExpr record {|
@@ -545,7 +545,7 @@ public type TypeDescRef record {|
     *PositionFields;
     string? prefix = ();
     string typeName;
-    Position pos;
+    Position qnamePos;
 |};
 
 public type SingletonTypeDesc record {|

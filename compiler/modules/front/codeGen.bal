@@ -531,17 +531,20 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         foreach var pattern in clause.patterns {
             if pattern is s:ConstPattern {
                 if wildcardClauseIndex != () && i > wildcardClauseIndex {
-                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.pos);
+                    // FIXME:
+                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.qnamePos);
                 }
                 s:Expr patternExpr = pattern.expr;
                 s:ConstValueExpr cv = <s:ConstValueExpr> check cx.foldExpr(env, patternExpr, matchedType);
                 ConstMatchValue mv = { value: cv.value, clauseIndex: i, pos: clause.opPos };
                 if constMatchValues.hasKey(mv.value) {
-                    return cx.semanticErr("duplicate const match pattern", pos=pattern.pos);
+                    // FIXME:
+                    return cx.semanticErr("duplicate const match pattern", pos=pattern.qnamePos);
                 }
                 constMatchValues.add(mv);    
                 if !t:containsConst(matchedType, cv.value) {
-                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.pos);
+                    // FIXME:
+                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.qnamePos);
                 }
                 clausePatternUnion = t:union(clausePatternUnion, t:singleton(mv.value));
             }
@@ -1567,10 +1570,10 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
     string? prefix = expr.prefix;
     bir:FunctionRef func;
     if prefix == () {
-        func =  check genLocalFunctionRef(cx, env, expr.funcName, expr.namePos);
+        func =  check genLocalFunctionRef(cx, env, expr.funcName, expr.qnamePos);
     }
     else {
-        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.namePos);
+        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.qnamePos);
     }
     check validArgumentCount(cx, func, expr.args.length(), expr.openParenPos);
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1597,7 +1600,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
 
 function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MethodCallExpr expr) returns CodeGenError|RegExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, expr.target, ()));
-    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
+    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.qnamePos);
     check validArgumentCount(cx, func, expr.args.length() + 1, expr.opPos);
 
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1613,7 +1616,7 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env
         func,
         result,
         args: args.cloneReadOnly(),
-        pos: expr.namePos
+        pos: expr.qnamePos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };

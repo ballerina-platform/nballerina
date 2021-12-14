@@ -394,13 +394,18 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         }
     }
     if expr is ExprNamePos {
-        check tok.moveToPos(expr.namePos, MODE_NORMAL);
+        check tok.moveToPos(expr.qnamePos, MODE_NORMAL);
         string newName = check tok.expectIdentifier();
         if expr is MethodCallExpr {
             test:assertEquals(expr.methodName, newName);
         }
         else {
-            test:assertEquals(expr.funcName, newName);
+            if expr.prefix != () {
+                test:assertEquals(expr.prefix, newName);
+            }
+            else {
+                test:assertEquals(expr.funcName, newName);
+            }
         }
     }
     if expr is ExprParenPos {

@@ -223,7 +223,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         if prefix == () {
             s:ModuleLevelDefn? defn = mod.defns[td.typeName];
             if defn == () {
-                return err:semantic(`reference to undefined type ${td.typeName}`, s:locationInDefn(modDefn, td.pos));
+                // FIXME:
+                return err:semantic(`reference to undefined type ${td.typeName}`, s:locationInDefn(modDefn, td.qnamePos));
             }
             else if defn is s:TypeDefn {
                 return check resolveTypeDefn(mod, defn, depth);
@@ -232,7 +233,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 var [t, _] = check resolveConstDefn(mod, defn);
                 return t;
             }
-            return err:semantic(`reference to non-type ${td.typeName} in type-descriptor`, s:locationInDefn(modDefn, td.pos));
+            // FIXME:
+            return err:semantic(`reference to non-type ${td.typeName} in type-descriptor`, s:locationInDefn(modDefn, td.qnamePos));
         }
         else {
             ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix, td.startPos)).defns[td.typeName];
@@ -244,7 +246,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
             else {
                 string qName = prefix + ":" + td.typeName;
-                d:Location loc =  s:locationInDefn(modDefn, td.pos);
+                // FIXME:
+                d:Location loc =  s:locationInDefn(modDefn, td.qnamePos);
                 if defn == () {
                     return err:semantic(`no public definition of ${qName}`, loc=loc);
                 }
