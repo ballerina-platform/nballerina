@@ -206,7 +206,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
             else if restTd == s:INCLUSIVE_RECORD_TYPE_DESC {
-                rest = t:createAnydata(env);
+                rest = t:createAnydata(mod.tc);
             }
             else {
                 rest = t:NEVER;

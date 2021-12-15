@@ -189,6 +189,7 @@ public class Context {
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
+    SemType? anydataMemo = ();
 
     function init(Env env) {
         self.env = env;
@@ -1210,12 +1211,17 @@ public function createJson(Env env) returns SemType {
 
 // This is an approximation, because we don't have table subtypes yet.
 // SUBSET table subtypes
-public function createAnydata(Env env) returns SemType {
+public function createAnydata(Context context) returns SemType {
+    SemType? memo = context.anydataMemo;
+    if memo != () {
+        return memo;
+    }
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType ad = union(union(SIMPLE_OR_STRING, union(XML, TABLE)), union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, rest = ad);
-    _ = mapDef.define(env, [], ad);
+    SemType ad = union(union(SIMPLE_OR_STRING, union(XML, TABLE)), union(listDef.getSemType(context.env), mapDef.getSemType(context.env)));
+    _ = listDef.define(context.env, rest = ad);
+    _ = mapDef.define(context.env, [], ad);
+    context.anydataMemo = ad;
     return ad;
 }
 

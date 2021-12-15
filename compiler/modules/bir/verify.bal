@@ -15,7 +15,7 @@ class VerifyContext {
         t:Context tc  = mod.getTypeContext();
         self.tc = tc;
         self.defn = defn;
-        self.anydataType = t:createAnydata(tc.env);
+        self.anydataType = t:createAnydata(tc);
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
