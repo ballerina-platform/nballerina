@@ -472,9 +472,8 @@ function semTypeRepr(t:SemType ty) returns Repr {
     }
     int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:STRING|t:LIST|t:MAPPING|t:ERROR;
     // DECIMAL is here for ConvertToInt or ConvertToFloat
-    // TABLE and XML are here for anydata
-    int maximized = w | supported | t:DECIMAL | t:TABLE | t:XML;
-    if maximized == t:TOP || maximized == (t:NON_BEHAVIORAL|t:ERROR) {
+    int maximized = w | supported | t:DECIMAL;
+    if maximized == t:TOP || maximized == (t:NON_BEHAVIOURAL|t:ERROR) || (w & supported) == w {
         TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };
         return repr;
     }
