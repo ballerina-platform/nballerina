@@ -172,13 +172,16 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
                 fieldsByName[fd.name] = fd;
             }
-            s:TypeDesc? restTd = td.rest;
+            s:TypeDesc|s:INCLUSIVE_RECORD_TYPE_DESC? restTd = td.rest;
             t:SemType rest;
-            if restTd == () {
-                rest = t:NEVER;
+            if restTd is s:TypeDesc {
+                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+            }
+            else if restTd == s:INCLUSIVE_RECORD_TYPE_DESC {
+                rest = t:createAnydata(env);
             }
             else {
-                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+                rest = t:NEVER;
             }
             return d.define(env, fields, rest);
         }

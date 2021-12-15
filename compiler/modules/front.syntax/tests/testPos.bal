@@ -462,7 +462,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         newTd = check parseTypeDesc(tok);
     }
     Position actualEnd = tok.previousEndPos();
-    while td.toString() != newTd.toString() && newTd is ListTypeDesc|MappingTypeDesc {
+    while td.toString() != newTd.toString() && (newTd is ListTypeDesc || (newTd is MappingTypeDesc && newTd.rest is TypeDesc)) {
         // These are left recursions which we can't separately parse
         TypeDesc rest = <TypeDesc> newTd.rest;
         actualEnd = rest.endPos;
@@ -487,7 +487,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
             check validateTypeDescPos(f.typeDesc, tok, td.startPos, td.endPos);
             childNodePos.push([f.typeDesc.startPos, f.typeDesc.endPos]);
         }
-        TypeDesc? rest = td.rest;
+        TypeDesc|INCLUSIVE_RECORD_TYPE_DESC? rest = td.rest;
         if rest is TypeDesc {
             childNodePos.push([rest.startPos, rest.endPos]);
             check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
@@ -564,6 +564,9 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
             return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
         }
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
+    }
+    else if td is MappingTypeDesc && td.rest == INCLUSIVE_RECORD_TYPE_DESC {
+        return !checkPosFragCode(file, endPos, CP_RIGHT_SQUARE, ...base);
     }
     return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
 }
