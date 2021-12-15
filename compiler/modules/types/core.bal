@@ -1007,13 +1007,23 @@ public function split(SemType t) returns SplitSemType  {
     }
 }
 
-public type Value readonly & record {|
-    string|int|float|boolean|() value;
+public type SingleValue ()|boolean|int|float|string;
+
+// JBUG #34320, this issue is related to type narrowing.
+// After this issue is fixed, `OptSingleValue` should be changed as shown below.
+//
+// public type OptSingleValue readonly & record {|
+//    SingleValue value;
+// |}?;
+public type OptSingleValue NonOptSingleValue?;
+
+type NonOptSingleValue readonly & record {|
+   SingleValue value;
 |};
 
 // If the type contains exactly onr shape, return a value
 // having that shape.
-public function singleShape(SemType t) returns Value? {
+public function singleShape(SemType t) returns OptSingleValue {
     if t === NIL {
         return { value: () };
     }
