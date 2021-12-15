@@ -69,7 +69,8 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         else if tok.current() == "[" {
             SimpleConstExpr?[] dimensions = [];
-            Position? endPos = (); // Init with nil as we can't prove to the compiler that first iteration will always run.
+            Position? endPos = ();
+            // JBUG #34331 can re-write this to a `while true` and make `Position endPos;`  
             while tok.current() == "[" {
                 check tok.advance();
                 if tok.current() == "]" {
