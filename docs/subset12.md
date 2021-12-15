@@ -12,7 +12,7 @@
       * not of structured types
    * type definitions
 * Type descriptors:
-   * predefined basic type name: `boolean`, `decimal, `error`, `float`, `int`, `string`
+   * predefined basic type name: `boolean`, `decimal`, `error`, `float`, `int`, `string`
    * nil type `()`
    * `any` type
    * optional type: `T?`
