@@ -64,6 +64,7 @@ jobs:
             test/out
 
   test-jni:
+    if: ${{ false }}  # disable due to JBUG #34341
     env:
       JBAL_VERSION: swan-lake-beta6
     runs-on: ubuntu-latest
