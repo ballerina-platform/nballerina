@@ -97,7 +97,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             // These are easy
             "any" => { return t:ANY; }
             "boolean" => { return t:BOOLEAN; }
-            "decimal" => { return t:DECIMAL; }
             "error" => { return t:ERROR; }
             "float" => { return t:FLOAT; }
             "int" => { return t:INT; }
@@ -109,6 +108,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
         match td.builtinTypeName {
             "byte" => { return t:BYTE; }
+            "decimal" => { return t:DECIMAL; }
             "handle" => { return t:HANDLE; }
             "json" => { return t:createJson(mod.tc.env); }
             "never" => { return t:NEVER; }
