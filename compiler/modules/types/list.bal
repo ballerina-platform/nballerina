@@ -187,10 +187,8 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
                 [members, rest] = intersected;
             }
         }
-        foreach var m in members.initial {
-            if isEmpty(cx, m) {
-                return true;
-            }
+        if fixedArrayAnyEmpty(cx, members) {
+            return true;
         }
         // Ensure that we can use isNever on rest in listInhabited
         if rest !== NEVER && isEmpty(cx, rest) {
@@ -208,7 +206,7 @@ function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicTyp
         if isNever(rest) {
             return ();
         }
-        fixedLengthArrayFill(members, newLen, rest);
+        fixedArrayFill(members, newLen, rest);
     }
     int nonRepeatedLen = int:max(members.initial.length(), lt.members.initial.length());
     foreach int i in 0 ..< nonRepeatedLen {
@@ -245,7 +243,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
             if isNever(rest) {
                 return listInhabited(cx, members, rest, neg.next);
             }
-            fixedLengthArrayFill(members, negLen, rest);
+            fixedArrayFill(members, negLen, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
@@ -298,8 +296,17 @@ function listMemberAt(FixedLengthArray fixedArray, SemType rest, int index) retu
     return rest;
 } 
 
+function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean {
+    foreach var t in array.initial {
+        if isEmpty(cx, t) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // fill out to length of newLen with filler
-function fixedLengthArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
+function fixedArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
     SemType[] initial = arr.initial;
     if arr.fixedLength == 0 || initial[initial.length() - 1] != filler {
         initial.push(filler);

@@ -59,10 +59,8 @@ function listProjPath(Context cx, int k, Conjunction? pos, Conjunction? neg) ret
                 [members, rest] = intersected;
             }
         }
-        foreach var m in members.initial {
-            if isEmpty(cx, m) {
-                return NEVER;
-            }
+        if fixedArrayAnyEmpty(cx, members) {
+            return NEVER;
         }
         // Ensure that we can use isNever on rest in listInhabited
         if rest !== NEVER && isEmpty(cx, rest) {
@@ -89,7 +87,7 @@ function listProjExclude(Context cx, int k, FixedLengthArray members, SemType re
             if isNever(rest) {
                 return listProjExclude(cx, k, members, rest, neg.next);
             }
-            fixedLengthArrayFill(members, negLen, rest);
+            fixedArrayFill(members, negLen, rest);
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
