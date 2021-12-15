@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     env:
-      JBAL_VERSION: swan-lake-beta4
+      JBAL_VERSION: swan-lake-beta6
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -65,7 +65,7 @@ jobs:
 
   test-jni:
     env:
-      JBAL_VERSION: swan-lake-beta4
+      JBAL_VERSION: swan-lake-beta6
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2

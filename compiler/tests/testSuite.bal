@@ -260,8 +260,6 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
             test:assertFail(tn.identifier + " is not a list or a mapping type");
         } 
     }
-    // JBUG: #31642 function must return a call
-    panic error("unreachable");
 }
 
 function testListProj(t:Context tc, t:SemType t, int index) returns t:SemType {
@@ -281,6 +279,4 @@ function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
     else {
         return t;
     }
-    // JBUG: #31642 function must return a call
-    panic error("unreachable");
 }

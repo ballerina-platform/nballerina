@@ -12,7 +12,7 @@
       * not of structured types
    * type definitions
 * Type descriptors:
-   * predefined basic type name: `boolean`, `decimal, `error`, `float`, `int`, `string`
+   * predefined basic type name: `boolean`, `decimal`, `error`, `float`, `int`, `string`
    * nil type `()`
    * `any` type
    * optional type: `T?`
@@ -21,7 +21,7 @@
    * structure types
       * map type: `map<T>`
       * array type: `T[]`
-      * record types: `record {| T1 f1; T2 f2; R...; |}`
+      * record types: `record { T1 f1; T2 f2; }` and `record {| T1 f1; T2 f2; R...; |}`
    * a reference to a type defined by a type definition
 * Statements:
    * function/method call statement
@@ -376,6 +376,7 @@ Two kinds of `import` are supported.
 ## Additions from subset 11
 
 * `decimal` has been added
+* inclusive record types have been added
 
 ## Implemented spec changes since 2021R1
 
