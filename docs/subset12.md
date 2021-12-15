@@ -113,8 +113,7 @@ primary-type-desc =
   | nil-type-desc
   | "(" type-desc ")"
   | type-reference
-  | map-type-desc
-  | record-type-desc
+  | mapping-type-desc
 
 builtin-type-name = "any" | "boolean" | "int" | "float" | "string" | "error"
 
@@ -123,9 +122,13 @@ nil-type-desc = nil-literal
 # reference to a type definition
 type-reference = identifier | qualified-identifier
 
+mapping-type-desc = map-type-desc | record-type-desc
+
 map-type-desc = "map" "<" type-desc ">"
 
-record-type-desc = "record" "{|" field-desc* [rest-field-desc] "|}"
+record-type-desc = inclusive-record-type-desc | exclusive-record-type-desc
+inclusive-record-type-desc = "record" "{" field-desc* "}"
+exclusive-record-type-desc = "record" "{|" field-desc* [rest-field-desc] "|}"
 field-desc = type-desc identifier ";"
 rest-field-desc = type-desc "..." ";"
 
