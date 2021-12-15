@@ -23,8 +23,10 @@ intersection-td :=
 
 postfix-td := 
   primary-td
-  | postfix-td "[" "]"
+  | postfix-td array-dimension+
   | postfix-td "?"
+
+array-dimension := "[" [simple-const-expr] "]"
 
 primary-td :=
   predefined-td
@@ -32,6 +34,7 @@ primary-td :=
   | map-td
   | record-td
   | tuple-td
+  | table-td
   | xml-td
   | error-td
   | function-td
@@ -55,6 +58,7 @@ td-list :=
 record-td := "record" "{|" field-desc* "|}"
 field-desc := type-desc identifier ";"
 
+table-td := "table" type-param
 xml-rd := "xml" [type-param]
 
 type-param := "<" type-desc ">"

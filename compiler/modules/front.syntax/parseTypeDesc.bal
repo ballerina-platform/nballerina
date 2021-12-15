@@ -68,10 +68,21 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             td = bin;
         }
         else if tok.current() == "[" {
-            check tok.advance();
-            Position endPos = check tok.expectEnd("]");
-            ListTypeDesc list = { startPos, endPos, members: [], rest: td };
-            td = list;
+            SimpleConstExpr?[] dimensions = [];
+            Position? endPos = ();
+            // JBUG #34331 can re-write this to a `while true` and make `Position endPos;`  
+            while tok.current() == "[" {
+                check tok.advance();
+                if tok.current() == "]" {
+                    dimensions.push(());
+                } 
+                else {
+                    dimensions.push(check parseSimpleConstExpr(tok));
+                }
+                endPos = check tok.expectEnd("]");
+            }
+            ArrayTypeDesc array = { startPos, endPos: <Position>endPos, member: td , dimensions };
+            td = array;
         }
         else {
             break;
@@ -176,6 +187,12 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         "record" => {
             return parseRecordTypeDesc(tok, startPos);
+        }
+        "table" => {
+            check tok.advance();
+            TypeDesc row = check parseTypeParam(tok);
+            Position endPos = tok.previousEndPos();
+            return { startPos, endPos, row };
         }
         [IDENTIFIER, var identifier] => {
             Position pos = tok.currentStartPos();
@@ -326,12 +343,12 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
 }
 
 // current token is []
-function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
+function parseTupleTypeDesc(Tokenizer tok) returns TupleTypeDesc|err:Syntax {
     TypeDesc[] members = [];
     Position startPos = tok.currentStartPos();
     check tok.advance();
     Position endPos = tok.currentEndPos();
-    TypeDesc rest = { startPos, endPos, builtinTypeName: "never"};
+    TypeDesc? rest = ();
     if tok.current() != "]" {
         while true {
             TypeDesc td = check parseTypeDesc(tok);
@@ -354,12 +371,26 @@ function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
     }
     endPos = tok.currentEndPos();
     check tok.advance();
-    return { startPos, endPos, members, rest};
+    return { startPos, endPos, members, rest };
 }
 
 function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {
     check tok.advance();
-    check tok.expect("{|");
+    match tok.current() {
+        "{|" => {
+            return parseExclusiveRecordTypeDesc(tok, startPos);
+        }
+        "{" => {
+            return parseInclusiveRecordTypeDesc(tok, startPos);
+        }
+        _ => {
+            return parseError(tok);
+        }
+    }
+}
+
+function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {
+    check tok.advance();
     FieldDesc[] fields = [];
     TypeDesc? rest = ();
     while tok.current() != "|}" {
@@ -367,24 +398,35 @@ function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTy
             return parseError(tok);
         }
         TypeDesc td = check parseTypeDesc(tok);
-        match tok.current() {
-            "..." => {
-                rest = td;
-                check tok.advance();
-                check tok.expect(";");
-            }
-            [IDENTIFIER, var name] => {
-                Position fieldStartPos = tok.currentStartPos();
-                check tok.advance();
-                Position fieldEndPos = check tok.expectEnd(";");
-                fields.push({ startPos: fieldStartPos, endPos: fieldEndPos, name, typeDesc: td });
-            }
-            _ => {
-                return parseError(tok);
-            }
+        if tok.current() == "..." {
+            rest = td;
+            check tok.advance();
+            check tok.expect(";");
+        }
+        else {
+            fields.push(check parseFieldDesc(tok, td));
         }
     }
     Position endPos = tok.currentEndPos();
     check tok.advance();
     return { startPos, endPos, fields, rest };
+}
+
+function parseInclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {
+    check tok.advance();
+    FieldDesc[] fields = [];
+    while tok.current() != "}" {
+        TypeDesc td = check parseTypeDesc(tok);
+        fields.push(check parseFieldDesc(tok, td));
+    }
+    Position endPos = tok.currentEndPos();
+    check tok.advance();
+    return { startPos, endPos, fields, rest: INCLUSIVE_RECORD_TYPE_DESC };
+}
+
+function parseFieldDesc(Tokenizer tok, TypeDesc typeDesc) returns FieldDesc|err:Syntax {
+    Position startPos = tok.currentStartPos();
+    string name = check tok.expectIdentifier();
+    Position endPos = check tok.expectEnd(";");
+    return { startPos, endPos, name, typeDesc };
 }

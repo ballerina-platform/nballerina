@@ -2,7 +2,7 @@
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
-declare i8 addrspace(1)* @_bal_tagged_clear_exact(i8 addrspace(1)*) readnone
+declare i8 addrspace(1)* @_bal_tagged_clear_exact_any(i8 addrspace(1)*) readnone
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
@@ -20,7 +20,7 @@ define void @_B04rootmain() !dbg !5 {
   %8 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 255)
   store i8 addrspace(1)* %8, i8 addrspace(1)** %v1
   %9 = load i8 addrspace(1)*, i8 addrspace(1)** %v1
-  %10 = call i8 addrspace(1)* @_bal_tagged_clear_exact(i8 addrspace(1)* %9)
+  %10 = call i8 addrspace(1)* @_bal_tagged_clear_exact_any(i8 addrspace(1)* %9)
   store i8 addrspace(1)* %10, i8 addrspace(1)** %v2
   %11 = load i8 addrspace(1)*, i8 addrspace(1)** %v2
   %12 = addrspacecast i8 addrspace(1)* %11 to i8*

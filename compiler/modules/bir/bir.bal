@@ -210,8 +210,7 @@ public type Insn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
-public type SimpleConstOperand ()|boolean|int|float;
-public type ConstOperand SimpleConstOperand|string;
+public type ConstOperand t:SingleValue;
 public type StringOperand string|Register;
 public type IntOperand int|Register;
 public type FloatOperand float|Register;

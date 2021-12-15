@@ -1,11 +1,11 @@
 @_bal_stack_guard = external global i8*
-@_Bi04root0 = external constant {i32, i32}
+@_Bi04root0 = external constant {i32}
 @.str5 = internal unnamed_addr constant {i16, i16, [12 x i8]} {i16 8, i16 8, [12 x i8] c"greeting\00\00\00\00"}, align 8
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
-declare {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}*, i64)
+declare {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* @_bal_list_construct({i32}*, i64)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare zeroext i1 @_bal_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 define void @_B04rootmain() !dbg !5 {
@@ -29,7 +29,7 @@ define void @_B04rootmain() !dbg !5 {
   %18 = alloca i8
   %19 = load i8*, i8** @_bal_stack_guard
   %20 = icmp ult i8* %18, %19
-  br i1 %20, label %56, label %21
+  br i1 %20, label %57, label %21
 21:
   %22 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0), !dbg !10
   %23 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %22), !dbg !10
@@ -67,35 +67,36 @@ define void @_B04rootmain() !dbg !5 {
   %39 = load i8 addrspace(1)*, i8 addrspace(1)** %11, !dbg !21
   call void @_Bb02ioprintln(i8 addrspace(1)* %39), !dbg !21
   store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !21
-  %40 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* @_bal_list_construct({i32, i32}* @_Bi04root0, i64 1)
-  %41 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %40, i64 0, i32 3
-  %42 = load [0 x i8 addrspace(1)*] addrspace(1)*, [0 x i8 addrspace(1)*] addrspace(1)* addrspace(1)* %41, align 8
-  %43 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
-  %44 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %42, i64 0, i64 0
-  store i8 addrspace(1)* %43, i8 addrspace(1)* addrspace(1)* %44
-  %45 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %40, i64 0, i32 1
-  store i64 1, i64 addrspace(1)* %45
-  %46 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i32}*, i64, i64, [0 x i8 addrspace(1)*] addrspace(1)*} addrspace(1)* %40 to i8 addrspace(1)*
-  %47 = getelementptr i8, i8 addrspace(1)* %46, i64 1297036692682702852
-  store i8 addrspace(1)* %47, i8 addrspace(1)** %13
-  %48 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !22
-  %49 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %48), !dbg !22
-  store i8 addrspace(1)* %49, i8 addrspace(1)** %14, !dbg !22
-  %50 = load i8 addrspace(1)*, i8 addrspace(1)** %14, !dbg !23
-  call void @_Bb02ioprintln(i8 addrspace(1)* %50), !dbg !23
+  %40 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* @_bal_list_construct({i32}* @_Bi04root0, i64 1)
+  %41 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %40, i64 0, i32 3
+  %42 = load i8* addrspace(1)*, i8* addrspace(1)* addrspace(1)* %41, align 8
+  %43 = bitcast i8* addrspace(1)* %42 to [0 x i8 addrspace(1)*] addrspace(1)*
+  %44 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 0)
+  %45 = getelementptr inbounds [0 x i8 addrspace(1)*], [0 x i8 addrspace(1)*] addrspace(1)* %43, i64 0, i64 0
+  store i8 addrspace(1)* %44, i8 addrspace(1)* addrspace(1)* %45
+  %46 = getelementptr inbounds {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*}, {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %40, i64 0, i32 1
+  store i64 1, i64 addrspace(1)* %46
+  %47 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %40 to i8 addrspace(1)*
+  %48 = getelementptr i8, i8 addrspace(1)* %47, i64 1297036692682702852
+  store i8 addrspace(1)* %48, i8 addrspace(1)** %13
+  %49 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !22
+  %50 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %49), !dbg !22
+  store i8 addrspace(1)* %50, i8 addrspace(1)** %14, !dbg !22
+  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %14, !dbg !23
+  call void @_Bb02ioprintln(i8 addrspace(1)* %51), !dbg !23
   store i8 addrspace(1)* null, i8 addrspace(1)** %15, !dbg !23
-  %51 = zext i1 0 to i64, !dbg !24
-  %52 = or i64 %51, 72057594037927936, !dbg !24
-  %53 = getelementptr i8, i8 addrspace(1)* null, i64 %52, !dbg !24
-  %54 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %53), !dbg !24
-  store i8 addrspace(1)* %54, i8 addrspace(1)** %16, !dbg !24
-  %55 = load i8 addrspace(1)*, i8 addrspace(1)** %16, !dbg !25
-  call void @_Bb02ioprintln(i8 addrspace(1)* %55), !dbg !25
+  %52 = zext i1 0 to i64, !dbg !24
+  %53 = or i64 %52, 72057594037927936, !dbg !24
+  %54 = getelementptr i8, i8 addrspace(1)* null, i64 %53, !dbg !24
+  %55 = call i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %54), !dbg !24
+  store i8 addrspace(1)* %55, i8 addrspace(1)** %16, !dbg !24
+  %56 = load i8 addrspace(1)*, i8 addrspace(1)** %16, !dbg !25
+  call void @_Bb02ioprintln(i8 addrspace(1)* %56), !dbg !25
   store i8 addrspace(1)* null, i8 addrspace(1)** %17, !dbg !25
   ret void
-56:
-  %57 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
-  call void @_bal_panic(i8 addrspace(1)* %57)
+57:
+  %58 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9
+  call void @_bal_panic(i8 addrspace(1)* %58)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %0) !dbg !7 {

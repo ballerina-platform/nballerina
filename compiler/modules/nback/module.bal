@@ -10,8 +10,8 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     bir:File[] partFiles = birMod.getPartFiles();
     ModuleDI? di = ();
     if options.debugLevel > 0 {
-        di = createModuleDI(llMod, partFiles);
-    } 
+        di = createModuleDI(llMod, partFiles, options.debugLevel == DEBUG_FULL);
+    }
     bir:FunctionDefn[] functionDefns = birMod.getFunctionDefns();
     llvm:FunctionDefn[] llFuncs = [];
     DISubprogram[] diFuncs = [];
@@ -83,13 +83,13 @@ function createTypeUsage(table<UsedSemType> usedSemTypes) returns TypeUsage {
     return { types: types.cloneReadOnly(), uses: uses.cloneReadOnly() };
 }
 
-function createModuleDI(llvm:Module mod, bir:File[] partFiles) returns ModuleDI {
+function createModuleDI(llvm:Module mod, bir:File[] partFiles, boolean debugFull) returns ModuleDI {
     DIBuilder builder = mod.createDIBuilder();
     mod.addModuleFlag("warning", ["Debug Info Version", 3]);
     DIFile[] files = from var f in partFiles select builder.createFile(f.filename(), f.directory() ?: "");
     DICompileUnit compileUnit = builder.createCompileUnit(file=files[0]);
     DISubroutineType funcType = builder.createSubroutineType(files[0]);
-    return { builder, files, compileUnit, funcType };
+    return { builder, files, compileUnit, funcType, debugFull };
 }
 
 function createFunctionDI(ModuleDI mod, bir:File[] files, bir:FunctionDefn birFunc, llvm:FunctionDefn llFunc, string mangledName) returns DISubprogram {

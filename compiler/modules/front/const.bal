@@ -14,14 +14,14 @@ import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.types as t;
 
-type SimpleConst string|int|float|boolean|();
+type SimpleConst t:SingleValue;
 
 type FoldError ResolveTypeError;
 
 type FoldContext object {
     function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
-    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError;
+    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError;
     function typeContext() returns t:Context;
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
     function isConstDefn() returns boolean;
@@ -41,14 +41,14 @@ class ConstFoldContext {
         return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, defnName=self.defn.name);
     }
 
-    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError {
+    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
         if prefix != () {
-            return lookupImportedConst(self.mod, self.defn, prefix, varName);
+            return { value: check lookupImportedConst(self.mod, self.defn, prefix, varName) };
         }
         s:ModuleLevelDefn? defn = self.mod.defns[varName];
         if defn is s:ConstDefn {
             var resolved = check resolveConstDefn(self.mod, defn);
-            return resolved[1];
+            return { value: resolved[1] };
         }
         else if defn == () {
             return self.semanticErr(`${varName} is not defined`, pos);
@@ -79,24 +79,33 @@ function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:Resolve
     }
     else {
         defn.resolved = false;
-        ConstFoldContext cx = new ConstFoldContext(defn, mod);
         s:SubsetBuiltinTypeDesc? td = defn.td;
         t:SemType? expectedType = td == () ? () : resolveBuiltinTypeDesc(td);
-        s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
-        if expr is s:ConstValueExpr {
-            if expectedType == () || t:containsConst(expectedType, expr.value) {
-                s:ResolvedConst r = [t:singleton(expr.value), { value: expr.value }];
-                defn.resolved = r;
-                return r;
-            }
-            else {
-                return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
-            }
+        s:ResolvedConst resolvedConst = check resolveConstExpr(mod, defn, defn.expr, expectedType);
+        defn.resolved = resolvedConst;
+        return resolvedConst;
+    }
+}
+
+function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, t:SemType? expectedType) returns s:ResolvedConst|FoldError {
+    ConstFoldContext cx = new ConstFoldContext(defn, mod);
+    s:Expr foldedExpr = check foldExpr(cx, expectedType, expr);
+    if foldedExpr is s:ConstValueExpr {
+        if expectedType == () || t:containsConst(expectedType, foldedExpr.value) {
+            return [t:singleton(foldedExpr.value), foldedExpr.value];
         }
         else {
-            return err:semantic(`initializer of ${defn.name} is not constant`, s:defnLocation(defn));
+            return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
         }
     }
+    else {
+        return err:semantic(`initializer of ${defn.name} is not constant`, s:defnLocation(defn));
+    }
+}
+
+function resolveConstIntExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr) returns int|FoldError {
+    [t:SemType, t:SingleValue] [_, resolved] = check resolveConstExpr(mod, defn, expr, t:INT);
+    return <int>resolved;
 }
 
 function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns s:Expr|FoldError {
@@ -199,7 +208,25 @@ function mappingAlternativeAllowsFields(t:MappingAlternative alt, string[] field
                 return false;
             }
         }
-        // SUBSET `...` in records will need to check all required fields are present
+        // Check that all members of a.names are included in fieldNames
+        // Both a.names and fieldNames are ordered
+        int i = 0;
+        int len = fieldNames.length();
+        foreach string name in a.names {
+            while true {
+                if i >= len {
+                    return false;
+                }
+                if fieldNames[i] == name {
+                    i += 1;
+                    break;
+                }
+                if fieldNames[i] > name {
+                    return false;
+                }
+                i += 1;
+            }
+        }
     }
     return true;
 }
@@ -503,7 +530,7 @@ function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, 
 }
 
 function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr expr) returns s:Expr|FoldError {
-    s:FLOAT_ZERO|t:Value? constValue = check cx.lookupConst(expr.prefix, expr.name, expr.namePos);
+    s:FLOAT_ZERO|t:OptSingleValue constValue = check cx.lookupConst(expr.prefix, expr.name, expr.namePos);
     if constValue == () {
         return expr;
     }

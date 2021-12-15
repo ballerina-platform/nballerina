@@ -26,7 +26,7 @@
 22. typedesc subtypes
 23. future subtypes
 24. stream subtypes
-25. table type without keys
+25. ~~table type without keys~~
 26. table keys
 27. distinct object types
 28. public, private object member qualifiers
@@ -37,7 +37,7 @@
 33. ~~xml subtypes~~
 34. isolated qualifier
 35. transactional qualifier
-36. fixed length array types (logically tuples, but implementation not scaleable)
+36. ~~fixed length array types (logically tuples, but implementation not scaleable)~~
 
 ## JSON syntax features
 

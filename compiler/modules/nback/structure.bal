@@ -366,8 +366,7 @@ function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:Strin
                 return false;
             }
         }
-        // XXX need to handle rest here
-        return true;
+        return isSameTypeWithin(tc, mat.rest, POTENTIALLY_EXACT, peResult);
     }
 }
 

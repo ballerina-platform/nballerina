@@ -11,8 +11,7 @@ public function main() {
     EmptyTuple e2 = [];
     io:println(e1 < e2); // @output false
 
-
     boolean[0] b0 = [];
     float[0] f0 = [];
-    io:println(b1 < f0); // @output false
+    io:println(b0 < f0); // @output false
 }

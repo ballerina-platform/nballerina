@@ -97,7 +97,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             // These are easy
             "any" => { return t:ANY; }
             "boolean" => { return t:BOOLEAN; }
-            "decimal" => { return t:DECIMAL; }
             "error" => { return t:ERROR; }
             "float" => { return t:FLOAT; }
             "int" => { return t:INT; }
@@ -109,6 +108,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
         match td.builtinTypeName {
             "byte" => { return t:BYTE; }
+            "decimal" => { return t:DECIMAL; }
             "handle" => { return t:HANDLE; }
             "json" => { return t:createJson(mod.tc.env); }
             "never" => { return t:NEVER; }
@@ -139,7 +139,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
-    if td is s:ListTypeDesc {
+    if td is s:TupleTypeDesc {
         t:ListDefinition? defn = td.defn;
         if defn == () {
             if !mod.allowAllTypes && td.members.length() > 0 {
@@ -148,8 +148,36 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             t:ListDefinition d = new;
             td.defn = d;
             t:SemType[] members = from var x in td.members select check resolveTypeDesc(mod, modDefn, depth + 1, x);
-            t:SemType rest = check resolveTypeDesc(mod, modDefn, depth + 1, td.rest);
-            return d.define(env, members, rest);
+            t:SemType rest = t:NEVER;
+            s:TypeDesc? restTd = td.rest;
+            if restTd != () {
+                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+            }
+            return d.define(env, initial = members, rest = rest);
+        }
+        else {
+            return defn.getSemType(env);
+        }   
+    }    
+    if td is s:ArrayTypeDesc {
+        t:ListDefinition? defn = td.defn;
+        if defn == () {
+            t:ListDefinition d = new;
+            td.defn = d;
+            t:SemType t = check resolveTypeDesc(mod, modDefn, depth + 1, td.member);
+            foreach s:SimpleConstExpr? len in td.dimensions.reverse() {
+                if len == () {
+                    t = d.define(env, rest = t);
+                }
+                else {
+                    if !mod.allowAllTypes {
+                        return err:unimplemented("fixed length array types not implemented", s:locationInDefn(modDefn, td.startPos));
+                    }
+                    int length = check resolveConstIntExpr(mod, modDefn, len);
+                    t = d.define(env, [t], length);
+                }
+            }
+            return t;
         }
         else {
             return defn.getSemType(env);
@@ -172,13 +200,16 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 }
                 fieldsByName[fd.name] = fd;
             }
-            s:TypeDesc? restTd = td.rest;
+            s:TypeDesc|s:INCLUSIVE_RECORD_TYPE_DESC? restTd = td.rest;
             t:SemType rest;
-            if restTd == () {
-                rest = t:NEVER;
+            if restTd is s:TypeDesc {
+                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+            }
+            else if restTd == s:INCLUSIVE_RECORD_TYPE_DESC {
+                rest = t:createAnydata(env);
             }
             else {
-                rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
+                rest = t:NEVER;
             }
             return d.define(env, fields, rest);
         }
@@ -271,12 +302,22 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     if td is s:XmlSequenceTypeDesc {
         t:SemType t = check resolveTypeDesc(mod, modDefn, depth, td.constituent);
-        d:Location loc =  d:location(modDefn.part.file, td.pos);
         
         if !t:isSubtypeSimple(t, t:XML) {
+            d:Location loc =  d:location(modDefn.part.file, td.pos);
             return err:semantic("type parameter for xml is not a subtype of xml", loc=loc);
         }
         return t:xmlSequence(t);
+    }
+    if td is s:TableTypeDesc {
+        t:SemType t = check resolveTypeDesc(mod, modDefn, depth, td.row);
+        
+        // Ensure the parameter type of table is a subtype of MAPPING
+        if !t:isSubtypeSimple(t, t:MAPPING) {
+            d:Location loc =  d:location(modDefn.part.file, td.startPos, td.endPos);
+            return err:semantic("type parameter for table is not a record", loc=loc);
+        }
+        return t:tableContaining(t);
     }
     panic error("unimplemented type-descriptor");
 }

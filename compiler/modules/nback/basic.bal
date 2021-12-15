@@ -31,6 +31,7 @@ final RuntimeFunction stringConcatFunction = {
 };
 
 function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos) {
+    scaffold.setDebugLocation(builder, pos);
     llvm:BasicBlock overflowBlock = scaffold.addBasicBlock();
     llvm:BasicBlock firstBlock = scaffold.basicBlock(0);
     builder.condBr(builder.iCmp("ult", builder.alloca("i8"), builder.load(scaffold.stackGuard())),
@@ -39,12 +40,14 @@ function buildPrologue(llvm:Builder builder, Scaffold scaffold, bir:Position pos
     buildCallPanic(builder, scaffold, buildErrorForConstPanic(builder, scaffold, PANIC_STACK_OVERFLOW, pos));
     builder.positionAtEnd(firstBlock);
     scaffold.saveParams(builder);
+    scaffold.clearDebugLocation(builder);
 }
 
 function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock block) returns BuildError? {
     scaffold.setBasicBlock(block);
     builder.positionAtEnd(scaffold.basicBlock(block.label));
     foreach var insn in block.insns {
+        scaffold.setDebugLocation(builder, insn.pos);
         if insn is bir:IntArithmeticBinaryInsn {
             buildArithmeticBinary(builder, scaffold, insn);
         }
@@ -173,7 +176,7 @@ function buildAssign(llvm:Builder builder, Scaffold scaffold, bir:AssignInsn ins
 }
 
 function buildCall(llvm:Builder builder, Scaffold scaffold, bir:CallInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.pos);
+    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_CALL);
     // Handler indirect calls later
     bir:FunctionRef funcRef = <bir:FunctionRef>insn.func;
     llvm:Value[] args = [];
@@ -222,7 +225,7 @@ function buildFunctionDecl(Scaffold scaffold, bir:ExternalSymbol symbol, bir:Fun
 }
 
 function buildErrorConstruct(llvm:Builder builder, Scaffold scaffold, bir:ErrorConstructInsn insn) returns BuildError? {
-    scaffold.setDebugLocation(builder, insn.pos, "file");
+    scaffold.setDebugLocation(builder, insn.pos, DEBUG_ORIGIN_ERROR_CONSTRUCT);
     llvm:Value value = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(errorConstructFunction),
                                                 [
                                                     check buildString(builder, scaffold, insn.operand),

@@ -199,19 +199,22 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
         s:TypeTest test = check s:parseTypeTest(item);
         t:SemType left = resolveTestSemtype(tc, m, test.left);
         t:SemType right = resolveTestSemtype(tc, m, test.right);
+
+        string lhsStr = test.left.toString();
+        string rhsStr = test.right.toString();
         
         boolean lsr = t:isSubtype(tc, left, right);
         boolean rsl = t:isSubtype(tc, right, left);
         boolean[2] testPair = [lsr, rsl]; 
         match test.op { 
             "<" => {
-                test:assertEquals(testPair, [true, false], "LHS is not a proper subtype of RHS");
+                test:assertEquals(testPair, [true, false], string `${lhsStr} is not a proper subtype of ${rhsStr}`);
             }
             "<>" => {
-                test:assertEquals(testPair, [false, false], "LHS and RHS are subtypes");
+                test:assertEquals(testPair, [false, false], string `${lhsStr} and ${rhsStr} are subtypes`);
             }
             "=" => {
-                test:assertEquals(testPair, [true, true], "LHS is not equivalent to RHS");
+                test:assertEquals(testPair, [true, true], string `${lhsStr} is not equivalent to ${rhsStr}`);
             }
         }
     }
@@ -233,8 +236,8 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
                 if k == t:INT {
                     return t:listMemberType(tc, t, ());
                 }
-                t:Value? val = t:singleShape(k);
-                if val is t:Value && val.value is int {
+                t:OptSingleValue val = t:singleShape(k);
+                if val != () && val.value is int {
                     return testListProj(tc, t, <int> val.value);
                 }
                 test:assertFail("index for list projection must be an int");
@@ -246,8 +249,8 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
                 if k == t:STRING {
                     return t:mappingMemberType(tc, t, ());
                 }
-                t:Value? val = t:singleShape(k);
-                if val is t:Value && val.value is string {
+                t:OptSingleValue val = t:singleShape(k);
+                if val != () && val.value is string {
                     return t:mappingMemberType(tc, t, <string> val.value);
                 }
             }
@@ -257,8 +260,6 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
             test:assertFail(tn.identifier + " is not a list or a mapping type");
         } 
     }
-    // JBUG: #31642 function must return a call
-    panic error("unreachable");
 }
 
 function testListProj(t:Context tc, t:SemType t, int index) returns t:SemType {
@@ -278,6 +279,4 @@ function lookupSemtype(map<t:SemType> m, s:Identifier id) returns t:SemType {
     else {
         return t;
     }
-    // JBUG: #31642 function must return a call
-    panic error("unreachable");
 }

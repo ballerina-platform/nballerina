@@ -49,7 +49,7 @@ public type FunctionParam record {|
     TypeDesc td;
 |};
 
-public type ResolvedConst readonly & [t:SemType, t:Value];
+public type ResolvedConst readonly & [t:SemType, t:SingleValue];
 public type ConstDefn record {|
     *PositionFields;
     readonly string name;
@@ -395,7 +395,7 @@ public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
 
 public type ConstValueExpr record {|
     *PositionFields;
-    ()|boolean|int|float|string value;
+    t:SingleValue value;
     // This is non-nil when the static public type of the expression
     // contains more than one shape.
     // When it contains exactly one shape, then the shape is
@@ -455,14 +455,19 @@ public type TypeDefn record {|
 
 public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
-public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc;
+public type ConstructorTypeDesc TupleTypeDesc|ArrayTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc|TableTypeDesc;
 
-public type ListTypeDesc record {|
-    // JBUG #32617 can't include PositionFields
-    Position startPos;
-    Position endPos;
+public type TupleTypeDesc record {|
+    *PositionFields;
     TypeDesc[] members;
-    TypeDesc rest;
+    TypeDesc? rest;
+    t:ListDefinition? defn = ();
+|};
+
+public type ArrayTypeDesc record {|
+    *PositionFields;
+    TypeDesc member;
+    SimpleConstExpr?[] dimensions = [];
     t:ListDefinition? defn = ();
 |};
 
@@ -472,12 +477,13 @@ public type FieldDesc record {|
     TypeDesc typeDesc;
 |};
 
+public const INCLUSIVE_RECORD_TYPE_DESC = true;
 public type MappingTypeDesc record {|
     // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     FieldDesc[] fields;
-    TypeDesc? rest;
+    TypeDesc|INCLUSIVE_RECORD_TYPE_DESC? rest;
     t:MappingDefinition? defn = ();
 |};
 
@@ -528,6 +534,11 @@ public type XmlSequenceTypeDesc record {|
     Position endPos;
     Position pos;
     TypeDesc constituent;
+|};
+
+public type TableTypeDesc record {|
+    *PositionFields;
+    TypeDesc row;
 |};
 
 public type TypeDescRef record {|

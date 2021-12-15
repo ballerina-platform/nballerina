@@ -1,14 +1,15 @@
 @_bal_stack_guard = external global i8*
-@_Bi04root0 = external constant {i32, i32}
+@_Bi04root0 = external constant {i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct({i32, i32}*, i64)
+declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
 declare i8 addrspace(1)* @_Bb0m4lang3inttoHexString(i64)
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
+declare i8 addrspace(1)* @_bal_tagged_member_clear_exact_any(i8 addrspace(1)*, i8 addrspace(1)*) readnone
 declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
 declare {i64, i1} @_bal_float_to_int(double) nounwind readnone speculatable willreturn
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
@@ -40,7 +41,7 @@ define void @_B04rootmain() !dbg !5 {
   %17 = icmp ult i8* %15, %16
   br i1 %17, label %51, label %18
 18:
-  %19 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi04root0, i64 0)
+  %19 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 0)
   store i8 addrspace(1)* %19, i8 addrspace(1)** %1
   %20 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %20, i8 addrspace(1)** %m
@@ -85,7 +86,7 @@ define void @_B04rootmain() !dbg !5 {
   %43 = load i64, i64* %i.1
   %44 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 48879, i64 %43)
   %45 = extractvalue {i64, i1} %44, 1
-  br i1 %45, label %92, label %79
+  br i1 %45, label %93, label %79
 46:
   %47 = load i64, i64* %i.1
   %48 = add nsw i64 %47, 1
@@ -150,62 +151,63 @@ define void @_B04rootmain() !dbg !5 {
   %84 = load i8 addrspace(1)*, i8 addrspace(1)** %8
   %85 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %86 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %85, i8 addrspace(1)* %84)
-  store i8 addrspace(1)* %86, i8 addrspace(1)** %9
-  %87 = load i8 addrspace(1)*, i8 addrspace(1)** %9
-  %88 = addrspacecast i8 addrspace(1)* %87 to i8*
-  %89 = ptrtoint i8* %88 to i64
-  %90 = and i64 %89, 2233785415175766016
-  %91 = icmp eq i64 %90, 576460752303423488
-  br i1 %91, label %100, label %104
-92:
-  %93 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585), !dbg !7
-  store i8 addrspace(1)* %93, i8 addrspace(1)** %14
+  %87 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_any(i8 addrspace(1)* %85, i8 addrspace(1)* %86)
+  store i8 addrspace(1)* %87, i8 addrspace(1)** %9
+  %88 = load i8 addrspace(1)*, i8 addrspace(1)** %9
+  %89 = addrspacecast i8 addrspace(1)* %88 to i8*
+  %90 = ptrtoint i8* %89 to i64
+  %91 = and i64 %90, 2233785415175766016
+  %92 = icmp eq i64 %91, 576460752303423488
+  br i1 %92, label %101, label %105
+93:
+  %94 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585), !dbg !7
+  store i8 addrspace(1)* %94, i8 addrspace(1)** %14
   br label %49
-94:
-  %95 = load i8 addrspace(1)*, i8 addrspace(1)** %10
-  %96 = addrspacecast i8 addrspace(1)* %95 to i8*
-  %97 = ptrtoint i8* %96 to i64
-  %98 = and i64 %97, 2233785415175766016
-  %99 = icmp eq i64 %98, 504403158265495552
-  br i1 %99, label %110, label %116
-100:
-  %101 = call double @_bal_tagged_to_float(i8 addrspace(1)* %87)
-  %102 = call {i64, i1} @_bal_float_to_int(double %101)
-  %103 = extractvalue {i64, i1} %102, 1
-  br i1 %103, label %108, label %105
-104:
-  store i8 addrspace(1)* %87, i8 addrspace(1)** %10
-  br label %94
+95:
+  %96 = load i8 addrspace(1)*, i8 addrspace(1)** %10
+  %97 = addrspacecast i8 addrspace(1)* %96 to i8*
+  %98 = ptrtoint i8* %97 to i64
+  %99 = and i64 %98, 2233785415175766016
+  %100 = icmp eq i64 %99, 504403158265495552
+  br i1 %100, label %111, label %117
+101:
+  %102 = call double @_bal_tagged_to_float(i8 addrspace(1)* %88)
+  %103 = call {i64, i1} @_bal_float_to_int(double %102)
+  %104 = extractvalue {i64, i1} %103, 1
+  br i1 %104, label %109, label %106
 105:
-  %106 = extractvalue {i64, i1} %102, 0
-  %107 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %106)
-  store i8 addrspace(1)* %107, i8 addrspace(1)** %10
-  br label %94
-108:
-  %109 = call i8 addrspace(1)* @_bal_panic_construct(i64 3843), !dbg !7
-  store i8 addrspace(1)* %109, i8 addrspace(1)** %14
+  store i8 addrspace(1)* %88, i8 addrspace(1)** %10
+  br label %95
+106:
+  %107 = extractvalue {i64, i1} %103, 0
+  %108 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %107)
+  store i8 addrspace(1)* %108, i8 addrspace(1)** %10
+  br label %95
+109:
+  %110 = call i8 addrspace(1)* @_bal_panic_construct(i64 3843), !dbg !7
+  store i8 addrspace(1)* %110, i8 addrspace(1)** %14
   br label %49
-110:
-  %111 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %95)
-  store i64 %111, i64* %11
-  %112 = load i64, i64* %sum
-  %113 = load i64, i64* %11
-  %114 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %112, i64 %113)
-  %115 = extractvalue {i64, i1} %114, 1
-  br i1 %115, label %121, label %118
-116:
-  %117 = call i8 addrspace(1)* @_bal_panic_construct(i64 3843), !dbg !7
-  store i8 addrspace(1)* %117, i8 addrspace(1)** %14
+111:
+  %112 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %96)
+  store i64 %112, i64* %11
+  %113 = load i64, i64* %sum
+  %114 = load i64, i64* %11
+  %115 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 %113, i64 %114)
+  %116 = extractvalue {i64, i1} %115, 1
+  br i1 %116, label %122, label %119
+117:
+  %118 = call i8 addrspace(1)* @_bal_panic_construct(i64 3843), !dbg !7
+  store i8 addrspace(1)* %118, i8 addrspace(1)** %14
   br label %49
-118:
-  %119 = extractvalue {i64, i1} %114, 0
-  store i64 %119, i64* %12
-  %120 = load i64, i64* %12
-  store i64 %120, i64* %sum
+119:
+  %120 = extractvalue {i64, i1} %115, 0
+  store i64 %120, i64* %12
+  %121 = load i64, i64* %12
+  store i64 %121, i64* %sum
   br label %46
-121:
-  %122 = call i8 addrspace(1)* @_bal_panic_construct(i64 3841), !dbg !7
-  store i8 addrspace(1)* %122, i8 addrspace(1)** %14
+122:
+  %123 = call i8 addrspace(1)* @_bal_panic_construct(i64 3841), !dbg !7
+  store i8 addrspace(1)* %123, i8 addrspace(1)** %14
   br label %49
 }
 !llvm.module.flags = !{!0}
@@ -218,6 +220,6 @@ define void @_B04rootmain() !dbg !5 {
 !5 = distinct !DISubprogram(name:"main", linkageName:"_B04rootmain", scope: !1, file: !1, line: 4, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !6)
 !6 = !{}
 !7 = !DILocation(line: 0, column: 0, scope: !5)
-!8 = !DILocation(line: 11, column: 23, scope: !5)
+!8 = !DILocation(line: 11, column: 12, scope: !5)
 !9 = !DILocation(line: 17, column: 4, scope: !5)
-!10 = !DILocation(line: 15, column: 40, scope: !5)
+!10 = !DILocation(line: 15, column: 29, scope: !5)

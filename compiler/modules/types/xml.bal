@@ -42,24 +42,24 @@ public function xmlSequence(SemType constituentType) returns SemType {
         return constituentType;
     }   
     else {
-        SubtypeData ro = getComplexSubtypeData(constituentType, UT_XML_RO);
-        ro = ro is boolean ? ro : makeSequence(true, <XmlSubtype>ro);
+        var ro = <XmlSubtype|boolean>getComplexSubtypeData(constituentType, UT_XML_RO);
+        ro = ro is boolean ? ro : makeSequence(true, ro);
         
-        SubtypeData rw = getComplexSubtypeData(constituentType, UT_XML_RW);
-        rw = rw is boolean ? rw : makeSequence(false, <XmlSubtype>rw);
+        var rw = <XmlSubtype|boolean>getComplexSubtypeData(constituentType, UT_XML_RW);
+        rw = rw is boolean ? rw : makeSequence(false, rw);
         
         return createXmlSemtype(ro, rw);
     }
 }
 
-function makeSequence(boolean roPart, XmlSubtype d) returns SubtypeData {
+function makeSequence(boolean roPart, XmlSubtype d) returns XmlSubtype|boolean {
     int primitives = XML_PRIMITIVE_NEVER | d.primitives;
     int atom = d.primitives & (roPart ? XML_PRIMITIVE_RO_SINGLETON : XML_PRIMITIVE_SINGLETON);
     Bdd sequence = bddUnion(bddAtom(atom), d.sequence);
     return createXmlSubtype(roPart, primitives, sequence);
 }
 
-function createXmlSubtype(boolean isRo, int primitives, Bdd sequence) returns SubtypeData {
+function createXmlSubtype(boolean isRo, int primitives, Bdd sequence) returns XmlSubtype|boolean {
     int mask = isRo ? XML_PRIMITIVE_RO_MASK : XML_PRIMITIVE_RW_MASK;
     int p = primitives & mask;
     if sequence == true && p == mask {
@@ -68,24 +68,33 @@ function createXmlSubtype(boolean isRo, int primitives, Bdd sequence) returns Su
     return createXmlSubtypeOrEmpty(p, sequence);
 }
 
-function createXmlSubtypeOrEmpty(int primitives, Bdd sequence) returns SubtypeData {
+function createXmlSubtypeOrEmpty(int primitives, Bdd sequence) returns XmlSubtype|false {
     if sequence == false && primitives == 0 {
         return false;
     }
     return { primitives, sequence };
 }
 
-
-function createXmlSemtype(SubtypeData ro, SubtypeData rw) returns ComplexSemType {
-    if ro == false {
-        return createComplexSemType(0, [[UT_XML_RW, rw]]);
-    }
-    else if rw == false {
-        return createComplexSemType(0, [[UT_XML_RO, ro]]); 
+function createXmlSemtype(XmlSubtype|boolean ro, XmlSubtype|boolean rw) returns ComplexSemType {
+    UniformSubtype[] subtypes = [];
+    int all = 0;
+    if ro is boolean {
+        if ro {
+            all = 1 << UT_XML_RO;
+        }
     }
     else {
-        return createComplexSemType(0, [[UT_XML_RO, ro], [UT_XML_RW, rw]]);
+        subtypes.push([UT_XML_RO, ro]);
     }
+    if rw is boolean {
+        if rw {
+            all |= 1 << UT_XML_RW;
+        }
+    }
+    else {
+        subtypes.push([UT_XML_RW, rw]);
+    }
+    return createComplexSemType(<UniformTypeBitSet>all, subtypes);  
 }
 
 function xmlSubtypeUnion(boolean isRo, SubtypeData d1, SubtypeData d2) returns SubtypeData {

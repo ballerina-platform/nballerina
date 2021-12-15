@@ -117,19 +117,10 @@ isolated function bddDiff(Bdd b1, Bdd b2) returns Bdd {
 
         }
         else {
-            // We used to have this, following the Castagna paper:
-            // return bddCreate(b1.atom,
-            //             bddDiff(b1.left, b2.left),
-            //             bddDiff(b1.middle, b2.middle),
-            //             bddDiff(b1.right, b2.right));
-            // i.e. it does not materialize the union
-            // But that is not correct in a case like (a0|a1) - a0,
-            // when a0 and a1 are not disjoint.
-            //
-            // One workaround is to do it in terms of things we know work:
-            // return bddIntersect(b1, bddComplement(b2));
-            //
-            // This materializes the union like in the intersection case:
+            // There is an error in the Castagna paper for this formula.
+            // The union needs to be materialized here.
+            // The original formula does not work in a case like (a0|a1) - a0.
+            // Castagna confirms that the following formula is the correct one.
             return bddCreate(b1.atom,
                           bddDiff(bddUnion(b1.left, b1.middle), bddUnion(b2.left, b2.middle)),
                           false,
@@ -162,6 +153,9 @@ isolated function bddComplement(Bdd b) returns Bdd {
                            bddComplement(b.right));
         }
         else {
+            // There is a typo in the Frisch PhD thesis for this formula.
+            // (It has left and right swapped.)
+            // Castagna (the PhD supervisor) confirms that this is the correct formula.
             return bddCreate(b.atom,
                           bddComplement(bddUnion(b.left, b.middle)),
                           false,

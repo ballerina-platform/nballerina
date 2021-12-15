@@ -462,9 +462,10 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
         newTd = check parseTypeDesc(tok);
     }
     Position actualEnd = tok.previousEndPos();
-    while td.toString() != newTd.toString() && newTd is ListTypeDesc|MappingTypeDesc {
+    while td.toString() != newTd.toString() &&
+            (newTd is TupleTypeDesc|ArrayTypeDesc || newTd is MappingTypeDesc && newTd.rest is TypeDesc) {
         // These are left recursions which we can't separately parse
-        TypeDesc rest = <TypeDesc> newTd.rest;
+        TypeDesc rest = <TypeDesc> (newTd is ArrayTypeDesc ? newTd.member : newTd.rest);
         actualEnd = rest.endPos;
         newTd = rest;
     }
@@ -474,20 +475,34 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
     test:assertFalse(testPositionIsWhiteSpace(tok.file, td.startPos), "start position is a white space");
     test:assertTrue(testValidTypeDescEnd(tok.file, inclusiveEndPos(td.endPos), td), endPosErrorMessage(tok, td.endPos));
     [d:Position, d:Position][] childNodePos = [];
-    if td is ListTypeDesc {
+    if td is TupleTypeDesc {
         foreach var member in td.members {
             check validateTypeDescPos(member, tok, td.startPos, td.endPos);
             childNodePos.push([member.startPos, member.endPos]);
         }
-        check validateTypeDescPos(td.rest, tok, td.startPos, td.endPos);
-        childNodePos.push([td.rest.startPos, td.rest.endPos]);
+        TypeDesc? rest = td.rest;
+        if rest != () {
+            check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
+            childNodePos.push([rest.startPos, rest.endPos]);
+        }
+    }
+    if td is ArrayTypeDesc {
+        TypeDesc member = td.member;
+        check validateTypeDescPos(member, tok, td.startPos, td.endPos);
+        childNodePos.push([member.startPos, member.endPos]);
+        foreach var size in td.dimensions {
+            if size != () {
+                check validateExpressionPos(size, tok, td.startPos, td.endPos);
+                childNodePos.push([size.startPos, size.endPos]);
+            }
+        }
     }
     else if td is MappingTypeDesc {
         foreach var f in td.fields {
             check validateTypeDescPos(f.typeDesc, tok, td.startPos, td.endPos);
             childNodePos.push([f.typeDesc.startPos, f.typeDesc.endPos]);
         }
-        TypeDesc? rest = td.rest;
+        TypeDesc|INCLUSIVE_RECORD_TYPE_DESC? rest = td.rest;
         if rest is TypeDesc {
             childNodePos.push([rest.startPos, rest.endPos]);
             check validateTypeDescPos(rest, tok, td.startPos, td.endPos);
@@ -548,7 +563,7 @@ function validateTypeDescOpPos(TypeDesc td, Tokenizer tok) returns err:Syntax? {
 
 function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) returns boolean {
     FragCode[] base = [FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON];
-    if td is ListTypeDesc || (td is FunctionTypeDesc && td.ret is ListTypeDesc) {
+    if typeDescContainRightSqureBracket(td) {
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
     }
     else if td is BinaryTypeDesc {
@@ -556,18 +571,26 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
         TypeDesc left = td.left;
         while left is BinaryTypeDesc {
             left = left.left;
-            if left is ListTypeDesc || (left is FunctionTypeDesc && left.ret is ListTypeDesc) {
+            if typeDescContainRightSqureBracket(left) {
                 return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
             }
         }
-        if left is ListTypeDesc || (left is FunctionTypeDesc && left.ret is ListTypeDesc) {
+        TypeDesc right = td.right;
+        if typeDescContainRightSqureBracket(left) || typeDescContainRightSqureBracket(right) {
             return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
         }
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
     }
+    else if td is MappingTypeDesc && td.rest == INCLUSIVE_RECORD_TYPE_DESC {
+        return !checkPosFragCode(file, endPos, CP_RIGHT_SQUARE, ...base);
+    }
     return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
 }
 
+
+function typeDescContainRightSqureBracket(TypeDesc td) returns boolean {
+    return td is TupleTypeDesc || td is ArrayTypeDesc || td is FunctionTypeDesc && typeDescContainRightSqureBracket(td.ret);
+}
 
 function checkPosFragCode(SourceFile file, Position pos, FragCode... invalidCodes) returns boolean {
     var [lineIndex, fragIndex] = sourceFileFragIndex(file, pos);

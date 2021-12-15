@@ -244,9 +244,10 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         return;
     }
     else if td is MappingTypeDesc {
-        TypeDesc? rest = td.rest;
+        TypeDesc|INCLUSIVE_RECORD_TYPE_DESC? rest = td.rest;
         if td.fields.length() > 0 {
-            w.push("record", "{|");
+            w.push("record");
+            w.push(rest == INCLUSIVE_RECORD_TYPE_DESC ? "{" : "{|");
             boolean firstInBlock = true;
             foreach var f in td.fields {
                 w.push(<Word>(firstInBlock ? LF_INDENT : LF));
@@ -254,20 +255,20 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
                 typeDescToWords(w, f.typeDesc);
                 w.push(f.name, CLING, ";");
             }
-            if rest != () {
+            if rest is TypeDesc {
                 w.push(<Word> LF);
                 typeDescToWords(w, rest);
                 w.push("...", CLING, ";");
             }
-            w.push(<Word>LF_OUTDENT, "|}");
+            w.push(rest == INCLUSIVE_RECORD_TYPE_DESC ? "}" : "|}");
         }
         else {
             w.push("map", CLING, "<", CLING);
-            if rest == () {
-                w.push("never");
+            if rest is TypeDesc {
+                typeDescToWords(w, rest);
             }
             else {
-                typeDescToWords(w, rest);
+                w.push("never");
             }
             w.push(CLING, ">");
         }
@@ -278,13 +279,35 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         w.push(CLING, ">");
         return;
     }
-    else if td is ListTypeDesc {
+    else if td is TupleTypeDesc {
         if wrap != false {
             w.push("(");
         }
-        typeDescToWords(w, td.rest, true);
+        w.push("[");
+        typeDescsToWords(w, td.members);
+        TypeDesc? rest = td.rest;
+        if rest != () {
+            w.push(",", "...", CLING);
+            typeDescToWords(w, rest);
+        }
+        w.push("]");
+        if wrap != false {
+            w.push(")");
+        }
+    }
+    else if td is ArrayTypeDesc {
+        if wrap != false {
+            w.push("(");
+        }
+        typeDescToWords(w, td.member, true);
         w.push(CLING);
-        w.push("[", "]");
+        foreach var len in td.dimensions {
+            w.push("[");
+            if len != () {
+                exprToWords(w, len);
+            }
+            w.push("]");
+        }
         if wrap != false {
             w.push(")");
         }
@@ -313,6 +336,11 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is SingletonTypeDesc {
         valueToWords(w, td.value);
     }
+    else if td is TableTypeDesc {
+        w.push("table", CLING, "<", CLING);
+        typeDescToWords(w, td.row);
+        w.push(CLING, ">");
+    }    
     else if td is UnaryTypeDesc {
         w.push(td.op, CLING);
         typeDescToWords(w, td.td);
@@ -351,6 +379,17 @@ function exprsToWords(Word[] w, Expr[] exprs) {
             w.push(",");
         }
         exprToWords(w, expr);
+        firstExpr = false;
+    }
+}
+
+function typeDescsToWords(Word[] w, TypeDesc[] tds) {
+    boolean firstExpr = true;
+    foreach var td in tds {
+        if !firstExpr {
+            w.push(",");
+        }
+        typeDescToWords(w, td);
         firstExpr = false;
     }
 }
