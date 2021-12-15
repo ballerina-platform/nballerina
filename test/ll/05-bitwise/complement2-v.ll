@@ -235,7 +235,7 @@ define i64 @_B04rootaddTwo(i64 %0) !dbg !11 {
 !16 = !DILocation(line: 6, column: 4, scope: !5)
 !17 = !DILocation(line: 7, column: 16, scope: !5)
 !18 = !DILocation(line: 7, column: 4, scope: !5)
-!19 = !DILocation(line: 8, column: 48, scope: !5)
+!19 = !DILocation(line: 8, column: 37, scope: !5)
 !20 = !DILocation(line: 8, column: 4, scope: !5)
 !21 = !DILocation(line: 9, column: 4, scope: !5)
 !22 = !DILocation(line: 11, column: 15, scope: !5)

@@ -1,9 +1,9 @@
 @_bal_stack_guard = external global i8*
-@_Bi04root0 = external constant {i32, i32}
+@_Bi04root0 = external constant {i32}
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_mapping_construct({i32, i32}*, i64)
-declare i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)*, i64) nofree nosync nounwind readnone speculatable willreturn
+declare i8 addrspace(1)* @_bal_mapping_construct({i32}*, i64)
+declare i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)*) readnone
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
@@ -26,12 +26,12 @@ define void @_B04rootmain() !dbg !5 {
   %9 = icmp ult i8* %7, %8
   br i1 %9, label %30, label %10
 10:
-  %11 = call i8 addrspace(1)* @_bal_mapping_construct({i32, i32}* @_Bi04root0, i64 0)
+  %11 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root0, i64 0)
   store i8 addrspace(1)* %11, i8 addrspace(1)** %1
   %12 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   store i8 addrspace(1)* %12, i8 addrspace(1)** %mi
   %13 = load i8 addrspace(1)*, i8 addrspace(1)** %mi
-  %14 = call i8 addrspace(1)* @llvm.ptrmask.p1i8.i64(i8 addrspace(1)* %13, i64 -5)
+  %14 = call i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)* %13)
   store i8 addrspace(1)* %14, i8 addrspace(1)** %ma
   %15 = load i8 addrspace(1)*, i8 addrspace(1)** %ma
   %16 = zext i1 1 to i64

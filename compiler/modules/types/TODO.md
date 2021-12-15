@@ -26,7 +26,7 @@
 22. typedesc subtypes
 23. future subtypes
 24. stream subtypes
-25. table type without keys
+25. ~~table type without keys~~
 26. table keys
 27. distinct object types
 28. public, private object member qualifiers

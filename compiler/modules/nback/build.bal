@@ -127,7 +127,7 @@ function buildErrorForPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value 
 }
 
 function buildErrorForPackedPanic(llvm:Builder builder, Scaffold scaffold, llvm:Value packedPanic, bir:Position pos) returns llvm:PointerValue {
-    scaffold.setDebugLocation(builder, pos, "file");
+    scaffold.setDebugLocation(builder, pos, DEBUG_ORIGIN_ERROR_CONSTRUCT);
     var err = <llvm:PointerValue>builder.call(scaffold.getRuntimeFunctionDecl(panicConstructFunction), [packedPanic]);
     scaffold.clearDebugLocation(builder);
     return err;
@@ -290,21 +290,7 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else if operand is string {
         return [REPR_STRING, check buildConstString(builder, scaffold, operand)];
     }
-    else {
-        return buildSimpleConst(operand);
-    }
-}
-
-function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:ConstPointerValue|BuildError {   
-    return scaffold.getString(str);
-}
-
-function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) returns [Repr, llvm:Value] {
-    return [scaffold.getRepr(reg), builder.load(scaffold.address(reg))];
-}
-
-function buildSimpleConst(bir:SimpleConstOperand operand) returns [Repr, llvm:Value] {
-    if operand is int {
+    else if operand is int {
         return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
     }
     else if operand is float {
@@ -317,6 +303,14 @@ function buildSimpleConst(bir:SimpleConstOperand operand) returns [Repr, llvm:Va
         // operand is boolean
         return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0)];
     }
+}
+
+function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) returns llvm:ConstPointerValue|BuildError {   
+    return scaffold.getString(str);
+}
+
+function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) returns [Repr, llvm:Value] {
+    return [scaffold.getRepr(reg), builder.load(scaffold.address(reg))];
 }
 
 function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {

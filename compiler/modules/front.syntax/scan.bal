@@ -129,6 +129,7 @@ final readonly & Keyword[] keywords = [
     "return",
     "returns",
     "string",
+    "table",
     "true",
     "type",
     "typedesc",

@@ -228,20 +228,20 @@ class CodeGenFoldContext {
         self.env = env;
     }
 
-    function lookupConst(string? prefix, string varName, Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError {
+    function lookupConst(string? prefix, string varName, Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
         if prefix != () {
-            return lookupImportedConst(self.cx.mod, self.cx.functionDefn, prefix, varName);
+            return { value: check lookupImportedConst(self.cx.mod, self.cx.functionDefn, prefix, varName) };
         }
-        t:Value|Binding v = check lookupVarRef(self.cx, varName, self.env, pos);
+        t:SingleValue|Binding v = check lookupVarRef(self.cx, varName, self.env, pos);
         if v is Binding {
-            t:Value? shape = t:singleShape(v.reg.semType);
+            t:OptSingleValue shape = t:singleShape(v.reg.semType);
             if shape != () && shape.value == s:FLOAT_ZERO {
                 return s:FLOAT_ZERO;
             }
             return shape;
         }
         else {
-            return v;
+            return { value: v };
         }
     }
 
@@ -1397,8 +1397,8 @@ function codeGenVarRefExpr(CodeGenContext cx, s:VarRefExpr ref, Environment env,
     var v = check lookupVarRef(cx, ref.name, env, ref.startPos);
     bir:Operand result;
     Binding? binding;
-    if v is t:Value {
-        result = v.value;
+    if v is t:SingleValue {
+        result = v;
         binding = ();
     }
     else {
@@ -1587,7 +1587,9 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func,
         result,
         args: args.cloneReadOnly(),
-        pos: expr.namePos
+        // expr.namePos is currently the start of the local name
+        // which is not really what is wanted, so we use startPos instead
+        pos: expr.startPos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };
@@ -1755,7 +1757,7 @@ function lookupVarRefBinding(CodeGenContext cx, string name, Environment env, Po
     }
 }
 
-function lookupVarRef(CodeGenContext cx, string name, Environment env, Position pos) returns t:Value|Binding|CodeGenError {
+function lookupVarRef(CodeGenContext cx, string name, Environment env, Position pos) returns t:SingleValue|Binding|CodeGenError {
     Binding? binding = lookupLocalVarRef(cx, name, env);
     if binding == () {
         s:ModuleLevelDefn? defn = cx.mod.defns[name];

@@ -14,14 +14,14 @@ import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.front.syntax as s;
 import wso2/nballerina.types as t;
 
-type SimpleConst string|int|float|boolean|();
+type SimpleConst t:SingleValue;
 
 type FoldError ResolveTypeError;
 
 type FoldContext object {
     function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
-    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError;
+    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError;
     function typeContext() returns t:Context;
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
     function isConstDefn() returns boolean;
@@ -41,14 +41,14 @@ class ConstFoldContext {
         return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, defnName=self.defn.name);
     }
 
-    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:Value?|FoldError {
+    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
         if prefix != () {
-            return lookupImportedConst(self.mod, self.defn, prefix, varName);
+            return { value: check lookupImportedConst(self.mod, self.defn, prefix, varName) };
         }
         s:ModuleLevelDefn? defn = self.mod.defns[varName];
         if defn is s:ConstDefn {
             var resolved = check resolveConstDefn(self.mod, defn);
-            return resolved[1];
+            return { value: resolved[1] };
         }
         else if defn == () {
             return self.semanticErr(`${varName} is not defined`, pos);
@@ -92,7 +92,7 @@ function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr
     s:Expr foldedExpr = check foldExpr(cx, expectedType, expr);
     if foldedExpr is s:ConstValueExpr {
         if expectedType == () || t:containsConst(expectedType, foldedExpr.value) {
-            return [t:singleton(foldedExpr.value), { value: foldedExpr.value }];
+            return [t:singleton(foldedExpr.value), foldedExpr.value];
         }
         else {
             return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
@@ -104,8 +104,8 @@ function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr
 }
 
 function resolveConstIntExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr) returns int|FoldError {
-    [t:SemType, t:Value] [_, resolved] = check resolveConstExpr(mod, defn, expr, t:INT);
-    return <int>resolved.value;
+    [t:SemType, t:SingleValue] [_, resolved] = check resolveConstExpr(mod, defn, expr, t:INT);
+    return <int>resolved;
 }
 
 function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns s:Expr|FoldError {
@@ -530,7 +530,7 @@ function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, 
 }
 
 function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr expr) returns s:Expr|FoldError {
-    s:FLOAT_ZERO|t:Value? constValue = check cx.lookupConst(expr.prefix, expr.name, expr.namePos);
+    s:FLOAT_ZERO|t:OptSingleValue constValue = check cx.lookupConst(expr.prefix, expr.name, expr.namePos);
     if constValue == () {
         return expr;
     }

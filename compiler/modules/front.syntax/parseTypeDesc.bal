@@ -188,6 +188,12 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         "record" => {
             return parseRecordTypeDesc(tok, startPos);
         }
+        "table" => {
+            check tok.advance();
+            TypeDesc row = check parseTypeParam(tok);
+            Position endPos = tok.previousEndPos();
+            return { startPos, endPos, row };
+        }
         [IDENTIFIER, var identifier] => {
             Position pos = tok.currentStartPos();
             check tok.advance();

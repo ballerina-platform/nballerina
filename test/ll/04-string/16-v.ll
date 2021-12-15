@@ -84,7 +84,7 @@ define internal i8 addrspace(1)* @_B_double(i8 addrspace(1)* %0) !dbg !7 {
 !7 = distinct !DISubprogram(name:"double", linkageName:"_B_double", scope: !1, file: !1, line: 11, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !8)
 !8 = !{}
 !9 = !DILocation(line: 0, column: 0, scope: !5)
-!10 = !DILocation(line: 8, column: 25, scope: !5)
+!10 = !DILocation(line: 8, column: 19, scope: !5)
 !11 = !DILocation(line: 8, column: 4, scope: !5)
 !12 = !DILocation(line: 6, column: 14, scope: !5)
 !13 = !DILocation(line: 0, column: 0, scope: !7)
