@@ -32,6 +32,7 @@ primary-td :=
   | map-td
   | record-td
   | tuple-td
+  | table-td
   | xml-td
   | error-td
   | function-td
@@ -55,6 +56,7 @@ td-list :=
 record-td := "record" "{|" field-desc* "|}"
 field-desc := type-desc identifier ";"
 
+table-td := "table" type-param
 xml-rd := "xml" [type-param]
 
 type-param := "<" type-desc ">"
