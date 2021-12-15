@@ -96,6 +96,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         match td.builtinTypeName {
             // These are easy
             "any" => { return t:ANY; }
+            "anydata" => { return t:createAnydata(mod.tc); }
             "boolean" => { return t:BOOLEAN; }
             "error" => { return t:ERROR; }
             "float" => { return t:FLOAT; }
