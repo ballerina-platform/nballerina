@@ -829,14 +829,14 @@ public function simpleArrayMemberType(Context cx, SemType t) returns UniformType
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 public function arrayMemberType(Context cx, SemType t) returns SemType? {
     ListAtomicType? atomic = listAtomicTypeRw(cx, t);
-    if atomic != () && atomic.members.length() == 0 {
+    if atomic != () && atomic.members.fixedLength == 0 {
         return atomic.rest;
     }
     return ();
 }
 
 public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns UniformTypeBitSet? {
-    if atomic != () && atomic.members.length() == 0 {
+    if atomic != () && atomic.members.fixedLength == 0 {
         SemType memberType = atomic.rest;
         if memberType is UniformTypeBitSet {
             return memberType;
@@ -845,8 +845,7 @@ public function listAtomicSimpleArrayMemberType(ListAtomicType? atomic) returns 
     return ();   
 }
 
-final ListAtomicType LIST_ATOMIC_TOP = { members: [], rest: TOP };
-final ListAtomicType LIST_ATOMIC_READONLY = { members: [], rest: READONLY };
+final ListAtomicType LIST_ATOMIC_TOP = { members: { initial: [], fixedLength: 0 }, rest: TOP };
 
 public function listAtomicTypeRw(Context cx, SemType t) returns ListAtomicType? {
     if t is UniformTypeBitSet {
@@ -1204,7 +1203,7 @@ public function createJson(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, [], j);
+    _ = listDef.define(env, rest = j);
     _ = mapDef.define(env, [], j);
     return j;
 }
@@ -1215,7 +1214,7 @@ public function createAnydata(Env env) returns SemType {
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType ad = union(union(SIMPLE_OR_STRING, union(XML, TABLE)), union(listDef.getSemType(env), mapDef.getSemType(env)));
-    _ = listDef.define(env, [], ad);
+    _ = listDef.define(env, rest = ad);
     _ = mapDef.define(env, [], ad);
     return ad;
 }

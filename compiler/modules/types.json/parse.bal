@@ -98,7 +98,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
             }
             t:ListDefinition def = new;
             t:SemType[] members = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
-            return def.define(env, members, t:NEVER);
+            return def.define(env, members);
         }
         "list" => {
             t:SemType? s = lookupDef(env, b, jlist);
@@ -114,7 +114,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
             else {
                 rest = members.pop();
             }
-            return def.define(env, members, rest);
+            return def.define(env, rest = rest);
         }
         "record" => {
             t:SemType? s = lookupDef(env, b, jlist);

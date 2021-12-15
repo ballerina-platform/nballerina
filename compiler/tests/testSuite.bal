@@ -199,19 +199,22 @@ function testSubtypes(front:SourcePart[] sources, string[] expected) returns err
         s:TypeTest test = check s:parseTypeTest(item);
         t:SemType left = resolveTestSemtype(tc, m, test.left);
         t:SemType right = resolveTestSemtype(tc, m, test.right);
+
+        string lhsStr = test.left.toString();
+        string rhsStr = test.right.toString();
         
         boolean lsr = t:isSubtype(tc, left, right);
         boolean rsl = t:isSubtype(tc, right, left);
         boolean[2] testPair = [lsr, rsl]; 
         match test.op { 
             "<" => {
-                test:assertEquals(testPair, [true, false], "LHS is not a proper subtype of RHS");
+                test:assertEquals(testPair, [true, false], string `${lhsStr} is not a proper subtype of ${rhsStr}`);
             }
             "<>" => {
-                test:assertEquals(testPair, [false, false], "LHS and RHS are subtypes");
+                test:assertEquals(testPair, [false, false], string `${lhsStr} and ${rhsStr} are subtypes`);
             }
             "=" => {
-                test:assertEquals(testPair, [true, true], "LHS is not equivalent to RHS");
+                test:assertEquals(testPair, [true, true], string `${lhsStr} is not equivalent to ${rhsStr}`);
             }
         }
     }

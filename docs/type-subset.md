@@ -23,8 +23,10 @@ intersection-td :=
 
 postfix-td := 
   primary-td
-  | postfix-td "[" "]"
+  | postfix-td array-dimension+
   | postfix-td "?"
+
+array-dimension := "[" [simple-const-expr] "]"
 
 primary-td :=
   predefined-td

@@ -455,14 +455,19 @@ public type TypeDefn record {|
 
 public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
-public type ConstructorTypeDesc ListTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc|TableTypeDesc;
+public type ConstructorTypeDesc TupleTypeDesc|ArrayTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc|TableTypeDesc;
 
-public type ListTypeDesc record {|
-    // JBUG #32617 can't include PositionFields
-    Position startPos;
-    Position endPos;
+public type TupleTypeDesc record {|
+    *PositionFields;
     TypeDesc[] members;
-    TypeDesc rest;
+    TypeDesc? rest;
+    t:ListDefinition? defn = ();
+|};
+
+public type ArrayTypeDesc record {|
+    *PositionFields;
+    TypeDesc member;
+    SimpleConstExpr?[] dimensions = [];
     t:ListDefinition? defn = ();
 |};
 

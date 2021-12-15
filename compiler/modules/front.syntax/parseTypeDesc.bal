@@ -68,10 +68,21 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             td = bin;
         }
         else if tok.current() == "[" {
-            check tok.advance();
-            Position endPos = check tok.expectEnd("]");
-            ListTypeDesc list = { startPos, endPos, members: [], rest: td };
-            td = list;
+            SimpleConstExpr?[] dimensions = [];
+            Position? endPos = ();
+            // JBUG #34331 can re-write this to a `while true` and make `Position endPos;`  
+            while tok.current() == "[" {
+                check tok.advance();
+                if tok.current() == "]" {
+                    dimensions.push(());
+                } 
+                else {
+                    dimensions.push(check parseSimpleConstExpr(tok));
+                }
+                endPos = check tok.expectEnd("]");
+            }
+            ArrayTypeDesc array = { startPos, endPos: <Position>endPos, member: td , dimensions };
+            td = array;
         }
         else {
             break;
@@ -332,12 +343,12 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
 }
 
 // current token is []
-function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
+function parseTupleTypeDesc(Tokenizer tok) returns TupleTypeDesc|err:Syntax {
     TypeDesc[] members = [];
     Position startPos = tok.currentStartPos();
     check tok.advance();
     Position endPos = tok.currentEndPos();
-    TypeDesc rest = { startPos, endPos, builtinTypeName: "never"};
+    TypeDesc? rest = ();
     if tok.current() != "]" {
         while true {
             TypeDesc td = check parseTypeDesc(tok);
@@ -360,7 +371,7 @@ function parseTupleTypeDesc(Tokenizer tok) returns ListTypeDesc|err:Syntax {
     }
     endPos = tok.currentEndPos();
     check tok.advance();
-    return { startPos, endPos, members, rest};
+    return { startPos, endPos, members, rest };
 }
 
 function parseRecordTypeDesc(Tokenizer tok, Position startPos) returns MappingTypeDesc|err:Syntax {

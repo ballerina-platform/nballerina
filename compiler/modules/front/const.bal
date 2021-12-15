@@ -79,24 +79,33 @@ function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:Resolve
     }
     else {
         defn.resolved = false;
-        ConstFoldContext cx = new ConstFoldContext(defn, mod);
         s:SubsetBuiltinTypeDesc? td = defn.td;
         t:SemType? expectedType = td == () ? () : resolveBuiltinTypeDesc(td);
-        s:Expr expr = check foldExpr(cx, expectedType, defn.expr);
-        if expr is s:ConstValueExpr {
-            if expectedType == () || t:containsConst(expectedType, expr.value) {
-                s:ResolvedConst r = [t:singleton(expr.value), expr.value ];
-                defn.resolved = r;
-                return r;
-            }
-            else {
-                return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
-            }
+        s:ResolvedConst resolvedConst = check resolveConstExpr(mod, defn, defn.expr, expectedType);
+        defn.resolved = resolvedConst;
+        return resolvedConst;
+    }
+}
+
+function resolveConstExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr, t:SemType? expectedType) returns s:ResolvedConst|FoldError {
+    ConstFoldContext cx = new ConstFoldContext(defn, mod);
+    s:Expr foldedExpr = check foldExpr(cx, expectedType, expr);
+    if foldedExpr is s:ConstValueExpr {
+        if expectedType == () || t:containsConst(expectedType, foldedExpr.value) {
+            return [t:singleton(foldedExpr.value), foldedExpr.value];
         }
         else {
-            return err:semantic(`initializer of ${defn.name} is not constant`, s:defnLocation(defn));
+            return err:semantic(`initializer of ${defn.name} is not a subtype of the declared type`, s:defnLocation(defn));
         }
     }
+    else {
+        return err:semantic(`initializer of ${defn.name} is not constant`, s:defnLocation(defn));
+    }
+}
+
+function resolveConstIntExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr expr) returns int|FoldError {
+    [t:SemType, t:SingleValue] [_, resolved] = check resolveConstExpr(mod, defn, expr, t:INT);
+    return <int>resolved;
 }
 
 function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns s:Expr|FoldError {

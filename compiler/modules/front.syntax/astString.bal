@@ -279,13 +279,35 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         w.push(CLING, ">");
         return;
     }
-    else if td is ListTypeDesc {
+    else if td is TupleTypeDesc {
         if wrap != false {
             w.push("(");
         }
-        typeDescToWords(w, td.rest, true);
+        w.push("[");
+        typeDescsToWords(w, td.members);
+        TypeDesc? rest = td.rest;
+        if rest != () {
+            w.push(",", "...", CLING);
+            typeDescToWords(w, rest);
+        }
+        w.push("]");
+        if wrap != false {
+            w.push(")");
+        }
+    }
+    else if td is ArrayTypeDesc {
+        if wrap != false {
+            w.push("(");
+        }
+        typeDescToWords(w, td.member, true);
         w.push(CLING);
-        w.push("[", "]");
+        foreach var len in td.dimensions {
+            w.push("[");
+            if len != () {
+                exprToWords(w, len);
+            }
+            w.push("]");
+        }
         if wrap != false {
             w.push(")");
         }
@@ -357,6 +379,17 @@ function exprsToWords(Word[] w, Expr[] exprs) {
             w.push(",");
         }
         exprToWords(w, expr);
+        firstExpr = false;
+    }
+}
+
+function typeDescsToWords(Word[] w, TypeDesc[] tds) {
+    boolean firstExpr = true;
+    foreach var td in tds {
+        if !firstExpr {
+            w.push(",");
+        }
+        typeDescToWords(w, td);
         firstExpr = false;
     }
 }
