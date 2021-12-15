@@ -42,12 +42,10 @@ function rwTableSubtypeEmpty(Context cx, SubtypeData t) returns boolean {
 }
 
 function createRwTableSubtype(Bdd ro, Bdd rw) returns SubtypeData {
-    if ro == false && rw == false {
-        return false;
-    } else if ro == true && rw == true {
-        return true;
+    if ro is boolean && ro == rw {
+        return ro;
     }
-    return {ro, rw};
+    return { ro, rw };
 }
 
 final UniformTypeOps tableRoOps = {

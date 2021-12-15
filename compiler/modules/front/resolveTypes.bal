@@ -271,19 +271,19 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     if td is s:XmlSequenceTypeDesc {
         t:SemType t = check resolveTypeDesc(mod, modDefn, depth, td.constituent);
-        d:Location loc =  d:location(modDefn.part.file, td.pos);
         
         if !t:isSubtypeSimple(t, t:XML) {
+            d:Location loc =  d:location(modDefn.part.file, td.pos);
             return err:semantic("type parameter for xml is not a subtype of xml", loc=loc);
         }
         return t:xmlSequence(t);
     }
     if td is s:TableTypeDesc {
         t:SemType t = check resolveTypeDesc(mod, modDefn, depth, td.row);
-        d:Location loc =  d:location(modDefn.part.file, td.startPos, td.endPos);
         
         // Ensure the parameter type of table is a subtype of MAPPING
         if !t:isSubtypeSimple(t, t:MAPPING) {
+            d:Location loc =  d:location(modDefn.part.file, td.startPos, td.endPos);
             return err:semantic("type parameter for table is not a record", loc=loc);
         }
         return t:tableContaining(t);
