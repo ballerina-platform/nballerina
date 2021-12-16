@@ -80,7 +80,7 @@ function resolveConstDefn(ModuleSymbols mod, s:ConstDefn defn) returns s:Resolve
     else {
         defn.resolved = false;
         s:SubsetBuiltinTypeDesc? td = defn.td;
-        t:SemType? expectedType = td == () ? () : resolveBuiltinTypeDesc(td, mod.tc);
+        t:SemType? expectedType = td == () ? () : resolveBuiltinTypeDesc(mod.tc, td);
         s:ResolvedConst resolvedConst = check resolveConstExpr(mod, defn, defn.expr, expectedType);
         defn.resolved = resolvedConst;
         return resolvedConst;

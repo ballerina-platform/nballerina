@@ -553,9 +553,9 @@ public type SingletonTypeDesc record {|
     (string|float|int|boolean|decimal) value;
 |};
 
-public type SubsetBuiltinTypeName "any"|"boolean"|"int"|"float"|"string"|"error";
+public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"int"|"float"|"string"|"error";
 
-public type BuiltinTypeName SubsetBuiltinTypeName|"anydata"|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
+public type BuiltinTypeName SubsetBuiltinTypeName|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
 
 public type BuiltinTypeDesc readonly & record {|
     *PositionFields;
