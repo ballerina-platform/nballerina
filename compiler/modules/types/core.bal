@@ -178,10 +178,6 @@ type ComparableMemo record {|
     boolean comparable = false;
 |};
 
-public function createJsonTestContext(Env env) returns Context {
-    return new(env);
-}
-
 // Operations on types require a Context.
 // There can be multiple contexts for the same Env.
 // Whereas an Env is isolated, a Context is not isolated.
