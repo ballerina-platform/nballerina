@@ -49,7 +49,7 @@ function parseType(t:Env env, Binding? b, json j, Path path) returns t:SemType|P
         Typedesc => { return t:TYPEDESC; }
         Handle => { return t:HANDLE; }
         Xml => { return t:XML; } 
-        Json => { return t:createJson(env); }
+        Json => { return t:createJson(t:createJsonTestContext(env)); }
         Any => { return t:ANY; }
         Never => { return t:NEVER; }
         ReadOnly => { return t:READONLY; }
