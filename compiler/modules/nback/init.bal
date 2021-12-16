@@ -331,8 +331,8 @@ function createSubtypeStruct(InitModuleContext cx, t:UniformTypeCode typeCode, t
     if typeCode == t:UT_LIST_RW {
         return createListSubtypeStruct(cx, semType); 
     }
-    else if typeCode == t:UT_MAPPING_RW {
-        return createMappingSubtypeStruct(cx, semType); 
+    else if typeCode == t:UT_MAPPING_RW || typeCode == t:UT_TABLE_RO || typeCode == t:UT_TABLE_RW {
+        return createMappingSubtypeStruct(cx, semType);
     }
     panic err:impossible(`subtypes of uniform type ${typeCode} are not implemented`);    
 }

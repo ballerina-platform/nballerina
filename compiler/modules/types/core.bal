@@ -1218,7 +1218,8 @@ public function createAnydata(Context context) returns SemType {
     }
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType ad = union(union(SIMPLE_OR_STRING, union(XML, TABLE)), union(listDef.getSemType(context.env), mapDef.getSemType(context.env)));
+    SemType tableTy = tableContaining(mapDef.getSemType(context.env));
+    SemType ad = union(union(SIMPLE_OR_STRING, union(XML, tableTy)), union(listDef.getSemType(context.env), mapDef.getSemType(context.env)));
     _ = listDef.define(context.env, rest = ad);
     _ = mapDef.define(context.env, [], ad);
     context.anydataMemo = ad;
