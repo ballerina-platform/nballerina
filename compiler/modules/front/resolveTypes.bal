@@ -323,9 +323,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     panic error("unimplemented type-descriptor");
 }
 
-function resolveBuiltinTypeDesc(s:SubsetBuiltinTypeDesc td) returns t:UniformTypeBitSet {
+function resolveBuiltinTypeDesc(s:SubsetBuiltinTypeDesc td, t:Context context) returns t:UniformTypeBitSet {
     match td.builtinTypeName {
         "any" => { return t:ANY; }
+        "anydata" => { return t:widenToUniformTypes(t:createAnydata(context)); }
         "boolean" => { return t:BOOLEAN; }
         "int" => { return t:INT; }
         "float" => { return t:FLOAT; }
