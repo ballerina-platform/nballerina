@@ -95,6 +95,7 @@ const FRAG_KEYWORD = 0x80;
 final readonly & Keyword[] keywords = [
     "_",
     "any",
+    "anydata",
     "as",
     "boolean",
     "break",

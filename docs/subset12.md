@@ -15,6 +15,7 @@
    * predefined basic type name: `boolean`, `decimal`, `error`, `float`, `int`, `string`
    * nil type `()`
    * `any` type
+   * `anydata` type
    * optional type: `T?`
    * unions: `T1|T2`
    * intersections: `T1&T2`
@@ -115,7 +116,7 @@ primary-type-desc =
   | type-reference
   | mapping-type-desc
 
-builtin-type-name = "any" | "boolean" | "int" | "float" | "string" | "error"
+builtin-type-name = "any" | "anydata" | "boolean" | "int" | "float" | "string" | "error"
 
 nil-type-desc = nil-literal
 
@@ -377,6 +378,7 @@ Two kinds of `import` are supported.
 
 * `decimal` has been added
 * inclusive record types have been added
+* `anydata` has been added
 
 ## Implemented spec changes since 2021R1
 

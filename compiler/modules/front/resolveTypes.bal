@@ -96,6 +96,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         match td.builtinTypeName {
             // These are easy
             "any" => { return t:ANY; }
+            "anydata" => { return t:createAnydata(mod.tc); }
             "boolean" => { return t:BOOLEAN; }
             "error" => { return t:ERROR; }
             "float" => { return t:FLOAT; }
@@ -206,7 +207,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 rest = check resolveTypeDesc(mod, modDefn, depth + 1, restTd);
             }
             else if restTd == s:INCLUSIVE_RECORD_TYPE_DESC {
-                rest = t:createAnydata(env);
+                rest = t:createAnydata(mod.tc);
             }
             else {
                 rest = t:NEVER;
@@ -322,9 +323,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     panic error("unimplemented type-descriptor");
 }
 
-function resolveBuiltinTypeDesc(s:SubsetBuiltinTypeDesc td) returns t:UniformTypeBitSet {
+function resolveBuiltinTypeDesc(s:SubsetBuiltinTypeDesc td, t:Context context) returns t:UniformTypeBitSet {
     match td.builtinTypeName {
         "any" => { return t:ANY; }
+        "anydata" => { return t:widenToUniformTypes(t:createAnydata(context)); }
         "boolean" => { return t:BOOLEAN; }
         "int" => { return t:INT; }
         "float" => { return t:FLOAT; }

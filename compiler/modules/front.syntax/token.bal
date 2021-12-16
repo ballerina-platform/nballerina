@@ -29,6 +29,7 @@ type CompoundAssignDelim "+=" | "-=" | "/=" | "*=" | "&=" | "|=" | "^=" | "<<=" 
 type Keyword
     "_"
     | "any"
+    | "anydata"
     | "as"
     | "boolean"
     | "byte"

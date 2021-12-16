@@ -121,6 +121,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         | "typedesc"
         | "handle"
         | "any"
+        | "anydata"
         | "never"
         | "json"
         | "readonly"
