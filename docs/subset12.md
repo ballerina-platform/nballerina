@@ -378,6 +378,7 @@ Two kinds of `import` are supported.
 
 * `decimal` has been added
 * inclusive record types have been added
+* `anydata` has been added
 
 ## Implemented spec changes since 2021R1
 

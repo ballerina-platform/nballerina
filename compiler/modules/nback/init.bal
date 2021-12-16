@@ -270,7 +270,7 @@ function addComplexTypeDefn(InitModuleContext cx, string symbol, t:ComplexSemTyp
     int someBits = 0;
     llvm:ConstValue[] llSubtypes = [];
     foreach var [code, subtype] in some {
-        if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO {
+        if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO || code == t:UT_TABLE_RO || code == t:UT_TABLE_RW {
             // these cannot occur for now, so ignore them
             continue;
         }
@@ -331,8 +331,8 @@ function createSubtypeStruct(InitModuleContext cx, t:UniformTypeCode typeCode, t
     if typeCode == t:UT_LIST_RW {
         return createListSubtypeStruct(cx, semType); 
     }
-    else if typeCode == t:UT_MAPPING_RW || typeCode == t:UT_TABLE_RO || typeCode == t:UT_TABLE_RW {
-        return createMappingSubtypeStruct(cx, semType);
+    else if typeCode == t:UT_MAPPING_RW {
+        return createMappingSubtypeStruct(cx, semType); 
     }
     panic err:impossible(`subtypes of uniform type ${typeCode} are not implemented`);    
 }

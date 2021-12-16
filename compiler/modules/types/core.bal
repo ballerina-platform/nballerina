@@ -1213,15 +1213,16 @@ public function createJson(Env env) returns SemType {
 // SUBSET table subtypes
 public function createAnydata(Context context) returns SemType {
     SemType? memo = context.anydataMemo;
+    Env env = context.env;
     if memo != () {
         return memo;
     }
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType tableTy = tableContaining(mapDef.getSemType(context.env));
-    SemType ad = union(union(SIMPLE_OR_STRING, union(XML, tableTy)), union(listDef.getSemType(context.env), mapDef.getSemType(context.env)));
-    _ = listDef.define(context.env, rest = ad);
-    _ = mapDef.define(context.env, [], ad);
+    SemType tableTy = tableContaining(mapDef.getSemType(env));
+    SemType ad = union(union(SIMPLE_OR_STRING, union(XML, tableTy)), union(listDef.getSemType(env), mapDef.getSemType(env)));
+    _ = listDef.define(env, rest = ad);
+    _ = mapDef.define(env, [], ad);
     context.anydataMemo = ad;
     return ad;
 }

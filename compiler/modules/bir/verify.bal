@@ -8,14 +8,12 @@ class VerifyContext {
     private final Module mod;
     private final t:Context tc;
     private final FunctionDefn defn;
-    private final t:SemType anydataType;
 
     function init(Module mod, FunctionDefn defn) {
         self.mod = mod;
         t:Context tc  = mod.getTypeContext();
         self.tc = tc;
         self.defn = defn;
-        self.anydataType = t:createAnydata(tc);
     }
 
     function isSubtype(t:SemType s, t:SemType t) returns boolean {
@@ -35,7 +33,7 @@ class VerifyContext {
     }
 
     function isAnydata(t:SemType t) returns boolean {
-        return t:isSubtype(self.tc, t, self.anydataType);
+        return t:isSubtype(self.tc, t, t:createAnydata(self.tc));
     }
 
     function typeContext() returns t:Context {
