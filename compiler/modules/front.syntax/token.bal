@@ -608,7 +608,6 @@ function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int st
     return startCodePointIndex + fragments[fragmentIndex].length();
 }
 
-
 function fragmentCountUpTo(string[] fragments, int codePointIndex) returns int {
     int nCodePoints = 0;
     int fragmentIndex = 0;

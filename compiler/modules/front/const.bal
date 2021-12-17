@@ -21,7 +21,7 @@ type FoldError ResolveTypeError;
 type FoldContext object {
     function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
-    function lookupConst(string? prefix, string varName, d:Position startPos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError;
+    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError;
     function qNameRange(d:Position startPos) returns d:Range;
     function typeContext() returns t:Context;
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
@@ -50,7 +50,7 @@ class ConstFoldContext {
         return err:semantic(msg, loc=loc, cause=cause, defnName=self.defn.name);
     }
 
-    function lookupConst(string? prefix, string varName, d:Position startPos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
+    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
         if prefix != () {
             return { value: check lookupImportedConst(self.mod, self.defn, prefix, varName) };
         }
@@ -60,10 +60,10 @@ class ConstFoldContext {
             return { value: resolved[1] };
         }
         else if defn == () {
-            return self.semanticErr(`${varName} is not defined`, self.qNameRange(startPos));
+            return self.semanticErr(`${varName} is not defined`, self.qNameRange(pos));
         }
         else {
-            return self.semanticErr(`reference to ${varName} not defined with const`, startPos);
+            return self.semanticErr(`reference to ${varName} not defined with const`, pos);
         }
     }
 
