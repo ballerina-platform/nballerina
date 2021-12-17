@@ -136,7 +136,7 @@ const WildcardMatchPattern = "_";
 
 public type ConstPattern record {|
     SimpleConstExpr expr;
-    Position namePos;
+    Position pos;
 |};
 
 public type WhileStmt record {|

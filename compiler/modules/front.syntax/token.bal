@@ -551,7 +551,7 @@ public readonly class SourceFile {
         ];
     }
 
-    public function qualifiedIdentifierEndPos(Position startPos) returns Position {
+    public function qNameEndPos(Position startPos) returns Position {
         var[lineNum, startColumnNum] = self.lineColumn(startPos);
         ScannedLine line = self.scannedLine(lineNum);
         int endColumnNum = qualifiedIdentifierEndCodePointIndex(line, startColumnNum);

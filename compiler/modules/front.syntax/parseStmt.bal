@@ -436,7 +436,7 @@ function parseMatchPattern(Tokenizer tok) returns MatchPattern|err:Syntax {
         check tok.advance();
         return cur;
     }
-    Position namePos = tok.currentStartPos();
+    Position pos = tok.currentStartPos();
     SimpleConstExpr expr = check parseSimpleConstExpr(tok);
-    return { expr, namePos };
+    return { expr, pos };
 }

@@ -17,7 +17,7 @@ class TestFoldContext {
         self.tc = t:typeContext(new);
         self.file = file;
     }
-    function lookupConst(string? prefix, string varName, s:Position startPos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
+    function lookupConst(string? prefix, string varName, s:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
         return ();
     }
 
@@ -26,7 +26,7 @@ class TestFoldContext {
     }
 
     function qNameRange(d:Position startPos) returns d:Range {
-        d:Position endPos = self.file.qualifiedIdentifierEndPos(startPos);
+        d:Position endPos = self.file.qNameEndPos(startPos);
         return { startPos, endPos };
     }
 

@@ -132,7 +132,7 @@ class CodeGenContext {
     }
 
     function qNameRange(Position startPos) returns Range {
-        return {startPos, endPos: self.file.qualifiedIdentifierEndPos(startPos)};
+        return {startPos, endPos: self.file.qNameEndPos(startPos)};
     }
 
     function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
@@ -541,17 +541,17 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         foreach var pattern in clause.patterns {
             if pattern is s:ConstPattern {
                 if wildcardClauseIndex != () && i > wildcardClauseIndex {
-                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.namePos);
+                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.pos);
                 }
                 s:Expr patternExpr = pattern.expr;
                 s:ConstValueExpr cv = <s:ConstValueExpr> check cx.foldExpr(env, patternExpr, matchedType);
                 ConstMatchValue mv = { value: cv.value, clauseIndex: i, pos: clause.opPos };
                 if constMatchValues.hasKey(mv.value) {
-                    return cx.semanticErr("duplicate const match pattern", pos=pattern.namePos);
+                    return cx.semanticErr("duplicate const match pattern", pos=pattern.pos);
                 }
                 constMatchValues.add(mv);    
                 if !t:containsConst(matchedType, cv.value) {
-                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.namePos);
+                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.pos);
                 }
                 clausePatternUnion = t:union(clausePatternUnion, t:singleton(mv.value));
             }

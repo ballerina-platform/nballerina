@@ -41,7 +41,7 @@ class VerifyContext {
     }
 
     function qNameRange(Position startPos) returns Range {
-        Position endPos = self.mod.getPartFile(self.defn.partIndex).qualifiedIdentifierEndPos(startPos);
+        Position endPos = self.mod.getPartFile(self.defn.partIndex).qNameEndPos(startPos);
         return { startPos, endPos };
     }
 
@@ -212,7 +212,7 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
     }
     t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
     if !vc.isSameType(memberType, insn.result.semType) {
-        return vc.err("bad BIR: ListGet result type is not same as member type", insn.pos);
+        return vc.err("bad BIR: ListGet result type is not same as member type", pos=insn.pos);
     }
 }
 

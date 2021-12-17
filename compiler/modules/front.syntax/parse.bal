@@ -207,11 +207,11 @@ function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
 }
 
 public function defnLocation(ModuleLevelDefn defn) returns d:Location {
-    return d:location(defn.part.file, defn.qNamePos);
+    return qNameLocationInDefn(defn, defn.qNamePos);
 }
 
 public function qNameLocationInDefn(ModuleLevelDefn defn, Position qnamePos) returns d:Location {
-    Position endPos = defn.part.file.qualifiedIdentifierEndPos(qnamePos);
+    Position endPos = defn.part.file.qNameEndPos(qnamePos);
     return locationInDefn(defn, qnamePos, endPos);
 }
 
