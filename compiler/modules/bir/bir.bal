@@ -214,6 +214,7 @@ public type ConstOperand t:SingleValue;
 public type StringOperand string|Register;
 public type IntOperand int|Register;
 public type FloatOperand float|Register;
+public type DecimalOperand decimal|Register;
 public type BooleanOperand boolean|Register;
 public type FunctionOperand FunctionRef|Register;
 

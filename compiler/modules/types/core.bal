@@ -743,6 +743,10 @@ public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean {
     return isEmpty(cx, diff(t1, t2));
 }
 
+public function includesSome(SemType t1, SemType t2) returns boolean {
+    return !isNever(intersect(t1, t2));
+}
+
 public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolean {
     int bits;
     if t1 is UniformTypeBitSet {
@@ -1007,7 +1011,7 @@ public function split(SemType t) returns SplitSemType  {
     }
 }
 
-public type SingleValue ()|boolean|int|float|string;
+public type SingleValue ()|boolean|int|float|decimal|string;
 
 // JBUG #34320 parentheses should not be necessary
 public type OptSingleValue (readonly & record {|
@@ -1046,7 +1050,7 @@ public function singleShape(SemType t) returns OptSingleValue {
     return ();
 }
 
-public function singleton(string|int|float|boolean|decimal|() v) returns SemType {
+public function singleton(SingleValue v) returns SemType {
     if v == () {
         return NIL;
     }
@@ -1078,7 +1082,7 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
-public function constUniformTypeCode(string|int|float|boolean|decimal|() v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL {
+public function constUniformTypeCode(SingleValue v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL {
     if v == () {
         return UT_NIL;
     }
@@ -1099,11 +1103,11 @@ public function constUniformTypeCode(string|int|float|boolean|decimal|() v) retu
     }
 }
 
-public function constBasicType(string|int|float|boolean|decimal|() v) returns UniformTypeBitSet {
+public function constBasicType(SingleValue v) returns UniformTypeBitSet {
     return  uniformType(constUniformTypeCode(v));
 }
 
-public function containsConst(SemType t, string|int|float|boolean|decimal|() v) returns boolean {
+public function containsConst(SemType t, SingleValue v) returns boolean {
     if v == () {
         return containsNil(t);
     }
