@@ -26,11 +26,11 @@ type DefBinding record {|
    Binding? next;
 |};
 
-public function parse(t:Env env, json j) returns t:SemType|ParseError {
-    return parseType(env, (), j, []);
+public function parse(t:Context tc, json j) returns t:SemType|ParseError {
+    return parseType(tc, (), j, []);
 } 
 
-function parseType(t:Env env, Binding? b, json j, Path path) returns t:SemType|ParseError {
+function parseType(t:Context tc, Binding? b, json j, Path path) returns t:SemType|ParseError {
     match j {
         Nil => { return t:NIL; }
         Boolean => { return t:BOOLEAN; }
@@ -49,7 +49,7 @@ function parseType(t:Env env, Binding? b, json j, Path path) returns t:SemType|P
         Typedesc => { return t:TYPEDESC; }
         Handle => { return t:HANDLE; }
         Xml => { return t:XML; } 
-        Json => { return t:createJson(t:typeContext(env)); }
+        Json => { return t:createJson(tc); }
         Any => { return t:ANY; }
         Never => { return t:NEVER; }
         ReadOnly => { return t:READONLY; }
@@ -68,7 +68,7 @@ function parseType(t:Env env, Binding? b, json j, Path path) returns t:SemType|P
                     return parseError("expected array to begin with string", path, 0);
                 }
                 else {
-                    return parseCompoundType(env, b, k, js, path);
+                    return parseCompoundType(tc, b, k, js, path);
                 }
             }
            
@@ -81,14 +81,15 @@ function parseType(t:Env env, Binding? b, json j, Path path) returns t:SemType|P
 }
 
 // jlist is a list starting with k
-function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path parent) returns t:SemType|ParseError {
+function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Path parent) returns t:SemType|ParseError {
+    t:Env env = tc.env;
     match k {
         "|" => {
-            t:SemType[] v = check parseTypes(env, b, jlist, parent, 1);
+            t:SemType[] v = check parseTypes(tc, b, jlist, parent, 1);
             return reduce(v, t:union, t:NEVER);
         }
         "&" => {
-            t:SemType[] v = check parseTypes(env, b, jlist, parent, 1);
+            t:SemType[] v = check parseTypes(tc, b, jlist, parent, 1);
             return reduce(v, t:intersect, t:TOP);
         }
         "tuple" => {
@@ -97,7 +98,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
                 return s;
             }
             t:ListDefinition def = new;
-            t:SemType[] members = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            t:SemType[] members = check parseTypes(tc, consDefBinding(jlist, def, b), jlist, parent, 1);
             return def.define(env, members);
         }
         "list" => {
@@ -106,7 +107,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
                 return s;
             }
             t:ListDefinition def = new;
-            t:SemType[] members = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            t:SemType[] members = check parseTypes(tc, consDefBinding(jlist, def, b), jlist, parent, 1);
             t:SemType rest;
             if members.length() == 0 {
                 rest = t:TOP;
@@ -122,7 +123,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
                 return s;
             }
             t:MappingDefinition def = new;
-            t:Field[] fields = check parseFields(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            t:Field[] fields = check parseFields(tc, consDefBinding(jlist, def, b), jlist, parent, 1);
             return def.define(env, fields, t:NEVER);
         }
         "map" => {
@@ -135,8 +136,8 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
             }
             t:MappingDefinition def = new;
             Binding? mb = consDefBinding(jlist, def, b);
-            t:SemType rest = check parseType(env, mb, jlist[1], pathAppend(parent, 1));
-            t:Field[] fields = check parseFields(env, mb, jlist, parent, 2);
+            t:SemType rest = check parseType(tc, mb, jlist[1], pathAppend(parent, 1));
+            t:Field[] fields = check parseFields(tc, mb, jlist, parent, 2);
             return def.define(env, fields, rest);
         }
         "function" => {
@@ -145,7 +146,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
                 return s;
             }
             t:FunctionDefinition def = new(env);
-            t:SemType[] v = check parseTypes(env, consDefBinding(jlist, def, b), jlist, parent, 1);
+            t:SemType[] v = check parseTypes(tc, consDefBinding(jlist, def, b), jlist, parent, 1);
             if v.length() == 0 {
                 return t:FUNCTION;
             }
@@ -156,7 +157,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
             if jlist.length() != 2 {
                 return parseError("'error' must be followed by a string", parent, 0);
             }
-            t:SemType detail = check parseType(env, b, jlist[1], pathAppend(parent, 1));
+            t:SemType detail = check parseType(tc, b, jlist[1], pathAppend(parent, 1));
             return t:errorDetail(detail);
         }
         "string" => {
@@ -224,7 +225,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
             }
             else {
                 if jlist.length() == 3 {
-                    return parseRec(env, b, name, jlist[2], pathAppend(parent, 2));
+                    return parseRec(tc, b, name, jlist[2], pathAppend(parent, 2));
                 }
                 else {
                     return parseError("'rec' must be followed by two operands",
@@ -250,7 +251,7 @@ function parseCompoundType(t:Env env, Binding? b, string k, json[] jlist, Path p
                 }
                 else {
                     var [j, path] = res;
-                    return parseType(env, b, j, path);
+                    return parseType(tc, b, j, path);
                 }
             }
         }
@@ -266,17 +267,17 @@ function consDefBinding(json desc, t:Definition def, Binding? next) returns Bind
     return db;
 }
 
-function parseFields(t:Env env, Binding? b, json[] jlist, Path parent, int startIndex) returns t:Field[]|ParseError {
+function parseFields(t:Context tc, Binding? b, json[] jlist, Path parent, int startIndex) returns t:Field[]|ParseError {
     t:Field[] fields = [];
     foreach int i in startIndex ..< jlist.length() {
-        t:Field f = check parseField(env, b, jlist[i], pathAppend(parent, i));
+        t:Field f = check parseField(tc, b, jlist[i], pathAppend(parent, i));
         fields.push(f);
     }
     return fields;
 }
 
 
-function parseField(t:Env env, Binding? b, json j, Path path) returns t:Field|ParseError {
+function parseField(t:Context tc, Binding? b, json j, Path path) returns t:Field|ParseError {
     if j !is json[] || j.length() != 2 {
         return parseError("field must be 2-tuple", path);
     }
@@ -286,7 +287,7 @@ function parseField(t:Env env, Binding? b, json j, Path path) returns t:Field|Pa
             return parseError("first member of field must be a string", path, 0);
         }
         else {
-            t:SemType t = check parseType(env, b, j[1], pathAppend(path, 1));
+            t:SemType t = check parseType(tc, b, j[1], pathAppend(path, 1));
             return [name, t];
         }
     }
@@ -335,15 +336,15 @@ function lookupDef(t:Env env, Binding? b, json desc) returns t:SemType? {
     return ();
 }
 
-function parseRec(t:Env env, Binding? b, string name, json t, Path path) returns t:SemType|ParseError {
+function parseRec(t:Context tc, Binding? b, string name, json t, Path path) returns t:SemType|ParseError {
     NameBinding nb = { name, next: b, desc: t, path };
-    return parseType(env, nb, t, path);
+    return parseType(tc, nb, t, path);
 }
 
-function parseTypes(t:Env env, Binding? b, json[] js, Path parent, int startIndex) returns t:SemType[]|ParseError {
+function parseTypes(t:Context tc, Binding? b, json[] js, Path parent, int startIndex) returns t:SemType[]|ParseError {
     t:SemType[] s = [];
     foreach var i in startIndex ..< js.length() {
-        t:SemType t = check parseType(env, b, js[i], pathAppend(parent, i));
+        t:SemType t = check parseType(tc, b, js[i], pathAppend(parent, i));
         s.push(t);
     }
     return s;
