@@ -111,7 +111,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             "byte" => { return t:BYTE; }
             "decimal" => { return t:DECIMAL; }
             "handle" => { return t:HANDLE; }
-            "json" => { return t:createJson(mod.tc.env); }
+            "json" => { return t:createJson(mod.tc); }
             "never" => { return t:NEVER; }
             "readonly" => { return t:READONLY; }
             "typedesc" => { return t:TYPEDESC; }
