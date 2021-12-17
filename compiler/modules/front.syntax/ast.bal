@@ -37,7 +37,7 @@ public type FunctionDefn record {|
     FunctionTypeDesc typeDesc;
     FunctionParam[] params;
     StmtBlock body;
-    Position namePos;
+    Position qNamePos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
 |};
@@ -57,7 +57,7 @@ public type ConstDefn record {|
     SubsetBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
-    Position namePos;
+    Position qNamePos;
     ResolvedConst|false? resolved = ();    
 |};
 
@@ -136,7 +136,7 @@ const WildcardMatchPattern = "_";
 
 public type ConstPattern record {|
     SimpleConstExpr expr;
-    Position qnamePos;
+    Position namePos;
 |};
 
 public type WhileStmt record {|
@@ -249,7 +249,7 @@ public type FunctionCallExpr record {|
     Position startPos;
     Position endPos;
     Position openParenPos;
-    Position qnamePos;
+    Position qNamePos;
     string? prefix = ();
     string funcName;
     Expr[] args;
@@ -262,7 +262,7 @@ public type MethodCallExpr record {|
     Position endPos;
     Position opPos; // position of .
     Position openParenPos;
-    Position qnamePos;
+    Position qNamePos;
     string methodName;
     Expr target;
     Expr[] args;
@@ -366,7 +366,7 @@ public type VarRefExpr record {|
     *PositionFields;
     string? prefix = ();
     string name;
-    Position qnamePos;
+    Position qNamePos;
 |};
 
 public type TypeCastExpr record {|
@@ -448,7 +448,7 @@ public type TypeDefn record {|
     ModulePart part;
     Visibility vis;
     TypeDesc td;
-    Position namePos;
+    Position qNamePos;
     t:SemType? semType = ();
     int cycleDepth = -1;
 |};
@@ -545,7 +545,7 @@ public type TypeDescRef record {|
     *PositionFields;
     string? prefix = ();
     string typeName;
-    Position qnamePos;
+    Position qNamePos;
 |};
 
 public type SingletonTypeDesc record {|

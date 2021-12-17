@@ -37,7 +37,7 @@ function symbolToString(ModuleSymbols mod, int partIndex, bir:Symbol sym) return
         if importPrefix == () {
             string? org = modId.org;
             string orgString = org == () ? "" : org + "/";
-            prefix = "{" + orgString  + ".".'join(...sym.module.names) + "}";
+            prefix = "{" + orgString + ".".'join(...sym.module.names) + "}";
         }
         else {
             prefix = importPrefix + ":";
@@ -47,7 +47,7 @@ function symbolToString(ModuleSymbols mod, int partIndex, bir:Symbol sym) return
 }
 
 function getPrefixForModuleId(ModuleSymbols mod, int partIndex, bir:ModuleId id) returns string? {
-    foreach var [prefix, { moduleId }] in mod.partPrefixes[partIndex].entries() {
+    foreach var [prefix, {moduleId}] in mod.partPrefixes[partIndex].entries() {
         if moduleId == id {
             return prefix;
         }
@@ -85,7 +85,7 @@ function moduleIdDefaultPrefix(bir:ModuleId id) returns string {
 function moduleIdToString(bir:ModuleId id) returns string {
     string m = ".".'join(...id.names);
     if id.org != "" {
-        return id.org + "/"  + m;
+        return id.org + "/" + m;
     }
     else {
         return m;
@@ -95,11 +95,11 @@ function moduleIdToString(bir:ModuleId id) returns string {
 function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix, bir:Position pos) returns Import|err:Semantic {
     Import? implicitImport = autoImportPrefixes[prefix];
     if implicitImport != () {
-        return  implicitImport;
+        return implicitImport;
     }
     Import? imported = mod.partPrefixes[modDefn.part.partIndex][prefix];
     if imported == () {
-        return err:semantic(`no import declaration for ${prefix}`, loc=s:locationInDefn(modDefn, pos), defnName=modDefn.name);
+        return err:semantic(`no import declaration for ${prefix}`, loc = s:locationInDefn(modDefn, pos), defnName = modDefn.name);
     }
     else {
         imported.used = true;
@@ -108,9 +108,9 @@ function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefi
 }
 
 function lookupImportedConst(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix, string varName) returns t:SingleValue|err:Semantic {
-    ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix, modDefn.startPos)).defns[varName];
+    ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix, modDefn.qNamePos)).defns[varName];
     if defn is s:ResolvedConst {
         return defn[1];
     }
-    return err:semantic(`${prefix + ":" + varName} is not defined as a public const`, loc=s:locationInDefn(modDefn, modDefn.namePos), defnName=modDefn.name);
+    return err:semantic(`${prefix + ":" + varName} is not defined as a public const`, loc = s:locationInDefn(modDefn, modDefn.qNamePos), defnName = modDefn.name);
 }

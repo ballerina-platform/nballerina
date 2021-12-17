@@ -124,20 +124,20 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 
 
 // statement must not start with a type desc.
-function finishIdentifierStmt(Tokenizer tok, string name, Position startPos, Position qnamePos) returns Stmt|err:Syntax {
+function finishIdentifierStmt(Tokenizer tok, string name, Position startPos, Position qNamePos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
     if cur == "=" {
-        VarRefExpr lValue = { startPos, endPos, name, qnamePos };
+        VarRefExpr lValue = { startPos, endPos, name, qNamePos };
         return finishAssignStmt(tok, lValue, startPos);
     }
     else if cur is CompoundAssignOp {
         Position opPos = tok.currentStartPos();
-        VarRefExpr lValue = { startPos, endPos, name, qnamePos };
+        VarRefExpr lValue = { startPos, endPos, name, qNamePos };
         return parseCompoundAssignStmt(tok, lValue, cur, startPos, opPos);
     }
     else if cur == "[" {
-        VarRefExpr varRef = { startPos, endPos, name, qnamePos };
+        VarRefExpr varRef = { startPos, endPos, name, qNamePos };
         Position bracketPos = tok.currentStartPos();
         check tok.advance();
         // type-desc case is handled before
@@ -177,7 +177,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name,
     }
     else if cur == "." {
         Position opPos = tok.currentStartPos();
-        VarRefExpr varRef = { startPos, endPos:tok.previousEndPos(), name, qnamePos: startPos, prefix };
+        VarRefExpr varRef = { startPos, endPos:tok.previousEndPos(), name, qNamePos: startPos, prefix };
         check tok.advance();
         Position localNamePos = tok.currentStartPos();
         string localName = check tok.expectIdentifier();
@@ -186,7 +186,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name,
         }
         else {
             endPos = tok.previousEndPos();
-            VarRefExpr container = { startPos, endPos, name, qnamePos: startPos };
+            VarRefExpr container = { startPos, endPos, name, qNamePos: startPos };
             FieldAccessLExpr fieldAccessLValue = { startPos, endPos, fieldName: localName, container, opPos };
             Token? t = tok.current();
             while t == "." {
@@ -436,7 +436,7 @@ function parseMatchPattern(Tokenizer tok) returns MatchPattern|err:Syntax {
         check tok.advance();
         return cur;
     }
-    Position qnamePos = tok.currentStartPos();
+    Position namePos = tok.currentStartPos();
     SimpleConstExpr expr = check parseSimpleConstExpr(tok);
-    return { expr, qnamePos };
+    return { expr, namePos };
 }

@@ -583,6 +583,7 @@ function qualifiedIdentifierEndCodePointIndex(ScannedLine line, int startCodePoi
                 break;
             }
         }
+        fragIndex += 1;
     }
     return endCodePoint;
 }

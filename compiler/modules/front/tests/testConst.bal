@@ -17,12 +17,26 @@ class TestFoldContext {
         self.tc = t:typeContext(new);
         self.file = file;
     }
-    function lookupConst(string? prefix, string varName, s:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
+    function lookupConst(string? prefix, string varName, s:Position startPos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
         return ();
     }
-    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, d:location(self.file, pos), cause=cause);
+
+    function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic {
+        d:Location loc;
+        if pos is d:Range {
+            loc = d:location(self.file, pos.startPos, pos.endPos);
+        }
+        else {
+            loc = d:location(self.file, pos);
+        }
+        return err:semantic(msg, loc, cause=cause);
     }
+
+    function qNameRange(d:Position startPos) returns d:Range {
+        d:Position endPos = self.file.qualifiedIdentifierEndPos(startPos);
+        return { startPos, endPos };
+    }
+
     function typeContext() returns t:Context {
         return self.tc;
     }

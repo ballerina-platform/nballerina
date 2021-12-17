@@ -73,6 +73,7 @@ public type UnimplementedDiagnostic record {|
     UNIMPLEMENTED category = UNIMPLEMENTED;
 |};
 
+// FIXME: see if we can make arguments range
 public function location(File file, Position startPos, Position? endPos = ()) returns Location {
     Range|Position range;
     if endPos != () {

@@ -131,7 +131,7 @@ class CodeGenContext {
         return bir:createBasicBlock(self.code, name);
     }
 
-    function qualifiedIdentifierRange(Position startPos) returns Range {
+    function qNameRange(Position startPos) returns Range {
         return {startPos, endPos: self.file.qualifiedIdentifierEndPos(startPos)};
     }
 
@@ -237,11 +237,11 @@ class CodeGenFoldContext {
         self.env = env;
     }
 
-    function lookupConst(string? prefix, string varName, Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
+    function lookupConst(string? prefix, string varName, Position startPos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
         if prefix != () {
             return { value: check lookupImportedConst(self.cx.mod, self.cx.functionDefn, prefix, varName) };
         }
-        t:SingleValue|Binding v = check lookupVarRef(self.cx, varName, self.env, pos);
+        t:SingleValue|Binding v = check lookupVarRef(self.cx, varName, self.env, startPos);
         if v is Binding {
             t:OptSingleValue shape = t:singleShape(v.reg.semType);
             if shape != () && shape.value == s:FLOAT_ZERO {
@@ -254,8 +254,12 @@ class CodeGenFoldContext {
         }
     }
 
-    function semanticErr(d:Message msg, Position pos, error? cause = ()) returns err:Semantic {
+    function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
         return self.cx.semanticErr(msg, pos = pos, cause = cause);
+    }
+
+    function qNameRange(Position startPos) returns Range {
+        return self.cx.qNameRange(startPos); 
     }
 
     function typeContext() returns t:Context {
@@ -540,17 +544,17 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         foreach var pattern in clause.patterns {
             if pattern is s:ConstPattern {
                 if wildcardClauseIndex != () && i > wildcardClauseIndex {
-                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos = cx.qualifiedIdentifierRange(pattern.qnamePos));
+                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos = pattern.namePos);
                 }
                 s:Expr patternExpr = pattern.expr;
                 s:ConstValueExpr cv = <s:ConstValueExpr>check cx.foldExpr(env, patternExpr, matchedType);
                 ConstMatchValue mv = {value: cv.value, clauseIndex: i, pos: clause.opPos};
                 if constMatchValues.hasKey(mv.value) {
-                    return cx.semanticErr("duplicate const match pattern", pos = cx.qualifiedIdentifierRange(pattern.qnamePos));
+                    return cx.semanticErr("duplicate const match pattern", pos = pattern.namePos);
                 }
                 constMatchValues.add(mv);
                 if !t:containsConst(matchedType, cv.value) {
-                    return cx.semanticErr("match pattern cannot match value of expression", pos = cx.qualifiedIdentifierRange(pattern.qnamePos));
+                    return cx.semanticErr("match pattern cannot match value of expression", pos = pattern.namePos);
                 }
                 clausePatternUnion = t:union(clausePatternUnion, t:singleton(mv.value));
             }
@@ -1576,10 +1580,10 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
     string? prefix = expr.prefix;
     bir:FunctionRef func;
     if prefix == () {
-        func = check genLocalFunctionRef(cx, env, expr.funcName, expr.qnamePos);
+        func = check genLocalFunctionRef(cx, env, expr.funcName, expr.qNamePos);
     }
     else {
-        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.qnamePos);
+        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.qNamePos);
     }
     check validArgumentCount(cx, func, expr.args.length(), expr.openParenPos);
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1596,9 +1600,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func,
         result,
         args: args.cloneReadOnly(),
-        // expr.namePos is currently the start of the local name
-        // which is not really what is wanted, so we use startPos instead
-        pos: expr.startPos
+        pos: expr.qNamePos
     };
     curBlock.insns.push(call);
     return {result, block: curBlock};
@@ -1606,7 +1608,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
 
 function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MethodCallExpr expr) returns CodeGenError|RegExprEffect {
     var {result: target, block: curBlock} = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, expr.target, ()));
-    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.qnamePos);
+    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.qNamePos);
     check validArgumentCount(cx, func, expr.args.length() + 1, expr.opPos);
 
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1622,7 +1624,7 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env
         func,
         result,
         args: args.cloneReadOnly(),
-        pos: expr.qnamePos
+        pos: expr.qNamePos
     };
     curBlock.insns.push(call);
     return {result, block: curBlock};
@@ -1644,7 +1646,7 @@ function validArgumentCount(CodeGenContext cx, bir:FunctionRef func, int nSuppli
 
 function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
     if !(lookup(identifier, env) == ()) {
-        return cx.unimplementedErr("local variables cannot yet have function type", pos);
+        return cx.unimplementedErr("local variables cannot yet have function type", cx.qNameRange(pos));
     }
     bir:FunctionSignature signature;
     s:ModuleLevelDefn? defn = cx.mod.defns[identifier];
@@ -1662,7 +1664,7 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
         else {
             msg = `${identifier} is not a function`;
         }
-        return cx.semanticErr(msg, pos);
+        return cx.semanticErr(msg, cx.qNameRange(pos));
     }
 }
 
@@ -1678,14 +1680,14 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
     }
     else if defn == () {
         if mod.partial {
-            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, pos);
+            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, cx.qNameRange(pos));
         }
         else {
-            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, pos);
+            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, cx.qNameRange(pos));
         }
     }
     else {
-        return cx.semanticErr("reference to non-function where function required", pos);
+        return cx.semanticErr("reference to non-function where function required", cx.qNameRange(pos));
     }
 }
 
@@ -1697,7 +1699,7 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
         string moduleName = t[0];
         bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature == () {
-            return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, pos);
+            return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, cx.qNameRange(pos));
         }
         else {
             bir:ExternalSymbol symbol = {
@@ -1711,7 +1713,7 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
             return {symbol, signature, erasedSignature};
         }
     }
-    return cx.unimplementedErr(`cannot resolve ${methodName} to lang lib function`, pos);
+    return cx.unimplementedErr(`cannot resolve ${methodName} to lang lib function`, cx.qNameRange(pos));
 }
 
 type Counter record {|

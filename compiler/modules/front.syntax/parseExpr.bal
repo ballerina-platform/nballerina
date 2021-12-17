@@ -267,7 +267,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
             return finishFunctionCallExpr(tok, prefix, name, startPos);
         }
         endPos = tok.previousEndPos();
-        return { startPos, endPos, prefix, name, qnamePos: startPos };
+        return { startPos, endPos, prefix, name, qNamePos: startPos };
     }
     else if t is [DECIMAL_NUMBER, string] {
         IntLiteralExpr expr = { startPos, endPos, base: 10, digits: t[1] };
@@ -356,12 +356,12 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
 }
 
 // Called with current token as "("
-function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Position startPos, Position qnamePos, Position opPos) returns MethodCallExpr|err:Syntax {
+function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Position startPos, Position qNamePos, Position opPos) returns MethodCallExpr|err:Syntax {
     Position openParenPos = tok.currentStartPos();
     check tok.advance();
     Expr[] args = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, opPos, qnamePos, openParenPos, target, methodName, args };
+    return { startPos, endPos, opPos, qNamePos, openParenPos, target, methodName, args };
 }
 
 function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position startPos) returns FunctionCallExpr|err:Syntax {
@@ -369,7 +369,7 @@ function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, 
     check tok.advance();
     Expr[] args = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, openParenPos, qnamePos: startPos, funcName, args, prefix };
+    return { startPos, endPos, openParenPos, qNamePos: startPos, funcName, args, prefix };
 }
 
 function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syntax {
@@ -458,7 +458,7 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             if prefix != () {
                 endPos = tok.previousEndPos();
             }
-            return { startPos, endPos, prefix, name, qnamePos: startPos };
+            return { startPos, endPos, prefix, name, qNamePos: startPos };
         }
         [STRING_LITERAL, var value] => {
             Position endPos = tok.currentEndPos();

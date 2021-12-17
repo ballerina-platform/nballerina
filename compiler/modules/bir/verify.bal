@@ -40,8 +40,21 @@ class VerifyContext {
         return self.tc;
     }
 
-    function err(d:Message msg, Position pos) returns err:Semantic {
-        return err:semantic(msg, loc=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
+    function qNameRange(Position startPos) returns Range {
+        Position endPos = self.mod.getPartFile(self.defn.partIndex).qualifiedIdentifierEndPos(startPos);
+        return { startPos, endPos };
+    }
+
+    function err(d:Message msg, Position|Range pos) returns err:Semantic {
+        d:Location loc;
+        d:File file = self.mod.getPartFile(self.defn.partIndex);
+        if pos is Range {
+            loc = d:location(file, pos.startPos, pos.endPos);
+        }
+        else {
+            loc = d:location(file, pos);
+        }
+        return err:semantic(msg, loc=loc, defnName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
@@ -146,14 +159,14 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
     if nSuppliedArgs != nExpectedArgs {
         string name = vc.symbolToString(func.symbol);
         if nSuppliedArgs < nExpectedArgs {
-            return vc.err(`too few arguments for call to function ${name}`, insn.pos);
+            return vc.err(`too few arguments for call to function ${name}`, vc.qNameRange(insn.pos));
         }
         else {
-            return vc.err(`too many arguments for call to function ${name}`, insn.pos);
+            return vc.err(`too many arguments for call to function ${name}`, vc.qNameRange(insn.pos));
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, insn.pos);
+        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
     }
 }
 
@@ -207,7 +220,7 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
     }
     t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
     if !vc.isSameType(memberType, insn.result.semType) {
-        return vc.err("bad BIR: ListGet result type is not same as member type", pos=insn.pos);
+        return vc.err("bad BIR: ListGet result type is not same as member type", insn.pos);
     }
 }
 
@@ -331,7 +344,7 @@ function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
     return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
 }
 
-function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position pos) returns err:Semantic? {
+function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Semantic? {
     if !vc.operandHasType(operand, semType) {
         return vc.err(msg, pos);
     }

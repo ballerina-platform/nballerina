@@ -19,9 +19,10 @@ type SimpleConst t:SingleValue;
 type FoldError ResolveTypeError;
 
 type FoldContext object {
-    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic;
+    function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
-    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError;
+    function lookupConst(string? prefix, string varName, d:Position startPos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError;
+    function qNameRange(d:Position startPos) returns d:Range;
     function typeContext() returns t:Context;
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
     function isConstDefn() returns boolean;
@@ -37,11 +38,19 @@ class ConstFoldContext {
         self.mod = mod;
     }
 
-    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, defnName=self.defn.name);
+    function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic {
+        d:Location loc;
+        d:File file = self.defn.part.file;
+        if pos is d:Range {
+            loc = d:location(file, pos.startPos, pos.endPos);
+        }
+        else {
+            loc = d:location(file, pos);
+        }
+        return err:semantic(msg, loc=loc, cause=cause, defnName=self.defn.name);
     }
 
-    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
+    function lookupConst(string? prefix, string varName, d:Position startPos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
         if prefix != () {
             return { value: check lookupImportedConst(self.mod, self.defn, prefix, varName) };
         }
@@ -51,11 +60,16 @@ class ConstFoldContext {
             return { value: resolved[1] };
         }
         else if defn == () {
-            return self.semanticErr(`${varName} is not defined`, pos);
+            return self.semanticErr(`${varName} is not defined`, self.qNameRange(startPos));
         }
         else {
-            return self.semanticErr(`reference to ${varName} not defined with const`, pos);
+            return self.semanticErr(`reference to ${varName} not defined with const`, startPos);
         }
+    }
+
+    function qNameRange(d:Position startPos) returns d:Range {
+        d:Position endPos = self.defn.part.file.qualifiedIdentifierEndPos(startPos);
+        return { startPos, endPos };
     }
 
     function typeContext() returns t:Context {
@@ -188,14 +202,14 @@ function selectMappingInherentType(FoldContext cx, t:SemType expectedType, s:Map
         where mappingAlternativeAllowsFields(alt, fieldNames)
         select alt;
     if alts.length() == 0 {
-        return cx.semanticErr("no applicable inherent type for mapping constructor", pos=expr.startPos);
+        return cx.semanticErr("no applicable inherent type for mapping constructor", expr.startPos);
     }
     else if alts.length() > 1 {
-        return cx.semanticErr("ambiguous inherent type for mapping constructor", pos=expr.startPos);
+        return cx.semanticErr("ambiguous inherent type for mapping constructor", expr.startPos);
     }
     t:SemType semType = alts[0].semType;
     if t:mappingAtomicTypeRw(tc, semType) == () {
-        return cx.semanticErr("appplicable type for mapping constructor is not atomic", pos=expr.startPos);
+        return cx.semanticErr("appplicable type for mapping constructor is not atomic", expr.startPos);
     }
     return semType;
 }
@@ -243,7 +257,7 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
                 return foldedBinaryConstExpr(result, t:INT, leftExpr, rightExpr);
             }
             else {
-                return cx.semanticErr(`evaluation of int constant ${expr.arithmeticOp} expression failed`, pos=expr.opPos, cause=result);
+                return cx.semanticErr(`evaluation of int constant ${expr.arithmeticOp} expression failed`, expr.opPos, cause=result);
             }
         }
         else if left is string && right is string && expr.arithmeticOp == "+" {
@@ -439,7 +453,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
                 SimpleConst operand = subExpr.value;
                 if operand is int {
                     if operand == int:MIN_VALUE {
-                        return cx.semanticErr(`${"-"} applied to minimum integer value`, pos=expr.opPos);
+                        return cx.semanticErr(`${"-"} applied to minimum integer value`, expr.opPos);
                     }
                     return foldedUnaryConstExpr(-operand, t:INT, subExpr);
                 }
@@ -483,7 +497,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
             if value is float {
                 int|error converted = trap <int>value;
                 if converted is error {
-                    return cx.semanticErr(`cannot convert ${value} to int`, pos = expr.opPos);
+                    return cx.semanticErr(`cannot convert ${value} to int`, expr.opPos);
                 }
                 else {
                     value = converted;
@@ -496,7 +510,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
             }
         }
         if !t:containsConst(semType, value) {
-            return cx.semanticErr(`type cast will always fail`, pos=expr.opPos);
+            return cx.semanticErr(`type cast will always fail`, expr.opPos);
         }
         if toNumType != () && value != subExpr.value {
             return foldedUnaryConstExpr(value, toNumType, subExpr);
@@ -533,7 +547,7 @@ function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, 
 }
 
 function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr expr) returns s:Expr|FoldError {
-    s:FLOAT_ZERO|t:OptSingleValue constValue = check cx.lookupConst(expr.prefix, expr.name, expr.qnamePos);
+    s:FLOAT_ZERO|t:OptSingleValue constValue = check cx.lookupConst(expr.prefix, expr.name, expr.qNamePos);
     if constValue == () {
         return expr;
     }
