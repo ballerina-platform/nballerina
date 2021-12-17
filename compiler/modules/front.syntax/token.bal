@@ -551,11 +551,40 @@ public readonly class SourceFile {
         ];
     }
 
+    public function qualifiedIdentifierEndPos(Position startPos) returns Position {
+        var[lineNum, startColumnNum] = self.lineColumn(startPos);
+        ScannedLine line = self.scannedLine(lineNum);
+        int endColumnNum = qualifiedIdentifierEndCodePointIndex(line, startColumnNum);
+        return createPosition(lineNum, endColumnNum);
+    }
+
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
 
     function scannedLine(int lineNumber) returns ScannedLine {
         return self.lines[lineNumber - 1];
     }
+}
+
+function qualifiedIdentifierEndCodePointIndex(ScannedLine line, int startCodePointIndex) returns int {
+    var [fragIndex, fragmentIndex] = scanLineFragIndex(line, startCodePointIndex);
+    string[] fragments = line.fragments;
+    FragCode[] fragCodes = line.fragCodes;
+    int endCodePoint = startCodePointIndex;
+    while true {
+        match fragCodes[fragIndex] {
+            FRAG_IDENTIFIER => {
+                endCodePoint += fragments[fragmentIndex].length();
+                fragmentIndex += 1;
+            }
+            CP_COLON => {
+                endCodePoint += 1;
+            }
+            _ => {
+                break;
+            }
+        }
+    }
+    return endCodePoint;
 }
 
 function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex) returns int {
@@ -577,6 +606,7 @@ function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int st
     }
     return startCodePointIndex + fragments[fragmentIndex].length();
 }
+
 
 function fragmentCountUpTo(string[] fragments, int codePointIndex) returns int {
     int nCodePoints = 0;
