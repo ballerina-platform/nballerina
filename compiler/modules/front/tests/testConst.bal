@@ -22,14 +22,7 @@ class TestFoldContext {
     }
 
     function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic {
-        d:Location loc;
-        if pos is d:Range {
-            loc = d:location(self.file, pos.startPos, pos.endPos);
-        }
-        else {
-            loc = d:location(self.file, pos);
-        }
-        return err:semantic(msg, loc, cause=cause);
+        return err:semantic(msg, loc=d:location(self.file, pos), cause=cause);
     }
 
     function qNameRange(d:Position startPos) returns d:Range {

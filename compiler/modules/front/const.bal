@@ -39,15 +39,7 @@ class ConstFoldContext {
     }
 
     function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic {
-        d:Location loc;
-        d:File file = self.defn.part.file;
-        if pos is d:Range {
-            loc = d:location(file, pos.startPos, pos.endPos);
-        }
-        else {
-            loc = d:location(file, pos);
-        }
-        return err:semantic(msg, loc=loc, cause=cause, defnName=self.defn.name);
+        return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, defnName=self.defn.name);
     }
 
     function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
@@ -63,7 +55,7 @@ class ConstFoldContext {
             return self.semanticErr(`${varName} is not defined`, self.qNameRange(pos));
         }
         else {
-            return self.semanticErr(`reference to ${varName} not defined with const`, pos);
+            return self.semanticErr(`reference to ${varName} not defined with const`, self.qNameRange(pos));
         }
     }
 

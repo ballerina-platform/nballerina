@@ -315,7 +315,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         
         // Ensure the parameter type of table is a subtype of MAPPING
         if !t:isSubtypeSimple(t, t:MAPPING) {
-            d:Location loc =  d:location(modDefn.part.file, td.startPos, td.endPos);
+            d:Location loc =  d:location(modDefn.part.file, { startPos: td.startPos, endPos: td.endPos });
             return err:semantic("type parameter for table is not a record", loc=loc);
         }
         return t:tableContaining(t);

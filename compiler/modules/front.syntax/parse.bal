@@ -216,5 +216,10 @@ public function qNameLocationInDefn(ModuleLevelDefn defn, Position qnamePos) ret
 }
 
 public function locationInDefn(ModuleLevelDefn defn, Position startPos, Position? endPos=()) returns d:Location {
-    return d:location(defn.part.file, startPos, endPos);
+    if endPos == () {
+        return d:location(defn.part.file, startPos);
+    }
+    else {
+        return d:location(defn.part.file, { startPos, endPos });
+    }
 }

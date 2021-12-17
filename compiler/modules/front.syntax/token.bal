@@ -446,7 +446,7 @@ class Tokenizer {
 
     function err(d:Message msg) returns err:Syntax {
         // XXX pass in endPos if we need to in order to be able to recreate the right endPos
-        return err:syntax(msg, loc=d:location(self.file, self.currentStartPos(), self.currentEndPos()));
+        return err:syntax(msg, loc=d:location(self.file, { startPos: self.currentStartPos(), endPos: self.currentEndPos() }));
     }
 
     function save() returns TokenizerState {

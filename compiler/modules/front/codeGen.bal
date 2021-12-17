@@ -144,9 +144,6 @@ class CodeGenContext {
     }
 
     private function location(Position|Range pos) returns d:Location {
-        if pos is Range {
-            return d:location(self.file, pos.startPos, pos.endPos);
-        }
         return d:location(self.file, pos);
     }
 
