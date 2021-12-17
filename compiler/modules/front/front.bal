@@ -32,7 +32,7 @@ class Module {
                     symbol: <bir:InternalSymbol>{ identifier: defn.name, isPublic: defn.vis == "public" },
                     // casting away nil here, because it was filled in by `resolveTypes`
                     signature: <bir:FunctionSignature>defn.signature,
-                    position: defn.qNamePos,
+                    position: defn.namePos,
                     partIndex: defn.part.partIndex
                 });
             }

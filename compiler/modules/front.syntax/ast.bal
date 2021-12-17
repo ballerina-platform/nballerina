@@ -37,7 +37,7 @@ public type FunctionDefn record {|
     FunctionTypeDesc typeDesc;
     FunctionParam[] params;
     StmtBlock body;
-    Position qNamePos;
+    Position namePos;
     // This is filled in during analysis
     bir:FunctionSignature? signature = ();
 |};
@@ -57,7 +57,7 @@ public type ConstDefn record {|
     SubsetBuiltinTypeDesc? td;
     Visibility vis;
     Expr expr;
-    Position qNamePos;
+    Position namePos;
     ResolvedConst|false? resolved = ();    
 |};
 
@@ -448,7 +448,7 @@ public type TypeDefn record {|
     ModulePart part;
     Visibility vis;
     TypeDesc td;
-    Position qNamePos;
+    Position namePos;
     t:SemType? semType = ();
     int cycleDepth = -1;
 |};
