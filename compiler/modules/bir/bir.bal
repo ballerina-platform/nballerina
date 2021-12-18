@@ -279,6 +279,8 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     FloatOperand[2] operands;
 |};
 
+// This panics for overflows, invalid decimals, divide by zero.
+// So this is a PPI.
 public type DecimalArithmeticBinaryInsn readonly & record {|
     *InsnBase;
     INSN_DECIMAL_ARITHMETIC_BINARY name = INSN_DECIMAL_ARITHMETIC_BINARY;

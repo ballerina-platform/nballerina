@@ -20,6 +20,33 @@ final RuntimeFunction decimalNegFunction = {
     },
     attrs: ["readonly"]
 };
+final map<RuntimeFunction> decimalArithmeticFuncs = {};
+
+function init() {
+    llvm:FunctionType ty = {
+        returnType: llvm:structType([LLVM_TAGGED_PTR, "i64"]),
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    };
+    foreach var [op, name] in decimalArithmeticFuncNames.entries() {
+        decimalArithmeticFuncs[op] = { name: "decimal_" + name, ty, attrs: ["readnone"] };
+    }
+}
+
+// JBUG #34400
+// init function should be changed as below.
+// final readonly & map<RuntimeFunction> decimalArithmeticFuncs;
+
+// function init() {
+//     llvm:FunctionType ty = {
+//         returnType: llvm:structType([LLVM_TAGGED_PTR, "i64"]),
+//         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+//     };
+//     map<RuntimeFunction> decimalArithmeticFuncsMutableMap = {};
+//     foreach var [op, name] in decimalArithmeticFuncNames.entries() {
+//         decimalArithmeticFuncsMutableMap[op] = { name: "decimal_" + name, ty, attrs: ["readnone"] };
+//     }
+//     decimalArithmeticFuncs = decimalArithmeticFuncsMutableMap.cloneReadOnly();
+// }
 
 function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntArithmeticBinaryInsn insn) {
     llvm:IntrinsicFunctionName? intrinsicName = buildBinaryIntIntrinsic(insn.op);
@@ -98,7 +125,7 @@ function buildFloatArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir
 function buildDecimalArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:DecimalArithmeticBinaryInsn insn) {
     llvm:Value lhs = buildDecimal(builder, scaffold, insn.operands[0]);
     llvm:Value rhs = buildDecimal(builder, scaffold, insn.operands[1]);
-    llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalArithmaticFunc(insn.op)), [lhs, rhs]);
+    llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalArithmeticFuncs.get(insn.op)), [lhs, rhs]);
     llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
     llvm:BasicBlock errBlock = scaffold.addBasicBlock();
     llvm:Value panicCode = builder.extractValue(resultWithErr, 1);
@@ -108,22 +135,6 @@ function buildDecimalArithmeticBinary(llvm:Builder builder, Scaffold scaffold, b
     builder.br(scaffold.getOnPanic());
     builder.positionAtEnd(continueBlock);
     buildStoreDecimal(builder, scaffold, builder.extractValue(resultWithErr, 0), insn.result);                                  
-}
-
-final readonly & map<string> decimalArithmeticFuncName = {
-    "+": "decimal_add",
-    "-": "decimal_sub",
-    "*": "decimal_mul",
-    "/": "decimal_div",
-    "%": "decimal_rem"
-};
-
-function decimalArithmaticFunc(bir:ArithmeticBinaryOp op) returns RuntimeFunction {
-    llvm:FunctionType ty = {
-        returnType: llvm:structType([LLVM_TAGGED_PTR, "i64"]),
-        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
-    };
-    return { name: decimalArithmeticFuncName.get(op), ty, attrs: ["readnone"] };
 }
 
 function buildFloatNegate(llvm:Builder builder, Scaffold scaffold, bir:FloatNegateInsn insn) {
@@ -262,6 +273,14 @@ final readonly & map<llvm:FloatArithmeticOp> floatArithmeticOps = {
     "*": "fmul",
     "/": "fdiv",
     "%": "frem"
+};
+
+final readonly & map<string> decimalArithmeticFuncNames = {
+    "+": "add",
+    "-": "sub",
+    "*": "mul",
+    "/": "div",
+    "%": "rem"
 };
 
 // final readonly & map<llvm:BinaryIntOp> binaryIntOps = {
