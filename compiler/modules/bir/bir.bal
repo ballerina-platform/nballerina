@@ -162,6 +162,7 @@ public enum InsnName {
     INSN_FLOAT_NEGATE,
     INSN_CONVERT_TO_INT,
     INSN_CONVERT_TO_FLOAT,
+    INSN_DECIMAL_NEGATE,
     INSN_COMPARE,
     INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
@@ -201,6 +202,7 @@ public type InsnBase record {
 public type Insn 
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |FloatArithmeticBinaryInsn|FloatNegateInsn
+    |DecimalNegateInsn
     |ConvertToIntInsn|ConvertToFloatInsn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
@@ -283,6 +285,12 @@ public type FloatNegateInsn readonly & record {|
     Register operand;
 |};
 
+public type DecimalNegateInsn readonly & record {|
+    *InsnBase;
+    INSN_DECIMAL_NEGATE name = INSN_DECIMAL_NEGATE;
+    Register result;
+    Register operand;
+|};
 
 # If the operand is a float or decimal, then convert it to an int.
 # Otherwise leave the operand unchanged.
