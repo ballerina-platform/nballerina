@@ -502,7 +502,6 @@ function semTypeRepr(t:SemType ty) returns Repr {
         panic err:impossible("allocate register with never type");
     }
     int supported = t:NIL|t:BOOLEAN|t:INT|t:FLOAT|t:DECIMAL|t:STRING|t:LIST|t:MAPPING|t:ERROR;
-    // DECIMAL is here for ConvertToInt or ConvertToFloat
     int maximized = w | supported;
     if maximized == t:TOP || maximized == (t:NON_BEHAVIOURAL|t:ERROR) || (w & supported) == w {
         TaggedRepr repr = { base: BASE_REPR_TAGGED, llvm: LLVM_TAGGED_PTR, subtype: w };
