@@ -20,33 +20,20 @@ final RuntimeFunction decimalNegFunction = {
     },
     attrs: ["readonly"]
 };
-final map<RuntimeFunction> decimalArithmeticFuncs = {};
 
-function init() {
+final readonly & map<RuntimeFunction> decimalArithmeticFuncs = decimalArithmeticFuncsInit();
+
+function decimalArithmeticFuncsInit() returns readonly & map<RuntimeFunction> {
+    map<RuntimeFunction> m = {};
     llvm:FunctionType ty = {
         returnType: llvm:structType([LLVM_TAGGED_PTR, "i64"]),
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     };
     foreach var [op, name] in decimalArithmeticFuncNames.entries() {
-        decimalArithmeticFuncs[op] = { name: "decimal_" + name, ty, attrs: ["readnone"] };
+        m[op] = { name: "decimal_" + name, ty, attrs: ["readnone"] };
     }
+    return m.cloneReadOnly();
 }
-
-// JBUG #34400
-// init function should be changed as below.
-// final readonly & map<RuntimeFunction> decimalArithmeticFuncs;
-
-// function init() {
-//     llvm:FunctionType ty = {
-//         returnType: llvm:structType([LLVM_TAGGED_PTR, "i64"]),
-//         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
-//     };
-//     map<RuntimeFunction> decimalArithmeticFuncsMutableMap = {};
-//     foreach var [op, name] in decimalArithmeticFuncNames.entries() {
-//         decimalArithmeticFuncsMutableMap[op] = { name: "decimal_" + name, ty, attrs: ["readnone"] };
-//     }
-//     decimalArithmeticFuncs = decimalArithmeticFuncsMutableMap.cloneReadOnly();
-// }
 
 function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntArithmeticBinaryInsn insn) {
     llvm:IntrinsicFunctionName? intrinsicName = buildBinaryIntIntrinsic(insn.op);
