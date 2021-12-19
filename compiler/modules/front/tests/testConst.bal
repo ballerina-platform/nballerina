@@ -25,13 +25,10 @@ class TestFoldContext {
         return err:semantic(msg, loc=d:location(self.file, pos), cause=cause);
     }
 
-    function qNameRange(d:Position startPos) returns d:Range {
-        return self.file.qNameRange(startPos);
-    }
-
     function typeContext() returns t:Context {
         return self.tc;
     }
+
     function resolveTypeDesc(s:TypeDesc td) returns err:Semantic|t:SemType {
         if td is s:SubsetBuiltinTypeDesc {
             return resolveBuiltinTypeDesc(self.tc, td);

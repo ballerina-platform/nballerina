@@ -22,7 +22,6 @@ type FoldContext object {
     function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError;
-    function qNameRange(d:Position startPos) returns d:Range;
     function typeContext() returns t:Context;
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
     function isConstDefn() returns boolean;

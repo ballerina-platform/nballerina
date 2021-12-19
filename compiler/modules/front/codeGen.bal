@@ -255,10 +255,6 @@ class CodeGenFoldContext {
         return self.cx.semanticErr(msg, pos=pos, cause=cause);
     }
 
-    function qNameRange(Position startPos) returns Range {
-        return self.cx.qNameRange(startPos);
-    }
-
     function typeContext() returns t:Context {
         return self.cx.mod.tc;
     }
