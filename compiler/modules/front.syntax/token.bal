@@ -1,6 +1,8 @@
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
 
+type Range d:Range;
+
 type Token FixedToken|VariableLengthToken;
 type FixedToken SingleCharDelim|MultiCharDelim|Keyword;
 
