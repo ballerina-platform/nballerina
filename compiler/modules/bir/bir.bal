@@ -4,7 +4,6 @@ import wso2/nballerina.comm.diagnostic as d;
 
 public type SemType t:SemType;
 public type Position d:Position;
-public type Range d:Range;
 public type File d:File;
 
 public type Module object {

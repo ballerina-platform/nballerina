@@ -373,6 +373,10 @@ class Tokenizer {
         return createPosition(self.lineIndex, self.codePointIndex);
     }
 
+    function currentRange() returns Range {
+        return { startPos: self.currentStartPos(), endPos: self.currentEndPos() };
+    }
+
     function previousEndPos() returns Position {
         return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex);
     }
@@ -446,7 +450,7 @@ class Tokenizer {
 
     function err(d:Message msg) returns err:Syntax {
         // XXX pass in endPos if we need to in order to be able to recreate the right endPos
-        return err:syntax(msg, loc=d:location(self.file, { startPos: self.currentStartPos(), endPos: self.currentEndPos() }));
+        return err:syntax(msg, loc=d:location(self.file, self.currentRange()));
     }
 
     function save() returns TokenizerState {

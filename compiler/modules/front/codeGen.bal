@@ -1605,7 +1605,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
 
 function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MethodCallExpr expr) returns CodeGenError|RegExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, expr.target, ()));
-    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.qNamePos);
+    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, { startPos: expr.namePos, endPos: expr.openParenPos });
     check validArgumentCount(cx, func, expr.args.length() + 1, expr.opPos);
 
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1621,7 +1621,7 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env
         func,
         result,
         args: args.cloneReadOnly(),
-        pos: expr.qNamePos
+        pos: expr.namePos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };
@@ -1643,7 +1643,7 @@ function validArgumentCount(CodeGenContext cx, bir:FunctionRef func, int nSuppli
 
 function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
     if !(lookup(identifier, env) == ()) {
-        return cx.unimplementedErr("local variables cannot yet have function type", cx.qNameRange(pos));
+        return cx.unimplementedErr("local variables cannot yet have function type", pos);
     }
     bir:FunctionSignature signature;
     s:ModuleLevelDefn? defn = cx.mod.defns[identifier];
@@ -1661,7 +1661,7 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
         else {
             msg = `${identifier} is not a function`;
         }
-        return cx.semanticErr(msg, cx.qNameRange(pos));
+        return cx.semanticErr(msg, pos);
     }
 }
 
@@ -1690,13 +1690,13 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
 
 type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
 
-function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName, Position pos) returns bir:FunctionRef|CodeGenError {
+function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName, Range nameRange) returns bir:FunctionRef|CodeGenError {
     TypedOperand? t = typedOperand(target);
     if t != () && t[0] is LangLibModuleName {
         string moduleName = t[0];
         bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature == () {
-            return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, cx.qNameRange(pos));
+            return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, nameRange);
         }
         else {
             bir:ExternalSymbol symbol = {
@@ -1710,7 +1710,7 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
             return { symbol, signature, erasedSignature }; 
         }
     }
-    return cx.unimplementedErr(`cannot resolve ${methodName} to lang lib function`, cx.qNameRange(pos));
+    return cx.unimplementedErr(`cannot resolve ${methodName} to lang lib function`, nameRange);
 }
 
 type Counter record {|

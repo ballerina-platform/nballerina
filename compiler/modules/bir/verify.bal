@@ -4,6 +4,8 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
 
+public type Range d:Range;
+
 class VerifyContext {
     private final Module mod;
     private final t:Context tc;

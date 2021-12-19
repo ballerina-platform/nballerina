@@ -263,7 +263,7 @@ public type MethodCallExpr record {|
     Position endPos;
     Position opPos; // position of .
     Position openParenPos;
-    Position qNamePos;
+    Position namePos;
     string methodName;
     Expr target;
     Expr[] args;
