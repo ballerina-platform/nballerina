@@ -282,6 +282,7 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
             return foldedBinaryConstExpr(f, t:FLOAT, leftExpr, rightExpr);
         }
         else if left is decimal && right is decimal {
+            // This part needs should be changed according to #783
             decimal|error result = trap decimalArithmeticEval(expr.arithmeticOp, left, right);
             if result is decimal {
                 return foldedBinaryConstExpr(result, t:DECIMAL, leftExpr, rightExpr);

@@ -21,16 +21,16 @@ final RuntimeFunction decimalNegFunction = {
     attrs: ["readonly"]
 };
 
-final readonly & map<RuntimeFunction> decimalArithmeticFuncs = decimalArithmeticFuncsInit();
+final readonly & map<RuntimeFunction> decimalArithmeticFuncs = createDecimalArithmeticFuncs();
 
-function decimalArithmeticFuncsInit() returns readonly & map<RuntimeFunction> {
+function createDecimalArithmeticFuncs() returns readonly & map<RuntimeFunction> {
     map<RuntimeFunction> m = {};
-    llvm:FunctionType ty = {
+    readonly & llvm:FunctionType ty = {
         returnType: llvm:structType([LLVM_TAGGED_PTR, "i64"]),
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     };
     foreach var [op, name] in decimalArithmeticFuncNames.entries() {
-        m[op] = { name: "decimal_" + name, ty, attrs: ["readnone"] };
+        m[op] = { name: "decimal_" + name, ty, attrs: ["readonly"] };
     }
     return m.cloneReadOnly();
 }
