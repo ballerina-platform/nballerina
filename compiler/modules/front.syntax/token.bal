@@ -551,11 +551,11 @@ public readonly class SourceFile {
         ];
     }
 
-    public function qNameEndPos(Position startPos) returns Position {
+    public function qNameRange(Position startPos) returns d:Range {
         var[lineNum, startColumnNum] = self.lineColumn(startPos);
         ScannedLine line = self.scannedLine(lineNum);
         int endColumnNum = qualifiedIdentifierEndCodePointIndex(line, startColumnNum);
-        return createPosition(lineNum, endColumnNum);
+        return { startPos, endPos: createPosition(lineNum, endColumnNum) };
     }
 
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
@@ -566,18 +566,18 @@ public readonly class SourceFile {
 }
 
 function qualifiedIdentifierEndCodePointIndex(ScannedLine line, int startCodePointIndex) returns int {
-    var [fragIndex, fragmentIndex] = scanLineFragIndex(line, startCodePointIndex);
+    var[fragIndex, fragmentIndex] = scanLineFragIndex(line, startCodePointIndex);
     string[] fragments = line.fragments;
     FragCode[] fragCodes = line.fragCodes;
-    int endCodePoint = startCodePointIndex;
+    int endCodePointIndex = startCodePointIndex;
     while true {
         match fragCodes[fragIndex] {
             FRAG_IDENTIFIER => {
-                endCodePoint += fragments[fragmentIndex].length();
+                endCodePointIndex += fragments[fragmentIndex].length();
                 fragmentIndex += 1;
             }
             CP_COLON => {
-                endCodePoint += 1;
+                endCodePointIndex += 1;
             }
             _ => {
                 break;
@@ -585,7 +585,7 @@ function qualifiedIdentifierEndCodePointIndex(ScannedLine line, int startCodePoi
         }
         fragIndex += 1;
     }
-    return endCodePoint;
+    return endCodePointIndex;
 }
 
 function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex) returns int {

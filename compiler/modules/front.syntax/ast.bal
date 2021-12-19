@@ -3,6 +3,7 @@ import wso2/nballerina.bir;
 import wso2/nballerina.comm.diagnostic as d;
 
 public type Position d:Position;
+public type Range d:Range;
 
 type PositionFields record {|
    Position startPos;

@@ -60,8 +60,7 @@ class ConstFoldContext {
     }
 
     function qNameRange(d:Position startPos) returns d:Range {
-        d:Position endPos = self.defn.part.file.qNameEndPos(startPos);
-        return { startPos, endPos };
+        return self.defn.part.file.qNameRange(startPos);
     }
 
     function typeContext() returns t:Context {

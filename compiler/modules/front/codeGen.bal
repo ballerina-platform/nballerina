@@ -132,7 +132,7 @@ class CodeGenContext {
     }
 
     function qNameRange(Position startPos) returns Range {
-        return {startPos, endPos: self.file.qNameEndPos(startPos)};
+        return self.file.qNameRange(startPos);
     }
 
     function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {

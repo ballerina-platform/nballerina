@@ -26,8 +26,7 @@ class TestFoldContext {
     }
 
     function qNameRange(d:Position startPos) returns d:Range {
-        d:Position endPos = self.file.qNameEndPos(startPos);
-        return { startPos, endPos };
+        return self.file.qNameRange(startPos);
     }
 
     function typeContext() returns t:Context {

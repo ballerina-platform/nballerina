@@ -41,8 +41,7 @@ class VerifyContext {
     }
 
     function qNameRange(Position startPos) returns Range {
-        Position endPos = self.mod.getPartFile(self.defn.partIndex).qNameEndPos(startPos);
-        return { startPos, endPos };
+        return self.mod.getPartFile(self.defn.partIndex).qNameRange(startPos);
     }
 
     function err(d:Message msg, Position|Range pos) returns err:Semantic {

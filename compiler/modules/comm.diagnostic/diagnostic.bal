@@ -27,7 +27,7 @@ public type File readonly & object {
     public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
     public function lineContent(Position|Range range) returns [string, string, string];
-    public function qNameEndPos(Position startPos) returns Position;
+    public function qNameRange(Position startPos) returns Range;
 };
 
 public type Location readonly & record {|
