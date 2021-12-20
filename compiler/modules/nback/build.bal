@@ -119,7 +119,7 @@ final RuntimeFunction decimalConstFunction = {
         returnType: LLVM_TAGGED_PTR,
         paramTypes: [LLVM_DECIMAL_CONST]
     },
-    attrs: ["readnone"]
+    attrs: ["readonly"]
 };
 
 final bir:ModuleId runtimeModule = {
@@ -159,6 +159,10 @@ function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value v
 
 function buildStoreTagged(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
     return builder.store(buildUntagged(builder, scaffold, <llvm:PointerValue>value, scaffold.getRepr(reg)), scaffold.address(reg));
+}
+
+function buildStoreDecimal(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(value, scaffold.address(reg));
 }
 
 function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue value, Repr targetRepr) returns llvm:Value {

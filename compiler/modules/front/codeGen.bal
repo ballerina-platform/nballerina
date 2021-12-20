@@ -1080,8 +1080,12 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 result = cx.createTmpRegister(t:FLOAT, pos);
                 insn = <bir:FloatNegateInsn> { operand: <bir:Register>typed[1], result, pos };
             }
+            else if typed is ["decimal", bir:DecimalOperand] {
+                result = cx.createTmpRegister(t:DECIMAL, pos);
+                insn = <bir:DecimalNegateInsn> { operand: <bir:Register>typed[1], result, pos };
+            }
             else {
-                return cx.semanticErr(`operand of ${"-"} must be int or float`, pos);
+                return cx.semanticErr(`operand of ${"-"} must be int or float or decimal`, pos);
             }
             nextBlock.insns.push(insn);
             return { result, block: nextBlock };
@@ -1881,6 +1885,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         }
         else if t:isSubtypeSimple(operand.semType, t:FLOAT) {
             return ["float", operand];
+        }
+        else if t:isSubtypeSimple(operand.semType, t:DECIMAL) {
+            return ["decimal", operand];
         }
         else if t:isSubtypeSimple(operand.semType, t:STRING) {
             return ["string", operand];
