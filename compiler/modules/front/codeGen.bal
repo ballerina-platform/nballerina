@@ -285,10 +285,10 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     }
     var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
     if endBlock != () {
-        bir:RetInsn ret = { operand: (), pos: defn.body.closingPos };
+        bir:RetInsn ret = { operand: (), pos: defn.body.closeBracePos };
         endBlock.insns.push(ret);
     }
-    codeGenOnPanic(cx, defn.body.closingPos);
+    codeGenOnPanic(cx, defn.body.closeBracePos);
     return cx.code;
 }
 
@@ -457,7 +457,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     else if stmt.body.length() == 0 {
         // this is `while false { }`
         // need to put something in loopHead
-        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.body.closingPos };
+        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.body.closeBracePos };
         exitReachable = true;
     }
     else {
@@ -637,7 +637,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     else {
         bir:BasicBlock b = maybeCreateBasicBlock(cx, contBlock);
         contBlock = b;
-        Position endPos = stmt.clauses.length() > 0 ? (stmt.clauses[stmt.clauses.length()-1].block.closingPos) : stmt.startPos;
+        Position endPos = stmt.clauses.length() > 0 ? (stmt.clauses[stmt.clauses.length()-1].block.closeBracePos) : stmt.startPos;
         bir:BranchInsn branch = { dest: b.label, pos: endPos };
         testBlock.insns.push(branch);
     }
@@ -715,7 +715,7 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
                 return { block: () };
             }
             contBlock = cx.createBasicBlock();
-            Position endPos = (stmt.ifFalse ?: stmt.ifTrue).closingPos;
+            Position endPos = (stmt.ifFalse ?: stmt.ifTrue).closeBracePos;
             bir:BranchInsn branch = { dest: contBlock.label, pos: endPos };
             if ifContBlock != () {
                 ifContBlock.insns.push(branch);
