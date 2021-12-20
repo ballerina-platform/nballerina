@@ -6,6 +6,8 @@ import wso2/nballerina.comm.diagnostic as d;
 
 type Position d:Position;
 
+type Range d:Range;
+
 type Environment record {|
     Binding? bindings;
     // A list of registers that were narrowed but have been assigned to
@@ -129,15 +131,19 @@ class CodeGenContext {
         return bir:createBasicBlock(self.code, name);
     }
 
-    function semanticErr(d:Message msg, Position pos, error? cause = ()) returns err:Semantic {
+    function qNameRange(Position startPos) returns Range {
+        return self.file.qNameRange(startPos);
+    }
+
+    function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
         return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
     }
 
-    function unimplementedErr(d:Message msg, Position pos, error? cause = ()) returns err:Unimplemented {
+    function unimplementedErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Unimplemented {
         return err:unimplemented(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
     }
 
-    private function location(Position pos) returns d:Location {
+    private function location(Position|Range pos) returns d:Location {
         return d:location(self.file, pos);
     }
 
@@ -245,7 +251,7 @@ class CodeGenFoldContext {
         }
     }
 
-    function semanticErr(d:Message msg, Position pos, error? cause = ()) returns err:Semantic {
+    function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
         return self.cx.semanticErr(msg, pos=pos, cause=cause);
     }
 
@@ -1445,7 +1451,7 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     t:SemType semType = check cx.resolveTypeDesc(td);
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
     // Constants should be resolved during constant folding
-    bir:Register reg = <bir:Register>operand;        
+    bir:Register reg = <bir:Register>operand;      
     t:SemType diff = t:roDiff(cx.mod.tc, reg.semType, semType);
     if t:isEmpty(cx.mod.tc, diff) {
         return { result: !negated, block: bb };
@@ -1567,10 +1573,10 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
     string? prefix = expr.prefix;
     bir:FunctionRef func;
     if prefix == () {
-        func =  check genLocalFunctionRef(cx, env, expr.funcName, expr.namePos);
+        func = check genLocalFunctionRef(cx, env, expr.funcName, expr.qNamePos);
     }
     else {
-        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.namePos);
+        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.qNamePos);
     }
     check validArgumentCount(cx, func, expr.args.length(), expr.openParenPos);
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1587,9 +1593,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func,
         result,
         args: args.cloneReadOnly(),
-        // expr.namePos is currently the start of the local name
-        // which is not really what is wanted, so we use startPos instead
-        pos: expr.startPos
+        pos: expr.qNamePos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };
@@ -1597,7 +1601,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
 
 function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MethodCallExpr expr) returns CodeGenError|RegExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, expr.target, ()));
-    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
+    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, { startPos: expr.namePos, endPos: expr.openParenPos });
     check validArgumentCount(cx, func, expr.args.length() + 1, expr.opPos);
 
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1654,7 +1658,7 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
             msg = `${identifier} is not a function`;
         }
         return cx.semanticErr(msg, pos);
-    }  
+    }
 }
 
 function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
@@ -1669,26 +1673,26 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
     }
     else if defn == () {
         if mod.partial {
-            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, pos);
+            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, cx.qNameRange(pos));
         }
         else {
-            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, pos);
+            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, cx.qNameRange(pos));
         }
     }
     else {
-        return cx.semanticErr("reference to non-function where function required", pos);
+        return cx.semanticErr("reference to non-function where function required", cx.qNameRange(pos));
     }
 }
 
 type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
 
-function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName, Position pos) returns bir:FunctionRef|CodeGenError {
+function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName, Range nameRange) returns bir:FunctionRef|CodeGenError {
     TypedOperand? t = typedOperand(target);
     if t != () && t[0] is LangLibModuleName {
         string moduleName = t[0];
         bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature == () {
-            return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, pos);
+            return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, nameRange);
         }
         else {
             bir:ExternalSymbol symbol = {
@@ -1702,7 +1706,7 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
             return { symbol, signature, erasedSignature }; 
         }
     }
-    return cx.unimplementedErr(`cannot resolve ${methodName} to lang lib function`, pos);
+    return cx.unimplementedErr(`cannot resolve ${methodName} to lang lib function`, nameRange);
 }
 
 type Counter record {|

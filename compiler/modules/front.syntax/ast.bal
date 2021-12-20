@@ -249,7 +249,7 @@ public type FunctionCallExpr record {|
     Position startPos;
     Position endPos;
     Position openParenPos;
-    Position namePos;
+    Position qNamePos;
     string? prefix = ();
     string funcName;
     Expr[] args;
@@ -366,7 +366,7 @@ public type VarRefExpr record {|
     *PositionFields;
     string? prefix = ();
     string name;
-    Position namePos;
+    Position qNamePos;
 |};
 
 public type TypeCastExpr record {|
@@ -545,7 +545,7 @@ public type TypeDescRef record {|
     *PositionFields;
     string? prefix = ();
     string typeName;
-    Position pos;
+    Position qNamePos;
 |};
 
 public type SingletonTypeDesc record {|

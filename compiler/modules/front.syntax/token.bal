@@ -1,6 +1,8 @@
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
 
+type Range d:Range;
+
 type Token FixedToken|VariableLengthToken;
 type FixedToken SingleCharDelim|MultiCharDelim|Keyword;
 
@@ -373,6 +375,10 @@ class Tokenizer {
         return createPosition(self.lineIndex, self.codePointIndex);
     }
 
+    function currentRange() returns Range {
+        return { startPos: self.currentStartPos(), endPos: self.currentEndPos() };
+    }
+
     function previousEndPos() returns Position {
         return createPosition(self.prevTokenEndLineIndex, self.prevTokenEndCodePointIndex);
     }
@@ -446,7 +452,7 @@ class Tokenizer {
 
     function err(d:Message msg) returns err:Syntax {
         // XXX pass in endPos if we need to in order to be able to recreate the right endPos
-        return err:syntax(msg, loc=d:location(self.file, self.currentStartPos(), self.currentEndPos()));
+        return err:syntax(msg, loc=d:location(self.file, self.currentRange()));
     }
 
     function save() returns TokenizerState {
@@ -551,11 +557,41 @@ public readonly class SourceFile {
         ];
     }
 
+    public function qNameRange(Position startPos) returns d:Range {
+        var[lineNum, startColumnNum] = self.lineColumn(startPos);
+        ScannedLine line = self.scannedLine(lineNum);
+        int endColumnNum = qualifiedIdentifierEndCodePointIndex(line, startColumnNum);
+        return { startPos, endPos: createPosition(lineNum, endColumnNum) };
+    }
+
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
 
     function scannedLine(int lineNumber) returns ScannedLine {
         return self.lines[lineNumber - 1];
     }
+}
+
+function qualifiedIdentifierEndCodePointIndex(ScannedLine line, int startCodePointIndex) returns int {
+    var[fragIndex, fragmentIndex] = scanLineFragIndex(line, startCodePointIndex);
+    string[] fragments = line.fragments;
+    FragCode[] fragCodes = line.fragCodes;
+    int endCodePointIndex = startCodePointIndex;
+    while true {
+        match fragCodes[fragIndex] {
+            FRAG_IDENTIFIER => {
+                endCodePointIndex += fragments[fragmentIndex].length();
+                fragmentIndex += 1;
+            }
+            CP_COLON => {
+                endCodePointIndex += 1;
+            }
+            _ => {
+                break;
+            }
+        }
+        fragIndex += 1;
+    }
+    return endCodePointIndex;
 }
 
 function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex) returns int {

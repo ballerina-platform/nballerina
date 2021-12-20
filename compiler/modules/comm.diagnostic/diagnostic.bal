@@ -27,6 +27,7 @@ public type File readonly & object {
     public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
     public function lineContent(Position|Range range) returns [string, string, string];
+    public function qNameRange(Position startPos) returns Range;
 };
 
 public type Location readonly & record {|
@@ -72,14 +73,7 @@ public type UnimplementedDiagnostic record {|
     UNIMPLEMENTED category = UNIMPLEMENTED;
 |};
 
-public function location(File file, Position startPos, Position? endPos = ()) returns Location {
-    Range|Position range;
-    if endPos != () {
-        range = { startPos, endPos };
-    }
-    else {
-        range = startPos;
-    }
+public function location(File file, Position|Range range) returns Location {
     return { file, range };
 }
 
