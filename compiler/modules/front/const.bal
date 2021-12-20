@@ -505,7 +505,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
             }
         }
         else if toNumType == t:FLOAT {
-            if value is int {
+            if value is int || value is decimal {
                 value = <float>value;
             }
         }

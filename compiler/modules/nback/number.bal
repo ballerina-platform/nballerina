@@ -1,5 +1,6 @@
 
 import wso2/nballerina.bir;
+import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
 final RuntimeFunction floatToIntFunction = {
@@ -20,6 +21,15 @@ final RuntimeFunction decimalNegFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction convertToFloatFunction = {
+    name: "convert_to_float",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
 final readonly & map<RuntimeFunction> decimalArithmeticFuncs = createDecimalArithmeticFuncs();
 
 function createDecimalArithmeticFuncs() returns readonly & map<RuntimeFunction> {
@@ -33,6 +43,15 @@ function createDecimalArithmeticFuncs() returns readonly & map<RuntimeFunction> 
     }
     return m.cloneReadOnly();
 }
+
+final RuntimeFunction decimalToFloatFunction = {
+    name: "decimal_to_float",
+    ty: {
+        returnType: "double",
+        paramTypes: [LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
 
 function buildArithmeticBinary(llvm:Builder builder, Scaffold scaffold, bir:IntArithmeticBinaryInsn insn) {
     llvm:IntrinsicFunctionName? intrinsicName = buildBinaryIntIntrinsic(insn.op);
@@ -199,34 +218,22 @@ function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:Conver
         buildConvertIntToFloat(builder, scaffold, val, insn);
         return;
     }
-    else if repr.base != BASE_REPR_TAGGED {
-        return scaffold.unimplementedErr("convert form decimal to float", insn.pos);
+    else if repr.base == BASE_REPR_TAGGED && repr.subtype == t:DECIMAL {
+        buildConvertDecimalToFloat(builder, scaffold, val, insn);
+        return;
     }
     // convert to float form tagged pointer
-
-    // number part of semType must be some *non-empty* combination of
-    // (some or all of) int, float and decimal
-    llvm:PointerValue tagged = <llvm:PointerValue>val;
-    llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
-
-    // semType must contain int or decimal. Since we don't have decimal yet in subset 6,
-    // it must contain int. In the future, below section is only needed conditionally.
-    llvm:Value hasType = buildHasTag(builder, tagged, TAG_INT);
-    llvm:BasicBlock hasIntBlock = scaffold.addBasicBlock();
-    llvm:BasicBlock noIntBlock = scaffold.addBasicBlock();
-    builder.condBr(hasType, hasIntBlock, noIntBlock);
-    builder.positionAtEnd(hasIntBlock);
-    buildConvertIntToFloat(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn);
-    builder.br(joinBlock);
-
-    builder.positionAtEnd(noIntBlock);
-    buildStoreTagged(builder, scaffold, tagged, insn.result);
-    builder.br(joinBlock);
-    builder.positionAtEnd(joinBlock);
+    llvm:Value result = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(convertToFloatFunction), [val]);
+    buildStoreTagged(builder, scaffold, result, insn.result);
 }
 
 function buildConvertIntToFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value intVal, bir:ConvertToFloatInsn insn) {
     buildStoreFloat(builder, scaffold, builder.sIToFP(intVal, LLVM_DOUBLE), insn.result);
+}
+
+function buildConvertDecimalToFloat(llvm:Builder builder, Scaffold scaffold, llvm:Value decimalVal, bir:ConvertToFloatInsn insn) {
+    llvm:Value result = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalToFloatFunction), [decimalVal]);
+    buildStoreFloat(builder, scaffold, result, insn.result);
 }
 
 function buildDecimalNegate(llvm:Builder builder, Scaffold scaffold, bir:DecimalNegateInsn insn) {

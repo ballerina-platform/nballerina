@@ -380,6 +380,8 @@ extern CompareResult READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr 
 extern CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs);
 extern CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs);
 
+extern TaggedPtr READONLY _bal_convert_to_float(TaggedPtr tp);
+
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
 #define BAL_LIB_IO_NAME(sym) _Bb02io ## sym
