@@ -9,8 +9,9 @@ function parseStmtBlock(Tokenizer tok) returns StmtBlock|err:Syntax {
             stmts.push(check parseStmt(tok));
         }
         Position endPos = tok.currentEndPos();
+        Position closeBracePos = tok.currentStartPos();
         check tok.advance();
-        return { startPos, endPos, stmts };
+        return { startPos, endPos, stmts, closeBracePos };
     }
     return parseError(tok, "unhandled condition in statement block");
 }
@@ -360,7 +361,8 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
             Position blockStartPos = elseIfStmt.ifTrue.startPos;
             StmtBlock? elseIfFalseBlock = elseIfStmt.ifFalse;
             Position blockEndPos = (elseIfFalseBlock ?: elseIfStmt.ifTrue).endPos;
-            ifFalse = { startPos: blockStartPos, endPos: blockEndPos, stmts: [elseIfStmt] };
+            Position closeBracePos = (elseIfFalseBlock ?: elseIfStmt.ifTrue).closeBracePos;
+            ifFalse = { startPos: blockStartPos, endPos: blockEndPos, stmts: [elseIfStmt], closeBracePos };
         }
         // if exp1 { } else { }
         else if tok.current() == "{" {

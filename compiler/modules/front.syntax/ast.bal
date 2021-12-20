@@ -73,6 +73,7 @@ public const WILDCARD = ();
 public type StmtBlock record {|
     *PositionFields;
     Stmt[] stmts;
+    Position closeBracePos;
 |};
 
 public type CallStmt record {|
