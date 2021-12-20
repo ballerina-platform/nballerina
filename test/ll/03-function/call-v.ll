@@ -127,7 +127,7 @@ define internal i8 addrspace(1)* @_B_foo(i8 addrspace(1)* %0) !dbg !11 {
 !14 = !DILocation(line: 7, column: 2, scope: !5)
 !15 = !DILocation(line: 8, column: 2, scope: !5)
 !16 = !DILocation(line: 0, column: 0, scope: !7)
-!17 = !DILocation(line: 13, column: 3, scope: !7)
+!17 = !DILocation(line: 13, column: 4, scope: !7)
 !18 = !DILocation(line: 13, column: 12, scope: !7)
 !19 = !DILocation(line: 14, column: 3, scope: !7)
 !20 = !DILocation(line: 0, column: 0, scope: !9)
