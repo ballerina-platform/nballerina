@@ -1,6 +1,5 @@
 
 import wso2/nballerina.bir;
-import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
 final RuntimeFunction floatToIntFunction = {
@@ -124,7 +123,6 @@ function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertT
     }
     // convert to int form tagged pointer
 
-    t:SemType semType = insn.operand.semType;
     llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
 
@@ -138,10 +136,8 @@ function buildConvertToInt(llvm:Builder builder, Scaffold scaffold, bir:ConvertT
     buildConvertFloatToInt(builder, scaffold, buildUntagFloat(builder, scaffold, tagged), insn);
     builder.br(joinBlock);
 
-    builder.positionAtEnd(<llvm:BasicBlock>noFloatBlock);
-    if !t:isSubtypeSimple(semType, t:FLOAT) {
-        builder.store(tagged, scaffold.address(insn.result));
-    }
+    builder.positionAtEnd(noFloatBlock);
+    buildStoreTagged(builder, scaffold, tagged, insn.result);
     builder.br(joinBlock);
     builder.positionAtEnd(joinBlock);
 }
@@ -172,7 +168,6 @@ function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:Conver
 
     // number part of semType must be some *non-empty* combination of
     // (some or all of) int, float and decimal
-    t:SemType semType = insn.operand.semType;
     llvm:PointerValue tagged = <llvm:PointerValue>val;
     llvm:BasicBlock joinBlock = scaffold.addBasicBlock();
 
@@ -186,10 +181,8 @@ function buildConvertToFloat(llvm:Builder builder, Scaffold scaffold, bir:Conver
     buildConvertIntToFloat(builder, scaffold, buildUntagInt(builder, scaffold, tagged), insn);
     builder.br(joinBlock);
 
-    builder.positionAtEnd(<llvm:BasicBlock>noIntBlock);
-    if !t:isSubtypeSimple(semType, t:INT) {
-        builder.store(tagged, scaffold.address(insn.result));
-    }
+    builder.positionAtEnd(noIntBlock);
+    buildStoreTagged(builder, scaffold, tagged, insn.result);
     builder.br(joinBlock);
     builder.positionAtEnd(joinBlock);
 }
