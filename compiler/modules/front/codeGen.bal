@@ -285,10 +285,10 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     }
     var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
     if endBlock != () {
-        bir:RetInsn ret = { operand: (), pos: defn.endPos };
+        bir:RetInsn ret = { operand: (), pos: defn.body.closingPos };
         endBlock.insns.push(ret);
     }
-    codeGenOnPanic(cx, defn.endPos);
+    codeGenOnPanic(cx, defn.body.closingPos);
     return cx.code;
 }
 
@@ -457,7 +457,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     else if stmt.body.length() == 0 {
         // this is `while false { }`
         // need to put something in loopHead
-        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.body.endPos };
+        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.body.closingPos };
         exitReachable = true;
     }
     else {
@@ -637,7 +637,8 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     else {
         bir:BasicBlock b = maybeCreateBasicBlock(cx, contBlock);
         contBlock = b;
-        bir:BranchInsn branch = { dest: b.label, pos: stmt.endPos };
+        Position endPos = stmt.clauses.length() > 0 ? (stmt.clauses[stmt.clauses.length()-1].block.closingPos) : stmt.startPos;
+        bir:BranchInsn branch = { dest: b.label, pos: endPos };
         testBlock.insns.push(branch);
     }
     return { block: contBlock, assignments };
@@ -714,7 +715,8 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
                 return { block: () };
             }
             contBlock = cx.createBasicBlock();
-            bir:BranchInsn branch = { dest: contBlock.label, pos: stmt.endPos };
+            Position endPos = (stmt.ifFalse ?: stmt.ifTrue).closingPos;
+            bir:BranchInsn branch = { dest: contBlock.label, pos: endPos };
             if ifContBlock != () {
                 ifContBlock.insns.push(branch);
             }

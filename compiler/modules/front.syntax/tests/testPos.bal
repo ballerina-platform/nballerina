@@ -168,6 +168,9 @@ function validateStmtBlockPos(StmtBlock block, Tokenizer tok, Position parentSta
     test:assertEquals(tok.current(), "{", "invalid start token for StmtBlock");
     check tok.moveToPos(inclusiveEndPos(block.endPos), MODE_NORMAL);
     test:assertEquals(tok.current(), "}", "invalid end token for StmtBlock");
+    check tok.moveToPos(inclusiveEndPos(block.closingPos), MODE_NORMAL);
+    test:assertEquals(tok.current(), "}", "invalid end token for StmtBlock");
+    test:assertNotEquals(block.endPos, block.closingPos);
     test:assertTrue(block.startPos > parentStartPos && block.endPos <= parentEndPos, "stmt block outside of parent");
 }
 
