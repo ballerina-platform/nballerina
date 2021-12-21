@@ -48,7 +48,7 @@ final RuntimeFunction booleanCompareFunction = {
 };
 
 final RuntimeFunction decimalCompareFunction = {
-    name: "decimal_compare",
+    name: "decimal_cmp",
     ty: {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
@@ -111,7 +111,7 @@ final RuntimeFunction arrayExactIntCompareFunction = {
 };
 
 final RuntimeFunction arrayDecimalCompareFunction = {
-    name: "array_decimal_compare",
+    name: "array_float_compare",
     ty: {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
