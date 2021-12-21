@@ -33,6 +33,8 @@ DECL_PANIC_MESSAGE(PANIC_LIST_STORE, "bad list store");
 DECL_PANIC_MESSAGE(PANIC_MAPPING_STORE, "bad mapping store");
 DECL_PANIC_MESSAGE(PANIC_NO_FILLER, "list has no filler");
 DECL_PANIC_MESSAGE(PANIC_INTERNAL_ERROR, "internal error");
+// This panic code is used in cases where a float operation would return NaN,
+// notably for 0/0 and some cases of remainder. 
 DECL_PANIC_MESSAGE(PANIC_INVALID_DECIMAL, "not a valid decimal");
 
 #define PANIC_MESSAGE_ENTRY(code) [code] = (struct MediumString *)&(panic_msg_##code)
