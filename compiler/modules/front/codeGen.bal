@@ -1096,11 +1096,79 @@ function codeGenExprForString(CodeGenContext cx, bir:BasicBlock bb, Environment 
     return cx.semanticErr("expected string operand", expr.startPos);
 }
 
+// FIXME: move this below
+type LiftResult record {|
+    bir:Operand[] operands;
+    bir:ArithmeticBinaryOp op; // change this to union type
+    bir:BasicBlock nextBlock;
+    bir:BasicBlock? nilBlock;
+|};
+
+type BinaryLiftResult record {|
+    bir:Operand lhs;
+    bir:Operand rhs;
+    bir:ArithmeticBinaryOp op;
+    bir:BasicBlock nextBlock;
+    bir:BasicBlock? nilBlock = ();
+|};
+
+function nilLift(CodeGenContext cx, bir:Operand[] operands, bir:ArithmeticBinaryOp op, bir:BasicBlock bb, Position pos) returns LiftResult {
+    bir:Operand lhs = operands[0];
+    bir:Operand rhs = operands[1];
+    bir:BasicBlock? nilBlock = ();
+    bir:BasicBlock nextBlock = cx.createBasicBlock();
+    // pr-todo: can this be const value?
+    if (lhs is bir:Register && t:containsNil(lhs.semType)) ||
+       (rhs is bir:Register && t:containsNil(rhs.semType)) {
+            nilBlock = cx.createBasicBlock();
+
+            bir:Register lhsIsNil = cx.createTmpRegister(t:BOOLEAN, pos);
+            if lhs is bir:Register {
+                bir:TypeTestInsn lhsNilTest = { operand: lhs, semType: t:NIL , result: lhsIsNil, negated: false, pos };
+                bb.insns.push(lhsNilTest);
+            }
+            else {
+                bir:AssignInsn insn = { pos, result: lhsIsNil, operand: false };
+                bb.insns.push(insn);
+            }
+
+            bir:Register rhsIsNil = cx.createTmpRegister(t:BOOLEAN, pos);
+            if rhs is bir:Register {
+                bir:TypeTestInsn rhsNilTest = { operand: rhs, semType: t:NIL , result: rhsIsNil, negated: false, pos };
+                bb.insns.push(rhsNilTest);
+            }
+            else {
+                bir:AssignInsn insn = { pos, result: rhsIsNil, operand: false };
+                bb.insns.push(insn);
+            }
+
+            bir:Register isNil = cx.createTmpRegister(t:BOOLEAN, pos);
+            bir:IntBitwiseBinaryInsn isNilInsn = { op: "|" , pos, operands: [lhsIsNil, rhsIsNil], result: isNil };
+            bb.insns.push(isNilInsn);
+
+            // pr-todo: add cond narrowing here
+            bir:CondBranchInsn branch = { operand: isNil, pos, ifTrue: (<bir:BasicBlock>nilBlock).label, ifFalse: nextBlock.label };
+            bb.insns.push(branch);
+    }
+    else {
+        bir:BranchInsn branch = { pos, dest: nextBlock.label };
+        bb.insns.push(branch);
+    }
+    return { operands, op, nextBlock, nilBlock };
+}
+
+function binaryNilLift(CodeGenContext cx, bir:Operand left, bir:Operand right, bir:ArithmeticBinaryOp operand, bir:BasicBlock bb, Position pos) returns BinaryLiftResult {
+    var { operands, op, nextBlock, nilBlock } = nilLift(cx, [left, right], operand, bb, pos);
+    return { lhs: operands[0], rhs: operands[1], op, nextBlock, nilBlock };
+}
+
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|ExprEffect {
     match expr {
         var { opPos: pos, arithmeticOp: op, left, right } => {
+            // FIXME: better to call them lhs rhs?
             var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
             var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
+            { lhs: l, rhs: r, op, nextBlock, nilBlock: _ } = binaryNilLift(cx, l, r, op, nextBlock, pos);
             // We evaluate the operands here, so we can reuse the function for compound assignment.
             return codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, l, r);
         }
