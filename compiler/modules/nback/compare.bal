@@ -47,6 +47,15 @@ final RuntimeFunction booleanCompareFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction decimalCompareFunction = {
+    name: "decimal_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
 final RuntimeFunction arrayIntCompareFunction = {
     name: "array_int_compare",
     ty: {
@@ -111,7 +120,8 @@ final readonly & table<TaggedCompareFunction> key(utCode) compareFunctions = tab
     { utCode: t:UT_INT, compareFunction: intCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
     { utCode: t:UT_FLOAT, compareFunction: floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
     { utCode: t:UT_BOOLEAN, compareFunction: booleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
-    { utCode: t:UT_STRING, compareFunction: stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction }
+    { utCode: t:UT_STRING, compareFunction: stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction },
+    { utCode: t:UT_DECIMAL, compareFunction: decimalCompareFunction, arrayCompareFunction: arrayIntCompareFunction }
 ];
 
 function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) returns BuildError? {
@@ -128,7 +138,7 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
         else {
             t:UniformTypeBitSet OrderTyMinusNil = (lhsRepr.subtype | rhsRepr.subtype) & ~t:NIL;
             t:UniformTypeCode?  OrderTyMinusNilCode = t:uniformTypeCode(OrderTyMinusNil);
-            if OrderTyMinusNilCode is t:UT_STRING|t:UT_INT|t:UT_FLOAT|t:UT_BOOLEAN {
+            if OrderTyMinusNilCode is t:UT_STRING|t:UT_INT|t:UT_FLOAT|t:UT_BOOLEAN|t:UT_DECIMAL {
                 RuntimeFunction comparator = compareFunctions.get(OrderTyMinusNilCode).compareFunction;
                 buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, comparator);
             }

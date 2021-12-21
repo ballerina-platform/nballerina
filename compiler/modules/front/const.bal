@@ -400,6 +400,9 @@ function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:Bin
         else if left is boolean && right is boolean {
             return foldedBinaryConstExpr(booleanRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
         }
+        else if left is decimal && right is decimal {
+            return foldedBinaryConstExpr(decimalRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
+        }
         else if left == () || right == () {
             // () behaves like NaN, EQ iff `left = right = ()`
             boolean result = expr.relationalOp is "<="|">=" ? left == right : false;
@@ -714,6 +717,24 @@ function floatRelationalEval(s:BinaryRelationalOp op, float left, float right) r
 }
 
 function intRelationalEval(s:BinaryRelationalOp op, int left, int right) returns boolean {
+    match op {
+        "<" => {
+            return left < right;
+        }
+        "<=" => {
+            return left <= right;
+        }
+        ">" => {
+            return left > right;
+        }
+        ">=" => {
+            return left >= right;
+        }
+    }
+    panic err:impossible();
+}
+
+function decimalRelationalEval(s:BinaryRelationalOp op, decimal left, decimal right) returns boolean {
     match op {
         "<" => {
             return left < right;
