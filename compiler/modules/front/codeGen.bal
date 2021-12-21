@@ -1113,48 +1113,51 @@ type BinaryLiftResult record {|
 |};
 
 function nilLift(CodeGenContext cx, bir:Operand[] operands, bir:ArithmeticBinaryOp op, bir:BasicBlock bb, Position pos) returns LiftResult {
-    bir:Operand lhs = operands[0];
-    bir:Operand rhs = operands[1];
     bir:BasicBlock? nilBlock = ();
     bir:BasicBlock nextBlock = cx.createBasicBlock();
+    bir:BasicBlock currentBlock = bb;
+    bir:Operand[] newOperands = operands;
     // pr-todo: can this be const value?
-    if (lhs is bir:Register && t:containsNil(lhs.semType)) ||
-       (rhs is bir:Register && t:containsNil(rhs.semType)) {
-            nilBlock = cx.createBasicBlock();
-
-            bir:Register lhsIsNil = cx.createTmpRegister(t:BOOLEAN, pos);
-            if lhs is bir:Register {
-                bir:TypeTestInsn lhsNilTest = { operand: lhs, semType: t:NIL , result: lhsIsNil, negated: false, pos };
-                bb.insns.push(lhsNilTest);
+    boolean nullableOperand = false;
+    foreach int i in 0 ..< operands.length() {
+        bir:Operand operand = operands[i];
+        if operand is bir:Register && t:containsNil(operand.semType) {
+            if nullableOperand == true {
+                currentBlock = nextBlock;
+                nextBlock = cx.createBasicBlock();
             }
-            else {
-                bir:AssignInsn insn = { pos, result: lhsIsNil, operand: false };
-                bb.insns.push(insn);
+            nullableOperand = true;
+            if nilBlock == () {
+                nilBlock = cx.createBasicBlock();
             }
+            bir:Register result = cx.createTmpRegister(t:BOOLEAN);
+            bir:TypeTestInsn operandTypeTest = { operand, semType: t:NIL , result, negated: false, pos };
+            currentBlock.insns.push(operandTypeTest);
 
-            bir:Register rhsIsNil = cx.createTmpRegister(t:BOOLEAN, pos);
-            if rhs is bir:Register {
-                bir:TypeTestInsn rhsNilTest = { operand: rhs, semType: t:NIL , result: rhsIsNil, negated: false, pos };
-                bb.insns.push(rhsNilTest);
-            }
-            else {
-                bir:AssignInsn insn = { pos, result: rhsIsNil, operand: false };
-                bb.insns.push(insn);
-            }
-
-            bir:Register isNil = cx.createTmpRegister(t:BOOLEAN, pos);
-            bir:IntBitwiseBinaryInsn isNilInsn = { op: "|" , pos, operands: [lhsIsNil, rhsIsNil], result: isNil };
-            bb.insns.push(isNilInsn);
-
-            // pr-todo: add cond narrowing here
-            bir:CondBranchInsn branch = { operand: isNil, pos, ifTrue: (<bir:BasicBlock>nilBlock).label, ifFalse: nextBlock.label };
-            bb.insns.push(branch);
+            bir:InsnRef testInsnRef = bir:lastInsnRef(currentBlock);
+            t:SemType baseType = t:diff(operand.semType, t:NIL);
+            bir:Register newOperand = cx.createTmpRegister(baseType);
+            bir:CondNarrowInsn narrowToBase = {
+                result: newOperand,
+                operand,
+                basis: { insn: testInsnRef, result: false },
+                pos
+            };
+            currentBlock.insns.push(narrowToBase);
+            newOperands[i] = newOperand;
+            bir:CondBranchInsn branch = { operand: result, pos, ifTrue: (<bir:BasicBlock>nilBlock).label, ifFalse: nextBlock.label };
+            currentBlock.insns.push(branch);
+        }
     }
-    else {
+    if nullableOperand == false {
         bir:BranchInsn branch = { pos, dest: nextBlock.label };
         bb.insns.push(branch);
     }
-    return { operands, op, nextBlock, nilBlock };
+    if nilBlock != () {
+        bir:BranchInsn branch = { pos, dest: nextBlock.label };
+        nilBlock.insns.push(branch);
+    }
+    return { operands: newOperands, op, nextBlock, nilBlock };
 }
 
 function binaryNilLift(CodeGenContext cx, bir:Operand left, bir:Operand right, bir:ArithmeticBinaryOp operand, bir:BasicBlock bb, Position pos) returns BinaryLiftResult {
