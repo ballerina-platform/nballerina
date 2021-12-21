@@ -33,7 +33,7 @@ DECL_PANIC_MESSAGE(PANIC_LIST_STORE, "bad list store");
 DECL_PANIC_MESSAGE(PANIC_MAPPING_STORE, "bad mapping store");
 DECL_PANIC_MESSAGE(PANIC_NO_FILLER, "list has no filler");
 DECL_PANIC_MESSAGE(PANIC_INTERNAL_ERROR, "internal error");
-DECL_PANIC_MESSAGE(PANIC_INVALID_DECIMAL, "invalid decimal");
+DECL_PANIC_MESSAGE(PANIC_INVALID_DECIMAL, "not a valid decimal");
 
 #define PANIC_MESSAGE_ENTRY(code) [code] = (struct MediumString *)&(panic_msg_##code)
 
