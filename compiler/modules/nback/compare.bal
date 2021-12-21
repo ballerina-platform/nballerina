@@ -110,6 +110,15 @@ final RuntimeFunction arrayExactIntCompareFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction arrayDecimalCompareFunction = {
+    name: "array_decimal_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
 type TaggedCompareFunction readonly & record {|
     t:UniformTypeCode utCode;
     RuntimeFunction compareFunction;
@@ -121,7 +130,7 @@ final readonly & table<TaggedCompareFunction> key(utCode) compareFunctions = tab
     { utCode: t:UT_FLOAT, compareFunction: floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
     { utCode: t:UT_BOOLEAN, compareFunction: booleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
     { utCode: t:UT_STRING, compareFunction: stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction },
-    { utCode: t:UT_DECIMAL, compareFunction: decimalCompareFunction, arrayCompareFunction: arrayIntCompareFunction }
+    { utCode: t:UT_DECIMAL, compareFunction: decimalCompareFunction, arrayCompareFunction: arrayDecimalCompareFunction }
 ];
 
 function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) returns BuildError? {
