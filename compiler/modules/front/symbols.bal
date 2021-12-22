@@ -108,7 +108,7 @@ function lookupPrefix(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefi
 }
 
 function lookupImportedConst(ModuleSymbols mod, s:ModuleLevelDefn modDefn, string prefix, string varName) returns t:SingleValue|err:Semantic {
-    ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix, modDefn.startPos)).defns[varName];
+    ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix, modDefn.namePos)).defns[varName];
     if defn is s:ResolvedConst {
         return defn[1];
     }

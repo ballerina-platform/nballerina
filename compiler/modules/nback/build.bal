@@ -113,6 +113,15 @@ final RuntimeFunction taggedClearExactPtrFunction = {
     attrs: ["readnone"]
 };
 
+final RuntimeFunction decimalConstFunction = {
+    name: "decimal_const",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_DECIMAL_CONST]
+    },
+    attrs: ["readonly"]
+};
+
 final bir:ModuleId runtimeModule = {
     org: "ballerinai",
     names: ["runtime"]
@@ -150,6 +159,10 @@ function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value v
 
 function buildStoreTagged(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
     return builder.store(buildUntagged(builder, scaffold, <llvm:PointerValue>value, scaffold.getRepr(reg)), scaffold.address(reg));
+}
+
+function buildStoreDecimal(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(value, scaffold.address(reg));
 }
 
 function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue value, Repr targetRepr) returns llvm:Value {
@@ -296,6 +309,9 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else if operand is float {
         return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, operand)];
     }
+    else if operand is decimal {
+        return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, operand)];
+    }
     else if operand == () {
         return [REPR_NIL, buildConstNil()];
     }
@@ -311,6 +327,10 @@ function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) r
 
 function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) returns [Repr, llvm:Value] {
     return [scaffold.getRepr(reg), builder.load(scaffold.address(reg))];
+}
+
+function buildConstDecimal(llvm:Builder builder, Scaffold scaffold, decimal decimalValue) returns llvm:Value {
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalConstFunction), [scaffold.getDecimal(decimalValue)]);
 }
 
 function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {

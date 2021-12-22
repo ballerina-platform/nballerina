@@ -189,6 +189,8 @@ public class Context {
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
+    SemType? anydataMemo = ();
+    SemType? jsonMemo = ();
 
     function init(Env env) {
         self.env = env;
@@ -742,6 +744,10 @@ public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean {
     return isEmpty(cx, diff(t1, t2));
 }
 
+public function includesSome(SemType t1, SemType t2) returns boolean {
+    return !isNever(intersect(t1, t2));
+}
+
 public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolean {
     int bits;
     if t1 is UniformTypeBitSet {
@@ -1006,7 +1012,7 @@ public function split(SemType t) returns SplitSemType  {
     }
 }
 
-public type SingleValue ()|boolean|int|float|string;
+public type SingleValue ()|boolean|int|float|decimal|string;
 
 // JBUG #34320 parentheses should not be necessary
 public type OptSingleValue (readonly & record {|
@@ -1045,7 +1051,7 @@ public function singleShape(SemType t) returns OptSingleValue {
     return ();
 }
 
-public function singleton(string|int|float|boolean|decimal|() v) returns SemType {
+public function singleton(SingleValue v) returns SemType {
     if v == () {
         return NIL;
     }
@@ -1077,7 +1083,7 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
-public function constUniformTypeCode(string|int|float|boolean|decimal|() v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL {
+public function constUniformTypeCode(SingleValue v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL {
     if v == () {
         return UT_NIL;
     }
@@ -1098,11 +1104,11 @@ public function constUniformTypeCode(string|int|float|boolean|decimal|() v) retu
     }
 }
 
-public function constBasicType(string|int|float|boolean|decimal|() v) returns UniformTypeBitSet {
+public function constBasicType(SingleValue v) returns UniformTypeBitSet {
     return  uniformType(constUniformTypeCode(v));
 }
 
-public function containsConst(SemType t, string|int|float|boolean|decimal|() v) returns boolean {
+public function containsConst(SemType t, SingleValue v) returns boolean {
     if v == () {
         return containsNil(t);
     }
@@ -1199,23 +1205,36 @@ public function typeContext(Env env) returns Context {
     return new(env);
 }
 
-public function createJson(Env env) returns SemType {
+public function createJson(Context context) returns SemType {
+    SemType? memo = context.jsonMemo;
+    if memo != () {
+        return memo;
+    }
+    Env env = context.env;
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, rest = j);
     _ = mapDef.define(env, [], j);
+    context.jsonMemo = j;
     return j;
 }
 
 // This is an approximation, because we don't have table subtypes yet.
 // SUBSET table subtypes
-public function createAnydata(Env env) returns SemType {
+public function createAnydata(Context context) returns SemType {
+    SemType? memo = context.anydataMemo;
+    Env env = context.env;
+    if memo != () {
+        return memo;
+    }
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
-    SemType ad = union(union(SIMPLE_OR_STRING, union(XML, TABLE)), union(listDef.getSemType(env), mapDef.getSemType(env)));
+    SemType tableTy = tableContaining(mapDef.getSemType(env));
+    SemType ad = union(union(SIMPLE_OR_STRING, union(XML, tableTy)), union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, rest = ad);
     _ = mapDef.define(env, [], ad);
+    context.anydataMemo = ad;
     return ad;
 }
 

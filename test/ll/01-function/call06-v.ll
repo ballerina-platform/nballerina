@@ -97,7 +97,7 @@ define internal void @_B_baz(i64 %0) !dbg !11 {
 !11 = distinct !DISubprogram(name:"baz", linkageName:"_B_baz", scope: !1, file: !1, line: 20, type: !3, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !12)
 !12 = !{}
 !13 = !DILocation(line: 0, column: 0, scope: !5)
-!14 = !DILocation(line: 5, column: 7, scope: !5)
+!14 = !DILocation(line: 5, column: 8, scope: !5)
 !15 = !DILocation(line: 6, column: 8, scope: !5)
 !16 = !DILocation(line: 8, column: 8, scope: !5)
 !17 = !DILocation(line: 0, column: 0, scope: !7)

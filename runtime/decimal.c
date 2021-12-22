@@ -114,6 +114,7 @@ static TaggedPtrPanicCode finish(decQuad *dq, decContext *cx) {
         }
         else {
             // status & DEC_IEEE_754_Invalid_operation = true
+            // This is used in a case where a float operation would return NaN
             result.panicCode = PANIC_INVALID_DECIMAL;
         }
     }

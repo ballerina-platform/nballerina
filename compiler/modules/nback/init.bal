@@ -270,7 +270,7 @@ function addComplexTypeDefn(InitModuleContext cx, string symbol, t:ComplexSemTyp
     int someBits = 0;
     llvm:ConstValue[] llSubtypes = [];
     foreach var [code, subtype] in some {
-        if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO {
+        if code == t:UT_LIST_RO || code == t:UT_MAPPING_RO || code == t:UT_TABLE_RO || code == t:UT_TABLE_RW {
             // these cannot occur for now, so ignore them
             continue;
         }

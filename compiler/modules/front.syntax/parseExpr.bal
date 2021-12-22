@@ -259,23 +259,22 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     Position startPos = tok.currentStartPos();
     Position endPos = tok.currentEndPos();
     if t is [IDENTIFIER, string] {
-        Position namePos = tok.currentStartPos();
         string? prefix;
         string name;
         check tok.advance();
-        [prefix, name, namePos] = check parseOptQualIdentifier(tok, t[1], namePos);
+        [prefix, name] = check parseOptQualIdentifier(tok, t[1]);
         if tok.current() == "(" {
-            return finishFunctionCallExpr(tok, prefix, name, startPos, namePos);
+            return finishFunctionCallExpr(tok, prefix, name, startPos);
         }
         endPos = tok.previousEndPos();
-        return { startPos, endPos, prefix, name, namePos };
+        return { startPos, endPos, prefix, name, qNamePos: startPos };
     }
     else if t is [DECIMAL_NUMBER, string] {
         IntLiteralExpr expr = { startPos, endPos, base: 10, digits: t[1] };
         check tok.advance();
         return expr;
     }
-    else if t is [DECIMAL_FP_NUMBER, string, FLOAT_TYPE_SUFFIX|()] {
+    else if t is [DECIMAL_FP_NUMBER, string, FpTypeSuffix?] {
         FpLiteralExpr expr = { startPos, endPos, untypedLiteral: t[1], typeSuffix: t[2] };
         check tok.advance();
         return expr;
@@ -340,10 +339,10 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
     else if t == "." {
         opPos = tok.currentStartPos();
         check tok.advance();
-        Position namePos = tok.currentStartPos();
+        Position qnamePos = tok.currentStartPos();
         string name = check tok.expectIdentifier();
         if tok.current() == "(" {
-            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, namePos, opPos), startPos);
+            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, qnamePos, opPos), startPos);
         }
         else {
             Position endPos = tok.previousEndPos();
@@ -365,12 +364,12 @@ function finishMethodCallExpr(Tokenizer tok, Expr target, string methodName, Pos
     return { startPos, endPos, opPos, namePos, openParenPos, target, methodName, args };
 }
 
-function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position startPos, Position namePos) returns FunctionCallExpr|err:Syntax {
+function finishFunctionCallExpr(Tokenizer tok, string? prefix, string funcName, Position startPos) returns FunctionCallExpr|err:Syntax {
     Position openParenPos = tok.currentStartPos();
     check tok.advance();
     Expr[] args = check parseExprList(tok, ")");
     Position endPos = tok.previousEndPos();
-    return { startPos, endPos, openParenPos, namePos, funcName, args, prefix };
+    return { startPos, endPos, openParenPos, qNamePos: startPos, funcName, args, prefix };
 }
 
 function parseExprList(Tokenizer tok, "]"|")" terminator) returns Expr[]|err:Syntax {
@@ -453,14 +452,13 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     }
     match t {
         [IDENTIFIER, var identifier] => {
-            Position identifierPos = tok.currentStartPos();
             check tok.advance();
-            var [prefix, name, namePos] = check parseOptQualIdentifier(tok, identifier, identifierPos);
+            var [prefix, name] = check parseOptQualIdentifier(tok, identifier);
             Position endPos = tok.currentEndPos();
             if prefix != () {
                 endPos = tok.previousEndPos();
             }
-            return { startPos, endPos, prefix, name, namePos };
+            return { startPos, endPos, prefix, name, qNamePos: startPos };
         }
         [STRING_LITERAL, var value] => {
             Position endPos = tok.currentEndPos();
@@ -493,14 +491,13 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     return parseError(tok);
 }
 
-function parseOptQualIdentifier(Tokenizer tok, string identifier, Position identifierPos) returns [string?, string, Position]|err:Syntax {
+function parseOptQualIdentifier(Tokenizer tok, string identifier) returns [string?, string]|err:Syntax {
     if tok.currentIsNoSpaceColon() {
         check tok.advance();
-        Position localNamePos = tok.currentStartPos();
-        return [identifier, check tok.expectIdentifier(), localNamePos];
+        return [identifier, check tok.expectIdentifier()];
     }
     else {
-        return [(), identifier, identifierPos];
+        return [(), identifier];
     }
 }
 

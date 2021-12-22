@@ -73,6 +73,7 @@ public const WILDCARD = ();
 public type StmtBlock record {|
     *PositionFields;
     Stmt[] stmts;
+    Position closeBracePos;
 |};
 
 public type CallStmt record {|
@@ -249,7 +250,7 @@ public type FunctionCallExpr record {|
     Position startPos;
     Position endPos;
     Position openParenPos;
-    Position namePos;
+    Position qNamePos;
     string? prefix = ();
     string funcName;
     Expr[] args;
@@ -366,7 +367,7 @@ public type VarRefExpr record {|
     *PositionFields;
     string? prefix = ();
     string name;
-    Position namePos;
+    Position qNamePos;
 |};
 
 public type TypeCastExpr record {|
@@ -545,7 +546,7 @@ public type TypeDescRef record {|
     *PositionFields;
     string? prefix = ();
     string typeName;
-    Position pos;
+    Position qNamePos;
 |};
 
 public type SingletonTypeDesc record {|
@@ -553,9 +554,9 @@ public type SingletonTypeDesc record {|
     (string|float|int|boolean|decimal) value;
 |};
 
-public type SubsetBuiltinTypeName "any"|"boolean"|"int"|"float"|"string"|"error";
+public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"int"|"decimal"|"float"|"string"|"error";
 
-public type BuiltinTypeName SubsetBuiltinTypeName|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
+public type BuiltinTypeName SubsetBuiltinTypeName|"byte"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
 
 public type BuiltinTypeDesc readonly & record {|
     *PositionFields;

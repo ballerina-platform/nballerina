@@ -160,8 +160,10 @@ public enum InsnName {
     INSN_INT_BITWISE_BINARY,
     INSN_FLOAT_ARITHMETIC_BINARY,
     INSN_FLOAT_NEGATE,
+    INSN_DECIMAL_ARITHMETIC_BINARY,
     INSN_CONVERT_TO_INT,
     INSN_CONVERT_TO_FLOAT,
+    INSN_DECIMAL_NEGATE,
     INSN_COMPARE,
     INSN_EQUALITY,
     INSN_BOOLEAN_NOT,
@@ -201,6 +203,7 @@ public type InsnBase record {
 public type Insn 
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |FloatArithmeticBinaryInsn|FloatNegateInsn
+    |DecimalArithmeticBinaryInsn|DecimalNegateInsn
     |ConvertToIntInsn|ConvertToFloatInsn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
@@ -214,6 +217,7 @@ public type ConstOperand t:SingleValue;
 public type StringOperand string|Register;
 public type IntOperand int|Register;
 public type FloatOperand float|Register;
+public type DecimalOperand decimal|Register;
 public type BooleanOperand boolean|Register;
 public type FunctionOperand FunctionRef|Register;
 
@@ -275,6 +279,16 @@ public type FloatArithmeticBinaryInsn readonly & record {|
     FloatOperand[2] operands;
 |};
 
+// This panics for overflows, invalid decimals, divide by zero.
+// So this is a PPI.
+public type DecimalArithmeticBinaryInsn readonly & record {|
+    *InsnBase;
+    INSN_DECIMAL_ARITHMETIC_BINARY name = INSN_DECIMAL_ARITHMETIC_BINARY;
+    ArithmeticBinaryOp op;
+    Register result;
+    DecimalOperand[2] operands;
+|};
+
 public type FloatNegateInsn readonly & record {|
     *InsnBase;
     INSN_FLOAT_NEGATE name = INSN_FLOAT_NEGATE;
@@ -282,6 +296,12 @@ public type FloatNegateInsn readonly & record {|
     Register operand;
 |};
 
+public type DecimalNegateInsn readonly & record {|
+    *InsnBase;
+    INSN_DECIMAL_NEGATE name = INSN_DECIMAL_NEGATE;
+    Register result;
+    Register operand;
+|};
 
 # If the operand is a float or decimal, then convert it to an int.
 # Otherwise leave the operand unchanged.
@@ -584,6 +604,7 @@ final readonly & map<true> PPI_INSNS = {
     // [INSN_CALL]: true,
     [INSN_PANIC]: true,
     [INSN_INT_ARITHMETIC_BINARY]: true,
+    [INSN_DECIMAL_ARITHMETIC_BINARY]: true,
     [INSN_CONVERT_TO_INT]: true,
     [INSN_TYPE_CAST]: true,
     [INSN_LIST_GET]: true,

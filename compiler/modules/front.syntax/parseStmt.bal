@@ -9,8 +9,9 @@ function parseStmtBlock(Tokenizer tok) returns StmtBlock|err:Syntax {
             stmts.push(check parseStmt(tok));
         }
         Position endPos = tok.currentEndPos();
+        Position closeBracePos = tok.currentStartPos();
         check tok.advance();
-        return { startPos, endPos, stmts };
+        return { startPos, endPos, stmts, closeBracePos };
     }
     return parseError(tok, "unhandled condition in statement block");
 }
@@ -91,7 +92,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             // JBUG #33341 cast
             return finishCheckingCallStmt(tok, <CheckingKeyword>cur, startPos);
         }
-        var td if td is SubsetBuiltinTypeName|"map"|"record" => {
+        var td if td is SubsetBuiltinTypeName|"anydata"|"map"|"record" => {
             return parseVarDeclStmt(tok, startPos);
         }
         "null" => {
@@ -124,20 +125,20 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 
 
 // statement must not start with a type desc.
-function finishIdentifierStmt(Tokenizer tok, string name, Position startPos, Position namePos) returns Stmt|err:Syntax {
+function finishIdentifierStmt(Tokenizer tok, string name, Position startPos, Position qNamePos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
     if cur == "=" {
-        VarRefExpr lValue = { startPos, endPos, name, namePos };
+        VarRefExpr lValue = { startPos, endPos, name, qNamePos };
         return finishAssignStmt(tok, lValue, startPos);
     }
     else if cur is CompoundAssignOp {
         Position opPos = tok.currentStartPos();
-        VarRefExpr lValue = { startPos, endPos, name, namePos };
+        VarRefExpr lValue = { startPos, endPos, name, qNamePos };
         return parseCompoundAssignStmt(tok, lValue, cur, startPos, opPos);
     }
     else if cur == "[" {
-        VarRefExpr varRef = { startPos, endPos, name, namePos };
+        VarRefExpr varRef = { startPos, endPos, name, qNamePos };
         Position bracketPos = tok.currentStartPos();
         check tok.advance();
         // type-desc case is handled before
@@ -163,22 +164,21 @@ function finishIdentifierStmt(Tokenizer tok, string name, Position startPos, Pos
     }
     else if tok.currentIsNoSpaceColon() {
         check tok.advance();
-        Position localNamePos = tok.currentStartPos();
-        return finishOptQualIdentifierStmt(tok, name, check tok.expectIdentifier(), startPos, localNamePos);
+        return finishOptQualIdentifierStmt(tok, name, check tok.expectIdentifier(), startPos);
     }
-    return finishOptQualIdentifierStmt(tok, (), name, startPos, startPos);
+    return finishOptQualIdentifierStmt(tok, (), name, startPos);
 }
 
-function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name, Position startPos, Position namePos) returns Stmt|err:Syntax {
+function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name, Position startPos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
     Position endPos = tok.previousEndPos();
     if cur == "(" {
-        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, name, startPos, namePos);
+        FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, name, startPos);
         return finishCallStmt(tok, expr, startPos);
     }
     else if cur == "." {
         Position opPos = tok.currentStartPos();
-        VarRefExpr varRef = { startPos, endPos:tok.previousEndPos(), name, namePos, prefix };
+        VarRefExpr varRef = { startPos, endPos: tok.previousEndPos(), name, qNamePos: startPos, prefix };
         check tok.advance();
         Position localNamePos = tok.currentStartPos();
         string localName = check tok.expectIdentifier();
@@ -187,7 +187,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name,
         }
         else {
             endPos = tok.previousEndPos();
-            VarRefExpr container = { startPos, endPos, name, namePos };
+            VarRefExpr container = { startPos, endPos, name, qNamePos: startPos };
             FieldAccessLExpr fieldAccessLValue = { startPos, endPos, fieldName: localName, container, opPos };
             Token? t = tok.current();
             while t == "." {
@@ -361,7 +361,8 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
             Position blockStartPos = elseIfStmt.ifTrue.startPos;
             StmtBlock? elseIfFalseBlock = elseIfStmt.ifFalse;
             Position blockEndPos = (elseIfFalseBlock ?: elseIfStmt.ifTrue).endPos;
-            ifFalse = { startPos: blockStartPos, endPos: blockEndPos, stmts: [elseIfStmt] };
+            Position closeBracePos = (elseIfFalseBlock ?: elseIfStmt.ifTrue).closeBracePos;
+            ifFalse = { startPos: blockStartPos, endPos: blockEndPos, stmts: [elseIfStmt], closeBracePos };
         }
         // if exp1 { } else { }
         else if tok.current() == "{" {
@@ -439,5 +440,5 @@ function parseMatchPattern(Tokenizer tok) returns MatchPattern|err:Syntax {
     }
     Position pos = tok.currentStartPos();
     SimpleConstExpr expr = check parseSimpleConstExpr(tok);
-    return { expr, pos};
+    return { expr, pos };
 }

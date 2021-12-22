@@ -229,7 +229,7 @@ function simpleArrayMemberTypeTest() {
     testArrayMemberTypeOk(cx, INT);
     testArrayMemberTypeOk(cx, TOP);
     testArrayMemberTypeOk(cx, BOOLEAN);
-    testArrayMemberTypeFail(cx, createJson(cx.env));
+    testArrayMemberTypeFail(cx, createJson(cx));
     testArrayMemberTypeFail(cx, intWidthUnsigned(8));
     test:assertEquals(simpleArrayMemberType(typeContext(new Env()), INT), ());
 }

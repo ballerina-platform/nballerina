@@ -6,6 +6,8 @@ import wso2/nballerina.comm.diagnostic as d;
 
 type Position d:Position;
 
+type Range d:Range;
+
 type Environment record {|
     Binding? bindings;
     // A list of registers that were narrowed but have been assigned to
@@ -129,15 +131,19 @@ class CodeGenContext {
         return bir:createBasicBlock(self.code, name);
     }
 
-    function semanticErr(d:Message msg, Position pos, error? cause = ()) returns err:Semantic {
+    function qNameRange(Position startPos) returns Range {
+        return self.file.qNameRange(startPos);
+    }
+
+    function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
         return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
     }
 
-    function unimplementedErr(d:Message msg, Position pos, error? cause = ()) returns err:Unimplemented {
+    function unimplementedErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Unimplemented {
         return err:unimplemented(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
     }
 
-    private function location(Position pos) returns d:Location {
+    private function location(Position|Range pos) returns d:Location {
         return d:location(self.file, pos);
     }
 
@@ -245,7 +251,7 @@ class CodeGenFoldContext {
         }
     }
 
-    function semanticErr(d:Message msg, Position pos, error? cause = ()) returns err:Semantic {
+    function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
         return self.cx.semanticErr(msg, pos=pos, cause=cause);
     }
 
@@ -279,10 +285,10 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     }
     var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
     if endBlock != () {
-        bir:RetInsn ret = { operand: (), pos: defn.endPos };
+        bir:RetInsn ret = { operand: (), pos: defn.body.closeBracePos };
         endBlock.insns.push(ret);
     }
-    codeGenOnPanic(cx, defn.endPos);
+    codeGenOnPanic(cx, defn.body.closeBracePos);
     return cx.code;
 }
 
@@ -451,7 +457,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     else if stmt.body.length() == 0 {
         // this is `while false { }`
         // need to put something in loopHead
-        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.body.endPos };
+        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.body.closeBracePos };
         exitReachable = true;
     }
     else {
@@ -631,7 +637,8 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     else {
         bir:BasicBlock b = maybeCreateBasicBlock(cx, contBlock);
         contBlock = b;
-        bir:BranchInsn branch = { dest: b.label, pos: stmt.endPos };
+        Position endPos = stmt.clauses.length() > 0 ? (stmt.clauses[stmt.clauses.length()-1].block.closeBracePos) : stmt.startPos;
+        bir:BranchInsn branch = { dest: b.label, pos: endPos };
         testBlock.insns.push(branch);
     }
     return { block: contBlock, assignments };
@@ -708,7 +715,8 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
                 return { block: () };
             }
             contBlock = cx.createBasicBlock();
-            bir:BranchInsn branch = { dest: contBlock.label, pos: stmt.endPos };
+            Position endPos = (stmt.ifFalse ?: stmt.ifTrue).closeBracePos;
+            bir:BranchInsn branch = { dest: contBlock.label, pos: endPos };
             if ifContBlock != () {
                 ifContBlock.insns.push(branch);
             }
@@ -1074,8 +1082,12 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 result = cx.createTmpRegister(t:FLOAT, pos);
                 insn = <bir:FloatNegateInsn> { operand: <bir:Register>typed[1], result, pos };
             }
+            else if typed is ["decimal", bir:DecimalOperand] {
+                result = cx.createTmpRegister(t:DECIMAL, pos);
+                insn = <bir:DecimalNegateInsn> { operand: <bir:Register>typed[1], result, pos };
+            }
             else {
-                return cx.semanticErr(`operand of ${"-"} must be int or float`, pos);
+                return cx.semanticErr(`operand of ${"-"} must be int or float or decimal`, pos);
             }
             nextBlock.insns.push(insn);
             return { result, block: nextBlock };
@@ -1254,6 +1266,11 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
         bir:FloatArithmeticBinaryInsn insn = { op, pos, operands: pair[1], result };
         bb.insns.push(insn);
     }
+    else if pair is DecimalOperandPair {
+        result = cx.createTmpRegister(t:DECIMAL, pos);
+        bir:DecimalArithmeticBinaryInsn insn = { op, pos, operands: pair[1], result };
+        bb.insns.push(insn);
+    }    
     else if pair is StringOperandPair && op == "+" {
         result = cx.createTmpRegister(t:STRING, pos);
         bir:StringConcatInsn insn = { operands: pair[1], result, pos };
@@ -1445,7 +1462,7 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     t:SemType semType = check cx.resolveTypeDesc(td);
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
     // Constants should be resolved during constant folding
-    bir:Register reg = <bir:Register>operand;        
+    bir:Register reg = <bir:Register>operand;      
     t:SemType diff = t:roDiff(cx.mod.tc, reg.semType, semType);
     if t:isEmpty(cx.mod.tc, diff) {
         return { result: !negated, block: bb };
@@ -1567,10 +1584,10 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
     string? prefix = expr.prefix;
     bir:FunctionRef func;
     if prefix == () {
-        func =  check genLocalFunctionRef(cx, env, expr.funcName, expr.namePos);
+        func = check genLocalFunctionRef(cx, env, expr.funcName, expr.qNamePos);
     }
     else {
-        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.namePos);
+        func = check genImportedFunctionRef(cx, env, prefix, expr.funcName, expr.qNamePos);
     }
     check validArgumentCount(cx, func, expr.args.length(), expr.openParenPos);
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1587,9 +1604,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         func,
         result,
         args: args.cloneReadOnly(),
-        // expr.namePos is currently the start of the local name
-        // which is not really what is wanted, so we use startPos instead
-        pos: expr.startPos
+        pos: expr.qNamePos
     };
     curBlock.insns.push(call);
     return { result, block: curBlock };
@@ -1597,7 +1612,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
 
 function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MethodCallExpr expr) returns CodeGenError|RegExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, expr.target, ()));
-    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
+    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, { startPos: expr.namePos, endPos: expr.openParenPos });
     check validArgumentCount(cx, func, expr.args.length() + 1, expr.opPos);
 
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1654,7 +1669,7 @@ function genLocalFunctionRef(CodeGenContext cx, Environment env, string identifi
             msg = `${identifier} is not a function`;
         }
         return cx.semanticErr(msg, pos);
-    }  
+    }
 }
 
 function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefix, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
@@ -1669,26 +1684,26 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
     }
     else if defn == () {
         if mod.partial {
-            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, pos);
+            return cx.unimplementedErr(`unsupported library function ${prefix + ":" + identifier}`, cx.qNameRange(pos));
         }
         else {
-            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, pos);
+            return cx.semanticErr(`no public definition of ${prefix + ":" + identifier}`, cx.qNameRange(pos));
         }
     }
     else {
-        return cx.semanticErr("reference to non-function where function required", pos);
+        return cx.semanticErr("reference to non-function where function required", cx.qNameRange(pos));
     }
 }
 
 type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
 
-function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName, Position pos) returns bir:FunctionRef|CodeGenError {
+function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName, Range nameRange) returns bir:FunctionRef|CodeGenError {
     TypedOperand? t = typedOperand(target);
     if t != () && t[0] is LangLibModuleName {
         string moduleName = t[0];
         bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature == () {
-            return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, pos);
+            return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, nameRange);
         }
         else {
             bir:ExternalSymbol symbol = {
@@ -1702,7 +1717,7 @@ function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string met
             return { symbol, signature, erasedSignature }; 
         }
     }
-    return cx.unimplementedErr(`cannot resolve ${methodName} to lang lib function`, pos);
+    return cx.unimplementedErr(`cannot resolve ${methodName} to lang lib function`, nameRange);
 }
 
 type Counter record {|
@@ -1827,10 +1842,11 @@ type NilOperand ()|bir:Register;
 type BooleanOperandPair readonly & ["boolean", [bir:BooleanOperand, bir:BooleanOperand]];
 type IntOperandPair readonly & ["int", [bir:IntOperand, bir:IntOperand]];
 type FloatOperandPair readonly & ["float", [bir:FloatOperand, bir:FloatOperand]];
+type DecimalOperandPair readonly & ["decimal", [bir:DecimalOperand, bir:DecimalOperand]];
 type StringOperandPair readonly & ["string", [bir:StringOperand, bir:StringOperand]];
 type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 
-type TypedOperandPair BooleanOperandPair|IntOperandPair|FloatOperandPair|StringOperandPair|NilOperandPair;
+type TypedOperandPair BooleanOperandPair|IntOperandPair|DecimalOperandPair|FloatOperandPair|StringOperandPair|NilOperandPair;
 
 // XXX should use t:UT_* instead of strings here (like the ordering stuff)
 type TypedOperand readonly & (["array", bir:Register]
@@ -1838,6 +1854,7 @@ type TypedOperand readonly & (["array", bir:Register]
                               |["error", bir:Register]
                               |["string", bir:StringOperand]
                               |["float", bir:FloatOperand]
+                              |["decimal", bir:DecimalOperand]
                               |["int", bir:IntOperand]
                               |["boolean", bir:BooleanOperand]
                               |["nil", NilOperand]);
@@ -1850,6 +1867,9 @@ function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperand
     }
     if l is ["float", bir:FloatOperand] && r is ["float", bir:FloatOperand] {
         return ["float", [l[1], r[1]]];
+    }
+    if l is ["decimal", bir:DecimalOperand] && r is ["decimal", bir:DecimalOperand] {
+        return ["decimal", [l[1], r[1]]];
     }
     if l is ["string", bir:StringOperand] && r is ["string", bir:StringOperand] {
         return ["string", [l[1], r[1]]];
@@ -1877,6 +1897,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         else if t:isSubtypeSimple(operand.semType, t:FLOAT) {
             return ["float", operand];
         }
+        else if t:isSubtypeSimple(operand.semType, t:DECIMAL) {
+            return ["decimal", operand];
+        }
         else if t:isSubtypeSimple(operand.semType, t:STRING) {
             return ["string", operand];
         }
@@ -1898,6 +1921,9 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
     }
     else if operand is float {
         return ["float", operand];
+    }
+    else if operand is decimal {
+        return ["decimal", operand];
     }
     else if operand is boolean {
         return ["boolean", operand];

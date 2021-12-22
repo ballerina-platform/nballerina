@@ -33,6 +33,8 @@
     ["V", "expr", "100000000000000000000000000000.0"],
     ["V", "expr", "10.0e10000000"],
     ["V", "expr", "-1E1F", "-1E1f"],
+    ["V", "expr", "-1E1D", "-1E1d"],
+    ["V", "expr", "1E+12d", "1E+12d"],
 
     { "comment" : "literals string" },
     ["V", "expr", "\"what\""],
@@ -344,6 +346,9 @@
     ["V", "stmt", "a:b((j), k).x();", "a:b(j, k).x();"],
     ["V", "stmt", "a:b.m();"],
     ["V", "stmt", "error e = error(\"\");"],
+    ["V", "stmt", "decimal d = 2;"],
+    ["V", "stmt", "decimal d = 2d;"],
+    ["V", "stmt", "decimal d = 1E+12d;"],
 
     { "comment" : "statement method call" },
     { "comment" : "not semantically valid" },
