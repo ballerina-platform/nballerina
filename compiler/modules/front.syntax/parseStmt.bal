@@ -434,11 +434,11 @@ function parseMatchPatternList(Tokenizer tok) returns MatchPattern[]|err:Syntax 
 
 function parseMatchPattern(Tokenizer tok) returns MatchPattern|err:Syntax {
     Token? cur = tok.current();
-    if cur is WildcardMatchPattern {
+    if cur is WildcardMatchPatternContent {
+        Position startPos = tok.currentStartPos();
+        Position endPos = tok.currentEndPos();
         check tok.advance();
-        return cur;
+        return { startPos, endPos };
     }
-    Position pos = tok.currentStartPos();
-    SimpleConstExpr expr = check parseSimpleConstExpr(tok);
-    return { expr, pos };
+    return check parseSimpleConstExpr(tok);
 }

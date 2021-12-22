@@ -178,11 +178,11 @@ function stmtToWords(Word[] w, Stmt stmt) {
                 else {
                     w.push("|");
                 }
-                if pattern is string {
-                    w.push(pattern);
+                if pattern is WildcardMatchPattern {
+                    w.push("_");
                 }
                 else {
-                    exprToWords(w, pattern.expr);
+                    exprToWords(w, pattern);
                 }
             }
             w.push("=>");
