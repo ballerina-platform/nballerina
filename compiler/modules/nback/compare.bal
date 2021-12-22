@@ -156,6 +156,9 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
                 if isOperandIntSubtypeArray(tc, lhs) && isOperandIntSubtypeArray(tc, rhs) {
                     buildCompareSpecializedIntList(builder, scaffold, insn, lhsValue, rhsValue);
                 }
+                else if isOperandDecimalSubtypeArray(tc, lhs) && isOperandDecimalSubtypeArray(tc, rhs) {
+                    buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, arrayDecimalCompareFunction);
+                }
                 else {
                     buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, arrayGenericCompareFunction);
                 }
@@ -203,6 +206,10 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
 
 function isOperandIntSubtypeArray(t:Context tc, bir:Operand o) returns boolean {
     return o is bir:Register && t:isSubtypeSimple(t:listMemberType(tc, o.semType ,()), t:INT);
+}
+
+function isOperandDecimalSubtypeArray(t:Context tc, bir:Operand o) returns boolean {
+    return o is bir:Register && t:isSubtypeSimple(t:listMemberType(tc, o.semType ,()), t:DECIMAL);
 }
 
 final readonly & map<bir:OrderOp> flippedOrderOps = {
