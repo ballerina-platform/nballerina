@@ -17,3 +17,5 @@ int64_t _bal_int_compare(TaggedPtr lhs, TaggedPtr rhs);
 int64_t _bal_string_compare(TaggedPtr lhs, TaggedPtr rhs);
 
 void BAL_LANG_ARRAY_NAME(push)(TaggedPtr p, TaggedPtr val);
+
+int64_t _bal_decimal_compare(TaggedPtr lhs, TaggedPtr rhs);

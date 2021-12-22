@@ -420,3 +420,7 @@ CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs) {
 CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs) {
     return arrayCompare(lhs, rhs, &taggedBooleanCompare);
 }
+
+CompareResult READONLY _bal_array_decimal_compare(TaggedPtr lhs, TaggedPtr rhs) {
+    return arrayCompare(lhs, rhs, &taggedDecimalCompare);
+}
