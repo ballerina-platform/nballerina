@@ -294,6 +294,11 @@ typedef struct {
     bool overflow;
 } IntWithOverflow;
 
+typedef struct {
+    TaggedPtr ptr;
+    bool overflow;
+} TaggedWithOverflow;
+
 #define ALIGN_HEAP 8
 
 // Don't declare functions here if they are balrt_inline.c
@@ -381,6 +386,7 @@ extern CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr
 extern CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs);
 
 extern TaggedPtr READONLY _bal_convert_to_float(TaggedPtr tp);
+extern TaggedWithOverflow READONLY _bal_convert_to_int(TaggedPtr tp);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym

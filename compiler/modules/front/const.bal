@@ -494,7 +494,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
         t:UniformTypeBitSet? toNumType = t:singleNumericType(semType);
         var value = subExpr.value;
         if toNumType == t:INT {
-            if value is float {
+            if value is float || value is decimal {
                 int|error converted = trap <int>value;
                 if converted is error {
                     return cx.semanticErr(`cannot convert ${value} to int`, pos = expr.opPos);
