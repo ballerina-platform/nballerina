@@ -1099,12 +1099,9 @@ function codeGenExprForString(CodeGenContext cx, bir:BasicBlock bb, Environment 
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|ExprEffect {
     match expr {
         var { opPos: pos, arithmeticOp: op, left, right } => {
-            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
-            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
-            bir:BasicBlock? nilBlock;
-            { lhs: l, rhs: r, nextBlock, nilBlock } = codeGenBinaryNilLift(cx, l, r, nextBlock, pos);
             // We evaluate the operands here, so we can reuse the function for compound assignment.
-            return codeGenNilResult(cx, check codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, l, r), nilBlock, pos);
+            var { lhs, rhs, nextBlock, nilBlock } = check codeGenBinaryNilLift(cx, env, left, right, bb, pos);
+            return codeGenNilResult(cx, check codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, lhs, rhs), nilBlock, pos);
         }
         // Negation
         { opPos: var pos, op: "-",  operand: var o } => {
@@ -1142,14 +1139,12 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenCheckingExpr(cx, bb, env, checkingKeyword, operand, pos);
         }
         var { opPos: pos, bitwiseOp: op, left, right } => {
-            var { result: l, block: block1} = check codeGenExprForInt(cx, bb, env, left);
-            var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, right);
-            bir:Operand lhs;
-            bir:Operand rhs;
-            bir:BasicBlock? nilBlock;
-            { lhs, rhs, nextBlock, nilBlock } = codeGenBinaryNilLift(cx, l, r, nextBlock, pos);
+            var { lhs, rhs, nextBlock, nilBlock } = check codeGenBinaryNilLift(cx, env, left, right, bb, pos);
             // We evaluate the operands here, so we can reuse the function for compound assignment.
-            return codeGenNilResult(cx, check codeGenBitwiseBinaryExpr(cx, nextBlock, op, pos, <bir:IntOperand>lhs, <bir:IntOperand>rhs), nilBlock, pos);
+            if lhs is bir:IntOperand && rhs is bir:IntOperand {
+                return codeGenNilResult(cx, check codeGenBitwiseBinaryExpr(cx, nextBlock, op, pos, lhs, rhs), nilBlock, pos);
+            }
+            return cx.semanticErr("invalid operand types", pos);
         }
         var { opPos: pos, equalityOp: op, left, right } => {
             return codeGenEqualityExpr(cx, bb, env, op, pos, left, right);
@@ -1279,26 +1274,26 @@ type UnaryLiftResult record {|
     bir:BasicBlock? nilBlock = ();
 |};
 
-function codeGenBinaryNilLift(CodeGenContext cx, bir:Operand left, bir:Operand right, bir:BasicBlock bb, Position pos) returns BinaryLiftResult {
-    var { operands, nextBlock, nilBlock } = codeGenNilLift(cx, [left, right], bb, pos);
+function codeGenBinaryNilLift(CodeGenContext cx, Environment env, s:Expr left, s:Expr right, bir:BasicBlock bb, Position pos) returns BinaryLiftResult|CodeGenError {
+    var { operands, nextBlock, nilBlock } = check codeGenNilLift(cx, env, [left, right], bb, pos);
     return { lhs: operands[0], rhs: operands[1], nextBlock, nilBlock };
 }
 
-function codeGenUnaryLift(CodeGenContext cx, bir:Operand operand, bir:BasicBlock bb, Position pos) returns UnaryLiftResult {
-    var { operands, nextBlock, nilBlock } = codeGenNilLift(cx, [operand], bb, pos);
+function codeGenUnaryLift(CodeGenContext cx, Environment env, s:Expr operand, bir:BasicBlock bb, Position pos) returns UnaryLiftResult|CodeGenError {
+    var { operands, nextBlock, nilBlock } = check codeGenNilLift(cx, env, [operand], bb, pos);
     return { operand: operands[0], nextBlock, nilBlock };
 }
 
-function codeGenNilLift(CodeGenContext cx, bir:Operand[] operands, bir:BasicBlock bb, Position pos) returns LiftResult {
+function codeGenNilLift(CodeGenContext cx, Environment env, s:Expr[] operands, bir:BasicBlock bb, Position pos) returns LiftResult|CodeGenError {
     bir:BasicBlock? nilBlock = ();
     bir:BasicBlock nextBlock = bb;
-    bir:BasicBlock currentBlock;
-    bir:Operand[] newOperands = operands;
+    bir:BasicBlock currentBlock = bb;
+    bir:Operand[] newOperands = [];
     foreach int i in 0 ..< operands.length() {
-        bir:Operand operand = operands[i];
+        s:Expr operandExpr = operands[i];
+        var { result: operand, block } = check codeGenExpr(cx, currentBlock, env, operandExpr);
+        currentBlock = block;
         if operand == () || (operand is bir:Register && t:containsNil(operand.semType) && t:singleNumericType(operand.semType) != ()) {
-            currentBlock = nextBlock;
-            nextBlock = cx.createBasicBlock();
             if nilBlock == () {
                 nilBlock = cx.createBasicBlock();
             }
@@ -1322,9 +1317,15 @@ function codeGenNilLift(CodeGenContext cx, bir:Operand[] operands, bir:BasicBloc
                 };
                 currentBlock.insns.push(narrowToBase);
                 newOperands[i] = newOperand;
+                nextBlock = cx.createBasicBlock();
                 branchInsn = { operand: isNil, pos, ifTrue: (<bir:BasicBlock>nilBlock).label, ifFalse: nextBlock.label };
             }
             currentBlock.insns.push(branchInsn);
+            currentBlock = nextBlock;
+        }
+        else {
+            nextBlock = block;
+            newOperands[i] = operand;
         }
     }
     return { operands: newOperands, nextBlock, nilBlock };
