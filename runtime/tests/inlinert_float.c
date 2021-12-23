@@ -60,14 +60,14 @@ void testFloatExactEq() {
 }
 
 void testFloatToIntNoOverflow(double d, long l) {
-    struct FloatToIntResult r = _bal_float_to_int(d);
-    assert(!r.overflowed);
+    IntWithOverflow r = _bal_float_to_int(d);
+    assert(!r.overflow);
     assert(r.value == l);
 }
 
 void testFloatToIntOverflow(double d) {
-    struct FloatToIntResult r = _bal_float_to_int(d);
-    assert(r.overflowed);
+    IntWithOverflow r = _bal_float_to_int(d);
+    assert(r.overflow);
 }
 
 void testFloatsToIntConvert() {
