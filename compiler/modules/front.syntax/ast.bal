@@ -133,10 +133,10 @@ public type MatchClause record {|
 
 public type MatchPattern SimpleConstExpr|WildcardMatchPattern;
 
-const WildcardMatchPatternContent = "_";
+const WILDCARD_MATCH_PATTERN = "_";
 public type WildcardMatchPattern record {|
     *PositionFields;
-    WildcardMatchPatternContent content = WildcardMatchPatternContent;
+    WILDCARD_MATCH_PATTERN pattern = WILDCARD_MATCH_PATTERN;
 |};
 
 public type WhileStmt record {|
