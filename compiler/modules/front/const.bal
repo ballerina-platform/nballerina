@@ -442,6 +442,14 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
                 value = <float>value;
             }
         }
+        else if toNumType == t:DECIMAL {
+            if value is int {
+                value = <decimal>value;
+            }
+            else if value is float {
+                value = check convertFloatToDecimalEval(cx, expr.opPos, value);
+            }
+        }
         if !t:containsConst(semType, value) {
             return cx.semanticErr(`type cast will always fail`, pos=expr.opPos);
         }
