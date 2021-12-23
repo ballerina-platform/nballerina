@@ -131,13 +131,12 @@ public type MatchClause record {|
     Position opPos;
 |};
 
-public type MatchPattern ConstPattern|WildcardMatchPattern;
+public type MatchPattern SimpleConstExpr|WildcardMatchPattern;
 
-const WildcardMatchPattern = "_";
-
-public type ConstPattern record {|
-    SimpleConstExpr expr;
-    Position pos;
+const WildcardMatchPatternContent = "_";
+public type WildcardMatchPattern record {|
+    *PositionFields;
+    WildcardMatchPatternContent content = WildcardMatchPatternContent;
 |};
 
 public type WhileStmt record {|

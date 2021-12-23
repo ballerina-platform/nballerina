@@ -122,8 +122,8 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
         if stmt is MatchStmt {
             foreach var clause in stmt.clauses {
                 foreach var matchPattern in clause.patterns {
-                    if matchPattern is ConstPattern {
-                        check validateExpressionPos(matchPattern.expr, tok, stmt.startPos, stmt.endPos);
+                    if matchPattern is SimpleConstExpr {
+                        check validateExpressionPos(matchPattern, tok, stmt.startPos, stmt.endPos);
                     }
                 }
                 check validateMatchClausePos(clause, tok, stmt.startPos, stmt.endPos);

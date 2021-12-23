@@ -535,19 +535,18 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         clauseBlocks[i] = cx.createBasicBlock("clause." + i.toString());
         t:SemType clausePatternUnion = t:NEVER;
         foreach var pattern in clause.patterns {
-            if pattern is s:ConstPattern {
+            if pattern is s:SimpleConstExpr {
                 if wildcardClauseIndex != () && i > wildcardClauseIndex {
-                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.pos);
+                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.startPos);
                 }
-                s:Expr patternExpr = pattern.expr;
-                s:ConstValueExpr cv = <s:ConstValueExpr> check cx.foldExpr(env, patternExpr, matchedType);
+                s:ConstValueExpr cv = <s:ConstValueExpr> check cx.foldExpr(env, pattern, matchedType);
                 ConstMatchValue mv = { value: cv.value, clauseIndex: i, pos: clause.opPos };
                 if constMatchValues.hasKey(mv.value) {
-                    return cx.semanticErr("duplicate const match pattern", pos=pattern.pos);
+                    return cx.semanticErr("duplicate const match pattern", pos=pattern.startPos);
                 }
                 constMatchValues.add(mv);    
                 if !t:containsConst(matchedType, cv.value) {
-                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.pos);
+                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.startPos);
                 }
                 clausePatternUnion = t:union(clausePatternUnion, t:singleton(mv.value));
             }
