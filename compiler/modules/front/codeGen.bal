@@ -1302,7 +1302,7 @@ function codeGenNilLift(CodeGenContext cx, Environment env, s:Expr[] operands, b
         s:Expr operandExpr = operands[i];
         var { result: operand, block } = check codeGenExpr(cx, currentBlock, env, operandExpr);
         currentBlock = block;
-        if operand is bir:Register && t:containsNil(operand.semType) && t:singleNumericType(operand.semType) != () {
+        if operand is bir:Register && t:containsNil(operand.semType) {
             if ifNilBlock == () {
                 ifNilBlock = cx.createBasicBlock();
             }
