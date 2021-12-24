@@ -1295,21 +1295,22 @@ function codeGenUnaryNilLift(CodeGenContext cx, Environment env, s:Expr operand,
 
 function codeGenNilLift(CodeGenContext cx, Environment env, s:Expr[] operands, bir:BasicBlock bb, Position pos) returns NilLiftResult|CodeGenError {
     bir:BasicBlock? ifNilBlock = ();
-    bir:BasicBlock nextBlock;
     bir:BasicBlock currentBlock = bb;
     bir:Operand[] newOperands = [];
-    foreach int i in 0 ..< operands.length() {
-        s:Expr operandExpr = operands[i];
+    foreach s:Expr operandExpr in operands {
         var { result: operand, block } = check codeGenExpr(cx, currentBlock, env, operandExpr);
         currentBlock = block;
+        newOperands.push(operand);
+    }
+    bir:BasicBlock nextBlock = currentBlock;
+    foreach int i in 0 ..< newOperands.length() {
+        bir:Operand operand = newOperands[i];
         if operand is bir:Register && t:containsNil(operand.semType) {
-            if ifNilBlock == () {
-                ifNilBlock = cx.createBasicBlock();
-            }
             bir:Register isNil = cx.createTmpRegister(t:BOOLEAN);
             bir:TypeTestInsn operandTypeTest = { operand, semType: t:NIL , result: isNil, negated: false, pos };
             currentBlock.insns.push(operandTypeTest);
 
+            nextBlock = cx.createBasicBlock();
             bir:InsnRef testInsnRef = bir:lastInsnRef(currentBlock);
             t:SemType baseType = t:diff(operand.semType, t:NIL);
             bir:Register newOperand = cx.createTmpRegister(baseType);
@@ -1319,16 +1320,14 @@ function codeGenNilLift(CodeGenContext cx, Environment env, s:Expr[] operands, b
                 basis: { insn: testInsnRef, result: false },
                 pos
             };
-            currentBlock.insns.push(narrowToBase);
+            nextBlock.insns.push(narrowToBase);
             newOperands[i] = newOperand;
-            nextBlock = cx.createBasicBlock();
+            if ifNilBlock == () {
+                ifNilBlock = cx.createBasicBlock();
+            }
             bir:CondBranchInsn branchInsn = { operand: isNil, pos, ifTrue: (<bir:BasicBlock>ifNilBlock).label, ifFalse: nextBlock.label };
             currentBlock.insns.push(branchInsn);
             currentBlock = nextBlock;
-        }
-        else {
-            nextBlock = block;
-            newOperands[i] = operand;
         }
     }
     return { operands: newOperands, nextBlock, ifNilBlock };
