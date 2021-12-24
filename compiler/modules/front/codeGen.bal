@@ -323,7 +323,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
     foreach var stmt in block.stmts {
         StmtEffect effect;
         if curBlock == () {
-            return cx.semanticErr("unreachable code", stmt.startPos);
+            return cx.semanticErr("unreachable code", s:range(stmt));
         }
         else if stmt is s:IfElseStmt {
             effect = check codeGenIfElseStmt(cx, curBlock, env, stmt);
@@ -509,10 +509,18 @@ function codeGenBreakContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, 
     return { block: () };
 }
 
-type ConstMatchValue record {|
-    readonly SimpleConst value;
-    readonly int clauseIndex;
-    readonly Position pos;
+type MatchTest EqualMatchTest|UniformTypeMatchTest;
+
+type EqualMatchTest record {|
+    int clauseIndex;
+    Position pos;
+    readonly t:SingleValue value;
+|};
+
+type UniformTypeMatchTest record {|
+    int clauseIndex;
+    Position pos;
+    t:UniformTypeBitSet bitSet;
 |};
 
 function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MatchStmt stmt) returns CodeGenError|StmtEffect {
@@ -520,9 +528,12 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     var { result: matched, block: testBlock, binding } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, stmt.expr, ()));
     // JBUG #33303 need parentheses
     t:SemType matchedType = matched is bir:Register ? (matched.semType) : t:singleton(matched);
-    // we enforce that the wildcardClauseIndex is either () or the index of the last clause
-    int? wildcardClauseIndex = ();
-    table<ConstMatchValue> key(value) constMatchValues = table[];
+    // defaultCodeIndex is either () or the index of the last clause;
+    // the latter case means that the match is exhaustive
+    int? defaultClauseIndex = ();
+    boolean hadWildcardPattern = false;
+    table<EqualMatchTest> key(value) equalMatchTests = table [];
+    MatchTest[] matchTests = [];
     t:SemType[] clauseLooksLike = [];
     bir:InsnRef[][] clauseTestInsns = [];
     // union of all clause patterns preceding this one
@@ -535,48 +546,69 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         clauseBlocks[i] = cx.createBasicBlock("clause." + i.toString());
         t:SemType clausePatternUnion = t:NEVER;
         foreach var pattern in clause.patterns {
+            t:SemType patternType;
             if pattern is s:SimpleConstExpr {
-                if wildcardClauseIndex != () && i > wildcardClauseIndex {
-                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.startPos);
-                }
                 s:ConstValueExpr cv = <s:ConstValueExpr> check cx.foldExpr(env, pattern, matchedType);
-                ConstMatchValue mv = { value: cv.value, clauseIndex: i, pos: clause.opPos };
-                if constMatchValues.hasKey(mv.value) {
-                    return cx.semanticErr("duplicate const match pattern", pos=pattern.startPos);
+                EqualMatchTest mt = { value: cv.value, clauseIndex: i, pos: clause.opPos };
+                if equalMatchTests.hasKey(mt.value) {
+                    return cx.semanticErr("duplicate const match pattern", pos=s:range(pattern));
                 }
-                constMatchValues.add(mv);    
+                equalMatchTests.add(mt);    
                 if !t:containsConst(matchedType, cv.value) {
-                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.startPos);
+                    return cx.semanticErr("match pattern cannot match value of expression", pos=s:range(pattern));
                 }
-                clausePatternUnion = t:union(clausePatternUnion, t:singleton(mv.value));
+                matchTests.push(mt);
+                patternType = t:singleton(mt.value);
             }
             else {
                 // `1|_ => {}` is pointless, but I'm not making it an error
                 // because a later pattern that overlaps an earlier one is not in general an error
-                if wildcardClauseIndex != () {
-                    return cx.semanticErr("duplicate wildcard match pattern", clause.startPos);
+                if hadWildcardPattern {
+                    return cx.semanticErr("duplicate wildcard match pattern", pattern.startPos);
                 }
-                wildcardClauseIndex = i;
-                clausePatternUnion = t:ANY;
+                hadWildcardPattern = true;
+                UniformTypeMatchTest mt = { bitSet: t:ANY, clauseIndex: i, pos: clause.opPos };
+                matchTests.push(mt);
+                patternType = t:ANY;
+                if t:isSubtypeSimple(matchedType, t:ERROR) {
+                    return cx.semanticErr("wildcard match pattern cannot match error", pattern.startPos);
+                }
             }
+            clausePatternUnion = t:union(clausePatternUnion, patternType);
         }
         clauseLooksLike[i] = t:diff(clausePatternUnion, precedingPatternsUnion);
         precedingPatternsUnion = t:union(precedingPatternsUnion, clausePatternUnion);
+        if t:isSubtype(cx.mod.tc, matchedType, precedingPatternsUnion) {
+            if i != stmt.clauses.length() - 1 {
+                return cx.semanticErr("match clause unmatchable because of previous wildcard match pattern", pos=s:range(stmt.clauses[i + 1]));
+            }
+            defaultClauseIndex = i;
+        }
     }
 
     int patternIndex = 0;
-    foreach var mv in constMatchValues {
-        int clauseIndex = mv.clauseIndex;
-        if clauseIndex == wildcardClauseIndex {
+    foreach var mt in matchTests {
+        int clauseIndex = mt.clauseIndex;
+        if clauseIndex == defaultClauseIndex {
             break;
         }
-        bir:Register testResult = cx.createTmpRegister(t:BOOLEAN, mv.pos);
-        bir:EqualityInsn eq = { op: "==", pos: mv.pos, result: testResult, operands: [matched, mv.value] };
-        testBlock.insns.push(eq);
+        bir:Register testResult = cx.createTmpRegister(t:BOOLEAN, mt.pos);
+        if mt is EqualMatchTest {
+            bir:EqualityInsn eq = { op: "==", pos: mt.pos, result: testResult, operands: [matched, mt.value] };
+            testBlock.insns.push(eq);
+        }
+        else {
+            // We only get here if there is no defaultClauseIndex
+            // A wildcard match pattern can only not be the default if the type of the match pattern includes error,
+            // in which case the matched Operand cannot be const.
+            // So the cast to `bir:Register` is safe.
+            bir:TypeTestInsn tt = { pos: mt.pos, result: testResult, operand: <bir:Register>matched, semType: mt.bitSet, negated: false };
+            testBlock.insns.push(tt);
+        }
         clauseTestInsns[clauseIndex].push(bir:lastInsnRef(testBlock));
         bir:BasicBlock nextBlock = cx.createBasicBlock("pattern." + patternIndex.toString());
         patternIndex += 1;
-        bir:CondBranchInsn condBranch = { operand: testResult, ifTrue: clauseBlocks[clauseIndex].label, ifFalse: nextBlock.label, pos: mv.pos } ;
+        bir:CondBranchInsn condBranch = { operand: testResult, ifTrue: clauseBlocks[clauseIndex].label, ifFalse: nextBlock.label, pos: mt.pos } ;
         testBlock.insns.push(condBranch);
         testBlock = nextBlock;
     }
@@ -588,7 +620,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         // Do type narrowing
         if binding != () {
             bir:Result? basis = ();
-            if clauseIndex == wildcardClauseIndex {
+            if clauseIndex == defaultClauseIndex {
                 bir:Result[] and = [];
                 foreach int i in 0 ..< clauseIndex {
                     foreach var insn in clauseTestInsns[i] {
@@ -625,8 +657,8 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
             assignments.push(...blockAssignments);
         }
     }
-    if wildcardClauseIndex != () {
-        bir:BranchInsn branch = { dest: clauseBlocks[wildcardClauseIndex].label, pos: stmt.clauses[wildcardClauseIndex].startPos };
+    if defaultClauseIndex != () {
+        bir:BranchInsn branch = { dest: clauseBlocks[defaultClauseIndex].label, pos: stmt.clauses[defaultClauseIndex].startPos };
         testBlock.insns.push(branch);
         if contBlock == () {
             // all the clauses have a return or similar
@@ -667,16 +699,16 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
             notTaken = ifTrue;
         }
         if notTaken is s:StmtBlock && notTaken.stmts.length() > 0 {
-            // XXX position should come from first member of notTaken
             s:Stmt firstStmt = notTaken.stmts[0];
-            Position errPos;
+            s:Stmt errStmt;
+            // XXX clean this up when we fix AST for if/else
             if firstStmt is s:IfElseStmt {
-                errPos = firstStmt.ifTrue.stmts[0].startPos;
+                errStmt = firstStmt.ifTrue.stmts[0];
             }
             else {
-                errPos = notTaken.stmts[0].startPos;
+                errStmt = notTaken.stmts[0];
             }
-            return cx.semanticErr("unreachable code", errPos);
+            return cx.semanticErr("unreachable code", s:range(errStmt));
         }
         if taken is s:StmtBlock {
             return codeGenStmts(cx, branchBlock, env, taken);
@@ -1611,7 +1643,7 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
 
 function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MethodCallExpr expr) returns CodeGenError|RegExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, expr.target, ()));
-    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, { startPos: expr.namePos, endPos: expr.openParenPos });
+    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
     check validArgumentCount(cx, func, expr.args.length() + 1, expr.opPos);
 
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1696,7 +1728,7 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
 
 type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
 
-function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName, Range nameRange) returns bir:FunctionRef|CodeGenError {
+function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName, Position|Range nameRange) returns bir:FunctionRef|CodeGenError {
     TypedOperand? t = typedOperand(target);
     if t != () && t[0] is LangLibModuleName {
         string moduleName = t[0];
