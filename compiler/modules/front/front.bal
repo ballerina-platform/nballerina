@@ -52,7 +52,7 @@ class Module {
         map<Import>[] partPrefixes = self.syms.partPrefixes;
         foreach int i in 0 ..< partPrefixes.length() {
             foreach var [prefix, { decl, used }] in partPrefixes[i].entries() {
-                if !used {
+                if !used && decl != () {
                     return err:semantic(`import ${prefix} unused`, loc=d:location(self.files[i], decl.namePos));
                 }
             }
