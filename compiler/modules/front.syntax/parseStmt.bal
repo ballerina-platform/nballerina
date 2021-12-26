@@ -22,7 +22,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
     match cur {
         [IDENTIFIER, var identifier] => {
             var peeked = tok.peek(skipQualIdent=true);
-            if peeked is "|" | "?" | "&" | IDENTIFIER {
+            if peeked is "|" | "?" | "&" | "_" | IDENTIFIER {
                 TypeDesc td = check parseTypeDesc(tok);
                 return finishVarDeclStmt(tok, td, startPos);
             }
