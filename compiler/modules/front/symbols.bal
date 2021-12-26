@@ -14,7 +14,7 @@ type ModuleSymbols record {|
 |};
 
 type Import record {|
-    s:ImportDecl decl?;
+    s:ImportDecl? decl = ();
     bir:ModuleId moduleId;
     ModuleExports defns;
     // This is when we haven't implemented everything in the module.
