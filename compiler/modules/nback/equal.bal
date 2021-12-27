@@ -130,7 +130,7 @@ function isAnyOperandSmallString(bir:Operand[] operands) returns boolean {
     foreach var operand in operands {
         if operand is string {
             byte[] bytes = operand.toBytes();
-            int nBytes = operand.length();
+            int nBytes = bytes.length();
             if isSmallString(operand.length(), bytes, nBytes) {
                 return true;
             }
