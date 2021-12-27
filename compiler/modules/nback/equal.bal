@@ -128,10 +128,11 @@ function buildEqualFloat(llvm:Builder builder, Scaffold scaffold, boolean exact,
 
 function isAnyOperandSmallString(bir:Operand[] operands) returns boolean {
     foreach var operand in operands {
-        if operand is string {
-            byte[] bytes = operand.toBytes();
-            int nBytes = operand.length();
-            if isSmallString(operand.length(), bytes, nBytes) {
+        if operand is bir:StringConstOperand {
+            string str = operand.value;
+            byte[] bytes = str.toBytes();
+            int nBytes = str.length();
+            if isSmallString(str.length(), bytes, nBytes) {
                 return true;
             }
         }

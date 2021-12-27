@@ -233,8 +233,8 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping get applied to non-mapping", insn.pos);
     }
-    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
-    if k !is string || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k) {
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is StringConstOperand ? k.value : ());
+    if k !is StringConstOperand || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k.value) {
         memberType = t:union(memberType, t:NIL);
     }
     if !vc.isSameType(memberType, insn.result.semType) {
@@ -248,7 +248,7 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Sem
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.err("mapping set applied to non-mapping", insn.pos);
     }
-    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is StringConstOperand ? k.value : ());
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type", insn.pos);
 }
 
@@ -300,7 +300,7 @@ function operandToSemType(Operand operand) returns t:SemType {
         return operand.semType;
     }
     else {
-        return t:constBasicType(operand);
+        return t:constBasicType(operand.value);
     }
 }
 
@@ -317,24 +317,24 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
                 return;
             }
         }
-        else if t:containsConst(lhs.semType, rhs) {
+        else if t:containsConst(lhs.semType, rhs.value) {
             return;
         }
     }
     else if rhs is Register {
-        if t:containsConst(rhs.semType, lhs) {
+        if t:containsConst(rhs.semType, lhs.value) {
             return;
         }
     }
-    else if isEqual(lhs, rhs) {
+    else if isEqual(lhs.value, rhs.value) {
         return;
     }
     return vc.err(`intersection of operands of operator ${insn.op} is empty`, insn.pos);
 }
 
 // After JBUG #17977, #32245 is fixed, replace by ==
-function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
-    return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
+function isEqual(t:SingleValue v1, t:SingleValue v2) returns boolean {
+    return v1 is float && v2 is float ? (v1 == v2 || (float:isNaN(v1) && float:isNaN(v2))) : v1 == v2;
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Semantic? {
