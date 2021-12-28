@@ -247,6 +247,10 @@ class CodeGenFoldContext {
             if wrapped.value == s:FLOAT_ZERO {
                 return s:FLOAT_ZERO;
             }
+            if wrapped.value is decimal {
+                // Cannot fold here because we would lose the precision
+                return ();
+            }
             return wrapped;
         }
         else {
