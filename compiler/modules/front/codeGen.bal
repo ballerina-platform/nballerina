@@ -258,7 +258,7 @@ class CodeGenFoldContext {
         }
     }
 
-    function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
+    public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
         return self.cx.semanticErr(msg, pos=pos, cause=cause);
     }
 

@@ -19,7 +19,8 @@ type SimpleConst t:SingleValue;
 type FoldError ResolveTypeError;
 
 type FoldContext object {
-    function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic;
+    *err:SemanticContext;
+    public function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
     function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:WrappedSingleValue|FoldError|();
     function typeContext() returns t:Context;
@@ -37,7 +38,7 @@ class ConstFoldContext {
         self.mod = mod;
     }
 
-    function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic {
+    public function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic {
         return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, defnName=self.defn.name);
     }
 
@@ -242,13 +243,7 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
         SimpleConst left = leftExpr.value;
         SimpleConst right = rightExpr.value;
         if left is int && right is int {
-            int|error result = trap intArithmeticEval(expr.arithmeticOp, left, right);
-            if result is int {
-                return foldedBinaryConstExpr(result, t:INT, leftExpr, rightExpr);
-            }
-            else {
-                return cx.semanticErr(`evaluation of int constant ${expr.arithmeticOp} expression failed`, pos=expr.opPos, cause=result);
-            }
+            return foldedBinaryConstExpr(check intArithmeticEval(cx, expr.opPos, expr.arithmeticOp, left, right), t:INT, leftExpr, rightExpr);
         }
         else if left is string && right is string && expr.arithmeticOp == "+" {
             return foldedBinaryConstExpr(left + right, t:STRING, leftExpr, rightExpr);
@@ -282,14 +277,7 @@ function foldBinaryArithmeticExpr(FoldContext cx, t:SemType? expectedType, s:Bin
             return foldedBinaryConstExpr(f, t:FLOAT, leftExpr, rightExpr);
         }
         else if left is decimal && right is decimal {
-            // This part needs should be changed according to #783
-            decimal|error result = trap decimalArithmeticEval(expr.arithmeticOp, left, right);
-            if result is decimal {
-                return foldedBinaryConstExpr(result, t:DECIMAL, leftExpr, rightExpr);
-            }
-            else {
-                return cx.semanticErr(`evaluation of decimal constant ${expr.arithmeticOp} expression failed`, pos=expr.opPos, cause=result);
-            }            
+            return foldedBinaryConstExpr(check decimalArithmeticEval(cx, expr.opPos, expr.arithmeticOp, left, right), t:DECIMAL, leftExpr, rightExpr);       
         }
         else {
             return cx.semanticErr(`invalid operand types for ${expr.arithmeticOp}`, expr.opPos);
@@ -495,13 +483,7 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
         var value = subExpr.value;
         if toNumType == t:INT {
             if value is float || value is decimal {
-                int|error converted = trap <int>value;
-                if converted is error {
-                    return cx.semanticErr(`cannot convert ${value} to int`, pos = expr.opPos);
-                }
-                else {
-                    value = converted;
-                }
+                value = check convertToIntEval(cx, expr.opPos, value);
             }
         }
         else if toNumType == t:FLOAT {

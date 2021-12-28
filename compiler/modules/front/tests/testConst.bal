@@ -21,7 +21,7 @@ class TestFoldContext {
         return ();
     }
 
-    function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic {
+    public function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic {
         return err:semantic(msg, loc=d:location(self.file, pos), cause=cause);
     }
 
