@@ -1,5 +1,3 @@
-// Prepare to split off into eval.bal
-
 // Constant folding is used for several purposes
 // 1. for evaluating the RHS of a const definition at compile time
 // 2. for determining whether the type of a conditional expression is singleton true/false (which affects reachability)
