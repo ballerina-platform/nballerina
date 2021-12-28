@@ -533,8 +533,9 @@ type UniformTypeMatchTest record {|
 function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MatchStmt stmt) returns CodeGenError|StmtEffect {
     int[] assignments = [];
     var { result: matched, block: testBlock, binding } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, stmt.expr, ()));
+    t:Context tc = cx.mod.tc;
     // JBUG #33303 need parentheses
-    t:SemType matchedType = matched is bir:Register ? (matched.semType) : t:singleton(matched);
+    t:SemType matchedType = matched is bir:Register ? (matched.semType) : t:singleton(tc, matched);
     // defaultCodeIndex is either () or the index of the last clause;
     // the latter case means that the match is exhaustive
     int? defaultClauseIndex = ();
@@ -565,7 +566,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
                     return cx.semanticErr("match pattern cannot match value of expression", pos=s:range(pattern));
                 }
                 matchTests.push(mt);
-                patternType = t:singleton(mt.value);
+                patternType = t:singleton(tc, mt.value);
             }
             else {
                 // `1|_ => {}` is pointless, but I'm not making it an error
@@ -1428,8 +1429,9 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     }
     else {
         var [binding, value] = narrowingCompare;
-        t:SemType ifTrue = t:singleton(value);
-        t:SemType ifFalse = t:roDiff(cx.mod.tc, binding.reg.semType, ifTrue);
+        t:Context tc = cx.mod.tc;
+        t:SemType ifTrue = t:singleton(tc, value);
+        t:SemType ifFalse = t:roDiff(tc, binding.reg.semType, ifTrue);
         if (<string>op).startsWith("!") {
             [ifTrue, ifFalse] = [ifFalse, ifTrue];
         }

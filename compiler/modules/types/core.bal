@@ -178,6 +178,11 @@ type ComparableMemo record {|
     boolean comparable = false;
 |};
 
+type SingletonMemo readonly & record {|
+    boolean|int|decimal|float|string value;
+    ComplexSemType semType;
+|};
+
 // Operations on types require a Context.
 // There can be multiple contexts for the same Env.
 // Whereas an Env is isolated, a Context is not isolated.
@@ -189,6 +194,7 @@ public class Context {
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
+    final table<SingletonMemo> key(value) singletonMemo = table [];
     SemType? anydataMemo = ();
     SemType? jsonMemo = ();
 
@@ -326,7 +332,7 @@ public function uniformTypeUnion(int bits) returns UniformTypeBitSet {
     return <UniformTypeBitSet>bits;
 }
 
-function uniformSubtype(UniformTypeCode code, ProperSubtypeData data) returns SemType {
+function uniformSubtype(UniformTypeCode code, ProperSubtypeData data) returns ComplexSemType {
     return createComplexSemType(0, [[code, data]]);
 }
 
@@ -1096,25 +1102,33 @@ public function singleStringShape(SemType t) returns string? {
     return ();
 }
 
-public function singleton(SingleValue v) returns SemType {
-    if v == () {
+public function singleton(Context cx, SingleValue value) returns SemType {
+    if value is () {
         return NIL;
     }
-    else if v is int {
-        return intConst(v);
+    SingletonMemo? memo = cx.singletonMemo[value];
+    if memo != () {
+        return memo.semType;
     }
-    else if v is float {
-        return floatConst(v);
+    ComplexSemType semType;
+    if value is int {
+        semType = intConst(value);
     }
-    else if v is string {
-        return stringConst(v);
+    else if value is float {
+        semType = floatConst(value);
     }
-    else if v is decimal {
-        return decimalConst(v);
+    else if value is string {
+        semType = stringConst(value);
+    }
+    else if value is decimal {
+        semType = decimalConst(value);
     }
     else {
-        return booleanConst(v);
+        boolean _ = value;
+        semType = booleanConst(value);
     }
+    cx.singletonMemo.add({ value, semType });
+    return semType;
 }
 
 public function isReadOnly(SemType t) returns boolean {
