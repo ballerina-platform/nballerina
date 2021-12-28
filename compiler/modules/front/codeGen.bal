@@ -234,17 +234,20 @@ class CodeGenFoldContext {
         self.env = env;
     }
 
-    function lookupConst(string? prefix, string varName, Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
+    function lookupConst(string? prefix, string varName, Position pos) returns s:FLOAT_ZERO|t:WrappedSingleValue|FoldError|() {
         if prefix != () {
             return { value: check lookupImportedConst(self.cx.mod, self.cx.functionDefn, prefix, varName) };
         }
         t:SingleValue|Binding v = check lookupVarRef(self.cx, varName, self.env, pos);
         if v is Binding {
-            t:OptSingleValue shape = t:singleShape(v.reg.semType);
-            if shape != () && shape.value == s:FLOAT_ZERO {
+            t:WrappedSingleValue? wrapped = t:singleShape(v.reg.semType);
+            if wrapped is () {
+                return ();
+            }
+            if wrapped.value == s:FLOAT_ZERO {
                 return s:FLOAT_ZERO;
             }
-            return shape;
+            return wrapped;
         }
         else {
             return { value: v };

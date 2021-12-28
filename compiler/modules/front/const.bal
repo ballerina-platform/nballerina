@@ -21,7 +21,7 @@ type FoldError ResolveTypeError;
 type FoldContext object {
     function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic;
     // Return value of FLOAT_ZERO means shape is FLOAT_ZERO but value (+0 or -0) is unknown
-    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError;
+    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:WrappedSingleValue|FoldError|();
     function typeContext() returns t:Context;
     function resolveTypeDesc(s:TypeDesc td) returns FoldError|t:SemType;
     function isConstDefn() returns boolean;
@@ -41,7 +41,7 @@ class ConstFoldContext {
         return err:semantic(msg, loc=d:location(self.defn.part.file, pos), cause=cause, defnName=self.defn.name);
     }
 
-    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
+    function lookupConst(string? prefix, string varName, d:Position pos) returns s:FLOAT_ZERO|t:WrappedSingleValue|FoldError|() {
         if prefix != () {
             return { value: check lookupImportedConst(self.mod, self.defn, prefix, varName) };
         }
@@ -547,7 +547,7 @@ function foldedUnaryConstExpr(SimpleConst value, t:UniformTypeBitSet basicType, 
 }
 
 function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr expr) returns s:Expr|FoldError {
-    s:FLOAT_ZERO|t:OptSingleValue constValue = check cx.lookupConst(expr.prefix, expr.name, expr.qNamePos);
+    s:FLOAT_ZERO|t:WrappedSingleValue? constValue = check cx.lookupConst(expr.prefix, expr.name, expr.qNamePos);
     if constValue == () {
         return expr;
     }

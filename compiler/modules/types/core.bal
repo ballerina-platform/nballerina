@@ -294,6 +294,13 @@ function unpackComplexSemType(ComplexSemType t) returns UniformSubtype[] {
     return subtypeList;
 }
 
+function singleUniformSubtype(ComplexSemType t) returns UniformSubtype? {
+    if t.all == 0 && t.subtypeDataList.length() == 1 {
+        return [<UniformTypeCode>lib:numberOfTrailingZeros(t.some), t.subtypeDataList[0]];
+    }
+    return ();
+}
+
 function getComplexSubtypeData(ComplexSemType t, UniformTypeCode code) returns SubtypeData {
     int c = code;
     c = 1 << c;
@@ -1014,39 +1021,77 @@ public function split(SemType t) returns SplitSemType  {
 
 public type SingleValue ()|boolean|int|float|decimal|string;
 
-// JBUG #34320 parentheses should not be necessary
-public type OptSingleValue (readonly & record {|
+public type WrappedSingleValue readonly & record {|
    SingleValue value;
-|})?;
+|};
 
-// If the type contains exactly onr shape, return a value
-// having that shape.
-public function singleShape(SemType t) returns OptSingleValue {
-    if t === NIL {
-        return { value: () };
+// If the type contains exactly one shape, return a record
+// containing a value with that shape. Otherwise, return ().
+public function singleShape(SemType t) returns WrappedSingleValue? {
+    if t is UniformTypeBitSet {
+        return t === NIL ? { value: () } : ();
     }
-    else if t is UniformTypeBitSet {
+    UniformSubtype? s = singleUniformSubtype(t);
+    if s is () {
         return ();
     }
-    else if isSubtypeSimple(t, INT) {
-        SubtypeData sd = getComplexSubtypeData(t, UT_INT);
-        int? value = intSubtypeSingleValue(sd);
-        return value == () ? () : { value };
+    var [code, sd] = s;  
+    SingleValue value;
+    if code == UT_INT {
+        value = intSubtypeSingleValue(sd);
     }
-    else if isSubtypeSimple(t, FLOAT) {
-        SubtypeData sd = getComplexSubtypeData(t, UT_FLOAT);
-        float? value = floatSubtypeSingleValue(sd);
-        return value == () ? () : { value };
+    else if code == UT_FLOAT {
+        value = floatSubtypeSingleValue(sd);
     }
-    else if isSubtypeSimple(t, STRING) {
-        SubtypeData sd = getComplexSubtypeData(t, UT_STRING);
-        string? value = stringSubtypeSingleValue(sd);
-        return value == () ? () : { value };
+    else if code == UT_DECIMAL {
+        value = decimalSubtypeSingleValue(sd);
     }
-    else if isSubtypeSimple(t, BOOLEAN) {
-        SubtypeData sd = getComplexSubtypeData(t, UT_BOOLEAN);
-        boolean? value = booleanSubtypeSingleValue(sd);
-        return value == () ? () : { value };
+    else if code == UT_STRING {
+        value = stringSubtypeSingleValue(sd);
+    }
+    else if code == UT_BOOLEAN {
+        value = booleanSubtypeSingleValue(sd);
+    }
+    else {
+        return ();
+    }
+    if value == () {
+        return ();
+    }
+    return { value };
+}
+
+public function singleDecimalShape(SemType t) returns decimal? {
+    if t is ComplexSemType && t.some == DECIMAL && t.all == 0 {
+        return decimalSubtypeSingleValue(t.subtypeDataList[0]);
+    }
+    return ();
+}
+
+public function singleFloatShape(SemType t) returns float? {
+    if t is ComplexSemType && t.some == FLOAT && t.all == 0 {
+        return floatSubtypeSingleValue(t.subtypeDataList[0]);
+    }
+    return ();
+}
+
+public function singleIntShape(SemType t) returns int? {
+    if t is ComplexSemType && t.some == INT && t.all == 0 {
+        return intSubtypeSingleValue(t.subtypeDataList[0]);
+    }
+    return ();
+}
+
+public function singleBooleanShape(SemType t) returns boolean? {
+    if t is ComplexSemType && t.some == BOOLEAN && t.all == 0 {
+        return booleanSubtypeSingleValue(t.subtypeDataList[0]);
+    }
+    return ();
+}
+
+public function singleStringShape(SemType t) returns string? {
+    if t is ComplexSemType && t.some == STRING && t.all == 0 {
+        return stringSubtypeSingleValue(t.subtypeDataList[0]);
     }
     return ();
 }

@@ -232,26 +232,26 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
                 return testListProj(tc, t, index);
             }
             else {
-                t:SemType k = lookupSemtype(m, index);
-                if k == t:INT {
+                t:SemType kt = lookupSemtype(m, index);
+                if kt == t:INT {
                     return t:listMemberType(tc, t, ());
                 }
-                t:OptSingleValue val = t:singleShape(k);
-                if val != () && val.value is int {
-                    return testListProj(tc, t, <int> val.value);
+                int? i = t:singleIntShape(kt);
+                if i != () {
+                    return testListProj(tc, t, i);
                 }
                 test:assertFail("index for list projection must be an int");
             }
         }
         else if t:isSubtypeSimple(t, t:MAPPING) {
             if index is s:Identifier {
-                t:SemType k = lookupSemtype(m, index);
-                if k == t:STRING {
+                t:SemType kt = lookupSemtype(m, index);
+                if kt == t:STRING {
                     return t:mappingMemberType(tc, t, ());
                 }
-                t:OptSingleValue val = t:singleShape(k);
-                if val != () && val.value is string {
-                    return t:mappingMemberType(tc, t, <string> val.value);
+                string? k = t:singleStringShape(kt);
+                if k != () {
+                    return t:mappingMemberType(tc, t, k);
                 }
             }
             test:assertFail("index for mapping projection must be a string");
