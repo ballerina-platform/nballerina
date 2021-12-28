@@ -219,6 +219,7 @@ public type IntOperand int|Register;
 public type FloatOperand float|Register;
 public type DecimalOperand decimal|Register;
 public type BooleanOperand boolean|Register;
+public type NilOperand ()|Register;
 public type FunctionOperand FunctionRef|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {

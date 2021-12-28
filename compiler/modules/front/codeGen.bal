@@ -1872,15 +1872,12 @@ function bitwiseOperandType(bir:IntOperand operand) returns t:SemType {
     return t:widenUnsigned(t);
 }
 
-type NilOperand ()|bir:Register;
-type BooleanOperandPair readonly & ["boolean", [bir:BooleanOperand, bir:BooleanOperand]];
 type IntOperandPair readonly & ["int", [bir:IntOperand, bir:IntOperand]];
 type FloatOperandPair readonly & ["float", [bir:FloatOperand, bir:FloatOperand]];
 type DecimalOperandPair readonly & ["decimal", [bir:DecimalOperand, bir:DecimalOperand]];
 type StringOperandPair readonly & ["string", [bir:StringOperand, bir:StringOperand]];
-type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 
-type TypedOperandPair BooleanOperandPair|IntOperandPair|DecimalOperandPair|FloatOperandPair|StringOperandPair|NilOperandPair;
+type TypedOperandPair IntOperandPair|DecimalOperandPair|FloatOperandPair|StringOperandPair;
 
 // XXX should use t:UT_* instead of strings here (like the ordering stuff)
 type TypedOperand readonly & (["array", bir:Register]
@@ -1891,7 +1888,7 @@ type TypedOperand readonly & (["array", bir:Register]
                               |["decimal", bir:DecimalOperand]
                               |["int", bir:IntOperand]
                               |["boolean", bir:BooleanOperand]
-                              |["nil", NilOperand]);
+                              |["nil", bir:NilOperand]);
 
 function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperandPair? {
     TypedOperand? l = typedOperand(lhs);
@@ -1907,12 +1904,6 @@ function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperand
     }
     if l is ["string", bir:StringOperand] && r is ["string", bir:StringOperand] {
         return ["string", [l[1], r[1]]];
-    }
-    if l is ["boolean", bir:BooleanOperand] && r is ["boolean", bir:BooleanOperand] {
-        return ["boolean", [l[1], r[1]]];
-    }
-    if l is ["nil", NilOperand] && r is ["int", NilOperand] {
-        return ["nil", [l[1], r[1]]];
     }
     return ();
 }
