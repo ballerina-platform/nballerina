@@ -637,6 +637,8 @@ static READONLY inline bool taggedPtrEq(TaggedPtr tp1, TaggedPtr tp2, EqStack *s
                 FloatPtr p2 = taggedToPtr(tp2);
                 return _bal_float_eq(*p1, *p2);
             }
+        case TAG_DECIMAL:
+            return _bal_decimal_cmp(tp1, tp2) == 0;
         case TAG_LIST_RW:
         case TAG_MAPPING_RW:
             {  
