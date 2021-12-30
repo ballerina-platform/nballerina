@@ -112,6 +112,9 @@ function relationalEval(err:SemanticContext cx, Position pos, s:BinaryRelational
     else if left is float && right is float {
         return floatRelationalEval(op, left, right);
     }
+    else if left is decimal && right is decimal {
+        return decimalRelationalEval(op, left, right);
+    }
     else if left is string && right is string {
         return stringRelationalEval(op, left, right);
     }
@@ -144,6 +147,24 @@ function stringRelationalEval(s:BinaryRelationalOp op, string left, string right
 }
 
 function floatRelationalEval(s:BinaryRelationalOp op, float left, float right) returns boolean {
+    match op {
+        "<" => {
+            return left < right;
+        }
+        "<=" => {
+            return left <= right;
+        }
+        ">" => {
+            return left > right;
+        }
+        ">=" => {
+            return left >= right;
+        }
+    }
+    panic err:impossible();
+}
+
+function decimalRelationalEval(s:BinaryRelationalOp op, decimal left, decimal right) returns boolean {
     match op {
         "<" => {
             return left < right;
