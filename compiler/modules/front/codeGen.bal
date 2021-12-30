@@ -1123,10 +1123,11 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
         { opPos: var pos, op: "!",  operand: var o } => {
             var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, env, o);
-            // Should have been resolved during constant folding
-            bir:Register reg = <bir:Register>operand;
+            if operand is boolean {
+                return { result: !operand, block: nextBlock };
+            }
             bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
-            bir:BooleanNotInsn insn = { operand: reg, result, pos };
+            bir:BooleanNotInsn insn = { operand, result, pos };
             nextBlock.insns.push(insn);
             if narrowing != () {
                 narrowing.negated = !narrowing.negated;
