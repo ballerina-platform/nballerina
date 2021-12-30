@@ -292,7 +292,7 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
 
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
     if !t:comparable(vc.typeContext(), operandToSemType(insn.operands[0]), operandToSemType(insn.operands[1])) {
-        return vc.err(`operands of ${insn.op} do not belong to an ordered type`, insn.pos);
+        return vc.err(`bad BIR: operands of ${insn.op} do not belong to an ordered type`, insn.pos);
     }
 }
 
@@ -311,7 +311,7 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
     Operand lhs = insn.operands[0];
     Operand rhs = insn.operands[1];
     if lhs is Register && rhs is Register && insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
-        return vc.err(`at least one operand of an == or !=  at expression must be a subtype of anydata`, insn.pos);
+        return vc.err(`bad BIR: at least one operand of an == or !=  at expression must be a subtype of anydata`, insn.pos);
     }
 }
 

@@ -1143,15 +1143,10 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenBitwiseBinaryExpr(cx, nextBlock, op, pos, l, r);
         }
         var { opPos: pos, equalityOp: op, left, right } => {
-            return codeGenEquality(cx, bb, env, op, pos, left, right);
+            return codeGenEqualityExpr(cx, bb, env, op, pos, left, right);
         }
         var { opPos: pos, relationalOp: op, left, right } => {
-            bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
-            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
-            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
-            bir:CompareInsn insn = { op, pos, operands: [l, r], result };
-            nextBlock.insns.push(insn);
-            return { result, block: nextBlock };
+            return codeGenRelationalExpr(cx, bb, env, op, pos, left, right);
         }
         var { td: _, operand: _ } => {
             // JBUG #31782 cast needed
@@ -1442,8 +1437,29 @@ function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env
     }
 }
 
-function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryEqualityOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
+function codeGenRelationalExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryRelationalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
+    var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
+    var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
+    t:Context tc = cx.mod.tc;
+
+    t:SemType lType = operandSemType(tc, l);
+    t:SemType rType = operandSemType(tc, r);
+    if !t:comparable(tc, lType, rType) {
+        return cx.semanticErr(`operands of ${op} do not belong to an ordered type`, pos);
+    }
+    t:WrappedSingleValue? lShape = operandSingleShape(l);
+    t:WrappedSingleValue? rShape = operandSingleShape(r);
+    if lShape != () && rShape != () {
+        boolean result = check relationalEval(cx, pos, op, lShape.value, rShape.value);
+        return { result, block: nextBlock };
+    }
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:CompareInsn insn = { op, pos, operands: [l, r], result };
+    nextBlock.insns.push(insn);
+    return { result, block: nextBlock };
+}
+
+function codeGenEqualityExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryEqualityOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
     var { result: l, block: block1, binding: lBinding } = check codeGenExpr(cx, bb, env, left);
     var { result: r, block: nextBlock, binding: rBinding } = check codeGenExpr(cx, block1, env, right);
     t:Context tc = cx.mod.tc;
@@ -1470,7 +1486,8 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     }
     // XXX fold rewrite: need to fold exact case here
 
-    // Type checking is done in the verifier
+    bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+
     bir:EqualityInsn insn = { op, pos, operands: [l, r], result };
     nextBlock.insns.push(insn);
     [Binding, SimpleConst]? narrowingCompare = ();
@@ -1482,6 +1499,7 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
             narrowingCompare = [rBinding, l];
         }
     }
+
     if narrowingCompare == () {
         return { result, block: nextBlock };
     }
