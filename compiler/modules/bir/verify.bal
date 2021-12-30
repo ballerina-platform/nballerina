@@ -254,7 +254,8 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Sem
 
 function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
     if vc.isEmpty(insn.result.semType) {
-        return vc.err("type cast cannot succeed", insn.pos);
+        // This is now caught in the front-end.
+        return vc.err("bad BIR: result of type case is never", insn.pos);
     }
     // These should not happen with the nballerina front-end
     if !vc.isSubtype(insn.result.semType, insn.operand.semType) {
@@ -305,31 +306,13 @@ function operandToSemType(Operand operand) returns t:SemType {
 }
 
 function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semantic? {
+    // non-empty intersection of operand types is enforced in front-end
+    // not needed for BIR correctness
     Operand lhs = insn.operands[0];
     Operand rhs = insn.operands[1];
-    if lhs is Register {
-        if rhs is Register {
-            t:SemType intersectType = t:intersect(lhs.semType, rhs.semType);
-            if !vc.isEmpty(intersectType) {
-                if insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
-                    return vc.err(`at least one operand of an == or !=  at expression must be a subtype of anydata`, insn.pos);
-                }
-                return;
-            }
-        }
-        else if t:containsConst(lhs.semType, rhs) {
-            return;
-        }
+    if lhs is Register && rhs is Register && insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
+        return vc.err(`at least one operand of an == or !=  at expression must be a subtype of anydata`, insn.pos);
     }
-    else if rhs is Register {
-        if t:containsConst(rhs.semType, lhs) {
-            return;
-        }
-    }
-    else if isEqual(lhs, rhs) {
-        return;
-    }
-    return vc.err(`intersection of operands of operator ${insn.op} is empty`, insn.pos);
 }
 
 // After JBUG #17977, #32245 is fixed, replace by ==
