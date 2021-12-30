@@ -105,6 +105,25 @@ function bitwiseEval(s:BinaryBitwiseOp op, int left, int right) returns int  {
     panic err:impossible();
 }
 
+function relationalEval(err:SemanticContext cx, Position pos, s:BinaryRelationalOp op, SimpleConst left, SimpleConst right) returns boolean|err:Semantic {
+    if left is int && right is int {
+        return intRelationalEval(op, left, right);
+    }
+    else if left is float && right is float {
+        return floatRelationalEval(op, left, right);
+    }
+    else if left is string && right is string {
+        return stringRelationalEval(op, left, right);
+    }
+    else if left is boolean && right is boolean {
+        return booleanRelationalEval(op, left, right);
+    }
+    else if left == () || right == () {
+        // () behaves like NaN, EQ iff `left = right = ()`
+        return op is "<="|">=" ? left == right : false;
+    }
+    return cx.semanticErr(`invalid operand types for ${op}`, pos);
+}
 
 function stringRelationalEval(s:BinaryRelationalOp op, string left, string right) returns boolean {
     match op {

@@ -384,26 +384,8 @@ function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:Bin
     s:Expr leftExpr = check foldExpr(cx, (), expr.left);
     s:Expr rightExpr = check foldExpr(cx, (), expr.right);
     if leftExpr is s:ConstShapeExpr && rightExpr is s:ConstShapeExpr {
-        SimpleConst left = leftExpr.value;
-        SimpleConst right = rightExpr.value;
-        if left is int && right is int {
-            return foldedBinaryConstExpr(intRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
-        }
-        else if left is float && right is float {
-            return foldedBinaryConstExpr(floatRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
-        }
-        else if left is string && right is string {
-            return foldedBinaryConstExpr(stringRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
-        }
-        else if left is boolean && right is boolean {
-            return foldedBinaryConstExpr(booleanRelationalEval(expr.relationalOp, left, right), t:BOOLEAN, leftExpr, rightExpr);
-        }
-        else if left == () || right == () {
-            // () behaves like NaN, EQ iff `left = right = ()`
-            boolean result = expr.relationalOp is "<="|">=" ? left == right : false;
-            return foldedBinaryConstExpr(result, t:BOOLEAN, leftExpr, rightExpr);
-        }
-        return cx.semanticErr(`invalid operand types for ${expr.relationalOp}`, expr.opPos);
+        return foldedBinaryConstExpr(check relationalEval(cx, expr.opPos, expr.relationalOp, leftExpr.value, rightExpr.value),
+                                     t:BOOLEAN, leftExpr, rightExpr);
     }
     expr.left = leftExpr;
     expr.right = rightExpr;
