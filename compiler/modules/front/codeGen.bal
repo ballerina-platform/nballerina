@@ -235,7 +235,7 @@ class CodeGenFoldContext {
         self.env = env;
     }
 
-    function lookupConst(string? prefix, string varName, Position pos) returns s:FLOAT_ZERO|t:WrappedSingleValue|FoldError|() {
+    function lookupConst(string? prefix, string varName, Position pos) returns t:WrappedSingleValue|FoldError|() {
         if prefix != () {
             return { value: check lookupImportedConst(self.cx.mod, self.cx.functionDefn, prefix, varName) };
         }
@@ -245,11 +245,8 @@ class CodeGenFoldContext {
             if wrapped is () {
                 return ();
             }
-            if wrapped.value == s:FLOAT_ZERO {
-                return s:FLOAT_ZERO;
-            }
-            if wrapped.value is decimal {
-                // Cannot fold here because we would lose the precision
+            if wrapped.value is decimal || wrapped.value == 0.0f {
+                // Cannot fold here because we would lose the precision (for decimal)
                 return ();
             }
             return wrapped;
@@ -1166,9 +1163,6 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         // JBUG #33309 does not work as match pattern `var { value, multiSemType }`
         var cvExpr if cvExpr is s:ConstValueExpr => {
             return codeGenConstValue(cx, bb, env, cvExpr);
-        }
-        var floatZeroExpr if floatZeroExpr is s:FloatZeroExpr => {
-            return codeGenExpr(cx, bb, env, floatZeroExpr.expr);
         }
         // Function/method call
         var callExpr if callExpr is (s:FunctionCallExpr|s:MethodCallExpr) => {

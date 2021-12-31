@@ -2,8 +2,10 @@
 import ballerina/io;
 
 public function main() {
+    // x/0.0 has type float
     if 0.0 / 0.0 == -0.0 / 0.0 {
+        io:println("same"); // @output same
         return;
     }
-    io:println("impossible"); // @error
+    io:println("impossible");
 }

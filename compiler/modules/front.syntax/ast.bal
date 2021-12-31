@@ -63,10 +63,10 @@ public type ConstDefn record {|
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallExpr FunctionCallExpr|MethodCallExpr|CheckingCallExpr;
-public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
 public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
-public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
+public type SimpleConstExpr ConstValueExpr|VarRefExpr|NumericLiteralExpr|SimpleConstNegateExpr;
 
 public const WILDCARD = ();
 
@@ -391,8 +391,6 @@ public type TypeTestExpr record {|
     Position kwPos;
 |};
 
-public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
-
 public type ConstValueExpr record {|
     *PositionFields;
     t:SingleValue value;
@@ -401,17 +399,6 @@ public type ConstValueExpr record {|
     // When it contains exactly one shape, then the shape is
     // the shape of the value.
     t:SemType? multiSemType = ();
-|};
-
-public const float FLOAT_ZERO = 0f;
-
-// This is an expression where we know that the value is == 0f
-// but do not know whether it is +0f or -0f.
-public type FloatZeroExpr record {|
-    *PositionFields;
-    FLOAT_ZERO value = FLOAT_ZERO;
-    () multiSemType = ();
-    Expr expr;
 |};
 
 public type NumericLiteralExpr IntLiteralExpr|FpLiteralExpr;

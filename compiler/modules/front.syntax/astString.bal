@@ -419,9 +419,6 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     if expr is ConstValueExpr {
         valueToWords(w, expr.value);      
     }
-    else if expr is FloatZeroExpr {
-        exprToWords(w, expr.expr, wrap);
-    }
     else if expr is IntLiteralExpr {
         if expr.base == 16 {
             w.push("0x" + expr.digits.toUpperAscii());

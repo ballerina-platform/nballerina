@@ -17,7 +17,7 @@ class TestFoldContext {
         self.tc = t:typeContext(new);
         self.file = file;
     }
-    function lookupConst(string? prefix, string varName, s:Position pos) returns s:FLOAT_ZERO|t:WrappedSingleValue|FoldError|() {
+    function lookupConst(string? prefix, string varName, s:Position pos) returns t:WrappedSingleValue|FoldError|() {
         return ();
     }
 
