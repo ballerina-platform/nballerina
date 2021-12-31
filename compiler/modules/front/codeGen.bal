@@ -1547,8 +1547,29 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
     t:SemType toType = check cx.resolveTypeDesc(tcExpr.td);
     t:UniformTypeBitSet? toNumType = t:singleNumericType(toType);
     if toNumType != () && !t:isSubtypeSimple(t:intersect(fromType, t:NUMBER), toNumType) {
+        // do numeric conversion now
         toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
-        if operand is bir:Register {
+        t:WrappedSingleValue? wrapped = operandSingleShape(operand);
+        if wrapped != () {
+            t:SingleValue shape = wrapped.value;
+            if toNumType == t:INT {
+                if shape is float|decimal {
+                    operand = check convertToIntEval(cx, tcExpr.opPos, shape);
+                    fromType = operandSemType(cx.mod.tc, operand);
+                }
+            }
+            else if toNumType == t:FLOAT {
+                if shape is int|decimal {
+                    operand = <float>shape;
+                    fromType = operandSemType(cx.mod.tc, operand);
+                }
+            }
+            else {
+                // SUBSET decimal
+                panic err:impossible("convert to decimal");
+            }
+        }
+        else if operand is bir:Register { // always true but does needed narrowing
             bir:Register result = cx.createTmpRegister(t:union(t:diff(fromType, t:NUMBER), toNumType), tcExpr.opPos);
             if toNumType == t:INT {
                 bir:ConvertToIntInsn insn = { operand, result, pos: tcExpr.opPos };
@@ -1564,25 +1585,6 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
             }
             operand = result;
             fromType = result.semType;
-        }
-        else {
-            // do numeric conversion now
-            if toNumType == t:INT {
-                if operand is float|decimal {
-                    operand = check convertToIntEval(cx, tcExpr.opPos, operand);
-                    fromType = operandSemType(cx.mod.tc, operand);
-                }
-            }
-            else if toNumType == t:FLOAT {
-                if operand is int|decimal {
-                    operand = <float>operand;
-                    fromType = operandSemType(cx.mod.tc, operand);
-                }
-            }
-            else {
-                // SUBSET decimal
-                panic err:impossible("convert to decimal");
-            }
         }
     }
     if t:isSubtype(cx.mod.tc, fromType, toType) {
