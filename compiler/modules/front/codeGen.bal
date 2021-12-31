@@ -1283,8 +1283,18 @@ function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock nextBlock, Position
         insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [0, intOperand], result };
     }
     else if typed is ["float", bir:FloatOperand] {
-        result = cx.createTmpRegister(t:FLOAT, pos);
-        insn = <bir:FloatNegateInsn> { operand: <bir:Register>typed[1], result, pos };
+        bir:FloatOperand floatOperand = typed[1];
+        t:SemType resultType = t:FLOAT;
+        float? shape = floatOperandSingleShape(floatOperand);
+        if shape != () {
+            float resultShape = -shape; // shouldn't ever panic
+            if shape != 0f || shape == operand {
+                return { result: resultShape, block: nextBlock };
+            }
+            resultType = t:singleton(cx.mod.tc, resultShape);
+        }
+        result = cx.createTmpRegister(resultType, pos);
+        insn = <bir:FloatNegateInsn> { operand: <bir:Register>floatOperand, result, pos };
     }
     else if typed is ["decimal", bir:DecimalOperand] {
         bir:DecimalOperand decimalOperand = typed[1];
@@ -1303,7 +1313,7 @@ function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock nextBlock, Position
             resultType = t:DECIMAL;
         }
         result = cx.createTmpRegister(resultType, pos);
-        insn = <bir:DecimalNegateInsn> { operand: <bir:Register>typed[1], result, pos };
+        insn = <bir:DecimalNegateInsn> { operand: <bir:Register>decimalOperand, result, pos };
     }
     else {
         return cx.semanticErr(`operand of ${"-"} must be int or float or decimal`, pos);
