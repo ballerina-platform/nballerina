@@ -31,6 +31,13 @@ function trappedIntArithmeticEval(s:BinaryArithmeticOp op, int left, int right) 
     panic err:impossible();
 }
 
+function intNegateEval(err:SemanticContext cx, Position pos, int value) returns int|err:Semantic {
+    if value == int:MIN_VALUE {
+        return cx.semanticErr(`${"-"} applied to minimum integer value`, pos);
+    }
+    return -value;
+}
+
 function floatArithmeticEval(s:BinaryArithmeticOp op, float left, float right) returns float  {
     match op {
         "+" => {

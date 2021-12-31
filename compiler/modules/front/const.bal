@@ -422,10 +422,7 @@ function foldUnaryExpr(FoldContext cx, t:SemType? expectedType, s:UnaryExpr expr
             if subExpr is s:ConstValueExpr {
                 SimpleConst operand = subExpr.value;
                 if operand is int {
-                    if operand == int:MIN_VALUE {
-                        return cx.semanticErr(`${"-"} applied to minimum integer value`, pos=expr.opPos);
-                    }
-                    return foldedUnaryConstExpr(-operand, t:INT, subExpr);
+                    return foldedUnaryConstExpr(check intNegateEval(cx, expr.opPos, operand), t:INT, subExpr);
                 }
                 else if operand is float {
                     return foldedUnaryConstExpr(-operand, t:FLOAT, subExpr);

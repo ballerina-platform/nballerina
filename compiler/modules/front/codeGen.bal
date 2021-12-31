@@ -1275,8 +1275,12 @@ function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock nextBlock, Position
     bir:Register result;
     bir:Insn insn;
     if typed is ["int", bir:IntOperand] {
+        bir:IntOperand intOperand = typed[1];
+        if intOperand is int {
+            return { result: check intNegateEval(cx, pos, intOperand), block: nextBlock };
+        }
         result = cx.createTmpRegister(t:INT, pos);
-        insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [0, typed[1]], result };
+        insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [0, intOperand], result };
     }
     else if typed is ["float", bir:FloatOperand] {
         result = cx.createTmpRegister(t:FLOAT, pos);
@@ -1312,8 +1316,14 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
     TypedOperandPair? pair = typedOperandPair(lhs, rhs);
     bir:Register result;
     if pair is IntOperandPair {
+        readonly & bir:IntOperand[2] operands = pair[1];
+        int? leftOperand = intOperandSingleShape(operands[0]);
+        int? rightOperand = intOperandSingleShape(operands[1]);
+        if leftOperand != () && rightOperand != () {
+            return { result: check intArithmeticEval(cx, pos, op, leftOperand, rightOperand), block: bb };
+        }
         result = cx.createTmpRegister(t:INT, pos);
-        bir:IntArithmeticBinaryInsn insn = { op, pos, operands: pair[1], result };
+        bir:IntArithmeticBinaryInsn insn = { op, pos, operands, result };
         bb.insns.push(insn);
     }
     else if pair is FloatOperandPair {
@@ -2083,4 +2093,10 @@ function operandSingleShape(bir:Operand operand) returns t:WrappedSingleValue? {
 
 function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? {
     return operand is decimal ? operand : t:singleDecimalShape(operand.semType);
+}
+
+function intOperandSingleShape(bir:IntOperand operand) returns int? {
+    // Since ints have only one value per shape, an int operand with singleton shape
+    // should always be represented by an int.
+    return operand is int ? operand : ();
 }
