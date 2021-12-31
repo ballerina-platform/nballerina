@@ -1327,8 +1327,20 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
         bb.insns.push(insn);
     }
     else if pair is FloatOperandPair {
-        result = cx.createTmpRegister(t:FLOAT, pos);
-        bir:FloatArithmeticBinaryInsn insn = { op, pos, operands: pair[1], result };
+        readonly & bir:FloatOperand[2] operands = pair[1];
+        t:SemType resultType = t:FLOAT;
+        float? leftShape = floatOperandSingleShape(operands[0]);
+        float? rightShape = floatOperandSingleShape(operands[1]);
+        if leftShape != () && rightShape != () && !(op == "/" && rightShape == 0f) {
+            float resultShape = floatArithmeticEval(op, leftShape, rightShape);
+            // only 0f shape has multiple shapes
+            if resultShape != 0f || (leftShape == lhs && rightShape == rhs) {
+                return { result: resultShape, block: bb };
+            }
+            resultType = t:singleton(cx.mod.tc, resultShape);
+        }
+        result = cx.createTmpRegister(resultType, pos);
+        bir:FloatArithmeticBinaryInsn insn = { op, pos, operands, result };
         bb.insns.push(insn);
     }
     else if pair is DecimalOperandPair {
@@ -2093,6 +2105,10 @@ function operandSingleShape(bir:Operand operand) returns t:WrappedSingleValue? {
 
 function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? {
     return operand is decimal ? operand : t:singleDecimalShape(operand.semType);
+}
+
+function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
+    return operand is float ? operand : t:singleFloatShape(operand.semType);
 }
 
 function intOperandSingleShape(bir:IntOperand operand) returns int? {
