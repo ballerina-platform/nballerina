@@ -240,20 +240,10 @@ class CodeGenFoldContext {
             return { value: check lookupImportedConst(self.cx.mod, self.cx.functionDefn, prefix, varName) };
         }
         t:SingleValue|Binding v = check lookupVarRef(self.cx, varName, self.env, pos);
-        if v is Binding {
-            t:WrappedSingleValue? wrapped = t:singleShape(v.reg.semType);
-            if wrapped is () {
-                return ();
-            }
-            if wrapped.value is decimal || wrapped.value == 0.0f {
-                // Cannot fold here because we would lose the precision (for decimal)
-                return ();
-            }
-            return wrapped;
-        }
-        else {
+        if v is t:SingleValue {
             return { value: v };
         }
+        return ();
     }
 
     public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
@@ -1507,7 +1497,7 @@ function codeGenEqualityExpr(CodeGenContext cx, bir:BasicBlock bb, Environment e
 
     if !exact {
         t:SemType ad = t:createAnydata(tc);
-        if !t:isSubtype(tc, lType, ad) && !t:isSubtype(tc, rType, ad) {
+        if !t:isSubtype(tc, lType, ad) && !t:isSubtype(tc,rType, ad) {
             return cx.semanticErr(`type of at least one operand of ${op} operator must be a subtype of anydata`, pos);
         }
         t:WrappedSingleValue? lShape = operandSingleShape(l);
@@ -1567,8 +1557,17 @@ function codeGenVarRefExpr(CodeGenContext cx, s:VarRefExpr ref, Environment env,
         binding = ();
     }
     else {
-        result = v.reg;
-        binding = v;
+        t:WrappedSingleValue? wrapped = t:singleShape(v.reg.semType);
+        // for decimal, we need the register to preserve precision
+        // for 0f, we need the register to preserve the sign
+        if wrapped != () && wrapped.value !is decimal && wrapped.value != 0.0f {
+            result = wrapped.value;
+            binding = ();
+        }
+        else {
+            result = v.reg;
+            binding = v;
+        }
     }
     return { result, block: bb, binding };
 }
