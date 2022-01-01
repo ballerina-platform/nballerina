@@ -223,6 +223,7 @@ class CodeGenContext {
     function resolveTypeDesc(s:TypeDesc td) returns t:SemType|ResolveTypeError {
         return resolveSubsetTypeDesc(self.mod, self.functionDefn, td);
     }
+
 }
 
 class CodeGenFoldContext {
@@ -544,17 +545,17 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         foreach var pattern in clause.patterns {
             t:SemType patternType;
             if pattern is s:SimpleConstExpr {
-                s:ConstValueExpr cv = <s:ConstValueExpr> check cx.foldExpr(env, pattern, matchedType);
-                EqualMatchTest mt = { value: cv.value, clauseIndex: i, pos: clause.opPos };
-                if equalMatchTests.hasKey(mt.value) {
+                t:SingleValue value = check resolveConstMatchPattern(cx, env, pattern, matchedType);
+                if equalMatchTests.hasKey(value) {
                     return cx.semanticErr("duplicate const match pattern", pos=s:range(pattern));
                 }
+                EqualMatchTest mt = { value, clauseIndex: i, pos: clause.opPos };
                 equalMatchTests.add(mt);    
-                if !t:containsConst(matchedType, cv.value) {
+                if !t:containsConst(matchedType, value) {
                     return cx.semanticErr("match pattern cannot match value of expression", pos=s:range(pattern));
                 }
                 matchTests.push(mt);
-                patternType = t:singleton(tc, mt.value);
+                patternType = t:singleton(tc, value);
             }
             else {
                 // `1|_ => {}` is pointless, but I'm not making it an error
@@ -669,6 +670,14 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         testBlock.insns.push(branch);
     }
     return { block: contBlock, assignments };
+}
+
+function resolveConstMatchPattern(CodeGenContext cx, Environment env, s:SimpleConstExpr expr, t:SemType? expectedType) returns t:SingleValue|FoldError {
+    s:Expr foldedExpr = check cx.foldExpr(env, expr, expectedType);
+    if foldedExpr is s:ConstValueExpr {
+        return foldedExpr.value;
+    }
+    return cx.semanticErr(`match pattern is not constant`, s:range(expr));
 }
 
 function maybeCreateBasicBlock(CodeGenContext cx, bir:BasicBlock? block) returns bir:BasicBlock {
