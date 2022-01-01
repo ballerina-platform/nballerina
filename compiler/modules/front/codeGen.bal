@@ -1113,6 +1113,9 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         // Bitwise complement
         { opPos: var pos, op: "~",  operand: var o } => {
             var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, o);
+            if operand is int {
+                return { result: ~operand, block: nextBlock };
+            }
             bir:Register result = cx.createTmpRegister(t:INT, pos);
             bir:IntBitwiseBinaryInsn insn = { op: "^", pos, operands: [-1, operand], result };
             nextBlock.insns.push(insn);
@@ -1321,9 +1324,9 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
     bir:Register result;
     if pair is IntOperandPair {
         readonly & bir:IntOperand[2] operands = pair[1];
-        int? leftOperand = intOperandSingleShape(operands[0]);
-        int? rightOperand = intOperandSingleShape(operands[1]);
-        if leftOperand != () && rightOperand != () {
+        bir:IntOperand leftOperand = operands[0];
+        bir:IntOperand rightOperand = operands[1];
+        if leftOperand is int && rightOperand is int {
             return { result: check intArithmeticEval(cx, pos, op, leftOperand, rightOperand), block: bb };
         }
         result = cx.createTmpRegister(t:INT, pos);
@@ -1378,6 +1381,9 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
 }
 
 function codeGenBitwiseBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, s:BinaryBitwiseOp op, Position pos, bir:IntOperand lhs, bir:IntOperand rhs) returns CodeGenError|ExprEffect {
+    if lhs is int && rhs is int {
+        return { result: bitwiseEval(op, lhs, rhs), block: bb };
+    }
     t:SemType lt = bitwiseOperandType(lhs);
     t:SemType rt = bitwiseOperandType(rhs);
     t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
@@ -2113,10 +2119,4 @@ function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? 
 
 function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
     return operand is float ? operand : t:singleFloatShape(operand.semType);
-}
-
-function intOperandSingleShape(bir:IntOperand operand) returns int? {
-    // Since ints have only one value per shape, an int operand with singleton shape
-    // should always be represented by an int.
-    return operand is int ? operand : ();
 }
