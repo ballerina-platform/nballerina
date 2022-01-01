@@ -1360,6 +1360,12 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
         bb.insns.push(insn);
     }    
     else if pair is StringOperandPair && op == "+" {
+        readonly & bir:StringOperand[2] operands = pair[1];
+        bir:StringOperand leftOperand = operands[0];
+        bir:StringOperand rightOperand = operands[1];
+        if leftOperand is string && rightOperand is string {
+            return { result: leftOperand + rightOperand, block: bb };
+        }
         result = cx.createTmpRegister(t:STRING, pos);
         bir:StringConcatInsn insn = { operands: pair[1], result, pos };
         bb.insns.push(insn);
