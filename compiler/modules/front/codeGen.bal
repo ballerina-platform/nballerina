@@ -997,7 +997,6 @@ function codeGenCompoundAssignToVar(CodeGenContext cx,
         bir:Operand r;
         { block: nextBlock, result: l } = check codeGenExpr(cx, startBlock, env, lValue);
         { block: nextBlock, result: r } = check codeGenExpr(cx, nextBlock, env, foldedRExpr);
-        // We evaluate the operands here, so we can reuse the function for compound assignment.
         { block: nextBlock, result: opResult } = check codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, l, r);
     }
     else {
@@ -1005,7 +1004,6 @@ function codeGenCompoundAssignToVar(CodeGenContext cx,
         bir:IntOperand r;
         { block: nextBlock, result: l } = check codeGenExprForInt(cx, startBlock, env, lValue);
         { block: nextBlock, result: r } = check codeGenExprForInt(cx, nextBlock, env, foldedRExpr);
-        // We evaluate the operands here, so we can reuse the function for compound assignment.
         { block: nextBlock, result: opResult } = check codeGenBitwiseBinaryExpr(cx, nextBlock, op, pos, l, r);
     }
 
@@ -1123,18 +1121,15 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
         // Negation
         { opPos: var pos, op: "-",  operand: var o } => {
-            var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
-            return codeGenNegateExpr(cx, nextBlock, pos, operand);
+            var { operand, nextBlock, ifNilBlock } = check codeGenUnaryNilLift(cx, env, o, bb, pos);
+            return codeGenNegateExpr(cx, nextBlock, ifNilBlock, pos, operand);
         }
         // Bitwise complement
         { opPos: var pos, op: "~",  operand: var o } => {
-            var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, o);
-            if operand is int {
-                return { result: ~operand, block: nextBlock };
+            var { operand: liftedOperand, nextBlock, ifNilBlock } = check codeGenUnaryNilLift(cx, env, o, bb, pos);
+            if liftedOperand is int {
+                return { result: ~liftedOperand, block: nextBlock };
             }
-            bir:Operand liftedOperand;
-            bir:BasicBlock? nilBlock;
-            { operand: liftedOperand , nextBlock, nilBlock } = codeGenUnaryLift(cx, operand, nextBlock, pos);
             bir:Register result = cx.createTmpRegister(t:INT, pos);
             bir:IntOperand operand = check intOperand(cx, liftedOperand, exprRange(o));
             bir:IntBitwiseBinaryInsn insn = { op: "^", pos, operands: [-1, operand], result };
@@ -1389,12 +1384,8 @@ function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environ
     }
 }
 
-function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock currentBlock, Position pos, bir:Operand operand) returns CodeGenError|ExprEffect {
-    var { operand: liftedOperand , nextBlock, nilBlock } = unaryNilLift(cx, operand, currentBlock, pos);
-    if nilBlock != () {
-        return codeGenNilResult(cx, nextBlock, nilBlock, pos);
-    }
-    TypedOperand? typed = typedOperand(liftedOperand);
+function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock nextBlock, bir:BasicBlock? ifNilBlock, Position pos, bir:Operand operand) returns CodeGenError|ExprEffect {
+    TypedOperand? typed = typedOperand(operand);
     bir:Register result;
     bir:Insn insn;
     if typed is ["int", bir:IntOperand] {
@@ -1411,7 +1402,7 @@ function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock currentBlock, Posit
         float? shape = floatOperandSingleShape(floatOperand);
         if shape != () {
             float resultShape = -shape; // shouldn't ever panic
-            if shape != 0f || shape == liftedOperand {
+            if shape != 0f || shape == operand {
                 return { result: resultShape, block: nextBlock };
             }
             resultType = t:singleton(cx.mod.tc, resultShape);
@@ -1442,7 +1433,7 @@ function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock currentBlock, Posit
         return cx.semanticErr(`operand of ${"-"} must be int or float or decimal`, pos);
     }
     nextBlock.insns.push(insn);
-    return { result, block: nextBlock };
+    return codeGenNilLiftResult(cx, { result, block: nextBlock }, ifNilBlock, pos);
 }
 
 function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, Position pos, bir:Operand lhs, bir:Operand rhs) returns CodeGenError|ExprEffect {
