@@ -3,19 +3,31 @@
  (import "console" "log" (func $println (param i32)))
  (export "printBoolean" (func $printBoolean))
  (func $printBoolean (param $0 i32)
-  (block $first
-   (block $second
-    (br_if $second
-     (local.get $0)
-    )
-    (call $println
-     (i32.const 0)
-    )
-    (br $first)
+  (block $block$4$break
+   (block
    )
-   (call $println
-    (i32.const 1)
+   (if
+    (local.get $0)
+    (block
+     (call $println
+      (i32.const 0)
+     )
+     (block
+      (br $block$4$break)
+     )
+    )
+    (block
+     (call $println
+      (i32.const 1)
+     )
+     (block
+      (br $block$4$break)
+     )
+    )
    )
+  )
+  (block
+   (return)
   )
  )
 )
