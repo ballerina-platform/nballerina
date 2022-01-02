@@ -4,11 +4,8 @@
 
 #define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
 
-const double F0 = +0.0;
-
-static inline TaggedPtr listConstruct(ListDescPtr desc, int64_t capacity) {
-    return ptrAddFlags(_bal_list_construct(desc, capacity),
-                       ((uint64_t)TAG_LIST_RW << TAG_SHIFT)|EXACT_FLAG);
+static inline Fillability createArrayFiller(ListDescPtr ldp, TaggedPtr *valuePtr) {
+    return _bal_structure_create_filler(ldp->memberType, ldp->fillerDesc, valuePtr);
 }
 
 ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
@@ -16,57 +13,6 @@ ListPtr _bal_list_construct(ListDescPtr desc, int64_t capacity) {
     lp->desc = desc;
     initGenericArray(&(lp->gArray), capacity, TAGGED_PTR_SHIFT);
     return lp;
-}
-
-typedef enum {
-    FILL_NONE,
-    FILL_EACH,
-    FILL_COPY
-} Fillability;
-
-static Fillability getArrayFiller(ListDescPtr desc, TaggedPtr *valuePtr) {
-    MemberType memberType = desc->memberType;
-    uint32_t bitSet;
-    if ((memberType & 1) == 0) {
-        ComplexTypePtr ctp = (ComplexTypePtr)memberType;
-        bitSet = ctp->all | ctp->some;
-        StructureDescPtr fillerDesc = desc->fillerDesc;
-        if (fillerDesc != 0) {
-            switch (bitSet) {
-                case (1 << TAG_LIST_RW):
-                    *valuePtr = listConstruct((ListDescPtr)fillerDesc, 0);
-                    return FILL_EACH;
-                case (1 << TAG_MAPPING_RW):
-                    *valuePtr = _bal_mapping_construct((MappingDescPtr)fillerDesc, 0);
-                    return FILL_EACH;
-            }
-        }         
-    }
-    else {
-        bitSet = (uint32_t)(memberType >> 1);
-        switch (bitSet) {
-            case (1 << TAG_BOOLEAN):
-                *valuePtr = bitsToTaggedPtr(((uint64_t)TAG_BOOLEAN) << TAG_SHIFT);
-                return FILL_COPY;
-            case (1 << TAG_INT):
-                *valuePtr = bitsToTaggedPtr(IMMEDIATE_FLAG | ((uint64_t)TAG_INT) << TAG_SHIFT);
-                return FILL_COPY;
-            case (1 << TAG_FLOAT):
-                {
-                    GC double *fp = (GC double *)&F0;
-                    *valuePtr = ptrAddFlags(fp, ((uint64_t)TAG_FLOAT) << TAG_SHIFT);
-                    return FILL_COPY;
-                }
-            case (1 << TAG_STRING):
-                _bal_string_alloc(0, 0, valuePtr);
-                return FILL_COPY;
-        }
-    }
-    if (bitSet & (1 << TAG_NIL)) {
-        *valuePtr = 0;
-        return FILL_COPY;
-    }
-    return FILL_NONE;
 }
 
 // _bal_list_*_get functions must be called with an index such that, 0 <= index < lp->gArray.length
@@ -133,7 +79,7 @@ PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val
     Fillability fill;
     if (index > ap->length) {
         // we have a gap to fill
-        fill = getArrayFiller(ldp, &filler);
+        fill = createArrayFiller(ldp, &filler);
         if (fill == FILL_NONE) {
             // Note that we panic before trying to grow the array
             return PANIC_NO_FILLER;
@@ -155,7 +101,7 @@ PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val
         ap->members[ap->length] = filler;
         for (int64_t i = ap->length + 1; i < index; i++) {
             if (fill == FILL_EACH) {
-                (void)getArrayFiller(ldp, &filler);
+                (void)createArrayFiller(ldp, &filler);
             }
             ap->members[i] = filler;
         }

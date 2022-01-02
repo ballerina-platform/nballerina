@@ -352,6 +352,14 @@ extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
 extern READONLY bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2);
 extern READONLY bool _bal_mapping_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp);
 
+typedef enum {
+    FILL_NONE,
+    FILL_EACH,
+    FILL_COPY
+} Fillability;
+
+extern Fillability _bal_structure_create_filler(MemberType memberType, StructureDescPtr fillerDesc, TaggedPtr *valuePtr);
+
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
 extern READNONE TaggedPtr _bal_tagged_clear_exact(TaggedPtr p);
