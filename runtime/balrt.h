@@ -392,6 +392,7 @@ extern CompareResult READONLY _bal_array_int_compare(TaggedPtr lhs, TaggedPtr rh
 extern CompareResult READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr rhs);
 extern CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs);
 extern CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs);
+extern CompareResult READONLY _bal_array_decimal_compare(TaggedPtr lhs, TaggedPtr rhs);
 
 extern TaggedPtr READONLY _bal_convert_to_float(TaggedPtr tp);
 extern TaggedWithOverflow READONLY _bal_convert_to_int(TaggedPtr tp);
@@ -549,6 +550,14 @@ static READONLY inline CompareResult taggedStringCompare(TaggedPtr lhs, TaggedPt
         return COMPARE_UN;
     }
     int64_t compareResult = _bal_string_cmp(lhs, rhs);
+    return COMPARE_TOTAL(compareResult, 0);
+}
+
+static READONLY inline CompareResult taggedDecimalCompare(TaggedPtr lhs, TaggedPtr rhs) {
+    if (lhs == rhs) {
+        return COMPARE_EQ;
+    }
+    int64_t compareResult = _bal_decimal_cmp(lhs, rhs);
     return COMPARE_TOTAL(compareResult, 0);
 }
 
