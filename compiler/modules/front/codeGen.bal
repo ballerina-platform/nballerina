@@ -868,12 +868,12 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 }
 
 function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr, Position pos) returns CodeGenError|StmtEffect {
-    var [unnarrowedReg, assignments] = check assignmentRegister(cx, env, varName, pos);
+    var [unnarrowedReg, assignments] = check lookupVarRefForAssign(cx, env, varName, pos);
     bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, unnarrowedReg, expr, unnarrowedReg.semType, pos);
     return { block: nextBlock, assignments };
 }
 
-function assignmentRegister(CodeGenContext cx, Environment env, string varName, Position pos) returns CodeGenError|[bir:Register, int[]] {
+function lookupVarRefForAssign(CodeGenContext cx, Environment env, string varName, Position pos) returns CodeGenError|[bir:Register, int[]] {
     Binding binding = check lookupVarRefBinding(cx, varName, env, pos);
     if binding.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`, pos);
@@ -988,26 +988,16 @@ function codeGenCompoundAssignToVar(CodeGenContext cx,
                                     s:Expr rexpr,
                                     s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                     Position pos) returns CodeGenError|StmtEffect {
-    var [unnarrowedReg, assignments] = check assignmentRegister(cx, env, lValue.name, pos);
-    bir:BasicBlock nextBlock;
-    bir:Operand opResult;
-    s:Expr foldedRExpr = check cx.foldExpr(env, rexpr, unnarrowedReg.semType);
-    if op is s:BinaryArithmeticOp {
-        bir:Operand l;
-        bir:Operand r;
-        { block: nextBlock, result: l } = check codeGenExpr(cx, startBlock, env, lValue);
-        { block: nextBlock, result: r } = check codeGenExpr(cx, nextBlock, env, foldedRExpr);
-        { block: nextBlock, result: opResult } = check codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, l, r);
+    var { block: nextBlock, result: lhs } = check codeGenExpr(cx, startBlock, env, lValue);
+    bir:Operand operand;
+    if lhs is bir:Register {
+        { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx, nextBlock, env, op, pos, lhs, rexpr);
     }
     else {
-        bir:IntOperand l;
-        bir:IntOperand r;
-        { block: nextBlock, result: l } = check codeGenExprForInt(cx, startBlock, env, lValue);
-        { block: nextBlock, result: r } = check codeGenExprForInt(cx, nextBlock, env, foldedRExpr);
-        { block: nextBlock, result: opResult } = check codeGenBitwiseBinaryExpr(cx, nextBlock, op, pos, l, r);
+        return cx.semanticErr("value assigned to a constant", pos);
     }
-
-    bir:AssignInsn insn = { pos, result: unnarrowedReg, operand: opResult };
+    var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
+    bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
     return { block: nextBlock, assignments };
 }
