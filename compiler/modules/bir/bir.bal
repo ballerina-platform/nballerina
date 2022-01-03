@@ -163,6 +163,7 @@ public enum InsnName {
     INSN_DECIMAL_ARITHMETIC_BINARY,
     INSN_CONVERT_TO_INT,
     INSN_CONVERT_TO_FLOAT,
+    INSN_CONVERT_TO_DECIMAL,
     INSN_DECIMAL_NEGATE,
     INSN_COMPARE,
     INSN_EQUALITY,
@@ -204,7 +205,7 @@ public type Insn
     IntArithmeticBinaryInsn|IntNoPanicArithmeticBinaryInsn|IntBitwiseBinaryInsn
     |FloatArithmeticBinaryInsn|FloatNegateInsn
     |DecimalArithmeticBinaryInsn|DecimalNegateInsn
-    |ConvertToIntInsn|ConvertToFloatInsn
+    |ConvertToIntInsn|ConvertToFloatInsn|ConvertToDecimalInsn
     |BooleanNotInsn|CompareInsn|EqualityInsn
     |ListConstructInsn|ListGetInsn|ListSetInsn
     |MappingConstructInsn|MappingGetInsn|MappingSetInsn
@@ -326,6 +327,19 @@ public type ConvertToIntInsn readonly & record {|
 public type ConvertToFloatInsn readonly & record {|
     *InsnBase;
     INSN_CONVERT_TO_FLOAT name = INSN_CONVERT_TO_FLOAT;
+    Register result;
+    Register operand;
+|};
+
+# If the operand is an int or float, then convert it to a decimal.
+# Otherwise leave the operand unchanged.
+# The intersection of the operand type with int|float must be non-empty.
+# The result type must be `(T - (int|float))|decimal`,
+# where T is the operand type.
+# This panics if the conversion cannot be performed, so is a PPI.
+public type ConvertToDecimalInsn readonly & record {|
+    *InsnBase;
+    INSN_CONVERT_TO_DECIMAL name = INSN_CONVERT_TO_DECIMAL;
     Register result;
     Register operand;
 |};
@@ -607,6 +621,7 @@ final readonly & map<true> PPI_INSNS = {
     [INSN_INT_ARITHMETIC_BINARY]: true,
     [INSN_DECIMAL_ARITHMETIC_BINARY]: true,
     [INSN_CONVERT_TO_INT]: true,
+    [INSN_CONVERT_TO_DECIMAL]: true,
     [INSN_TYPE_CAST]: true,
     [INSN_LIST_GET]: true,
     [INSN_LIST_SET]: true,

@@ -38,3 +38,18 @@ TaggedWithOverflow _bal_convert_to_int(TaggedPtr tp) {
     }
     return res;
 }
+
+TaggedPtrPanicCode _bal_convert_to_decimal(TaggedPtr tp) {
+    TaggedPtrPanicCode res;
+    switch (getTag(tp) & UT_MASK) {
+        case TAG_INT:
+            res.ptr = _bal_decimal_from_int(taggedToInt(tp));
+            break;
+        case TAG_FLOAT:
+            return _bal_decimal_from_float(taggedToFloat(tp));
+        default:
+            res.ptr = tp;
+    }
+    res.panicCode = 0;
+    return res;
+}

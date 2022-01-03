@@ -433,13 +433,18 @@ function foldTypeCastExpr(FoldContext cx, t:SemType? expectedType, s:TypeCastExp
         t:UniformTypeBitSet? toNumType = t:singleNumericType(semType);
         var value = subExpr.value;
         if toNumType == t:INT {
-            if value is float || value is decimal {
+            if value is float|decimal {
                 value = check convertToIntEval(cx, expr.opPos, value);
             }
         }
         else if toNumType == t:FLOAT {
-            if value is int || value is decimal {
+            if value is int|decimal {
                 value = <float>value;
+            }
+        }
+        else if toNumType == t:DECIMAL {
+            if value is int|float {
+                value = check convertToDecimalEval(cx, expr.opPos, value);
             }
         }
         if !t:containsConst(semType, value) {

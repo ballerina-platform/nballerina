@@ -1611,8 +1611,10 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
                 }
             }
             else {
-                // SUBSET decimal
-                panic err:impossible("convert to decimal");
+                if shape is int|float {
+                    operand = check convertToDecimalEval(cx, tcExpr.opPos, shape);
+                    fromType = operandSemType(cx.mod.tc, operand);
+                }
             }
         }
         else if operand is bir:Register { // always true but does needed narrowing
@@ -1626,8 +1628,8 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
                 nextBlock.insns.push(insn);
             }
             else {
-                // SUBSET decimal
-                panic err:impossible("convert to decimal");
+                bir:ConvertToDecimalInsn insn = { operand, result, pos: tcExpr.opPos };
+                nextBlock.insns.push(insn);
             }
             operand = result;
             fromType = result.semType;
