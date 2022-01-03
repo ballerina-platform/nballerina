@@ -80,7 +80,7 @@ type CodeGenError err:Semantic|err:Unimplemented;
 type LoopContext record {|
     // number of first register created in the loop
     int startRegister;
-    bir:BasicBlock onBreak;
+    bir:BasicBlock? onBreak;
     bir:BasicBlock? onContinue;
     LoopContext? enclosing;
     // will use this with while true to determine whether
@@ -148,7 +148,7 @@ class CodeGenContext {
         return d:location(self.file, pos);
     }
 
-    function pushLoopContext(bir:BasicBlock onBreak, bir:BasicBlock? onContinue) {
+    function pushLoopContext(bir:BasicBlock? onBreak, bir:BasicBlock? onContinue) {
         LoopContext c = { onBreak, onContinue, enclosing: self.loopContext, startRegister: self.nextRegisterNumber()  };
         self.loopContext = c;
     }
@@ -159,6 +159,10 @@ class CodeGenContext {
 
     function loopContinueBlock() returns bir:BasicBlock? {
         return (<LoopContext>self.loopContext).onContinue;
+    }
+
+    function loopBreakBlock() returns bir:BasicBlock? {
+        return (<LoopContext>self.loopContext).onBreak;
     }
 
     function loopStartRegister() returns int {
@@ -175,8 +179,10 @@ class CodeGenContext {
             return self.semanticErr("break not in loop", pos);
         }
         else {
+            bir:BasicBlock b = c.onBreak ?: self.createBasicBlock();
+            c.onBreak = b;
             c.breakUsed = true;
-            return c.onBreak.label;
+            return b.label;
         }
     }
 
@@ -438,13 +444,15 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     startBlock.insns.push(branchToLoopHead);
     bir:BasicBlock loopBody = cx.createBasicBlock();
-    bir:BasicBlock exit = cx.createBasicBlock();
+    bir:BasicBlock? exit = ();
 
     boolean exitReachable = false;
     var { result: condition, block: afterCondition } = check codeGenConditionalExpr(cx, loopHead, env, stmt.condition);
     bir:Insn branch;
     if condition is bir:Register {
-        branch = <bir:CondBranchInsn>{ operand: condition, ifFalse: exit.label, ifTrue: loopBody.label, pos: stmt.condition.startPos };
+        bir:BasicBlock ifFalseBb = cx.createBasicBlock();
+        exit = ifFalseBb;
+        branch = <bir:CondBranchInsn>{ operand: condition, ifFalse: ifFalseBb.label, ifTrue: loopBody.label, pos: stmt.condition.startPos };
         exitReachable = true;
     }
     else if condition is true {
@@ -453,7 +461,9 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     else if stmt.body.length() == 0 {
         // this is `while false { }`
         // need to put something in loopHead
-        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.body.closeBracePos };
+        bir:BasicBlock destBb = cx.createBasicBlock();
+        exit = destBb;
+        branch = <bir:BranchInsn> { dest: destBb.label, pos: stmt.body.closeBracePos };
         exitReachable = true;
     }
     else {
@@ -473,6 +483,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     assignments.push(...cx.onBreakAssignments());
     if cx.loopUsedBreak() {
         exitReachable = true;
+        exit = cx.loopBreakBlock();
     }
     cx.popLoopContext();
    
