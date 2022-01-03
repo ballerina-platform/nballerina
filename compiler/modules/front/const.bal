@@ -361,7 +361,6 @@ function simpleConstExprIntersectIsEmpty(s:ConstValueExpr leftExpr, s:ConstValue
 function foldBinaryRelationalExpr(FoldContext cx, t:SemType? expectedType, s:BinaryRelationalExpr expr) returns s:Expr|FoldError {
     s:Expr leftExpr = check foldExpr(cx, (), expr.left);
     s:Expr rightExpr = check foldExpr(cx, (), expr.right);
-    
     if leftExpr is s:ConstValueExpr && rightExpr is s:ConstValueExpr {
         return foldedBinaryConstExpr(check relationalEval(cx, expr.opPos, expr.relationalOp, leftExpr.value, rightExpr.value),
                                      t:BOOLEAN, leftExpr, rightExpr);
