@@ -168,9 +168,6 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
                 if isOperandIntSubtypeArray(tc, lhs) && isOperandIntSubtypeArray(tc, rhs) {
                     buildCompareSpecializedIntList(builder, scaffold, insn, lhsValue, rhsValue);
                 }
-                if isOperandDecimalSubtypeArray(tc, lhs) && isOperandDecimalSubtypeArray(tc, rhs) {
-                    buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, arrayDecimalCompareFunction);
-                }
                 else {
                     buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, arrayGenericCompareFunction);
                 }

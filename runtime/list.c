@@ -313,6 +313,8 @@ static READONLY TaggedValueComparator getArrayComparator(MemberType memberType) 
                 return &taggedFloatCompare;
             case (1 << TAG_STRING):
                 return &taggedStringCompare;
+            case (1 << TAG_DECIMAL):
+                return &taggedDecimalCompare;
         }
         unreachable();
     }
