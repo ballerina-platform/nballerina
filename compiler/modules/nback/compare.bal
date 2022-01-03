@@ -153,9 +153,6 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
         if lhsRepr.subtype == t:STRING && rhsRepr.subtype == t:STRING {
             buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
         }
-        else if lhsRepr.subtype == t:DECIMAL && rhsRepr.subtype == t:DECIMAL {
-            buildCompareDecimal(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
-        }
         else {
             t:UniformTypeBitSet OrderTyMinusNil = (lhsRepr.subtype | rhsRepr.subtype) & ~t:NIL;
             t:UniformTypeCode?  OrderTyMinusNilCode = t:uniformTypeCode(OrderTyMinusNil);
@@ -167,6 +164,9 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
                 t:Context tc = scaffold.typeContext();
                 if isOperandIntSubtypeArray(tc, lhs) && isOperandIntSubtypeArray(tc, rhs) {
                     buildCompareSpecializedIntList(builder, scaffold, insn, lhsValue, rhsValue);
+                }
+                else if isOperandDecimalSubtypeArray(tc, lhs) && isOperandDecimalSubtypeArray(tc, rhs) {
+                    buildCompareDecimal(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
                 }
                 else {
                     buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, arrayGenericCompareFunction);
