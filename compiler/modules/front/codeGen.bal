@@ -1247,10 +1247,10 @@ function codeGenNilLiftResult(CodeGenContext cx, ExprEffect nonNilEffect, bir:Ba
     }
     else {
         bir:BasicBlock block = cx.createBasicBlock();
-        bir:Register nonNilResult = <bir:Register> nonNilEffect.result;
+        bir:Operand nonNilResult = nonNilEffect.result;
         bir:BasicBlock nonNilBlock = nonNilEffect.block;
 
-        bir:Register result = cx.createTmpRegister(t:union(nonNilResult.semType, t:NIL));
+        bir:Register result = cx.createTmpRegister(t:union(operandSemType(cx.mod.tc, nonNilResult), t:NIL));
         bir:AssignInsn nilAssign = { result, operand: (), pos };
         ifNilBlock.insns.push(nilAssign);
         bir:BranchInsn branchInsn = { dest: block.label, pos };
