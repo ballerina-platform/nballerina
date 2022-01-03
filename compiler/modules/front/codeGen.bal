@@ -1097,11 +1097,7 @@ function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Environment
 
 function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|IntExprEffect {
     var { result, block } = check codeGenExpr(cx, bb, env, expr);
-    if result is bir:IntOperand {
-        // rest of the type checking is in the verifier
-        return { result, block };
-    }
-    return cx.semanticErr("expected integer operand", expr.startPos);
+    return { result: check intOperand(cx, result, expr), block };
 }
 
 function codeGenExprForString(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|StringExprEffect {
@@ -1131,7 +1127,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
                 return { result: ~liftedOperand, block: nextBlock };
             }
             bir:Register result = cx.createTmpRegister(t:INT, pos);
-            bir:IntOperand operand = check intOperand(cx, liftedOperand, exprRange(o));
+            bir:IntOperand operand = check intOperand(cx, liftedOperand, o);
             bir:IntBitwiseBinaryInsn insn = { op: "^", pos, operands: [-1, operand], result };
             nextBlock.insns.push(insn);
             return codeGenNilLiftResult(cx, { result, block: nextBlock }, ifNilBlock, pos);
@@ -1154,8 +1150,8 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
         var { opPos: pos, bitwiseOp: op, left, right } => {
             var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, env, left, right, bb, pos);
-            bir:IntOperand l = check intOperand(cx, lhs, exprRange(left));
-            bir:IntOperand r = check intOperand(cx, rhs, exprRange(right));
+            bir:IntOperand l = check intOperand(cx, lhs, left);
+            bir:IntOperand r = check intOperand(cx, rhs, right);
             return codeGenNilLiftResult(cx, check codeGenBitwiseBinaryExpr(cx, nextBlock, op, pos, l, r), ifNilBlock, pos);
         }
         var { opPos: pos, equalityOp: op, left, right } => {
@@ -1243,17 +1239,6 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
     }
     panic err:impossible("unrecognized expression type in code gen: " +  s:exprToString(expr));
-}
-
-function intOperand(CodeGenContext cx, bir:Operand operand, Range subExprRange) returns bir:IntOperand|CodeGenError {
-    if operand is bir:IntOperand {
-        return operand;
-    }
-    return cx.semanticErr("expected an int operand", subExprRange);
-}
-
-function exprRange(s:Expr expr) returns Range {
-    return { startPos: expr.startPos, endPos: expr.endPos };
 }
 
 function codeGenNilLiftResult(CodeGenContext cx, ExprEffect nonNilEffect, bir:BasicBlock? ifNilBlock, Position pos) returns ExprEffect {
@@ -2251,4 +2236,11 @@ function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? 
 
 function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
     return operand is float ? operand : t:singleFloatShape(operand.semType);
+}
+
+function intOperand(CodeGenContext cx, bir:Operand operand, s:Expr expr) returns bir:IntOperand|CodeGenError {
+    if operand is bir:IntOperand {
+        return operand;
+    }
+    return cx.semanticErr("expected an int operand", s:range(expr));
 }
