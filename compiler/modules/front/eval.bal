@@ -233,7 +233,7 @@ function convertToIntEval(err:SemanticContext cx, Position pos, float|decimal va
     return cx.semanticErr(`cannot convert ${value} to int`, pos, cause=result);             
 }
 
-function convertFloatToDecimalEval(err:SemanticContext cx, Position pos, float value) returns decimal|err:Semantic {
+function convertToDecimalEval(err:SemanticContext cx, Position pos, float|int value) returns decimal|err:Semantic {
     decimal|error result = trap <decimal>value;
     if result is decimal {
         return result;

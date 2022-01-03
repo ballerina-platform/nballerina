@@ -1611,12 +1611,8 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
                 }
             }
             else {
-                if shape is int {
-                    operand = <decimal>shape;
-                    fromType = operandSemType(cx.mod.tc, operand);
-                }
-                else if shape is float {
-                    operand = check convertFloatToDecimalEval(cx, tcExpr.opPos, shape);
+                if shape is int|float {
+                    operand = check convertToDecimalEval(cx, tcExpr.opPos, shape);
                     fromType = operandSemType(cx.mod.tc, operand);
                 }
             }
