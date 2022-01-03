@@ -113,6 +113,8 @@ static void insertInit(MappingPtr m, uint64_t hash, int64_t insertMapIndex) {
 }
 
 static void allocTable(MappingPtr m) {
+    // We are assuming that a _bal_alloc(1 << 63) will get an out of memory panic,
+    // so we will never get to do _bal_alloc(1 << 64).
     uint64_t size = (uint64_t)1 << (m->tableLengthShift + m->tableElementShift);
     m->table = _bal_alloc(size);
     // Mark all slots as empty

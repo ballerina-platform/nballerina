@@ -10,7 +10,7 @@ type Range readonly & record {|
 |};
 
 
-public function intConst(int value) returns SemType {
+public function intConst(int value) returns ComplexSemType {
     IntSubtype t = [{ min: value, max: value }];
     return uniformSubtype(UT_INT, t);
 }

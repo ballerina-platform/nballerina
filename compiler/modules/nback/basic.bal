@@ -132,6 +132,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:FloatNegateInsn {
             buildFloatNegate(builder, scaffold, insn);
         }
+        else if insn is bir:DecimalArithmeticBinaryInsn {
+            buildDecimalArithmeticBinary(builder, scaffold, insn);
+        }        
         else if insn is bir:DecimalNegateInsn {
             buildDecimalNegate(builder, scaffold, insn);
         }

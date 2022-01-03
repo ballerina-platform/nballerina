@@ -4,7 +4,7 @@ public type Message string|Template;
 public type Template object {
     *object:RawTemplate;
     public (readonly & string[]) strings;
-    public (string|int|float)[] insertions;
+    public (string|int|float|decimal)[] insertions;
 };
 
 const QUOTE = "'";

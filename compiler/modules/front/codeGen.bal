@@ -91,6 +91,7 @@ type LoopContext record {|
 |};
 
 class CodeGenContext {
+    *err:SemanticContext;
     final ModuleSymbols mod;
     final s:SourceFile file;
     final s:FunctionDefn functionDefn;
@@ -135,7 +136,7 @@ class CodeGenContext {
         return self.file.qNameRange(startPos);
     }
 
-    function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
+    public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
         return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.functionDefn.name);
     }
 
@@ -222,6 +223,7 @@ class CodeGenContext {
     function resolveTypeDesc(s:TypeDesc td) returns t:SemType|ResolveTypeError {
         return resolveSubsetTypeDesc(self.mod, self.functionDefn, td);
     }
+
 }
 
 class CodeGenFoldContext {
@@ -234,24 +236,18 @@ class CodeGenFoldContext {
         self.env = env;
     }
 
-    function lookupConst(string? prefix, string varName, Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
+    function lookupConst(string? prefix, string varName, Position pos) returns t:WrappedSingleValue|FoldError|() {
         if prefix != () {
             return { value: check lookupImportedConst(self.cx.mod, self.cx.functionDefn, prefix, varName) };
         }
         t:SingleValue|Binding v = check lookupVarRef(self.cx, varName, self.env, pos);
-        if v is Binding {
-            t:OptSingleValue shape = t:singleShape(v.reg.semType);
-            if shape != () && shape.value == s:FLOAT_ZERO {
-                return s:FLOAT_ZERO;
-            }
-            return shape;
-        }
-        else {
+        if v is t:SingleValue {
             return { value: v };
         }
+        return ();
     }
 
-    function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
+    public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
         return self.cx.semanticErr(msg, pos=pos, cause=cause);
     }
 
@@ -285,10 +281,10 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     }
     var { block: endBlock } = check codeGenStmts(cx, startBlock, { bindings }, defn.body);
     if endBlock != () {
-        bir:RetInsn ret = { operand: (), pos: defn.endPos };
+        bir:RetInsn ret = { operand: (), pos: defn.body.closeBracePos };
         endBlock.insns.push(ret);
     }
-    codeGenOnPanic(cx, defn.endPos);
+    codeGenOnPanic(cx, defn.body.closeBracePos);
     return cx.code;
 }
 
@@ -323,7 +319,7 @@ function codeGenStmts(CodeGenContext cx, bir:BasicBlock bb, Environment initialE
     foreach var stmt in block.stmts {
         StmtEffect effect;
         if curBlock == () {
-            return cx.semanticErr("unreachable code", stmt.startPos);
+            return cx.semanticErr("unreachable code", s:range(stmt));
         }
         else if stmt is s:IfElseStmt {
             effect = check codeGenIfElseStmt(cx, curBlock, env, stmt);
@@ -457,7 +453,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     else if stmt.body.length() == 0 {
         // this is `while false { }`
         // need to put something in loopHead
-        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.body.endPos };
+        branch = <bir:BranchInsn> { dest: exit.label, pos: stmt.body.closeBracePos };
         exitReachable = true;
     }
     else {
@@ -509,20 +505,32 @@ function codeGenBreakContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, 
     return { block: () };
 }
 
-type ConstMatchValue record {|
-    readonly SimpleConst value;
-    readonly int clauseIndex;
-    readonly Position pos;
+type MatchTest EqualMatchTest|UniformTypeMatchTest;
+
+type EqualMatchTest record {|
+    int clauseIndex;
+    Position pos;
+    readonly t:SingleValue value;
+|};
+
+type UniformTypeMatchTest record {|
+    int clauseIndex;
+    Position pos;
+    t:UniformTypeBitSet bitSet;
 |};
 
 function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MatchStmt stmt) returns CodeGenError|StmtEffect {
     int[] assignments = [];
     var { result: matched, block: testBlock, binding } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, stmt.expr, ()));
+    t:Context tc = cx.mod.tc;
     // JBUG #33303 need parentheses
-    t:SemType matchedType = matched is bir:Register ? (matched.semType) : t:singleton(matched);
-    // we enforce that the wildcardClauseIndex is either () or the index of the last clause
-    int? wildcardClauseIndex = ();
-    table<ConstMatchValue> key(value) constMatchValues = table[];
+    t:SemType matchedType = matched is bir:Register ? (matched.semType) : t:singleton(tc, matched);
+    // defaultCodeIndex is either () or the index of the last clause;
+    // the latter case means that the match is exhaustive
+    int? defaultClauseIndex = ();
+    boolean hadWildcardPattern = false;
+    table<EqualMatchTest> key(value) equalMatchTests = table [];
+    MatchTest[] matchTests = [];
     t:SemType[] clauseLooksLike = [];
     bir:InsnRef[][] clauseTestInsns = [];
     // union of all clause patterns preceding this one
@@ -535,49 +543,69 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         clauseBlocks[i] = cx.createBasicBlock("clause." + i.toString());
         t:SemType clausePatternUnion = t:NEVER;
         foreach var pattern in clause.patterns {
-            if pattern is s:ConstPattern {
-                if wildcardClauseIndex != () && i > wildcardClauseIndex {
-                    return cx.semanticErr("match pattern unmatchable because of previous wildcard match pattern", pos=pattern.pos);
+            t:SemType patternType;
+            if pattern is s:SimpleConstExpr {
+                t:SingleValue value = check resolveConstMatchPattern(cx, env, pattern, matchedType);
+                if equalMatchTests.hasKey(value) {
+                    return cx.semanticErr("duplicate const match pattern", pos=s:range(pattern));
                 }
-                s:Expr patternExpr = pattern.expr;
-                s:ConstValueExpr cv = <s:ConstValueExpr> check cx.foldExpr(env, patternExpr, matchedType);
-                ConstMatchValue mv = { value: cv.value, clauseIndex: i, pos: clause.opPos };
-                if constMatchValues.hasKey(mv.value) {
-                    return cx.semanticErr("duplicate const match pattern", pos=pattern.pos);
+                EqualMatchTest mt = { value, clauseIndex: i, pos: clause.opPos };
+                equalMatchTests.add(mt);    
+                if !t:containsConst(matchedType, value) {
+                    return cx.semanticErr("match pattern cannot match value of expression", pos=s:range(pattern));
                 }
-                constMatchValues.add(mv);    
-                if !t:containsConst(matchedType, cv.value) {
-                    return cx.semanticErr("match pattern cannot match value of expression", pos=pattern.pos);
-                }
-                clausePatternUnion = t:union(clausePatternUnion, t:singleton(mv.value));
+                matchTests.push(mt);
+                patternType = t:singleton(tc, value);
             }
             else {
                 // `1|_ => {}` is pointless, but I'm not making it an error
                 // because a later pattern that overlaps an earlier one is not in general an error
-                if wildcardClauseIndex != () {
-                    return cx.semanticErr("duplicate wildcard match pattern", clause.startPos);
+                if hadWildcardPattern {
+                    return cx.semanticErr("duplicate wildcard match pattern", pattern.startPos);
                 }
-                wildcardClauseIndex = i;
-                clausePatternUnion = t:ANY;
+                hadWildcardPattern = true;
+                UniformTypeMatchTest mt = { bitSet: t:ANY, clauseIndex: i, pos: clause.opPos };
+                matchTests.push(mt);
+                patternType = t:ANY;
+                if t:isSubtypeSimple(matchedType, t:ERROR) {
+                    return cx.semanticErr("wildcard match pattern cannot match error", pattern.startPos);
+                }
             }
+            clausePatternUnion = t:union(clausePatternUnion, patternType);
         }
         clauseLooksLike[i] = t:diff(clausePatternUnion, precedingPatternsUnion);
         precedingPatternsUnion = t:union(precedingPatternsUnion, clausePatternUnion);
+        if t:isSubtype(cx.mod.tc, matchedType, precedingPatternsUnion) {
+            if i != stmt.clauses.length() - 1 {
+                return cx.semanticErr("match clause unmatchable because of previous wildcard match pattern", pos=s:range(stmt.clauses[i + 1]));
+            }
+            defaultClauseIndex = i;
+        }
     }
 
     int patternIndex = 0;
-    foreach var mv in constMatchValues {
-        int clauseIndex = mv.clauseIndex;
-        if clauseIndex == wildcardClauseIndex {
+    foreach var mt in matchTests {
+        int clauseIndex = mt.clauseIndex;
+        if clauseIndex == defaultClauseIndex {
             break;
         }
-        bir:Register testResult = cx.createTmpRegister(t:BOOLEAN, mv.pos);
-        bir:EqualityInsn eq = { op: "==", pos: mv.pos, result: testResult, operands: [matched, mv.value] };
-        testBlock.insns.push(eq);
+        bir:Register testResult = cx.createTmpRegister(t:BOOLEAN, mt.pos);
+        if mt is EqualMatchTest {
+            bir:EqualityInsn eq = { op: "==", pos: mt.pos, result: testResult, operands: [matched, mt.value] };
+            testBlock.insns.push(eq);
+        }
+        else {
+            // We only get here if there is no defaultClauseIndex
+            // A wildcard match pattern can only not be the default if the type of the match pattern includes error,
+            // in which case the matched Operand cannot be const.
+            // So the cast to `bir:Register` is safe.
+            bir:TypeTestInsn tt = { pos: mt.pos, result: testResult, operand: <bir:Register>matched, semType: mt.bitSet, negated: false };
+            testBlock.insns.push(tt);
+        }
         clauseTestInsns[clauseIndex].push(bir:lastInsnRef(testBlock));
         bir:BasicBlock nextBlock = cx.createBasicBlock("pattern." + patternIndex.toString());
         patternIndex += 1;
-        bir:CondBranchInsn condBranch = { operand: testResult, ifTrue: clauseBlocks[clauseIndex].label, ifFalse: nextBlock.label, pos: mv.pos } ;
+        bir:CondBranchInsn condBranch = { operand: testResult, ifTrue: clauseBlocks[clauseIndex].label, ifFalse: nextBlock.label, pos: mt.pos } ;
         testBlock.insns.push(condBranch);
         testBlock = nextBlock;
     }
@@ -589,7 +617,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         // Do type narrowing
         if binding != () {
             bir:Result? basis = ();
-            if clauseIndex == wildcardClauseIndex {
+            if clauseIndex == defaultClauseIndex {
                 bir:Result[] and = [];
                 foreach int i in 0 ..< clauseIndex {
                     foreach var insn in clauseTestInsns[i] {
@@ -626,8 +654,8 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
             assignments.push(...blockAssignments);
         }
     }
-    if wildcardClauseIndex != () {
-        bir:BranchInsn branch = { dest: clauseBlocks[wildcardClauseIndex].label, pos: stmt.clauses[wildcardClauseIndex].startPos };
+    if defaultClauseIndex != () {
+        bir:BranchInsn branch = { dest: clauseBlocks[defaultClauseIndex].label, pos: stmt.clauses[defaultClauseIndex].startPos };
         testBlock.insns.push(branch);
         if contBlock == () {
             // all the clauses have a return or similar
@@ -637,10 +665,19 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     else {
         bir:BasicBlock b = maybeCreateBasicBlock(cx, contBlock);
         contBlock = b;
-        bir:BranchInsn branch = { dest: b.label, pos: stmt.endPos };
+        Position endPos = stmt.clauses.length() > 0 ? (stmt.clauses[stmt.clauses.length()-1].block.closeBracePos) : stmt.startPos;
+        bir:BranchInsn branch = { dest: b.label, pos: endPos };
         testBlock.insns.push(branch);
     }
     return { block: contBlock, assignments };
+}
+
+function resolveConstMatchPattern(CodeGenContext cx, Environment env, s:SimpleConstExpr expr, t:SemType? expectedType) returns t:SingleValue|FoldError {
+    s:Expr foldedExpr = check cx.foldExpr(env, expr, expectedType);
+    if foldedExpr is s:ConstValueExpr {
+        return foldedExpr.value;
+    }
+    return cx.semanticErr(`match pattern is not constant`, s:range(expr));
 }
 
 function maybeCreateBasicBlock(CodeGenContext cx, bir:BasicBlock? block) returns bir:BasicBlock {
@@ -667,16 +704,16 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
             notTaken = ifTrue;
         }
         if notTaken is s:StmtBlock && notTaken.stmts.length() > 0 {
-            // XXX position should come from first member of notTaken
             s:Stmt firstStmt = notTaken.stmts[0];
-            Position errPos;
+            s:Stmt errStmt;
+            // XXX clean this up when we fix AST for if/else
             if firstStmt is s:IfElseStmt {
-                errPos = firstStmt.ifTrue.stmts[0].startPos;
+                errStmt = firstStmt.ifTrue.stmts[0];
             }
             else {
-                errPos = notTaken.stmts[0].startPos;
+                errStmt = notTaken.stmts[0];
             }
-            return cx.semanticErr("unreachable code", errPos);
+            return cx.semanticErr("unreachable code", s:range(errStmt));
         }
         if taken is s:StmtBlock {
             return codeGenStmts(cx, branchBlock, env, taken);
@@ -714,7 +751,8 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
                 return { block: () };
             }
             contBlock = cx.createBasicBlock();
-            bir:BranchInsn branch = { dest: contBlock.label, pos: stmt.endPos };
+            Position endPos = (stmt.ifFalse ?: stmt.ifTrue).closeBracePos;
+            bir:BranchInsn branch = { dest: contBlock.label, pos: endPos };
             if ifContBlock != () {
                 ifContBlock.insns.push(branch);
             }
@@ -1009,19 +1047,19 @@ function codeGenCompoundableBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, Env
 }
 
 function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:CallStmt stmt) returns CodeGenError|StmtEffect {
-    bir:Register reg;
+    bir:Operand result;
     bir:BasicBlock nextBlock;
     s:CallExpr expr = stmt.expr;
     if expr is s:FunctionCallExpr {
-        { result: reg, block: nextBlock } = check codeGenFunctionCall(cx, startBlock, env, expr);
+        { result, block: nextBlock } = check codeGenFunctionCall(cx, startBlock, env, expr);
     }
     else if expr is s:MethodCallExpr {
-        { result: reg, block: nextBlock } = check codeGenMethodCall(cx, startBlock, env, expr);
+        { result, block: nextBlock } = check codeGenMethodCall(cx, startBlock, env, expr);
     }
     else {
         return check codeGenCheckingStmt(cx, startBlock, env, expr.checkingKeyword, expr.operand, expr.kwPos);
     }
-    if reg.semType !== t:NIL {
+    if result != () {
         return cx.semanticErr("return type of function or method in call statement must be nil", stmt.startPos);
     }
     return { block: nextBlock };
@@ -1069,30 +1107,14 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         // Negation
         { opPos: var pos, op: "-",  operand: var o } => {
             var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
-            TypedOperand? typed = typedOperand(operand);
-            bir:Register result;
-            bir:Insn insn;
-            if typed is ["int", bir:IntOperand] {
-                result = cx.createTmpRegister(t:INT, pos);
-                insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [0, typed[1]], result };
-            }
-            else if typed is ["float", bir:FloatOperand] {
-                result = cx.createTmpRegister(t:FLOAT, pos);
-                insn = <bir:FloatNegateInsn> { operand: <bir:Register>typed[1], result, pos };
-            }
-            else if typed is ["decimal", bir:DecimalOperand] {
-                result = cx.createTmpRegister(t:DECIMAL, pos);
-                insn = <bir:DecimalNegateInsn> { operand: <bir:Register>typed[1], result, pos };
-            }
-            else {
-                return cx.semanticErr(`operand of ${"-"} must be int or float or decimal`, pos);
-            }
-            nextBlock.insns.push(insn);
-            return { result, block: nextBlock };
+            return codeGenNegateExpr(cx, nextBlock, pos, operand);
         }
         // Bitwise complement
         { opPos: var pos, op: "~",  operand: var o } => {
             var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, o);
+            if operand is int {
+                return { result: ~operand, block: nextBlock };
+            }
             bir:Register result = cx.createTmpRegister(t:INT, pos);
             bir:IntBitwiseBinaryInsn insn = { op: "^", pos, operands: [-1, operand], result };
             nextBlock.insns.push(insn);
@@ -1100,10 +1122,11 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
         { opPos: var pos, op: "!",  operand: var o } => {
             var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, env, o);
-            // Should have been resolved during constant folding
-            bir:Register reg = <bir:Register>operand;
+            if operand is boolean {
+                return { result: !operand, block: nextBlock };
+            }
             bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
-            bir:BooleanNotInsn insn = { operand: reg, result, pos };
+            bir:BooleanNotInsn insn = { operand, result, pos };
             nextBlock.insns.push(insn);
             if narrowing != () {
                 narrowing.negated = !narrowing.negated;
@@ -1120,15 +1143,10 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenBitwiseBinaryExpr(cx, nextBlock, op, pos, l, r);
         }
         var { opPos: pos, equalityOp: op, left, right } => {
-            return codeGenEquality(cx, bb, env, op, pos, left, right);
+            return codeGenEqualityExpr(cx, bb, env, op, pos, left, right);
         }
         var { opPos: pos, relationalOp: op, left, right } => {
-            bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
-            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
-            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
-            bir:CompareInsn insn = { op, pos, operands: [l, r], result };
-            nextBlock.insns.push(insn);
-            return { result, block: nextBlock };
+            return codeGenRelationalExpr(cx, bb, env, op, pos, left, right);
         }
         var { td: _, operand: _ } => {
             // JBUG #31782 cast needed
@@ -1147,9 +1165,6 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         // JBUG #33309 does not work as match pattern `var { value, multiSemType }`
         var cvExpr if cvExpr is s:ConstValueExpr => {
             return codeGenConstValue(cx, bb, env, cvExpr);
-        }
-        var floatZeroExpr if floatZeroExpr is s:FloatZeroExpr => {
-            return codeGenExpr(cx, bb, env, floatZeroExpr.expr);
         }
         // Function/method call
         var callExpr if callExpr is (s:FunctionCallExpr|s:MethodCallExpr) => {
@@ -1251,20 +1266,115 @@ function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environ
     }
 }
 
+function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock nextBlock, Position pos, bir:Operand operand) returns CodeGenError|ExprEffect {
+    TypedOperand? typed = typedOperand(operand);
+    bir:Register result;
+    bir:Insn insn;
+    if typed is ["int", bir:IntOperand] {
+        bir:IntOperand intOperand = typed[1];
+        if intOperand is int {
+            return { result: check intNegateEval(cx, pos, intOperand), block: nextBlock };
+        }
+        result = cx.createTmpRegister(t:INT, pos);
+        insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [0, intOperand], result };
+    }
+    else if typed is ["float", bir:FloatOperand] {
+        bir:FloatOperand floatOperand = typed[1];
+        t:SemType resultType = t:FLOAT;
+        float? shape = floatOperandSingleShape(floatOperand);
+        if shape != () {
+            float resultShape = -shape; // shouldn't ever panic
+            if shape != 0f || shape == operand {
+                return { result: resultShape, block: nextBlock };
+            }
+            resultType = t:singleton(cx.mod.tc, resultShape);
+        }
+        result = cx.createTmpRegister(resultType, pos);
+        insn = <bir:FloatNegateInsn> { operand: <bir:Register>floatOperand, result, pos };
+    }
+    else if typed is ["decimal", bir:DecimalOperand] {
+        bir:DecimalOperand decimalOperand = typed[1];
+        decimal? shape = decimalOperandSingleShape(decimalOperand);
+        t:SemType resultType;
+        if shape != () {
+            decimal resultShape = -shape; // shouldn't ever panic
+            if decimalOperand is bir:Register {
+                resultType = t:singleton(cx.mod.tc, resultShape);
+            }
+            else {
+                return { result: resultShape, block: nextBlock };
+            }
+        }
+        else {
+            resultType = t:DECIMAL;
+        }
+        result = cx.createTmpRegister(resultType, pos);
+        insn = <bir:DecimalNegateInsn> { operand: <bir:Register>decimalOperand, result, pos };
+    }
+    else {
+        return cx.semanticErr(`operand of ${"-"} must be int or float or decimal`, pos);
+    }
+    nextBlock.insns.push(insn);
+    return { result, block: nextBlock };
+}
+
 function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, Position pos, bir:Operand lhs, bir:Operand rhs) returns CodeGenError|ExprEffect {
     TypedOperandPair? pair = typedOperandPair(lhs, rhs);
     bir:Register result;
     if pair is IntOperandPair {
+        readonly & bir:IntOperand[2] operands = pair[1];
+        bir:IntOperand leftOperand = operands[0];
+        bir:IntOperand rightOperand = operands[1];
+        if leftOperand is int && rightOperand is int {
+            return { result: check intArithmeticEval(cx, pos, op, leftOperand, rightOperand), block: bb };
+        }
         result = cx.createTmpRegister(t:INT, pos);
-        bir:IntArithmeticBinaryInsn insn = { op, pos, operands: pair[1], result };
+        bir:IntArithmeticBinaryInsn insn = { op, pos, operands, result };
         bb.insns.push(insn);
     }
     else if pair is FloatOperandPair {
-        result = cx.createTmpRegister(t:FLOAT, pos);
-        bir:FloatArithmeticBinaryInsn insn = { op, pos, operands: pair[1], result };
+        readonly & bir:FloatOperand[2] operands = pair[1];
+        t:SemType resultType = t:FLOAT;
+        float? leftShape = floatOperandSingleShape(operands[0]);
+        float? rightShape = floatOperandSingleShape(operands[1]);
+        if leftShape != () && rightShape != () && !(op == "/" && rightShape == 0f) {
+            float resultShape = floatArithmeticEval(op, leftShape, rightShape);
+            // only 0f shape has multiple shapes
+            if resultShape != 0f || (leftShape == lhs && rightShape == rhs) {
+                return { result: resultShape, block: bb };
+            }
+            resultType = t:singleton(cx.mod.tc, resultShape);
+        }
+        result = cx.createTmpRegister(resultType, pos);
+        bir:FloatArithmeticBinaryInsn insn = { op, pos, operands, result };
         bb.insns.push(insn);
     }
+    else if pair is DecimalOperandPair {
+        readonly & bir:DecimalOperand[2] operands = pair[1];
+        decimal? leftShape = decimalOperandSingleShape(operands[0]);
+        decimal? rightShape = decimalOperandSingleShape(operands[1]);
+        t:SemType resultType;
+        if leftShape != () && rightShape != () {
+            decimal resultShape = check decimalArithmeticEval(cx, pos, op, leftShape, rightShape);
+            if leftShape == lhs && rightShape == rhs {
+                return { result: resultShape, block: bb };
+            }
+            resultType = t:singleton(cx.mod.tc, resultShape);
+        }
+        else {
+            resultType = t:DECIMAL;
+        }
+        result = cx.createTmpRegister(resultType, pos);
+        bir:DecimalArithmeticBinaryInsn insn = { op, pos, operands, result };
+        bb.insns.push(insn);
+    }    
     else if pair is StringOperandPair && op == "+" {
+        readonly & bir:StringOperand[2] operands = pair[1];
+        bir:StringOperand leftOperand = operands[0];
+        bir:StringOperand rightOperand = operands[1];
+        if leftOperand is string && rightOperand is string {
+            return { result: leftOperand + rightOperand, block: bb };
+        }
         result = cx.createTmpRegister(t:STRING, pos);
         bir:StringConcatInsn insn = { operands: pair[1], result, pos };
         bb.insns.push(insn);
@@ -1276,6 +1386,9 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
 }
 
 function codeGenBitwiseBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, s:BinaryBitwiseOp op, Position pos, bir:IntOperand lhs, bir:IntOperand rhs) returns CodeGenError|ExprEffect {
+    if lhs is int && rhs is int {
+        return { result: bitwiseEval(op, lhs, rhs), block: bb };
+    }
     t:SemType lt = bitwiseOperandType(lhs);
     t:SemType rt = bitwiseOperandType(rhs);
     t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
@@ -1362,15 +1475,61 @@ function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env
     }
 }
 
-function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryEqualityOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
+function codeGenRelationalExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryRelationalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
+    var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
+    var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
+    t:Context tc = cx.mod.tc;
+
+    t:SemType lType = operandSemType(tc, l);
+    t:SemType rType = operandSemType(tc, r);
+    if !t:comparable(tc, lType, rType) {
+        return cx.semanticErr(`operands of ${op} do not belong to an ordered type`, pos);
+    }
+    t:WrappedSingleValue? lShape = operandSingleShape(l);
+    t:WrappedSingleValue? rShape = operandSingleShape(r);
+    if lShape != () && rShape != () {
+        boolean result = check relationalEval(cx, pos, op, lShape.value, rShape.value);
+        return { result, block: nextBlock };
+    }
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:CompareInsn insn = { op, pos, operands: [l, r], result };
+    nextBlock.insns.push(insn);
+    return { result, block: nextBlock };
+}
+
+function codeGenEqualityExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:BinaryEqualityOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
     var { result: l, block: block1, binding: lBinding } = check codeGenExpr(cx, bb, env, left);
     var { result: r, block: nextBlock, binding: rBinding } = check codeGenExpr(cx, block1, env, right);
-    // Type checking is done in the verifier
+    t:Context tc = cx.mod.tc;
+
+    t:SemType lType = operandSemType(tc, l);
+    t:SemType rType = operandSemType(tc, r);
+    if t:isEmpty(tc, t:intersect(lType, rType)) {
+        return cx.semanticErr(`intersection of operands of operator ${op} is empty`, pos);
+    }
+    boolean exact = op.length() == 3;
+    boolean negated = op.startsWith("!");
+
+    if !exact {
+        t:SemType ad = t:createAnydata(tc);
+        if !t:isSubtype(tc, lType, ad) && !t:isSubtype(tc,rType, ad) {
+            return cx.semanticErr(`type of at least one operand of ${op} operator must be a subtype of anydata`, pos);
+        }
+        t:WrappedSingleValue? lShape = operandSingleShape(l);
+        t:WrappedSingleValue? rShape = operandSingleShape(r);
+        // we only need to check for shapes being equal, since unequal shapes would result in empty intersection
+        if lShape != () && lShape == rShape {
+            return { result: !negated, block: nextBlock };
+        }
+    }
+    // XXX fold rewrite: need to fold exact case here
+
+    bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+
     bir:EqualityInsn insn = { op, pos, operands: [l, r], result };
     nextBlock.insns.push(insn);
     [Binding, SimpleConst]? narrowingCompare = ();
-    if op is ("=="|"!=") {
+    if !exact {
         if lBinding is Binding && r is SimpleConst {
             narrowingCompare = [lBinding, r];
         }
@@ -1378,14 +1537,15 @@ function codeGenEquality(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
             narrowingCompare = [rBinding, l];
         }
     }
+
     if narrowingCompare == () {
         return { result, block: nextBlock };
     }
     else {
         var [binding, value] = narrowingCompare;
-        t:SemType ifTrue = t:singleton(value);
-        t:SemType ifFalse = t:roDiff(cx.mod.tc, binding.reg.semType, ifTrue);
-        if (<string>op).startsWith("!") {
+        t:SemType ifTrue = t:singleton(tc, value);
+        t:SemType ifFalse = t:roDiff(tc, binding.reg.semType, ifTrue);
+        if negated {
             [ifTrue, ifFalse] = [ifFalse, ifTrue];
         }
         Narrowing narrowing = {
@@ -1412,40 +1572,77 @@ function codeGenVarRefExpr(CodeGenContext cx, s:VarRefExpr ref, Environment env,
         binding = ();
     }
     else {
-        result = v.reg;
-        binding = v;
+        t:WrappedSingleValue? wrapped = t:singleShape(v.reg.semType);
+        // for decimal, we need the register to preserve precision
+        // for 0f, we need the register to preserve the sign
+        if wrapped != () && wrapped.value !is decimal && wrapped.value != 0.0f {
+            result = wrapped.value;
+            binding = ();
+        }
+        else {
+            result = v.reg;
+            binding = v;
+        }
     }
     return { result, block: bb, binding };
 }
 
 function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeCastExpr tcExpr) returns CodeGenError|ExprEffect {
     var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, tcExpr.operand);
-    var reg = <bir:Register>operand; // const folding should have got rid of the const
+    t:SemType fromType = operandSemType(cx.mod.tc, operand);
     t:SemType toType = check cx.resolveTypeDesc(tcExpr.td);
     t:UniformTypeBitSet? toNumType = t:singleNumericType(toType);
-    if toNumType != () && !t:isSubtypeSimple(t:intersect(reg.semType, t:NUMBER), toNumType) {
+    if toNumType != () && !t:isSubtypeSimple(t:intersect(fromType, t:NUMBER), toNumType) {
+        // do numeric conversion now
         toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
-
-        bir:Register result = cx.createTmpRegister(t:union(t:diff(reg.semType, t:NUMBER), toNumType), tcExpr.opPos);
-        if toNumType == t:INT {
-            bir:ConvertToIntInsn insn = { operand: reg, result, pos: tcExpr.opPos };
-            nextBlock.insns.push(insn);
+        t:WrappedSingleValue? wrapped = operandSingleShape(operand);
+        if wrapped != () {
+            t:SingleValue shape = wrapped.value;
+            if toNumType == t:INT {
+                if shape is float|decimal {
+                    operand = check convertToIntEval(cx, tcExpr.opPos, shape);
+                    fromType = operandSemType(cx.mod.tc, operand);
+                }
+            }
+            else if toNumType == t:FLOAT {
+                if shape is int|decimal {
+                    operand = <float>shape;
+                    fromType = operandSemType(cx.mod.tc, operand);
+                }
+            }
+            else {
+                // SUBSET decimal
+                panic err:impossible("convert to decimal");
+            }
         }
-        else if toNumType == t:FLOAT {
-            bir:ConvertToFloatInsn insn = { operand: reg, result, pos: tcExpr.opPos };
-            nextBlock.insns.push(insn);
+        else if operand is bir:Register { // always true but does needed narrowing
+            bir:Register result = cx.createTmpRegister(t:union(t:diff(fromType, t:NUMBER), toNumType), tcExpr.opPos);
+            if toNumType == t:INT {
+                bir:ConvertToIntInsn insn = { operand, result, pos: tcExpr.opPos };
+                nextBlock.insns.push(insn);
+            }
+            else if toNumType == t:FLOAT {
+                bir:ConvertToFloatInsn insn = { operand, result, pos: tcExpr.opPos };
+                nextBlock.insns.push(insn);
+            }
+            else {
+                // SUBSET decimal
+                panic err:impossible("convert to decimal");
+            }
+            operand = result;
+            fromType = result.semType;
         }
-        else {
-            panic err:impossible("convert to decimal");
-        }
-        reg = result;
     }
-    if t:isSubtype(cx.mod.tc, reg.semType, toType) {
+    if t:isSubtype(cx.mod.tc, fromType, toType) {
         // it's redundant, so we can remove it
-        return { result: reg, block: nextBlock };
+        return { result: operand, block: nextBlock };
     }
-    t:SemType resultType = t:intersect(reg.semType, toType);
+    t:SemType resultType = t:intersect(fromType, toType);
+    if t:isEmpty(cx.mod.tc, resultType) {
+        return cx.semanticErr("type cast will always panic", tcExpr.opPos);
+    }
     bir:Register result = cx.createTmpRegister(resultType, tcExpr.opPos);
+    bir:Register reg = <bir:Register>operand;
     bir:TypeCastInsn insn = { operand: reg, semType: toType, pos: tcExpr.opPos, result };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
@@ -1454,23 +1651,25 @@ function codeGenTypeCast(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
 function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:TypeDesc td, s:Expr left, boolean negated, Position pos) returns CodeGenError|ExprEffect {
     t:SemType semType = check cx.resolveTypeDesc(td);
     var { result: operand, block: nextBlock, binding } = check codeGenExpr(cx, bb, env, left);
-    // Constants should be resolved during constant folding
-    bir:Register reg = <bir:Register>operand;      
-    t:SemType diff = t:roDiff(cx.mod.tc, reg.semType, semType);
-    if t:isEmpty(cx.mod.tc, diff) {
-        return { result: !negated, block: bb };
+    t:Context tc = cx.mod.tc;  
+    t:SemType curSemType = operandSemType(tc, operand);
+    t:SemType diff = t:roDiff(tc, curSemType, semType);
+    if t:isEmpty(tc, diff) {
+        return { result: !negated, block: nextBlock };
     }
     t:SemType intersect;
-    if t:isSubtype(cx.mod.tc, semType, reg.semType) {
+    if t:isSubtype(tc, semType, curSemType) {
         intersect = semType;
     }
     else {
-        intersect = t:intersect(reg.semType, semType);
+        intersect = t:intersect(curSemType, semType);
     }
-    if t:isEmpty(cx.mod.tc, intersect) {
-        return { result: negated, block: bb };
+    if t:isEmpty(tc, intersect) {
+        return { result: negated, block: nextBlock };
     }
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+    // Either diff or intersect should be empty if the operand is singleton
+    bir:Register reg = <bir:Register>operand;
     bir:TypeTestInsn insn = { operand: reg, semType, result, negated, pos };
     nextBlock.insns.push(insn);
     if negated {
@@ -1491,17 +1690,17 @@ function codeGenTypeTest(CodeGenContext cx, bir:BasicBlock bb, Environment env, 
 function codeGenCheckingStmt(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:CheckingKeyword checkingKeyword, s:Expr expr, Position pos) returns CodeGenError|StmtEffect {
     // checking stmt falls into one of : 1) never err 2) always err 3) conditionally err
     var { result: o, block: nextBlock } = check codeGenExpr(cx, bb, env, expr);
-    // Constants should be resolved during constant folding
-    bir:Register operand = <bir:Register>o;
-    t:SemType errorType =  t:intersect(operand.semType, t:ERROR);
+    t:SemType semType = operandSemType(cx.mod.tc, o);
+    t:SemType errorType = t:intersect(semType, t:ERROR);
     bir:BasicBlock block;
     t:SemType resultType;
     if t:isNever(errorType) {
         block = nextBlock;
-        resultType = operand.semType;
+        resultType = semType;
     }
     else {
-        resultType = t:diff(operand.semType, t:ERROR);
+        bir:Register operand = <bir:Register>o;
+        resultType = t:diff(semType, t:ERROR);
         if t:isNever(resultType) {
             codeGenCheckingTerminator(nextBlock, checkingKeyword, operand, pos);
             return { block: () };
@@ -1515,18 +1714,19 @@ function codeGenCheckingStmt(CodeGenContext cx, bir:BasicBlock bb, Environment e
     return { block };
 }
 
-function codeGenCheckingExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:CheckingKeyword checkingKeyword, s:Expr expr, Position pos) returns CodeGenError|RegExprEffect {
-    // Checking stmt falls into one of : 1) never err 2) conditionally err
+function codeGenCheckingExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:CheckingKeyword checkingKeyword, s:Expr expr, Position pos) returns CodeGenError|ExprEffect {
+    // Checking expr falls into one of : 1) never err 2) conditionally err
     var { result: o, block: nextBlock } = check codeGenExpr(cx, bb, env, expr);
-    // Constants should be resolved during constant folding
-    bir:Register operand = <bir:Register>o;
-    t:SemType errorType =  t:intersect(operand.semType, t:ERROR);
+    t:SemType semType = operandSemType(cx.mod.tc, o);
+    t:SemType errorType =  t:intersect(semType, t:ERROR);
     if t:isNever(errorType) {
-        return { result: operand, block: nextBlock };
+        return { result: o, block: nextBlock };
     }
     else {
-        t:SemType resultType = t:diff(operand.semType, t:ERROR);
+        bir:Register operand = <bir:Register>o;
+        t:SemType resultType = t:diff(semType, t:ERROR);
         if t:isNever(resultType) {
+            // This has to be an error, otherwise type of expression would be `never``
             return cx.semanticErr(`operand of ${checkingKeyword} expression is always an error`, pos);
         }
         return check codeGenCheckingCond(cx, nextBlock, operand, errorType, checkingKeyword, resultType, pos);
@@ -1573,7 +1773,9 @@ function codeGenCheckingTerminator(bir:BasicBlock bb, s:CheckingKeyword checking
     }
 }
 
-function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:FunctionCallExpr expr) returns CodeGenError|RegExprEffect {
+type SingleShapeMultipleValues decimal|0f;
+
+function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:FunctionCallExpr expr) returns CodeGenError|ExprEffect {
     string? prefix = expr.prefix;
     bir:FunctionRef func;
     if prefix == () {
@@ -1592,20 +1794,12 @@ function codeGenFunctionCall(CodeGenContext cx, bir:BasicBlock bb, Environment e
         curBlock = nextBlock;
         args.push(arg);
     }
-    bir:Register result = cx.createTmpRegister(func.signature.returnType, expr.startPos);
-    bir:CallInsn call = {
-        func,
-        result,
-        args: args.cloneReadOnly(),
-        pos: expr.qNamePos
-    };
-    curBlock.insns.push(call);
-    return { result, block: curBlock };
+    return codeGenCall(cx, curBlock, func, args, expr.qNamePos);
 }
 
-function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MethodCallExpr expr) returns CodeGenError|RegExprEffect {
+function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, expr.target, ()));
-    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, { startPos: expr.namePos, endPos: expr.openParenPos });
+    bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
     check validArgumentCount(cx, func, expr.args.length() + 1, expr.opPos);
 
     t:SemType[] paramTypes = func.signature.paramTypes;
@@ -1616,15 +1810,22 @@ function codeGenMethodCall(CodeGenContext cx, bir:BasicBlock bb, Environment env
         curBlock = nextBlock;
         args.push(arg);
     }
-    bir:Register result = cx.createTmpRegister(func.signature.returnType, expr.opPos);
+    return codeGenCall(cx, curBlock, func, args, expr.namePos);
+}
+
+function codeGenCall(CodeGenContext cx, bir:BasicBlock curBlock, bir:FunctionRef func, bir:Operand[] args, Position pos) returns ExprEffect {
+    t:SemType returnType = func.signature.returnType;
+    bir:Register reg = cx.createTmpRegister(returnType, pos);
     bir:CallInsn call = {
         func,
-        result,
+        result: reg,
         args: args.cloneReadOnly(),
-        pos: expr.namePos
+        pos
     };
     curBlock.insns.push(call);
-    return { result, block: curBlock };
+    t:WrappedSingleValue? returnShape = t:singleShape(returnType);
+    bir:Operand result = returnShape == () || returnShape.value is SingleShapeMultipleValues ? reg : returnShape.value;
+    return { result, block: curBlock };    
 }
 
 function validArgumentCount(CodeGenContext cx, bir:FunctionRef func, int nSuppliedArgs, Position pos) returns CodeGenError? {
@@ -1690,7 +1891,7 @@ function genImportedFunctionRef(CodeGenContext cx, Environment env, string prefi
 
 type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
 
-function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName, Range nameRange) returns bir:FunctionRef|CodeGenError {
+function getLangLibFunctionRef(CodeGenContext cx, bir:Operand target, string methodName, Position|Range nameRange) returns bir:FunctionRef|CodeGenError {
     TypedOperand? t = typedOperand(target);
     if t != () && t[0] is LangLibModuleName {
         string moduleName = t[0];
@@ -1831,14 +2032,12 @@ function bitwiseOperandType(bir:IntOperand operand) returns t:SemType {
     return t:widenUnsigned(t);
 }
 
-type NilOperand ()|bir:Register;
-type BooleanOperandPair readonly & ["boolean", [bir:BooleanOperand, bir:BooleanOperand]];
 type IntOperandPair readonly & ["int", [bir:IntOperand, bir:IntOperand]];
 type FloatOperandPair readonly & ["float", [bir:FloatOperand, bir:FloatOperand]];
+type DecimalOperandPair readonly & ["decimal", [bir:DecimalOperand, bir:DecimalOperand]];
 type StringOperandPair readonly & ["string", [bir:StringOperand, bir:StringOperand]];
-type NilOperandPair readonly & ["nil", [NilOperand, NilOperand]];
 
-type TypedOperandPair BooleanOperandPair|IntOperandPair|FloatOperandPair|StringOperandPair|NilOperandPair;
+type TypedOperandPair IntOperandPair|DecimalOperandPair|FloatOperandPair|StringOperandPair;
 
 // XXX should use t:UT_* instead of strings here (like the ordering stuff)
 type TypedOperand readonly & (["array", bir:Register]
@@ -1849,7 +2048,7 @@ type TypedOperand readonly & (["array", bir:Register]
                               |["decimal", bir:DecimalOperand]
                               |["int", bir:IntOperand]
                               |["boolean", bir:BooleanOperand]
-                              |["nil", NilOperand]);
+                              |["nil", bir:NilOperand]);
 
 function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperandPair? {
     TypedOperand? l = typedOperand(lhs);
@@ -1860,14 +2059,11 @@ function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperand
     if l is ["float", bir:FloatOperand] && r is ["float", bir:FloatOperand] {
         return ["float", [l[1], r[1]]];
     }
+    if l is ["decimal", bir:DecimalOperand] && r is ["decimal", bir:DecimalOperand] {
+        return ["decimal", [l[1], r[1]]];
+    }
     if l is ["string", bir:StringOperand] && r is ["string", bir:StringOperand] {
         return ["string", [l[1], r[1]]];
-    }
-    if l is ["boolean", bir:BooleanOperand] && r is ["boolean", bir:BooleanOperand] {
-        return ["boolean", [l[1], r[1]]];
-    }
-    if l is ["nil", NilOperand] && r is ["int", NilOperand] {
-        return ["nil", [l[1], r[1]]];
     }
     return ();
 }
@@ -1921,4 +2117,20 @@ function typedOperand(bir:Operand operand) returns TypedOperand? {
         return ["nil", operand];
     }
     return ();
+}
+
+function operandSemType(t:Context tc, bir:Operand operand) returns t:SemType {
+    return operand is bir:Register ? operand.semType : t:singleton(tc, operand);
+}
+
+function operandSingleShape(bir:Operand operand) returns t:WrappedSingleValue? {
+    return operand is bir:Register ? t:singleShape(operand.semType) : { value: operand };
+}
+
+function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? {
+    return operand is decimal ? operand : t:singleDecimalShape(operand.semType);
+}
+
+function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
+    return operand is float ? operand : t:singleFloatShape(operand.semType);
 }

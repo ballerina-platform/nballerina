@@ -294,6 +294,11 @@ typedef struct {
     bool overflow;
 } IntWithOverflow;
 
+typedef struct {
+    TaggedPtr ptr;
+    bool overflow;
+} TaggedWithOverflow;
+
 #define ALIGN_HEAP 8
 
 // Don't declare functions here if they are balrt_inline.c
@@ -347,6 +352,14 @@ extern READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key);
 extern READONLY bool _bal_mapping_eq(TaggedPtr p1, TaggedPtr p2);
 extern READONLY bool _bal_mapping_eq_internal(TaggedPtr p1, TaggedPtr p2, EqStack *sp);
 
+typedef enum {
+    FILL_NONE,
+    FILL_EACH,
+    FILL_COPY
+} Fillability;
+
+extern Fillability _bal_structure_create_filler(MemberType memberType, StructureDescPtr fillerDesc, TaggedPtr *valuePtr);
+
 extern READNONE UntypedPtr _bal_tagged_to_ptr(TaggedPtr p);
 extern READNONE UntypedPtr _bal_tagged_to_ptr_exact(TaggedPtr p);
 extern READNONE TaggedPtr _bal_tagged_clear_exact(TaggedPtr p);
@@ -380,6 +393,9 @@ extern CompareResult READONLY _bal_array_float_compare(TaggedPtr lhs, TaggedPtr 
 extern CompareResult READONLY _bal_array_string_compare(TaggedPtr lhs, TaggedPtr rhs);
 extern CompareResult READONLY _bal_array_boolean_compare(TaggedPtr lhs, TaggedPtr rhs);
 extern CompareResult READONLY _bal_array_decimal_compare(TaggedPtr lhs, TaggedPtr rhs);
+
+extern TaggedPtr READONLY _bal_convert_to_float(TaggedPtr tp);
+extern TaggedWithOverflow READONLY _bal_convert_to_int(TaggedPtr tp);
 
 // Library mangling
 #define BAL_ROOT_NAME(sym) _B04root ## sym
@@ -638,6 +654,8 @@ static READONLY inline bool taggedPtrEq(TaggedPtr tp1, TaggedPtr tp2, EqStack *s
                 FloatPtr p2 = taggedToPtr(tp2);
                 return _bal_float_eq(*p1, *p2);
             }
+        case TAG_DECIMAL:
+            return _bal_decimal_cmp(tp1, tp2) == 0;
         case TAG_LIST_RW:
         case TAG_MAPPING_RW:
             {  

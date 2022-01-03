@@ -9,8 +9,9 @@ function parseStmtBlock(Tokenizer tok) returns StmtBlock|err:Syntax {
             stmts.push(check parseStmt(tok));
         }
         Position endPos = tok.currentEndPos();
+        Position closeBracePos = tok.currentStartPos();
         check tok.advance();
-        return { startPos, endPos, stmts };
+        return { startPos, endPos, stmts, closeBracePos };
     }
     return parseError(tok, "unhandled condition in statement block");
 }
@@ -21,7 +22,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
     match cur {
         [IDENTIFIER, var identifier] => {
             var peeked = tok.peek(skipQualIdent=true);
-            if peeked is "|" | "?" | "&" | IDENTIFIER {
+            if peeked is "|" | "?" | "&" | "_" | IDENTIFIER {
                 TypeDesc td = check parseTypeDesc(tok);
                 return finishVarDeclStmt(tok, td, startPos);
             }
@@ -360,7 +361,8 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
             Position blockStartPos = elseIfStmt.ifTrue.startPos;
             StmtBlock? elseIfFalseBlock = elseIfStmt.ifFalse;
             Position blockEndPos = (elseIfFalseBlock ?: elseIfStmt.ifTrue).endPos;
-            ifFalse = { startPos: blockStartPos, endPos: blockEndPos, stmts: [elseIfStmt] };
+            Position closeBracePos = (elseIfFalseBlock ?: elseIfStmt.ifTrue).closeBracePos;
+            ifFalse = { startPos: blockStartPos, endPos: blockEndPos, stmts: [elseIfStmt], closeBracePos };
         }
         // if exp1 { } else { }
         else if tok.current() == "{" {
@@ -432,11 +434,11 @@ function parseMatchPatternList(Tokenizer tok) returns MatchPattern[]|err:Syntax 
 
 function parseMatchPattern(Tokenizer tok) returns MatchPattern|err:Syntax {
     Token? cur = tok.current();
-    if cur is WildcardMatchPattern {
+    if cur is WILDCARD_MATCH_PATTERN {
+        Position startPos = tok.currentStartPos();
+        Position endPos = tok.currentEndPos();
         check tok.advance();
-        return cur;
+        return <WildcardMatchPattern> { startPos, endPos };
     }
-    Position pos = tok.currentStartPos();
-    SimpleConstExpr expr = check parseSimpleConstExpr(tok);
-    return { expr, pos };
+    return check parseSimpleConstExpr(tok);
 }

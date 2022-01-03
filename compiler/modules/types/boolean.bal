@@ -4,7 +4,7 @@ type BooleanSubtype readonly & record {|
     boolean value;
 |};
 
-public function booleanConst(boolean value) returns SemType {
+public function booleanConst(boolean value) returns ComplexSemType {
     BooleanSubtype t = { value };
     return uniformSubtype(UT_BOOLEAN, t);
 }
