@@ -35,3 +35,7 @@ public function impossible(d:Message? detail = ()) returns Panic {
 public function illegalArgument(d:Message detail) returns Panic {
     return error Panic(d:messageToString(detail));
 }
+
+public type SemanticContext object {
+    public function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns Semantic;
+};

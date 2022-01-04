@@ -22,7 +22,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
     match cur {
         [IDENTIFIER, var identifier] => {
             var peeked = tok.peek(skipQualIdent=true);
-            if peeked is "|" | "?" | "&" | IDENTIFIER {
+            if peeked is "|" | "?" | "&" | "_" | IDENTIFIER {
                 TypeDesc td = check parseTypeDesc(tok);
                 return finishVarDeclStmt(tok, td, startPos);
             }
@@ -434,11 +434,11 @@ function parseMatchPatternList(Tokenizer tok) returns MatchPattern[]|err:Syntax 
 
 function parseMatchPattern(Tokenizer tok) returns MatchPattern|err:Syntax {
     Token? cur = tok.current();
-    if cur is WildcardMatchPattern {
+    if cur is WILDCARD_MATCH_PATTERN {
+        Position startPos = tok.currentStartPos();
+        Position endPos = tok.currentEndPos();
         check tok.advance();
-        return cur;
+        return <WildcardMatchPattern> { startPos, endPos };
     }
-    Position pos = tok.currentStartPos();
-    SimpleConstExpr expr = check parseSimpleConstExpr(tok);
-    return { expr, pos };
+    return check parseSimpleConstExpr(tok);
 }

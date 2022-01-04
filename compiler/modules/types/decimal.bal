@@ -5,7 +5,7 @@ type DecimalSubtype readonly & record {|
     decimal[] values;
 |};
 
-public function decimalConst(decimal value) returns SemType {
+public function decimalConst(decimal value) returns ComplexSemType {
     DecimalSubtype st = { allowed: true, values: [value] };
     return uniformSubtype(UT_DECIMAL, st);
 }

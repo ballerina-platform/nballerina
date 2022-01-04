@@ -217,3 +217,7 @@ public function qNameLocationInDefn(ModuleLevelDefn defn, Position qnamePos) ret
 public function locationInDefn(ModuleLevelDefn defn, Position|Range pos) returns d:Location {
     return d:location(defn.part.file, pos);
 }
+
+public function range(record {| *PositionFields; any|error...; |} node) returns Range {
+    return { startPos: node.startPos, endPos: node.endPos };
+}

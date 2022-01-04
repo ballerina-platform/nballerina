@@ -11,11 +11,15 @@ public function main() {
     if () == () {
         io:println(3); // @output 3
     }
-     if makeNil() != () {
-        io:println(4);
+    if makeNil() != () {
+    }
+    else {
+        io:println(4); // @output 4
     }
     if () != makeNil() {
-        io:println(5);
+    }
+    else {
+        io:println(5); // @output 5
     }
     boolean b = () != ();
     if b {

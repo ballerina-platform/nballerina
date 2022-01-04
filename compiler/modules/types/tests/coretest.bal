@@ -13,7 +13,8 @@ function testSubtypeSimple() {
 function testSingleNumericType() {
     test:assertEquals(singleNumericType(INT), INT);
     test:assertEquals(singleNumericType(BOOLEAN), ());
-    test:assertEquals(singleNumericType(singleton(1)), INT);
+    Env env = new;
+    test:assertEquals(singleNumericType(singleton(typeContext(env), 1)), INT);
     test:assertEquals(singleNumericType(union(INT, FLOAT)), ());
 }
 

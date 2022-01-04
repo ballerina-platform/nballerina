@@ -16,6 +16,7 @@ const int TAG_NIL      = 0;
 const int TAG_BOOLEAN  = t:UT_BOOLEAN << TAG_SHIFT;
 const int TAG_INT      = t:UT_INT << TAG_SHIFT;
 const int TAG_FLOAT    = t:UT_FLOAT << TAG_SHIFT;
+const int TAG_DECIMAL  = t:UT_DECIMAL << TAG_SHIFT;
 const int TAG_STRING   = t:UT_STRING << TAG_SHIFT;
 const int TAG_ERROR   = t:UT_ERROR << TAG_SHIFT;
 

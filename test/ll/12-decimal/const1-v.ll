@@ -11,7 +11,7 @@
 @.dec9 = internal unnamed_addr constant [43 x i8] c"-9.999999999999999999999999999999999E+6144\00", align 8
 declare i8 addrspace(1)* @_bal_panic_construct(i64) cold
 declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
-declare i8 addrspace(1)* @_bal_decimal_const(i8*) readnone
+declare i8 addrspace(1)* @_bal_decimal_const(i8*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
   %1 = alloca i8 addrspace(1)*

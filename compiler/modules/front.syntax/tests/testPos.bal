@@ -122,8 +122,8 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
         if stmt is MatchStmt {
             foreach var clause in stmt.clauses {
                 foreach var matchPattern in clause.patterns {
-                    if matchPattern is ConstPattern {
-                        check validateExpressionPos(matchPattern.expr, tok, stmt.startPos, stmt.endPos);
+                    if matchPattern is SimpleConstExpr {
+                        check validateExpressionPos(matchPattern, tok, stmt.startPos, stmt.endPos);
                     }
                 }
                 check validateMatchClausePos(clause, tok, stmt.startPos, stmt.endPos);
@@ -258,32 +258,18 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         newExpr = check parseExpr(tok);
     }
     if newExpr is Expr {
-        Position actualEnd;
-        if expr is ListConstructorExpr
-                |MemberAccessExpr
-                |PrimaryExpr
-                |TypeTestExpr
-                |MappingConstructorExpr
-                |SimpleConstExpr
-                |BinaryExpr
-                |UnaryExpr
-                |CheckingExpr
-                |TypeCastExpr {
-            if expr is SimpleConstExpr && usedSimpleConstExprParser {
-                if expr is SimpleConstNegateExpr {
-                    actualEnd = tok.previousEndPos();
-                }
-                else {
-                    actualEnd = tok.currentEndPos();
-                }
+        Position actualEnd;       
+        if expr is SimpleConstExpr && usedSimpleConstExprParser {
+            if expr is SimpleConstNegateExpr {
+                actualEnd = tok.previousEndPos();
             }
             else {
-                actualEnd = tok.previousEndPos();
+                actualEnd = tok.currentEndPos();
             }
         }
         else {
-            actualEnd = tok.currentEndPos();
-        }
+            actualEnd = tok.previousEndPos();
+        }       
 
         while (expr.endPos != newExpr.endPos) && (expr is RecursiveBinaryExpr && newExpr is RecursiveBinaryExpr) {
             // These are left recursive expression that can't be separately parsed

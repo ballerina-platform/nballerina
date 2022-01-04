@@ -350,6 +350,14 @@
     ["V", "stmt", "decimal d = 2d;"],
     ["V", "stmt", "decimal d = 1E+12d;"],
 
+    { "comment" : "statement var decl wildcard" },
+    ["V", "stmt", "Int | String _ = x;"],
+    ["V", "stmt", "XYZ? _ = x;"],
+    ["V", "stmt", "T_1 & T_2 _ = x;"],
+    ["V", "stmt", "map<T> _ = { k: x };"],
+    ["V", "stmt", "T[] _ = [x];"],
+    ["E", "stmt", "_ _ = x;"],
+
     { "comment" : "statement method call" },
     { "comment" : "not semantically valid" },
     ["V", "stmt", "error(\"\").message();"],

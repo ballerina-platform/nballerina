@@ -452,9 +452,9 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     }
     match t {
         [IDENTIFIER, var identifier] => {
+            Position endPos = tok.currentEndPos();
             check tok.advance();
             var [prefix, name] = check parseOptQualIdentifier(tok, identifier);
-            Position endPos = tok.currentEndPos();
             if prefix != () {
                 endPos = tok.previousEndPos();
             }

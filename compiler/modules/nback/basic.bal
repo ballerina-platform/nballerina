@@ -138,6 +138,9 @@ function buildBasicBlock(llvm:Builder builder, Scaffold scaffold, bir:BasicBlock
         else if insn is bir:DecimalNegateInsn {
             buildDecimalNegate(builder, scaffold, insn);
         }
+        else if insn is bir:ConvertToDecimalInsn {
+            check buildConvertToDecimal(builder, scaffold, insn);
+        }
         else {
             bir:CatchInsn _ = insn;
             // nothing to do

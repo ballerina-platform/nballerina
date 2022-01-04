@@ -5,7 +5,7 @@ type FloatSubtype readonly & record {|
     float[] values;
 |};
 
-public function floatConst(float value) returns SemType {
+public function floatConst(float value) returns ComplexSemType {
     FloatSubtype st = { allowed: true, values: [value] };
     return uniformSubtype(UT_FLOAT, st);
 }

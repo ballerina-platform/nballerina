@@ -8,8 +8,7 @@ declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i64 @_bal_mapping_set(i8 addrspace(1)*, i8 addrspace(1)*, i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 declare i8 addrspace(1)* @_bal_tagged_member_clear_exact_any(i8 addrspace(1)*, i8 addrspace(1)*) readnone
-declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
-declare {i64, i1} @_bal_float_to_int(double) nounwind readnone speculatable willreturn
+declare {i8 addrspace(1)*, i1} @_bal_convert_to_int(i8 addrspace(1)*) readonly
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 define void @_B04rootmain() !dbg !5 {
   %m = alloca i8 addrspace(1)*
@@ -88,7 +87,7 @@ define internal i64 @_B_get(i8 addrspace(1)* %0, i8 addrspace(1)* %1) !dbg !9 {
   %7 = alloca i8
   %8 = load i8*, i8** @_bal_stack_guard
   %9 = icmp ult i8* %7, %8
-  br i1 %9, label %22, label %10
+  br i1 %9, label %20, label %10
 10:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %m
   store i8 addrspace(1)* %1, i8 addrspace(1)** %k
@@ -98,52 +97,39 @@ define internal i64 @_B_get(i8 addrspace(1)* %0, i8 addrspace(1)* %1) !dbg !9 {
   %14 = call i8 addrspace(1)* @_bal_tagged_member_clear_exact_any(i8 addrspace(1)* %12, i8 addrspace(1)* %13)
   store i8 addrspace(1)* %14, i8 addrspace(1)** %3
   %15 = load i8 addrspace(1)*, i8 addrspace(1)** %3
-  %16 = addrspacecast i8 addrspace(1)* %15 to i8*
-  %17 = ptrtoint i8* %16 to i64
-  %18 = and i64 %17, 2233785415175766016
-  %19 = icmp eq i64 %18, 576460752303423488
-  br i1 %19, label %30, label %34
+  %16 = call {i8 addrspace(1)*, i1} @_bal_convert_to_int(i8 addrspace(1)* %15)
+  %17 = extractvalue {i8 addrspace(1)*, i1} %16, 1
+  br i1 %17, label %29, label %22
+18:
+  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  call void @_bal_panic(i8 addrspace(1)* %19)
+  unreachable
 20:
-  %21 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  %21 = call i8 addrspace(1)* @_bal_panic_construct(i64 3844), !dbg !16
   call void @_bal_panic(i8 addrspace(1)* %21)
   unreachable
 22:
-  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 3844), !dbg !16
-  call void @_bal_panic(i8 addrspace(1)* %23)
-  unreachable
-24:
-  %25 = load i8 addrspace(1)*, i8 addrspace(1)** %4
-  %26 = addrspacecast i8 addrspace(1)* %25 to i8*
-  %27 = ptrtoint i8* %26 to i64
-  %28 = and i64 %27, 2233785415175766016
-  %29 = icmp eq i64 %28, 504403158265495552
-  br i1 %29, label %40, label %43
-30:
-  %31 = call double @_bal_tagged_to_float(i8 addrspace(1)* %15)
-  %32 = call {i64, i1} @_bal_float_to_int(double %31)
-  %33 = extractvalue {i64, i1} %32, 1
-  br i1 %33, label %38, label %35
+  %23 = extractvalue {i8 addrspace(1)*, i1} %16, 0
+  store i8 addrspace(1)* %23, i8 addrspace(1)** %4
+  %24 = load i8 addrspace(1)*, i8 addrspace(1)** %4
+  %25 = addrspacecast i8 addrspace(1)* %24 to i8*
+  %26 = ptrtoint i8* %25 to i64
+  %27 = and i64 %26, 2233785415175766016
+  %28 = icmp eq i64 %27, 504403158265495552
+  br i1 %28, label %31, label %34
+29:
+  %30 = call i8 addrspace(1)* @_bal_panic_construct(i64 4097), !dbg !16
+  store i8 addrspace(1)* %30, i8 addrspace(1)** %6
+  br label %18
+31:
+  %32 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %24)
+  store i64 %32, i64* %5
+  %33 = load i64, i64* %5
+  ret i64 %33
 34:
-  store i8 addrspace(1)* %15, i8 addrspace(1)** %4
-  br label %24
-35:
-  %36 = extractvalue {i64, i1} %32, 0
-  %37 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %36)
-  store i8 addrspace(1)* %37, i8 addrspace(1)** %4
-  br label %24
-38:
-  %39 = call i8 addrspace(1)* @_bal_panic_construct(i64 4099), !dbg !16
-  store i8 addrspace(1)* %39, i8 addrspace(1)** %6
-  br label %20
-40:
-  %41 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %25)
-  store i64 %41, i64* %5
-  %42 = load i64, i64* %5
-  ret i64 %42
-43:
-  %44 = call i8 addrspace(1)* @_bal_panic_construct(i64 4099), !dbg !16
-  store i8 addrspace(1)* %44, i8 addrspace(1)** %6
-  br label %20
+  %35 = call i8 addrspace(1)* @_bal_panic_construct(i64 4099), !dbg !16
+  store i8 addrspace(1)* %35, i8 addrspace(1)** %6
+  br label %18
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}
