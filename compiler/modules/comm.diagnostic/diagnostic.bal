@@ -28,6 +28,8 @@ public type File readonly & object {
     public function lineColumn(Position pos) returns LineColumn;
     public function lineContent(Position|Range range) returns [string, string, string];
     public function qNameRange(Position startPos) returns Range;
+    public function maxLineNum() returns int;
+    public function maxColumnNum(int lineNum) returns int;
 };
 
 public type Location readonly & record {|
@@ -108,6 +110,7 @@ public function messageFormat(Template t) returns string {
 
 public function format(Diagnostic d) returns string[] {
     Location loc = d.location;
+    validateLocation(loc);
     string[] lines = [];
     string line = loc.file.filename();
     LineColumn lc = locationLineColumn(loc);
@@ -119,6 +122,28 @@ public function format(Diagnostic d) returns string[] {
     lines.push("".'join(...loc.file.lineContent(range)));
     lines.push(caretLine(loc.file, range));
     return lines;
+}
+
+function validateLocation(Location loc) {
+    File file = loc.file;
+    Position|Range range = loc.range;
+    if range is Position {
+        validatePosition(range, file);
+    }
+    else {
+        validatePosition(range.startPos, file);
+        validatePosition(range.endPos, file);
+    }
+}
+
+function validatePosition(Position pos, File file) {
+    var [lineNum, columnNum] = file.lineColumn(pos);
+    if lineNum > file.maxLineNum() || lineNum < 1 {
+        panic error(string `line number ${lineNum} is out of range in ${file.filename()}`);
+    }
+    if columnNum >= file.maxColumnNum(lineNum) || columnNum < 0 {
+        panic error(string `column number ${columnNum} is out of range for ${file.filename()}`);
+    }
 }
 
 function caretLine(File file, Range|Position range) returns string {
