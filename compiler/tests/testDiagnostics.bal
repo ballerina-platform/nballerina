@@ -3,22 +3,53 @@ import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.front.syntax as s;
 
 @test:Config{}
-function testPositionOutOfRange() {
+function testInvalidPosition() {
     string[] testFileContent = [
         "type RecordType record {",
         "    string test;",
-        "}"
+        "};"
     ];
-    s:SourceFile file = s:createSourceFile(testFileContent, { filename: "testFile1" });
-    d:Position range = position(3,1);
-    d:Location location = { file, range };
-    d:Diagnostic diagnostic = { category: d:SYNTAX, location, message: "missing semicolon" };
-    string[]|error result = trap d:format(diagnostic);
-    if result is error {
-        test:assertTrue(result.message().startsWith("column number 1 is out of range"));
+    s:SourceFile file = s:createSourceFile(testFileContent, { filename: "testFile" });
+    d:Position[] positions = [
+        position(0,1),
+        position(1,24),
+        position(3,2),
+        position(40,1),
+        position(3,40)
+    ];
+    string[] errMessagePrefixes = [
+        "line number 0 is out of range",
+        "column number 24 is out of range",
+        "column number 2 is out of range",
+        "line number 40 is out of range",
+        "column number 40 is out of range"
+    ];
+    foreach int i in 0 ..< positions.length() {
+        d:Position range = positions[i];
+        string errMessagePrefix = errMessagePrefixes[i];
+        d:Location location = { file, range };
+        d:Diagnostic diagnostic = { category: d:SYNTAX, location, message: "test error" };
+        string[]|error result = trap d:format(diagnostic);
+        if result is error {
+            test:assertTrue(result.message().startsWith(errMessagePrefix), string `"${result.message()}" to start with "${errMessagePrefix}"`);
+        }
+        else {
+            test:assertFail(string `invalid start position ${unpackPosition(range).toString()} must cause a panic`);
+        }
     }
-    else {
-        test:assertFail("invalid position must cause a panic");
+    foreach int i in 0 ..< positions.length() {
+        d:Position endPos = positions[i];
+        d:Position startPos = position(1, 0);
+        string errMessagePrefix = errMessagePrefixes[i];
+        d:Location location = { file, range: { startPos, endPos } };
+        d:Diagnostic diagnostic = { category: d:SYNTAX, location, message: "test error" };
+        string[]|error result = trap d:format(diagnostic);
+        if result is error {
+            test:assertTrue(result.message().startsWith(errMessagePrefix), string `"${result.message()}" to start with "${errMessagePrefix}"`);
+        }
+        else {
+            test:assertFail(string `invalid end position ${unpackPosition(endPos).toString()} must cause a panic`);
+        }
     }
 }
 
@@ -39,46 +70,10 @@ function testPositionOnEmptyFile() {
     test:assertTrue(result is error, "failed to panic when position is out of range");
 }
 
-@test:Config{}
-function testInvalidLineNumber() {
-    string[] testFileContent = [
-        "type RecordType record {",
-        "    string test;",
-        "}"
-    ];
-    s:SourceFile file = s:createSourceFile(testFileContent, { filename: "testFile3" });
-    d:Position range = position(40,1);
-    d:Location location = { file, range };
-    d:Diagnostic diagnostic = { category: d:SYNTAX, location, message: "missing semicolon" };
-    string[]|error result = trap d:format(diagnostic);
-    if result is error {
-        test:assertTrue(result.message().startsWith("line number 40 is out of range"));
-    }
-    else {
-        test:assertFail("invalid position must cause a panic");
-    }
-}
-
-@test:Config{}
-function testInvalidColumnNumber() {
-    string[] testFileContent = [
-        "type RecordType record {",
-        "    string test;",
-        "}"
-    ];
-    s:SourceFile file = s:createSourceFile(testFileContent, { filename: "testFile4" });
-    d:Position range = position(3,40);
-    d:Location location = { file, range };
-    d:Diagnostic diagnostic = { category: d:SYNTAX, location, message: "missing semicolon" };
-    string[]|error result = trap d:format(diagnostic);
-    if result is error {
-        test:assertTrue(result.message().startsWith("column number 40 is out of range"), result.message());
-    }
-    else {
-        test:assertFail("invalid position must cause a panic");
-    }
-}
-
 function position(int lineNum, int columnNum) returns d:Position {
     return lineNum << 32 | columnNum;
+}
+
+function unpackPosition(d:Position pos) returns [int, int] & readonly {
+    return [pos >> 32, pos & 0xFFFFFFFF];
 }
