@@ -988,15 +988,8 @@ function codeGenCompoundAssignToVar(CodeGenContext cx,
                                     s:Expr rexpr,
                                     s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                     Position pos) returns CodeGenError|StmtEffect {
-    var { block: nextBlock, result: lhs } = check codeGenExpr(cx, startBlock, env, lValue);
-    bir:Operand operand;
-    if lhs is bir:Register {
-        { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx, nextBlock, env, op, pos, lhs, rexpr);
-    }
-    else {
-        return cx.semanticErr("value assigned to a constant", pos);
-    }
     var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
+    var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx, startBlock, env, op, pos, result, rexpr);
     bir:AssignInsn insn = { pos, result, operand };
     nextBlock.insns.push(insn);
     return { block: nextBlock, assignments };
