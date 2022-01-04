@@ -1101,7 +1101,7 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         // Negation
         { opPos: var pos, op: "-",  operand: var o } => {
             var { operand, nextBlock, ifNilBlock } = check codeGenUnaryNilLift(cx, env, o, bb, pos);
-            return codeGenNegateExpr(cx, nextBlock, ifNilBlock, pos, operand);
+            return codeGenNilLiftResult(cx, check codeGenNegateExpr(cx, nextBlock, pos, operand), ifNilBlock, pos);
         }
         // Bitwise complement
         { opPos: var pos, op: "~",  operand: var o } => {
@@ -1352,7 +1352,7 @@ function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environ
     }
 }
 
-function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock nextBlock, bir:BasicBlock? ifNilBlock, Position pos, bir:Operand operand) returns CodeGenError|ExprEffect {
+function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock nextBlock, Position pos, bir:Operand operand) returns CodeGenError|ExprEffect {
     TypedOperand? typed = typedOperand(operand);
     bir:Register result;
     bir:Insn insn;
@@ -1401,7 +1401,7 @@ function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock nextBlock, bir:Basi
         return cx.semanticErr(`operand of ${"-"} must be int or float or decimal`, pos);
     }
     nextBlock.insns.push(insn);
-    return codeGenNilLiftResult(cx, { result, block: nextBlock }, ifNilBlock, pos);
+    return { result, block: nextBlock };
 }
 
 function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, Position pos, bir:Operand lhs, bir:Operand rhs) returns CodeGenError|ExprEffect {
