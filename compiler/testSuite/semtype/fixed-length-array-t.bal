@@ -66,3 +66,13 @@ type Array7OfArray2OfInt5 Array2OfInt5[7];
 
 // @type Array7x2x5 = Array7OfArray2OfInt5
 type Array7x2x5 int[7][2][5];
+
+public const int MAX_VALUE = 9223372036854775807;
+public const int MAX_VALUE_M_1 = 9223372036854775806;
+
+// @type LargeArray < IntArray
+type LargeArray int[MAX_VALUE];
+
+// @type LargeArray2 < IntArray
+// @type LargeArray <> LargeArray2
+type LargeArray2 int[MAX_VALUE_M_1];
