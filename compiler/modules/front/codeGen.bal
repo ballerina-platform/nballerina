@@ -879,6 +879,12 @@ function codeGenAssignStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 }
 
 function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, string varName, s:Expr expr, Position pos) returns CodeGenError|StmtEffect {
+    var [unnarrowedReg, assignments] = check lookupVarRefForAssign(cx, env, varName, pos);
+    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, unnarrowedReg, expr, unnarrowedReg.semType, pos);
+    return { block: nextBlock, assignments };
+}
+
+function lookupVarRefForAssign(CodeGenContext cx, Environment env, string varName, Position pos) returns CodeGenError|[bir:Register, int[]] {
     Binding binding = check lookupVarRefBinding(cx, varName, env, pos);
     if binding.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`, pos);
@@ -897,8 +903,7 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         unnarrowedReg = unnarrowedBinding.reg;
         assignments = [ unnarrowedReg.number ];
     }
-    bir:BasicBlock nextBlock = check codeGenAssign(cx, env, startBlock, unnarrowedReg, expr, unnarrowedReg.semType, pos);
-    return { block: nextBlock, assignments };
+    return [unnarrowedReg, assignments];
 }
 
 function codeGenAssign(CodeGenContext cx, Environment env, bir:BasicBlock block, bir:Register result, s:Expr expr, t:SemType semType, Position pos) returns CodeGenError|bir:BasicBlock {
@@ -994,16 +999,11 @@ function codeGenCompoundAssignToVar(CodeGenContext cx,
                                     s:Expr rexpr,
                                     s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                     Position pos) returns CodeGenError|StmtEffect {
-    s:Expr expr;
-    Position startPos = rexpr.startPos;
-    Position endPos = rexpr.endPos;
-    if op is s:BinaryArithmeticOp {
-        expr = { startPos, endPos, opPos: pos, arithmeticOp: op, left: lValue, right: rexpr };
-    }
-    else {
-        expr = { startPos, endPos, opPos: pos, bitwiseOp: op, left: lValue, right: rexpr };
-    }
-    return codeGenAssignToVar(cx, startBlock, env, lValue.name, expr, pos);
+    var [result, assignments] = check lookupVarRefForAssign(cx, env, lValue.name, pos);
+    var { block: nextBlock, result: operand } = check codeGenCompoundableBinaryExpr(cx, startBlock, env, op, pos, result, rexpr);
+    bir:AssignInsn insn = { pos, result, operand };
+    nextBlock.insns.push(insn);
+    return { block: nextBlock, assignments };
 }
 
 function codeGenCompoundAssignToListMember(CodeGenContext cx,
@@ -1091,11 +1091,7 @@ function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Environment
 
 function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|IntExprEffect {
     var { result, block } = check codeGenExpr(cx, bb, env, expr);
-    if result is bir:IntOperand {
-        // rest of the type checking is in the verifier
-        return { result, block };
-    }
-    return cx.semanticErr("expected integer operand", expr.startPos);
+    return { result: check intOperand(cx, result, expr), block };
 }
 
 function codeGenExprForString(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|StringExprEffect {
@@ -1110,26 +1106,25 @@ function codeGenExprForString(CodeGenContext cx, bir:BasicBlock bb, Environment 
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|ExprEffect {
     match expr {
         var { opPos: pos, arithmeticOp: op, left, right } => {
-            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, left);
-            var { result: r, block: nextBlock } = check codeGenExpr(cx, block1, env, right);
-            // We evaluate the operands here, so we can reuse the function for compound assignment.
-            return codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, l, r);
+            var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, env, left, right, bb, pos);
+            return codeGenNilLiftResult(cx, check codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, lhs, rhs), ifNilBlock, pos);
         }
         // Negation
         { opPos: var pos, op: "-",  operand: var o } => {
-            var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, o);
-            return codeGenNegateExpr(cx, nextBlock, pos, operand);
+            var { operand, nextBlock, ifNilBlock } = check codeGenUnaryNilLift(cx, env, o, bb, pos);
+            return codeGenNilLiftResult(cx, check codeGenNegateExpr(cx, nextBlock, pos, operand), ifNilBlock, pos);
         }
         // Bitwise complement
         { opPos: var pos, op: "~",  operand: var o } => {
-            var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, o);
-            if operand is int {
-                return { result: ~operand, block: nextBlock };
+            var { operand: liftedOperand, nextBlock, ifNilBlock } = check codeGenUnaryNilLift(cx, env, o, bb, pos);
+            if liftedOperand is int {
+                return { result: ~liftedOperand, block: nextBlock };
             }
             bir:Register result = cx.createTmpRegister(t:INT, pos);
+            bir:IntOperand operand = check intOperand(cx, liftedOperand, o);
             bir:IntBitwiseBinaryInsn insn = { op: "^", pos, operands: [-1, operand], result };
             nextBlock.insns.push(insn);
-            return { result, block: nextBlock };
+            return codeGenNilLiftResult(cx, { result, block: nextBlock }, ifNilBlock, pos);
         }
         { opPos: var pos, op: "!",  operand: var o } => {
             var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, env, o);
@@ -1148,10 +1143,10 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenCheckingExpr(cx, bb, env, checkingKeyword, operand, pos);
         }
         var { opPos: pos, bitwiseOp: op, left, right } => {
-            var { result: l, block: block1} = check codeGenExprForInt(cx, bb, env, left);
-            var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, right);
-            // We evaluate the operands here, so we can reuse the function for compound assignment.
-            return codeGenBitwiseBinaryExpr(cx, nextBlock, op, pos, l, r);
+            var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, env, left, right, bb, pos);
+            bir:IntOperand l = check intOperand(cx, lhs, left);
+            bir:IntOperand r = check intOperand(cx, rhs, right);
+            return codeGenNilLiftResult(cx, check codeGenBitwiseBinaryExpr(cx, nextBlock, op, pos, l, r), ifNilBlock, pos);
         }
         var { opPos: pos, equalityOp: op, left, right } => {
             return codeGenEqualityExpr(cx, bb, env, op, pos, left, right);
@@ -1238,6 +1233,97 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
     }
     panic err:impossible("unrecognized expression type in code gen: " +  s:exprToString(expr));
+}
+
+function codeGenNilLiftResult(CodeGenContext cx, ExprEffect nonNilEffect, bir:BasicBlock? ifNilBlock, Position pos) returns ExprEffect {
+    if ifNilBlock == () {
+        return nonNilEffect;
+    }
+    else {
+        bir:BasicBlock block = cx.createBasicBlock();
+        bir:Operand nonNilResult = nonNilEffect.result;
+        bir:BasicBlock nonNilBlock = nonNilEffect.block;
+
+        bir:Register result = cx.createTmpRegister(t:union(operandSemType(cx.mod.tc, nonNilResult), t:NIL));
+        bir:AssignInsn nilAssign = { result, operand: (), pos };
+        ifNilBlock.insns.push(nilAssign);
+        bir:BranchInsn branchInsn = { dest: block.label, pos };
+        ifNilBlock.insns.push(branchInsn);
+
+        bir:AssignInsn valAssign = { result, operand: nonNilResult, pos };
+        nonNilBlock.insns.push(valAssign);
+        nonNilBlock.insns.push(branchInsn);
+        return { result, block };
+    }
+}
+
+type NilLiftResult record {|
+    bir:Operand[] operands;
+    bir:BasicBlock nextBlock;
+    bir:BasicBlock? ifNilBlock;
+|};
+
+type BinaryNilLiftResult record {|
+    bir:Operand lhs;
+    bir:Operand rhs;
+    bir:BasicBlock nextBlock;
+    bir:BasicBlock? ifNilBlock = ();
+|};
+
+type UnaryNilLiftResult record {|
+    bir:Operand operand;
+    bir:BasicBlock nextBlock;
+    bir:BasicBlock? ifNilBlock = ();
+|};
+
+function codeGenBinaryNilLift(CodeGenContext cx, Environment env, s:Expr left, s:Expr right, bir:BasicBlock bb, Position pos) returns BinaryNilLiftResult|CodeGenError {
+    var { operands, nextBlock, ifNilBlock } = check codeGenNilLift(cx, env, [left, right], bb, pos);
+    return { lhs: operands[0], rhs: operands[1], nextBlock, ifNilBlock };
+}
+
+function codeGenUnaryNilLift(CodeGenContext cx, Environment env, s:Expr operand, bir:BasicBlock bb, Position pos) returns UnaryNilLiftResult|CodeGenError {
+    var { operands, nextBlock, ifNilBlock } = check codeGenNilLift(cx, env, [operand], bb, pos);
+    return { operand: operands[0], nextBlock, ifNilBlock };
+}
+
+function codeGenNilLift(CodeGenContext cx, Environment env, s:Expr[] operands, bir:BasicBlock bb, Position pos) returns NilLiftResult|CodeGenError {
+    bir:BasicBlock? ifNilBlock = ();
+    bir:BasicBlock currentBlock = bb;
+    bir:Operand[] newOperands = [];
+    foreach s:Expr operandExpr in operands {
+        var { result: operand, block } = check codeGenExpr(cx, currentBlock, env, operandExpr);
+        currentBlock = block;
+        newOperands.push(operand);
+    }
+    bir:BasicBlock nextBlock = currentBlock;
+    foreach int i in 0 ..< newOperands.length() {
+        bir:Operand operand = newOperands[i];
+        if operand is bir:Register && t:containsNil(operand.semType) {
+            bir:Register isNil = cx.createTmpRegister(t:BOOLEAN);
+            bir:TypeTestInsn operandTypeTest = { operand, semType: t:NIL , result: isNil, negated: false, pos };
+            currentBlock.insns.push(operandTypeTest);
+
+            nextBlock = cx.createBasicBlock();
+            bir:InsnRef testInsnRef = bir:lastInsnRef(currentBlock);
+            t:SemType baseType = t:diff(operand.semType, t:NIL);
+            bir:Register newOperand = cx.createTmpRegister(baseType);
+            bir:CondNarrowInsn narrowToBase = {
+                result: newOperand,
+                operand,
+                basis: { insn: testInsnRef, result: false },
+                pos
+            };
+            nextBlock.insns.push(narrowToBase);
+            newOperands[i] = newOperand;
+            if ifNilBlock == () {
+                ifNilBlock = cx.createBasicBlock();
+            }
+            bir:CondBranchInsn branchInsn = { operand: isNil, pos, ifTrue: (<bir:BasicBlock>ifNilBlock).label, ifFalse: nextBlock.label };
+            currentBlock.insns.push(branchInsn);
+            currentBlock = nextBlock;
+        }
+    }
+    return { operands: newOperands, nextBlock, ifNilBlock };
 }
 
 type MappingAccessType "."|"[";
@@ -2146,4 +2232,11 @@ function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? 
 
 function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
     return operand is float ? operand : t:singleFloatShape(operand.semType);
+}
+
+function intOperand(CodeGenContext cx, bir:Operand operand, s:Expr expr) returns bir:IntOperand|CodeGenError {
+    if operand is bir:IntOperand {
+        return operand;
+    }
+    return cx.semanticErr("expected an int operand", s:range(expr));
 }
