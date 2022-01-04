@@ -270,7 +270,11 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
         // SemType d1 = diff(s[1], t[1]);
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
-        foreach int i in 0 ..< len {
+        int maxInitialLength = members.initial.length();
+        if maxInitialLength != 0 {
+            maxInitialLength = int:max(maxInitialLength, nt.members.initial.length());
+        }
+        foreach int i in 0 ..< maxInitialLength {
             SemType d = diff(fixedArrayGet(members, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
@@ -278,7 +282,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
-            }     
+            }
         }
         if !isEmpty(cx, diff(rest, nt.rest)) {
             return true;
