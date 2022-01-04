@@ -535,12 +535,14 @@ public readonly class SourceFile {
             startPos = range;
             endPos = ();
         }
+        self.validatePosition(startPos);
         var [startLineNum, startColumnNum] = self.lineColumn(startPos);
         ScannedLine line = self.scannedLine(startLineNum);
         string[] lineFragments = scanLineFragments(line);
         string lineContent = "".'join(...lineFragments);
         int endColumnNum;
         if endPos != () {
+            self.validatePosition(endPos);
             int endLineNum;
             [endLineNum, endColumnNum] = self.lineColumn(endPos);
             if endLineNum != startLineNum {
@@ -568,6 +570,19 @@ public readonly class SourceFile {
 
     function scannedLine(int lineNumber) returns ScannedLine {
         return self.lines[lineNumber - 1];
+    }
+
+    function validatePosition(Position pos) {
+        var[lineNum, columnNum] = self.lineColumn(pos);
+        if lineNum > self.lines.length() || lineNum < 1 {
+            panic error(string `line number ${lineNum} is out of range`);
+        }
+        ScannedLine line = self.scannedLine(lineNum);
+        string[] lineFragments = scanLineFragments(line);
+        string lineContent = "".'join(...lineFragments);
+        if columnNum >= lineContent.length() || columnNum < 0 {
+            panic error(string `column number ${columnNum} is out of range for line "${lineContent}"`);
+        }
     }
 }
 
