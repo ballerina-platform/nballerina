@@ -12,14 +12,14 @@ function testInvalidPosition() {
     s:SourceFile file = s:createSourceFile(testFileContent, { filename: "testFile" });
     d:Position[] positions = [
         position(0,1),
-        position(1,24),
+        position(1,25),
         position(3,2),
         position(40,1),
         position(3,40)
     ];
     string[] errMessagePrefixes = [
         "line number 0 is out of range",
-        "column number 24 is out of range",
+        "column number 25 is out of range",
         "column number 2 is out of range",
         "line number 40 is out of range",
         "column number 40 is out of range"
@@ -31,7 +31,7 @@ function testInvalidPosition() {
         d:Diagnostic diagnostic = { category: d:SYNTAX, location, message: "test error" };
         string[]|error result = trap d:format(diagnostic);
         if result is error {
-            test:assertTrue(result.message().startsWith(errMessagePrefix), string `"${result.message()}" to start with "${errMessagePrefix}"`);
+            test:assertTrue(result.message().startsWith(errMessagePrefix), string `error message "${result.message()}" must begin with "${errMessagePrefix}"`);
         }
         else {
             test:assertFail(string `invalid start position ${unpackPosition(range).toString()} must cause a panic`);
@@ -45,7 +45,7 @@ function testInvalidPosition() {
         d:Diagnostic diagnostic = { category: d:SYNTAX, location, message: "test error" };
         string[]|error result = trap d:format(diagnostic);
         if result is error {
-            test:assertTrue(result.message().startsWith(errMessagePrefix), string `"${result.message()}" to start with "${errMessagePrefix}"`);
+            test:assertTrue(result.message().startsWith(errMessagePrefix), string `error message "${result.message()}" must begin with "${errMessagePrefix}"`);
         }
         else {
             test:assertFail(string `invalid end position ${unpackPosition(endPos).toString()} must cause a panic`);
@@ -65,9 +65,8 @@ function testPositionOnEmptyFile() {
         test:assertTrue(result.message().startsWith("line number 3 is out of range"));
     }
     else {
-        test:assertFail("invalid position must cause a panic");
+        test:assertFail("position in empty file must cause a panic");
     }
-    test:assertTrue(result is error, "failed to panic when position is out of range");
 }
 
 function position(int lineNum, int columnNum) returns d:Position {
