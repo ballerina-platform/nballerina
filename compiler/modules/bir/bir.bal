@@ -368,6 +368,8 @@ public type ListConstructInsn readonly & record {|
 public type ListGetInsn readonly & record {|
     *InsnBase;
     INSN_LIST_GET name = INSN_LIST_GET;
+    // fill must be false unless the result type is a subtype of list or mapping
+    boolean fill = false;  // if true do a filling read
     Register result;
     [Register, IntOperand] operands;
 |};
