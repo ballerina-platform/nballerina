@@ -121,7 +121,7 @@ public function format(Diagnostic d) returns string[] {
     Range|Position range = loc.range;
     string[] content = loc.file.lineContent(range);
     if content[1] == "" {
-        panic error(string `error position ${lc.toString()} is empty`);
+        panic error(string `error range ${lc.toString()} is empty in ${loc.file.filename()}`);
     }
     lines.push("".'join(...content));
     lines.push(caretLine(loc.file, range));
@@ -143,10 +143,10 @@ function validateLocation(Location loc) {
 function validatePosition(Position pos, File file) {
     var [lineNum, columnNum] = file.lineColumn(pos);
     if lineNum > file.maxLineNum() || lineNum < 1 {
-        panic error(string `line number ${lineNum} is out of range in ${file.filename()}`);
+        panic error(string `line number ${lineNum} is out of range for ${file.filename()}`);
     }
     if columnNum > file.maxColumnNum(lineNum) || columnNum < 0 {
-        panic error(string `column number ${columnNum} is out of range for ${file.filename()}`);
+        panic error(string `column number ${columnNum} is out of range for ${file.filename()}:${lineNum}`);
     }
 }
 

@@ -78,8 +78,8 @@ function testEmptyPositions() {
         position(3,2)
     ];
     string[] errMessage = [
-        "error position [1,24] is empty",
-        "error position [3,2] is empty"
+        "error range [1,24] is empty in testFile",
+        "error range [3,2] is empty in testFile"
     ];
     foreach int i in 0 ..< positions.length() {
         d:Position range = positions[i];
