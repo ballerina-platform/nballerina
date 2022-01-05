@@ -172,10 +172,6 @@ class CodeGenContext {
         return (<LoopContext>self.loopContext).onBreak;
     }
 
-    function loopStartRegister() returns int {
-        return (<LoopContext>self.loopContext).startRegister;
-    }
-
     function popLoopContext() {
         self.loopContext = (<LoopContext>self.loopContext).enclosing;
     }
@@ -427,6 +423,7 @@ function environmentCopy(Environment env) returns Environment {
 }
 
 function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:ForeachStmt stmt) returns CodeGenError|StmtEffect {
+    Binding? startBindings = env.bindings;
     string varName = stmt.name;
     if lookup(varName, env) !== () {
         return cx.semanticErr(`duplicate declaration of ${varName}`, stmt.namePos);
@@ -456,9 +453,9 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
         loopStep = loopStep ?: cx.createBasicBlock();
         bir:BranchInsn branchToLoopStep = { dest: (<bir:BasicBlock>loopStep).label, pos: stmt.kwPos };
         loopEnd.insns.push(branchToLoopStep);
-        check validLoopAssignments(cx, assignments);
+        check validLoopAssignments(cx, startBindings, assignments);
     }
-    check validLoopAssignments(cx, cx.onContinueAssignments());
+    check validLoopAssignments(cx, startBindings, cx.onContinueAssignments());
     assignments.push(...cx.onContinueAssignments());
     assignments.push(...cx.onBreakAssignments());
     if loopStep != () {
@@ -472,6 +469,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
 }
 
 function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:WhileStmt stmt) returns CodeGenError|StmtEffect {
+    Binding? startBindings = env.bindings;
     bir:BasicBlock loopHead = cx.createBasicBlock(); // where we go to on continue
     bir:BranchInsn branchToLoopHead = { dest: loopHead.label, pos: stmt.body.startPos };
     startBlock.insns.push(branchToLoopHead);
@@ -507,9 +505,9 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     var { block: loopEnd, assignments } = check codeGenStmtBlock(cx, loopBody, env, stmt.body);
     if loopEnd != () {
         loopEnd.insns.push(branchToLoopHead);
-        check validLoopAssignments(cx, assignments);
+        check validLoopAssignments(cx, startBindings, assignments);
     }
-    check validLoopAssignments(cx, cx.onContinueAssignments());
+    check validLoopAssignments(cx, startBindings, cx.onContinueAssignments());
     // We won't used these if the exit isn't reachable
     assignments.push(...cx.onContinueAssignments());
     assignments.push(...cx.onBreakAssignments());
@@ -527,12 +525,19 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     }
 }
 
-function validLoopAssignments(CodeGenContext cx, int[] assignments) returns CodeGenError? {
-    foreach int r in assignments {
-        if r < cx.loopStartRegister() {
-            return cx.semanticErr(`assignment to narrowed variable ${<string>cx.registerVarName(r)} in loop`, <Position>cx.registerPosition(r));
+function validLoopAssignments(CodeGenContext cx, Binding? startBindings, int[] assignments) returns CodeGenError? {
+    Binding? tem = startBindings;
+    while tem != () {
+        Binding? unnarrowed = tem.unnarrowed;
+        if unnarrowed != () {
+            int unnarrowedReg = unnarrowed.reg.number;
+            if assignments.indexOf(unnarrowedReg) != () {
+                return cx.semanticErr(`assignment to narrowed variable ${<string>cx.registerVarName(unnarrowedReg)} in loop`, <Position>cx.registerPosition(unnarrowedReg));
+            }
         }
+        tem = tem.prev;
     }
+    return ();
 }
 
 function codeGenBreakContinueStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:BreakContinueStmt stmt) returns CodeGenError|StmtEffect {
