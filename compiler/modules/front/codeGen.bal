@@ -500,7 +500,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     }
     else {
         // condition is false and body is non-empty
-        return cx.semanticErr("unreachable code", stmt.body.stmts[0].startPos);
+        return cx.semanticErr("unreachable code", s:range(stmt.body));
     }
     afterCondition.insns.push(branch);
     cx.pushLoopContext(exit, loopHead);
@@ -604,14 +604,14 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
                 // `1|_ => {}` is pointless, but I'm not making it an error
                 // because a later pattern that overlaps an earlier one is not in general an error
                 if hadWildcardPattern {
-                    return cx.semanticErr("duplicate wildcard match pattern", pattern.startPos);
+                    return cx.semanticErr("duplicate wildcard match pattern", s:range(pattern));
                 }
                 hadWildcardPattern = true;
                 UniformTypeMatchTest mt = { bitSet: t:ANY, clauseIndex: i, pos: clause.opPos };
                 matchTests.push(mt);
                 patternType = t:ANY;
                 if t:isSubtypeSimple(matchedType, t:ERROR) {
-                    return cx.semanticErr("wildcard match pattern cannot match error", pattern.startPos);
+                    return cx.semanticErr("wildcard match pattern cannot match error", s:range(pattern));
                 }
             }
             clausePatternUnion = t:union(clausePatternUnion, patternType);
@@ -936,7 +936,7 @@ function codeGenPanicStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         return { block: () };
     }
     else {
-        return cx.semanticErr("argument to error must be a string", stmt.startPos);
+        return cx.semanticErr("argument to error must be a string", s:range(stmt));
     }
 }
 
@@ -1172,7 +1172,7 @@ function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environme
         return check codeGenCheckingStmt(cx, startBlock, env, expr.checkingKeyword, expr.operand, expr.kwPos);
     }
     if result != () {
-        return cx.semanticErr("return type of function or method in call statement must be nil", stmt.startPos);
+        return cx.semanticErr("return type of function or method in call statement must be nil", s:range(stmt));
     }
     return { block: nextBlock };
 }
@@ -1187,7 +1187,7 @@ function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Environment
         // rest of the type checking is in the verifier
         return { result, block, narrowing };
     }
-    return cx.semanticErr("expected boolean operand", expr.startPos);
+    return cx.semanticErr("expected boolean operand", s:range(expr));
 }
 
 function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|IntExprEffect {
@@ -1201,7 +1201,7 @@ function codeGenExprForString(CodeGenContext cx, bir:BasicBlock bb, Environment 
         // rest of the type checking is in the verifier
         return { result, block };
     }
-    return cx.semanticErr("expected string operand", expr.startPos);
+    return cx.semanticErr("expected string operand", s:range(expr));
 }
 
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|ExprEffect {
@@ -1606,7 +1606,7 @@ function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environmen
     }
     t:SemType resultType = <t:SemType>expr.expectedType;
     if t:isEmpty(cx.mod.tc, resultType) {
-        return cx.semanticErr("list now allowed in this context", expr.startPos);
+        return cx.semanticErr("list now allowed in this context", s:range(expr));
     }
     bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
@@ -1618,7 +1618,7 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
     t:SemType resultType = <t:SemType>expr.expectedType;
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(cx.mod.tc, resultType);
     if mat is () {
-        return cx.semanticErr("mapping not allowed in this context", expr.startPos);
+        return cx.semanticErr("mapping not allowed in this context", s:range(expr));
     }
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
@@ -1628,15 +1628,15 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
         string name = f.name;
         Position? prevPos = fieldPos[name];
         if prevPos != () {
-            return cx.semanticErr(`duplicate field ${name}`, pos=f.startPos);
+            return cx.semanticErr(`duplicate field ${name}`, s:range(f));
         }
         fieldPos[name] = f.startPos;
         if mat.names.indexOf(name) == () {
             if mat.rest == t:NEVER {
-                return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
+                return cx.semanticErr(`type does not allow field named ${name}`, s:range(f));
             }
             else if f.isIdentifier && mat.names.length() > 0 {
-                return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, pos=f.startPos);
+                return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, s:range(f));
             }
         }
         bir:Operand operand;
@@ -1762,7 +1762,7 @@ function codeGenVarRefExpr(CodeGenContext cx, s:VarRefExpr ref, Environment env,
         // This should be caught during const folding
         panic err:impossible("prefix in var ref is non-nil");
     }
-    var v = check lookupVarRef(cx, ref.name, env, ref.startPos);
+    var v = check lookupVarRef(cx, ref.name, env, s:range(ref));
     bir:Operand result;
     Binding? binding;
     if v is t:SingleValue {
@@ -2166,7 +2166,7 @@ function lookupVarRefBinding(CodeGenContext cx, string name, Environment env, Po
     }
 }
 
-function lookupVarRef(CodeGenContext cx, string name, Environment env, Position pos) returns t:SingleValue|Binding|CodeGenError {
+function lookupVarRef(CodeGenContext cx, string name, Environment env, Position|Range pos) returns t:SingleValue|Binding|CodeGenError {
     Binding? binding = lookupLocalVarRef(cx, name, env);
     if binding == () {
         s:ModuleLevelDefn? defn = cx.mod.defns[name];
