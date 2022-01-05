@@ -2,7 +2,6 @@ import ballerina/test;
 import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.front.syntax as s;
 
-// pr-to: end of line shouldn't panic
 @test:Config{}
 function testInvalidPosition() {
     string[] testFileContent = [
@@ -13,15 +12,11 @@ function testInvalidPosition() {
     s:SourceFile file = s:createSourceFile(testFileContent, { filename: "testFile" });
     d:Position[] positions = [
         position(0,1),
-        position(1,25),
-        position(3,2),
         position(40,1),
         position(3,40)
     ];
     string[] errMessagePrefixes = [
         "line number 0 is out of range",
-        "column number 25 is out of range",
-        "column number 2 is out of range",
         "line number 40 is out of range",
         "column number 40 is out of range"
     ];

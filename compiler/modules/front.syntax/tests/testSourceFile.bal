@@ -1,7 +1,7 @@
 import ballerina/test;
 
 @test:Config{}
-function testEndOfLineLineContent() {
+function testEndOfLinePositionsForLineContent() {
     string[] testFileContent = [
         "type RecordType record {",
         "    string test;",

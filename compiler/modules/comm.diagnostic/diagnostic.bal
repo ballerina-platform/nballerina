@@ -141,7 +141,7 @@ function validatePosition(Position pos, File file) {
     if lineNum > file.maxLineNum() || lineNum < 1 {
         panic error(string `line number ${lineNum} is out of range in ${file.filename()}`);
     }
-    if columnNum >= file.maxColumnNum(lineNum) || columnNum < 0 {
+    if columnNum > file.maxColumnNum(lineNum) || columnNum < 0 {
         panic error(string `column number ${columnNum} is out of range for ${file.filename()}`);
     }
 }
