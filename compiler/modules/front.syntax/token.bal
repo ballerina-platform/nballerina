@@ -567,17 +567,6 @@ public readonly class SourceFile {
         return { startPos, endPos: createPosition(lineNum, endColumnNum) };
     }
 
-    public function maxLineNum() returns int {
-        return self.lines.length();
-    }
-
-    public function maxColumnNum(int lineNum) returns int {
-        ScannedLine line = self.scannedLine(lineNum);
-        string[] lineFragments = scanLineFragments(line);
-        string lineContent = "".'join(...lineFragments);
-        return lineContent.length();
-    }
-
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
 
     function scannedLine(int lineNumber) returns ScannedLine {
