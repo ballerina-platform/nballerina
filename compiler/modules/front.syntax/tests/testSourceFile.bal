@@ -5,6 +5,8 @@ function testEndOfLinePositionsForLineContent() {
     string[] testFileContent = [
         "type RecordType record {",
         "    string test;",
+        "    \"type\" \"type\";",
+        "",
         "}"
     ];
     SourceFile file = createSourceFile(testFileContent, { filename: "testFile" });
