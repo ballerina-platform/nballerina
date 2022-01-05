@@ -56,3 +56,7 @@ function makeNop() returns BinaryenExpression{
 function makeReturn() returns BinaryenExpression{
 
 }
+
+function makeCall(string name, BinaryenExpression operands, int numOperands, BinaryenExpression returnVal) returns BinaryenExpression {
+
+}

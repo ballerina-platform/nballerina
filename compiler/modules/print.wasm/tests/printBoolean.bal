@@ -11,11 +11,11 @@ int main() {
 
     // Then call (b == true)
     BinaryenExpression[] thencallOperands = [makeConst(makeLiteralInt32(1))];
-    BinaryenCall thenCall  = new("println",thencallOperands,1,makeTypeNone());
+    BinaryenExpression  thenCall  = makeCall("println",thencallOperands,1,makeTypeNone());
 
     // Else call (b == false)
     BinaryenExpression[] elsecallOperands = [makeConst(makeLiteralInt32(0))];
-    BinaryenCall elseCall = new("println",elsecallOperands,1,makeTypeNone());
+    BinaryenExpression  elseCall = makeCall("println",elsecallOperands,1,makeTypeNone());
 
   
     Relooper relooper = new(module);
