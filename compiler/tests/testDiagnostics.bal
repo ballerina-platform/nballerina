@@ -2,6 +2,7 @@ import ballerina/test;
 import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.front.syntax as s;
 
+// pr-to: end of line shouldn't panic
 @test:Config{}
 function testInvalidPosition() {
     string[] testFileContent = [
