@@ -596,6 +596,9 @@ function qualifiedIdentifierEndCodePointIndex(ScannedLine line, int startCodePoi
 
 function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex) returns int {
     int fragmentIndex = fragmentCountUpTo(fragments, startCodePointIndex);
+    if fragmentIndex == fragCodes.length() {
+        return startCodePointIndex;
+    }
     match fragCodes[fragmentIndex] {
         FRAG_STRING_OPEN  => {
             return stringTokenEndCodePointIndex(fragments, fragCodes, startCodePointIndex, fragmentIndex);
