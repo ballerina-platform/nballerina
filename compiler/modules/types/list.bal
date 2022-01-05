@@ -240,11 +240,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
         ListAtomicType nt = cx.listAtomType(neg.atom);
         int negLen = nt.members.fixedLength;
         if len < negLen {
-            if isNever(rest) {
-                return listInhabited(cx, members, rest, neg.next);
-            }
-            fixedArrayFill(members, negLen, rest);
-            len = negLen;
+            return listInhabited(cx, members, rest, neg.next);
         }
         else if negLen < len && isNever(nt.rest) {
             return listInhabited(cx, members, rest, neg.next);

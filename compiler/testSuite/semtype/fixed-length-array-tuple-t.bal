@@ -25,3 +25,7 @@ type Int2Intersection IntIntT & int[2];
 // @type Int = Int2AnyArrayIntersection[0]
 // @type Int = Int2AnyArrayIntersection[1]
 type Int2AnyArrayIntersection IntIntT & any[];
+
+// @type T2 < T1
+type T1 [int...];
+type T2 [int, int...];
