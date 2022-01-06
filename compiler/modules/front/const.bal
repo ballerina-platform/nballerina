@@ -549,7 +549,7 @@ function decimalFromFpLiteral(FoldContext cx, string decimalStr, Position pos) r
 function intFromLiteral(FoldContext cx, s:IntLiteralExpr expr) returns int|FoldError {
     int|error i = s:intFromIntLiteral(expr.base, expr.digits);
     if i is error {
-        return cx.semanticErr("invalid int literal", cause=i, pos=s:range(expr));
+        return cx.semanticErr("invalid int literal", cause=i, pos=expr.startPos);
     }
     return i;
 }

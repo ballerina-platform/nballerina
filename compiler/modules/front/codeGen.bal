@@ -1606,7 +1606,7 @@ function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environmen
     }
     t:SemType resultType = <t:SemType>expr.expectedType;
     if t:isEmpty(cx.mod.tc, resultType) {
-        return cx.semanticErr("list now allowed in this context", s:range(expr));
+        return cx.semanticErr("list not allowed in this context", s:range(expr));
     }
     bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
@@ -1762,7 +1762,7 @@ function codeGenVarRefExpr(CodeGenContext cx, s:VarRefExpr ref, Environment env,
         // This should be caught during const folding
         panic err:impossible("prefix in var ref is non-nil");
     }
-    var v = check lookupVarRef(cx, ref.name, env, s:range(ref));
+    var v = check lookupVarRef(cx, ref.name, env, ref.startPos);
     bir:Operand result;
     Binding? binding;
     if v is t:SingleValue {
@@ -2166,7 +2166,7 @@ function lookupVarRefBinding(CodeGenContext cx, string name, Environment env, Po
     }
 }
 
-function lookupVarRef(CodeGenContext cx, string name, Environment env, Position|Range pos) returns t:SingleValue|Binding|CodeGenError {
+function lookupVarRef(CodeGenContext cx, string name, Environment env, Position pos) returns t:SingleValue|Binding|CodeGenError {
     Binding? binding = lookupLocalVarRef(cx, name, env);
     if binding == () {
         s:ModuleLevelDefn? defn = cx.mod.defns[name];
