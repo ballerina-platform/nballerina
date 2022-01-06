@@ -115,7 +115,7 @@ function parseCompoundType(t:Context tc, Binding? b, string k, json[] jlist, Pat
             else {
                 rest = members.pop();
             }
-            return def.define(env, rest = rest);
+            return def.define(env, members, rest = rest);
         }
         "record" => {
             t:SemType? s = lookupDef(env, b, jlist);

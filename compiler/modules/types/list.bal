@@ -243,6 +243,20 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
             if isNever(rest) {
                 return listInhabited(cx, members, rest, neg.next);
             }
+            // For list shapes with length less than negLen,
+            // this neg type is not relevant.
+            if listInhabited(cx, members, NEVER, neg.next) {
+                return true;
+            }
+            foreach int i in len + 1 ..< negLen {
+                FixedLengthArray s = fixedArrayShallowCopy(members);
+                fixedArrayFill(s, i, rest);
+                if listInhabited(cx, s, NEVER, neg.next) {
+                    return true;
+                }
+            }
+            // List shapes >= negLen need to take in account
+            // this neg type and are handled below.
             fixedArrayFill(members, negLen, rest);
             len = negLen;
         }
