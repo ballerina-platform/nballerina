@@ -73,6 +73,7 @@ type Keyword
     | "import"
     | "table"
     ;
+type SpecialMethodName "map";
 
 type StringIterator object {
     public isolated function next() returns record {|
@@ -418,6 +419,28 @@ class Tokenizer {
             }
             else {
                 msg = `expected an identifier`;
+            }
+            return self.err(msg);
+        }
+    }
+
+    function expectMethodName() returns string|err:Syntax {
+        Token? t = self.curTok;
+        if t is [IDENTIFIER, string] {
+            check self.advance();
+            return t[1];
+        }
+        else if t is SpecialMethodName {
+            check self.advance();
+            return t;
+        }
+        else {
+            d:Message msg;
+            if t is string {
+                msg = `expected a method name; got ${t}`;
+            }
+            else {
+                msg = `expected a method name`;
             }
             return self.err(msg);
         }

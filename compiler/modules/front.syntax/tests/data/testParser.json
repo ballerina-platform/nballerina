@@ -228,6 +228,7 @@
     ["V", "expr", "false.length()"],
     ["V", "expr", "-1.hexStr()", "-(1.hexStr())"],
     ["V", "expr", "-0xf.max()", "-(0xF.max())"],
+    ["V", "expr", "x.map()", "x.map()"],
 
     { "comment" : "field access" },
     ["V", "expr", "a.b"],
@@ -238,8 +239,6 @@
     ["V", "expr", "a(x).b.c[y]", "((a(x).b).c)[y]"],
     ["V", "expr", "a[b.c]"],
     ["E", "expr", "a.1", ""],
-    { "comment" : "may get allowed under  ballerina-spec#34" },
-    ["E", "expr", "a.map", ""],
     { "comment" : "XXX Output is illegal in 2021R1 but will be addressed in ballerina-spec#905" },
     ["V", "expr", "42 .length()", "42.length()"],
     ["V", "expr", "x.foo().bar()", "(x.foo()).bar()"],

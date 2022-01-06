@@ -340,7 +340,7 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         opPos = tok.currentStartPos();
         check tok.advance();
         Position qnamePos = tok.currentStartPos();
-        string name = check tok.expectIdentifier();
+        string name = check tok.expectMethodName();
         if tok.current() == "(" {
             return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, qnamePos, opPos), startPos);
         }
