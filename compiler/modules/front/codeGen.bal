@@ -500,7 +500,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     }
     else {
         // condition is false and body is non-empty
-        return cx.semanticErr("unreachable code", s:range(stmt.body));
+        return cx.semanticErr("unreachable code", stmt.body.stmts[0].startPos);
     }
     afterCondition.insns.push(branch);
     cx.pushLoopContext(exit, loopHead);
@@ -604,14 +604,14 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
                 // `1|_ => {}` is pointless, but I'm not making it an error
                 // because a later pattern that overlaps an earlier one is not in general an error
                 if hadWildcardPattern {
-                    return cx.semanticErr("duplicate wildcard match pattern", s:range(pattern));
+                    return cx.semanticErr("duplicate wildcard match pattern", pattern.startPos);
                 }
                 hadWildcardPattern = true;
                 UniformTypeMatchTest mt = { bitSet: t:ANY, clauseIndex: i, pos: clause.opPos };
                 matchTests.push(mt);
                 patternType = t:ANY;
                 if t:isSubtypeSimple(matchedType, t:ERROR) {
-                    return cx.semanticErr("wildcard match pattern cannot match error", s:range(pattern));
+                    return cx.semanticErr("wildcard match pattern cannot match error", pattern.startPos);
                 }
             }
             clausePatternUnion = t:union(clausePatternUnion, patternType);
@@ -936,7 +936,7 @@ function codeGenPanicStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
         return { block: () };
     }
     else {
-        return cx.semanticErr("argument to error must be a string", s:range(stmt));
+        return cx.semanticErr("argument to error must be a string", stmt.startPos);
     }
 }
 
@@ -1172,7 +1172,7 @@ function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environme
         return check codeGenCheckingStmt(cx, startBlock, env, expr.checkingKeyword, expr.operand, expr.kwPos);
     }
     if result != () {
-        return cx.semanticErr("return type of function or method in call statement must be nil", s:range(stmt));
+        return cx.semanticErr("return type of function or method in call statement must be nil", stmt.startPos);
     }
     return { block: nextBlock };
 }
@@ -1628,15 +1628,15 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
         string name = f.name;
         Position? prevPos = fieldPos[name];
         if prevPos != () {
-            return cx.semanticErr(`duplicate field ${name}`, s:range(f));
+            return cx.semanticErr(`duplicate field ${name}`, pos=f.startPos);
         }
         fieldPos[name] = f.startPos;
         if mat.names.indexOf(name) == () {
             if mat.rest == t:NEVER {
-                return cx.semanticErr(`type does not allow field named ${name}`, s:range(f));
+                return cx.semanticErr(`type does not allow field named ${name}`, pos=f.startPos);
             }
             else if f.isIdentifier && mat.names.length() > 0 {
-                return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, s:range(f));
+                return cx.semanticErr(`field name must be in double quotes since it is not an individual field in the type`, pos=f.startPos);
             }
         }
         bir:Operand operand;
