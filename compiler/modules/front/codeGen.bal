@@ -1187,7 +1187,7 @@ function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Environment
         // rest of the type checking is in the verifier
         return { result, block, narrowing };
     }
-    return cx.semanticErr("expected boolean operand", expr.startPos);
+    return cx.semanticErr("expected boolean operand", s:range(expr));
 }
 
 function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|IntExprEffect {
@@ -1201,7 +1201,7 @@ function codeGenExprForString(CodeGenContext cx, bir:BasicBlock bb, Environment 
         // rest of the type checking is in the verifier
         return { result, block };
     }
-    return cx.semanticErr("expected string operand", expr.startPos);
+    return cx.semanticErr("expected string operand", s:range(expr));
 }
 
 function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|ExprEffect {
@@ -1606,7 +1606,7 @@ function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environmen
     }
     t:SemType resultType = <t:SemType>expr.expectedType;
     if t:isEmpty(cx.mod.tc, resultType) {
-        return cx.semanticErr("list now allowed in this context", expr.startPos);
+        return cx.semanticErr("list now allowed in this context", s:range(expr));
     }
     bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
@@ -1618,7 +1618,7 @@ function codeGenMappingConstructor(CodeGenContext cx, bir:BasicBlock bb, Environ
     t:SemType resultType = <t:SemType>expr.expectedType;
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(cx.mod.tc, resultType);
     if mat is () {
-        return cx.semanticErr("mapping not allowed in this context", expr.startPos);
+        return cx.semanticErr("mapping not allowed in this context", s:range(expr));
     }
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
@@ -1762,7 +1762,7 @@ function codeGenVarRefExpr(CodeGenContext cx, s:VarRefExpr ref, Environment env,
         // This should be caught during const folding
         panic err:impossible("prefix in var ref is non-nil");
     }
-    var v = check lookupVarRef(cx, ref.name, env, ref.startPos);
+    var v = check lookupVarRef(cx, ref.name, env, s:range(ref));
     bir:Operand result;
     Binding? binding;
     if v is t:SingleValue {
@@ -2166,7 +2166,7 @@ function lookupVarRefBinding(CodeGenContext cx, string name, Environment env, Po
     }
 }
 
-function lookupVarRef(CodeGenContext cx, string name, Environment env, Position pos) returns t:SingleValue|Binding|CodeGenError {
+function lookupVarRef(CodeGenContext cx, string name, Environment env, Position|Range pos) returns t:SingleValue|Binding|CodeGenError {
     Binding? binding = lookupLocalVarRef(cx, name, env);
     if binding == () {
         s:ModuleLevelDefn? defn = cx.mod.defns[name];
