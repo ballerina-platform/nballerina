@@ -4,6 +4,8 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
 
+type Range d:Range;
+
 class VerifyContext {
     private final Module mod;
     private final t:Context tc;
@@ -40,7 +42,11 @@ class VerifyContext {
         return self.tc;
     }
 
-    function err(d:Message msg, Position pos) returns err:Semantic {
+    function qNameRange(Position startPos) returns Range {
+        return self.mod.getPartFile(self.defn.partIndex).qNameRange(startPos);
+    }
+
+    function err(d:Message msg, Position|Range pos) returns err:Semantic {
         return err:semantic(msg, loc=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
     }
 
@@ -146,14 +152,14 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
     if nSuppliedArgs != nExpectedArgs {
         string name = vc.symbolToString(func.symbol);
         if nSuppliedArgs < nExpectedArgs {
-            return vc.err(`too few arguments for call to function ${name}`, insn.pos);
+            return vc.err(`too few arguments for call to function ${name}`, vc.qNameRange(insn.pos));
         }
         else {
-            return vc.err(`too many arguments for call to function ${name}`, insn.pos);
+            return vc.err(`too many arguments for call to function ${name}`, vc.qNameRange(insn.pos));
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, insn.pos);
+        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
     }
 }
 
@@ -248,7 +254,8 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Sem
 
 function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Semantic? {
     if vc.isEmpty(insn.result.semType) {
-        return vc.err("type cast cannot succeed", insn.pos);
+        // This is now caught in the front-end.
+        return vc.err("bad BIR: result of type case is never", insn.pos);
     }
     // These should not happen with the nballerina front-end
     if !vc.isSubtype(insn.result.semType, insn.operand.semType) {
@@ -285,7 +292,7 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
 
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Semantic? {
     if !t:comparable(vc.typeContext(), operandToSemType(insn.operands[0]), operandToSemType(insn.operands[1])) {
-        return vc.err(`operands of ${insn.op} do not belong to an ordered type`, insn.pos);
+        return vc.err(`bad BIR: operands of ${insn.op} do not belong to an ordered type`, insn.pos);
     }
 }
 
@@ -299,31 +306,13 @@ function operandToSemType(Operand operand) returns t:SemType {
 }
 
 function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semantic? {
+    // non-empty intersection of operand types is enforced in front-end
+    // not needed for BIR correctness
     Operand lhs = insn.operands[0];
     Operand rhs = insn.operands[1];
-    if lhs is Register {
-        if rhs is Register {
-            t:SemType intersectType = t:intersect(lhs.semType, rhs.semType);
-            if !vc.isEmpty(intersectType) {
-                if insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
-                    return vc.err(`at least one operand of an == or !=  at expression must be a subtype of anydata`, insn.pos);
-                }
-                return;
-            }
-        }
-        else if t:containsConst(lhs.semType, rhs) {
-            return;
-        }
+    if lhs is Register && rhs is Register && insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
+        return vc.err(`bad BIR: at least one operand of an == or !=  at expression must be a subtype of anydata`, insn.pos);
     }
-    else if rhs is Register {
-        if t:containsConst(rhs.semType, lhs) {
-            return;
-        }
-    }
-    else if isEqual(lhs, rhs) {
-        return;
-    }
-    return vc.err(`intersection of operands of operator ${insn.op} is empty`, insn.pos);
 }
 
 // After JBUG #17977, #32245 is fixed, replace by ==
@@ -331,7 +320,7 @@ function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
     return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
 }
 
-function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position pos) returns err:Semantic? {
+function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Semantic? {
     if !vc.operandHasType(operand, semType) {
         return vc.err(msg, pos);
     }

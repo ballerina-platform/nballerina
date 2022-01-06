@@ -36,14 +36,15 @@ final var relationExpect = {
 
 function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
     t:Env env = new;
+    t:Context tc = t:typeContext(env);
     boolean firstOk = false;
     do {
-        t:SemType t1 = check j:parse(env, j1);
+        t:SemType t1 = check j:parse(tc, j1);
         firstOk = true;
-        t:SemType t2 = check j:parse(env, j2);
+        t:SemType t2 = check j:parse(tc, j2);
         var expect = <[boolean,boolean]>relationExpect[rel];
-        return expectSubtype(testNum, j1, j2, env, t1, t2, expect, 0)
-                && expectSubtype(testNum, j2, j1, env, t2, t1, expect, 1);
+        return expectSubtype(testNum, j1, j2, tc, t1, t2, expect, 0)
+                && expectSubtype(testNum, j2, j1, tc, t2, t1, expect, 1);
     }
     on fail j:ParseError err {
         io:println("Could not parse ", firstOk ? "second" : "first", " type in test ", testNum, ": ", err.message());
@@ -51,10 +52,9 @@ function runTest(Relation rel, json j1, json j2, int testNum) returns boolean {
     }
 }
 
-function expectSubtype(int testNum, json j1, json j2, t:Env env, t:SemType t1, t:SemType t2, boolean[] expect, int i) returns boolean {
+function expectSubtype(int testNum, json j1, json j2, t:Context tc, t:SemType t1, t:SemType t2, boolean[] expect, int i) returns boolean {
     io:println("Test ", testNum, "/", i);
     int tem = t:bddGetCount();
-    var tc = t:typeContext(env);
     boolean b = t:isSubtype(tc, t1, t2);
     if b == expect[i] {
         io:println("  created ", t:bddGetCount() - tem, " BDDs");

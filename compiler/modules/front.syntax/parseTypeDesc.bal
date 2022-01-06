@@ -133,7 +133,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         }
         "string"
         |"int" => {
-            Position pos = tok.currentStartPos();
+            Position qNamePos = tok.currentStartPos();
             Position endPos = tok.currentEndPos();
             check tok.advance();
             if !tok.currentIsNoSpaceColon() {
@@ -143,7 +143,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             check tok.advance();
             string typeName = check tok.expectIdentifier();
             endPos = tok.previousEndPos();
-            return { startPos, endPos, prefix: <string>cur, typeName, pos };
+            return { startPos, endPos, prefix: <string>cur, typeName, qNamePos };
         }
         "xml" => {
             Position pos = tok.currentStartPos();
@@ -153,7 +153,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 check tok.advance();
                 string typeName = check tok.expectIdentifier();
                 endPos = tok.previousEndPos();
-                return { startPos, endPos, prefix: <string>cur, typeName, pos };
+                return { startPos, endPos, prefix: <string>cur, typeName, qNamePos: pos };
             }
             else if tok.current() == "<" {
                 TypeDesc constituent = check parseTypeParam(tok);
@@ -196,11 +196,11 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             return { startPos, endPos, row };
         }
         [IDENTIFIER, var identifier] => {
-            Position pos = tok.currentStartPos();
+            Position qNamePos = tok.currentStartPos();
             check tok.advance();
-            var [prefix, typeName, _] = check parseOptQualIdentifier(tok, identifier, pos);
+            var [prefix, typeName] = check parseOptQualIdentifier(tok, identifier);
             Position endPos = tok.previousEndPos();
-            return { startPos, endPos, prefix, typeName, pos };
+            return { startPos, endPos, prefix, typeName, qNamePos };
         }
         [STRING_LITERAL, var str] => {
             Position endPos = tok.currentEndPos();
@@ -356,6 +356,7 @@ function parseTupleTypeDesc(Tokenizer tok) returns TupleTypeDesc|err:Syntax {
             if tok.current() == "..." {
                 rest = td;
                 check tok.advance();
+                break;
             }
             else {
                 members.push(td);

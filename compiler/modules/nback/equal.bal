@@ -47,6 +47,15 @@ final RuntimeFunction exactEqFunction = {
     attrs: [["return", "zeroext"], "readonly"]
 };
 
+final RuntimeFunction decimalExactEqFunction = {
+    name: "decimal_exact_eq",
+    ty: {
+        returnType: "i1",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: [["return", "zeroext"], "readonly"]
+};
+
 type CmpEqOp "ne"|"eq";
 
 function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn insn) returns BuildError? {
@@ -65,6 +74,9 @@ function buildEquality(llvm:Builder builder, Scaffold scaffold, bir:EqualityInsn
                     return buildStoreBoolean(builder, scaffold, builder.iCmp(op, lhsValue, rhsValue), result);
                 }
                 return buildEqualStringString(builder, scaffold, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
+            }
+            else if reprIsDecimal(lhsRepr) && reprIsDecimal(rhsRepr) {
+                return buildEqualDecimalDecimal(builder, scaffold, exact, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
             }
             else {
                 return buildEqualTaggedTagged(builder, scaffold, exact, op, <llvm:PointerValue>lhsValue, <llvm:PointerValue>rhsValue, result);
@@ -130,7 +142,7 @@ function isAnyOperandSmallString(bir:Operand[] operands) returns boolean {
     foreach var operand in operands {
         if operand is string {
             byte[] bytes = operand.toBytes();
-            int nBytes = operand.length();
+            int nBytes = bytes.length();
             if isSmallString(operand.length(), bytes, nBytes) {
                 return true;
             }
@@ -145,6 +157,10 @@ function reprIsNil(Repr repr) returns boolean {
 
 function reprIsString(Repr repr) returns boolean {
     return repr is TaggedRepr && repr.subtype == t:STRING;
+}
+
+function reprIsDecimal(Repr repr) returns boolean {
+    return repr is TaggedRepr && repr.subtype == t:DECIMAL;
 }
 
 function reprIsImmediate(Repr repr) returns boolean {
@@ -187,6 +203,20 @@ function buildEqualStringString(llvm:Builder builder, Scaffold scaffold, CmpEqOp
     llvm:Value b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringEqFunction), [tagged1, tagged2]);
     if op == "ne" {
         b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
+    }
+    buildStoreBoolean(builder, scaffold, b, result);
+}
+
+function buildEqualDecimalDecimal(llvm:Builder builder, Scaffold scaffold, boolean exact, CmpEqOp op, llvm:PointerValue tagged1, llvm:PointerValue tagged2, bir:Register result) {
+    llvm:Value b;
+    if exact {
+        b = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalExactEqFunction), [tagged1, tagged2]);
+        if op == "ne" {
+            b = builder.iBitwise("xor", b, llvm:constInt(LLVM_BOOLEAN, 1));
+        }
+    }
+    else {
+        b = builder.iCmp(op, <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalCmpFunction), [tagged1, tagged2]), llvm:constInt(LLVM_INT, 0));
     }
     buildStoreBoolean(builder, scaffold, b, result);
 }

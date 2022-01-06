@@ -122,8 +122,8 @@ function validateChildExpressions(Stmt stmt, Tokenizer tok) returns err:Syntax? 
         if stmt is MatchStmt {
             foreach var clause in stmt.clauses {
                 foreach var matchPattern in clause.patterns {
-                    if matchPattern is ConstPattern {
-                        check validateExpressionPos(matchPattern.expr, tok, stmt.startPos, stmt.endPos);
+                    if matchPattern is SimpleConstExpr {
+                        check validateExpressionPos(matchPattern, tok, stmt.startPos, stmt.endPos);
                     }
                 }
                 check validateMatchClausePos(clause, tok, stmt.startPos, stmt.endPos);
@@ -168,6 +168,9 @@ function validateStmtBlockPos(StmtBlock block, Tokenizer tok, Position parentSta
     test:assertEquals(tok.current(), "{", "invalid start token for StmtBlock");
     check tok.moveToPos(inclusiveEndPos(block.endPos), MODE_NORMAL);
     test:assertEquals(tok.current(), "}", "invalid end token for StmtBlock");
+    check tok.moveToPos(inclusiveEndPos(block.closeBracePos), MODE_NORMAL);
+    test:assertEquals(tok.current(), "}", "invalid end token for StmtBlock");
+    test:assertTrue(block.endPos > block.closeBracePos);
     test:assertTrue(block.startPos > parentStartPos && block.endPos <= parentEndPos, "stmt block outside of parent");
 }
 
@@ -255,32 +258,18 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
         newExpr = check parseExpr(tok);
     }
     if newExpr is Expr {
-        Position actualEnd;
-        if expr is ListConstructorExpr
-                |MemberAccessExpr
-                |PrimaryExpr
-                |TypeTestExpr
-                |MappingConstructorExpr
-                |SimpleConstExpr
-                |BinaryExpr
-                |UnaryExpr
-                |CheckingExpr
-                |TypeCastExpr {
-            if expr is SimpleConstExpr && usedSimpleConstExprParser {
-                if expr is SimpleConstNegateExpr {
-                    actualEnd = tok.previousEndPos();
-                }
-                else {
-                    actualEnd = tok.currentEndPos();
-                }
+        Position actualEnd;       
+        if expr is SimpleConstExpr && usedSimpleConstExprParser {
+            if expr is SimpleConstNegateExpr {
+                actualEnd = tok.previousEndPos();
             }
             else {
-                actualEnd = tok.previousEndPos();
+                actualEnd = tok.currentEndPos();
             }
         }
         else {
-            actualEnd = tok.currentEndPos();
-        }
+            actualEnd = tok.previousEndPos();
+        }       
 
         while (expr.endPos != newExpr.endPos) && (expr is RecursiveBinaryExpr && newExpr is RecursiveBinaryExpr) {
             // These are left recursive expression that can't be separately parsed
@@ -394,13 +383,19 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         }
     }
     if expr is ExprNamePos {
-        check tok.moveToPos(expr.namePos, MODE_NORMAL);
+        Position namePos = expr is MethodCallExpr ? expr.namePos : expr.qNamePos;
+        check tok.moveToPos(namePos, MODE_NORMAL);
         string newName = check tok.expectIdentifier();
         if expr is MethodCallExpr {
             test:assertEquals(expr.methodName, newName);
         }
         else {
-            test:assertEquals(expr.funcName, newName);
+            if expr.prefix != () {
+                test:assertEquals(expr.prefix, newName);
+            }
+            else {
+                test:assertEquals(expr.funcName, newName);
+            }
         }
     }
     if expr is ExprParenPos {

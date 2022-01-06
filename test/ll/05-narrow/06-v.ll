@@ -5,8 +5,7 @@ declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nofree nosync nounwind readnone speculatable willreturn
-declare double @_bal_tagged_to_float(i8 addrspace(1)*) readonly
-declare {i64, i1} @_bal_float_to_int(double) nounwind readnone speculatable willreturn
+declare {i8 addrspace(1)*, i1} @_bal_convert_to_int(i8 addrspace(1)*) readonly
 define void @_B04rootmain() !dbg !5 {
   %1 = alloca i64
   %2 = alloca i8 addrspace(1)*
@@ -101,7 +100,7 @@ define internal i64 @_B_add(i8 addrspace(1)* %0, i8 addrspace(1)* %1) !dbg !7 {
   %33 = load i64, i64* %y.1
   %34 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %32, i64 %33)
   %35 = extractvalue {i64, i1} %34, 1
-  br i1 %35, label %52, label %43
+  br i1 %35, label %50, label %43
 36:
   %37 = load i64, i64* %n.1
   ret i64 %37
@@ -122,47 +121,34 @@ define internal i64 @_B_add(i8 addrspace(1)* %0, i8 addrspace(1)* %1) !dbg !7 {
   %46 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %45)
   store i8 addrspace(1)* %46, i8 addrspace(1)** %n
   %47 = load i8 addrspace(1)*, i8 addrspace(1)** %n
-  %48 = addrspacecast i8 addrspace(1)* %47 to i8*
-  %49 = ptrtoint i8* %48 to i64
-  %50 = and i64 %49, 2233785415175766016
-  %51 = icmp eq i64 %50, 576460752303423488
-  br i1 %51, label %60, label %64
+  %48 = call {i8 addrspace(1)*, i1} @_bal_convert_to_int(i8 addrspace(1)* %47)
+  %49 = extractvalue {i8 addrspace(1)*, i1} %48, 1
+  br i1 %49, label %59, label %52
+50:
+  %51 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585), !dbg !16
+  store i8 addrspace(1)* %51, i8 addrspace(1)** %8
+  br label %39
 52:
-  %53 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585), !dbg !16
-  store i8 addrspace(1)* %53, i8 addrspace(1)** %8
+  %53 = extractvalue {i8 addrspace(1)*, i1} %48, 0
+  store i8 addrspace(1)* %53, i8 addrspace(1)** %6
+  %54 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  %55 = addrspacecast i8 addrspace(1)* %54 to i8*
+  %56 = ptrtoint i8* %55 to i64
+  %57 = and i64 %56, 2233785415175766016
+  %58 = icmp eq i64 %57, 504403158265495552
+  br i1 %58, label %61, label %64
+59:
+  %60 = call i8 addrspace(1)* @_bal_panic_construct(i64 3841), !dbg !16
+  store i8 addrspace(1)* %60, i8 addrspace(1)** %8
   br label %39
-54:
-  %55 = load i8 addrspace(1)*, i8 addrspace(1)** %6
-  %56 = addrspacecast i8 addrspace(1)* %55 to i8*
-  %57 = ptrtoint i8* %56 to i64
-  %58 = and i64 %57, 2233785415175766016
-  %59 = icmp eq i64 %58, 504403158265495552
-  br i1 %59, label %70, label %73
-60:
-  %61 = call double @_bal_tagged_to_float(i8 addrspace(1)* %47)
-  %62 = call {i64, i1} @_bal_float_to_int(double %61)
-  %63 = extractvalue {i64, i1} %62, 1
-  br i1 %63, label %68, label %65
+61:
+  %62 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %54)
+  store i64 %62, i64* %7
+  %63 = load i64, i64* %7
+  ret i64 %63
 64:
-  store i8 addrspace(1)* %47, i8 addrspace(1)** %6
-  br label %54
-65:
-  %66 = extractvalue {i64, i1} %62, 0
-  %67 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %66)
-  store i8 addrspace(1)* %67, i8 addrspace(1)** %6
-  br label %54
-68:
-  %69 = call i8 addrspace(1)* @_bal_panic_construct(i64 3843), !dbg !16
-  store i8 addrspace(1)* %69, i8 addrspace(1)** %8
-  br label %39
-70:
-  %71 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %55)
-  store i64 %71, i64* %7
-  %72 = load i64, i64* %7
-  ret i64 %72
-73:
-  %74 = call i8 addrspace(1)* @_bal_panic_construct(i64 3843), !dbg !16
-  store i8 addrspace(1)* %74, i8 addrspace(1)** %8
+  %65 = call i8 addrspace(1)* @_bal_panic_construct(i64 3843), !dbg !16
+  store i8 addrspace(1)* %65, i8 addrspace(1)** %8
   br label %39
 }
 !llvm.module.flags = !{!0}

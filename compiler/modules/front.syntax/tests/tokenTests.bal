@@ -45,6 +45,23 @@ function test1() {
     test:assertEquals(tokenization("_x = x"), [[IDENTIFIER, "_x"], "=", [IDENTIFIER, "x"]]);
     test:assertEquals(tokenization("__ = x"), [[IDENTIFIER, "__"], "=", [IDENTIFIER, "x"]]);
     test:assertEquals(tokenization("int _x = x"), ["int", [IDENTIFIER, "_x"], "=", [IDENTIFIER, "x"]]);
+
+    test:assertEquals(tokenization("0e+123"), [[DECIMAL_FP_NUMBER, "0e+123", ()]]);
+    test:assertEquals(tokenization("0E123"), [[DECIMAL_FP_NUMBER, "0E123", ()]]);
+    test:assertEquals(tokenization("0E-123"), [[DECIMAL_FP_NUMBER, "0E-123", ()]]);
+    test:assertEquals(tokenization("0e123d"), [[DECIMAL_FP_NUMBER, "0e123", "d"]]);
+    test:assertEquals(tokenization("0e+123d"), [[DECIMAL_FP_NUMBER, "0e+123", "d"]]);
+    test:assertEquals(tokenization("0E123d"), [[DECIMAL_FP_NUMBER, "0E123", "d"]]);
+    test:assertEquals(tokenization("0E+123d"), [[DECIMAL_FP_NUMBER, "0E+123", "d"]]);
+    test:assertEquals(tokenization("0e123D"), [[DECIMAL_FP_NUMBER, "0e123", "d"]]);
+    test:assertEquals(tokenization("1.2e12d"), [[DECIMAL_FP_NUMBER, "1.2e12", "d"]]);
+    test:assertEquals(tokenization(".2e12d"), [[DECIMAL_FP_NUMBER, ".2e12", "d"]]);
+    test:assertEquals(tokenization("1.2d"), [[DECIMAL_FP_NUMBER, "1.2", "d"]]);
+    test:assertEquals(tokenization("0d"), [[DECIMAL_FP_NUMBER, "0", "d"]]);
+    test:assertEquals(tokenization("123D"), [[DECIMAL_FP_NUMBER, "123", "d"]]);
+
+    test:assertEquals(tokenization("decimal d = 123D"), ["decimal", [IDENTIFIER, "d"], "=", [DECIMAL_FP_NUMBER, "123", "d"]]);
+    test:assertEquals(tokenization("decimal d = 1.2e12d"), ["decimal", [IDENTIFIER, "d"], "=", [DECIMAL_FP_NUMBER, "1.2e12", "d"]]);
 }
 
 @test:Config{}

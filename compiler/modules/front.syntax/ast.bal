@@ -63,16 +63,17 @@ public type ConstDefn record {|
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallExpr FunctionCallExpr|MethodCallExpr|CheckingCallExpr;
-public type Expr NumericLiteralExpr|ConstValueExpr|FloatZeroExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
+public type Expr NumericLiteralExpr|ConstValueExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
 public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
-public type SimpleConstExpr ConstValueExpr|VarRefExpr|IntLiteralExpr|SimpleConstNegateExpr;
+public type SimpleConstExpr ConstValueExpr|VarRefExpr|NumericLiteralExpr|SimpleConstNegateExpr;
 
 public const WILDCARD = ();
 
 public type StmtBlock record {|
     *PositionFields;
     Stmt[] stmts;
+    Position closeBracePos;
 |};
 
 public type CallStmt record {|
@@ -130,13 +131,12 @@ public type MatchClause record {|
     Position opPos;
 |};
 
-public type MatchPattern ConstPattern|WildcardMatchPattern;
+public type MatchPattern SimpleConstExpr|WildcardMatchPattern;
 
-const WildcardMatchPattern = "_";
-
-public type ConstPattern record {|
-    SimpleConstExpr expr;
-    Position pos;
+const WILDCARD_MATCH_PATTERN = "_";
+public type WildcardMatchPattern record {|
+    *PositionFields;
+    WILDCARD_MATCH_PATTERN pattern = WILDCARD_MATCH_PATTERN;
 |};
 
 public type WhileStmt record {|
@@ -249,7 +249,7 @@ public type FunctionCallExpr record {|
     Position startPos;
     Position endPos;
     Position openParenPos;
-    Position namePos;
+    Position qNamePos;
     string? prefix = ();
     string funcName;
     Expr[] args;
@@ -366,7 +366,7 @@ public type VarRefExpr record {|
     *PositionFields;
     string? prefix = ();
     string name;
-    Position namePos;
+    Position qNamePos;
 |};
 
 public type TypeCastExpr record {|
@@ -391,8 +391,6 @@ public type TypeTestExpr record {|
     Position kwPos;
 |};
 
-public type ConstShapeExpr ConstValueExpr|FloatZeroExpr;
-
 public type ConstValueExpr record {|
     *PositionFields;
     t:SingleValue value;
@@ -401,17 +399,6 @@ public type ConstValueExpr record {|
     // When it contains exactly one shape, then the shape is
     // the shape of the value.
     t:SemType? multiSemType = ();
-|};
-
-public const float FLOAT_ZERO = 0f;
-
-// This is an expression where we know that the value is == 0f
-// but do not know whether it is +0f or -0f.
-public type FloatZeroExpr record {|
-    *PositionFields;
-    FLOAT_ZERO value = FLOAT_ZERO;
-    () multiSemType = ();
-    Expr expr;
 |};
 
 public type NumericLiteralExpr IntLiteralExpr|FpLiteralExpr;
@@ -545,7 +532,7 @@ public type TypeDescRef record {|
     *PositionFields;
     string? prefix = ();
     string typeName;
-    Position pos;
+    Position qNamePos;
 |};
 
 public type SingletonTypeDesc record {|
@@ -553,9 +540,9 @@ public type SingletonTypeDesc record {|
     (string|float|int|boolean|decimal) value;
 |};
 
-public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"int"|"float"|"string"|"error";
+public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"int"|"decimal"|"float"|"string"|"error";
 
-public type BuiltinTypeName SubsetBuiltinTypeName|"byte"|"decimal"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
+public type BuiltinTypeName SubsetBuiltinTypeName|"byte"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
 
 public type BuiltinTypeDesc readonly & record {|
     *PositionFields;

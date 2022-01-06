@@ -50,6 +50,7 @@
                    ["rec", "json", ["|", "nil", "int", "string", ["tuple", ["ref", "json"], ["ref", "json"]], ["record", ["x", ["ref", "json"]], ["y", ["ref", "json"]]]]]],
     ["equivalent", ["&", ["tuple", "int"], ["tuple", "int", "int"]], "never"],
     ["proper_subtype", ["list", "int"], ["list", ["|", "int", "nil"]]],
+    ["proper_subtype", ["list", "int", "int"], ["list", "int"]],
     ["equivalent", ["list", "int"], ["|", ["tuple"], ["tuple", "int"], ["list", "int", "int", "int"]]],
     ["proper_subtype", ["rec", "t", ["|", ["string", "nil"],
                                           ["string", "int"],

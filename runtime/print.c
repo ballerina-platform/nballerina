@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "third-party/dtoa/emyg_dtoa.h"
+#include "third-party/decNumber/decQuad.h"
 
 #define STYLE_DIRECT 0
 #define STYLE_INFORMAL 1
@@ -140,6 +141,13 @@ static void printTagged(FILE *fp, TaggedPtr p, int style, struct PrintStack *sta
                 else {
                     fwrite(bytes, 1, nBytes, fp);
                 }
+            }
+            break;
+        case TAG_DECIMAL:
+            {
+                char decStr[DECQUAD_String];
+                decQuadToString((decQuad *)taggedToPtr(p), decStr);
+                fprintf(fp, "%s", decStr);
             }
             break;
         default:

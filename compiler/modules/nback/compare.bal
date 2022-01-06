@@ -11,6 +11,15 @@ final RuntimeFunction stringCmpFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction decimalCmpFunction = {
+    name: "decimal_cmp",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
 final RuntimeFunction intCompareFunction = {
     name: "int_compare",
     ty: {
@@ -40,6 +49,15 @@ final RuntimeFunction stringCompareFunction = {
 
 final RuntimeFunction booleanCompareFunction = {
     name: "boolean_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction decimalCompareFunction = {
+    name: "decimal_compare",
     ty: {
         returnType: "i64",
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
@@ -101,6 +119,15 @@ final RuntimeFunction arrayExactIntCompareFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction arrayDecimalCompareFunction = {
+    name: "array_decimal_compare",
+    ty: {
+        returnType: "i64",
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
 type TaggedCompareFunction readonly & record {|
     t:UniformTypeCode utCode;
     RuntimeFunction compareFunction;
@@ -111,7 +138,8 @@ final readonly & table<TaggedCompareFunction> key(utCode) compareFunctions = tab
     { utCode: t:UT_INT, compareFunction: intCompareFunction, arrayCompareFunction: arrayIntCompareFunction },
     { utCode: t:UT_FLOAT, compareFunction: floatCompareFunction, arrayCompareFunction: arrayFloatCompareFunction },
     { utCode: t:UT_BOOLEAN, compareFunction: booleanCompareFunction, arrayCompareFunction: arrayBooleanCompareFunction },
-    { utCode: t:UT_STRING, compareFunction: stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction }
+    { utCode: t:UT_STRING, compareFunction: stringCompareFunction, arrayCompareFunction: arrayStringCompareFunction },
+    { utCode: t:UT_DECIMAL, compareFunction: decimalCompareFunction, arrayCompareFunction: arrayDecimalCompareFunction }
 ];
 
 function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn insn) returns BuildError? {
@@ -125,10 +153,13 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
         if lhsRepr.subtype == t:STRING && rhsRepr.subtype == t:STRING {
             buildCompareString(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
         }
+        else if lhsRepr.subtype == t:DECIMAL && rhsRepr.subtype == t:DECIMAL {
+            buildCompareDecimal(builder, scaffold, buildIntCompareOp(insn.op), lhsValue, rhsValue, result);
+        }
         else {
             t:UniformTypeBitSet OrderTyMinusNil = (lhsRepr.subtype | rhsRepr.subtype) & ~t:NIL;
             t:UniformTypeCode?  OrderTyMinusNilCode = t:uniformTypeCode(OrderTyMinusNil);
-            if OrderTyMinusNilCode is t:UT_STRING|t:UT_INT|t:UT_FLOAT|t:UT_BOOLEAN {
+            if OrderTyMinusNilCode is t:UT_STRING|t:UT_INT|t:UT_FLOAT|t:UT_BOOLEAN|t:UT_DECIMAL {
                 RuntimeFunction comparator = compareFunctions.get(OrderTyMinusNilCode).compareFunction;
                 buildCompareStore(builder, scaffold, insn, lhsValue, rhsValue, comparator);
             }
@@ -184,6 +215,10 @@ function buildCompare(llvm:Builder builder, Scaffold scaffold, bir:CompareInsn i
 
 function isOperandIntSubtypeArray(t:Context tc, bir:Operand o) returns boolean {
     return o is bir:Register && t:isSubtypeSimple(t:listMemberType(tc, o.semType ,()), t:INT);
+}
+
+function isOperandDecimalSubtypeArray(t:Context tc, bir:Operand o) returns boolean {
+    return o is bir:Register && t:isSubtypeSimple(t:listMemberType(tc, o.semType ,()), t:DECIMAL);
 }
 
 final readonly & map<bir:OrderOp> flippedOrderOps = {
@@ -281,6 +316,13 @@ function buildCompareFloat(llvm:Builder builder, Scaffold scaffold, llvm:FloatPr
 function buildCompareString(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
     buildStoreBoolean(builder, scaffold,
                       builder.iCmp(op, <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(stringCmpFunction), [lhs, rhs]),
+                                   llvm:constInt(LLVM_INT, 0)),
+                      result);
+}
+
+function buildCompareDecimal(llvm:Builder builder, Scaffold scaffold, llvm:IntPredicate op, llvm:Value lhs, llvm:Value rhs, bir:Register result) {
+    buildStoreBoolean(builder, scaffold,
+                      builder.iCmp(op, <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalCmpFunction), [lhs, rhs]),
                                    llvm:constInt(LLVM_INT, 0)),
                       result);
 }

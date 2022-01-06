@@ -178,11 +178,11 @@ function stmtToWords(Word[] w, Stmt stmt) {
                 else {
                     w.push("|");
                 }
-                if pattern is string {
-                    w.push(pattern);
+                if pattern is WildcardMatchPattern {
+                    w.push("_");
                 }
                 else {
-                    exprToWords(w, pattern.expr);
+                    exprToWords(w, pattern);
                 }
             }
             w.push("=>");
@@ -287,8 +287,11 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         typeDescsToWords(w, td.members);
         TypeDesc? rest = td.rest;
         if rest != () {
-            w.push(",", "...", CLING);
+            if td.members.length() > 0 {
+                w.push(",");
+            }
             typeDescToWords(w, rest);
+            w.push("...", CLING);
         }
         w.push("]");
         if wrap != false {
@@ -418,9 +421,6 @@ function lExprToWords(Word[] w, LExpr expr) {
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     if expr is ConstValueExpr {
         valueToWords(w, expr.value);      
-    }
-    else if expr is FloatZeroExpr {
-        exprToWords(w, expr.expr, wrap);
     }
     else if expr is IntLiteralExpr {
         if expr.base == 16 {

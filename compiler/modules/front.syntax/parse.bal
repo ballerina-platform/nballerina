@@ -207,9 +207,17 @@ function parseError(Tokenizer tok, string? detail = ()) returns err:Syntax {
 }
 
 public function defnLocation(ModuleLevelDefn defn) returns d:Location {
-    return d:location(defn.part.file, defn.namePos);
+    return qNameLocationInDefn(defn, defn.namePos);
 }
 
-public function locationInDefn(ModuleLevelDefn defn, Position pos) returns d:Location {
+public function qNameLocationInDefn(ModuleLevelDefn defn, Position qnamePos) returns d:Location {
+    return locationInDefn(defn, defn.part.file.qNameRange(qnamePos));
+}
+
+public function locationInDefn(ModuleLevelDefn defn, Position|Range pos) returns d:Location {
     return d:location(defn.part.file, pos);
+}
+
+public function range(record {| *PositionFields; any|error...; |} node) returns Range {
+    return { startPos: node.startPos, endPos: node.endPos };
 }

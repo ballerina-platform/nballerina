@@ -4,7 +4,7 @@ public type Message string|Template;
 public type Template object {
     *object:RawTemplate;
     public (readonly & string[]) strings;
-    public (string|int|float)[] insertions;
+    public (string|int|float|decimal)[] insertions;
 };
 
 const QUOTE = "'";
@@ -27,6 +27,7 @@ public type File readonly & object {
     public function directory() returns string?;
     public function lineColumn(Position pos) returns LineColumn;
     public function lineContent(Position|Range range) returns [string, string, string];
+    public function qNameRange(Position startPos) returns Range;
 };
 
 public type Location readonly & record {|
@@ -72,14 +73,7 @@ public type UnimplementedDiagnostic record {|
     UNIMPLEMENTED category = UNIMPLEMENTED;
 |};
 
-public function location(File file, Position startPos, Position? endPos = ()) returns Location {
-    Range|Position range;
-    if endPos != () {
-        range = { startPos, endPos };
-    }
-    else {
-        range = startPos;
-    }
+public function location(File file, Position|Range range) returns Location {
     return { file, range };
 }
 
@@ -122,7 +116,11 @@ public function format(Diagnostic d) returns string[] {
     line += ": error: " + d.message;
     lines.push(line);
     Range|Position range = loc.range;
-    lines.push("".'join(...loc.file.lineContent(range)));
+    string[] content = loc.file.lineContent(range);
+    if content[1] == "" {
+        panic error(string `error range ${lc.toString()} is empty in ${loc.file.filename()}`);
+    }
+    lines.push("".'join(...content));
     lines.push(caretLine(loc.file, range));
     return lines;
 }

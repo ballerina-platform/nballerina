@@ -178,6 +178,11 @@ type ComparableMemo record {|
     boolean comparable = false;
 |};
 
+type SingletonMemo readonly & record {|
+    boolean|int|decimal|float|string value;
+    ComplexSemType semType;
+|};
+
 // Operations on types require a Context.
 // There can be multiple contexts for the same Env.
 // Whereas an Env is isolated, a Context is not isolated.
@@ -189,7 +194,9 @@ public class Context {
     BddMemoTable mappingMemo = table [];
     BddMemoTable functionMemo = table [];
     final table<ComparableMemo> key(semType1, semType2) comparableMemo = table [];
+    final table<SingletonMemo> key(value) singletonMemo = table [];
     SemType? anydataMemo = ();
+    SemType? jsonMemo = ();
 
     function init(Env env) {
         self.env = env;
@@ -293,6 +300,13 @@ function unpackComplexSemType(ComplexSemType t) returns UniformSubtype[] {
     return subtypeList;
 }
 
+function singleUniformSubtype(ComplexSemType t) returns UniformSubtype? {
+    if t.all == 0 && t.subtypeDataList.length() == 1 {
+        return [<UniformTypeCode>lib:numberOfTrailingZeros(t.some), t.subtypeDataList[0]];
+    }
+    return ();
+}
+
 function getComplexSubtypeData(ComplexSemType t, UniformTypeCode code) returns SubtypeData {
     int c = code;
     c = 1 << c;
@@ -318,7 +332,7 @@ public function uniformTypeUnion(int bits) returns UniformTypeBitSet {
     return <UniformTypeBitSet>bits;
 }
 
-function uniformSubtype(UniformTypeCode code, ProperSubtypeData data) returns SemType {
+function uniformSubtype(UniformTypeCode code, ProperSubtypeData data) returns ComplexSemType {
     return createComplexSemType(0, [[code, data]]);
 }
 
@@ -743,6 +757,10 @@ public function isSubtype(Context cx, SemType t1, SemType t2) returns boolean {
     return isEmpty(cx, diff(t1, t2));
 }
 
+public function includesSome(SemType t1, SemType t2) returns boolean {
+    return !isNever(intersect(t1, t2));
+}
+
 public function isSubtypeSimple(SemType t1, UniformTypeBitSet t2) returns boolean {
     int bits;
     if t1 is UniformTypeBitSet {
@@ -1007,64 +1025,110 @@ public function split(SemType t) returns SplitSemType  {
     }
 }
 
-public type SingleValue ()|boolean|int|float|string;
+public type SingleValue ()|boolean|int|float|decimal|string;
 
-// JBUG #34320 parentheses should not be necessary
-public type OptSingleValue (readonly & record {|
+public type WrappedSingleValue readonly & record {|
    SingleValue value;
-|})?;
+|};
 
-// If the type contains exactly onr shape, return a value
-// having that shape.
-public function singleShape(SemType t) returns OptSingleValue {
-    if t === NIL {
-        return { value: () };
+// If the type contains exactly one shape, return a record
+// containing a value with that shape. Otherwise, return ().
+public function singleShape(SemType t) returns WrappedSingleValue? {
+    if t is UniformTypeBitSet {
+        return t === NIL ? { value: () } : ();
     }
-    else if t is UniformTypeBitSet {
+    UniformSubtype? s = singleUniformSubtype(t);
+    if s is () {
         return ();
     }
-    else if isSubtypeSimple(t, INT) {
-        SubtypeData sd = getComplexSubtypeData(t, UT_INT);
-        int? value = intSubtypeSingleValue(sd);
-        return value == () ? () : { value };
+    var [code, sd] = s;  
+    SingleValue value;
+    if code == UT_INT {
+        value = intSubtypeSingleValue(sd);
     }
-    else if isSubtypeSimple(t, FLOAT) {
-        SubtypeData sd = getComplexSubtypeData(t, UT_FLOAT);
-        float? value = floatSubtypeSingleValue(sd);
-        return value == () ? () : { value };
+    else if code == UT_FLOAT {
+        value = floatSubtypeSingleValue(sd);
     }
-    else if isSubtypeSimple(t, STRING) {
-        SubtypeData sd = getComplexSubtypeData(t, UT_STRING);
-        string? value = stringSubtypeSingleValue(sd);
-        return value == () ? () : { value };
+    else if code == UT_DECIMAL {
+        value = decimalSubtypeSingleValue(sd);
     }
-    else if isSubtypeSimple(t, BOOLEAN) {
-        SubtypeData sd = getComplexSubtypeData(t, UT_BOOLEAN);
-        boolean? value = booleanSubtypeSingleValue(sd);
-        return value == () ? () : { value };
+    else if code == UT_STRING {
+        value = stringSubtypeSingleValue(sd);
+    }
+    else if code == UT_BOOLEAN {
+        value = booleanSubtypeSingleValue(sd);
+    }
+    else {
+        return ();
+    }
+    if value == () {
+        return ();
+    }
+    return { value };
+}
+
+public function singleDecimalShape(SemType t) returns decimal? {
+    if t is ComplexSemType && t.some == DECIMAL && t.all == 0 {
+        return decimalSubtypeSingleValue(t.subtypeDataList[0]);
     }
     return ();
 }
 
-public function singleton(string|int|float|boolean|decimal|() v) returns SemType {
-    if v == () {
+public function singleFloatShape(SemType t) returns float? {
+    if t is ComplexSemType && t.some == FLOAT && t.all == 0 {
+        return floatSubtypeSingleValue(t.subtypeDataList[0]);
+    }
+    return ();
+}
+
+public function singleIntShape(SemType t) returns int? {
+    if t is ComplexSemType && t.some == INT && t.all == 0 {
+        return intSubtypeSingleValue(t.subtypeDataList[0]);
+    }
+    return ();
+}
+
+public function singleBooleanShape(SemType t) returns boolean? {
+    if t is ComplexSemType && t.some == BOOLEAN && t.all == 0 {
+        return booleanSubtypeSingleValue(t.subtypeDataList[0]);
+    }
+    return ();
+}
+
+public function singleStringShape(SemType t) returns string? {
+    if t is ComplexSemType && t.some == STRING && t.all == 0 {
+        return stringSubtypeSingleValue(t.subtypeDataList[0]);
+    }
+    return ();
+}
+
+public function singleton(Context cx, SingleValue value) returns SemType {
+    if value is () {
         return NIL;
     }
-    else if v is int {
-        return intConst(v);
+    SingletonMemo? memo = cx.singletonMemo[value];
+    if memo != () {
+        return memo.semType;
     }
-    else if v is float {
-        return floatConst(v);
+    ComplexSemType semType;
+    if value is int {
+        semType = intConst(value);
     }
-    else if v is string {
-        return stringConst(v);
+    else if value is float {
+        semType = floatConst(value);
     }
-    else if v is decimal {
-        return decimalConst(v);
+    else if value is string {
+        semType = stringConst(value);
+    }
+    else if value is decimal {
+        semType = decimalConst(value);
     }
     else {
-        return booleanConst(v);
+        boolean _ = value;
+        semType = booleanConst(value);
     }
+    cx.singletonMemo.add({ value, semType });
+    return semType;
 }
 
 public function isReadOnly(SemType t) returns boolean {
@@ -1078,7 +1142,7 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
-public function constUniformTypeCode(string|int|float|boolean|decimal|() v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL {
+public function constUniformTypeCode(SingleValue v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL {
     if v == () {
         return UT_NIL;
     }
@@ -1099,11 +1163,11 @@ public function constUniformTypeCode(string|int|float|boolean|decimal|() v) retu
     }
 }
 
-public function constBasicType(string|int|float|boolean|decimal|() v) returns UniformTypeBitSet {
+public function constBasicType(SingleValue v) returns UniformTypeBitSet {
     return  uniformType(constUniformTypeCode(v));
 }
 
-public function containsConst(SemType t, string|int|float|boolean|decimal|() v) returns boolean {
+public function containsConst(SemType t, SingleValue v) returns boolean {
     if v == () {
         return containsNil(t);
     }
@@ -1200,12 +1264,18 @@ public function typeContext(Env env) returns Context {
     return new(env);
 }
 
-public function createJson(Env env) returns SemType {
+public function createJson(Context context) returns SemType {
+    SemType? memo = context.jsonMemo;
+    if memo != () {
+        return memo;
+    }
+    Env env = context.env;
     ListDefinition listDef = new;
     MappingDefinition mapDef = new;
     SemType j = union(SIMPLE_OR_STRING, union(listDef.getSemType(env), mapDef.getSemType(env)));
     _ = listDef.define(env, rest = j);
     _ = mapDef.define(env, [], j);
+    context.jsonMemo = j;
     return j;
 }
 

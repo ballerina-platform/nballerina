@@ -17,15 +17,18 @@ class TestFoldContext {
         self.tc = t:typeContext(new);
         self.file = file;
     }
-    function lookupConst(string? prefix, string varName, s:Position pos) returns s:FLOAT_ZERO|t:OptSingleValue|FoldError {
+    function lookupConst(string? prefix, string varName, s:Position pos) returns t:WrappedSingleValue|FoldError|() {
         return ();
     }
-    function semanticErr(d:Message msg, s:Position pos, error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, d:location(self.file, pos), cause=cause);
+
+    public function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic {
+        return err:semantic(msg, loc=d:location(self.file, pos), cause=cause);
     }
+
     function typeContext() returns t:Context {
         return self.tc;
     }
+
     function resolveTypeDesc(s:TypeDesc td) returns err:Semantic|t:SemType {
         if td is s:SubsetBuiltinTypeDesc {
             return resolveBuiltinTypeDesc(self.tc, td);

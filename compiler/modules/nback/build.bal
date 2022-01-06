@@ -16,6 +16,7 @@ const int TAG_NIL      = 0;
 const int TAG_BOOLEAN  = t:UT_BOOLEAN << TAG_SHIFT;
 const int TAG_INT      = t:UT_INT << TAG_SHIFT;
 const int TAG_FLOAT    = t:UT_FLOAT << TAG_SHIFT;
+const int TAG_DECIMAL  = t:UT_DECIMAL << TAG_SHIFT;
 const int TAG_STRING   = t:UT_STRING << TAG_SHIFT;
 const int TAG_ERROR   = t:UT_ERROR << TAG_SHIFT;
 
@@ -41,6 +42,8 @@ const PANIC_LIST_STORE = 8;
 const PANIC_MAPPING_STORE = 9;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
+
+final llvm:StructType LLVM_TAGGED_WITH_PANIC_CODE = llvm:structType([LLVM_TAGGED_PTR, LLVM_INT]);
 
 final t:UniformTypeBitSet POTENTIALLY_EXACT = t:uniformTypeUnion(t:LIST_RW|t:MAPPING_RW);
 
@@ -113,10 +116,31 @@ final RuntimeFunction taggedClearExactPtrFunction = {
     attrs: ["readnone"]
 };
 
+final RuntimeFunction decimalConstFunction = {
+    name: "decimal_const",
+    ty: {
+        returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_DECIMAL_CONST]
+    },
+    attrs: ["readonly"]
+};
+
 final bir:ModuleId runtimeModule = {
     org: "ballerinai",
     names: ["runtime"]
 };
+
+function buildCheckPanicCode(llvm:Builder builder, Scaffold scaffold, llvm:Value valWithErr, bir:Position pos) returns llvm:Value {
+    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock errBlock = scaffold.addBasicBlock();
+    llvm:Value panicCode = builder.extractValue(valWithErr, 1);
+    builder.condBr(builder.iCmp("ne", panicCode, llvm:constInt("i64", 0)), errBlock, continueBlock);
+    builder.positionAtEnd(errBlock);
+    builder.store(buildErrorForPanic(builder, scaffold, panicCode, pos), scaffold.panicAddress());
+    builder.br(scaffold.getOnPanic());
+    builder.positionAtEnd(continueBlock);
+    return builder.extractValue(valWithErr, 0);
+}
 
 function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
     return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, panicIndex | (scaffold.lineNumber(pos) << 8)), pos);
@@ -150,6 +174,10 @@ function buildStoreBoolean(llvm:Builder builder, Scaffold scaffold, llvm:Value v
 
 function buildStoreTagged(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
     return builder.store(buildUntagged(builder, scaffold, <llvm:PointerValue>value, scaffold.getRepr(reg)), scaffold.address(reg));
+}
+
+function buildStoreDecimal(llvm:Builder builder, Scaffold scaffold, llvm:Value value, bir:Register reg) {
+    builder.store(value, scaffold.address(reg));
 }
 
 function buildUntagged(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue value, Repr targetRepr) returns llvm:Value {
@@ -296,6 +324,9 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else if operand is float {
         return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, operand)];
     }
+    else if operand is decimal {
+        return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, operand)];
+    }
     else if operand == () {
         return [REPR_NIL, buildConstNil()];
     }
@@ -311,6 +342,10 @@ function buildConstString(llvm:Builder builder, Scaffold scaffold, string str) r
 
 function buildLoad(llvm:Builder builder, Scaffold scaffold, bir:Register reg) returns [Repr, llvm:Value] {
     return [scaffold.getRepr(reg), builder.load(scaffold.address(reg))];
+}
+
+function buildConstDecimal(llvm:Builder builder, Scaffold scaffold, decimal decimalValue) returns llvm:Value {
+    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalConstFunction), [scaffold.getDecimal(decimalValue)]);
 }
 
 function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {

@@ -17,7 +17,7 @@ type NonCharStringSubtype readonly & record {|
     string[] values;
 |};
 
-public function stringConst(string value) returns SemType {
+public function stringConst(string value) returns ComplexSemType {
     CharStringSubtype char;
     NonCharStringSubtype nonChar;
     
