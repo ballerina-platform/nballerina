@@ -195,7 +195,10 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             rest = NEVER;
         }
     }
-    return !listInhabited(cx, members, rest, neg);
+    // We only need to fill `maxInitialLen` number of places in any FixedLenthArray 
+    // members after this number of items are just repeats for `rest` type.
+    int maxInitialLen = int:max(members.initial.length(), maxInitialLength(cx, neg));
+    return !listInhabited(cx, members, rest, neg, maxInitialLen);
 }
 
 function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicType lt) returns [FixedLengthArray, SemType]? {
@@ -231,7 +234,7 @@ function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicTyp
 // Precondition is that each of `members` is not empty.
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
-function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conjunction? neg) returns boolean {
+function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conjunction? neg, int maxInitialLen) returns boolean {
     if neg == () {
         return true;
     }
@@ -241,17 +244,17 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
         int negLen = nt.members.fixedLength;
         if len < negLen {
             if isNever(rest) {
-                return listInhabited(cx, members, rest, neg.next);
+                return listInhabited(cx, members, rest, neg.next, maxInitialLen);
             }
             // For list shapes with length less than negLen,
             // this neg type is not relevant.
-            if listInhabited(cx, members, NEVER, neg.next) {
+            if listInhabited(cx, members, NEVER, neg.next, maxInitialLen) {
                 return true;
             }
-            foreach int i in len + 1 ..< negLen {
+            foreach int i in len + 1 ..< maxInitialLen {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, i, rest);
-                if listInhabited(cx, s, NEVER, neg.next) {
+                if listInhabited(cx, s, NEVER, neg.next, maxInitialLen) {
                     return true;
                 }
             }
@@ -261,7 +264,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
             len = negLen;
         }
         else if negLen < len && isNever(nt.rest) {
-            return listInhabited(cx, members, rest, neg.next);
+            return listInhabited(cx, members, rest, neg.next, maxInitialLen);
         }
         // now we have nt.members.length() <= len
 
@@ -284,16 +287,12 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
         // SemType d1 = diff(s[1], t[1]);
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
-        int maxInitialLength = members.initial.length();
-        if maxInitialLength != 0 {
-            maxInitialLength = int:max(maxInitialLength, nt.members.initial.length());
-        }
-        foreach int i in 0 ..< maxInitialLength {
-            SemType d = diff(fixedArrayGet(members, i), listMemberAt(nt.members, nt.rest, i));
+        foreach int i in 0 ..< maxInitialLen {
+            SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArraySet(s, i, d);
-                if listInhabited(cx, s, rest, neg.next) {
+                if listInhabited(cx, s, rest, neg.next, maxInitialLen) {
                     return true;
                 }
             }
@@ -357,6 +356,17 @@ function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
 
 function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray {
     return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
+}
+
+function maxInitialLength(Context cx, Conjunction? con) returns int {
+    int maxLen = 0;
+    Conjunction? c = con;
+    while c != () {
+        ListAtomicType t = cx.listAtomType(c.atom);
+        maxLen = int:max(maxLen, t.members.fixedLength);
+        c = c.next;
+    }
+    return maxLen;
 }
 
 function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns SemType {
