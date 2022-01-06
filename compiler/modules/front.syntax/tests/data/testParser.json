@@ -228,7 +228,7 @@
     ["V", "expr", "false.length()"],
     ["V", "expr", "-1.hexStr()", "-(1.hexStr())"],
     ["V", "expr", "-0xf.max()", "-(0xF.max())"],
-    ["V", "expr", "x.map()", "x.map()"],
+    ["V", "expr", "x.map()"],
 
     { "comment" : "field access" },
     ["V", "expr", "a.b"],
