@@ -87,10 +87,6 @@ function checkErrorLocation(err:Diagnostic err, string path) returns file:Error|
     string filename = loc.file.filename();
     test:assertEquals(file:getAbsolutePath(filename), expectedFilename, "invalid error filename" + filename);
     d:LineColumn lc = d:locationLineColumn(loc);
-    if err is err:Semantic && err.detail().message.startsWith("assignment to narrowed variable") {
-        // these errors currently have the position of the variable creation not assignment
-        return;
-    }
     test:assertEquals(lc[0], expectedLineNo, "invalid error line number in " + expectedFilename);    
 }
 
