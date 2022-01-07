@@ -37,6 +37,7 @@ function testParserOnTestSuite() returns err:Syntax|io:Error|file:Error? {
                 continue;
             }
             else {
+                validateModulePart(part);
                 SourceFile file = part.file;
                 Tokenizer tok = new(file);
                 [d:Position, d:Position][] topLevelDefnPos = [];
