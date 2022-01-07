@@ -1,4 +1,3 @@
-import ballerina/io;
 type SyntaxNode TerminalSyntaxNode|NonTerminalSyntaxNode;
 
 type TerminalSyntaxNode record {|
@@ -19,23 +18,37 @@ type AstNode record {|
 |};
 
 function validateModulePart(ModulePart part) {
-    _ = buildTree(part);
+    var [importDecls, moduleLevelDefns] = buildTree(part);
+    foreach SyntaxNode decl in importDecls {
+        validateSyntaxNode(decl);
+    }
+    foreach SyntaxNode defn in moduleLevelDefns {
+        validateSyntaxNode(defn);
+    }
+}
+
+function validateSyntaxNode(SyntaxNode node) {
+    Position parentStart = node.startPos;
+    Position parentEnd = node.endPos;
+    if node is NonTerminalSyntaxNode {
+        Position lastEnd = parentStart;
+        foreach SyntaxNode child in node.childNodes {
+            if child.startPos < parentStart || child.endPos > parentEnd {
+                panic error("child node outside of parent");
+            }
+            if child.startPos < lastEnd {
+                panic error("overlapping child nodes");
+            }
+            // pr-to check if difference is all white space
+            lastEnd = child.endPos;
+            validateSyntaxNode(child);
+        }
+    }
 }
 
 function buildTree(ModulePart part) returns [SyntaxNode[], SyntaxNode[]] {
     TerminalSyntaxNode[] importDecls = from ImportDecl decl in part.importDecls select buildImportDecl(decl);
-    // pr-to: remove filter
     SyntaxNode[] moduleLevelDefns = from ModuleLevelDefn defn in part.defns select buildModuleLevelDefn(defn);
-    io:println(part.file.filename());
-    foreach var importDecl in importDecls {
-        io:println(importDecl.token);
-    }
-    foreach var defn in moduleLevelDefns {
-        if defn is TerminalSyntaxNode {
-            io:println(defn.token);
-        }
-    }
-    io:println("\n");
     return [importDecls, moduleLevelDefns];
 }
 
@@ -46,7 +59,6 @@ function buildImportDecl(ImportDecl decl) returns TerminalSyntaxNode {
     string token = wordsToString(tokenContent);
     return { startPos: decl.startPos, endPos: decl.endPos, token, astNode: decl };
 }
-
 
 function buildModuleLevelDefn(ModuleLevelDefn defn) returns SyntaxNode {
     if defn is ConstDefn {
@@ -76,9 +88,63 @@ function buildFunctionDefn(FunctionDefn defn) returns NonTerminalSyntaxNode {
     return { startPos: defn.startPos, endPos: defn.endPos, childNodes, astNode: defn };
 }
 
-// pr-to: fix this
-function buildStmt(Stmt stmt) returns NonTerminalSyntaxNode {
-    return { startPos: stmt.startPos, endPos: stmt.endPos, childNodes: [], astNode: stmt };
+function buildStmt(Stmt stmt) returns SyntaxNode {
+    SyntaxNode[] childNodes;
+    if stmt is VarDeclStmt {
+       childNodes = [buildExpr(stmt.initExpr)];
+    }
+    else if stmt is ReturnStmt {
+        Expr? returnExpr = stmt.returnExpr;
+        childNodes = returnExpr != () ? [buildExpr(returnExpr)] : [];
+    }
+    else if stmt is PanicStmt {
+        childNodes = [buildExpr(stmt.panicExpr)];
+    }
+    else if stmt is AssignStmt {
+        LExpr|WILDCARD lValue = stmt.lValue;
+        //pr-to: make better
+        if lValue is LExpr {
+            childNodes = [buildExpr(lValue), buildExpr(stmt.expr)];
+        }
+        else {
+            childNodes = [buildExpr(stmt.expr)];
+        }
+    }
+    else if stmt is CompoundAssignStmt {
+        childNodes = [buildExpr(stmt.lValue), buildExpr(stmt.expr)];
+    }
+    else if stmt is IfElseStmt {
+        childNodes = [buildExpr(stmt.condition)];
+        // pr-todo: refactor stmt blocks
+        childNodes.push(...buildStmtBlock(stmt.ifTrue));
+        StmtBlock? ifFalse = stmt.ifFalse;
+        if ifFalse != () {
+            childNodes.push(...buildStmtBlock(ifFalse));
+        }
+    }
+    else if stmt is MatchStmt {
+        childNodes = [buildExpr(stmt.expr)];
+        // pr-todo: deal with claues
+    }
+    else if stmt is WhileStmt {
+        childNodes = [buildExpr(stmt.condition)];
+        childNodes.push(...buildStmtBlock(stmt.body));
+    }
+    else if stmt is ForeachStmt {
+        childNodes = [buildExpr(stmt.range.lower), buildExpr(stmt.range.upper)];
+        childNodes.push(...buildStmtBlock(stmt.body));
+    }
+    else if stmt is BreakContinueStmt {
+        return { startPos: stmt.startPos, endPos: stmt.endPos, token: stmt.breakContinue + ";", astNode: stmt };
+    }
+    else {
+        childNodes = [buildExpr(stmt.expr)];
+    }
+    return { startPos: stmt.startPos, endPos: stmt.endPos, childNodes, astNode: stmt };
+}
+
+function buildStmtBlock(StmtBlock block) returns SyntaxNode[] {
+    return from Stmt stmt in block.stmts select buildStmt(stmt);
 }
 
 // pr-to: fix this
