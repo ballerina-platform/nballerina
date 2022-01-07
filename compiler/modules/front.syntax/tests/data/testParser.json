@@ -239,6 +239,8 @@
     ["V", "expr", "a(x).b.c[y]", "((a(x).b).c)[y]"],
     ["V", "expr", "a[b.c]"],
     ["E", "expr", "a.1", ""],
+    { "comment" : "may get allowed under  ballerina-spec#34" },
+    ["E", "expr", "a.map", ""],
     { "comment" : "XXX Output is illegal in 2021R1 but will be addressed in ballerina-spec#905" },
     ["V", "expr", "42 .length()", "42.length()"],
     ["V", "expr", "x.foo().bar()", "(x.foo()).bar()"],

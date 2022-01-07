@@ -340,7 +340,16 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         opPos = tok.currentStartPos();
         check tok.advance();
         Position qnamePos = tok.currentStartPos();
-        string name = check tok.expectMethodName();
+        if tok.current() == "map" {
+            check tok.advance();
+            if tok.current() == "(" {
+                return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, "map", startPos, qnamePos, opPos), startPos);
+            }
+            else {
+                return parseError(tok, "expected paranthesis after special method name");
+            }
+        }
+        string name = check tok.expectIdentifier();
         if tok.current() == "(" {
             return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, qnamePos, opPos), startPos);
         }

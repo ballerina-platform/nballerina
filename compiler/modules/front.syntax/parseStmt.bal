@@ -181,7 +181,7 @@ function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name,
         VarRefExpr varRef = { startPos, endPos: tok.previousEndPos(), name, qNamePos: startPos, prefix };
         check tok.advance();
         Position localNamePos = tok.currentStartPos();
-        string localName = check tok.expectMethodName();
+        string localName = check tok.expectIdentifier();
         if tok.current() == "(" {
             return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, localName, startPos, localNamePos, opPos), startPos);
         }
