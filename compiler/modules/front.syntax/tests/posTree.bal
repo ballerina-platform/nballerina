@@ -1,3 +1,4 @@
+import ballerina/io;
 type SyntaxNode TerminalSyntaxNode|NonTerminalSyntaxNode;
 
 type TerminalSyntaxNode record {|
@@ -21,31 +22,70 @@ function validateModulePart(ModulePart part) {
     _ = buildTree(part);
 }
 
-function buildTree(ModulePart part) returns [TerminalSyntaxNode[], NonTerminalSyntaxNode[]] {
+function buildTree(ModulePart part) returns [SyntaxNode[], SyntaxNode[]] {
     TerminalSyntaxNode[] importDecls = from ImportDecl decl in part.importDecls select buildImportDecl(decl);
-    return [importDecls, []];
+    // pr-to: remove filter
+    SyntaxNode[] moduleLevelDefns = from ModuleLevelDefn defn in part.defns select buildModuleLevelDefn(defn);
+    io:println(part.file.filename());
+    foreach var importDecl in importDecls {
+        io:println(importDecl.token);
+    }
+    foreach var defn in moduleLevelDefns {
+        if defn is TerminalSyntaxNode {
+            io:println(defn.token);
+        }
+    }
+    io:println("\n");
+    return [importDecls, moduleLevelDefns];
 }
 
 function buildImportDecl(ImportDecl decl) returns TerminalSyntaxNode {
     // hardcoded spaces: no org pos
-    string[] tokenContent = ["import", " "];
-    string? org = decl.org;
-    if org != () {
-        tokenContent.push(org, "/");
-    }
-    foreach int i in 0 ..< decl.names.length() {
-        if i > 0 {
-            tokenContent.push(".");
-        }
-        tokenContent.push(decl.names[i]);
-    }
-    string? prefix = decl.prefix;
-    if prefix != () {
-        // currently we don't have the position of prefix so hard coded
-        tokenContent.push(" ", "as", " ", prefix);
-    }
-    tokenContent.push(";");
-    string token = "".'join(...tokenContent);
+    Word[] tokenContent = [];
+    importDeclToWords(tokenContent, decl);
+    string token = wordsToString(tokenContent);
     return { startPos: decl.startPos, endPos: decl.endPos, token, astNode: decl };
 }
 
+
+function buildModuleLevelDefn(ModuleLevelDefn defn) returns SyntaxNode {
+    if defn is ConstDefn {
+        return buildConstDefn(defn);
+    }
+    else if defn is TypeDefn {
+        return buildTypeDefn(defn);
+    }
+    else {
+        return buildFunctionDefn(defn);
+    }
+}
+
+function buildConstDefn(ConstDefn defn) returns NonTerminalSyntaxNode {
+    return { startPos: defn.startPos, endPos: defn.endPos, childNodes: [buildExpr(defn.expr)], astNode: defn };
+}
+
+function buildTypeDefn(TypeDefn defn) returns TerminalSyntaxNode {
+    Word[] tokenContent = [];
+    typeDefnToWords(tokenContent, defn);
+    string token = wordsToString(tokenContent);
+    return { startPos: defn.startPos, endPos: defn.endPos, token, astNode: defn };
+}
+
+function buildFunctionDefn(FunctionDefn defn) returns NonTerminalSyntaxNode {
+    SyntaxNode[] childNodes = from Stmt stmt in defn.body.stmts select buildStmt(stmt);
+    return { startPos: defn.startPos, endPos: defn.endPos, childNodes, astNode: defn };
+}
+
+// pr-to: fix this
+function buildStmt(Stmt stmt) returns NonTerminalSyntaxNode {
+    return { startPos: stmt.startPos, endPos: stmt.endPos, childNodes: [], astNode: stmt };
+}
+
+// pr-to: fix this
+function buildExpr(Expr expr) returns NonTerminalSyntaxNode {
+    return { startPos: expr.startPos, endPos: expr.endPos, childNodes: [], astNode: expr };
+}
+
+function wordsToString(Word[] words) returns string {
+    return "\n".'join(...wordsToLines(words));
+}

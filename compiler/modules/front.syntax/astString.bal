@@ -18,21 +18,7 @@ function modulePartToWords(Word[] w, ModulePart mod) {
             w.push(<Word>LF);
         }
         first = false;
-        w.push("import");
-        if decl.org is string {
-            w.push(decl.org, CLING, "/", CLING);
-        }
-        foreach int j in 0 ..< decl.names.length() {
-            if j > 0 {
-                w.push(".");
-            }
-            string name = decl.names[j];
-            w.push(name);
-        }
-        if decl.prefix is string {
-            w.push("as", decl.prefix);
-        }
-        w.push(";");
+        importDeclToWords(w, decl);
     }
     foreach var defn in mod.defns {
         if !first {
@@ -51,6 +37,24 @@ function modulePartToWords(Word[] w, ModulePart mod) {
             typeDefnToWords(w, defn);
         }
     }
+}
+
+function importDeclToWords(Word[] w, ImportDecl decl) {
+    w.push("import");
+    if decl.org is string {
+        w.push(decl.org, CLING, "/", CLING);
+    }
+    foreach int j in 0 ..< decl.names.length() {
+        if j > 0 {
+            w.push(".");
+        }
+        string name = decl.names[j];
+        w.push(name);
+    }
+    if decl.prefix is string {
+        w.push("as", decl.prefix);
+    }
+    w.push(";");
 }
 
 function functionDefnToWords(Word[] w, FunctionDefn func) {
