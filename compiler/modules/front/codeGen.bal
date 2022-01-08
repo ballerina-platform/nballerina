@@ -1016,22 +1016,29 @@ function codeGenAssign(CodeGenContext cx, Environment env, bir:BasicBlock block,
 }
 
 function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr|s:FieldAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
-    s:VarRefExpr|s:FieldAccessLExpr container = lValue.container;
+    s:LExpr container = lValue.container;
     bir:Register reg;
     bir:BasicBlock block1;
     if container is s:VarRefExpr {
         reg = (check lookupVarRefBinding(cx, container.name, env, lValue.opPos)).reg;
         block1 = startBlock;
     }
+    else if container is s:FieldAccessLExpr {
+        bir:Operand result;
+        { result, block: block1 } = check codeGenFieldAccessExpr(cx, startBlock, env, container.opPos, container.container, container.fieldName);
+        if result !is bir:Register {
+            return cx.semanticErr("list or mapping required", s:range(container.container));
+        }
+        reg = result;
+    }
     else {
-        var { result: operand, block: nextBlock } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, container, ()));
-        if operand is bir:Register && t:isSubtypeSimple(operand.semType, t:MAPPING)  {
-            reg = operand;
-            block1 = nextBlock;
+        s:MemberAccessLExpr _ = container;
+        bir:Operand result;
+        { result, block: block1 } = check codeGenMemberAccessExpr(cx, startBlock, env, container.opPos, container.container, container.index, fill=true);
+        if result !is bir:Register {
+            return cx.semanticErr("list or mapping required", s:range(container.container));
         }
-        else {
-            return cx.semanticErr("can only apply field access to mapping", pos=lValue.opPos);
-        }
+        reg = result;
     }
     t:UniformTypeBitSet indexType;
     t:SemType memberType;
@@ -1284,37 +1291,11 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
         // Member access E[i]
         var { container, index, opPos: pos } => {
-            // Do constant folding here since these expressions are not allowed in const definitions
-            var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
-            if l is bir:Register {
-                if t:isSubtypeSimple(l.semType, t:LIST) {
-                    var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, index, t:INT));
-                    t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r is int ? r : ());
-                    if t:isEmpty(cx.mod.tc, memberType) {
-                        return cx.semanticErr("type of member access is never", pos);
-                    }
-                    bir:Register result = cx.createTmpRegister(memberType, pos);
-                    bir:ListGetInsn insn = { result, operands: [l, r], pos };
-                    nextBlock.insns.push(insn);
-                    return { result, block: nextBlock };
-                }
-                else if t:isSubtypeSimple(l.semType, t:MAPPING) {
-                    var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
-                    return codeGenMappingGet(cx, nextBlock, l, "[", r, pos);
-                }
-                else if t:isSubtypeSimple(l.semType, t:STRING) {
-                    return cx.unimplementedErr("not implemented: member access on string", pos=pos);
-                }
-            }
-            return cx.semanticErr("can only apply member access to list or mapping", pos=pos);
+            return codeGenMemberAccessExpr(cx, bb, env, pos, container, index);
         }
         // Field access
         var { container, fieldName, opPos: pos } => {
-            var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
-            if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
-                return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
-            }
-            return cx.semanticErr("can only apply field access to mapping", pos=pos);
+            return codeGenFieldAccessExpr(cx, bb, env, pos, container, fieldName);
         }
         // List construct
         // JBUG #33309 should be able to use just `var { members }`
@@ -1462,6 +1443,43 @@ function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environ
     else {
         return codeGenExprForString(cx, block, env, check cx.foldExpr(env, mappingLValue.index, t:STRING));
     }
+}
+
+function codeGenFieldAccessExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Position pos, s:Expr container, string fieldName) returns CodeGenError|ExprEffect {
+    var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
+    if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
+        return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
+    }
+    return cx.semanticErr("can only apply field access to mapping", pos=pos);
+}
+
+function codeGenMemberAccessExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Position pos, s:Expr container, s:Expr index, boolean fill=false) returns CodeGenError|ExprEffect {
+    // Do constant folding here since these expressions are not allowed in const definitions
+    var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
+    if l is bir:Register {
+        if t:isSubtypeSimple(l.semType, t:LIST) {
+            var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, index, t:INT));
+            t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r is int ? r : ());
+            if t:isEmpty(cx.mod.tc, memberType) {
+                return cx.semanticErr("type of member access is never", pos);
+            }
+            bir:Register result = cx.createTmpRegister(memberType, pos);
+            bir:ListGetInsn insn = { result, operands: [l, r], pos, fill };
+            nextBlock.insns.push(insn);
+            return { result, block: nextBlock };
+        }
+        else if t:isSubtypeSimple(l.semType, t:MAPPING) {
+            if fill {
+                return cx.unimplementedErr("not implemented: filling-read of mapping", pos=pos);
+            }
+            var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
+            return codeGenMappingGet(cx, nextBlock, l, "[", r, pos);
+        }
+        else if t:isSubtypeSimple(l.semType, t:STRING) {
+            return cx.unimplementedErr("not implemented: member access on string", pos=pos);
+        }
+    }
+    return cx.semanticErr("can only apply member access to list or mapping", pos=pos);     
 }
 
 function codeGenNegateExpr(CodeGenContext cx, bir:BasicBlock nextBlock, Position pos, bir:Operand operand) returns CodeGenError|ExprEffect {
