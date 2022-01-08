@@ -12,7 +12,7 @@ type Environment record {|
     Binding? bindings;
     // A list of registers that were narrowed but have been assigned to
     // Holds the number of the original, unnarrowed register
-    int[] assignments = [];
+    Assignment[] assignments = [];
 |};
 
 type Binding record {|
@@ -28,6 +28,12 @@ type Binding record {|
     Binding? unnarrowed = ();
 |};
 
+type Assignment readonly & record {|
+    int unnarrowedReg;
+    int? narrowedReg;
+    Position pos;
+|};
+
 type StmtNarrowing record {|
     Binding binding;
     t:SemType ifCompletesNormally;
@@ -38,7 +44,7 @@ type StmtEffect record {|
     bir:BasicBlock? block;
     Binding? bindings = ();
     StmtNarrowing[] narrowings = [];
-    int[] assignments = [];
+    Assignment[] assignments = [];
 |};
 
 type ExprEffect record {|
@@ -93,8 +99,8 @@ type LoopContext record {|
     // will use this with while true to determine whether
     // following block is reachable
     boolean breakUsed = false;
-    int[] onBreakAssignments = [];
-    int[] onContinueAssignments = [];
+    Assignment[] onBreakAssignments = [];
+    Assignment[] onContinueAssignments = [];
 |};
 
 class CodeGenContext {
@@ -205,7 +211,7 @@ class CodeGenContext {
         }
     }
 
-    function addOnBreakAssignments(int[] assignments) {
+    function addOnBreakAssignments(Assignment[] assignments) {
         if assignments.length() == 0 {
             return;
         }
@@ -213,7 +219,7 @@ class CodeGenContext {
         addAssignments(c.onBreakAssignments, assignments, c.startRegister);
     }
 
-    function addOnContinueAssignments(int[] assignments) {
+    function addOnContinueAssignments(Assignment[] assignments) {
         if assignments.length() == 0 {
             return;
         }
@@ -221,11 +227,11 @@ class CodeGenContext {
         addAssignments(c.onContinueAssignments, assignments, c.startRegister);
     }
 
-    function onBreakAssignments() returns int[] {
+    function onBreakAssignments() returns Assignment[] {
         return  (<LoopContext>self.loopContext).onBreakAssignments;
     }
 
-    function onContinueAssignments() returns int[] {
+    function onContinueAssignments() returns Assignment[] {
         return  (<LoopContext>self.loopContext).onContinueAssignments;
     }
 
@@ -275,10 +281,10 @@ class CodeGenFoldContext {
     function isConstDefn() returns boolean => false;
 }
 
-function addAssignments(int[] dest, int[] src, int excludeStart) {
-    foreach int r in src {
-        if r < excludeStart {
-            dest.push(r);
+function addAssignments(Assignment[] dest, Assignment[] src, int excludeStart) {
+    foreach Assignment a in src {
+        if a.unnarrowedReg < excludeStart {
+            dest.push(a);
         }
     }
 }
@@ -395,14 +401,16 @@ function codeGenStmtBlock(CodeGenContext cx, bir:BasicBlock bb, Environment init
         stmtIndex += 1;
     }
     check unusedLocalVariables(cx, env, initialEnv.bindings);
-    int[] assignments = [];
+    Assignment[] assignments = [];
     addAssignments(assignments, env.assignments, startRegister);
     return { block: curBlock, assignments, narrowings };
 }
 
 function updateAssignments(Environment env, StmtEffect effect) {
     foreach var n in effect.narrowings {
-        int? invalidated = env.assignments.indexOf(unnarrowBinding(n.binding).reg.number);
+        // Only the first assign to var generates an Assignment (until Assignment is invalidated)
+        // So at most one Assignment has to be invalidated
+        int? invalidated = findAssignmentByUnnarrowedReg(env.assignments, unnarrowBinding(n.binding).reg.number);
         if invalidated != () {
             _ = env.assignments.remove(invalidated);
         }
@@ -527,10 +535,11 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     }
 }
 
-function validLoopAssignments(CodeGenContext cx, int[] assignments) returns CodeGenError? {
-    foreach int r in assignments {
-        if r < cx.loopStartRegister() {
-            return cx.semanticErr(`assignment to narrowed variable ${<string>cx.registerVarName(r)} in loop`, <Position>cx.registerPosition(r));
+function validLoopAssignments(CodeGenContext cx, Assignment[] assignments) returns CodeGenError? {
+    foreach Assignment a in assignments {
+        int? narrowedReg = a.narrowedReg;
+        if narrowedReg != () && narrowedReg < cx.loopStartRegister() {
+            return cx.semanticErr(`assignment to narrowed variable ${<string>cx.registerVarName(narrowedReg)} in loop`, a.pos);
         }
     }
 }
@@ -563,7 +572,7 @@ type UniformTypeMatchTest record {|
 |};
 
 function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MatchStmt stmt) returns CodeGenError|StmtEffect {
-    int[] assignments = [];
+    Assignment[] assignments = [];
     var { result: matched, block: testBlock, binding } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, stmt.expr, ()));
     t:Context tc = cx.mod.tc;
     // JBUG #33303 need parentheses
@@ -985,13 +994,13 @@ function codeGenAssignToVar(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     return { block: nextBlock, assignments };
 }
 
-function lookupVarRefForAssign(CodeGenContext cx, Environment env, string varName, Position pos) returns CodeGenError|[bir:Register, int[]] {
+function lookupVarRefForAssign(CodeGenContext cx, Environment env, string varName, Position pos) returns CodeGenError|[bir:Register, Assignment[]] {
     Binding binding = check lookupVarRefBinding(cx, varName, env, pos);
     if binding.isFinal {
         return cx.semanticErr(`cannot assign to ${varName}`, pos);
     }
     bir:Register unnarrowedReg;
-    int[] assignments;
+    Assignment[] assignments;
     Binding? unnarrowedBinding = binding.unnarrowed;
     if unnarrowedBinding == () {
         // no narrowed binding in effect
@@ -1002,7 +1011,7 @@ function lookupVarRefForAssign(CodeGenContext cx, Environment env, string varNam
         // invalidate the narrowed binding
         // and use the unnarrowed binding
         unnarrowedReg = unnarrowedBinding.reg;
-        assignments = [ unnarrowedReg.number ];
+        assignments = [{ unnarrowedReg: unnarrowedReg.number, narrowedReg: binding.reg.number, pos }];
     }
     return [unnarrowedReg, assignments];
 }
@@ -2193,7 +2202,7 @@ function lookupLocalVarRef(CodeGenContext cx, string name, Environment env) retu
             unnarrowed.used = true;
             // This is a narrowed binding
             int num = unnarrowed.reg.number;
-            if env.assignments.indexOf(num) != () {
+            if findAssignmentByUnnarrowedReg(env.assignments, num) != () {
                 // This binding has been invalidated by an assignment
                 return unnarrowed;
             }
@@ -2203,6 +2212,17 @@ function lookupLocalVarRef(CodeGenContext cx, string name, Environment env) retu
         }
     }
     return binding;
+}
+
+function findAssignmentByUnnarrowedReg(Assignment[] assignments, int unnarrowedReg) returns int? {
+    int index = 0;
+    foreach var a in assignments {
+        if a.unnarrowedReg == unnarrowedReg {
+            return index;
+        }
+        index += 1;
+    }
+    return ();
 }
 
 function lookup(string name, Environment env) returns Binding? {
