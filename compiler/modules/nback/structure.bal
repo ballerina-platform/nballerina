@@ -352,20 +352,19 @@ function mappingOrderFields(t:MappingAtomicType mat, string[] fieldNames, bir:Op
 function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGetInsn insn) returns BuildError? {
     bir:Register mappingReg = insn.operands[0];
     bir:StringOperand keyOperand = insn.operands[1];
-    int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
+    var { isClosed, index } = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
     llvm:Value mapping = builder.load(scaffold.address(mappingReg));
-    if fieldIndex == () {
+    if !isClosed {
         llvm:BasicBlock bbExact = scaffold.addBasicBlock();
         llvm:BasicBlock bbInexact = scaffold.addBasicBlock();
         llvm:BasicBlock bbJoin = scaffold.addBasicBlock();
         llvm:Value isExact = buildIsExact(builder, scaffold, mapping);
         builder.condBr(isExact, bbExact, bbInexact);
         builder.positionAtEnd(bbExact);
-        fieldIndex = openMappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
         boolean fill;
         RuntimeFunction rf;
         llvm:Value k;
-        if fieldIndex == () {
+        if index == () {
             fill = insn.name == bir:INSN_MAPPING_FILLING_GET;
             rf = fill ? mappingFillingGetFunction : mappingGetFunction;
             k = check buildString(builder, scaffold, keyOperand);
@@ -373,7 +372,7 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
         else {
             fill = false;
             rf = mappingIndexedGetFunction;
-            k = llvm:constInt(LLVM_INT, fieldIndex);
+            k = llvm:constInt(LLVM_INT, index);
         }
         llvm:Value memberWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [mapping, k]);
         llvm:Value member = fill ? buildCheckPanicCode(builder, scaffold, memberWithErr, insn.pos) : memberWithErr;
@@ -386,7 +385,7 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
         builder.positionAtEnd(bbJoin);
     }
     else {
-        llvm:Value member = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(mappingIndexedGetFunction), [mapping, llvm:constInt(LLVM_INT, fieldIndex)]);
+        llvm:Value member = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(mappingIndexedGetFunction), [mapping, llvm:constInt(LLVM_INT, <int>index)]);
         buildStoreMappingGet(builder, scaffold, insn, member, mapping, mappingReg, keyOperand);
     }
 }
@@ -434,13 +433,32 @@ function isSameTypeWithin(t:Context tc, t:SemType semType, t:SemType within, t:S
 function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSetInsn insn) returns BuildError? {
     bir:Register mappingReg = insn.operands[0];
     bir:SemType mappingType = mappingReg.semType;
+    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingType);
     bir:StringOperand keyOperand = insn.operands[1];
-    int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
+    var { isClosed, index } = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
     t:Context tc = scaffold.typeContext();
     bir:Operand newMemberOperand = insn.operands[2];
-    RuntimeFunction rf;
-    llvm:Value k;
-    if fieldIndex == () {
+    llvm:Value mapping = builder.load(scaffold.address(mappingReg));
+    if !isClosed {
+        llvm:BasicBlock bbExact = scaffold.addBasicBlock();
+        llvm:BasicBlock bbInexact = scaffold.addBasicBlock();
+        llvm:BasicBlock bbJoin = scaffold.addBasicBlock();
+        llvm:Value isExact = buildIsExact(builder, scaffold, mapping);
+        builder.condBr(isExact, bbExact, bbInexact);
+        builder.positionAtEnd(bbExact);
+        RuntimeFunction rf;
+        llvm:Value k;
+        if index == () {
+            rf = mappingSetFunction;
+            k = check buildString(builder, scaffold, keyOperand);
+        }
+        else {
+            rf = mappingIndexedSetFunction;
+            k = llvm:constInt(LLVM_INT, index);
+        }
+        check buildCallMappingSet(builder, scaffold, rf, k, newMemberOperand, mapping, memberType, insn.pos);
+        builder.br(bbJoin);
+        builder.positionAtEnd(bbInexact);
         if isMappingSetAlwaysInexact(tc, mappingType, newMemberOperand) {
             rf = mappingInexactSetFunction;
         }
@@ -448,22 +466,26 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
             rf = mappingSetFunction;
         }
         k = check buildString(builder, scaffold, keyOperand);
+        check buildCallMappingSet(builder, scaffold, rf, k, newMemberOperand, mapping, memberType, insn.pos);
+        builder.br(bbJoin);
+        builder.positionAtEnd(bbJoin);
     }
     else {
-        rf = mappingIndexedSetFunction;
-        k = llvm:constInt(LLVM_INT, fieldIndex);
+        check buildCallMappingSet(builder, scaffold, mappingIndexedSetFunction, llvm:constInt(LLVM_INT, <int>index), newMemberOperand, mapping, memberType, insn.pos);
     }
-    t:SemType memberType = t:mappingMemberType(scaffold.typeContext(), mappingType);
+}
+
+function buildCallMappingSet(llvm:Builder builder, Scaffold scaffold, RuntimeFunction rf, llvm:Value k, bir:Operand newMemberOperand, llvm:Value mapping, t:SemType memberType, bir:Position pos) returns BuildError? {
     // Note that we do not need to check the exactness of the mapping value, nor do we need
     // to check the exactness of the member type: buildWideRepr does all that is necessary.
     // See exact.md for more details.
     llvm:Value? err = builder.call(scaffold.getRuntimeFunctionDecl(rf),
                                    [
-                                       builder.load(scaffold.address(mappingReg)),
+                                       mapping,
                                        k,
                                        check buildWideRepr(builder, scaffold, newMemberOperand, REPR_ANY, memberType)
                                    ]);
-    buildCheckError(builder, scaffold, <llvm:Value>err, insn.pos);
+    buildCheckError(builder, scaffold, <llvm:Value>err, pos);
 }
 
 // Returns true if it is possible for both the mapping type to be equal to the inherent type
@@ -488,24 +510,17 @@ function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, bir:Oper
     return !bir:operandHasType(tc, operand, mat.rest);
 }
 
-function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {
-    if k is string {
-        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
-        if mat != () && mat.rest == t:NEVER {
-            return mat.names.indexOf(k);
-        }
-    }
-    return ();
-}
-
-function openMappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {
+function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns record {| boolean isClosed; int? index; |} {
+    boolean isClosed = false;
+    int? index = ();
     if k is string {
         t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
         if mat != () {
-            return mat.names.indexOf(k);
+            isClosed = mat.rest == t:NEVER;
+            index = mat.names.indexOf(k); 
         }
     }
-    return ();
+    return { isClosed, index };
 }
 
 function buildMemberClearExact(llvm:Builder builder, Scaffold scaffold, llvm:Value structure, llvm:Value member, t:SemType sourceType) returns llvm:Value {
