@@ -449,7 +449,12 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
         RuntimeFunction rf;
         llvm:Value k;
         if index == () {
-            rf = mappingSetFunction;
+            if isMappingSetAlwaysInexact(tc, mappingType, newMemberOperand) {
+                rf = mappingInexactSetFunction;
+            }
+            else {
+                rf = mappingSetFunction;
+            }
             k = check buildString(builder, scaffold, keyOperand);
         }
         else {
@@ -459,12 +464,7 @@ function buildMappingSet(llvm:Builder builder, Scaffold scaffold, bir:MappingSet
         check buildCallMappingSet(builder, scaffold, rf, k, newMemberOperand, mapping, memberType, insn.pos);
         builder.br(bbJoin);
         builder.positionAtEnd(bbInexact);
-        if isMappingSetAlwaysInexact(tc, mappingType, newMemberOperand) {
-            rf = mappingInexactSetFunction;
-        }
-        else {
-            rf = mappingSetFunction;
-        }
+        rf = mappingSetFunction;
         k = check buildString(builder, scaffold, keyOperand);
         check buildCallMappingSet(builder, scaffold, rf, k, newMemberOperand, mapping, memberType, insn.pos);
         builder.br(bbJoin);
