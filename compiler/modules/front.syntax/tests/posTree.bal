@@ -17,6 +17,8 @@ type AstNode record {|
    any...;
 |};
 
+// pr-todo: better names for buildFunctions
+
 function validateModulePart(ModulePart part) {
     var [importDecls, moduleLevelDefns] = buildTree(part);
     foreach SyntaxNode decl in importDecls {
@@ -39,7 +41,7 @@ function validateSyntaxNode(SyntaxNode node) {
             if child.startPos < lastEnd {
                 panic error("overlapping child nodes");
             }
-            // pr-to check if difference is all white space
+            // pr-to: check if difference is all white space
             lastEnd = child.endPos;
             validateSyntaxNode(child);
         }
@@ -88,6 +90,10 @@ function buildFunctionDefn(FunctionDefn defn) returns NonTerminalSyntaxNode {
     return { startPos: defn.startPos, endPos: defn.endPos, childNodes, astNode: defn };
 }
 
+function buildStmtBlock(StmtBlock block) returns SyntaxNode[] {
+    return from Stmt stmt in block.stmts select buildStmt(stmt);
+}
+
 function buildStmt(Stmt stmt) returns SyntaxNode {
     SyntaxNode[] childNodes;
     if stmt is VarDeclStmt {
@@ -104,14 +110,14 @@ function buildStmt(Stmt stmt) returns SyntaxNode {
         LExpr|WILDCARD lValue = stmt.lValue;
         //pr-to: make better
         if lValue is LExpr {
-            childNodes = [buildExpr(lValue), buildExpr(stmt.expr)];
+            childNodes = buildExprs([lValue, stmt.expr]);
         }
         else {
             childNodes = [buildExpr(stmt.expr)];
         }
     }
     else if stmt is CompoundAssignStmt {
-        childNodes = [buildExpr(stmt.lValue), buildExpr(stmt.expr)];
+        childNodes = buildExprs([stmt.lValue, stmt.expr]);
     }
     else if stmt is IfElseStmt {
         childNodes = [buildExpr(stmt.condition)];
@@ -131,7 +137,7 @@ function buildStmt(Stmt stmt) returns SyntaxNode {
         childNodes.push(...buildStmtBlock(stmt.body));
     }
     else if stmt is ForeachStmt {
-        childNodes = [buildExpr(stmt.range.lower), buildExpr(stmt.range.upper)];
+        childNodes = buildExprs([stmt.range.lower, stmt.range.upper]);
         childNodes.push(...buildStmtBlock(stmt.body));
     }
     else if stmt is BreakContinueStmt {
@@ -143,13 +149,69 @@ function buildStmt(Stmt stmt) returns SyntaxNode {
     return { startPos: stmt.startPos, endPos: stmt.endPos, childNodes, astNode: stmt };
 }
 
-function buildStmtBlock(StmtBlock block) returns SyntaxNode[] {
-    return from Stmt stmt in block.stmts select buildStmt(stmt);
+function buildExprs(Expr[] exprs) returns SyntaxNode[] {
+    return from Expr expr in exprs select buildExpr(expr);
 }
 
-// pr-to: fix this
-function buildExpr(Expr expr) returns NonTerminalSyntaxNode {
-    return { startPos: expr.startPos, endPos: expr.endPos, childNodes: [], astNode: expr };
+type TerminalExpr VarRefExpr|ConstValueExpr|NumericLiteralExpr;
+function buildTerminalExpr(TerminalExpr expr) returns TerminalSyntaxNode {
+    string token;
+    if expr is VarRefExpr {
+        string? prefix = expr.prefix;
+        token = prefix == () ? "" : prefix+":";
+        token += expr.name;
+    }
+    else if expr is ConstValueExpr {
+        token = expr.value.toString();
+    }
+    else if expr is IntLiteralExpr {
+        token = expr.digits;
+    }
+    else {
+        token = expr.untypedLiteral;
+    }
+    return { startPos: expr.startPos, endPos: expr.endPos, token, astNode: expr };
+}
+
+function buildExpr(Expr expr) returns SyntaxNode {
+    SyntaxNode[] childNodes;
+    if expr is TerminalExpr {
+        return buildTerminalExpr(expr);
+    }
+    else if expr is BinaryExpr {
+        childNodes = buildExprs([expr.left, expr.right]);
+    }
+    else if expr is TypeTestExpr {
+        childNodes = [buildExpr(expr.left)];
+    }
+    else if expr is ErrorConstructorExpr {
+        childNodes = [buildExpr(expr.message)];
+    }
+    else if expr is FunctionCallExpr {
+        childNodes = buildExprs(expr.args);
+    }
+    else if expr is MethodCallExpr {
+        childNodes = [buildExpr(expr.target)];
+        childNodes.push(...buildExprs(expr.args));
+    }
+    else if expr is ListConstructorExpr {
+        childNodes = buildExprs(expr.members);
+    }
+    else if expr is MappingConstructorExpr {
+        // pr-todo: add build field
+        Expr[] feildExpr = from Field f in expr.fields select f.value;
+        childNodes = buildExprs(feildExpr);
+    }
+    else if expr is MemberAccessExpr {
+        childNodes = buildExprs([expr.container, expr.index]);
+    }
+    else if expr is FieldAccessExpr {
+        childNodes = [buildExpr(expr.container)];
+    }
+    else {
+        childNodes = [buildExpr(expr.operand)];
+    }
+    return { startPos: expr.startPos, endPos: expr.endPos, childNodes, astNode: expr };
 }
 
 function wordsToString(Word[] words) returns string {
