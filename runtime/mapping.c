@@ -28,37 +28,32 @@ static READONLY inline int64_t fetch(UntypedPtr table, int64_t i, int tableEleme
     FETCH_CASE(int64_t);
 }
 
-// store if the current value is -1; return value before store
-static inline int64_t replace(UntypedPtr table, int64_t i, int64_t n, int tableElementShift)  {
-#define REPLACE_CASE(T) { \
-    GC T *p = (GC T *)table; \
-    if (p[i] == (T)-1) { \
-        p[i] = n; \
-        return -1; \
-    } \
-    else { \
-        return p[i]; \
-    } \
-}
+static inline void put(UntypedPtr table, int64_t i, int64_t n, int tableElementShift)  {
+#define PUT_CASE(T) ((GC T *)table)[i] = n; return
     switch (tableElementShift & 3) {
-        case 0: REPLACE_CASE(uint8_t);
-        case 1: REPLACE_CASE(uint16_t);
-        case 2: REPLACE_CASE(uint32_t);
+        case 0: PUT_CASE(uint8_t);
+        case 1: PUT_CASE(uint16_t);
+        case 2: PUT_CASE(uint32_t);
     }
-    REPLACE_CASE(int64_t);
+    PUT_CASE(int64_t);
 }
 
-// Returns index into the map if found, otherwise -1
+// Returns index into the map if found, otherwise a negative number,
+// which can be used to insert it.
+// The negative number is -i - 1,
+// where i is the index at which it should be inserted
 static READONLY int64_t lookup(MappingPtr m, TaggedPtr key, uint64_t hash)  {
     int tableElementShift = m->tableElementShift & 3;
     int tableIndexMax = (1 << m->tableLengthShift) - 1;
     int64_t i = hash & tableIndexMax;
-    int64_t mapIndex;
     UntypedPtr table = m->table;
     for (;;) {
-        mapIndex = fetch(table, i, tableElementShift);
-        if (mapIndex == -1 || matches(m, key, mapIndex)) {
+        int64_t mapIndex = fetch(table, i, tableElementShift);
+        if (mapIndex == -1) {
             break;
+        }
+        if (matches(m, key, mapIndex)) {
+            return mapIndex;
         }
         if (i == 0) {
             i = tableIndexMax;
@@ -67,39 +62,18 @@ static READONLY int64_t lookup(MappingPtr m, TaggedPtr key, uint64_t hash)  {
             --i;
         }
     }
-    return mapIndex;
+    return -i - 1; // this cannot overflow, since INT_MIN is -INT_MAX - 1
 }
 
-// Returns index into map if found, -1 otherwise; in the -1 case, sets it to insertMapIndex
-static int64_t lookupInsert(MappingPtr m, TaggedPtr key, uint64_t hash, int64_t insertMapIndex) {
-    int tableElementShift = m->tableElementShift & 3;
-    int tableIndexMax = (1 << m->tableLengthShift) - 1;
-    int64_t i = hash & tableIndexMax;
-    UntypedPtr table = m->table;
-    int64_t mapIndex;
-    for (;;) {
-        mapIndex = replace(table, i, insertMapIndex, tableElementShift);
-        if (mapIndex == -1 || matches(m, key, mapIndex)) {
-            break;
-        }
-        if (i == 0) {
-            i = tableIndexMax;
-        }
-        else {
-            --i;
-        }
-    }
-    return mapIndex;
-}
-
-// This is when we know it's not a duplicate
-static void insertInit(MappingPtr m, uint64_t hash, int64_t insertMapIndex) {
+// This is when we know it's not a duplicate.
+// We don't need to compare
+static int64_t lookupDistinct(MappingPtr m, uint64_t hash) {
     int tableElementShift = m->tableElementShift & 3;
     int tableIndexMax = (1 << m->tableLengthShift) - 1;
     int64_t i = hash & tableIndexMax;
     UntypedPtr table = m->table;
     for (;;) {
-        int64_t mapIndex = replace(table, i, insertMapIndex, tableElementShift);
+        int64_t mapIndex = fetch(table, i, tableElementShift);
         if (mapIndex == -1) {
             break;
         }
@@ -110,6 +84,15 @@ static void insertInit(MappingPtr m, uint64_t hash, int64_t insertMapIndex) {
             --i;
         }
     }
+    return -i - 1;
+}
+
+// lookupIndex is the negative number returned by lookup
+static void insert(MappingPtr m, int64_t lookupIndex, int64_t insertMapIndex) {
+    int tableElementShift = m->tableElementShift & 3;
+    UntypedPtr table = m->table;
+    int i = -(lookupIndex + 1);
+    put(table, i, insertMapIndex, tableElementShift);
 }
 
 static void allocTable(MappingPtr m) {
@@ -159,8 +142,19 @@ static void mappingGrow(MappingPtr m) {
     int64_t nFields = m->fArray.length;
     for (int64_t i = 0; i < nFields; i++) {
         TaggedPtr key = fields[i].key;
-        insertInit(m, _bal_string_hash(key), i);
+        insert(m, lookupDistinct(m, _bal_string_hash(key)), i);
     }
+}
+
+// Returns the new length
+static inline int64_t mappingPush(MappingPtr mp, TaggedPtr key, TaggedPtr value, int64_t lookupIndex) {
+    int64_t len = mp->fArray.length;
+    mp->fArray.members[len].key = key;
+    mp->fArray.members[len].value = value;
+    insert(mp, lookupIndex, len);
+    len += 1;
+    mp->fArray.length = len;
+    return len;
 }
 
 TaggedPtr _bal_mapping_construct(MappingDescPtr desc, int64_t capacity) {
@@ -186,11 +180,7 @@ READONLY TaggedPtr _bal_mapping_get(TaggedPtr mapping, TaggedPtr key) {
 // with distinct keys
 void _bal_mapping_init_member(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
-    int64_t len = mp->fArray.length;
-    mp->fArray.members[len].key = key;
-    mp->fArray.members[len].value = value;
-    mp->fArray.length = len + 1;
-    lookupInsert(mp, key, _bal_string_hash(key), len);
+    mappingPush(mp, key, value, lookupDistinct(mp, _bal_string_hash(key)));
 }
 
 // We use this in the case where exactness does not guarantee that the set will succeed.
@@ -204,9 +194,8 @@ PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingDescPtr mdp = mp->desc;
     int64_t len = mp->fArray.length;
     int64_t nRequiredFields = mdp->nFields;
-    // Here may insert something that is equal to the empty marker
-    // But it doesn't matter because in this case we will rebuild anyway
-    int64_t i = lookupInsert(mp, key, _bal_string_hash(key), len);
+    
+    int64_t i = lookup(mp, key, _bal_string_hash(key));
     if (i >= 0) {
         MemberType memberType = i < nRequiredFields ? mdp->fieldTypes[i] : mdp->restType;
         if (!memberTypeContainsTagged(memberType, value)) {
@@ -217,17 +206,15 @@ PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     }
     // If the field does not exist yet, then it can be allowed only by the rest type.
     if (!memberTypeContainsTagged(mdp->restType, value)) {
-        return storePanicCode(mapping, PANIC_MAPPING_STORE);
+         return storePanicCode(mapping, PANIC_MAPPING_STORE);
     }
     if (unlikely(len >= mp->fArray.capacity)) {
         _bal_array_grow(&(mp->gArray), 0, MAP_FIELD_SHIFT);
     }
-    // note that array_grow does not change length
-    mp->fArray.members[len].key = key;
-    mp->fArray.members[len].value = value;
-    len += 1;
-    mp->fArray.length = len;
-    if (len >= 1 << (mp->tableLengthShift - 1)) {
+    // Note that array_grow does not change length.
+    // Here may insert something that is equal to the empty marker.
+    // But it doesn't matter because in this case we will rebuild anyway.
+    if (mappingPush(mp, key, value, i) >= 1 << (mp->tableLengthShift - 1)) {
         mappingGrow(mp);
     }
     return 0;
