@@ -1,3 +1,4 @@
+import ballerina/io;
 type SyntaxNode TerminalSyntaxNode|NonTerminalSyntaxNode;
 
 type TerminalSyntaxNode record {|
@@ -101,7 +102,12 @@ function buildStmt(Stmt stmt) returns SyntaxNode {
     }
     else if stmt is ReturnStmt {
         Expr? returnExpr = stmt.returnExpr;
-        childNodes = returnExpr != () ? [buildExpr(returnExpr)] : [];
+        if returnExpr == () {
+            return { startPos: stmt.startPos, endPos: stmt.endPos, token: "return;", astNode: stmt };
+        }
+        else {
+            childNodes = [buildExpr(returnExpr)];
+        }
     }
     else if stmt is PanicStmt {
         childNodes = [buildExpr(stmt.panicExpr)];
@@ -146,6 +152,9 @@ function buildStmt(Stmt stmt) returns SyntaxNode {
     else {
         childNodes = [buildExpr(stmt.expr)];
     }
+    if childNodes.length() == 0 {
+        return { startPos: stmt.startPos, endPos: stmt.endPos, astNode: stmt, token: () };
+    }
     return { startPos: stmt.startPos, endPos: stmt.endPos, childNodes, astNode: stmt };
 }
 
@@ -173,6 +182,7 @@ function buildTerminalExpr(TerminalExpr expr) returns TerminalSyntaxNode {
     return { startPos: expr.startPos, endPos: expr.endPos, token, astNode: expr };
 }
 
+// pr-todo: should we use empty array or string consts for empty
 function buildExpr(Expr expr) returns SyntaxNode {
     SyntaxNode[] childNodes;
     if expr is TerminalExpr {
@@ -188,6 +198,9 @@ function buildExpr(Expr expr) returns SyntaxNode {
         childNodes = [buildExpr(expr.message)];
     }
     else if expr is FunctionCallExpr {
+        if expr.args.length() == 0 {
+            return { startPos: expr.startPos, endPos: expr.endPos, token: string`${expr.funcName}()`, astNode: expr };
+        }
         childNodes = buildExprs(expr.args);
     }
     else if expr is MethodCallExpr {
@@ -195,10 +208,16 @@ function buildExpr(Expr expr) returns SyntaxNode {
         childNodes.push(...buildExprs(expr.args));
     }
     else if expr is ListConstructorExpr {
+        if expr.members.length() == 0 {
+            return { startPos: expr.startPos, endPos: expr.endPos, token: "[]", astNode: expr };
+        }
         childNodes = buildExprs(expr.members);
     }
     else if expr is MappingConstructorExpr {
         // pr-todo: add build field
+        if expr.fields.length() == 0 {
+            return { startPos: expr.startPos, endPos: expr.endPos, token: "{}", astNode: expr };
+        }
         Expr[] feildExpr = from Field f in expr.fields select f.value;
         childNodes = buildExprs(feildExpr);
     }
@@ -210,6 +229,9 @@ function buildExpr(Expr expr) returns SyntaxNode {
     }
     else {
         childNodes = [buildExpr(expr.operand)];
+    }
+    if childNodes.length() == 0 {
+        return { startPos: expr.startPos, endPos: expr.endPos, astNode: expr, token: () };
     }
     return { startPos: expr.startPos, endPos: expr.endPos, childNodes, astNode: expr };
 }
