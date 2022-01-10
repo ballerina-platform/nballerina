@@ -1,13 +1,11 @@
 type SyntaxNode TerminalSyntaxNode|NonTerminalSyntaxNode;
 
 type TerminalSyntaxNode record {|
-  *PositionFields;
   AstNode astNode;
   string? token;  // if non-nil expect the token to be this
 |};
 
 type NonTerminalSyntaxNode record {|
-  *PositionFields;
   AstNode astNode;
   SyntaxNode[] childNodes;
 |};
@@ -18,6 +16,22 @@ type AstNode record {|
 |};
 
 // pr-todo: better names for buildFunctions
+
+// pr-todo:
+// function checkPositionSyntaxNode(Tokenizer tok, SyntaxNode node) [Position, Position] {
+//     if node is NonTerminalSyntaxNode {
+//         AstNode ast = node.astNode;
+//
+//         foreach var child in node.childNodes {
+//             validateSyntaxNode(tok, child);
+//         }
+//         //
+//     }
+//     else {
+//
+//     }
+//
+// }
 
 function validateModulePart(ModulePart part) {
     var [importDecls, moduleLevelDefns] = buildTree(part);
@@ -30,19 +44,22 @@ function validateModulePart(ModulePart part) {
 }
 
 function validateSyntaxNode(SyntaxNode node) {
-    Position parentStart = node.startPos;
-    Position parentEnd = node.endPos;
+    Position parentStart = node.astNode.startPos;
+    Position parentEnd = node.astNode.endPos;
     if node is NonTerminalSyntaxNode {
         Position lastEnd = parentStart;
         foreach SyntaxNode child in node.childNodes {
-            if child.startPos < parentStart || child.endPos > parentEnd {
-                panic error("child node outside of parent");
+            Position childStartPos = child.astNode.startPos;
+            Position childEndPos = child.astNode.endPos;
+            // pr-todo: fix messages
+            if childStartPos < parentStart || childEndPos > parentEnd {
+                panic error("child node outside of parent"+ ":"+ node.astNode.toString()+ "<"+ child.astNode.toString());
             }
-            if child.startPos < lastEnd {
-                panic error("overlapping child nodes");
+            if childStartPos < lastEnd {
+                panic error("overlapping child nodes\n" + node.toString());
             }
             // pr-to: check if difference is all white space
-            lastEnd = child.endPos;
+            lastEnd = childEndPos;
             validateSyntaxNode(child);
         }
     }
@@ -59,7 +76,7 @@ function addImportDeclNode(ImportDecl decl) returns TerminalSyntaxNode {
     Word[] tokenContent = [];
     importDeclToWords(tokenContent, decl);
     string token = wordsToString(tokenContent);
-    return { startPos: decl.startPos, endPos: decl.endPos, token, astNode: decl };
+    return { token, astNode: decl };
 }
 
 function addModuleLevelDefnNode(ModuleLevelDefn defn) returns SyntaxNode {
@@ -74,35 +91,65 @@ function addModuleLevelDefnNode(ModuleLevelDefn defn) returns SyntaxNode {
     }
 }
 
-function addConstDefnNode(ConstDefn defn) returns NonTerminalSyntaxNode {
-    return { startPos: defn.startPos, endPos: defn.endPos, childNodes: [addExprNode(defn.expr)], astNode: defn };
+function addConstDefnNode(ConstDefn defn) returns SyntaxNode {
+    return { childNodes: [addExprNode(defn.expr)], astNode: defn };
 }
 
 function addTypeDefnNode(TypeDefn defn) returns TerminalSyntaxNode {
     Word[] tokenContent = [];
     typeDefnToWords(tokenContent, defn);
     string token = wordsToString(tokenContent);
-    return { startPos: defn.startPos, endPos: defn.endPos, token, astNode: defn };
+    return { token, astNode: defn };
 }
 
-function addFunctionDefnNode(FunctionDefn defn) returns NonTerminalSyntaxNode {
+function addFunctionDefnNode(FunctionDefn defn) returns SyntaxNode {
     SyntaxNode[] childNodes = from Stmt stmt in defn.body.stmts select addStmtNode(stmt);
-    return { startPos: defn.startPos, endPos: defn.endPos, childNodes, astNode: defn };
+    return { childNodes, astNode: defn };
 }
 
 function addStmtBlockNodes(StmtBlock block) returns SyntaxNode[] {
     return from Stmt stmt in block.stmts select addStmtNode(stmt);
 }
 
+// function nodeFromStmt(Stmt stmt) returns SyntaxNode {
+//     if stmt is VarDeclStmt {
+//         return {
+//             astNode: stmt,
+//             childNodes: [ nodeFromTypeDesc(stmt.td), nodeFromExpr(stmt.initExpr) ]
+//         };
+//     }
+//     else if
+// }
+//
+// function nodesFromStmtBlock(StmtBlock block) returns SyntaxNode[] {
+//     SyntaxNode[] nodes = [];
+//     // Add terminal for `{`
+//     foreach var stmt in block.stmts {
+//         nodes.push(nodeFromStmt(stmt));
+//
+//     }
+//
+//     // Add terminal for `}` with closeBracePos
+//     return nodes;
+// }
+//
+// function nodeFromExpr(Expr expr) returns SyntaxNode {
+//
+// }
+//
+// function nodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
+//
+// }
+
 function addStmtNode(Stmt stmt) returns SyntaxNode {
     SyntaxNode[] childNodes;
     if stmt is VarDeclStmt {
-       childNodes = [addExprNode(stmt.initExpr)];
+       childNodes = [addTypeDescNode(stmt.td), addExprNode(stmt.initExpr)];
     }
     else if stmt is ReturnStmt {
         Expr? returnExpr = stmt.returnExpr;
         if returnExpr == () {
-            return { startPos: stmt.startPos, endPos: stmt.endPos, token: "return;", astNode: stmt };
+            return { token: "return;", astNode: stmt };
         }
         else {
             childNodes = [addExprNode(returnExpr)];
@@ -146,15 +193,15 @@ function addStmtNode(Stmt stmt) returns SyntaxNode {
         childNodes.push(...addStmtBlockNodes(stmt.body));
     }
     else if stmt is BreakContinueStmt {
-        return { startPos: stmt.startPos, endPos: stmt.endPos, token: stmt.breakContinue + ";", astNode: stmt };
+        return { token: stmt.breakContinue + ";", astNode: stmt };
     }
     else {
         childNodes = [addExprNode(stmt.expr)];
     }
     if childNodes.length() == 0 {
-        return { startPos: stmt.startPos, endPos: stmt.endPos, astNode: stmt, token: () };
+        return { astNode: stmt, token: () };
     }
-    return { startPos: stmt.startPos, endPos: stmt.endPos, childNodes, astNode: stmt };
+    return { childNodes, astNode: stmt };
 }
 
 function addExprNodes(Expr[] exprs) returns SyntaxNode[] {
@@ -178,7 +225,7 @@ function addTerminalExprNode(TerminalExpr expr) returns TerminalSyntaxNode {
     else {
         token = expr.untypedLiteral;
     }
-    return { startPos: expr.startPos, endPos: expr.endPos, token, astNode: expr };
+    return { token, astNode: expr };
 }
 
 // pr-todo: should we use empty array or string consts for empty
@@ -191,14 +238,14 @@ function addExprNode(Expr expr) returns SyntaxNode {
         childNodes = addExprNodes([expr.left, expr.right]);
     }
     else if expr is TypeTestExpr {
-        childNodes = [addExprNode(expr.left)];
+        childNodes = [addExprNode(expr.left), addTypeDescNode(expr.td)];
     }
     else if expr is ErrorConstructorExpr {
         childNodes = [addExprNode(expr.message)];
     }
     else if expr is FunctionCallExpr {
         if expr.args.length() == 0 {
-            return { startPos: expr.startPos, endPos: expr.endPos, token: string`${expr.funcName}()`, astNode: expr };
+            return { token: string`${expr.funcName}()`, astNode: expr };
         }
         childNodes = addExprNodes(expr.args);
     }
@@ -208,13 +255,13 @@ function addExprNode(Expr expr) returns SyntaxNode {
     }
     else if expr is ListConstructorExpr {
         if expr.members.length() == 0 {
-            return { startPos: expr.startPos, endPos: expr.endPos, token: "[]", astNode: expr };
+            return { token: "[]", astNode: expr };
         }
         childNodes = addExprNodes(expr.members);
     }
     else if expr is MappingConstructorExpr {
         if expr.fields.length() == 0 {
-            return { startPos: expr.startPos, endPos: expr.endPos, token: "{}", astNode: expr };
+            return { token: "{}", astNode: expr };
         }
         childNodes = from Field f in expr.fields select addFieldNode(f);
     }
@@ -224,17 +271,94 @@ function addExprNode(Expr expr) returns SyntaxNode {
     else if expr is FieldAccessExpr {
         childNodes = [addExprNode(expr.container)];
     }
+    else if expr is TypeCastExpr {
+        childNodes = [addTypeDescNode(expr.td), addExprNode(expr.operand)];
+    }
     else {
         childNodes = [addExprNode(expr.operand)];
     }
     if childNodes.length() == 0 {
-        return { startPos: expr.startPos, endPos: expr.endPos, astNode: expr, token: () };
+        return { astNode: expr, token: () };
     }
-    return { startPos: expr.startPos, endPos: expr.endPos, childNodes, astNode: expr };
+    return { childNodes, astNode: expr };
 }
 
-function addFieldNode(Field f) returns NonTerminalSyntaxNode {
-    return { startPos: f.startPos, endPos: f.endPos, childNodes: [addExprNode(f.value)], astNode: f };
+function addFieldNode(Field f) returns SyntaxNode {
+    return { childNodes: [addExprNode(f.value)], astNode: f };
+}
+
+function addTypeDescNodes(TypeDesc[] tds) returns SyntaxNode[] {
+    return from TypeDesc td in tds select addTypeDescNode(td);
+}
+
+function addTypeDescNode(TypeDesc td) returns SyntaxNode {
+    // pr-todo: fix this
+    SyntaxNode[] childNodes;
+    if td is TerminalTypeDesc {
+        return addTerminalTypeDescNode(td);
+    }
+    if td is TupleTypeDesc {
+        childNodes = addTypeDescNodes(td.members);
+        TypeDesc? rest = td.rest;
+        if rest != () {
+            childNodes.push(addTypeDescNode(rest));
+        }
+    }
+    else if td is ArrayTypeDesc {
+        childNodes = [addTypeDescNode(td.member)];
+        //pr-todo: add dimension nodes
+    }
+    else if td is MappingTypeDesc {
+        childNodes = from FieldDesc fd in td.fields select addFieldDescNode(fd);
+        TypeDesc|INCLUSIVE_RECORD_TYPE_DESC? rest = td.rest;
+        if rest is TypeDesc {
+            childNodes.push(addTypeDescNode(rest));
+        }
+    }
+    else if td is FunctionTypeDesc {
+        childNodes = from FunctionTypeParam param in td.params select addFunctionTypeParamNode(param);
+        childNodes.push(addTypeDescNode(td.ret));
+    }
+    else if td is BinaryTypeDesc {
+        childNodes = [addTypeDescNode(td.left), addTypeDescNode(td.right)];
+    }
+    else if td is ErrorTypeDesc {
+        childNodes = [addTypeDescNode(td.detail)];
+    }
+    else if td is XmlSequenceTypeDesc {
+        childNodes = [addTypeDescNode(td.constituent)];
+    }
+    else if td is TableTypeDesc {
+        childNodes = [addTypeDescNode(td.row)];
+    }
+    else {
+        childNodes = [addTypeDescNode(td.td)];
+    }
+    return { astNode: td, childNodes };
+}
+
+type TerminalTypeDesc BuiltinTypeDesc|TypeDescRef|SingletonTypeDesc;
+function addTerminalTypeDescNode(TerminalTypeDesc td) returns TerminalSyntaxNode {
+    string token;
+    if td is BuiltinTypeDesc {
+        token = td.builtinTypeName;
+    }
+    else if td is TypeDescRef {
+        token = td.typeName;
+    }
+    else {
+        token = td.value.toString();
+    }
+    return { token, astNode: td };
+}
+
+// pr-todo: should these be combined?
+function addFieldDescNode(FieldDesc fd) returns SyntaxNode {
+    return { childNodes: [addTypeDescNode(fd.typeDesc)], astNode: fd };
+}
+
+function addFunctionTypeParamNode(FunctionTypeParam param) returns SyntaxNode {
+    return { childNodes: [addTypeDescNode(param.td)], astNode: param };
 }
 
 function wordsToString(Word[] words) returns string {
