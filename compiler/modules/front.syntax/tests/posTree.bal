@@ -66,12 +66,12 @@ function validateSyntaxNode(SyntaxNode node) {
 }
 
 function buildTree(ModulePart part) returns [SyntaxNode[], SyntaxNode[]] {
-    TerminalSyntaxNode[] importDecls = from ImportDecl decl in part.importDecls select addImportDeclNode(decl);
-    SyntaxNode[] moduleLevelDefns = from ModuleLevelDefn defn in part.defns select addModuleLevelDefnNode(defn);
+    TerminalSyntaxNode[] importDecls = from ImportDecl decl in part.importDecls select importDeclToNode(decl);
+    SyntaxNode[] moduleLevelDefns = from ModuleLevelDefn defn in part.defns select moduleLevelDefnToNode(defn);
     return [importDecls, moduleLevelDefns];
 }
 
-function addImportDeclNode(ImportDecl decl) returns TerminalSyntaxNode {
+function importDeclToNode(ImportDecl decl) returns TerminalSyntaxNode {
     // hardcoded spaces: no org pos
     Word[] tokenContent = [];
     importDeclToWords(tokenContent, decl);
@@ -79,36 +79,36 @@ function addImportDeclNode(ImportDecl decl) returns TerminalSyntaxNode {
     return { token, astNode: decl };
 }
 
-function addModuleLevelDefnNode(ModuleLevelDefn defn) returns SyntaxNode {
+function moduleLevelDefnToNode(ModuleLevelDefn defn) returns SyntaxNode {
     if defn is ConstDefn {
-        return addConstDefnNode(defn);
+        return constDefnToNode(defn);
     }
     else if defn is TypeDefn {
-        return addTypeDefnNode(defn);
+        return typeDefnToNode(defn);
     }
     else {
-        return addFunctionDefnNode(defn);
+        return functionDefnToNode(defn);
     }
 }
 
-function addConstDefnNode(ConstDefn defn) returns SyntaxNode {
-    return { childNodes: [addExprNode(defn.expr)], astNode: defn };
+function constDefnToNode(ConstDefn defn) returns SyntaxNode {
+    return { childNodes: [exprToNode(defn.expr)], astNode: defn };
 }
 
-function addTypeDefnNode(TypeDefn defn) returns TerminalSyntaxNode {
+function typeDefnToNode(TypeDefn defn) returns TerminalSyntaxNode {
     Word[] tokenContent = [];
     typeDefnToWords(tokenContent, defn);
     string token = wordsToString(tokenContent);
     return { token, astNode: defn };
 }
 
-function addFunctionDefnNode(FunctionDefn defn) returns SyntaxNode {
-    SyntaxNode[] childNodes = from Stmt stmt in defn.body.stmts select addStmtNode(stmt);
+function functionDefnToNode(FunctionDefn defn) returns SyntaxNode {
+    SyntaxNode[] childNodes = from Stmt stmt in defn.body.stmts select stmtToNode(stmt);
     return { childNodes, astNode: defn };
 }
 
-function addStmtBlockNodes(StmtBlock block) returns SyntaxNode[] {
-    return from Stmt stmt in block.stmts select addStmtNode(stmt);
+function stmtBlockToNodes(StmtBlock block) returns SyntaxNode[] {
+    return from Stmt stmt in block.stmts select stmtToNode(stmt);
 }
 
 // function nodeFromStmt(Stmt stmt) returns SyntaxNode {
@@ -141,10 +141,10 @@ function addStmtBlockNodes(StmtBlock block) returns SyntaxNode[] {
 //
 // }
 
-function addStmtNode(Stmt stmt) returns SyntaxNode {
+function stmtToNode(Stmt stmt) returns SyntaxNode {
     SyntaxNode[] childNodes;
     if stmt is VarDeclStmt {
-       childNodes = [addTypeDescNode(stmt.td), addExprNode(stmt.initExpr)];
+       childNodes = [typeDescToNode(stmt.td), exprToNode(stmt.initExpr)];
     }
     else if stmt is ReturnStmt {
         Expr? returnExpr = stmt.returnExpr;
@@ -152,60 +152,56 @@ function addStmtNode(Stmt stmt) returns SyntaxNode {
             return { token: "return;", astNode: stmt };
         }
         else {
-            childNodes = [addExprNode(returnExpr)];
+            childNodes = [exprToNode(returnExpr)];
         }
     }
     else if stmt is PanicStmt {
-        childNodes = [addExprNode(stmt.panicExpr)];
+        childNodes = [exprToNode(stmt.panicExpr)];
     }
     else if stmt is AssignStmt {
         LExpr|WILDCARD lValue = stmt.lValue;
         //pr-to: make better
         if lValue is LExpr {
-            childNodes = addExprNodes([lValue, stmt.expr]);
+            childNodes = from Expr child in [lValue, stmt.expr] select exprToNode(child);
         }
         else {
-            childNodes = [addExprNode(stmt.expr)];
+            childNodes = [exprToNode(stmt.expr)];
         }
     }
     else if stmt is CompoundAssignStmt {
-        childNodes = addExprNodes([stmt.lValue, stmt.expr]);
+        childNodes = from Expr expr in [stmt.lValue, stmt.expr] select exprToNode(expr);
     }
     else if stmt is IfElseStmt {
-        childNodes = [addExprNode(stmt.condition)];
+        childNodes = [exprToNode(stmt.condition)];
         // pr-todo: refactor stmt blocks
-        childNodes.push(...addStmtBlockNodes(stmt.ifTrue));
+        childNodes.push(...stmtBlockToNodes(stmt.ifTrue));
         StmtBlock? ifFalse = stmt.ifFalse;
         if ifFalse != () {
-            childNodes.push(...addStmtBlockNodes(ifFalse));
+            childNodes.push(...stmtBlockToNodes(ifFalse));
         }
     }
     else if stmt is MatchStmt {
-        childNodes = [addExprNode(stmt.expr)];
+        childNodes = [exprToNode(stmt.expr)];
         // pr-todo: deal with claues
     }
     else if stmt is WhileStmt {
-        childNodes = [addExprNode(stmt.condition)];
-        childNodes.push(...addStmtBlockNodes(stmt.body));
+        childNodes = [exprToNode(stmt.condition)];
+        childNodes.push(...stmtBlockToNodes(stmt.body));
     }
     else if stmt is ForeachStmt {
-        childNodes = addExprNodes([stmt.range.lower, stmt.range.upper]);
-        childNodes.push(...addStmtBlockNodes(stmt.body));
+        childNodes = from Expr expr in [stmt.range.lower, stmt.range.upper] select exprToNode(expr);
+        childNodes.push(...stmtBlockToNodes(stmt.body));
     }
     else if stmt is BreakContinueStmt {
         return { token: stmt.breakContinue + ";", astNode: stmt };
     }
     else {
-        childNodes = [addExprNode(stmt.expr)];
+        childNodes = [exprToNode(stmt.expr)];
     }
     if childNodes.length() == 0 {
         return { astNode: stmt, token: () };
     }
     return { childNodes, astNode: stmt };
-}
-
-function addExprNodes(Expr[] exprs) returns SyntaxNode[] {
-    return from Expr expr in exprs select addExprNode(expr);
 }
 
 type TerminalExpr VarRefExpr|ConstValueExpr|NumericLiteralExpr;
@@ -229,53 +225,53 @@ function addTerminalExprNode(TerminalExpr expr) returns TerminalSyntaxNode {
 }
 
 // pr-todo: should we use empty array or string consts for empty
-function addExprNode(Expr expr) returns SyntaxNode {
+function exprToNode(Expr expr) returns SyntaxNode {
     SyntaxNode[] childNodes;
     if expr is TerminalExpr {
         return addTerminalExprNode(expr);
     }
     else if expr is BinaryExpr {
-        childNodes = addExprNodes([expr.left, expr.right]);
+        childNodes = from Expr child in [expr.left, expr.right] select exprToNode(child);
     }
     else if expr is TypeTestExpr {
-        childNodes = [addExprNode(expr.left), addTypeDescNode(expr.td)];
+        childNodes = [exprToNode(expr.left), typeDescToNode(expr.td)];
     }
     else if expr is ErrorConstructorExpr {
-        childNodes = [addExprNode(expr.message)];
+        childNodes = [exprToNode(expr.message)];
     }
     else if expr is FunctionCallExpr {
         if expr.args.length() == 0 {
             return { token: string`${expr.funcName}()`, astNode: expr };
         }
-        childNodes = addExprNodes(expr.args);
+        childNodes = from Expr arg in expr.args select exprToNode(arg);
     }
     else if expr is MethodCallExpr {
-        childNodes = [addExprNode(expr.target)];
-        childNodes.push(...addExprNodes(expr.args));
+        childNodes = [exprToNode(expr.target)];
+        childNodes.push(...from Expr arg in expr.args select exprToNode(arg));
     }
     else if expr is ListConstructorExpr {
         if expr.members.length() == 0 {
             return { token: "[]", astNode: expr };
         }
-        childNodes = addExprNodes(expr.members);
+        childNodes = from Expr member in expr.members select exprToNode(member);
     }
     else if expr is MappingConstructorExpr {
         if expr.fields.length() == 0 {
             return { token: "{}", astNode: expr };
         }
-        childNodes = from Field f in expr.fields select addFieldNode(f);
+        childNodes = from Field f in expr.fields select fieldToNode(f);
     }
     else if expr is MemberAccessExpr {
-        childNodes = addExprNodes([expr.container, expr.index]);
+        childNodes = from Expr each in [expr.container, expr.index] select exprToNode(each);
     }
     else if expr is FieldAccessExpr {
-        childNodes = [addExprNode(expr.container)];
+        childNodes = [exprToNode(expr.container)];
     }
     else if expr is TypeCastExpr {
-        childNodes = [addTypeDescNode(expr.td), addExprNode(expr.operand)];
+        childNodes = [typeDescToNode(expr.td), exprToNode(expr.operand)];
     }
     else {
-        childNodes = [addExprNode(expr.operand)];
+        childNodes = [exprToNode(expr.operand)];
     }
     if childNodes.length() == 0 {
         return { astNode: expr, token: () };
@@ -283,56 +279,52 @@ function addExprNode(Expr expr) returns SyntaxNode {
     return { childNodes, astNode: expr };
 }
 
-function addFieldNode(Field f) returns SyntaxNode {
-    return { childNodes: [addExprNode(f.value)], astNode: f };
+function fieldToNode(Field f) returns SyntaxNode {
+    return { childNodes: [exprToNode(f.value)], astNode: f };
 }
 
-function addTypeDescNodes(TypeDesc[] tds) returns SyntaxNode[] {
-    return from TypeDesc td in tds select addTypeDescNode(td);
-}
-
-function addTypeDescNode(TypeDesc td) returns SyntaxNode {
+function typeDescToNode(TypeDesc td) returns SyntaxNode {
     // pr-todo: fix this
     SyntaxNode[] childNodes;
     if td is TerminalTypeDesc {
         return addTerminalTypeDescNode(td);
     }
     if td is TupleTypeDesc {
-        childNodes = addTypeDescNodes(td.members);
+        childNodes = from TypeDesc member in td.members select typeDescToNode(member);
         TypeDesc? rest = td.rest;
         if rest != () {
-            childNodes.push(addTypeDescNode(rest));
+            childNodes.push(typeDescToNode(rest));
         }
     }
     else if td is ArrayTypeDesc {
-        childNodes = [addTypeDescNode(td.member)];
+        childNodes = [typeDescToNode(td.member)];
         //pr-todo: add dimension nodes
     }
     else if td is MappingTypeDesc {
         childNodes = from FieldDesc fd in td.fields select addFieldDescNode(fd);
         TypeDesc|INCLUSIVE_RECORD_TYPE_DESC? rest = td.rest;
         if rest is TypeDesc {
-            childNodes.push(addTypeDescNode(rest));
+            childNodes.push(typeDescToNode(rest));
         }
     }
     else if td is FunctionTypeDesc {
         childNodes = from FunctionTypeParam param in td.params select addFunctionTypeParamNode(param);
-        childNodes.push(addTypeDescNode(td.ret));
+        childNodes.push(typeDescToNode(td.ret));
     }
     else if td is BinaryTypeDesc {
-        childNodes = [addTypeDescNode(td.left), addTypeDescNode(td.right)];
+        childNodes = [typeDescToNode(td.left), typeDescToNode(td.right)];
     }
     else if td is ErrorTypeDesc {
-        childNodes = [addTypeDescNode(td.detail)];
+        childNodes = [typeDescToNode(td.detail)];
     }
     else if td is XmlSequenceTypeDesc {
-        childNodes = [addTypeDescNode(td.constituent)];
+        childNodes = [typeDescToNode(td.constituent)];
     }
     else if td is TableTypeDesc {
-        childNodes = [addTypeDescNode(td.row)];
+        childNodes = [typeDescToNode(td.row)];
     }
     else {
-        childNodes = [addTypeDescNode(td.td)];
+        childNodes = [typeDescToNode(td.td)];
     }
     return { astNode: td, childNodes };
 }
@@ -354,11 +346,11 @@ function addTerminalTypeDescNode(TerminalTypeDesc td) returns TerminalSyntaxNode
 
 // pr-todo: should these be combined?
 function addFieldDescNode(FieldDesc fd) returns SyntaxNode {
-    return { childNodes: [addTypeDescNode(fd.typeDesc)], astNode: fd };
+    return { childNodes: [typeDescToNode(fd.typeDesc)], astNode: fd };
 }
 
 function addFunctionTypeParamNode(FunctionTypeParam param) returns SyntaxNode {
-    return { childNodes: [addTypeDescNode(param.td)], astNode: param };
+    return { childNodes: [typeDescToNode(param.td)], astNode: param };
 }
 
 function wordsToString(Word[] words) returns string {
