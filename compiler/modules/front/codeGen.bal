@@ -487,7 +487,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     bir:BasicBlock? exit = ();
 
     boolean exitReachable = false;
-    var { result: condition, block: afterCondition } = check codeGenConditionalExpr(cx, loopHead, env, stmt.condition);
+    var { result: condition, block: afterCondition, narrowing: condNarrowing } = check codeGenConditionalExpr(cx, loopHead, env, stmt.condition);
     bir:Insn branch;
     if condition is bir:Register {
         bir:BasicBlock ifFalseBb = cx.createBasicBlock();
@@ -512,7 +512,8 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     }
     afterCondition.insns.push(branch);
     cx.pushLoopContext(exit, loopHead);
-    var { block: loopEnd, assignments } = check codeGenStmtBlock(cx, loopBody, env, stmt.body);
+    StmtNarrowing? bodyNarrowing = stmtNarrowingFromExprNarrowing(condNarrowing, true);
+    var { block: loopEnd, assignments } = check codeGenStmtBlock(cx, loopBody, env, stmt.body, bodyNarrowing);
     if loopEnd != () {
         loopEnd.insns.push(branchToLoopHead);
         check validLoopAssignments(cx, assignments);
@@ -538,6 +539,8 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
 function validLoopAssignments(CodeGenContext cx, Assignment[] assignments) returns CodeGenError? {
     foreach Assignment a in assignments {
         int? narrowedReg = a.narrowedReg;
+        // Despite of `loopStartRegister` being calculated after the conditional, assignment to vars narrowed in the conditional work
+        // because narrowings for the conditional are actually generated as the first thing in the block, not in the conditional itself.
         if narrowedReg != () && narrowedReg < cx.loopStartRegister() {
             return cx.semanticErr(`assignment to narrowed variable ${<string>cx.registerVarName(narrowedReg)} in loop`, a.pos);
         }
