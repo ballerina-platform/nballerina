@@ -364,7 +364,7 @@ function parseIdOrSpecialMethodName(Tokenizer tok) returns string|err:Syntax {
         if tok.current() == "(" {
             return t;
         }
-        return parseError(tok, "expected open paranthesis");
+        return parseError(tok, "expected open parenthesis");
     }
     return tok.expectIdentifier();
 }
