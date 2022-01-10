@@ -342,18 +342,16 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         opPos = tok.currentStartPos();
         check tok.advance();
         Position qnamePos = tok.currentStartPos();
-        t = tok.current();
-        check tok.advance();
+        string name = check parseIdOrSpecialMethodName(tok);
         if tok.current() == "(" {
-            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, check parseMethodName(tok, t), startPos, qnamePos, opPos), startPos);
-        }
-        if t is [IDENTIFIER, string] {
-            Position endPos = tok.previousEndPos();
-            FieldAccessExpr fieldAccessExpr = { startPos, endPos, opPos, container: expr, fieldName: t[1] };
-            return finishPrimaryExpr(tok, fieldAccessExpr, startPos);
+            check tok.advance();
+            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, qnamePos, opPos), startPos);
         }
         else {
-            return parseError(tok, "expected an identifier for field access");
+            check tok.advance();
+            Position endPos = tok.previousEndPos();
+            FieldAccessExpr fieldAccessExpr = { startPos, endPos, opPos, container: expr, fieldName: name };
+            return finishPrimaryExpr(tok, fieldAccessExpr, startPos);
         }
     }
     else {
@@ -361,16 +359,16 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
     }
 }
 
-function parseMethodName(Tokenizer tok, Token? t) returns string|err:Syntax {
-    if t is [IDENTIFIER, string] {
-        return t[1];
+function parseIdOrSpecialMethodName(Tokenizer tok) returns string|err:Syntax {
+    Token? t = tok.current();
+    if t is SpecialMethodName {
+        check tok.advance();
+        if tok.current() == "(" {
+            return t;
+        }
+        return parseError(tok, "expected open paranthesis");
     }
-    else if t is SpecialMethodName {
-        return t;
-    }
-    else {
-        return parseError(tok, "invalid method name");
-    }
+    return tok.expectIdentifier();
 }
 
 // Called with current token as "("
