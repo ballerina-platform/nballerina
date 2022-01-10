@@ -1,5 +1,7 @@
 import wso2/nballerina.comm.err;
 
+type SpecialMethodName "map";
+
 function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
@@ -340,27 +342,34 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         opPos = tok.currentStartPos();
         check tok.advance();
         Position qnamePos = tok.currentStartPos();
-        if tok.current() == "map" {
-            check tok.advance();
-            if tok.current() == "(" {
-                return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, "map", startPos, qnamePos, opPos), startPos);
-            }
-            else {
-                return parseError(tok, "expected paranthesis after special method name");
-            }
-        }
-        string name = check tok.expectIdentifier();
+        t = tok.current();
+        check tok.advance();
         if tok.current() == "(" {
-            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, qnamePos, opPos), startPos);
+            return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, check parseMethodName(tok, t), startPos, qnamePos, opPos), startPos);
+        }
+        if t is [IDENTIFIER, string] {
+            Position endPos = tok.previousEndPos();
+            FieldAccessExpr fieldAccessExpr = { startPos, endPos, opPos, container: expr, fieldName: t[1] };
+            return finishPrimaryExpr(tok, fieldAccessExpr, startPos);
         }
         else {
-            Position endPos = tok.previousEndPos();
-            FieldAccessExpr fieldAccessExpr = { startPos, endPos, opPos, container: expr, fieldName: name };
-            return finishPrimaryExpr(tok, fieldAccessExpr, startPos);
+            return parseError(tok, "expected an identifier for field access");
         }
     }
     else {
         return expr;
+    }
+}
+
+function parseMethodName(Tokenizer tok, Token? t) returns string|err:Syntax {
+    if t is [IDENTIFIER, string] {
+        return t[1];
+    }
+    else if t is SpecialMethodName {
+        return t;
+    }
+    else {
+        return parseError(tok, "invalid method name");
     }
 }
 
