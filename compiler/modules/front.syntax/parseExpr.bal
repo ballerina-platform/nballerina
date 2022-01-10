@@ -344,11 +344,9 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         Position qnamePos = tok.currentStartPos();
         string name = check parseIdOrSpecialMethodName(tok);
         if tok.current() == "(" {
-            check tok.advance();
             return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, qnamePos, opPos), startPos);
         }
         else {
-            check tok.advance();
             Position endPos = tok.previousEndPos();
             FieldAccessExpr fieldAccessExpr = { startPos, endPos, opPos, container: expr, fieldName: name };
             return finishPrimaryExpr(tok, fieldAccessExpr, startPos);
