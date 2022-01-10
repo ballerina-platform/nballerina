@@ -136,6 +136,10 @@ static void growTable(MappingPtr mp) {
 
 // This part does not know about the table
 
+static inline Fillability mappingCreateFiller(MappingDescPtr mdp, TaggedPtr *valuePtr) {
+    return _bal_structure_create_filler(mdp->restType, mdp->fillerDesc, valuePtr);
+}
+
 static void mappingGrow(MappingPtr m) {
     growTable(m);
     GC MapField *fields = m->fArray.members;
@@ -146,15 +150,28 @@ static void mappingGrow(MappingPtr m) {
     }
 }
 
-// Returns the new length
-static inline int64_t mappingPush(MappingPtr mp, TaggedPtr key, TaggedPtr value, int64_t lookupIndex) {
+static inline void mappingPush(MappingPtr mp, TaggedPtr key, TaggedPtr value, int64_t lookupIndex) {
     int64_t len = mp->fArray.length;
     mp->fArray.members[len].key = key;
     mp->fArray.members[len].value = value;
     insert(mp, lookupIndex, len);
     len += 1;
     mp->fArray.length = len;
-    return len;
+}
+
+static inline void mappingGrowPush(MappingPtr mp, TaggedPtr key, TaggedPtr value, int64_t lookupIndex) {
+    int64_t len = mp->fArray.length;
+    if (unlikely(len >= mp->fArray.capacity)) {
+        _bal_array_grow(&(mp->gArray), 0, MAP_FIELD_SHIFT);
+    }
+    // Note that array_grow does not change length.
+    // Here may insert something that is equal to the empty marker.
+    // But it doesn't matter because in this case we will rebuild anyway.
+    mappingPush(mp, key, value, lookupIndex);
+    len += 1;
+    if (len >= 1 << (mp->tableLengthShift - 1)) {
+        mappingGrow(mp);
+    }
 }
 
 TaggedPtr _bal_mapping_construct(MappingDescPtr desc, int64_t capacity) {
@@ -192,7 +209,6 @@ PanicCode _bal_mapping_inexact_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr v
 PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     MappingPtr mp = taggedToPtr(mapping);
     MappingDescPtr mdp = mp->desc;
-    int64_t len = mp->fArray.length;
     int64_t nRequiredFields = mdp->nFields;
     
     int64_t i = lookup(mp, key, _bal_string_hash(key));
@@ -208,16 +224,29 @@ PanicCode _bal_mapping_set(TaggedPtr mapping, TaggedPtr key, TaggedPtr value) {
     if (!memberTypeContainsTagged(mdp->restType, value)) {
          return storePanicCode(mapping, PANIC_MAPPING_STORE);
     }
-    if (unlikely(len >= mp->fArray.capacity)) {
-        _bal_array_grow(&(mp->gArray), 0, MAP_FIELD_SHIFT);
-    }
-    // Note that array_grow does not change length.
-    // Here may insert something that is equal to the empty marker.
-    // But it doesn't matter because in this case we will rebuild anyway.
-    if (mappingPush(mp, key, value, i) >= 1 << (mp->tableLengthShift - 1)) {
-        mappingGrow(mp);
-    }
+    mappingGrowPush(mp, key, value, i);
     return 0;
+}
+
+TaggedPtrPanicCode _bal_mapping_filling_get(TaggedPtr mapping, TaggedPtr key) {
+    TaggedPtrPanicCode result;
+    MappingPtr mp = taggedToPtr(mapping);
+    int64_t i = lookup(mp, key, _bal_string_hash(key));
+    if (i >= 0) {
+        result.ptr = mp->fArray.members[i].value;
+        result.panicCode = 0;
+        return result;
+    }
+    TaggedPtr value;
+    Fillability fill = mappingCreateFiller(mp->desc, &value);
+    if (fill == FILL_NONE) {
+        result.panicCode = PANIC_NO_FILLER;
+        return result;
+    }
+    mappingGrowPush(mp, key, value, i);
+    result.ptr = value;
+    result.panicCode = 0;
+    return result;
 }
 
 PanicCode _bal_mapping_indexed_set(TaggedPtr mapping, int64_t i, TaggedPtr value) {
