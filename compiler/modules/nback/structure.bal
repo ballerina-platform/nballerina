@@ -57,6 +57,15 @@ final RuntimeFunction mappingGetFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction mappingFillingGetFunction = {
+    name: "mapping_filling_get",
+    ty: {
+        returnType: LLVM_TAGGED_WITH_PANIC_CODE,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
 final RuntimeFunction mappingIndexedGetFunction = {
     name: "mapping_indexed_get",
     ty: {
@@ -344,18 +353,22 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
     bir:Register mappingReg = insn.operands[0];
     bir:StringOperand keyOperand = insn.operands[1];
     int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
+    boolean fill;
     RuntimeFunction rf;
     llvm:Value k;
     if fieldIndex == () {
-        rf = mappingGetFunction;
+        fill = insn.name == bir:INSN_MAPPING_FILLING_GET;
+        rf = fill ? mappingFillingGetFunction : mappingGetFunction;
         k = check buildString(builder, scaffold, keyOperand);
     }
     else {
+        fill = false;
         rf = mappingIndexedGetFunction;
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
     llvm:Value mapping = builder.load(scaffold.address(mappingReg));
-    llvm:Value member = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [mapping, k]);
+    llvm:Value memberWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [mapping, k]);
+    llvm:Value member = fill ? buildCheckPanicCode(builder, scaffold, memberWithErr, insn.pos) : memberWithErr;
     t:SemType resultType = insn.result.semType;
     if isPotentiallyExact(resultType) {
         if !isMappingMemberTypeExact(scaffold.typeContext(), mappingReg.semType, keyOperand, resultType) {

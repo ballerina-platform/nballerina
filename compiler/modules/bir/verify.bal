@@ -234,11 +234,11 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
         return vc.err("mapping get applied to non-mapping", insn.pos);
     }
     t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
-    if k !is string || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k) {
+    if insn.name == INSN_MAPPING_GET && (k !is string || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k)) {
         memberType = t:union(memberType, t:NIL);
     }
     if !vc.isSameType(memberType, insn.result.semType) {
-        return vc.err("bad BIR: MappingGet result type is not same as member type", insn.pos);
+        return vc.err(`bad BIR: ${insn.name} result type is not same as member type`, insn.pos);
     }
 }
 

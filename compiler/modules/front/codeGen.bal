@@ -1420,26 +1420,32 @@ function codeGenNilLift(CodeGenContext cx, Environment env, s:Expr[] operands, b
     return { operands: newOperands, nextBlock, ifNilBlock };
 }
 
-type MappingAccessType "."|"[";
+type MappingAccessType "."|"["|"fill";
 
 // if accessType is ".", k must be a string
 function codeGenMappingGet(CodeGenContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, Position pos) returns CodeGenError|RegExprEffect {
     string? kVal = k is string ? k : ();
-    boolean keyRequired = false;
+    boolean maybeMissing = true;
     if kVal != () {
         if t:mappingMemberRequired(cx.mod.tc, mapping.semType, kVal) {
-            keyRequired = true;
+            maybeMissing = false;
         }
         else if accessType == "." {
             return cx.semanticErr(`field access to ${kVal} is invalid because field may not be present`, pos=pos);
         }
     }
     t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, kVal);
-    if !keyRequired {
-        memberType = t:union(memberType, t:NIL);
+    bir:INSN_MAPPING_FILLING_GET|bir:INSN_MAPPING_GET name = bir:INSN_MAPPING_GET;
+    if maybeMissing {
+        if accessType == "fill" {
+            name = bir:INSN_MAPPING_FILLING_GET;
+        }
+        else {
+            memberType = t:union(memberType, t:NIL);
+        }
     }
     bir:Register result = cx.createTmpRegister(memberType, pos);
-    bir:MappingGetInsn insn = { result, operands: [mapping, k], pos };
+    bir:Insn insn = { name, result, operands: [mapping, k], pos };
     block.insns.push(insn);
     return { result, block };
 }
@@ -1481,11 +1487,8 @@ function codeGenMemberAccessExpr(CodeGenContext cx, bir:BasicBlock bb, Environme
             return { result, block: nextBlock };
         }
         else if t:isSubtypeSimple(l.semType, t:MAPPING) {
-            if fill {
-                return cx.unimplementedErr("not implemented: filling-read of mapping", pos=pos);
-            }
             var { result: r, block: nextBlock } = check codeGenExprForString(cx, block1, env, check cx.foldExpr(env, index, t:STRING));
-            return codeGenMappingGet(cx, nextBlock, l, "[", r, pos);
+            return codeGenMappingGet(cx, nextBlock, l, fill ? "fill" : "[", r, pos);
         }
         else if t:isSubtypeSimple(l.semType, t:STRING) {
             return cx.unimplementedErr("not implemented: member access on string", pos=pos);
