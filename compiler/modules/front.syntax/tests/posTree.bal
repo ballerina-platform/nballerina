@@ -77,18 +77,34 @@ function validateSyntaxNode(SyntaxNode node) {
                         panic error("child node outside of parent"+ ":"+ node.astNode.toString()+ "<"+ child.astNode.toString());
                     }
                     if childStartPos < lastEnd {
-                        panic error("overlapping child nodes\n" + node.toString());
+                        overlappingNodeErr(node, lastEnd, childStartPos);
                     }
                     // pr-to: check if difference is all white space
                     lastEnd = childEndPos;
                     validateSyntaxNode(child);
                 }
                 else {
+                    Position? pos = child.pos;
+                    if pos != () {
+                        if pos < lastEnd {
+                            overlappingNodeErr(node, lastEnd, pos);
+                        }
+                        // pr-todo: add this after if else fix
+                        // lastEnd = pos;
+                    }
                     // pr-todo: consume token
                 }
             }
         }
     }
+}
+
+function overlappingNodeErr(NonTerminalSyntaxNode parent, Position lastEnd, Position currentStart) {
+    string[] body = ["overlapping child nodes"];
+    body.push(string `ast node: ${parent.astNode.toString()}`);
+    body.push(string`overlapping range: ${unpackPosition(lastEnd).toString()}:${unpackPosition(currentStart).toString()}`);
+    string msg = "\n".'join(...body);
+    panic error(msg);
 }
 
 function buildTree(ModulePart part) returns RootSyntaxNode {
@@ -152,7 +168,12 @@ function functionDefnToNode(FunctionDefn defn) returns SyntaxNode {
 }
 
 function stmtBlockToNodes(StmtBlock block) returns SyntaxNode[] {
-    return from Stmt stmt in block.stmts select stmtToNode(stmt);
+    SyntaxNode[] childNodes = [{ token: "{", pos: block.startPos }];
+    foreach Stmt stmt in block.stmts {
+        childNodes.push(stmtToNode(stmt));
+    }
+    childNodes.push({ token: "}", pos: block.endPos });
+    return childNodes;
 }
 
 // function nodeFromStmt(Stmt stmt) returns SyntaxNode {
@@ -217,7 +238,6 @@ function stmtToNode(Stmt stmt) returns SyntaxNode {
     }
     else if stmt is IfElseStmt {
         childNodes = [exprToNode(stmt.condition)];
-        // pr-todo: refactor stmt blocks
         childNodes.push(...stmtBlockToNodes(stmt.ifTrue));
         StmtBlock? ifFalse = stmt.ifFalse;
         if ifFalse != () {
