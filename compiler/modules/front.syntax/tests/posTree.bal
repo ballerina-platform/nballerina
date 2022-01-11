@@ -19,7 +19,7 @@ type RootSyntaxNode record {|
 // pr-todo: may be we can merge fallowing together
 // represents keywords and fixed tokens
 type FixedSyntaxNode record {|
-    string token;
+    FixedToken token;
     Position? pos = ();
 |};
 
@@ -260,11 +260,17 @@ function stmtBlockToNodes(StmtBlock block) returns SyntaxNode[] {
 //
 // }
 
-function stmtToNode(Stmt stmt) returns SyntaxNode {
+function stmtToNode(Stmt stmt) returns NonTerminalSyntaxNode {
     SyntaxNode[] childNodes;
     // pr-todo: add all the fixed tokens
     if stmt is VarDeclStmt {
-       childNodes = [typeDescToNode(stmt.td), exprToNode(stmt.initExpr)];
+        childNodes = [];
+        if stmt.isFinal {
+            childNodes.push({ token: "final", pos: stmt.startPos });
+        }
+        childNodes.push(typeDescToNode(stmt.td));
+        childNodes.push({ token: "=", pos: stmt.opPos });
+        childNodes.push(exprToNode(stmt.initExpr));
     }
     else if stmt is ReturnStmt {
         Expr? returnExpr = stmt.returnExpr;
@@ -276,24 +282,37 @@ function stmtToNode(Stmt stmt) returns SyntaxNode {
         }
     }
     else if stmt is PanicStmt {
-        childNodes = [exprToNode(stmt.panicExpr)];
+        childNodes = [{ token: "panic", pos: stmt.startPos }, exprToNode(stmt.panicExpr)];
     }
     else if stmt is AssignStmt {
+        childNodes = [];
         LExpr|WILDCARD lValue = stmt.lValue;
         if lValue is LExpr {
-            childNodes = from Expr child in [lValue, stmt.expr] select exprToNode(child);
+            childNodes.push(exprToNode(lValue));
         }
         else {
-            childNodes = [exprToNode(stmt.expr)];
+            childNodes.push({ token: "_", pos:stmt.startPos });
         }
+        childNodes.push({ token: "=", pos: stmt.opPos });
+        childNodes.push(exprToNode(stmt.expr));
     }
     else if stmt is CompoundAssignStmt {
-        childNodes = from Expr expr in [stmt.lValue, stmt.expr] select exprToNode(expr);
+        childNodes = [
+            exprToNode(stmt.lValue),
+            { token: stmt.op, pos: stmt.opPos },
+            exprToNode(stmt.expr)
+        ];
     }
     else if stmt is IfElseStmt {
-        childNodes = [exprToNode(stmt.condition)];
+        childNodes = [
+            { token: "if", pos: stmt.startPos },
+            exprToNode(stmt.condition)
+        ];
         childNodes.push(...stmtBlockToNodes(stmt.ifTrue));
         StmtBlock|IfElseStmt? ifFalse = stmt.ifFalse;
+        if ifFalse != () {
+            childNodes.push({ token: "else" });
+        }
         if ifFalse is StmtBlock {
             childNodes.push(...stmtBlockToNodes(ifFalse));
         }
@@ -302,25 +321,48 @@ function stmtToNode(Stmt stmt) returns SyntaxNode {
         }
     }
     else if stmt is MatchStmt {
-        childNodes = [exprToNode(stmt.expr)];
-        // pr-todo: deal with claues
+        childNodes = [
+            { token: "match", pos: stmt.startPos },
+            exprToNode(stmt.expr),
+            { token: "{" },
+            // pr-todo: deal with claues
+            { token: "}" }
+        ];
     }
     else if stmt is WhileStmt {
-        childNodes = [exprToNode(stmt.condition)];
+        childNodes = [
+            { token: "while", pos: stmt.startPos },
+            exprToNode(stmt.condition)
+        ];
         childNodes.push(...stmtBlockToNodes(stmt.body));
     }
     else if stmt is ForeachStmt {
-        childNodes = from Expr expr in [stmt.range.lower, stmt.range.upper] select exprToNode(expr);
+        childNodes = [
+            { token: "foreach", pos: stmt.startPos },
+            { token: "int" },
+            { name: stmt.name, pos: stmt.namePos },
+            { token: "in" },
+            rangeExprToNode(stmt.range)
+        ];
         childNodes.push(...stmtBlockToNodes(stmt.body));
     }
     else if stmt is BreakContinueStmt {
-        return { token: stmt.breakContinue, astNode: stmt };
+        childNodes = [{ token: stmt.breakContinue, pos: stmt.startPos }];
     }
     else {
         childNodes = [exprToNode(stmt.expr)];
     }
     childNodes.push(SEMICOLON_NODE);
     return { childNodes, astNode: stmt };
+}
+
+function rangeExprToNode(RangeExpr expr) returns SyntaxNode {
+    SyntaxNode[] childNodes = [
+        exprToNode(expr.lower),
+        { token: "..<", pos: expr.opPos },
+        exprToNode(expr.upper)
+    ];
+    return { childNodes, astNode: expr };
 }
 
 function exprToNode(Expr expr) returns SyntaxNode {
