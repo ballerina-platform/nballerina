@@ -262,7 +262,6 @@ function stmtBlockToNodes(StmtBlock block) returns SyntaxNode[] {
 
 function stmtToNode(Stmt stmt) returns NonTerminalSyntaxNode {
     SyntaxNode[] childNodes;
-    // pr-todo: add all the fixed tokens
     if stmt is VarDeclStmt {
         childNodes = [];
         if stmt.isFinal {
@@ -373,50 +372,80 @@ function exprToNode(Expr expr) returns SyntaxNode {
     else if expr is BinaryExpr {
         return binaryExprToNode(expr);
     }
-    // pr-todo: add the keyword nodes
     else if expr is TypeTestExpr {
-        childNodes = [exprToNode(expr.left), typeDescToNode(expr.td)];
+        childNodes = [exprToNode(expr.left)];
+        if expr.negated {
+            // pr-todo: should we make "!is" a token?
+            childNodes.push({ token: "!", pos: expr.kwPos });
+            childNodes.push({ token: "is" });
+        }
+        else {
+            childNodes.push({ token: "is", pos: expr.kwPos });
+        }
+        childNodes.push(typeDescToNode(expr.td));
     }
     else if expr is ErrorConstructorExpr {
-        childNodes = [exprToNode(expr.message)];
+        childNodes = [
+            { token: "error", pos: expr.startPos },
+            { token: "(" },
+            exprToNode(expr.message),
+            { token: ")", pos:expr.endPos }
+        ];
     }
     else if expr is FunctionCallExpr {
-        childNodes = [];
-        childNodes.push({ name: expr.funcName, pos: expr.startPos });
-        childNodes.push({ token: "(", pos: expr.openParenPos });
+        childNodes = [
+            { name: expr.funcName, pos: expr.startPos },
+            { token: "(", pos: expr.openParenPos }
+        ];
         foreach Expr arg in expr.args {
             childNodes.push(exprToNode(arg));
         }
         childNodes.push({ token: ")", pos: expr.endPos });
     }
-    // pr-todo: refactor the fallowing out to a function
     else if expr is MethodCallExpr {
-        childNodes = [exprToNode(expr.target)];
-        // pr-todo: refactor this part out
-        childNodes.push({ token: "(", pos: expr.openParenPos });
+        childNodes = [
+            exprToNode(expr.target),
+            { token: "(", pos: expr.openParenPos }
+        ];
         childNodes.push(...from Expr arg in expr.args select exprToNode(arg));
         childNodes.push({ token: ")"});
     }
     else if expr is ListConstructorExpr {
-        childNodes = [];
-        childNodes.push({ token: "[", pos: expr.startPos });
+        childNodes = [
+            { token: "[", pos: expr.startPos }
+        ];
         childNodes.push(...from Expr member in expr.members select exprToNode(member));
         childNodes.push({ token: "]", pos: expr.endPos });
     }
     else if expr is MappingConstructorExpr {
-        childNodes = [];
-        childNodes.push({ token: "{", pos: expr.startPos });
+        childNodes = [
+            { token: "{", pos: expr.startPos }
+        ];
         childNodes.push(...from Field f in expr.fields select fieldToNode(f));
         childNodes.push({ token: "}", pos: expr.endPos });
     }
     else if expr is MemberAccessExpr {
-        childNodes = from Expr each in [expr.container, expr.index] select exprToNode(each);
+        childNodes = [
+            exprToNode(expr.container),
+            { token: "[" },
+            exprToNode(expr.index),
+            { token: "]" }
+        ];
     }
     else if expr is FieldAccessExpr {
-        childNodes = [exprToNode(expr.container)];
+        childNodes = [
+            exprToNode(expr.container),
+            { token: ".", pos: expr.opPos },
+            { name: expr.fieldName, pos: () }
+        ];
     }
     else if expr is TypeCastExpr {
-        childNodes = [typeDescToNode(expr.td), exprToNode(expr.operand)];
+        childNodes = [
+            { token: "<", pos: expr.startPos },
+            typeDescToNode(expr.td),
+            { token: ">" },
+            exprToNode(expr.operand)
+        ];
     }
     else if expr is VarRefExpr {
         string? prefix = expr.prefix;
@@ -429,14 +458,24 @@ function exprToNode(Expr expr) returns SyntaxNode {
         }
         childNodes.push({ name: expr.name, pos: identifierPos });
     }
+    else if expr is CheckingExpr {
+        childNodes = [
+            { token: expr.checkingKeyword, pos: expr.kwPos },
+            exprToNode(expr.operand)
+        ];
+    }
     else {
-        childNodes = [exprToNode(expr.operand)];
+        childNodes = [
+            { token: expr.op, pos: expr.opPos },
+            exprToNode(expr.operand)
+        ];
     }
     return { childNodes, astNode: expr };
 }
 
 type TerminalExpr ConstValueExpr|NumericLiteralExpr;
 function terminalExprToNode(TerminalExpr expr) returns TerminalSyntaxNode {
+    // pr-todo: add fixed tokens
     string token;
     if expr is ConstValueExpr {
         token = expr.value.toString();
