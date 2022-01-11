@@ -298,7 +298,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
         bir:Register reg = cx.createVarRegister(signature.paramTypes[i], param.name, param.namePos);
         bindings = { name: <string>param.name, reg, prev: bindings, isFinal: true };
     }
-    var { block: endBlock } = check codeGenStmtBlock(cx, startBlock, { bindings }, defn.body);
+    var { block: endBlock } = check codeGenScope(cx, startBlock, { bindings }, defn.body);
     if endBlock != () {
         bir:RetInsn ret = { operand: (), pos: defn.body.closeBracePos };
         endBlock.insns.push(ret);
@@ -332,78 +332,92 @@ function codeGenOnPanic(CodeGenContext cx, Position pos) {
 }
 
 // If block of stmts doesn't complete normally, will return empty narrowings and assignments.
-function codeGenStmtBlock(CodeGenContext cx, bir:BasicBlock bb, Environment initialEnv, s:StmtBlock block, StmtNarrowing? initialNarrowing = ()) returns CodeGenError|StmtEffect {
-    bir:BasicBlock? curBlock = bb;
+function codeGenScope(CodeGenContext cx, bir:BasicBlock bb, Environment initialEnv, s:StmtBlock|s:IfElseStmt scope, StmtNarrowing? initialNarrowing = ()) returns CodeGenError|StmtEffect {
     Environment env = environmentCopy(initialEnv);
     final int startRegister = cx.nextRegisterNumber();
     // SUBSET with && || initialNarrowing will need to become a list
     StmtNarrowing[] narrowings = initialNarrowing != () ? [initialNarrowing] : [];
     // initialNarrowing is processed under the cloned env so the effects of it is confined to the block
     updateAssignments(env, { block: bb, narrowings });
-    addNarrowings(cx, bb, env, narrowings, block.startPos);
-    int lastStmtIndex = block.stmts.length() - 1;
-    int stmtIndex = 0;
-    foreach var stmt in block.stmts {
-        StmtEffect effect;
-        if curBlock == () {
-            return cx.semanticErr("unreachable code", s:range(stmt));
-        }
-        else if stmt is s:IfElseStmt {
-            effect = check codeGenIfElseStmt(cx, curBlock, env, stmt);
-        }
-        else if stmt is s:MatchStmt {
-            effect = check codeGenMatchStmt(cx, curBlock, env, stmt);
-        }
-        else if stmt is s:WhileStmt {
-            effect = check codeGenWhileStmt(cx, curBlock, env, stmt);
-        }
-        else if stmt is s:ForeachStmt {
-            effect = check codeGenForeachStmt(cx, curBlock, env, stmt);
-        }
-        else if stmt is s:BreakContinueStmt {
-            effect = check codeGenBreakContinueStmt(cx, curBlock, env, stmt);
-        }
-        else if stmt is s:ReturnStmt {
-            effect = check codeGenReturnStmt(cx, curBlock, env, stmt);
-        }
-        else if stmt is s:PanicStmt {
-            effect = check codeGenPanicStmt(cx, curBlock, env, stmt);
-        }
-        else if stmt is s:VarDeclStmt {
-            effect = check codeGenVarDeclStmt(cx, curBlock, env, stmt);
-        }
-        else if stmt is s:AssignStmt {
-            effect = check codeGenAssignStmt(cx, curBlock, env, stmt);
-        }
-        else if stmt is s:CompoundAssignStmt {
-            effect = check codeGenCompoundAssignStmt(cx, curBlock, env, stmt);
-        }
-        else {
-            effect = check codeGenCallStmt(cx, curBlock, env, stmt);
-        }
+    addNarrowings(cx, bb, env, narrowings, scope.startPos);
+    bir:BasicBlock? curBlock = bb;
+    if scope is s:IfElseStmt {
+        StmtEffect effect = check codeGenIfElseStmt(cx, bb, env, scope);
         curBlock = effect.block;
-        Binding? bindings = effect.bindings;
-        if bindings != () {
-            env.bindings = bindings;
-        }
-        if curBlock == () {
-            env.assignments.setLength(0);
-            narrowings.setLength(0);
-        }
-        else {
-            updateAssignments(env, effect);
+        applyEffect(env, narrowings, effect);
+    }
+    else {
+        int lastStmtIndex = scope.stmts.length() - 1;
+        int stmtIndex = 0;
+        foreach var stmt in scope.stmts {
+            StmtEffect effect = check codeGenStmt(cx, curBlock, env, stmt);
+            curBlock = effect.block;
+            applyEffect(env, narrowings, effect);
             // Compound statements will gen narrowings post-block, no need to narrow after last stmt
-            if stmtIndex != lastStmtIndex {
+            if curBlock != () && stmtIndex != lastStmtIndex {
                 addNarrowings(cx, curBlock, env, effect.narrowings, stmt.endPos);
             }
-            addIntersectStmtNarrowings(narrowings, effect.narrowings);
+            stmtIndex += 1;
         }
-        stmtIndex += 1;
     }
     check unusedLocalVariables(cx, env, initialEnv.bindings);
     Assignment[] assignments = [];
     addAssignments(assignments, env.assignments, startRegister);
     return { block: curBlock, assignments, narrowings };
+}
+
+function codeGenStmt(CodeGenContext cx, bir:BasicBlock? curBlock, Environment env, s:Stmt stmt) returns CodeGenError|StmtEffect {
+    if curBlock == () {
+        return cx.semanticErr("unreachable code", s:range(stmt));
+    }
+    else if stmt is s:IfElseStmt {
+        return codeGenIfElseStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:MatchStmt {
+        return codeGenMatchStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:WhileStmt {
+        return codeGenWhileStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:ForeachStmt {
+        return codeGenForeachStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:BreakContinueStmt {
+        return codeGenBreakContinueStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:ReturnStmt {
+        return codeGenReturnStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:PanicStmt {
+        return codeGenPanicStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:VarDeclStmt {
+        return codeGenVarDeclStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:AssignStmt {
+        return codeGenAssignStmt(cx, curBlock, env, stmt);
+    }
+    else if stmt is s:CompoundAssignStmt {
+        return codeGenCompoundAssignStmt(cx, curBlock, env, stmt);
+    }
+    else {
+        return codeGenCallStmt(cx, curBlock, env, stmt);
+    }
+}
+
+function applyEffect(Environment env, StmtNarrowing[] narrowings, StmtEffect effect) {
+    Binding? bindings = effect.bindings;
+    if bindings != () {
+        env.bindings = bindings;
+    }
+    if effect.block == () {
+        env.assignments.setLength(0);
+        narrowings.setLength(0);
+    }
+    else {
+        updateAssignments(env, effect);
+        addIntersectStmtNarrowings(narrowings, effect.narrowings);
+    }
 }
 
 function updateAssignments(Environment env, StmtEffect effect) {
@@ -457,7 +471,7 @@ function codeGenForeachStmt(CodeGenContext cx, bir:BasicBlock startBlock, Enviro
     loopHead.insns.push(branch);
     cx.pushLoopContext(exit, ());
     Binding loopBindings = { name: varName, reg: loopVar, prev: env.bindings, isFinal: true };
-    var { block: loopEnd, assignments } = check codeGenStmtBlock(cx, loopBody, { bindings: loopBindings }, stmt.body);
+    var { block: loopEnd, assignments } = check codeGenScope(cx, loopBody, { bindings: loopBindings }, stmt.body);
 
     bir:BasicBlock? loopStep = cx.loopContinueBlock();
     if loopEnd != () {
@@ -513,7 +527,7 @@ function codeGenWhileStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     afterCondition.insns.push(branch);
     cx.pushLoopContext(exit, loopHead);
     StmtNarrowing? bodyNarrowing = stmtNarrowingFromExprNarrowing(condNarrowing, true);
-    var { block: loopEnd, assignments } = check codeGenStmtBlock(cx, loopBody, env, stmt.body, bodyNarrowing);
+    var { block: loopEnd, assignments } = check codeGenScope(cx, loopBody, env, stmt.body, bodyNarrowing);
     if loopEnd != () {
         loopEnd.insns.push(branchToLoopHead);
         check validLoopAssignments(cx, assignments);
@@ -698,7 +712,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
                 narrowings = { basis, ifCompletesNormally: narrowedType, binding };
             }
         } 
-        var { block: stmtBlockEnd, assignments: blockAssignments } = check codeGenStmtBlock(cx, stmtBlock, clauseEnv, clause.block, narrowings);
+        var { block: stmtBlockEnd, assignments: blockAssignments } = check codeGenScope(cx, stmtBlock, clauseEnv, clause.block, narrowings);
         if stmtBlockEnd == () {
             continue;
         }
@@ -749,8 +763,8 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     var { condition, ifTrue, ifFalse } = stmt;
     var { result: operand, block: branchBlock, narrowing: condNarrowing } = check codeGenConditionalExpr(cx, startBlock, env, condition);
     if operand is boolean {
-        s:StmtBlock? taken;
-        s:StmtBlock? notTaken;
+        s:StmtBlock|s:IfElseStmt? taken;
+        s:StmtBlock|s:IfElseStmt? notTaken;
         if operand {
             taken = ifTrue;
             notTaken = ifFalse;
@@ -759,20 +773,12 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
             taken = ifFalse;
             notTaken = ifTrue;
         }
-        if notTaken is s:StmtBlock && notTaken.stmts.length() > 0 {
-            s:Stmt firstStmt = notTaken.stmts[0];
-            s:Stmt errStmt;
-            // XXX clean this up when we fix AST for if/else
-            if firstStmt is s:IfElseStmt {
-                errStmt = firstStmt.ifTrue.stmts[0];
-            }
-            else {
-                errStmt = notTaken.stmts[0];
-            }
+        s:Stmt? errStmt = firstStmt(notTaken);
+        if errStmt != () {
             return cx.semanticErr("unreachable code", s:range(errStmt));
         }
-        if taken is s:StmtBlock {
-            return codeGenStmtBlock(cx, branchBlock, env, taken);
+        if taken != () {
+            return codeGenScope(cx, branchBlock, env, taken);
         }
         else {
             // if false whithout else block
@@ -782,7 +788,7 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
     else {
         bir:BasicBlock ifBlock = cx.createBasicBlock();
         StmtNarrowing? condIfNarrowing = stmtNarrowingFromExprNarrowing(condNarrowing, true);
-        var { block: ifContBlock, assignments, narrowings: ifNarrowings } = check codeGenStmtBlock(cx, ifBlock, env, ifTrue, condIfNarrowing);
+        var { block: ifContBlock, assignments, narrowings: ifNarrowings } = check codeGenScope(cx, ifBlock, env, ifTrue, condIfNarrowing);
         bir:BasicBlock contBlock;
         if ifFalse == () {
             // just an if branch
@@ -801,7 +807,7 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
             // an if and an else
             bir:BasicBlock elseBlock = cx.createBasicBlock();
             StmtNarrowing? condElseNarrowing = stmtNarrowingFromExprNarrowing(condNarrowing, false);
-            var { block: elseContBlock, assignments: elseAssignments, narrowings: elseNarrowings } = check codeGenStmtBlock(cx, elseBlock, env, ifFalse, condElseNarrowing);
+            var { block: elseContBlock, assignments: elseAssignments, narrowings: elseNarrowings } = check codeGenScope(cx, elseBlock, env, ifFalse, condElseNarrowing);
             bir:CondBranchInsn condBranch = { operand, ifTrue: ifBlock.label, ifFalse: elseBlock.label, pos: stmt.condition.startPos };
             branchBlock.insns.push(condBranch);
             if ifContBlock == () && elseContBlock == () {
@@ -809,8 +815,8 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
                 return { block: () };
             }
             contBlock = cx.createBasicBlock();
-            Position endPos = (stmt.ifFalse ?: stmt.ifTrue).closeBracePos;
-            bir:BranchInsn branch = { dest: contBlock.label, pos: endPos };
+            Position joinPos = (ifFalse is s:StmtBlock ? ifFalse : ifFalse.ifTrue).closeBracePos;
+            bir:BranchInsn branch = { dest: contBlock.label, pos: joinPos };
             if ifContBlock != () {
                 ifContBlock.insns.push(branch);
             }
@@ -822,6 +828,18 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
             return { block: contBlock, assignments, narrowings };
         }
     }
+}
+
+function firstStmt(s:StmtBlock|s:IfElseStmt? s) returns s:Stmt? {
+    if s is s:IfElseStmt {
+        return firstStmt(s.ifTrue) ?: firstStmt(s.ifFalse);
+    }
+    else if s is s:StmtBlock {
+        if s.stmts.length() > 0 {
+            return s.stmts[0];
+        }
+    }
+    return ();
 }
 
 function combineIfElseNarrowings(StmtNarrowing[] ifNarrowings, boolean ifCompletes, StmtNarrowing[] elseNarrowings, boolean elseCompletes) returns StmtNarrowing[] {
@@ -1169,7 +1187,7 @@ function codeGenCompoundableBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, Env
     s:Expr folded = check cx.foldExpr(env, rexpr, memberType);
     if op is s:BinaryArithmeticOp {
         var { result: operand, block: nextBlock } = check codeGenExpr(cx, bb, env, folded);
-        return check codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, member, operand);
+        return codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, member, operand);
     }
     else {
         var { result: operand, block: nextBlock } = check codeGenExprForInt(cx, bb, env, folded);
@@ -1188,7 +1206,7 @@ function codeGenCallStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environme
         { result, block: nextBlock } = check codeGenMethodCall(cx, startBlock, env, expr);
     }
     else {
-        return check codeGenCheckingStmt(cx, startBlock, env, expr.checkingKeyword, expr.operand, expr.kwPos);
+        return codeGenCheckingStmt(cx, startBlock, env, expr.checkingKeyword, expr.operand, expr.kwPos);
     }
     if result != () {
         return cx.semanticErr("return type of function or method in call statement must be nil", stmt.startPos);
@@ -1962,7 +1980,7 @@ function codeGenCheckingExpr(CodeGenContext cx, bir:BasicBlock bb, Environment e
             // This has to be an error, otherwise type of expression would be `never``
             return cx.semanticErr(`operand of ${checkingKeyword} expression is always an error`, pos);
         }
-        return check codeGenCheckingCond(cx, nextBlock, operand, errorType, checkingKeyword, resultType, pos);
+        return codeGenCheckingCond(cx, nextBlock, operand, errorType, checkingKeyword, resultType, pos);
     }
 }
 
