@@ -28,7 +28,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             }
             else if peeked == "[" {
                 TokenizerState state = tok.save();
-                boolean isTypeDesc = check preparseIndexedTypeDesc(tok);
+                boolean isTypeDesc = check preparseArrayTypeDesc(tok);
                 tok.restore(state);
 
                 if isTypeDesc {
@@ -41,7 +41,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         "_" => {
             check tok.advance();
             if tok.current() == "=" {
-                return finishAssignStmt(tok, WILDCARD, startPos);
+                return finishAssignStmt(tok, WILDCARD, "=", startPos);
             }
         }
         "return" => {
@@ -123,101 +123,52 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
     return parseError(tok, "unhandled statement");
 }
 
+type AssignOp "="|CompoundAssignOp;
 
-// statement must not start with a type desc.
-function finishIdentifierStmt(Tokenizer tok, string name, Position startPos, Position qNamePos) returns Stmt|err:Syntax {
-    Token? cur = tok.current();
-    Position endPos = tok.previousEndPos();
-    if cur == "=" {
-        VarRefExpr lValue = { startPos, endPos, name, qNamePos };
-        return finishAssignStmt(tok, lValue, startPos);
-    }
-    else if cur is CompoundAssignOp {
-        Position opPos = tok.currentStartPos();
-        VarRefExpr lValue = { startPos, endPos, name, qNamePos };
-        return parseCompoundAssignStmt(tok, lValue, cur, startPos, opPos);
-    }
-    else if cur == "[" {
-        VarRefExpr varRef = { startPos, endPos, name, qNamePos };
-        Position bracketPos = tok.currentStartPos();
+// We only call this when we know (through preparsing) that the statement does not start with a type descriptor.
+function finishIdentifierStmt(Tokenizer tok, string name1, Position startPos, Position qNamePos) returns Stmt|err:Syntax {
+    string name;
+    string? prefix;
+    if tok.currentIsNoSpaceColon() {
         check tok.advance();
-        // type-desc case is handled before
-        Expr index = check parseInnerExpr(tok);
-        Position memberAccessEndPos = check tok.expectEnd("]");
-        cur = tok.current();
-        if cur == "=" {
-            MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, opPos: bracketPos };
-            return finishAssignStmt(tok, lValue, startPos);
-        }
-        else if cur is CompoundAssignOp {
-            Position opPos = tok.currentStartPos();
-            MemberAccessLExpr lValue = { startPos, endPos: memberAccessEndPos, container: varRef, index, opPos };
-            return parseCompoundAssignStmt(tok, lValue, cur, startPos, opPos);
-        }
-        MemberAccessExpr memberAccess = { startPos, endPos: memberAccessEndPos, container: varRef, index, opPos: bracketPos };
-        Expr expr = check finishPrimaryExpr(tok, memberAccess, startPos);
-        if expr is MethodCallExpr {
-            endPos = check tok.expectEnd(";");
-            return { startPos, endPos, expr };
-        }
-        return parseError(tok, "member access expr not allowed as a statement");
+        name = check tok.expectIdentifier();
+        prefix = name1;
     }
-    else if tok.currentIsNoSpaceColon() {
-        check tok.advance();
-        return finishOptQualIdentifierStmt(tok, name, check tok.expectIdentifier(), startPos);
+    else {
+        name = name1;
+        prefix = ();
     }
-    return finishOptQualIdentifierStmt(tok, (), name, startPos);
-}
-
-function finishOptQualIdentifierStmt(Tokenizer tok, string? prefix, string name, Position startPos) returns Stmt|err:Syntax {
     Token? cur = tok.current();
-    Position endPos = tok.previousEndPos();
     if cur == "(" {
         FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, name, startPos);
         return finishCallStmt(tok, expr, startPos);
     }
-    else if cur == "." {
+    Position endPos = tok.previousEndPos();
+    LExpr lExpr = { startPos, endPos, name, qNamePos: startPos, prefix };
+    while true {
         Position opPos = tok.currentStartPos();
-        VarRefExpr varRef = { startPos, endPos: tok.previousEndPos(), name, qNamePos: startPos, prefix };
-        check tok.advance();
-        Position localNamePos = tok.currentStartPos();
-        string localName = check tok.expectIdentifier();
-        if tok.current() == "(" {
-            return finishCallStmt(tok, check finishMethodCallExpr(tok, varRef, localName, startPos, localNamePos, opPos), startPos);
+        if cur == "." {
+            check tok.advance();
+            Position namePos = tok.currentStartPos();
+            name = check parseIdentifierOrMethodName(tok);
+            if tok.current() == "(" {
+                 return finishCallStmt(tok, check finishMethodCallExpr(tok, lExpr, name, startPos, namePos, opPos), startPos);
+            }
+            lExpr = { startPos, endPos, fieldName: name, container: lExpr, opPos };
+        }
+        else if cur == "[" {
+            check tok.advance();
+            Expr index = check parseInnerExpr(tok);
+            endPos = check tok.expectEnd("]");
+            lExpr =  { startPos, endPos, container: lExpr, index, opPos };
         }
         else {
-            endPos = tok.previousEndPos();
-            VarRefExpr container = { startPos, endPos, name, qNamePos: startPos };
-            FieldAccessLExpr fieldAccessLValue = { startPos, endPos, fieldName: localName, container, opPos };
-            Token? t = tok.current();
-            while t == "." {
-                Position dotPos = tok.currentStartPos();
-                check tok.advance();
-                string fieldName = check tok.expectIdentifier();
-                fieldAccessLValue = <FieldAccessLExpr>{ startPos, endPos, fieldName, container: fieldAccessLValue, opPos: dotPos };
-                t = tok.current();
-            }
-            FieldAccessLExpr|MemberAccessLExpr lValue;
-            if t == "[" {
-                Position bracketPos = tok.currentStartPos();
-                check tok.advance();
-                Expr index = check parseInnerExpr(tok);
-                Position memberAccessEndPos = check tok.expectEnd("]");
-                lValue = <MemberAccessLExpr>{ startPos, endPos: memberAccessEndPos, index, container: fieldAccessLValue, opPos: bracketPos };
-                t = tok.current();
-            }
-            else {
-                lValue = fieldAccessLValue;
-            }
-            if t == "=" {
-                return finishAssignStmt(tok, lValue, startPos);
-            }
-            else if t is CompoundAssignOp {
-                opPos = tok.currentStartPos();
-                return parseCompoundAssignStmt(tok, lValue, t, startPos, opPos);
-            }
+            break;
         }
-        // falls through to end
+        cur = tok.current();
+    }
+    if cur is AssignOp {
+        return finishAssignStmt(tok, lExpr, cur, startPos);
     }
     return parseError(tok, "invalid statement");
 }
@@ -282,23 +233,22 @@ function callStmtAddChecking(Position kwPos, Position endPos, CallStmt stmt, Che
     stmt.startPos = kwPos;
 }
 
-function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue, Position startPos) returns AssignStmt|err:Syntax {
+function finishAssignStmt(Tokenizer tok, LExpr|WILDCARD lValue, AssignOp op, Position startPos) returns AssignStmt|CompoundAssignStmt|err:Syntax {
     Position opPos = tok.currentStartPos();
     check tok.advance();
     Expr expr = check parseExpr(tok);
     Position endPos = check tok.expectEnd(";");
-    AssignStmt stmt = { startPos, endPos, opPos, lValue, expr };
-    return stmt;
-}
-
-function parseCompoundAssignStmt(Tokenizer tok, LExpr lValue, CompoundAssignOp op, Position startPos, Position opPos) returns CompoundAssignStmt|err:Syntax {
-    check tok.advance();
-    Expr expr = check parseExpr(tok);
-    string opStr = op;
-    BinaryArithmeticOp|BinaryBitwiseOp binOp = <BinaryArithmeticOp|BinaryBitwiseOp> opStr.substring(0, opStr.length() - 1);
-    Position endPos = check tok.expectEnd(";");
-    CompoundAssignStmt stmt = { startPos, endPos, opPos, lValue, expr, op: binOp };
-    return stmt;
+    // the `||` makes the narrowings work
+    if op is "=" || lValue == WILDCARD {
+        AssignStmt stmt = { startPos, endPos, opPos, lValue, expr };
+        return stmt;
+    }
+    else {
+        string opStr = op;
+        BinaryArithmeticOp|BinaryBitwiseOp binOp = <BinaryArithmeticOp|BinaryBitwiseOp> opStr.substring(0, opStr.length() - 1);
+        CompoundAssignStmt stmt = { startPos, endPos, opPos, lValue, expr, op: binOp };
+        return stmt;
+    }
 }
 
 function parseVarDeclStmt(Tokenizer tok, Position startPos, boolean isFinal = false) returns VarDeclStmt|err:Syntax {
@@ -346,7 +296,7 @@ function parsePanicStmt(Tokenizer tok, Position startPos) returns PanicStmt|err:
 }
 
 function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|err:Syntax {
-    StmtBlock? ifFalse;
+    IfElseStmt|StmtBlock? ifFalse;
     Expr condition = check parseExpr(tok);
     StmtBlock ifTrue = check parseStmtBlock(tok);
     Position endPos = tok.previousEndPos();
@@ -357,12 +307,7 @@ function parseIfElseStmt(Tokenizer tok, Position startPos) returns IfElseStmt|er
         if tok.current() == "if" {
             Position ifFalseStartPos = tok.currentStartPos();
             check tok.advance();
-            IfElseStmt elseIfStmt = check parseIfElseStmt(tok, ifFalseStartPos);
-            Position blockStartPos = elseIfStmt.ifTrue.startPos;
-            StmtBlock? elseIfFalseBlock = elseIfStmt.ifFalse;
-            Position blockEndPos = (elseIfFalseBlock ?: elseIfStmt.ifTrue).endPos;
-            Position closeBracePos = (elseIfFalseBlock ?: elseIfStmt.ifTrue).closeBracePos;
-            ifFalse = { startPos: blockStartPos, endPos: blockEndPos, stmts: [elseIfStmt], closeBracePos };
+            ifFalse = check parseIfElseStmt(tok, ifFalseStartPos);
         }
         // if exp1 { } else { }
         else if tok.current() == "{" {

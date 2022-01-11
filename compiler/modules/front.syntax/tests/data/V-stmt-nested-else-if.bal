@@ -3,9 +3,9 @@ function wrapper(boolean a, boolean b) {
     if a {
     }
     else {
-      if b {
-          noOp();
-      }
+        if b {
+            noOp();
+        }
     }
     // @end
 }

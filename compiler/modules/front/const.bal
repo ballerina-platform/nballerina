@@ -192,14 +192,14 @@ function selectMappingInherentType(FoldContext cx, t:SemType expectedType, s:Map
         where mappingAlternativeAllowsFields(alt, fieldNames)
         select alt;
     if alts.length() == 0 {
-        return cx.semanticErr("no applicable inherent type for mapping constructor", pos=expr.startPos);
+        return cx.semanticErr("no applicable inherent type for mapping constructor", s:range(expr));
     }
     else if alts.length() > 1 {
-        return cx.semanticErr("ambiguous inherent type for mapping constructor", pos=expr.startPos);
+        return cx.semanticErr("ambiguous inherent type for mapping constructor", s:range(expr));
     }
     t:SemType semType = alts[0].semType;
     if t:mappingAtomicTypeRw(tc, semType) == () {
-        return cx.semanticErr("appplicable type for mapping constructor is not atomic", pos=expr.startPos);
+        return cx.semanticErr("appplicable type for mapping constructor is not atomic", s:range(expr));
     }
     return semType;
 }

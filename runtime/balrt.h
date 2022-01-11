@@ -169,6 +169,7 @@ typedef struct {
     Tid tid;
     uint32_t nFields;
     MemberType restType;
+    StructureDescPtr fillerDesc;
     MemberType fieldTypes[];
 } MappingDesc, *MappingDescPtr;
 

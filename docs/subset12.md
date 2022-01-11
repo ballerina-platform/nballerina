@@ -7,7 +7,7 @@
    * function definitions
       * no default arguments
       * no rest arguments
-      * may be declared public
+      * may be declared `public`
    * const definitions
       * not of structured types
    * type definitions
@@ -29,11 +29,11 @@
    * local variable declaration with explicit type descriptor and initializer
       * binding pattern is either an identifier or `_`
    * assignment
-      * to variable `v = E;`
-      * to member of a list or mapping `v[E1] = E2;`
-      * to a field `v.x.y.z = E`
-      * to wildcard binding pattern `_ = E`
-      * compound assignment `op=`
+      * assignment statement `L = E;`
+      * compound assignment `L op= E;`
+      * lvalues for fields `L.x`
+      * lvalues for a list or mapping `L[E]`
+      * assignment to wildcard binding pattern `_ = E;`
    * `return` statement
    * `if`/`else` statements
    * `while` statement
@@ -173,16 +173,15 @@ destructuring-assign-stmt = wildcard-binding-pattern "=" expression ";"
 wildcard-binding-pattern = "_"
 
 lvexpr =
-   chainable-lvexpr
+   variable-reference-lvexpr
+   | field-access-lvexpr
    | member-access-lvexpr
 
-chainable-lvexpr = variable-reference-lvexpr | field-access-lvexpr
+variable-reference-lvexpr = identifier
 
-member-access-lvexpr = chainable-lvexpr "[" expression "]"
+field-access-lvexpr =lvexpr "." identifier
 
-field-access-lvexpr = chainable-lvexpr "." identifier
-
-variable-reference-lvexpr = variable-reference
+member-access-lvexpr = lvexpr "[" expression "]"
 
 return-stmt = "return" [expression] ";"
 
@@ -324,9 +323,7 @@ qualified-identifier = module-prefix ":" identifier
 
 module-prefix = identifier
 
-variable-reference-expr = variable-reference
-
-variable-reference = identifier | qualified-identifier # can refer to parameter, local variable or constant
+variable-reference-expr = identifier | qualified-identifier # can refer to parameter, local variable or constant
 
 // tokens
 int-literal = (as in Ballerina language spec)
@@ -379,6 +376,7 @@ Two kinds of `import` are supported.
 * `decimal` type has been added
 * inclusive record types have been added
 * `anydata` type has been added
+* filling-read operation on lvalues is supported (e.g. `x[17][21] = y;`)
 
 ## Implemented spec changes since 2021R1
 
