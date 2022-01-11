@@ -150,7 +150,7 @@ function finishIdentifierStmt(Tokenizer tok, string name1, Position startPos, Po
         if cur == "." {
             check tok.advance();
             Position namePos = tok.currentStartPos();
-            name = check tok.expectIdentifier();
+            name = check parseIdentifierOrMethodName(tok);
             if tok.current() == "(" {
                  return finishCallStmt(tok, check finishMethodCallExpr(tok, lExpr, name, startPos, namePos, opPos), startPos);
             }

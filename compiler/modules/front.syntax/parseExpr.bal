@@ -1,5 +1,7 @@
 import wso2/nballerina.comm.err;
 
+type SpecialMethodName "map";
+
 function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
     Token? t = tok.current();
     Position startPos = tok.currentStartPos();
@@ -340,7 +342,7 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         opPos = tok.currentStartPos();
         check tok.advance();
         Position qnamePos = tok.currentStartPos();
-        string name = check tok.expectIdentifier();
+        string name = check parseIdentifierOrMethodName(tok);
         if tok.current() == "(" {
             return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, qnamePos, opPos), startPos);
         }
@@ -353,6 +355,18 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
     else {
         return expr;
     }
+}
+
+function parseIdentifierOrMethodName(Tokenizer tok) returns string|err:Syntax {
+    Token? t = tok.current();
+    if t is SpecialMethodName {
+        check tok.advance();
+        if tok.current() == "(" {
+            return t;
+        }
+        return parseError(tok, "expected open parenthesis");
+    }
+    return tok.expectIdentifier();
 }
 
 // Called with current token as "("
