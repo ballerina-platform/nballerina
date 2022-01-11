@@ -279,7 +279,8 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             newExpr = matchingChild;
         }
         test:assertEquals(expr.endPos, actualEnd);
-        test:assertEquals(expr.toString(), newExpr.toString());
+        // JBUG expr is not recognized as anydata: should just be able to use `==` here
+        test:assertEquals(exprToString(expr), exprToString(<Expr>newExpr));
         test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
         test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
         test:assertTrue(testValidExprEnd(tok.file, inclusiveEndPos(expr.endPos), expr), endPosErrorMessage(tok, expr.endPos));

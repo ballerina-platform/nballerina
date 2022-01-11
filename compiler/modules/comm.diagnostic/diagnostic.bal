@@ -116,7 +116,11 @@ public function format(Diagnostic d) returns string[] {
     line += ": error: " + d.message;
     lines.push(line);
     Range|Position range = loc.range;
-    lines.push("".'join(...loc.file.lineContent(range)));
+    string[] content = loc.file.lineContent(range);
+    if content[1] == "" {
+        panic error(string `error range ${lc.toString()} is empty in ${loc.file.filename()}`);
+    }
+    lines.push("".'join(...content));
     lines.push(caretLine(loc.file, range));
     return lines;
 }

@@ -48,8 +48,6 @@ final llvm:Type llListType = llvm:structType([llvm:pointerType(llListDescType), 
                                               LLVM_INT,                                  // int64_t capacity
                                               heapPointerType(llvm:pointerType("i8"))]); // union {TaggedPtr, int64_t, float} *members
 
-final llvm:StructType llMapDescType = llvm:structType([LLVM_TID, LLVM_MEMBER_TYPE]);
-
 type TypeHowUsed USED_INHERENT_TYPE|USED_EXACTIFY|USED_TYPE_TEST;
 
 public type TypeUsage readonly & record {|

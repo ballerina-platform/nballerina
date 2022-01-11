@@ -356,6 +356,7 @@ function parseTupleTypeDesc(Tokenizer tok) returns TupleTypeDesc|err:Syntax {
             if tok.current() == "..." {
                 rest = td;
                 check tok.advance();
+                break;
             }
             else {
                 members.push(td);

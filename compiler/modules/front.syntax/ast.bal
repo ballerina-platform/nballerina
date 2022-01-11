@@ -68,6 +68,9 @@ public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|Meth
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|NumericLiteralExpr|SimpleConstNegateExpr;
 
+// L-value expression
+public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
+
 public const WILDCARD = ();
 
 public type StmtBlock record {|
@@ -95,9 +98,6 @@ public type CompoundAssignStmt record {|
     BinaryArithmeticOp|BinaryBitwiseOp op;
     Position opPos;
 |};
-
-// L-value expression
-public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
 
 public type ReturnStmt record {|
     *PositionFields;
@@ -204,7 +204,7 @@ public type BinaryEqualityExpr record {|
 |};
 
 public type BinaryRelationalExpr record {|
-    *BinaryExprBase;
+    *BinaryExprBase;    
     BinaryRelationalOp relationalOp;
 |};
 
@@ -334,7 +334,7 @@ public type MemberAccessExpr record {|
 public type MemberAccessLExpr record {|
     *PositionFields;
     Position opPos;
-    VarRefExpr|FieldAccessLExpr container;
+    LExpr container;
     Expr index;
 |};
 
@@ -351,7 +351,7 @@ public type FieldAccessExpr record {|
 public type FieldAccessLExpr record {|
     *PositionFields;
     Position opPos;
-    VarRefExpr|FieldAccessLExpr container;
+    LExpr container;
     string fieldName;
 |};
 
@@ -364,7 +364,7 @@ public type RangeExpr record {|
 
 public type VarRefExpr record {|
     *PositionFields;
-    string? prefix = ();
+    string? prefix;
     string name;
     Position qNamePos;
 |};
