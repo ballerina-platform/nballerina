@@ -85,14 +85,14 @@ function validateSyntaxNode(SyntaxNode node) {
                     validateSyntaxNode(child);
                 }
                 else {
-                    Position? pos = child.pos;
-                    if pos != () {
-                        if pos < lastEnd {
-                            overlappingNodeErr(node, lastEnd, pos);
-                        }
-                        // pr-todo: add this after if else fix
-                        // lastEnd = pos;
-                    }
+                    // pr-todo:
+                    // Position? pos = child.pos;
+                    // if pos != () {
+                    //     if pos < lastEnd {
+                    //         overlappingNodeErr(node, lastEnd, pos);
+                    //     }
+                    //     lastEnd = pos;
+                    // }
                     // pr-todo: consume token
                 }
             }
@@ -100,6 +100,7 @@ function validateSyntaxNode(SyntaxNode node) {
     }
 }
 
+// pr-todo: show file names in the error msg
 function overlappingNodeErr(NonTerminalSyntaxNode parent, Position lastEnd, Position currentStart) {
     string[] body = ["overlapping child nodes"];
     body.push(string `ast node: ${parent.astNode.toString()}`);
@@ -155,6 +156,7 @@ function moduleLevelDefnToNode(ModuleLevelDefn defn) returns SyntaxNode {
     }
 }
 
+// pr-todo: add fixed tokens
 function constDefnToNode(ConstDefn defn) returns SyntaxNode {
     return { childNodes: [exprToNode(defn.expr)], astNode: defn };
 }
@@ -171,6 +173,7 @@ function typeDefnToNode(TypeDefn defn) returns SyntaxNode {
     return { childNodes, astNode: defn };
 }
 
+// pr-todo: add fixed tokens
 function functionDefnToNode(FunctionDefn defn) returns SyntaxNode {
     SyntaxNode[] childNodes = from Stmt stmt in defn.body.stmts select stmtToNode(stmt);
     return { childNodes, astNode: defn };
@@ -217,6 +220,7 @@ function stmtBlockToNodes(StmtBlock block) returns SyntaxNode[] {
 
 function stmtToNode(Stmt stmt) returns SyntaxNode {
     SyntaxNode[] childNodes;
+    // pr-todo: add all the fixed tokens
     if stmt is VarDeclStmt {
        childNodes = [typeDescToNode(stmt.td), exprToNode(stmt.initExpr)];
     }
@@ -247,9 +251,12 @@ function stmtToNode(Stmt stmt) returns SyntaxNode {
     else if stmt is IfElseStmt {
         childNodes = [exprToNode(stmt.condition)];
         childNodes.push(...stmtBlockToNodes(stmt.ifTrue));
-        StmtBlock? ifFalse = stmt.ifFalse;
-        if ifFalse != () {
+        StmtBlock|IfElseStmt? ifFalse = stmt.ifFalse;
+        if ifFalse is StmtBlock {
             childNodes.push(...stmtBlockToNodes(ifFalse));
+        }
+        else if ifFalse is IfElseStmt {
+            childNodes.push(stmtToNode(ifFalse));
         }
     }
     else if stmt is MatchStmt {
@@ -386,6 +393,7 @@ function fieldToNode(Field f) returns SyntaxNode {
 
 function typeDescToNode(TypeDesc td) returns SyntaxNode {
     SyntaxNode[] childNodes;
+    // pr-todo: add fixed tokens
     if td is TerminalTypeDesc {
         return addTerminalTypeDescNode(td);
     }
