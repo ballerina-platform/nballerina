@@ -1,3 +1,4 @@
+import ballerina/io;
 type SyntaxNode TerminalSyntaxNode|NonTerminalSyntaxNode|IdentifierSyntaxNode|FixedSyntaxNode;
 
 // pr-todo: may be we need a union of Node that has a ASTNode to simplify stuff
@@ -78,6 +79,8 @@ function validateSyntaxNode(SyntaxNode node) {
                         outofBoundChildErrr(node, child);
                     }
                     if childStartPos < lastEnd {
+                        io:println(node);
+                        io:println(child);
                         overlappingNodeErr(node, lastEnd, childStartPos);
                     }
                     // pr-to: check if difference is all white space
@@ -85,14 +88,15 @@ function validateSyntaxNode(SyntaxNode node) {
                     validateSyntaxNode(child);
                 }
                 else {
-                    // pr-todo:
-                    // Position? pos = child.pos;
-                    // if pos != () {
-                    //     if pos < lastEnd {
-                    //         overlappingNodeErr(node, lastEnd, pos);
-                    //     }
-                    //     lastEnd = pos;
-                    // }
+                    Position? pos = child.pos;
+                    if pos != () {
+                        if pos < lastEnd {
+                            io:println(node);
+                            io:println(child);
+                            overlappingNodeErr(node, lastEnd, pos);
+                        }
+                        lastEnd = pos;
+                    }
                     // pr-todo: consume token
                 }
             }
@@ -323,7 +327,7 @@ function exprToNode(Expr expr) returns SyntaxNode {
         childNodes = [];
         childNodes.push({ token: "{", pos: expr.startPos });
         childNodes.push(...from Field f in expr.fields select fieldToNode(f));
-        childNodes.push({ token: "}", pos: expr.startPos });
+        childNodes.push({ token: "}", pos: expr.endPos });
     }
     else if expr is MemberAccessExpr {
         childNodes = from Expr each in [expr.container, expr.index] select exprToNode(each);
