@@ -1,5 +1,6 @@
 type SyntaxNode TerminalSyntaxNode|NonTerminalSyntaxNode|IdentifierSyntaxNode|FixedSyntaxNode;
 
+// pr-todo: may be we need a union of Node that has a ASTNode to simplify stuff
 type TerminalSyntaxNode record {|
     AstNode astNode;
     string? token;  // if non-nil expect the token to be this
@@ -15,6 +16,7 @@ type RootSyntaxNode record {|
     SyntaxNode[] childNodes;
 |};
 
+// pr-todo: may be we can merge fallowing together
 // represents keywords and fixed tokens
 type FixedSyntaxNode record {|
     string token;
@@ -32,7 +34,6 @@ type AstNode record {|
    any...;
 |};
 
-// pr-todo: better names for buildFunctions
 
 // pr-todo:
 // function checkPositionSyntaxNode(Tokenizer tok, SyntaxNode node) [Position, Position] {
@@ -50,6 +51,7 @@ type AstNode record {|
 //
 // }
 
+// pr-todo: add these to all commong fixed tokens that don't have positions
 FixedSyntaxNode SEMICOLON_NODE = { token: ";" };
 
 function validateModulePart(ModulePart part) {
@@ -72,9 +74,8 @@ function validateSyntaxNode(SyntaxNode node) {
                 if child is TerminalSyntaxNode|NonTerminalSyntaxNode {
                     Position childStartPos = child.astNode.startPos;
                     Position childEndPos = child.astNode.endPos;
-                    // pr-todo: fix messages
                     if childStartPos < parentStart || childEndPos > parentEnd {
-                        panic error("child node outside of parent"+ ":"+ node.astNode.toString()+ "<"+ child.astNode.toString());
+                        outofBoundChildErrr(node, child);
                     }
                     if childStartPos < lastEnd {
                         overlappingNodeErr(node, lastEnd, childStartPos);
@@ -103,6 +104,14 @@ function overlappingNodeErr(NonTerminalSyntaxNode parent, Position lastEnd, Posi
     string[] body = ["overlapping child nodes"];
     body.push(string `ast node: ${parent.astNode.toString()}`);
     body.push(string`overlapping range: ${unpackPosition(lastEnd).toString()}:${unpackPosition(currentStart).toString()}`);
+    string msg = "\n".'join(...body);
+    panic error(msg);
+}
+
+function outofBoundChildErrr(NonTerminalSyntaxNode parent, NonTerminalSyntaxNode|TerminalSyntaxNode child) {
+    string[] body = ["child node outside of parent"];
+    body.push(string `parent node: ${parent.astNode.toString()}`);
+    body.push(string `child node: ${child.astNode.toString()}`);
     string msg = "\n".'join(...body);
     panic error(msg);
 }
@@ -225,7 +234,6 @@ function stmtToNode(Stmt stmt) returns SyntaxNode {
     }
     else if stmt is AssignStmt {
         LExpr|WILDCARD lValue = stmt.lValue;
-        //pr-to: make better
         if lValue is LExpr {
             childNodes = from Expr child in [lValue, stmt.expr] select exprToNode(child);
         }
@@ -266,15 +274,15 @@ function stmtToNode(Stmt stmt) returns SyntaxNode {
     return { childNodes, astNode: stmt };
 }
 
-// pr-todo: should we use empty array or string consts for empty
 function exprToNode(Expr expr) returns SyntaxNode {
     SyntaxNode[] childNodes;
     if expr is TerminalExpr {
-        return addTerminalExprNode(expr);
+        return terminalExprToNode(expr);
     }
     else if expr is BinaryExpr {
-        childNodes = from Expr child in [expr.left, expr.right] select exprToNode(child);
+        return binaryExprToNode(expr);
     }
+    // pr-todo: add the keyword nodes
     else if expr is TypeTestExpr {
         childNodes = [exprToNode(expr.left), typeDescToNode(expr.td)];
     }
@@ -282,26 +290,33 @@ function exprToNode(Expr expr) returns SyntaxNode {
         childNodes = [exprToNode(expr.message)];
     }
     else if expr is FunctionCallExpr {
-        if expr.args.length() == 0 {
-            return { token: string`${expr.funcName}()`, astNode: expr };
+        childNodes = [];
+        childNodes.push({ name: expr.funcName, pos: expr.startPos });
+        childNodes.push({ token: "(", pos: expr.openParenPos });
+        foreach Expr arg in expr.args {
+            childNodes.push(exprToNode(arg));
         }
-        childNodes = from Expr arg in expr.args select exprToNode(arg);
+        childNodes.push({ token: ")", pos: expr.endPos });
     }
+    // pr-todo: refactor the fallowing out to a function
     else if expr is MethodCallExpr {
         childNodes = [exprToNode(expr.target)];
+        // pr-todo: refactor this part out
+        childNodes.push({ token: "(", pos: expr.openParenPos });
         childNodes.push(...from Expr arg in expr.args select exprToNode(arg));
+        childNodes.push({ token: ")"});
     }
     else if expr is ListConstructorExpr {
-        if expr.members.length() == 0 {
-            return { token: "[]", astNode: expr };
-        }
-        childNodes = from Expr member in expr.members select exprToNode(member);
+        childNodes = [];
+        childNodes.push({ token: "[", pos: expr.startPos });
+        childNodes.push(...from Expr member in expr.members select exprToNode(member));
+        childNodes.push({ token: "]", pos: expr.endPos });
     }
     else if expr is MappingConstructorExpr {
-        if expr.fields.length() == 0 {
-            return { token: "{}", astNode: expr };
-        }
-        childNodes = from Field f in expr.fields select fieldToNode(f);
+        childNodes = [];
+        childNodes.push({ token: "{", pos: expr.startPos });
+        childNodes.push(...from Field f in expr.fields select fieldToNode(f));
+        childNodes.push({ token: "}", pos: expr.startPos });
     }
     else if expr is MemberAccessExpr {
         childNodes = from Expr each in [expr.container, expr.index] select exprToNode(each);
@@ -330,7 +345,7 @@ function exprToNode(Expr expr) returns SyntaxNode {
 }
 
 type TerminalExpr ConstValueExpr|NumericLiteralExpr;
-function addTerminalExprNode(TerminalExpr expr) returns TerminalSyntaxNode {
+function terminalExprToNode(TerminalExpr expr) returns TerminalSyntaxNode {
     string token;
     if expr is ConstValueExpr {
         token = expr.value.toString();
@@ -342,6 +357,27 @@ function addTerminalExprNode(TerminalExpr expr) returns TerminalSyntaxNode {
         token = expr.untypedLiteral;
     }
     return { token, astNode: expr };
+}
+
+function binaryExprToNode(BinaryExpr expr) returns SyntaxNode {
+    SyntaxNode[] childNodes = [exprToNode(expr.left)];
+    // pr-todo: why bitwise not an expr op?
+    BinaryExprOp|BinaryBitwiseOp op;
+    if expr is BinaryEqualityExpr {
+        op = expr.equalityOp;
+    }
+    else if expr is BinaryRelationalExpr {
+        op = expr.relationalOp;
+    }
+    else if expr is BinaryArithmeticExpr {
+        op = expr.arithmeticOp;
+    }
+    else {
+        op = expr.bitwiseOp;
+    }
+    childNodes.push({ token: op, pos: expr.opPos });
+    childNodes.push(exprToNode(expr.right));
+    return { astNode: expr, childNodes };
 }
 
 function fieldToNode(Field f) returns SyntaxNode {
