@@ -229,6 +229,11 @@
     ["V", "expr", "-1.hexStr()", "-(1.hexStr())"],
     ["V", "expr", "-0xf.max()", "-(0xF.max())"],
     ["V", "expr", "x.map()"],
+    ["V", "expr", "x.map(arr)"],
+    ["V", "expr", "x.a.map()", "(x.a).map()"],
+    ["V", "expr", "x.a.b.map()", "((x.a).b).map()"],
+    ["V", "expr", "x[1].map()", "(x[1]).map()"],
+    ["V", "expr", "x.y[z].map()", "((x.y)[z]).map()"],
     ["V", "stmt", "x.map();"],
 
     { "comment" : "field access" },

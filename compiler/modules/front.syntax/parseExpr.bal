@@ -342,7 +342,7 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
         opPos = tok.currentStartPos();
         check tok.advance();
         Position qnamePos = tok.currentStartPos();
-        string name = check parseIdOrSpecialMethodName(tok);
+        string name = check parseIdentifierOrMethodName(tok);
         if tok.current() == "(" {
             return finishPrimaryExpr(tok, check finishMethodCallExpr(tok, expr, name, startPos, qnamePos, opPos), startPos);
         }
@@ -357,7 +357,7 @@ function finishPrimaryExpr(Tokenizer tok, Expr expr, Position startPos) returns 
     }
 }
 
-function parseIdOrSpecialMethodName(Tokenizer tok) returns string|err:Syntax {
+function parseIdentifierOrMethodName(Tokenizer tok) returns string|err:Syntax {
     Token? t = tok.current();
     if t is SpecialMethodName {
         check tok.advance();
