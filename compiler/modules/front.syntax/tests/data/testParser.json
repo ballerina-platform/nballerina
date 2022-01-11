@@ -229,6 +229,7 @@
     ["V", "expr", "-1.hexStr()", "-(1.hexStr())"],
     ["V", "expr", "-0xf.max()", "-(0xF.max())"],
     ["V", "expr", "x.map()"],
+    ["V", "stmt", "x.map();"],
 
     { "comment" : "field access" },
     ["V", "expr", "a.b"],
