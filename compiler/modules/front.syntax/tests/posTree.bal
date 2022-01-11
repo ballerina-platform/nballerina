@@ -1,4 +1,3 @@
-import ballerina/io;
 type SyntaxNode TerminalSyntaxNode|NonTerminalSyntaxNode|IdentifierSyntaxNode|FixedSyntaxNode;
 
 // pr-todo: may be we need a union of Node that has a ASTNode to simplify stuff
@@ -79,8 +78,6 @@ function validateSyntaxNode(SyntaxNode node) {
                         outofBoundChildErrr(node, child);
                     }
                     if childStartPos < lastEnd {
-                        io:println(node);
-                        io:println(child);
                         overlappingNodeErr(node, lastEnd, childStartPos);
                     }
                     // pr-to: check if difference is all white space
@@ -91,8 +88,6 @@ function validateSyntaxNode(SyntaxNode node) {
                     Position? pos = child.pos;
                     if pos != () {
                         if pos < lastEnd {
-                            io:println(node);
-                            io:println(child);
                             overlappingNodeErr(node, lastEnd, pos);
                         }
                         lastEnd = pos;
@@ -160,16 +155,22 @@ function moduleLevelDefnToNode(ModuleLevelDefn defn) returns SyntaxNode {
     }
 }
 
-// pr-todo: add fixed tokens
 function constDefnToNode(ConstDefn defn) returns SyntaxNode {
-    return { childNodes: [exprToNode(defn.expr)], astNode: defn };
+    SyntaxNode[] childNodes = moduleLevelDefnPrefix(defn);
+    childNodes.push({ token: "const" });
+    SubsetBuiltinTypeDesc? td = defn.td;
+    if td != () {
+        childNodes.push({ token: td.builtinTypeName });
+    }
+    childNodes.push({ name: defn.name, pos: defn.namePos });
+    childNodes.push({ token: "=" });
+    childNodes.push(exprToNode(defn.expr));
+    childNodes.push(SEMICOLON_NODE);
+    return { childNodes, astNode: defn };
 }
 
 function typeDefnToNode(TypeDefn defn) returns SyntaxNode {
-    SyntaxNode[] childNodes = [];
-    if defn.vis == "public" {
-        childNodes.push({ token: "public", pos: defn.startPos });
-    }
+    SyntaxNode[] childNodes = moduleLevelDefnPrefix(defn);
     childNodes.push({ token: "type" });
     childNodes.push({ name: defn.name, pos: defn.namePos });
     childNodes.push(typeDescToNode(defn.td));
@@ -177,10 +178,47 @@ function typeDefnToNode(TypeDefn defn) returns SyntaxNode {
     return { childNodes, astNode: defn };
 }
 
-// pr-todo: add fixed tokens
 function functionDefnToNode(FunctionDefn defn) returns SyntaxNode {
-    SyntaxNode[] childNodes = from Stmt stmt in defn.body.stmts select stmtToNode(stmt);
+    SyntaxNode[] childNodes = moduleLevelDefnPrefix(defn);
+    childNodes.push({ token: "function" });
+    childNodes.push({ name: defn.name, pos: defn.namePos });
+    childNodes.push(functionTypeDescToNode(defn.typeDesc));
+    childNodes.push(...stmtBlockToNodes(defn.body));
     return { childNodes, astNode: defn };
+}
+
+function moduleLevelDefnPrefix(ModuleLevelDefn defn) returns SyntaxNode[] {
+    SyntaxNode[] childNodes = [];
+    if defn.vis == "public" {
+        childNodes.push({ token: "public", pos: defn.startPos });
+    }
+    return childNodes;
+}
+
+function functionTypeDescToNode(FunctionTypeDesc td) returns SyntaxNode {
+    SyntaxNode[] childNodes = [{ token: "(", pos: td.startPos }];
+    foreach int i in 0 ..< td.params.length() {
+        if i > 0 {
+            childNodes.push({ token: "," });
+        }
+        childNodes.push(functionTypeParamToNode(td.params[i]));
+    }
+    childNodes.push({ token: ")" });
+    TypeDesc retTd = td.ret;
+    // pr-todo: this will mess "returns null" functions
+    if !(retTd is BuiltinTypeDesc && retTd.builtinTypeName == "null") {
+        childNodes.push({ token: "returns" }, typeDescToNode(retTd));
+    }
+    return { childNodes, astNode: td };
+}
+
+function functionTypeParamToNode(FunctionTypeParam param) returns SyntaxNode {
+    SyntaxNode[] childNodes = [typeDescToNode(param.td)];
+    string? name = param.name;
+    if name != () {
+        childNodes.push({ name, pos:param.namePos });
+    }
+    return { childNodes, astNode: param };
 }
 
 function stmtBlockToNodes(StmtBlock block) returns SyntaxNode[] {
