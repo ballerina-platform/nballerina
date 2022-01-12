@@ -35,13 +35,16 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
             check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
         }
-        StmtBlock? ifFalse = stmt.ifFalse;
+        StmtBlock|IfElseStmt? ifFalse = stmt.ifFalse;
         if ifFalse is StmtBlock {
             check validateStmtBlockPos(ifFalse, tok, parentStartPos, parentEndPos);
             foreach Stmt falseStmt in ifFalse.stmts {
                 check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
                 childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
             }
+        }
+        else if ifFalse is IfElseStmt {
+            check validateStatementPos(ifFalse, tok, stmt.startPos, stmt.endPos);
         }
     }
     else if stmt is MatchStmt {
