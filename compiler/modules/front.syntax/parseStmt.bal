@@ -27,10 +27,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
                 return finishVarDeclStmt(tok, td, startPos);
             }
             else if peeked == "[" {
-                TokenizerState state = tok.save();
-                boolean isTypeDesc = check preparseArrayTypeDesc(tok);
-                tok.restore(state);
-
+                boolean isTypeDesc = check preparseArrayTypeDescRestoreTok(tok);
                 if isTypeDesc {
                     return parseVarDeclStmt(tok, startPos);
                 }
@@ -122,8 +119,17 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         | "false"
         | [HEX_INT_LITERAL, _]
         | [DECIMAL_FP_NUMBER, _, _] => {
-            if tok.peek() == "." || tok.peek() == "[" {
+            if tok.peek() == "." {
                 return parseMethodCallStmt(tok);
+            }
+            else if tok.peek() == "[" {
+                boolean isTypeDesc = check preparseArrayTypeDescRestoreTok(tok);
+                if isTypeDesc {
+                    return parseVarDeclStmt(tok, startPos);
+                }
+                else {
+                    return parseMethodCallStmt(tok);
+                }
             }
             else {
                 return parseVarDeclStmt(tok, startPos);
@@ -134,6 +140,13 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 }
 
 type AssignOp "="|CompoundAssignOp;
+
+function preparseArrayTypeDescRestoreTok(Tokenizer tok) returns boolean|err:Syntax {
+    TokenizerState state = tok.save();
+    boolean isTypeDesc = check preparseArrayTypeDesc(tok);
+    tok.restore(state);
+    return isTypeDesc;
+}
 
 // We only call this when we know (through preparsing) that the statement does not start with a type descriptor.
 function finishIdentifierStmt(Tokenizer tok, string name1, Position startPos, Position qNamePos) returns Stmt|err:Syntax {
