@@ -45,7 +45,6 @@ public function parseModulePart(ScannedModulePart scanned) returns ModulePart|er
         partIndex: scanned.partIndex,
         defns,
         importDecls: scanned.importDecls,
-        // placeholder values
         startPos,
         endPos
     };
