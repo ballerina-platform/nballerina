@@ -96,7 +96,7 @@ function tokenToString(Token t) returns string {
         [DECIMAL_FP_NUMBER, var digits, var suffix] => {
             return digits.toLowerAscii() + (suffix ?: "");
         }
-        // #34522 when member types of `VariableLengthToken` are in-lined, compiler fails. #33694 is related.
+        // JBUG #34522 when member types of `VariableLengthToken` are in-lined, compiler fails. #33694 is related.
         [_, var str] => {
             return str;
         }
