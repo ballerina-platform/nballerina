@@ -1160,15 +1160,11 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         var { td, left, negated, kwPos:pos } => {
             return codeGenTypeTest(cx, bb, env, td, left, negated, pos);
         }
-        // Variable reference
-        // JBUG #33309 does not work as match pattern
-        var ref if ref is s:VarRefExpr => {
-            return codeGenVarRefExpr(cx, ref, env, bb);
+        var {prefix, name, startPos} => {
+            return codeGenVarRefExpr(cx, env, bb, prefix, name, startPos);
         }
-        // Constant
-        // JBUG #33309 does not work as match pattern `var { value, multiSemType }`
-        var cvExpr if cvExpr is s:ConstValueExpr => {
-            return codeGenConstValue(cx, bb, env, cvExpr);
+        var { value, multiSemType, startPos:pos } => {
+            return codeGenConstValue(cx, bb, env, value, multiSemType, pos);
         }
         // Function/method call
         var callExpr if callExpr is (s:FunctionCallExpr|s:MethodCallExpr) => {
@@ -1214,9 +1210,8 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return cx.semanticErr("can only apply field access to mapping", pos=pos);
         }
         // List construct
-        // JBUG #33309 should be able to use just `var { members }`
-        var listConstructorExpr if listConstructorExpr is s:ListConstructorExpr => {
-            return codeGenListConstructor(cx, bb, env, listConstructorExpr);  
+        var { startPos, members, opPos, expectedType } => {
+            return codeGenListConstructor(cx, bb, env, startPos, members, opPos, expectedType);
         }
         // Mapping construct
         var mappingConstructorExpr if mappingConstructorExpr is s:MappingConstructorExpr  => {
@@ -1493,20 +1488,20 @@ function codeGenBitwiseBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, s:Binary
     return { result, block: bb };
 }
 
-function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:ListConstructorExpr expr) returns CodeGenError|ExprEffect {
+function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, Position startPos, s:Expr[] members, Position opPos, t:SemType? expectedType) returns CodeGenError|ExprEffect {
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
-    foreach var member in expr.members {
+    foreach var member in members {
         bir:Operand operand;
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, member);
         operands.push(operand);
     }
-    t:SemType resultType = <t:SemType>expr.expectedType;
+    t:SemType resultType = <t:SemType>expectedType;
     if t:isEmpty(cx.mod.tc, resultType) {
-        return cx.semanticErr("list now allowed in this context", expr.startPos);
+        return cx.semanticErr("list now allowed in this context", startPos);
     }
-    bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
-    bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
+    bir:Register result = cx.createTmpRegister(resultType, opPos);
+    bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
 }
@@ -1556,15 +1551,13 @@ function codeGenErrorConstructor(CodeGenContext cx, bir:BasicBlock bb, Environme
     return { result, block };
 }
 
-function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:ConstValueExpr cvExpr) returns CodeGenError|ExprEffect {
-    t:SemType? multiSemType = cvExpr.multiSemType;
-    SimpleConst value = cvExpr.value;
+function codeGenConstValue(CodeGenContext cx, bir:BasicBlock bb, Environment env, SimpleConst value, t:SemType? multiSemType, Position pos) returns CodeGenError|ExprEffect {
     if multiSemType == () {
         return { result: value, block: bb };
     }
     else {
-        bir:Register reg = cx.createTmpRegister(multiSemType, cvExpr.startPos);
-        bir:AssignInsn insn = { operand: value, result: reg, pos: cvExpr.startPos };
+        bir:Register reg = cx.createTmpRegister(multiSemType, pos);
+        bir:AssignInsn insn = { operand: value, result: reg, pos: pos };
         bb.insns.push(insn);
         return { result: reg, block: bb };
     }
@@ -1654,12 +1647,12 @@ function codeGenEqualityExpr(CodeGenContext cx, bir:BasicBlock bb, Environment e
     }
 }
 
-function codeGenVarRefExpr(CodeGenContext cx, s:VarRefExpr ref, Environment env, bir:BasicBlock bb) returns CodeGenError|ExprEffect {
-    if ref.prefix != () {
+function codeGenVarRefExpr(CodeGenContext cx, Environment env, bir:BasicBlock bb, string? prefix, string name, Position startPos) returns CodeGenError|ExprEffect {
+    if prefix != () {
         // This should be caught during const folding
         panic err:impossible("prefix in var ref is non-nil");
     }
-    var v = check lookupVarRef(cx, ref.name, env, ref.startPos);
+    var v = check lookupVarRef(cx, name, env, startPos);
     bir:Operand result;
     Binding? binding;
     if v is t:SingleValue {
