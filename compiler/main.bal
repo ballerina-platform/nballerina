@@ -63,7 +63,8 @@ public function main(string[] filenames, *Options opts) returns error? {
             if err is err:Diagnostic {
                 errorFileCount += 1;
                 dPrinter.print(err.detail());
-            } else {
+            }
+            else {
                 return err;
             }
         }
