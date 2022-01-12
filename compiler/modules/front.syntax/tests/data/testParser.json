@@ -323,6 +323,14 @@
     ["V", "stmt", "B[] x = [];"],
     ["V", "stmt", "X:Y[] x = [];"],
     ["V", "stmt", "A&B|C&D x = 1;", "(A & B) | (C & D) x = 1;"],
+    
+    { "comment" : "statement literal typedesc" },
+    ["V", "stmt", "\"abc\" s = \"abc\";"],
+    ["V", "stmt", "true TRUE = true;"],
+    ["V", "stmt", "false FALSE = false;"],
+    ["V", "stmt", "1 X = 1;"],
+    ["V", "stmt", "1.0 X = 1.0;"],
+    ["V", "stmt", "0xF X = 0xF;", "15 X = 0xF;"],
 
     { "comment" : "statement return" },
     ["V", "stmt", "return;"],
