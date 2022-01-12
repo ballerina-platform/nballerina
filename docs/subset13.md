@@ -1,4 +1,4 @@
-# Language subset 12
+# Language subset 13
 
 For programs that are in the subset, the compiler should conform to the Ballerina Language Specification. For this subset,
 the target version of the Ballerina Language Specification is the [2022-01-06 draft](https://ballerina.io/spec/lang/master/).
@@ -374,10 +374,7 @@ Two kinds of `import` are supported.
 * The syntax restricts where a `list-constructor-expr` or `mapping-constructor-expr` can occur so as to avoid the need to infer a type for the constructed list.
 * Types in type definitions are restricted semantically, rather than syntactically: a type definition that is referenced from a function definition must define a type that is equivalent to one that can be described using the type-defn grammar in this document. It must also match the type-defn [grammar supported for semantic type-checking](type-subset.md).
 
-## Additions from subset 11
+## Additions from subset 12
 
-* `decimal` type has been added
-* inclusive record types have been added
-* `anydata` type has been added
-* filling-read operation on lvalues is supported (e.g. `x[17][21] = y;`)
-* the compiler is up-to-date with the 2022-01-06 draft of the Ballerina Language Specification
+* TBD
+
