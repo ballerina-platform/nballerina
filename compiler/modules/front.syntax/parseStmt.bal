@@ -120,7 +120,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         | [HEX_INT_LITERAL, _]
         | [DECIMAL_FP_NUMBER, _, _] => {
             var peeked = tok.peek();
-            if peeked == "." || peeked == "[" && check preparseArrayTypeDescRestoreTok(tok) {
+            if peeked == "." || peeked == "[" && !check preparseArrayTypeDescRestoreTok(tok) {
                 return parseMethodCallStmt(tok);
             }
             return parseVarDeclStmt(tok, startPos);
