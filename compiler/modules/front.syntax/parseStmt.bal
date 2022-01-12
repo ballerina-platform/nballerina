@@ -27,7 +27,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
                 return finishVarDeclStmt(tok, td, startPos);
             }
             else if peeked == "[" {
-                boolean isTypeDesc = check preparseArrayTypeDescRestoreTok(tok);
+                boolean isTypeDesc = check savePreparseRestore(tok, preparseArrayTypeDesc);
                 if isTypeDesc {
                     return parseVarDeclStmt(tok, startPos);
                 }
@@ -120,7 +120,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         | [HEX_INT_LITERAL, _]
         | [DECIMAL_FP_NUMBER, _, _] => {
             var peeked = tok.peek();
-            if peeked == "." || peeked == "[" && !check preparseArrayTypeDescRestoreTok(tok) {
+            if peeked == "." || (peeked == "[" && !check savePreparseRestore(tok, preparseArrayTypeDesc)) {
                 return parseMethodCallStmt(tok);
             }
             return parseVarDeclStmt(tok, startPos);
@@ -131,9 +131,9 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 
 type AssignOp "="|CompoundAssignOp;
 
-function preparseArrayTypeDescRestoreTok(Tokenizer tok) returns boolean|err:Syntax {
+function savePreparseRestore(Tokenizer tok, PreparseFunc func) returns boolean|err:Syntax {
     TokenizerState state = tok.save();
-    boolean isTypeDesc = check preparseArrayTypeDesc(tok);
+    boolean isTypeDesc = check func(tok);
     tok.restore(state);
     return isTypeDesc;
 }

@@ -4,6 +4,7 @@ const PREPARSE_TYPE_DESC = true;
 const PREPARSE_EXPR = false;
 
 type CLOSE_BRACKET ")" | "]" | "}" | "|}";
+type PreparseFunc function(Tokenizer) returns boolean|err:Syntax;
 
 final readonly & map<CLOSE_BRACKET> closeBracketMap = {
     "(": ")",
