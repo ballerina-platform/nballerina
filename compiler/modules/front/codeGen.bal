@@ -1062,12 +1062,12 @@ function codeGenLExpr(CodeGenContext cx, bir:BasicBlock startBlock, Environment 
         bir:Operand result;
         { result: containerOperand, block } = check codeGenLExpr(cx, startBlock, env, container.container);
         if container is s:FieldAccessLExpr {
-            { result, block } = check codeGenFieldAccess(cx, startBlock, env, container.opPos, containerOperand, container.fieldName);
+            { result, block } = check codeGenFieldAccessExpr(cx, startBlock, env, container.opPos, containerOperand, container.fieldName);
             
         }
         else {
             s:MemberAccessLExpr _ = container;
-            { result, block } = check codeGenMemberAccess(cx, startBlock, env, container.opPos, containerOperand, container.index, fill=true);
+            { result, block } = check codeGenMemberAccessExpr(cx, startBlock, env, container.opPos, containerOperand, container.index, fill=true);
         }
         if result !is bir:Register {
             return cx.semanticErr("list or mapping required", s:range(container.container));
@@ -1331,11 +1331,14 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         }
         // Member access E[i]
         var { container, index, opPos: pos } => {
-            return codeGenMemberAccessExpr(cx, bb, env, pos, container, index);
+            // Do constant folding here since these expressions are not allowed in const definitions
+            var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
+            return codeGenMemberAccessExpr(cx, nextBlock, env, pos, l, index);
         }
         // Field access
         var { container, fieldName, opPos: pos } => {
-            return codeGenFieldAccessExpr(cx, bb, env, pos, container, fieldName);
+            var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
+            return codeGenFieldAccessExpr(cx, nextBlock, env, pos, l, fieldName);
         }
         // List construct
         // JBUG #33309 should be able to use just `var { members }`
@@ -1491,25 +1494,14 @@ function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environ
     }
 }
 
-function codeGenFieldAccessExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Position pos, s:Expr container, string fieldName) returns CodeGenError|ExprEffect {
-    var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
-    return codeGenFieldAccess(cx, nextBlock, env, pos, l, fieldName);
-}
-
-function codeGenFieldAccess(CodeGenContext cx, bir:BasicBlock nextBlock, Environment env, Position pos, bir:Operand l, string fieldName) returns CodeGenError|ExprEffect {
+function codeGenFieldAccessExpr(CodeGenContext cx, bir:BasicBlock nextBlock, Environment env, Position pos, bir:Operand l, string fieldName) returns CodeGenError|ExprEffect {
     if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
         return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
     }
     return cx.semanticErr("can only apply field access to mapping", pos=pos);
 }
 
-function codeGenMemberAccessExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Position pos, s:Expr container, s:Expr index, boolean fill=false) returns CodeGenError|ExprEffect {
-    // Do constant folding here since these expressions are not allowed in const definitions
-    var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
-    return codeGenMemberAccess(cx, block1, env, pos, l, index, fill);
-}
-
-function codeGenMemberAccess(CodeGenContext cx, bir:BasicBlock block1, Environment env, Position pos, bir:Operand l, s:Expr index, boolean fill=false) returns CodeGenError|ExprEffect {
+function codeGenMemberAccessExpr(CodeGenContext cx, bir:BasicBlock block1, Environment env, Position pos, bir:Operand l, s:Expr index, boolean fill=false) returns CodeGenError|ExprEffect {
     if l is bir:Register {
         if t:isSubtypeSimple(l.semType, t:LIST) {
             var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, index, t:INT));
