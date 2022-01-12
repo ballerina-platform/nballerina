@@ -326,14 +326,6 @@ function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:Binar
     return expr;
 }
 
-function isEqual(SimpleConst c1, SimpleConst c2) returns boolean {
-    return c1 == c2;
-}
-
-function isExactEqual(SimpleConst c1, SimpleConst c2) returns boolean {
-    return c1 === c2;
-}
-
 // Precondition is that the values are !=
 function simpleConstExprIntersectIsEmpty(s:ConstValueExpr leftExpr, s:ConstValueExpr rightExpr) returns boolean {
     t:SemType? lt = leftExpr.multiSemType;

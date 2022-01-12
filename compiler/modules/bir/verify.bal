@@ -315,10 +315,6 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Semanti
     }
 }
 
-function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
-    return c1 == c2;
-}
-
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Semantic? {
     if !vc.operandHasType(operand, semType) {
         return vc.err(msg, pos);
