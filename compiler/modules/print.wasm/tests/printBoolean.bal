@@ -6,9 +6,9 @@ public function printBoolean() returns error? {
     Type[] localTypes = ["i32"];
     module.addFunctionImport("println", "console", "log", "i32", "None");
     Expression b = module.localGet(0, "i32");
-    Expression[] thenCallOperands = [module.addConst(<LiteralInt32>{i32: 1})];
+    Expression[] thenCallOperands = [module.addConst({ i32: 1 })];
     Expression thenCall = module.call("println", thenCallOperands, 1, "None");
-    Expression[] elseCallOperands = [module.addConst(<LiteralInt32>{i32: 0})];
+    Expression[] elseCallOperands = [module.addConst({ i32: 0 })];
     Expression elseCall = module.call("println", elseCallOperands, 1, "None");
     Relooper relooper = new(module);
     Block bb0 = relooper.addBlock(module.nop());
