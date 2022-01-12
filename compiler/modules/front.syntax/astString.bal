@@ -145,16 +145,16 @@ function stmtToWords(Word[] w, Stmt stmt) {
         w.push("if");
         exprToWords(w, stmt.condition);
         blockToWords(w, stmt.ifTrue);
-        StmtBlock? ifFalse = stmt.ifFalse;
-        if ifFalse is StmtBlock {
-            if ifFalse.stmts.length() == 1 &&  ifFalse.stmts[0] is IfElseStmt {
-                w.push(<Word>LF, "else");
-                stmtToWords(w, ifFalse.stmts[0]);
-            }
-            else if ifFalse.stmts.length() > 0 {
-                w.push(<Word>LF, "else");
-                blockToWords(w, ifFalse);
-            }
+        StmtBlock|IfElseStmt? ifFalse = stmt.ifFalse;
+        if ifFalse == () {
+            return;
+        }
+        w.push(<Word>LF, "else");
+        if ifFalse is IfElseStmt {
+            stmtToWords(w, ifFalse);
+        }
+        else if ifFalse is StmtBlock {
+            blockToWords(w, ifFalse);
         }
     }
     else if stmt is MatchStmt {
@@ -287,8 +287,11 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         typeDescsToWords(w, td.members);
         TypeDesc? rest = td.rest;
         if rest != () {
-            w.push(",", "...", CLING);
+            if td.members.length() > 0 {
+                w.push(",");
+            }
             typeDescToWords(w, rest);
+            w.push("...", CLING);
         }
         w.push("]");
         if wrap != false {

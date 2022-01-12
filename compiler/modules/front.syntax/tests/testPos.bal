@@ -35,13 +35,16 @@ function validateStatementPos(Stmt stmt, Tokenizer tok, Position parentStartPos,
             check validateStatementPos(trueStmt, tok, stmt.startPos, stmt.endPos);
             childNodePos.push([trueStmt.startPos, trueStmt.endPos]);
         }
-        StmtBlock? ifFalse = stmt.ifFalse;
+        StmtBlock|IfElseStmt? ifFalse = stmt.ifFalse;
         if ifFalse is StmtBlock {
             check validateStmtBlockPos(ifFalse, tok, parentStartPos, parentEndPos);
             foreach Stmt falseStmt in ifFalse.stmts {
                 check validateStatementPos(falseStmt, tok, stmt.startPos, stmt.endPos);
                 childNodePos.push([falseStmt.startPos, falseStmt.endPos]);
             }
+        }
+        else if ifFalse is IfElseStmt {
+            check validateStatementPos(ifFalse, tok, stmt.startPos, stmt.endPos);
         }
     }
     else if stmt is MatchStmt {
@@ -279,7 +282,8 @@ function validateExpressionPos(Expr expr, Tokenizer tok, Position parentStartPos
             newExpr = matchingChild;
         }
         test:assertEquals(expr.endPos, actualEnd);
-        test:assertEquals(expr.toString(), newExpr.toString());
+        // JBUG expr is not recognized as anydata: should just be able to use `==` here
+        test:assertEquals(exprToString(expr), exprToString(<Expr>newExpr));
         test:assertTrue(expr.startPos >= parentStartPos && expr.endPos <= parentEndPos, "child node outside of parent");
         test:assertFalse(testPositionIsWhiteSpace(tok.file, expr.startPos), "start position is a white space");
         test:assertTrue(testValidExprEnd(tok.file, inclusiveEndPos(expr.endPos), expr), endPosErrorMessage(tok, expr.endPos));

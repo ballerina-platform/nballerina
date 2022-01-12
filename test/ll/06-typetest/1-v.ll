@@ -48,13 +48,14 @@ define internal void @_B_bin(i8 addrspace(1)* %0) !dbg !7 {
   %3 = alloca i8 addrspace(1)*
   %x.2 = alloca i8 addrspace(1)*
   %4 = alloca i8 addrspace(1)*
-  %5 = alloca i1
   %x.3 = alloca i8 addrspace(1)*
+  %5 = alloca i1
+  %x.4 = alloca i8 addrspace(1)*
   %6 = alloca i8 addrspace(1)*
   %7 = alloca i8
   %8 = load i8*, i8** @_bal_stack_guard
   %9 = icmp ult i8* %7, %8
-  br i1 %9, label %32, label %10
+  br i1 %9, label %33, label %10
 10:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %x
   %11 = load i8 addrspace(1)*, i8 addrspace(1)** %x
@@ -77,27 +78,29 @@ define internal void @_B_bin(i8 addrspace(1)* %0) !dbg !7 {
   br label %19
 19:
   %20 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %21 = addrspacecast i8 addrspace(1)* %20 to i8*
-  %22 = ptrtoint i8* %21 to i64
-  %23 = and i64 %22, 2233785415175766016
-  %24 = lshr i64 %23, 56
-  %25 = shl i64 1, %24
-  %26 = and i64 %25, 131
-  %27 = icmp ne i64 %26, 0
-  store i1 %27, i1* %5
-  %28 = load i1, i1* %5
-  br i1 %28, label %29, label %31
-29:
-  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  store i8 addrspace(1)* %30, i8 addrspace(1)** %x.3
+  store i8 addrspace(1)* %20, i8 addrspace(1)** %x.3
+  %21 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
+  %22 = addrspacecast i8 addrspace(1)* %21 to i8*
+  %23 = ptrtoint i8* %22 to i64
+  %24 = and i64 %23, 2233785415175766016
+  %25 = lshr i64 %24, 56
+  %26 = shl i64 1, %25
+  %27 = and i64 %26, 131
+  %28 = icmp ne i64 %27, 0
+  store i1 %28, i1* %5
+  %29 = load i1, i1* %5
+  br i1 %29, label %30, label %32
+30:
+  %31 = load i8 addrspace(1)*, i8 addrspace(1)** %x.3
+  store i8 addrspace(1)* %31, i8 addrspace(1)** %x.4
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str2 to i8*) to i8 addrspace(1)*), i64 720575940379279360)), !dbg !19
   store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !19
-  br label %31
-31:
-  ret void
+  br label %32
 32:
-  %33 = call i8 addrspace(1)* @_bal_panic_construct(i64 5892), !dbg !16
-  call void @_bal_panic(i8 addrspace(1)* %33)
+  ret void
+33:
+  %34 = call i8 addrspace(1)* @_bal_panic_construct(i64 5892), !dbg !16
+  call void @_bal_panic(i8 addrspace(1)* %34)
   unreachable
 }
 !llvm.module.flags = !{!0}

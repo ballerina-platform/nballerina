@@ -9,11 +9,12 @@ define void @_B04rootmain() !dbg !5 {
   %1 = alloca i1
   %d1.1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
+  %d1.2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
   %4 = alloca i8
   %5 = load i8*, i8** @_bal_stack_guard
   %6 = icmp ult i8* %4, %5
-  br i1 %6, label %19, label %7
+  br i1 %6, label %20, label %7
 7:
   store i8 addrspace(1)* null, i8 addrspace(1)** %d1
   %8 = load i8 addrspace(1)*, i8 addrspace(1)** %d1
@@ -31,15 +32,17 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !8
   br label %16
 16:
-  %17 = call i8 addrspace(1)* @_bal_decimal_const(i8* bitcast([4 x i8]* @.dec0 to i8*))
-  store i8 addrspace(1)* %17, i8 addrspace(1)** %d1
-  %18 = load i8 addrspace(1)*, i8 addrspace(1)** %d1, !dbg !9
-  call void @_Bb02ioprintln(i8 addrspace(1)* %18), !dbg !9
+  %17 = load i8 addrspace(1)*, i8 addrspace(1)** %d1
+  store i8 addrspace(1)* %17, i8 addrspace(1)** %d1.2
+  %18 = call i8 addrspace(1)* @_bal_decimal_const(i8* bitcast([4 x i8]* @.dec0 to i8*))
+  store i8 addrspace(1)* %18, i8 addrspace(1)** %d1
+  %19 = load i8 addrspace(1)*, i8 addrspace(1)** %d1, !dbg !9
+  call void @_Bb02ioprintln(i8 addrspace(1)* %19), !dbg !9
   store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !9
   ret void
-19:
-  %20 = call i8 addrspace(1)* @_bal_panic_construct(i64 516), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %20)
+20:
+  %21 = call i8 addrspace(1)* @_bal_panic_construct(i64 516), !dbg !7
+  call void @_bal_panic(i8 addrspace(1)* %21)
   unreachable
 }
 !llvm.module.flags = !{!0}

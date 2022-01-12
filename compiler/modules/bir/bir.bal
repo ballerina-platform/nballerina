@@ -172,7 +172,9 @@ public enum InsnName {
     INSN_LIST_GET,
     INSN_LIST_SET,
     INSN_MAPPING_CONSTRUCT_RW,
+    // MappingGetInsn has two potential names
     INSN_MAPPING_GET,
+    INSN_MAPPING_FILLING_GET,
     INSN_MAPPING_SET,
     INSN_STR_CONCAT,
     INSN_ERROR_CONSTRUCT,
@@ -368,6 +370,8 @@ public type ListConstructInsn readonly & record {|
 public type ListGetInsn readonly & record {|
     *InsnBase;
     INSN_LIST_GET name = INSN_LIST_GET;
+    // fill must be false unless the result type is a subtype of list or mapping
+    boolean fill = false;  // if true do a filling read
     Register result;
     [Register, IntOperand] operands;
 |};
@@ -391,11 +395,12 @@ public type MappingConstructInsn readonly & record {|
 |};
 
 # Gets a member of a mapping with a specified key.
-# This returns nil if there is no such member.
-# So this is not a PPI
+# INSN_MAPPING_GET returns nil if there is no such member; this is not a PPI.
+# INSN_MAPPING_FILLING_GET fills if there is no such member; this is a PPI
+# The filling version 
 public type MappingGetInsn readonly & record {|
     *InsnBase;
-    INSN_MAPPING_GET name = INSN_MAPPING_GET;
+    INSN_MAPPING_GET|INSN_MAPPING_FILLING_GET name;
     Register result;
     [Register, StringOperand] operands;
 |};
@@ -625,6 +630,7 @@ final readonly & map<true> PPI_INSNS = {
     [INSN_TYPE_CAST]: true,
     [INSN_LIST_GET]: true,
     [INSN_LIST_SET]: true,
+    [INSN_MAPPING_FILLING_GET]: true,
     [INSN_MAPPING_SET]: true
 };
 

@@ -5,31 +5,31 @@ declare i64 @_bal_tagged_to_int(i8 addrspace(1)*) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 declare i8 addrspace(1)* @_bal_int_to_tagged(i64)
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca i1
-  %2 = alloca i8 addrspace(1)*
+  %1 = alloca i8 addrspace(1)*
+  %2 = alloca i1
   %3 = alloca i8 addrspace(1)*
-  %4 = alloca i1
-  %5 = alloca i8 addrspace(1)*
+  %4 = alloca i8 addrspace(1)*
+  %5 = alloca i1
   %6 = alloca i8 addrspace(1)*
-  %7 = alloca i1
-  %8 = alloca i8 addrspace(1)*
+  %7 = alloca i8 addrspace(1)*
+  %8 = alloca i1
   %9 = alloca i8 addrspace(1)*
-  %10 = alloca i1
-  %11 = alloca i8 addrspace(1)*
+  %10 = alloca i8 addrspace(1)*
+  %11 = alloca i1
   %12 = alloca i8 addrspace(1)*
   %n = alloca i64
-  %13 = alloca i1
-  %14 = alloca i8 addrspace(1)*
+  %13 = alloca i8 addrspace(1)*
+  %14 = alloca i1
   %15 = alloca i8 addrspace(1)*
-  %16 = alloca i1
-  %17 = alloca i8 addrspace(1)*
+  %16 = alloca i8 addrspace(1)*
+  %17 = alloca i1
   %18 = alloca i8 addrspace(1)*
   %b = alloca i1
-  %19 = alloca i1
-  %20 = alloca i8 addrspace(1)*
+  %19 = alloca i8 addrspace(1)*
+  %20 = alloca i1
   %21 = alloca i8 addrspace(1)*
-  %22 = alloca i1
-  %23 = alloca i8 addrspace(1)*
+  %22 = alloca i8 addrspace(1)*
+  %23 = alloca i1
   %24 = alloca i8 addrspace(1)*
   %25 = alloca i8
   %26 = load i8*, i8** @_bal_stack_guard
@@ -37,8 +37,8 @@ define void @_B04rootmain() !dbg !5 {
   br i1 %27, label %35, label %28
 28:
   %29 = call i8 addrspace(1)* @_B_mkInt(i64 2), !dbg !12
-  store i8 addrspace(1)* %29, i8 addrspace(1)** %2, !dbg !12
-  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %2
+  store i8 addrspace(1)* %29, i8 addrspace(1)** %1, !dbg !12
+  %30 = load i8 addrspace(1)*, i8 addrspace(1)** %1
   %31 = addrspacecast i8 addrspace(1)* %30 to i8*
   %32 = ptrtoint i8* %31 to i64
   %33 = and i64 %32, 2233785415175766016
@@ -51,21 +51,21 @@ define void @_B04rootmain() !dbg !5 {
 37:
   %38 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %30)
   %39 = icmp eq i64 %38, 2
-  store i1 %39, i1* %1
+  store i1 %39, i1* %2
   br label %41
 40:
-  store i1 0, i1* %1
+  store i1 0, i1* %2
   br label %41
 41:
-  %42 = load i1, i1* %1, !dbg !13
+  %42 = load i1, i1* %2, !dbg !13
   %43 = zext i1 %42 to i64, !dbg !13
   %44 = or i64 %43, 72057594037927936, !dbg !13
   %45 = getelementptr i8, i8 addrspace(1)* null, i64 %44, !dbg !13
   call void @_Bb02ioprintln(i8 addrspace(1)* %45), !dbg !13
   store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !13
   %46 = call i8 addrspace(1)* @_B_mkInt(i64 17), !dbg !14
-  store i8 addrspace(1)* %46, i8 addrspace(1)** %5, !dbg !14
-  %47 = load i8 addrspace(1)*, i8 addrspace(1)** %5
+  store i8 addrspace(1)* %46, i8 addrspace(1)** %4, !dbg !14
+  %47 = load i8 addrspace(1)*, i8 addrspace(1)** %4
   %48 = addrspacecast i8 addrspace(1)* %47 to i8*
   %49 = ptrtoint i8* %48 to i64
   %50 = and i64 %49, 2233785415175766016
@@ -74,41 +74,41 @@ define void @_B04rootmain() !dbg !5 {
 52:
   %53 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %47)
   %54 = icmp ne i64 %53, 17
-  store i1 %54, i1* %4
+  store i1 %54, i1* %5
   br label %56
 55:
-  store i1 1, i1* %4
+  store i1 1, i1* %5
   br label %56
 56:
-  %57 = load i1, i1* %4, !dbg !15
+  %57 = load i1, i1* %5, !dbg !15
   %58 = zext i1 %57 to i64, !dbg !15
   %59 = or i64 %58, 72057594037927936, !dbg !15
   %60 = getelementptr i8, i8 addrspace(1)* null, i64 %59, !dbg !15
   call void @_Bb02ioprintln(i8 addrspace(1)* %60), !dbg !15
   store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !15
   %61 = call i8 addrspace(1)* @_B_mkBoolean(i1 1), !dbg !16
-  store i8 addrspace(1)* %61, i8 addrspace(1)** %8, !dbg !16
-  %62 = load i8 addrspace(1)*, i8 addrspace(1)** %8
+  store i8 addrspace(1)* %61, i8 addrspace(1)** %7, !dbg !16
+  %62 = load i8 addrspace(1)*, i8 addrspace(1)** %7
   %63 = zext i1 1 to i64
   %64 = or i64 %63, 72057594037927936
   %65 = getelementptr i8, i8 addrspace(1)* null, i64 %64
   %66 = icmp eq i8 addrspace(1)* %62, %65
-  store i1 %66, i1* %7
-  %67 = load i1, i1* %7, !dbg !17
+  store i1 %66, i1* %8
+  %67 = load i1, i1* %8, !dbg !17
   %68 = zext i1 %67 to i64, !dbg !17
   %69 = or i64 %68, 72057594037927936, !dbg !17
   %70 = getelementptr i8, i8 addrspace(1)* null, i64 %69, !dbg !17
   call void @_Bb02ioprintln(i8 addrspace(1)* %70), !dbg !17
   store i8 addrspace(1)* null, i8 addrspace(1)** %9, !dbg !17
   %71 = call i8 addrspace(1)* @_B_mkBoolean(i1 0), !dbg !18
-  store i8 addrspace(1)* %71, i8 addrspace(1)** %11, !dbg !18
-  %72 = load i8 addrspace(1)*, i8 addrspace(1)** %11
+  store i8 addrspace(1)* %71, i8 addrspace(1)** %10, !dbg !18
+  %72 = load i8 addrspace(1)*, i8 addrspace(1)** %10
   %73 = zext i1 0 to i64
   %74 = or i64 %73, 72057594037927936
   %75 = getelementptr i8, i8 addrspace(1)* null, i64 %74
   %76 = icmp ne i8 addrspace(1)* %72, %75
-  store i1 %76, i1* %10
-  %77 = load i1, i1* %10, !dbg !19
+  store i1 %76, i1* %11
+  %77 = load i1, i1* %11, !dbg !19
   %78 = zext i1 %77 to i64, !dbg !19
   %79 = or i64 %78, 72057594037927936, !dbg !19
   %80 = getelementptr i8, i8 addrspace(1)* null, i64 %79, !dbg !19
@@ -116,8 +116,8 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !19
   store i64 2, i64* %n
   %81 = call i8 addrspace(1)* @_B_mkInt(i64 2), !dbg !20
-  store i8 addrspace(1)* %81, i8 addrspace(1)** %14, !dbg !20
-  %82 = load i8 addrspace(1)*, i8 addrspace(1)** %14
+  store i8 addrspace(1)* %81, i8 addrspace(1)** %13, !dbg !20
+  %82 = load i8 addrspace(1)*, i8 addrspace(1)** %13
   %83 = load i64, i64* %n
   %84 = addrspacecast i8 addrspace(1)* %82 to i8*
   %85 = ptrtoint i8* %84 to i64
@@ -127,13 +127,13 @@ define void @_B04rootmain() !dbg !5 {
 88:
   %89 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %82)
   %90 = icmp eq i64 %89, %83
-  store i1 %90, i1* %13
+  store i1 %90, i1* %14
   br label %92
 91:
-  store i1 0, i1* %13
+  store i1 0, i1* %14
   br label %92
 92:
-  %93 = load i1, i1* %13, !dbg !21
+  %93 = load i1, i1* %14, !dbg !21
   %94 = zext i1 %93 to i64, !dbg !21
   %95 = or i64 %94, 72057594037927936, !dbg !21
   %96 = getelementptr i8, i8 addrspace(1)* null, i64 %95, !dbg !21
@@ -141,9 +141,9 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* null, i8 addrspace(1)** %15, !dbg !21
   store i64 17, i64* %n
   %97 = call i8 addrspace(1)* @_B_mkInt(i64 17), !dbg !22
-  store i8 addrspace(1)* %97, i8 addrspace(1)** %17, !dbg !22
+  store i8 addrspace(1)* %97, i8 addrspace(1)** %16, !dbg !22
   %98 = load i64, i64* %n
-  %99 = load i8 addrspace(1)*, i8 addrspace(1)** %17
+  %99 = load i8 addrspace(1)*, i8 addrspace(1)** %16
   %100 = addrspacecast i8 addrspace(1)* %99 to i8*
   %101 = ptrtoint i8* %100 to i64
   %102 = and i64 %101, 2233785415175766016
@@ -152,13 +152,13 @@ define void @_B04rootmain() !dbg !5 {
 104:
   %105 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %99)
   %106 = icmp ne i64 %105, %98
-  store i1 %106, i1* %16
+  store i1 %106, i1* %17
   br label %108
 107:
-  store i1 1, i1* %16
+  store i1 1, i1* %17
   br label %108
 108:
-  %109 = load i1, i1* %16, !dbg !23
+  %109 = load i1, i1* %17, !dbg !23
   %110 = zext i1 %109 to i64, !dbg !23
   %111 = or i64 %110, 72057594037927936, !dbg !23
   %112 = getelementptr i8, i8 addrspace(1)* null, i64 %111, !dbg !23
@@ -166,15 +166,15 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* null, i8 addrspace(1)** %18, !dbg !23
   store i1 1, i1* %b
   %113 = call i8 addrspace(1)* @_B_mkBoolean(i1 1), !dbg !24
-  store i8 addrspace(1)* %113, i8 addrspace(1)** %20, !dbg !24
-  %114 = load i8 addrspace(1)*, i8 addrspace(1)** %20
+  store i8 addrspace(1)* %113, i8 addrspace(1)** %19, !dbg !24
+  %114 = load i8 addrspace(1)*, i8 addrspace(1)** %19
   %115 = load i1, i1* %b
   %116 = zext i1 %115 to i64
   %117 = or i64 %116, 72057594037927936
   %118 = getelementptr i8, i8 addrspace(1)* null, i64 %117
   %119 = icmp eq i8 addrspace(1)* %114, %118
-  store i1 %119, i1* %19
-  %120 = load i1, i1* %19, !dbg !25
+  store i1 %119, i1* %20
+  %120 = load i1, i1* %20, !dbg !25
   %121 = zext i1 %120 to i64, !dbg !25
   %122 = or i64 %121, 72057594037927936, !dbg !25
   %123 = getelementptr i8, i8 addrspace(1)* null, i64 %122, !dbg !25
@@ -182,15 +182,15 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* null, i8 addrspace(1)** %21, !dbg !25
   store i1 0, i1* %b
   %124 = call i8 addrspace(1)* @_B_mkBoolean(i1 0), !dbg !26
-  store i8 addrspace(1)* %124, i8 addrspace(1)** %23, !dbg !26
+  store i8 addrspace(1)* %124, i8 addrspace(1)** %22, !dbg !26
   %125 = load i1, i1* %b
-  %126 = load i8 addrspace(1)*, i8 addrspace(1)** %23
+  %126 = load i8 addrspace(1)*, i8 addrspace(1)** %22
   %127 = zext i1 %125 to i64
   %128 = or i64 %127, 72057594037927936
   %129 = getelementptr i8, i8 addrspace(1)* null, i64 %128
   %130 = icmp ne i8 addrspace(1)* %126, %129
-  store i1 %130, i1* %22
-  %131 = load i1, i1* %22, !dbg !27
+  store i1 %130, i1* %23
+  %131 = load i1, i1* %23, !dbg !27
   %132 = zext i1 %131 to i64, !dbg !27
   %133 = or i64 %132, 72057594037927936, !dbg !27
   %134 = getelementptr i8, i8 addrspace(1)* null, i64 %133, !dbg !27

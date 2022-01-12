@@ -150,28 +150,30 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[basic];
     int tid = defns.length();
     llvm:StructType llType;
-    llvm:ConstValue? initValue;
     if basic == STRUCTURE_LIST {
-        llType = llListDescType;
-        // The initializer is set later, because of the possibility of
-        // recursion via `getFillerDesc`.
-        initValue = ();
+        llType = llListDescType;        
     }
     else {
-        t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType);
-        llType = createMappingDescType(tid, mat);
-        // SUBSET move this later, when we do filling of mapping values
-        initValue = createMappingDescInit(cx, tid, mat);
+        llType = createMappingDescType(cx.tc, tid, semType);        
     }
-    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, initializer=initValue, isConstant=true, linkage=linkage);
+    // The initializer is set later, because of the possibility of
+    // recursion via `getFillerDesc`.
+    llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, isConstant=true, linkage=linkage);
     defns.add({ llType, ptr, semType, tid });
+    llvm:ConstValue initValue;
     if basic == STRUCTURE_LIST {
-        cx.llMod.setInitializer(ptr, createListDescInit(cx, tid, <t:SemType>t:arrayMemberType(cx.tc, semType)));
+        initValue = createListDescInit(cx, tid, semType);
     }
+    else {
+        initValue = createMappingDescInit(cx, tid, semType);
+    }
+    cx.llMod.setInitializer(ptr, initValue);
+
     return ptr;
 }
 
-function createListDescInit(InitModuleContext cx, int tid, t:SemType memberType) returns llvm:ConstValue {
+function createListDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {
+    t:SemType memberType = <t:SemType>t:arrayMemberType(cx.tc, semType);
     FunctionRef[] functionRefs = getListDescFunctionRefs(cx, memberType);
     llvm:Value[] initStructValues = [llvm:constInt(LLVM_TID, tid)];
     foreach FunctionRef fr in functionRefs {
@@ -182,12 +184,30 @@ function createListDescInit(InitModuleContext cx, int tid, t:SemType memberType)
     return cx.llContext.constStruct(initStructValues);    
 }
 
+function createMappingDescType(t:Context tc, int tid, t:SemType semType) returns llvm:StructType {
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(tc, semType);
+    // tid, fieldCount, restField, individualFields...
+    return llvm:structType([LLVM_TID, "i32", LLVM_MEMBER_TYPE, llStructureDescPtrType, llvm:arrayType(LLVM_MEMBER_TYPE, mat.names.length())]);
+}
+
+function createMappingDescInit(InitModuleContext cx, int tid, t:SemType semType) returns llvm:ConstValue {  
+    t:MappingAtomicType mat = <t:MappingAtomicType>t:mappingAtomicTypeRw(cx.tc, semType);
+    llvm:ConstValue[] llFields = from var ty in mat.types select getMemberType(cx, ty);
+    return cx.llContext.constStruct([
+        llvm:constInt(LLVM_TID, tid),
+        llvm:constInt("i32", llFields.length()),
+        getMemberType(cx, mat.rest),
+        getFillerDesc(cx, mat.rest),
+        cx.llContext.constArray(LLVM_MEMBER_TYPE, llFields)
+    ]);
+}
+
 // Type of the value should be llStructureDescPtrType
 function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:ConstPointerValue {
     StructureBasicType? basic = fillableStructureBasicType(cx.tc, memberType);
     // JBUG narrowing does not work if you say `== ()`
     if basic is () {
-        return llvm:constNull(llStructureDescPtrType);
+        return llNoFillerDesc;
     }
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[basic];
     InherentTypeDefn? existingDefn = defns[memberType];
@@ -209,26 +229,12 @@ function fillableStructureBasicType(t:Context tc, t:SemType semType) returns Str
         }
     }
     if basic == STRUCTURE_MAPPING {
-        if t:mappingAtomicTypeRw(tc, semType) != () {
+        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, semType);
+        if  mat != () && mat.names.length() == 0 {
             return basic;
         }
     }
     return ();
-}
-
-function createMappingDescType(int tid, t:MappingAtomicType mat) returns llvm:StructType {
-    // tid, fieldCount, restField, individualFields...
-    return llvm:structType([LLVM_TID, "i32", LLVM_MEMBER_TYPE, llvm:arrayType(LLVM_MEMBER_TYPE, mat.names.length())]);
-}
-
-function createMappingDescInit(InitModuleContext cx, int tid, t:MappingAtomicType mat) returns llvm:ConstValue {    
-    llvm:ConstValue[] llFields = from var ty in mat.types select getMemberType(cx, ty);
-    return cx.llContext.constStruct([
-        llvm:constInt(LLVM_TID, tid),
-        llvm:constInt("i32", llFields.length()),
-        getMemberType(cx, mat.rest),
-        cx.llContext.constArray(LLVM_MEMBER_TYPE, llFields)
-    ]);
 }
 
 function getMemberType(InitModuleContext cx, t:SemType memberType) returns llvm:ConstValue {

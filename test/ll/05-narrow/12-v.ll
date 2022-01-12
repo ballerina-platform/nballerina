@@ -30,12 +30,13 @@ define internal void @_B_foo(i8 addrspace(1)* %0) !dbg !7 {
   %i = alloca i64
   %3 = alloca i1
   %4 = alloca i64
+  %x.2 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i8 addrspace(1)*
   %7 = alloca i8
   %8 = load i8*, i8** @_bal_stack_guard
   %9 = icmp ult i8* %7, %8
-  br i1 %9, label %40, label %10
+  br i1 %9, label %41, label %10
 10:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v
   %11 = load i8 addrspace(1)*, i8 addrspace(1)** %v
@@ -70,7 +71,7 @@ define internal void @_B_foo(i8 addrspace(1)* %0) !dbg !7 {
   %29 = load i64, i64* %x.1
   %30 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %29, i64 1)
   %31 = extractvalue {i64, i1} %30, 1
-  br i1 %31, label %46, label %42
+  br i1 %31, label %47, label %43
 32:
   br label %33
 33:
@@ -79,29 +80,31 @@ define internal void @_B_foo(i8 addrspace(1)* %0) !dbg !7 {
   store i64 %35, i64* %i
   br label %21
 36:
-  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %x, !dbg !12
-  call void @_Bb02ioprintln(i8 addrspace(1)* %37), !dbg !12
+  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %x
+  store i8 addrspace(1)* %37, i8 addrspace(1)** %x.2
+  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2, !dbg !12
+  call void @_Bb02ioprintln(i8 addrspace(1)* %38), !dbg !12
   store i8 addrspace(1)* null, i8 addrspace(1)** %5, !dbg !12
   ret void
-38:
-  %39 = load i8 addrspace(1)*, i8 addrspace(1)** %6
-  call void @_bal_panic(i8 addrspace(1)* %39)
+39:
+  %40 = load i8 addrspace(1)*, i8 addrspace(1)** %6
+  call void @_bal_panic(i8 addrspace(1)* %40)
   unreachable
-40:
-  %41 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052), !dbg !11
-  call void @_bal_panic(i8 addrspace(1)* %41)
+41:
+  %42 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052), !dbg !11
+  call void @_bal_panic(i8 addrspace(1)* %42)
   unreachable
-42:
-  %43 = extractvalue {i64, i1} %30, 0
-  store i64 %43, i64* %4
-  %44 = load i64, i64* %4
-  %45 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %44)
-  store i8 addrspace(1)* %45, i8 addrspace(1)** %x
+43:
+  %44 = extractvalue {i64, i1} %30, 0
+  store i64 %44, i64* %4
+  %45 = load i64, i64* %4
+  %46 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %45)
+  store i8 addrspace(1)* %46, i8 addrspace(1)** %x
   br label %25
-46:
-  %47 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585), !dbg !11
-  store i8 addrspace(1)* %47, i8 addrspace(1)** %6
-  br label %38
+47:
+  %48 = call i8 addrspace(1)* @_bal_panic_construct(i64 3585), !dbg !11
+  store i8 addrspace(1)* %48, i8 addrspace(1)** %6
+  br label %39
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}

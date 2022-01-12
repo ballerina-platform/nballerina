@@ -29,8 +29,8 @@ define internal i64 @_B_foo(i64 %0) !dbg !7 {
   %i = alloca i64
   %2 = alloca i1
   %3 = alloca i64
-  %4 = alloca i1
-  %5 = alloca i64
+  %4 = alloca i64
+  %5 = alloca i1
   %6 = alloca i8 addrspace(1)*
   %7 = alloca i1
   %8 = alloca i64
@@ -101,11 +101,11 @@ define internal i64 @_B_foo(i64 %0) !dbg !7 {
   br label %36
 49:
   %50 = extractvalue {i64, i1} %45, 0
-  store i64 %50, i64* %5
-  %51 = load i64, i64* %5
+  store i64 %50, i64* %4
+  %51 = load i64, i64* %4
   %52 = icmp eq i64 %51, 2
-  store i1 %52, i1* %4
-  %53 = load i1, i1* %4
+  store i1 %52, i1* %5
+  %53 = load i1, i1* %5
   br i1 %53, label %27, label %30
 54:
   %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 4609), !dbg !12

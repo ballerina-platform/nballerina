@@ -558,7 +558,7 @@ public readonly class SourceFile {
     }
 
     public function qNameRange(Position startPos) returns d:Range {
-        var[lineNum, startColumnNum] = self.lineColumn(startPos);
+        var [lineNum, startColumnNum] = self.lineColumn(startPos);
         ScannedLine line = self.scannedLine(lineNum);
         int endColumnNum = qualifiedIdentifierEndCodePointIndex(line, startColumnNum);
         return { startPos, endPos: createPosition(lineNum, endColumnNum) };
@@ -571,8 +571,9 @@ public readonly class SourceFile {
     }
 }
 
+// XXX this should be robust no matter what fragments are at startCodePointIndex
 function qualifiedIdentifierEndCodePointIndex(ScannedLine line, int startCodePointIndex) returns int {
-    var[fragIndex, fragmentIndex] = scanLineFragIndex(line, startCodePointIndex);
+    var [fragIndex, fragmentIndex] = scanLineFragIndex(line, startCodePointIndex);
     string[] fragments = line.fragments;
     FragCode[] fragCodes = line.fragCodes;
     int endCodePointIndex = startCodePointIndex;
@@ -596,6 +597,9 @@ function qualifiedIdentifierEndCodePointIndex(ScannedLine line, int startCodePoi
 
 function tokenEndCodePointIndex(string[] fragments, FragCode[] fragCodes, int startCodePointIndex) returns int {
     int fragmentIndex = fragmentCountUpTo(fragments, startCodePointIndex);
+    if fragmentIndex == fragCodes.length() {
+        return startCodePointIndex;
+    }
     match fragCodes[fragmentIndex] {
         FRAG_STRING_OPEN  => {
             return stringTokenEndCodePointIndex(fragments, fragCodes, startCodePointIndex, fragmentIndex);

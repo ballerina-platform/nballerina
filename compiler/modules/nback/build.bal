@@ -43,6 +43,8 @@ const PANIC_MAPPING_STORE = 9;
 
 type PanicIndex PANIC_ARITHMETIC_OVERFLOW|PANIC_DIVIDE_BY_ZERO|PANIC_TYPE_CAST|PANIC_STACK_OVERFLOW|PANIC_INDEX_OUT_OF_BOUNDS;
 
+final llvm:StructType LLVM_TAGGED_WITH_PANIC_CODE = llvm:structType([LLVM_TAGGED_PTR, LLVM_INT]);
+
 final t:UniformTypeBitSet POTENTIALLY_EXACT = t:uniformTypeUnion(t:LIST_RW|t:MAPPING_RW);
 
 type RuntimeFunction readonly & record {|
@@ -127,6 +129,18 @@ final bir:ModuleId runtimeModule = {
     org: "ballerinai",
     names: ["runtime"]
 };
+
+function buildCheckPanicCode(llvm:Builder builder, Scaffold scaffold, llvm:Value valWithErr, bir:Position pos) returns llvm:Value {
+    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+    llvm:BasicBlock errBlock = scaffold.addBasicBlock();
+    llvm:Value panicCode = builder.extractValue(valWithErr, 1);
+    builder.condBr(builder.iCmp("ne", panicCode, llvm:constInt("i64", 0)), errBlock, continueBlock);
+    builder.positionAtEnd(errBlock);
+    builder.store(buildErrorForPanic(builder, scaffold, panicCode, pos), scaffold.panicAddress());
+    builder.br(scaffold.getOnPanic());
+    builder.positionAtEnd(continueBlock);
+    return builder.extractValue(valWithErr, 0);
+}
 
 function buildErrorForConstPanic(llvm:Builder builder, Scaffold scaffold, PanicIndex panicIndex, bir:Position pos) returns llvm:PointerValue {
     return buildErrorForPackedPanic(builder, scaffold, llvm:constInt(LLVM_INT, panicIndex | (scaffold.lineNumber(pos) << 8)), pos);

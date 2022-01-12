@@ -37,7 +37,7 @@ define void @_B04rootmain() !dbg !5 {
   %19 = load i8 addrspace(1)*, i8 addrspace(1)** %d2
   %20 = call {i8 addrspace(1)*, i64} @_bal_decimal_div(i8 addrspace(1)* %18, i8 addrspace(1)* %19)
   %21 = extractvalue {i8 addrspace(1)*, i64} %20, 1
-  %22 = icmp ugt i64 %21, 0
+  %22 = icmp ne i64 %21, 0
   br i1 %22, label %37, label %27
 23:
   %24 = load i8 addrspace(1)*, i8 addrspace(1)** %11
@@ -61,7 +61,7 @@ define void @_B04rootmain() !dbg !5 {
   %33 = load i8 addrspace(1)*, i8 addrspace(1)** %d2
   %34 = call {i8 addrspace(1)*, i64} @_bal_decimal_div(i8 addrspace(1)* %32, i8 addrspace(1)* %33)
   %35 = extractvalue {i8 addrspace(1)*, i64} %34, 1
-  %36 = icmp ugt i64 %35, 0
+  %36 = icmp ne i64 %35, 0
   br i1 %36, label %50, label %40
 37:
   %38 = or i64 %21, 1280
@@ -82,7 +82,7 @@ define void @_B04rootmain() !dbg !5 {
   %46 = load i8 addrspace(1)*, i8 addrspace(1)** %d2
   %47 = call {i8 addrspace(1)*, i64} @_bal_decimal_div(i8 addrspace(1)* %45, i8 addrspace(1)* %46)
   %48 = extractvalue {i8 addrspace(1)*, i64} %47, 1
-  %49 = icmp ugt i64 %48, 0
+  %49 = icmp ne i64 %48, 0
   br i1 %49, label %63, label %53
 50:
   %51 = or i64 %35, 2304
@@ -103,7 +103,7 @@ define void @_B04rootmain() !dbg !5 {
   %59 = load i8 addrspace(1)*, i8 addrspace(1)** %d2
   %60 = call {i8 addrspace(1)*, i64} @_bal_decimal_div(i8 addrspace(1)* %58, i8 addrspace(1)* %59)
   %61 = extractvalue {i8 addrspace(1)*, i64} %60, 1
-  %62 = icmp ugt i64 %61, 0
+  %62 = icmp ne i64 %61, 0
   br i1 %62, label %76, label %66
 63:
   %64 = or i64 %48, 3328
@@ -124,7 +124,7 @@ define void @_B04rootmain() !dbg !5 {
   %72 = load i8 addrspace(1)*, i8 addrspace(1)** %d2
   %73 = call {i8 addrspace(1)*, i64} @_bal_decimal_div(i8 addrspace(1)* %71, i8 addrspace(1)* %72)
   %74 = extractvalue {i8 addrspace(1)*, i64} %73, 1
-  %75 = icmp ugt i64 %74, 0
+  %75 = icmp ne i64 %74, 0
   br i1 %75, label %82, label %79
 76:
   %77 = or i64 %61, 4352

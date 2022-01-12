@@ -4,7 +4,7 @@
 
 #define ARRAY_LENGTH_MAX ((int64_t)(INT64_MAX/sizeof(TaggedPtr)))
 
-static inline Fillability createArrayFiller(ListDescPtr ldp, TaggedPtr *valuePtr) {
+static inline Fillability arrayCreateFiller(ListDescPtr ldp, TaggedPtr *valuePtr) {
     return _bal_structure_create_filler(ldp->memberType, ldp->fillerDesc, valuePtr);
 }
 
@@ -79,7 +79,7 @@ PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val
     Fillability fill;
     if (index > ap->length) {
         // we have a gap to fill
-        fill = createArrayFiller(ldp, &filler);
+        fill = arrayCreateFiller(ldp, &filler);
         if (fill == FILL_NONE) {
             // Note that we panic before trying to grow the array
             return PANIC_NO_FILLER;
@@ -101,7 +101,7 @@ PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val
         ap->members[ap->length] = filler;
         for (int64_t i = ap->length + 1; i < index; i++) {
             if (fill == FILL_EACH) {
-                (void)createArrayFiller(ldp, &filler);
+                (void)arrayCreateFiller(ldp, &filler);
             }
             ap->members[i] = filler;
         }
@@ -109,6 +109,48 @@ PanicCode _bal_list_generic_set_tagged(TaggedPtr p, int64_t index, TaggedPtr val
     ap->members[index] = val;
     ap->length = index + 1;
     return 0;
+}
+
+TaggedPtrPanicCode _bal_list_filling_get(TaggedPtr p, int64_t index) {
+    TaggedPtrPanicCode result;
+    ListPtr lp = taggedToPtr(p);
+    GC TaggedPtrArray *ap = &(lp->tpArray);
+    if (likely((uint64_t)index < (uint64_t)ap->length)) {
+        result.ptr = ap->members[index];
+        result.panicCode = 0;
+        return result;
+    }
+    if (unlikely(index < 0)) {
+        result.panicCode = PANIC_INDEX_OUT_OF_BOUNDS;
+        return result;
+    }
+    ListDescPtr ldp = lp->desc;
+    TaggedPtr filler;
+    Fillability fill = arrayCreateFiller(ldp, &filler);
+    if (fill == FILL_NONE) {
+        result.panicCode = PANIC_NO_FILLER;
+        return result;
+    }
+    if (index >= ap->capacity) {
+        if (index >= ARRAY_LENGTH_MAX) {
+            result.panicCode = PANIC_LIST_TOO_LONG;
+            return result;
+        }
+        _bal_array_grow(&(lp->gArray), index + 1, TAGGED_PTR_SHIFT);
+    }
+    ap->members[index] = filler;
+    result.ptr = filler;
+    result.panicCode = 0;
+    for (int64_t i = ap->length; i < index; i++) {
+        // Probably will only call this when FILL_EACH would be true,
+        // but let's handle all cases.
+        if (likely(fill == FILL_EACH)) {
+            (void)arrayCreateFiller(ldp, &filler);
+        }
+        ap->members[i] = filler;
+    }
+    ap->length = index + 1;
+    return result;
 }
 
 PanicCode _bal_list_generic_set_float(TaggedPtr p, int64_t index, double val) {

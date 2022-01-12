@@ -4,7 +4,6 @@ import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
 final llvm:StructType LLVM_INT_WITH_OVERFLOW = llvm:structType(["i64", "i1"]);
-final llvm:StructType LLVM_TAGGED_WITH_PANIC_CODE = llvm:structType([LLVM_TAGGED_PTR, LLVM_INT]);
 
 final RuntimeFunction floatToIntFunction = {
     name: "float_to_int",
@@ -297,18 +296,6 @@ function buildConvertIntToDecimal(llvm:Builder builder, Scaffold scaffold, llvm:
 function buildConvertFloatToDecimal(llvm:Builder builder, Scaffold scaffold, llvm:Value floatVal, bir:ConvertToDecimalInsn insn) {
     llvm:Value resultWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(decimalFromFloatFunction), [floatVal]);
     buildStoreDecimal(builder, scaffold, buildCheckPanicCode(builder, scaffold, resultWithErr, insn.pos), insn.result);   
-}
-
-function buildCheckPanicCode(llvm:Builder builder, Scaffold scaffold, llvm:Value valWithErr, bir:Position pos) returns llvm:Value {
-    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
-    llvm:BasicBlock errBlock = scaffold.addBasicBlock();
-    llvm:Value panicCode = builder.extractValue(valWithErr, 1);
-    builder.condBr(builder.iCmp("ne", panicCode, llvm:constInt("i64", 0)), errBlock, continueBlock);
-    builder.positionAtEnd(errBlock);
-    builder.store(buildErrorForPanic(builder, scaffold, panicCode, pos), scaffold.panicAddress());
-    builder.br(scaffold.getOnPanic());
-    builder.positionAtEnd(continueBlock);
-    return builder.extractValue(valWithErr, 0);
 }
 
 function buildDecimalNegate(llvm:Builder builder, Scaffold scaffold, bir:DecimalNegateInsn insn) {

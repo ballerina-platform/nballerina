@@ -1,5 +1,8 @@
 # Language subset 12
 
+For programs that are in the subset, the compiler should conform to the Ballerina Language Specification. For this subset,
+the target version of the Ballerina Language Specification is the [2022-01-06 draft](https://ballerina.io/spec/lang/master/).
+
 ## Summary
 
 * Only values allowed are of basic type nil, boolean, int, float, decimal, string, list, mapping and error.
@@ -7,7 +10,7 @@
    * function definitions
       * no default arguments
       * no rest arguments
-      * may be declared public
+      * may be declared `public`
    * const definitions
       * not of structured types
    * type definitions
@@ -29,11 +32,11 @@
    * local variable declaration with explicit type descriptor and initializer
       * binding pattern is either an identifier or `_`
    * assignment
-      * to variable `v = E;`
-      * to member of a list or mapping `v[E1] = E2;`
-      * to a field `v.x.y.z = E`
-      * to wildcard binding pattern `_ = E`
-      * compound assignment `op=`
+      * assignment statement `L = E;`
+      * compound assignment `L op= E;`
+      * lvalues for fields `L.x`
+      * lvalues for a list or mapping `L[E]`
+      * assignment to wildcard binding pattern `_ = E;`
    * `return` statement
    * `if`/`else` statements
    * `while` statement
@@ -173,16 +176,15 @@ destructuring-assign-stmt = wildcard-binding-pattern "=" expression ";"
 wildcard-binding-pattern = "_"
 
 lvexpr =
-   chainable-lvexpr
+   variable-reference-lvexpr
+   | field-access-lvexpr
    | member-access-lvexpr
 
-chainable-lvexpr = variable-reference-lvexpr | field-access-lvexpr
+variable-reference-lvexpr = identifier
 
-member-access-lvexpr = chainable-lvexpr "[" expression "]"
+field-access-lvexpr =lvexpr "." identifier
 
-field-access-lvexpr = chainable-lvexpr "." identifier
-
-variable-reference-lvexpr = variable-reference
+member-access-lvexpr = lvexpr "[" expression "]"
 
 return-stmt = "return" [expression] ";"
 
@@ -324,9 +326,7 @@ qualified-identifier = module-prefix ":" identifier
 
 module-prefix = identifier
 
-variable-reference-expr = variable-reference
-
-variable-reference = identifier | qualified-identifier # can refer to parameter, local variable or constant
+variable-reference-expr = identifier | qualified-identifier # can refer to parameter, local variable or constant
 
 // tokens
 int-literal = (as in Ballerina language spec)
@@ -379,17 +379,5 @@ Two kinds of `import` are supported.
 * `decimal` type has been added
 * inclusive record types have been added
 * `anydata` type has been added
-
-## Implemented spec changes since 2021R1
-
-* [#752](https://github.com/ballerina-platform/ballerina-spec/issues/752) - `!is` operator
-* [#791](https://github.com/ballerina-platform/ballerina-spec/issues/791) - restrict characters in organization/module name in an import declaration
-* [#814](https://github.com/ballerina-platform/ballerina-spec/issues/814) - improved typing rules for `==` and `!=`
-* [#827](https://github.com/ballerina-platform/ballerina-spec/issues/827#issuecomment-895601520) - improved type narrowing for `match` statement
-* [#887](https://github.com/ballerina-platform/ballerina-spec/issues/887) - improved treatment of unreachability
-* [#902](https://github.com/ballerina-platform/ballerina-spec/issues/902) - expression has a singleton type when its subexpressions have singleton type
-* [#904](https://github.com/ballerina-platform/ballerina-spec/issues/904) - restrict assignment to type-narrowed variables within loops
-* [#905](https://github.com/ballerina-platform/ballerina-spec/issues/905) - disallow trailing dot in floating-point literals
-* [#970](https://github.com/ballerina-platform/ballerina-spec/issues/970#issuecomment-952463711) - disallow white space in qualified identifier
-* [#991](https://github.com/ballerina-platform/ballerina-spec/issues/991) - clarify that `null` is allowed as a type descriptor
-
+* filling-read operation on lvalues is supported (e.g. `x[17][21] = y;`)
+* the compiler is up-to-date with the 2022-01-06 draft of the Ballerina Language Specification

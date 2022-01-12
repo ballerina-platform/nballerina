@@ -1,3 +1,4 @@
+import wso2/nballerina.comm.err;
 import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
@@ -38,10 +39,28 @@ final RuntimeFunction listConstructFunction = {
     attrs: []
 };
 
+final RuntimeFunction listFillingGetFunction = {
+    name: "list_filling_get",
+    ty: {
+        returnType: LLVM_TAGGED_WITH_PANIC_CODE,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_INT]
+    },
+    attrs: ["readonly"]
+};
+
 final RuntimeFunction mappingGetFunction = {
     name: "mapping_get",
     ty: {
         returnType: LLVM_TAGGED_PTR,
+        paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction mappingFillingGetFunction = {
+    name: "mapping_filling_get",
+    ty: {
+        returnType: LLVM_TAGGED_WITH_PANIC_CODE,
         paramTypes: [LLVM_TAGGED_PTR, LLVM_TAGGED_PTR]
     },
     attrs: ["readonly"]
@@ -175,33 +194,42 @@ function buildListConstruct(llvm:Builder builder, Scaffold scaffold, bir:ListCon
 }
 
 function buildListGet(llvm:Builder builder, Scaffold scaffold, bir:ListGetInsn insn) returns BuildError? {
-    llvm:Value taggedStruct = builder.load(scaffold.address(insn.operands[0]));
-    llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
-    // struct is the untagged pointer to the struct
-    llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
-                                                                               [taggedStruct, llvm:constInt(LLVM_INT, POINTER_MASK)]),
-                                               heapPointerType(llListType));
-    llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
-    llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
-    builder.condBr(builder.iCmp("ult",
-                                index,
-                                builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)]), ALIGN_HEAP)),
-                   continueBlock,
-                   outOfBoundsBlock);
-    builder.positionAtEnd(outOfBoundsBlock);
-    builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_INDEX_OUT_OF_BOUNDS, insn.pos), scaffold.panicAddress());
-    builder.br(scaffold.getOnPanic());
-    builder.positionAtEnd(continueBlock);
-
-    llvm:BasicBlock? bbJoin = ();
     t:SemType memberType = t:listMemberType(scaffold.typeContext(), insn.operands[0].semType);
     ListRepr repr = memberTypeToListRepr(memberType);
-    if repr.isSpecialized {
-        bbJoin = buildSpecializedListGet(builder, scaffold, taggedStruct, struct, index, repr, insn.result);
+    llvm:Value taggedStruct = builder.load(scaffold.address(insn.operands[0]));
+    llvm:Value index = buildInt(builder, scaffold, insn.operands[1]);
+    llvm:BasicBlock? bbJoin = ();
+    llvm:Value member;
+    if insn.fill {
+        if repr.isSpecialized {
+            panic err:impossible("filling-get with type that has specialization");
+        }
+        llvm:Value memberWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(listFillingGetFunction), [taggedStruct, index]);
+        member = buildCheckPanicCode(builder, scaffold, memberWithErr, insn.pos);
     }
-    llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP);
-    llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, repr.listDescGetIndex)]), ALIGN_HEAP);
-    llvm:Value member = <llvm:Value>builder.call(func, [taggedStruct, index]);
+    else {
+        // struct is the untagged pointer to the struct
+        llvm:PointerValue struct = builder.bitCast(<llvm:PointerValue>builder.call(scaffold.getIntrinsicFunction("ptrmask.p1i8.i64"),
+                                                                                   [taggedStruct, llvm:constInt(LLVM_INT, POINTER_MASK)]),
+                                                   heapPointerType(llListType));
+        llvm:BasicBlock continueBlock = scaffold.addBasicBlock();
+        llvm:BasicBlock outOfBoundsBlock = scaffold.addBasicBlock();
+        builder.condBr(builder.iCmp("ult",
+                                    index,
+                                    builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 1)]), ALIGN_HEAP)),
+                       continueBlock,
+                       outOfBoundsBlock);
+        builder.positionAtEnd(outOfBoundsBlock);
+        builder.store(buildErrorForConstPanic(builder, scaffold, PANIC_INDEX_OUT_OF_BOUNDS, insn.pos), scaffold.panicAddress());
+        builder.br(scaffold.getOnPanic());
+        builder.positionAtEnd(continueBlock);
+        if repr.isSpecialized {
+            bbJoin = buildSpecializedListGet(builder, scaffold, taggedStruct, struct, index, repr, insn.result);
+        }
+        llvm:PointerValue desc = <llvm:PointerValue>builder.load(builder.getElementPtr(struct, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, 0)]), ALIGN_HEAP);
+        llvm:PointerValue func = <llvm:PointerValue>builder.load(builder.getElementPtr(desc, [llvm:constInt(LLVM_INT, 0), llvm:constInt(LLVM_INDEX, repr.listDescGetIndex)]), ALIGN_HEAP);
+        member = <llvm:Value>builder.call(func, [taggedStruct, index]);
+    }
     t:SemType resultType = insn.result.semType;
     if isPotentiallyExact(resultType) {
         // SUBSET tuples will need to do something analogous to`isMappingMemberTypeExact``
@@ -325,18 +353,22 @@ function buildMappingGet(llvm:Builder builder, Scaffold scaffold, bir:MappingGet
     bir:Register mappingReg = insn.operands[0];
     bir:StringOperand keyOperand = insn.operands[1];
     int? fieldIndex = mappingFieldIndex(scaffold.typeContext(), mappingReg.semType, keyOperand);
+    boolean fill;
     RuntimeFunction rf;
     llvm:Value k;
     if fieldIndex == () {
-        rf = mappingGetFunction;
+        fill = insn.name == bir:INSN_MAPPING_FILLING_GET;
+        rf = fill ? mappingFillingGetFunction : mappingGetFunction;
         k = check buildString(builder, scaffold, keyOperand);
     }
     else {
+        fill = false;
         rf = mappingIndexedGetFunction;
         k = llvm:constInt(LLVM_INT, fieldIndex);
     }
     llvm:Value mapping = builder.load(scaffold.address(mappingReg));
-    llvm:Value member = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [mapping, k]);
+    llvm:Value memberWithErr = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(rf), [mapping, k]);
+    llvm:Value member = fill ? buildCheckPanicCode(builder, scaffold, memberWithErr, insn.pos) : memberWithErr;
     t:SemType resultType = insn.result.semType;
     if isPotentiallyExact(resultType) {
         if !isMappingMemberTypeExact(scaffold.typeContext(), mappingReg.semType, keyOperand, resultType) {

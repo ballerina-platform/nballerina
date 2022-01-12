@@ -25,7 +25,7 @@ define void @_B04rootmain() !dbg !5 {
   %11 = load i8 addrspace(1)*, i8 addrspace(1)** %d2
   %12 = call {i8 addrspace(1)*, i64} @_bal_decimal_rem(i8 addrspace(1)* %10, i8 addrspace(1)* %11)
   %13 = extractvalue {i8 addrspace(1)*, i64} %12, 1
-  %14 = icmp ugt i64 %13, 0
+  %14 = icmp ne i64 %13, 0
   br i1 %14, label %22, label %19
 15:
   %16 = load i8 addrspace(1)*, i8 addrspace(1)** %3
