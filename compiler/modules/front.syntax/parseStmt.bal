@@ -116,16 +116,18 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
                 return parseMethodCallStmt(tok);
             }
         }
-        [DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false" => {
+        [DECIMAL_NUMBER, _]
+        | [STRING_LITERAL, _]
+        | "true"
+        | "false"
+        | [HEX_INT_LITERAL, _]
+        | [DECIMAL_FP_NUMBER, _, _] => {
             if tok.peek() == "." || tok.peek() == "[" {
                 return parseMethodCallStmt(tok);
             }
             else {
                 return parseVarDeclStmt(tok, startPos);
             }
-        }
-        [HEX_INT_LITERAL, _]| [DECIMAL_FP_NUMBER, _, _] => {
-            return parseVarDeclStmt(tok, startPos);
         }
     }
     return parseError(tok, "unhandled statement");

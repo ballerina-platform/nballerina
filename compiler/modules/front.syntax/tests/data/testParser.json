@@ -379,6 +379,8 @@
     { "comment" : "statement method call" },
     { "comment" : "not semantically valid" },
     ["V", "stmt", "error(\"\").message();"],
+    ["V", "stmt", "0x2.toString();"],
+    ["V", "stmt", "1.0.toString();"],
 
     { "comment" : "statement lvalue" },
     ["V", "stmt", "a.b = c;"],
