@@ -124,16 +124,11 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             }
             else if tok.peek() == "[" {
                 boolean isTypeDesc = check preparseArrayTypeDescRestoreTok(tok);
-                if isTypeDesc {
-                    return parseVarDeclStmt(tok, startPos);
-                }
-                else {
+                if !isTypeDesc {
                     return parseMethodCallStmt(tok);
                 }
             }
-            else {
-                return parseVarDeclStmt(tok, startPos);
-            }
+            return parseVarDeclStmt(tok, startPos);
         }
     }
     return parseError(tok, "unhandled statement");
