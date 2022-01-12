@@ -534,8 +534,7 @@ function codeGenMatchStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environm
     int[] assignments = [];
     var { result: matched, block: testBlock, binding } = check codeGenExpr(cx, startBlock, env, check cx.foldExpr(env, stmt.expr, ()));
     t:Context tc = cx.mod.tc;
-    // JBUG #33303 need parentheses
-    t:SemType matchedType = matched is bir:Register ? (matched.semType) : t:singleton(tc, matched);
+    t:SemType matchedType = matched is bir:Register ? matched.semType : t:singleton(tc, matched);
     // defaultCodeIndex is either () or the index of the last clause;
     // the latter case means that the match is exhaustive
     int? defaultClauseIndex = ();
@@ -778,8 +777,7 @@ function codeGenIfElseStmt(CodeGenContext cx, bir:BasicBlock startBlock, Environ
 
 function codeGenIfElseNarrowing(CodeGenContext cx, bir:BasicBlock bb, Environment env, Narrowing narrowing, boolean condition, Position pos) returns Environment {
     boolean insnResult = condition == !narrowing.negated;
-    // JBUG #33303 without parentheses this gets a parse error
-    t:SemType narrowedType = insnResult ? (narrowing.ifTrue) : narrowing.ifFalse;
+    t:SemType narrowedType = insnResult ? narrowing.ifTrue : narrowing.ifFalse;
     if narrowedType === t:NEVER {
         panic err:impossible("narrowed to never type");
     }
