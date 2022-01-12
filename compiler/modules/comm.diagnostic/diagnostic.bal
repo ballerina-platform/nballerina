@@ -28,6 +28,8 @@ public type File readonly & object {
     public function lineColumn(Position pos) returns LineColumn;
     public function lineContent(Position|Range range) returns [string, string, string];
     public function qNameRange(Position startPos) returns Range;
+    public function startPos() returns Position;
+    public function endPos() returns Position;
 };
 
 public type Location readonly & record {|

@@ -10,6 +10,7 @@ type PositionFields record {|
 |};
 
 public type ModulePart record {|
+    *PositionFields;
     ImportDecl[] importDecls;
     SourceFile file;
     int partIndex;
