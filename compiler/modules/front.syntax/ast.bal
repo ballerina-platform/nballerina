@@ -282,7 +282,6 @@ public type ListConstructorExpr record {|
     *PositionFields;
     Position opPos;
     Expr[] members;
-    // JBUG #33309 adding this field makes match statement in codeGenExpr fail
     t:SemType? expectedType = ();
 |};
 
