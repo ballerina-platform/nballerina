@@ -157,7 +157,7 @@ function addInherentTypeDefn(InitModuleContext cx, string symbol, t:SemType semT
         llType = createMappingDescType(cx.tc, tid, semType);        
     }
     // The initializer is set later, because of the possibility of
-        // recursion via `getFillerDesc`.
+    // recursion via `getFillerDesc`.
     llvm:ConstPointerValue ptr = cx.llMod.addGlobal(llType, symbol, isConstant=true, linkage=linkage);
     defns.add({ llType, ptr, semType, tid });
     llvm:ConstValue initValue;
@@ -207,7 +207,7 @@ function getFillerDesc(InitModuleContext cx, t:SemType memberType) returns llvm:
     StructureBasicType? basic = fillableStructureBasicType(cx.tc, memberType);
     // JBUG narrowing does not work if you say `== ()`
     if basic is () {
-        return llvm:constNull(llStructureDescPtrType);
+        return llNoFillerDesc;
     }
     table<InherentTypeDefn> key(semType) defns = cx.inherentTypeDefns[basic];
     InherentTypeDefn? existingDefn = defns[memberType];
@@ -229,7 +229,8 @@ function fillableStructureBasicType(t:Context tc, t:SemType semType) returns Str
         }
     }
     if basic == STRUCTURE_MAPPING {
-        if t:mappingAtomicTypeRw(tc, semType) != () {
+        t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, semType);
+        if  mat != () && mat.names.length() == 0 {
             return basic;
         }
     }

@@ -16,6 +16,7 @@ const LLVM_PANIC_CODE = "i64";
 
 final llvm:StructType llStructureDescType = llvm:structType([LLVM_TID]);
 final llvm:PointerType llStructureDescPtrType = llvm:pointerType(llStructureDescType);
+final llvm:ConstPointerValue llNoFillerDesc = llvm:constNull(llStructureDescPtrType);
 
 // This is an approximation, but close enough since we are only accessing the pointer in C.
 final llvm:StructType llComplexType = llvm:structType([LLVM_BITSET, LLVM_BITSET, llvm:arrayType(llvm:pointerType("i8"), 0)]);

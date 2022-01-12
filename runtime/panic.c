@@ -31,7 +31,7 @@ DECL_PANIC_MESSAGE(PANIC_LIST_TOO_LONG, "list too long");
 DECL_PANIC_MESSAGE(PANIC_STRING_TOO_LONG, "string too long");
 DECL_PANIC_MESSAGE(PANIC_LIST_STORE, "bad list store");
 DECL_PANIC_MESSAGE(PANIC_MAPPING_STORE, "bad mapping store");
-DECL_PANIC_MESSAGE(PANIC_NO_FILLER, "list has no filler");
+DECL_PANIC_MESSAGE(PANIC_NO_FILLER, "no filler value");
 DECL_PANIC_MESSAGE(PANIC_INTERNAL_ERROR, "internal error");
 // This panic code is used in cases where a float operation would return NaN,
 // notably for 0/0 and some cases of remainder. 

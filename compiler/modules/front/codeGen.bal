@@ -47,6 +47,11 @@ type StmtEffect record {|
     Assignment[] assignments = [];
 |};
 
+type LExprEffect record {|
+    bir:BasicBlock block;
+    bir:Register result;
+|};
+
 type ExprEffect record {|
     bir:BasicBlock block;
     bir:Operand result;
@@ -1027,31 +1032,36 @@ function codeGenAssign(CodeGenContext cx, Environment env, bir:BasicBlock block,
     return nextBlock;
 }
 
-function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr|s:FieldAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
-    s:LExpr container = lValue.container;
+function codeGenLExpr(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:LExpr container) returns CodeGenError|LExprEffect {
     bir:Register reg;
-    bir:BasicBlock block1;
+    bir:BasicBlock block;
     if container is s:VarRefExpr {
-        reg = (check lookupVarRefBinding(cx, container.name, env, lValue.opPos)).reg;
-        block1 = startBlock;
+        reg = (check lookupVarRefBinding(cx, container.name, env, container.startPos)).reg;
+        block = startBlock;
     }
-    else if container is s:FieldAccessLExpr {
+    else  {
+        bir:Operand containerOperand;
         bir:Operand result;
-        { result, block: block1 } = check codeGenFieldAccessExpr(cx, startBlock, env, container.opPos, container.container, container.fieldName);
+        { result: containerOperand, block } = check codeGenLExpr(cx, startBlock, env, container.container);
+        if container is s:FieldAccessLExpr {
+            { result, block } = check codeGenFieldAccess(cx, startBlock, env, container.opPos, containerOperand, container.fieldName);
+            
+        }
+        else {
+            s:MemberAccessLExpr _ = container;
+            { result, block } = check codeGenMemberAccess(cx, startBlock, env, container.opPos, containerOperand, container.index, fill=true);
+        }
         if result !is bir:Register {
             return cx.semanticErr("list or mapping required", s:range(container.container));
         }
         reg = result;
+
     }
-    else {
-        s:MemberAccessLExpr _ = container;
-        bir:Operand result;
-        { result, block: block1 } = check codeGenMemberAccessExpr(cx, startBlock, env, container.opPos, container.container, container.index, fill=true);
-        if result !is bir:Register {
-            return cx.semanticErr("list or mapping required", s:range(container.container));
-        }
-        reg = result;
-    }
+    return { result: reg, block };
+}
+
+function codeGenAssignToMember(CodeGenContext cx, bir:BasicBlock startBlock, Environment env, s:MemberAccessLExpr|s:FieldAccessLExpr lValue, s:Expr expr) returns CodeGenError|StmtEffect {
+    var { result: reg, block: block1 } = check codeGenLExpr(cx, startBlock, env, lValue.container);
     t:UniformTypeBitSet indexType;
     t:SemType memberType;
     if t:isSubtypeSimple(reg.semType, t:MAPPING) {
@@ -1465,6 +1475,10 @@ function codeGenLExprMappingKey(CodeGenContext cx, bir:BasicBlock block, Environ
 
 function codeGenFieldAccessExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Position pos, s:Expr container, string fieldName) returns CodeGenError|ExprEffect {
     var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
+    return codeGenFieldAccess(cx, nextBlock, env, pos, l, fieldName);
+}
+
+function codeGenFieldAccess(CodeGenContext cx, bir:BasicBlock nextBlock, Environment env, Position pos, bir:Operand l, string fieldName) returns CodeGenError|ExprEffect {
     if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
         return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
     }
@@ -1474,6 +1488,10 @@ function codeGenFieldAccessExpr(CodeGenContext cx, bir:BasicBlock bb, Environmen
 function codeGenMemberAccessExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, Position pos, s:Expr container, s:Expr index, boolean fill=false) returns CodeGenError|ExprEffect {
     // Do constant folding here since these expressions are not allowed in const definitions
     var { result: l, block: block1 } = check codeGenExpr(cx, bb, env, check cx.foldExpr(env, container, ()));
+    return codeGenMemberAccess(cx, block1, env, pos, l, index, fill);
+}
+
+function codeGenMemberAccess(CodeGenContext cx, bir:BasicBlock block1, Environment env, Position pos, bir:Operand l, s:Expr index, boolean fill=false) returns CodeGenError|ExprEffect {
     if l is bir:Register {
         if t:isSubtypeSimple(l.semType, t:LIST) {
             var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, env, check cx.foldExpr(env, index, t:INT));
@@ -1481,6 +1499,7 @@ function codeGenMemberAccessExpr(CodeGenContext cx, bir:BasicBlock bb, Environme
             if t:isEmpty(cx.mod.tc, memberType) {
                 return cx.semanticErr("type of member access is never", pos);
             }
+            // XXX this isn't correct for singletons
             bir:Register result = cx.createTmpRegister(memberType, pos);
             bir:ListGetInsn insn = { result, operands: [l, r], pos, fill };
             nextBlock.insns.push(insn);
