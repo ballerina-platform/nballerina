@@ -130,6 +130,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
 }
 
 type AssignOp "="|CompoundAssignOp;
+type PreparseFunc function(Tokenizer) returns boolean|err:Syntax;
 
 function savePreparseRestore(Tokenizer tok, PreparseFunc func) returns boolean|err:Syntax {
     TokenizerState state = tok.save();
