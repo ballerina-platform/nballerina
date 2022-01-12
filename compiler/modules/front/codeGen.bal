@@ -1660,7 +1660,7 @@ function codeGenBitwiseBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, s:Binary
     return { result, block: bb };
 }
 
-function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, Position startPos, s:Expr[] members, Position opPos, t:SemType? expectedType) returns CodeGenError|ExprEffect {
+function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, Position startPos, Position endPos, s:Expr[] members, Position opPos, t:SemType? expectedType) returns CodeGenError|ExprEffect {
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
     foreach var member in members {
@@ -1670,7 +1670,7 @@ function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environmen
     }
     t:SemType resultType = <t:SemType>expectedType;
     if t:isEmpty(cx.mod.tc, resultType) {
-        return cx.semanticErr("list not allowed in this context", { startPos: node.startPos, endPos: node.endPos });
+        return cx.semanticErr("list not allowed in this context", {startPos, endPos});
     }
     bir:Register result = cx.createTmpRegister(resultType, opPos);
     bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: opPos };
