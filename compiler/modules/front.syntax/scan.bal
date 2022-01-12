@@ -178,8 +178,7 @@ function createFragTokens() returns readonly & FixedToken?[] {
     ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = "<<=";
     ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = ">>=";
     ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = ">>>=";
-    // JBUG #33347 error if hex used for 32 and 128
-    foreach int cp in 32 ..< 128 {
+    foreach int cp in 0x20 ..< 0x80 {
         string s = checkpanic string:fromCodePointInt(cp);
         if s is SingleCharDelim {
             ft[cp] = s;
