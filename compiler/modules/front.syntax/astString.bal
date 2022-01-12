@@ -481,6 +481,9 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         else if expr is BinaryRelationalExpr {
             op = expr.relationalOp;
         }
+        else if expr is BinaryLogicalExpr {
+            op = expr.logicalOp;
+        }
         else {
             op = expr.equalityOp;
         }

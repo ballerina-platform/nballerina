@@ -355,6 +355,9 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
         else if expr is BinaryArithmeticExpr {
             test:assertTrue(token is BinaryArithmeticOp);
         }
+        else if expr is BinaryLogicalExpr {
+            test:assertTrue(token is BinaryLogicalOp);
+        }
         else if expr is BinaryBitwiseExpr {
             test:assertTrue(token is BinaryBitwiseOp);
         }
@@ -383,6 +386,7 @@ function validateExprOpPos(Expr expr, Tokenizer tok) returns err:Syntax? {
             test:assertEquals(token, "is");
         }
         else {
+            FieldAccessExpr|FieldAccessLExpr _ = expr;
             test:assertEquals(token, ".");
         }
     }

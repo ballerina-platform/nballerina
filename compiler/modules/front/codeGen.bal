@@ -1280,6 +1280,11 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
         var { checkingKeyword, operand, kwPos: pos } => {
             return codeGenCheckingExpr(cx, bb, env, checkingKeyword, operand, pos);
         }
+        var { opPos: pos, logicalOp: op, left, right } => {
+            var { result: l, block: block1 } = check codeGenExprForBoolean(cx, bb, env, left);
+            var { result: r, block: nextBlock } = check codeGenExprForBoolean(cx, block1, env, right);
+            return codeGenLogicalBinaryExpr(cx, nextBlock, op, pos, l, r);
+        }
         var { opPos: pos, bitwiseOp: op, left, right } => {
             var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, env, left, right, bb, pos);
             bir:IntOperand l = check intOperand(cx, lhs, left);
@@ -1632,6 +1637,13 @@ function codeGenArithmeticBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, bir:A
         return cx.semanticErr(`${op} not supported for operand types`, pos);
     }
     return { result, block: bb };
+}
+
+function codeGenLogicalBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, s:BinaryLogicalOp op, Position pos, bir:BooleanOperand lhs, bir:BooleanOperand rhs) returns CodeGenError|ExprEffect {
+    if lhs is boolean && rhs is boolean {
+        return { result: logicalEval(op, lhs, rhs), block: bb };
+    }
+    return cx.unimplementedErr(`not implemented: logical expressions on non-constant values`, pos);
 }
 
 function codeGenBitwiseBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, s:BinaryBitwiseOp op, Position pos, bir:IntOperand lhs, bir:IntOperand rhs) returns CodeGenError|ExprEffect {

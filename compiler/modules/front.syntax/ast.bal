@@ -174,6 +174,7 @@ public type VarDeclStmt record {|
 
 public type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
 public type BinaryBitwiseOp "|" | "^" | "&" | "<<" | ">>" | ">>>";
+public type BinaryLogicalOp "&&" | "||";
 public type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 public type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
 public type RangeOp  "..." | "..<";
@@ -186,7 +187,7 @@ const NegateOp = "-";
 
 public type UnaryExprOp NegateOp | "!" | "~";
 
-public type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr;
+public type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr|BinaryLogicalExpr;
 
 // We use different operator names so things work better with match statements
 public type BinaryExprBase record {|
@@ -216,6 +217,11 @@ public type BinaryArithmeticExpr record {|
 public type BinaryBitwiseExpr record {|
     *BinaryExprBase;
     BinaryBitwiseOp bitwiseOp;
+|};
+
+public type BinaryLogicalExpr record {|
+    *BinaryExprBase;
+    BinaryLogicalOp logicalOp;
 |};
 
 public type UnaryExpr record {|
