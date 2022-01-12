@@ -645,8 +645,7 @@ function wordsToLines(Word[] s) returns string[] {
             firstInLine = true;
             lines.push("".'join(...buf));
             buf.setLength(0);
-            // JBUG #33532 should use `_` here
-            foreach int i in 0 ..< level {
+            foreach var _ in 0 ..< level {
                 buf.push("    ");
             }
         }
