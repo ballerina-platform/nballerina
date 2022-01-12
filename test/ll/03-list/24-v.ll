@@ -19,8 +19,8 @@ define void @_B04rootmain() !dbg !5 {
   %2 = alloca i1
   %3 = alloca i64
   %sum = alloca i64
-  %4 = alloca i1
-  %5 = alloca i64
+  %4 = alloca i64
+  %5 = alloca i1
   %6 = alloca i8 addrspace(1)*
   %7 = alloca i8 addrspace(1)*
   %8 = alloca i64
@@ -76,12 +76,12 @@ define void @_B04rootmain() !dbg !5 {
   %49 = load i8 addrspace(1)*, i8 addrspace(1)** %v, !dbg !8
   %50 = call i8 addrspace(1)* @_bal_tagged_clear_exact_ptr(i8 addrspace(1)* %49), !dbg !8
   %51 = call i64 @_Bb0m4lang5arraylength(i8 addrspace(1)* %50), !dbg !8
-  store i64 %51, i64* %5, !dbg !8
+  store i64 %51, i64* %4, !dbg !8
   %52 = load i64, i64* %i
-  %53 = load i64, i64* %5
+  %53 = load i64, i64* %4
   %54 = icmp slt i64 %52, %53
-  store i1 %54, i1* %4
-  %55 = load i1, i1* %4
+  store i1 %54, i1* %5
+  %55 = load i1, i1* %5
   br i1 %55, label %56, label %64
 56:
   %57 = load i8 addrspace(1)*, i8 addrspace(1)** %v

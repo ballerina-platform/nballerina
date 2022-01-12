@@ -15,157 +15,196 @@ define void @_B04rootmain() !dbg !5 {
   %9 = alloca double
   %10 = alloca i8 addrspace(1)*
   %11 = alloca double
-  %12 = alloca i8 addrspace(1)*
-  %13 = alloca double
-  %14 = alloca i8 addrspace(1)*
+  %12 = alloca double
+  %13 = alloca i8 addrspace(1)*
+  %14 = alloca double
   %15 = alloca double
-  %16 = alloca i8 addrspace(1)*
-  %17 = alloca double
-  %18 = alloca i8 addrspace(1)*
+  %16 = alloca double
+  %17 = alloca i8 addrspace(1)*
+  %18 = alloca double
   %19 = alloca double
   %20 = alloca i8 addrspace(1)*
-  %21 = alloca i8 addrspace(1)*
-  %22 = alloca i8 addrspace(1)*
-  %23 = alloca i8 addrspace(1)*
+  %21 = alloca double
+  %22 = alloca double
+  %23 = alloca double
   %24 = alloca i8 addrspace(1)*
-  %25 = alloca i8 addrspace(1)*
-  %26 = alloca i8 addrspace(1)*
+  %25 = alloca double
+  %26 = alloca double
   %27 = alloca i8 addrspace(1)*
   %28 = alloca i8 addrspace(1)*
   %29 = alloca i8 addrspace(1)*
   %30 = alloca i8 addrspace(1)*
-  %f1 = alloca double
-  %31 = alloca double
+  %31 = alloca i8 addrspace(1)*
   %32 = alloca i8 addrspace(1)*
-  %f2 = alloca double
   %33 = alloca double
   %34 = alloca i8 addrspace(1)*
   %35 = alloca double
   %36 = alloca i8 addrspace(1)*
-  %37 = alloca i8
-  %38 = load i8*, i8** @_bal_stack_guard
-  %39 = icmp ult i8* %37, %38
-  br i1 %39, label %94, label %40
-40:
-  %41 = call double @_B_floatSub(double 1.0, double 2.0), !dbg !10
-  store double %41, double* %1, !dbg !10
-  %42 = load double, double* %1, !dbg !11
-  %43 = call i8 addrspace(1)* @_bal_float_to_tagged(double %42), !dbg !11
-  call void @_Bb02ioprintln(i8 addrspace(1)* %43), !dbg !11
+  %37 = alloca double
+  %38 = alloca i8 addrspace(1)*
+  %39 = alloca double
+  %40 = alloca i8 addrspace(1)*
+  %41 = alloca double
+  %42 = alloca i8 addrspace(1)*
+  %f1 = alloca double
+  %43 = alloca double
+  %44 = alloca i8 addrspace(1)*
+  %f2 = alloca double
+  %45 = alloca double
+  %46 = alloca i8 addrspace(1)*
+  %47 = alloca double
+  %48 = alloca double
+  %49 = alloca i8 addrspace(1)*
+  %50 = alloca i8
+  %51 = load i8*, i8** @_bal_stack_guard
+  %52 = icmp ult i8* %50, %51
+  br i1 %52, label %120, label %53
+53:
+  %54 = call double @_B_floatSub(double 1.0, double 2.0), !dbg !10
+  store double %54, double* %1, !dbg !10
+  %55 = load double, double* %1, !dbg !11
+  %56 = call i8 addrspace(1)* @_bal_float_to_tagged(double %55), !dbg !11
+  call void @_Bb02ioprintln(i8 addrspace(1)* %56), !dbg !11
   store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !11
-  %44 = call double @_B_floatSub(double 1.0, double 1.0), !dbg !12
-  store double %44, double* %3, !dbg !12
-  %45 = load double, double* %3, !dbg !13
-  %46 = call i8 addrspace(1)* @_bal_float_to_tagged(double %45), !dbg !13
-  call void @_Bb02ioprintln(i8 addrspace(1)* %46), !dbg !13
+  %57 = call double @_B_floatSub(double 1.0, double 1.0), !dbg !12
+  store double %57, double* %3, !dbg !12
+  %58 = load double, double* %3, !dbg !13
+  %59 = call i8 addrspace(1)* @_bal_float_to_tagged(double %58), !dbg !13
+  call void @_Bb02ioprintln(i8 addrspace(1)* %59), !dbg !13
   store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !13
-  %47 = call double @_B_floatSub(double 0.0, double -0.0), !dbg !14
-  store double %47, double* %5, !dbg !14
-  %48 = load double, double* %5, !dbg !15
-  %49 = call i8 addrspace(1)* @_bal_float_to_tagged(double %48), !dbg !15
-  call void @_Bb02ioprintln(i8 addrspace(1)* %49), !dbg !15
+  %60 = call double @_B_floatSub(double 0.0, double -0.0), !dbg !14
+  store double %60, double* %5, !dbg !14
+  %61 = load double, double* %5, !dbg !15
+  %62 = call i8 addrspace(1)* @_bal_float_to_tagged(double %61), !dbg !15
+  call void @_Bb02ioprintln(i8 addrspace(1)* %62), !dbg !15
   store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !15
-  %50 = call double @_B_floatSub(double -0.0, double 0.0), !dbg !16
-  store double %50, double* %7, !dbg !16
-  %51 = load double, double* %7, !dbg !17
-  %52 = call i8 addrspace(1)* @_bal_float_to_tagged(double %51), !dbg !17
-  call void @_Bb02ioprintln(i8 addrspace(1)* %52), !dbg !17
+  %63 = call double @_B_floatSub(double -0.0, double 0.0), !dbg !16
+  store double %63, double* %7, !dbg !16
+  %64 = load double, double* %7, !dbg !17
+  %65 = call i8 addrspace(1)* @_bal_float_to_tagged(double %64), !dbg !17
+  call void @_Bb02ioprintln(i8 addrspace(1)* %65), !dbg !17
   store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !17
-  %53 = call double @_B_floatSub(double 0.0, double 0.0), !dbg !18
-  store double %53, double* %9, !dbg !18
-  %54 = load double, double* %9, !dbg !19
-  %55 = call i8 addrspace(1)* @_bal_float_to_tagged(double %54), !dbg !19
-  call void @_Bb02ioprintln(i8 addrspace(1)* %55), !dbg !19
+  %66 = call double @_B_floatSub(double 0.0, double 0.0), !dbg !18
+  store double %66, double* %9, !dbg !18
+  %67 = load double, double* %9, !dbg !19
+  %68 = call i8 addrspace(1)* @_bal_float_to_tagged(double %67), !dbg !19
+  call void @_Bb02ioprintln(i8 addrspace(1)* %68), !dbg !19
   store i8 addrspace(1)* null, i8 addrspace(1)** %10, !dbg !19
-  %56 = call double @_B_floatSub(double 0x7FF8000000000000, double 1.0), !dbg !20
-  store double %56, double* %11, !dbg !20
-  %57 = load double, double* %11, !dbg !21
-  %58 = call i8 addrspace(1)* @_bal_float_to_tagged(double %57), !dbg !21
-  call void @_Bb02ioprintln(i8 addrspace(1)* %58), !dbg !21
-  store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !21
-  %59 = call double @_B_floatSub(double 0x7FF8000000000000, double 0x7FF8000000000000), !dbg !22
-  store double %59, double* %13, !dbg !22
-  %60 = load double, double* %13, !dbg !23
-  %61 = call i8 addrspace(1)* @_bal_float_to_tagged(double %60), !dbg !23
-  call void @_Bb02ioprintln(i8 addrspace(1)* %61), !dbg !23
-  store i8 addrspace(1)* null, i8 addrspace(1)** %14, !dbg !23
-  %62 = call double @_B_floatSub(double 0x7FF0000000000000, double 20.0), !dbg !24
-  store double %62, double* %15, !dbg !24
-  %63 = load double, double* %15, !dbg !25
-  %64 = call i8 addrspace(1)* @_bal_float_to_tagged(double %63), !dbg !25
-  call void @_Bb02ioprintln(i8 addrspace(1)* %64), !dbg !25
-  store i8 addrspace(1)* null, i8 addrspace(1)** %16, !dbg !25
-  %65 = call double @_B_floatSub(double 0xFFF0000000000000, double 0x7FF0000000000000), !dbg !26
-  store double %65, double* %17, !dbg !26
-  %66 = load double, double* %17, !dbg !27
-  %67 = call i8 addrspace(1)* @_bal_float_to_tagged(double %66), !dbg !27
-  call void @_Bb02ioprintln(i8 addrspace(1)* %67), !dbg !27
-  store i8 addrspace(1)* null, i8 addrspace(1)** %18, !dbg !27
-  %68 = call double @_B_floatSub(double 0xFFF0000000000000, double 100.0), !dbg !28
-  store double %68, double* %19, !dbg !28
-  %69 = load double, double* %19, !dbg !29
-  %70 = call i8 addrspace(1)* @_bal_float_to_tagged(double %69), !dbg !29
-  call void @_Bb02ioprintln(i8 addrspace(1)* %70), !dbg !29
-  store i8 addrspace(1)* null, i8 addrspace(1)** %20, !dbg !29
-  %71 = call i8 addrspace(1)* @_bal_float_to_tagged(double -1.0), !dbg !30
-  call void @_Bb02ioprintln(i8 addrspace(1)* %71), !dbg !30
-  store i8 addrspace(1)* null, i8 addrspace(1)** %21, !dbg !30
-  %72 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0.0), !dbg !31
-  call void @_Bb02ioprintln(i8 addrspace(1)* %72), !dbg !31
-  store i8 addrspace(1)* null, i8 addrspace(1)** %22, !dbg !31
-  %73 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0.0), !dbg !32
-  call void @_Bb02ioprintln(i8 addrspace(1)* %73), !dbg !32
-  store i8 addrspace(1)* null, i8 addrspace(1)** %23, !dbg !32
-  %74 = call i8 addrspace(1)* @_bal_float_to_tagged(double -0.0), !dbg !33
-  call void @_Bb02ioprintln(i8 addrspace(1)* %74), !dbg !33
-  store i8 addrspace(1)* null, i8 addrspace(1)** %24, !dbg !33
-  %75 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0.0), !dbg !34
-  call void @_Bb02ioprintln(i8 addrspace(1)* %75), !dbg !34
-  store i8 addrspace(1)* null, i8 addrspace(1)** %25, !dbg !34
-  %76 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0x7FF8000000000000), !dbg !35
-  call void @_Bb02ioprintln(i8 addrspace(1)* %76), !dbg !35
-  store i8 addrspace(1)* null, i8 addrspace(1)** %26, !dbg !35
-  %77 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0x7FF8000000000000), !dbg !36
-  call void @_Bb02ioprintln(i8 addrspace(1)* %77), !dbg !36
-  store i8 addrspace(1)* null, i8 addrspace(1)** %27, !dbg !36
-  %78 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0x7FF0000000000000), !dbg !37
-  call void @_Bb02ioprintln(i8 addrspace(1)* %78), !dbg !37
-  store i8 addrspace(1)* null, i8 addrspace(1)** %28, !dbg !37
-  %79 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0xFFF0000000000000), !dbg !38
-  call void @_Bb02ioprintln(i8 addrspace(1)* %79), !dbg !38
-  store i8 addrspace(1)* null, i8 addrspace(1)** %29, !dbg !38
-  %80 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0xFFF0000000000000), !dbg !39
-  call void @_Bb02ioprintln(i8 addrspace(1)* %80), !dbg !39
-  store i8 addrspace(1)* null, i8 addrspace(1)** %30, !dbg !39
+  store double 0x7FF8000000000000, double* %11
+  %69 = load double, double* %11, !dbg !20
+  %70 = call double @_B_floatSub(double %69, double 1.0), !dbg !20
+  store double %70, double* %12, !dbg !20
+  %71 = load double, double* %12, !dbg !21
+  %72 = call i8 addrspace(1)* @_bal_float_to_tagged(double %71), !dbg !21
+  call void @_Bb02ioprintln(i8 addrspace(1)* %72), !dbg !21
+  store i8 addrspace(1)* null, i8 addrspace(1)** %13, !dbg !21
+  store double 0x7FF8000000000000, double* %14
+  store double 0x7FF8000000000000, double* %15
+  %73 = load double, double* %14, !dbg !22
+  %74 = load double, double* %15, !dbg !22
+  %75 = call double @_B_floatSub(double %73, double %74), !dbg !22
+  store double %75, double* %16, !dbg !22
+  %76 = load double, double* %16, !dbg !23
+  %77 = call i8 addrspace(1)* @_bal_float_to_tagged(double %76), !dbg !23
+  call void @_Bb02ioprintln(i8 addrspace(1)* %77), !dbg !23
+  store i8 addrspace(1)* null, i8 addrspace(1)** %17, !dbg !23
+  store double 0x7FF0000000000000, double* %18
+  %78 = load double, double* %18, !dbg !24
+  %79 = call double @_B_floatSub(double %78, double 20.0), !dbg !24
+  store double %79, double* %19, !dbg !24
+  %80 = load double, double* %19, !dbg !25
+  %81 = call i8 addrspace(1)* @_bal_float_to_tagged(double %80), !dbg !25
+  call void @_Bb02ioprintln(i8 addrspace(1)* %81), !dbg !25
+  store i8 addrspace(1)* null, i8 addrspace(1)** %20, !dbg !25
+  store double 0xFFF0000000000000, double* %21
+  store double 0x7FF0000000000000, double* %22
+  %82 = load double, double* %21, !dbg !26
+  %83 = load double, double* %22, !dbg !26
+  %84 = call double @_B_floatSub(double %82, double %83), !dbg !26
+  store double %84, double* %23, !dbg !26
+  %85 = load double, double* %23, !dbg !27
+  %86 = call i8 addrspace(1)* @_bal_float_to_tagged(double %85), !dbg !27
+  call void @_Bb02ioprintln(i8 addrspace(1)* %86), !dbg !27
+  store i8 addrspace(1)* null, i8 addrspace(1)** %24, !dbg !27
+  store double 0xFFF0000000000000, double* %25
+  %87 = load double, double* %25, !dbg !28
+  %88 = call double @_B_floatSub(double %87, double 100.0), !dbg !28
+  store double %88, double* %26, !dbg !28
+  %89 = load double, double* %26, !dbg !29
+  %90 = call i8 addrspace(1)* @_bal_float_to_tagged(double %89), !dbg !29
+  call void @_Bb02ioprintln(i8 addrspace(1)* %90), !dbg !29
+  store i8 addrspace(1)* null, i8 addrspace(1)** %27, !dbg !29
+  %91 = call i8 addrspace(1)* @_bal_float_to_tagged(double -1.0), !dbg !30
+  call void @_Bb02ioprintln(i8 addrspace(1)* %91), !dbg !30
+  store i8 addrspace(1)* null, i8 addrspace(1)** %28, !dbg !30
+  %92 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0.0), !dbg !31
+  call void @_Bb02ioprintln(i8 addrspace(1)* %92), !dbg !31
+  store i8 addrspace(1)* null, i8 addrspace(1)** %29, !dbg !31
+  %93 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0.0), !dbg !32
+  call void @_Bb02ioprintln(i8 addrspace(1)* %93), !dbg !32
+  store i8 addrspace(1)* null, i8 addrspace(1)** %30, !dbg !32
+  %94 = call i8 addrspace(1)* @_bal_float_to_tagged(double -0.0), !dbg !33
+  call void @_Bb02ioprintln(i8 addrspace(1)* %94), !dbg !33
+  store i8 addrspace(1)* null, i8 addrspace(1)** %31, !dbg !33
+  %95 = call i8 addrspace(1)* @_bal_float_to_tagged(double 0.0), !dbg !34
+  call void @_Bb02ioprintln(i8 addrspace(1)* %95), !dbg !34
+  store i8 addrspace(1)* null, i8 addrspace(1)** %32, !dbg !34
+  store double 0x7FF8000000000000, double* %33
+  %96 = load double, double* %33, !dbg !35
+  %97 = call i8 addrspace(1)* @_bal_float_to_tagged(double %96), !dbg !35
+  call void @_Bb02ioprintln(i8 addrspace(1)* %97), !dbg !35
+  store i8 addrspace(1)* null, i8 addrspace(1)** %34, !dbg !35
+  store double 0x7FF8000000000000, double* %35
+  %98 = load double, double* %35, !dbg !36
+  %99 = call i8 addrspace(1)* @_bal_float_to_tagged(double %98), !dbg !36
+  call void @_Bb02ioprintln(i8 addrspace(1)* %99), !dbg !36
+  store i8 addrspace(1)* null, i8 addrspace(1)** %36, !dbg !36
+  store double 0x7FF0000000000000, double* %37
+  %100 = load double, double* %37, !dbg !37
+  %101 = call i8 addrspace(1)* @_bal_float_to_tagged(double %100), !dbg !37
+  call void @_Bb02ioprintln(i8 addrspace(1)* %101), !dbg !37
+  store i8 addrspace(1)* null, i8 addrspace(1)** %38, !dbg !37
+  store double 0xFFF0000000000000, double* %39
+  %102 = load double, double* %39, !dbg !38
+  %103 = call i8 addrspace(1)* @_bal_float_to_tagged(double %102), !dbg !38
+  call void @_Bb02ioprintln(i8 addrspace(1)* %103), !dbg !38
+  store i8 addrspace(1)* null, i8 addrspace(1)** %40, !dbg !38
+  store double 0xFFF0000000000000, double* %41
+  %104 = load double, double* %41, !dbg !39
+  %105 = call i8 addrspace(1)* @_bal_float_to_tagged(double %104), !dbg !39
+  call void @_Bb02ioprintln(i8 addrspace(1)* %105), !dbg !39
+  store i8 addrspace(1)* null, i8 addrspace(1)** %42, !dbg !39
   store double 4.0, double* %f1
-  %81 = load double, double* %f1
-  %82 = fsub double 46.0, %81
-  store double %82, double* %31
-  %83 = load double, double* %31, !dbg !40
-  %84 = call i8 addrspace(1)* @_bal_float_to_tagged(double %83), !dbg !40
-  call void @_Bb02ioprintln(i8 addrspace(1)* %84), !dbg !40
-  store i8 addrspace(1)* null, i8 addrspace(1)** %32, !dbg !40
+  %106 = load double, double* %f1
+  %107 = fsub double 46.0, %106
+  store double %107, double* %43
+  %108 = load double, double* %43, !dbg !40
+  %109 = call i8 addrspace(1)* @_bal_float_to_tagged(double %108), !dbg !40
+  call void @_Bb02ioprintln(i8 addrspace(1)* %109), !dbg !40
+  store i8 addrspace(1)* null, i8 addrspace(1)** %44, !dbg !40
   store double 46.42, double* %f2
-  %85 = load double, double* %f1
-  %86 = load double, double* %f2
-  %87 = fsub double %85, %86
-  store double %87, double* %33
-  %88 = load double, double* %33, !dbg !41
-  %89 = call i8 addrspace(1)* @_bal_float_to_tagged(double %88), !dbg !41
-  call void @_Bb02ioprintln(i8 addrspace(1)* %89), !dbg !41
-  store i8 addrspace(1)* null, i8 addrspace(1)** %34, !dbg !41
-  store double 0xFFF0000000000000, double* %f2
-  %90 = load double, double* %f2
-  %91 = fsub double %90, 2.0
-  store double %91, double* %35
-  %92 = load double, double* %35, !dbg !42
-  %93 = call i8 addrspace(1)* @_bal_float_to_tagged(double %92), !dbg !42
-  call void @_Bb02ioprintln(i8 addrspace(1)* %93), !dbg !42
-  store i8 addrspace(1)* null, i8 addrspace(1)** %36, !dbg !42
+  %110 = load double, double* %f1
+  %111 = load double, double* %f2
+  %112 = fsub double %110, %111
+  store double %112, double* %45
+  %113 = load double, double* %45, !dbg !41
+  %114 = call i8 addrspace(1)* @_bal_float_to_tagged(double %113), !dbg !41
+  call void @_Bb02ioprintln(i8 addrspace(1)* %114), !dbg !41
+  store i8 addrspace(1)* null, i8 addrspace(1)** %46, !dbg !41
+  store double 0xFFF0000000000000, double* %47
+  %115 = load double, double* %47
+  store double %115, double* %f2
+  %116 = load double, double* %f2
+  %117 = fsub double %116, 2.0
+  store double %117, double* %48
+  %118 = load double, double* %48, !dbg !42
+  %119 = call i8 addrspace(1)* @_bal_float_to_tagged(double %118), !dbg !42
+  call void @_Bb02ioprintln(i8 addrspace(1)* %119), !dbg !42
+  store i8 addrspace(1)* null, i8 addrspace(1)** %49, !dbg !42
   ret void
-94:
-  %95 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284), !dbg !9
-  call void @_bal_panic(i8 addrspace(1)* %95)
+120:
+  %121 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284), !dbg !9
+  call void @_bal_panic(i8 addrspace(1)* %121)
   unreachable
 }
 define internal double @_B_floatSub(double %0, double %1) !dbg !7 {

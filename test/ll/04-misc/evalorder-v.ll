@@ -68,44 +68,44 @@ define void @_B04rootmain() !dbg !9 {
   %15 = alloca i64
   %_.4 = alloca i8 addrspace(1)*
   %lt = alloca i1
-  %16 = alloca i1
+  %16 = alloca i64
   %17 = alloca i64
-  %18 = alloca i64
+  %18 = alloca i1
   %_.5 = alloca i8 addrspace(1)*
   %lteq = alloca i1
-  %19 = alloca i1
+  %19 = alloca i64
   %20 = alloca i64
-  %21 = alloca i64
+  %21 = alloca i1
   %_.6 = alloca i8 addrspace(1)*
   %gt = alloca i1
-  %22 = alloca i1
+  %22 = alloca i64
   %23 = alloca i64
-  %24 = alloca i64
+  %24 = alloca i1
   %_.7 = alloca i8 addrspace(1)*
   %gteq = alloca i1
-  %25 = alloca i1
+  %25 = alloca i64
   %26 = alloca i64
-  %27 = alloca i64
+  %27 = alloca i1
   %_.8 = alloca i8 addrspace(1)*
   %eq = alloca i1
-  %28 = alloca i1
+  %28 = alloca i64
   %29 = alloca i64
-  %30 = alloca i64
+  %30 = alloca i1
   %_.9 = alloca i8 addrspace(1)*
   %neq = alloca i1
-  %31 = alloca i1
+  %31 = alloca i64
   %32 = alloca i64
-  %33 = alloca i64
+  %33 = alloca i1
   %_.10 = alloca i8 addrspace(1)*
   %eeq = alloca i1
-  %34 = alloca i1
+  %34 = alloca i64
   %35 = alloca i64
-  %36 = alloca i64
+  %36 = alloca i1
   %_.11 = alloca i8 addrspace(1)*
   %neeq = alloca i1
-  %37 = alloca i1
+  %37 = alloca i64
   %38 = alloca i64
-  %39 = alloca i64
+  %39 = alloca i1
   %_.12 = alloca i8 addrspace(1)*
   %and = alloca i64
   %40 = alloca i64
@@ -263,14 +263,14 @@ define void @_B04rootmain() !dbg !9 {
   %136 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %135)
   store i8 addrspace(1)* %136, i8 addrspace(1)** %_.4
   %137 = call i64 @_B_one(), !dbg !28
-  store i64 %137, i64* %17, !dbg !28
+  store i64 %137, i64* %16, !dbg !28
   %138 = call i64 @_B_two(), !dbg !29
-  store i64 %138, i64* %18, !dbg !29
-  %139 = load i64, i64* %17
-  %140 = load i64, i64* %18
+  store i64 %138, i64* %17, !dbg !29
+  %139 = load i64, i64* %16
+  %140 = load i64, i64* %17
   %141 = icmp slt i64 %139, %140
-  store i1 %141, i1* %16
-  %142 = load i1, i1* %16
+  store i1 %141, i1* %18
+  %142 = load i1, i1* %18
   store i1 %142, i1* %lt
   %143 = load i1, i1* %lt
   %144 = zext i1 %143 to i64
@@ -278,14 +278,14 @@ define void @_B04rootmain() !dbg !9 {
   %146 = getelementptr i8, i8 addrspace(1)* null, i64 %145
   store i8 addrspace(1)* %146, i8 addrspace(1)** %_.5
   %147 = call i64 @_B_one(), !dbg !30
-  store i64 %147, i64* %20, !dbg !30
+  store i64 %147, i64* %19, !dbg !30
   %148 = call i64 @_B_two(), !dbg !31
-  store i64 %148, i64* %21, !dbg !31
-  %149 = load i64, i64* %20
-  %150 = load i64, i64* %21
+  store i64 %148, i64* %20, !dbg !31
+  %149 = load i64, i64* %19
+  %150 = load i64, i64* %20
   %151 = icmp sle i64 %149, %150
-  store i1 %151, i1* %19
-  %152 = load i1, i1* %19
+  store i1 %151, i1* %21
+  %152 = load i1, i1* %21
   store i1 %152, i1* %lteq
   %153 = load i1, i1* %lteq
   %154 = zext i1 %153 to i64
@@ -293,14 +293,14 @@ define void @_B04rootmain() !dbg !9 {
   %156 = getelementptr i8, i8 addrspace(1)* null, i64 %155
   store i8 addrspace(1)* %156, i8 addrspace(1)** %_.6
   %157 = call i64 @_B_one(), !dbg !32
-  store i64 %157, i64* %23, !dbg !32
+  store i64 %157, i64* %22, !dbg !32
   %158 = call i64 @_B_two(), !dbg !33
-  store i64 %158, i64* %24, !dbg !33
-  %159 = load i64, i64* %23
-  %160 = load i64, i64* %24
+  store i64 %158, i64* %23, !dbg !33
+  %159 = load i64, i64* %22
+  %160 = load i64, i64* %23
   %161 = icmp sgt i64 %159, %160
-  store i1 %161, i1* %22
-  %162 = load i1, i1* %22
+  store i1 %161, i1* %24
+  %162 = load i1, i1* %24
   store i1 %162, i1* %gt
   %163 = load i1, i1* %gt
   %164 = zext i1 %163 to i64
@@ -308,14 +308,14 @@ define void @_B04rootmain() !dbg !9 {
   %166 = getelementptr i8, i8 addrspace(1)* null, i64 %165
   store i8 addrspace(1)* %166, i8 addrspace(1)** %_.7
   %167 = call i64 @_B_one(), !dbg !34
-  store i64 %167, i64* %26, !dbg !34
+  store i64 %167, i64* %25, !dbg !34
   %168 = call i64 @_B_two(), !dbg !35
-  store i64 %168, i64* %27, !dbg !35
-  %169 = load i64, i64* %26
-  %170 = load i64, i64* %27
+  store i64 %168, i64* %26, !dbg !35
+  %169 = load i64, i64* %25
+  %170 = load i64, i64* %26
   %171 = icmp sge i64 %169, %170
-  store i1 %171, i1* %25
-  %172 = load i1, i1* %25
+  store i1 %171, i1* %27
+  %172 = load i1, i1* %27
   store i1 %172, i1* %gteq
   %173 = load i1, i1* %gteq
   %174 = zext i1 %173 to i64
@@ -323,14 +323,14 @@ define void @_B04rootmain() !dbg !9 {
   %176 = getelementptr i8, i8 addrspace(1)* null, i64 %175
   store i8 addrspace(1)* %176, i8 addrspace(1)** %_.8
   %177 = call i64 @_B_one(), !dbg !36
-  store i64 %177, i64* %29, !dbg !36
+  store i64 %177, i64* %28, !dbg !36
   %178 = call i64 @_B_two(), !dbg !37
-  store i64 %178, i64* %30, !dbg !37
-  %179 = load i64, i64* %29
-  %180 = load i64, i64* %30
+  store i64 %178, i64* %29, !dbg !37
+  %179 = load i64, i64* %28
+  %180 = load i64, i64* %29
   %181 = icmp eq i64 %179, %180
-  store i1 %181, i1* %28
-  %182 = load i1, i1* %28
+  store i1 %181, i1* %30
+  %182 = load i1, i1* %30
   store i1 %182, i1* %eq
   %183 = load i1, i1* %eq
   %184 = zext i1 %183 to i64
@@ -338,14 +338,14 @@ define void @_B04rootmain() !dbg !9 {
   %186 = getelementptr i8, i8 addrspace(1)* null, i64 %185
   store i8 addrspace(1)* %186, i8 addrspace(1)** %_.9
   %187 = call i64 @_B_one(), !dbg !38
-  store i64 %187, i64* %32, !dbg !38
+  store i64 %187, i64* %31, !dbg !38
   %188 = call i64 @_B_two(), !dbg !39
-  store i64 %188, i64* %33, !dbg !39
-  %189 = load i64, i64* %32
-  %190 = load i64, i64* %33
+  store i64 %188, i64* %32, !dbg !39
+  %189 = load i64, i64* %31
+  %190 = load i64, i64* %32
   %191 = icmp ne i64 %189, %190
-  store i1 %191, i1* %31
-  %192 = load i1, i1* %31
+  store i1 %191, i1* %33
+  %192 = load i1, i1* %33
   store i1 %192, i1* %neq
   %193 = load i1, i1* %neq
   %194 = zext i1 %193 to i64
@@ -353,14 +353,14 @@ define void @_B04rootmain() !dbg !9 {
   %196 = getelementptr i8, i8 addrspace(1)* null, i64 %195
   store i8 addrspace(1)* %196, i8 addrspace(1)** %_.10
   %197 = call i64 @_B_one(), !dbg !40
-  store i64 %197, i64* %35, !dbg !40
+  store i64 %197, i64* %34, !dbg !40
   %198 = call i64 @_B_two(), !dbg !41
-  store i64 %198, i64* %36, !dbg !41
-  %199 = load i64, i64* %35
-  %200 = load i64, i64* %36
+  store i64 %198, i64* %35, !dbg !41
+  %199 = load i64, i64* %34
+  %200 = load i64, i64* %35
   %201 = icmp eq i64 %199, %200
-  store i1 %201, i1* %34
-  %202 = load i1, i1* %34
+  store i1 %201, i1* %36
+  %202 = load i1, i1* %36
   store i1 %202, i1* %eeq
   %203 = load i1, i1* %eeq
   %204 = zext i1 %203 to i64
@@ -368,14 +368,14 @@ define void @_B04rootmain() !dbg !9 {
   %206 = getelementptr i8, i8 addrspace(1)* null, i64 %205
   store i8 addrspace(1)* %206, i8 addrspace(1)** %_.11
   %207 = call i64 @_B_one(), !dbg !42
-  store i64 %207, i64* %38, !dbg !42
+  store i64 %207, i64* %37, !dbg !42
   %208 = call i64 @_B_two(), !dbg !43
-  store i64 %208, i64* %39, !dbg !43
-  %209 = load i64, i64* %38
-  %210 = load i64, i64* %39
+  store i64 %208, i64* %38, !dbg !43
+  %209 = load i64, i64* %37
+  %210 = load i64, i64* %38
   %211 = icmp ne i64 %209, %210
-  store i1 %211, i1* %37
-  %212 = load i1, i1* %37
+  store i1 %211, i1* %39
+  %212 = load i1, i1* %39
   store i1 %212, i1* %neeq
   %213 = load i1, i1* %neeq
   %214 = zext i1 %213 to i64

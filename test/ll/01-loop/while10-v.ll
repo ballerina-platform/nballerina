@@ -28,11 +28,11 @@ define void @_B04rootmain() !dbg !5 {
   %15 = xor i1 1, %14
   store i1 %15, i1* %2
   %16 = load i1, i1* %2
-  br i1 %16, label %18, label %19
+  br i1 %16, label %17, label %19
 17:
-  ret void
+  br label %18
 18:
-  br label %17
+  ret void
 19:
   %20 = load i64, i64* %i, !dbg !8
   %21 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %20), !dbg !8

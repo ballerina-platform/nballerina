@@ -9,13 +9,14 @@ define void @_B04rootmain() !dbg !5 {
   %1 = alloca i1
   %x.1 = alloca i64
   %2 = alloca i8 addrspace(1)*
-  %3 = alloca i1
   %x.2 = alloca i8 addrspace(1)*
+  %3 = alloca i1
+  %x.3 = alloca i8 addrspace(1)*
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i8
   %6 = load i8*, i8** @_bal_stack_guard
   %7 = icmp ult i8* %5, %6
-  br i1 %7, label %29, label %8
+  br i1 %7, label %30, label %8
 8:
   %9 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
   store i8 addrspace(1)* %9, i8 addrspace(1)** %x
@@ -36,24 +37,26 @@ define void @_B04rootmain() !dbg !5 {
   br label %19
 19:
   %20 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  %21 = addrspacecast i8 addrspace(1)* %20 to i8*
-  %22 = ptrtoint i8* %21 to i64
-  %23 = and i64 %22, 2233785415175766016
-  %24 = icmp eq i64 %23, 720575940379279360
-  store i1 %24, i1* %3
-  %25 = load i1, i1* %3
-  br i1 %25, label %26, label %28
-26:
-  %27 = load i8 addrspace(1)*, i8 addrspace(1)** %x
-  store i8 addrspace(1)* %27, i8 addrspace(1)** %x.2
+  store i8 addrspace(1)* %20, i8 addrspace(1)** %x.2
+  %21 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
+  %22 = addrspacecast i8 addrspace(1)* %21 to i8*
+  %23 = ptrtoint i8* %22 to i64
+  %24 = and i64 %23, 2233785415175766016
+  %25 = icmp eq i64 %24, 720575940379279360
+  store i1 %25, i1* %3
+  %26 = load i1, i1* %3
+  br i1 %26, label %27, label %29
+27:
+  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %x.2
+  store i8 addrspace(1)* %28, i8 addrspace(1)** %x.3
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098308792567362675)), !dbg !9
   store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !9
-  br label %28
-28:
-  ret void
+  br label %29
 29:
-  %30 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %30)
+  ret void
+30:
+  %31 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
+  call void @_bal_panic(i8 addrspace(1)* %31)
   unreachable
 }
 !llvm.module.flags = !{!0}

@@ -22,8 +22,8 @@ define void @_B04rootmain() !dbg !5 {
 define internal void @_B_printInts(i64 %0) !dbg !7 {
   %maxExclusive = alloca i64
   %i = alloca i64
-  %2 = alloca i1
-  %3 = alloca i64
+  %2 = alloca i64
+  %3 = alloca i1
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i64
   %6 = alloca i8
@@ -38,11 +38,11 @@ define internal void @_B_printInts(i64 %0) !dbg !7 {
 11:
   %12 = load i64, i64* %i, !dbg !14
   %13 = call i64 @_B_decrease(i64 %12), !dbg !14
-  store i64 %13, i64* %3, !dbg !14
-  %14 = load i64, i64* %3
+  store i64 %13, i64* %2, !dbg !14
+  %14 = load i64, i64* %2
   %15 = icmp sle i64 0, %14
-  store i1 %15, i1* %2
-  %16 = load i1, i1* %2
+  store i1 %15, i1* %3
+  %16 = load i1, i1* %3
   br i1 %16, label %17, label %23
 17:
   %18 = load i64, i64* %i, !dbg !15

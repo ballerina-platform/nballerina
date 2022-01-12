@@ -71,11 +71,12 @@ define internal i64 @_B_foo(i8 addrspace(1)* %0) !dbg !7 {
   %v.2 = alloca i64
   %v.3 = alloca i64
   %6 = alloca i64
+  %v.4 = alloca i8 addrspace(1)*
   %7 = alloca i8 addrspace(1)*
   %8 = alloca i8
   %9 = load i8*, i8** @_bal_stack_guard
   %10 = icmp ult i8* %8, %9
-  br i1 %10, label %39, label %11
+  br i1 %10, label %40, label %11
 11:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %v
   %12 = load i8 addrspace(1)*, i8 addrspace(1)** %v
@@ -106,7 +107,7 @@ clause.1:
   %27 = load i64, i64* %v.3
   %28 = call {i64, i1} @llvm.ssub.with.overflow.i64(i64 0, i64 %27)
   %29 = extractvalue {i64, i1} %28, 1
-  br i1 %29, label %44, label %41
+  br i1 %29, label %45, label %42
 pattern.0:
   %30 = load i64, i64* %v.1
   %31 = icmp eq i64 %30, 2
@@ -122,24 +123,26 @@ pattern.1:
 pattern.2:
   br label %clause.1
 36:
+  %37 = load i8 addrspace(1)*, i8 addrspace(1)** %v
+  store i8 addrspace(1)* %37, i8 addrspace(1)** %v.4
   ret i64 0
-37:
-  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %7
-  call void @_bal_panic(i8 addrspace(1)* %38)
+38:
+  %39 = load i8 addrspace(1)*, i8 addrspace(1)** %7
+  call void @_bal_panic(i8 addrspace(1)* %39)
   unreachable
-39:
-  %40 = call i8 addrspace(1)* @_bal_panic_construct(i64 3076), !dbg !20
-  call void @_bal_panic(i8 addrspace(1)* %40)
+40:
+  %41 = call i8 addrspace(1)* @_bal_panic_construct(i64 3076), !dbg !20
+  call void @_bal_panic(i8 addrspace(1)* %41)
   unreachable
-41:
-  %42 = extractvalue {i64, i1} %28, 0
-  store i64 %42, i64* %6
-  %43 = load i64, i64* %6
-  ret i64 %43
-44:
-  %45 = call i8 addrspace(1)* @_bal_panic_construct(i64 4865), !dbg !20
-  store i8 addrspace(1)* %45, i8 addrspace(1)** %7
-  br label %37
+42:
+  %43 = extractvalue {i64, i1} %28, 0
+  store i64 %43, i64* %6
+  %44 = load i64, i64* %6
+  ret i64 %44
+45:
+  %46 = call i8 addrspace(1)* @_bal_panic_construct(i64 4865), !dbg !20
+  store i8 addrspace(1)* %46, i8 addrspace(1)** %7
+  br label %38
 }
 !llvm.module.flags = !{!0}
 !llvm.dbg.cu = !{!2}

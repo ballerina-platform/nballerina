@@ -12,114 +12,89 @@ define void @_B04rootmain() !dbg !5 {
   %3 = alloca i8 addrspace(1)*
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
-  %6 = alloca i1
+  %6 = alloca i8 addrspace(1)*
   %7 = alloca i8 addrspace(1)*
   %8 = alloca i8 addrspace(1)*
-  %9 = alloca i1
+  %9 = alloca i8 addrspace(1)*
   %10 = alloca i8 addrspace(1)*
   %11 = alloca i8 addrspace(1)*
-  %12 = alloca i1
+  %12 = alloca i8 addrspace(1)*
   %13 = alloca i8 addrspace(1)*
   %14 = alloca i8 addrspace(1)*
-  %15 = alloca i1
-  %16 = alloca i8 addrspace(1)*
-  %17 = alloca i8 addrspace(1)*
-  %18 = alloca i1
-  %19 = alloca i8 addrspace(1)*
-  %20 = alloca i8 addrspace(1)*
-  %21 = alloca i8
-  %22 = load i8*, i8** @_bal_stack_guard
-  %23 = icmp ult i8* %21, %22
-  br i1 %23, label %70, label %24
-24:
+  %15 = alloca i8 addrspace(1)*
+  %16 = alloca i8
+  %17 = load i8*, i8** @_bal_stack_guard
+  %18 = icmp ult i8* %16, %17
+  br i1 %18, label %50, label %19
+19:
   store i8 addrspace(1)* null, i8 addrspace(1)** %a
   store i8 addrspace(1)* null, i8 addrspace(1)** %b
   store i8 addrspace(1)* null, i8 addrspace(1)** %c
   store i8 addrspace(1)* null, i8 addrspace(1)** %d
-  %25 = zext i1 1 to i64, !dbg !18
-  %26 = or i64 %25, 72057594037927936, !dbg !18
-  %27 = getelementptr i8, i8 addrspace(1)* null, i64 %26, !dbg !18
-  call void @_Bb02ioprintln(i8 addrspace(1)* %27), !dbg !18
+  %20 = zext i1 1 to i64, !dbg !18
+  %21 = or i64 %20, 72057594037927936, !dbg !18
+  %22 = getelementptr i8, i8 addrspace(1)* null, i64 %21, !dbg !18
+  call void @_Bb02ioprintln(i8 addrspace(1)* %22), !dbg !18
   store i8 addrspace(1)* null, i8 addrspace(1)** %1, !dbg !18
-  %28 = zext i1 1 to i64, !dbg !19
-  %29 = or i64 %28, 72057594037927936, !dbg !19
-  %30 = getelementptr i8, i8 addrspace(1)* null, i64 %29, !dbg !19
-  call void @_Bb02ioprintln(i8 addrspace(1)* %30), !dbg !19
+  %23 = zext i1 1 to i64, !dbg !19
+  %24 = or i64 %23, 72057594037927936, !dbg !19
+  %25 = getelementptr i8, i8 addrspace(1)* null, i64 %24, !dbg !19
+  call void @_Bb02ioprintln(i8 addrspace(1)* %25), !dbg !19
   store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !19
-  %31 = zext i1 1 to i64, !dbg !20
-  %32 = or i64 %31, 72057594037927936, !dbg !20
-  %33 = getelementptr i8, i8 addrspace(1)* null, i64 %32, !dbg !20
-  call void @_Bb02ioprintln(i8 addrspace(1)* %33), !dbg !20
+  %26 = zext i1 1 to i64, !dbg !20
+  %27 = or i64 %26, 72057594037927936, !dbg !20
+  %28 = getelementptr i8, i8 addrspace(1)* null, i64 %27, !dbg !20
+  call void @_Bb02ioprintln(i8 addrspace(1)* %28), !dbg !20
   store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !20
-  %34 = zext i1 1 to i64, !dbg !21
-  %35 = or i64 %34, 72057594037927936, !dbg !21
-  %36 = getelementptr i8, i8 addrspace(1)* null, i64 %35, !dbg !21
-  call void @_Bb02ioprintln(i8 addrspace(1)* %36), !dbg !21
+  %29 = zext i1 1 to i64, !dbg !21
+  %30 = or i64 %29, 72057594037927936, !dbg !21
+  %31 = getelementptr i8, i8 addrspace(1)* null, i64 %30, !dbg !21
+  call void @_Bb02ioprintln(i8 addrspace(1)* %31), !dbg !21
   store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !21
-  %37 = zext i1 1 to i64, !dbg !22
-  %38 = or i64 %37, 72057594037927936, !dbg !22
-  %39 = getelementptr i8, i8 addrspace(1)* null, i64 %38, !dbg !22
-  call void @_Bb02ioprintln(i8 addrspace(1)* %39), !dbg !22
+  %32 = zext i1 1 to i64, !dbg !22
+  %33 = or i64 %32, 72057594037927936, !dbg !22
+  %34 = getelementptr i8, i8 addrspace(1)* null, i64 %33, !dbg !22
+  call void @_Bb02ioprintln(i8 addrspace(1)* %34), !dbg !22
   store i8 addrspace(1)* null, i8 addrspace(1)** %5, !dbg !22
   call void @_B_retNul1(), !dbg !23
-  store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !23
-  %40 = load i8 addrspace(1)*, i8 addrspace(1)** %7
-  %41 = icmp eq i8 addrspace(1)* null, %40
-  store i1 %41, i1* %6
-  %42 = load i1, i1* %6, !dbg !24
-  %43 = zext i1 %42 to i64, !dbg !24
-  %44 = or i64 %43, 72057594037927936, !dbg !24
-  %45 = getelementptr i8, i8 addrspace(1)* null, i64 %44, !dbg !24
-  call void @_Bb02ioprintln(i8 addrspace(1)* %45), !dbg !24
-  store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !24
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !23
+  %35 = zext i1 1 to i64, !dbg !24
+  %36 = or i64 %35, 72057594037927936, !dbg !24
+  %37 = getelementptr i8, i8 addrspace(1)* null, i64 %36, !dbg !24
+  call void @_Bb02ioprintln(i8 addrspace(1)* %37), !dbg !24
+  store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !24
   call void @_B_retNul2(), !dbg !25
-  store i8 addrspace(1)* null, i8 addrspace(1)** %10, !dbg !25
-  %46 = load i8 addrspace(1)*, i8 addrspace(1)** %10
-  %47 = icmp eq i8 addrspace(1)* null, %46
-  store i1 %47, i1* %9
-  %48 = load i1, i1* %9, !dbg !26
-  %49 = zext i1 %48 to i64, !dbg !26
-  %50 = or i64 %49, 72057594037927936, !dbg !26
-  %51 = getelementptr i8, i8 addrspace(1)* null, i64 %50, !dbg !26
-  call void @_Bb02ioprintln(i8 addrspace(1)* %51), !dbg !26
-  store i8 addrspace(1)* null, i8 addrspace(1)** %11, !dbg !26
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !25
+  %38 = zext i1 1 to i64, !dbg !26
+  %39 = or i64 %38, 72057594037927936, !dbg !26
+  %40 = getelementptr i8, i8 addrspace(1)* null, i64 %39, !dbg !26
+  call void @_Bb02ioprintln(i8 addrspace(1)* %40), !dbg !26
+  store i8 addrspace(1)* null, i8 addrspace(1)** %9, !dbg !26
   call void @_B_retNul3(), !dbg !27
-  store i8 addrspace(1)* null, i8 addrspace(1)** %13, !dbg !27
-  %52 = load i8 addrspace(1)*, i8 addrspace(1)** %13
-  %53 = icmp eq i8 addrspace(1)* null, %52
-  store i1 %53, i1* %12
-  %54 = load i1, i1* %12, !dbg !28
-  %55 = zext i1 %54 to i64, !dbg !28
-  %56 = or i64 %55, 72057594037927936, !dbg !28
-  %57 = getelementptr i8, i8 addrspace(1)* null, i64 %56, !dbg !28
-  call void @_Bb02ioprintln(i8 addrspace(1)* %57), !dbg !28
-  store i8 addrspace(1)* null, i8 addrspace(1)** %14, !dbg !28
+  store i8 addrspace(1)* null, i8 addrspace(1)** %10, !dbg !27
+  %41 = zext i1 1 to i64, !dbg !28
+  %42 = or i64 %41, 72057594037927936, !dbg !28
+  %43 = getelementptr i8, i8 addrspace(1)* null, i64 %42, !dbg !28
+  call void @_Bb02ioprintln(i8 addrspace(1)* %43), !dbg !28
+  store i8 addrspace(1)* null, i8 addrspace(1)** %11, !dbg !28
   call void @_B_retNul4(), !dbg !29
-  store i8 addrspace(1)* null, i8 addrspace(1)** %16, !dbg !29
-  %58 = load i8 addrspace(1)*, i8 addrspace(1)** %16
-  %59 = icmp eq i8 addrspace(1)* null, %58
-  store i1 %59, i1* %15
-  %60 = load i1, i1* %15, !dbg !30
-  %61 = zext i1 %60 to i64, !dbg !30
-  %62 = or i64 %61, 72057594037927936, !dbg !30
-  %63 = getelementptr i8, i8 addrspace(1)* null, i64 %62, !dbg !30
-  call void @_Bb02ioprintln(i8 addrspace(1)* %63), !dbg !30
-  store i8 addrspace(1)* null, i8 addrspace(1)** %17, !dbg !30
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !29
+  %44 = zext i1 1 to i64, !dbg !30
+  %45 = or i64 %44, 72057594037927936, !dbg !30
+  %46 = getelementptr i8, i8 addrspace(1)* null, i64 %45, !dbg !30
+  call void @_Bb02ioprintln(i8 addrspace(1)* %46), !dbg !30
+  store i8 addrspace(1)* null, i8 addrspace(1)** %13, !dbg !30
   call void @_B_retNul5(), !dbg !31
-  store i8 addrspace(1)* null, i8 addrspace(1)** %19, !dbg !31
-  %64 = load i8 addrspace(1)*, i8 addrspace(1)** %19
-  %65 = icmp eq i8 addrspace(1)* null, %64
-  store i1 %65, i1* %18
-  %66 = load i1, i1* %18, !dbg !32
-  %67 = zext i1 %66 to i64, !dbg !32
-  %68 = or i64 %67, 72057594037927936, !dbg !32
-  %69 = getelementptr i8, i8 addrspace(1)* null, i64 %68, !dbg !32
-  call void @_Bb02ioprintln(i8 addrspace(1)* %69), !dbg !32
-  store i8 addrspace(1)* null, i8 addrspace(1)** %20, !dbg !32
+  store i8 addrspace(1)* null, i8 addrspace(1)** %14, !dbg !31
+  %47 = zext i1 1 to i64, !dbg !32
+  %48 = or i64 %47, 72057594037927936, !dbg !32
+  %49 = getelementptr i8, i8 addrspace(1)* null, i64 %48, !dbg !32
+  call void @_Bb02ioprintln(i8 addrspace(1)* %49), !dbg !32
+  store i8 addrspace(1)* null, i8 addrspace(1)** %15, !dbg !32
   ret void
-70:
-  %71 = call i8 addrspace(1)* @_bal_panic_construct(i64 772), !dbg !17
-  call void @_bal_panic(i8 addrspace(1)* %71)
+50:
+  %51 = call i8 addrspace(1)* @_bal_panic_construct(i64 772), !dbg !17
+  call void @_bal_panic(i8 addrspace(1)* %51)
   unreachable
 }
 define internal void @_B_retNul1() !dbg !7 {

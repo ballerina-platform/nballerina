@@ -6,8 +6,8 @@ define void @_B04rootmain() !dbg !5 {
   %x = alloca i8 addrspace(1)*
   %1 = alloca i8 addrspace(1)*
   %2 = alloca i8 addrspace(1)*
-  %3 = alloca i1
-  %4 = alloca i8 addrspace(1)*
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i1
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i8 addrspace(1)*
   %7 = alloca i8 addrspace(1)*
@@ -73,11 +73,11 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* %49, i8 addrspace(1)** %8
   br label %34
 50:
-  store i8 addrspace(1)* %40, i8 addrspace(1)** %4
-  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %4
+  store i8 addrspace(1)* %40, i8 addrspace(1)** %3
+  %51 = load i8 addrspace(1)*, i8 addrspace(1)** %3
   %52 = icmp eq i8 addrspace(1)* %51, null
-  store i1 %52, i1* %3
-  %53 = load i1, i1* %3
+  store i1 %52, i1* %4
+  %53 = load i1, i1* %4
   br i1 %53, label %24, label %25
 54:
   %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 2051), !dbg !7

@@ -32,10 +32,12 @@ define internal i64 @_B_foo(i8 addrspace(1)* %0) !dbg !7 {
   %n.1 = alloca i64
   %i = alloca i64
   %3 = alloca i1
+  %i.1 = alloca i64
+  %n.2 = alloca i8 addrspace(1)*
   %4 = alloca i8
   %5 = load i8*, i8** @_bal_stack_guard
   %6 = icmp ult i8* %4, %5
-  br i1 %6, label %27, label %7
+  br i1 %6, label %29, label %7
 7:
   store i8 addrspace(1)* %0, i8 addrspace(1)** %x
   %8 = load i8 addrspace(1)*, i8 addrspace(1)** %x
@@ -47,7 +49,7 @@ define internal i64 @_B_foo(i8 addrspace(1)* %0) !dbg !7 {
   %13 = icmp eq i64 %12, 504403158265495552
   store i1 %13, i1* %2
   %14 = load i1, i1* %2
-  br i1 %14, label %15, label %26
+  br i1 %14, label %15, label %27
 15:
   %16 = load i8 addrspace(1)*, i8 addrspace(1)** %n
   %17 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %16)
@@ -59,19 +61,23 @@ define internal i64 @_B_foo(i8 addrspace(1)* %0) !dbg !7 {
   %20 = icmp eq i64 %19, 0
   store i1 %20, i1* %3
   %21 = load i1, i1* %3
-  br i1 %21, label %22, label %24
+  br i1 %21, label %22, label %25
 22:
-  %23 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
-  store i8 addrspace(1)* %23, i8 addrspace(1)** %n
+  %23 = load i64, i64* %i
+  store i64 %23, i64* %i.1
+  %24 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1)
+  store i8 addrspace(1)* %24, i8 addrspace(1)** %n
   ret i64 -1
-24:
-  %25 = load i64, i64* %n.1
-  ret i64 %25
-26:
-  ret i64 0
+25:
+  %26 = load i64, i64* %n.1
+  ret i64 %26
 27:
-  %28 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052), !dbg !12
-  call void @_bal_panic(i8 addrspace(1)* %28)
+  %28 = load i8 addrspace(1)*, i8 addrspace(1)** %n
+  store i8 addrspace(1)* %28, i8 addrspace(1)** %n.2
+  ret i64 0
+29:
+  %30 = call i8 addrspace(1)* @_bal_panic_construct(i64 2052), !dbg !12
+  call void @_bal_panic(i8 addrspace(1)* %30)
   unreachable
 }
 !llvm.module.flags = !{!0}
