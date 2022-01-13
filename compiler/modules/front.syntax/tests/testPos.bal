@@ -517,8 +517,7 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
             childNodePos.push([param.startPos, param.endPos]);
         }
         TypeDesc? ret = td.ret;
-        if !(ret == () || (ret is BuiltinTypeDesc && ret.builtinTypeName is "null")) {
-            // above is true when there is no actual return type and value is hardcoded not parsed
+        if ret != () {
             check validateTypeDescPos(ret, tok, td.startPos, td.endPos);
             childNodePos.push([ret.startPos, ret.endPos]);
         }
