@@ -486,7 +486,7 @@ public type FunctionTypeDesc record {|
     Position startPos;
     Position endPos;
     FunctionTypeParam[] params;
-    TypeDesc ret;
+    TypeDesc? ret;
     t:FunctionDefinition? defn = ();
 |};
 

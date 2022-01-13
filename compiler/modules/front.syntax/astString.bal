@@ -67,10 +67,10 @@ function functionDefnToWords(Word[] w, FunctionDefn func) {
         w.push(func.params[i].name);
     }
     w.push(")");
-    TypeDesc funcRetTd = func.typeDesc.ret;
-    if !(funcRetTd is BuiltinTypeDesc && funcRetTd.builtinTypeName == "null") {
+    TypeDesc? funcRetTd = func.typeDesc.ret;
+    if funcRetTd != () {
         w.push("returns");
-        typeDescToWords(w, func.typeDesc.ret);
+        typeDescToWords(w, funcRetTd);
     }
     blockToWords(w, func.body);
 }
@@ -367,8 +367,8 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
             comma = true;
         }
         w.push(")");
-        TypeDesc ret = td.ret;
-        if ret !is BuiltinTypeDesc || ret.builtinTypeName != "null" {
+        TypeDesc? ret = td.ret;
+        if ret != () {
             w.push("returns");
             typeDescToWords(w, ret);
         }
