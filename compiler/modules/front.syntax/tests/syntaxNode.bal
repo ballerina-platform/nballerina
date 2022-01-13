@@ -1,15 +1,11 @@
 function syntaxNodeFromImportDecl(ImportDecl decl) returns NonTerminalSyntaxNode {
-    SyntaxNode[] childNodes = [];
-    childNodes.push();
     string? org = decl.org;
     string? prefix = decl.prefix;
     return finishWithSemiColon(decl,
                                { token: "import", pos: decl.startPos },
-                               org != () ? childNodes.push({ name: org, pos: () }) : (),
-                               org != () ? childNodes.push({ token: "/" }) : (),
+                               org != () ? [{ name: org, pos: () }, { token: "/" }] : (),
                                { name: ".".'join(...decl.names), pos: decl.namePos },
-                               prefix != () ? childNodes.push({ token: "as" }) : (),
-                               prefix != () ? childNodes.push({ name: prefix, pos: () }) : ());
+                               prefix != () ? [{ token: "as" }, { name: prefix, pos: () }] : ());
 }
 
 function syntaxNodeFromModuleLevelDefn(ModuleLevelDefn defn) returns SyntaxNode {
@@ -63,36 +59,6 @@ function syntaxNodeFromStmtBlock(StmtBlock block) returns NonTerminalSyntaxNode 
                                         body, // JBUG: can't use query expression directly
                                         { token: "}", pos: block.endPos });
 }
-
-// function nodeFromStmt(Stmt stmt) returns SyntaxNode {
-//     if stmt is VarDeclStmt {
-//         return {
-//             astNode: stmt,
-//             childNodes: [ nodeFromTypeDesc(stmt.td), nodeFromExpr(stmt.initExpr) ]
-//         };
-//     }
-//     else if
-// }
-//
-// function nodesFromStmtBlock(StmtBlock block) returns SyntaxNode[] {
-//     SyntaxNode[] nodes = [];
-//     // Add terminal for `{`
-//     foreach var stmt in block.stmts {
-//         nodes.push(nodeFromStmt(stmt));
-//
-//     }
-//
-//     // Add terminal for `}` with closeBracePos
-//     return nodes;
-// }
-//
-// function nodeFromExpr(Expr expr) returns SyntaxNode {
-//
-// }
-//
-// function nodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
-//
-// }
 
 function syntaxNodeFromStmt(Stmt stmt) returns NonTerminalSyntaxNode {
     if stmt is VarDeclStmt {
@@ -427,21 +393,11 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
 }
 
 function syntaxNodeFromTupleTypeDesc(TupleTypeDesc td) returns NonTerminalSyntaxNode {
-    SyntaxNode[] memberNodes = [];
-    foreach int i in 0 ..< td.members.length() {
-        if i > 0 {
-            memberNodes.push({ token: "," });
-        }
-        memberNodes.push(syntaxNodeFromTypeDesc(td.members[i]));
-    }
+    SyntaxNode[] memberNodes = flattenSyntaxNodeList(from int i in 0 ..< td.members.length() select commaSeperatedSyntaxNode(i, syntaxNodeFromTypeDesc(td.members[i])));
     TypeDesc? rest = td.rest;
-    if rest != () {
-        // pr-todo: should these be combined?
-        memberNodes.push(syntaxNodeFromTypeDesc(rest));
-        memberNodes.push({ token: "..." });
-    }
     return nonTerminalSyntaxNode(td, { token: "[", pos: td.startPos},
                                      memberNodes,
+                                     rest != () ? [syntaxNodeFromTypeDesc(rest), { token: "..." }] : (),
                                      { token: "]", pos: td.endPos});
 }
 
@@ -472,27 +428,16 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
     }
 }
 
-// pr-todo: refactor this to nonTermianlSyntaxNode
 // pr-todo: maybe we need a seperate function for function signature and get rid of skipHeader
 function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean skipHeader = false) returns SyntaxNode {
-    SyntaxNode[] childNodes = [];
-    if !skipHeader {
-        childNodes.push({ token: "function" });
-    }
-    childNodes.push({ token: "(", pos: td.startPos });
-    foreach int i in 0 ..< td.params.length() {
-        if i > 0 {
-            childNodes.push({ token: "," });
-        }
-        childNodes.push(syntaxNodeFromFunctionTypeParam(td.params[i]));
-    }
-    childNodes.push({ token: ")" });
+    SyntaxNode[] params = flattenSyntaxNodeList(from int i in 0 ..< td.params.length() select commaSeperatedSyntaxNode(i, syntaxNodeFromFunctionTypeParam(td.params[i])));
     TypeDesc retTd = td.ret;
-    // pr-todo: this will mess "returns null" functions
-    if !(retTd is BuiltinTypeDesc && retTd.builtinTypeName == "null") {
-        childNodes.push({ token: "returns" }, syntaxNodeFromTypeDesc(retTd));
-    }
-    return { childNodes, astNode: td };
+    return nonTerminalSyntaxNode(td, skipHeader ? () : { token: "function" },
+                                     { token: "(", pos: td.startPos },
+                                     params,
+                                     { token: ")" },
+                                     // pt-todo: we currently have no way of seperating "returns null" function
+                                     !(retTd is BuiltinTypeDesc && retTd.builtinTypeName == "null") ? [{ token: "returns" }, syntaxNodeFromTypeDesc(retTd)] : ());
 }
 
 function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSyntaxNode {
@@ -553,23 +498,32 @@ function syntaxNodeFromFieldDesc(FieldDesc fd) returns SyntaxNode {
     return { childNodes: [syntaxNodeFromTypeDesc(fd.typeDesc)], astNode: fd };
 }
 
+function commaSeperatedSyntaxNode(int index, SyntaxNode node) returns SyntaxNode[] {
+    return index > 0 ? [{ token: "," }, node] : [node];
+}
+
 function finishWithSemiColon(AstNode astNode, SyntaxNode[]|SyntaxNode?... nodes) returns NonTerminalSyntaxNode {
     nodes.push(SEMICOLON_NODE);
     return nonTerminalSyntaxNode(astNode, ...nodes);
 }
 
 function nonTerminalSyntaxNode(AstNode astNode, SyntaxNode[]|SyntaxNode?... nodes) returns NonTerminalSyntaxNode {
-    SyntaxNode[] childNodes = [];
+    SyntaxNode[] childNodes = flattenSyntaxNodeList(nodes);
+    return { childNodes, astNode };
+}
+
+function flattenSyntaxNodeList((SyntaxNode[]|SyntaxNode?)[] arr) returns SyntaxNode[] {
+    SyntaxNode[] nodes = from var node in arr select node !is SyntaxNode[] ? (node) : (...node);
     // pr-todo: use a function flattern
-    foreach var node in nodes {
+    foreach var node in arr {
         if node is SyntaxNode[] {
             foreach var child in node {
-                childNodes.push(child);
+                nodes.push(child);
             }
         }
         else if node is SyntaxNode {
-            childNodes.push(node);
+            nodes.push(node);
         }
     }
-    return { childNodes, astNode };
+    return nodes;
 }
