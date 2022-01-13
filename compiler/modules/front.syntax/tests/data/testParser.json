@@ -183,6 +183,13 @@
     ["V", "expr", "a ^ b & c", "a ^ (b & c)"],
     ["V", "expr", "a & b ^ c", "(a & b) ^ c"],
 
+    { "comment" : "logical expression" },
+    ["V", "expr", "a && b"],
+    ["V", "expr", "a || b"],
+    ["V", "expr", "a || b || c", "(a || b) || c"],
+    ["V", "expr", "a && b && c", "(a && b) && c"],
+    ["V", "expr", "a || b && c", "a || (b && c)"],
+
     { "comment" : "ref" },
     ["V", "expr", "x"],
     ["V", "expr", "x1"],
