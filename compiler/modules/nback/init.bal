@@ -46,6 +46,7 @@ const TYPE_KIND_ARRAY = "array";
 const TYPE_KIND_MAP = "map";
 const TYPE_KIND_RECORD = "record";
 const TYPE_KIND_PRECOMPUTED = "precomputed";
+const TYPE_KIND_STRING = "string";
 
 const STRUCTURE_LIST = 0;
 const STRUCTURE_MAPPING = 1;
@@ -53,7 +54,7 @@ const STRUCTURE_MAPPING = 1;
 type StructureBasicType STRUCTURE_LIST|STRUCTURE_MAPPING;
 
 type TypeKindArrayOrMap TYPE_KIND_ARRAY|TYPE_KIND_MAP;
-type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED;
+type TypeKind TypeKindArrayOrMap|TYPE_KIND_RECORD|TYPE_KIND_PRECOMPUTED|TYPE_KIND_STRING;
 
 type FunctionRef llvm:FunctionDecl|llvm:ConstPointerValue;
 
@@ -68,6 +69,7 @@ type InitModuleContext record {|
     InitTypes llTypes;
     map<llvm:FunctionDecl> typeTestFuncs = {};
     map<llvm:FunctionDecl> runtimeFuncs = {};
+    map<llvm:ConstPointerValue> stringDefns = {};
     // subtype definitions cannot be completed before inherent types are complete,
     // because precomputed subtypes need to know all inherent types
     boolean inherentTypesComplete;
@@ -340,7 +342,32 @@ function createSubtypeStruct(InitModuleContext cx, t:UniformTypeCode typeCode, t
     else if typeCode == t:UT_MAPPING_RW {
         return createMappingSubtypeStruct(cx, semType); 
     }
+    else if typeCode == t:UT_STRING {
+        return createStringSubtypeStruct(cx, semType);
+    }
     panic err:impossible(`subtypes of uniform type ${typeCode} are not implemented`);    
+}
+
+function createStringSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
+    t:StringSubtype sub = <t:StringSubtype>t:stringSubtype(semType);
+    string[] strs = [];
+    foreach string s in sub.char.values {
+        strs.push(s);
+    }
+    foreach string s in sub.nonChar.values {
+        strs.push(s);
+    }
+    llvm:ConstValue[] strConsts = from var s in strs.sort() select getInitString(cx, s);
+    return {
+        types: [cx.llTypes.subtypeContainsFunctionPtr, "i32", "i16", "i16", llvm:arrayType(LLVM_TAGGED_PTR, strs.length())],
+        values: [
+            getSubtypeContainsFunc(cx, TYPE_KIND_STRING),
+            llvm:constInt("i32", strs.length()),
+            llvm:constInt("i16", sub.char.allowed ? 1 : 0),
+            llvm:constInt("i16", sub.nonChar.allowed ? 1 : 0),
+            cx.llContext.constArray(LLVM_TAGGED_PTR, strConsts)
+        ]
+    };
 }
 
 function createListSubtypeStruct(InitModuleContext cx, t:ComplexSemType semType) returns SubtypeStruct {
@@ -479,4 +506,16 @@ function getInitRuntimeFunction(InitModuleContext cx, string symbol, llvm:Functi
         cx.runtimeFuncs[symbol] = newDecl;
         return newDecl;
     }
+}
+
+
+// XXX this duplicates code in Scaffold
+function getInitString(InitModuleContext cx, string str) returns llvm:ConstPointerValue {
+    llvm:ConstPointerValue? curDefn = cx.stringDefns[str];
+    if curDefn != () {
+        return curDefn;
+    }
+    llvm:ConstPointerValue newDefn = addStringDefn(cx.llContext, cx.llMod, cx.stringDefns.length(), str);
+    cx.stringDefns[str] = newDefn;
+    return newDefn;
 }

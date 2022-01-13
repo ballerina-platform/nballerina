@@ -839,6 +839,11 @@ public function widenUnsigned(SemType t) returns SemType {
     }
 }
 
+// Describes the subtype of string included in the type: true/false mean all or none of string
+public function stringSubtype(ComplexSemType t) returns StringSubtype|boolean {
+    return <boolean|StringSubtype>getComplexSubtypeData(t, UT_STRING);
+}
+
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
 public function simpleArrayMemberType(Context cx, SemType t) returns UniformTypeBitSet? {

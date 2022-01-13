@@ -223,6 +223,19 @@ typedef struct {
 } *PrecomputedSubtypePtr;
 
 typedef struct {
+    UniformSubtype uniform;
+    uint32_t nStrs;
+    // If a string has length 1 and it's in the strs list, isCharInStrsAllowed says whether it's included in the type.
+    // If a string has length != 1 and it's in the strs list, isNonCharInStrsAllowed says whether it's included in the type.
+    // If the string is not in the strs list, it's included iff it wouldn't be included if it was in the list.
+    // These two fields are uint16 rather than bool, just to avoid any padding problems.
+    uint16_t isCharInStrsIncluded;
+    uint16_t isNonCharInStrsIncluded;
+    // Sorted list of strings
+    TaggedPtr strs[];
+} *StringSubtypePtr;
+
+typedef struct {
    uint32_t all;
    uint32_t some;
    UniformSubtypePtr subtypes[];
@@ -595,6 +608,27 @@ static READONLY inline StringLength taggedStringLength(TaggedPtr p) {
         LargeStringPtr sp = taggedToPtr(p);
         StringLength len = { sp->lengthInBytes, sp->lengthInCodePoints };
         return len;
+    }
+}
+
+// A more efficient version of taggedStringLength(p) == 1
+// This is READNONE because we can do this looking just at the tagged ptr
+static READNONE inline bool taggedStringIsChar(TaggedPtr p) {
+    uint64_t bits = taggedPtrBits(p);
+    if (bits & IMMEDIATE_FLAG) {
+        unsigned loByte = bits & 0xFF;
+        if (loByte & 0x80) {
+            return loByte != 0xFF;
+        }
+        else {
+            // This char uses one byte.
+            // So it's one char 1 if the other bytes are all padding (0xFF).
+            return (~bits >> 8) == 0;
+        }
+    }
+    else {
+        // non-immediate strings have length > 1
+        return false;
     }
 }
 

@@ -22,6 +22,8 @@ void validateTaggedStringLength(const TaggedPtr ptr, const uint64_t lengthInByte
     const StringLength actual = taggedStringLength(ptr);
     assert(lengthInBytes == actual.nBytes);
     assert(lengthInCodePoints == actual.nCodePoints);
+    bool isChar = taggedStringIsChar(ptr);
+    assert(isChar == (lengthInCodePoints == 1));
 }
 
 void testLargeStringSize(){
