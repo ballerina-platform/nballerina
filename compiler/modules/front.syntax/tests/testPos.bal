@@ -565,7 +565,7 @@ function validateTypeDescOpPos(TypeDesc td, Tokenizer tok) returns err:Syntax? {
 
 function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) returns boolean {
     FragCode[] base = [FRAG_WHITESPACE, FRAG_COMMENT, CP_SEMICOLON];
-    if typeDescContainRightSqureBracket(td) {
+    if typeDescContainsRightSquareBracket(td) {
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
     }
     else if td is BinaryTypeDesc {
@@ -573,12 +573,12 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
         TypeDesc left = td.left;
         while left is BinaryTypeDesc {
             left = left.left;
-            if typeDescContainRightSqureBracket(left) {
+            if typeDescContainsRightSquareBracket(left) {
                 return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
             }
         }
         TypeDesc right = td.right;
-        if typeDescContainRightSqureBracket(left) || typeDescContainRightSqureBracket(right) {
+        if typeDescContainsRightSquareBracket(left) || typeDescContainsRightSquareBracket(right) {
             return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, ...base);
         }
         return !checkPosFragCode(file, endPos, CP_RIGHT_CURLY, CP_RIGHT_SQUARE, ...base);
@@ -590,10 +590,10 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
 }
 
 
-function typeDescContainRightSqureBracket(TypeDesc td) returns boolean {
+function typeDescContainsRightSquareBracket(TypeDesc td) returns boolean {
     if td is FunctionTypeDesc {
         TypeDesc? ret = td.ret;
-        return ret != () && typeDescContainRightSqureBracket(ret);
+        return ret != () && typeDescContainsRightSquareBracket(ret);
     }
     return td is TupleTypeDesc || td is ArrayTypeDesc;
 }

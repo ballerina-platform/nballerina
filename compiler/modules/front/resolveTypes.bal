@@ -47,7 +47,7 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
         paramTypes.push(check resolveSubsetTypeDesc(mod, defn, x.td));
     }
     s:TypeDesc? retTy = defn.typeDesc.ret;
-    t:SemType ret = check resolveSubsetTypeDesc(mod, defn, retTy?: { startPos: defn.typeDesc.endPos, endPos: defn.typeDesc.endPos, builtinTypeName: "null" });
+    t:SemType ret = retTy != () ? check resolveSubsetTypeDesc(mod, defn, retTy) : t:NIL;
     return { paramTypes: paramTypes.cloneReadOnly(), returnType: ret };
 }
 
@@ -269,7 +269,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
             t:SemType[] args = from var x in a select check resolveTypeDesc(mod, modDefn, depth + 1, x);
             s:TypeDesc? retTy = td.ret;
-            t:SemType ret = check resolveTypeDesc(mod, modDefn, depth + 1, retTy?: { startPos: td.endPos, endPos: td.endPos, builtinTypeName: "null" });
+            t:SemType ret = retTy != () ? check resolveTypeDesc(mod, modDefn, depth + 1, retTy) : t:NIL;
             return d.define(env, t:tuple(env, ...args), ret);
         }
         else {
