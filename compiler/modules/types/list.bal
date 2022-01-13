@@ -197,7 +197,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
     }
     // We only need to fill `maxInitialLen` number of places in any FixedLenthArray 
     // members after this number of items are just repeats for `rest` type.
-    int maxInitialLen = int:max(members.initial.length(), maxInitialLength(cx, neg));
+    int maxInitialLen = int:max(members.initial.length(), listConjunctionMaxInitialLength(cx, neg));
     return !listInhabited(cx, members, rest, neg, maxInitialLen);
 }
 
@@ -298,10 +298,8 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
             }
         }
         SemType rd = diff(rest, nt.rest);
-        if !isEmpty(cx, rd) {
-            if listInhabited(cx, members, rd, neg.next, maxInitialLen) {
-                return true;
-            }
+        if !isEmpty(cx, rd) && listInhabited(cx, members, rd, neg.next, maxInitialLen) {
+            return true;
         }
         // This is correct for length 0, because we know that the length of the
         // negative is 0, and [] - [] is empty.
@@ -363,7 +361,7 @@ function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray 
     return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
 }
 
-function maxInitialLength(Context cx, Conjunction? con) returns int {
+function listConjunctionMaxInitialLength(Context cx, Conjunction? con) returns int {
     int maxLen = 0;
     Conjunction? c = con;
     while c != () {
