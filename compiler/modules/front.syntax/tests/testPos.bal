@@ -516,11 +516,11 @@ function validateTypeDescPos(TypeDesc td, Tokenizer tok, Position parentStartPos
             check validateTypeDescPos(param.td, tok, td.startPos, td.endPos);
             childNodePos.push([param.startPos, param.endPos]);
         }
-        TypeDesc ret = td.ret;
-        if !(ret is BuiltinTypeDesc && ret.builtinTypeName is "null") {
+        TypeDesc? ret = td.ret;
+        if !(ret == () || (ret is BuiltinTypeDesc && ret.builtinTypeName is "null")) {
             // above is true when there is no actual return type and value is hardcoded not parsed
-            check validateTypeDescPos(td.ret, tok, td.startPos, td.endPos);
-            childNodePos.push([td.ret.startPos, td.ret.endPos]);
+            check validateTypeDescPos(ret, tok, td.startPos, td.endPos);
+            childNodePos.push([ret.startPos, ret.endPos]);
         }
     }
     childNodePos = childNodePos.sort();
@@ -592,7 +592,11 @@ function testValidTypeDescEnd(SourceFile file, Position endPos, TypeDesc td) ret
 
 
 function typeDescContainRightSqureBracket(TypeDesc td) returns boolean {
-    return td is TupleTypeDesc || td is ArrayTypeDesc || td is FunctionTypeDesc && typeDescContainRightSqureBracket(td.ret);
+    if td is FunctionTypeDesc {
+        TypeDesc? ret = td.ret;
+        return ret != () && typeDescContainRightSqureBracket(ret);
+    }
+    return td is TupleTypeDesc || td is ArrayTypeDesc;
 }
 
 function checkPosFragCode(SourceFile file, Position pos, FragCode... invalidCodes) returns boolean {
