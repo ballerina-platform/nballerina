@@ -1230,8 +1230,7 @@ function codeGenConditionalExpr(CodeGenContext cx, bir:BasicBlock block, Environ
 
 function codeGenExprForBoolean(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|BooleanExprEffect {
     var { result, block, narrowing } = check codeGenExpr(cx, bb, env, expr);
-    if result is bir:BooleanOperand {
-        // rest of the type checking is in the verifier
+    if result is bir:BooleanOperand && (result is boolean || t:isSubtypeSimple(result.semType, t:BOOLEAN)) {
         return { result, block, narrowing };
     }
     return cx.semanticErr("expected boolean operand", s:range(expr));
@@ -1244,8 +1243,7 @@ function codeGenExprForInt(CodeGenContext cx, bir:BasicBlock bb, Environment env
 
 function codeGenExprForString(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|StringExprEffect {
     var { result, block } = check codeGenExpr(cx, bb, env, expr);
-    if result is bir:StringOperand {
-        // rest of the type checking is in the verifier
+    if result is bir:StringOperand && (result is string || t:isSubtypeSimple(result.semType, t:STRING)) {
         return { result, block };
     }
     return cx.semanticErr("expected string operand", s:range(expr));
@@ -2409,7 +2407,7 @@ function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
 }
 
 function intOperand(CodeGenContext cx, bir:Operand operand, s:Expr expr) returns bir:IntOperand|CodeGenError {
-    if operand is bir:IntOperand {
+    if operand is bir:IntOperand && (operand is int || t:isSubtypeSimple(operand.semType, t:INT)) {
         return operand;
     }
     return cx.semanticErr("expected an int operand", s:range(expr));

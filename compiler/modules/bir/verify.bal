@@ -361,5 +361,5 @@ function verifyRegisterSemType(VerifyContext vc, string insnName, Register opera
 }
 
 function operandTypeErr(VerifyContext vc, string insnName, string typeName, Position pos) returns err:Semantic {
-    return vc.err(`operands of ${insnName} must be subtype of ${typeName}`, pos);
+    return vc.err(`bad BIR: operands of ${insnName} must be subtype of ${typeName}`, pos);
 }
