@@ -143,12 +143,28 @@ function syntaxNodeFromIfElseStmt(IfElseStmt stmt) returns NonTerminalSyntaxNode
 }
 
 function syntaxNodeFromMatchStmt(MatchStmt stmt) returns NonTerminalSyntaxNode {
+    SyntaxNode[] clauses = from MatchClause clause in stmt.clauses select syntaxNodeFromMatchClause(clause);
     return nonTerminalSyntaxNode(stmt,
                                  { token: "match", pos: stmt.startPos },
                                  syntaxNodeFromExpr(stmt.expr),
                                  { token: "{" },
-                                 // pr-todo: deal with claues
+                                 clauses,
                                  { token: "}" });
+}
+
+function syntaxNodeFromMatchClause(MatchClause clause) returns NonTerminalSyntaxNode {
+    return nonTerminalSyntaxNode(clause, syntaxNodeFromMatchPatterns(clause.patterns),
+                                         { token: "=>", pos: clause.opPos },
+                                         syntaxNodeFromStmtBlock(clause.block));
+}
+
+function syntaxNodeFromMatchPatterns(MatchPattern[] patterns) returns NonTerminalSyntaxNode[] {
+    SyntaxNode[][] childNodes = from int i in 0 ..< patterns.length() select i > 0 ? [{ token: "|" }, syntaxNodeFromMatchPattern(patterns[i])] : [syntaxNodeFromMatchPattern(patterns[i])];
+    return from int i in 0 ..< patterns.length() select nonTerminalSyntaxNode(patterns[i], childNodes[i]);
+}
+
+function syntaxNodeFromMatchPattern(MatchPattern pattern) returns NonTerminalSyntaxNode {
+    return nonTerminalSyntaxNode(pattern, pattern is WildcardMatchPattern ? { token: "_" } : syntaxNodeFromExpr(pattern));
 }
 
 function syntaxNodeFromWhileStmt(WhileStmt stmt) returns NonTerminalSyntaxNode {
@@ -402,10 +418,10 @@ function syntaxNodeFromTupleTypeDesc(TupleTypeDesc td) returns NonTerminalSyntax
 }
 
 function syntaxNodeFromArrayTypeDesc(ArrayTypeDesc td) returns NonTerminalSyntaxNode {
+    SyntaxNode[][] dimensions = from SimpleConstExpr? dimension in td.dimensions select dimension == () ? [{ token: "[" }, { token: "]" }]:
+                                                                                                          [{ token: "[" }, syntaxNodeFromExpr(dimension), { token: "]" }];
     return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.member),
-                                     { token: "[" },
-                                     // pr-todo: deal with dimensions
-                                     { token: "]", pos: td.endPos});
+                                     ...dimensions);
 }
 
 function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSyntaxNode {
@@ -492,10 +508,8 @@ function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns TerminalSyn
     return { token, astNode: td };
 }
 
-// pr-todo: should these be combined?
 function syntaxNodeFromFieldDesc(FieldDesc fd) returns SyntaxNode {
-    // pr-todo: semicolon
-    return { childNodes: [syntaxNodeFromTypeDesc(fd.typeDesc)], astNode: fd };
+    return finishWithSemiColon(fd, syntaxNodeFromTypeDesc(fd.typeDesc), { name: fd.name, pos: ()});
 }
 
 function commaSeperatedSyntaxNode(int index, SyntaxNode node) returns SyntaxNode[] {
@@ -513,7 +527,9 @@ function nonTerminalSyntaxNode(AstNode astNode, SyntaxNode[]|SyntaxNode?... node
 }
 
 function flattenSyntaxNodeList((SyntaxNode[]|SyntaxNode?)[] arr) returns SyntaxNode[] {
-    SyntaxNode[] nodes = from var node in arr select node !is SyntaxNode[] ? (node) : (...node);
+    // why fallowing is invalid?
+    // SyntaxNode[] nodes = from var node in arr select (node !is SyntaxNode[] ? node : (...node));
+    SyntaxNode[] nodes = [];
     // pr-todo: use a function flattern
     foreach var node in arr {
         if node is SyntaxNode[] {
