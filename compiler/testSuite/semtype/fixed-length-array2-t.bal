@@ -11,5 +11,5 @@ type NegInt14 (!Int14 & IntArray);
 type I4A Int4|(!Int4 & IntArray);
 
 // @type IA = IntArray
-// BUG #842: IA < ISArray
+// @type IA < ISArray
 type IA Int14|NegInt14;

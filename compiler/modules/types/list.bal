@@ -251,7 +251,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
             if listInhabited(cx, members, NEVER, neg.next, maxInitialLen) {
                 return true;
             }
-            foreach int i in len + 1 ..< maxInitialLen {
+            foreach int i in len + 1 ..< negLen {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
                 fixedArrayFill(s, i, rest);
                 if listInhabited(cx, s, NEVER, neg.next, maxInitialLen) {
@@ -297,8 +297,11 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
                 }
             }
         }
-        if !isEmpty(cx, diff(rest, nt.rest)) {
-            return true;
+        SemType rd = diff(rest, nt.rest);
+        if !isEmpty(cx, rd) {
+            if listInhabited(cx, members, rd, neg.next, maxInitialLen) {
+                return true;
+            }
         }
         // This is correct for length 0, because we know that the length of the
         // negative is 0, and [] - [] is empty.
@@ -346,12 +349,14 @@ function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
         members.initial[setIndex] = m;
         return;
     }
-        
     SemType lastMember = members.initial[initCount - 1]; 
-    foreach int i in initCount ..< setIndex + 1 {
-        members.initial.push(lastMember);
+    if lastMember != m {
+        foreach int i in initCount ..< setIndex + 1 {
+            members.initial.push(lastMember);
+        }
+        members.initial[setIndex] = m;
     }
-    members.initial[setIndex] = m;
+    members.fixedLength = int:max(members.fixedLength, setIndex + 1);
 }
 
 function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray {
