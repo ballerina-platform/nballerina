@@ -564,21 +564,6 @@ public readonly class SourceFile {
         return { startPos, endPos: createPosition(lineNum, endColumnNum) };
     }
 
-    public function startPos() returns Position {
-        return createPosition(1, 0);
-    }
-
-    public function endPos() returns Position {
-        if self.lines.length() == 0 {
-            // empty file
-            return createPosition(1, 0);
-        }
-        int lastLineIndex = self.lines.length();
-        ScannedLine lastLine = self.scannedLine(lastLineIndex);
-        string lineContent = "".'join(...scanLineFragments(lastLine));
-        return createPosition(lastLineIndex, lineContent.length());
-    }
-
     function scannedLines() returns readonly & ScannedLine[] => self.lines;
 
     function scannedLine(int lineNumber) returns ScannedLine {

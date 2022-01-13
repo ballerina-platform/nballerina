@@ -42,7 +42,7 @@ function syntaxNodeFromFunctionDefn(FunctionDefn defn) returns SyntaxNode {
     return nonTerminalSyntaxNode(defn,
                                  { token: "function" },
                                  { name: defn.name, pos: defn.namePos},
-                                 syntaxNodeFromFunctionTypeDesc(defn.typeDesc, skipHeader = true),
+                                 syntaxNodeFromFunctionTypeDesc(defn.typeDesc, functionSignature = true),
                                  syntaxNodeFromStmtBlock(defn.body));
 }
 
@@ -251,7 +251,6 @@ function syntaxNodeFromRangeExpr(RangeExpr expr) returns NonTerminalSyntaxNode {
 function syntaxNodeFromTypeTestExpr(TypeTestExpr expr) returns NonTerminalSyntaxNode {
     return nonTerminalSyntaxNode(expr,
                                  syntaxNodeFromExpr(expr.left),
-                                 // pr-todo: should we make "!is" a token?
                                  expr.negated ? { token: "!" } : (),
                                  { token: "is", pos: expr.kwPos },
                                  syntaxNodeFromTypeDesc(expr.td));
@@ -337,10 +336,9 @@ function syntaxNodeFromUnaryExpr(UnaryExpr expr) returns NonTerminalSyntaxNode {
 }
 
 type TerminalExpr ConstValueExpr|NumericLiteralExpr;
-function syntaxNodeFromTerminalExpr(TerminalExpr expr) returns TerminalSyntaxNode {
+function syntaxNodeFromTerminalExpr(TerminalExpr expr) returns TerminalSyntaxAstNode {
     string token;
     if expr is ConstValueExpr {
-        // pr-todo: this will mess up "null"
         token = expr.value != () ? expr.value.toString() : "()";
     }
     else if expr is IntLiteralExpr {
@@ -432,9 +430,8 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
                                          rest == INCLUSIVE_RECORD_TYPE_DESC ? { token: "{|" } : { token: "{" },
                                          // JBUG: can't use query expression directly
                                          fields,
-                                         (rest is TypeDesc) ? [syntaxNodeFromTypeDesc(rest), { token: "..." }, SEMICOLON_NODE] : (),
+                                         (rest is TypeDesc) ? [syntaxNodeFromTypeDesc(rest), { token: "..." }, { token: ";" }] : (),
                                          (rest is INCLUSIVE_RECORD_TYPE_DESC) ? { token: "}", pos: td.endPos } : { token: "|}", pos: td.endPos});
-
     }
     else {
         return nonTerminalSyntaxNode(td, { token: "map", pos: td.startPos},
@@ -444,15 +441,13 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
     }
 }
 
-// pr-todo: maybe we need a seperate function for function signature and get rid of skipHeader
-function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean skipHeader = false) returns SyntaxNode {
+function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSignature = false) returns SyntaxNode {
     SyntaxNode[] params = flattenSyntaxNodeList(from int i in 0 ..< td.params.length() select commaSeperatedSyntaxNode(i, syntaxNodeFromFunctionTypeParam(td.params[i])));
     TypeDesc retTd = td.ret;
-    return nonTerminalSyntaxNode(td, skipHeader ? () : { token: "function" },
+    return nonTerminalSyntaxNode(td, functionSignature ? () : { token: "function" },
                                      { token: "(", pos: td.startPos },
                                      params,
                                      { token: ")" },
-                                     // pt-todo: we currently have no way of seperating "returns null" function
                                      !(retTd is BuiltinTypeDesc && retTd.builtinTypeName == "null") ? [{ token: "returns" }, syntaxNodeFromTypeDesc(retTd)] : ());
 }
 
@@ -462,31 +457,29 @@ function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSynt
         return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.left), { token: "?", pos: td.endPos });
     }
     else {
-        // pr-todo: wrapping with paranthesis
+        // todo: wrapping with paranthesis
         return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.left), { token: td.op, pos: td.opPos }, syntaxNodeFromTypeDesc(td.right));
     }
 }
 
-// pr-todo: refactor common parts among fallowing 3
 function syntaxNodeFromErrorTypeDesc(ErrorTypeDesc td) returns NonTerminalSyntaxNode {
     return nonTerminalSyntaxNode(td, { token: "error", pos: td.startPos },
-                                     { token: "<" },
-                                     syntaxNodeFromTypeDesc(td.detail),
-                                     { token: ">", pos: td.endPos });
+                                     syntaxNodesFromTypeParameter(td.detail, td.endPos));
 }
 
 function syntaxNodeFromXmlSequenceTypeDesc(XmlSequenceTypeDesc td) returns NonTerminalSyntaxNode {
     return nonTerminalSyntaxNode(td, { token: "xml", pos: td.startPos },
-                                     { token: "<" },
-                                     syntaxNodeFromTypeDesc(td.constituent),
-                                     { token: ">", pos: td.endPos });
+                                     syntaxNodesFromTypeParameter(td.constituent, td.endPos));
 }
 
 function syntaxNodeFromTableTypeDesc(TableTypeDesc td) returns NonTerminalSyntaxNode {
     return nonTerminalSyntaxNode(td, { token: "table", pos: td.startPos },
-                                     { token: "<" },
-                                     syntaxNodeFromTypeDesc(td.row),
-                                     { token: ">", pos: td.endPos });
+                                     syntaxNodesFromTypeParameter(td.row, td.endPos));
+}
+
+// pr-idea: should this made a node in the ast (it is explicit in the grammer)
+function syntaxNodesFromTypeParameter(TypeDesc td, Position parentEndPos) returns SyntaxNode[] {
+    return [{ token: "<" }, syntaxNodeFromTypeDesc(td), { token: ">", pos: parentEndPos }];
 }
 
 function syntaxNodeFromUnaryTypeDesc(UnaryTypeDesc td) returns NonTerminalSyntaxNode {
@@ -494,7 +487,7 @@ function syntaxNodeFromUnaryTypeDesc(UnaryTypeDesc td) returns NonTerminalSyntax
 }
 
 type TerminalTypeDesc BuiltinTypeDesc|TypeDescRef|SingletonTypeDesc;
-function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns TerminalSyntaxNode {
+function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns TerminalSyntaxAstNode {
     string token;
     if td is BuiltinTypeDesc {
         token = td.builtinTypeName;
@@ -517,7 +510,7 @@ function commaSeperatedSyntaxNode(int index, SyntaxNode node) returns SyntaxNode
 }
 
 function finishWithSemiColon(AstNode astNode, SyntaxNode[]|SyntaxNode?... nodes) returns NonTerminalSyntaxNode {
-    nodes.push(SEMICOLON_NODE);
+    nodes.push({ token: ";" });
     return nonTerminalSyntaxNode(astNode, ...nodes);
 }
 
@@ -527,10 +520,7 @@ function nonTerminalSyntaxNode(AstNode astNode, SyntaxNode[]|SyntaxNode?... node
 }
 
 function flattenSyntaxNodeList((SyntaxNode[]|SyntaxNode?)[] arr) returns SyntaxNode[] {
-    // why fallowing is invalid?
-    // SyntaxNode[] nodes = from var node in arr select (node !is SyntaxNode[] ? node : (...node));
     SyntaxNode[] nodes = [];
-    // pr-todo: use a function flattern
     foreach var node in arr {
         if node is SyntaxNode[] {
             foreach var child in node {

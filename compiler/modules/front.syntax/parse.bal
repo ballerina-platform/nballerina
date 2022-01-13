@@ -38,15 +38,11 @@ public function scanModulePart(SourceFile file, int partIndex) returns ScannedMo
 public function parseModulePart(ScannedModulePart scanned) returns ModulePart|err:Syntax {
     Tokenizer tok = scanned.tokenizer();
     ModuleLevelDefn[] defns = [];
-    Position startPos = scanned.sourceFile().startPos();
-    Position endPos = scanned.sourceFile().endPos();
     ModulePart part = {
         file: scanned.sourceFile(),
         partIndex: scanned.partIndex,
         defns,
-        importDecls: scanned.importDecls,
-        startPos,
-        endPos
+        importDecls: scanned.importDecls
     };
     while tok.current() != () {
         defns.push(check parseModuleDecl(tok, part));
