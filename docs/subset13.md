@@ -17,7 +17,7 @@ the target version of the Ballerina Language Specification is the [2022-01-06 dr
 * Type descriptors:
    * predefined basic type name: `boolean`, `decimal`, `error`, `float`, `int`, `string`
    * nil type `()`
-   * singleton string types `"xyz"`
+   * singletons of basic type boolean, int, float, decimal, string
    * `any` type
    * `anydata` type
    * optional type: `T?`
@@ -125,7 +125,7 @@ builtin-type-name = "any" | "anydata" | "boolean" | "int" | "float" | "string" |
 
 nil-type-desc = nil-literal
 
-singleton-type-desc = string-literal
+singleton-type-desc = simple-const-expr
 
 # reference to a type definition
 type-reference = identifier | qualified-identifier
@@ -380,6 +380,6 @@ Two kinds of `import` are supported.
 
 ## Additions from subset 12
 
-* singleton string types
+* singleton types
 
 

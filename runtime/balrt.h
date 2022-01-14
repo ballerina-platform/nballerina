@@ -223,7 +223,47 @@ typedef struct {
 } *PrecomputedSubtypePtr;
 
 typedef struct {
+    int64_t min;
+    int64_t max;
+} IntRange;
+
+typedef struct {
     UniformSubtype uniform;
+    // Use 64 bits to avoid padding.
+    // nRanges must be > 0
+    int64_t nRanges;
+    // Sorted
+    IntRange ranges[];
+} *IntSubtypePtr;
+
+typedef struct {
+    UniformSubtype uniform;
+    // nFloats must be > 0.
+    int32_t nFloats;
+    // This is 0 or 1. Use 32 bits to avoid padding.
+    // 1 means members of decimals are included in the type
+    int32_t included;
+    // If NaN is included, it will be the first entry.
+    // The remaining entries are ordered.
+    // It is not possible to have both +0 and -0.
+    double floats[];
+} *FloatSubtypePtr;
+
+typedef const char *DecimalConstPtr;
+
+typedef struct {
+    UniformSubtype uniform;
+    // nDecimals must be > 0
+    int32_t nDecimals;
+    // This is 0 or 1. Use 32 bits to avoid padding.
+    // 1 means members of decimals are included in the type
+    int32_t included;
+    DecimalConstPtr decimals[];
+} *DecimalSubtypePtr;
+
+typedef struct {
+    UniformSubtype uniform;
+    // nStrs may be 0
     uint32_t nStrs;
     // If a string has length 1 and it's in the strs list, isCharInStrsAllowed says whether it's included in the type.
     // If a string has length != 1 and it's in the strs list, isNonCharInStrsAllowed says whether it's included in the type.

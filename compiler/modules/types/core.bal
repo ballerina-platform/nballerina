@@ -839,6 +839,23 @@ public function widenUnsigned(SemType t) returns SemType {
     }
 }
 
+public function booleanSubtype(ComplexSemType t) returns BooleanSubtype|boolean {
+    return <boolean|BooleanSubtype>getComplexSubtypeData(t, UT_BOOLEAN);
+}
+
+// Describes the subtype of int included in the type: true/false mean all or none of string
+public function intSubtype(ComplexSemType t) returns IntSubtype|boolean {
+    return <boolean|IntSubtype>getComplexSubtypeData(t, UT_INT);
+}
+
+public function floatSubtype(ComplexSemType t) returns FloatSubtype|boolean {
+    return <boolean|FloatSubtype>getComplexSubtypeData(t, UT_FLOAT);
+}
+
+public function decimalSubtype(ComplexSemType t) returns DecimalSubtype|boolean {
+    return <boolean|DecimalSubtype>getComplexSubtypeData(t, UT_DECIMAL);
+}
+
 // Describes the subtype of string included in the type: true/false mean all or none of string
 public function stringSubtype(ComplexSemType t) returns StringSubtype|boolean {
     return <boolean|StringSubtype>getComplexSubtypeData(t, UT_STRING);

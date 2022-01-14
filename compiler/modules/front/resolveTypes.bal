@@ -255,12 +255,23 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
         }
     }
-    t:SingleValue value = ();
     if td is s:SingletonTypeDesc {
-        value = td.value;
-    }
-    if value is string {
-        return t:stringConst(value);
+        var value = td.value;
+        if value is string {
+            return t:stringConst(value);
+        }
+        else if value is int {
+            return t:intConst(value);
+        }
+        else if value is boolean {
+            return t:booleanConst(value);
+        }
+        else if value is decimal {
+            return t:decimalConst(value);
+        }
+        else {
+            return t:floatConst(value);
+        }
     }
     if !mod.allowAllTypes {
         return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, td.startPos));
@@ -281,20 +292,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
         else {
             return defn.getSemType(env);
-        }
-    }
-    if value != () {
-        if value is boolean {
-            return t:booleanConst(value);
-        }
-        else if value is int {
-            return t:intConst(value);
-        }
-        else if value is decimal {
-            return t:decimalConst(value);
-        }
-        else {
-            return t:floatConst(value);
         }
     }
     if td is s:ErrorTypeDesc {
