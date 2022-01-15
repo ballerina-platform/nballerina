@@ -68,8 +68,42 @@ class Relooper {
         return block;
     }
 
-    function calculate(Block entry) {
-        panic error("unimplemented");        
+    function createSimpleBlock(Block[] blocks, Block entry) returns Shape {
+        panic error("unimplemented");    
+    }
+
+    function createLoopBlock(Block[] blocks, Block[] entries) returns Shape {
+        panic error("unimplemented");    
+    }
+
+    function createMultipleShape(Block[] blocks, Block[] entries, map<Block[]> independentGroups) returns Shape {
+        panic error("unimplemented");    
+    }
+
+    function findIndependentBlocks(Block[] entries) returns map<Block[]> {
+        panic error("unimplemented");    
+    }
+
+    function calculate(Block[] validBlocks, Block[] entries) returns Shape? {
+        if entries.length() == 1 {
+            Block entry = entries[0];
+            if entry.branchesIn.length() == 0 {
+                return self.createSimpleBlock(validBlocks,entry);
+            }
+            else {
+                return self.createLoopBlock(validBlocks, entries);
+            }
+        }
+        else if entries.length() > 0 {
+            map<Block[]> independentGroups = self.findIndependentBlocks(entries);
+            if independentGroups.keys().length() > 0 {
+                return self.createMultipleShape(validBlocks, entries, independentGroups);
+            }
+            return self.createLoopBlock(validBlocks, entries);
+        }
+        else {
+            return ();
+        }
     }
 
     function render(Block body, int labelHelper) returns Expression {
