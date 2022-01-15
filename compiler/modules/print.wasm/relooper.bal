@@ -69,7 +69,19 @@ class Relooper {
     }
 
     function createSimpleBlock(Block[] blocks, Block entry) returns Shape {
-        panic error("unimplemented");    
+        Block[] nextEntries = [];
+        foreach BlockBranchMap next in entry.branchesOut {
+            if blocks.indexOf(next.block) != () {
+                nextEntries.push(next.block);
+                next.block.branchesIn = next.block.branchesIn.filter(b => b.id != entry.id);
+            }
+        }
+        Block[] validBlocks = blocks.filter(b => b.id != entry.id);
+        SimpleShape simple = {
+            inner: entry,
+            next: self.calculate(validBlocks,nextEntries)
+        };
+        return simple;
     }
 
     function createLoopBlock(Block[] blocks, Block[] entries) returns Shape {
