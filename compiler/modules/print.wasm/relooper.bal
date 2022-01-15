@@ -259,7 +259,9 @@ class Relooper {
     }
 
     function render(Block body, int labelHelper) returns Expression {
-        panic error("unimplemented");    
+        self.root = self.calculate(self.blocks, [body]);
+        // TODO:mapping between relooper blocks and WASM blocks
+        return {code: "Hello World"};    
     }
 
 }
