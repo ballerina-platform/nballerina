@@ -24,8 +24,12 @@ bool _bal_int_subtype_contains(UniformSubtypePtr stp, TaggedPtr tp) {
     return intRangeListContains(istp->ranges, istp->ranges + istp->nRanges, taggedToInt(tp));
 }
 
-bool _bal_int_subtype_contains_int(UniformSubtypePtr stp, int64_t n) {
-    IntSubtypePtr istp = (IntSubtypePtr)stp;
+bool _bal_type_contains_int(ComplexTypePtr ctp, int64_t n) {
+    UniformSubtypeData usd = complexTypeUniformSubtypeData(ctp, TAG_INT);
+    IntSubtypePtr istp = (IntSubtypePtr)usd.ptr;
+    if (istp == 0) {
+        return usd.contains;
+    }
     return intRangeListContains(istp->ranges, istp->ranges + istp->nRanges, n);
 }
 

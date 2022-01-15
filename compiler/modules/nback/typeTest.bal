@@ -11,6 +11,24 @@ final RuntimeFunction typeContainsFunction = {
     attrs: ["readonly"]
 };
 
+final RuntimeFunction typeContainsIntFunction = {
+    name: "type_contains_int",
+    ty: {
+        returnType: LLVM_BOOLEAN,
+        paramTypes: [llvm:pointerType(llComplexType), LLVM_INT]
+    },
+    attrs: ["readonly"]
+};
+
+final RuntimeFunction typeContainsFloatFunction = {
+    name: "type_contains_float",
+    ty: {
+        returnType: LLVM_BOOLEAN,
+        paramTypes: [llvm:pointerType(llComplexType), LLVM_DOUBLE]
+    },
+    attrs: ["readonly"]
+};
+
 final RuntimeFunction structureExactifyFunction = {
     name: "structure_exactify",
     ty: {
@@ -61,21 +79,30 @@ function buildTypeCast(llvm:Builder builder, Scaffold scaffold, bir:TypeCastInsn
 
 function buildTypeTestedValue(llvm:Builder builder, Scaffold scaffold, bir:Register operand, bir:Position pos, t:SemType semType) returns BuildError|TypeTestedValue {
     var [repr, value] = check buildReprValue(builder, scaffold, operand);
-    if repr.base != BASE_REPR_TAGGED {
-        // SUBSET no singleton types; no subtypes of simple basic types
-        return scaffold.unimplementedErr("cast from untagged value", pos);
-    }
-    llvm:PointerValue tagged = <llvm:PointerValue>value;
-    t:UniformTypeBitSet? bitSet = testTypeAsUniformBitSet(scaffold.typeContext(), operand.semType, semType);
+    llvm:PointerValue? valueToExactify = ();
     llvm:Value hasType;
-    llvm:PointerValue? valueToExactify;
-    if bitSet != () {
-        hasType = buildHasTagInSet(builder, tagged, bitSet);
-        valueToExactify = ();
+    BaseRepr baseRepr = repr.base;
+    if baseRepr == BASE_REPR_TAGGED { 
+        llvm:PointerValue tagged = <llvm:PointerValue>value;
+        t:UniformTypeBitSet? bitSet = testTypeAsUniformBitSet(scaffold.typeContext(), operand.semType, semType);
+        if bitSet != () {
+            hasType = buildHasTagInSet(builder, tagged, bitSet);
+        }
+        else {
+            hasType = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFunction), [scaffold.getTypeTest(<t:ComplexSemType>semType), tagged]);
+            valueToExactify = tagged;
+        }
+    }
+    else if baseRepr == BASE_REPR_INT {
+        hasType = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsIntFunction), [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
+    }
+    else if baseRepr == BASE_REPR_FLOAT {
+        hasType = <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFloatFunction), [scaffold.getTypeTest(<t:ComplexSemType>semType), value]);
     }
     else {
-        hasType = check buildHasComplexSemType(builder, scaffold, tagged, <t:ComplexSemType>semType);
-        valueToExactify = tagged;
+        BASE_REPR_BOOLEAN _ = baseRepr;
+        t:BooleanSubtype sub = <t:BooleanSubtype>t:booleanSubtype(<t:ComplexSemType>semType);
+        hasType = builder.iCmp("eq", value, llvm:constInt(LLVM_BOOLEAN, sub.value ? 1 : 0));
     }
     return { hasType, valueToExactify, value, repr };
 }
@@ -100,10 +127,6 @@ function buildNarrowRepr(llvm:Builder builder, Scaffold scaffold, Repr sourceRep
         return buildUntagged(builder, scaffold, <llvm:PointerValue>value, targetRepr);
     }
     return scaffold.unimplementedErr("unimplemented narrowing conversion required", pos);
-}
-
-function buildHasComplexSemType(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:ComplexSemType targetType) returns llvm:Value|BuildError {
-    return <llvm:Value>builder.call(scaffold.getRuntimeFunctionDecl(typeContainsFunction), [scaffold.getTypeTest(targetType), tagged]);
 }
 
 function buildExactify(llvm:Builder builder, Scaffold scaffold, llvm:PointerValue tagged, t:SemType targetType) returns llvm:PointerValue {

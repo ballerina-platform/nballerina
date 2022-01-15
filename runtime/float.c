@@ -8,8 +8,12 @@ bool _bal_float_subtype_contains(UniformSubtypePtr stp, TaggedPtr tp) {
     return floatSubtypeContainsFloat(stp, taggedToFloat(tp));   
 }
 
-bool _bal_float_subtype_contains_float(UniformSubtypePtr stp, double d) {
-    return floatSubtypeContainsFloat(stp, d);
+bool _bal_type_contains_float(ComplexTypePtr ctp, double d) {
+    UniformSubtypeData usd = complexTypeUniformSubtypeData(ctp, TAG_FLOAT);
+    if (usd.ptr == 0) {
+        return usd.contains;
+    }
+    return floatSubtypeContainsFloat(usd.ptr, d);
 }
 
 static bool floatSubtypeContainsFloat(UniformSubtypePtr stp, double d) {

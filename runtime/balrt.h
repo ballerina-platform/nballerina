@@ -513,6 +513,30 @@ static READONLY inline bool complexTypeContainsTagged(ComplexTypePtr ctp, Tagged
     return (vp->contains)(vp, p);
 }
 
+typedef struct {
+    // If this is null, then contains is the result
+    UniformSubtypePtr ptr;
+    bool contains;
+} UniformSubtypeData;
+
+static READONLY inline UniformSubtypeData complexTypeUniformSubtypeData(ComplexTypePtr ctp, int tag) {
+    int flag = 1 << tag;
+    UniformSubtypeData result;
+    if (ctp->all & flag) {
+        result.ptr = 0;
+        result.contains = true;
+    }
+    else if (!(ctp->some & flag)) {
+        result.ptr = 0;
+        result.contains = false;
+    }
+    else {
+        int i = __builtin_popcount(ctp->some & (flag - 1));
+        result.ptr = ctp->subtypes[i];
+    }
+    return result;
+}
+
 static READONLY inline bool memberTypeContainsTagged(MemberType memberType, TaggedPtr tp) {
     if (memberType & 1) {
         uint64_t flag =  (uint64_t)1 << (1 + (getTag(tp) & UT_MASK));
