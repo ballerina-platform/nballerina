@@ -14,6 +14,26 @@ type BlockBranchMap record {
     Block block;
 };
 
+type SimpleShape record {
+    string ty = "Simple";
+    Block inner;
+    Shape? next = ();
+};
+
+type MultipleShape record {
+    string ty = "Multiple";
+    Shape? next = ();
+    map<Shape?> handledBlocks = {};
+}; 
+
+type LoopShape record {
+    string ty = "Loop";
+    Shape? inner;
+    Shape? next;
+};
+
+type Shape SimpleShape|MultipleShape|LoopShape;
+
 class Relooper {
     private Module module;
     private Branch[] branches =[];
