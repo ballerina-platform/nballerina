@@ -68,7 +68,7 @@ class Relooper {
         return block;
     }
 
-    function createSimpleBlock(Block[] blocks, Block entry) returns Shape {
+    function createSimpleShape(Block[] blocks, Block entry) returns Shape {
         Block[] nextEntries = [];
         foreach BlockBranchMap next in entry.branchesOut {
             if blocks.indexOf(next.block) != () {
@@ -84,7 +84,7 @@ class Relooper {
         return simple;
     }
 
-    function createLoopBlock(Block[] blocks, Block[] entries) returns Shape {
+    function createLoopShape(Block[] blocks, Block[] entries) returns Shape {
         Block[] nextEntries = [];
         Block[] innerBlocks = [];
         Block[] validBlocks = blocks.clone();
@@ -240,10 +240,10 @@ class Relooper {
         if entries.length() == 1 {
             Block entry = entries[0];
             if entry.branchesIn.length() == 0 {
-                return self.createSimpleBlock(validBlocks,entry);
+                return self.createSimpleShape(validBlocks,entry);
             }
             else {
-                return self.createLoopBlock(validBlocks, entries);
+                return self.createLoopShape(validBlocks, entries);
             }
         }
         else if entries.length() > 0 {
@@ -251,7 +251,7 @@ class Relooper {
             if independentGroups.keys().length() > 0 {
                 return self.createMultipleShape(validBlocks, entries, independentGroups);
             }
-            return self.createLoopBlock(validBlocks, entries);
+            return self.createLoopShape(validBlocks, entries);
         }
         else {
             return ();
