@@ -201,9 +201,40 @@ class Relooper {
     }
 
     function createMultipleShape(Block[] blocks, Block[] entries, map<Block[]> independentGroups) returns Shape {
-        panic error("unimplemented");    
+        Block[] nextEntries = [];
+        Block[] validBlocks = blocks.clone();
+        MultipleShape multiple = {};
+        Block[] currEntries = [];
+        foreach Block entry in entries {
+            int? index = independentGroups.keys().indexOf(entry.id.toString());
+            if index == () {
+                nextEntries.push(entry);
+            }
+            else {
+                currEntries = [];
+                currEntries.push(entry);
+                validBlocks = validBlocks.filter(b => b.id != entry.id);
+                Block[] group = <Block[]>independentGroups[entry.id.toString()];
+                foreach Block currInner in group {
+                    validBlocks = validBlocks.filter(b => b.id != currInner.id);
+                    foreach BlockBranchMap item in currInner.branchesOut {
+                        if group.indexOf(item.block) == () && nextEntries.indexOf(item.block) == () {
+                            nextEntries.push(item.block);
+                            foreach Block prev in item.block.branchesIn {
+                                index = entries.indexOf(prev);
+                                if index != () {
+                                    item.block.branchesIn = item.block.branchesIn.filter(b => b.id != prev.id);
+                                }
+                            }
+                        }
+                    }
+                }
+                multiple.handledBlocks[entry.id.toString()] = self.calculate(group, currEntries);
+            }
+        }
+        multiple.next = self.calculate(validBlocks,nextEntries);
+        return multiple;
     }
-
 
     function calculate(Block[] validBlocks, Block[] entries) returns Shape? {
         if entries.length() == 1 {
