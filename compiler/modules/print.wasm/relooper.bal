@@ -110,13 +110,100 @@ class Relooper {
         return loop;
     }
 
+    function invalidateChildren(Block block, map<Block?> ownership, map<Block[]?> independentGroups) {
+        Block[] queue = [block];
+        while queue.length() > 0 {
+            Block curr = queue.remove(0);
+            int? index = ownership.keys().indexOf(curr.id.toString());
+            if index == () {
+                continue;
+            }
+            else {
+                Block? owner = ownership[curr.id.toString()];
+                if owner == () {
+                    continue;
+                }
+                else {
+                    Block[] ownerGroup = <Block[]>independentGroups[owner.id.toString()];
+                    ownerGroup = ownerGroup.filter(b => b.id != curr.id);
+                    independentGroups[owner.id.toString()] = ownerGroup;
+                    ownership[curr.id.toString()] = ();
+                    foreach BlockBranchMap child in curr.branchesOut {
+                        queue.push(child.block);
+                    }
+                }
+            }
+        }
+    }
+
+    function findIndependentBlocks(Block[] entries) returns map<Block[]> {
+        map<Block[]> independentGroups = {};
+        map<Block?> ownership = {};
+        foreach Block entry in entries {
+            ownership[entry.id.toString()] = entry;
+            independentGroups[entry.id.toString()] = [entry];
+        }
+        Block[] queue = entries.clone();
+
+        while queue.length() > 0 {
+            Block curr = queue.remove(0);
+            int? index = ownership.keys().indexOf(curr.id.toString());
+            if index != () {
+                Block? owner = ownership[curr.id.toString()];
+                if owner == () {
+                    continue;
+                }
+                else {
+                    foreach BlockBranchMap child in curr.branchesOut {
+                        index = ownership.keys().indexOf(child.block.id.toString());
+                        if index == () {
+                            queue.push(child.block);
+                            ownership[child.block.id.toString()] = owner;
+                            Block[] group = <Block[]>independentGroups[owner.id.toString()];
+                            group.push(child.block);            
+                            independentGroups[owner.id.toString()] = group;
+                        }
+                        else {
+                            Block? existingOwner = ownership[index.toString()];
+                            if existingOwner == () {
+                                continue;
+                            }
+                            else if existingOwner.id != owner.id {
+                                self.invalidateChildren(child.block, ownership, independentGroups);
+                            } 
+                        }
+                    }
+                }
+            }
+            else {
+                continue;
+            }
+        }
+        foreach Block entry in entries {
+            Block[] group = <Block[]>independentGroups[entry.id.toString()];
+            Block[] toInvalidate =[];
+            foreach Block child in group {
+                foreach Block parent in child.branchesIn {
+                    if ownership[parent.id.toString()] != ownership[child.id.toString()] {
+                        self.invalidateChildren(child,ownership,independentGroups);
+                        break;
+                    }
+                }
+            }
+        }
+        foreach Block entry in entries {
+            Block[] group = <Block[]>independentGroups[entry.id.toString()];
+            if group.length() == 0 {
+                Block[] removed = independentGroups.remove(entry.id.toString());
+            }
+        }
+        return independentGroups;
+    }
+
     function createMultipleShape(Block[] blocks, Block[] entries, map<Block[]> independentGroups) returns Shape {
         panic error("unimplemented");    
     }
 
-    function findIndependentBlocks(Block[] entries) returns map<Block[]> {
-        panic error("unimplemented");    
-    }
 
     function calculate(Block[] validBlocks, Block[] entries) returns Shape? {
         if entries.length() == 1 {
