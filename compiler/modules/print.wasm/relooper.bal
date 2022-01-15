@@ -85,7 +85,29 @@ class Relooper {
     }
 
     function createLoopBlock(Block[] blocks, Block[] entries) returns Shape {
-        panic error("unimplemented");    
+        Block[] nextEntries = [];
+        Block[] innerBlocks = [];
+        Block[] validBlocks = blocks.clone();
+        foreach Block entry in entries {
+            foreach Block prev in entry.branchesIn {
+                if innerBlocks.indexOf(prev) == () {
+                    innerBlocks.push(prev);
+                    validBlocks = blocks.filter(b => b.id != prev.id);
+                }
+            }    
+        }
+        foreach Block inner in innerBlocks {
+            foreach BlockBranchMap block in inner.branchesOut {
+                if innerBlocks.indexOf(block.block) == () {
+                    nextEntries.push(block.block);
+                }
+            }
+        }
+        LoopShape loop = {
+            inner: self.calculate(innerBlocks, entries),
+            next : self.calculate(validBlocks, nextEntries)
+        };
+        return loop;
     }
 
     function createMultipleShape(Block[] blocks, Block[] entries, map<Block[]> independentGroups) returns Shape {
