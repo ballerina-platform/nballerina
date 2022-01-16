@@ -19,6 +19,7 @@ the target version of the Ballerina Language Specification is the [2022-01-06 dr
    * nil type `()`
    * singletons of basic type boolean, int, float, decimal, string
    * `any` type
+   * `byte` type
    * `anydata` type
    * optional type: `T?`
    * unions: `T1|T2`
@@ -121,7 +122,7 @@ primary-type-desc =
   | type-reference
   | mapping-type-desc
 
-builtin-type-name = "any" | "anydata" | "boolean" | "int" | "float" | "string" | "error"
+builtin-type-name = "any" | "anydata" | "boolean" | "byte" | "int" | "float" | "string" | "error"
 
 nil-type-desc = nil-literal
 
@@ -380,6 +381,5 @@ Two kinds of `import` are supported.
 
 ## Additions from subset 12
 
-* singleton types
-
-
+* singleton types of boolean, int, float, decimal, string
+* `byte` type

@@ -99,6 +99,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             "any" => { return t:ANY; }
             "anydata" => { return t:createAnydata(mod.tc); }
             "boolean" => { return t:BOOLEAN; }
+            "byte" => { return t:BYTE; }
             "error" => { return t:ERROR; }
             "float" => { return t:FLOAT; }
             "decimal" => { return t:DECIMAL; }
@@ -110,7 +111,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return err:unimplemented(`type ${td.builtinTypeName} is not implemented`, s:locationInDefn(modDefn, td.startPos));
         }
         match td.builtinTypeName {
-            "byte" => { return t:BYTE; }
             "handle" => { return t:HANDLE; }
             "json" => { return t:createJson(mod.tc); }
             "never" => { return t:NEVER; }
@@ -330,6 +330,7 @@ function resolveBuiltinTypeDesc(t:Context tc, s:SubsetBuiltinTypeDesc td) return
         "any" => { return t:ANY; }
         "anydata" => { return t:createAnydata(tc); }
         "boolean" => { return t:BOOLEAN; }
+        "byte" => { return t:BYTE; }
         "int" => { return t:INT; }
         "float" => { return t:FLOAT; }
         "decimal" => { return t:DECIMAL; }

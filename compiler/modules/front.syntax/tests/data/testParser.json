@@ -379,6 +379,8 @@
     ["V", "stmt", "decimal d = 2;"],
     ["V", "stmt", "decimal d = 2d;"],
     ["V", "stmt", "decimal d = 1E+12d;"],
+    ["V", "stmt", "byte i = 10;"],
+    ["V", "stmt", "byte[] i = [10];"],
 
     { "comment" : "statement var decl wildcard" },
     ["V", "stmt", "Int | String _ = x;"],
