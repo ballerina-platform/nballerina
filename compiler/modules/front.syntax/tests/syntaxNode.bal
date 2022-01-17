@@ -1,10 +1,12 @@
 function syntaxNodeFromImportDecl(ImportDecl decl) returns NonTerminalSyntaxNode {
     string? org = decl.org;
     string? prefix = decl.prefix;
+    SyntaxNode[] nameNodes = flattenSyntaxNodeList(from int i in 0 ..< decl.names.length() select
+                                                   fixedTokenSeperatedSyntaxNode(i, { name: decl.names[i], pos: i==0 ? decl.namePos : ()}, "."));
     return finishWithSemiColon(decl,
                                { token: "import", pos: decl.startPos },
                                org != () ? [{ name: org, pos: () }, { token: "/" }] : (),
-                               { name: ".".'join(...decl.names), pos: decl.namePos },
+                               nameNodes,
                                prefix != () ? [{ token: "as" }, { name: prefix, pos: () }] : ());
 }
 
@@ -345,13 +347,14 @@ function syntaxNodeFromTerminalExpr(TerminalExpr expr) returns TerminalSyntaxAst
         token = expr.base == 16 ? "0x" + expr.digits : expr.digits;
     }
     else {
-        token = expr.untypedLiteral + expr.typeSuffix.toString();
+        FpTypeSuffix? typeSuffix = expr.typeSuffix;
+        token = expr.untypedLiteral + (typeSuffix ?: "");
     }
     return { token, astNode: expr };
 }
 
 function syntaxNodeFromBinaryExpr(BinaryExpr expr) returns SyntaxNode {
-    BinaryExprOp|BinaryBitwiseOp op;
+    BinaryExprOp|BinaryBitwiseOp|BinaryLogicalOp op;
     if expr is BinaryEqualityExpr {
         op = expr.equalityOp;
     }
@@ -361,8 +364,11 @@ function syntaxNodeFromBinaryExpr(BinaryExpr expr) returns SyntaxNode {
     else if expr is BinaryArithmeticExpr {
         op = expr.arithmeticOp;
     }
-    else {
+    else if expr is BinaryBitwiseExpr {
         op = expr.bitwiseOp;
+    }
+    else {
+        op = expr.logicalOp;
     }
     return nonTerminalSyntaxNode(expr, syntaxNodeFromExpr(expr.left),
                                        { token: op, pos: expr.opPos },
@@ -407,7 +413,7 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
 }
 
 function syntaxNodeFromTupleTypeDesc(TupleTypeDesc td) returns NonTerminalSyntaxNode {
-    SyntaxNode[] memberNodes = flattenSyntaxNodeList(from int i in 0 ..< td.members.length() select commaSeperatedSyntaxNode(i, syntaxNodeFromTypeDesc(td.members[i])));
+    SyntaxNode[] memberNodes = flattenSyntaxNodeList(from int i in 0 ..< td.members.length() select fixedTokenSeperatedSyntaxNode(i, syntaxNodeFromTypeDesc(td.members[i]), ","));
     TypeDesc? rest = td.rest;
     return nonTerminalSyntaxNode(td, { token: "[", pos: td.startPos},
                                      memberNodes,
@@ -442,13 +448,13 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
 }
 
 function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSignature = false) returns SyntaxNode {
-    SyntaxNode[] params = flattenSyntaxNodeList(from int i in 0 ..< td.params.length() select commaSeperatedSyntaxNode(i, syntaxNodeFromFunctionTypeParam(td.params[i])));
-    TypeDesc retTd = td.ret;
+    SyntaxNode[] params = flattenSyntaxNodeList(from int i in 0 ..< td.params.length() select fixedTokenSeperatedSyntaxNode(i, syntaxNodeFromFunctionTypeParam(td.params[i]), ","));
+    TypeDesc? retTd = td.ret;
     return nonTerminalSyntaxNode(td, functionSignature ? () : { token: "function" },
                                      { token: "(", pos: td.startPos },
                                      params,
                                      { token: ")" },
-                                     !(retTd is BuiltinTypeDesc && retTd.builtinTypeName == "null") ? [{ token: "returns" }, syntaxNodeFromTypeDesc(retTd)] : ());
+                                     retTd != () ? [{ token: "returns" }, syntaxNodeFromTypeDesc(retTd)] : ());
 }
 
 function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSyntaxNode {
@@ -457,7 +463,7 @@ function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSynt
         return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.left), { token: "?", pos: td.endPos });
     }
     else {
-        // todo: wrapping with paranthesis
+        // todo: wrapping with parenthesis
         return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.left), { token: td.op, pos: td.opPos }, syntaxNodeFromTypeDesc(td.right));
     }
 }
@@ -505,8 +511,8 @@ function syntaxNodeFromFieldDesc(FieldDesc fd) returns SyntaxNode {
     return finishWithSemiColon(fd, syntaxNodeFromTypeDesc(fd.typeDesc), { name: fd.name, pos: ()});
 }
 
-function commaSeperatedSyntaxNode(int index, SyntaxNode node) returns SyntaxNode[] {
-    return index > 0 ? [{ token: "," }, node] : [node];
+function fixedTokenSeperatedSyntaxNode(int index, SyntaxNode node, FixedToken seperator) returns SyntaxNode[] {
+    return index > 0 ? [{ token: seperator }, node] : [node];
 }
 
 function finishWithSemiColon(AstNode astNode, SyntaxNode[]|SyntaxNode?... nodes) returns NonTerminalSyntaxNode {
