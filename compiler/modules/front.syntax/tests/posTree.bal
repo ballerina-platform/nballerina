@@ -1,4 +1,5 @@
-import ballerina/test;
+import wso2/nballerina.comm.diagnostic as d;
+
 type TerminalSyntaxNode TerminalSyntaxAstNode|FixedSyntaxNode|IdentifierSyntaxNode|StringLiteralSyntaxNode;
 type AstSyntaxNode TerminalSyntaxAstNode|NonTerminalSyntaxNode;
 type SyntaxNode NonTerminalSyntaxNode|TerminalSyntaxNode;
@@ -40,10 +41,9 @@ type AstNode record {|
    any...;
 |};
 
-
 function validateModulePart(ModulePart part) {
     RootSyntaxNode root = buildTree(part);
-    validateSyntaxNode(root, new(part.file));
+    checkpanic validateSyntaxNode(root, new(part.file));
 }
 
 function buildTree(ModulePart part) returns RootSyntaxNode {
@@ -76,30 +76,32 @@ function skipClosingParan(string expected, Tokenizer tok) {
         current = tok.current();
     }
 }
-// pr-todo: get rid of test module
-function validateTerminalSyntaxNode(TerminalSyntaxNode node, Tokenizer tok) {
+
+function validateTerminalSyntaxNode(TerminalSyntaxNode node, Tokenizer tok) returns PositionValidationError? {
     string expected = node is IdentifierSyntaxNode ? node.name : node is StringLiteralSyntaxNode ? node.literal : node.token;
     skipOpeaningParan(expected, tok);
     skipClosingParan(expected, tok);
+    Position? expectedPos = node is IdentifierSyntaxNode|FixedSyntaxNode|StringLiteralSyntaxNode ? node.pos : ();
+    if expectedPos != () && tok.currentStartPos() != expectedPos {
+        return invalidStartPos(currentLocation(tok), expectedPos, node is IdentifierSyntaxNode ? node.name : node is StringLiteralSyntaxNode? node.literal : node.token);
+    }
     if node is IdentifierSyntaxNode {
-        Position? pos = node.pos;
-        if pos != () {
-            test:assertEquals(tok.currentStartPos(), pos, tok.file.filename());
-        }
-        string real;
-        // pr-todo: allowing FixedToken to deal with int: type of things
-        if expected != "_" && expected !is FixedToken {
-            real = checkpanic tok.expectIdentifier();
+        string actual;
+        // Keyword is allowed for cases such as int:<id>
+        if expected != "_" && expected !is Keyword {
+            actual = checkpanic tok.expectIdentifier();
         }
         else {
-            real = <string>tok.current();
+            actual = <string>tok.current();
             checkpanic tok.advance();
         }
-        test:assertEquals(real, expected, node.toString() + tok.file.filename());
+        if actual != expected {
+            return unexpectedToken(currentLocation(tok), expected, actual);
+        }
     }
     else {
         Token? token = tok.current();
-        string? actual;
+        string actual;
         if token is VariableLengthToken {
             if token[0] is HEX_INT_LITERAL {
                 // tokenizer ignore 0x part
@@ -113,63 +115,69 @@ function validateTerminalSyntaxNode(TerminalSyntaxNode node, Tokenizer tok) {
             }
         }
         else {
-            actual = token == "null" ? "()" : token;
+            actual = token == "null" ? "()" : <string>token;
         }
         if expected == "()" && actual == "(" && tok.peek() == ")" {
             checkpanic tok.advance();
             actual = "()";
         }
-
+        checkpanic tok.advance();
         if actual != expected && token is VariableLengthToken && token[0] is DECIMAL_FP_NUMBER {
             // 0f vs 0.0
+            return;
         }
-        else {
-            test:assertEquals(actual, expected, node.toString() + tok.file.filename());
+        else if actual != expected {
+            return unexpectedToken(currentLocation(tok), expected, actual);
         }
-        checkpanic tok.advance();
     }
 }
 
-function validateSyntaxNode(SyntaxNode|RootSyntaxNode node, Tokenizer tok) {
+function validateSyntaxNode(SyntaxNode|RootSyntaxNode node, Tokenizer tok) returns PositionValidationError? {
     if node is TerminalSyntaxNode {
-        validateTerminalSyntaxNode(node, tok);
+        check validateTerminalSyntaxNode(node, tok);
     }
     else if node is RootSyntaxNode {
         checkpanic tok.advance();
         foreach SyntaxNode child in node.childNodes {
-            validateSyntaxNode(child, tok);
+            check validateSyntaxNode(child, tok);
         }
     }
     else {
         Position parentStart = node.astNode.startPos;
         Position parentEnd = node.astNode.endPos;
-        Position lastEnd = parentStart;
+        Range parentRange = { startPos: parentStart, endPos: parentEnd };
         boolean isTypeDesc = node.astNode is TypeDesc;
+        d:Range|d:Position lastRange = parentStart;
         foreach SyntaxNode child in node.childNodes {
+            Position lastEnd = lastRange is Position ? lastRange : lastRange.endPos;
             if child !is AstSyntaxNode {
                 Position? pos = child.pos;
                 if pos != () {
                     if pos < lastEnd {
-                        overlappingNodeErr(node, lastEnd, pos, tok.file.filename());
+                        check overlappingChildNodes(currentLocation(tok), [lastRange, pos]);
                     }
-                    lastEnd = pos;
+                    if pos < parentStart {
+                        check childNodeOutOfRange(currentLocation(tok), parentRange, pos);
+                    }
+                    lastRange = pos;
                 }
             }
             else {
                 Position childStartPos = child.astNode.startPos;
                 Position childEndPos = child.astNode.endPos;
+                Range childRange = { startPos: childStartPos, endPos: childEndPos };
                 if childStartPos < parentStart || childEndPos > parentEnd {
-                    outofBoundChildErrr(node, child, tok.file.filename());
+                    check childNodeOutOfRange(currentLocation(tok), parentRange, childRange);
                 }
                 if childStartPos < lastEnd {
-                    overlappingNodeErr(node, lastEnd, childStartPos, tok.file.filename());
+                    check overlappingChildNodes(currentLocation(tok), [lastRange, childRange]);
                 }
-                lastEnd = childEndPos;
+                lastRange = childRange;
             }
             if isTypeDesc {
                 tok.setMode(MODE_TYPE_DESC);
             }
-            validateSyntaxNode(child, tok);
+            check validateSyntaxNode(child, tok);
             if isTypeDesc {
                 tok.setMode(MODE_NORMAL);
             }
@@ -177,19 +185,69 @@ function validateSyntaxNode(SyntaxNode|RootSyntaxNode node, Tokenizer tok) {
     }
 }
 
-function overlappingNodeErr(NonTerminalSyntaxNode parent, Position lastEnd, Position currentStart, string filename) {
-    string[] body = ["overlapping child nodes"];
-    body.push(string `ast node: ${parent.astNode.toString()}`);
-    body.push(string`overlapping range: ${unpackPosition(lastEnd).toString()}:${unpackPosition(currentStart).toString()}`);
-    body.push(string`file: ${filename}`);
-    string msg = "\n".'join(...body);
-    panic error(msg);
+enum PositionValidationErrorType {
+    OVERLAPPING_CHILD_NODES = "overlapping child nodes",
+    CHILD_NODE_OUT_OF_RANGE = "childnode out of range",
+    UNEXPECTED_TOKEN = "unexpected token",
+    INVALID_START_POS = "invalid start position"
 }
 
-function outofBoundChildErrr(NonTerminalSyntaxNode parent, NonTerminalSyntaxNode|TerminalSyntaxAstNode child, string filename) {
-    string[] body = ["child node outside of parent"];
-    body.push(string `parent node: ${parent.astNode.toString()}`);
-    body.push(string `child node: ${child.astNode.toString()}`);
-    string msg = "\n".'join(...body);
-    panic error(msg);
+type PositionValidationDiagnostic record {|
+    PositionValidationErrorType message;
+    d:Location loc;
+|};
+
+type InvalidStartPosDiagnostic record {|
+    *PositionValidationDiagnostic;
+    INVALID_START_POS message = INVALID_START_POS;
+    Position expected;
+    string nodeContent;
+|};
+
+type OverlappingChildNodesDiagnostic record {|
+    *PositionValidationDiagnostic;
+    OVERLAPPING_CHILD_NODES message = OVERLAPPING_CHILD_NODES;
+    [Range|Position, Range|Position] childNodeRanges;
+|};
+
+type ChildNodeOutOfRangeDiagnostic record {|
+    *PositionValidationDiagnostic;
+    CHILD_NODE_OUT_OF_RANGE message = CHILD_NODE_OUT_OF_RANGE;
+    Range parentRange;
+    Range|Position childRange;
+|};
+
+type UnexpectTokenDiagnostic record {|
+    *PositionValidationDiagnostic;
+    UNEXPECTED_TOKEN message = UNEXPECTED_TOKEN;
+    string expected;
+    string actual;
+|};
+
+
+type OverlappingChildNodes error<OverlappingChildNodesDiagnostic>;
+type ChildNodeOutOfRange error<ChildNodeOutOfRangeDiagnostic>;
+type UnexpectToken error<UnexpectTokenDiagnostic>;
+type InvalidStartPos error<InvalidStartPosDiagnostic>;
+
+type PositionValidationError OverlappingChildNodes|ChildNodeOutOfRange|UnexpectToken|InvalidStartPos;
+
+function overlappingChildNodes(d:Location currentLocation, [Range|Position, Range|Position] childNodeRanges) returns OverlappingChildNodes {
+    return error OverlappingChildNodes("position validation error", message=OVERLAPPING_CHILD_NODES, loc=currentLocation, childNodeRanges=childNodeRanges);
+}
+
+function childNodeOutOfRange(d:Location currentLocation, Range parentRange, Range|Position childRange) returns ChildNodeOutOfRange {
+    return error ChildNodeOutOfRange("position validation error", message=CHILD_NODE_OUT_OF_RANGE, loc=currentLocation, parentRange=parentRange, childRange=childRange);
+}
+
+function unexpectedToken(d:Location currentLocation, string expected, string actual) returns UnexpectToken {
+    return error UnexpectToken("position validation error", message=UNEXPECTED_TOKEN, loc=currentLocation, expected=expected, actual=actual);
+}
+
+function invalidStartPos(d:Location currentLocation, Position expected, string nodeContent) returns InvalidStartPos {
+    return error InvalidStartPos("position validation error", message=INVALID_START_POS, loc=currentLocation, expected=expected, nodeContent=nodeContent);
+}
+
+function currentLocation(Tokenizer tok) returns d:Location {
+    return { file: tok.file, range: tok.currentStartPos()};
 }
