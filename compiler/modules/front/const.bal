@@ -137,12 +137,6 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
     else if expr is s:CheckingExpr {
         return foldCheckingExpr(cx, expectedType, expr);
     }
-    else if expr is s:ListConstructorExpr {
-        return foldListConstructorExpr(cx, expectedType, expr);
-    }
-    else if expr is s:MappingConstructorExpr {
-        return foldMappingConstructorExpr(cx, expectedType, expr);
-    }
     else if expr is s:VarRefExpr {
         return foldVarRefExpr(cx, expectedType, expr);
     }
@@ -157,32 +151,9 @@ function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns 
     } 
 }
 
-function foldListConstructorExpr(FoldContext cx, t:SemType? expectedType, s:ListConstructorExpr expr) returns s:Expr|FoldError {
-    // SUBSET always have contextually expected type for list constructor
-    t:SemType expectedListType = t:intersect(<t:SemType>expectedType, t:LIST_RW);
-    t:SemType? memberType = t:arrayMemberType(cx.typeContext(), expectedListType);
-    s:Expr[] members = expr.members;
-    foreach int i in 0 ..< members.length() {
-        members[i] = check foldExpr(cx, memberType, members[i]);
-    }
-    expr.expectedType = expectedListType;
-    return expr;
-}
-
-function foldMappingConstructorExpr(FoldContext cx, t:SemType? expectedType, s:MappingConstructorExpr expr) returns s:Expr|FoldError {
-    // SUBSET always have contextually expected type for mapping constructor
-    t:SemType inherentType = check selectMappingInherentType(cx, <t:SemType>expectedType, expr); 
-    expr.expectedType = inherentType;
-    foreach s:Field f in expr.fields {
-        t:SemType memberType = t:mappingMemberType(cx.typeContext(), inherentType, f.name);
-        f.value = check foldExpr(cx, memberType, f.value);
-    }
-    return expr;
-}
-
-function selectMappingInherentType(FoldContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns t:SemType|FoldError {
+function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns t:SemType|FoldError {
     t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING_RW);
-    t:Context tc = cx.typeContext();
+    t:Context tc = cx.mod.tc;
     if t:mappingAtomicTypeRw(tc, expectedMappingType) != () {
         return expectedMappingType; // easy case
     }
@@ -495,37 +466,52 @@ function foldVarRefExpr(FoldContext cx, t:SemType? expectedType, s:VarRefExpr ex
     }
 }
 
-function foldFpLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError { 
-    var { typeSuffix, untypedLiteral, startPos } = expr;
-    float|decimal result;
-    if typeSuffix != () {
-        result = typeSuffix is s:FLOAT_TYPE_SUFFIX ? floatFromFpLiteral(untypedLiteral) : check decimalFromFpLiteral(cx, untypedLiteral, startPos);
-    }
-    else if expectedType == () || t:includesSome(expectedType, t:FLOAT) || !t:includesSome(expectedType, t:DECIMAL) {
-        result = floatFromFpLiteral(untypedLiteral);
-    }
-    else {
-        result = check decimalFromFpLiteral(cx, untypedLiteral, startPos);
-    }
-    return { startPos: startPos, endPos: expr.endPos, value: result };
+function foldFpLiteralExpr(FoldContext cx, t:SemType? expectedType, s:FpLiteralExpr expr) returns s:ConstValueExpr|FoldError {
+    Position startPos = expr.startPos;
+    return {
+        value: check fpLiteralValue(cx, expectedType, expr.untypedLiteral, expr.typeSuffix, startPos),
+        startPos,
+        endPos: expr.endPos
+    };
 }
 
 function foldIntLiteralExpr(FoldContext cx, t:SemType? expectedType, s:IntLiteralExpr expr) returns s:ConstValueExpr|FoldError {
     Position startPos = expr.startPos;
-    int|float|decimal result;
-    if expectedType == () || t:includesSome(expectedType, t:INT) {
-        result = check intFromLiteral(cx, expr);
-    }  
-    else if t:includesSome(expectedType, t:FLOAT) {
-        result = floatFromFpLiteral(expr.digits);
+    return {
+       value: check intLiteralValue(cx, expectedType, expr.base, expr.digits, startPos),
+       startPos,
+       endPos: expr.endPos
+    };
+}
+
+
+function fpLiteralValue(err:SemanticContext cx, t:SemType? expectedType, string untypedLiteral, string? typeSuffix, Position pos) returns float|decimal|FoldError {
+    if typeSuffix != () {
+        return typeSuffix is s:FLOAT_TYPE_SUFFIX ? floatFromFpLiteral(untypedLiteral) : check decimalFromFpLiteral(cx, untypedLiteral, pos);
     }
-    else if t:includesSome(expectedType, t:DECIMAL) {
-        result = check decimalFromFpLiteral(cx, expr.digits, startPos);
+    else if expectedType == () || t:includesSome(expectedType, t:FLOAT) || !t:includesSome(expectedType, t:DECIMAL) {
+        return floatFromFpLiteral(untypedLiteral);
     }
     else {
-        result = check intFromLiteral(cx, expr);
+        return check decimalFromFpLiteral(cx, untypedLiteral, pos);
     }
-    return { startPos: startPos, endPos: expr.endPos, value: result };
+}
+
+function intLiteralValue(err:SemanticContext cx, t:SemType? expectedType, s:IntLiteralBase base, string digits, Position pos) returns int|float|decimal|FoldError {
+    if expectedType == () || t:includesSome(expectedType, t:INT) {
+        return check intFromLiteral(cx, base, digits, pos);
+    }  
+    else if t:includesSome(expectedType, t:FLOAT) {
+        // BUG base ignored
+        return floatFromFpLiteral(digits);
+    }
+    else if t:includesSome(expectedType, t:DECIMAL) {
+        // BUG base ignored
+        return check decimalFromFpLiteral(cx, digits, pos);
+    }
+    else {
+        return check intFromLiteral(cx, base, digits, pos);
+    }
 }
 
 // Since the binary floating point literal is parsed correctly,
@@ -536,7 +522,7 @@ function floatFromFpLiteral(string digits) returns float {
 
 // Even if the decimal floating point literal is parsed correctly,
 // overflows should return an error.
-function decimalFromFpLiteral(FoldContext cx, string decimalStr, Position pos) returns decimal|FoldError {
+function decimalFromFpLiteral(err:SemanticContext cx, string decimalStr, Position pos) returns decimal|FoldError {
     decimal|error d = decimal:fromString(decimalStr);
     if d is error {
         return cx.semanticErr("invalid decimal floating point number", cause=d, pos=pos);
@@ -546,10 +532,10 @@ function decimalFromFpLiteral(FoldContext cx, string decimalStr, Position pos) r
 
 // Even if the integer literal is parsed correctly,
 // overflows should return an error.
-function intFromLiteral(FoldContext cx, s:IntLiteralExpr expr) returns int|FoldError {
-    int|error i = s:intFromIntLiteral(expr.base, expr.digits);
+function intFromLiteral(err:SemanticContext cx, s:IntLiteralBase base, string digits, Position pos) returns int|FoldError {
+    int|error i = s:intFromIntLiteral(base, digits);
     if i is error {
-        return cx.semanticErr("invalid int literal", cause=i, pos=expr.startPos);
+        return cx.semanticErr("invalid int literal", cause=i, pos=pos);
     }
     return i;
 }

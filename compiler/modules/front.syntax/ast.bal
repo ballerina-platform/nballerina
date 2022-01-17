@@ -304,15 +304,12 @@ public type ListConstructorExpr record {|
     Position endPos;
     Position opPos;
     Expr[] members;
-    // JBUG #33309 adding this field makes match statement in codeGenExpr fail
-    t:SemType? expectedType = ();
 |};
 
 public type MappingConstructorExpr record {|
     *PositionFields;
     Position opPos;
     Field[] fields;
-    t:SemType? expectedType = ();
 |};
 
 public type Field record {|

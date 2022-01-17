@@ -1128,10 +1128,13 @@ public function singleton(Context cx, SingleValue value) returns SemType {
     if value is () {
         return NIL;
     }
-    SingletonMemo? memo = cx.singletonMemo[value];
-    if memo != () {
-        return memo.semType;
-    }
+    // JBUG this memoization code doesn't work with numeric zeros
+    // looks like zeros of different basic types are being treated as `==` by table code
+    // see cases in 13-bug
+    //SingletonMemo? memo = cx.singletonMemo[value];
+    //if memo != () {
+    //    return memo.semType;
+    //}
     ComplexSemType semType;
     if value is int {
         semType = intConst(value);
@@ -1149,7 +1152,7 @@ public function singleton(Context cx, SingleValue value) returns SemType {
         boolean _ = value;
         semType = booleanConst(value);
     }
-    cx.singletonMemo.add({ value, semType });
+    //cx.singletonMemo.add({ value, semType });
     return semType;
 }
 
