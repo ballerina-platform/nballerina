@@ -25,6 +25,7 @@ function syntaxNodeFromModuleLevelDefn(ModuleLevelDefn defn) returns SyntaxNode 
 function syntaxNodeFromConstDefn(ConstDefn defn) returns SyntaxNode {
     SubsetBuiltinTypeDesc? td = defn.td;
     return finishWithSemiColon(defn,
+                               defn.vis == "public" ? { token: "public" } : (),
                                { token: "const" },
                                td != () ? { token: td.builtinTypeName } : (),
                                { name: defn.name, pos: defn.namePos },
@@ -35,6 +36,7 @@ function syntaxNodeFromConstDefn(ConstDefn defn) returns SyntaxNode {
 
 function syntaxNodeFromTypeDefn(TypeDefn defn) returns SyntaxNode {
     return finishWithSemiColon(defn,
+                               defn.vis == "public" ? { token: "public" } : (),
                                { token: "type" },
                                { name: defn.name, pos: defn.namePos },
                                syntaxNodeFromTypeDesc(defn.td));
@@ -42,6 +44,7 @@ function syntaxNodeFromTypeDefn(TypeDefn defn) returns SyntaxNode {
 
 function syntaxNodeFromFunctionDefn(FunctionDefn defn) returns SyntaxNode {
     return nonTerminalSyntaxNode(defn,
+                                 defn.vis == "public" ? { token: "public" } : (),
                                  { token: "function" },
                                  { name: defn.name, pos: defn.namePos},
                                  syntaxNodeFromFunctionTypeDesc(defn.typeDesc, functionSignature = true),
@@ -57,7 +60,7 @@ function syntaxNodeFromFunctionTypeParam(FunctionTypeParam param) returns Syntax
 
 function syntaxNodeFromStmtBlock(StmtBlock block) returns NonTerminalSyntaxNode {
     SyntaxNode[] body = from Stmt stmt in block.stmts select syntaxNodeFromStmt(stmt);
-    return nonTerminalSyntaxNode(block, { token: "}", pos: block.startPos},
+    return nonTerminalSyntaxNode(block, { token: "{", pos: block.startPos},
                                         body, // JBUG: can't use query expression directly
                                         { token: "}", pos: block.endPos });
 }
@@ -99,9 +102,11 @@ function syntaxNodeFromStmt(Stmt stmt) returns NonTerminalSyntaxNode {
 }
 
 function syntaxNodeFromVarDeclStmt(VarDeclStmt stmt) returns NonTerminalSyntaxNode {
+    string? name = stmt.name;
     return finishWithSemiColon(stmt,
                                stmt.isFinal ? { token: "final", pos: stmt.startPos }: (),
                                syntaxNodeFromTypeDesc(stmt.td),
+                               { name: name ?: "_", pos: stmt.namePos },
                                { token: "=", pos: stmt.opPos },
                                syntaxNodeFromExpr(stmt.initExpr));
 }
@@ -130,7 +135,7 @@ function syntaxNodeFromAssignStmt(AssignStmt stmt) returns NonTerminalSyntaxNode
 function syntaxNodeFromCompoundAssignStmt(CompoundAssignStmt stmt) returns NonTerminalSyntaxNode {
     return finishWithSemiColon(stmt,
                                syntaxNodeFromExpr(stmt.lValue),
-                               { token: stmt.op, pos: stmt.opPos },
+                               { token: <FixedToken>(stmt.op + "="), pos: stmt.opPos },
                                syntaxNodeFromExpr(stmt.expr));
 }
 
@@ -267,8 +272,10 @@ function syntaxNodeFromErrorConstructorExpr(ErrorConstructorExpr expr) returns N
 }
 
 function syntaxNodeFromFunctionCallExpr(FunctionCallExpr expr) returns NonTerminalSyntaxNode {
-    SyntaxNode[] args = from Expr arg in expr.args select syntaxNodeFromExpr(arg);
-    return nonTerminalSyntaxNode(expr, { name: expr.funcName, pos: expr.startPos },
+    SyntaxNode[] args = flattenSyntaxNodeList(from int i in 0 ..< expr.args.length() select fixedTokenSeperatedSyntaxNode(i, syntaxNodeFromExpr(expr.args[i]), ","));
+    string? prefix = expr.prefix;
+    return nonTerminalSyntaxNode(expr, prefix != () ? [{ name: prefix, pos: expr.qNamePos }, { token: ":" }] : (),
+                                       { name: expr.funcName, pos: prefix == () ? expr.qNamePos : () },
                                        { token: "(", pos: expr.openParenPos },
                                        // JBUG: can't use the query exprssion directly
                                        args,
@@ -278,6 +285,8 @@ function syntaxNodeFromFunctionCallExpr(FunctionCallExpr expr) returns NonTermin
 function syntaxNodeFromMethodCallExpr(MethodCallExpr expr) returns NonTerminalSyntaxNode {
     SyntaxNode[] args = from Expr arg in expr.args select syntaxNodeFromExpr(arg);
     return nonTerminalSyntaxNode(expr, syntaxNodeFromExpr(expr.target),
+                                       { token: ".", pos: expr.opPos },
+                                       { name: expr.methodName, pos: expr.namePos },
                                        { token: "(", pos: expr.openParenPos },
                                        // JBUG: can't use the query exprssion directly
                                        args,
@@ -285,7 +294,7 @@ function syntaxNodeFromMethodCallExpr(MethodCallExpr expr) returns NonTerminalSy
 }
 
 function syntaxNodeFromListConstructorExpr(ListConstructorExpr expr) returns NonTerminalSyntaxNode{
-    SyntaxNode[] members = from Expr member in expr.members select syntaxNodeFromExpr(member);
+    SyntaxNode[] members = flattenSyntaxNodeList(from int i in 0 ..< expr.members.length() select fixedTokenSeperatedSyntaxNode(i, syntaxNodeFromExpr(expr.members[i]), ","));
     return nonTerminalSyntaxNode(expr, { token: "[", pos: expr.startPos },
                                        // JBUG: can't use the query exprssion directly
                                        members,
@@ -293,7 +302,7 @@ function syntaxNodeFromListConstructorExpr(ListConstructorExpr expr) returns Non
 }
 
 function syntaxNodeFromMappingConstructorExpr(MappingConstructorExpr expr) returns NonTerminalSyntaxNode{
-    SyntaxNode[] fields = from Field f in expr.fields select syntaxNodeFromField(f);
+    SyntaxNode[] fields = flattenSyntaxNodeList(from int i in 0 ..< expr.fields.length() select fixedTokenSeperatedSyntaxNode(i, syntaxNodeFromField(expr.fields[i]), ","));
     return nonTerminalSyntaxNode(expr, { token: "{", pos: expr.startPos },
                                        // JBUG: can't use the query exprssion directly
                                        fields,
@@ -322,7 +331,7 @@ function syntaxNodeFromTypeCastExpr(TypeCastExpr expr) returns NonTerminalSyntax
 
 function syntaxNodeFromVarRefExpr(VarRefExpr expr) returns NonTerminalSyntaxNode {
     string? prefix = expr.prefix;
-    Position? identifierPos = prefix == () ? () : expr.qNamePos;
+    Position? identifierPos = prefix == () ? expr.qNamePos : ();
     return nonTerminalSyntaxNode(expr, prefix != () ? [{ name: prefix, pos: expr.qNamePos }, { token: ":" }] : (),
                                        { name: expr.name, pos: identifierPos });
 }
@@ -344,6 +353,7 @@ function syntaxNodeFromTerminalExpr(TerminalExpr expr) returns TerminalSyntaxAst
         token = expr.value != () ? expr.value.toString() : "()";
     }
     else if expr is IntLiteralExpr {
+        // pr-todo: skipping "0x"
         token = expr.base == 16 ? "0x" + expr.digits : expr.digits;
     }
     else {
@@ -376,7 +386,9 @@ function syntaxNodeFromBinaryExpr(BinaryExpr expr) returns SyntaxNode {
 }
 
 function syntaxNodeFromField(Field f) returns SyntaxNode {
-    return nonTerminalSyntaxNode(f, syntaxNodeFromExpr(f.value));
+    return nonTerminalSyntaxNode(f, f.isIdentifier ? { name: f.name, pos: f.startPos} : { literal: f.name, pos: f.startPos },
+                                    { token: ":", pos: f.colonPos },
+                                    syntaxNodeFromExpr(f.value));
 }
 
 function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
@@ -407,6 +419,9 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
     else if td is TableTypeDesc {
         return syntaxNodeFromTableTypeDesc(td);
     }
+    else if td is TypeDescRef {
+        return syntaxNodeFromTypeDescRef(td);
+    }
     else {
         return syntaxNodeFromUnaryTypeDesc(td);
     }
@@ -417,6 +432,7 @@ function syntaxNodeFromTupleTypeDesc(TupleTypeDesc td) returns NonTerminalSyntax
     TypeDesc? rest = td.rest;
     return nonTerminalSyntaxNode(td, { token: "[", pos: td.startPos},
                                      memberNodes,
+                                     rest != () && td.members.length() > 0 ? { token: "," } : (),
                                      rest != () ? [syntaxNodeFromTypeDesc(rest), { token: "..." }] : (),
                                      { token: "]", pos: td.endPos});
 }
@@ -433,11 +449,11 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
     if td.fields.length() > 0 {
         SyntaxNode[] fields = from FieldDesc f in td.fields select syntaxNodeFromFieldDesc(f);
         return nonTerminalSyntaxNode(td, { token: "record", pos: td.startPos },
-                                         rest == INCLUSIVE_RECORD_TYPE_DESC ? { token: "{|" } : { token: "{" },
+                                         rest == INCLUSIVE_RECORD_TYPE_DESC ? { token: "{" } : { token: "{|" },
                                          // JBUG: can't use query expression directly
                                          fields,
                                          (rest is TypeDesc) ? [syntaxNodeFromTypeDesc(rest), { token: "..." }, { token: ";" }] : (),
-                                         (rest is INCLUSIVE_RECORD_TYPE_DESC) ? { token: "}", pos: td.endPos } : { token: "|}", pos: td.endPos});
+                                         rest == INCLUSIVE_RECORD_TYPE_DESC ? { token: "}", pos: td.endPos } : { token: "|}", pos: td.endPos});
     }
     else {
         return nonTerminalSyntaxNode(td, { token: "map", pos: td.startPos},
@@ -483,6 +499,12 @@ function syntaxNodeFromTableTypeDesc(TableTypeDesc td) returns NonTerminalSyntax
                                      syntaxNodesFromTypeParameter(td.row, td.endPos));
 }
 
+function syntaxNodeFromTypeDescRef(TypeDescRef td) returns NonTerminalSyntaxNode {
+    string? prefix = td.prefix;
+    return nonTerminalSyntaxNode(td, prefix != () ? [{ name: prefix, pos: td.qNamePos }, { token: ":" }] : (),
+                                     { name: td.typeName, pos: prefix == () ? td.qNamePos : () });
+}
+
 // pr-idea: should this made a node in the ast (it is explicit in the grammer)
 function syntaxNodesFromTypeParameter(TypeDesc td, Position parentEndPos) returns SyntaxNode[] {
     return [{ token: "<" }, syntaxNodeFromTypeDesc(td), { token: ">", pos: parentEndPos }];
@@ -492,17 +514,20 @@ function syntaxNodeFromUnaryTypeDesc(UnaryTypeDesc td) returns NonTerminalSyntax
     return nonTerminalSyntaxNode(td , { token: td.op, pos: td.startPos }, syntaxNodeFromTypeDesc(td.td));
 }
 
-type TerminalTypeDesc BuiltinTypeDesc|TypeDescRef|SingletonTypeDesc;
-function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns TerminalSyntaxAstNode {
+type TerminalTypeDesc BuiltinTypeDesc|SingletonTypeDesc;
+function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns SyntaxNode {
     string token;
     if td is BuiltinTypeDesc {
-        token = td.builtinTypeName;
-    }
-    else if td is TypeDescRef {
-        token = td.typeName;
+        token = td.builtinTypeName == "null" ? "()" : td.builtinTypeName;
     }
     else {
-        token = td.value.toString();
+        var value = td.value;
+        if (value is int && value < 0) || (value is float && value < 0.0) {
+            return nonTerminalSyntaxNode(td, { token: "-" }, { literal: (value * -1).toString()});
+        }
+        else {
+            token = td.value.toString();
+        }
     }
     return { token, astNode: td };
 }
