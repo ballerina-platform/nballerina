@@ -1,5 +1,6 @@
 import wso2/nballerina.comm.err;
 import wso2/nballerina.front.syntax as s;
+import wso2/nballerina.types as t;
 
 function intArithmeticEval(err:SemanticContext cx, Position pos, s:BinaryArithmeticOp op, int left, int right) returns int|err:Semantic  {
     int|error result = trappedIntArithmeticEval(op, left, right);
@@ -251,4 +252,60 @@ function convertToDecimalEval(err:SemanticContext cx, Position pos, float|int va
         return result;
     }
     return cx.semanticErr(`cannot convert ${value} to decimal`, pos, cause=result);
+}
+
+
+function fpLiteralValue(err:SemanticContext cx, t:SemType? expectedType, string untypedLiteral, string? typeSuffix, Position pos) returns float|decimal|err:Semantic {
+    if typeSuffix != () {
+        return typeSuffix is s:FLOAT_TYPE_SUFFIX ? floatFromFpLiteral(untypedLiteral) : check decimalFromFpLiteral(cx, untypedLiteral, pos);
+    }
+    else if expectedType == () || t:includesSome(expectedType, t:FLOAT) || !t:includesSome(expectedType, t:DECIMAL) {
+        return floatFromFpLiteral(untypedLiteral);
+    }
+    else {
+        return check decimalFromFpLiteral(cx, untypedLiteral, pos);
+    }
+}
+
+function intLiteralValue(err:SemanticContext cx, t:SemType? expectedType, s:IntLiteralBase base, string digits, Position pos) returns int|float|decimal|err:Semantic {
+    if expectedType == () || t:includesSome(expectedType, t:INT) {
+        return check intFromLiteral(cx, base, digits, pos);
+    }  
+    else if t:includesSome(expectedType, t:FLOAT) {
+        // BUG base ignored
+        return floatFromFpLiteral(digits);
+    }
+    else if t:includesSome(expectedType, t:DECIMAL) {
+        // BUG base ignored
+        return check decimalFromFpLiteral(cx, digits, pos);
+    }
+    else {
+        return check intFromLiteral(cx, base, digits, pos);
+    }
+}
+
+// Since the binary floating point literal is parsed correctly,
+// it is impossible to return an error.
+function floatFromFpLiteral(string digits) returns float {
+    return checkpanic float:fromString(digits);
+}
+
+// Even if the decimal floating point literal is parsed correctly,
+// overflows should return an error.
+function decimalFromFpLiteral(err:SemanticContext cx, string decimalStr, Position pos) returns decimal|err:Semantic {
+    decimal|error d = decimal:fromString(decimalStr);
+    if d is error {
+        return cx.semanticErr("invalid decimal floating point number", cause=d, pos=pos);
+    }
+    return d;
+}
+
+// Even if the integer literal is parsed correctly,
+// overflows should return an error.
+function intFromLiteral(err:SemanticContext cx, s:IntLiteralBase base, string digits, Position pos) returns int|err:Semantic {
+    int|error i = s:intFromIntLiteral(base, digits);
+    if i is error {
+        return cx.semanticErr("invalid int literal", cause=i, pos=pos);
+    }
+    return i;
 }

@@ -15,19 +15,6 @@ type Environment record {|
     Assignment[] assignments = [];
 |};
 
-type Binding record {|
-    string name;
-    bir:Register reg;
-    boolean isFinal;
-    boolean used = false;
-    Binding? prev;
-    // When this binding represents a narrowing, this refers to the
-    // original binding that was not narrowed.
-    // In the case of the nested narrowing, this points all the way
-    // back to the original explicit binding, not to the previous narrowing.
-    Binding? unnarrowed = ();
-|};
-
 type Assignment readonly & record {|
     int unnarrowedReg;
     int? narrowedReg;
@@ -1162,4 +1149,156 @@ function codeGenCallStmt(StmtContext cx, bir:BasicBlock startBlock, Environment 
         return cx.semanticErr("return type of function or method in call statement must be nil", stmt.startPos);
     }
     return { block: nextBlock };
+}
+
+function codeGenCheckingStmt(StmtContext cx, bir:BasicBlock bb, Environment env, s:CheckingKeyword checkingKeyword, s:Expr expr, Position pos) returns CodeGenError|StmtEffect {
+    // checking stmt falls into one of : 1) never err 2) always err 3) conditionally err
+    var { result: o, block: nextBlock } = check cx.codeGenExpr(bb, env, t:ERROR, expr);
+    t:SemType semType = operandSemType(cx.mod.tc, o);
+    t:SemType errorType = t:intersect(semType, t:ERROR);
+    bir:BasicBlock block;
+    t:SemType resultType;
+    if t:isNever(errorType) {
+        block = nextBlock;
+        resultType = semType;
+    }
+    else {
+        bir:Register operand = <bir:Register>o;
+        resultType = t:diff(semType, t:ERROR);
+        if t:isNever(resultType) {
+            codeGenCheckingTerminator(nextBlock, checkingKeyword, operand, pos);
+            return { block: () };
+        }
+        { block, result: _ } = check codeGenCheckingCond(cx, nextBlock, operand, errorType, checkingKeyword, resultType, pos);
+    }
+    // resultType === NEVER case is already handled
+    if resultType !== t:NIL {
+        return cx.semanticErr(`operand of ${checkingKeyword} statement must be a subtype of error?`, pos);
+    }
+    return { block };
+}
+
+function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register operand, t:SemType errorType, s:CheckingKeyword checkingKeyword, t:SemType okType, Position pos) returns CodeGenError|RegExprEffect {
+    bir:Register isError = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:TypeTestInsn typeTest = { operand, semType: t:ERROR, result: isError, negated: false, pos };
+    bb.insns.push(typeTest);
+    bir:InsnRef testInsnRef = bir:lastInsnRef(bb);
+    bir:BasicBlock okBlock = cx.createBasicBlock();
+    bir:BasicBlock errorBlock = cx.createBasicBlock();
+    bir:CondBranchInsn condBranch = { operand: isError, ifTrue: errorBlock.label, ifFalse: okBlock.label, pos };
+    bb.insns.push(condBranch);
+    bir:Register errorReg = cx.createTmpRegister(errorType, pos);
+    bir:CondNarrowInsn narrowToError = {
+        result: errorReg,
+        operand,
+        basis: { insn: testInsnRef, result: true },
+        pos
+    };
+    errorBlock.insns.push(narrowToError);
+    codeGenCheckingTerminator(errorBlock, checkingKeyword, errorReg, pos);
+    bir:Register result = cx.createTmpRegister(okType, pos);
+    bir:CondNarrowInsn narrowToOk = {
+        result,
+        operand,
+        basis: { insn: testInsnRef, result: false },
+        pos
+    };
+    okBlock.insns.push(narrowToOk);
+    return { result, block: okBlock };
+}
+
+function lookupVarRefBinding(StmtContext cx, string name, Environment env, Position pos) returns Binding|CodeGenError {
+    var b = check lookupLocalVarRef(cx, name, env, pos);
+    if b is Binding {
+        return b;
+    }
+    else {
+        return cx.semanticErr("an lvalue can only refer to a variable definition", pos);
+    }
+}
+
+function lookupLocalVarRef(StmtContext cx, string name, Environment env, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
+    Binding? binding = envLookup(name, env);
+    if binding == () {
+        s:ModuleLevelDefn? defn = cx.mod.defns[name];
+        if defn == () {
+            return cx.semanticErr(`variable ${name} not defined`, pos);
+        }
+        else if defn is s:ConstDefn {
+            return (<s:ResolvedConst>defn.resolved)[1];
+        }
+        else if defn is s:FunctionDefn {
+            var signature = <bir:FunctionSignature>defn.signature;
+            boolean isPublic = defn.vis == "public";
+            bir:InternalSymbol symbol = { identifier: name, isPublic };
+            return { symbol, signature, erasedSignature: signature };
+        }
+        else {
+            s:TypeDefn _ = defn;
+            // SUBSET typedesc
+            return cx.unimplementedErr(`values of type descriptor type not yet implemented`, pos);
+        }
+    }
+    else {
+        return binding;
+    }
+}
+
+function envLookup(string name, Environment env) returns Binding? {
+    Binding? binding = bindingsLookup(name, env);
+    if binding != () {
+        Binding? unnarrowed = binding.unnarrowed;
+        if unnarrowed != () {
+            unnarrowed.used = true;
+            // This is a narrowed binding
+            int num = unnarrowed.reg.number;
+            if findAssignmentByUnnarrowedReg(env.assignments, num) != () {
+                // This binding has been invalidated by an assignment
+                return unnarrowed;
+            }
+        }
+        else {
+            binding.used = true;
+        }
+    }
+    return binding;
+}
+
+function envDefines(string name, Environment env) returns boolean {
+    return bindingsLookup(name, env) != ();
+}
+
+function addAssignments(Assignment[] dest, Assignment[] src, int excludeStart) {
+    foreach Assignment a in src {
+        if a.unnarrowedReg < excludeStart {
+            dest.push(a);
+        }
+    }
+}
+
+function findAssignmentByUnnarrowedReg(Assignment[] assignments, int unnarrowedReg) returns int? {
+    int index = 0;
+    foreach var a in assignments {
+        if a.unnarrowedReg == unnarrowedReg {
+            return index;
+        }
+        index += 1;
+    }
+    return ();
+}
+
+function bindingsLookup(string name, Environment env) returns Binding? {
+    Binding? tem = env.bindings;
+    while true {
+        if tem == () {
+            break;
+        }
+        else if tem.name == name {
+            return tem;
+        }
+        else {
+            tem = tem.prev;
+        }
+    }
+    return ();
 }
