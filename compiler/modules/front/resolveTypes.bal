@@ -238,14 +238,16 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         else {
             ExportedDefn? defn = (check lookupPrefix(mod, modDefn, prefix, td.startPos)).defns[td.typeName];
             if defn is t:SemType {
-                return defn;
+                if mod.allowAllTypes || !t:isSubtypeSimple(defn, t:XML) {
+                    return defn;
+                }
             }
             else if defn is s:ResolvedConst {
                 return defn[0];
             }
             else {
                 string qName = prefix + ":" + td.typeName;
-                d:Location loc =  s:qNameLocationInDefn(modDefn, td.qNamePos);
+                d:Location loc = s:qNameLocationInDefn(modDefn, td.qNamePos);
                 if defn == () {
                     return err:semantic(`no public definition of ${qName}`, loc=loc);
                 }
@@ -274,7 +276,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     if !mod.allowAllTypes {
-        return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, td.startPos));
+        return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, s:range(td)));
     }
     if td is s:FunctionTypeDesc {
         t:FunctionDefinition? defn = td.defn;
