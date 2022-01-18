@@ -57,7 +57,7 @@ class VerifyContext {
     }
 }
 
-public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns err:Semantic? {
+public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns err:Semantic|err:BadBIR? {
     VerifyContext cx = new(mod, defn);
     foreach BasicBlock b in code.blocks {
         check verifyBasicBlock(cx, b);
@@ -66,13 +66,13 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
-function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns err:Semantic? {
+function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns err:Semantic|err:BadBIR? {
     foreach Insn insn in bb.insns {
         check verifyInsn(vc, insn);
     }
 }
 
-function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
+function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic|err:BadBIR? {
     string name = insn.name;
     if insn is IntBinaryInsn {
         // XXX need to check result also
@@ -143,7 +143,7 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic? {
     }
 }
 
-function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
+function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic|err:BadBIR? {
     // XXX verify insn.semType
     FunctionRef func = <FunctionRef>insn.func;
     FunctionSignature sig = func.signature;
@@ -163,7 +163,7 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic? {
     }
 }
 
-function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic? {
+function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic|err:BadBIR? {
     t:SemType ty = insn.result.semType;
     // XXX verify ty exactly
     if !vc.isSubtype(ty, t:LIST_RW) {
@@ -183,7 +183,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
     }
 }
 
-function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns err:Semantic? {
+function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns err:Semantic|err:BadBIR? {
     t:SemType ty = insn.result.semType;
     // XXX verify ty exactly
     if !vc.isSubtype(ty, t:MAPPING_RW) {
@@ -206,7 +206,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     }
 }
 
-function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic? {
+function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic|err:BadBIR? {
     check verifyOperandInt(vc, insn.name, insn.operands[1], insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.err("list get applied to non-list", insn.pos);
@@ -217,7 +217,7 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic?
     }
 }
 
-function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic? {
+function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic|err:BadBIR? {
     IntOperand i = insn.operands[1];
     check verifyOperandInt(vc, insn.name, i, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
@@ -227,7 +227,7 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic?
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type", insn.pos);
 }
 
-function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic? {
+function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic|err:BadBIR? {
     StringOperand k = insn.operands[1];
     check verifyOperandString(vc, insn.name, k, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
@@ -242,7 +242,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
     }
 }
 
-function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic? {
+function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic|err:BadBIR? {
     StringOperand k = insn.operands[1];
     check verifyOperandString(vc, insn.name, k, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
@@ -326,40 +326,40 @@ function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType,
     }
 }
 
-function verifyOperandString(VerifyContext vc, string insnName, StringOperand operand, Position pos) returns err:Semantic? {
+function verifyOperandString(VerifyContext vc, string insnName, StringOperand operand, Position pos) returns err:BadBIR? {
     if operand is Register {
         return verifyRegisterSemType(vc, insnName, operand, t:STRING, "string", pos);
     }
 }
 
-function verifyOperandInt(VerifyContext vc, string insnName, IntOperand operand, Position pos) returns err:Semantic? {
+function verifyOperandInt(VerifyContext vc, string insnName, IntOperand operand, Position pos) returns err:BadBIR? {
     if operand is Register {
         return verifyRegisterSemType(vc, insnName, operand, t:INT, "int", pos);
     }
 }
 
-function verifyOperandFloat(VerifyContext vc, string insnName, FloatOperand operand, Position pos) returns err:Semantic? {
+function verifyOperandFloat(VerifyContext vc, string insnName, FloatOperand operand, Position pos) returns err:BadBIR? {
     if operand is Register {
         return verifyRegisterSemType(vc, insnName, operand, t:FLOAT, "float", pos);
     }
 }
 
-function verifyOperandBoolean(VerifyContext vc, string insnName, BooleanOperand operand, Position pos) returns err:Semantic? {
+function verifyOperandBoolean(VerifyContext vc, string insnName, BooleanOperand operand, Position pos) returns err:BadBIR? {
     if operand is Register {
         return verifyRegisterSemType(vc,insnName, operand, t:BOOLEAN, "boolean", pos);
     }
 }
 
-function verifyOperandError(VerifyContext vc, string insnName, Register operand, Position pos) returns err:Semantic? {
+function verifyOperandError(VerifyContext vc, string insnName, Register operand, Position pos) returns err:BadBIR? {
     return verifyRegisterSemType(vc, insnName, operand, t:ERROR, "error", pos);
 }
 
-function verifyRegisterSemType(VerifyContext vc, string insnName, Register operand, t:SemType semType, string typeName, Position pos) returns err:Semantic? {
+function verifyRegisterSemType(VerifyContext vc, string insnName, Register operand, t:SemType semType, string typeName, Position pos) returns err:BadBIR? {
     if !vc.isSubtype(operand.semType, semType) {
-        return operandTypeErr(vc, insnName, typeName, pos);
+        return operandTypeErr(vc, insnName, typeName);
     }
 }
 
-function operandTypeErr(VerifyContext vc, string insnName, string typeName, Position pos) returns err:Semantic {
-    return vc.err(`bad BIR: operands of ${insnName} must be subtype of ${typeName}`, pos);
+function operandTypeErr(VerifyContext vc, string insnName, string typeName) returns err:BadBIR {
+    return err:badBIR(`bad BIR: operands of ${insnName} must be subtype of ${typeName}`);
 }

@@ -881,13 +881,13 @@ function codeGenReturnStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
 function codeGenPanicStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:PanicStmt stmt) returns CodeGenError|StmtEffect {
     var { panicExpr } = stmt;
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(startBlock, env, t:ERROR, panicExpr);
-    if operand is bir:Register {
+    if operand is bir:Register && t:isSubtypeSimple(operand.semType, t:ERROR) {
         bir:PanicInsn insn = { operand, pos: stmt.kwPos };
         nextBlock.insns.push(insn);
         return { block: () };
     }
     else {
-        return cx.semanticErr("argument to error must be a string", stmt.startPos);
+        return cx.semanticErr("argument to panic must be a error", stmt.startPos);
     }
 }
 
