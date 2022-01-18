@@ -291,7 +291,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
-                fixedArrayFill(s, i, rest);
+                fixedArrayFill(s, i - 1, rest);
                 fixedArraySet(s, i, d);
                 if listInhabited(cx, s, rest, neg.next, maxInitialLen) {
                     return true;
