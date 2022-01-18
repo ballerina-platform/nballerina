@@ -42,9 +42,7 @@ type AstNode record {|
 function rootSyntaxNode(ModulePart part) returns RootSyntaxNode {
     SyntaxNode[] importDecls = from ImportDecl decl in part.importDecls select syntaxNodeFromImportDecl(decl);
     SyntaxNode[] moduleLevelDefns = from ModuleLevelDefn defn in part.defns select syntaxNodeFromModuleLevelDefn(defn);
-    SyntaxNode[] childNodes = [];
-    childNodes.push(...importDecls);
-    childNodes.push(...moduleLevelDefns);
+    SyntaxNode[] childNodes = flattenSyntaxNodeList([importDecls, moduleLevelDefns]);
     return { childNodes, part };
 }
 
@@ -340,7 +338,7 @@ function syntaxNodeFromMethodCallExpr(MethodCallExpr expr) returns NonTerminalSy
                                        { token: "(", pos: expr.openParenPos },
                                        // JBUG: can't use the query exprssion directly
                                        args,
-                                       { token: ")"});
+                                       { token: ")" });
 }
 
 function syntaxNodeFromListConstructorExpr(ListConstructorExpr expr) returns NonTerminalSyntaxNode{
@@ -479,7 +477,7 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
 function syntaxNodeFromTupleTypeDesc(TupleTypeDesc td) returns NonTerminalSyntaxNode {
     SyntaxNode[] memberNodes = flattenSyntaxNodeList(from int i in 0 ..< td.members.length() select fixedTokenSeperatedSyntaxNode(i, syntaxNodeFromTypeDesc(td.members[i]), ","));
     TypeDesc? rest = td.rest;
-    return nonTerminalSyntaxNode(td, { token: "[", pos: td.startPos},
+    return nonTerminalSyntaxNode(td, { token: "[", pos: td.startPos },
                                      memberNodes,
                                      rest != () && td.members.length() > 0 ? { token: "," } : (),
                                      rest != () ? [syntaxNodeFromTypeDesc(rest), { token: "..." }] : (),
@@ -505,7 +503,7 @@ function syntaxNodeFromMappingTypeDesc(MappingTypeDesc td) returns NonTerminalSy
                                          rest == INCLUSIVE_RECORD_TYPE_DESC ? { token: "}" } : { token: "|}" });
     }
     else {
-        return nonTerminalSyntaxNode(td, { token: "map", pos: td.startPos},
+        return nonTerminalSyntaxNode(td, { token: "map", pos: td.startPos },
                                          { token: "<" },
                                          rest is TypeDesc ? syntaxNodeFromTypeDesc(rest) : { token: "never" },
                                          { token: ">" });
@@ -572,7 +570,7 @@ function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns SyntaxNode 
     else {
         var value = td.value;
         if (value is int && value < 0) || (value is float && value < 0.0) {
-            return nonTerminalSyntaxNode(td, { token: "-" }, { literal: (value * -1).toString()});
+            return nonTerminalSyntaxNode(td, { token: "-" }, { literal: (value * -1).toString() });
         }
         else {
             token = td.value.toString();
@@ -582,7 +580,7 @@ function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns SyntaxNode 
 }
 
 function syntaxNodeFromFieldDesc(FieldDesc fd) returns SyntaxNode {
-    return finishWithSemiColon(fd, syntaxNodeFromTypeDesc(fd.typeDesc), { name: fd.name, pos: ()});
+    return finishWithSemiColon(fd, syntaxNodeFromTypeDesc(fd.typeDesc), { name: fd.name, pos: () });
 }
 
 function fixedTokenSeperatedSyntaxNode(int index, SyntaxNode node, FixedToken seperator) returns SyntaxNode[] {
