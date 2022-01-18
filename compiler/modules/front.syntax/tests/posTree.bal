@@ -85,50 +85,34 @@ function validateTerminalSyntaxNode(TerminalSyntaxNode node, Tokenizer tok) retu
     if expectedPos != () && tok.currentStartPos() != expectedPos {
         return invalidStartPos(currentLocation(tok), expectedPos, node is IdentifierSyntaxNode ? node.name : node is StringLiteralSyntaxNode? node.literal : node.token);
     }
-    if node is IdentifierSyntaxNode {
-        string actual;
-        // Keyword is allowed for cases such as int:<id>
-        if expected != "_" && expected !is Keyword {
-            actual = checkpanic tok.expectIdentifier();
+    Token? token = tok.current();
+    string actual;
+    if token is VariableLengthToken {
+        if token[0] is HEX_INT_LITERAL {
+            // tokenizer ignore 0x part
+            actual = "0x" + token[1];
+        }
+        else if token[0] is DECIMAL_FP_NUMBER {
+            actual = token[1] + token[2].toString();
         }
         else {
-            actual = <string>tok.current();
-            checkpanic tok.advance();
-        }
-        if actual != expected {
-            return unexpectedToken(currentLocation(tok), expected, actual);
+            actual = token[1];
         }
     }
     else {
-        Token? token = tok.current();
-        string actual;
-        if token is VariableLengthToken {
-            if token[0] is HEX_INT_LITERAL {
-                // tokenizer ignore 0x part
-                actual = "0x" + token[1];
-            }
-            else if token[0] is DECIMAL_FP_NUMBER {
-                actual = token[1] + token[2].toString();
-            }
-            else {
-                actual = token[1];
-            }
-        }
-        else {
-            actual = token == "null" ? "()" : <string>token;
-        }
-        if expected == "()" && actual == "(" && tok.peek() == ")" {
-            checkpanic tok.advance();
-            actual = "()";
-        }
+        actual = token == "null" ? "()" : <string>token;
+    }
+    if expected == "()" && actual == "(" && tok.peek() == ")" {
         checkpanic tok.advance();
-        if actual != expected && token is VariableLengthToken && token[0] is DECIMAL_FP_NUMBER {
-            // 0f vs 0.0
-            return;
-        }
-        else if actual != expected {
-            return unexpectedToken(currentLocation(tok), expected, actual);
-        }
+        actual = "()";
+    }
+    checkpanic tok.advance();
+    if actual != expected && token is VariableLengthToken && token[0] is DECIMAL_FP_NUMBER {
+        // 0f vs 0.0
+        return;
+    }
+    else if actual != expected {
+        return unexpectedToken(currentLocation(tok), expected, actual);
     }
 }
 

@@ -2,7 +2,7 @@ function syntaxNodeFromImportDecl(ImportDecl decl) returns NonTerminalSyntaxNode
     string? org = decl.org;
     string? prefix = decl.prefix;
     SyntaxNode[] nameNodes = flattenSyntaxNodeList(from int i in 0 ..< decl.names.length() select
-                                                   fixedTokenSeperatedSyntaxNode(i, { name: decl.names[i], pos: i==0 ? decl.namePos : ()}, "."));
+                                                   fixedTokenSeperatedSyntaxNode(i, { name: decl.names[i], pos: i == 0 ? decl.namePos : () }, "."));
     return finishWithSemiColon(decl,
                                { token: "import", pos: decl.startPos },
                                org != () ? [{ name: org, pos: () }, { token: "/" }] : (),
@@ -46,7 +46,7 @@ function syntaxNodeFromFunctionDefn(FunctionDefn defn) returns SyntaxNode {
     return nonTerminalSyntaxNode(defn,
                                  defn.vis == "public" ? { token: "public" } : (),
                                  { token: "function" },
-                                 { name: defn.name, pos: defn.namePos},
+                                 { name: defn.name, pos: defn.namePos },
                                  syntaxNodeFromFunctionTypeDesc(defn.typeDesc, functionSignature = true),
                                  syntaxNodeFromStmtBlock(defn.body));
 }
@@ -55,12 +55,12 @@ function syntaxNodeFromFunctionTypeParam(FunctionTypeParam param) returns Syntax
     string? name = param.name;
     return nonTerminalSyntaxNode(param,
                                  syntaxNodeFromTypeDesc(param.td),
-                                 name != () ? { name, pos: param.namePos} : ());
+                                 name != () ? { name, pos: param.namePos } : ());
 }
 
 function syntaxNodeFromStmtBlock(StmtBlock block) returns NonTerminalSyntaxNode {
     SyntaxNode[] body = from Stmt stmt in block.stmts select syntaxNodeFromStmt(stmt);
-    return nonTerminalSyntaxNode(block, { token: "{", pos: block.startPos},
+    return nonTerminalSyntaxNode(block, { token: "{", pos: block.startPos },
                                         body, // JBUG: can't use query expression directly
                                         { token: "}" });
 }
@@ -353,7 +353,6 @@ function syntaxNodeFromTerminalExpr(TerminalExpr expr) returns TerminalSyntaxAst
         token = expr.value != () ? expr.value.toString() : "()";
     }
     else if expr is IntLiteralExpr {
-        // pr-todo: skipping "0x"
         token = expr.base == 16 ? "0x" + expr.digits : expr.digits;
     }
     else {
@@ -505,7 +504,6 @@ function syntaxNodeFromTypeDescRef(TypeDescRef td) returns NonTerminalSyntaxNode
                                      { name: td.typeName, pos: prefix == () ? td.qNamePos : () });
 }
 
-// pr-idea: should this made a node in the ast (it is explicit in the grammer)
 function syntaxNodesFromTypeParameter(TypeDesc td) returns SyntaxNode[] {
     return [{ token: "<" }, syntaxNodeFromTypeDesc(td), { token: ">" }];
 }

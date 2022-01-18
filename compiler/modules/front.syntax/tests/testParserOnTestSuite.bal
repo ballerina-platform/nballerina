@@ -61,8 +61,3 @@ function partToLines(ModulePart part) returns string[] {
 function scanAndParseModulePart(SourceFile sourceFile, int partIndex) returns ModulePart|err:Syntax {
     return parseModulePart(check scanModulePart(sourceFile, partIndex));
 }
-
-// pr-todo: remove this
-//function testPositionIsWhiteSpace(SourceFile file, Position pos) returns boolean {
-//    return checkPosFragCode(file, pos, FRAG_WHITESPACE, FRAG_COMMENT);
-//}
