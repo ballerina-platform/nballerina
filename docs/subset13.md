@@ -17,7 +17,9 @@ the target version of the Ballerina Language Specification is the [2022-01-06 dr
 * Type descriptors:
    * predefined basic type name: `boolean`, `decimal`, `error`, `float`, `int`, `string`
    * nil type `()`
+   * singletons of basic type boolean, int, float, decimal, string
    * `any` type
+   * `byte` type
    * `anydata` type
    * optional type: `T?`
    * unions: `T1|T2`
@@ -115,13 +117,16 @@ array-type-desc = optional-type-desc "[" "]"
 primary-type-desc =
   builtin-type-name
   | nil-type-desc
+  | singleton-type-desc
   | "(" type-desc ")"
   | type-reference
   | mapping-type-desc
 
-builtin-type-name = "any" | "anydata" | "boolean" | "int" | "float" | "string" | "error"
+builtin-type-name = "any" | "anydata" | "boolean" | "byte" | "int" | "float" | "string" | "error"
 
 nil-type-desc = nil-literal
+
+singleton-type-desc = simple-const-expr
 
 # reference to a type definition
 type-reference = identifier | qualified-identifier
@@ -376,5 +381,5 @@ Two kinds of `import` are supported.
 
 ## Additions from subset 12
 
-* TBD
-
+* singleton types of boolean, int, float, decimal, string
+* `byte` type

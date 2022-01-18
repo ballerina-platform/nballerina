@@ -13,7 +13,7 @@ DN_OBJS=$(addprefix third-party/decNumber/, decQuad.o decContext.o)
 DN_DEFINES=-DHAVE_STDBOOL_H -DHAVE_STDINT_H -DDECPRINT=0
 DTOA_OBJS=third-party/dtoa/emyg_dtoa.o
 THIRD_PARTY_OBJS=$(DTOA_OBJS) $(BT_OBJS) $(DN_OBJS)
-RT_OBJS=alloc.o error.o list.o main.o mapping.o structure.o panic.o print.o string.o int.o decimal.o convert.o
+RT_OBJS=alloc.o error.o list.o main.o mapping.o structure.o panic.o print.o string.o int.o decimal.o float.o boolean.o convert.o
 OBJS=$(RT_OBJS) $(THIRD_PARTY_OBJS)
 DEFINES=$(DN_DEFINES)
 C_BCS=eq_inline.bc int_inline.bc list_inline.bc mapping_inline.bc string_inline.bc float_inline.bc \
@@ -61,7 +61,9 @@ $(DTOA_OBJS) $(DN_OBJS): %.o: %.c
 	$(CLANG) -c $(CFLAGS) $(DEFINES) $(WARN_FLAGS) -emit-llvm -o - $< | \
 	$(LLVM_LINK) $(LL_BCS) - -o - -S | \
 	sed -e '/define .*@_bal_ptr_mask/s/^define /define linkonce_odr /' \
-		-e '/define .*@_bal_float_/s/^define /define linkonce_odr /' | \
+		-e '/define .*@_bal_float_eq/s/^define /define linkonce_odr /' \
+		-e '/define .*@_bal_float_exact_eq/s/^define /define linkonce_odr /' \
+		-e '/define .*@_bal_float_to_int/s/^define /define linkonce_odr /' | \
 	$(OPT) -O2 - -o - -S | \
 	$(LLVM_AS) >$@
 

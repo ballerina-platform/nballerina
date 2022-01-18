@@ -29,8 +29,7 @@ final llvm:PointerType LLVM_DECIMAL_CONST = llvm:pointerType("i8");
 enum UniformBaseRepr {
     BASE_REPR_INT,
     BASE_REPR_FLOAT,
-    BASE_REPR_BOOLEAN,
-    BASE_REPR_ERROR
+    BASE_REPR_BOOLEAN
 }
 
 const BASE_REPR_VOID = "BASE_REPR_VOID";

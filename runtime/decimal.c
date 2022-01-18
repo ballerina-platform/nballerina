@@ -13,6 +13,7 @@ typedef GC decQuad *DecimalPtr;
 #define DECIMAL_STATUS_FAIL DEC_Errors
 
 static TaggedPtrPanicCode finish(decQuad *dq, decContext *cx);
+static bool decimalListContains(const DecimalConstPtr *start, const DecimalConstPtr *end, const decQuad *dq);
 
 static inline TaggedPtr createDecimal(decQuad *dq) {
     DecimalPtr dp = _bal_alloc(sizeof(decQuad));
@@ -253,4 +254,48 @@ TaggedPtr _bal_decimal_const(const char *decString) {
     decQuad dq;
     decQuadFromString(&dq, decString, &cx);
     return createDecimal(&dq);
+}
+
+bool _bal_decimal_subtype_contains(UniformSubtypePtr stp, TaggedPtr tp) {
+    DecimalSubtypePtr dstp = (DecimalSubtypePtr)stp;
+    return decimalListContains(dstp->decimals, dstp->decimals + dstp->nDecimals, taggedToDecQuad(tp));
+}
+
+// Do binary search for tp
+// Approximately the same code as tidListContains
+// The decimal constants are currently stored as ASCII strings,
+// which means we have to convert each before we compare it.
+// (Obviously far from optimal: the compiler should convert decimal constants into the IEEE binary128
+// format used by decNumber. This will be easier if we can self-host since we can link to decNumber.)
+static bool decimalListContains(const DecimalConstPtr *start, const DecimalConstPtr *end, const decQuad *dq) {
+    // Lower bound inclusive; upper bound is exclusive
+    // Invariant: if there is a member in the list == to dq, then its address p 
+    // satisfies start <= p < end
+    decContext cx;
+    initContext(&cx);
+    while (start < end) {
+        const DecimalConstPtr *mid = start + (end - start)/2;
+        decQuad midVal;
+        decQuadFromString(&midVal, *mid, &cx);
+        decQuad cmp;
+        decQuadCompare(&cmp, dq, &midVal, &cx);
+        enum decClass cmpClass = decQuadClass(&cmp);
+        // We have start <= mid < end
+        // int64_t cmp = _bal_decimal_cmp(tp, *mid);
+        if (cmpClass == DEC_CLASS_POS_ZERO) {
+            return true;
+        }
+        if (cmpClass == DEC_CLASS_NEG_NORMAL) {
+            // this decreases end, since mid < end
+            // still have start <= end
+            end = mid;
+        }
+        else {
+            // this increases start, since mid >= start
+            // still have start <= end
+            start = mid + 1;
+        }
+    }
+    // start == end, so there is no such member
+    return false;
 }

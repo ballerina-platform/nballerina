@@ -46,7 +46,8 @@ function resolveFunctionSignature(ModuleSymbols mod, s:FunctionDefn defn) return
     foreach var x in defn.params {
         paramTypes.push(check resolveSubsetTypeDesc(mod, defn, x.td));
     }
-    t:SemType ret = check resolveSubsetTypeDesc(mod, defn, defn.typeDesc.ret);
+    s:TypeDesc? retTy = defn.typeDesc.ret;
+    t:SemType ret = retTy != () ? check resolveSubsetTypeDesc(mod, defn, retTy) : t:NIL;
     return { paramTypes: paramTypes.cloneReadOnly(), returnType: ret };
 }
 
@@ -98,6 +99,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             "any" => { return t:ANY; }
             "anydata" => { return t:createAnydata(mod.tc); }
             "boolean" => { return t:BOOLEAN; }
+            "byte" => { return t:BYTE; }
             "error" => { return t:ERROR; }
             "float" => { return t:FLOAT; }
             "decimal" => { return t:DECIMAL; }
@@ -109,7 +111,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return err:unimplemented(`type ${td.builtinTypeName} is not implemented`, s:locationInDefn(modDefn, td.startPos));
         }
         match td.builtinTypeName {
-            "byte" => { return t:BYTE; }
             "handle" => { return t:HANDLE; }
             "json" => { return t:createJson(mod.tc); }
             "never" => { return t:NEVER; }
@@ -254,6 +255,24 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
         }
     }
+    if td is s:SingletonTypeDesc {
+        var value = td.value;
+        if value is string {
+            return t:stringConst(value);
+        }
+        else if value is int {
+            return t:intConst(value);
+        }
+        else if value is boolean {
+            return t:booleanConst(value);
+        }
+        else if value is decimal {
+            return t:decimalConst(value);
+        }
+        else {
+            return t:floatConst(value);
+        }
+    }
     if !mod.allowAllTypes {
         return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, td.startPos));
     }
@@ -267,29 +286,12 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 a.push(arg.td);
             }
             t:SemType[] args = from var x in a select check resolveTypeDesc(mod, modDefn, depth + 1, x);
-            t:SemType ret = check resolveTypeDesc(mod, modDefn, depth + 1, td.ret);
+            s:TypeDesc? retTy = td.ret;
+            t:SemType ret = retTy != () ? check resolveTypeDesc(mod, modDefn, depth + 1, retTy) : t:NIL;
             return d.define(env, t:tuple(env, ...args), ret);
         }
         else {
             return defn.getSemType(env);
-        }
-    }
-    if td is s:SingletonTypeDesc {
-        var value = td.value;
-        if value is string {
-            return t:stringConst(value);
-        }
-        else if value is boolean {
-            return t:booleanConst(value);
-        }
-        else if value is int {
-            return t:intConst(value);
-        }
-        else if value is decimal {
-            return t:decimalConst(value);
-        }
-        else {
-            return t:floatConst(value);
         }
     }
     if td is s:ErrorTypeDesc {
@@ -328,6 +330,7 @@ function resolveBuiltinTypeDesc(t:Context tc, s:SubsetBuiltinTypeDesc td) return
         "any" => { return t:ANY; }
         "anydata" => { return t:createAnydata(tc); }
         "boolean" => { return t:BOOLEAN; }
+        "byte" => { return t:BYTE; }
         "int" => { return t:INT; }
         "float" => { return t:FLOAT; }
         "decimal" => { return t:DECIMAL; }
