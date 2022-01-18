@@ -291,6 +291,7 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
             SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
+                fixedArrayFill(s, i, rest);
                 fixedArraySet(s, i, d);
                 if listInhabited(cx, s, rest, neg.next, maxInitialLen) {
                     return true;
@@ -326,6 +327,9 @@ function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean 
 // fill out to length of newLen with filler
 function fixedArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
     SemType[] initial = arr.initial;
+    if newLen <= initial.length() {
+        return;
+    }
     if arr.fixedLength == 0 || initial[initial.length() - 1] != filler {
         initial.push(filler);
     }
@@ -348,13 +352,10 @@ function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
         return;
     }
     SemType lastMember = members.initial[initCount - 1]; 
-    if lastMember != m {
-        foreach int i in initCount ..< setIndex + 1 {
-            members.initial.push(lastMember);
-        }
-        members.initial[setIndex] = m;
+    foreach int i in initCount ..< setIndex + 1 {
+        members.initial.push(lastMember);
     }
-    members.fixedLength = int:max(members.fixedLength, setIndex + 1);
+    members.initial[setIndex] = m;
 }
 
 function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray {
