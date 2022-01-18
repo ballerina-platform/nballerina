@@ -89,7 +89,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             // JBUG #33341 cast
             return finishCheckingCallStmt(tok, <CheckingKeyword>cur, startPos);
         }
-        var td if td is SubsetBuiltinTypeName|"anydata"|"map"|"record" => {
+        var td if td is SubsetBuiltinTypeName|"map"|"record" => {
             return parseVarDeclStmt(tok, startPos);
         }
         "(" => {
