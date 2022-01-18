@@ -118,6 +118,9 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             }
             return parseVarDeclStmt(tok, startPos);
         }
+        "-" => {
+            return parseVarDeclStmt(tok, startPos);
+        }
     }
     return parseError(tok, "unhandled statement");
 }
