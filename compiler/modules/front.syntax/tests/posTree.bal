@@ -1,61 +1,11 @@
 import wso2/nballerina.comm.diagnostic as d;
 
-type TerminalSyntaxNode TerminalSyntaxAstNode|FixedSyntaxNode|IdentifierSyntaxNode|StringLiteralSyntaxNode;
-type AstSyntaxNode TerminalSyntaxAstNode|NonTerminalSyntaxNode;
-type SyntaxNode NonTerminalSyntaxNode|TerminalSyntaxNode;
-
-type TerminalSyntaxAstNode record {|
-    AstNode astNode;
-    string token;
-|};
-
-type NonTerminalSyntaxNode record {|
-    AstNode astNode;
-    SyntaxNode[] childNodes;
-|};
-
-type RootSyntaxNode record {|
-    ModulePart part;
-    SyntaxNode[] childNodes;
-|};
-
-// represents keywords and fixed tokens
-type FixedSyntaxNode record {|
-    FixedToken token;
-    Position? pos = ();
-|};
-
-type StringLiteralSyntaxNode record {|
-    string literal;
-    Position? pos = ();
-|};
-
-// represents identifiers
-type IdentifierSyntaxNode record {|
-    string name;
-    Position? pos;
-|};
-
-type AstNode record {|
-   *PositionFields;
-   any...;
-|};
-
-function validateModulePart(ModulePart part) {
-    RootSyntaxNode root = buildTree(part);
-    checkpanic validateSyntaxNode(root, new(part.file));
+function validateModulePartPositions(ModulePart part) returns PositionValidationError? {
+    RootSyntaxNode root = rootSyntaxNode(part);
+    check validateSyntaxNode(root, new(part.file));
 }
 
-function buildTree(ModulePart part) returns RootSyntaxNode {
-    SyntaxNode[] importDecls = from ImportDecl decl in part.importDecls select syntaxNodeFromImportDecl(decl);
-    SyntaxNode[] moduleLevelDefns = from ModuleLevelDefn defn in part.defns select syntaxNodeFromModuleLevelDefn(defn);
-    SyntaxNode[] childNodes = [];
-    childNodes.push(...importDecls);
-    childNodes.push(...moduleLevelDefns);
-    return { childNodes, part };
-}
-
-function skipOpeaningParan(string expected, Tokenizer tok) {
+function skipOpeningParan(string expected, Tokenizer tok) {
     Token? current = tok.current();
     if current != "(" || current == expected {
         return;
@@ -79,7 +29,7 @@ function skipClosingParan(string expected, Tokenizer tok) {
 
 function validateTerminalSyntaxNode(TerminalSyntaxNode node, Tokenizer tok) returns PositionValidationError? {
     string expected = node is IdentifierSyntaxNode ? node.name : node is StringLiteralSyntaxNode ? node.literal : node.token;
-    skipOpeaningParan(expected, tok);
+    skipOpeningParan(expected, tok);
     skipClosingParan(expected, tok);
     Position? expectedPos = node is IdentifierSyntaxNode|FixedSyntaxNode|StringLiteralSyntaxNode ? node.pos : ();
     if expectedPos != () && tok.currentStartPos() != expectedPos {

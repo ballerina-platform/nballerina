@@ -1,3 +1,53 @@
+type TerminalSyntaxNode TerminalSyntaxAstNode|FixedSyntaxNode|IdentifierSyntaxNode|StringLiteralSyntaxNode;
+type AstSyntaxNode TerminalSyntaxAstNode|NonTerminalSyntaxNode;
+type SyntaxNode NonTerminalSyntaxNode|TerminalSyntaxNode;
+
+type TerminalSyntaxAstNode record {|
+    AstNode astNode;
+    string token;
+|};
+
+type NonTerminalSyntaxNode record {|
+    AstNode astNode;
+    SyntaxNode[] childNodes;
+|};
+
+type RootSyntaxNode record {|
+    ModulePart part;
+    SyntaxNode[] childNodes;
+|};
+
+// represents keywords and fixed tokens
+type FixedSyntaxNode record {|
+    FixedToken token;
+    Position? pos = ();
+|};
+
+type StringLiteralSyntaxNode record {|
+    string literal;
+    Position? pos = ();
+|};
+
+// represents identifiers
+type IdentifierSyntaxNode record {|
+    string name;
+    Position? pos;
+|};
+
+type AstNode record {|
+   *PositionFields;
+   any...;
+|};
+
+function rootSyntaxNode(ModulePart part) returns RootSyntaxNode {
+    SyntaxNode[] importDecls = from ImportDecl decl in part.importDecls select syntaxNodeFromImportDecl(decl);
+    SyntaxNode[] moduleLevelDefns = from ModuleLevelDefn defn in part.defns select syntaxNodeFromModuleLevelDefn(defn);
+    SyntaxNode[] childNodes = [];
+    childNodes.push(...importDecls);
+    childNodes.push(...moduleLevelDefns);
+    return { childNodes, part };
+}
+
 function syntaxNodeFromImportDecl(ImportDecl decl) returns NonTerminalSyntaxNode {
     string? org = decl.org;
     string? prefix = decl.prefix;
@@ -504,6 +554,7 @@ function syntaxNodeFromTypeDescRef(TypeDescRef td) returns NonTerminalSyntaxNode
                                      { name: td.typeName, pos: prefix == () ? td.qNamePos : () });
 }
 
+// pr-idea: should this made a node in the ast (it is explicit in the grammer)
 function syntaxNodesFromTypeParameter(TypeDesc td) returns SyntaxNode[] {
     return [{ token: "<" }, syntaxNodeFromTypeDesc(td), { token: ">" }];
 }
