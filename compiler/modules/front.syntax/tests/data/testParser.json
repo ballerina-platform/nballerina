@@ -395,6 +395,12 @@
     ["V", "stmt", "error(\"\").message();"],
     ["V", "stmt", "0x2.toString();"],
     ["V", "stmt", "1.0.toString();"],
+    ["V", "stmt", "true.toString();"],
+    ["V", "stmt", "null.toString();", "().toString();"],
+    ["V", "stmt", "().toString();"],
+    ["V", "stmt", "null[1].toString();", "(()[1]).toString();"],
+    ["V", "stmt", "()[1].toString();", "(()[1]).toString();"],
+    ["V", "stmt", "\"foo\"[1].toString();", "(\"foo\"[1]).toString();"],
 
     { "comment" : "statement lvalue" },
     ["V", "stmt", "a.b = c;"],

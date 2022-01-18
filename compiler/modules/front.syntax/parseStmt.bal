@@ -92,14 +92,6 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         var td if td is SubsetBuiltinTypeName|"anydata"|"map"|"record" => {
             return parseVarDeclStmt(tok, startPos);
         }
-        "null" => {
-            if tok.peek() == "." {
-                return parseMethodCallStmt(tok);
-            }
-            else {
-                return parseVarDeclStmt(tok, startPos);
-            }
-        }
         "(" => {
             TokenizerState state = tok.save();
             check tok.advance();
@@ -117,6 +109,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         | [STRING_LITERAL, _]
         | "true"
         | "false"
+        | "null"
         | [HEX_INT_LITERAL, _]
         | [DECIMAL_FP_NUMBER, _, _] => {
             var peeked = tok.peek();
