@@ -53,8 +53,8 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionDefn defn = functionDefns[i];
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
-        err:BadBIR|err:Semantic? verifyErr =  bir:verifyFunctionCode(birMod, defn, code);
-        if verifyErr is err:BadBIR {
+        bir:InvalidError|err:Semantic? verifyErr =  bir:verifyFunctionCode(birMod, defn, code);
+        if verifyErr is bir:InvalidError {
             panic(verifyErr);
         }
         else if verifyErr is err:Semantic {

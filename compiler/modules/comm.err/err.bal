@@ -9,8 +9,6 @@ public type Unimplemented error<d:UnimplementedDiagnostic>;
 
 public type Panic distinct error;
 
-public type BadBIR distinct error;
-
 // XXX the `cause` argument here is not really right: we just it for errors from numeric conversion functions
 public function syntax(d:Message m, d:Location loc, string? defnName = (), error? cause = ()) returns Syntax {
     return error Syntax("syntax error", cause, message=d:messageToString(m), location=loc, defnName=defnName);
