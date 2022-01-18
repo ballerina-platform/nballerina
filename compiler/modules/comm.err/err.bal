@@ -41,11 +41,3 @@ public function illegalArgument(d:Message detail) returns Panic {
 public type SemanticContext object {
     public function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns Semantic;
 };
-
-public function badBIR(d:Message? detail = ()) returns BadBIR {
-    string msg = "error encountered in BIR verify";
-    if detail is d:Message {
-        msg += " (" + d:messageToString(detail) + ")";
-    }
-    return error BadBIR(msg);
-}

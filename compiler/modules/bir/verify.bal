@@ -66,6 +66,14 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
+public function InvalidError(d:Message? detail = ()) returns err:BadBIR {
+    string msg = "error encountered in BIR verify";
+    if detail is d:Message {
+        msg += " (" + d:messageToString(detail) + ")";
+    }
+    return error err:BadBIR(msg);
+}
+
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns err:Semantic|err:BadBIR? {
     foreach Insn insn in bb.insns {
         check verifyInsn(vc, insn);
@@ -361,5 +369,5 @@ function verifyRegisterSemType(VerifyContext vc, string insnName, Register opera
 }
 
 function operandTypeErr(VerifyContext vc, string insnName, string typeName) returns err:BadBIR {
-    return err:badBIR(`bad BIR: operands of ${insnName} must be subtype of ${typeName}`);
+    return InvalidError(`bad BIR: operands of ${insnName} must be subtype of ${typeName}`);
 }
