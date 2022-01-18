@@ -95,10 +95,10 @@ define internal i1 @_B_isSquareNumber(i64 %0) !dbg !9 {
   %x = alloca i64
   %i = alloca i64
   %2 = alloca i1
-  %3 = alloca i1
-  %4 = alloca i64
-  %5 = alloca i1
-  %6 = alloca i64
+  %3 = alloca i64
+  %4 = alloca i1
+  %5 = alloca i64
+  %6 = alloca i1
   %7 = alloca i64
   %8 = alloca i8 addrspace(1)*
   %9 = alloca i8
@@ -151,12 +151,12 @@ define internal i1 @_B_isSquareNumber(i64 %0) !dbg !9 {
   unreachable
 40:
   %41 = extractvalue {i64, i1} %21, 0
-  store i64 %41, i64* %4
-  %42 = load i64, i64* %4
+  store i64 %41, i64* %3
+  %42 = load i64, i64* %3
   %43 = load i64, i64* %x
   %44 = icmp eq i64 %42, %43
-  store i1 %44, i1* %3
-  %45 = load i1, i1* %3
+  store i1 %44, i1* %4
+  %45 = load i1, i1* %4
   br i1 %45, label %24, label %25
 46:
   %47 = call i8 addrspace(1)* @_bal_panic_construct(i64 6401), !dbg !19
@@ -164,12 +164,12 @@ define internal i1 @_B_isSquareNumber(i64 %0) !dbg !9 {
   br label %36
 48:
   %49 = extractvalue {i64, i1} %28, 0
-  store i64 %49, i64* %6
-  %50 = load i64, i64* %6
+  store i64 %49, i64* %5
+  %50 = load i64, i64* %5
   %51 = load i64, i64* %x
   %52 = icmp sgt i64 %50, %51
-  store i1 %52, i1* %5
-  %53 = load i1, i1* %5
+  store i1 %52, i1* %6
+  %53 = load i1, i1* %6
   br i1 %53, label %30, label %31
 54:
   %55 = call i8 addrspace(1)* @_bal_panic_construct(i64 6913), !dbg !19

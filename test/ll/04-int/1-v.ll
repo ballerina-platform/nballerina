@@ -172,10 +172,10 @@ define internal void @_B_testAround(i64 %0) !dbg !7 {
 }
 define internal void @_B_roundTrip(i64 %0) !dbg !9 {
   %n = alloca i64
-  %2 = alloca i1
+  %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
-  %4 = alloca i8 addrspace(1)*
-  %5 = alloca i64
+  %4 = alloca i64
+  %5 = alloca i1
   %6 = alloca i8 addrspace(1)*
   %7 = alloca i8 addrspace(1)*
   %8 = alloca i8
@@ -186,8 +186,8 @@ define internal void @_B_roundTrip(i64 %0) !dbg !9 {
   store i64 %0, i64* %n
   %12 = load i64, i64* %n, !dbg !24
   %13 = call i8 addrspace(1)* @_B_toAny(i64 %12), !dbg !24
-  store i8 addrspace(1)* %13, i8 addrspace(1)** %3, !dbg !24
-  %14 = load i8 addrspace(1)*, i8 addrspace(1)** %3
+  store i8 addrspace(1)* %13, i8 addrspace(1)** %2, !dbg !24
+  %14 = load i8 addrspace(1)*, i8 addrspace(1)** %2
   %15 = call {i8 addrspace(1)*, i1} @_bal_convert_to_int(i8 addrspace(1)* %14)
   %16 = extractvalue {i8 addrspace(1)*, i1} %15, 1
   br i1 %16, label %28, label %21
@@ -201,8 +201,8 @@ define internal void @_B_roundTrip(i64 %0) !dbg !9 {
   unreachable
 21:
   %22 = extractvalue {i8 addrspace(1)*, i1} %15, 0
-  store i8 addrspace(1)* %22, i8 addrspace(1)** %4
-  %23 = load i8 addrspace(1)*, i8 addrspace(1)** %4
+  store i8 addrspace(1)* %22, i8 addrspace(1)** %3
+  %23 = load i8 addrspace(1)*, i8 addrspace(1)** %3
   %24 = addrspacecast i8 addrspace(1)* %23 to i8*
   %25 = ptrtoint i8* %24 to i64
   %26 = and i64 %25, 2233785415175766016
@@ -214,12 +214,12 @@ define internal void @_B_roundTrip(i64 %0) !dbg !9 {
   br label %17
 30:
   %31 = call i64 @_bal_tagged_to_int(i8 addrspace(1)* %23)
-  store i64 %31, i64* %5
+  store i64 %31, i64* %4
   %32 = load i64, i64* %n
-  %33 = load i64, i64* %5
+  %33 = load i64, i64* %4
   %34 = icmp eq i64 %32, %33
-  store i1 %34, i1* %2
-  %35 = load i1, i1* %2, !dbg !25
+  store i1 %34, i1* %5
+  %35 = load i1, i1* %5, !dbg !25
   %36 = zext i1 %35 to i64, !dbg !25
   %37 = or i64 %36, 72057594037927936, !dbg !25
   %38 = getelementptr i8, i8 addrspace(1)* null, i64 %37, !dbg !25

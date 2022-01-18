@@ -14,12 +14,13 @@ define void @_B04rootmain() !dbg !5 {
   %3 = alloca i1
   %iv.1 = alloca i8 addrspace(1)*
   %4 = alloca i8 addrspace(1)*
+  %iv.2 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i8 addrspace(1)*
   %7 = alloca i8
   %8 = load i8*, i8** @_bal_stack_guard
   %9 = icmp ult i8* %7, %8
-  br i1 %9, label %21, label %10
+  br i1 %9, label %22, label %10
 10:
   %11 = call {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* @_bal_list_construct({i32}* @_Bi04root0, i64 0)
   %12 = bitcast {{i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*}*, i64, i64, i8* addrspace(1)*} addrspace(1)* %11 to i8 addrspace(1)*
@@ -41,14 +42,16 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !9
   br label %20
 20:
+  %21 = load i8 addrspace(1)*, i8 addrspace(1)** %iv
+  store i8 addrspace(1)* %21, i8 addrspace(1)** %iv.2
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098297715142192745)), !dbg !10
   store i8 addrspace(1)* null, i8 addrspace(1)** %5, !dbg !10
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543618405193)), !dbg !11
   store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !11
   ret void
-21:
-  %22 = call i8 addrspace(1)* @_bal_panic_construct(i64 1540), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %22)
+22:
+  %23 = call i8 addrspace(1)* @_bal_panic_construct(i64 1540), !dbg !7
+  call void @_bal_panic(i8 addrspace(1)* %23)
   unreachable
 }
 !llvm.module.flags = !{!0}

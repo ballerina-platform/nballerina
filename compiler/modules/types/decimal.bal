@@ -1,6 +1,6 @@
 // Implementation specific to basic type decimal.
 
-type DecimalSubtype readonly & record {|
+public type DecimalSubtype readonly & record {|
     boolean allowed;
     decimal[] values;
 |};

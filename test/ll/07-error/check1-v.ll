@@ -104,10 +104,11 @@ define internal i8 addrspace(1)* @_B_nonZero(i64 %0) !dbg !9 {
   %2 = alloca i1
   %n.1 = alloca i64
   %3 = alloca i8 addrspace(1)*
+  %n.2 = alloca i64
   %4 = alloca i8
   %5 = load i8*, i8** @_bal_stack_guard
   %6 = icmp ult i8* %4, %5
-  br i1 %6, label %18, label %7
+  br i1 %6, label %19, label %7
 7:
   store i64 %0, i64* %n
   %8 = load i64, i64* %n
@@ -124,11 +125,13 @@ define internal i8 addrspace(1)* @_B_nonZero(i64 %0) !dbg !9 {
   ret i8 addrspace(1)* %14
 15:
   %16 = load i64, i64* %n
-  %17 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %16)
-  ret i8 addrspace(1)* %17
-18:
-  %19 = call i8 addrspace(1)* @_bal_panic_construct(i64 3076), !dbg !18
-  call void @_bal_panic(i8 addrspace(1)* %19)
+  store i64 %16, i64* %n.2
+  %17 = load i64, i64* %n.2
+  %18 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 %17)
+  ret i8 addrspace(1)* %18
+19:
+  %20 = call i8 addrspace(1)* @_bal_panic_construct(i64 3076), !dbg !18
+  call void @_bal_panic(i8 addrspace(1)* %20)
   unreachable
 }
 !llvm.module.flags = !{!0}

@@ -27,10 +27,7 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
                 return finishVarDeclStmt(tok, td, startPos);
             }
             else if peeked == "[" {
-                TokenizerState state = tok.save();
-                boolean isTypeDesc = check preparseArrayTypeDesc(tok);
-                tok.restore(state);
-
+                boolean isTypeDesc = check savePreparseRestore(tok, preparseArrayTypeDesc);
                 if isTypeDesc {
                     return parseVarDeclStmt(tok, startPos);
                 }
@@ -95,14 +92,6 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         var td if td is SubsetBuiltinTypeName|"anydata"|"map"|"record" => {
             return parseVarDeclStmt(tok, startPos);
         }
-        "null" => {
-            if tok.peek() == "." {
-                return parseMethodCallStmt(tok);
-            }
-            else {
-                return parseVarDeclStmt(tok, startPos);
-            }
-        }
         "(" => {
             TokenizerState state = tok.save();
             check tok.advance();
@@ -116,14 +105,35 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
                 return parseMethodCallStmt(tok);
             }
         }
-        [DECIMAL_NUMBER, _]|[STRING_LITERAL, _]|"true"|"false" => {
-            return parseMethodCallStmt(tok);
+        [DECIMAL_NUMBER, _]
+        | [STRING_LITERAL, _]
+        | "true"
+        | "false"
+        | "null"
+        | [HEX_INT_LITERAL, _]
+        | [DECIMAL_FP_NUMBER, _, _] => {
+            var peeked = tok.peek();
+            if peeked == "." || (peeked == "[" && !check savePreparseRestore(tok, preparseArrayTypeDesc)) {
+                return parseMethodCallStmt(tok);
+            }
+            return parseVarDeclStmt(tok, startPos);
+        }
+        "-" => {
+            return parseVarDeclStmt(tok, startPos);
         }
     }
     return parseError(tok, "unhandled statement");
 }
 
 type AssignOp "="|CompoundAssignOp;
+type PreparseFunc function(Tokenizer) returns boolean|err:Syntax;
+
+function savePreparseRestore(Tokenizer tok, PreparseFunc func) returns boolean|err:Syntax {
+    TokenizerState state = tok.save();
+    boolean isTypeDesc = check func(tok);
+    tok.restore(state);
+    return isTypeDesc;
+}
 
 // We only call this when we know (through preparsing) that the statement does not start with a type descriptor.
 function finishIdentifierStmt(Tokenizer tok, string name1, Position startPos, Position qNamePos) returns Stmt|err:Syntax {

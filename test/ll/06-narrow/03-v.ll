@@ -43,10 +43,11 @@ define internal i8 addrspace(1)* @_B_zero(double %0) !dbg !7 {
   %v.1 = alloca double
   %3 = alloca i1
   %4 = alloca i1
+  %v.2 = alloca double
   %5 = alloca i8
   %6 = load i8*, i8** @_bal_stack_guard
   %7 = icmp ult i8* %5, %6
-  br i1 %7, label %26, label %8
+  br i1 %7, label %27, label %8
 8:
   store double %0, double* %v
   %9 = load double, double* %v
@@ -77,10 +78,12 @@ define internal i8 addrspace(1)* @_B_zero(double %0) !dbg !7 {
 24:
   br label %25
 25:
+  %26 = load double, double* %v
+  store double %26, double* %v.2
   ret i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901025)
-26:
-  %27 = call i8 addrspace(1)* @_bal_panic_construct(i64 2564), !dbg !16
-  call void @_bal_panic(i8 addrspace(1)* %27)
+27:
+  %28 = call i8 addrspace(1)* @_bal_panic_construct(i64 2564), !dbg !16
+  call void @_bal_panic(i8 addrspace(1)* %28)
   unreachable
 }
 !llvm.module.flags = !{!0}

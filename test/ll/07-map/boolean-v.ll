@@ -13,8 +13,8 @@ define void @_B04rootmain() !dbg !5 {
   %3 = alloca i8 addrspace(1)*
   %4 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
-  %6 = alloca i1
-  %7 = alloca i8 addrspace(1)*
+  %6 = alloca i8 addrspace(1)*
+  %7 = alloca i1
   %8 = alloca i8 addrspace(1)*
   %9 = alloca i8
   %10 = load i8*, i8** @_bal_stack_guard
@@ -47,11 +47,11 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* null, i8 addrspace(1)** %5, !dbg !9
   %27 = load i8 addrspace(1)*, i8 addrspace(1)** %m
   %28 = call i8 addrspace(1)* @_bal_mapping_get(i8 addrspace(1)* %27, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901114))
-  store i8 addrspace(1)* %28, i8 addrspace(1)** %7
-  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %7
+  store i8 addrspace(1)* %28, i8 addrspace(1)** %6
+  %29 = load i8 addrspace(1)*, i8 addrspace(1)** %6
   %30 = icmp eq i8 addrspace(1)* %29, null
-  store i1 %30, i1* %6
-  %31 = load i1, i1* %6
+  store i1 %30, i1* %7
+  %31 = load i1, i1* %7
   br i1 %31, label %32, label %33
 32:
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621228910)), !dbg !10

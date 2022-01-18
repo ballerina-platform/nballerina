@@ -44,7 +44,7 @@ define void @_B04rootmain() !dbg !5 {
   %22 = load i64, i64* %2
   %23 = call {i64, i1} @llvm.sadd.with.overflow.i64(i64 %21, i64 %22)
   %24 = extractvalue {i64, i1} %23, 1
-  br i1 %24, label %43, label %29
+  br i1 %24, label %42, label %29
 25:
   %26 = load i8 addrspace(1)*, i8 addrspace(1)** %9
   call void @_bal_panic(i8 addrspace(1)* %26)
@@ -74,15 +74,14 @@ define void @_B04rootmain() !dbg !5 {
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098475922679686504)), !dbg !9
   store i8 addrspace(1)* null, i8 addrspace(1)** %7, !dbg !9
   %40 = call i8 addrspace(1)* @_bal_mapping_construct({i32}* @_Bi04root1, i64 1)
-  %41 = load i8 addrspace(1)*, i8 addrspace(1)** %7
-  call void @_bal_mapping_init_member(i8 addrspace(1)* %40, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)* %41)
+  call void @_bal_mapping_init_member(i8 addrspace(1)* %40, i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630901112), i8 addrspace(1)* null)
   store i8 addrspace(1)* %40, i8 addrspace(1)** %8
-  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %8
-  store i8 addrspace(1)* %42, i8 addrspace(1)** %_
+  %41 = load i8 addrspace(1)*, i8 addrspace(1)** %8
+  store i8 addrspace(1)* %41, i8 addrspace(1)** %_
   ret void
-43:
-  %44 = call i8 addrspace(1)* @_bal_panic_construct(i64 1537), !dbg !7
-  store i8 addrspace(1)* %44, i8 addrspace(1)** %9
+42:
+  %43 = call i8 addrspace(1)* @_bal_panic_construct(i64 1537), !dbg !7
+  store i8 addrspace(1)* %43, i8 addrspace(1)** %9
   br label %25
 }
 !llvm.module.flags = !{!0}

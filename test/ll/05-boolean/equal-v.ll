@@ -6,8 +6,8 @@ define internal i1 @_B_foo(i64 %0, i64 %1, i64 %2) !dbg !5 {
   %a = alloca i64
   %b = alloca i64
   %c = alloca i64
-  %4 = alloca i1
-  %5 = alloca i64
+  %4 = alloca i64
+  %5 = alloca i1
   %6 = alloca i8
   %7 = load i8*, i8** @_bal_stack_guard
   %8 = icmp ult i8* %6, %7
@@ -19,12 +19,12 @@ define internal i1 @_B_foo(i64 %0, i64 %1, i64 %2) !dbg !5 {
   %10 = load i64, i64* %a
   %11 = load i64, i64* %b
   %12 = or i64 %10, %11
-  store i64 %12, i64* %5
-  %13 = load i64, i64* %5
+  store i64 %12, i64* %4
+  %13 = load i64, i64* %4
   %14 = load i64, i64* %c
   %15 = icmp eq i64 %13, %14
-  store i1 %15, i1* %4
-  %16 = load i1, i1* %4
+  store i1 %15, i1* %5
+  %16 = load i1, i1* %5
   ret i1 %16
 17:
   %18 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !9

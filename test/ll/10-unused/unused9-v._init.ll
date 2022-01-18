@@ -1,5 +1,5 @@
 @_Bi04root0 = constant {i32, i8 addrspace(1)*(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)*, i64(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, i64)*, double(i8 addrspace(1)*, i64)*, i64(i8 addrspace(1)*, i64, double)*, i64, {i32}*} {i32 0, i8 addrspace(1)*(i8 addrspace(1)*, i64)* @_bal_list_int_array_get_tagged, i64(i8 addrspace(1)*, i64, i8 addrspace(1)*)* @_bal_list_int_array_set_tagged, i64(i8 addrspace(1)*, i64)* @_bal_list_int_array_get_int, i64(i8 addrspace(1)*, i64, i64)* @_bal_list_int_array_set_int, double(i8 addrspace(1)*, i64)* null, i64(i8 addrspace(1)*, i64, double)* @_bal_list_int_array_set_float, i64 257, {i32}* null}
-@_Bi04root1 = constant {i32, i32, i64, [0 x i64]} {i32 0, i32 0, i64 257, [0 x i64] []}
+@_Bi04root1 = constant {i32, i32, i64, {i32}*, [0 x i64]} {i32 0, i32 0, i64 257, {i32}* null, [0 x i64] []}
 declare i8 addrspace(1)* @_bal_list_int_array_get_tagged(i8 addrspace(1)*, i64)
 declare i64 @_bal_list_int_array_set_tagged(i8 addrspace(1)*, i64, i8 addrspace(1)*)
 declare i64 @_bal_list_int_array_get_int(i8 addrspace(1)*, i64)

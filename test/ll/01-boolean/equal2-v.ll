@@ -16,15 +16,16 @@ define void @_B04rootmain() !dbg !5 {
   %8 = alloca i8 addrspace(1)*
   %b.2 = alloca i1
   %9 = alloca i8 addrspace(1)*
-  %10 = alloca i1
   %b.3 = alloca i1
-  %11 = alloca i8 addrspace(1)*
+  %10 = alloca i1
   %b.4 = alloca i1
+  %11 = alloca i8 addrspace(1)*
+  %b.5 = alloca i1
   %12 = alloca i8 addrspace(1)*
   %13 = alloca i8
   %14 = load i8*, i8** @_bal_stack_guard
   %15 = icmp ult i8* %13, %14
-  br i1 %15, label %55, label %16
+  br i1 %15, label %56, label %16
 16:
   store i1 1, i1* %b
   %17 = load i1, i1* %b
@@ -89,31 +90,33 @@ define void @_B04rootmain() !dbg !5 {
   store i8 addrspace(1)* null, i8 addrspace(1)** %9, !dbg !15
   br label %44
 44:
-  store i1 0, i1* %b
   %45 = load i1, i1* %b
-  %46 = icmp eq i1 1, %45
-  store i1 %46, i1* %10
-  %47 = load i1, i1* %10
-  br i1 %47, label %48, label %51
-48:
-  %49 = load i1, i1* %b
-  store i1 %49, i1* %b.3
-  %50 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 12), !dbg !16
-  call void @_Bb02ioprintln(i8 addrspace(1)* %50), !dbg !16
+  store i1 %45, i1* %b.3
+  store i1 0, i1* %b
+  %46 = load i1, i1* %b
+  %47 = icmp eq i1 1, %46
+  store i1 %47, i1* %10
+  %48 = load i1, i1* %10
+  br i1 %48, label %49, label %52
+49:
+  %50 = load i1, i1* %b
+  store i1 %50, i1* %b.4
+  %51 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 12), !dbg !16
+  call void @_Bb02ioprintln(i8 addrspace(1)* %51), !dbg !16
   store i8 addrspace(1)* null, i8 addrspace(1)** %11, !dbg !16
-  br label %54
-51:
-  %52 = load i1, i1* %b
-  store i1 %52, i1* %b.4
-  %53 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 13), !dbg !17
-  call void @_Bb02ioprintln(i8 addrspace(1)* %53), !dbg !17
+  br label %55
+52:
+  %53 = load i1, i1* %b
+  store i1 %53, i1* %b.5
+  %54 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 13), !dbg !17
+  call void @_Bb02ioprintln(i8 addrspace(1)* %54), !dbg !17
   store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !17
-  br label %54
-54:
-  ret void
+  br label %55
 55:
-  %56 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %56)
+  ret void
+56:
+  %57 = call i8 addrspace(1)* @_bal_panic_construct(i64 1028), !dbg !7
+  call void @_bal_panic(i8 addrspace(1)* %57)
   unreachable
 }
 !llvm.module.flags = !{!0}

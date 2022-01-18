@@ -23,7 +23,47 @@ function parseExpr(Tokenizer tok) returns Expr|err:Syntax {
 }
 
 function parseInnerExpr(Tokenizer tok) returns Expr|err:Syntax {
-    return parseBitwiseOrExpr(tok);
+    return parseLogicalOrExpr(tok);
+}
+
+function parseLogicalOrExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
+    Expr expr = check parseLogicalAndExpr(tok);
+    while true {
+        Token? t = tok.current();
+        if t == "||" {
+            Position opPos = tok.currentStartPos();
+            check tok.advance();
+            Expr right = check parseLogicalAndExpr(tok);
+            Position endPos = tok.previousEndPos();
+            BinaryLogicalExpr bin = { startPos, endPos, opPos, logicalOp: "||", left: expr, right };
+            expr = bin;
+        }
+        else {
+            break;
+        }
+    }
+    return expr;
+}
+
+function parseLogicalAndExpr(Tokenizer tok) returns Expr|err:Syntax {
+    Position startPos = tok.currentStartPos();
+    Expr expr = check parseBitwiseOrExpr(tok);
+    while true {
+        Token? t = tok.current();
+        if t == "&&" {
+            Position opPos = tok.currentStartPos();
+            check tok.advance();
+            Expr right = check parseBitwiseOrExpr(tok);
+            Position endPos = tok.previousEndPos();
+            BinaryLogicalExpr bin = { startPos, endPos, opPos, logicalOp: "&&", left: expr, right };
+            expr = bin;
+        }
+        else {
+            break;
+        }
+    }
+    return expr;
 }
 
 function parseBitwiseOrExpr(Tokenizer tok) returns Expr|err:Syntax {

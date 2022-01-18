@@ -75,7 +75,7 @@ function preparseBracketed(Tokenizer tok, CLOSE_BRACKET close) returns err:Synta
 
 // Returns `true` if a statement that starts with an unqualified identifier followed by `[` begins a type descriptor rather than an expression
 function preparseArrayTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
-    _ = check tok.expectIdentifier();
+    check tok.advance();
     if tok.currentIsNoSpaceColon() {
         check tok.advance();
         _ = check tok.expectIdentifier();

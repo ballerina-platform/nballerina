@@ -10,6 +10,7 @@ static int64_t stringCmpGeneric(TaggedPtr tp1, TaggedPtr tp2);
 static int64_t stringCmpImmediate(uint64_t bits1, uint64_t bits2);
 static int64_t stringCmpMedium(MediumStringPtr s1, MediumStringPtr s2);
 static int64_t stringCmpLarge(LargeStringPtr s1, LargeStringPtr s2);
+static bool stringListContains(const TaggedPtr *start, const TaggedPtr *end, TaggedPtr str);
 
 static int64_t memcmp8(IntPtr p1, IntPtr p2, int64_t n);
 
@@ -282,4 +283,38 @@ TaggedPtr _bal_string_concat(TaggedPtr tp1, TaggedPtr tp2) {
     memcpy(bytes, taggedStringBytes(&tp1), len1.nBytes);
     memcpy(bytes + len1.nBytes, taggedStringBytes(&tp2), len2.nBytes);
     return result;
+}
+
+bool _bal_string_subtype_contains(UniformSubtypePtr stp, TaggedPtr str) {
+    StringSubtypePtr sstp = (StringSubtypePtr)stp;
+    bool inStrs = stringListContains(sstp->strs, sstp->strs + sstp->nStrs, str);
+    return inStrs == (taggedStringIsChar(str) ? sstp->isCharInStrsIncluded : sstp->isNonCharInStrsIncluded);
+}
+
+// Do binary search for str
+// Approximately the same code as tidListContains
+static bool stringListContains(const TaggedPtr *start, const TaggedPtr *end, TaggedPtr str) {
+    // Lower bound inclusive; upper bound is exclusive
+    // Invariant: if there is a member in the list == to tid, then its address p 
+    // satisfies start <= p < end
+    while (start < end) {    
+        const TaggedPtr *mid = start + (end - start)/2;
+        // We have start <= mid < end
+        int64_t cmp = _bal_string_cmp(str, *mid);
+        if (cmp == 0) {
+            return true;
+        }
+        if (cmp < 0) {
+            // this decreases end, since mid < end
+            // still have start <= end
+            end = mid;
+        }
+        else {
+            // this increases start, since mid >= start
+            // still have start <= end
+            start = mid + 1;
+        }
+    }
+    // start == end, so there is no such member
+    return false;
 }

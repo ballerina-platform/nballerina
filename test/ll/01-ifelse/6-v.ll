@@ -42,12 +42,12 @@ define void @_B04rootmain() !dbg !5 {
 define internal i64 @_B_foo(i64 %0, i64 %1) !dbg !7 {
   %x = alloca i64
   %y = alloca i64
-  %3 = alloca i1
+  %3 = alloca i64
   %4 = alloca i64
-  %5 = alloca i64
-  %6 = alloca i1
+  %5 = alloca i1
+  %6 = alloca i64
   %7 = alloca i64
-  %8 = alloca i64
+  %8 = alloca i1
   %9 = alloca i8
   %10 = load i8*, i8** @_bal_stack_guard
   %11 = icmp ult i8* %9, %10
@@ -57,30 +57,30 @@ define internal i64 @_B_foo(i64 %0, i64 %1) !dbg !7 {
   store i64 %1, i64* %y
   %13 = load i64, i64* %x, !dbg !21
   %14 = call i64 @_B_bar(i64 %13), !dbg !21
-  store i64 %14, i64* %4, !dbg !21
+  store i64 %14, i64* %3, !dbg !21
   %15 = load i64, i64* %y, !dbg !22
   %16 = call i64 @_B_baz(i64 %15), !dbg !22
-  store i64 %16, i64* %5, !dbg !22
-  %17 = load i64, i64* %4
-  %18 = load i64, i64* %5
+  store i64 %16, i64* %4, !dbg !22
+  %17 = load i64, i64* %3
+  %18 = load i64, i64* %4
   %19 = icmp eq i64 %17, %18
-  store i1 %19, i1* %3
-  %20 = load i1, i1* %3
+  store i1 %19, i1* %5
+  %20 = load i1, i1* %5
   br i1 %20, label %21, label %22
 21:
   ret i64 0
 22:
   %23 = load i64, i64* %x, !dbg !23
   %24 = call i64 @_B_bar(i64 %23), !dbg !23
-  store i64 %24, i64* %7, !dbg !23
+  store i64 %24, i64* %6, !dbg !23
   %25 = load i64, i64* %y, !dbg !24
   %26 = call i64 @_B_baz(i64 %25), !dbg !24
-  store i64 %26, i64* %8, !dbg !24
-  %27 = load i64, i64* %7
-  %28 = load i64, i64* %8
+  store i64 %26, i64* %7, !dbg !24
+  %27 = load i64, i64* %6
+  %28 = load i64, i64* %7
   %29 = icmp sgt i64 %27, %28
-  store i1 %29, i1* %6
-  %30 = load i1, i1* %6
+  store i1 %29, i1* %8
+  %30 = load i1, i1* %8
   br i1 %30, label %31, label %32
 31:
   ret i64 1

@@ -1,18 +1,18 @@
 // Implementation specific to basic type string.
 
-type StringSubtype readonly & record {|
+public type StringSubtype readonly & record {|
     CharStringSubtype char;
     NonCharStringSubtype nonChar;
 |};
 
 // allowed = false with empty `values` means `String:char`
-type CharStringSubtype readonly & record {|
+public type CharStringSubtype readonly & record {|
     boolean allowed;
     string:Char[] values;
 |};
 
 // allowed = false with empty `values` mean all non char strings
-type NonCharStringSubtype readonly & record {|
+public type NonCharStringSubtype readonly & record {|
     boolean allowed;
     string[] values;
 |};

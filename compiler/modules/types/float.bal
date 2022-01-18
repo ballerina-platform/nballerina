@@ -1,6 +1,6 @@
 // Implementation specific to basic type float.
 
-type FloatSubtype readonly & record {|
+public type FloatSubtype readonly & record {|
     boolean allowed;
     float[] values;
 |};

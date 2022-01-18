@@ -1,14 +1,13 @@
 // Implementation specific to basic type int.
 
-type IntSubtype readonly & Range[];
+public type IntSubtype readonly & Range[];
 
 // Ranges are inclusive
 // Require min <= max
-type Range readonly & record {|
+public type Range readonly & record {|
     int min;
     int max;
 |};
-
 
 public function intConst(int value) returns ComplexSemType {
     IntSubtype t = [{ min: value, max: value }];
