@@ -1130,7 +1130,8 @@ public function singleton(Context cx, SingleValue value) returns SemType {
     }
     // JBUG this memoization code doesn't work with numeric zeros
     // looks like zeros of different basic types are being treated as `==` by table code
-    // see cases in 13-bug
+    // JBUG #34712
+    // note: Uncomment the line that adds to the table.
     //SingletonMemo? memo = cx.singletonMemo[value];
     //if memo != () {
     //    return memo.semType;
