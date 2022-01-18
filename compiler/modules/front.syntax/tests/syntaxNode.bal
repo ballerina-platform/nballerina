@@ -175,7 +175,7 @@ function syntaxNodeFromPanicStmt(PanicStmt stmt) returns NonTerminalSyntaxNode {
 function syntaxNodeFromAssignStmt(AssignStmt stmt) returns NonTerminalSyntaxNode {
     LExpr|WILDCARD lValue = stmt.lValue;
     return finishWithSemiColon(stmt,
-                               lValue is LExpr ? syntaxNodeFromExpr(lValue) : { token: "_", pos:stmt.startPos },
+                               lValue is LExpr ? syntaxNodeFromExpr(lValue) : { token: "_", pos: stmt.startPos },
                                { token: "=", pos: stmt.opPos },
                                syntaxNodeFromExpr(stmt.expr));
 }
@@ -241,8 +241,7 @@ function syntaxNodeFromForeachStmt(ForeachStmt stmt) returns NonTerminalSyntaxNo
 
 function syntaxNodeFromBreakContinueStmt(BreakContinueStmt stmt) returns NonTerminalSyntaxNode {
     return finishWithSemiColon(stmt,
-                               { token: stmt.breakContinue,
-                               pos: stmt.startPos });
+                               { token: stmt.breakContinue, pos: stmt.startPos });
 }
 
 function syntaxNodeFromCallStmt(CallStmt stmt) returns NonTerminalSyntaxNode {
@@ -552,7 +551,6 @@ function syntaxNodeFromTypeDescRef(TypeDescRef td) returns NonTerminalSyntaxNode
                                      { name: td.typeName, pos: prefix == () ? td.qNamePos : () });
 }
 
-// pr-idea: should this made a node in the ast (it is explicit in the grammer)
 function syntaxNodesFromTypeParameter(TypeDesc td) returns SyntaxNode[] {
     return [{ token: "<" }, syntaxNodeFromTypeDesc(td), { token: ">" }];
 }
