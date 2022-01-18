@@ -3,8 +3,6 @@ import wso2/nballerina.print.llvm;
 import wso2/nballerina.types as t;
 import wso2/nballerina.comm.err;
 
-
-
 public function buildModule(bir:Module birMod, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
     llvm:Context llContext = new;
     bir:ModuleId modId = birMod.getId();
