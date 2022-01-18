@@ -539,6 +539,12 @@ function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBit
     if lhs is int && rhs is int {
         return { result: bitwiseEval(op, lhs, rhs), block: bb };
     }
+    if lhs is bir:Register && !t:isSubtypeSimple(lhs.semType, t:INT) {
+        return cx.semanticErr("LHS is not an int", pos);
+    }
+    if rhs is bir:Register && !t:isSubtypeSimple(rhs.semType, t:INT) {
+        return cx.semanticErr("RHS is not an int", pos);
+    }
     t:SemType lt = bitwiseOperandType(lhs);
     t:SemType rt = bitwiseOperandType(rhs);
     t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
