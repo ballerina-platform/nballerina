@@ -223,6 +223,59 @@ typedef struct {
 } *PrecomputedSubtypePtr;
 
 typedef struct {
+    int64_t min;
+    int64_t max;
+} IntRange;
+
+typedef struct {
+    UniformSubtype uniform;
+    // Use 64 bits to avoid padding.
+    // nRanges must be > 0
+    int64_t nRanges;
+    // Sorted
+    IntRange ranges[];
+} *IntSubtypePtr;
+
+typedef struct {
+    UniformSubtype uniform;
+    // nFloats must be > 0.
+    int32_t nFloats;
+    // This is 0 or 1. Use 32 bits to avoid padding.
+    // 1 means members of decimals are included in the type
+    int32_t included;
+    // If NaN is included, it will be the first entry.
+    // The remaining entries are ordered.
+    // It is not possible to have both +0 and -0.
+    double floats[];
+} *FloatSubtypePtr;
+
+typedef const char *DecimalConstPtr;
+
+typedef struct {
+    UniformSubtype uniform;
+    // nDecimals must be > 0
+    int32_t nDecimals;
+    // This is 0 or 1. Use 32 bits to avoid padding.
+    // 1 means members of decimals are included in the type
+    int32_t included;
+    DecimalConstPtr decimals[];
+} *DecimalSubtypePtr;
+
+typedef struct {
+    UniformSubtype uniform;
+    // nStrs may be 0
+    uint32_t nStrs;
+    // If a string has length 1 and it's in the strs list, isCharInStrsAllowed says whether it's included in the type.
+    // If a string has length != 1 and it's in the strs list, isNonCharInStrsAllowed says whether it's included in the type.
+    // If the string is not in the strs list, it's included iff it wouldn't be included if it was in the list.
+    // These two fields are uint16 rather than bool, just to avoid any padding problems.
+    uint16_t isCharInStrsIncluded;
+    uint16_t isNonCharInStrsIncluded;
+    // Sorted list of strings
+    TaggedPtr strs[];
+} *StringSubtypePtr;
+
+typedef struct {
    uint32_t all;
    uint32_t some;
    UniformSubtypePtr subtypes[];
@@ -460,6 +513,30 @@ static READONLY inline bool complexTypeContainsTagged(ComplexTypePtr ctp, Tagged
     return (vp->contains)(vp, p);
 }
 
+typedef struct {
+    // If this is null, then contains is the result
+    UniformSubtypePtr ptr;
+    bool contains;
+} UniformSubtypeData;
+
+static READONLY inline UniformSubtypeData complexTypeUniformSubtypeData(ComplexTypePtr ctp, int tag) {
+    int flag = 1 << tag;
+    UniformSubtypeData result;
+    if (ctp->all & flag) {
+        result.ptr = 0;
+        result.contains = true;
+    }
+    else if (!(ctp->some & flag)) {
+        result.ptr = 0;
+        result.contains = false;
+    }
+    else {
+        int i = __builtin_popcount(ctp->some & (flag - 1));
+        result.ptr = ctp->subtypes[i];
+    }
+    return result;
+}
+
 static READONLY inline bool memberTypeContainsTagged(MemberType memberType, TaggedPtr tp) {
     if (memberType & 1) {
         uint64_t flag =  (uint64_t)1 << (1 + (getTag(tp) & UT_MASK));
@@ -595,6 +672,27 @@ static READONLY inline StringLength taggedStringLength(TaggedPtr p) {
         LargeStringPtr sp = taggedToPtr(p);
         StringLength len = { sp->lengthInBytes, sp->lengthInCodePoints };
         return len;
+    }
+}
+
+// A more efficient version of taggedStringLength(p) == 1
+// This is READNONE because we can do this looking just at the tagged ptr
+static READNONE inline bool taggedStringIsChar(TaggedPtr p) {
+    uint64_t bits = taggedPtrBits(p);
+    if (bits & IMMEDIATE_FLAG) {
+        unsigned loByte = bits & 0xFF;
+        if (loByte & 0x80) {
+            return loByte != 0xFF;
+        }
+        else {
+            // This char uses one byte.
+            // So it's one char 1 if the other bytes are all padding (0xFF).
+            return (~bits >> 8) == 0;
+        }
+    }
+    else {
+        // non-immediate strings have length > 1
+        return false;
     }
 }
 

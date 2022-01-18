@@ -1,6 +1,6 @@
 // Implementation specific to basic type boolean.
 
-type BooleanSubtype readonly & record {|
+public type BooleanSubtype readonly & record {|
     boolean value;
 |};
 

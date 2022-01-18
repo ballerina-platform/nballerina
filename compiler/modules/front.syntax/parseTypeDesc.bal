@@ -331,13 +331,10 @@ function parseFunctionTypeDesc(Tokenizer tok, FunctionParam[]? namedParams = ())
     Position endPos = tok.previousEndPos();
     // on ")"
     check tok.advance();
-    TypeDesc ret;
+    TypeDesc? ret = ();
     if tok.current() == "returns" {
         check tok.advance();
         ret = check parseTypeDesc(tok);
-    }
-    else {
-        ret = { startPos: tok.currentStartPos(), endPos, builtinTypeName: "null" };
     }
     endPos = tok.previousEndPos();
     return { startPos, endPos, params, ret };
