@@ -4,8 +4,9 @@ type OverlappingChildNodes error<OverlappingChildNodesDiagnostic>;
 type ChildNodeOutOfRange error<ChildNodeOutOfRangeDiagnostic>;
 type UnexpectToken error<UnexpectTokenDiagnostic>;
 type InvalidStartPos error<InvalidStartPosDiagnostic>;
+type InvalidAstNodeRange error<InvalidAstNodeRangeDiagnostic>;
 
-type PositionValidationError OverlappingChildNodes|ChildNodeOutOfRange|UnexpectToken|InvalidStartPos;
+type PositionValidationError OverlappingChildNodes|ChildNodeOutOfRange|UnexpectToken|InvalidStartPos|InvalidAstNodeRange;
 
 function validateModulePartPositions(ModulePart part) returns PositionValidationError? {
     RootSyntaxNode root = rootSyntaxNode(part);
@@ -50,6 +51,9 @@ function validateTerminalSyntaxNode(TerminalSyntaxNode node, Tokenizer tok) retu
 }
 
 function validateSyntaxNode(SyntaxNode|RootSyntaxNode node, Tokenizer tok) returns PositionValidationError? {
+    if node is AstSyntaxNode {
+        check validateAstNodeRange(node, tok);
+    }
     if node is TerminalSyntaxNode {
         check validateTerminalSyntaxNode(node, tok);
     }
@@ -102,11 +106,32 @@ function validateSyntaxNode(SyntaxNode|RootSyntaxNode node, Tokenizer tok) retur
     }
 }
 
+function validateAstNodeRange(AstSyntaxNode syntaxNode, Tokenizer tok) returns InvalidAstNodeRange? {
+    SourceFile file = tok.file;
+    AstNode node = syntaxNode.astNode;
+    check validateAstNodePosition(node.startPos, file, false);
+    return validateAstNodePosition(node.endPos, file, true);
+}
+
+function validateAstNodePosition(Position pos, SourceFile file, boolean isEndPos) returns InvalidAstNodeRange? {
+    var [lineIndex, columnIndex] = file.lineColumn(pos);
+    ScannedLine line = file.scannedLine(lineIndex);
+    string lineContent = "".'join(...scanLineFragments(line));
+    if !isEndPos && columnIndex >= lineContent.length() {
+        return invalidAstNodeRange({ file, range: pos }, "position at the end of line", [lineIndex, columnIndex]);
+    }
+    string rest = lineContent.substring(isEndPos ? columnIndex - 1 : columnIndex);
+    if rest.startsWith(" ") || rest.startsWith("\t") || rest.startsWith("//") {
+        return invalidAstNodeRange({ file, range: pos }, "position is white space or comment", [lineIndex, columnIndex]);
+    }
+}
+
 enum PositionValidationErrorType {
     OVERLAPPING_CHILD_NODES = "overlapping child nodes",
     CHILD_NODE_OUT_OF_RANGE = "childnode out of range",
     UNEXPECTED_TOKEN = "unexpected token",
-    INVALID_START_POS = "invalid start position"
+    INVALID_START_POS = "invalid start position",
+    INVALID_AST_NODE_RANGE = "invalid node range"
 }
 
 type PositionValidationDiagnostic record {|
@@ -141,6 +166,13 @@ type UnexpectTokenDiagnostic record {|
     string actual;
 |};
 
+type InvalidAstNodeRangeDiagnostic record {|
+    *PositionValidationDiagnostic;
+    INVALID_AST_NODE_RANGE message = INVALID_AST_NODE_RANGE;
+    string details;
+    d:LineColumn lineColumn;
+|};
+
 function overlappingChildNodes(d:Location currentLocation, [Range|Position, Range|Position] childNodeRanges) returns OverlappingChildNodes {
     return error OverlappingChildNodes("position validation error", message=OVERLAPPING_CHILD_NODES, loc=currentLocation, childNodeRanges=childNodeRanges);
 }
@@ -155,6 +187,10 @@ function unexpectedToken(d:Location currentLocation, string expected, string act
 
 function invalidStartPos(d:Location currentLocation, Position expected, string nodeContent) returns InvalidStartPos {
     return error InvalidStartPos("position validation error", message=INVALID_START_POS, loc=currentLocation, expected=expected, nodeContent=nodeContent);
+}
+
+function invalidAstNodeRange(d:Location errorLocation, string details, d:LineColumn lineColumn) returns InvalidAstNodeRange {
+    return error InvalidAstNodeRange("position validation error", message=INVALID_AST_NODE_RANGE, loc=errorLocation, details=details, lineColumn=lineColumn);
 }
 
 function currentLocation(Tokenizer tok) returns d:Location {
