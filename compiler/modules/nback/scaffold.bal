@@ -435,8 +435,7 @@ function isSmallString(int nCodePoints, byte[] bytes, int nBytes) returns boolea
 function padBytes(byte[] bytes, int headerSize) returns int {
     int nBytes = bytes.length();
     int nBytesPadded = (((nBytes + headerSize + 7) >> 3) << 3) - headerSize;
-    // JBUG #33352 should be able to use `_` here
-    foreach int i in 0 ..< nBytesPadded - nBytes {
+    foreach var _ in 0 ..< nBytesPadded - nBytes {
         bytes.push(0);
     }
     return nBytesPadded;

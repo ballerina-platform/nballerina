@@ -191,9 +191,7 @@ public type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticE
 
 // We use different operator names so things work better with match statements
 public type BinaryExprBase record {|
-    // JBUG #32617 can't include PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     Position opPos;
     Expr left;
     Expr right;
@@ -225,9 +223,7 @@ public type BinaryLogicalExpr record {|
 |};
 
 public type UnaryExpr record {|
-    // JBUG #32617 can't include PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     Position opPos;
     UnaryExprOp op;
     Expr operand;
@@ -241,19 +237,13 @@ public type SimpleConstNegateExpr record {|
 |};
 
 public type ErrorConstructorExpr record {|
-    // JBUG #32617 can't include PositionFields
-    // *PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     Position kwPos;
     Expr message;
 |};
 
 public type FunctionCallExpr record {|
-    // JBUG #32617 can't include PositionFields
-    // *PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     Position openParenPos;
     Position qNamePos;
     string? prefix = ();
@@ -262,10 +252,7 @@ public type FunctionCallExpr record {|
 |};
 
 public type MethodCallExpr record {|
-    // JBUG #32617 can't include PositionFields
-    // *PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     Position opPos; // position of .
     Position openParenPos;
     Position namePos;
@@ -298,10 +285,7 @@ public type CheckingCallExpr record {|
 |};
 
 public type ListConstructorExpr record {|
-    // JBUG #32617 can't include PositionFields
-    // *PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     Position opPos;
     Expr[] members;
 |};
@@ -313,10 +297,7 @@ public type MappingConstructorExpr record {|
 |};
 
 public type Field record {|
-    // JBUG #32617 can't include PositionFields
-    // *PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     Position colonPos;
     boolean isIdentifier;
     string name;
@@ -324,10 +305,7 @@ public type Field record {|
 |};
 
 public type MemberAccessExpr record {|
-    // JBUG #32617 can't include PositionFields
-    // *PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     Position opPos;
     Expr container;
     Expr index;
@@ -342,10 +320,7 @@ public type MemberAccessLExpr record {|
 |};
 
 public type FieldAccessExpr record {|
-    // JBUG #32617 can't include PositionFields
-    // *PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     Position opPos;
     Expr container;
     string fieldName;
@@ -373,20 +348,14 @@ public type VarRefExpr record {|
 |};
 
 public type TypeCastExpr record {|
-    // JBUG #32617 can't include PositionFields
-    // *PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     TypeDesc td;
     Expr operand;
     Position opPos;
 |};
 
 public type TypeTestExpr record {|
-    // JBUG #32617 can't include PositionFields
-    // *PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     TypeDesc td;
     // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
     Expr left;
@@ -469,9 +438,7 @@ public type FieldDesc record {|
 
 public const INCLUSIVE_RECORD_TYPE_DESC = true;
 public type MappingTypeDesc record {|
-    // JBUG #32617 can't include PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     FieldDesc[] fields;
     TypeDesc|INCLUSIVE_RECORD_TYPE_DESC? rest;
     t:MappingDefinition? defn = ();
@@ -479,9 +446,7 @@ public type MappingTypeDesc record {|
 
 public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
-    // JBUG #32617 can't include PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     FunctionTypeParam[] params;
     TypeDesc? ret;
     t:FunctionDefinition? defn = ();
@@ -495,9 +460,7 @@ public type FunctionTypeParam record {|
 |};
 
 public type ErrorTypeDesc record {|
-    // JBUG #32617 can't include PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     TypeDesc detail;
 |};
 
@@ -519,9 +482,7 @@ public type UnaryTypeDesc record {|
 |};
 
 public type XmlSequenceTypeDesc record {|
-    // JBUG #32617 can't include PositionFields
-    Position startPos;
-    Position endPos;
+    *PositionFields;
     Position pos;
     TypeDesc constituent;
 |};
