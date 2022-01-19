@@ -244,7 +244,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
         memberType = t:union(memberType, t:NIL);
     }
     if !vc.isSameType(memberType, insn.result.semType) {
-        return vc.invalidErr("${insn.name} result type is not same as member type", insn.pos);
+        return vc.invalidErr("instruction result type is not same as member type", insn.pos);
     }
 }
 
