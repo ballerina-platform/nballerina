@@ -276,7 +276,7 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
             applyEffect(env, narrowings, effect);
             // Compound statements will gen narrowings post-block, no need to narrow after last stmt
             if curBlock != () && stmtIndex != lastStmtIndex {
-                addNarrowings(cx, curBlock, env, effect.narrowings, stmt.endPos);
+                addNarrowings(cx, curBlock, env, effect.narrowings, stmt.startPos);
             }
             stmtIndex += 1;
         }
