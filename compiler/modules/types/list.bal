@@ -15,6 +15,13 @@ public type FixedLengthArray record {|
     int fixedLength;
 |};
 
+type ListConjunction record {|
+    ListAtomicType listType;
+    // Maximum number of members found in `initial` array of `listType` field in all the conjunctions onwards this.
+    int maxInitialLen;
+    ListConjunction? next;
+|};
+
 // This is atom index 0
 // Used by bddFixReadOnly
 final ListAtomicType LIST_SUBTYPE_RO = { members: { initial: [], fixedLength: 0 }, rest: READONLY };
@@ -195,7 +202,7 @@ function listFormulaIsEmpty(Context cx, Conjunction? pos, Conjunction? neg) retu
             rest = NEVER;
         }
     }
-    return !listInhabited(cx, members, rest, neg);
+    return !listInhabited(cx, members, rest, listConjunction(cx, neg));
 }
 
 function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicType lt) returns [FixedLengthArray, SemType]? {
@@ -231,13 +238,13 @@ function listIntersectWith(FixedLengthArray members, SemType rest, ListAtomicTyp
 // Precondition is that each of `members` is not empty.
 // This is formula Phi' in section 7.3.1 of Alain Frisch's PhD thesis,
 // generalized to tuples of arbitrary length.
-function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conjunction? neg) returns boolean {
+function listInhabited(Context cx, FixedLengthArray members, SemType rest, ListConjunction? neg) returns boolean {
     if neg == () {
         return true;
     }
     else {
         int len = members.fixedLength;
-        ListAtomicType nt = cx.listAtomType(neg.atom);
+        ListAtomicType nt = neg.listType;
         int negLen = nt.members.fixedLength;
         if len < negLen {
             if isNever(rest) {
@@ -284,21 +291,19 @@ function listInhabited(Context cx, FixedLengthArray members, SemType rest, Conju
         // SemType d1 = diff(s[1], t[1]);
         // return !isEmpty(cx, d1) &&  tupleInhabited(cx, [s[0], d1], neg.rest);
         // We can generalize this to tuples of arbitrary length.
-        int maxInitialLength = members.initial.length();
-        if maxInitialLength != 0 {
-            maxInitialLength = int:max(maxInitialLength, nt.members.initial.length());
-        }
-        foreach int i in 0 ..< maxInitialLength {
-            SemType d = diff(fixedArrayGet(members, i), listMemberAt(nt.members, nt.rest, i));
+        foreach int i in 0 ..< int:max(members.initial.length(), neg.maxInitialLen) {
+            SemType d = diff(listMemberAt(members, rest, i), listMemberAt(nt.members, nt.rest, i));
             if !isEmpty(cx, d) {
                 FixedLengthArray s = fixedArrayShallowCopy(members);
+                fixedArrayFill(s, i - 1, rest);
                 fixedArraySet(s, i, d);
                 if listInhabited(cx, s, rest, neg.next) {
                     return true;
                 }
             }
         }
-        if !isEmpty(cx, diff(rest, nt.rest)) {
+        SemType rd = diff(rest, nt.rest);
+        if !isEmpty(cx, rd) && listInhabited(cx, members, rd, neg.next) {
             return true;
         }
         // This is correct for length 0, because we know that the length of the
@@ -326,6 +331,9 @@ function fixedArrayAnyEmpty(Context cx, FixedLengthArray array) returns boolean 
 // fill out to length of newLen with filler
 function fixedArrayFill(FixedLengthArray arr, int newLen, SemType filler) {
     SemType[] initial = arr.initial;
+    if newLen <= initial.length() {
+        return;
+    }
     if arr.fixedLength == 0 || initial[initial.length() - 1] != filler {
         initial.push(filler);
     }
@@ -343,11 +351,10 @@ function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
     boolean lastMemberRepeats = members.fixedLength > initCount;
 
     // No need to expand
-    if setIndex < initCount - (lastMemberRepeats ? 1 : 0) {
+    if setIndex == 0 || setIndex < initCount - (lastMemberRepeats ? 1 : 0) {
         members.initial[setIndex] = m;
         return;
     }
-        
     SemType lastMember = members.initial[initCount - 1]; 
     foreach int i in initCount ..< setIndex + 1 {
         members.initial.push(lastMember);
@@ -357,6 +364,17 @@ function fixedArraySet(FixedLengthArray members, int setIndex, SemType m) {
 
 function fixedArrayShallowCopy(FixedLengthArray array) returns FixedLengthArray {
     return { initial: shallowCopyTypes(array.initial), fixedLength: array.fixedLength };
+}
+
+function listConjunction(Context cx, Conjunction? con) returns ListConjunction? {
+    if con != () {
+        ListAtomicType listType = cx.listAtomType(con.atom);
+        int len = listType.members.initial.length();
+        ListConjunction? next = listConjunction(cx, con.next);
+        int maxInitialLen = next == () ? len : int:max(len, next.maxInitialLen);
+        return { listType, maxInitialLen, next };
+    }
+    return ();
 }
 
 function bddListMemberType(Context cx, Bdd b, int? key, SemType accum) returns SemType {
