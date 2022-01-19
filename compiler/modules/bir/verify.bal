@@ -173,15 +173,15 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
     t:SemType ty = insn.result.semType;
     // XXX verify ty exactly
     if !vc.isSubtype(ty, t:LIST_RW) {
-        return vc.invalidErr("bad BIR: inherent type of list construct is not a mutable list", insn.pos);
+        return vc.invalidErr("inherent type of list construct is not a mutable list", insn.pos);
     }
     t:ListAtomicType? lat = t:listAtomicTypeRw(vc.typeContext(), ty);
     if lat == () {
-        return vc.invalidErr("bad BIR: inherent type of list is not atomic", insn.pos);
+        return vc.invalidErr("inherent type of list is not atomic", insn.pos);
     }
     else {
         if lat.members.fixedLength > 0 {
-            return vc.invalidErr("bad BIR: tuples and fixed length arrays not supported as list inherent type", insn.pos);
+            return vc.invalidErr("tuples and fixed length arrays not supported as list inherent type", insn.pos);
         }
         foreach var operand in insn.operands {
             check verifyOperandType(vc, operand, lat.rest, "type of list constructor member is not allowed by the list type", insn.pos);
@@ -193,7 +193,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     t:SemType ty = insn.result.semType;
     // XXX verify ty exactly
     if !vc.isSubtype(ty, t:MAPPING_RW) {
-        return vc.invalidErr("bad BIR: inherent type of mapping construct is not a mutable mapping", insn.pos);
+        return vc.invalidErr("inherent type of mapping construct is not a mutable mapping", insn.pos);
     }
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(vc.typeContext(), ty);
     foreach int i in 0 ..< insn.operands.length() {
@@ -205,7 +205,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
                                 "type of mapping constructor member is not allowed by the mapping type", insn.pos);
     }
     if mat == () {
-        return vc.invalidErr("bad BIR: inherent type of map is not atomic", insn.pos);
+        return vc.invalidErr("inherent type of map is not atomic", insn.pos);
     }
     else if insn.operands.length() < mat.names.length() {
         return vc.semanticErr("missing record fields in mapping constructor", insn.pos);
@@ -219,7 +219,7 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic|
     }
     t:SemType memberType = t:listMemberType(vc.typeContext(), insn.operands[0].semType);
     if !vc.isSameType(memberType, insn.result.semType) {
-        return vc.invalidErr("bad BIR: ListGet result type is not same as member type", pos=insn.pos);
+        return vc.invalidErr("ListGet result type is not same as member type", pos=insn.pos);
     }
 }
 
@@ -244,7 +244,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
         memberType = t:union(memberType, t:NIL);
     }
     if !vc.isSameType(memberType, insn.result.semType) {
-        return vc.semanticErr(`bad BIR: ${insn.name} result type is not same as member type`, insn.pos);
+        return vc.invalidErr("${insn.name} result type is not same as member type", insn.pos);
     }
 }
 
@@ -261,44 +261,44 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Sem
 function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns InvalidError? {
     if vc.isEmpty(insn.result.semType) {
         // This is now caught in the front-end.
-        return vc.invalidErr("bad BIR: result of type case is never", insn.pos);
+        return vc.invalidErr("result of type case is never", insn.pos);
     }
     // These should not happen with the nballerina front-end
     if !vc.isSubtype(insn.result.semType, insn.operand.semType) {
-        return vc.invalidErr("bad BIR: result of type cast is not subtype of operand", insn.pos);
+        return vc.invalidErr("result of type cast is not subtype of operand", insn.pos);
     }
     if !vc.isSameType(insn.result.semType, insn.semType) {
-        return vc.invalidErr("bad BIR: result of type cast is not same as cast to type", insn.pos);
+        return vc.invalidErr("result of type cast is not same as cast to type", insn.pos);
     }
 }
 
 function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns InvalidError? {
     if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:INT), t:NUMBER)) {
-        return vc.invalidErr("bad BIR: operand type of ConvertToInt has no non-integral numeric component", insn.pos);
+        return vc.invalidErr("operand type of ConvertToInt has no non-integral numeric component", insn.pos);
     }
     if !vc.isSameType(t:union(t:diff(insn.operand.semType, t:NUMBER), t:INT), insn.result.semType) {
-        return vc.invalidErr("bad BIR: result type of ConvertToInt is incorrect", insn.pos);
+        return vc.invalidErr("result type of ConvertToInt is incorrect", insn.pos);
     }
     if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:INT), t:NUMBER)) {
-        return vc.invalidErr("bad BIR: result type of ConvertToInt contains non-integral numeric type", insn.pos);
+        return vc.invalidErr("result type of ConvertToInt contains non-integral numeric type", insn.pos);
     }
 }
 
 function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) returns InvalidError? {
     if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:FLOAT), t:NUMBER)) {
-        return vc.invalidErr("bad BIR: operand type of ConvertToFloat has no non-float numeric component", insn.pos);
+        return vc.invalidErr("operand type of ConvertToFloat has no non-float numeric component", insn.pos);
     }
     if !vc.isSameType(t:union(t:diff(insn.operand.semType, t:NUMBER), t:FLOAT), insn.result.semType) {
-        return vc.invalidErr("bad BIR: result type of ConvertToFloat is incorrect", insn.pos);
+        return vc.invalidErr("result type of ConvertToFloat is incorrect", insn.pos);
     }
     if !vc.isEmpty(t:intersect(t:diff(insn.result.semType, t:FLOAT), t:NUMBER)) {
-        return vc.invalidErr("bad BIR: result type of ConvertToFloat contains non-float numeric type", insn.pos);
+        return vc.invalidErr("result type of ConvertToFloat contains non-float numeric type", insn.pos);
     }
 }
 
 function verifyCompare(VerifyContext vc, CompareInsn insn) returns InvalidError? {
     if !t:comparable(vc.typeContext(), operandToSemType(insn.operands[0]), operandToSemType(insn.operands[1])) {
-        return vc.invalidErr(`bad BIR: operands of ${insn.op} do not belong to an ordered type`, insn.pos);
+        return vc.invalidErr(`operands of ${insn.op} do not belong to an ordered type`, insn.pos);
     }
 }
 
@@ -317,7 +317,7 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns InvalidErro
     Operand lhs = insn.operands[0];
     Operand rhs = insn.operands[1];
     if lhs is Register && rhs is Register && insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
-        return vc.invalidErr(`bad BIR: at least one operand of an == or !=  at expression must be a subtype of anydata`, insn.pos);
+        return vc.invalidErr(`at least one operand of an == or !=  at expression must be a subtype of anydata`, insn.pos);
     }
 }
 
@@ -367,5 +367,5 @@ function verifyRegisterSemType(VerifyContext vc, string insnName, Register opera
 }
 
 function operandTypeErr(VerifyContext vc, string insnName, string typeName, Position pos) returns InvalidError {
-    return vc.invalidErr(`bad BIR: operands of ${insnName} must be subtype of ${typeName}`, pos);
+    return vc.invalidErr(`operands of ${insnName} must be subtype of ${typeName}`, pos);
 }
