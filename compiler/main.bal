@@ -64,7 +64,9 @@ public function main(string[] filenames, *Options opts) returns error? {
                 errorFileCount += 1;
                 dPrinter.print(err.detail());
             }
-            else {
+            // JBUG: #34014
+            // can't use else { check err; }
+            else if err != () {
                 return err;
             }
         }
