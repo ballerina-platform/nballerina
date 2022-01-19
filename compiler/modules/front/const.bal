@@ -219,9 +219,9 @@ function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:Binar
     boolean positive = expr.equalityOp[0] == "=";
     if exact {
         if leftExpr is s:ConstValueExpr && rightExpr is s:ConstValueExpr {
-            boolean equal = leftExpr.value === rightExpr.value;
+            boolean equal = isExactEqual(leftExpr.value, rightExpr.value);
             boolean value = positive == equal;
-            if !equal && leftExpr.value != rightExpr.value && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
+            if !equal && !isEqual(leftExpr.value, rightExpr.value) && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
                 return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`, expr.opPos);
             }
             return <s:ConstValueExpr> { startPos: expr.startPos, endPos: expr.endPos, value, multiSemType: t:BOOLEAN };
@@ -229,7 +229,7 @@ function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:Binar
     }
     else {
         if leftExpr is s:ConstValueExpr && rightExpr is s:ConstValueExpr {
-            boolean equal = leftExpr.value == rightExpr.value;
+            boolean equal = isEqual(leftExpr.value, rightExpr.value);
             boolean value = positive == equal;
             if !equal && simpleConstExprIntersectIsEmpty(leftExpr, rightExpr) {
                 return cx.semanticErr(`intersection of types of operands of ${expr.equalityOp} is empty`, expr.opPos);
@@ -240,6 +240,16 @@ function foldBinaryEqualityExpr(FoldContext cx, t:SemType? expectedType, s:Binar
     expr.left = leftExpr;
     expr.right = rightExpr;
     return expr;
+}
+
+// Remove after JBUG #17977, #32245 is fixed
+function isEqual(SimpleConst c1, SimpleConst c2) returns boolean {
+    return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
+}
+
+// Remove after JBUG #17977, #32247 is fixed
+function isExactEqual(SimpleConst c1, SimpleConst c2) returns boolean {
+    return c1 === c2 || (c1 is float && c2 is float && float:isNaN(c1) && float:isNaN(c2));
 }
 
 // Precondition is that the values are !=

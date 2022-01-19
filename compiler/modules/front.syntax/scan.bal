@@ -91,7 +91,7 @@ const FRAG_GREATER_THAN_GREATER_THAN_EQUAL = 0x55;
 const FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL = 0x56;
 const FRAG_AMPERSAND_AMPERSAND = 0x57;
 const FRAG_VBAR_VBAR = 0x58;
-
+ 
 const FRAG_KEYWORD = 0x80;
 
 final readonly & Keyword[] keywords = [
@@ -182,7 +182,8 @@ function createFragTokens() returns readonly & FixedToken?[] {
     ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = ">>>=";
     ft[<int>FRAG_AMPERSAND_AMPERSAND] = "&&";
     ft[<int>FRAG_VBAR_VBAR] = "||";
-    foreach int cp in 0x20 ..< 0x80 {
+    // JBUG #33347 error if hex used for 32 and 128
+    foreach int cp in 32 ..< 128 {
         string s = checkpanic string:fromCodePointInt(cp);
         if s is SingleCharDelim {
             ft[cp] = s;
@@ -379,7 +380,7 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                     if cp2 == CP_EQUAL {
                        i += 1;
                        endFragment(FRAG_VBAR_EQUAL, i, result);
-                       continue;
+                       continue; 
                     }
                     if cp2 == CP_VBAR {
                        i += 1;
