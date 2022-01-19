@@ -972,7 +972,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         args.push(arg);
     }
     // TODO make error location more specific
-    check validArgumentTypes(cx, func, args, expr.openParenPos);
+    check validArgumentTypes(cx, func, args, expr);
     return codeGenCall(cx, curBlock, func, args, expr.qNamePos);
 }
 
@@ -984,7 +984,7 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
     t:SemType[] paramTypes = func.signature.paramTypes;
     bir:Operand[] args = [target];
     // TODO make error location more specific
-    check validArgumentTypes(cx, func, args, expr.opPos);
+    check validArgumentTypes(cx, func, args, expr);
     foreach int i in 0 ..< expr.args.length() {
         var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, paramTypes[i + 1], expr.args[i]);
         curBlock = nextBlock;
@@ -1022,12 +1022,12 @@ function validArgumentCount(ExprContext cx, bir:FunctionRef func, int nSuppliedA
     }
 }
 
-function validArgumentTypes(ExprContext cx, bir:FunctionRef func, bir:Operand[] suppliedArgs, Position pos) returns CodeGenError? {
+function validArgumentTypes(ExprContext cx, bir:FunctionRef func, bir:Operand[] suppliedArgs, s:MethodCallExpr|s:FunctionCallExpr expr) returns CodeGenError? {
     foreach int i in 0 ..< suppliedArgs.length() {
         if operandHasType(cx.mod.tc, suppliedArgs[i], func.signature.paramTypes[i]) {
             continue;
         }
-        return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, pos);
+        return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, expr.args[i].startPos);
     }
     return ();
 }
