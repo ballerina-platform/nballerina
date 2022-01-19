@@ -174,6 +174,7 @@ public type VarDeclStmt record {|
 
 public type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
 public type BinaryBitwiseOp "|" | "^" | "&" | "<<" | ">>" | ">>>";
+public type BinaryLogicalOp "&&" | "||";
 public type BinaryRelationalOp "<" | ">" | "<=" | ">=";
 public type BinaryEqualityOp  "==" | "!=" | "===" | "!==";
 public type RangeOp  "..." | "..<";
@@ -186,7 +187,7 @@ const NegateOp = "-";
 
 public type UnaryExprOp NegateOp | "!" | "~";
 
-public type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr;
+public type BinaryExpr BinaryRelationalExpr|BinaryEqualityExpr|BinaryArithmeticExpr|BinaryBitwiseExpr|BinaryLogicalExpr;
 
 // We use different operator names so things work better with match statements
 public type BinaryExprBase record {|
@@ -214,6 +215,11 @@ public type BinaryArithmeticExpr record {|
 public type BinaryBitwiseExpr record {|
     *BinaryExprBase;
     BinaryBitwiseOp bitwiseOp;
+|};
+
+public type BinaryLogicalExpr record {|
+    *BinaryExprBase;
+    BinaryLogicalOp logicalOp;
 |};
 
 public type UnaryExpr record {|
@@ -282,14 +288,12 @@ public type ListConstructorExpr record {|
     *PositionFields;
     Position opPos;
     Expr[] members;
-    t:SemType? expectedType = ();
 |};
 
 public type MappingConstructorExpr record {|
     *PositionFields;
     Position opPos;
     Field[] fields;
-    t:SemType? expectedType = ();
 |};
 
 public type Field record {|
@@ -444,7 +448,7 @@ public type FunctionTypeDesc record {|
     // XXX need to handle rest public type
     *PositionFields;
     FunctionTypeParam[] params;
-    TypeDesc ret;
+    TypeDesc? ret;
     t:FunctionDefinition? defn = ();
 |};
 
@@ -500,9 +504,9 @@ public type SingletonTypeDesc record {|
     (string|float|int|boolean|decimal) value;
 |};
 
-public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"int"|"decimal"|"float"|"string"|"error";
+public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"byte"|"int"|"decimal"|"float"|"string"|"error";
 
-public type BuiltinTypeName SubsetBuiltinTypeName|"byte"|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
+public type BuiltinTypeName SubsetBuiltinTypeName|"handle"|"json"|"never"|"readonly"|"typedesc"|"xml"|"null";
 
 public type BuiltinTypeDesc readonly & record {|
     *PositionFields;

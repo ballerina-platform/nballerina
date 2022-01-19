@@ -89,7 +89,9 @@ const FRAG_CIRCUMFLEX_EQUAL = 0x53;
 const FRAG_LESS_THAN_LESS_THAN_EQUAL = 0x54;
 const FRAG_GREATER_THAN_GREATER_THAN_EQUAL = 0x55;
 const FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL = 0x56;
- 
+const FRAG_AMPERSAND_AMPERSAND = 0x57;
+const FRAG_VBAR_VBAR = 0x58;
+
 const FRAG_KEYWORD = 0x80;
 
 final readonly & Keyword[] keywords = [
@@ -178,6 +180,8 @@ function createFragTokens() returns readonly & FixedToken?[] {
     ft[<int>FRAG_LESS_THAN_LESS_THAN_EQUAL] = "<<=";
     ft[<int>FRAG_GREATER_THAN_GREATER_THAN_EQUAL] = ">>=";
     ft[<int>FRAG_GREATER_THAN_GREATER_THAN_GREATER_THAN_EQUAL] = ">>>=";
+    ft[<int>FRAG_AMPERSAND_AMPERSAND] = "&&";
+    ft[<int>FRAG_VBAR_VBAR] = "||";
     foreach int cp in 0x20 ..< 0x80 {
         string s = checkpanic string:fromCodePointInt(cp);
         if s is SingleCharDelim {
@@ -365,15 +369,23 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                 endFragment(CP_LEFT_CURLY, i, result);
             }
             CP_VBAR => {
-                if i < len && codePoints[i] == CP_RIGHT_CURLY {
-                    i += 1;
-                    endFragment(FRAG_VBAR_RIGHT_CURLY, i, result);
-                    continue;
-                }
-                if i < len && codePoints[i] == CP_EQUAL {
-                    i += 1;
-                   endFragment(FRAG_VBAR_EQUAL, i, result);
-                   continue; 
+                if i < len {
+                    int cp2 = codePoints[i];
+                    if cp2 == CP_RIGHT_CURLY {
+                        i += 1;
+                        endFragment(FRAG_VBAR_RIGHT_CURLY, i, result);
+                        continue;
+                    }
+                    if cp2 == CP_EQUAL {
+                       i += 1;
+                       endFragment(FRAG_VBAR_EQUAL, i, result);
+                       continue;
+                    }
+                    if cp2 == CP_VBAR {
+                       i += 1;
+                       endFragment(FRAG_VBAR_VBAR, i, result);
+                       continue;
+                    }
                 }
                 endFragment(CP_VBAR, i, result);
             }
@@ -541,6 +553,11 @@ function scanNormal(int[] codePoints, int startIndex, Scanned result) {
                 i = endFragmentCompoundAssign(codePoints, i, CP_ASTERISK, FRAG_ASTERISK_EQUAL, result);
             }
             CP_AMPERSAND => {
+                if i < len && codePoints[i] == CP_AMPERSAND {
+                    i += 1;
+                    endFragment(FRAG_AMPERSAND_AMPERSAND, i, result);
+                    continue;
+                }
                 i = endFragmentCompoundAssign(codePoints, i, CP_AMPERSAND, FRAG_AMPERSAND_EQUAL, result);
             }
             CP_DOUBLE_QUOTE => {

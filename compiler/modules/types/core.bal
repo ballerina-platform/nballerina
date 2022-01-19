@@ -839,6 +839,28 @@ public function widenUnsigned(SemType t) returns SemType {
     }
 }
 
+public function booleanSubtype(ComplexSemType t) returns BooleanSubtype|boolean {
+    return <boolean|BooleanSubtype>getComplexSubtypeData(t, UT_BOOLEAN);
+}
+
+// Describes the subtype of int included in the type: true/false mean all or none of string
+public function intSubtype(ComplexSemType t) returns IntSubtype|boolean {
+    return <boolean|IntSubtype>getComplexSubtypeData(t, UT_INT);
+}
+
+public function floatSubtype(ComplexSemType t) returns FloatSubtype|boolean {
+    return <boolean|FloatSubtype>getComplexSubtypeData(t, UT_FLOAT);
+}
+
+public function decimalSubtype(ComplexSemType t) returns DecimalSubtype|boolean {
+    return <boolean|DecimalSubtype>getComplexSubtypeData(t, UT_DECIMAL);
+}
+
+// Describes the subtype of string included in the type: true/false mean all or none of string
+public function stringSubtype(ComplexSemType t) returns StringSubtype|boolean {
+    return <boolean|StringSubtype>getComplexSubtypeData(t, UT_STRING);
+}
+
 // This is a temporary API that identifies when a SemType corresponds to a type T[]
 // where T is a union of complete basic types.
 public function simpleArrayMemberType(Context cx, SemType t) returns UniformTypeBitSet? {
@@ -1106,10 +1128,14 @@ public function singleton(Context cx, SingleValue value) returns SemType {
     if value is () {
         return NIL;
     }
-    SingletonMemo? memo = cx.singletonMemo[value];
-    if memo != () {
-        return memo.semType;
-    }
+    // JBUG this memoization code doesn't work with numeric zeros
+    // looks like zeros of different basic types are being treated as `==` by table code
+    // JBUG #34712
+    // note: Uncomment the line that adds to the table.
+    //SingletonMemo? memo = cx.singletonMemo[value];
+    //if memo != () {
+    //    return memo.semType;
+    //}
     ComplexSemType semType;
     if value is int {
         semType = intConst(value);
@@ -1127,7 +1153,7 @@ public function singleton(Context cx, SingleValue value) returns SemType {
         boolean _ = value;
         semType = booleanConst(value);
     }
-    cx.singletonMemo.add({ value, semType });
+    //cx.singletonMemo.add({ value, semType });
     return semType;
 }
 
