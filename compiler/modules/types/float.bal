@@ -32,7 +32,7 @@ function floatSubtypeContains(SubtypeData d, float f) returns boolean {
     }
     FloatSubtype v = <FloatSubtype>d;
     int? index = v.values.indexOf(f);
-    if index is int {
+    if index != () {
         return v.allowed;
     }
     return !v.allowed;
