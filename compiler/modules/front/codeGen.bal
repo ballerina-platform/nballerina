@@ -1333,8 +1333,8 @@ function codeGenExpr(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:Ex
             return codeGenFieldAccessExpr(cx, bb, env, pos, container, fieldName);
         }
         // List construct
-        var { startPos, endPos, members, opPos, expectedType } => {
-            return codeGenListConstructor(cx, bb, env, startPos, endPos, members, opPos, expectedType);
+        var listConstructorExpr if listConstructorExpr is s:ListConstructorExpr => {
+            return codeGenListConstructor(cx, bb, env, listConstructorExpr);
         }
         // Mapping construct
         var mappingConstructorExpr if mappingConstructorExpr is s:MappingConstructorExpr  => {
@@ -1660,20 +1660,20 @@ function codeGenBitwiseBinaryExpr(CodeGenContext cx, bir:BasicBlock bb, s:Binary
     return { result, block: bb };
 }
 
-function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, Position startPos, Position endPos, s:Expr[] members, Position opPos, t:SemType? expectedType) returns CodeGenError|ExprEffect {
+function codeGenListConstructor(CodeGenContext cx, bir:BasicBlock bb, Environment env, s:ListConstructorExpr expr) returns CodeGenError|ExprEffect {
     bir:BasicBlock nextBlock = bb;
     bir:Operand[] operands = [];
-    foreach var member in members {
+    foreach var member in expr.members {
         bir:Operand operand;
         { result: operand, block: nextBlock } = check codeGenExpr(cx, nextBlock, env, member);
         operands.push(operand);
     }
-    t:SemType resultType = <t:SemType>expectedType;
+    t:SemType resultType = <t:SemType>expr.expectedType;
     if t:isEmpty(cx.mod.tc, resultType) {
-        return cx.semanticErr("list not allowed in this context", {startPos, endPos});
+        return cx.semanticErr("list not allowed in this context", s:range(expr));
     }
-    bir:Register result = cx.createTmpRegister(resultType, opPos);
-    bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: opPos };
+    bir:Register result = cx.createTmpRegister(resultType, expr.opPos);
+    bir:ListConstructInsn insn = { operands: operands.cloneReadOnly(), result, pos: expr.opPos };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
 }
