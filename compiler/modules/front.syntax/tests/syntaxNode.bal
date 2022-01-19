@@ -521,7 +521,7 @@ function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSig
 
 function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSyntaxNode {
     TypeDesc rightTd = td.right;
-    if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName === "null" {
+    if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName === "null" && rightTd.startPos == rightTd.endPos {
         return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.left), { token: "?" });
     }
     else {
