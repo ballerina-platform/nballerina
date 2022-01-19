@@ -123,8 +123,8 @@ function bddPaths(Bdd b, BddPath[] paths, BddPath accum) {
         }
     }
     else {
-        BddPath left = bddPathClone(accum);
-        BddPath right = bddPathClone(accum);
+        BddPath left = accum.clone();
+        BddPath right = accum.clone();
         left.pos.push(b.atom);
         left.bdd = bddIntersect(left.bdd, bddAtom(b.atom));
         bddPaths(b.left, paths, left);
@@ -133,10 +133,6 @@ function bddPaths(Bdd b, BddPath[] paths, BddPath accum) {
         right.bdd = bddDiff(right.bdd, bddAtom(b.atom));
         bddPaths(b.right, paths, right);
     }
-}
-
-function bddPathClone(BddPath path) returns BddPath {
-    return path.clone();
 }
 
 // Feels like this should be a lang library function.
