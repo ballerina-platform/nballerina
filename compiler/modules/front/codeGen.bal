@@ -1819,12 +1819,12 @@ function codeGenEqualityExpr(CodeGenContext cx, bir:BasicBlock bb, Environment e
     }
 }
 
-function codeGenVarRefExpr(CodeGenContext cx, Environment env, bir:BasicBlock bb, string? prefix, string name, Position startPos) returns CodeGenError|ExprEffect {
+function codeGenVarRefExpr(CodeGenContext cx, Environment env, bir:BasicBlock bb, string? prefix, string name, Position pos) returns CodeGenError|ExprEffect {
     if prefix != () {
         // This should be caught during const folding
         panic err:impossible("prefix in var ref is non-nil");
     }
-    var v = check lookupVarRef(cx, name, env, startPos);
+    var v = check lookupVarRef(cx, name, env, pos);
     bir:Operand result;
     Binding? binding;
     if v is t:SingleValue {
