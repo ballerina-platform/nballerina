@@ -1,5 +1,12 @@
 import wso2/nballerina.comm.diagnostic as d;
 
+type OverlappingChildNodes error<OverlappingChildNodesDiagnostic>;
+type ChildNodeOutOfRange error<ChildNodeOutOfRangeDiagnostic>;
+type UnexpectToken error<UnexpectTokenDiagnostic>;
+type InvalidStartPos error<InvalidStartPosDiagnostic>;
+
+type PositionValidationError OverlappingChildNodes|ChildNodeOutOfRange|UnexpectToken|InvalidStartPos;
+
 function validateModulePartPositions(ModulePart part) returns PositionValidationError? {
     RootSyntaxNode root = rootSyntaxNode(part);
     check validateSyntaxNode(root, new(part.file));
@@ -157,14 +164,6 @@ type UnexpectTokenDiagnostic record {|
     string expected;
     string actual;
 |};
-
-
-type OverlappingChildNodes error<OverlappingChildNodesDiagnostic>;
-type ChildNodeOutOfRange error<ChildNodeOutOfRangeDiagnostic>;
-type UnexpectToken error<UnexpectTokenDiagnostic>;
-type InvalidStartPos error<InvalidStartPosDiagnostic>;
-
-type PositionValidationError OverlappingChildNodes|ChildNodeOutOfRange|UnexpectToken|InvalidStartPos;
 
 function overlappingChildNodes(d:Location currentLocation, [Range|Position, Range|Position] childNodeRanges) returns OverlappingChildNodes {
     return error OverlappingChildNodes("position validation error", message=OVERLAPPING_CHILD_NODES, loc=currentLocation, childNodeRanges=childNodeRanges);
