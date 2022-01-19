@@ -51,7 +51,7 @@ class VerifyContext {
     }
 
     function invalidErr(d:Message m, Position|Range pos) returns InvalidError {
-        return error InvalidError("invalid error", (), message=d:messageToString(m), location=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
+        return error InvalidError("invalid BIR", message=d:messageToString(m), location=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
@@ -61,7 +61,7 @@ class VerifyContext {
     }
 }
 
-public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns err:Semantic|InvalidError? {
+public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode code) returns Error? {
     VerifyContext cx = new(mod, defn);
     foreach BasicBlock b in code.blocks {
         check verifyBasicBlock(cx, b);
@@ -70,15 +70,17 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
-public type InvalidError distinct error<d:SemanticDiagnostic>;
+public type InvalidError distinct error;
 
-function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns err:Semantic|InvalidError? {
+type Error err:Semantic|InvalidError;
+
+function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
     foreach Insn insn in bb.insns {
         check verifyInsn(vc, insn);
     }
 }
 
-function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic|InvalidError? {
+function verifyInsn(VerifyContext vc, Insn insn) returns Error? {
     string name = insn.name;
     if insn is IntBinaryInsn {
         // XXX need to check result also
@@ -149,7 +151,7 @@ function verifyInsn(VerifyContext vc, Insn insn) returns err:Semantic|InvalidErr
     }
 }
 
-function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic|InvalidError? {
+function verifyCall(VerifyContext vc, CallInsn insn) returns Error? {
     // XXX verify insn.semType
     FunctionRef func = <FunctionRef>insn.func;
     FunctionSignature sig = func.signature;
@@ -169,7 +171,7 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns err:Semantic|Invali
     }
 }
 
-function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns err:Semantic|InvalidError? {
+function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns Error? {
     t:SemType ty = insn.result.semType;
     // XXX verify ty exactly
     if !vc.isSubtype(ty, t:LIST_RW) {
@@ -189,7 +191,7 @@ function verifyListConstruct(VerifyContext vc, ListConstructInsn insn) returns e
     }
 }
 
-function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns err:Semantic|InvalidError? {
+function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) returns Error? {
     t:SemType ty = insn.result.semType;
     // XXX verify ty exactly
     if !vc.isSubtype(ty, t:MAPPING_RW) {
@@ -212,7 +214,7 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     }
 }
 
-function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic|InvalidError? {
+function verifyListGet(VerifyContext vc, ListGetInsn insn) returns Error? {
     check verifyOperandInt(vc, insn.name, insn.operands[1], insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
         return vc.semanticErr("list get applied to non-list", insn.pos);
@@ -223,7 +225,7 @@ function verifyListGet(VerifyContext vc, ListGetInsn insn) returns err:Semantic|
     }
 }
 
-function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic|InvalidError? {
+function verifyListSet(VerifyContext vc, ListSetInsn insn) returns Error? {
     IntOperand i = insn.operands[1];
     check verifyOperandInt(vc, insn.name, i, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:LIST) {
@@ -233,7 +235,7 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns err:Semantic|
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of list is not a subtype of array member type", insn.pos);
 }
 
-function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Semantic|InvalidError? {
+function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns Error? {
     StringOperand k = insn.operands[1];
     check verifyOperandString(vc, insn.name, k, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
@@ -248,7 +250,7 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns err:Sem
     }
 }
 
-function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns err:Semantic|InvalidError? {
+function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns Error? {
     StringOperand k = insn.operands[1];
     check verifyOperandString(vc, insn.name, k, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
