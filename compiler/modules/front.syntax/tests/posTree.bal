@@ -12,32 +12,8 @@ function validateModulePartPositions(ModulePart part) returns PositionValidation
     check validateSyntaxNode(root, new(part.file));
 }
 
-function skipOpeningParan(string expected, Tokenizer tok) {
-    Token? current = tok.current();
-    if current != "(" || current == expected {
-        return;
-    }
-    while current == "(" && tok.peek() != ")" {
-        checkpanic tok.advance();
-        current = tok.current();
-    }
-}
-
-function skipClosingParan(string expected, Tokenizer tok) {
-    Token? current = tok.current();
-    if expected == ")" {
-        return;
-    }
-    while current == ")" {
-        checkpanic tok.advance();
-        current = tok.current();
-    }
-}
-
 function validateTerminalSyntaxNode(TerminalSyntaxNode node, Tokenizer tok) returns PositionValidationError? {
     string expected = node is IdentifierSyntaxNode ? node.name : node is StringLiteralSyntaxNode ? node.literal : node.token;
-    skipOpeningParan(expected, tok);
-    skipClosingParan(expected, tok);
     Position? expectedPos = node is IdentifierSyntaxNode|FixedSyntaxNode|StringLiteralSyntaxNode ? node.pos : ();
     if expectedPos != () && tok.currentStartPos() != expectedPos {
         return invalidStartPos(currentLocation(tok), expectedPos, node is IdentifierSyntaxNode ? node.name : node is StringLiteralSyntaxNode? node.literal : node.token);
