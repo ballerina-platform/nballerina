@@ -54,10 +54,10 @@ type RegExprEffect record {|
 // caused by the use of a boolean expression in a condition.
 type ExprNarrowing record {|
     Binding binding;
-    t:SemType ifTrue;
-    t:SemType ifFalse;
-    bir:InsnRef testInsn;
-    boolean negated = false;
+    t:SemType typeIfTrue;
+    t:SemType typeIfFalse;
+    bir:Result basisIfTrue;
+    bir:Result basisIfFalse;
 |};
 
 class ExprContext {
@@ -165,7 +165,13 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
             bir:BooleanNotInsn insn = { operand, result, pos };
             nextBlock.insns.push(insn);
             if narrowing != () {
-                narrowing.negated = !narrowing.negated;
+                t:SemType tmpType = narrowing.typeIfTrue;
+                narrowing.typeIfTrue = narrowing.typeIfFalse;
+                narrowing.typeIfFalse = tmpType;
+
+                bir:Result tmpBasis = narrowing.basisIfTrue;
+                narrowing.basisIfTrue = narrowing.basisIfTrue;
+                narrowing.basisIfFalse = tmpBasis;
             }
             return { result, block: nextBlock, narrowing };
         }
@@ -765,17 +771,18 @@ function codeGenEqualityExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
     }
     else {
         var [binding, value] = narrowingCompare;
-        t:SemType ifTrue = t:singleton(tc, value);
-        t:SemType ifFalse = t:roDiff(tc, binding.reg.semType, ifTrue);
+        t:SemType typeIfTrue = t:singleton(tc, value);
+        t:SemType typeIfFalse = t:roDiff(tc, binding.reg.semType, typeIfTrue);
         if negated {
-            [ifTrue, ifFalse] = [ifFalse, ifTrue];
+            [typeIfTrue, typeIfFalse] = [typeIfFalse, typeIfTrue];
         }
+        bir:InsnRef insnRef = bir:lastInsnRef(nextBlock);
         ExprNarrowing narrowing = {
             binding,
-            ifTrue,
-            ifFalse,
-            testInsn: bir:lastInsnRef(nextBlock),
-            negated: false
+            typeIfTrue,
+            typeIfFalse,
+            basisIfTrue: { insn: insnRef, result: true },
+            basisIfFalse: { insn: insnRef, result: false }
         };
         return { result, block: nextBlock, narrowing };
     }
@@ -907,12 +914,14 @@ function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
         [intersect, diff] = [diff, intersect];
     }
     ExprNarrowing? narrowing = ();
+    bir:InsnRef insnRef = bir:lastInsnRef(nextBlock);
     if binding != () {
         narrowing = {
             binding,
-            ifTrue: intersect,
-            ifFalse: diff,
-            testInsn: bir:lastInsnRef(nextBlock)
+            typeIfTrue: intersect,
+            typeIfFalse: diff,
+            basisIfTrue: { insn: insnRef, result: true },
+            basisIfFalse: { insn: insnRef, result: false }
         };
     }
     return { result, block: nextBlock, narrowing };   
