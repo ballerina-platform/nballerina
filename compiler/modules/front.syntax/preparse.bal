@@ -16,16 +16,16 @@ final readonly & map<CLOSE_BRACKET> closeBracketMap = {
 // (implying that the statement is a local variable declaration rather than a method call).
 // This is a preparse: the statement will be parsed again according to the value returned.
 function preparseParenTypeDesc(Tokenizer tok) returns boolean|err:Syntax {
-    boolean? result = check preparseBracketed(tok, ")");
-    if result != () {
-        return result;
+    boolean? parenResult = check preparseBracketed(tok, ")");
+    if parenResult != () {
+        return parenResult;
     }
     Token? t = tok.current();
     while t == "[" {
         check tok.advance();
-        result = check preparseBracketed(tok, "]");
-        if result != () {
-            return result;
+        boolean? squareResult = check preparseBracketed(tok, "]");
+        if squareResult != () {
+            return squareResult;
         }
         t = tok.current();
     }
