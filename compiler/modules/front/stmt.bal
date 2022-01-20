@@ -268,17 +268,16 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
         applyEffect(env, narrowings, effect);
     }
     else {
-        int lastStmtIndex = scope.stmts.length() - 1;
-        int stmtIndex = 0;
+        StmtEffect? previousEffect = ();
         foreach var stmt in scope.stmts {
+            // add narrowing to previous stmt
+            if previousEffect != () {
+                addNarrowings(cx, <bir:BasicBlock>previousEffect.block, env, previousEffect.narrowings, stmt.startPos);
+            }
             StmtEffect effect = check codeGenStmt(cx, curBlock, env, stmt);
             curBlock = effect.block;
+            previousEffect = curBlock != () ? effect : ();
             applyEffect(env, narrowings, effect);
-            // Compound statements will gen narrowings post-block, no need to narrow after last stmt
-            if curBlock != () && stmtIndex != lastStmtIndex {
-                addNarrowings(cx, curBlock, env, effect.narrowings, stmt.endPos);
-            }
-            stmtIndex += 1;
         }
     }
     check unusedLocalVariables(cx, env, initialEnv.bindings);
