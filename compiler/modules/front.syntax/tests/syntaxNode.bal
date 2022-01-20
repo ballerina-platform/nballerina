@@ -447,7 +447,10 @@ function syntaxNodeFromField(Field f) returns SyntaxNode {
 }
 
 function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
-    if td is TerminalTypeDesc {
+    if td is GroupingTypeDesc {
+        return syntaxNodeFromGroupingTypeDesc(td);
+    }
+    else if td is TerminalTypeDesc {
         return syntaxNodeFromTerminalTypeDesc(td);
     }
     else if td is TupleTypeDesc {
@@ -480,6 +483,12 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
     else {
         return syntaxNodeFromUnaryTypeDesc(td);
     }
+}
+
+function syntaxNodeFromGroupingTypeDesc(GroupingTypeDesc td) returns NonTerminalSyntaxNode {
+    return nonTerminalSyntaxNode(td, { token: "(", pos: td.startPos },
+                                     syntaxNodeFromTypeDesc(td.innerTd),
+                                     { token: ")" });
 }
 
 function syntaxNodeFromTupleTypeDesc(TupleTypeDesc td) returns NonTerminalSyntaxNode {

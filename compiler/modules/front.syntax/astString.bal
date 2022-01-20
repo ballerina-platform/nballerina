@@ -226,7 +226,10 @@ function blockToWords(Word[] w, StmtBlock body) {
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
-    if td is BuiltinTypeDesc {
+    if td is GroupingTypeDesc {
+        return typeDescToWords(w, td.innerTd, wrap);
+    }
+    else if td is BuiltinTypeDesc {
         if td.builtinTypeName == "null" {
             w.push("()");
         }
