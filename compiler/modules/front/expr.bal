@@ -132,6 +132,9 @@ function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) re
 
 function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr) returns CodeGenError|ExprEffect {
     match expr {
+        var { innerExpr } => {
+            return codeGenExpr(cx, bb, expected, innerExpr);
+        }
         var { opPos: pos, arithmeticOp: op, left, right } => {
             var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, expected, left, right, bb, pos);
             return codeGenNilLiftResult(cx, check codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, lhs, rhs), ifNilBlock, pos);

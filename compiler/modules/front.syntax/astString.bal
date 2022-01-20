@@ -226,7 +226,10 @@ function blockToWords(Word[] w, StmtBlock body) {
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
-    if td is BuiltinTypeDesc {
+    if td is GroupingTypeDesc {
+        return typeDescToWords(w, td.innerTd, wrap);
+    }
+    else if td is BuiltinTypeDesc {
         if td.builtinTypeName == "null" {
             w.push("()");
         }
@@ -419,7 +422,10 @@ function lExprToWords(Word[] w, LExpr expr) {
 }
 
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
-    if expr is ConstValueExpr {
+    if expr is GroupingExpr {
+        exprToWords(w, expr.innerExpr, wrap);
+    }
+    else if expr is ConstValueExpr {
         valueToWords(w, expr.value);      
     }
     else if expr is IntLiteralExpr {
