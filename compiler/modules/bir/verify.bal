@@ -70,7 +70,7 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
-public type InvalidError distinct error;
+public type InvalidError distinct error<d:InvalidDiagnostic>;
 
 type Error err:Semantic|InvalidError;
 

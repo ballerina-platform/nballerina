@@ -1,7 +1,6 @@
 import wso2/nballerina.bir;
 import wso2/nballerina.print.llvm;
 import wso2/nballerina.types as t;
-import wso2/nballerina.comm.err;
 
 public function buildModule(bir:Module birMod, *Options options) returns [llvm:Module, TypeUsage]|BuildError {
     llvm:Context llContext = new;
@@ -53,13 +52,7 @@ public function buildModule(bir:Module birMod, *Options options) returns [llvm:M
     foreach int i in 0 ..< functionDefns.length() {
         bir:FunctionDefn defn = functionDefns[i];
         bir:FunctionCode code = check birMod.generateFunctionCode(i);
-        bir:InvalidError|err:Semantic? verifyErr =  bir:verifyFunctionCode(birMod, defn, code);
-        if verifyErr is bir:InvalidError {
-            panic(verifyErr);
-        }
-        else if verifyErr is err:Semantic {
-            return verifyErr;
-        }
+        check bir:verifyFunctionCode(birMod, defn, code);
         DISubprogram? diFunc = di == () ? () : diFuncs[i];
         Scaffold scaffold = new(mod, llFuncs[i], diFunc, builder, defn, code);
         buildPrologue(builder, scaffold, defn.position);

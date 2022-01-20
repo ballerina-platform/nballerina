@@ -4,6 +4,7 @@ import wso2/nballerina.front;
 import ballerina/io;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
+import wso2/nballerina.bir;
 
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
@@ -60,10 +61,14 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
         else {
             boolean isE = kind[0] == "e";
             if isE {
-                if err is err:Unimplemented {
+                if err is bir:InvalidError {
                     io:println(err);
+                    test:assertFail("invalid error should not happen" + path);
                 }
-                test:assertFalse(err is err:Unimplemented, "unimplemented error on E test" + path);
+                else if err is err:Unimplemented {
+                    io:println(err);
+                    test:assertFail("unimplemented error on E test" + path);
+                }
             }
             // io:println U errors are reported as semantic errors
             else if !err.detail().message.includes("'io:println'") {
