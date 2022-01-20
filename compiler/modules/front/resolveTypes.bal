@@ -93,7 +93,10 @@ function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns 
 }
 
 function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
-    if td is s:BuiltinTypeDesc {
+    if td is s:GroupingTypeDesc {
+        return resolveTypeDesc(mod, modDefn, depth + 1, td.innerTd);
+    }
+    else if td is s:BuiltinTypeDesc {
         match td.builtinTypeName {
             // These are easy
             "any" => { return t:ANY; }
