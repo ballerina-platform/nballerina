@@ -173,6 +173,7 @@ public type VarDeclStmt record {|
 |};
 
 public type GroupingExpr record {|
+    // JBUG #32617 can't include PositionFields
     Position startPos;
     Position endPos;
     Expr innerExpr;
