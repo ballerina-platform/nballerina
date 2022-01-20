@@ -419,7 +419,10 @@ function lExprToWords(Word[] w, LExpr expr) {
 }
 
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
-    if expr is ConstValueExpr {
+    if expr is GroupingExpr {
+        exprToWords(w, expr.innerExpr, wrap);
+    }
+    else if expr is ConstValueExpr {
         valueToWords(w, expr.value);      
     }
     else if expr is IntLiteralExpr {

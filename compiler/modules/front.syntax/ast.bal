@@ -63,7 +63,7 @@ public type ConstDefn record {|
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallExpr FunctionCallExpr|MethodCallExpr|CheckingCallExpr;
-public type Expr NumericLiteralExpr|ConstValueExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
+public type Expr GroupingExpr|NumericLiteralExpr|ConstValueExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
 public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
 public type SimpleConstExpr ConstValueExpr|VarRefExpr|NumericLiteralExpr|SimpleConstNegateExpr;
@@ -170,6 +170,12 @@ public type VarDeclStmt record {|
     Position namePos;
     Expr initExpr;
     boolean isFinal;
+|};
+
+public type GroupingExpr record {|
+    Position startPos;
+    Position endPos;
+    Expr innerExpr;
 |};
 
 public type BinaryArithmeticOp "+" | "-" | "*" | "/" | "%";
