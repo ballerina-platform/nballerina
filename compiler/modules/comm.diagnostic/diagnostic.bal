@@ -46,7 +46,7 @@ public enum Category {
     SYNTAX = "syntax",
     SEMANTIC = "semantic",
     UNIMPLEMENTED = "unimplemented",
-    INVALID = "invalid"
+    INTERNAL = "internal"
 }
 
 // JBUG if this is readonly, then jBallerina rejects `error<Diagnostic>`
@@ -74,9 +74,9 @@ public type UnimplementedDiagnostic record {|
     UNIMPLEMENTED category = UNIMPLEMENTED;
 |};
 
-public type InvalidDiagnostic record {|
+public type InternalDiagnostic record {|
     *Diagnostic;
-    INVALID category = INVALID;
+    INTERNAL category = INTERNAL;
 |};
 
 public function location(File file, Position|Range range) returns Location {
