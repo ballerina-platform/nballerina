@@ -109,6 +109,9 @@ function validateSyntaxNode(SyntaxNode|RootSyntaxNode node, Tokenizer tok) retur
 function validateAstNodeRange(AstSyntaxNode syntaxNode, Tokenizer tok) returns InvalidAstNodeRange? {
     SourceFile file = tok.file;
     AstNode node = syntaxNode.astNode;
+    if node.startPos >= node.endPos {
+        return invalidAstNodeRange({ file, range: { startPos: node.startPos, endPos: node.endPos }}, "invalid ast node range", unpackPosition(node.startPos));
+    }
     check validateAstNodePosition(node.startPos, file, false);
     return validateAstNodePosition(node.endPos, file, true);
 }
