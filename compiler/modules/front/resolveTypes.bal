@@ -143,6 +143,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return result;
         }
     }
+    if td is s:OptionalTypeDesc {
+        t:SemType postfix = check resolveTypeDesc(mod, modDefn, depth, td.postfixTd);
+        return t:union(postfix, t:NIL);
+    }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
     if td is s:TupleTypeDesc {
         t:ListDefinition? defn = td.defn;

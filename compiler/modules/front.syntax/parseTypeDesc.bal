@@ -57,15 +57,13 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             Position opPos = tok.currentStartPos();
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            BinaryTypeDesc bin =  {
+            OptionalTypeDesc opTd = {
                 startPos,
                 endPos,
                 opPos,
-                op: "|",
-                left: td,
-                right: { startPos: endPos, endPos, builtinTypeName: "null"} // start and end position of right is same because its single character
+                postfixTd: td
             };
-            td = bin;
+            td = opTd;
         }
         else if tok.current() == "[" {
             SimpleConstExpr?[] dimensions = [];

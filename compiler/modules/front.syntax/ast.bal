@@ -450,13 +450,19 @@ public type TypeDefn record {|
     int cycleDepth = -1;
 |};
 
-public type TypeDesc GroupingTypeDesc|BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
+public type TypeDesc GroupingTypeDesc|BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc|OptionalTypeDesc;
 
 public type ConstructorTypeDesc TupleTypeDesc|ArrayTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc|TableTypeDesc;
 
 public type GroupingTypeDesc record {|
     *PositionFields;
     TypeDesc innerTd;
+|};
+
+public type OptionalTypeDesc record {|
+    *PositionFields;
+    Position opPos;
+    TypeDesc postfixTd;
 |};
 
 public type TupleTypeDesc record {|

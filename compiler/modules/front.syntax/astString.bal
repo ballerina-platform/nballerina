@@ -321,22 +321,15 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is BinaryTypeDesc {
         // subset 6 does not allow parentheses
         // so we need to take care not to add them unnecessarily
-        TypeDesc rightTd = td.right;
-        if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName === "null" {
-            typeDescToWords(w, td.left, wrap);
-            w.push(CLING, "?");
+        boolean noWrap = wrap == false || wrap == td.op;
+        if !noWrap {
+            w.push("(");
         }
-        else {
-            boolean noWrap = wrap == false || wrap == td.op;
-            if !noWrap {
-                w.push("(");
-            }
-            typeDescToWords(w, td.left, td.op);
-            w.push(td.op);
-            typeDescToWords(w, td.right, td.op);
-            if !noWrap {
-                w.push(")");
-            }
+        typeDescToWords(w, td.left, td.op);
+        w.push(td.op);
+        typeDescToWords(w, td.right, td.op);
+        if !noWrap {
+            w.push(")");
         }
     }
     else if td is SingletonTypeDesc {
@@ -355,6 +348,10 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         w.push("xml", CLING, "<", CLING);
         typeDescToWords(w, td.constituent);
         w.push(CLING, ">");
+    }
+    else if td is OptionalTypeDesc {
+        typeDescToWords(w, td.postfixTd, wrap);
+        w.push(CLING, "?");
     }
     else {
         w.push("function", CLING, "(", CLING);

@@ -480,9 +480,17 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
     else if td is TypeDescRef {
         return syntaxNodeFromTypeDescRef(td);
     }
+    else if td is OptionalTypeDesc {
+        return syntaxNodeFromOptionalTypeDesc(td);
+    }
     else {
         return syntaxNodeFromUnaryTypeDesc(td);
     }
+}
+
+function syntaxNodeFromOptionalTypeDesc(OptionalTypeDesc td) returns NonTerminalSyntaxNode {
+    return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.postfixTd),
+                                     { token: "?", pos: td.opPos });
 }
 
 function syntaxNodeFromGroupingTypeDesc(GroupingTypeDesc td) returns NonTerminalSyntaxNode {
@@ -538,14 +546,7 @@ function syntaxNodeFromFunctionTypeDesc(FunctionTypeDesc td, boolean functionSig
 }
 
 function syntaxNodeFromBinaryTypeDesc(BinaryTypeDesc td) returns NonTerminalSyntaxNode {
-    TypeDesc rightTd = td.right;
-    if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName === "null" && rightTd.startPos == rightTd.endPos {
-        return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.left), { token: "?" });
-    }
-    else {
-        // todo: wrapping with parenthesis
-        return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.left), { token: td.op, pos: td.opPos }, syntaxNodeFromTypeDesc(td.right));
-    }
+    return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.left), { token: td.op, pos: td.opPos }, syntaxNodeFromTypeDesc(td.right));
 }
 
 function syntaxNodeFromErrorTypeDesc(ErrorTypeDesc td) returns NonTerminalSyntaxNode {
