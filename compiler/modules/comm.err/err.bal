@@ -7,6 +7,8 @@ public type Syntax error<d:SyntaxDiagnostic>;
 public type Semantic error<d:SemanticDiagnostic>;
 public type Unimplemented error<d:UnimplementedDiagnostic>;
 
+public type Internal distinct error<d:InternalDiagnostic>;
+
 public type Panic distinct error;
 
 // XXX the `cause` argument here is not really right: we just it for errors from numeric conversion functions

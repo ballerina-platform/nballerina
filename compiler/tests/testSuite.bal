@@ -4,7 +4,6 @@ import wso2/nballerina.front;
 import ballerina/io;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
-import wso2/nballerina.bir;
 
 import wso2/nballerina.comm.err;
 import wso2/nballerina.comm.diagnostic as d;
@@ -61,7 +60,7 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
         else {
             boolean isE = kind[0] == "e";
             if isE {
-                if err is bir:InvalidError {
+                if err is err:Internal {
                     io:println(err);
                     test:assertFail("invalid error should not happen" + path);
                 }

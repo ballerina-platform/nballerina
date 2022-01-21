@@ -50,8 +50,8 @@ class VerifyContext {
         return err:semantic(msg, loc=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
     }
 
-    function invalidErr(d:Message m, Position|Range pos) returns InvalidError {
-        return error InvalidError("invalid BIR", message=d:messageToString(m), location=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
+    function invalidErr(d:Message m, Position|Range pos) returns err:Internal {
+        return error err:Internal("invalid BIR", message=d:messageToString(m), location=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;
@@ -70,9 +70,7 @@ public function verifyFunctionCode(Module mod, FunctionDefn defn, FunctionCode c
 
 type IntBinaryInsn IntArithmeticBinaryInsn|IntBitwiseBinaryInsn;
 
-public type InvalidError distinct error<d:InternalDiagnostic>;
-
-type Error err:Semantic|InvalidError;
+type Error err:Semantic|err:Internal;
 
 function verifyBasicBlock(VerifyContext vc, BasicBlock bb) returns Error? {
     foreach Insn insn in bb.insns {
@@ -260,7 +258,7 @@ function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns Error? 
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type", insn.pos);
 }
 
-function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns InvalidError? {
+function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns err:Internal? {
     if vc.isEmpty(insn.result.semType) {
         // This is now caught in the front-end.
         return vc.invalidErr("result of type case is never", insn.pos);
@@ -274,7 +272,7 @@ function verifyTypeCast(VerifyContext vc, TypeCastInsn insn) returns InvalidErro
     }
 }
 
-function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns InvalidError? {
+function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns err:Internal? {
     if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:INT), t:NUMBER)) {
         return vc.invalidErr("operand type of ConvertToInt has no non-integral numeric component", insn.pos);
     }
@@ -286,7 +284,7 @@ function verifyConvertToIntInsn(VerifyContext vc, ConvertToIntInsn insn) returns
     }
 }
 
-function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) returns InvalidError? {
+function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) returns err:Internal? {
     if vc.isEmpty(t:intersect(t:diff(insn.operand.semType, t:FLOAT), t:NUMBER)) {
         return vc.invalidErr("operand type of ConvertToFloat has no non-float numeric component", insn.pos);
     }
@@ -298,7 +296,7 @@ function verifyConvertToFloatInsn(VerifyContext vc, ConvertToFloatInsn insn) ret
     }
 }
 
-function verifyCompare(VerifyContext vc, CompareInsn insn) returns InvalidError? {
+function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Internal? {
     if !t:comparable(vc.typeContext(), operandToSemType(insn.operands[0]), operandToSemType(insn.operands[1])) {
         return vc.invalidErr(`operands of ${insn.op} do not belong to an ordered type`, insn.pos);
     }
@@ -313,7 +311,7 @@ function operandToSemType(Operand operand) returns t:SemType {
     }
 }
 
-function verifyEquality(VerifyContext vc, EqualityInsn insn) returns InvalidError? {
+function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Internal? {
     // non-empty intersection of operand types is enforced in front-end
     // not needed for BIR correctness
     Operand lhs = insn.operands[0];
@@ -334,40 +332,40 @@ function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType,
     }
 }
 
-function verifyOperandString(VerifyContext vc, string insnName, StringOperand operand, Position pos) returns InvalidError? {
+function verifyOperandString(VerifyContext vc, string insnName, StringOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
         return verifyRegisterSemType(vc, insnName, operand, t:STRING, "string", pos);
     }
 }
 
-function verifyOperandInt(VerifyContext vc, string insnName, IntOperand operand, Position pos) returns InvalidError? {
+function verifyOperandInt(VerifyContext vc, string insnName, IntOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
         return verifyRegisterSemType(vc, insnName, operand, t:INT, "int", pos);
     }
 }
 
-function verifyOperandFloat(VerifyContext vc, string insnName, FloatOperand operand, Position pos) returns InvalidError? {
+function verifyOperandFloat(VerifyContext vc, string insnName, FloatOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
         return verifyRegisterSemType(vc, insnName, operand, t:FLOAT, "float", pos);
     }
 }
 
-function verifyOperandBoolean(VerifyContext vc, string insnName, BooleanOperand operand, Position pos) returns InvalidError? {
+function verifyOperandBoolean(VerifyContext vc, string insnName, BooleanOperand operand, Position pos) returns err:Internal? {
     if operand is Register {
         return verifyRegisterSemType(vc,insnName, operand, t:BOOLEAN, "boolean", pos);
     }
 }
 
-function verifyOperandError(VerifyContext vc, string insnName, Register operand, Position pos) returns InvalidError? {
+function verifyOperandError(VerifyContext vc, string insnName, Register operand, Position pos) returns err:Internal? {
     return verifyRegisterSemType(vc, insnName, operand, t:ERROR, "error", pos);
 }
 
-function verifyRegisterSemType(VerifyContext vc, string insnName, Register operand, t:SemType semType, string typeName, Position pos) returns InvalidError? {
+function verifyRegisterSemType(VerifyContext vc, string insnName, Register operand, t:SemType semType, string typeName, Position pos) returns err:Internal? {
     if !vc.isSubtype(operand.semType, semType) {
         return operandTypeErr(vc, insnName, typeName, pos);
     }
 }
 
-function operandTypeErr(VerifyContext vc, string insnName, string typeName, Position pos) returns InvalidError {
+function operandTypeErr(VerifyContext vc, string insnName, string typeName, Position pos) returns err:Internal {
     return vc.invalidErr(`operands of ${insnName} must be subtype of ${typeName}`, pos);
 }
