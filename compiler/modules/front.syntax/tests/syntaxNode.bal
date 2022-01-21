@@ -489,13 +489,13 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
 }
 
 function syntaxNodeFromOptionalTypeDesc(OptionalTypeDesc td) returns NonTerminalSyntaxNode {
-    return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.postfixTd),
+    return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.td),
                                      { token: "?", pos: td.opPos });
 }
 
 function syntaxNodeFromGroupingTypeDesc(GroupingTypeDesc td) returns NonTerminalSyntaxNode {
     return nonTerminalSyntaxNode(td, { token: "(", pos: td.startPos },
-                                     syntaxNodeFromTypeDesc(td.innerTd),
+                                     syntaxNodeFromTypeDesc(td.td),
                                      { token: ")" });
 }
 

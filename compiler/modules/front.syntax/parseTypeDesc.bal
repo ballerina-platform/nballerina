@@ -61,7 +61,7 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 startPos,
                 endPos,
                 opPos,
-                postfixTd: td
+                td
             };
             td = opTd;
         }
@@ -103,9 +103,9 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 check tok.advance();
                 return { startPos, endPos, builtinTypeName: "null" };
             }
-            TypeDesc innerTd = check parseTypeDesc(tok);
+            TypeDesc td = check parseTypeDesc(tok);
             endPos = check tok.expectEnd(")");
-            return { startPos, endPos, innerTd };
+            return { startPos, endPos, td };
         }
         "boolean"
         | "decimal"

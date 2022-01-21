@@ -227,7 +227,7 @@ function blockToWords(Word[] w, StmtBlock body) {
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
     if td is GroupingTypeDesc {
-        return typeDescToWords(w, td.innerTd, wrap);
+        return typeDescToWords(w, td.td, wrap);
     }
     else if td is BuiltinTypeDesc {
         if td.builtinTypeName == "null" {
@@ -350,7 +350,7 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         w.push(CLING, ">");
     }
     else if td is OptionalTypeDesc {
-        typeDescToWords(w, td.postfixTd, wrap);
+        typeDescToWords(w, td.td, wrap);
         w.push(CLING, "?");
     }
     else {

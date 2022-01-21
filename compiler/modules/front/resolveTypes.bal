@@ -94,7 +94,7 @@ function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns 
 
 function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
     if td is s:GroupingTypeDesc {
-        return resolveTypeDesc(mod, modDefn, depth + 1, td.innerTd);
+        return resolveTypeDesc(mod, modDefn, depth + 1, td.td);
     }
     else if td is s:BuiltinTypeDesc {
         match td.builtinTypeName {
@@ -144,7 +144,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     if td is s:OptionalTypeDesc {
-        t:SemType postfix = check resolveTypeDesc(mod, modDefn, depth, td.postfixTd);
+        t:SemType postfix = check resolveTypeDesc(mod, modDefn, depth, td.td);
         return t:union(postfix, t:NIL);
     }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309

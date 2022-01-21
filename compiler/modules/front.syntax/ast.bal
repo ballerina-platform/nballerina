@@ -456,13 +456,13 @@ public type ConstructorTypeDesc TupleTypeDesc|ArrayTypeDesc|MappingTypeDesc|Func
 
 public type GroupingTypeDesc record {|
     *PositionFields;
-    TypeDesc innerTd;
+    TypeDesc td;
 |};
 
 public type OptionalTypeDesc record {|
     *PositionFields;
     Position opPos;
-    TypeDesc postfixTd;
+    TypeDesc td;
 |};
 
 public type TupleTypeDesc record {|
