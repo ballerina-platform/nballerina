@@ -971,7 +971,6 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         curBlock = nextBlock;
         args.push(arg);
     }
-    // TODO make error location more specific
     check validArgumentTypes(cx, func, args, expr);
     return codeGenCall(cx, curBlock, func, args, expr.qNamePos);
 }
@@ -983,7 +982,6 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
 
     t:SemType[] paramTypes = func.signature.paramTypes;
     bir:Operand[] args = [target];
-    // TODO make error location more specific
     check validArgumentTypes(cx, func, args, expr);
     foreach int i in 0 ..< expr.args.length() {
         var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, paramTypes[i + 1], expr.args[i]);
