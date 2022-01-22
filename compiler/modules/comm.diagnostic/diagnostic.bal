@@ -45,7 +45,8 @@ public function locationLineColumn(Location loc) returns LineColumn {
 public enum Category {
     SYNTAX = "syntax",
     SEMANTIC = "semantic",
-    UNIMPLEMENTED = "unimplemented"
+    UNIMPLEMENTED = "unimplemented",
+    INTERNAL = "internal"
 }
 
 // JBUG if this is readonly, then jBallerina rejects `error<Diagnostic>`
@@ -71,6 +72,11 @@ public type SemanticDiagnostic record {|
 public type UnimplementedDiagnostic record {|
     *Diagnostic;
     UNIMPLEMENTED category = UNIMPLEMENTED;
+|};
+
+public type InternalDiagnostic record {|
+    *Diagnostic;
+    INTERNAL category = INTERNAL;
 |};
 
 public function location(File file, Position|Range range) returns Location {

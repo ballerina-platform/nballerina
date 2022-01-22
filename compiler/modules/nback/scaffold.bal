@@ -4,7 +4,7 @@ import wso2/nballerina.bir;
 import wso2/nballerina.types as t;
 import wso2/nballerina.print.llvm;
 
-type BuildError err:Semantic|err:Unimplemented;
+type BuildError err:Semantic|err:Unimplemented|err:Internal;
 
 type DIBuilder llvm:DIBuilder;
 type DISubprogram llvm:Metadata;

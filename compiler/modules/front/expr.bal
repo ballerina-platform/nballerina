@@ -109,8 +109,7 @@ class ExprContext {
 
 function codeGenExprForBoolean(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|BooleanExprEffect {
     var { result, block, narrowing } = check codeGenExpr(cx, bb, t:BOOLEAN, expr);
-    if result is bir:BooleanOperand {
-        // rest of the type checking is in the verifier
+    if result is boolean || (result is bir:Register && t:isSubtypeSimple(result.semType, t:BOOLEAN)) {
         return { result, block, narrowing };
     }
     return cx.semanticErr("expected boolean operand", s:range(expr));
@@ -123,8 +122,7 @@ function codeGenExprForInt(ExprContext cx, bir:BasicBlock bb, s:Expr expr) retur
 
 function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|StringExprEffect {
     var { result, block } = check codeGenExpr(cx, bb, t:STRING, expr);
-    if result is bir:StringOperand {
-        // rest of the type checking is in the verifier
+    if result is string || (result is bir:Register && t:isSubtypeSimple(result.semType, t:STRING)) {
         return { result, block };
     }
     return cx.semanticErr("expected string operand", s:range(expr));
@@ -543,6 +541,12 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
 function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBitwiseOp op, Position pos, bir:IntOperand lhs, bir:IntOperand rhs) returns CodeGenError|ExprEffect {
     if lhs is int && rhs is int {
         return { result: bitwiseEval(op, lhs, rhs), block: bb };
+    }
+    if lhs is bir:Register && !t:isSubtypeSimple(lhs.semType, t:INT) {
+        return cx.semanticErr("LHS is not an int", pos);
+    }
+    if rhs is bir:Register && !t:isSubtypeSimple(rhs.semType, t:INT) {
+        return cx.semanticErr("RHS is not an int", pos);
     }
     t:SemType lt = bitwiseOperandType(lhs);
     t:SemType rt = bitwiseOperandType(rhs);
@@ -1226,7 +1230,7 @@ function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
 }
 
 function intOperand(ExprContext cx, bir:Operand operand, s:Expr expr) returns bir:IntOperand|CodeGenError {
-    if operand is bir:IntOperand {
+    if operand is int || (operand is bir:Register && t:isSubtypeSimple(operand.semType, t:INT)) {
         return operand;
     }
     return cx.semanticErr("expected an int operand", s:range(expr));
