@@ -1168,7 +1168,9 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
-public function constUniformTypeCode(SingleValue v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL {
+public type SingleValueUniformTypeCode UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL;
+
+public function constUniformTypeCode(SingleValue v) returns SingleValueUniformTypeCode {
     if v == () {
         return UT_NIL;
     }

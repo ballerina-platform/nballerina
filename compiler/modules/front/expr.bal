@@ -406,19 +406,19 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
 }
 
 function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position pos, bir:Operand operand) returns CodeGenError|ExprEffect {
-    TypedOperand? typed = typedOperand(operand);
+    ArithmeticOperand? arith = arithmeticOperand(operand);
     bir:Register result;
     bir:Insn insn;
-    if typed is ["int", bir:IntOperand] {
-        bir:IntOperand intOperand = typed[1];
+    if arith is [t:UT_INT, bir:IntOperand] {
+        bir:IntOperand intOperand = arith[1];
         if intOperand is int {
             return { result: check intNegateEval(cx, pos, intOperand), block: nextBlock };
         }
         result = cx.createTmpRegister(t:INT, pos);
         insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [0, intOperand], result };
     }
-    else if typed is ["float", bir:FloatOperand] {
-        bir:FloatOperand floatOperand = typed[1];
+    else if arith is [t:UT_FLOAT, bir:FloatOperand] {
+        bir:FloatOperand floatOperand = arith[1];
         t:SemType resultType = t:FLOAT;
         float? shape = floatOperandSingleShape(floatOperand);
         if shape != () {
@@ -431,8 +431,8 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
         result = cx.createTmpRegister(resultType, pos);
         insn = <bir:FloatNegateInsn> { operand: <bir:Register>floatOperand, result, pos };
     }
-    else if typed is ["decimal", bir:DecimalOperand] {
-        bir:DecimalOperand decimalOperand = typed[1];
+    else if arith is [t:UT_DECIMAL, bir:DecimalOperand] {
+        bir:DecimalOperand decimalOperand = arith[1];
         decimal? shape = decimalOperandSingleShape(decimalOperand);
         t:SemType resultType;
         if shape != () {
@@ -458,7 +458,7 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
 }
 
 function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, Position pos, bir:Operand lhs, bir:Operand rhs) returns CodeGenError|ExprEffect {
-    TypedOperandPair? pair = typedOperandPair(lhs, rhs);
+    ArithmeticOperandPair? pair = arithmeticOperandPair(lhs, rhs);
     bir:Register result;
     if pair is IntOperandPair {
         readonly & bir:IntOperand[2] operands = pair[1];
@@ -1048,12 +1048,9 @@ function genImportedFunctionRef(ExprContext cx, string prefix, string identifier
     }
 }
 
-type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
-
 function getLangLibFunctionRef(ExprContext cx, bir:Operand target, string methodName, Position|Range nameRange) returns bir:FunctionRef|CodeGenError {
-    TypedOperand? t = typedOperand(target);
-    if t != () && t[0] is LangLibModuleName {
-        string moduleName = t[0];
+    LangLibModuleName? moduleName = operandLangLibModuleName(target);
+    if moduleName != () {
         bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature == () {
             return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, nameRange);
@@ -1064,7 +1061,7 @@ function getLangLibFunctionRef(ExprContext cx, bir:Operand target, string method
                 identifier: methodName
             };
             bir:FunctionSignature signature = erasedSignature;
-            if t[0] == "array" {
+            if moduleName == "array" {
                 signature = instantiateArrayFunctionSignature(cx.mod.tc, signature, (<bir:Register>target).semType);
             }
             return { symbol, signature, erasedSignature }; 
@@ -1126,89 +1123,99 @@ function bitwiseOperandType(bir:IntOperand operand) returns t:SemType {
     return t:widenUnsigned(t);
 }
 
-type IntOperandPair readonly & ["int", [bir:IntOperand, bir:IntOperand]];
-type FloatOperandPair readonly & ["float", [bir:FloatOperand, bir:FloatOperand]];
-type DecimalOperandPair readonly & ["decimal", [bir:DecimalOperand, bir:DecimalOperand]];
-type StringOperandPair readonly & ["string", [bir:StringOperand, bir:StringOperand]];
+type IntOperandPair readonly & [t:UT_INT, [bir:IntOperand, bir:IntOperand]];
+type FloatOperandPair readonly & [t:UT_FLOAT, [bir:FloatOperand, bir:FloatOperand]];
+type DecimalOperandPair readonly & [t:UT_DECIMAL, [bir:DecimalOperand, bir:DecimalOperand]];
+type StringOperandPair readonly & [t:UT_STRING, [bir:StringOperand, bir:StringOperand]];
 
-type TypedOperandPair IntOperandPair|DecimalOperandPair|FloatOperandPair|StringOperandPair;
+type ArithmeticOperandPair IntOperandPair|DecimalOperandPair|FloatOperandPair|StringOperandPair;
 
-// XXX should use t:UT_* instead of strings here (like the ordering stuff)
-type TypedOperand readonly & (["array", bir:Register]
-                              |["map", bir:Register]
-                              |["error", bir:Register]
-                              |["string", bir:StringOperand]
-                              |["float", bir:FloatOperand]
-                              |["decimal", bir:DecimalOperand]
-                              |["int", bir:IntOperand]
-                              |["boolean", bir:BooleanOperand]
-                              |["nil", bir:NilOperand]);
+type ArithmeticOperand readonly & ([t:UT_STRING, bir:StringOperand]
+                                   |[t:UT_FLOAT, bir:FloatOperand]
+                                   |[t:UT_DECIMAL, bir:DecimalOperand]
+                                   |[t:UT_INT, bir:IntOperand]);
 
-function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperandPair? {
-    TypedOperand? l = typedOperand(lhs);
-    TypedOperand? r = typedOperand(rhs);
-    if l is ["int", bir:IntOperand] && r is ["int", bir:IntOperand] {
-        return ["int", [l[1], r[1]]];
+function arithmeticOperandPair(bir:Operand lhs, bir:Operand rhs) returns ArithmeticOperandPair? {
+    ArithmeticOperand? l = arithmeticOperand(lhs);
+    ArithmeticOperand? r = arithmeticOperand(rhs);
+    if l is [t:UT_INT, bir:IntOperand] && r is [t:UT_INT, bir:IntOperand] {
+        return [t:UT_INT, [l[1], r[1]]];
     }
-    if l is ["float", bir:FloatOperand] && r is ["float", bir:FloatOperand] {
-        return ["float", [l[1], r[1]]];
+    if l is [t:UT_FLOAT, bir:FloatOperand] && r is [t:UT_FLOAT, bir:FloatOperand] {
+        return [t:UT_FLOAT, [l[1], r[1]]];
     }
-    if l is ["decimal", bir:DecimalOperand] && r is ["decimal", bir:DecimalOperand] {
-        return ["decimal", [l[1], r[1]]];
+    if l is [t:UT_DECIMAL, bir:DecimalOperand] && r is [t:UT_DECIMAL, bir:DecimalOperand] {
+        return [t:UT_DECIMAL, [l[1], r[1]]];
     }
-    if l is ["string", bir:StringOperand] && r is ["string", bir:StringOperand] {
-        return ["string", [l[1], r[1]]];
+    if l is [t:UT_STRING, bir:StringOperand] && r is [t:UT_STRING, bir:StringOperand] {
+        return [t:UT_STRING, [l[1], r[1]]];
     }
     return ();
 }
 
-function typedOperand(bir:Operand operand) returns TypedOperand? {
+function arithmeticOperand(bir:Operand operand) returns ArithmeticOperand? {
     if operand is bir:Register {
-        if operand.semType === t:NIL {
-            return ["nil", operand];
+        t:UniformTypeCode? utc = t:uniformTypeCode(t:widenToUniformTypes(operand.semType));
+        // JBUG should be able to do this with a single return
+        if utc == t:UT_INT {
+            return [utc, operand];
         }
-        else if t:isSubtypeSimple(operand.semType, t:BOOLEAN) {
-            return ["boolean", operand];
+        if utc == t:UT_FLOAT {
+            return [utc, operand];
         }
-        else if t:isSubtypeSimple(operand.semType, t:INT) {
-            return ["int", operand];
+        if utc == t:UT_DECIMAL {
+            return [utc, operand];
         }
-        else if t:isSubtypeSimple(operand.semType, t:FLOAT) {
-            return ["float", operand];
+        if utc == t:UT_STRING {
+            return [utc, operand];
         }
-        else if t:isSubtypeSimple(operand.semType, t:DECIMAL) {
-            return ["decimal", operand];
-        }
-        else if t:isSubtypeSimple(operand.semType, t:STRING) {
-            return ["string", operand];
-        }
-        else if t:isSubtypeSimple(operand.semType, t:LIST) {
-            return ["array", operand];
-        }
-        else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
-            return ["map", operand];
-        }
-        else if t:isSubtypeSimple(operand.semType, t:ERROR) {
-            return ["error", operand];
-        }
-    }
-    else if operand is string {
-        return ["string", operand];
-    }
-    else if operand is int {
-        return ["int", operand];
-    }
-    else if operand is float {
-        return ["float", operand];
-    }
-    else if operand is decimal {
-        return ["decimal", operand];
-    }
-    else if operand is boolean {
-        return ["boolean", operand];
+        return ();
     }
     else {
-        return ["nil", operand];
+        return arithmeticConstOperand(operand);
+    }
+}
+
+function arithmeticConstOperand(bir:ConstOperand operand) returns ArithmeticOperand? {
+    if operand is string {
+        return [t:UT_STRING, operand];
+    }
+    else if operand is int {
+        return [t:UT_INT, operand];
+    }
+    else if operand is float {
+        return [t:UT_FLOAT, operand];
+    }
+    else if operand is decimal {
+        return [t:UT_DECIMAL, operand];
+    }
+    else {
+        return ();
+    }
+}
+
+function operandLangLibModuleName(bir:Operand operand) returns LangLibModuleName? {
+    t:UniformTypeCode? utc;
+    if operand is bir:ConstOperand {
+        utc = t:constUniformTypeCode(operand);
+    }
+    else {
+        t:SemType semType = operand.semType;
+        if t:isSubtypeSimple(operand.semType, t:LIST) {
+            return "array";
+        }
+        else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
+            return "map";
+        }
+        utc = t:uniformTypeCode(t:widenToUniformTypes(semType));
+    }
+    match utc {
+        t:UT_BOOLEAN => { return "boolean"; }
+        t:UT_INT => { return "int"; }
+        t:UT_FLOAT => { return "float"; }
+        t:UT_DECIMAL => { return "decimal"; }
+        t:UT_STRING => { return "string"; }
+        t:UT_ERROR => { return "error"; }
     }
     return ();
 }
