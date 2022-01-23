@@ -47,11 +47,15 @@ class VerifyContext {
     }
 
     function semanticErr(d:Message msg, Position|Range pos) returns err:Semantic {
-        return err:semantic(msg, loc=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
+        return err:semantic(msg, loc=self.location(pos), defnName=self.defn.symbol.identifier);
     }
 
     function invalidErr(d:Message m, Position|Range pos) returns err:Internal {
-        return error err:Internal("invalid BIR", message=d:messageToString(m), location=d:location(self.mod.getPartFile(self.defn.partIndex), pos), defnName=self.defn.symbol.identifier);
+        return err:internal("invalid BIR: " + d:messageToString(m), loc=self.location(pos), defnName=self.defn.symbol.identifier);
+    }
+
+    private function location(Position|Range pos) returns d:Location {
+        return d:location(self.mod.getPartFile(self.defn.partIndex), pos);
     }
 
     function returnType() returns t:SemType => self.defn.signature.returnType;

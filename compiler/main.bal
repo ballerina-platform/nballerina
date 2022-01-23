@@ -60,7 +60,10 @@ public function main(string[] filenames, *Options opts) returns error? {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
             CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
-            if err is err:Diagnostic {
+            if err is err:Internal {
+                panic error(d:toString(err.detail()), err);
+            }
+            else if err is err:Diagnostic {
                 errorFileCount += 1;
                 dPrinter.print(err.detail());
             }

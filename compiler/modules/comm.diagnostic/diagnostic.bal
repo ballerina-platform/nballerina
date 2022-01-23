@@ -112,6 +112,10 @@ public function messageFormat(Template t) returns string {
     return string:concat(...strs);
 }
 
+public function toString(Diagnostic d) returns string {
+    return "\n".join(...format(d));
+}
+
 public function format(Diagnostic d) returns string[] {
     Location loc = d.location;
     string[] lines = [];
