@@ -480,17 +480,9 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
     else if td is TypeDescRef {
         return syntaxNodeFromTypeDescRef(td);
     }
-    else if td is OptionalTypeDesc {
-        return syntaxNodeFromOptionalTypeDesc(td);
-    }
     else {
         return syntaxNodeFromUnaryTypeDesc(td);
     }
-}
-
-function syntaxNodeFromOptionalTypeDesc(OptionalTypeDesc td) returns NonTerminalSyntaxNode {
-    return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.td),
-                                     { token: "?", pos: td.opPos });
 }
 
 function syntaxNodeFromGroupingTypeDesc(GroupingTypeDesc td) returns NonTerminalSyntaxNode {
@@ -575,7 +567,12 @@ function syntaxNodesFromTypeParameter(TypeDesc td) returns SyntaxNode[] {
 }
 
 function syntaxNodeFromUnaryTypeDesc(UnaryTypeDesc td) returns NonTerminalSyntaxNode {
-    return nonTerminalSyntaxNode(td , { token: td.op, pos: td.startPos }, syntaxNodeFromTypeDesc(td.td));
+    if td.op == "!" {
+        return nonTerminalSyntaxNode(td , { token: td.op, pos: td.startPos }, syntaxNodeFromTypeDesc(td.td));
+    }
+    else {
+        return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.td), { token: td.op });
+    }
 }
 
 type TerminalTypeDesc BuiltinTypeDesc|SingletonTypeDesc;

@@ -341,17 +341,19 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         w.push(CLING, ">");
     }    
     else if td is UnaryTypeDesc {
-        w.push(td.op, CLING);
-        typeDescToWords(w, td.td);
+        if td.op == "!" {
+            w.push(td.op, CLING);
+            typeDescToWords(w, td.td);
+        }
+        else {
+            typeDescToWords(w, td.td, wrap);
+            w.push(CLING, "?");
+        }
     }
     else if td is XmlSequenceTypeDesc {
         w.push("xml", CLING, "<", CLING);
         typeDescToWords(w, td.constituent);
         w.push(CLING, ">");
-    }
-    else if td is OptionalTypeDesc {
-        typeDescToWords(w, td.td, wrap);
-        w.push(CLING, "?");
     }
     else {
         w.push("function", CLING, "(", CLING);

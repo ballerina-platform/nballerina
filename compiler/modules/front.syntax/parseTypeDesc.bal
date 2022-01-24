@@ -54,16 +54,15 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     TypeDesc td = check parsePrimaryTypeDesc(tok);
     while true {
         if tok.current() == "?" {
-            Position opPos = tok.currentStartPos();
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            OptionalTypeDesc opTd = {
+            UnaryTypeDesc optionalTd = {
                 startPos,
                 endPos,
-                opPos,
+                op: "?",
                 td
             };
-            td = opTd;
+            td = optionalTd;
         }
         else if tok.current() == "[" {
             SimpleConstExpr?[] dimensions = [];

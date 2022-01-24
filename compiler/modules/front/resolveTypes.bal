@@ -143,10 +143,6 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return result;
         }
     }
-    if td is s:OptionalTypeDesc {
-        t:SemType postfix = check resolveTypeDesc(mod, modDefn, depth, td.td);
-        return t:union(postfix, t:NIL);
-    }
     // JBUG would like to use match patterns here. This cannot be done properly without fixing #33309
     if td is s:TupleTypeDesc {
         t:ListDefinition? defn = td.defn;
@@ -282,6 +278,10 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return t:floatConst(value);
         }
     }
+    if td is s:UnaryTypeDesc && td.op == "?" {
+        t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td.td);
+        return t:union(ty, t:NIL);
+    }
     if !mod.allowAllTypes {
         return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, s:range(td)));
     }
@@ -308,7 +308,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     // JBUG #33722 work around incorrect type narrowing
     s:TypeDesc td2 = td;
-    if td2 is s:UnaryTypeDesc {
+    if td2 is s:UnaryTypeDesc && td2.op == "!" {
         t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td2.td);
         return t:complement(ty);
     }
