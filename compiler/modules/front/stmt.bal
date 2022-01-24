@@ -499,6 +499,7 @@ type MatchTest EqualMatchTest|UniformTypeMatchTest;
 type EqualMatchTest record {|
     int clauseIndex;
     Position pos;
+    bir:ConstOperand operand;
     readonly t:SingleValue value;
 |};
 
@@ -512,8 +513,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     Assignment[] assignments = [];
     var { result: matched, block: testBlock, binding } = check codeGenExpr(cx.exprContext(env), startBlock, (), stmt.expr);
     t:Context tc = cx.mod.tc;
-    // JBUG #33303 need parentheses
-    t:SemType matchedType = matched is bir:Register ? (matched.semType) : t:singleton(tc, matched);
+    t:SemType matchedType = operandSemType(tc, matched);
     // defaultCodeIndex is either () or the index of the last clause;
     // the latter case means that the match is exhaustive
     int? defaultClauseIndex = ();
@@ -538,13 +538,15 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
                 if equalMatchTests.hasKey(value) {
                     return cx.semanticErr("duplicate const match pattern", pos=s:range(pattern));
                 }
-                EqualMatchTest mt = { value, clauseIndex: i, pos: clause.opPos };
-                equalMatchTests.add(mt);    
+             
                 if !t:containsConst(matchedType, value) {
                     return cx.semanticErr("match pattern cannot match value of expression", pos=s:range(pattern));
                 }
-                matchTests.push(mt);
                 patternType = t:singleton(tc, value);
+                bir:ConstOperand operand = value is decimal ? { value, semType: patternType } : value;
+                EqualMatchTest mt = { value, operand, clauseIndex: i, pos: clause.opPos };
+                equalMatchTests.add(mt);    
+                matchTests.push(mt);
             }
             else {
                 // `1|_ => {}` is pointless, but I'm not making it an error
@@ -580,7 +582,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
         }
         bir:Register testResult = cx.createTmpRegister(t:BOOLEAN, mt.pos);
         if mt is EqualMatchTest {
-            bir:EqualityInsn eq = { op: "==", pos: mt.pos, result: testResult, operands: [matched, mt.value] };
+            bir:EqualityInsn eq = { op: "==", pos: mt.pos, result: testResult, operands: [matched, mt.operand] };
             testBlock.insns.push(eq);
         }
         else {

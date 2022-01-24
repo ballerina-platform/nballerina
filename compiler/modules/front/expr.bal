@@ -263,12 +263,12 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         }
         // Int literal
         var { digits, base, startPos: pos } => {
-            float|int|decimal result = check intLiteralValue(cx, expected, base, digits, pos);
+            bir:ConstOperand result = constOperand(cx, check intLiteralValue(cx, expected, base, digits, pos));
             return { result, block: bb };
         }
         // FP literal
         var { untypedLiteral, typeSuffix, startPos: pos } => {
-            float|decimal result = check fpLiteralValue(cx, expected, untypedLiteral, typeSuffix, pos);
+            bir:ConstOperand result = constOperand(cx, check fpLiteralValue(cx, expected, untypedLiteral, typeSuffix, pos));
             return { result, block: bb };
         }
     }
@@ -464,7 +464,7 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
                 resultType = t:singleton(cx.mod.tc, resultShape);
             }
             else {
-                return { result: resultShape, block: nextBlock };
+                return { result: constOperand(cx, resultShape), block: nextBlock };
             }
         }
         else {
@@ -525,8 +525,8 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
         t:SemType resultType;
         if leftShape != () && rightShape != () {
             decimal resultShape = check decimalArithmeticEval(cx, pos, op, leftShape, rightShape);
-            if leftShape == lhs && rightShape == rhs {
-                return { result: resultShape, block: bb };
+            if lhs is bir:DecimalConstOperand && rhs is bir:DecimalConstOperand {
+                return { result: constOperand(cx, resultShape), block: bb };
             }
             resultType = t:singleton(cx.mod.tc, resultShape);
         }
@@ -799,7 +799,10 @@ function codeGenConstValue(ExprContext cx, bir:BasicBlock bb, t:SemType? expecte
     t:SemType? multiSemType = cvExpr.multiSemType;
     SimpleConst value = cvExpr.value;
     if multiSemType == () {
-        return { result: value, block: bb };
+        return { result: constOperand(cx, value), block: bb };
+    }
+    else if value is decimal {
+        return { result: { value, semType: multiSemType }, block: bb };
     }
     else {
         bir:Register reg = cx.createTmpRegister(multiSemType, cvExpr.startPos);
@@ -860,21 +863,28 @@ function codeGenEqualityExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
 
     // XXX fold rewrite: redo this so it is recognized as constant in containing expressions
-    if exact && l is t:SingleValue && r is t:SingleValue {
-        bir:AssignInsn insn = { result, operand: negated ? l !== r : l === r, pos };
-        nextBlock.insns.push(insn);
-        return { result, block: nextBlock };
+    if exact {
+        t:WrappedSingleValue? lVal = operandConstValue(l);
+        t:WrappedSingleValue? rVal = operandConstValue(r);
+        if lVal != () && rVal != () {
+            boolean exactEq = lVal.value === rVal.value;
+            bir:AssignInsn insn = { result, operand: negated == !exactEq, pos };
+            nextBlock.insns.push(insn);
+            return { result, block: nextBlock };
+        }  
     }
 
     bir:EqualityInsn insn = { op, pos, operands: [l, r], result };
     nextBlock.insns.push(insn);
     [Binding, SimpleConst]? narrowingCompare = ();
     if !exact {
-        if lBinding is Binding && r is SimpleConst {
-            narrowingCompare = [lBinding, r];
+        t:WrappedSingleValue? lShape = operandSingleShape(l);
+        t:WrappedSingleValue? rShape = operandSingleShape(r);
+        if lBinding is Binding && rShape !is () {
+            narrowingCompare = [lBinding, rShape.value];
         }
-        else if rBinding is Binding && l is SimpleConst {
-            narrowingCompare = [rBinding, l];
+        else if rBinding is Binding && lShape !is () {
+            narrowingCompare = [rBinding, lShape.value];
         }
     }
 
@@ -905,30 +915,21 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
     Binding? binding;
     string? prefix = ref.prefix;
     if prefix != () {
-        result = check lookupImportedConst(cx.mod, cx.defn, prefix, ref.name);
+        result = constOperand(cx, check lookupImportedConst(cx.mod, cx.defn, prefix, ref.name));
         binding = ();
     }
     else {
         var v = check cx.lookupLocalVarRef(ref.name, ref.startPos);
         if v is t:SingleValue {
-            result = v;
+            result = constOperand(cx, v);
             binding = ();
         }
         else if v is bir:FunctionRef {
             return cx.unimplementedErr("values of function type are not implemented", ref.startPos);
         }
         else {
-            t:WrappedSingleValue? wrapped = t:singleShape(v.reg.semType);
-            // for decimal, we need the register to preserve precision
-            // for 0f, we need the register to preserve the sign
-            if wrapped != () && wrapped.value !is decimal && wrapped.value != 0.0f {
-                result = wrapped.value;
-                binding = ();
-            }
-            else {
-                result = v.reg;
-                binding = v;
-            }
+            result = constifyRegister(v.reg);
+            binding = result === v.reg ? v : ();
         }
     }  
     return { result, block: bb, binding };
@@ -960,7 +961,7 @@ function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
             }
             else {
                 if shape is int|float {
-                    operand = check convertToDecimalEval(cx, tcExpr.opPos, shape);
+                    operand = constOperand(cx, check convertToDecimalEval(cx, tcExpr.opPos, shape));
                     fromType = operandSemType(cx.mod.tc, operand);
                 }
             }
@@ -1069,8 +1070,6 @@ function codeGenCheckingTerminator(bir:BasicBlock bb, s:CheckingKeyword checking
     }
 }
 
-type SingleShapeMultipleValues decimal|0f;
-
 function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCallExpr expr) returns CodeGenError|ExprEffect {
     string? prefix = expr.prefix;
     bir:FunctionRef func;
@@ -1123,9 +1122,7 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
         pos
     };
     curBlock.insns.push(call);
-    t:WrappedSingleValue? returnShape = t:singleShape(returnType);
-    bir:Operand result = returnShape == () || returnShape.value is SingleShapeMultipleValues ? reg : returnShape.value;
-    return { result, block: curBlock };    
+    return { result: constifyRegister(reg), block: curBlock };    
 }
 
 function validArgumentCount(ExprContext cx, bir:FunctionRef func, int nSuppliedArgs, Position pos) returns CodeGenError? {
@@ -1303,7 +1300,7 @@ function arithmeticConstOperand(bir:ConstOperand operand) returns ArithmeticOper
     else if operand is float {
         return [t:UT_FLOAT, operand];
     }
-    else if operand is decimal {
+    else if operand is bir:DecimalConstOperand {
         return [t:UT_DECIMAL, operand];
     }
     else {
@@ -1313,7 +1310,7 @@ function arithmeticConstOperand(bir:ConstOperand operand) returns ArithmeticOper
 
 function operandLangLibModuleName(bir:Operand operand) returns LangLibModuleName? {
     t:UniformTypeCode? utc;
-    if operand is bir:ConstOperand {
+    if operand is t:SingleValue {
         utc = t:constUniformTypeCode(operand);
     }
     else {
@@ -1338,15 +1335,16 @@ function operandLangLibModuleName(bir:Operand operand) returns LangLibModuleName
 }
 
 function operandSemType(t:Context tc, bir:Operand operand) returns t:SemType {
-    return operand is bir:Register ? operand.semType : t:singleton(tc, operand);
+    return operand is bir:Register|bir:DecimalConstOperand ? operand.semType : t:singleton(tc, operand);
 }
 
+// Returns non-nil if operand has singleton type.
 function operandSingleShape(bir:Operand operand) returns t:WrappedSingleValue? {
-    return operand is bir:Register ? t:singleShape(operand.semType) : { value: operand };
+    return operand is bir:Register|bir:DecimalConstOperand ? t:singleShape(operand.semType) : { value: operand };
 }
 
 function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? {
-    return operand is decimal ? operand : t:singleDecimalShape(operand.semType);
+    return t:singleDecimalShape(operand.semType);
 }
 
 function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
@@ -1358,4 +1356,37 @@ function intOperand(ExprContext cx, bir:Operand operand, s:Expr expr) returns bi
         return operand;
     }
     return cx.semanticErr("expected an int operand", s:range(expr));
+}
+
+function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
+    if operand is bir:DecimalConstOperand {
+        return { value: operand.value };
+    }
+    else if operand !is bir:Register {
+        return { value: operand };
+    }
+    return ();
+}
+
+function constOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
+    return value is decimal ? { value, semType: t:singleton(cx.mod.tc, value) } : value;
+}
+
+function constifyRegister(bir:Register reg) returns bir:Operand {
+    t:SemType ty = reg.semType;
+    t:WrappedSingleValue? wrapped = t:singleShape(ty);
+    if wrapped is () {
+        return reg;
+    }
+    t:SingleValue shape = wrapped.value;
+    // for decimal, we need the register to preserve precision
+    // for 0f, we need the register to preserve the sign
+    // JBUG when written as shape is decimal|0f this succeeds with integer 0
+    if shape is decimal || shape == 0f {
+        return reg;
+    }
+    // JBUG gets a compile error without the `else`
+    else {
+        return shape;
+    }   
 }

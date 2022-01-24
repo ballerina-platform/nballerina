@@ -359,8 +359,8 @@ function buildFloat(llvm:Builder builder, Scaffold scaffold, bir:FloatOperand op
 }
 
 function buildDecimal(llvm:Builder builder, Scaffold scaffold, bir:DecimalOperand operand) returns llvm:Value {
-    if operand is decimal {
-        return buildConstDecimal(builder, scaffold, operand);
+    if operand is bir:DecimalConstOperand {
+        return buildConstDecimal(builder, scaffold, operand.value);
     }
     else {
         return builder.load(scaffold.address(operand));

@@ -324,8 +324,8 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else if operand is float {
         return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, operand)];
     }
-    else if operand is decimal {
-        return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, operand)];
+    else if operand is bir:DecimalConstOperand {
+        return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, operand.value)];
     }
     else if operand == () {
         return [REPR_NIL, buildConstNil()];

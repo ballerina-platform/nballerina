@@ -307,7 +307,7 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Internal?
 }
 
 function operandToSemType(Operand operand) returns t:SemType {
-    if operand is Register {
+    if operand is Register|DecimalConstOperand {
         return operand.semType;
     }
     else {
