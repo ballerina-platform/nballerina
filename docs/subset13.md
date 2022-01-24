@@ -110,9 +110,9 @@ postfix-type-desc =
   | optional-type-desc
   | array-type-desc
 
-optional-type-desc = postfix-type-desc [ "?" ]
+optional-type-desc = postfix-type-desc "?"
 
-array-type-desc = optional-type-desc "[" "]"
+array-type-desc = postfix-type-desc "[" "]"
 
 primary-type-desc =
   builtin-type-name
