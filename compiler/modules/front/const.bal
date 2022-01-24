@@ -113,7 +113,10 @@ function resolveConstIntExpr(ModuleSymbols mod, s:ModuleLevelDefn defn, s:Expr e
 }
 
 function foldExpr(FoldContext cx, t:SemType? expectedType, s:Expr expr) returns s:Expr|FoldError {
-    if expr is s:BinaryArithmeticExpr {
+    if expr is s:GroupingExpr {
+        return foldExpr(cx, expectedType, expr.innerExpr);
+    }
+    else if expr is s:BinaryArithmeticExpr {
         return foldBinaryArithmeticExpr(cx, expectedType, expr);
     } 
     else if expr is s:BinaryBitwiseExpr {

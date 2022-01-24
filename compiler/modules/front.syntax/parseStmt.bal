@@ -148,13 +148,13 @@ function finishIdentifierStmt(Tokenizer tok, string name1, Position startPos, Po
         name = name1;
         prefix = ();
     }
-    Token? cur = tok.current();
-    if cur == "(" {
+    if tok.current() == "(" {
         FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, name, startPos);
         return finishCallStmt(tok, expr, startPos);
     }
     Position endPos = tok.previousEndPos();
     LExpr lExpr = { startPos, endPos, name, qNamePos: startPos, prefix };
+    Token? cur = tok.current();
     while true {
         Position opPos = tok.currentStartPos();
         if cur == "." {

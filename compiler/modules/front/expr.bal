@@ -54,10 +54,10 @@ type RegExprEffect record {|
 // caused by the use of a boolean expression in a condition.
 type ExprNarrowing record {|
     Binding binding;
-    t:SemType ifTrue;
-    t:SemType ifFalse;
-    bir:InsnRef testInsn;
-    boolean negated = false;
+    t:SemType typeIfTrue;
+    t:SemType typeIfFalse;
+    bir:Result basisIfTrue;
+    bir:Result basisIfFalse;
 |};
 
 class ExprContext {
@@ -105,12 +105,30 @@ class ExprContext {
     function stmtContext() returns StmtContext|CodeGenError {
         return self.sc;
     }
+
+    function createNarrowedExprContext(bir:BasicBlock bb, Binding binding, t:SemType narrowedType, bir:Result basis, Position pos) returns ExprContext {
+        bir:Register narrowed = self.sc.createVarRegister(narrowedType, binding.name, pos);
+        bir:CondNarrowInsn insn = {
+            result: narrowed,
+            operand: binding.reg,
+            basis,
+            pos
+        };
+        bb.insns.push(insn);
+        Binding bindings = {
+            name: binding.name,
+            reg: narrowed,
+            isFinal: binding.isFinal,
+            prev: self.env.bindings,
+            unnarrowed: unnarrowBinding(binding)
+        };
+        return new(self.sc, { bindings, assignments: self.env.assignments });
+    }
 }
 
 function codeGenExprForBoolean(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|BooleanExprEffect {
     var { result, block, narrowing } = check codeGenExpr(cx, bb, t:BOOLEAN, expr);
-    if result is bir:BooleanOperand {
-        // rest of the type checking is in the verifier
+    if result is boolean || (result is bir:Register && t:isSubtypeSimple(result.semType, t:BOOLEAN)) {
         return { result, block, narrowing };
     }
     return cx.semanticErr("expected boolean operand", s:range(expr));
@@ -123,8 +141,7 @@ function codeGenExprForInt(ExprContext cx, bir:BasicBlock bb, s:Expr expr) retur
 
 function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|StringExprEffect {
     var { result, block } = check codeGenExpr(cx, bb, t:STRING, expr);
-    if result is bir:StringOperand {
-        // rest of the type checking is in the verifier
+    if result is string || (result is bir:Register && t:isSubtypeSimple(result.semType, t:STRING)) {
         return { result, block };
     }
     return cx.semanticErr("expected string operand", s:range(expr));
@@ -132,6 +149,9 @@ function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) re
 
 function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr) returns CodeGenError|ExprEffect {
     match expr {
+        var { innerExpr } => {
+            return codeGenExpr(cx, bb, expected, innerExpr);
+        }
         var { opPos: pos, arithmeticOp: op, left, right } => {
             var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, expected, left, right, bb, pos);
             return codeGenNilLiftResult(cx, check codeGenArithmeticBinaryExpr(cx, nextBlock, op, pos, lhs, rhs), ifNilBlock, pos);
@@ -162,7 +182,13 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
             bir:BooleanNotInsn insn = { operand, result, pos };
             nextBlock.insns.push(insn);
             if narrowing != () {
-                narrowing.negated = !narrowing.negated;
+                t:SemType tmpType = narrowing.typeIfTrue;
+                narrowing.typeIfTrue = narrowing.typeIfFalse;
+                narrowing.typeIfFalse = tmpType;
+
+                bir:Result tmpBasis = narrowing.basisIfTrue;
+                narrowing.basisIfTrue = narrowing.basisIfTrue;
+                narrowing.basisIfFalse = tmpBasis;
             }
             return { result, block: nextBlock, narrowing };
         }
@@ -170,9 +196,7 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
             return codeGenCheckingExpr(cx, bb, expected, checkingKeyword, operand, pos);
         }
         var { opPos: pos, logicalOp: op, left, right } => {
-            var { result: l, block: block1 } = check codeGenExprForBoolean(cx, bb, left);
-            var { result: r, block: nextBlock } = check codeGenExprForBoolean(cx, block1, right);
-            return codeGenLogicalBinaryExpr(cx, nextBlock, op, pos, l, r);
+            return codeGenLogicalBinaryExpr(cx, bb, op, pos, left, right);
         }
         var { opPos: pos, bitwiseOp: op, left, right } => {
             var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, expected, left, right, bb, pos);
@@ -405,19 +429,19 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
 }
 
 function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position pos, bir:Operand operand) returns CodeGenError|ExprEffect {
-    TypedOperand? typed = typedOperand(operand);
+    ArithmeticOperand? arith = arithmeticOperand(operand);
     bir:Register result;
     bir:Insn insn;
-    if typed is ["int", bir:IntOperand] {
-        bir:IntOperand intOperand = typed[1];
+    if arith is [t:UT_INT, bir:IntOperand] {
+        bir:IntOperand intOperand = arith[1];
         if intOperand is int {
             return { result: check intNegateEval(cx, pos, intOperand), block: nextBlock };
         }
         result = cx.createTmpRegister(t:INT, pos);
         insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [0, intOperand], result };
     }
-    else if typed is ["float", bir:FloatOperand] {
-        bir:FloatOperand floatOperand = typed[1];
+    else if arith is [t:UT_FLOAT, bir:FloatOperand] {
+        bir:FloatOperand floatOperand = arith[1];
         t:SemType resultType = t:FLOAT;
         float? shape = floatOperandSingleShape(floatOperand);
         if shape != () {
@@ -430,8 +454,8 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
         result = cx.createTmpRegister(resultType, pos);
         insn = <bir:FloatNegateInsn> { operand: <bir:Register>floatOperand, result, pos };
     }
-    else if typed is ["decimal", bir:DecimalOperand] {
-        bir:DecimalOperand decimalOperand = typed[1];
+    else if arith is [t:UT_DECIMAL, bir:DecimalOperand] {
+        bir:DecimalOperand decimalOperand = arith[1];
         decimal? shape = decimalOperandSingleShape(decimalOperand);
         t:SemType resultType;
         if shape != () {
@@ -457,7 +481,7 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
 }
 
 function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:ArithmeticBinaryOp op, Position pos, bir:Operand lhs, bir:Operand rhs) returns CodeGenError|ExprEffect {
-    TypedOperandPair? pair = typedOperandPair(lhs, rhs);
+    ArithmeticOperandPair? pair = arithmeticOperandPair(lhs, rhs);
     bir:Register result;
     if pair is IntOperandPair {
         readonly & bir:IntOperand[2] operands = pair[1];
@@ -530,16 +554,113 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
     return { result, block: bb };
 }
 
-function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLogicalOp op, Position pos, bir:BooleanOperand lhs, bir:BooleanOperand rhs) returns CodeGenError|ExprEffect {
-    if lhs is boolean && rhs is boolean {
-        return { result: logicalEval(op, lhs, rhs), block: bb };
+function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLogicalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
+    boolean isOr = op == "||";
+    var { result: lhs, block: block1, narrowing: lhsNarrowing } = check codeGenExprForBoolean(cx, bb, left);
+    if lhs is boolean {
+        boolean shortCircuit = isOr;
+        if lhs == shortCircuit {
+            return <ExprEffect>{ result: lhs, block: bb };
+        }
+        else {
+            return codeGenExprForBoolean(cx, block1, right);
+        }
     }
-    return cx.unimplementedErr(`not implemented: logical expressions on non-constant values`, pos);
+
+    var evalRightBlock = cx.createBasicBlock();
+    var shortCircuitBlock = cx.createBasicBlock();
+    // JBUG var instead tuple type doesn't work
+    [bir:BasicBlock, bir:BasicBlock] [ifTrue, ifFalse] = isOr ? [shortCircuitBlock, evalRightBlock] : [evalRightBlock, shortCircuitBlock];
+    bir:CondBranchInsn condBranch = { operand: lhs, ifTrue: ifTrue.label, ifFalse: ifFalse.label, pos };
+    block1.insns.push(condBranch);
+    ExprContext rhsCx;
+    if lhsNarrowing != () {
+        if isOr {
+            rhsCx = cx.createNarrowedExprContext(evalRightBlock, lhsNarrowing.binding, lhsNarrowing.typeIfFalse, lhsNarrowing.basisIfFalse, pos);
+        }
+        else {
+            rhsCx = cx.createNarrowedExprContext(evalRightBlock, lhsNarrowing.binding, lhsNarrowing.typeIfTrue, lhsNarrowing.basisIfTrue, pos);
+        }
+    }
+    else {
+        rhsCx = cx;
+    }
+    var { result: rhs, block: evalRightBlock2, narrowing: rhsNarrowing } = check codeGenExprForBoolean(rhsCx, evalRightBlock, right);
+    ExprNarrowing? narrowing;
+    if lhsNarrowing == () && rhsNarrowing == () {
+        narrowing = ();
+    }
+    else if isOr {
+        if lhsNarrowing != () && rhsNarrowing != () {
+            if lhsNarrowing.binding.name != rhsNarrowing.binding.name {
+                return cx.unimplementedErr("not implemented: logical expr that narrows multiple variables", pos=pos);
+            }
+            narrowing = {
+                binding: lhsNarrowing.binding,
+                typeIfTrue: t:union(lhsNarrowing.typeIfTrue, rhsNarrowing.typeIfTrue),
+                typeIfFalse: t:intersect(lhsNarrowing.typeIfFalse, rhsNarrowing.typeIfFalse),
+                basisIfTrue: { or: [lhsNarrowing.basisIfTrue, rhsNarrowing.basisIfTrue] },
+                basisIfFalse: { and: [lhsNarrowing.basisIfFalse, rhsNarrowing.basisIfFalse] }
+            };
+        }
+        else {
+            ExprNarrowing n = <ExprNarrowing>(lhsNarrowing ?: rhsNarrowing);
+            narrowing = {
+                binding: n.binding,
+                typeIfTrue: n.binding.reg.semType, // same as t:union(n.typeIfTrue, n.binding.reg.semType)
+                typeIfFalse: n.typeIfFalse, // same as t:intersect(n.typeIfFalse, n.binding.reg.semType)
+                basisIfTrue: n.basisIfTrue,
+                basisIfFalse: n.basisIfFalse
+            };
+        }
+    }
+    else {
+        if lhsNarrowing != () && rhsNarrowing != () {
+            if lhsNarrowing.binding.name != rhsNarrowing.binding.name {
+                return cx.unimplementedErr("not implemented: logical expr that narrows multiple variables", pos=pos);
+            }
+            narrowing = {
+                binding: lhsNarrowing.binding,
+                typeIfTrue: t:intersect(lhsNarrowing.typeIfTrue, rhsNarrowing.typeIfTrue),
+                typeIfFalse: t:union(lhsNarrowing.typeIfFalse, t:intersect(lhsNarrowing.typeIfTrue, rhsNarrowing.typeIfFalse)),
+                basisIfTrue: { and: [lhsNarrowing.basisIfTrue, rhsNarrowing.basisIfTrue] },
+                basisIfFalse: { or: [lhsNarrowing.basisIfFalse, { and: [rhsNarrowing.basisIfTrue, rhsNarrowing.basisIfFalse] }] }
+            };
+        }
+        else {
+            ExprNarrowing n = <ExprNarrowing>(lhsNarrowing ?: rhsNarrowing);
+            narrowing = {
+                binding: n.binding,
+                typeIfTrue: n.typeIfTrue, // same as t:intersect(n.typeIfTrue, n.binding.reg.semType)
+                typeIfFalse: n.binding.reg.semType, // same as t:union(n.typeIfFalse, n.binding.reg.semType)
+                basisIfTrue: n.basisIfTrue,
+                basisIfFalse: n.basisIfFalse
+            };
+        }
+    }
+
+    bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:BasicBlock joinBlock = cx.createBasicBlock();
+    bir:AssignInsn lhsAssignInsn = { result, operand: lhs, pos };
+    shortCircuitBlock.insns.push(lhsAssignInsn);
+    bir:BranchInsn lhsBranchInsn = { dest: joinBlock.label, pos };
+    shortCircuitBlock.insns.push(lhsBranchInsn);
+    bir:AssignInsn rhsAssignInsn = { result, operand: rhs, pos };
+    evalRightBlock2.insns.push(rhsAssignInsn);
+    bir:BranchInsn rhsBranchInsn = { dest: joinBlock.label, pos };
+    evalRightBlock2.insns.push(rhsBranchInsn);
+    return { result, block: joinBlock, narrowing };
 }
 
 function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBitwiseOp op, Position pos, bir:IntOperand lhs, bir:IntOperand rhs) returns CodeGenError|ExprEffect {
     if lhs is int && rhs is int {
         return { result: bitwiseEval(op, lhs, rhs), block: bb };
+    }
+    if lhs is bir:Register && !t:isSubtypeSimple(lhs.semType, t:INT) {
+        return cx.semanticErr("LHS is not an int", pos);
+    }
+    if rhs is bir:Register && !t:isSubtypeSimple(rhs.semType, t:INT) {
+        return cx.semanticErr("RHS is not an int", pos);
     }
     t:SemType lt = bitwiseOperandType(lhs);
     t:SemType rt = bitwiseOperandType(rhs);
@@ -762,17 +883,18 @@ function codeGenEqualityExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
     }
     else {
         var [binding, value] = narrowingCompare;
-        t:SemType ifTrue = t:singleton(tc, value);
-        t:SemType ifFalse = t:roDiff(tc, binding.reg.semType, ifTrue);
+        t:SemType typeIfTrue = t:singleton(tc, value);
+        t:SemType typeIfFalse = t:roDiff(tc, binding.reg.semType, typeIfTrue);
         if negated {
-            [ifTrue, ifFalse] = [ifFalse, ifTrue];
+            [typeIfTrue, typeIfFalse] = [typeIfFalse, typeIfTrue];
         }
+        bir:InsnRef insnRef = bir:lastInsnRef(nextBlock);
         ExprNarrowing narrowing = {
             binding,
-            ifTrue,
-            ifFalse,
-            testInsn: bir:lastInsnRef(nextBlock),
-            negated: false
+            typeIfTrue,
+            typeIfFalse,
+            basisIfTrue: { insn: insnRef, result: true },
+            basisIfFalse: { insn: insnRef, result: false }
         };
         return { result, block: nextBlock, narrowing };
     }
@@ -904,12 +1026,14 @@ function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
         [intersect, diff] = [diff, intersect];
     }
     ExprNarrowing? narrowing = ();
+    bir:InsnRef insnRef = bir:lastInsnRef(nextBlock);
     if binding != () {
         narrowing = {
             binding,
-            ifTrue: intersect,
-            ifFalse: diff,
-            testInsn: bir:lastInsnRef(nextBlock)
+            typeIfTrue: intersect,
+            typeIfFalse: diff,
+            basisIfTrue: { insn: insnRef, result: true },
+            basisIfFalse: { insn: insnRef, result: false }
         };
     }
     return { result, block: nextBlock, narrowing };   
@@ -1041,12 +1165,9 @@ function genImportedFunctionRef(ExprContext cx, string prefix, string identifier
     }
 }
 
-type LangLibModuleName "int"|"boolean"|"string"|"array"|"map"|"error";
-
 function getLangLibFunctionRef(ExprContext cx, bir:Operand target, string methodName, Position|Range nameRange) returns bir:FunctionRef|CodeGenError {
-    TypedOperand? t = typedOperand(target);
-    if t != () && t[0] is LangLibModuleName {
-        string moduleName = t[0];
+    LangLibModuleName? moduleName = operandLangLibModuleName(target);
+    if moduleName != () {
         bir:FunctionSignature? erasedSignature = getLangLibFunction(moduleName, methodName);
         if erasedSignature == () {
             return cx.unimplementedErr(`unrecognized lang library function ${moduleName + ":" + methodName}`, nameRange);
@@ -1057,7 +1178,7 @@ function getLangLibFunctionRef(ExprContext cx, bir:Operand target, string method
                 identifier: methodName
             };
             bir:FunctionSignature signature = erasedSignature;
-            if t[0] == "array" {
+            if moduleName == "array" {
                 signature = instantiateArrayFunctionSignature(cx.mod.tc, signature, (<bir:Register>target).semType);
             }
             return { symbol, signature, erasedSignature }; 
@@ -1119,89 +1240,99 @@ function bitwiseOperandType(bir:IntOperand operand) returns t:SemType {
     return t:widenUnsigned(t);
 }
 
-type IntOperandPair readonly & ["int", [bir:IntOperand, bir:IntOperand]];
-type FloatOperandPair readonly & ["float", [bir:FloatOperand, bir:FloatOperand]];
-type DecimalOperandPair readonly & ["decimal", [bir:DecimalOperand, bir:DecimalOperand]];
-type StringOperandPair readonly & ["string", [bir:StringOperand, bir:StringOperand]];
+type IntOperandPair readonly & [t:UT_INT, [bir:IntOperand, bir:IntOperand]];
+type FloatOperandPair readonly & [t:UT_FLOAT, [bir:FloatOperand, bir:FloatOperand]];
+type DecimalOperandPair readonly & [t:UT_DECIMAL, [bir:DecimalOperand, bir:DecimalOperand]];
+type StringOperandPair readonly & [t:UT_STRING, [bir:StringOperand, bir:StringOperand]];
 
-type TypedOperandPair IntOperandPair|DecimalOperandPair|FloatOperandPair|StringOperandPair;
+type ArithmeticOperandPair IntOperandPair|DecimalOperandPair|FloatOperandPair|StringOperandPair;
 
-// XXX should use t:UT_* instead of strings here (like the ordering stuff)
-type TypedOperand readonly & (["array", bir:Register]
-                              |["map", bir:Register]
-                              |["error", bir:Register]
-                              |["string", bir:StringOperand]
-                              |["float", bir:FloatOperand]
-                              |["decimal", bir:DecimalOperand]
-                              |["int", bir:IntOperand]
-                              |["boolean", bir:BooleanOperand]
-                              |["nil", bir:NilOperand]);
+type ArithmeticOperand readonly & ([t:UT_STRING, bir:StringOperand]
+                                   |[t:UT_FLOAT, bir:FloatOperand]
+                                   |[t:UT_DECIMAL, bir:DecimalOperand]
+                                   |[t:UT_INT, bir:IntOperand]);
 
-function typedOperandPair(bir:Operand lhs, bir:Operand rhs) returns TypedOperandPair? {
-    TypedOperand? l = typedOperand(lhs);
-    TypedOperand? r = typedOperand(rhs);
-    if l is ["int", bir:IntOperand] && r is ["int", bir:IntOperand] {
-        return ["int", [l[1], r[1]]];
+function arithmeticOperandPair(bir:Operand lhs, bir:Operand rhs) returns ArithmeticOperandPair? {
+    ArithmeticOperand? l = arithmeticOperand(lhs);
+    ArithmeticOperand? r = arithmeticOperand(rhs);
+    if l is [t:UT_INT, bir:IntOperand] && r is [t:UT_INT, bir:IntOperand] {
+        return [t:UT_INT, [l[1], r[1]]];
     }
-    if l is ["float", bir:FloatOperand] && r is ["float", bir:FloatOperand] {
-        return ["float", [l[1], r[1]]];
+    if l is [t:UT_FLOAT, bir:FloatOperand] && r is [t:UT_FLOAT, bir:FloatOperand] {
+        return [t:UT_FLOAT, [l[1], r[1]]];
     }
-    if l is ["decimal", bir:DecimalOperand] && r is ["decimal", bir:DecimalOperand] {
-        return ["decimal", [l[1], r[1]]];
+    if l is [t:UT_DECIMAL, bir:DecimalOperand] && r is [t:UT_DECIMAL, bir:DecimalOperand] {
+        return [t:UT_DECIMAL, [l[1], r[1]]];
     }
-    if l is ["string", bir:StringOperand] && r is ["string", bir:StringOperand] {
-        return ["string", [l[1], r[1]]];
+    if l is [t:UT_STRING, bir:StringOperand] && r is [t:UT_STRING, bir:StringOperand] {
+        return [t:UT_STRING, [l[1], r[1]]];
     }
     return ();
 }
 
-function typedOperand(bir:Operand operand) returns TypedOperand? {
+function arithmeticOperand(bir:Operand operand) returns ArithmeticOperand? {
     if operand is bir:Register {
-        if operand.semType === t:NIL {
-            return ["nil", operand];
+        t:UniformTypeCode? utc = t:uniformTypeCode(t:widenToUniformTypes(operand.semType));
+        // JBUG should be able to do this with a single return
+        if utc == t:UT_INT {
+            return [utc, operand];
         }
-        else if t:isSubtypeSimple(operand.semType, t:BOOLEAN) {
-            return ["boolean", operand];
+        if utc == t:UT_FLOAT {
+            return [utc, operand];
         }
-        else if t:isSubtypeSimple(operand.semType, t:INT) {
-            return ["int", operand];
+        if utc == t:UT_DECIMAL {
+            return [utc, operand];
         }
-        else if t:isSubtypeSimple(operand.semType, t:FLOAT) {
-            return ["float", operand];
+        if utc == t:UT_STRING {
+            return [utc, operand];
         }
-        else if t:isSubtypeSimple(operand.semType, t:DECIMAL) {
-            return ["decimal", operand];
-        }
-        else if t:isSubtypeSimple(operand.semType, t:STRING) {
-            return ["string", operand];
-        }
-        else if t:isSubtypeSimple(operand.semType, t:LIST) {
-            return ["array", operand];
-        }
-        else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
-            return ["map", operand];
-        }
-        else if t:isSubtypeSimple(operand.semType, t:ERROR) {
-            return ["error", operand];
-        }
-    }
-    else if operand is string {
-        return ["string", operand];
-    }
-    else if operand is int {
-        return ["int", operand];
-    }
-    else if operand is float {
-        return ["float", operand];
-    }
-    else if operand is decimal {
-        return ["decimal", operand];
-    }
-    else if operand is boolean {
-        return ["boolean", operand];
+        return ();
     }
     else {
-        return ["nil", operand];
+        return arithmeticConstOperand(operand);
+    }
+}
+
+function arithmeticConstOperand(bir:ConstOperand operand) returns ArithmeticOperand? {
+    if operand is string {
+        return [t:UT_STRING, operand];
+    }
+    else if operand is int {
+        return [t:UT_INT, operand];
+    }
+    else if operand is float {
+        return [t:UT_FLOAT, operand];
+    }
+    else if operand is decimal {
+        return [t:UT_DECIMAL, operand];
+    }
+    else {
+        return ();
+    }
+}
+
+function operandLangLibModuleName(bir:Operand operand) returns LangLibModuleName? {
+    t:UniformTypeCode? utc;
+    if operand is bir:ConstOperand {
+        utc = t:constUniformTypeCode(operand);
+    }
+    else {
+        t:SemType semType = operand.semType;
+        if t:isSubtypeSimple(operand.semType, t:LIST) {
+            return "array";
+        }
+        else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
+            return "map";
+        }
+        utc = t:uniformTypeCode(t:widenToUniformTypes(semType));
+    }
+    match utc {
+        t:UT_BOOLEAN => { return "boolean"; }
+        t:UT_INT => { return "int"; }
+        t:UT_FLOAT => { return "float"; }
+        t:UT_DECIMAL => { return "decimal"; }
+        t:UT_STRING => { return "string"; }
+        t:UT_ERROR => { return "error"; }
     }
     return ();
 }
@@ -1223,7 +1354,7 @@ function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
 }
 
 function intOperand(ExprContext cx, bir:Operand operand, s:Expr expr) returns bir:IntOperand|CodeGenError {
-    if operand is bir:IntOperand {
+    if operand is int || (operand is bir:Register && t:isSubtypeSimple(operand.semType, t:INT)) {
         return operand;
     }
     return cx.semanticErr("expected an int operand", s:range(expr));

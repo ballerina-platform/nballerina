@@ -268,17 +268,16 @@ function codeGenScope(StmtContext cx, bir:BasicBlock bb, Environment initialEnv,
         applyEffect(env, narrowings, effect);
     }
     else {
-        int lastStmtIndex = scope.stmts.length() - 1;
-        int stmtIndex = 0;
+        StmtEffect? previousEffect = ();
         foreach var stmt in scope.stmts {
+            // add narrowing to previous stmt
+            if previousEffect != () {
+                addNarrowings(cx, <bir:BasicBlock>previousEffect.block, env, previousEffect.narrowings, stmt.startPos);
+            }
             StmtEffect effect = check codeGenStmt(cx, curBlock, env, stmt);
             curBlock = effect.block;
+            previousEffect = curBlock != () ? effect : ();
             applyEffect(env, narrowings, effect);
-            // Compound statements will gen narrowings post-block, no need to narrow after last stmt
-            if curBlock != () && stmtIndex != lastStmtIndex {
-                addNarrowings(cx, curBlock, env, effect.narrowings, stmt.endPos);
-            }
-            stmtIndex += 1;
         }
     }
     check unusedLocalVariables(cx, env, initialEnv.bindings);
@@ -826,13 +825,12 @@ function stmtNarrowingFromExprNarrowing(ExprNarrowing? narrowing, boolean condit
         return ();
     }
     else {
-        boolean insnResult = condition == !narrowing.negated;
         // JBUG #33303 without parentheses this gets a parse error
-        t:SemType narrowedType = insnResult ? (narrowing.ifTrue) : narrowing.ifFalse;
+        t:SemType narrowedType = condition ? (narrowing.typeIfTrue) : narrowing.typeIfFalse;
         if narrowedType === t:NEVER {
             panic err:impossible("narrowed to never type");
         }
-        bir:Result basis = { insn: narrowing.testInsn, result: insnResult };
+        bir:Result basis = condition ? narrowing.basisIfTrue : narrowing.basisIfFalse;
         return { basis, binding: narrowing.binding, ifCompletesNormally: narrowedType };
     }
 }
@@ -881,13 +879,13 @@ function codeGenReturnStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
 function codeGenPanicStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:PanicStmt stmt) returns CodeGenError|StmtEffect {
     var { panicExpr } = stmt;
     var { result: operand, block: nextBlock } = check cx.codeGenExpr(startBlock, env, t:ERROR, panicExpr);
-    if operand is bir:Register {
+    if operand is bir:Register && t:isSubtypeSimple(operand.semType, t:ERROR) {
         bir:PanicInsn insn = { operand, pos: stmt.kwPos };
         nextBlock.insns.push(insn);
         return { block: () };
     }
     else {
-        return cx.semanticErr("argument to error must be a string", stmt.startPos);
+        return cx.semanticErr("argument to panic must be a error", stmt.startPos);
     }
 }
 

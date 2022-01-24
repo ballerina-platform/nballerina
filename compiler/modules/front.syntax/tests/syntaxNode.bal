@@ -250,7 +250,10 @@ function syntaxNodeFromCallStmt(CallStmt stmt) returns NonTerminalSyntaxNode {
 }
 
 function syntaxNodeFromExpr(Expr expr) returns SyntaxNode {
-    if expr is TerminalExpr {
+    if expr is GroupingExpr {
+        return syntaxNodeFromGroupingExpr(expr);
+    }
+    else if expr is TerminalExpr {
         return syntaxNodeFromTerminalExpr(expr);
     }
     else if expr is BinaryExpr {
@@ -292,6 +295,12 @@ function syntaxNodeFromExpr(Expr expr) returns SyntaxNode {
     else {
         return syntaxNodeFromUnaryExpr(expr);
     }
+}
+
+function syntaxNodeFromGroupingExpr(GroupingExpr expr) returns NonTerminalSyntaxNode {
+    return nonTerminalSyntaxNode(expr, { token: "(", pos: expr.startPos },
+                                       syntaxNodeFromExpr(expr.innerExpr),
+                                       { token: ")" });
 }
 
 function syntaxNodeFromRangeExpr(RangeExpr expr) returns NonTerminalSyntaxNode {
@@ -438,7 +447,10 @@ function syntaxNodeFromField(Field f) returns SyntaxNode {
 }
 
 function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
-    if td is TerminalTypeDesc {
+    if td is GroupingTypeDesc {
+        return syntaxNodeFromGroupingTypeDesc(td);
+    }
+    else if td is TerminalTypeDesc {
         return syntaxNodeFromTerminalTypeDesc(td);
     }
     else if td is TupleTypeDesc {
@@ -471,6 +483,12 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
     else {
         return syntaxNodeFromUnaryTypeDesc(td);
     }
+}
+
+function syntaxNodeFromGroupingTypeDesc(GroupingTypeDesc td) returns NonTerminalSyntaxNode {
+    return nonTerminalSyntaxNode(td, { token: "(", pos: td.startPos },
+                                     syntaxNodeFromTypeDesc(td.innerTd),
+                                     { token: ")" });
 }
 
 function syntaxNodeFromTupleTypeDesc(TupleTypeDesc td) returns NonTerminalSyntaxNode {

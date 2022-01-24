@@ -60,10 +60,14 @@ function testCompileEU(string path, string kind) returns file:Error|io:Error? {
         else {
             boolean isE = kind[0] == "e";
             if isE {
-                if err is err:Unimplemented {
+                if err is err:Internal {
                     io:println(err);
+                    test:assertFail("invalid error should not happen" + path);
                 }
-                test:assertFalse(err is err:Unimplemented, "unimplemented error on E test" + path);
+                else if err is err:Unimplemented {
+                    io:println(err);
+                    test:assertFail("unimplemented error on E test" + path);
+                }
             }
             // io:println U errors are reported as semantic errors
             else if !err.detail().message.includes("'io:println'") {
