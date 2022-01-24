@@ -263,12 +263,12 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         }
         // Int literal
         var { digits, base, startPos: pos } => {
-            bir:ConstOperand result = constOperand(cx, check intLiteralValue(cx, expected, base, digits, pos));
+            bir:ConstOperand result = singletonOperand(cx, check intLiteralValue(cx, expected, base, digits, pos));
             return { result, block: bb };
         }
         // FP literal
         var { untypedLiteral, typeSuffix, startPos: pos } => {
-            bir:ConstOperand result = constOperand(cx, check fpLiteralValue(cx, expected, untypedLiteral, typeSuffix, pos));
+            bir:ConstOperand result = singletonOperand(cx, check fpLiteralValue(cx, expected, untypedLiteral, typeSuffix, pos));
             return { result, block: bb };
         }
     }
@@ -447,7 +447,7 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
         if shape != () {
             float resultShape = -shape; // shouldn't ever panic
             if shape != 0f || floatOperand !is bir:Register {
-                return { result: constOperand(cx, resultShape), block: nextBlock };
+                return { result: singletonOperand(cx, resultShape), block: nextBlock };
             }
             resultType = t:singleton(cx.mod.tc, resultShape);
         }
@@ -464,7 +464,7 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
                 resultType = t:singleton(cx.mod.tc, resultShape);
             }
             else {
-                return { result: constOperand(cx, resultShape), block: nextBlock };
+                return { result: singletonOperand(cx, resultShape), block: nextBlock };
             }
         }
         else {
@@ -526,7 +526,7 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
         if leftShape != () && rightShape != () {
             decimal resultShape = check decimalArithmeticEval(cx, pos, op, leftShape, rightShape);
             if lhs is bir:DecimalConstOperand && rhs is bir:DecimalConstOperand {
-                return { result: constOperand(cx, resultShape), block: bb };
+                return { result: singletonOperand(cx, resultShape), block: bb };
             }
             resultType = t:singleton(cx.mod.tc, resultShape);
         }
@@ -799,7 +799,7 @@ function codeGenConstValue(ExprContext cx, bir:BasicBlock bb, t:SemType? expecte
     t:SemType? multiSemType = cvExpr.multiSemType;
     SimpleConst value = cvExpr.value;
     if multiSemType == () {
-        return { result: constOperand(cx, value), block: bb };
+        return { result: singletonOperand(cx, value), block: bb };
     }
     else if value is float|decimal {
         return { result: { value, semType: multiSemType }, block: bb };
@@ -915,13 +915,13 @@ function codeGenVarRefExpr(ExprContext cx, s:VarRefExpr ref, t:SemType? expected
     Binding? binding;
     string? prefix = ref.prefix;
     if prefix != () {
-        result = constOperand(cx, check lookupImportedConst(cx.mod, cx.defn, prefix, ref.name));
+        result = singletonOperand(cx, check lookupImportedConst(cx.mod, cx.defn, prefix, ref.name));
         binding = ();
     }
     else {
         var v = check cx.lookupLocalVarRef(ref.name, ref.startPos);
         if v is t:SingleValue {
-            result = constOperand(cx, v);
+            result = singletonOperand(cx, v);
             binding = ();
         }
         else if v is bir:FunctionRef {
@@ -955,13 +955,13 @@ function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
             }
             else if toNumType == t:FLOAT {
                 if shape is int|decimal {
-                    operand = constOperand(cx, <float>shape);
+                    operand = singletonOperand(cx, <float>shape);
                     fromType = operandSemType(cx.mod.tc, operand);
                 }
             }
             else {
                 if shape is int|float {
-                    operand = constOperand(cx, check convertToDecimalEval(cx, tcExpr.opPos, shape));
+                    operand = singletonOperand(cx, check convertToDecimalEval(cx, tcExpr.opPos, shape));
                     fromType = operandSemType(cx.mod.tc, operand);
                 }
             }
@@ -1372,7 +1372,7 @@ function floatOperandConstValue(bir:FloatOperand operand) returns float? {
     return operand is bir:FloatConstOperand ? operand.value : ();
 }
 
-function constOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
+function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
     return value is decimal|float ? { value, semType: t:singleton(cx.mod.tc, value) } : value;
 }
 
