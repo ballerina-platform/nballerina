@@ -393,7 +393,7 @@ class MappingPairing {
     private function curName2() returns string => self.names2[self.i2];
 }
 
-function bddMappingMemberType(Context cx, Bdd b, string? key, SemType accum) returns SemType {
+function bddMappingMemberType(Context cx, Bdd b, string|SemType? key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
     }
@@ -407,8 +407,21 @@ function bddMappingMemberType(Context cx, Bdd b, string? key, SemType accum) ret
 }
 
 
-function mappingAtomicMemberType(MappingAtomicType atomic, string? key) returns SemType {
-    if key != () {
+function mappingAtomicMemberType(MappingAtomicType atomic, string|SemType? key) returns SemType {
+    if key is ComplexSemType {
+        SubtypeData subtypeData = getComplexSubtypeData(key, UT_STRING);
+        SemType m = NEVER;
+        foreach var i in 0 ..< atomic.names.length() {
+            if stringSubtypeContains(subtypeData, atomic.names[i]) {
+                m = union(m, atomic.types[i]);
+            }
+        }
+        if stringSubtypeContainsExtra(subtypeData, atomic.names) {
+            m = union(m, atomic.rest);
+        }
+        return m;
+    }
+    else if key is string {
         int? i = atomic.names.indexOf(key);
         if i != () {
             return atomic.types[i];

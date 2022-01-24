@@ -249,6 +249,9 @@ function resolveTestSemtype(t:Context tc, map<t:SemType> m, s:Identifier|s:TypeP
                 if k != () {
                     return t:mappingMemberType(tc, t, k);
                 }
+                else {
+                    return t:mappingMemberType(tc, t, kt);
+                }
             }
             test:assertFail("index for mapping projection must be a string");
         }
