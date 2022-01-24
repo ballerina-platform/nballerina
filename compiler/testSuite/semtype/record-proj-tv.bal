@@ -22,14 +22,24 @@ type C record {|
 
 type IorS int|string;
 type IorSOrB IorS|boolean;
+type IorSorF IorS|float;
 
 const x = "x";
-type XorY "x"|"y";
+const z = "z";
 const other = "other";
+type XorY "x"|"y";
 type NEVER never;
 type BOOLEAN boolean;
+type FLOAT float;
+
 type XorYorOther XorY|other;
 
 // @type AorB[x] = IorS
 // @type AorB[XorY] = IorS
 type AorB A|B;
+
+// @type AorBorC[x] = IorS
+// @type AorBorC[z] = FLOAT
+// @type AorBorC[other] = BOOLEAN
+// @type AorBorC[XorYorOther] = IorSOrB
+type AorBorC AorB|C;
