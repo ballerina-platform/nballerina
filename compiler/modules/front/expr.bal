@@ -446,8 +446,8 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
         float? shape = floatOperandSingleShape(floatOperand);
         if shape != () {
             float resultShape = -shape; // shouldn't ever panic
-            if shape != 0f || shape == operand {
-                return { result: resultShape, block: nextBlock };
+            if shape != 0f || floatOperand !is bir:Register {
+                return { result: constOperand(cx, resultShape), block: nextBlock };
             }
             resultType = t:singleton(cx.mod.tc, resultShape);
         }
@@ -499,24 +499,24 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
         t:SemType resultType = t:FLOAT;
         float? leftShape = floatOperandSingleShape(operands[0]);
         float? rightShape = floatOperandSingleShape(operands[1]);
-        if leftShape != () && rightShape != () && !(op == "/" && rightShape == 0f) {
+        if leftShape != () && rightShape != () {
             float resultShape = floatArithmeticEval(op, leftShape, rightShape);
-            // only 0f shape has multiple values
-            if resultShape != 0f || (leftShape == lhs && rightShape == rhs) {
-                return { result: resultShape, block: bb };
+            boolean isConst = lhs is bir:FloatConstOperand && rhs is bir:FloatConstOperand;
+            if op != "/" || rightShape != 0f {
+                resultType = t:singleton(cx.mod.tc, resultShape);
             }
-            resultType = t:singleton(cx.mod.tc, resultShape);
+            if isConst || resultShape != 0f {
+                return { result: { value: resultShape, semType: resultType }, block: bb };
+            }
+        }
+        float? leftValue = floatOperandConstValue(operands[0]);
+        float? rightValue = floatOperandConstValue(operands[1]);
+        if leftValue != () && rightValue != () {
+            return { result: { value: leftValue/rightValue, semType: t:FLOAT }, block: bb };
         }
         result = cx.createTmpRegister(resultType, pos);
-        if op == "/" && lhs is float && rhs == 0f {
-            // XXX this is not a complete solution: const rewrite will propagate this value up
-            bir:AssignInsn insn = { pos, result, operand: lhs/rhs };
-            bb.insns.push(insn);
-        } 
-        else {
-            bir:FloatArithmeticBinaryInsn insn = { op, pos, operands, result };
-            bb.insns.push(insn);
-        }
+        bir:FloatArithmeticBinaryInsn insn = { op, pos, operands, result };
+        bb.insns.push(insn);
     }
     else if pair is DecimalOperandPair {
         readonly & bir:DecimalOperand[2] operands = pair[1];
@@ -801,7 +801,7 @@ function codeGenConstValue(ExprContext cx, bir:BasicBlock bb, t:SemType? expecte
     if multiSemType == () {
         return { result: constOperand(cx, value), block: bb };
     }
-    else if value is decimal {
+    else if value is float|decimal {
         return { result: { value, semType: multiSemType }, block: bb };
     }
     else {
@@ -955,7 +955,7 @@ function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
             }
             else if toNumType == t:FLOAT {
                 if shape is int|decimal {
-                    operand = <float>shape;
+                    operand = constOperand(cx, <float>shape);
                     fromType = operandSemType(cx.mod.tc, operand);
                 }
             }
@@ -1297,7 +1297,7 @@ function arithmeticConstOperand(bir:ConstOperand operand) returns ArithmeticOper
     else if operand is int {
         return [t:UT_INT, operand];
     }
-    else if operand is float {
+    else if operand is bir:FloatConstOperand {
         return [t:UT_FLOAT, operand];
     }
     else if operand is bir:DecimalConstOperand {
@@ -1335,12 +1335,12 @@ function operandLangLibModuleName(bir:Operand operand) returns LangLibModuleName
 }
 
 function operandSemType(t:Context tc, bir:Operand operand) returns t:SemType {
-    return operand is bir:Register|bir:DecimalConstOperand ? operand.semType : t:singleton(tc, operand);
+    return operand is bir:Register|bir:TypedConstOperand ? operand.semType : t:singleton(tc, operand);
 }
 
 // Returns non-nil if operand has singleton type.
 function operandSingleShape(bir:Operand operand) returns t:WrappedSingleValue? {
-    return operand is bir:Register|bir:DecimalConstOperand ? t:singleShape(operand.semType) : { value: operand };
+    return operand is bir:Register|bir:TypedConstOperand ? t:singleShape(operand.semType) : { value: operand };
 }
 
 function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? {
@@ -1348,7 +1348,7 @@ function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? 
 }
 
 function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
-    return operand is float ? operand : t:singleFloatShape(operand.semType);
+    return operand is bir:FloatConstOperand ? operand.value : t:singleFloatShape(operand.semType);
 }
 
 function intOperand(ExprContext cx, bir:Operand operand, s:Expr expr) returns bir:IntOperand|CodeGenError {
@@ -1359,7 +1359,7 @@ function intOperand(ExprContext cx, bir:Operand operand, s:Expr expr) returns bi
 }
 
 function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
-    if operand is bir:DecimalConstOperand {
+    if operand is bir:TypedConstOperand {
         return { value: operand.value };
     }
     else if operand !is bir:Register {
@@ -1368,8 +1368,12 @@ function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
     return ();
 }
 
+function floatOperandConstValue(bir:FloatOperand operand) returns float? {
+    return operand is bir:FloatConstOperand ? operand.value : ();
+}
+
 function constOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
-    return value is decimal ? { value, semType: t:singleton(cx.mod.tc, value) } : value;
+    return value is decimal|float ? { value, semType: t:singleton(cx.mod.tc, value) } : value;
 }
 
 function constifyRegister(bir:Register reg) returns bir:Operand {
@@ -1384,6 +1388,9 @@ function constifyRegister(bir:Register reg) returns bir:Operand {
     // JBUG when written as shape is decimal|0f this succeeds with integer 0
     if shape is decimal || shape == 0f {
         return reg;
+    }
+    else if shape is float {
+        return { value: shape, semType: ty };
     }
     // JBUG gets a compile error without the `else`
     else {

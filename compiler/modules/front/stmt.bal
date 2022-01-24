@@ -543,7 +543,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
                     return cx.semanticErr("match pattern cannot match value of expression", pos=s:range(pattern));
                 }
                 patternType = t:singleton(tc, value);
-                bir:ConstOperand operand = value is decimal ? { value, semType: patternType } : value;
+                bir:ConstOperand operand = value is decimal|float ? { value, semType: patternType } : value;
                 EqualMatchTest mt = { value, operand, clauseIndex: i, pos: clause.opPos };
                 equalMatchTests.add(mt);    
                 matchTests.push(mt);

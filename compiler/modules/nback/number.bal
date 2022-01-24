@@ -350,8 +350,8 @@ function buildBinaryIntIntrinsic(bir:ArithmeticBinaryOp op) returns llvm:Intrins
 
 // Build a value as REPR_FLOAT
 function buildFloat(llvm:Builder builder, Scaffold scaffold, bir:FloatOperand operand) returns llvm:Value {
-    if operand is float {
-        return llvm:constFloat(LLVM_DOUBLE, operand);
+    if operand is bir:FloatConstOperand {
+        return llvm:constFloat(LLVM_DOUBLE, operand.value);
     }
     else {
         return builder.load(scaffold.address(operand));

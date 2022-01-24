@@ -321,18 +321,23 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else if operand is int {
         return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
     }
-    else if operand is float {
-        return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, operand)];
-    }
-    else if operand is bir:DecimalConstOperand {
-        return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, operand.value)];
-    }
     else if operand == () {
         return [REPR_NIL, buildConstNil()];
     }
-    else {
+    else if operand is boolean {
         // operand is boolean
         return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0)];
+    }
+    else {
+        bir:TypedConstOperand _ = operand;
+        var value = operand.value;
+        if value is float {
+            return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, value)];
+        }
+        else {
+            decimal _ = value;
+            return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, value)];
+        }
     }
 }
 

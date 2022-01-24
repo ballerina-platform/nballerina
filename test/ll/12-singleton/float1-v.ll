@@ -4,35 +4,32 @@ declare void @_bal_panic(i8 addrspace(1)*) noreturn cold
 declare zeroext i1 @_bal_float_eq(double, double) readonly
 declare void @_Bb02ioprintln(i8 addrspace(1)*)
 define void @_B04rootmain() !dbg !5 {
-  %1 = alloca double
-  %2 = alloca i1
+  %1 = alloca i1
+  %2 = alloca i8 addrspace(1)*
   %3 = alloca i8 addrspace(1)*
-  %4 = alloca i8 addrspace(1)*
-  %5 = alloca i8
-  %6 = load i8*, i8** @_bal_stack_guard
-  %7 = icmp ult i8* %5, %6
-  br i1 %7, label %16, label %8
-8:
-  store double 0x7FF0000000000000, double* %1
-  %9 = load double, double* %1
-  %10 = call i1 @_bal_float_eq(double %9, double 0x7FF0000000000000)
-  %11 = xor i1 %10, 1
-  store i1 %11, i1* %2
-  %12 = load i1, i1* %2
-  br i1 %12, label %13, label %14
-13:
+  %4 = alloca i8
+  %5 = load i8*, i8** @_bal_stack_guard
+  %6 = icmp ult i8* %4, %5
+  br i1 %6, label %14, label %7
+7:
+  %8 = call i1 @_bal_float_eq(double 0x7FF0000000000000, double 0x7FF0000000000000)
+  %9 = xor i1 %8, 1
+  store i1 %9, i1* %1
+  %10 = load i1, i1* %1
+  br i1 %10, label %11, label %12
+11:
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543630864238)), !dbg !8
-  store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !8
-  br label %15
-14:
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !8
+  br label %13
+12:
   call void @_Bb02ioprintln(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* null, i64 3098476543621686649)), !dbg !9
-  store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !9
-  br label %15
-15:
+  store i8 addrspace(1)* null, i8 addrspace(1)** %3, !dbg !9
+  br label %13
+13:
   ret void
-16:
-  %17 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284), !dbg !7
-  call void @_bal_panic(i8 addrspace(1)* %17)
+14:
+  %15 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284), !dbg !7
+  call void @_bal_panic(i8 addrspace(1)* %15)
   unreachable
 }
 !llvm.module.flags = !{!0}

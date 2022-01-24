@@ -307,7 +307,7 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Internal?
 }
 
 function operandToSemType(Operand operand) returns t:SemType {
-    if operand is Register|DecimalConstOperand {
+    if operand is Register|TypedConstOperand {
         return operand.semType;
     }
     else {
@@ -323,11 +323,6 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Interna
     if lhs is Register && rhs is Register && insn.op.length() == 2 && !vc.isAnydata(lhs.semType) && !vc.isAnydata(rhs.semType) {
         return vc.invalidErr(`at least one operand of an == or !=  at expression must be a subtype of anydata`, insn.pos);
     }
-}
-
-// After JBUG #17977, #32245 is fixed, replace by ==
-function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
-    return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
 }
 
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Semantic? {
