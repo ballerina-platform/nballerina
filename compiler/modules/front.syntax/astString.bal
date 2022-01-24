@@ -226,10 +226,7 @@ function blockToWords(Word[] w, StmtBlock body) {
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
-    if td is GroupingTypeDesc {
-        return typeDescToWords(w, td.td, wrap);
-    }
-    else if td is BuiltinTypeDesc {
+    if td is BuiltinTypeDesc {
         if td.builtinTypeName == "null" {
             w.push("()");
         }
@@ -340,15 +337,18 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         typeDescToWords(w, td.row);
         w.push(CLING, ">");
     }    
-    else if td is UnaryTypeDesc {
-        if td.op == "!" {
+    else if td is PrefixTypeDesc {
+        if td.op == "(" {
+            return typeDescToWords(w, td.td, wrap);
+        }
+        else {
             w.push(td.op, CLING);
             typeDescToWords(w, td.td);
         }
-        else {
-            typeDescToWords(w, td.td, wrap);
-            w.push(CLING, "?");
-        }
+    }
+    else if td is PostfixTypeDesc {
+        typeDescToWords(w, td.td, wrap);
+        w.push(CLING, "?");
     }
     else if td is XmlSequenceTypeDesc {
         w.push("xml", CLING, "<", CLING);

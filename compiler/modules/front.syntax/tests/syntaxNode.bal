@@ -447,10 +447,7 @@ function syntaxNodeFromField(Field f) returns SyntaxNode {
 }
 
 function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
-    if td is GroupingTypeDesc {
-        return syntaxNodeFromGroupingTypeDesc(td);
-    }
-    else if td is TerminalTypeDesc {
+    if td is TerminalTypeDesc {
         return syntaxNodeFromTerminalTypeDesc(td);
     }
     else if td is TupleTypeDesc {
@@ -480,15 +477,12 @@ function syntaxNodeFromTypeDesc(TypeDesc td) returns SyntaxNode {
     else if td is TypeDescRef {
         return syntaxNodeFromTypeDescRef(td);
     }
-    else {
-        return syntaxNodeFromUnaryTypeDesc(td);
+    else if td is PrefixTypeDesc {
+        return syntaxNodeFromPrefixTypeDesc(td);
     }
-}
-
-function syntaxNodeFromGroupingTypeDesc(GroupingTypeDesc td) returns NonTerminalSyntaxNode {
-    return nonTerminalSyntaxNode(td, { token: "(", pos: td.startPos },
-                                     syntaxNodeFromTypeDesc(td.td),
-                                     { token: ")" });
+    else {
+        return syntaxNodeFromPostfixTypeDesc(td);
+    }
 }
 
 function syntaxNodeFromTupleTypeDesc(TupleTypeDesc td) returns NonTerminalSyntaxNode {
@@ -566,13 +560,18 @@ function syntaxNodesFromTypeParameter(TypeDesc td) returns SyntaxNode[] {
     return [{ token: "<" }, syntaxNodeFromTypeDesc(td), { token: ">" }];
 }
 
-function syntaxNodeFromUnaryTypeDesc(UnaryTypeDesc td) returns NonTerminalSyntaxNode {
-    if td.op == "!" {
-        return nonTerminalSyntaxNode(td , { token: td.op, pos: td.startPos }, syntaxNodeFromTypeDesc(td.td));
+function syntaxNodeFromPrefixTypeDesc(PrefixTypeDesc td) returns NonTerminalSyntaxNode {
+    SyntaxNode[] childNodes = [{ token: td.op, pos: td.startPos }, syntaxNodeFromTypeDesc(td.td)];
+    if td.op == "(" {
+        return nonTerminalSyntaxNode(td, childNodes, { token: ")" });
     }
     else {
-        return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.td), { token: td.op });
+        return nonTerminalSyntaxNode(td , childNodes);
     }
+}
+
+function syntaxNodeFromPostfixTypeDesc(PostfixTypeDesc td) returns NonTerminalSyntaxNode {
+    return nonTerminalSyntaxNode(td, syntaxNodeFromTypeDesc(td.td), { token: td.op, pos: td.opPos });
 }
 
 type TerminalTypeDesc BuiltinTypeDesc|SingletonTypeDesc;

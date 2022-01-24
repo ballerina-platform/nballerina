@@ -450,14 +450,9 @@ public type TypeDefn record {|
     int cycleDepth = -1;
 |};
 
-public type TypeDesc GroupingTypeDesc|BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
+public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
 public type ConstructorTypeDesc TupleTypeDesc|ArrayTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc|TableTypeDesc;
-
-public type GroupingTypeDesc record {|
-    *PositionFields;
-    TypeDesc td;
-|};
 
 public type TupleTypeDesc record {|
     *PositionFields;
@@ -514,7 +509,6 @@ public type ErrorTypeDesc record {|
 |};
 
 public type BinaryTypeOp "|" | "&";
-public type UnaryTypeOp "!"|"?";
 
 public type BinaryTypeDesc record {|
     *PositionFields;
@@ -524,9 +518,22 @@ public type BinaryTypeDesc record {|
     TypeDesc right;
 |};
 
-public type UnaryTypeDesc record {|
+public type UnaryTypeDesc PrefixTypeDesc|PostfixTypeDesc;
+
+public type PrefixTypeOp "!"|"(";
+
+public type PrefixTypeDesc record {|
     *PositionFields;
-    UnaryTypeOp op;
+    PrefixTypeOp op;
+    TypeDesc td;
+|};
+
+public const PostfixTypeOp = "?";
+
+public type PostfixTypeDesc record {|
+    *PositionFields;
+    PostfixTypeOp op;
+    Position opPos;
     TypeDesc td;
 |};
 

@@ -54,12 +54,14 @@ function parsePostfixTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     TypeDesc td = check parsePrimaryTypeDesc(tok);
     while true {
         if tok.current() == "?" {
+            Position opPos = tok.currentStartPos();
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            UnaryTypeDesc optionalTd = {
+            PostfixTypeDesc optionalTd = {
                 startPos,
                 endPos,
                 op: "?",
+                opPos,
                 td
             };
             td = optionalTd;
@@ -104,7 +106,7 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             }
             TypeDesc td = check parseTypeDesc(tok);
             endPos = check tok.expectEnd(")");
-            return { startPos, endPos, td };
+            return { startPos, endPos, op: "(", td };
         }
         "boolean"
         | "decimal"
