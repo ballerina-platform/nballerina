@@ -825,13 +825,12 @@ function stmtNarrowingFromExprNarrowing(ExprNarrowing? narrowing, boolean condit
         return ();
     }
     else {
-        boolean insnResult = condition == !narrowing.negated;
         // JBUG #33303 without parentheses this gets a parse error
-        t:SemType narrowedType = insnResult ? (narrowing.ifTrue) : narrowing.ifFalse;
+        t:SemType narrowedType = condition ? (narrowing.typeIfTrue) : narrowing.typeIfFalse;
         if narrowedType === t:NEVER {
             panic err:impossible("narrowed to never type");
         }
-        bir:Result basis = { insn: narrowing.testInsn, result: insnResult };
+        bir:Result basis = condition ? narrowing.basisIfTrue : narrowing.basisIfFalse;
         return { basis, binding: narrowing.binding, ifCompletesNormally: narrowedType };
     }
 }
