@@ -65,7 +65,7 @@ public function main(string[] filenames, *Options opts) returns error? {
                 dPrinter.print(err.detail());
             }
             else {
-                return err;
+                _ = check err;
             }
         }
         else if ext == TEST_EXTENSION {
