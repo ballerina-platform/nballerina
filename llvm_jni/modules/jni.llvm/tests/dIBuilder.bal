@@ -7,7 +7,7 @@ function dIBuilder() returns Module {
 
     DIBuilder dIBuilder = m.createDIBuilder();
     Metadata fileData = dIBuilder.createFile("filename.bal", "PATH_TO_BAL_SOURCE");
-    Metadata compileUnit = dIBuilder.createCompileUnit(file=fileData);
+    Metadata _ = dIBuilder.createCompileUnit(file=fileData);
     m.addModuleFlag("error", ["Debug Info Version", 3]);
     m.addModuleFlag("warning", ["Dwarf Version", 2]);
     Metadata functionTy = dIBuilder.createSubroutineType(fileData);
