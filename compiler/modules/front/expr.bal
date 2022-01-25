@@ -442,33 +442,32 @@ function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position po
     }
     else if arith is [t:UT_FLOAT, bir:FloatOperand] {
         bir:FloatOperand floatOperand = arith[1];
+        var [value, flags] = floatOperandValue(floatOperand);
         t:SemType resultType = t:FLOAT;
-        float? shape = floatOperandSingleShape(floatOperand);
-        if shape != () {
-            float resultShape = -shape; // shouldn't ever panic
-            if shape != 0f || floatOperand !is bir:Register {
-                return { result: singletonOperand(cx, resultShape), block: nextBlock };
+        if flags != 0 {
+            value = -value; // shouldn't ever panic
+            if (flags & VALUE_SINGLE_SHAPE) != 0 {
+                resultType = t:singleton(cx.mod.tc, value);
             }
-            resultType = t:singleton(cx.mod.tc, resultShape);
+            if value != 0f || (flags & VALUE_CONST) != 0 {
+                return { result: { value, semType: resultType }, block: nextBlock };
+            }
         }
         result = cx.createTmpRegister(resultType, pos);
         insn = <bir:FloatNegateInsn> { operand: <bir:Register>floatOperand, result, pos };
     }
     else if arith is [t:UT_DECIMAL, bir:DecimalOperand] {
         bir:DecimalOperand decimalOperand = arith[1];
-        decimal? shape = decimalOperandSingleShape(decimalOperand);
-        t:SemType resultType;
-        if shape != () {
-            decimal resultShape = -shape; // shouldn't ever panic
-            if decimalOperand is bir:Register {
-                resultType = t:singleton(cx.mod.tc, resultShape);
+        var [value, flags] = decimalOperandValue(decimalOperand);
+        t:SemType resultType = t:DECIMAL;
+        if flags != 0 {
+            value = -value; // shouldn't ever panic
+            if (flags & VALUE_SINGLE_SHAPE) != 0 {
+                resultType = t:singleton(cx.mod.tc, value);
             }
-            else {
-                return { result: singletonOperand(cx, resultShape), block: nextBlock };
+            if (flags & VALUE_CONST) != 0 {
+                return { result: { value, semType: resultType }, block: nextBlock };
             }
-        }
-        else {
-            resultType = t:DECIMAL;
         }
         result = cx.createTmpRegister(resultType, pos);
         insn = <bir:DecimalNegateInsn> { operand: <bir:Register>decimalOperand, result, pos };
@@ -496,23 +495,22 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
     }
     else if pair is FloatOperandPair {
         readonly & bir:FloatOperand[2] operands = pair[1];
+        var [leftVal, leftFlags] = floatOperandValue(operands[0]);
+        var [rightVal, rightFlags] = floatOperandValue(operands[1]);
+        ValueFlags resultFlags = leftFlags & rightFlags;
         t:SemType resultType = t:FLOAT;
-        float? leftShape = floatOperandSingleShape(operands[0]);
-        float? rightShape = floatOperandSingleShape(operands[1]);
-        if leftShape != () && rightShape != () {
-            float resultShape = floatArithmeticEval(op, leftShape, rightShape);
-            boolean isConst = lhs is bir:FloatConstOperand && rhs is bir:FloatConstOperand;
-            if op != "/" || rightShape != 0f {
-                resultType = t:singleton(cx.mod.tc, resultShape);
-            }
-            if isConst || resultShape != 0f {
-                return { result: { value: resultShape, semType: resultType }, block: bb };
-            }
+        if op == "/" && rightVal == 0f {
+            resultFlags &= ~VALUE_SINGLE_SHAPE;
         }
-        float? leftValue = floatOperandConstValue(operands[0]);
-        float? rightValue = floatOperandConstValue(operands[1]);
-        if leftValue != () && rightValue != () {
-            return { result: { value: leftValue/rightValue, semType: t:FLOAT }, block: bb };
+        if resultFlags != 0 {
+            float value = floatArithmeticEval(op, leftVal, rightVal);
+            if (resultFlags & VALUE_SINGLE_SHAPE) != 0 {
+                resultType = t:singleton(cx.mod.tc, value);
+            }
+            // If the shape isn't 0f, then we can infer the value from the shape.
+            if value != 0f || (resultFlags & VALUE_CONST) != 0 {
+                return { result: { value, semType: resultType }, block: bb };
+            }
         }
         result = cx.createTmpRegister(resultType, pos);
         bir:FloatArithmeticBinaryInsn insn = { op, pos, operands, result };
@@ -520,18 +518,19 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
     }
     else if pair is DecimalOperandPair {
         readonly & bir:DecimalOperand[2] operands = pair[1];
-        decimal? leftShape = decimalOperandSingleShape(operands[0]);
-        decimal? rightShape = decimalOperandSingleShape(operands[1]);
-        t:SemType resultType;
-        if leftShape != () && rightShape != () {
-            decimal resultShape = check decimalArithmeticEval(cx, pos, op, leftShape, rightShape);
-            if lhs is bir:DecimalConstOperand && rhs is bir:DecimalConstOperand {
-                return { result: singletonOperand(cx, resultShape), block: bb };
+        var [leftVal, leftFlags] = decimalOperandValue(operands[0]);
+        var [rightVal, rightFlags] = decimalOperandValue(operands[1]);
+        ValueFlags resultFlags = leftFlags & rightFlags;
+        t:SemType resultType = t:DECIMAL;
+        if resultFlags != 0 {
+            decimal value = check decimalArithmeticEval(cx, pos, op, leftVal, rightVal);
+            if (resultFlags & VALUE_SINGLE_SHAPE) != 0 {
+                resultType = t:singleton(cx.mod.tc, value);
             }
-            resultType = t:singleton(cx.mod.tc, resultShape);
-        }
-        else {
-            resultType = t:DECIMAL;
+            // Even if we have the shape, we need to compute the value in order to get the precision right.
+            if (resultFlags & VALUE_CONST) != 0 {
+                return { result: { value, semType: resultType }, block: bb };
+            }
         }
         result = cx.createTmpRegister(resultType, pos);
         bir:DecimalArithmeticBinaryInsn insn = { op, pos, operands, result };
@@ -1343,14 +1342,6 @@ function operandSingleShape(bir:Operand operand) returns t:WrappedSingleValue? {
     return operand is bir:Register|bir:TypedConstOperand ? t:singleShape(operand.semType) : { value: operand };
 }
 
-function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? {
-    return t:singleDecimalShape(operand.semType);
-}
-
-function floatOperandSingleShape(bir:FloatOperand operand) returns float? {
-    return operand is bir:FloatConstOperand ? operand.value : t:singleFloatShape(operand.semType);
-}
-
 function intOperand(ExprContext cx, bir:Operand operand, s:Expr expr) returns bir:IntOperand|CodeGenError {
     if operand is int || (operand is bir:Register && t:isSubtypeSimple(operand.semType, t:INT)) {
         return operand;
@@ -1366,10 +1357,6 @@ function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
         return { value: operand };
     }
     return ();
-}
-
-function floatOperandConstValue(bir:FloatOperand operand) returns float? {
-    return operand is bir:FloatConstOperand ? operand.value : ();
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
@@ -1396,4 +1383,52 @@ function constifyRegister(bir:Register reg) returns bir:Operand {
     else {
         return shape;
     }   
+}
+
+const VALUE_CONST = 1;
+const VALUE_SINGLE_SHAPE = 2;
+type ValueFlags int;
+
+function floatOperandValue(bir:FloatOperand operand) returns [float, ValueFlags] {
+    if operand is bir:FloatConstOperand {
+        float value = operand.value;
+        ValueFlags flags = VALUE_CONST;
+        float? shape = t:singleFloatShape(operand.semType);
+        if shape != () {
+            if shape != value {
+                panic err:impossible(`inconsistent float value/type ${value}/${shape}`);
+            }
+            flags |= VALUE_SINGLE_SHAPE;
+        }
+        return [value, flags];
+    }
+    else {
+        float? shape = t:singleFloatShape(operand.semType);
+        if shape != () {
+            return [shape, VALUE_SINGLE_SHAPE];
+        }
+        return [0f, 0];
+    }
+}
+
+function decimalOperandValue(bir:DecimalOperand operand) returns [decimal, ValueFlags] {
+    if operand is bir:DecimalConstOperand {
+        decimal value = operand.value;
+        ValueFlags flags = VALUE_CONST;
+        decimal? shape = t:singleDecimalShape(operand.semType);
+        if shape != () {
+            if shape != value {
+                panic err:impossible(`inconsistent decimal value/type ${value}/${shape}`);
+            }
+            flags |= VALUE_SINGLE_SHAPE;
+        }
+        return [value, flags];
+    }
+    else {
+        decimal? shape = t:singleDecimalShape(operand.semType);
+        if shape != () {
+            return [shape, VALUE_SINGLE_SHAPE];
+        }
+        return [0d, 0];
+    }
 }
