@@ -35,8 +35,31 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
         }
         return;
     }
+    if rule == "td" {
+        io:println("k: ", k);
+    }
     string[] actual = wordsToLines(check parsed);
     test:assertEquals(actual, expected, "wrong ast");
+    // pr-todo: currently only valid cases get this far we need to handle cases where case is invalid
+     SourceFile file = createSourceFile(subject, { filename: k });
+     Tokenizer tok = new (file);
+     check tok.advance();
+    string tree;
+    // if rule == "stmt" {
+    //     tree = syntaxNodeToString(canonicalTreeNodeFromStmt(check parseStmt(tok)));
+    // }
+    // else if rule == "expr" {
+    //     tree = syntaxNodeToString(canonicalTreeNodeFromExpr(check parseExpr(tok), false));
+    // }
+    if rule == "td" {
+        tree = syntaxNodeToString(syntaxNodeFromTypeDesc(check parseTypeDesc(tok)));
+    }
+    else {
+        return;
+    }
+    io:println("rule: " , rule);
+    io:println("expected: " , expected);
+    io:println("actual: ", tree, "\n");
 }
 
 type TokenizerTestCase [string, string[]];

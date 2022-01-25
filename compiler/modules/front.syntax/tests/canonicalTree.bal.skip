@@ -1,0 +1,177 @@
+// import ballerina/io;
+// // pr-todo: add spaces
+// function syntaxNodeToString(SyntaxNode node) returns string[] {
+//     string[] content = [];
+//     if node is TerminalSyntaxNode {
+//         content.push(terminalSyntaxNodeToString(node));
+//     }
+//     else {
+//         foreach var child in node.childNodes {
+//             if child is TerminalSyntaxNode {
+//                 content.push(terminalSyntaxNodeToString(child));
+//             }
+//             else {
+//                 content.push(...syntaxNodeToString(child));
+//             }
+//         }
+//     }
+//     return [" ".'join(...content)];
+// }
+// 
+// function terminalSyntaxNodeToString(TerminalSyntaxNode node) returns string {
+//     if node is IdentifierSyntaxNode {
+//         return node.name;
+//     }
+//     else if node is StringLiteralSyntaxNode {
+//         // pr-todo: escape literals
+//         return "\"" + node.literal + "\"";
+//     }
+//     else {
+//         return node.token;
+//     }
+// }
+// 
+// function canonicalTreeNodeFromStmt(Stmt stmt) returns SyntaxNode {
+//     io:println("stmt: ", stmt);
+//     if stmt is ForeachStmt {
+//         return nonTerminalSyntaxNode(stmt,
+//                                      { token: "foreach", pos: stmt.startPos },
+//                                      { token: "int" },
+//                                      { name: stmt.name, pos: stmt.namePos },
+//                                      { token: "in" },
+//                                      canoicalTreeNodeFromRangeExpr(stmt.range),
+//                                      syntaxNodeFromStmtBlock(stmt.body));
+//     }
+//     else if stmt is CallStmt {
+//         return finishWithSemiColon(stmt,
+//                                    canonicalTreeNodeFromExpr(stmt.expr, false));
+//     }
+//     else if stmt is VarDeclStmt {
+//         string? name = stmt.name;
+//         return finishWithSemiColon(stmt,
+//                                    stmt.isFinal ? { token: "final", pos: stmt.startPos }: (),
+//                                    canonicalTreeNodeFromTypeDesc(stmt.td, false),
+//                                    { name: name ?: "_", pos: stmt.namePos },
+//                                    { token: "=", pos: stmt.opPos },
+//                                    canonicalTreeNodeFromExpr(stmt.initExpr, false));
+//     }
+//     else {
+//         return syntaxNodeFromStmt(stmt);
+//     }
+// }
+// 
+// function canoicalTreeNodeFromRangeExpr(RangeExpr expr) returns SyntaxNode {
+//     return nonTerminalSyntaxNode(expr,
+//                                  canonicalTreeNodeFromExpr(expr.lower, true),
+//                                  { token: "..<", pos: expr.opPos },
+//                                  canonicalTreeNodeFromExpr(expr.upper, true)
+//     );
+// }
+// 
+// function canonicalTreeNodeFromExpr(Expr expr, boolean wrap) returns SyntaxNode {
+//     if expr is UnaryExpr {
+//         return nonTerminalSyntaxNodeConditionalWrap(expr, wrap, { token: expr.op, pos: expr.opPos },
+//                                                                 canonicalTreeNodeFromExpr(expr.operand, true));
+//     }
+//     else if expr is BinaryExpr {
+//         BinaryExprOp|BinaryBitwiseOp|BinaryLogicalOp op;
+//         if expr is BinaryEqualityExpr {
+//             op = expr.equalityOp;
+//         }
+//         else if expr is BinaryRelationalExpr {
+//             op = expr.relationalOp;
+//         }
+//         else if expr is BinaryArithmeticExpr {
+//             op = expr.arithmeticOp;
+//         }
+//         else if expr is BinaryBitwiseExpr {
+//             op = expr.bitwiseOp;
+//         }
+//         else {
+//             op = expr.logicalOp;
+//         }
+//         return nonTerminalSyntaxNodeConditionalWrap(expr, wrap, canonicalTreeNodeFromExpr(expr.left, true),
+//                                                                 { token: op, pos: expr.opPos },
+//                                                                 canonicalTreeNodeFromExpr(expr.right, true));
+//     }
+//     else if expr is TypeTestExpr {
+//         return nonTerminalSyntaxNodeConditionalWrap(expr, wrap, canonicalTreeNodeFromExpr(expr.left, true),
+//                                                                 expr.negated ? { token: "!" } : (),
+//                                                                 { token: "is", pos: expr.kwPos },
+//                                                                 canonicalTreeNodeFromTypeDesc(expr.td, false));
+//     }
+//     else if expr is TypeCastExpr {
+//         return nonTerminalSyntaxNodeConditionalWrap(expr, wrap, { token: "<" },
+//                                                                 canonicalTreeNodeFromTypeDesc(expr.td, false),
+//                                                                 { token: ">" },
+//                                                                 canonicalTreeNodeFromExpr(expr.operand, true));
+//     }
+//     else if expr is MemberAccessExpr {
+//         return nonTerminalSyntaxNodeConditionalWrap(expr, wrap, canonicalTreeNodeFromExpr(expr.container, true),
+//                                                                 { token: "[" },
+//                                                                 canonicalTreeNodeFromExpr(expr.index, false),
+//                                                                 { token: "]" });
+//     }
+//     else if expr is FieldAccessExpr {
+//         return nonTerminalSyntaxNodeConditionalWrap(expr, wrap, canonicalTreeNodeFromExpr(expr.container, true),
+//                                                                 { token: ".", pos: expr.opPos },
+//                                                                 { name: expr.fieldName, pos: () });
+//     }
+//     else if expr is MethodCallExpr {
+//         SyntaxNode[] args = from Expr arg in expr.args select canonicalTreeNodeFromExpr(arg, false);
+//         return nonTerminalSyntaxNodeConditionalWrap(expr, wrap, canonicalTreeNodeFromExpr(expr.target, true),
+//                                                                 { token: ".", pos: expr.opPos },
+//                                                                 { name: expr.methodName, pos: expr.namePos },
+//                                                                 { token: "(", pos: expr.openParenPos },
+//                                                                 // JBUG: can't use the query exprssion directly
+//                                                                 args,
+//                                                                 { token: ")" });
+//     }
+//     else if expr is CheckingExpr {
+//         return nonTerminalSyntaxNodeConditionalWrap(expr, wrap, { token: expr.checkingKeyword, pos: expr.kwPos },
+//                                                                 canonicalTreeNodeFromExpr(expr.operand, false));
+//     }
+//     else if expr is GroupingExpr {
+//         return canonicalTreeNodeFromExpr(expr.innerExpr, wrap);
+//     }
+//     else {
+//         return syntaxNodeFromExpr(expr);
+//     }
+// }
+// 
+// function canonicalTreeNodeFromTypeDesc(TypeDesc td, boolean|BinaryTypeOp wrap) returns SyntaxNode {
+//     if td is ArrayTypeDesc {
+//         SyntaxNode[][] dimensions = from SimpleConstExpr? dimension in td.dimensions select dimension == () ? [{ token: "[" }, { token: "]" }]:
+//                                                                                                               [{ token: "[" }, syntaxNodeFromExpr(dimension), { token: "]" }];
+//         return nonTerminalSyntaxNodeConditionalWrap(td, wrap != false, canonicalTreeNodeFromTypeDesc(td.member, wrap = true),
+//                                          ...dimensions);
+//     }
+//     // pr-todo: fix this after pr merge
+//     else if td is GroupingTypeDesc {
+//         return canonicalTreeNodeFromTypeDesc(td.innerTd, wrap);
+//     }
+//     else if td is TupleTypeDesc{
+//         return nonTerminalSyntaxNodeConditionalWrap(td, wrap != false, syntaxNodeFromTypeDesc(td));
+//     }
+//     else if td is BinaryTypeDesc {
+//         boolean noWrap = wrap == false || wrap == td.op;
+//         return nonTerminalSyntaxNodeConditionalWrap(td, !noWrap, canonicalTreeNodeFromTypeDesc(td.left, td.op),
+//                                                                   { token: td.op, pos: td.opPos },
+//                                                                   canonicalTreeNodeFromTypeDesc(td.right, td.op));
+//     }
+//     else {
+//         return syntaxNodeFromTypeDesc(td);
+//     }
+// }
+// 
+// function nonTerminalSyntaxNodeConditionalWrap(AstNode astNode, boolean condition, SyntaxNode[]|SyntaxNode?... nodes) returns NonTerminalSyntaxNode {
+//     SyntaxNode[] childNodes = [];
+//     if condition {
+//         childNodes.push({ token: "(" });
+//     }
+//     childNodes.push(...flattenSyntaxNodeList(nodes));
+//     if condition {
+//         childNodes.push({ token: ")" });
+//     }
+//     return nonTerminalSyntaxNode(astNode, childNodes);
+// }
