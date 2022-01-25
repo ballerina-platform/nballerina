@@ -955,47 +955,10 @@ function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
     t:SemType fromType = operandSemType(cx.mod.tc, operand);
     t:UniformTypeBitSet? toNumType = t:singleNumericType(toType);
     if toNumType != () && !t:isSubtypeSimple(t:intersect(fromType, t:NUMBER), toNumType) {
-        // do numeric conversion now
         toType = t:diff(toType, t:diff(t:NUMBER, toNumType));
-        t:WrappedSingleValue? wrapped = operandSingleShape(operand);
-        if wrapped != () {
-            t:SingleValue shape = wrapped.value;
-            if toNumType == t:INT {
-                if shape is float|decimal {
-                    operand = singletonOperand(cx, check convertToIntEval(cx, tcExpr.opPos, shape));
-                    fromType = operandSemType(cx.mod.tc, operand);
-                }
-            }
-            else if toNumType == t:FLOAT {
-                if shape is int|decimal {
-                    operand = singletonOperand(cx, <float>shape);
-                    fromType = operandSemType(cx.mod.tc, operand);
-                }
-            }
-            else {
-                if shape is int|float {
-                    operand = singletonOperand(cx, check convertToDecimalEval(cx, tcExpr.opPos, shape));
-                    fromType = operandSemType(cx.mod.tc, operand);
-                }
-            }
-        }
-        else if operand is bir:Register { // always true but does needed narrowing
-            bir:Register result = cx.createTmpRegister(t:union(t:diff(fromType, t:NUMBER), toNumType), tcExpr.opPos);
-            if toNumType == t:INT {
-                bir:ConvertToIntInsn insn = { operand, result, pos: tcExpr.opPos };
-                nextBlock.insns.push(insn);
-            }
-            else if toNumType == t:FLOAT {
-                bir:ConvertToFloatInsn insn = { operand, result, pos: tcExpr.opPos };
-                nextBlock.insns.push(insn);
-            }
-            else {
-                bir:ConvertToDecimalInsn insn = { operand, result, pos: tcExpr.opPos };
-                nextBlock.insns.push(insn);
-            }
-            operand = result;
-            fromType = result.semType;
-        }
+        // do numeric conversion now
+        { result: operand, block: nextBlock } = check codeGenNumericConvert(cx, nextBlock, operand, toNumType, tcExpr.opPos);
+        fromType = operandSemType(cx.mod.tc, operand);
     }
     if t:isSubtype(cx.mod.tc, fromType, toType) {
         // it's redundant, so we can remove it
@@ -1010,6 +973,53 @@ function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
     bir:TypeCastInsn insn = { operand: reg, semType: toType, pos: tcExpr.opPos, result };
     nextBlock.insns.push(insn);
     return { result, block: nextBlock };
+}
+
+function codeGenNumericConvert(ExprContext cx, bir:BasicBlock nextBlock, bir:Operand operand, t:UniformTypeBitSet toNumType, Position pos) returns CodeGenError|ExprEffect {
+    t:SemType fromType = operandSemType(cx.mod.tc, operand);
+    t:SemType resultType = t:union(t:diff(fromType, t:NUMBER), toNumType);
+    var [shape, flags] = operandValue(operand);
+    if flags != 0 {
+        int|float|decimal? converted = ();
+        if toNumType == t:INT {
+            if shape is float|decimal {
+                converted = check convertToIntEval(cx, pos, shape);
+            }
+        }
+        else if toNumType == t:FLOAT {
+            if shape is int|decimal {
+                converted = <float>shape;
+            }
+        }
+        else {
+            if shape is int|float {
+                converted = check convertToDecimalEval(cx, pos, shape);
+            }
+        }
+        if converted != () {
+            if (flags & VALUE_SINGLE_SHAPE) != 0 {
+                resultType = t:singleton(cx.mod.tc, converted);
+            }
+            return { result: { value: converted, semType: resultType }, block: nextBlock };
+        }
+    }
+    else if operand is bir:Register { // always true but does needed narrowing
+        bir:Register result = cx.createTmpRegister(resultType, pos);
+        if toNumType == t:INT {
+            bir:ConvertToIntInsn insn = { operand, result, pos };
+            nextBlock.insns.push(insn);
+        }
+        else if toNumType == t:FLOAT {
+            bir:ConvertToFloatInsn insn = { operand, result, pos };
+            nextBlock.insns.push(insn);
+        }
+        else {
+            bir:ConvertToDecimalInsn insn = { operand, result, pos };
+            nextBlock.insns.push(insn);
+        }
+        return { result, block: nextBlock };
+    }
+    return { result: operand, block: nextBlock };
 }
 
 function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:TypeDesc td, s:Expr left, boolean negated, Position pos) returns CodeGenError|ExprEffect {
@@ -1395,6 +1405,31 @@ function constifyRegister(bir:Register reg) returns bir:Operand {
 const VALUE_CONST = 1;
 const VALUE_SINGLE_SHAPE = 2;
 type ValueFlags int;
+
+function operandValue(bir:Operand operand) returns [t:SingleValue, ValueFlags] {
+    if operand is bir:TypedConstOperand {
+        var value = operand.value;
+        ValueFlags flags = VALUE_CONST;
+        t:WrappedSingleValue? wrapped = t:singleShape(operand.semType);
+        if wrapped != () {
+            if wrapped.value != value {
+                panic err:impossible(`inconsistent float value/type ${value}/${wrapped.value.toString()}`);
+            }
+            flags |= VALUE_SINGLE_SHAPE;
+        }
+        return [value, flags];
+    }
+    else if operand is bir:Register {
+        t:WrappedSingleValue? wrapped = t:singleShape(operand.semType);
+        if wrapped != () {
+            return [wrapped.value, VALUE_SINGLE_SHAPE];
+        }
+        return [(), 0];
+    }
+    else {
+        return [operand, VALUE_SINGLE_SHAPE|VALUE_CONST];
+    }
+}
 
 function floatOperandValue(bir:FloatOperand operand) returns [float, ValueFlags] {
     if operand is bir:FloatConstOperand {
