@@ -66,11 +66,8 @@ type RegExprEffect record {|
 // This describes the narrowing of the type of a variable
 // caused by the use of a boolean expression in a condition.
 type ExprNarrowing record {|
-    Binding binding;
-    t:SemType typeIfTrue;
-    t:SemType typeIfFalse;
-    bir:Result basisIfTrue;
-    bir:Result basisIfFalse;
+    Narrowing ifTrue;
+    Narrowing ifFalse;
 |};
 
 class ExprContext {
@@ -134,8 +131,9 @@ class ExprContext {
         }
     }
 
-    function createNarrowedExprContext(bir:BasicBlock bb, Binding binding, t:SemType narrowedType, bir:Result basis, Position pos) returns ExprContext {
-        bir:Register narrowed = bir:createRegister(self.code, narrowedType, binding.name, pos);
+    function createNarrowedExprContext(bir:BasicBlock bb, Narrowing narrowing, Position pos) returns ExprContext {
+        var {ty, binding, basis} = narrowing;
+        bir:Register narrowed = bir:createRegister(self.code, ty, binding.name, pos);
         bir:CondNarrowInsn insn = {
             result: narrowed,
             operand: binding.reg,
@@ -595,12 +593,9 @@ function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, 
     bir:BooleanNotInsn insn = { operand: <bir:Register>operand, result, pos };
     nextBlock.insns.push(insn);
     if narrowing != () {
-        t:SemType tmpType = narrowing.typeIfTrue;
-        narrowing.typeIfTrue = narrowing.typeIfFalse;
-        narrowing.typeIfFalse = tmpType;
-        bir:Result tmpBasis = narrowing.basisIfTrue;
-        narrowing.basisIfTrue = narrowing.basisIfTrue;
-        narrowing.basisIfFalse = tmpBasis;
+        Narrowing tmp = narrowing.ifTrue;
+        narrowing.ifTrue = narrowing.ifFalse;
+        narrowing.ifFalse = tmp;
     }
     return { result, block: nextBlock, narrowing };
 }
@@ -628,12 +623,8 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     block1.insns.push(condBranch);
     ExprContext rhsCx;
     if lhsNarrowing != () {
-        if isOr {
-            rhsCx = cx.createNarrowedExprContext(evalRightBlock, lhsNarrowing.binding, lhsNarrowing.typeIfFalse, lhsNarrowing.basisIfFalse, pos);
-        }
-        else {
-            rhsCx = cx.createNarrowedExprContext(evalRightBlock, lhsNarrowing.binding, lhsNarrowing.typeIfTrue, lhsNarrowing.basisIfTrue, pos);
-        }
+        Narrowing n = isOr ? lhsNarrowing.ifFalse : lhsNarrowing.ifTrue;
+        rhsCx = cx.createNarrowedExprContext(evalRightBlock, n, pos);
     }
     else {
         rhsCx = cx;
@@ -646,49 +637,61 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     }
     else if isOr {
         if lhsNarrowing != () && rhsNarrowing != () {
-            if lhsNarrowing.binding.name != rhsNarrowing.binding.name {
+            if lhsNarrowing.ifTrue.binding.name != rhsNarrowing.ifTrue.binding.name {
                 return cx.unimplementedErr("not implemented: logical expr that narrows multiple variables", pos=pos);
             }
             narrowing = {
-                binding: lhsNarrowing.binding,
-                typeIfTrue: t:union(lhsNarrowing.typeIfTrue, rhsNarrowing.typeIfTrue),
-                typeIfFalse: t:intersect(lhsNarrowing.typeIfFalse, rhsNarrowing.typeIfFalse),
-                basisIfTrue: { or: [lhsNarrowing.basisIfTrue, rhsNarrowing.basisIfTrue] },
-                basisIfFalse: { and: [lhsNarrowing.basisIfFalse, rhsNarrowing.basisIfFalse] }
+                ifTrue: {
+                    binding: lhsNarrowing.ifTrue.binding,
+                    ty: t:union(lhsNarrowing.ifTrue.ty, rhsNarrowing.ifTrue.ty),
+                    basis: { or: [lhsNarrowing.ifTrue.basis, rhsNarrowing.ifTrue.basis] }
+                },
+                ifFalse: {
+                    binding: lhsNarrowing.ifFalse.binding,
+                    ty: t:intersect(lhsNarrowing.ifFalse.ty, rhsNarrowing.ifFalse.ty),
+                    basis: { and: [lhsNarrowing.ifFalse.basis, rhsNarrowing.ifFalse.basis] }
+                }
             };
         }
         else {
             ExprNarrowing n = <ExprNarrowing>(lhsNarrowing ?: rhsNarrowing);
             narrowing = {
-                binding: n.binding,
-                typeIfTrue: n.binding.reg.semType, // same as t:union(n.typeIfTrue, n.binding.reg.semType)
-                typeIfFalse: n.typeIfFalse, // same as t:intersect(n.typeIfFalse, n.binding.reg.semType)
-                basisIfTrue: n.basisIfTrue,
-                basisIfFalse: n.basisIfFalse
+                ifTrue: {
+                    binding: n.ifTrue.binding,
+                    ty: n.ifTrue.binding.reg.semType, // same as t:union(n.ifTrue.ty, n.binding.reg.semType)
+                    basis: n.ifTrue.basis
+                },
+                ifFalse: n.ifFalse // since t:intersect(n.ifFalse.ty, n.binding.reg.semType) is same as n.ifFalse.ty
             };
         }
     }
     else {
         if lhsNarrowing != () && rhsNarrowing != () {
-            if lhsNarrowing.binding.name != rhsNarrowing.binding.name {
+            if lhsNarrowing.ifTrue.binding.name != rhsNarrowing.ifTrue.binding.name {
                 return cx.unimplementedErr("not implemented: logical expr that narrows multiple variables", pos=pos);
             }
             narrowing = {
-                binding: lhsNarrowing.binding,
-                typeIfTrue: t:intersect(lhsNarrowing.typeIfTrue, rhsNarrowing.typeIfTrue),
-                typeIfFalse: t:union(lhsNarrowing.typeIfFalse, t:intersect(lhsNarrowing.typeIfTrue, rhsNarrowing.typeIfFalse)),
-                basisIfTrue: { and: [lhsNarrowing.basisIfTrue, rhsNarrowing.basisIfTrue] },
-                basisIfFalse: { or: [lhsNarrowing.basisIfFalse, { and: [rhsNarrowing.basisIfTrue, rhsNarrowing.basisIfFalse] }] }
+                ifTrue: {
+                    binding: lhsNarrowing.ifTrue.binding,
+                    ty: t:intersect(lhsNarrowing.ifTrue.ty, rhsNarrowing.ifTrue.ty),
+                    basis: { and: [lhsNarrowing.ifTrue.basis, rhsNarrowing.ifTrue.basis] }
+                },
+                ifFalse: {
+                    binding: lhsNarrowing.ifFalse.binding,
+                    ty: t:union(lhsNarrowing.ifFalse.ty, t:intersect(lhsNarrowing.ifTrue.ty, rhsNarrowing.ifFalse.ty)),
+                    basis: { or: [lhsNarrowing.ifFalse.basis, { and: [rhsNarrowing.ifTrue.basis, rhsNarrowing.ifFalse.basis] }] }
+                }
             };
         }
         else {
             ExprNarrowing n = <ExprNarrowing>(lhsNarrowing ?: rhsNarrowing);
             narrowing = {
-                binding: n.binding,
-                typeIfTrue: n.typeIfTrue, // same as t:intersect(n.typeIfTrue, n.binding.reg.semType)
-                typeIfFalse: n.binding.reg.semType, // same as t:union(n.typeIfFalse, n.binding.reg.semType)
-                basisIfTrue: n.basisIfTrue,
-                basisIfFalse: n.basisIfFalse
+                ifTrue: n.ifTrue, // since t:intersect(n.ifTrue.ty, n.binding.reg.semType) is same as n.ifTrue.ty
+                ifFalse: {
+                    binding: n.ifFalse.binding,
+                    ty: n.ifFalse.binding.reg.semType, // same as t:union(n.ifFalse.ty, n.binding.reg.semType)
+                    basis: n.ifFalse.basis
+                }
             };
         }
     }
@@ -943,11 +946,16 @@ function codeGenEqualityExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
         }
         bir:InsnRef insnRef = bir:lastInsnRef(nextBlock);
         ExprNarrowing narrowing = {
-            binding,
-            typeIfTrue,
-            typeIfFalse,
-            basisIfTrue: { insn: insnRef, result: true },
-            basisIfFalse: { insn: insnRef, result: false }
+            ifTrue: {
+                binding,
+                basis: { insn: insnRef, result: true },
+                ty: typeIfTrue
+            },
+            ifFalse: {
+                binding,
+                basis: { insn: insnRef, result: false },
+                ty: typeIfFalse
+            }
         };
         return { result, block: nextBlock, narrowing };
     }
@@ -1083,11 +1091,16 @@ function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
     bir:InsnRef insnRef = bir:lastInsnRef(nextBlock);
     if binding != () {
         narrowing = {
-            binding,
-            typeIfTrue: intersect,
-            typeIfFalse: diff,
-            basisIfTrue: { insn: insnRef, result: true },
-            basisIfFalse: { insn: insnRef, result: false }
+            ifTrue: {
+                binding,
+                ty: intersect,
+                basis: { insn: insnRef, result: true }
+            },
+            ifFalse: {
+                binding,
+                ty: diff,
+                basis: { insn: insnRef, result: false }
+            }
         };
     }
     return { result, block: nextBlock, narrowing };   
