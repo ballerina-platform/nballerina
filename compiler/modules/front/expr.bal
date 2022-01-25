@@ -136,7 +136,7 @@ function codeGenExprForBoolean(ExprContext cx, bir:BasicBlock bb, s:Expr expr) r
 
 function codeGenExprForInt(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|IntExprEffect {
     var { result, block } = check codeGenExpr(cx, bb, t:INT, expr);
-    return { result: check intOperand(cx, result, expr), block };
+    return { result: check validIntOperand(cx, result, expr), block };
 }
 
 function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|StringExprEffect {
@@ -163,15 +163,9 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         }
         // Bitwise complement
         { opPos: var pos, op: "~",  operand: var o } => {
-            var { operand: liftedOperand, nextBlock, ifNilBlock } = check codeGenUnaryNilLift(cx, expected, o, bb, pos);
-            if liftedOperand is int {
-                return { result: ~liftedOperand, block: nextBlock };
-            }
-            bir:Register result = cx.createTmpRegister(t:INT, pos);
-            bir:IntOperand operand = check intOperand(cx, liftedOperand, o);
-            bir:IntBitwiseBinaryInsn insn = { op: "^", pos, operands: [-1, operand], result };
-            nextBlock.insns.push(insn);
-            return codeGenNilLiftResult(cx, { result, block: nextBlock }, ifNilBlock, pos);
+            var { operand, nextBlock, ifNilBlock } = check codeGenUnaryNilLift(cx, expected, o, bb, pos);
+            bir:IntOperand intOperand = check validIntOperand(cx, operand, o);
+            return codeGenNilLiftResult(cx, check codeGenComplementExpr(cx, nextBlock, pos, intOperand), ifNilBlock, pos);
         }
         { opPos: var pos, op: "!",  operand: var o } => {
             var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, o);
@@ -200,8 +194,8 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         }
         var { opPos: pos, bitwiseOp: op, left, right } => {
             var { lhs, rhs, nextBlock, ifNilBlock } = check codeGenBinaryNilLift(cx, expected, left, right, bb, pos);
-            bir:IntOperand l = check intOperand(cx, lhs, left);
-            bir:IntOperand r = check intOperand(cx, rhs, right);
+            bir:IntOperand l = check validIntOperand(cx, lhs, left);
+            bir:IntOperand r = check validIntOperand(cx, rhs, right);
             return codeGenNilLiftResult(cx, check codeGenBitwiseBinaryExpr(cx, nextBlock, op, pos, l, r), ifNilBlock, pos);
         }
         var { opPos: pos, equalityOp: op, left, right } => {
@@ -407,7 +401,7 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
     if l is bir:Register {
         if t:isSubtypeSimple(l.semType, t:LIST) {
             var { result: r, block: nextBlock } = check codeGenExprForInt(cx, block1, index);
-            t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, r is int ? r : ());
+            t:SemType memberType = t:listMemberType(cx.mod.tc, l.semType, t:singleIntShape(r.semType));
             if t:isEmpty(cx.mod.tc, memberType) {
                 return cx.semanticErr("type of member access is never", pos);
             }
@@ -428,17 +422,33 @@ function codeGenMemberAccessExpr(ExprContext cx, bir:BasicBlock block1, Position
     return cx.semanticErr("can only apply member access to list or mapping", pos=pos);     
 }
 
+function codeGenComplementExpr(ExprContext cx, bir:BasicBlock nextBlock, Position pos, bir:IntOperand operand) returns CodeGenError|ExprEffect {
+    var [value, flags] = intOperandValue(operand);
+    if flags != 0 {
+        value = ~value;
+        t:SemType resultType = (flags & VALUE_SINGLE_SHAPE) != 0 ? t:singleton(cx.mod.tc, value) : t:INT;
+        return { result: { value, semType: resultType }, block: nextBlock };
+    }
+    bir:Register result = cx.createTmpRegister(t:INT, pos);
+    bir:IntBitwiseBinaryInsn insn = { op: "^", pos, operands: [singletonIntOperand(cx.mod.tc, -1), operand], result };
+    nextBlock.insns.push(insn);
+    return { result, block: nextBlock };
+}
+
 function codeGenNegateExpr(ExprContext cx, bir:BasicBlock nextBlock, Position pos, bir:Operand operand) returns CodeGenError|ExprEffect {
     ArithmeticOperand? arith = arithmeticOperand(operand);
     bir:Register result;
     bir:Insn insn;
     if arith is [t:UT_INT, bir:IntOperand] {
         bir:IntOperand intOperand = arith[1];
-        if intOperand is int {
-            return { result: check intNegateEval(cx, pos, intOperand), block: nextBlock };
+        var [value, flags] = intOperandValue(intOperand);
+        if flags != 0 {
+            value = check intNegateEval(cx, pos, value);
+            t:SemType resultType = (flags & VALUE_SINGLE_SHAPE) != 0 ? t:singleton(cx.mod.tc, value) : t:INT;
+            return { result: { value, semType: resultType }, block: nextBlock };
         }
         result = cx.createTmpRegister(t:INT, pos);
-        insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [0, intOperand], result };
+        insn = <bir:IntArithmeticBinaryInsn> { op: "-", pos, operands: [singletonIntOperand(cx.mod.tc, 0), intOperand], result };
     }
     else if arith is [t:UT_FLOAT, bir:FloatOperand] {
         bir:FloatOperand floatOperand = arith[1];
@@ -484,10 +494,13 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
     bir:Register result;
     if pair is IntOperandPair {
         readonly & bir:IntOperand[2] operands = pair[1];
-        bir:IntOperand leftOperand = operands[0];
-        bir:IntOperand rightOperand = operands[1];
-        if leftOperand is int && rightOperand is int {
-            return { result: check intArithmeticEval(cx, pos, op, leftOperand, rightOperand), block: bb };
+        var [leftVal, leftFlags] = intOperandValue(operands[0]);
+        var [rightVal, rightFlags] = intOperandValue(operands[1]);
+        ValueFlags resultFlags = leftFlags & rightFlags;
+        if resultFlags != 0 {
+            int value = check intArithmeticEval(cx, pos, op, leftVal, rightVal);
+            t:SemType resultType = (resultFlags & VALUE_SINGLE_SHAPE) != 0 ? t:singleton(cx.mod.tc, value) : t:INT;   
+            return { result: { value, semType: resultType }, block: bb };
         }
         result = cx.createTmpRegister(t:INT, pos);
         bir:IntArithmeticBinaryInsn insn = { op, pos, operands, result };
@@ -652,18 +665,19 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
 }
 
 function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBitwiseOp op, Position pos, bir:IntOperand lhs, bir:IntOperand rhs) returns CodeGenError|ExprEffect {
-    if lhs is int && rhs is int {
-        return { result: bitwiseEval(op, lhs, rhs), block: bb };
-    }
-    if lhs is bir:Register && !t:isSubtypeSimple(lhs.semType, t:INT) {
-        return cx.semanticErr("LHS is not an int", pos);
-    }
-    if rhs is bir:Register && !t:isSubtypeSimple(rhs.semType, t:INT) {
-        return cx.semanticErr("RHS is not an int", pos);
-    }
-    t:SemType lt = bitwiseOperandType(lhs);
-    t:SemType rt = bitwiseOperandType(rhs);
+    var [leftValue, leftFlags] = intOperandValue(lhs);
+    var [rightValue, rightFlags] = intOperandValue(rhs);
+    ValueFlags resultFlags = leftFlags & rightFlags;
+    t:SemType lt = t:widenUnsigned(lhs.semType);
+    t:SemType rt = t:widenUnsigned(rhs.semType);
     t:SemType resultType = op == "&" ? t:intersect(lt, rt) : t:union(lt, rt);
+    if resultFlags != 0 {
+        int value = bitwiseEval(op, leftValue, rightValue);
+        if (resultFlags & VALUE_SINGLE_SHAPE) != 0 {
+            resultType = t:singleton(cx.mod.tc, value);
+        }
+        return { result: { value, semType: resultType }, block: bb };
+    }
     bir:Register result = cx.createTmpRegister(resultType, pos);
     bir:IntBitwiseBinaryInsn insn = { op, pos, operands: [lhs, rhs], result };
     bb.insns.push(insn);
@@ -800,7 +814,7 @@ function codeGenConstValue(ExprContext cx, bir:BasicBlock bb, t:SemType? expecte
     if multiSemType == () {
         return { result: singletonOperand(cx, value), block: bb };
     }
-    else if value is float|decimal {
+    else if value is int|float|decimal {
         return { result: { value, semType: multiSemType }, block: bb };
     }
     else {
@@ -948,7 +962,7 @@ function codeGenTypeCast(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
             t:SingleValue shape = wrapped.value;
             if toNumType == t:INT {
                 if shape is float|decimal {
-                    operand = check convertToIntEval(cx, tcExpr.opPos, shape);
+                    operand = singletonOperand(cx, check convertToIntEval(cx, tcExpr.opPos, shape));
                     fromType = operandSemType(cx.mod.tc, operand);
                 }
             }
@@ -1225,17 +1239,6 @@ function instantiateType(t:SemType ty, t:SemType memberType, t:SemType container
     }
 }
 
-function bitwiseOperandType(bir:IntOperand operand) returns t:SemType {
-    t:SemType t;
-    if operand is int {
-        t = t:intConst(operand);
-    }
-    else {
-        t = operand.semType;
-    }
-    return t:widenUnsigned(t);
-}
-
 type IntOperandPair readonly & [t:UT_INT, [bir:IntOperand, bir:IntOperand]];
 type FloatOperandPair readonly & [t:UT_FLOAT, [bir:FloatOperand, bir:FloatOperand]];
 type DecimalOperandPair readonly & [t:UT_DECIMAL, [bir:DecimalOperand, bir:DecimalOperand]];
@@ -1293,7 +1296,7 @@ function arithmeticConstOperand(bir:ConstOperand operand) returns ArithmeticOper
     if operand is string {
         return [t:UT_STRING, operand];
     }
-    else if operand is int {
+    else if operand is bir:IntOperand {
         return [t:UT_INT, operand];
     }
     else if operand is bir:FloatConstOperand {
@@ -1342,8 +1345,8 @@ function operandSingleShape(bir:Operand operand) returns t:WrappedSingleValue? {
     return operand is bir:Register|bir:TypedConstOperand ? t:singleShape(operand.semType) : { value: operand };
 }
 
-function intOperand(ExprContext cx, bir:Operand operand, s:Expr expr) returns bir:IntOperand|CodeGenError {
-    if operand is int || (operand is bir:Register && t:isSubtypeSimple(operand.semType, t:INT)) {
+function validIntOperand(ExprContext cx, bir:Operand operand, s:Expr expr) returns bir:IntOperand|CodeGenError {
+    if operand is bir:IntConstOperand || (operand is bir:Register && t:isSubtypeSimple(operand.semType, t:INT)) {
         return operand;
     }
     return cx.semanticErr("expected an int operand", s:range(expr));
@@ -1360,7 +1363,11 @@ function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
-    return value is decimal|float ? { value, semType: t:singleton(cx.mod.tc, value) } : value;
+    return value is int|decimal|float ? { value, semType: t:singleton(cx.mod.tc, value) } : value;
+}
+
+function singletonIntOperand(t:Context tc, int value) returns bir:IntConstOperand {
+    return { value, semType: t:singleton(tc, value) };
 }
 
 function constifyRegister(bir:Register reg) returns bir:Operand {
@@ -1376,7 +1383,7 @@ function constifyRegister(bir:Register reg) returns bir:Operand {
     if shape is decimal || shape == 0f {
         return reg;
     }
-    else if shape is float {
+    else if shape is float|int {
         return { value: shape, semType: ty };
     }
     // JBUG gets a compile error without the `else`
@@ -1430,5 +1437,27 @@ function decimalOperandValue(bir:DecimalOperand operand) returns [decimal, Value
             return [shape, VALUE_SINGLE_SHAPE];
         }
         return [0d, 0];
+    }
+}
+
+function intOperandValue(bir:IntOperand operand) returns [int, ValueFlags] {
+    if operand is bir:IntConstOperand {
+        int value = operand.value;
+        ValueFlags flags = VALUE_CONST;
+        int? shape = t:singleIntShape(operand.semType);
+        if shape != () {
+            if shape != value {
+                panic err:impossible(`inconsistent int value/type ${value}/${shape}`);
+            }
+            flags |= VALUE_SINGLE_SHAPE;
+        }
+        return [value, flags];
+    }
+    else {
+        int? shape = t:singleIntShape(operand.semType);
+        if shape != () {
+            return [shape, VALUE_SINGLE_SHAPE];
+        }
+        return [0, 0];
     }
 }

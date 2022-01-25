@@ -404,7 +404,7 @@ function codeGenForeachStmt(StmtContext cx, bir:BasicBlock startBlock, Environme
     assignments.push(...cx.onContinueAssignments());
     assignments.push(...cx.onBreakAssignments());
     if loopStep != () {
-        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, 1], result: loopVar };
+        bir:IntNoPanicArithmeticBinaryInsn increment = { op: "+", pos: stmt.kwPos, operands: [loopVar, singletonIntOperand(cx.mod.tc, 1)], result: loopVar };
         loopStep.insns.push(increment);
         loopStep.insns.push(branchToLoopHead);
     }
@@ -543,7 +543,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
                     return cx.semanticErr("match pattern cannot match value of expression", pos=s:range(pattern));
                 }
                 patternType = t:singleton(tc, value);
-                bir:ConstOperand operand = value is decimal|float ? { value, semType: patternType } : value;
+                bir:ConstOperand operand = value is int|decimal|float ? { value, semType: patternType } : value;
                 EqualMatchTest mt = { value, operand, clauseIndex: i, pos: clause.opPos };
                 equalMatchTests.add(mt);    
                 matchTests.push(mt);
@@ -1090,7 +1090,7 @@ function codeGenCompoundAssignToListMember(StmtContext cx,
                                            s:BinaryArithmeticOp|s:BinaryBitwiseOp op,
                                            Position pos) returns CodeGenError|StmtEffect {
     var { result: index, block: nextBlock } = check cx.codeGenExprForInt(bb, env, lValue.index);
-    t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, index is int ? index : ());
+    t:SemType memberType = t:listMemberType(cx.mod.tc, list.semType, t:singleIntShape(index.semType));
     if t:isEmpty(cx.mod.tc, memberType) {
         return cx.semanticErr("type of member access is never", pos);
     }
@@ -1115,7 +1115,7 @@ function codeGenCompoundAssignToMappingMember(StmtContext cx,
     ExprContext ec = cx.exprContext(env);
     var { result: member, block: block2 } = check codeGenMappingGet(ec, block1, mapping, "[", k, pos);
     var { result, block } = check codeGenCompoundableBinaryExpr(ec, block2, op, pos, member, rexpr);
-    bir:MappingSetInsn setInsn = { operands:[ mapping, k, result], pos: lValue.opPos };
+    bir:MappingSetInsn setInsn = { operands: [ mapping, k, result], pos: lValue.opPos };
     block.insns.push(setInsn);
     return { block };
 }
@@ -1127,6 +1127,9 @@ function codeGenCompoundableBinaryExpr(ExprContext ec, bir:BasicBlock bb, s:Bina
     }
     else {
         var { result: operand, block: nextBlock } = check codeGenExprForInt(ec, bb, rexpr);
+        if !t:isSubtypeSimple(member.semType, t:INT) {
+            return ec.semanticErr("left operand is not an integer", pos);
+        }
         return codeGenBitwiseBinaryExpr(ec, nextBlock, op, pos, member, operand);
     }
 }

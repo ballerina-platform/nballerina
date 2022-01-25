@@ -318,9 +318,6 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else if operand is string {
         return [REPR_STRING, check buildConstString(builder, scaffold, operand)];
     }
-    else if operand is int {
-        return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
-    }
     else if operand == () {
         return [REPR_NIL, buildConstNil()];
     }
@@ -331,6 +328,9 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else {
         bir:TypedConstOperand _ = operand;
         var value = operand.value;
+        if value is int {
+            return [REPR_INT, llvm:constInt(LLVM_INT, value)];
+        }
         if value is float {
             return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, value)];
         }
@@ -364,8 +364,8 @@ function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand 
 
 // Build a value as REPR_INT
 function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operand) returns llvm:Value {
-    if operand is int {
-        return llvm:constInt(LLVM_INT, operand);
+    if operand is bir:IntConstOperand {
+        return llvm:constInt(LLVM_INT, operand.value);
     }
     else {
         return builder.load(scaffold.address(operand));
