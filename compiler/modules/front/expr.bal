@@ -128,7 +128,7 @@ class ExprContext {
 
 function codeGenExprForBoolean(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|BooleanExprEffect {
     var { result, block, narrowing } = check codeGenExpr(cx, bb, t:BOOLEAN, expr);
-    if result is boolean || (result is bir:Register && t:isSubtypeSimple(result.semType, t:BOOLEAN)) {
+    if result is bir:BooleanConstOperand || (result is bir:Register && t:isSubtypeSimple(result.semType, t:BOOLEAN)) {
         return { result, block, narrowing };
     }
     return cx.semanticErr("expected boolean operand", s:range(expr));
@@ -168,23 +168,7 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
             return codeGenNilLiftResult(cx, check codeGenComplementExpr(cx, nextBlock, pos, intOperand), ifNilBlock, pos);
         }
         { opPos: var pos, op: "!",  operand: var o } => {
-            var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, o);
-            if operand is boolean {
-                return { result: !operand, block: nextBlock };
-            }
-            bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
-            bir:BooleanNotInsn insn = { operand, result, pos };
-            nextBlock.insns.push(insn);
-            if narrowing != () {
-                t:SemType tmpType = narrowing.typeIfTrue;
-                narrowing.typeIfTrue = narrowing.typeIfFalse;
-                narrowing.typeIfFalse = tmpType;
-
-                bir:Result tmpBasis = narrowing.basisIfTrue;
-                narrowing.basisIfTrue = narrowing.basisIfTrue;
-                narrowing.basisIfFalse = tmpBasis;
-            }
-            return { result, block: nextBlock, narrowing };
+            return codeGenLogicalNotExpr(cx, bb, pos, o);
         }
         var { checkingKeyword, operand, kwPos: pos } => {
             return codeGenCheckingExpr(cx, bb, expected, checkingKeyword, operand, pos);
@@ -566,13 +550,35 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
     return { result, block: bb };
 }
 
+function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, s:Expr expr) returns CodeGenError|ExprEffect {
+    var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, expr);
+    var [value, flags] = booleanOperandValue(operand);
+    if flags != 0 {
+        return constExprEffect(cx, nextBlock, !value, flags);
+    }
+    bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
+    bir:BooleanNotInsn insn = { operand: <bir:Register>operand, result, pos };
+    nextBlock.insns.push(insn);
+    if narrowing != () {
+        t:SemType tmpType = narrowing.typeIfTrue;
+        narrowing.typeIfTrue = narrowing.typeIfFalse;
+        narrowing.typeIfFalse = tmpType;
+        bir:Result tmpBasis = narrowing.basisIfTrue;
+        narrowing.basisIfTrue = narrowing.basisIfTrue;
+        narrowing.basisIfFalse = tmpBasis;
+    }
+    return { result, block: nextBlock, narrowing };
+}
+
 function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLogicalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
     boolean isOr = op == "||";
     var { result: lhs, block: block1, narrowing: lhsNarrowing } = check codeGenExprForBoolean(cx, bb, left);
-    if lhs is boolean {
-        boolean shortCircuit = isOr;
-        if lhs == shortCircuit {
-            return <ExprEffect>{ result: lhs, block: bb };
+    var [leftValue, leftFlags] = booleanOperandValue(lhs);
+    if leftFlags != 0 {
+        if leftValue == isOr {
+            // XXX not correct errors in `right` won't be found
+            // XXX previous code used bb not block1 here
+            return constExprEffect(cx, block1, leftValue, leftFlags);
         }
         else {
             return codeGenExprForBoolean(cx, block1, right);
@@ -583,7 +589,7 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     var shortCircuitBlock = cx.createBasicBlock();
     // JBUG var instead tuple type doesn't work
     [bir:BasicBlock, bir:BasicBlock] [ifTrue, ifFalse] = isOr ? [shortCircuitBlock, evalRightBlock] : [evalRightBlock, shortCircuitBlock];
-    bir:CondBranchInsn condBranch = { operand: lhs, ifTrue: ifTrue.label, ifFalse: ifFalse.label, pos };
+    bir:CondBranchInsn condBranch = { operand: <bir:Register>lhs, ifTrue: ifTrue.label, ifFalse: ifFalse.label, pos };
     block1.insns.push(condBranch);
     ExprContext rhsCx;
     if lhsNarrowing != () {
@@ -597,6 +603,7 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     else {
         rhsCx = cx;
     }
+    // XXX need properly to deal with case when rhs is const or singleton boolean
     var { result: rhs, block: evalRightBlock2, narrowing: rhsNarrowing } = check codeGenExprForBoolean(rhsCx, evalRightBlock, right);
     ExprNarrowing? narrowing;
     if lhsNarrowing == () && rhsNarrowing == () {
@@ -814,7 +821,7 @@ function codeGenConstValue(ExprContext cx, bir:BasicBlock bb, t:SemType? expecte
     if multiSemType == () {
         return { result: singletonOperand(cx, value), block: bb };
     }
-    else if value is int|float|decimal {
+    else if value is boolean|int|float|decimal {
         return { result: { value, semType: multiSemType }, block: bb };
     }
     else {
@@ -835,11 +842,12 @@ function codeGenRelationalExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? exp
     if !t:comparable(tc, lType, rType) {
         return cx.semanticErr(`operands of ${op} do not belong to an ordered type`, pos);
     }
-    t:WrappedSingleValue? lShape = operandSingleShape(l);
-    t:WrappedSingleValue? rShape = operandSingleShape(r);
-    if lShape != () && rShape != () {
-        boolean result = check relationalEval(cx, pos, op, lShape.value, rShape.value);
-        return { result, block: nextBlock };
+    var [leftValue, leftFlags] = operandValue(l);
+    var [rightValue, rightFlags] = operandValue(r);
+    ValueFlags resultFlags = leftFlags & rightFlags;
+    if resultFlags != 0 {
+        // XXX we only need the shape
+        return constExprEffect(cx, nextBlock, check relationalEval(cx, pos, op, leftValue, rightValue), resultFlags);
     }
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
     bir:CompareInsn insn = { op, pos, operands: [l, r], result };
@@ -858,35 +866,28 @@ function codeGenEqualityExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
         return cx.semanticErr(`intersection of operands of operator ${op} is empty`, pos);
     }
     boolean exact = op.length() == 3;
-    boolean negated = op.startsWith("!");
-
     if !exact {
         t:SemType ad = t:createAnydata(tc);
         if !t:isSubtype(tc, lType, ad) && !t:isSubtype(tc,rType, ad) {
             return cx.semanticErr(`type of at least one operand of ${op} operator must be a subtype of anydata`, pos);
         }
-        t:WrappedSingleValue? lShape = operandSingleShape(l);
-        t:WrappedSingleValue? rShape = operandSingleShape(r);
-        // we only need to check for shapes being equal, since unequal shapes would result in empty intersection
-        if lShape != () && lShape == rShape {
-            return { result: !negated, block: nextBlock };
+    }
+    boolean negated = op.startsWith("!");
+    var [leftValue, leftFlags] = operandValue(l);
+    var [rightValue, rightFlags] = operandValue(r);
+    ValueFlags resultFlags = leftFlags & rightFlags;
+    if resultFlags != 0 {
+        if !exact {
+            boolean value = negated == (leftValue != rightValue);
+            return constExprEffect(cx, nextBlock, value, resultFlags);
+        }
+        else if (resultFlags & VALUE_CONST) != 0 {
+            boolean value = negated == (leftValue !== rightValue);
+            return { result: { value, semType: t:BOOLEAN }, block: nextBlock };
         }
     }
     
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
-
-    // XXX fold rewrite: redo this so it is recognized as constant in containing expressions
-    if exact {
-        t:WrappedSingleValue? lVal = operandConstValue(l);
-        t:WrappedSingleValue? rVal = operandConstValue(r);
-        if lVal != () && rVal != () {
-            boolean exactEq = lVal.value === rVal.value;
-            bir:AssignInsn insn = { result, operand: negated == !exactEq, pos };
-            nextBlock.insns.push(insn);
-            return { result, block: nextBlock };
-        }  
-    }
-
     bir:EqualityInsn insn = { op, pos, operands: [l, r], result };
     nextBlock.insns.push(insn);
     [Binding, SimpleConst]? narrowingCompare = ();
@@ -1029,7 +1030,7 @@ function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
     t:SemType curSemType = operandSemType(tc, operand);
     t:SemType diff = t:roDiff(tc, curSemType, semType);
     if t:isEmpty(tc, diff) {
-        return { result: !negated, block: nextBlock };
+        return { result: singletonOperand(cx, !negated), block: nextBlock };
     }
     t:SemType intersect;
     if t:isSubtype(tc, semType, curSemType) {
@@ -1039,7 +1040,7 @@ function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
         intersect = t:intersect(curSemType, semType);
     }
     if t:isEmpty(tc, intersect) {
-        return { result: negated, block: nextBlock };
+        return { result: singletonOperand(cx, negated), block: nextBlock };
     }
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
     // Either diff or intersect should be empty if the operand is singleton
@@ -1373,7 +1374,7 @@ function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
-    return value is int|decimal|float ? { value, semType: t:singleton(cx.mod.tc, value) } : value;
+    return value is boolean|int|decimal|float ? { value, semType: t:singleton(cx.mod.tc, value) } : value;
 }
 
 function singletonIntOperand(t:Context tc, int value) returns bir:IntConstOperand {
@@ -1393,13 +1394,21 @@ function constifyRegister(bir:Register reg) returns bir:Operand {
     if shape is decimal || shape == 0f {
         return reg;
     }
-    else if shape is float|int {
+    else if shape is boolean|float|int {
         return { value: shape, semType: ty };
     }
     // JBUG gets a compile error without the `else`
     else {
         return shape;
     }   
+}
+
+function constExprEffect(ExprContext cx, bir:BasicBlock block, boolean|int|float|decimal value, ValueFlags flags) returns ExprEffect {    
+    return { result: { value, semType: constSemType(cx, value, flags) }, block };
+}
+
+function constSemType(ExprContext cx, boolean|int|float|decimal value, ValueFlags flags) returns t:SemType {
+    return (flags & VALUE_SINGLE_SHAPE) != 0 ? t:singleton(cx.mod.tc, value) : t:constBasicType(value);
 }
 
 const VALUE_CONST = 1;
@@ -1413,7 +1422,7 @@ function operandValue(bir:Operand operand) returns [t:SingleValue, ValueFlags] {
         t:WrappedSingleValue? wrapped = t:singleShape(operand.semType);
         if wrapped != () {
             if wrapped.value != value {
-                panic err:impossible(`inconsistent float value/type ${value}/${wrapped.value.toString()}`);
+                panic err:impossible(`inconsistent float value/type ${value.toBalString()}/${wrapped.value.toBalString()}`);
             }
             flags |= VALUE_SINGLE_SHAPE;
         }
@@ -1494,5 +1503,27 @@ function intOperandValue(bir:IntOperand operand) returns [int, ValueFlags] {
             return [shape, VALUE_SINGLE_SHAPE];
         }
         return [0, 0];
+    }
+}
+
+function booleanOperandValue(bir:BooleanOperand operand) returns [boolean, ValueFlags] {
+    if operand is bir:BooleanConstOperand {
+        boolean value = operand.value;
+        ValueFlags flags = VALUE_CONST;
+        boolean? shape = t:singleBooleanShape(operand.semType);
+        if shape != () {
+            if shape != value {
+                panic err:impossible(`inconsistent boolean value/type ${value}/${shape}`);
+            }
+            flags |= VALUE_SINGLE_SHAPE;
+        }
+        return [value, flags];
+    }
+    else {
+        boolean? shape = t:singleBooleanShape(operand.semType);
+        if shape != () {
+            return [shape, VALUE_SINGLE_SHAPE];
+        }
+        return [false, 0];
     }
 }

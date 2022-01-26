@@ -321,13 +321,12 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     else if operand == () {
         return [REPR_NIL, buildConstNil()];
     }
-    else if operand is boolean {
-        // operand is boolean
-        return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0)];
-    }
     else {
         bir:TypedConstOperand _ = operand;
         var value = operand.value;
+        if value is boolean {
+            return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, value ? 1 : 0)];
+        }
         if value is int {
             return [REPR_INT, llvm:constInt(LLVM_INT, value)];
         }
@@ -374,8 +373,8 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
 
 // Build a value as REPR_BOOLEAN
 function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperand operand) returns llvm:Value {
-    if operand is boolean {
-        return llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0);
+    if operand is bir:BooleanConstOperand {
+        return llvm:constInt(LLVM_BOOLEAN, operand.value ? 1 : 0);
     }
     else {
         return builder.load(scaffold.address(operand));

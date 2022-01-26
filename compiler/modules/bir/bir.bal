@@ -216,11 +216,16 @@ public type Insn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
-public type ConstOperand ()|boolean|string|TypedConstOperand;
+public type ConstOperand ()|string|TypedConstOperand;
 
 public type TypedConstOperand readonly & record {|
     t:SemType semType;
-    int|float|decimal value;
+    boolean|int|float|decimal value;
+|};
+
+public type BooleanConstOperand readonly & record {|
+    t:SemType semType;
+    boolean value;
 |};
 
 public type IntConstOperand readonly & record {|
@@ -242,7 +247,7 @@ public type StringOperand string|Register;
 public type IntOperand IntConstOperand|Register;
 public type FloatOperand FloatConstOperand|Register;
 public type DecimalOperand DecimalConstOperand|Register;
-public type BooleanOperand boolean|Register;
+public type BooleanOperand BooleanConstOperand|Register;
 public type NilOperand ()|Register;
 public type FunctionOperand FunctionRef|Register;
 

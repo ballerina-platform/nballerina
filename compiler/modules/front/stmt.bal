@@ -34,6 +34,12 @@ type StmtEffect record {|
     Assignment[] assignments = [];
 |};
 
+type CondExprEffect record {|
+    bir:BasicBlock block;
+    bir:Register|boolean result;
+    ExprNarrowing? narrowing;
+|};
+
 type LExprEffect record {|
     bir:BasicBlock block;
     bir:Register result;
@@ -421,7 +427,7 @@ function codeGenWhileStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     bir:BasicBlock? exit = ();
 
     boolean exitReachable = false;
-    var { result: condition, block: afterCondition, narrowing: condNarrowing } = check cx.codeGenExprForBoolean(loopHead, env, stmt.condition);
+    var { result: condition, block: afterCondition, narrowing: condNarrowing } = check codeGenExprForCond(cx, loopHead, env, stmt.condition);
     bir:Insn branch;
     if condition is bir:Register {
         bir:BasicBlock ifFalseBb = cx.createBasicBlock();
@@ -543,7 +549,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
                     return cx.semanticErr("match pattern cannot match value of expression", pos=s:range(pattern));
                 }
                 patternType = t:singleton(tc, value);
-                bir:ConstOperand operand = value is int|decimal|float ? { value, semType: patternType } : value;
+                bir:ConstOperand operand = value is boolean|int|decimal|float ? { value, semType: patternType } : value;
                 EqualMatchTest mt = { value, operand, clauseIndex: i, pos: clause.opPos };
                 equalMatchTests.add(mt);    
                 matchTests.push(mt);
@@ -683,7 +689,7 @@ function maybeCreateBasicBlock(StmtContext cx, bir:BasicBlock? block) returns bi
 
 function codeGenIfElseStmt(StmtContext cx, bir:BasicBlock startBlock, Environment env, s:IfElseStmt stmt) returns CodeGenError|StmtEffect {
     var { condition, ifTrue, ifFalse } = stmt;
-    var { result: operand, block: branchBlock, narrowing: condNarrowing } = check cx.codeGenExprForBoolean(startBlock, env, condition);
+    var { result: operand, block: branchBlock, narrowing: condNarrowing } = check codeGenExprForCond(cx, startBlock, env, condition);
     if operand is boolean {
         s:StmtBlock|s:IfElseStmt? taken;
         s:StmtBlock|s:IfElseStmt? notTaken;
@@ -1208,6 +1214,25 @@ function codeGenCheckingCond(StmtContext cx, bir:BasicBlock bb, bir:Register ope
     };
     okBlock.insns.push(narrowToOk);
     return { result, block: okBlock };
+}
+
+function codeGenExprForCond(StmtContext cx, bir:BasicBlock bb, Environment env, s:Expr expr) returns CodeGenError|CondExprEffect {
+    var { result: operand, block, narrowing } = check cx.codeGenExprForBoolean(bb, env, expr);
+    var [value, flags] = booleanOperandValue(operand);
+    boolean|bir:Register result;
+    if (flags & VALUE_SINGLE_SHAPE) != 0 {
+        result = value;
+    }
+    else if flags != 0 {
+        bir:Register reg = cx.createTmpRegister(t:BOOLEAN);
+        bir:AssignInsn insn = { result: reg, operand: { value, semType: t:BOOLEAN }, pos: expr.startPos };
+        block.insns.push(insn);
+        result = reg;
+    }
+    else {
+        result = <bir:Register>operand;
+    }
+    return { result, block, narrowing };
 }
 
 function lookupVarRefBinding(StmtContext cx, string name, Environment env, Position pos) returns Binding|CodeGenError {
