@@ -51,7 +51,10 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     // else if rule == "expr" {
     //     tree = syntaxNodeToString(canonicalTreeNodeFromExpr(check parseExpr(tok), false));
     // }
-    if rule is "expr" {
+    if rule is "stmt" {
+        tree = syntaxNodeToString(syntaxNodeFromStmt(check parseStmt(tok)));
+    }
+    else if rule is "expr" {
         tree = syntaxNodeToString(syntaxNodeFromExpr(check parseExpr(tok)));
     }
     else if rule == "td" {
@@ -61,7 +64,7 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
         return;
     }
     io:println("rule: " , rule);
-    io:println("expected: " , expected);
+    io:println("expected: " , "".'join(...expected));
     io:println("actual: ", tree, "\n");
 }
 

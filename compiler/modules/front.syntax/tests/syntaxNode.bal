@@ -339,7 +339,7 @@ function syntaxNodeFromFunctionCallExpr(FunctionCallExpr expr) returns NonTermin
 }
 
 function syntaxNodeFromMethodCallExpr(MethodCallExpr expr) returns NonTerminalSyntaxNode {
-    SyntaxNode[] args = from Expr arg in expr.args select syntaxNodeFromExpr(arg);
+    SyntaxNode[] args = flattenSyntaxNodeList(from int i in 0 ..< expr.args.length() select fixedTokenSeperatedSyntaxNode(i, syntaxNodeFromExpr(expr.args[i]), ","));
     return nonTerminalSyntaxNode(expr, syntaxNodeFromExpr(expr.target),
                                        { token: ".", pos: expr.opPos },
                                        { name: expr.methodName, pos: expr.namePos },

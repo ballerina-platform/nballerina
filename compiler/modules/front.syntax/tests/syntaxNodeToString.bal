@@ -16,7 +16,10 @@ function syntaxNodeToString(SyntaxNode node) returns string {
         return terminalSyntaxNodeToString(node);
     }
     AstNode astNode = node.astNode;
-    if astNode is Expr {
+    if astNode is Stmt {
+        return stmtSyntaxNodeToString(node);
+    }
+    else if astNode is Expr {
         return exprSyntaxNodeToString(node, false);
     }
     else if astNode is TypeDesc {
@@ -27,6 +30,41 @@ function syntaxNodeToString(SyntaxNode node) returns string {
     }
 }
 
+function stmtSyntaxNodeToString(SyntaxNode node) returns string {
+    if node is TerminalSyntaxNode {
+        return terminalSyntaxNodeToString(node);
+    }
+    AstNode astNode = node.astNode;
+    SyntaxNode[] childNodes = node.childNodes;
+    string[] content;
+    if astNode !is Stmt {
+        panic error("expected a stmt node");
+    }
+    if astNode is ForeachStmt {
+        content = [];
+        foreach int i in 0 ..< 4 {
+            content.push(syntaxNodeToString(childNodes[i]));
+        }
+        content.push(rangeExprSyntaxNodeToString(childNodes[4]));
+        content.push(syntaxNodeToString(childNodes[5]));
+    }
+    else {
+        content = from SyntaxNode child in childNodes select syntaxNodeToString(child);
+    }
+    return " ".'join(...content);
+}
+
+function rangeExprSyntaxNodeToString(SyntaxNode node) returns string {
+    if node !is NonTerminalSyntaxNode || node.astNode !is RangeExpr {
+        panic error("expected a range expr");
+    }
+    SyntaxNode[] childNodes = node.childNodes;
+    string[] content = [exprSyntaxNodeToString(childNodes[0], true),
+                        syntaxNodeToString(childNodes[1]),
+                        exprSyntaxNodeToString(childNodes[2], true)];
+    return " ".'join(...content);
+}
+
 function exprSyntaxNodeToString(SyntaxNode node, boolean wrap) returns string {
     if node is TerminalSyntaxNode {
         return terminalSyntaxNodeToString(node);
@@ -35,7 +73,7 @@ function exprSyntaxNodeToString(SyntaxNode node, boolean wrap) returns string {
     SyntaxNode[] childNodes = node.childNodes;
     string[] content;
     if astNode !is Expr {
-        panic error("expected a expr node");
+        panic error("expected an expr node");
     }
     if astNode is GroupingExpr {
         return exprSyntaxNodeToString(childNodes[1], wrap);
@@ -92,9 +130,16 @@ function typeDescSyntaxNodeToString(SyntaxNode node, boolean|BinaryTypeOp wrap) 
     }
     else if astNode is BinaryTypeDesc {
         boolean noWrap = wrap == false || wrap == astNode.op;
+        // FIXME: with the optional type desc
+        if childNodes.length() == 2 {
+            content = conditionalWrapContent(!noWrap, [typeDescSyntaxNodeToString(childNodes[0], astNode.op),
+                                                    "?"]);
+        }
+        else {
         content = conditionalWrapContent(!noWrap, [typeDescSyntaxNodeToString(childNodes[0], astNode.op),
-                                                syntaxNodeToString(childNodes[1]),
-                                                typeDescSyntaxNodeToString(childNodes[2], astNode.op)]);
+                                                   syntaxNodeToString(childNodes[1]),
+                                                   typeDescSyntaxNodeToString(childNodes[2], astNode.op)]);
+        }
     }
     else if astNode is TupleTypeDesc {
         content = conditionalWrapContent(wrap != false, from SyntaxNode child in childNodes select syntaxNodeToString(child));
