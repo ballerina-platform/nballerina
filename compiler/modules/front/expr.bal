@@ -1165,17 +1165,17 @@ function validArgumentTypes(ExprContext cx, bir:FunctionRef func, bir:Operand[] 
         if operandHasType(cx.mod.tc, suppliedArgs[i], func.signature.paramTypes[i]) {
             continue;
         }
-        Range range;
+        s:Expr argExpr;
         if expr is s:FunctionCallExpr {
-            range = s:range(expr.args[i]);
+            argExpr = expr.args[i];
         }
         else if i == 0 {
-            range = s:range(expr);
+            argExpr = expr;
         }
         else {
-            range = s:range(expr.args[i-1]);
+            argExpr = expr.args[i-1];
         }
-        return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, range);
+        return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, s:range(argExpr));
     }
     return ();
 }
@@ -1379,7 +1379,7 @@ function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
 }
 
 function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
-    return operand is bir:Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand);
+    return operand is bir:Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand.value);
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {

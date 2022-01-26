@@ -169,7 +169,7 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns Error? {
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `bad BIR: wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
+        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos), true);
     }
 }
 
@@ -322,9 +322,9 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Interna
     }
 }
 
-function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Semantic? {
+function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos, boolean invalid = false) returns Error? {
     if !vc.operandHasType(operand, semType) {
-        return vc.semanticErr(msg, pos);
+        return invalid ? vc.invalidErr(msg, pos) : vc.semanticErr(msg, pos);
     }
 }
 
