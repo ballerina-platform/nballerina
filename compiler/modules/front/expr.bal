@@ -141,7 +141,7 @@ function codeGenExprForInt(ExprContext cx, bir:BasicBlock bb, s:Expr expr) retur
 
 function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|StringExprEffect {
     var { result, block } = check codeGenExpr(cx, bb, t:STRING, expr);
-    if result is string || (result is bir:Register && t:isSubtypeSimple(result.semType, t:STRING)) {
+    if result is bir:StringConstOperand || (result is bir:Register && t:isSubtypeSimple(result.semType, t:STRING)) {
         return { result, block };
     }
     return cx.semanticErr("expected string operand", s:range(expr));
@@ -263,7 +263,7 @@ function codeGenNilLiftResult(ExprContext cx, ExprEffect nonNilEffect, bir:Basic
         bir:BasicBlock nonNilBlock = nonNilEffect.block;
 
         bir:Register result = cx.createTmpRegister(t:union(operandSemType(cx.mod.tc, nonNilResult), t:NIL));
-        bir:AssignInsn nilAssign = { result, operand: (), pos };
+        bir:AssignInsn nilAssign = { result, operand: bir:NIL_OPERAND, pos };
         ifNilBlock.insns.push(nilAssign);
         bir:BranchInsn branchInsn = { dest: block.label, pos };
         ifNilBlock.insns.push(branchInsn);
@@ -348,7 +348,7 @@ type MappingAccessType "."|"["|"fill";
 
 // if accessType is ".", k must be a string
 function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, Position pos) returns CodeGenError|RegExprEffect {
-    string? kVal = k is string ? k : ();
+    string? kVal = t:singleStringShape(k.semType);
     boolean maybeMissing = true;
     if kVal != () {
         if t:mappingMemberRequired(cx.mod.tc, mapping.semType, kVal) {
@@ -376,7 +376,7 @@ function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register ma
 
 function codeGenFieldAccessExpr(ExprContext cx, bir:BasicBlock nextBlock, Position pos, bir:Operand l, string fieldName) returns CodeGenError|ExprEffect {
     if l is bir:Register && t:isSubtypeSimple(l.semType, t:MAPPING)  {
-        return codeGenMappingGet(cx, nextBlock, l, ".", fieldName, pos);
+        return codeGenMappingGet(cx, nextBlock, l, ".", singletonStringOperand(cx.mod.tc, fieldName), pos);
     }
     return cx.semanticErr("can only apply field access to mapping", pos=pos);
 }
@@ -535,10 +535,11 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
     }    
     else if pair is StringOperandPair && op == "+" {
         readonly & bir:StringOperand[2] operands = pair[1];
-        bir:StringOperand leftOperand = operands[0];
-        bir:StringOperand rightOperand = operands[1];
-        if leftOperand is string && rightOperand is string {
-            return { result: leftOperand + rightOperand, block: bb };
+        var [leftVal, leftFlags] = stringOperandValue(operands[0]);
+        var [rightVal, rightFlags] = stringOperandValue(operands[1]);
+        ValueFlags resultFlags = leftFlags & rightFlags;
+        if resultFlags != 0 {
+            return constExprEffect(cx, bb, leftVal + rightVal, resultFlags);
         }
         result = cx.createTmpRegister(t:STRING, pos);
         bir:StringConcatInsn insn = { operands: pair[1], result, pos };
@@ -821,14 +822,8 @@ function codeGenConstValue(ExprContext cx, bir:BasicBlock bb, t:SemType? expecte
     if multiSemType == () {
         return { result: singletonOperand(cx, value), block: bb };
     }
-    else if value is boolean|int|float|decimal {
-        return { result: { value, semType: multiSemType }, block: bb };
-    }
     else {
-        bir:Register reg = cx.createTmpRegister(multiSemType, cvExpr.startPos);
-        bir:AssignInsn insn = { operand: value, result: reg, pos: cvExpr.startPos };
-        bb.insns.push(insn);
-        return { result: reg, block: bb };
+        return { result: { value, semType: multiSemType }, block: bb };
     }
 }
 
@@ -1304,7 +1299,7 @@ function arithmeticOperand(bir:Operand operand) returns ArithmeticOperand? {
 }
 
 function arithmeticConstOperand(bir:ConstOperand operand) returns ArithmeticOperand? {
-    if operand is string {
+    if operand is bir:StringOperand {
         return [t:UT_STRING, operand];
     }
     else if operand is bir:IntOperand {
@@ -1322,20 +1317,14 @@ function arithmeticConstOperand(bir:ConstOperand operand) returns ArithmeticOper
 }
 
 function operandLangLibModuleName(bir:Operand operand) returns LangLibModuleName? {
-    t:UniformTypeCode? utc;
-    if operand is t:SingleValue {
-        utc = t:constUniformTypeCode(operand);
+    t:SemType semType = operand.semType;
+    if t:isSubtypeSimple(operand.semType, t:LIST) {
+        return "array";
     }
-    else {
-        t:SemType semType = operand.semType;
-        if t:isSubtypeSimple(operand.semType, t:LIST) {
-            return "array";
-        }
-        else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
-            return "map";
-        }
-        utc = t:uniformTypeCode(t:widenToUniformTypes(semType));
+    else if t:isSubtypeSimple(operand.semType, t:MAPPING) {
+        return "map";
     }
+    t:UniformTypeCode? utc = t:uniformTypeCode(t:widenToUniformTypes(semType));
     match utc {
         t:UT_BOOLEAN => { return "boolean"; }
         t:UT_INT => { return "int"; }
@@ -1348,12 +1337,12 @@ function operandLangLibModuleName(bir:Operand operand) returns LangLibModuleName
 }
 
 function operandSemType(t:Context tc, bir:Operand operand) returns t:SemType {
-    return operand is bir:Register|bir:TypedConstOperand ? operand.semType : t:singleton(tc, operand);
+    return operand.semType;
 }
 
 // Returns non-nil if operand has singleton type.
 function operandSingleShape(bir:Operand operand) returns t:WrappedSingleValue? {
-    return operand is bir:Register|bir:TypedConstOperand ? t:singleShape(operand.semType) : { value: operand };
+    return t:singleShape(operand.semType);
 }
 
 function validIntOperand(ExprContext cx, bir:Operand operand, s:Expr expr) returns bir:IntOperand|CodeGenError {
@@ -1364,20 +1353,18 @@ function validIntOperand(ExprContext cx, bir:Operand operand, s:Expr expr) retur
 }
 
 function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
-    if operand is bir:TypedConstOperand {
-        return { value: operand.value };
-    }
-    else if operand !is bir:Register {
-        return { value: operand };
-    }
-    return ();
+    return operand is bir:Register ? () : { value: operand.value };
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
-    return value is boolean|int|decimal|float ? { value, semType: t:singleton(cx.mod.tc, value) } : value;
+    return { value, semType: t:singleton(cx.mod.tc, value) };
 }
 
 function singletonIntOperand(t:Context tc, int value) returns bir:IntConstOperand {
+    return { value, semType: t:singleton(tc, value) };
+}
+
+function singletonStringOperand(t:Context tc, string value) returns bir:StringConstOperand {
     return { value, semType: t:singleton(tc, value) };
 }
 
@@ -1394,20 +1381,16 @@ function constifyRegister(bir:Register reg) returns bir:Operand {
     if shape is decimal || shape == 0f {
         return reg;
     }
-    else if shape is boolean|float|int {
+    else {
         return { value: shape, semType: ty };
     }
-    // JBUG gets a compile error without the `else`
-    else {
-        return shape;
-    }   
 }
 
-function constExprEffect(ExprContext cx, bir:BasicBlock block, boolean|int|float|decimal value, ValueFlags flags) returns ExprEffect {    
+function constExprEffect(ExprContext cx, bir:BasicBlock block, t:SingleValue value, ValueFlags flags) returns ExprEffect {    
     return { result: { value, semType: constSemType(cx, value, flags) }, block };
 }
 
-function constSemType(ExprContext cx, boolean|int|float|decimal value, ValueFlags flags) returns t:SemType {
+function constSemType(ExprContext cx, t:SingleValue value, ValueFlags flags) returns t:SemType {
     return (flags & VALUE_SINGLE_SHAPE) != 0 ? t:singleton(cx.mod.tc, value) : t:constBasicType(value);
 }
 
@@ -1416,27 +1399,24 @@ const VALUE_SINGLE_SHAPE = 2;
 type ValueFlags int;
 
 function operandValue(bir:Operand operand) returns [t:SingleValue, ValueFlags] {
-    if operand is bir:TypedConstOperand {
+    if operand is bir:ConstOperand {
         var value = operand.value;
         ValueFlags flags = VALUE_CONST;
         t:WrappedSingleValue? wrapped = t:singleShape(operand.semType);
         if wrapped != () {
             if wrapped.value != value {
-                panic err:impossible(`inconsistent float value/type ${value.toBalString()}/${wrapped.value.toBalString()}`);
+                panic err:impossible(`inconsistent value/type ${value.toBalString()}/${wrapped.value.toBalString()}`);
             }
             flags |= VALUE_SINGLE_SHAPE;
         }
         return [value, flags];
     }
-    else if operand is bir:Register {
+    else {
         t:WrappedSingleValue? wrapped = t:singleShape(operand.semType);
         if wrapped != () {
             return [wrapped.value, VALUE_SINGLE_SHAPE];
         }
         return [(), 0];
-    }
-    else {
-        return [operand, VALUE_SINGLE_SHAPE|VALUE_CONST];
     }
 }
 
@@ -1525,5 +1505,27 @@ function booleanOperandValue(bir:BooleanOperand operand) returns [boolean, Value
             return [shape, VALUE_SINGLE_SHAPE];
         }
         return [false, 0];
+    }
+}
+
+function stringOperandValue(bir:StringOperand operand) returns [string, ValueFlags] {
+    if operand is bir:StringConstOperand {
+        string value = operand.value;
+        ValueFlags flags = VALUE_CONST;
+        string? shape = t:singleStringShape(operand.semType);
+        if shape != () {
+            if shape != value {
+                panic err:impossible(`inconsistent string value/type ${value}/${shape}`);
+            }
+            flags |= VALUE_SINGLE_SHAPE;
+        }
+        return [value, flags];
+    }
+    else {
+        string? shape = t:singleStringShape(operand.semType);
+        if shape != () {
+            return [shape, VALUE_SINGLE_SHAPE];
+        }
+        return ["", 0];
     }
 }

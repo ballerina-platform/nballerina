@@ -227,7 +227,7 @@ function codeGenFunction(ModuleSymbols mod, s:FunctionDefn defn, bir:FunctionSig
     }
     var { block: endBlock } = check codeGenScope(cx, startBlock, { bindings }, defn.body);
     if endBlock != () {
-        bir:RetInsn ret = { operand: (), pos: defn.body.closeBracePos };
+        bir:RetInsn ret = { operand: bir:NIL_OPERAND, pos: defn.body.closeBracePos };
         endBlock.insns.push(ret);
     }
     codeGenOnPanic(cx, defn.body.closeBracePos);
@@ -549,7 +549,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
                     return cx.semanticErr("match pattern cannot match value of expression", pos=s:range(pattern));
                 }
                 patternType = t:singleton(tc, value);
-                bir:ConstOperand operand = value is boolean|int|decimal|float ? { value, semType: patternType } : value;
+                bir:ConstOperand operand = { value, semType: patternType };
                 EqualMatchTest mt = { value, operand, clauseIndex: i, pos: clause.opPos };
                 equalMatchTests.add(mt);    
                 matchTests.push(mt);
@@ -876,7 +876,7 @@ function codeGenReturnStmt(StmtContext cx, bir:BasicBlock startBlock, Environmen
         { result: operand, block: nextBlock } = check cx.codeGenExpr(startBlock, env, cx.returnType, returnExpr);
     }
     else {
-        operand = ();
+        operand = bir:NIL_OPERAND;
         nextBlock = startBlock;
     }
     bir:RetInsn insn = { operand, pos: stmt.kwPos };
@@ -1042,7 +1042,7 @@ function codeGenLExprMappingKey(StmtContext cx, bir:BasicBlock block, Environmen
         if !t:mappingMemberRequired(cx.mod.tc, mappingType, fieldName) {
             return cx.semanticErr(`${fieldName} must be a required key`, pos=mappingLValue.opPos);
         }
-        return { result: fieldName, block };
+        return { result: singletonStringOperand(cx.mod.tc, fieldName), block };
     }
     else {
         return cx.codeGenExprForString(block, env, mappingLValue.index);
@@ -1154,7 +1154,7 @@ function codeGenCallStmt(StmtContext cx, bir:BasicBlock startBlock, Environment 
     else {
         return codeGenCheckingStmt(cx, startBlock, env, expr.checkingKeyword, expr.operand, expr.kwPos);
     }
-    if result != () {
+    if !t:isSubtype(cx.mod.tc, result.semType, t:NIL) {
         return cx.semanticErr("return type of function or method in call statement must be nil", stmt.startPos);
     }
     return { block: nextBlock };

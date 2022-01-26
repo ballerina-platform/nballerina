@@ -315,22 +315,21 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     if operand is bir:Register {
         return buildLoad(builder, scaffold, operand);
     }
-    else if operand is string {
-        return [REPR_STRING, check buildConstString(builder, scaffold, operand)];
-    }
-    else if operand == () {
-        return [REPR_NIL, buildConstNil()];
-    }
     else {
-        bir:TypedConstOperand _ = operand;
-        var value = operand.value;
-        if value is boolean {
+        t:SingleValue value = operand.value;
+        if value is string {
+            return [REPR_STRING, check buildConstString(builder, scaffold, value)];
+        }
+        else if value == () {
+            return [REPR_NIL, buildConstNil()];
+        }
+        else if value is boolean {
             return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, value ? 1 : 0)];
         }
-        if value is int {
+        else if value is int {
             return [REPR_INT, llvm:constInt(LLVM_INT, value)];
         }
-        if value is float {
+        else if value is float {
             return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, value)];
         }
         else {
@@ -353,8 +352,8 @@ function buildConstDecimal(llvm:Builder builder, Scaffold scaffold, decimal deci
 }
 
 function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {
-    if operand is string {
-        return buildConstString(builder, scaffold, operand);
+    if operand is bir:StringConstOperand {
+        return buildConstString(builder, scaffold, operand.value);
     }
     else {
         return builder.load(scaffold.address(operand));

@@ -216,12 +216,18 @@ public type Insn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
-public type ConstOperand ()|string|TypedConstOperand;
 
-public type TypedConstOperand readonly & record {|
+public type ConstOperand  readonly & record {|
     t:SemType semType;
-    boolean|int|float|decimal value;
+    t:SingleValue value;
 |};
+
+public type NilConstOperand readonly & record {|
+    t:SemType semType;
+    () value;
+|};
+
+public final NilConstOperand NIL_OPERAND = { value: (), semType: t:NIL };
 
 public type BooleanConstOperand readonly & record {|
     t:SemType semType;
@@ -243,16 +249,20 @@ public type FloatConstOperand readonly & record {|
     float value;
 |};
 
-public type StringOperand string|Register;
+public type StringConstOperand readonly & record {|
+    t:SemType semType;
+    string value;
+|};
+
 public type IntOperand IntConstOperand|Register;
 public type FloatOperand FloatConstOperand|Register;
 public type DecimalOperand DecimalConstOperand|Register;
 public type BooleanOperand BooleanConstOperand|Register;
-public type NilOperand ()|Register;
+public type StringOperand StringConstOperand|Register;
 public type FunctionOperand FunctionRef|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
-    return operand is Register|TypedConstOperand ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand);
+    return t:isSubtype(tc, operand.semType, semType);
 }
 
 # Perform a arithmetic operand on ints with two operands.
