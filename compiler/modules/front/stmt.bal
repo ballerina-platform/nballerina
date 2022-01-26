@@ -1039,7 +1039,7 @@ function codeGenAssignToMember(StmtContext cx, bir:BasicBlock startBlock, Enviro
 function codeGenLExprMappingKey(StmtContext cx, bir:BasicBlock block, Environment env, s:MemberAccessLExpr|s:FieldAccessLExpr mappingLValue, t:SemType mappingType) returns CodeGenError|StringExprEffect {
     if mappingLValue is s:FieldAccessLExpr {
         string fieldName = mappingLValue.fieldName;
-        if !t:mappingMemberRequired(cx.mod.tc, mappingType, fieldName) {
+        if !t:mappingMemberRequired(cx.mod.tc, mappingType, t:stringConst(fieldName)) {
             return cx.semanticErr(`${fieldName} must be a required key`, pos=mappingLValue.opPos);
         }
         return { result: singletonStringOperand(cx.mod.tc, fieldName), block };

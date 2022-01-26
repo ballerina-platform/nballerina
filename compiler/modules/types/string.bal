@@ -53,33 +53,6 @@ function stringSubtypeSingleValue(SubtypeData d) returns string? {
     return ();
 }
 
-function stringSubtypeContainsExtra(SubtypeData d, string[] values) returns boolean {
-    if d is boolean {
-        return d;
-    }
-    var { char, nonChar } = <StringSubtype>d;
-    if char.allowed {
-        if char.values.length() == 0 {
-            return true;
-        }
-        foreach string c in char.values {
-            if values.indexOf(c) == () {
-                return true;
-            }
-        }
-    }
-    if nonChar.allowed {
-        foreach string val in nonChar.values {
-            if values.indexOf(val) == () {
-                return true;
-            }
-        }
-    } else if nonChar.values.length() == 0 {
-        return true;
-    }
-    return false;
-}
-
 function stringSubtypeContains(SubtypeData d, string s) returns boolean {
     if d is boolean {
         return d;
@@ -90,6 +63,39 @@ function stringSubtypeContains(SubtypeData d, string s) returns boolean {
         return char.values.indexOf(<string:Char>s) != () ? char.allowed : !char.allowed;
     }
     return nonChar.values.indexOf(s) != () ? nonChar.allowed : !nonChar.allowed;
+}
+
+function stringSubtypeContainedIn(SubtypeData d, string[] values) returns boolean {
+    if d is boolean {
+        return false;
+    }
+    var { char, nonChar } = <StringSubtype>d;
+    if char.allowed {
+        foreach string c in char.values {
+            if values.indexOf(c) == () {
+                return false;
+            }
+        }
+    }
+    else if char.values.length() == 0 {
+        // all char
+        return false;
+    }
+    if nonChar.allowed {
+        foreach string val in nonChar.values {
+            if values.indexOf(val) == () {
+                return false;
+            }
+        }
+    }
+    else if nonChar.values.length() == 0 {
+        // all non char
+        return false;
+    }
+    if char.values.length() == 0 && nonChar.values.length() == 0 {
+        return false;
+    }
+    return true;
 }
 
 function stringSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {

@@ -393,7 +393,7 @@ class MappingPairing {
     private function curName2() returns string => self.names2[self.i2];
 }
 
-function bddMappingMemberType(Context cx, Bdd b, string|SemType? key, SemType accum) returns SemType {
+function bddMappingMemberType(Context cx, Bdd b, StringSubtype? key, SemType accum) returns SemType {
     if b is boolean {
         return b ? accum : NEVER;
     }
@@ -407,26 +407,18 @@ function bddMappingMemberType(Context cx, Bdd b, string|SemType? key, SemType ac
 }
 
 
-function mappingAtomicMemberType(MappingAtomicType atomic, string|SemType? key) returns SemType {
-    if key is ComplexSemType {
-        SubtypeData subtypeData = getComplexSubtypeData(key, UT_STRING);
+function mappingAtomicMemberType(MappingAtomicType atomic, StringSubtype? key) returns SemType {
+    if key != () {
         SemType m = NEVER;
         foreach var i in 0 ..< atomic.names.length() {
-            if stringSubtypeContains(subtypeData, atomic.names[i]) {
+            if stringSubtypeContains(key, atomic.names[i]) {
                 m = union(m, atomic.types[i]);
             }
         }
-        if stringSubtypeContainsExtra(subtypeData, atomic.names) {
+        if !stringSubtypeContainedIn(key, atomic.names) {
             m = union(m, atomic.rest);
         }
         return m;
-    }
-    else if key is string {
-        int? i = atomic.names.indexOf(key);
-        if i != () {
-            return atomic.types[i];
-        }
-        return atomic.rest;
     }
     SemType m = atomic.rest;
     foreach var ty in atomic.types {
@@ -435,18 +427,17 @@ function mappingAtomicMemberType(MappingAtomicType atomic, string|SemType? key) 
     return m;
 }
 
-function bddMappingMemberRequired(Context cx, Bdd b, string k, boolean requiredOnPath) returns boolean {
+function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean requiredOnPath) returns boolean {
     if b is boolean {
         return b ? requiredOnPath : true;
     }
     else {
         return bddMappingMemberRequired(cx, b.left, k,
-                                        requiredOnPath || cx.mappingAtomType(b.atom).names.indexOf(k) != ())
+                                        requiredOnPath || stringSubtypeContainedIn(k, cx.mappingAtomType(b.atom).names))
                && bddMappingMemberRequired(cx, b.middle, k, requiredOnPath)
                && bddMappingMemberRequired(cx, b.right, k, requiredOnPath);
     }
 }
-
 
 final UniformTypeOps mappingRoOps = {
     union: bddSubtypeUnion,
