@@ -89,16 +89,8 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
             // JBUG #33341 cast
             return finishCheckingCallStmt(tok, <CheckingKeyword>cur, startPos);
         }
-        var td if td is SubsetBuiltinTypeName|"anydata"|"map"|"record" => {
+        var td if td is SubsetBuiltinTypeName|"map"|"record" => {
             return parseVarDeclStmt(tok, startPos);
-        }
-        "null" => {
-            if tok.peek() == "." {
-                return parseMethodCallStmt(tok);
-            }
-            else {
-                return parseVarDeclStmt(tok, startPos);
-            }
         }
         "(" => {
             TokenizerState state = tok.save();
@@ -117,12 +109,16 @@ function parseStmt(Tokenizer tok) returns Stmt|err:Syntax {
         | [STRING_LITERAL, _]
         | "true"
         | "false"
+        | "null"
         | [HEX_INT_LITERAL, _]
         | [DECIMAL_FP_NUMBER, _, _] => {
             var peeked = tok.peek();
             if peeked == "." || (peeked == "[" && !check savePreparseRestore(tok, preparseArrayTypeDesc)) {
                 return parseMethodCallStmt(tok);
             }
+            return parseVarDeclStmt(tok, startPos);
+        }
+        "-" => {
             return parseVarDeclStmt(tok, startPos);
         }
     }
@@ -152,13 +148,13 @@ function finishIdentifierStmt(Tokenizer tok, string name1, Position startPos, Po
         name = name1;
         prefix = ();
     }
-    Token? cur = tok.current();
-    if cur == "(" {
+    if tok.current() == "(" {
         FunctionCallExpr expr = check finishFunctionCallExpr(tok, prefix, name, startPos);
         return finishCallStmt(tok, expr, startPos);
     }
     Position endPos = tok.previousEndPos();
     LExpr lExpr = { startPos, endPos, name, qNamePos: startPos, prefix };
+    Token? cur = tok.current();
     while true {
         Position opPos = tok.currentStartPos();
         if cur == "." {

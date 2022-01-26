@@ -1130,7 +1130,8 @@ public function singleton(Context cx, SingleValue value) returns SemType {
     }
     // JBUG this memoization code doesn't work with numeric zeros
     // looks like zeros of different basic types are being treated as `==` by table code
-    // see cases in 13-bug
+    // JBUG #34712
+    // note: Uncomment the line that adds to the table.
     //SingletonMemo? memo = cx.singletonMemo[value];
     //if memo != () {
     //    return memo.semType;
@@ -1167,7 +1168,9 @@ public function isReadOnly(SemType t) returns boolean {
     return (bits & UT_RW_MASK) == 0;
 }
 
-public function constUniformTypeCode(SingleValue v) returns UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL {
+public type SingleValueUniformTypeCode UT_STRING|UT_INT|UT_FLOAT|UT_BOOLEAN|UT_NIL|UT_DECIMAL;
+
+public function constUniformTypeCode(SingleValue v) returns SingleValueUniformTypeCode {
     if v == () {
         return UT_NIL;
     }

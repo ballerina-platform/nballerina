@@ -105,15 +105,9 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
                 check tok.advance();
                 return { startPos, endPos, builtinTypeName: "null" };
             }
-            TypeDesc td = check parseTypeDesc(tok);
+            TypeDesc innerTd = check parseTypeDesc(tok);
             endPos = check tok.expectEnd(")");
-            // extend the position to cover parenthesis
-            if td is BuiltinTypeDesc {
-                return { startPos, endPos, builtinTypeName: td.builtinTypeName };
-            }
-            td.startPos = startPos;
-            td.endPos = endPos;
-            return td;
+            return { startPos, endPos, innerTd };
         }
         "boolean"
         | "decimal"
@@ -396,6 +390,7 @@ function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
         if rest != () {
             return parseError(tok);
         }
+        Position fieldStartPos = tok.currentStartPos();
         TypeDesc td = check parseTypeDesc(tok);
         if tok.current() == "..." {
             rest = td;
@@ -403,7 +398,7 @@ function parseExclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
             check tok.expect(";");
         }
         else {
-            fields.push(check parseFieldDesc(tok, td));
+            fields.push(check parseFieldDesc(tok, td, fieldStartPos));
         }
     }
     Position endPos = tok.currentEndPos();
@@ -415,16 +410,16 @@ function parseInclusiveRecordTypeDesc(Tokenizer tok, Position startPos) returns 
     check tok.advance();
     FieldDesc[] fields = [];
     while tok.current() != "}" {
+        Position fieldStartPos = tok.currentStartPos();
         TypeDesc td = check parseTypeDesc(tok);
-        fields.push(check parseFieldDesc(tok, td));
+        fields.push(check parseFieldDesc(tok, td, fieldStartPos));
     }
     Position endPos = tok.currentEndPos();
     check tok.advance();
     return { startPos, endPos, fields, rest: INCLUSIVE_RECORD_TYPE_DESC };
 }
 
-function parseFieldDesc(Tokenizer tok, TypeDesc typeDesc) returns FieldDesc|err:Syntax {
-    Position startPos = tok.currentStartPos();
+function parseFieldDesc(Tokenizer tok, TypeDesc typeDesc, Position startPos) returns FieldDesc|err:Syntax {
     string name = check tok.expectIdentifier();
     Position endPos = check tok.expectEnd(";");
     return { startPos, endPos, name, typeDesc };

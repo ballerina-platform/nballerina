@@ -315,24 +315,27 @@ function buildReprValue(llvm:Builder builder, Scaffold scaffold, bir:Operand ope
     if operand is bir:Register {
         return buildLoad(builder, scaffold, operand);
     }
-    else if operand is string {
-        return [REPR_STRING, check buildConstString(builder, scaffold, operand)];
-    }
-    else if operand is int {
-        return [REPR_INT, llvm:constInt(LLVM_INT, operand)];
-    }
-    else if operand is float {
-        return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, operand)];
-    }
-    else if operand is decimal {
-        return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, operand)];
-    }
-    else if operand == () {
-        return [REPR_NIL, buildConstNil()];
-    }
     else {
-        // operand is boolean
-        return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0)];
+        t:SingleValue value = operand.value;
+        if value is string {
+            return [REPR_STRING, check buildConstString(builder, scaffold, value)];
+        }
+        else if value == () {
+            return [REPR_NIL, buildConstNil()];
+        }
+        else if value is boolean {
+            return [REPR_BOOLEAN, llvm:constInt(LLVM_BOOLEAN, value ? 1 : 0)];
+        }
+        else if value is int {
+            return [REPR_INT, llvm:constInt(LLVM_INT, value)];
+        }
+        else if value is float {
+            return [REPR_FLOAT, llvm:constFloat(LLVM_DOUBLE, value)];
+        }
+        else {
+            decimal _ = value;
+            return [REPR_DECIMAL, buildConstDecimal(builder, scaffold, value)];
+        }
     }
 }
 
@@ -349,8 +352,8 @@ function buildConstDecimal(llvm:Builder builder, Scaffold scaffold, decimal deci
 }
 
 function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand operand) returns llvm:Value|BuildError {
-    if operand is string {
-        return buildConstString(builder, scaffold, operand);
+    if operand is bir:StringConstOperand {
+        return buildConstString(builder, scaffold, operand.value);
     }
     else {
         return builder.load(scaffold.address(operand));
@@ -359,8 +362,8 @@ function buildString(llvm:Builder builder, Scaffold scaffold, bir:StringOperand 
 
 // Build a value as REPR_INT
 function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operand) returns llvm:Value {
-    if operand is int {
-        return llvm:constInt(LLVM_INT, operand);
+    if operand is bir:IntConstOperand {
+        return llvm:constInt(LLVM_INT, operand.value);
     }
     else {
         return builder.load(scaffold.address(operand));
@@ -369,8 +372,8 @@ function buildInt(llvm:Builder builder, Scaffold scaffold, bir:IntOperand operan
 
 // Build a value as REPR_BOOLEAN
 function buildBoolean(llvm:Builder builder, Scaffold scaffold, bir:BooleanOperand operand) returns llvm:Value {
-    if operand is boolean {
-        return llvm:constInt(LLVM_BOOLEAN, operand ? 1 : 0);
+    if operand is bir:BooleanConstOperand {
+        return llvm:constInt(LLVM_BOOLEAN, operand.value ? 1 : 0);
     }
     else {
         return builder.load(scaffold.address(operand));

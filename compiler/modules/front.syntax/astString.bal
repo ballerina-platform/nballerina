@@ -226,7 +226,10 @@ function blockToWords(Word[] w, StmtBlock body) {
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
-    if td is BuiltinTypeDesc {
+    if td is GroupingTypeDesc {
+        return typeDescToWords(w, td.innerTd, wrap);
+    }
+    else if td is BuiltinTypeDesc {
         if td.builtinTypeName == "null" {
             w.push("()");
         }
@@ -419,7 +422,10 @@ function lExprToWords(Word[] w, LExpr expr) {
 }
 
 function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
-    if expr is ConstValueExpr {
+    if expr is GroupingExpr {
+        exprToWords(w, expr.innerExpr, wrap);
+    }
+    else if expr is ConstValueExpr {
         valueToWords(w, expr.value);      
     }
     else if expr is IntLiteralExpr {
@@ -651,8 +657,7 @@ function wordsToLines(Word[] s) returns string[] {
             firstInLine = true;
             lines.push("".'join(...buf));
             buf.setLength(0);
-            // JBUG #33532 should use `_` here
-            foreach int i in 0 ..< level {
+            foreach var _ in 0 ..< level {
                 buf.push("    ");
             }
         }

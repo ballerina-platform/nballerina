@@ -339,11 +339,9 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
             ConstValueExpr expr = { startPos, endPos, value: () };
             return expr;
         }
-        Expr expr = check parseInnerExpr(tok);
+        Expr innerExpr = check parseInnerExpr(tok);
         endPos = check tok.expectEnd(")");
-        expr.startPos = startPos;
-        expr.endPos = endPos;
-        return expr;
+        return { startPos, endPos, innerExpr };
     }
     else if t is "true"|"false" {
         check tok.advance();

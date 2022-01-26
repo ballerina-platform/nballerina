@@ -60,14 +60,15 @@ public function main(string[] filenames, *Options opts) returns error? {
         var [basename, ext] = basenameExtension(filename);
         if ext == SOURCE_EXTENSION {
             CompileError? err = compileBalFile(filename, basename, check chooseOutputBasename(basename, opts.outDir), nbackOptions, opts);
-            if err is err:Diagnostic {
+            if err is err:Internal {
+                panic error(d:toString(err.detail()), err);
+            }
+            else if err is err:Diagnostic {
                 errorFileCount += 1;
                 dPrinter.print(err.detail());
             }
-            // JBUG: #34014
-            // can't use else { check err; }
-            else if err != () {
-                return err;
+            else {
+                _ = check err;
             }
         }
         else if ext == TEST_EXTENSION {
