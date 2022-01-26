@@ -169,7 +169,7 @@ function verifyCall(VerifyContext vc, CallInsn insn) returns Error? {
         }
     }
     foreach int i in 0 ..< nSuppliedArgs {
-        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
+        check verifyOperandType(vc, insn.args[i], sig.paramTypes[i], `bad BIR: wrong argument type for parameter ${i + 1} in call to function ${vc.symbolToString(func.symbol)}`, vc.qNameRange(insn.pos));
     }
 }
 

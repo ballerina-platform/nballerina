@@ -1113,6 +1113,7 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
         curBlock = nextBlock;
         args.push(arg);
     }
+    check validArgumentTypes(cx, func, args, expr);
     return codeGenCall(cx, curBlock, func, args, expr.qNamePos);
 }
 
@@ -1128,6 +1129,7 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
         curBlock = nextBlock;
         args.push(arg);
     }
+    check validArgumentTypes(cx, func, args, expr);
     return codeGenCall(cx, curBlock, func, args, expr.namePos);
 }
 
@@ -1156,6 +1158,26 @@ function validArgumentCount(ExprContext cx, bir:FunctionRef func, int nSuppliedA
     else {
         return cx.semanticErr(`too many arguments for call to function ${name}`, pos);
     }
+}
+
+function validArgumentTypes(ExprContext cx, bir:FunctionRef func, bir:Operand[] suppliedArgs, s:MethodCallExpr|s:FunctionCallExpr expr) returns CodeGenError? {
+    foreach int i in 0 ..< suppliedArgs.length() {
+        if operandHasType(cx.mod.tc, suppliedArgs[i], func.signature.paramTypes[i]) {
+            continue;
+        }
+        Range range;
+        if expr is s:FunctionCallExpr {
+            range = s:range(expr.args[i]);
+        }
+        else if i == 0 {
+            range = s:range(expr);
+        }
+        else {
+            range = s:range(expr.args[i-1]);
+        }
+        return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, range);
+    }
+    return ();
 }
 
 function genImportedFunctionRef(ExprContext cx, string prefix, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
@@ -1354,6 +1376,10 @@ function validIntOperand(ExprContext cx, bir:Operand operand, s:Expr expr) retur
 
 function operandConstValue(bir:Operand operand) returns t:WrappedSingleValue? {
     return operand is bir:Register ? () : { value: operand.value };
+}
+
+function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
+    return operand is bir:Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand);
 }
 
 function singletonOperand(ExprContext cx, t:SingleValue value) returns bir:ConstOperand {
