@@ -325,11 +325,6 @@ function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Interna
     }
 }
 
-// After JBUG #17977, #32245 is fixed, replace by ==
-function isEqual(ConstOperand c1, ConstOperand c2) returns boolean {
-    return c1 is float && c2 is float ? (c1 == c2 || (float:isNaN(c1) && float:isNaN(c2))) : c1 == c2;
-}
-
 function verifyOperandType(VerifyContext vc, Operand operand, t:SemType semType, d:Message msg, Position|Range pos) returns err:Semantic? {
     if !vc.operandHasType(operand, semType) {
         return vc.semanticErr(msg, pos);
