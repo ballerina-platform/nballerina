@@ -244,7 +244,7 @@ public type SimpleConstNegateExpr record {|
     *UnaryExpr;
     // JBUG #33369 should be able to do `"-" op = "-";`
     NegateOp op = "-";
-    IntLiteralExpr|ConstValueExpr operand;
+    NumericLiteralExpr|ConstValueExpr operand;
 |};
 
 public type ErrorConstructorExpr record {|
@@ -552,7 +552,7 @@ public type TypeDescRef record {|
 
 public type SingletonTypeDesc record {|
     *PositionFields;
-    (string|float|int|boolean|decimal) value;
+    SimpleConstExpr value;
 |};
 
 public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"byte"|"int"|"decimal"|"float"|"string"|"error";
