@@ -982,12 +982,12 @@ function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallEx
 
     t:SemType[] paramTypes = func.signature.paramTypes;
     bir:Operand[] args = [target];
-    check validArgumentTypes(cx, func, args, expr);
     foreach int i in 0 ..< expr.args.length() {
         var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, paramTypes[i + 1], expr.args[i]);
         curBlock = nextBlock;
         args.push(arg);
     }
+    check validArgumentTypes(cx, func, args, expr);
     return codeGenCall(cx, curBlock, func, args, expr.namePos);
 }
 
@@ -1025,7 +1025,17 @@ function validArgumentTypes(ExprContext cx, bir:FunctionRef func, bir:Operand[] 
         if operandHasType(cx.mod.tc, suppliedArgs[i], func.signature.paramTypes[i]) {
             continue;
         }
-        return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, expr.args[i].startPos);
+        Position pos;
+        if expr is s:FunctionCallExpr {
+            pos = expr.args[i].startPos;
+        }
+        else if i == 0 {
+            pos = expr.opPos;
+        }
+        else {
+            pos = expr.args[i-1].startPos;
+        }
+        return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, pos);
     }
     return ();
 }
