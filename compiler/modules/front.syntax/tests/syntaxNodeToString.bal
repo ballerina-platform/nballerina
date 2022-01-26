@@ -16,12 +16,65 @@ function syntaxNodeToString(SyntaxNode node) returns string {
         return terminalSyntaxNodeToString(node);
     }
     AstNode astNode = node.astNode;
-    if astNode is TypeDesc {
+    if astNode is Expr {
+        return exprSyntaxNodeToString(node, false);
+    }
+    else if astNode is TypeDesc {
         return typeDescSyntaxNodeToString(node, false);
     }
     else {
-        panic error("unimplemented");
+        return "".'join(...from SyntaxNode child in node.childNodes select syntaxNodeToString(child));
     }
+}
+
+function exprSyntaxNodeToString(SyntaxNode node, boolean wrap) returns string {
+    if node is TerminalSyntaxNode {
+        return terminalSyntaxNodeToString(node);
+    }
+    AstNode astNode = node.astNode;
+    SyntaxNode[] childNodes = node.childNodes;
+    string[] content;
+    if astNode !is Expr {
+        panic error("expected a expr node");
+    }
+    if astNode is GroupingExpr {
+        return exprSyntaxNodeToString(childNodes[1], wrap);
+    }
+    else if astNode is MemberAccessExpr|TypeTestExpr|FieldAccessExpr|MethodCallExpr {
+        string[] innerContent = [exprSyntaxNodeToString(childNodes[0], true)];
+        // pr-todo: figure out the Java NULL prt:
+        // innerContent.push(...from int i in 1 ..< childNodes.length() select syntaxNodeToString(childNodes[i]));
+        foreach int i in 1 ..< childNodes.length() {
+            innerContent.push(syntaxNodeToString(childNodes[i]));
+        }
+        content = conditionalWrapContent(wrap, innerContent);
+    }
+    else if astNode is UnaryExpr {
+        content = conditionalWrapContent(wrap, [syntaxNodeToString(childNodes[0]),
+                                                exprSyntaxNodeToString(childNodes[1], true)]);
+    }
+    else if astNode is BinaryExpr {
+        content = conditionalWrapContent(wrap, [exprSyntaxNodeToString(childNodes[0], true),
+                                                syntaxNodeToString(childNodes[1]),
+                                                exprSyntaxNodeToString(childNodes[2], true)]);
+    }
+    else if astNode is TypeCastExpr {
+        // pr-todo: figure out the Java NULL prt:
+        // string[] innerContent = from int i in 0 ..< childNodes.length() - 1 select syntaxNodeToString(node);
+        string[] innerContent = [];
+        foreach int i in 0 ..< childNodes.length() - 1 {
+            innerContent.push(syntaxNodeToString(childNodes[i]));
+        }
+        innerContent.push(exprSyntaxNodeToString(childNodes[childNodes.length() - 1], true));
+        content = conditionalWrapContent(wrap, innerContent);
+    }
+    else if astNode is CheckingExpr {
+        content = conditionalWrapContent(wrap, from SyntaxNode child in childNodes select syntaxNodeToString(child));
+    }
+    else {
+        content = from SyntaxNode child in childNodes select syntaxNodeToString(child);
+    }
+    return " ".'join(...content);
 }
 
 function typeDescSyntaxNodeToString(SyntaxNode node, boolean|BinaryTypeOp wrap) returns string {
@@ -29,33 +82,34 @@ function typeDescSyntaxNodeToString(SyntaxNode node, boolean|BinaryTypeOp wrap) 
         return terminalSyntaxNodeToString(node);
     }
     AstNode astNode = node.astNode;
+    SyntaxNode[] childNodes = node.childNodes;
     string[] content;
     if astNode !is TypeDesc {
         panic error("expected a type desc node");
     }
     if astNode is GroupingTypeDesc {
-        return typeDescSyntaxNodeToString(node.childNodes[1], wrap);
+        return typeDescSyntaxNodeToString(childNodes[1], wrap);
     }
     else if astNode is BinaryTypeDesc {
         boolean noWrap = wrap == false || wrap == astNode.op;
-        content = conditionalWrapContent(!noWrap, [typeDescSyntaxNodeToString(node.childNodes[0], astNode.op),
-                                                syntaxNodeToString(node.childNodes[1]),
-                                                typeDescSyntaxNodeToString(node.childNodes[2], astNode.op)]);
+        content = conditionalWrapContent(!noWrap, [typeDescSyntaxNodeToString(childNodes[0], astNode.op),
+                                                syntaxNodeToString(childNodes[1]),
+                                                typeDescSyntaxNodeToString(childNodes[2], astNode.op)]);
     }
     else if astNode is TupleTypeDesc {
-        content = conditionalWrapContent(wrap != false, from SyntaxNode child in node.childNodes select syntaxNodeToString(child));
+        content = conditionalWrapContent(wrap != false, from SyntaxNode child in childNodes select syntaxNodeToString(child));
     }
     else if astNode is ArrayTypeDesc {
-        string[] innerContent = [typeDescSyntaxNodeToString(node.childNodes[0], true)];
-        // JBUG: can't use query expression
-        // innerContent.push(...from int i in 1 ..< node.childNodes.length() select syntaxNodeToString(node.childNodes[i]));
-        foreach int i in 1 ..< node.childNodes.length() {
-            innerContent.push(syntaxNodeToString(node.childNodes[i]));
+        string[] innerContent = [typeDescSyntaxNodeToString(childNodes[0], true)];
+        // pr-todo: figure out the Java NULL prt:
+        // innerContent.push(...from int i in 1 ..< childNodes.length() select syntaxNodeToString(childNodes[i]));
+        foreach int i in 1 ..< childNodes.length() {
+            innerContent.push(syntaxNodeToString(childNodes[i]));
         }
         content = conditionalWrapContent(wrap != false, innerContent);
     }
     else {
-        content = from SyntaxNode child in node.childNodes select syntaxNodeToString(child);
+        content = from SyntaxNode child in childNodes select syntaxNodeToString(child);
     }
     return " ".'join(...content);
 

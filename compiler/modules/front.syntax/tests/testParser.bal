@@ -41,9 +41,9 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     string[] actual = wordsToLines(check parsed);
     test:assertEquals(actual, expected, "wrong ast");
     // pr-todo: currently only valid cases get this far we need to handle cases where case is invalid
-     SourceFile file = createSourceFile(subject, { filename: k });
-     Tokenizer tok = new (file);
-     check tok.advance();
+    SourceFile file = createSourceFile(subject, { filename: k });
+    Tokenizer tok = new (file);
+    check tok.advance();
     string tree;
     // if rule == "stmt" {
     //     tree = syntaxNodeToString(canonicalTreeNodeFromStmt(check parseStmt(tok)));
@@ -51,7 +51,10 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     // else if rule == "expr" {
     //     tree = syntaxNodeToString(canonicalTreeNodeFromExpr(check parseExpr(tok), false));
     // }
-    if rule == "td" {
+    if rule is "expr" {
+        tree = syntaxNodeToString(syntaxNodeFromExpr(check parseExpr(tok)));
+    }
+    else if rule == "td" {
         tree = syntaxNodeToString(syntaxNodeFromTypeDesc(check parseTypeDesc(tok)));
     }
     else {
