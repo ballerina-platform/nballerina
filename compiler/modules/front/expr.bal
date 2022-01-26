@@ -1039,11 +1039,6 @@ function validArgumentTypes(ExprContext cx, bir:FunctionRef func, bir:Operand[] 
     }
     return ();
 }
- 
-
-public function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
-    return operand is bir:Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand);
-}
 
 function genImportedFunctionRef(ExprContext cx, string prefix, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
     Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);
@@ -1239,6 +1234,10 @@ function operandSemType(t:Context tc, bir:Operand operand) returns t:SemType {
 
 function operandSingleShape(bir:Operand operand) returns t:WrappedSingleValue? {
     return operand is bir:Register ? t:singleShape(operand.semType) : { value: operand };
+}
+
+function operandHasType(t:Context tc, bir:Operand operand, t:SemType semType) returns boolean {
+    return operand is bir:Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand);
 }
 
 function decimalOperandSingleShape(bir:DecimalOperand operand) returns decimal? {
