@@ -1025,17 +1025,17 @@ function validArgumentTypes(ExprContext cx, bir:FunctionRef func, bir:Operand[] 
         if operandHasType(cx.mod.tc, suppliedArgs[i], func.signature.paramTypes[i]) {
             continue;
         }
-        Position pos;
+        Range range;
         if expr is s:FunctionCallExpr {
-            pos = expr.args[i].startPos;
+            range = s:range(expr.args[i]);
         }
         else if i == 0 {
-            pos = expr.opPos;
+            range = s:range(expr);
         }
         else {
-            pos = expr.args[i-1].startPos;
+            range = s:range(expr.args[i-1]);
         }
-        return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, pos);
+        return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, range);
     }
     return ();
 }
