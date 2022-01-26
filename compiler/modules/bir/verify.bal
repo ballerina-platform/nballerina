@@ -238,13 +238,14 @@ function verifyListSet(VerifyContext vc, ListSetInsn insn) returns Error? {
 }
 
 function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns Error? {
-    StringOperand k = insn.operands[1];
-    check verifyOperandString(vc, insn.name, k, insn.pos);
+    StringOperand keyOperand = insn.operands[1];
+    check verifyOperandString(vc, insn.name, keyOperand, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping get applied to non-mapping", insn.pos);
     }
-    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
-    if insn.name == INSN_MAPPING_GET && (k !is string || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k)) {
+    string? k = t:singleStringShape(keyOperand.semType);
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k);
+    if insn.name == INSN_MAPPING_GET && (k == () || !t:mappingMemberRequired(vc.typeContext(), insn.operands[0].semType, k)) {
         memberType = t:union(memberType, t:NIL);
     }
     if !vc.isSameType(memberType, insn.result.semType) {
@@ -253,12 +254,13 @@ function verifyMappingGet(VerifyContext vc, MappingGetInsn insn) returns Error? 
 }
 
 function verifyMappingSet(VerifyContext vc, MappingSetInsn insn) returns Error? {
-    StringOperand k = insn.operands[1];
-    check verifyOperandString(vc, insn.name, k, insn.pos);
+    StringOperand keyOperand = insn.operands[1];
+    check verifyOperandString(vc, insn.name, keyOperand, insn.pos);
     if !vc.isSubtype(insn.operands[0].semType, t:MAPPING) {
         return vc.semanticErr("mapping set applied to non-mapping", insn.pos);
     }
-    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k is string ? k : ());
+    string? k = t:singleStringShape(keyOperand.semType);
+    t:SemType memberType = t:mappingMemberType(vc.typeContext(), insn.operands[0].semType, k);
     return verifyOperandType(vc, insn.operands[2], memberType, "value assigned to member of mapping is not a subtype of map member type", insn.pos);
 }
 
@@ -307,12 +309,7 @@ function verifyCompare(VerifyContext vc, CompareInsn insn) returns err:Internal?
 }
 
 function operandToSemType(Operand operand) returns t:SemType {
-    if operand is Register {
-        return operand.semType;
-    }
-    else {
-        return t:constBasicType(operand);
-    }
+    return operand.semType;
 }
 
 function verifyEquality(VerifyContext vc, EqualityInsn insn) returns err:Internal? {
