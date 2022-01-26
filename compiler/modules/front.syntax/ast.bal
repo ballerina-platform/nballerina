@@ -518,21 +518,11 @@ public type BinaryTypeDesc record {|
     TypeDesc right;
 |};
 
-public type UnaryTypeDesc PrefixTypeDesc|PostfixTypeDesc;
+public type UnaryTypeOp "!"|"("|"?";
 
-public type PrefixTypeOp "!"|"(";
-
-public type PrefixTypeDesc record {|
+public type UnaryTypeDesc record {|
     *PositionFields;
-    PrefixTypeOp op;
-    TypeDesc td;
-|};
-
-public const PostfixTypeOp = "?";
-
-public type PostfixTypeDesc record {|
-    *PositionFields;
-    PostfixTypeOp op;
+    UnaryTypeOp op;
     Position opPos;
     TypeDesc td;
 |};

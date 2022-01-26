@@ -275,11 +275,11 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             return t:floatConst(value);
         }
     }
-    if td is s:PostfixTypeDesc {
-        t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td.td);
-        return t:union(ty, t:NIL);
-    }
-    if td is s:PrefixTypeDesc && td.op == "(" {
+    if td is s:UnaryTypeDesc && td.op != "!" {
+        if td.op == "?" {
+            t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td.td);
+            return t:union(ty, t:NIL);
+        }
         return resolveTypeDesc(mod, modDefn, depth + 1, td.td);
     }
     if !mod.allowAllTypes {
@@ -308,7 +308,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     // JBUG #33722 work around incorrect type narrowing
     s:TypeDesc td2 = td;
-    if td2 is s:PrefixTypeDesc && td2.op != "(" {
+    if td2 is s:UnaryTypeDesc && td2.op == "!" {
         t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td2.td);
         return t:complement(ty);
     }

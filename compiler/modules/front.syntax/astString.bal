@@ -337,18 +337,18 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         typeDescToWords(w, td.row);
         w.push(CLING, ">");
     }    
-    else if td is PrefixTypeDesc {
+    else if td is UnaryTypeDesc {
         if td.op == "(" {
             return typeDescToWords(w, td.td, wrap);
         }
-        else {
+        else if td.op == "!" {
             w.push(td.op, CLING);
             typeDescToWords(w, td.td);
         }
-    }
-    else if td is PostfixTypeDesc {
-        typeDescToWords(w, td.td, wrap);
-        w.push(CLING, "?");
+        else {
+            typeDescToWords(w, td.td, wrap);
+            w.push(CLING, "?");
+        }
     }
     else if td is XmlSequenceTypeDesc {
         w.push("xml", CLING, "<", CLING);
