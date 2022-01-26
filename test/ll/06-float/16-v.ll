@@ -11,13 +11,13 @@ declare zeroext i1 @_bal_float_exact_eq(double, double) readonly
 declare zeroext i1 @_bal_exact_eq(i8 addrspace(1)*, i8 addrspace(1)*) readonly
 define void @_B04rootmain() !dbg !5 {
   %nan0 = alloca double
-  %1 = alloca double
   %nan1 = alloca double
-  %2 = alloca double
   %pInf = alloca double
-  %3 = alloca double
   %nInf = alloca double
-  %4 = alloca double
+  %1 = alloca i8 addrspace(1)*
+  %2 = alloca i8 addrspace(1)*
+  %3 = alloca i8 addrspace(1)*
+  %4 = alloca i8 addrspace(1)*
   %5 = alloca i8 addrspace(1)*
   %6 = alloca i8 addrspace(1)*
   %7 = alloca i8 addrspace(1)*
@@ -44,123 +44,111 @@ define void @_B04rootmain() !dbg !5 {
   %28 = alloca i8 addrspace(1)*
   %29 = alloca i8 addrspace(1)*
   %30 = alloca i8 addrspace(1)*
-  %31 = alloca i8 addrspace(1)*
-  %32 = alloca i8 addrspace(1)*
-  %33 = alloca i8 addrspace(1)*
-  %34 = alloca i8 addrspace(1)*
-  %35 = alloca i8
-  %36 = load i8*, i8** @_bal_stack_guard
-  %37 = icmp ult i8* %35, %36
-  br i1 %37, label %90, label %38
-38:
-  store double 0x7FF8000000000000, double* %1
-  %39 = load double, double* %1
-  store double %39, double* %nan0
-  store double 0x7FF8000000000000, double* %2
-  %40 = load double, double* %2
-  store double %40, double* %nan1
-  store double 0x7FF0000000000000, double* %3
-  %41 = load double, double* %3
-  store double %41, double* %pInf
-  store double 0xFFF0000000000000, double* %4
-  %42 = load double, double* %4
-  store double %42, double* %nInf
-  %43 = call i8 addrspace(1)* @_B_exactEq(double 42.0, double 42.0), !dbg !16
-  store i8 addrspace(1)* %43, i8 addrspace(1)** %5, !dbg !16
-  %44 = load i8 addrspace(1)*, i8 addrspace(1)** %5, !dbg !17
-  call void @_Bb02ioprintln(i8 addrspace(1)* %44), !dbg !17
-  store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !17
-  %45 = call i8 addrspace(1)* @_B_exactEq(double 1.0, double 2.0), !dbg !18
-  store i8 addrspace(1)* %45, i8 addrspace(1)** %7, !dbg !18
-  %46 = load i8 addrspace(1)*, i8 addrspace(1)** %7, !dbg !19
-  call void @_Bb02ioprintln(i8 addrspace(1)* %46), !dbg !19
-  store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !19
-  %47 = call i8 addrspace(1)* @_B_exactEq(double 0.0, double 0.0), !dbg !20
-  store i8 addrspace(1)* %47, i8 addrspace(1)** %9, !dbg !20
-  %48 = load i8 addrspace(1)*, i8 addrspace(1)** %9, !dbg !21
-  call void @_Bb02ioprintln(i8 addrspace(1)* %48), !dbg !21
-  store i8 addrspace(1)* null, i8 addrspace(1)** %10, !dbg !21
-  %49 = call i8 addrspace(1)* @_B_exactEq(double 0.0, double -0.0), !dbg !22
-  store i8 addrspace(1)* %49, i8 addrspace(1)** %11, !dbg !22
-  %50 = load i8 addrspace(1)*, i8 addrspace(1)** %11, !dbg !23
-  call void @_Bb02ioprintln(i8 addrspace(1)* %50), !dbg !23
-  store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !23
-  %51 = load double, double* %nan0, !dbg !24
-  %52 = load double, double* %nan1, !dbg !24
-  %53 = call i8 addrspace(1)* @_B_exactEq(double %51, double %52), !dbg !24
-  store i8 addrspace(1)* %53, i8 addrspace(1)** %13, !dbg !24
-  %54 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !25
-  call void @_Bb02ioprintln(i8 addrspace(1)* %54), !dbg !25
-  store i8 addrspace(1)* null, i8 addrspace(1)** %14, !dbg !25
-  %55 = load double, double* %nan0, !dbg !26
-  %56 = call i8 addrspace(1)* @_B_exactEq(double %55, double 1.0), !dbg !26
-  store i8 addrspace(1)* %56, i8 addrspace(1)** %15, !dbg !26
-  %57 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !27
-  call void @_Bb02ioprintln(i8 addrspace(1)* %57), !dbg !27
-  store i8 addrspace(1)* null, i8 addrspace(1)** %16, !dbg !27
-  %58 = load double, double* %nan0, !dbg !28
-  %59 = load double, double* %nInf, !dbg !28
-  %60 = call i8 addrspace(1)* @_B_exactEq(double %58, double %59), !dbg !28
-  store i8 addrspace(1)* %60, i8 addrspace(1)** %17, !dbg !28
-  %61 = load i8 addrspace(1)*, i8 addrspace(1)** %17, !dbg !29
-  call void @_Bb02ioprintln(i8 addrspace(1)* %61), !dbg !29
-  store i8 addrspace(1)* null, i8 addrspace(1)** %18, !dbg !29
-  %62 = load double, double* %pInf, !dbg !30
-  %63 = load double, double* %nInf, !dbg !30
-  %64 = call i8 addrspace(1)* @_B_exactEq(double %62, double %63), !dbg !30
-  store i8 addrspace(1)* %64, i8 addrspace(1)** %19, !dbg !30
-  %65 = load i8 addrspace(1)*, i8 addrspace(1)** %19, !dbg !31
-  call void @_Bb02ioprintln(i8 addrspace(1)* %65), !dbg !31
-  store i8 addrspace(1)* null, i8 addrspace(1)** %20, !dbg !31
-  %66 = load double, double* %nInf, !dbg !32
-  %67 = load double, double* %pInf, !dbg !32
-  %68 = call i8 addrspace(1)* @_B_exactEq(double %66, double %67), !dbg !32
-  store i8 addrspace(1)* %68, i8 addrspace(1)** %21, !dbg !32
-  %69 = load i8 addrspace(1)*, i8 addrspace(1)** %21, !dbg !33
-  call void @_Bb02ioprintln(i8 addrspace(1)* %69), !dbg !33
-  store i8 addrspace(1)* null, i8 addrspace(1)** %22, !dbg !33
-  %70 = load double, double* %pInf, !dbg !34
-  %71 = load double, double* %pInf, !dbg !34
-  %72 = call i8 addrspace(1)* @_B_exactEq(double %70, double %71), !dbg !34
-  store i8 addrspace(1)* %72, i8 addrspace(1)** %23, !dbg !34
-  %73 = load i8 addrspace(1)*, i8 addrspace(1)** %23, !dbg !35
-  call void @_Bb02ioprintln(i8 addrspace(1)* %73), !dbg !35
-  store i8 addrspace(1)* null, i8 addrspace(1)** %24, !dbg !35
-  %74 = load double, double* %nInf, !dbg !36
-  %75 = load double, double* %nInf, !dbg !36
-  %76 = call i8 addrspace(1)* @_B_exactEq(double %74, double %75), !dbg !36
-  store i8 addrspace(1)* %76, i8 addrspace(1)** %25, !dbg !36
-  %77 = load i8 addrspace(1)*, i8 addrspace(1)** %25, !dbg !37
-  call void @_Bb02ioprintln(i8 addrspace(1)* %77), !dbg !37
-  store i8 addrspace(1)* null, i8 addrspace(1)** %26, !dbg !37
-  %78 = load double, double* %nInf, !dbg !38
-  %79 = call i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), double %78), !dbg !38
-  store i8 addrspace(1)* %79, i8 addrspace(1)** %27, !dbg !38
-  %80 = load i8 addrspace(1)*, i8 addrspace(1)** %27, !dbg !39
-  call void @_Bb02ioprintln(i8 addrspace(1)* %80), !dbg !39
-  store i8 addrspace(1)* null, i8 addrspace(1)** %28, !dbg !39
-  %81 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1), !dbg !40
-  %82 = call i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* %81, double 1.0), !dbg !40
-  store i8 addrspace(1)* %82, i8 addrspace(1)** %29, !dbg !40
-  %83 = load i8 addrspace(1)*, i8 addrspace(1)** %29, !dbg !41
-  call void @_Bb02ioprintln(i8 addrspace(1)* %83), !dbg !41
-  store i8 addrspace(1)* null, i8 addrspace(1)** %30, !dbg !41
-  %84 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1), !dbg !42
-  %85 = call i8 addrspace(1)* @_B_exactEqFA(double 1.0, i8 addrspace(1)* %84), !dbg !42
-  store i8 addrspace(1)* %85, i8 addrspace(1)** %31, !dbg !42
-  %86 = load i8 addrspace(1)*, i8 addrspace(1)** %31, !dbg !43
-  call void @_Bb02ioprintln(i8 addrspace(1)* %86), !dbg !43
-  store i8 addrspace(1)* null, i8 addrspace(1)** %32, !dbg !43
-  %87 = call i8 addrspace(1)* @_bal_float_to_tagged(double 8.0), !dbg !44
-  %88 = call i8 addrspace(1)* @_B_exactEqFA(double 8.0, i8 addrspace(1)* %87), !dbg !44
-  store i8 addrspace(1)* %88, i8 addrspace(1)** %33, !dbg !44
-  %89 = load i8 addrspace(1)*, i8 addrspace(1)** %33, !dbg !45
-  call void @_Bb02ioprintln(i8 addrspace(1)* %89), !dbg !45
-  store i8 addrspace(1)* null, i8 addrspace(1)** %34, !dbg !45
+  %31 = alloca i8
+  %32 = load i8*, i8** @_bal_stack_guard
+  %33 = icmp ult i8* %31, %32
+  br i1 %33, label %82, label %34
+34:
+  store double 0x7FF8000000000000, double* %nan0
+  store double 0x7FF8000000000000, double* %nan1
+  store double 0x7FF0000000000000, double* %pInf
+  store double 0xFFF0000000000000, double* %nInf
+  %35 = call i8 addrspace(1)* @_B_exactEq(double 42.0, double 42.0), !dbg !16
+  store i8 addrspace(1)* %35, i8 addrspace(1)** %1, !dbg !16
+  %36 = load i8 addrspace(1)*, i8 addrspace(1)** %1, !dbg !17
+  call void @_Bb02ioprintln(i8 addrspace(1)* %36), !dbg !17
+  store i8 addrspace(1)* null, i8 addrspace(1)** %2, !dbg !17
+  %37 = call i8 addrspace(1)* @_B_exactEq(double 1.0, double 2.0), !dbg !18
+  store i8 addrspace(1)* %37, i8 addrspace(1)** %3, !dbg !18
+  %38 = load i8 addrspace(1)*, i8 addrspace(1)** %3, !dbg !19
+  call void @_Bb02ioprintln(i8 addrspace(1)* %38), !dbg !19
+  store i8 addrspace(1)* null, i8 addrspace(1)** %4, !dbg !19
+  %39 = call i8 addrspace(1)* @_B_exactEq(double 0.0, double 0.0), !dbg !20
+  store i8 addrspace(1)* %39, i8 addrspace(1)** %5, !dbg !20
+  %40 = load i8 addrspace(1)*, i8 addrspace(1)** %5, !dbg !21
+  call void @_Bb02ioprintln(i8 addrspace(1)* %40), !dbg !21
+  store i8 addrspace(1)* null, i8 addrspace(1)** %6, !dbg !21
+  %41 = call i8 addrspace(1)* @_B_exactEq(double 0.0, double -0.0), !dbg !22
+  store i8 addrspace(1)* %41, i8 addrspace(1)** %7, !dbg !22
+  %42 = load i8 addrspace(1)*, i8 addrspace(1)** %7, !dbg !23
+  call void @_Bb02ioprintln(i8 addrspace(1)* %42), !dbg !23
+  store i8 addrspace(1)* null, i8 addrspace(1)** %8, !dbg !23
+  %43 = load double, double* %nan0, !dbg !24
+  %44 = load double, double* %nan1, !dbg !24
+  %45 = call i8 addrspace(1)* @_B_exactEq(double %43, double %44), !dbg !24
+  store i8 addrspace(1)* %45, i8 addrspace(1)** %9, !dbg !24
+  %46 = load i8 addrspace(1)*, i8 addrspace(1)** %9, !dbg !25
+  call void @_Bb02ioprintln(i8 addrspace(1)* %46), !dbg !25
+  store i8 addrspace(1)* null, i8 addrspace(1)** %10, !dbg !25
+  %47 = load double, double* %nan0, !dbg !26
+  %48 = call i8 addrspace(1)* @_B_exactEq(double %47, double 1.0), !dbg !26
+  store i8 addrspace(1)* %48, i8 addrspace(1)** %11, !dbg !26
+  %49 = load i8 addrspace(1)*, i8 addrspace(1)** %11, !dbg !27
+  call void @_Bb02ioprintln(i8 addrspace(1)* %49), !dbg !27
+  store i8 addrspace(1)* null, i8 addrspace(1)** %12, !dbg !27
+  %50 = load double, double* %nan0, !dbg !28
+  %51 = load double, double* %nInf, !dbg !28
+  %52 = call i8 addrspace(1)* @_B_exactEq(double %50, double %51), !dbg !28
+  store i8 addrspace(1)* %52, i8 addrspace(1)** %13, !dbg !28
+  %53 = load i8 addrspace(1)*, i8 addrspace(1)** %13, !dbg !29
+  call void @_Bb02ioprintln(i8 addrspace(1)* %53), !dbg !29
+  store i8 addrspace(1)* null, i8 addrspace(1)** %14, !dbg !29
+  %54 = load double, double* %pInf, !dbg !30
+  %55 = load double, double* %nInf, !dbg !30
+  %56 = call i8 addrspace(1)* @_B_exactEq(double %54, double %55), !dbg !30
+  store i8 addrspace(1)* %56, i8 addrspace(1)** %15, !dbg !30
+  %57 = load i8 addrspace(1)*, i8 addrspace(1)** %15, !dbg !31
+  call void @_Bb02ioprintln(i8 addrspace(1)* %57), !dbg !31
+  store i8 addrspace(1)* null, i8 addrspace(1)** %16, !dbg !31
+  %58 = load double, double* %nInf, !dbg !32
+  %59 = load double, double* %pInf, !dbg !32
+  %60 = call i8 addrspace(1)* @_B_exactEq(double %58, double %59), !dbg !32
+  store i8 addrspace(1)* %60, i8 addrspace(1)** %17, !dbg !32
+  %61 = load i8 addrspace(1)*, i8 addrspace(1)** %17, !dbg !33
+  call void @_Bb02ioprintln(i8 addrspace(1)* %61), !dbg !33
+  store i8 addrspace(1)* null, i8 addrspace(1)** %18, !dbg !33
+  %62 = load double, double* %pInf, !dbg !34
+  %63 = load double, double* %pInf, !dbg !34
+  %64 = call i8 addrspace(1)* @_B_exactEq(double %62, double %63), !dbg !34
+  store i8 addrspace(1)* %64, i8 addrspace(1)** %19, !dbg !34
+  %65 = load i8 addrspace(1)*, i8 addrspace(1)** %19, !dbg !35
+  call void @_Bb02ioprintln(i8 addrspace(1)* %65), !dbg !35
+  store i8 addrspace(1)* null, i8 addrspace(1)** %20, !dbg !35
+  %66 = load double, double* %nInf, !dbg !36
+  %67 = load double, double* %nInf, !dbg !36
+  %68 = call i8 addrspace(1)* @_B_exactEq(double %66, double %67), !dbg !36
+  store i8 addrspace(1)* %68, i8 addrspace(1)** %21, !dbg !36
+  %69 = load i8 addrspace(1)*, i8 addrspace(1)** %21, !dbg !37
+  call void @_Bb02ioprintln(i8 addrspace(1)* %69), !dbg !37
+  store i8 addrspace(1)* null, i8 addrspace(1)** %22, !dbg !37
+  %70 = load double, double* %nInf, !dbg !38
+  %71 = call i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* getelementptr(i8, i8 addrspace(1)* addrspacecast(i8* bitcast({i16, i16, [12 x i8]}* @.str0 to i8*) to i8 addrspace(1)*), i64 720575940379279360), double %70), !dbg !38
+  store i8 addrspace(1)* %71, i8 addrspace(1)** %23, !dbg !38
+  %72 = load i8 addrspace(1)*, i8 addrspace(1)** %23, !dbg !39
+  call void @_Bb02ioprintln(i8 addrspace(1)* %72), !dbg !39
+  store i8 addrspace(1)* null, i8 addrspace(1)** %24, !dbg !39
+  %73 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1), !dbg !40
+  %74 = call i8 addrspace(1)* @_B_exactEqAF(i8 addrspace(1)* %73, double 1.0), !dbg !40
+  store i8 addrspace(1)* %74, i8 addrspace(1)** %25, !dbg !40
+  %75 = load i8 addrspace(1)*, i8 addrspace(1)** %25, !dbg !41
+  call void @_Bb02ioprintln(i8 addrspace(1)* %75), !dbg !41
+  store i8 addrspace(1)* null, i8 addrspace(1)** %26, !dbg !41
+  %76 = call i8 addrspace(1)* @_bal_int_to_tagged(i64 1), !dbg !42
+  %77 = call i8 addrspace(1)* @_B_exactEqFA(double 1.0, i8 addrspace(1)* %76), !dbg !42
+  store i8 addrspace(1)* %77, i8 addrspace(1)** %27, !dbg !42
+  %78 = load i8 addrspace(1)*, i8 addrspace(1)** %27, !dbg !43
+  call void @_Bb02ioprintln(i8 addrspace(1)* %78), !dbg !43
+  store i8 addrspace(1)* null, i8 addrspace(1)** %28, !dbg !43
+  %79 = call i8 addrspace(1)* @_bal_float_to_tagged(double 8.0), !dbg !44
+  %80 = call i8 addrspace(1)* @_B_exactEqFA(double 8.0, i8 addrspace(1)* %79), !dbg !44
+  store i8 addrspace(1)* %80, i8 addrspace(1)** %29, !dbg !44
+  %81 = load i8 addrspace(1)*, i8 addrspace(1)** %29, !dbg !45
+  call void @_Bb02ioprintln(i8 addrspace(1)* %81), !dbg !45
+  store i8 addrspace(1)* null, i8 addrspace(1)** %30, !dbg !45
   ret void
-90:
-  %91 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284), !dbg !15
-  call void @_bal_panic(i8 addrspace(1)* %91)
+82:
+  %83 = call i8 addrspace(1)* @_bal_panic_construct(i64 1284), !dbg !15
+  call void @_bal_panic(i8 addrspace(1)* %83)
   unreachable
 }
 define internal i8 addrspace(1)* @_B_exactEq(double %0, double %1) !dbg !7 {

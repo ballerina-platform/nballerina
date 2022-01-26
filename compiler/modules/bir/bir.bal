@@ -216,17 +216,53 @@ public type Insn
     |BranchInsn|CondBranchInsn|CatchInsn|PanicInsn|ErrorConstructInsn;
 
 public type Operand ConstOperand|Register;
-public type ConstOperand t:SingleValue;
-public type StringOperand string|Register;
-public type IntOperand int|Register;
-public type FloatOperand float|Register;
-public type DecimalOperand decimal|Register;
-public type BooleanOperand boolean|Register;
-public type NilOperand ()|Register;
+
+public type ConstOperand  readonly & record {|
+    t:SemType semType;
+    t:SingleValue value;
+|};
+
+public type NilConstOperand readonly & record {|
+    t:SemType semType;
+    () value;
+|};
+
+public final NilConstOperand NIL_OPERAND = { value: (), semType: t:NIL };
+
+public type BooleanConstOperand readonly & record {|
+    t:SemType semType;
+    boolean value;
+|};
+
+public type IntConstOperand readonly & record {|
+    t:SemType semType;
+    int value;
+|};
+
+public type DecimalConstOperand readonly & record {|
+    t:SemType semType;
+    decimal value;
+|};
+
+public type FloatConstOperand readonly & record {|
+    t:SemType semType;
+    float value;
+|};
+
+public type StringConstOperand readonly & record {|
+    t:SemType semType;
+    string value;
+|};
+
+public type IntOperand IntConstOperand|Register;
+public type FloatOperand FloatConstOperand|Register;
+public type DecimalOperand DecimalConstOperand|Register;
+public type BooleanOperand BooleanConstOperand|Register;
+public type StringOperand StringConstOperand|Register;
 public type FunctionOperand FunctionRef|Register;
 
 public function operandHasType(t:Context tc, Operand operand, t:SemType semType) returns boolean {
-    return operand is Register ? t:isSubtype(tc, operand.semType, semType) : t:containsConst(semType, operand);
+    return t:isSubtype(tc, operand.semType, semType);
 }
 
 # Perform a arithmetic operand on ints with two operands.

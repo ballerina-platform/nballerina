@@ -388,7 +388,7 @@ function isMappingMemberTypeExact(t:Context tc, t:SemType mappingType, bir:Strin
         return false;
     }
     else {
-        if keyOperand is string || mat.names.length() == 0 {
+        if t:singleStringShape(keyOperand.semType) != () || mat.names.length() == 0 {
             return true;
         }
         // SUBSET singleton types
@@ -464,7 +464,8 @@ function isMappingSetAlwaysInexact(t:Context tc, t:SemType mappingType, bir:Oper
     return !bir:operandHasType(tc, operand, mat.rest);
 }
 
-function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand k) returns int? {
+function mappingFieldIndex(t:Context tc, t:SemType mappingType, bir:StringOperand keyOperand) returns int? {
+    string? k = t:singleStringShape(keyOperand.semType);
     if k is string {
         t:MappingAtomicType? mat = t:mappingAtomicTypeRw(tc, mappingType);
         if mat != () && mat.rest == t:NEVER {
