@@ -340,7 +340,7 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         }
     }
     else if td is SingletonTypeDesc {
-        valueToWords(w, td.value);
+        simpleConstExprToWords(w, td.valueExpr);
     }
     else if td is TableTypeDesc {
         w.push("table", CLING, "<", CLING);
@@ -598,6 +598,15 @@ function valueToWords(Word[] w, boolean|int|string|float|decimal|() val) {
     }
     else {
         w.push(val.toString());
+    }
+}
+
+function simpleConstExprToWords(Word[] w, SimpleConstExpr expr) {
+    if expr is ConstValueExpr {
+        valueToWords(w, expr.value);
+    }
+    else if expr is IntLiteralExpr {
+        valueToWords(w, expr.digits);
     }
 }
 

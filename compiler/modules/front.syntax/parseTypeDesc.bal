@@ -199,38 +199,37 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
         [STRING_LITERAL, var str] => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            ConstValueExpr value = { startPos, endPos, value: str };
-            return { startPos, endPos, value };
+            ConstValueExpr valueExpr = { startPos, endPos, value: str };
+            return { startPos, endPos, valueExpr };
         }
         [DECIMAL_NUMBER, _]
         | [HEX_INT_LITERAL, _]
         | [DECIMAL_FP_NUMBER, _, _] => {
             Position endPos = tok.currentEndPos();
-            NumericLiteralExpr value = check parseNumericLiteralExpr(tok);
-            return { startPos, endPos, value };
+            NumericLiteralExpr valueExpr = check parseNumericLiteralExpr(tok);
+            return { startPos, endPos, valueExpr };
         }
         "-" => {
             check tok.advance();
             NumericLiteralExpr operand = check parseNumericLiteralExpr(tok);
-
             Position opPos = tok.currentStartPos();
             check tok.advance();
             Position endPos = tok.previousEndPos();
-            SimpleConstNegateExpr value = { startPos, endPos, opPos, operand: operand };
-            return { startPos, endPos, value };
+            SimpleConstNegateExpr valueExpr = { startPos, endPos, opPos, operand: operand };
+            return { startPos, endPos, valueExpr };
 
         }
         "true" => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            ConstValueExpr value = { startPos, endPos, value: true };
-            return { startPos, endPos, value };
+            ConstValueExpr valueExpr = { startPos, endPos, value: true };
+            return { startPos, endPos, valueExpr };
         }
         "false" => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            ConstValueExpr value = { startPos, endPos, value: false };
-            return { startPos, endPos, value };
+            ConstValueExpr valueExpr = { startPos, endPos, value: false };
+            return { startPos, endPos, valueExpr };
         }
     }
     return parseError(tok);
@@ -241,14 +240,12 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 // we don't have what we need to create a context.
 // Another approach would be to have a kind of TypeDesc that refers to an NumericLiteralExpr and then convert in resolveTypes.
 // XXX Revisit when floats (and maybe decimals) are fully incorporated in the front-end.
-function parseNumericLiteralTypeDesc(Tokenizer tok, Position? signPos = ()) returns decimal|float|int|err:Syntax {
-    Position startPos = signPos != () ? signPos : tok.currentStartPos();
-    NumericLiteralExpr expr = check parseNumericLiteralExpr(tok);
+function parseNumericLiteralTypeDesc(NumericLiteralExpr expr) returns decimal|float|int|err:Syntax {
     if expr is FpLiteralExpr {
         if expr.typeSuffix == "d" {
             var f = decimal:fromString(expr.untypedLiteral);
             if f is error {
-                return tok.err(`invalid decimal literal ${expr.untypedLiteral}`);
+                return err:syntax(`invalid decimal literal ${expr.untypedLiteral}`, expr.startPos);
             }
             else {
                 decimal value = f;

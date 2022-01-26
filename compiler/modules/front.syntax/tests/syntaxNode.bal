@@ -584,12 +584,12 @@ function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns SyntaxNode 
         token = td.builtinTypeName == "null" ? "()" : td.builtinTypeName;
     }
     else {
-        var value = td.value;
+        var value = td.valueExpr;
         if (value is int && value < 0) || (value is float && value < 0.0) {
             return nonTerminalSyntaxNode(td, { token: "-" }, { literal: (value * -1).toString() });
         }
         else {
-            token = td.value.toString();
+            token = td.valueExpr.toString();
         }
     }
     return { token, astNode: td };

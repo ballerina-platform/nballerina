@@ -552,7 +552,7 @@ public type TypeDescRef record {|
 
 public type SingletonTypeDesc record {|
     *PositionFields;
-    SimpleConstExpr value;
+    SimpleConstExpr valueExpr;
 |};
 
 public type SubsetBuiltinTypeName "any"|"anydata"|"boolean"|"byte"|"int"|"decimal"|"float"|"string"|"error";
