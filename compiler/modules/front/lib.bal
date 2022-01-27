@@ -14,9 +14,7 @@ final readonly & LangLibFunction[] langLibFunctions = [
 ];
 
 function getLangLibFunction(string mod, string func) returns bir:FunctionSignature? {
-    // JBUG #33314 temp variable
-    LangLibFunction[] functions = langLibFunctions;
-    foreach var [moduleName, functionName, paramTypes, returnType] in functions {
+    foreach var [moduleName, functionName, paramTypes, returnType] in langLibFunctions {
         if moduleName == mod && functionName == func {
             return { returnType, paramTypes };
         }   
