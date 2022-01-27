@@ -1173,7 +1173,7 @@ function validArgumentTypes(ExprContext cx, bir:FunctionRef func, bir:Operand[] 
             argExpr = expr;
         }
         else {
-            argExpr = expr.args[i-1];
+            argExpr = expr.args[i - 1];
         }
         return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, s:range(argExpr));
     }
