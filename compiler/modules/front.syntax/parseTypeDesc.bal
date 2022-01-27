@@ -196,43 +196,10 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
             Position endPos = tok.previousEndPos();
             return { startPos, endPos, prefix, typeName, qNamePos };
         }
-        [STRING_LITERAL, var str] => {
-            Position endPos = tok.currentEndPos();
-            check tok.advance();
-            ConstValueExpr valueExpr = { startPos, endPos, value: str };
-            return { startPos, endPos, valueExpr };
-        }
-        [DECIMAL_NUMBER, _]
-        | [HEX_INT_LITERAL, _]
-        | [DECIMAL_FP_NUMBER, _, _] => {
-            Position endPos = tok.currentEndPos();
-            NumericLiteralExpr valueExpr = check parseNumericLiteralExpr(tok);
-            return { startPos, endPos, valueExpr };
-        }
-        "-" => {
-            check tok.advance();
-            NumericLiteralExpr operand = check parseNumericLiteralExpr(tok);
-            Position opPos = tok.currentStartPos();
-            check tok.advance();
-            Position endPos = tok.previousEndPos();
-            SimpleConstNegateExpr valueExpr = { startPos, endPos, opPos, operand: operand };
-            return { startPos, endPos, valueExpr };
-
-        }
-        "true" => {
-            Position endPos = tok.currentEndPos();
-            check tok.advance();
-            ConstValueExpr valueExpr = { startPos, endPos, value: true };
-            return { startPos, endPos, valueExpr };
-        }
-        "false" => {
-            Position endPos = tok.currentEndPos();
-            check tok.advance();
-            ConstValueExpr valueExpr = { startPos, endPos, value: false };
-            return { startPos, endPos, valueExpr };
-        }
     }
-    return parseError(tok);
+    Position endPos = tok.currentEndPos();
+    SimpleConstExpr valueExpr = check parseSimpleConstExpr(tok);
+    return { startPos, endPos, valueExpr };
 }
 
 // It would be cleaner to handle this using const folding, but there are obstacles:

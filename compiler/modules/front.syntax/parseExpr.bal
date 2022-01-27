@@ -536,8 +536,9 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
             return expr;
         }
         [DECIMAL_NUMBER, _]
-        | [HEX_INT_LITERAL, _] => {
-            return parseIntLiteralExpr(tok);
+        | [HEX_INT_LITERAL, _]
+        | [DECIMAL_FP_NUMBER, _, _] => {
+            return parseNumericLiteralExpr(tok);
         }
     }
     return parseError(tok);
