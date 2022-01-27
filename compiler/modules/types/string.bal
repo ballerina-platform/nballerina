@@ -70,6 +70,8 @@ function stringSubtypeContainedIn(SubtypeData d, string[] values) returns boolea
         return false;
     }
     var { char, nonChar } = <StringSubtype>d;
+    boolean emptyChars = char.values.length() == 0;
+    boolean emptyNonChars = nonChar.values.length() == 0;
     if char.allowed {
         foreach string c in char.values {
             if values.indexOf(c) == () {
@@ -77,7 +79,7 @@ function stringSubtypeContainedIn(SubtypeData d, string[] values) returns boolea
             }
         }
     }
-    else if char.values.length() == 0 {
+    else if emptyChars {
         // all char
         return false;
     }
@@ -88,11 +90,11 @@ function stringSubtypeContainedIn(SubtypeData d, string[] values) returns boolea
             }
         }
     }
-    else if nonChar.values.length() == 0 {
+    else if emptyNonChars {
         // all non-char
         return false;
     }
-    if char.values.length() == 0 && nonChar.values.length() == 0 {
+    if emptyChars && emptyNonChars {
         return false;
     }
     return true;
