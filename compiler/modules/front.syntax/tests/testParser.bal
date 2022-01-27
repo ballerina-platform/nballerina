@@ -41,31 +41,42 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     string[] actual = wordsToLines(check parsed);
     test:assertEquals(actual, expected, "wrong ast");
     // pr-todo: currently only valid cases get this far we need to handle cases where case is invalid
-    SourceFile file = createSourceFile(subject, { filename: k });
-    Tokenizer tok = new (file);
-    check tok.advance();
-    string tree;
-    // if rule == "stmt" {
-    //     tree = syntaxNodeToString(canonicalTreeNodeFromStmt(check parseStmt(tok)));
-    // }
-    // else if rule == "expr" {
-    //     tree = syntaxNodeToString(canonicalTreeNodeFromExpr(check parseExpr(tok), false));
-    // }
-    if rule is "stmt" {
-        tree = syntaxNodeToString(syntaxNodeFromStmt(check parseStmt(tok)));
-    }
-    else if rule is "expr" {
-        tree = syntaxNodeToString(syntaxNodeFromExpr(check parseExpr(tok)));
-    }
-    else if rule == "td" {
-        tree = syntaxNodeToString(syntaxNodeFromTypeDesc(check parseTypeDesc(tok)));
+    string result = check testParserRule(k, rule, subject);
+    io:println("rule: " , rule);
+    io:println("expected: " , "\n".'join(...expected));
+    io:println("actual: ", result, "\n");
+}
+
+function testParserRule(string k, string rule, string[] fragment) returns err:Syntax|string {
+    string actual = "";
+    if rule == "mod" {
+        RootSyntaxNode root = rootSyntaxNode(check scanAndParseModulePart(createSourceFile(fragment, { filename: k }), 0));
+        actual ="\n".'join(...from SyntaxNode child in root.childNodes select(syntaxNodeToString(child)));
     }
     else {
-        return;
+        SourceFile file = createSourceFile(fragment, { filename: k });
+        Tokenizer tok = new (file);
+        check tok.advance();
+        match rule {
+            "expr" => {
+                actual = syntaxNodeToString(syntaxNodeFromExpr(check parseExpr(tok)));
+            }
+            "stmt" => {
+                actual = syntaxNodeToString(syntaxNodeFromStmt(check parseStmt(tok)));
+            }
+            "td" => {
+                actual = syntaxNodeToString(syntaxNodeFromTypeDesc(check parseTypeDesc(tok)));
+            }
+            _ => {
+                panic err:impossible("unknown production rule " + rule);
+            }
+        }
+        if tok.current() != () {
+            return err:syntax("superfluous input at end", d:location(file, tok.currentStartPos()));
+        }
     }
-    io:println("rule: " , rule);
-    io:println("expected: " , "".'join(...expected));
-    io:println("actual: ", tree, "\n");
+    return actual;
+
 }
 
 type TokenizerTestCase [string, string[]];

@@ -164,5 +164,27 @@ function conditionalWrapContent(boolean condition, string[] content) returns str
 function concat(string... words) returns string {
     // pr-todo: set spaces correctly
     // pr-todo: escape characters
-    return " ".'join(...words);
+    string[] parts = [];
+    foreach string word in words {
+        string lastTail = parts.length() > 0 ? parts[parts.length() - 1] : "";
+        if lastTail.length() > 0 {
+            lastTail = lastTail.substring(lastTail.length() - 1);
+        }
+        string head = word.length() > 0 ? word.substring(0, 1) : "";
+        if !(omitSpaceBefore(word) || (head != "\"" && omitSpaceBefore(head)))
+                && parts.length() > 0
+                && !(omitSpaceAfter(parts[parts.length() - 1]) || (lastTail != "\"" && omitSpaceAfter(lastTail))) {
+            parts.push(" ");
+        }
+        parts.push(word);
+    }
+    return string:concat(...parts).trim();
+}
+
+function omitSpaceBefore(string word) returns boolean {
+    return word == "," || word == "(" || word == ")" || word == "\"" || word == "]" || word == ":" || word == ".";
+}
+
+function omitSpaceAfter(string word) returns boolean {
+    return word == "(" || word == "\"" || word == "[" || word == "." || word == "!";
 }
