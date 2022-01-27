@@ -1,6 +1,6 @@
  import ballerina/io;
- // pr-todo: add spaces
- function syntaxNodeToString(SyntaxNode node) returns string[] {
+ / pr-todo: add spaces
+ function syntaxNodeToString(SyntaxNode node returns string[] {
      string[] content = [];
      if node is TerminalSyntaxNode {
          content.push(terminalSyntaxNodeToString(node));

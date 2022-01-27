@@ -35,25 +35,38 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
         }
         return;
     }
-    if rule == "td" {
-        io:println("k: ", k);
-    }
-    string[] actual = wordsToLines(check parsed);
-    test:assertEquals(actual, expected, "wrong ast");
+    // test:assertEquals(actual, expected, "wrong ast");
     // pr-todo: currently only valid cases get this far we need to handle cases where case is invalid
-    SourceFile file = createSourceFile(subject, { filename: k });
-    Tokenizer tok = new (file);
-    check tok.advance();
-    string result;
-    if rule == "td" {
-        result = syntaxNodeToString(normalizeSyntaxNode(syntaxNodeFromTypeDesc(check parseTypeDesc(tok))));
+    SourceFile actualFile = createSourceFile(subject, { filename: k });
+    SourceFile expectedFile = createSourceFile(expected, { filename: k });
+    Tokenizer actualTok = new (actualFile);
+    Tokenizer expectedTok = new (expectedFile);
+    check actualTok.advance();
+    check expectedTok.advance();
+    SyntaxNode lhs;
+    SyntaxNode rhs;
+    if rule == "stmt" {
+        lhs = normalizeSyntaxNode(syntaxNodeFromStmt(check parseStmt(actualTok)));
+        rhs = syntaxNodeFromStmt(check parseStmt(expectedTok));
+    }
+    else if rule == "expr" {
+        lhs = normalizeSyntaxNode(syntaxNodeFromExpr(check parseExpr(actualTok)));
+        rhs = syntaxNodeFromExpr(check parseExpr(expectedTok));
+    }
+    else if rule == "td" {
+        lhs = normalizeSyntaxNode(syntaxNodeFromTypeDesc(check parseTypeDesc(actualTok)));
+        rhs = syntaxNodeFromTypeDesc(check parseTypeDesc(expectedTok));
     }
     else {
         return;
     }
-    io:println("rule: " , rule);
-    io:println("expected: " , "\n".'join(...expected));
-    io:println("actual: ", result, "\n");
+    string errMsg = "lhs : " + syntaxNodeToString(lhs) + "\nrhs : " + syntaxNodeToString(rhs);
+    boolean testResult = syntaxNodeEquals(lhs, rhs);
+    if !testResult {
+        io:println(lhs);
+        io:println(rhs);
+    }
+    test:assertTrue(testResult, errMsg);
 }
 
 function testParserRule(string k, string rule, string[] fragment) returns err:Syntax|string {

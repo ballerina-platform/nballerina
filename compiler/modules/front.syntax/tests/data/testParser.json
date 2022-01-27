@@ -234,7 +234,7 @@
     ["V", "expr", "true.length()"],
     ["V", "expr", "false.length()"],
     ["V", "expr", "-1.hexStr()", "-(1.hexStr())"],
-    ["V", "expr", "-0xf.max()", "-(0xF.max())"],
+    ["V", "expr", "-0xf.max()", "-(0xf.max())"],
     ["V", "expr", "x.map()"],
     ["V", "expr", "x.map(arr)"],
     ["V", "expr", "x.a.map()", "(x.a).map()"],
