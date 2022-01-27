@@ -63,10 +63,10 @@ public type ConstDefn record {|
 
 public type Stmt VarDeclStmt|AssignStmt|CallStmt|ReturnStmt|IfElseStmt|MatchStmt|WhileStmt|ForeachStmt|BreakContinueStmt|CompoundAssignStmt|PanicStmt;
 public type CallExpr FunctionCallExpr|MethodCallExpr|CheckingCallExpr;
-public type Expr GroupingExpr|NumericLiteralExpr|ConstValueExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
+public type Expr GroupingExpr|NumericLiteralExpr|LiteralExpr|VarRefExpr|CompoundExpr|FunctionCallExpr|MethodCallExpr;
 public type CompoundExpr BinaryExpr|UnaryExpr|CheckingExpr|FunctionCallExpr|MethodCallExpr|TypeCastExpr|TypeTestExpr|ConstructorExpr|MemberAccessExpr|FieldAccessExpr;
 public type ConstructorExpr ListConstructorExpr|MappingConstructorExpr|ErrorConstructorExpr;
-public type SimpleConstExpr ConstValueExpr|VarRefExpr|NumericLiteralExpr|SimpleConstNegateExpr;
+public type SimpleConstExpr LiteralExpr|VarRefExpr|NumericLiteralExpr|SimpleConstNegateExpr;
 
 // L-value expression
 public type LExpr VarRefExpr|MemberAccessLExpr|FieldAccessLExpr;
@@ -240,7 +240,7 @@ public type SimpleConstNegateExpr record {|
     *UnaryExpr;
     // JBUG #33369 should be able to do `"-" op = "-";`
     NegateOp op = "-";
-    NumericLiteralExpr|ConstValueExpr operand;
+    NumericLiteralExpr|LiteralExpr operand;
 |};
 
 public type ErrorConstructorExpr record {|
@@ -364,20 +364,16 @@ public type TypeCastExpr record {|
 public type TypeTestExpr record {|
     *PositionFields;
     TypeDesc td;
-    // Use `left` here so this is distinguishable from TypeCastExpr and ConstValueExpr
+    // Use `left` here so this is distinguishable from TypeCastExpr and LiteralExpr
     Expr left;
     boolean negated;
     Position kwPos;
 |};
 
-public type ConstValueExpr record {|
+// Non-numeric literals
+public type LiteralExpr record {|
     *PositionFields;
-    t:SingleValue value;
-    // This is non-nil when the static public type of the expression
-    // contains more than one shape.
-    // When it contains exactly one shape, then the shape is
-    // the shape of the value.
-    t:SemType? multiSemType = ();
+    string|boolean|() value;
 |};
 
 public type NumericLiteralExpr IntLiteralExpr|FpLiteralExpr;
@@ -405,7 +401,6 @@ public type FpLiteralExpr record {|
     FpTypeSuffix? typeSuffix;
 |};
 
-
 // Types
 
 public type TypeDefn record {|
@@ -419,14 +414,9 @@ public type TypeDefn record {|
     int cycleDepth = -1;
 |};
 
-public type TypeDesc GroupingTypeDesc|BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
+public type TypeDesc BuiltinTypeDesc|BinaryTypeDesc|ConstructorTypeDesc|TypeDescRef|SingletonTypeDesc|UnaryTypeDesc;
 
 public type ConstructorTypeDesc TupleTypeDesc|ArrayTypeDesc|MappingTypeDesc|FunctionTypeDesc|ErrorTypeDesc|XmlSequenceTypeDesc|TableTypeDesc;
-
-public type GroupingTypeDesc record {|
-    *PositionFields;
-    TypeDesc innerTd;
-|};
 
 public type TupleTypeDesc record {|
     *PositionFields;
@@ -477,7 +467,6 @@ public type ErrorTypeDesc record {|
 |};
 
 public type BinaryTypeOp "|" | "&";
-public const UnaryTypeOp = "!";
 
 public type BinaryTypeDesc record {|
     *PositionFields;
@@ -487,9 +476,12 @@ public type BinaryTypeDesc record {|
     TypeDesc right;
 |};
 
+public type UnaryTypeOp "!"|"("|"?";
+
 public type UnaryTypeDesc record {|
     *PositionFields;
     UnaryTypeOp op;
+    Position opPos;
     TypeDesc td;
 |};
 

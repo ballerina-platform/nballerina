@@ -327,7 +327,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         return expr;
     }
     else if t is [STRING_LITERAL, string] {
-        ConstValueExpr expr = { startPos, endPos, value: t[1] };
+        LiteralExpr expr = { startPos, endPos, value: t[1] };
         check tok.advance();
         return expr;
     }
@@ -336,7 +336,7 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
         if tok.current() == ")" {
             endPos = tok.currentEndPos();
             check tok.advance();
-            ConstValueExpr expr = { startPos, endPos, value: () };
+            LiteralExpr expr = { startPos, endPos, value: () };
             return expr;
         }
         Expr innerExpr = check parseInnerExpr(tok);
@@ -345,12 +345,12 @@ function startPrimaryExpr(Tokenizer tok) returns Expr|err:Syntax {
     }
     else if t is "true"|"false" {
         check tok.advance();
-        ConstValueExpr expr = { startPos, endPos, value: t == "true" };
+        LiteralExpr expr = { startPos, endPos, value: t == "true" };
         return expr;
     }
     else if t is "null" {
         check tok.advance();
-        ConstValueExpr expr = { startPos, endPos, value: () };
+        LiteralExpr expr = { startPos, endPos, value: () };
         return expr;
     }
     else if t is "error" {
@@ -514,25 +514,25 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
         }
         [STRING_LITERAL, var value] => {
             Position endPos = tok.currentEndPos();
-            ConstValueExpr expr = { startPos, endPos, value };
+            LiteralExpr expr = { startPos, endPos, value };
             check tok.advance();
             return expr;
         }
         "null" => {
             Position endPos = tok.currentEndPos();
-            ConstValueExpr expr = { startPos, endPos, value: () };
+            LiteralExpr expr = { startPos, endPos, value: () };
             return expr;
         }
         "("  => {
             check tok.advance();
             Position endPos = check tok.expectEnd(")");
-            ConstValueExpr expr = { startPos, endPos, value: () };
+            LiteralExpr expr = { startPos, endPos, value: () };
             return expr;
         }
         "true"|"false"  => {
             Position endPos = tok.currentEndPos();
             check tok.advance();
-            ConstValueExpr expr = {  startPos, endPos, value: t == "true" };
+            LiteralExpr expr = {  startPos, endPos, value: t == "true" };
             return expr;
         }
         [DECIMAL_NUMBER, _]

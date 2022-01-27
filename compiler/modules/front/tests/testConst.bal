@@ -1,50 +1,32 @@
 import ballerina/test;
-import wso2/nballerina.comm.err;
-import wso2/nballerina.comm.diagnostic as d;
 import wso2/nballerina.types as t;
 import wso2/nballerina.front.syntax as s;
 
-
-type ConstEvalTest [string,SimpleConst];
-
-class TestFoldContext {
-    // JBUG #33394 error if next line uncommented
-    // *FoldContext;
-    t:Context tc;
-    d:File file;
-
-    function init(d:File file) {
-        self.tc = t:typeContext(new);
-        self.file = file;
-    }
-    function lookupConst(string? prefix, string varName, s:Position pos) returns t:WrappedSingleValue|FoldError|() {
-        return ();
-    }
-
-    public function semanticErr(d:Message msg, d:Position|d:Range pos, error? cause = ()) returns err:Semantic {
-        return err:semantic(msg, loc=d:location(self.file, pos), cause=cause);
-    }
-
-    function typeContext() returns t:Context {
-        return self.tc;
-    }
-
-    function resolveTypeDesc(s:TypeDesc td) returns err:Semantic|t:SemType {
-        if td is s:SubsetBuiltinTypeDesc {
-            return resolveBuiltinTypeDesc(self.tc, td);
-        }
-        return err:semantic("TestFoldContext cannot resolve TypeDesc", d:location(self.file, td.startPos));
-    }
-    function isConstDefn() returns boolean => true;
-}
+type ConstEvalTest [string, t:SingleValue];
 
 @test:Config{ dataProvider: validConstExprs }
-function testConstExpr(string src, SimpleConst expected) {
+function testConstExpr(string src, t:SingleValue expected) {
     s:SourceFile file = s:createSourceFile([src], { filename: "<internal>" });
     s:Expr parsed = checkpanic s:parseExpression(file);
-    TestFoldContext cx = new(file);
-    var result = foldExpr(cx, (), parsed);
-    test:assertTrue(result is s:ConstValueExpr && result.value == expected, "got: " + (result is s:ConstValueExpr ? result.value.toString()  : "not constant"));
+    ModuleSymbols mod = { tc: t:typeContext(new) };
+    s:ConstDefn defn = {
+        startPos: 0,
+        endPos: 0,
+        namePos: 0,
+        name: "dummy",
+        part: {
+            file,
+            importDecls: [],
+            // JBUG I wrote `defns: table []` and got a crash at runtime rather than a compile-time error 
+            defns: [],
+            partIndex: 0
+        },
+        expr: parsed,
+        td: (),
+        vis: "public"
+    };
+    var result = resolveConstDefn(mod, defn);
+    test:assertTrue(result !is error && result[1] == expected, "got: " + (result is error ? "error" : result[1].toBalString()));
 }
 
 function validConstExprs() returns map<ConstEvalTest> {
