@@ -41,7 +41,16 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     string[] actual = wordsToLines(check parsed);
     test:assertEquals(actual, expected, "wrong ast");
     // pr-todo: currently only valid cases get this far we need to handle cases where case is invalid
-    string result = check testParserRule(k, rule, subject);
+    SourceFile file = createSourceFile(subject, { filename: k });
+    Tokenizer tok = new (file);
+    check tok.advance();
+    string result;
+    if rule == "td" {
+        result = syntaxNodeToString(normalizeSyntaxNode(syntaxNodeFromTypeDesc(check parseTypeDesc(tok))));
+    }
+    else {
+        return;
+    }
     io:println("rule: " , rule);
     io:println("expected: " , "\n".'join(...expected));
     io:println("actual: ", result, "\n");
@@ -49,32 +58,13 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
 
 function testParserRule(string k, string rule, string[] fragment) returns err:Syntax|string {
     string actual = "";
-    if rule == "mod" {
-        RootSyntaxNode root = rootSyntaxNode(check scanAndParseModulePart(createSourceFile(fragment, { filename: k }), 0));
-        actual ="\n".'join(...from SyntaxNode child in root.childNodes select(syntaxNodeToString(child)));
+    if rule != "td" {
+        return "";
     }
-    else {
-        SourceFile file = createSourceFile(fragment, { filename: k });
-        Tokenizer tok = new (file);
-        check tok.advance();
-        match rule {
-            "expr" => {
-                actual = syntaxNodeToString(syntaxNodeFromExpr(check parseExpr(tok)));
-            }
-            "stmt" => {
-                actual = syntaxNodeToString(syntaxNodeFromStmt(check parseStmt(tok)));
-            }
-            "td" => {
-                actual = syntaxNodeToString(syntaxNodeFromTypeDesc(check parseTypeDesc(tok)));
-            }
-            _ => {
-                panic err:impossible("unknown production rule " + rule);
-            }
-        }
-        if tok.current() != () {
-            return err:syntax("superfluous input at end", d:location(file, tok.currentStartPos()));
-        }
+    if rule == "td" {
+
     }
+    else {}
     return actual;
 
 }
