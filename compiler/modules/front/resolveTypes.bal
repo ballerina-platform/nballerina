@@ -262,8 +262,9 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     if td is s:SingletonTypeDesc {
         s:SimpleConstExpr valueExpr = td.valueExpr;
+        ()|boolean|int|float|decimal|string value = ();
         if valueExpr is s:ConstValueExpr {
-            var value = valueExpr.value;
+            value = valueExpr.value;
             if value is string {
                 return t:stringConst(value);
             }
@@ -275,7 +276,25 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
         }
         else if valueExpr is s:NumericLiteralExpr {
-
+            value = check s:resolveNumericLiteralExpr(valueExpr);
+        }
+        else if valueExpr is s:SimpleConstNegateExpr{
+            var operand = valueExpr.operand;
+            if operand is s:NumericLiteralExpr {
+                value = check s:resolveNumericLiteralExpr(operand);
+            } 
+        }
+        if value is decimal {
+            return t:decimalConst(value);
+        }
+        else if value is float {
+            return t:floatConst(value);
+        }
+        else if value is int {
+            return t:intConst(value);
+        }
+        else {
+            panic err:impossible("unexpected value in NumericLiteralExpr");
         }
     }
     if !mod.allowAllTypes {
