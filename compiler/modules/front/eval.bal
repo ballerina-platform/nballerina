@@ -125,7 +125,7 @@ function logicalEval(s:BinaryLogicalOp op, boolean left, boolean right) returns 
     panic err:impossible();
 }
 
-function relationalEval(err:SemanticContext cx, Position pos, s:BinaryRelationalOp op, SimpleConst left, SimpleConst right) returns boolean|err:Semantic {
+function relationalEval(err:SemanticContext cx, Position pos, s:BinaryRelationalOp op, t:SingleValue left, t:SingleValue right) returns boolean|err:Semantic {
     if left is int && right is int {
         return intRelationalEval(op, left, right);
     }

@@ -6,6 +6,19 @@ import wso2/nballerina.comm.diagnostic as d;
 
 type CodeGenError err:Semantic|err:Unimplemented;
 
+// When doing codeGen for an expression we need to determine
+// 1. when it has singleton type
+// 2. when it is const (i.e. OK on the RHS of a const definition)
+// Usually 1 and 2 go together, but sometimes they don't. Specifically:
+// - when the type of variable has been narrowed to singleton float zero (by `== 0f`), we do not know whether its value is +0f or -0f
+// (i.e. this is a case where it is singleton but not const)
+// (this applies even more in case of decimal precision)
+// - the type of an === expression is boolean, even if the operands have singleton type
+// (i.e. this is a case when it is const but not singleton)
+// These two cases can lead to cascading effects in expressions that contain them
+// (particularly numeric casts extend what can be affected by this).
+// In the future conditional expressions will extend it even further.
+
 type ExprEffect record {|
     bir:BasicBlock block;
     bir:Operand result;
@@ -62,52 +75,67 @@ type ExprNarrowing record {|
 
 class ExprContext {
     *err:SemanticContext;
-    final StmtContext sc;
+    final StmtContext? sc;
     final ModuleSymbols mod;
     final s:ModuleLevelDefn defn;
     final Environment env;
+    final s:SourceFile file;
+    final bir:FunctionCode code;
 
-    function init(StmtContext sc, Environment env) {
-        self.sc = sc;
-        self.mod = sc.mod;
+    function init(ModuleSymbols mod, s:ModuleLevelDefn defn, bir:FunctionCode code, Environment env, StmtContext? sc) {
+        self.mod = mod;
         self.env = env;
-        self.defn = sc.functionDefn;
-    }
-
-    function lookupLocalVarRef(string varName, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
-        return lookupLocalVarRef(self.sc, varName, self.env, pos);
+        self.defn = defn;
+        self.file = defn.part.file;
+        self.sc = sc;
+        self.code = code;
     }
 
     public function semanticErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Semantic {
-        return self.sc.semanticErr(msg, pos=pos, cause=cause);
+        return err:semantic(msg, loc=self.location(pos), cause=cause, defnName=self.defn.name);
     }
 
-    public function unimplementedErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Unimplemented {
-        return self.sc.unimplementedErr(msg, pos=pos, cause=cause);
+    function unimplementedErr(d:Message msg, Position|Range pos, error? cause = ()) returns err:Unimplemented {
+        return err:unimplemented(msg, loc=self.location(pos), cause=cause, defnName=self.defn.name);
     }
 
-    function resolveTypeDesc(s:TypeDesc td) returns ResolveTypeError|t:SemType {
-        return self.sc.resolveTypeDesc(td);
-    }
-
-    function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:Register {
-        return self.sc.createTmpRegister(t, pos);
-    }
-
-    function createBasicBlock(string? name = ()) returns bir:BasicBlock {
-        return self.sc.createBasicBlock(name);
+    private function location(Position|Range pos) returns d:Location {
+        return d:location(self.file, pos);
     }
 
     function qNameRange(Position startPos) returns Range {
-        return self.sc.file.qNameRange(startPos);
+        return self.file.qNameRange(startPos);
+    }
+
+    function resolveTypeDesc(s:TypeDesc td) returns t:SemType|ResolveTypeError {
+        return resolveSubsetTypeDesc(self.mod, self.defn, td);
+    }
+
+    function createTmpRegister(bir:SemType t, Position? pos = ()) returns bir:Register {
+        bir:Register reg = bir:createRegister(self.code, t, (), pos);
+        return reg;
+    }
+
+    function createBasicBlock(string? name = ()) returns bir:BasicBlock {
+        return bir:createBasicBlock(self.code, name);
     }
 
     function stmtContext() returns StmtContext|CodeGenError {
-        return self.sc;
+        return <StmtContext>self.sc;
+    }
+
+    function lookupLocalVarRef(string varName, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
+        return lookupLocalVarRef(self, self.mod, varName, self.env, pos);
+    }
+
+    function notInConst(s:Expr expr) returns CodeGenError? {
+        if self.sc == () {
+            return self.semanticErr("expression is not constant", s:range(expr));
+        }
     }
 
     function createNarrowedExprContext(bir:BasicBlock bb, Binding binding, t:SemType narrowedType, bir:Result basis, Position pos) returns ExprContext {
-        bir:Register narrowed = self.sc.createVarRegister(narrowedType, binding.name, pos);
+        bir:Register narrowed = bir:createRegister(self.code, narrowedType, binding.name, pos);
         bir:CondNarrowInsn insn = {
             result: narrowed,
             operand: binding.reg,
@@ -122,7 +150,8 @@ class ExprContext {
             prev: self.env.bindings,
             unnarrowed: unnarrowBinding(binding)
         };
-        return new(self.sc, { bindings, assignments: self.env.assignments });
+        Environment env = { bindings, assignments: self.env.assignments };
+        return new(self.mod, self.defn, self.code, env, self.sc);
     }
 }
 
@@ -171,6 +200,7 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
             return codeGenLogicalNotExpr(cx, bb, pos, o);
         }
         var { checkingKeyword, operand, kwPos: pos } => {
+            check cx.notInConst(expr);
             return codeGenCheckingExpr(cx, bb, expected, checkingKeyword, operand, pos);
         }
         var { opPos: pos, logicalOp: op, left, right } => {
@@ -208,6 +238,7 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         }
         // Function/method call
         var callExpr if callExpr is (s:FunctionCallExpr|s:MethodCallExpr) => {
+            check cx.notInConst(expr);
             if callExpr is s:FunctionCallExpr {
                 return codeGenFunctionCallExpr(cx, bb, callExpr);
             }
@@ -217,12 +248,14 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         }
         // Member access E[i]
         var { container, index, opPos: pos } => {
+            check cx.notInConst(expr);
             // Do constant folding here since these expressions are not allowed in const definitions
             var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, (), container);
             return codeGenMemberAccessExpr(cx, nextBlock, pos, l, index);
         }
         // Field access
         var { container, fieldName, opPos: pos } => {
+            check cx.notInConst(expr);
             var { result: l, block: nextBlock } = check codeGenExpr(cx, bb, (), container);
             return codeGenFieldAccessExpr(cx, nextBlock, pos, l, fieldName);
         }
@@ -237,6 +270,7 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         }
         // Error construct
         var { message, kwPos: pos } => {
+            check cx.notInConst(expr);
             return codeGenErrorConstructor(cx, bb, expected, message, pos);
         }
         // Int literal
@@ -753,7 +787,7 @@ function codeGenMappingConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType?
     return { result, block: nextBlock };
 }
 
-function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns t:SemType|FoldError {
+function selectMappingInherentType(ExprContext cx, t:SemType expectedType, s:MappingConstructorExpr expr) returns t:SemType|ResolveTypeError {
     t:SemType expectedMappingType = t:intersect(expectedType, t:MAPPING_RW);
     t:Context tc = cx.mod.tc;
     if t:mappingAtomicTypeRw(tc, expectedMappingType) != () {
@@ -818,7 +852,7 @@ function codeGenErrorConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? e
 
 function codeGenConstValue(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:ConstValueExpr cvExpr) returns CodeGenError|ExprEffect {
     t:SemType? multiSemType = cvExpr.multiSemType;
-    SimpleConst value = cvExpr.value;
+    t:SingleValue value = cvExpr.value;
     if multiSemType == () {
         return { result: singletonOperand(cx, value), block: bb };
     }
@@ -885,7 +919,7 @@ function codeGenEqualityExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
     bir:EqualityInsn insn = { op, pos, operands: [l, r], result };
     nextBlock.insns.push(insn);
-    [Binding, SimpleConst]? narrowingCompare = ();
+    [Binding, t:SingleValue]? narrowingCompare = ();
     if !exact {
         t:WrappedSingleValue? lShape = operandSingleShape(l);
         t:WrappedSingleValue? rShape = operandSingleShape(r);
