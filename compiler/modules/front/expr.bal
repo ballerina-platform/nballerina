@@ -348,14 +348,14 @@ type MappingAccessType "."|"["|"fill";
 
 // if accessType is ".", k must be a string
 function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register mapping, MappingAccessType accessType, bir:StringOperand k, Position pos) returns CodeGenError|RegExprEffect {
-    string? kVal = t:singleStringShape(k.semType);
     boolean maybeMissing = true;
-    if kVal != () {
-        if t:mappingMemberRequired(cx.mod.tc, mapping.semType, k.semType) {
-            maybeMissing = false;
-        }
-        else if accessType == "." {
-            return cx.semanticErr(`field access to ${kVal} is invalid because field may not be present`, pos=pos);
+    if t:mappingMemberRequired(cx.mod.tc, mapping.semType, k.semType) {
+        maybeMissing = false;
+    }
+    else if accessType == "." {
+        string? fieldName = t:singleStringShape(k.semType);
+        if fieldName != () {
+            return cx.semanticErr(`field access to ${fieldName} is invalid because field may not be present`, pos=pos);
         }
     }
     t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, k.semType);

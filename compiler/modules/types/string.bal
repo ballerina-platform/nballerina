@@ -89,7 +89,7 @@ function stringSubtypeContainedIn(SubtypeData d, string[] values) returns boolea
         }
     }
     else if nonChar.values.length() == 0 {
-        // all non char
+        // all non-char
         return false;
     }
     if char.values.length() == 0 && nonChar.values.length() == 0 {
