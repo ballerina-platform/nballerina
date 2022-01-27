@@ -206,46 +206,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
 // we don't have what we need to create a context.
 // Another approach would be to have a kind of TypeDesc that refers to an NumericLiteralExpr and then convert in resolveTypes.
 // XXX Revisit when floats (and maybe decimals) are fully incorporated in the front-end.
-public function resolveNumericLiteralExpr(NumericLiteralExpr expr) returns decimal|float|int|err:Semantic {
-    if expr is FpLiteralExpr {
-        if expr.typeSuffix == "d" {
-            var f = decimal:fromString(expr.untypedLiteral);
-            if f is error {
-                return err:semantic(`invalid decimal literal ${expr.untypedLiteral}`, loc = ());
-            }
-            else {
-                decimal value = f;
-                return value;
-            }
-        }
-        else {
-            var f = float:fromString(expr.untypedLiteral);
-            if f is error {
-                return err:semantic(`invalid float literal ${expr.untypedLiteral}`, loc = ()); // don't think this should happen
-            }
-            else {
-                float value = f;
-                return value;
-            }
-        }
-    }
-    else {
-        var n = intFromIntLiteral(expr.base, expr.digits);
-        if n is error {
-            return err:semantic(`invalid integer literal ${expr.digits}`, loc = ());
-        }
-        else {
-            int value;
-            if n == int:MIN_VALUE {
-                return err:semantic(`-${expr.digits} overflows`, loc = ());
-            }
-            else {
-                value = -n;
-            }
-            return value;
-        }
-    }
-}
 
 function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
     check tok.expect("<");

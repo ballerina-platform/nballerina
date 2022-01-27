@@ -260,7 +260,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     if td is s:SingletonTypeDesc {
         s:SimpleConstExpr valueExpr = td.valueExpr;
         ()|boolean|int|float|decimal|string value = ();
-        if valueExpr is s:ConstValueExpr {
+        if valueExpr is s:LiteralExpr {
             value = valueExpr.value;
             if value is string {
                 return t:stringConst(value);
@@ -269,17 +269,17 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
                 return t:booleanConst(value);
             }
             else {
-                panic err:impossible("unexpected value in ConstValueExpr");
+                panic err:impossible("unexpected value in LiteralExpr");
             }
         }
         else if valueExpr is s:NumericLiteralExpr {
-            value = check s:resolveNumericLiteralExpr(valueExpr);
+            value = check resolveNumericLiteralExpr(modDefn, valueExpr);
         }
         else if valueExpr is s:SimpleConstNegateExpr{
             var operand = valueExpr.operand;
             if operand is s:NumericLiteralExpr {
-                value = check s:resolveNumericLiteralExpr(operand);
-            } 
+                value = check resolveNumericLiteralExpr(modDefn, operand);
+            }
         }
         if value is decimal {
             return t:decimalConst(value);
@@ -366,4 +366,45 @@ function resolveBuiltinTypeDesc(t:Context tc, s:SubsetBuiltinTypeDesc td) return
         "error" => { return t:ERROR; }
     }
     panic err:impossible("unreachable in resolveInlineBuiltinTypeDesc");
+}
+
+function resolveNumericLiteralExpr(s:ModuleLevelDefn modDefn, s:NumericLiteralExpr expr) returns decimal|float|int|err:Semantic {
+    if expr is s:FpLiteralExpr {
+        if expr.typeSuffix == "d" {
+            var f = decimal:fromString(expr.untypedLiteral);
+            if f is error {
+                return err:semantic(`invalid decimal literal ${expr.untypedLiteral}`, loc = s:locationInDefn(modDefn, expr.startPos));
+            }
+            else {
+                decimal value = f;
+                return value;
+            }
+        }
+        else {
+            var f = float:fromString(expr.untypedLiteral);
+            if f is error {
+                return err:semantic(`invalid float literal ${expr.untypedLiteral}`, loc = s:locationInDefn(modDefn, expr.startPos)); // don't think this should happen
+            }
+            else {
+                float value = f;
+                return value;
+            }
+        }
+    }
+    else {
+        var n = s:intFromIntLiteral(expr.base, expr.digits);
+        if n is error {
+            return err:semantic(`invalid integer literal ${expr.digits}`, loc = s:locationInDefn(modDefn, expr.startPos));
+        }
+        else {
+            int value;
+            if n == int:MIN_VALUE {
+                return err:semantic(`-${expr.digits} overflows`, loc = s:locationInDefn(modDefn, expr.startPos));
+            }
+            else {
+                value = -n;
+            }
+            return value;
+        }
+    }
 }
