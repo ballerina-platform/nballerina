@@ -15,12 +15,14 @@ function syntaxNodeEquals(SyntaxNode lhs, SyntaxNode rhs) returns boolean {
     if lhs is TerminalSyntaxNode || rhs is TerminalSyntaxNode || (lhs.childNodes.length() != rhs.childNodes.length()) {
         return false;
     }
-    foreach int i in 0 ..< lhs.childNodes.length() {
-        if !syntaxNodeEquals(lhs.childNodes[i], rhs.childNodes[i]) {
-            return false;
+    else {
+        foreach int i in 0 ..< lhs.childNodes.length() {
+            if !syntaxNodeEquals(lhs.childNodes[i], rhs.childNodes[i]) {
+                return false;
+            }
         }
+        return true;
     }
-    return true;
 }
 
 function syntaxNodeToString(SyntaxNode node) returns string {
@@ -83,7 +85,11 @@ function normalizeStmtSyntaxNodeToString(SyntaxNode node) returns SyntaxNode {
     SyntaxNode[] childNodes = node.childNodes;
     SyntaxNode[] newChildNodes;
     if astNode is ForeachStmt {
-        newChildNodes = from int i in 0 ..< 4 select normalizeSyntaxNode(childNodes[i]);
+        newChildNodes = [];
+        // JBUG can't use query expression
+        foreach int i in 0 ..< 4 {
+            newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
+        }
         newChildNodes.push(normalizeRangeExprSyntaxNode(childNodes[4]));
         newChildNodes.push(normalizeSyntaxNode(childNodes[5]));
     }
@@ -133,7 +139,11 @@ function normalizeExprSyntaxNode(SyntaxNode node, boolean wrap) returns SyntaxNo
                                                           normalizeExprSyntaxNode(childNodes[2], true)]);
     }
     else if astNode is TypeCastExpr {
-        newChildNodes = from int i in 0 ..< childNodes.length() - 1 select normalizeSyntaxNode(childNodes[i]);
+        newChildNodes = [];
+        // JBUG can't use query expression
+        foreach int i in 0 ..< childNodes.length() - 1 {
+            newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
+        }
         newChildNodes.push(normalizeExprSyntaxNode(childNodes[childNodes.length() - 1], true));
         newChildNodes = conditionallWrapChildNodes(wrap, newChildNodes);
     }
