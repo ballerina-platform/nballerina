@@ -402,10 +402,10 @@ function syntaxNodeFromUnaryExpr(UnaryExpr expr) returns NonTerminalSyntaxNode {
                                        syntaxNodeFromExpr(expr.operand));
 }
 
-type TerminalExpr ConstValueExpr|NumericLiteralExpr;
+type TerminalExpr LiteralExpr|NumericLiteralExpr;
 function syntaxNodeFromTerminalExpr(TerminalExpr expr) returns TerminalSyntaxAstNode {
     string token;
-    if expr is ConstValueExpr {
+    if expr is LiteralExpr {
         token = expr.value != () ? expr.value.toString() : "()";
     }
     else if expr is IntLiteralExpr {

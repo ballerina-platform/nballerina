@@ -231,11 +231,6 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         var ref if ref is s:VarRefExpr => {
             return codeGenVarRefExpr(cx, ref, expected, bb);
         }
-        // Constant
-        // JBUG #33309 does not work as match pattern `var { value, multiSemType }`
-        var cvExpr if cvExpr is s:ConstValueExpr => {
-            return codeGenConstValue(cx, bb, expected, cvExpr);
-        }
         // Function/method call
         var callExpr if callExpr is (s:FunctionCallExpr|s:MethodCallExpr) => {
             check cx.notInConst(expr);
@@ -272,6 +267,10 @@ function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:E
         var { message, kwPos: pos } => {
             check cx.notInConst(expr);
             return codeGenErrorConstructor(cx, bb, expected, message, pos);
+        }
+        // Literal
+        var { value } => {
+            return { result: { value, semType: t:singleton(cx.mod.tc, value) }, block: bb };
         }
         // Int literal
         var { digits, base, startPos: pos } => {
@@ -848,17 +847,6 @@ function codeGenErrorConstructor(ExprContext cx, bir:BasicBlock bb, t:SemType? e
     bir:ErrorConstructInsn insn = { result, operand, pos };
     block.insns.push(insn);
     return { result, block };
-}
-
-function codeGenConstValue(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:ConstValueExpr cvExpr) returns CodeGenError|ExprEffect {
-    t:SemType? multiSemType = cvExpr.multiSemType;
-    t:SingleValue value = cvExpr.value;
-    if multiSemType == () {
-        return { result: singletonOperand(cx, value), block: bb };
-    }
-    else {
-        return { result: { value, semType: multiSemType }, block: bb };
-    }
 }
 
 function codeGenRelationalExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:BinaryRelationalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {

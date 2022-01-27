@@ -424,7 +424,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     if expr is GroupingExpr {
         exprToWords(w, expr.innerExpr, wrap);
     }
-    else if expr is ConstValueExpr {
+    else if expr is LiteralExpr {
         valueToWords(w, expr.value);      
     }
     else if expr is IntLiteralExpr {
