@@ -3,7 +3,6 @@ function terminalSyntaxNodeToString(TerminalSyntaxNode node) returns string {
         return node.name;
     }
     else if node is StringLiteralSyntaxNode {
-        // pr-todo: escape literals
         return "\"" + node.literal + "\"";
     }
     else {
@@ -26,7 +25,7 @@ function syntaxNodeToString(SyntaxNode node) returns string {
         return typeDescSyntaxNodeToString(node, false);
     }
     else {
-        return "".'join(...from SyntaxNode child in node.childNodes select syntaxNodeToString(child));
+        return concat(...from SyntaxNode child in node.childNodes select syntaxNodeToString(child));
     }
 }
 
@@ -51,7 +50,7 @@ function stmtSyntaxNodeToString(SyntaxNode node) returns string {
     else {
         content = from SyntaxNode child in childNodes select syntaxNodeToString(child);
     }
-    return " ".'join(...content);
+    return concat(...content);
 }
 
 function rangeExprSyntaxNodeToString(SyntaxNode node) returns string {
@@ -62,7 +61,7 @@ function rangeExprSyntaxNodeToString(SyntaxNode node) returns string {
     string[] content = [exprSyntaxNodeToString(childNodes[0], true),
                         syntaxNodeToString(childNodes[1]),
                         exprSyntaxNodeToString(childNodes[2], true)];
-    return " ".'join(...content);
+    return concat(...content);
 }
 
 function exprSyntaxNodeToString(SyntaxNode node, boolean wrap) returns string {
@@ -112,7 +111,7 @@ function exprSyntaxNodeToString(SyntaxNode node, boolean wrap) returns string {
     else {
         content = from SyntaxNode child in childNodes select syntaxNodeToString(child);
     }
-    return " ".'join(...content);
+    return concat(...content);
 }
 
 function typeDescSyntaxNodeToString(SyntaxNode node, boolean|BinaryTypeOp wrap) returns string {
@@ -125,21 +124,14 @@ function typeDescSyntaxNodeToString(SyntaxNode node, boolean|BinaryTypeOp wrap) 
     if astNode !is TypeDesc {
         panic error("expected a type desc node");
     }
-    if astNode is GroupingTypeDesc {
+    if astNode is UnaryTypeDesc && astNode.op == "(" {
         return typeDescSyntaxNodeToString(childNodes[1], wrap);
     }
     else if astNode is BinaryTypeDesc {
         boolean noWrap = wrap == false || wrap == astNode.op;
-        // FIXME: with the optional type desc
-        if childNodes.length() == 2 {
-            content = conditionalWrapContent(!noWrap, [typeDescSyntaxNodeToString(childNodes[0], astNode.op),
-                                                    "?"]);
-        }
-        else {
         content = conditionalWrapContent(!noWrap, [typeDescSyntaxNodeToString(childNodes[0], astNode.op),
                                                    syntaxNodeToString(childNodes[1]),
                                                    typeDescSyntaxNodeToString(childNodes[2], astNode.op)]);
-        }
     }
     else if astNode is TupleTypeDesc {
         content = conditionalWrapContent(wrap != false, from SyntaxNode child in childNodes select syntaxNodeToString(child));
@@ -156,8 +148,7 @@ function typeDescSyntaxNodeToString(SyntaxNode node, boolean|BinaryTypeOp wrap) 
     else {
         content = from SyntaxNode child in childNodes select syntaxNodeToString(child);
     }
-    return " ".'join(...content);
-
+    return concat(...content);
 }
 
 function conditionalWrapContent(boolean condition, string[] content) returns string[] {
@@ -168,4 +159,10 @@ function conditionalWrapContent(boolean condition, string[] content) returns str
     newContent.push(...content);
     newContent.push(")");
     return newContent;
+}
+
+function concat(string... words) returns string {
+    // pr-todo: set spaces correctly
+    // pr-todo: escape characters
+    return " ".'join(...words);
 }
