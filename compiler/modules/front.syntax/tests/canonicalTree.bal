@@ -10,6 +10,7 @@ function syntaxNodeEquals(SyntaxNode|RootSyntaxNode lhs, SyntaxNode|RootSyntaxNo
     if rhs is SyntaxNode {
         AstNode astNode = rhs.astNode;
         if astNode is GroupingExpr || (astNode is UnaryTypeDesc && astNode.op == "(") {
+            // rhs is a Grouping node with child nodes we need to flatten it's child nodes to compare with canonical node
             SyntaxNode[] childNodes = rhs.childNodes;
             rhsChildNodes = [childNodes[0]];
             NonTerminalSyntaxNode innerChild = <NonTerminalSyntaxNode>(childNodes[1]);
@@ -90,8 +91,7 @@ function normalizeSyntaxNode(SyntaxNode node) returns SyntaxNode {
 }
 
 function normalizeRootSyntaxNode(RootSyntaxNode node) returns RootSyntaxNode {
-    SyntaxNode[] newChildNodes = from SyntaxNode child in node.childNodes select normalizeSyntaxNode(child);
-    return { part: node.part, childNodes: newChildNodes };
+    return { part: node.part, childNodes: from SyntaxNode child in node.childNodes select normalizeSyntaxNode(child) };
 }
 
 function normalizeStmtSyntaxNodeToString(SyntaxNode node) returns SyntaxNode {
@@ -107,14 +107,17 @@ function normalizeStmtSyntaxNodeToString(SyntaxNode node) returns SyntaxNode {
     if astNode is ForeachStmt {
         newChildNodes = [];
         // JBUG can't use query expression
+        // newChildNodes = from int i in 0 ..< 4 select normalizeSyntaxNode(childNodes[i]);
         foreach int i in 0 ..< 4 {
             newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
         }
-        newChildNodes.push(normalizeRangeExprSyntaxNode(childNodes[4]));
-        newChildNodes.push(normalizeSyntaxNode(childNodes[5]));
+        newChildNodes.push(normalizeRangeExprSyntaxNode(childNodes[4]),
+                           normalizeSyntaxNode(childNodes[5]));
     }
     else if astNode is CompoundAssignStmt|AssignStmt {
         newChildNodes = [normalizeLExprSyntaxNode(childNodes[0])];
+        // JBUG can't use query expression
+        // newChildNodes.push(...from int i in 1 ..< childNodes.length() select normalizeSyntaxNode(childNodes[i]));
         foreach int i in 1 ..< childNodes.length() {
             newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
         }
@@ -161,6 +164,7 @@ function normalizeExprSyntaxNode(SyntaxNode node, boolean wrap) returns SyntaxNo
     else if astNode is TypeCastExpr {
         newChildNodes = [];
         // JBUG can't use query expression
+        // newChildNodes.push(...from int i in 0 ..< childNodes.length()-1 select normalizeSyntaxNode(childNodes[i]));
         foreach int i in 0 ..< childNodes.length() - 1 {
             newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
         }
@@ -172,6 +176,8 @@ function normalizeExprSyntaxNode(SyntaxNode node, boolean wrap) returns SyntaxNo
     }
     else if astNode is MemberAccessExpr|TypeTestExpr|FieldAccessExpr|MethodCallExpr {
         newChildNodes = [normalizeExprSyntaxNode(childNodes[0], true)];
+        // JBUG can't use query expression
+        // newChildNodes.push(...from int i in 1 ..< childNodes.length() select normalizeSyntaxNode(childNodes[i]));
         foreach int i in 1 ..< childNodes.length() {
             newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
         }
@@ -201,6 +207,8 @@ function normalizeLExprSyntaxNode(SyntaxNode node) returns SyntaxNode {
     }
     else if astNode is FieldAccessLExpr {
         newChildNodes = [normalizeLExprSyntaxNode(childNodes[0])];
+        // JBUG can't use query expression
+        // newChildNodes.push(...from int i in 1 ..< childNodes.length() select normalizeSyntaxNode(childNodes[i]));
         foreach int i in 1 ..< childNodes.length() {
             newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
         }
@@ -227,14 +235,16 @@ function normalizeTypeDescSyntaxNode(SyntaxNode node, boolean|BinaryTypeOp wrap)
     if astNode is BinaryTypeDesc {
         boolean noWrap = wrap == false || wrap == astNode.op;
         newChildNodes = conditionallWrapChildNodes(!noWrap, [normalizeTypeDescSyntaxNode(childNodes[0], astNode.op),
-                                                            normalizeSyntaxNode(childNodes[1]),
-                                                            normalizeTypeDescSyntaxNode(childNodes[2], astNode.op)]);
+                                                             normalizeSyntaxNode(childNodes[1]),
+                                                             normalizeTypeDescSyntaxNode(childNodes[2], astNode.op)]);
     }
     else if astNode is TupleTypeDesc {
         newChildNodes = conditionallWrapChildNodes(wrap != false, from SyntaxNode child in childNodes select normalizeSyntaxNode(child));
     }
     else if astNode is ArrayTypeDesc {
         newChildNodes = [normalizeTypeDescSyntaxNode(childNodes[0], true)];
+        // JBUG can't use query expression
+        // newChildNodes.push(...from int i in 1 ..< childNodes.length() select normalizeSyntaxNode(childNodes[i]));
         foreach int i in 1 ..< childNodes.length() {
             newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
         }

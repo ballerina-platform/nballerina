@@ -151,37 +151,6 @@ function tokenToString(Token t) returns string {
     return <string>t;
 }
 
-function reduceToWords(string k, string rule, string[] fragment) returns err:Syntax|Word[] {
-    Word[] w = [];
-    if rule == "mod" {
-        modulePartToWords(w, check scanAndParseModulePart(createSourceFile(fragment, { filename: k }), 0));
-    }
-    else {
-        SourceFile file = createSourceFile(fragment, { filename: k });
-        Tokenizer tok = new (file);
-        check tok.advance();
-        match rule {
-            "expr" => {
-                exprToWords(w, check parseExpr(tok));
-            }
-            "stmt" => {
-                stmtToWords(w, check parseStmt(tok));
-            }
-            "td" => {
-                typeDescToWords(w, check parseTypeDesc(tok));
-            }
-            _ => {
-                panic err:impossible("unknown production rule " + rule);
-            }
-        }
-        if tok.current() != () {
-            return err:syntax("superfluous input at end", d:location(file, tok.currentStartPos()));
-        }
-    }
-    return w;
-}
-
-
 function getTokenizerTests() returns map<TokenizerTestCase>|error {
      map<TokenizerTestCase> all = check invalidTokenSourceFragments();
      int invalidCases = all.length();
