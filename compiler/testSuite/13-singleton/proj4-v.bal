@@ -21,5 +21,5 @@ public function main() {
 
     p = {x: 44, y: 88 };
     int|string? y = p[xy];
-    io:println(y); // @output ()
+    io:println(y == ()); // @output true
 }
