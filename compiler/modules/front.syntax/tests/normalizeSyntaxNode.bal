@@ -1,36 +1,3 @@
-// lhs is expected to be the normalized tree node and rhs to be an un-normalized tree node
-function syntaxNodeEquals(SyntaxNode|RootSyntaxNode lhs, SyntaxNode|RootSyntaxNode rhs) returns boolean {
-    if lhs is TerminalSyntaxNode && rhs is TerminalSyntaxNode {
-        return terminalSyntaxNodeToString(lhs) == terminalSyntaxNodeToString(rhs);
-    }
-    if lhs is TerminalSyntaxNode || rhs is TerminalSyntaxNode {
-        return false;
-    }
-    SyntaxNode[] rhsChildNodes = rhs.childNodes;
-    if rhs is SyntaxNode {
-        AstNode astNode = rhs.astNode;
-        if astNode is GroupingExpr || (astNode is UnaryTypeDesc && astNode.op == "(") {
-            // rhs is a Grouping node with child nodes we need to flatten it's child nodes to compare with canonical node
-            SyntaxNode[] childNodes = rhs.childNodes;
-            rhsChildNodes = [childNodes[0]];
-            NonTerminalSyntaxNode innerChild = <NonTerminalSyntaxNode>(childNodes[1]);
-            rhsChildNodes.push(...innerChild.childNodes);
-            rhsChildNodes.push(childNodes[2]);
-        }
-    }
-    if lhs.childNodes.length() != rhsChildNodes.length() {
-        return false;
-    }
-    else {
-        foreach int i in 0 ..< lhs.childNodes.length() {
-            if !syntaxNodeEquals(lhs.childNodes[i], rhsChildNodes[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
-}
-
 function normalizeTree(RootSyntaxNode|SyntaxNode node) returns RootSyntaxNode|SyntaxNode {
     if node is RootSyntaxNode {
         return normalizeRootSyntaxNode(node);
@@ -60,7 +27,10 @@ function normalizeSyntaxNode(SyntaxNode node) returns SyntaxNode {
 }
 
 function normalizeRootSyntaxNode(RootSyntaxNode node) returns RootSyntaxNode {
-    return { part: node.part, childNodes: from SyntaxNode child in node.childNodes select normalizeSyntaxNode(child) };
+    return {
+        part: node.part,
+        childNodes: from SyntaxNode child in node.childNodes select normalizeSyntaxNode(child)
+    };
 }
 
 function normalizeStmtSyntaxNodeToString(SyntaxNode node) returns SyntaxNode {
@@ -94,7 +64,10 @@ function normalizeStmtSyntaxNodeToString(SyntaxNode node) returns SyntaxNode {
     else {
         newChildNodes = from SyntaxNode child in childNodes select normalizeSyntaxNode(child);
     }
-    return { astNode, childNodes: newChildNodes };
+    return {
+        astNode,
+        childNodes: newChildNodes
+    };
 }
 
 function normalizeRangeExprSyntaxNode(SyntaxNode node) returns SyntaxNode {
@@ -105,7 +78,10 @@ function normalizeRangeExprSyntaxNode(SyntaxNode node) returns SyntaxNode {
     SyntaxNode[] newChildNodes = [normalizeExprSyntaxNode(childNodes[0], true),
                                   normalizeSyntaxNode(childNodes[1]),
                                   normalizeExprSyntaxNode(childNodes[2], true)];
-    return { astNode: node.astNode, childNodes: newChildNodes };
+    return {
+        astNode: node.astNode,
+        childNodes: newChildNodes
+    };
 }
 
 function normalizeExprSyntaxNode(SyntaxNode node, boolean wrap) returns SyntaxNode {
@@ -122,13 +98,13 @@ function normalizeExprSyntaxNode(SyntaxNode node, boolean wrap) returns SyntaxNo
     }
     SyntaxNode[] newChildNodes;
     if astNode is UnaryExpr {
-        newChildNodes = conditionallWrapChildNodes(wrap, [normalizeSyntaxNode(childNodes[0]),
-                                                          normalizeExprSyntaxNode(childNodes[1], true)]);
+        newChildNodes = normalizeChildNodesConditionally(wrap, [normalizeSyntaxNode(childNodes[0]),
+                                                                normalizeExprSyntaxNode(childNodes[1], true)]);
     }
     else if astNode is BinaryExpr {
-        newChildNodes = conditionallWrapChildNodes(wrap, [normalizeExprSyntaxNode(childNodes[0], true),
-                                                          normalizeSyntaxNode(childNodes[1]),
-                                                          normalizeExprSyntaxNode(childNodes[2], true)]);
+        newChildNodes = normalizeChildNodesConditionally(wrap, [normalizeExprSyntaxNode(childNodes[0], true),
+                                                                normalizeSyntaxNode(childNodes[1]),
+                                                                normalizeExprSyntaxNode(childNodes[2], true)]);
     }
     else if astNode is TypeCastExpr {
         newChildNodes = [];
@@ -138,10 +114,10 @@ function normalizeExprSyntaxNode(SyntaxNode node, boolean wrap) returns SyntaxNo
             newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
         }
         newChildNodes.push(normalizeExprSyntaxNode(childNodes[childNodes.length() - 1], true));
-        newChildNodes = conditionallWrapChildNodes(wrap, newChildNodes);
+        newChildNodes = normalizeChildNodesConditionally(wrap, newChildNodes);
     }
     else if astNode is CheckingExpr {
-        newChildNodes = conditionallWrapChildNodes(wrap, from SyntaxNode child in childNodes select normalizeSyntaxNode(child));
+        newChildNodes = normalizeChildNodesConditionally(wrap, from SyntaxNode child in childNodes select normalizeSyntaxNode(child));
     }
     else if astNode is MemberAccessExpr|TypeTestExpr|FieldAccessExpr|MethodCallExpr {
         newChildNodes = [normalizeExprSyntaxNode(childNodes[0], true)];
@@ -150,12 +126,15 @@ function normalizeExprSyntaxNode(SyntaxNode node, boolean wrap) returns SyntaxNo
         foreach int i in 1 ..< childNodes.length() {
             newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
         }
-        newChildNodes = conditionallWrapChildNodes(wrap, newChildNodes);
+        newChildNodes = normalizeChildNodesConditionally(wrap, newChildNodes);
     }
     else {
         newChildNodes = from SyntaxNode child in childNodes select normalizeSyntaxNode(child);
     }
-    return { astNode, childNodes: newChildNodes };
+    return {
+        astNode,
+        childNodes: newChildNodes
+    };
 }
 
 function normalizeLExprSyntaxNode(SyntaxNode node) returns SyntaxNode {
@@ -185,7 +164,10 @@ function normalizeLExprSyntaxNode(SyntaxNode node) returns SyntaxNode {
     else {
         newChildNodes = from SyntaxNode child in childNodes select normalizeSyntaxNode(child);
     }
-    return { astNode, childNodes: newChildNodes };
+    return {
+        astNode,
+        childNodes: newChildNodes
+    };
 }
 
 function normalizeTypeDescSyntaxNode(SyntaxNode node, boolean|BinaryTypeOp wrap) returns SyntaxNode {
@@ -203,12 +185,12 @@ function normalizeTypeDescSyntaxNode(SyntaxNode node, boolean|BinaryTypeOp wrap)
     SyntaxNode[] newChildNodes;
     if astNode is BinaryTypeDesc {
         boolean noWrap = wrap == false || wrap == astNode.op;
-        newChildNodes = conditionallWrapChildNodes(!noWrap, [normalizeTypeDescSyntaxNode(childNodes[0], astNode.op),
-                                                             normalizeSyntaxNode(childNodes[1]),
-                                                             normalizeTypeDescSyntaxNode(childNodes[2], astNode.op)]);
+        newChildNodes = normalizeChildNodesConditionally(!noWrap, [normalizeTypeDescSyntaxNode(childNodes[0], astNode.op),
+                                                                   normalizeSyntaxNode(childNodes[1]),
+                                                                   normalizeTypeDescSyntaxNode(childNodes[2], astNode.op)]);
     }
     else if astNode is TupleTypeDesc {
-        newChildNodes = conditionallWrapChildNodes(wrap != false, from SyntaxNode child in childNodes select normalizeSyntaxNode(child));
+        newChildNodes = normalizeChildNodesConditionally(wrap != false, from SyntaxNode child in childNodes select normalizeSyntaxNode(child));
     }
     else if astNode is ArrayTypeDesc {
         newChildNodes = [normalizeTypeDescSyntaxNode(childNodes[0], true)];
@@ -217,15 +199,18 @@ function normalizeTypeDescSyntaxNode(SyntaxNode node, boolean|BinaryTypeOp wrap)
         foreach int i in 1 ..< childNodes.length() {
             newChildNodes.push(normalizeSyntaxNode(childNodes[i]));
         }
-        newChildNodes = conditionallWrapChildNodes(wrap != false, newChildNodes);
+        newChildNodes = normalizeChildNodesConditionally(wrap != false, newChildNodes);
     }
     else {
         newChildNodes = from SyntaxNode child in childNodes select normalizeSyntaxNode(child);
     }
-    return { astNode, childNodes: newChildNodes };
+    return {
+        astNode,
+        childNodes: newChildNodes
+    };
 }
 
-function conditionallWrapChildNodes(boolean condition, SyntaxNode[] childNodes) returns SyntaxNode[] {
+function normalizeChildNodesConditionally(boolean condition, SyntaxNode[] childNodes) returns SyntaxNode[] {
     if condition == false {
         return childNodes;
     }
@@ -235,61 +220,4 @@ function conditionallWrapChildNodes(boolean condition, SyntaxNode[] childNodes) 
         newChildNodes.push({ token: ")" });
         return newChildNodes;
     }
-}
-
-function syntaxNodeToString(SyntaxNode|RootSyntaxNode node) returns string {
-    string[] content = [];
-    if node is TerminalSyntaxNode {
-        content.push(terminalSyntaxNodeToString(node));
-    }
-    else {
-        SyntaxNode[] childNodes = node.childNodes;
-        foreach var child in childNodes {
-            if child is TerminalSyntaxNode {
-                content.push(terminalSyntaxNodeToString(child));
-            }
-            else {
-                content.push(syntaxNodeToString(child));
-            }
-        }
-    }
-    return concat(...content);
-}
-
-function terminalSyntaxNodeToString(TerminalSyntaxNode node) returns string {
-    if node is IdentifierSyntaxNode {
-        return node.name;
-    }
-    else if node is StringLiteralSyntaxNode {
-        return node.literal;
-    }
-    else {
-        return node.token;
-    }
-}
-
-function concat(string... tokens) returns string {
-    string[] parts = [];
-    foreach string token in tokens {
-        string lastTail = parts.length() > 0 ? parts[parts.length() - 1] : "";
-        if lastTail.length() > 0 {
-            lastTail = lastTail.substring(lastTail.length() - 1);
-        }
-        string head = token.length() > 0 ? token.substring(0, 1) : "";
-        if !(omitSpaceBefore(token) || (head != "\"" && omitSpaceBefore(head)))
-                && parts.length() > 0
-                && !(omitSpaceAfter(parts[parts.length() - 1]) || (lastTail != "\"" && omitSpaceAfter(lastTail))) {
-            parts.push(" ");
-        }
-        parts.push(token);
-    }
-    return string:concat(...parts).trim();
-}
-
-function omitSpaceBefore(string token) returns boolean {
-    return token == "," || token == "(" || token == ")" || token == "}" || token == "\"" || token == "]" || token == "*" || token == ":" || token == ".";
-}
-
-function omitSpaceAfter(string token) returns boolean {
-    return token == "(" || token == "{" || token == "\"" || token == "[" || token == "." || token == "!";
 }

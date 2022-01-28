@@ -39,9 +39,9 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
         panic err:impossible("can't normalize the actual tree");
     }
     RootSyntaxNode|SyntaxNode normalizedActualTree = normalizeTree(actualTree);
-    RootSyntaxNode|SyntaxNode expectedTree = check standardTree(k, rule, expected);
+    RootSyntaxNode|SyntaxNode expectedTree = normalizeTree(check standardTree(k, rule, expected));
     string errMsg = "actualTree : " + syntaxNodeToString(normalizedActualTree) + "\nexpectecTree : " + syntaxNodeToString(expectedTree);
-    test:assertTrue(syntaxNodeEquals(normalizedActualTree, expectedTree), errMsg);
+    test:assertTrue(validateNormalizedTree(normalizedActualTree, expectedTree), errMsg);
 }
 
 function standardTree(string k, string rule, string[] content) returns err:Syntax|SyntaxNode|RootSyntaxNode {
@@ -69,17 +69,23 @@ function standardTree(string k, string rule, string[] content) returns err:Synta
     return node;
 }
 
-function testParserRule(string k, string rule, string[] fragment) returns err:Syntax|string {
-    string actual = "";
-    if rule != "td" {
-        return "";
+function validateNormalizedTree(SyntaxNode|RootSyntaxNode normalizedTreeNode, SyntaxNode|RootSyntaxNode expectedTreeNode) returns boolean {
+    if normalizedTreeNode is TerminalSyntaxNode && expectedTreeNode is TerminalSyntaxNode {
+        return terminalSyntaxNodeToString(normalizedTreeNode) == terminalSyntaxNodeToString(expectedTreeNode);
     }
-    if rule == "td" {
-
+    if normalizedTreeNode is TerminalSyntaxNode ||
+       expectedTreeNode is TerminalSyntaxNode ||
+       normalizedTreeNode.childNodes.length() != expectedTreeNode.childNodes.length() {
+        return false;
     }
-    else {}
-    return actual;
-
+    else {
+        foreach int i in 0 ..< normalizedTreeNode.childNodes.length() {
+            if !validateNormalizedTree(normalizedTreeNode.childNodes[i], expectedTreeNode.childNodes[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
 
 type TokenizerTestCase [string, string[]];
