@@ -182,7 +182,7 @@ public distinct class Module {
             PointerPointer paramTypes = PointerPointerFromTypes(fnType.paramTypes);
             return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, 2), fnType, self.context);
         }
-        else if name is "ptrmask.p1i8.i64" {
+        else {
             FunctionType fnType = {returnType: pointerType("i8", 1), paramTypes: [pointerType("i8", 1), "i64"]};
             PointerPointer paramTypes = PointerPointerFromTypes(fnType.paramTypes);
             return new (jLLVMGetIntrinsicDeclaration(self.LLVMModule, id, paramTypes.jObject, 2), fnType, self.context);

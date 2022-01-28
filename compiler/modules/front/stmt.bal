@@ -88,6 +88,7 @@ class StmtContext {
     function nextRegisterNumber() returns int {
         return self.code.registers.length();
     }
+
     function registerVarName(int registerNumber) returns string? {
         return bir:getRegister(self.code, registerNumber).varName;
     }
@@ -191,23 +192,23 @@ class StmtContext {
     }
 
     function exprContext(Environment env) returns ExprContext {
-        return new ExprContext(self, env);
+        return new ExprContext(self.mod, self.functionDefn, self.code, env, self);
     }
 
     function codeGenExpr(bir:BasicBlock block, Environment env, t:SemType? expectedType, s:Expr expr) returns CodeGenError|ExprEffect {
-        return codeGenExpr(new ExprContext(self,  env), block, expectedType, expr);
+        return codeGenExpr(self.exprContext(env), block, expectedType, expr);
     }
 
     function codeGenExprForInt(bir:BasicBlock block, Environment env, s:Expr expr) returns CodeGenError|IntExprEffect {
-        return codeGenExprForInt(new ExprContext(self,  env), block, expr);
+        return codeGenExprForInt(self.exprContext(env), block, expr);
     }
 
     function codeGenExprForString(bir:BasicBlock block, Environment env, s:Expr expr) returns CodeGenError|StringExprEffect {
-        return codeGenExprForString(new ExprContext(self,  env), block, expr);
+        return codeGenExprForString(self.exprContext(env), block, expr);
     }
 
     function codeGenExprForBoolean(bir:BasicBlock block, Environment env, s:Expr expr) returns CodeGenError|BooleanExprEffect {
-        return codeGenExprForBoolean(new ExprContext(self,  env), block, expr);
+        return codeGenExprForBoolean(self.exprContext(env), block, expr);
     }
 
     function resolveTypeDesc(s:TypeDesc td) returns t:SemType|ResolveTypeError {
@@ -670,7 +671,7 @@ function codeGenMatchStmt(StmtContext cx, bir:BasicBlock startBlock, Environment
     return { block: contBlock, assignments };
 }
 
-function resolveConstMatchPattern(StmtContext cx, Environment env, s:SimpleConstExpr expr, t:SemType? expectedType) returns t:SingleValue|FoldError {
+function resolveConstMatchPattern(StmtContext cx, Environment env, s:SimpleConstExpr expr, t:SemType? expectedType) returns t:SingleValue|ResolveTypeError {
     if expr !is s:VarRefExpr || expr.prefix != () || !envDefines(expr.name, env) {
         var [_, value] = check resolveConstExpr(cx.mod, cx.functionDefn, expr, ());
         return value;
@@ -1236,7 +1237,7 @@ function codeGenExprForCond(StmtContext cx, bir:BasicBlock bb, Environment env, 
 }
 
 function lookupVarRefBinding(StmtContext cx, string name, Environment env, Position pos) returns Binding|CodeGenError {
-    var b = check lookupLocalVarRef(cx, name, env, pos);
+    var b = check lookupLocalVarRef(cx, cx.mod, name, env, pos);
     if b is Binding {
         return b;
     }
@@ -1245,18 +1246,22 @@ function lookupVarRefBinding(StmtContext cx, string name, Environment env, Posit
     }
 }
 
-function lookupLocalVarRef(StmtContext cx, string name, Environment env, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
+function lookupLocalVarRef(err:SemanticContext cx, ModuleSymbols mod, string name, Environment env, Position pos) returns t:SingleValue|Binding|bir:FunctionRef|CodeGenError {
     Binding? binding = envLookup(name, env);
     if binding == () {
-        s:ModuleLevelDefn? defn = cx.mod.defns[name];
+        s:ModuleLevelDefn? defn = mod.defns[name];
         if defn == () {
             return cx.semanticErr(`variable ${name} not defined`, pos);
         }
         else if defn is s:ConstDefn {
-            return (<s:ResolvedConst>defn.resolved)[1];
+            return (check resolveConstDefn(mod, defn))[1];
         }
         else if defn is s:FunctionDefn {
-            var signature = <bir:FunctionSignature>defn.signature;
+            var signature = defn.signature;
+            if signature is () {
+                // Signature will not be () if we are in a function
+                return cx.semanticErr("variable reference in a const cannot refer to a function", pos);
+            }
             boolean isPublic = defn.vis == "public";
             bir:InternalSymbol symbol = { identifier: name, isPublic };
             return { symbol, signature, erasedSignature: signature };
@@ -1264,7 +1269,8 @@ function lookupLocalVarRef(StmtContext cx, string name, Environment env, Positio
         else {
             s:TypeDefn _ = defn;
             // SUBSET typedesc
-            return cx.unimplementedErr(`values of type descriptor type not yet implemented`, pos);
+            // XXX should be unimplementedErr
+            return cx.semanticErr(`values of type descriptor type not yet implemented`, pos);
         }
     }
     else {
