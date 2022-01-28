@@ -1,23 +1,28 @@
+// lhs is expected to be the normalized tree node and rhs to be an un-normalized tree node
 function syntaxNodeEquals(SyntaxNode|RootSyntaxNode lhs, SyntaxNode|RootSyntaxNode rhs) returns boolean {
     if lhs is TerminalSyntaxNode && rhs is TerminalSyntaxNode {
         return terminalSyntaxNodeToString(lhs) == terminalSyntaxNodeToString(rhs);
     }
-    if rhs is NonTerminalSyntaxNode {
+    if lhs is TerminalSyntaxNode || rhs is TerminalSyntaxNode {
+        return false;
+    }
+    SyntaxNode[] rhsChildNodes = rhs.childNodes;
+    if rhs is SyntaxNode {
         AstNode astNode = rhs.astNode;
         if astNode is GroupingExpr || (astNode is UnaryTypeDesc && astNode.op == "(") {
             SyntaxNode[] childNodes = rhs.childNodes;
-            rhs.childNodes = [childNodes[0]];
+            rhsChildNodes = [childNodes[0]];
             NonTerminalSyntaxNode innerChild = <NonTerminalSyntaxNode>(childNodes[1]);
-            rhs.childNodes.push(...innerChild.childNodes);
-            rhs.childNodes.push(childNodes[2]);
+            rhsChildNodes.push(...innerChild.childNodes);
+            rhsChildNodes.push(childNodes[2]);
         }
     }
-    if lhs is TerminalSyntaxNode || rhs is TerminalSyntaxNode || (lhs.childNodes.length() != rhs.childNodes.length()) {
+    if lhs.childNodes.length() != rhsChildNodes.length() {
         return false;
     }
     else {
         foreach int i in 0 ..< lhs.childNodes.length() {
-            if !syntaxNodeEquals(lhs.childNodes[i], rhs.childNodes[i]) {
+            if !syntaxNodeEquals(lhs.childNodes[i], rhsChildNodes[i]) {
                 return false;
             }
         }
