@@ -1,4 +1,4 @@
-function syntaxNodeEquals(SyntaxNode lhs, SyntaxNode rhs) returns boolean {
+function syntaxNodeEquals(SyntaxNode|RootSyntaxNode lhs, SyntaxNode|RootSyntaxNode rhs) returns boolean {
     if lhs is TerminalSyntaxNode && rhs is TerminalSyntaxNode {
         return terminalSyntaxNodeToString(lhs) == terminalSyntaxNodeToString(rhs);
     }
@@ -25,13 +25,14 @@ function syntaxNodeEquals(SyntaxNode lhs, SyntaxNode rhs) returns boolean {
     }
 }
 
-function syntaxNodeToString(SyntaxNode node) returns string {
+function syntaxNodeToString(SyntaxNode|RootSyntaxNode node) returns string {
     string[] content = [];
     if node is TerminalSyntaxNode {
         content.push(terminalSyntaxNodeToString(node));
     }
     else {
-        foreach var child in node.childNodes {
+        SyntaxNode[] childNodes = node.childNodes;
+        foreach var child in childNodes {
             if child is TerminalSyntaxNode {
                 content.push(terminalSyntaxNodeToString(child));
             }
@@ -55,6 +56,15 @@ function terminalSyntaxNodeToString(TerminalSyntaxNode node) returns string {
     }
 }
 
+function normalizeTree(RootSyntaxNode|SyntaxNode node) returns RootSyntaxNode|SyntaxNode {
+    if node is RootSyntaxNode {
+        return normalizeRootSyntaxNode(node);
+    }
+    else {
+        return normalizeSyntaxNode(node);
+    }
+}
+
 function normalizeSyntaxNode(SyntaxNode node) returns SyntaxNode {
     if node is TerminalSyntaxNode {
         return node;
@@ -72,6 +82,11 @@ function normalizeSyntaxNode(SyntaxNode node) returns SyntaxNode {
     else {
         return node;
     }
+}
+
+function normalizeRootSyntaxNode(RootSyntaxNode node) returns RootSyntaxNode {
+    SyntaxNode[] newChildNodes = from SyntaxNode child in node.childNodes select normalizeSyntaxNode(child);
+    return { part: node.part, childNodes: newChildNodes };
 }
 
 function normalizeStmtSyntaxNodeToString(SyntaxNode node) returns SyntaxNode {

@@ -17,56 +17,61 @@ type SingleStringParserTestCase [Kind, string, string, string];
     dataProvider: readParserTests
 }
 function testParser(Kind k, string rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
-    err:Syntax|Word[] parsed = reduceToWords(k, rule, subject);
+    err:Syntax|SyntaxNode|RootSyntaxNode actualTree = standardTree(k, rule, subject);
     if k.includes("F") || k.includes("U") {
         if k.includes("V") {
-            test:assertTrue(parsed is err:Syntax, "test marked as unimplemented/failing but parsed");
+            test:assertTrue(actualTree is err:Syntax, "test marked as unimplemented/failing but parsed");
             return;
         }
         if k.includes("E") {
-            test:assertTrue(parsed is Word[], "test marked as unimplemented/failing but correctly got an error");
+            test:assertTrue(actualTree !is err:Syntax, "test marked as unimplemented/failing but correctly got an error");
             return;
         }
         panic err:impossible("kind must be FE or FV but was '" + k + "'");
     }
     if k.includes("E") {
-        if parsed !is error {
-            test:assertFail("expected a syntax error but got " + "\n".'join(...wordsToLines(parsed)));
+        if actualTree !is error {
+            test:assertFail("expected a syntax error but got " + syntaxNodeToString(actualTree));
         }
         return;
     }
-    // test:assertEquals(actual, expected, "wrong ast");
-    // pr-todo: currently only valid cases get this far we need to handle cases where case is invalid
-    SourceFile actualFile = createSourceFile(subject, { filename: k });
-    SourceFile expectedFile = createSourceFile(expected, { filename: k });
-    Tokenizer actualTok = new (actualFile);
-    Tokenizer expectedTok = new (expectedFile);
-    check actualTok.advance();
-    check expectedTok.advance();
-    SyntaxNode lhs;
-    SyntaxNode rhs;
-    if rule == "stmt" {
-        lhs = normalizeSyntaxNode(syntaxNodeFromStmt(check parseStmt(actualTok)));
-        rhs = syntaxNodeFromStmt(check parseStmt(expectedTok));
+    if actualTree is err:Syntax {
+        panic err:impossible("can't normalize the actual tree");
     }
-    else if rule == "expr" {
-        lhs = normalizeSyntaxNode(syntaxNodeFromExpr(check parseExpr(actualTok)));
-        rhs = syntaxNodeFromExpr(check parseExpr(expectedTok));
-    }
-    else if rule == "td" {
-        lhs = normalizeSyntaxNode(syntaxNodeFromTypeDesc(check parseTypeDesc(actualTok)));
-        rhs = syntaxNodeFromTypeDesc(check parseTypeDesc(expectedTok));
-    }
-    else {
-        return;
-    }
-    string errMsg = "lhs : " + syntaxNodeToString(lhs) + "\nrhs : " + syntaxNodeToString(rhs);
-    boolean testResult = syntaxNodeEquals(lhs, rhs);
+    RootSyntaxNode|SyntaxNode normalizedActualTree = normalizeTree(actualTree);
+    RootSyntaxNode|SyntaxNode expectedTree = check standardTree(k, rule, expected);
+    string errMsg = "actualTree : " + syntaxNodeToString(normalizedActualTree) + "\nexpectecTree : " + syntaxNodeToString(expectedTree);
+    boolean testResult = syntaxNodeEquals(normalizedActualTree, expectedTree);
     if !testResult {
-        io:println(lhs);
-        io:println(rhs);
+        io:println(normalizedActualTree);
+        io:println(expectedTree);
     }
     test:assertTrue(testResult, errMsg);
+}
+
+function standardTree(string k, string rule, string[] content) returns err:Syntax|SyntaxNode|RootSyntaxNode {
+    SyntaxNode|RootSyntaxNode node;
+    SourceFile file = createSourceFile(content, { filename: k });
+    if rule == "mod" {
+        node = rootSyntaxNode(check scanAndParseModulePart(file, 0));
+    }
+    else {
+        Tokenizer tok = new (file);
+        check tok.advance();
+        if rule == "stmt" {
+            node = syntaxNodeFromStmt(check parseStmt(tok));
+        }
+        else if rule == "expr" {
+            node = syntaxNodeFromExpr(check parseExpr(tok));
+        }
+        else {
+            node = syntaxNodeFromTypeDesc(check parseTypeDesc(tok));
+        }
+        if tok.current() != () {
+            return err:syntax("superfluous input at end", d:location(file, tok.currentStartPos()));
+        }
+    }
+    return node;
 }
 
 function testParserRule(string k, string rule, string[] fragment) returns err:Syntax|string {
