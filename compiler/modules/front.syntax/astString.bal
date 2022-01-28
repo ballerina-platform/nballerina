@@ -601,7 +601,7 @@ function valueToWords(Word[] w, boolean|int|string|float|decimal|() val) {
 }
 
 function simpleConstExprToWords(Word[] w, SimpleConstExpr expr) {
-    if expr is ConstValueExpr {
+    if expr is LiteralExpr {
         valueToWords(w, expr.value);
     }
     else if expr is IntLiteralExpr {

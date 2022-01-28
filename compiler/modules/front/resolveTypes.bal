@@ -273,26 +273,15 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
             }
         }
         else if valueExpr is s:NumericLiteralExpr {
-            value = check resolveNumericLiteralExpr(modDefn, valueExpr);
+            return resolveNumericLiteralExpr(modDefn, valueExpr);
         }
         else if valueExpr is s:SimpleConstNegateExpr{
             var operand = valueExpr.operand;
             if operand is s:NumericLiteralExpr {
-                value = check resolveNumericLiteralExpr(modDefn, operand);
+                return resolveNumericLiteralExpr(modDefn, operand, true);
             }
         }
-        if value is decimal {
-            return t:decimalConst(value);
-        }
-        else if value is float {
-            return t:floatConst(value);
-        }
-        else if value is int {
-            return t:intConst(value);
-        }
-        else {
-            panic err:impossible("unexpected value in NumericLiteralExpr");
-        }
+        panic err:impossible("unexpected value in SimpleConstExpr");
     }
     if td is s:UnaryTypeDesc && td.op != "!" {
         if td.op == "?" {
@@ -368,7 +357,7 @@ function resolveBuiltinTypeDesc(t:Context tc, s:SubsetBuiltinTypeDesc td) return
     panic err:impossible("unreachable in resolveInlineBuiltinTypeDesc");
 }
 
-function resolveNumericLiteralExpr(s:ModuleLevelDefn modDefn, s:NumericLiteralExpr expr) returns decimal|float|int|err:Semantic {
+function resolveNumericLiteralExpr(s:ModuleLevelDefn modDefn, s:NumericLiteralExpr expr, boolean sign = false) returns t:SemType|err:Semantic {
     if expr is s:FpLiteralExpr {
         if expr.typeSuffix == "d" {
             var f = decimal:fromString(expr.untypedLiteral);
@@ -377,7 +366,7 @@ function resolveNumericLiteralExpr(s:ModuleLevelDefn modDefn, s:NumericLiteralEx
             }
             else {
                 decimal value = f;
-                return value;
+                return t:decimalConst(value);
             }
         }
         else {
@@ -387,7 +376,7 @@ function resolveNumericLiteralExpr(s:ModuleLevelDefn modDefn, s:NumericLiteralEx
             }
             else {
                 float value = f;
-                return value;
+                return t:floatConst(value);
             }
         }
     }
@@ -398,13 +387,16 @@ function resolveNumericLiteralExpr(s:ModuleLevelDefn modDefn, s:NumericLiteralEx
         }
         else {
             int value;
+            if sign {
+                value = n;
+            }
             if n == int:MIN_VALUE {
                 return err:semantic(`-${expr.digits} overflows`, loc = s:locationInDefn(modDefn, expr.startPos));
             }
             else {
                 value = -n;
             }
-            return value;
+            return t:intConst(value);
         }
     }
 }
