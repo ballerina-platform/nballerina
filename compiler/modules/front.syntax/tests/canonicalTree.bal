@@ -31,37 +31,6 @@ function syntaxNodeEquals(SyntaxNode|RootSyntaxNode lhs, SyntaxNode|RootSyntaxNo
     }
 }
 
-function syntaxNodeToString(SyntaxNode|RootSyntaxNode node) returns string {
-    string[] content = [];
-    if node is TerminalSyntaxNode {
-        content.push(terminalSyntaxNodeToString(node));
-    }
-    else {
-        SyntaxNode[] childNodes = node.childNodes;
-        foreach var child in childNodes {
-            if child is TerminalSyntaxNode {
-                content.push(terminalSyntaxNodeToString(child));
-            }
-            else {
-                content.push(syntaxNodeToString(child));
-            }
-        }
-    }
-    return " ".'join(...content);
-}
-
-function terminalSyntaxNodeToString(TerminalSyntaxNode node) returns string {
-    if node is IdentifierSyntaxNode {
-        return node.name;
-    }
-    else if node is StringLiteralSyntaxNode {
-        return node.literal;
-    }
-    else {
-        return node.token;
-    }
-}
-
 function normalizeTree(RootSyntaxNode|SyntaxNode node) returns RootSyntaxNode|SyntaxNode {
     if node is RootSyntaxNode {
         return normalizeRootSyntaxNode(node);
@@ -266,4 +235,61 @@ function conditionallWrapChildNodes(boolean condition, SyntaxNode[] childNodes) 
         newChildNodes.push({ token: ")" });
         return newChildNodes;
     }
+}
+
+function syntaxNodeToString(SyntaxNode|RootSyntaxNode node) returns string {
+    string[] content = [];
+    if node is TerminalSyntaxNode {
+        content.push(terminalSyntaxNodeToString(node));
+    }
+    else {
+        SyntaxNode[] childNodes = node.childNodes;
+        foreach var child in childNodes {
+            if child is TerminalSyntaxNode {
+                content.push(terminalSyntaxNodeToString(child));
+            }
+            else {
+                content.push(syntaxNodeToString(child));
+            }
+        }
+    }
+    return concat(...content);
+}
+
+function terminalSyntaxNodeToString(TerminalSyntaxNode node) returns string {
+    if node is IdentifierSyntaxNode {
+        return node.name;
+    }
+    else if node is StringLiteralSyntaxNode {
+        return node.literal;
+    }
+    else {
+        return node.token;
+    }
+}
+
+function concat(string... tokens) returns string {
+    string[] parts = [];
+    foreach string token in tokens {
+        string lastTail = parts.length() > 0 ? parts[parts.length() - 1] : "";
+        if lastTail.length() > 0 {
+            lastTail = lastTail.substring(lastTail.length() - 1);
+        }
+        string head = token.length() > 0 ? token.substring(0, 1) : "";
+        if !(omitSpaceBefore(token) || (head != "\"" && omitSpaceBefore(head)))
+                && parts.length() > 0
+                && !(omitSpaceAfter(parts[parts.length() - 1]) || (lastTail != "\"" && omitSpaceAfter(lastTail))) {
+            parts.push(" ");
+        }
+        parts.push(token);
+    }
+    return string:concat(...parts).trim();
+}
+
+function omitSpaceBefore(string token) returns boolean {
+    return token == "," || token == "(" || token == ")" || token == "}" || token == "\"" || token == "]" || token == "*" || token == ":" || token == ".";
+}
+
+function omitSpaceAfter(string token) returns boolean {
+    return token == "(" || token == "{" || token == "\"" || token == "[" || token == "." || token == "!";
 }

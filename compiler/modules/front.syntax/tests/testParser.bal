@@ -40,10 +40,6 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     }
     RootSyntaxNode|SyntaxNode normalizedActualTree = normalizeTree(actualTree);
     RootSyntaxNode|SyntaxNode expectedTree = check standardTree(k, rule, expected);
-    if !syntaxNodeEquals(normalizedActualTree, expectedTree) {
-        io:println(normalizedActualTree);
-        io:println(expectedTree);
-    }
     string errMsg = "actualTree : " + syntaxNodeToString(normalizedActualTree) + "\nexpectecTree : " + syntaxNodeToString(expectedTree);
     test:assertTrue(syntaxNodeEquals(normalizedActualTree, expectedTree), errMsg);
 }
