@@ -201,7 +201,8 @@ function verifyMappingConstruct(VerifyContext vc, MappingConstructInsn insn) ret
     }
     t:MappingAtomicType? mat = t:mappingAtomicTypeRw(vc.typeContext(), ty);
     foreach int i in 0 ..< insn.operands.length() {
-        t:SemType memberType = t:mappingMemberType(vc.typeContext(), ty, t:stringConst(insn.fieldNames[i]));
+        t:Context cx = vc.typeContext();
+        t:SemType memberType = t:mappingMemberType(cx, ty, t:singleton(cx, insn.fieldNames[i]));
         if memberType == t:NEVER {
             return vc.semanticErr(`field ${insn.fieldNames[i]} is not allowed by the type`, insn.pos);
         }

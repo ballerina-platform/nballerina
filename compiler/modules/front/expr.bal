@@ -385,11 +385,8 @@ function codeGenMappingGet(ExprContext cx, bir:BasicBlock block, bir:Register ma
     if t:mappingMemberRequired(cx.mod.tc, mapping.semType, k.semType) {
         maybeMissing = false;
     }
-    else if accessType == "." {
-        string? fieldName = t:singleStringShape(k.semType);
-        if fieldName != () {
-            return cx.semanticErr(`field access to ${fieldName} is invalid because field may not be present`, pos=pos);
-        }
+    else if accessType == "." && k is bir:StringConstOperand {
+            return cx.semanticErr(`field access to ${k.value} is invalid because field may not be present`, pos=pos);
     }
     t:SemType memberType = t:mappingMemberType(cx.mod.tc, mapping.semType, k.semType);
     bir:INSN_MAPPING_FILLING_GET|bir:INSN_MAPPING_GET name = bir:INSN_MAPPING_GET;
