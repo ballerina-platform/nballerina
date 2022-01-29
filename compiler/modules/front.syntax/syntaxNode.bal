@@ -706,12 +706,13 @@ function importDeclSyntaxNodeToWords(Word[] words, NonTerminalSyntaxNode node) {
 }
 
 function functionDefnSyntaxNodeToWords(Word[] words, NonTerminalSyntaxNode node) {
-    boolean skipCheck = false;
+    boolean foundParan = false;
     foreach SyntaxNode childNode in node.childNodes {
         syntaxNodeToWords(words, childNode);
-        if !skipCheck && childNode is IdentifierSyntaxNode {
+        if !foundParan && childNode is IdentifierSyntaxNode {
+            // next childNode is paran node
             words.push(CLING);
-            skipCheck = true;
+            foundParan = true;
         }
     }
 }
@@ -724,7 +725,7 @@ function stmtBlockSyntaxNodeToWords(Word[] words, NonTerminalSyntaxNode node) {
             words.push(<Word>LF_INDENT);
         }
         syntaxNodeToWords(words, node.childNodes[i]);
-        if i == lastChild-1 {
+        if i == lastChild - 1 {
             // JBUG #33335 cast
             words.push(<Word>LF_OUTDENT);
         }
@@ -775,18 +776,15 @@ function clingAllChildNodes(Word[] words, NonTerminalSyntaxNode node) {
 
 // syntaxNode represent [tokens]* qualified-name([token]*) [token]*
 function callSyntaxNodeToWords(Word[] words, NonTerminalSyntaxNode node) {
-    boolean ignoreCheck = false;
+    boolean foundParan = false;
     SyntaxNode? previous = ();
     foreach SyntaxNode childNode in node.childNodes {
-        if !ignoreCheck && previous != () && childNode is FixedSyntaxNode && childNode.token == "(" && previous is IdentifierSyntaxNode {
+        if !foundParan && previous != () && childNode is FixedSyntaxNode && childNode.token == "(" && previous is IdentifierSyntaxNode {
             words.push(CLING);
-            ignoreCheck = true;
-        }
-        if !ignoreCheck && childNode is FixedSyntaxNode && childNode.token == ":" {
-            words.push(CLING);
+            foundParan = true;
         }
         syntaxNodeToWords(words, childNode);
-        if !ignoreCheck && childNode is FixedSyntaxNode && childNode.token == ":" {
+        if !foundParan && childNode is FixedSyntaxNode && childNode.token == ":" {
             words.push(CLING);
         }
         previous = childNode;
@@ -798,7 +796,7 @@ function terminalSyntaxNodeToString(TerminalSyntaxNode node) returns string {
         return node.name;
     }
     else if node is StringLiteralSyntaxNode {
-        return "\"" + node.literal + "\"";
+        return stringLiteral(node.literal);
     }
     else if node is TerminalSyntaxAstNode {
         AstNode astNode = node.astNode;
