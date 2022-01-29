@@ -1,4 +1,3 @@
-import ballerina/io;
 type TerminalSyntaxNode TerminalSyntaxAstNode|FixedSyntaxNode|IdentifierSyntaxNode|StringLiteralSyntaxNode;
 type AstSyntaxNode TerminalSyntaxAstNode|NonTerminalSyntaxNode;
 type SyntaxNode NonTerminalSyntaxNode|TerminalSyntaxNode;
@@ -625,6 +624,10 @@ function flattenSyntaxNodeList((SyntaxNode[]|SyntaxNode?)[] arr) returns SyntaxN
     return nodes;
 }
 
+public function exprToString(Expr expr) returns string {
+    return "\n".'join(...syntaxNodeToString(syntaxNodeFromExpr(expr)));
+}
+
 // join words without space
 const CLING = ();
 // line feed
@@ -637,154 +640,154 @@ const LF_OUTDENT = -1;
 type Word string|LF_INDENT|LF_OUTDENT|LF|CLING;
 
 function syntaxNodeToString(SyntaxNode|RootSyntaxNode node) returns string[] {
-    Word[] tokens = [];
-    syntaxNodeToTokens(tokens, node);
-    return concat(...tokens);
+    Word[] words = [];
+    syntaxNodeToWords(words, node);
+    return concat(...words);
 }
 
-function syntaxNodeToTokens(Word[] tokens, SyntaxNode|RootSyntaxNode node) {
+function syntaxNodeToWords(Word[] words, SyntaxNode|RootSyntaxNode node) {
     if node is TerminalSyntaxNode {
-        tokens.push(terminalSyntaxNodeToString(node));
+        words.push(terminalSyntaxNodeToString(node));
     }
     else {
         AstNode? astNode = node !is RootSyntaxNode ? node.astNode : ();
         if astNode is ImportDecl {
-            importDeclSyntaxNodeToTokens(tokens, <NonTerminalSyntaxNode>node);
+            importDeclSyntaxNodeToWords(words, <NonTerminalSyntaxNode>node);
         }
         else if astNode is FunctionDefn {
-            functionDefnSyntaxNodeToTokens(tokens, <NonTerminalSyntaxNode>node);
+            functionDefnSyntaxNodeToWords(words, <NonTerminalSyntaxNode>node);
         }
         else if astNode is StmtBlock {
-            stmtBlockSyntaxNodeToTokens(tokens, <NonTerminalSyntaxNode>node);
+            stmtBlockSyntaxNodeToWords(words, <NonTerminalSyntaxNode>node);
         }
         else if astNode is SingletonTypeDesc {
-            singletonTypedescSyntaxNodeToTokens(tokens, <NonTerminalSyntaxNode>node);
+            singletonTypedescSyntaxNodeToWords(words, <NonTerminalSyntaxNode>node);
         }
         else if astNode is UnaryExpr|VarRefExpr|MemberAccessExpr|FieldAccessExpr|TypeCastExpr|ErrorConstructorExpr ||
                (astNode is TypeDesc && astNode !is BinaryTypeDesc|FunctionTypeDesc) {
-            clingAllChildNodes(tokens, <NonTerminalSyntaxNode>node);
+            clingAllChildNodes(words, <NonTerminalSyntaxNode>node);
         }
         else if astNode is FunctionCallExpr|MethodCallExpr {
-            callSyntaxNodeToTokens(tokens, <NonTerminalSyntaxNode>node);
+            callSyntaxNodeToWords(words, <NonTerminalSyntaxNode>node);
         }
         else if astNode is MatchStmt {
-            matchStmtSyntaxNodeToTokens(tokens, <NonTerminalSyntaxNode>node);
+            matchStmtSyntaxNodeToWords(words, <NonTerminalSyntaxNode>node);
         }
         else {
             SyntaxNode[] childNodes = node.childNodes;
             foreach var child in childNodes {
                 if child is TerminalSyntaxNode {
-                    tokens.push(terminalSyntaxNodeToString(child));
+                    words.push(terminalSyntaxNodeToString(child));
                 }
                 else {
-                    syntaxNodeToTokens(tokens, child);
+                    syntaxNodeToWords(words, child);
                 }
             }
         }
         if astNode is Stmt|ConstDefn|TypeDefn|ImportDecl {
             // JBUG #33335 cast
-            tokens.push(<Word>LF);
+            words.push(<Word>LF);
         }
     }
 }
 
-function importDeclSyntaxNodeToTokens(Word[] tokens, NonTerminalSyntaxNode node) {
+function importDeclSyntaxNodeToWords(Word[] words, NonTerminalSyntaxNode node) {
     SyntaxNode[] childNodes = node.childNodes;
     foreach int i in 0 ..< childNodes.length() {
         SyntaxNode childNode = childNodes[i];
         if childNode is FixedSyntaxNode && childNode.token == "/" {
-            tokens.push(CLING);
+            words.push(CLING);
         }
-        syntaxNodeToTokens(tokens, childNode);
+        syntaxNodeToWords(words, childNode);
         if childNode is FixedSyntaxNode && childNode.token == "/" {
-            tokens.push(CLING);
+            words.push(CLING);
         }
     }
 }
 
-function functionDefnSyntaxNodeToTokens(Word[] tokens, NonTerminalSyntaxNode node) {
+function functionDefnSyntaxNodeToWords(Word[] words, NonTerminalSyntaxNode node) {
     boolean skipCheck = false;
     foreach SyntaxNode childNode in node.childNodes {
-        syntaxNodeToTokens(tokens, childNode);
+        syntaxNodeToWords(words, childNode);
         if !skipCheck && childNode is IdentifierSyntaxNode {
-            tokens.push(CLING);
+            words.push(CLING);
             skipCheck = true;
         }
     }
 }
 
-function stmtBlockSyntaxNodeToTokens(Word[] tokens, NonTerminalSyntaxNode node) {
+function stmtBlockSyntaxNodeToWords(Word[] words, NonTerminalSyntaxNode node) {
     int lastChild = node.childNodes.length() - 1;
     foreach int i in 0 ..< node.childNodes.length() {
         if i == 1 {
             // JBUG #33335 cast
-            tokens.push(<Word>LF_INDENT);
+            words.push(<Word>LF_INDENT);
         }
-        syntaxNodeToTokens(tokens, node.childNodes[i]);
+        syntaxNodeToWords(words, node.childNodes[i]);
         if i == lastChild-1 {
             // JBUG #33335 cast
-            tokens.push(<Word>LF_OUTDENT);
+            words.push(<Word>LF_OUTDENT);
         }
         else if i == lastChild {
             // JBUG #33335 cast
-            tokens.push(<Word>LF);
+            words.push(<Word>LF);
         }
     }
 }
 
-function singletonTypedescSyntaxNodeToTokens(Word[] tokens, SyntaxNode node) {
+function singletonTypedescSyntaxNodeToWords(Word[] words, SyntaxNode node) {
     if node is TerminalSyntaxNode {
-        tokens.push(terminalSyntaxNodeToString(node));
+        words.push(terminalSyntaxNodeToString(node));
     }
     else {
-        // -value
+        // node represents -numeric_value
         SyntaxNode[] childNodes = node.childNodes;
-        tokens.push((<FixedSyntaxNode>childNodes[0]).token, CLING, (<StringLiteralSyntaxNode>childNodes[1]).literal);
+        words.push((<FixedSyntaxNode>childNodes[0]).token, CLING, (<StringLiteralSyntaxNode>childNodes[1]).literal);
     }
 }
 
-function matchStmtSyntaxNodeToTokens(Word[] tokens, NonTerminalSyntaxNode node) {
+function matchStmtSyntaxNodeToWords(Word[] words, NonTerminalSyntaxNode node) {
     SyntaxNode[] childNodes = node.childNodes;
     boolean ignoreIndent = false;
     foreach int i in 0 ..< childNodes.length() {
         SyntaxNode child = childNodes[i];
         if !ignoreIndent && child is AstSyntaxNode && child.astNode is MatchClause {
             // JBUG #33335 cast
-            tokens.push(<Word>LF_INDENT);
+            words.push(<Word>LF_INDENT);
             ignoreIndent = true;
         }
         if i == childNodes.length() - 1 {
             // JBUG #33335 cast
-            tokens.push(<Word>LF_OUTDENT);
+            words.push(<Word>LF_OUTDENT);
         }
-        syntaxNodeToTokens(tokens, child);
+        syntaxNodeToWords(words, child);
     }
 }
 
-function clingAllChildNodes(Word[] tokens, NonTerminalSyntaxNode node) {
+function clingAllChildNodes(Word[] words, NonTerminalSyntaxNode node) {
     foreach int i in 0 ..< node.childNodes.length() {
         if i > 0 {
-            tokens.push(CLING);
+            words.push(CLING);
         }
-        syntaxNodeToTokens(tokens, node.childNodes[i]);
+        syntaxNodeToWords(words, node.childNodes[i]);
     }
 }
 
 // syntaxNode represent [tokens]* qualified-name([token]*) [token]*
-function callSyntaxNodeToTokens(Word[] tokens, NonTerminalSyntaxNode node) {
+function callSyntaxNodeToWords(Word[] words, NonTerminalSyntaxNode node) {
     boolean ignoreCheck = false;
     SyntaxNode? previous = ();
     foreach SyntaxNode childNode in node.childNodes {
         if !ignoreCheck && previous != () && childNode is FixedSyntaxNode && childNode.token == "(" && previous is IdentifierSyntaxNode {
-            tokens.push(CLING);
+            words.push(CLING);
             ignoreCheck = true;
         }
         if !ignoreCheck && childNode is FixedSyntaxNode && childNode.token == ":" {
-            tokens.push(CLING);
+            words.push(CLING);
         }
-        syntaxNodeToTokens(tokens, childNode);
+        syntaxNodeToWords(words, childNode);
         if !ignoreCheck && childNode is FixedSyntaxNode && childNode.token == ":" {
-            tokens.push(CLING);
+            words.push(CLING);
         }
         previous = childNode;
     }
@@ -800,7 +803,7 @@ function terminalSyntaxNodeToString(TerminalSyntaxNode node) returns string {
     else if node is TerminalSyntaxAstNode {
         AstNode astNode = node.astNode;
         if astNode is NumericLiteralExpr|BuiltinTypeDesc ||
-           astNode is ConstValueExpr|SingletonTypeDesc && astNode.value !is string {
+           astNode is LiteralExpr|SingletonTypeDesc && astNode.value !is string {
             return node.token;
         }
         return stringLiteral(node.token);
@@ -839,14 +842,13 @@ function stringLiteral(string str) returns string {
     return "".'join(...chunks);
 }
 
-function concat(Word... tokens) returns string[] {
-    io:println("tokens: ", tokens);
+function concat(Word... words) returns string[] {
     string[] parts = [];
     string[] lines = [];
     boolean skipSpace = true;
     int indentSize = 0;
     Word? previous = ();
-    foreach Word token in tokens {
+    foreach Word token in words {
         if token is string {
             if !skipSpace && !omitSpaceBefore(token) {
                 parts.push(" ");
@@ -864,13 +866,16 @@ function concat(Word... tokens) returns string[] {
         }
         previous = token;
     }
-    io:println("parts: ", parts);
+    string lastLine = string:concat(...parts).trim();
+    if lastLine.length() != 0 {
+        lines.push(lastLine);
+    }
     return lines;
 }
 
 function addNewLine(string[] parts, string[] lines, Word? previous, int indentSize) returns string[] {
     if previous !is LF|LF_INDENT|LF_OUTDENT {
-        lines.push(string:concat(...parts).trim());
+        lines.push(string:concat(...parts));
     }
     return [indent(indentSize)];
 }
