@@ -625,11 +625,12 @@ function flattenSyntaxNodeList((SyntaxNode[]|SyntaxNode?)[] arr) returns SyntaxN
 }
 
 function syntaxNodeToString(SyntaxNode|RootSyntaxNode node) returns string {
-    return concat(...syntaxNodeToTokens(node));
+    string[] tokens = [];
+    syntaxNodeToTokens(tokens, node);
+    return concat(...tokens);
 }
 
-function syntaxNodeToTokens(SyntaxNode|RootSyntaxNode node) returns string[] {
-    string[] tokens = [];
+function syntaxNodeToTokens(string[] tokens, SyntaxNode|RootSyntaxNode node) {
     if node is TerminalSyntaxNode {
         tokens.push(terminalSyntaxNodeToString(node));
     }
@@ -640,11 +641,10 @@ function syntaxNodeToTokens(SyntaxNode|RootSyntaxNode node) returns string[] {
                 tokens.push(terminalSyntaxNodeToString(child));
             }
             else {
-                tokens.push(syntaxNodeToString(child));
+                syntaxNodeToTokens(tokens, child);
             }
         }
     }
-    return tokens;
 }
 
 function terminalSyntaxNodeToString(TerminalSyntaxNode node) returns string {
