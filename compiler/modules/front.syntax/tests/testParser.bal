@@ -31,7 +31,7 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     }
     if k.includes("E") {
         if actualTree !is error {
-            test:assertFail("expected a syntax error but got " + syntaxNodeToString(actualTree));
+            test:assertFail("expected a syntax error but got " + "\n".'join(...syntaxNodeToString(actualTree)));
         }
         return;
     }
@@ -40,8 +40,9 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     }
     RootSyntaxNode|SyntaxNode normalizedActualTree = normalizeTree(actualTree);
     RootSyntaxNode|SyntaxNode expectedTree = normalizeTree(check standardTree(k, rule, expected));
-    string errMsg = "actualTree : " + syntaxNodeToString(normalizedActualTree) + "\nexpectecTree : " + syntaxNodeToString(expectedTree);
+    string errMsg = "actualTree : " + "\n".'join(...syntaxNodeToString(normalizedActualTree)) + "\nexpectecTree : " + "\n".'join(...syntaxNodeToString(expectedTree));
     test:assertTrue(validateNormalizedTree(normalizedActualTree, expectedTree), errMsg);
+    test:assertEquals("\n".'join(...expected), syntaxNodeToString(normalizedActualTree));
 }
 
 function standardTree(string k, string rule, string[] content) returns err:Syntax|SyntaxNode|RootSyntaxNode {

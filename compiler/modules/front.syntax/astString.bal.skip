@@ -605,34 +605,7 @@ function valueToWords(Word[] w, boolean|int|string|float|decimal|() val) {
     }
 }
 
-final readonly & map<string:Char> REVERSE_ESCAPES = {
-    "\\": "\\",
-    "\"": "\"",
-    "\n": "n",
-    "\r": "r",
-    "\t": "t"
-};
-
-function stringLiteral(string str) returns string {
-    string[] chunks = ["\""];
-    foreach var ch in str {
-        string:Char? singleEscaped =  REVERSE_ESCAPES[ch];
-        if singleEscaped == () {
-            int cp = ch.toCodePointInt();
-            if 0x20 <= cp && cp < 0x7F {
-                chunks.push(ch);
-            }
-            else {
-                chunks.push("\\u{", cp.toHexString().toUpperAscii(), "}");
-            }
-        }
-        else {
-            chunks.push("\\", singleEscaped);
-        }
-    }
-    chunks.push("\"");
-    return "".'join(...chunks);
-}
+// pr-todo: move to sytanx node
 
 function wordsToLines(Word[] s) returns string[] {
     string[] lines = [];
