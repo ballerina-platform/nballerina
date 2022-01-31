@@ -22,10 +22,9 @@ type CodeGenError err:Semantic|err:Unimplemented;
 type ExprEffect record {|
     bir:BasicBlock block;
     bir:Operand result;
-    // This is non-nil when the expression is a boolean expression that case causes the type
-    // of a variable to be narrowed when the expression is used as a condition.
-    // We do not have `&&` and `||` yet, so only one variable is narrowed.
-    ExprNarrowing? narrowing = ();
+    // If the expression is a boolean expression, list of narrowings to be applied if it is used as a condition.
+    Narrowing[] ifTrue = [];
+    Narrowing[] ifFalse = [];
     // This is non-nil when the expression is a variable reference.
     Binding? binding = ();
 |};
@@ -63,11 +62,10 @@ type RegExprEffect record {|
     bir:Register result;
 |};
 
-// This describes the narrowing of the type of a variable
-// caused by the use of a boolean expression in a condition.
-type ExprNarrowing record {|
-    Narrowing ifTrue;
-    Narrowing ifFalse;
+type Narrowing record {|
+    Binding binding;
+    t:SemType ty;
+    bir:Result basis;
 |};
 
 class ExprContext {
@@ -131,32 +129,17 @@ class ExprContext {
         }
     }
 
-    function createNarrowedExprContext(bir:BasicBlock bb, Narrowing narrowing, Position pos) returns ExprContext {
-        var {ty, binding, basis} = narrowing;
-        bir:Register narrowed = bir:createRegister(self.code, ty, binding.name, pos);
-        bir:CondNarrowInsn insn = {
-            result: narrowed,
-            operand: binding.reg,
-            basis,
-            pos
-        };
-        bb.insns.push(insn);
-        Binding bindings = {
-            name: binding.name,
-            reg: narrowed,
-            isFinal: binding.isFinal,
-            prev: self.env.bindings,
-            unnarrowed: unnarrowBinding(binding)
-        };
-        Environment env = { bindings, assignments: self.env.assignments };
-        return new(self.mod, self.defn, self.code, env, self.sc);
+    function createNarrowedExprContext(bir:BasicBlock bb, Narrowing[] narrowings, Position pos) returns ExprContext {
+        Environment envClone = { bindings: self.env.bindings, assignments: self.env.assignments };
+        addNarrowings(<StmtContext>self.sc, bb, envClone, narrowings, pos);
+        return new(self.mod, self.defn, self.code, envClone, self.sc);
     }
 }
 
 function codeGenExprForBoolean(ExprContext cx, bir:BasicBlock bb, s:Expr expr) returns CodeGenError|BooleanExprEffect {
-    var { result, block, narrowing } = check codeGenExpr(cx, bb, t:BOOLEAN, expr);
+    var { result, block, ifTrue, ifFalse } = check codeGenExpr(cx, bb, t:BOOLEAN, expr);
     if result is bir:BooleanConstOperand || (result is bir:Register && t:isSubtypeSimple(result.semType, t:BOOLEAN)) {
-        return { result, block, narrowing };
+        return { result, block, ifTrue, ifFalse };
     }
     return cx.semanticErr("expected boolean operand", s:range(expr));
 }
@@ -584,7 +567,7 @@ function codeGenArithmeticBinaryExpr(ExprContext cx, bir:BasicBlock bb, bir:Arit
 }
 
 function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, s:Expr expr) returns CodeGenError|ExprEffect {
-    var { result: operand, block: nextBlock, narrowing } = check codeGenExprForBoolean(cx, bb, expr);
+    var { result: operand, block: nextBlock, ifTrue, ifFalse } = check codeGenExprForBoolean(cx, bb, expr);
     var [value, flags] = booleanOperandValue(operand);
     if flags != 0 {
         return constExprEffect(cx, nextBlock, !value, flags);
@@ -592,17 +575,16 @@ function codeGenLogicalNotExpr(ExprContext cx, bir:BasicBlock bb, Position pos, 
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
     bir:BooleanNotInsn insn = { operand: <bir:Register>operand, result, pos };
     nextBlock.insns.push(insn);
-    if narrowing != () {
-        Narrowing tmp = narrowing.ifTrue;
-        narrowing.ifTrue = narrowing.ifFalse;
-        narrowing.ifFalse = tmp;
-    }
-    return { result, block: nextBlock, narrowing };
+    [ifTrue, ifFalse] = [ifFalse, ifTrue];
+    return { result, block: nextBlock, ifTrue, ifFalse };
 }
+
+// Nil represents having no narrowing, which is equivalent to being narrowed to it's binding's type
+type NarrowingCombinator function(Narrowing?, Narrowing?) returns Narrowing?;
 
 function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLogicalOp op, Position pos, s:Expr left, s:Expr right) returns CodeGenError|ExprEffect {
     boolean isOr = op == "||";
-    var { result: lhs, block: block1, narrowing: lhsNarrowing } = check codeGenExprForBoolean(cx, bb, left);
+    var { result: lhs, block: block1, ifTrue: lhsIfTrue, ifFalse: lhsIfFalse } = check codeGenExprForBoolean(cx, bb, left);
     var [leftValue, leftFlags] = booleanOperandValue(lhs);
     if leftFlags != 0 {
         if leftValue == isOr {
@@ -618,84 +600,16 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     var evalRightBlock = cx.createBasicBlock();
     var shortCircuitBlock = cx.createBasicBlock();
     // JBUG var instead tuple type doesn't work
-    [bir:BasicBlock, bir:BasicBlock] [ifTrue, ifFalse] = isOr ? [shortCircuitBlock, evalRightBlock] : [evalRightBlock, shortCircuitBlock];
-    bir:CondBranchInsn condBranch = { operand: <bir:Register>lhs, ifTrue: ifTrue.label, ifFalse: ifFalse.label, pos };
+    [bir:BasicBlock, bir:BasicBlock] [ifTrueBlock, ifFalseBlock] = isOr ? [shortCircuitBlock, evalRightBlock] : [evalRightBlock, shortCircuitBlock];
+    bir:CondBranchInsn condBranch = { operand: <bir:Register>lhs, ifTrue: ifTrueBlock.label, ifFalse: ifFalseBlock.label, pos };
     block1.insns.push(condBranch);
-    ExprContext rhsCx;
-    if lhsNarrowing != () {
-        Narrowing n = isOr ? lhsNarrowing.ifFalse : lhsNarrowing.ifTrue;
-        rhsCx = cx.createNarrowedExprContext(evalRightBlock, n, pos);
-    }
-    else {
-        rhsCx = cx;
-    }
+    ExprContext rhsCx = cx.createNarrowedExprContext(evalRightBlock, isOr ? lhsIfFalse : lhsIfTrue, pos);
+    var { result: rhs, block: evalRightBlock2, ifTrue: rhsIfTrue, ifFalse: rhsIfFalse } = check codeGenExprForBoolean(rhsCx, evalRightBlock, right);
     // XXX need properly to deal with case when rhs is const or singleton boolean
-    var { result: rhs, block: evalRightBlock2, narrowing: rhsNarrowing } = check codeGenExprForBoolean(rhsCx, evalRightBlock, right);
-    ExprNarrowing? narrowing;
-    if lhsNarrowing == () && rhsNarrowing == () {
-        narrowing = ();
-    }
-    else if isOr {
-        if lhsNarrowing != () && rhsNarrowing != () {
-            if lhsNarrowing.ifTrue.binding.name != rhsNarrowing.ifTrue.binding.name {
-                return cx.unimplementedErr("not implemented: logical expr that narrows multiple variables", pos=pos);
-            }
-            narrowing = {
-                ifTrue: {
-                    binding: lhsNarrowing.ifTrue.binding,
-                    ty: t:union(lhsNarrowing.ifTrue.ty, rhsNarrowing.ifTrue.ty),
-                    basis: { or: [lhsNarrowing.ifTrue.basis, rhsNarrowing.ifTrue.basis] }
-                },
-                ifFalse: {
-                    binding: lhsNarrowing.ifFalse.binding,
-                    ty: t:intersect(lhsNarrowing.ifFalse.ty, rhsNarrowing.ifFalse.ty),
-                    basis: { and: [lhsNarrowing.ifFalse.basis, rhsNarrowing.ifFalse.basis] }
-                }
-            };
-        }
-        else {
-            ExprNarrowing n = <ExprNarrowing>(lhsNarrowing ?: rhsNarrowing);
-            narrowing = {
-                ifTrue: {
-                    binding: n.ifTrue.binding,
-                    ty: n.ifTrue.binding.reg.semType, // same as t:union(n.ifTrue.ty, n.binding.reg.semType)
-                    basis: n.ifTrue.basis
-                },
-                ifFalse: n.ifFalse // since t:intersect(n.ifFalse.ty, n.binding.reg.semType) is same as n.ifFalse.ty
-            };
-        }
-    }
-    else {
-        if lhsNarrowing != () && rhsNarrowing != () {
-            if lhsNarrowing.ifTrue.binding.name != rhsNarrowing.ifTrue.binding.name {
-                return cx.unimplementedErr("not implemented: logical expr that narrows multiple variables", pos=pos);
-            }
-            narrowing = {
-                ifTrue: {
-                    binding: lhsNarrowing.ifTrue.binding,
-                    ty: t:intersect(lhsNarrowing.ifTrue.ty, rhsNarrowing.ifTrue.ty),
-                    basis: { and: [lhsNarrowing.ifTrue.basis, rhsNarrowing.ifTrue.basis] }
-                },
-                ifFalse: {
-                    binding: lhsNarrowing.ifFalse.binding,
-                    ty: t:union(lhsNarrowing.ifFalse.ty, t:intersect(lhsNarrowing.ifTrue.ty, rhsNarrowing.ifFalse.ty)),
-                    basis: { or: [lhsNarrowing.ifFalse.basis, { and: [rhsNarrowing.ifTrue.basis, rhsNarrowing.ifFalse.basis] }] }
-                }
-            };
-        }
-        else {
-            ExprNarrowing n = <ExprNarrowing>(lhsNarrowing ?: rhsNarrowing);
-            narrowing = {
-                ifTrue: n.ifTrue, // since t:intersect(n.ifTrue.ty, n.binding.reg.semType) is same as n.ifTrue.ty
-                ifFalse: {
-                    binding: n.ifFalse.binding,
-                    ty: n.ifFalse.binding.reg.semType, // same as t:union(n.ifFalse.ty, n.binding.reg.semType)
-                    basis: n.ifFalse.basis
-                }
-            };
-        }
-    }
-
+    [NarrowingCombinator, NarrowingCombinator] [ifTrueCombinator, ifFalseCombinator] = isOr ? [unionNarrowing, intersectNarrowing]
+                                                                                            : [intersectNarrowing, expandedUnionNarrowing];
+    Narrowing[] ifTrue = combineNarrowings(lhsIfTrue, rhsIfTrue, ifTrueCombinator);
+    Narrowing[] ifFalse = combineNarrowings(lhsIfFalse, rhsIfFalse, ifFalseCombinator);
     bir:Register result = cx.createTmpRegister(t:BOOLEAN, pos);
     bir:BasicBlock joinBlock = cx.createBasicBlock();
     bir:AssignInsn lhsAssignInsn = { result, operand: lhs, pos };
@@ -706,7 +620,90 @@ function codeGenLogicalBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryLog
     evalRightBlock2.insns.push(rhsAssignInsn);
     bir:BranchInsn rhsBranchInsn = { dest: joinBlock.label, pos };
     evalRightBlock2.insns.push(rhsBranchInsn);
-    return { result, block: joinBlock, narrowing };
+    return { result, block: joinBlock, ifFalse, ifTrue };
+}
+
+function combineNarrowings(Narrowing[] lns, Narrowing[] rns, NarrowingCombinator combine) returns Narrowing[] {
+    Narrowing[] result = [];
+    boolean[] rnsUsed = [];
+    int rnsLen = rns.length();
+    if rnsLen > 0 {
+        rnsUsed[rnsLen - 1] = false;
+    }
+    foreach var ln in lns {
+        int? rnUsedIndex = ();
+        int i = 0;
+        foreach var rn in rns {
+            if ln.binding.name == rn.binding.name {
+                pushNarrowing(result, combine(ln, rn));
+                rnUsedIndex = i;
+                break;
+            }
+            i = i + 1;
+        }
+        if rnUsedIndex != () {
+            rnsUsed[rnUsedIndex] = true;
+        }
+        else {
+            pushNarrowing(result, combine(ln, ()));
+        }
+    }
+    foreach var i in 0 ..< rnsLen {
+        if !rnsUsed[i] {
+            pushNarrowing(result, combine((), rns[i]));
+        }
+    }
+    return result;
+}
+
+function pushNarrowing(Narrowing[] narrowings, Narrowing? n) {
+    if n != () {
+       narrowings.push(n);
+    }
+}
+
+// A NarrowingCombinator. ln.binding.name == rn.binding.name if non-nil.
+function unionNarrowing(Narrowing? ln, Narrowing? rn) returns Narrowing? {
+    if ln != () && rn != () {
+        return {
+            binding: rn.binding,
+            ty: t:union(ln.ty, rn.ty),
+            basis: { or: [ln.basis, rn.basis] }
+        };
+    }
+    else {
+        return (); // union with no narrowing is no narrowing
+    }
+}
+
+// A NarrowingCombinator. ln.binding.name == rn.binding.name if non-nil.
+// May get removed with #ballerina-spec/1034
+function expandedUnionNarrowing(Narrowing? ln, Narrowing? rn) returns Narrowing? {
+    if ln != () && rn != () {
+        return {
+            binding: rn.binding,
+            ty: t:union(ln.ty, t:intersect(ln.ty, rn.ty)),
+            basis: { or: [ln.basis, { and: [rn.basis, rn.basis] }] }
+        };
+    }
+    else {
+        return ();
+    }
+}
+
+// A NarrowingCombinator. ln.binding.name == rn.binding.name if non-nil.
+function intersectNarrowing(Narrowing? ln, Narrowing? rn) returns Narrowing? {
+    if ln != () && rn != () {
+        return {
+            binding: rn.binding,
+            // Possible improvement: lexically successive one (lets say `rn`) is always a subtype. So this is same as rn.ty
+            ty: t:intersect(ln.ty, rn.ty),
+            basis: { and: [ln.basis, rn.basis] }
+        };
+    }
+    else {
+        return ln ?: rn; // intersecting with no narrowing is identity
+    }
 }
 
 function codeGenBitwiseBinaryExpr(ExprContext cx, bir:BasicBlock bb, s:BinaryBitwiseOp op, Position pos, bir:IntOperand lhs, bir:IntOperand rhs) returns CodeGenError|ExprEffect {
@@ -945,19 +942,17 @@ function codeGenEqualityExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expec
             [typeIfTrue, typeIfFalse] = [typeIfFalse, typeIfTrue];
         }
         bir:InsnRef insnRef = bir:lastInsnRef(nextBlock);
-        ExprNarrowing narrowing = {
-            ifTrue: {
-                binding,
-                basis: { insn: insnRef, result: true },
-                ty: typeIfTrue
-            },
-            ifFalse: {
-                binding,
-                basis: { insn: insnRef, result: false },
-                ty: typeIfFalse
-            }
-        };
-        return { result, block: nextBlock, narrowing };
+        Narrowing[] ifTrue = [{
+            binding,
+            basis: { insn: insnRef, result: !negated },
+            ty: typeIfTrue
+        }];
+        Narrowing[] ifFalse = [{
+            binding,
+            basis: { insn: insnRef, result: negated },
+            ty: typeIfFalse
+        }];
+        return { result, block: nextBlock, ifTrue, ifFalse };
     }
 }
 
@@ -1087,23 +1082,22 @@ function codeGenTypeTest(ExprContext cx, bir:BasicBlock bb, t:SemType? expected,
     if negated {
         [intersect, diff] = [diff, intersect];
     }
-    ExprNarrowing? narrowing = ();
     bir:InsnRef insnRef = bir:lastInsnRef(nextBlock);
+    Narrowing[] ifTrue = [];
+    Narrowing[] ifFalse = [];
     if binding != () {
-        narrowing = {
-            ifTrue: {
-                binding,
-                ty: intersect,
-                basis: { insn: insnRef, result: true }
-            },
-            ifFalse: {
-                binding,
-                ty: diff,
-                basis: { insn: insnRef, result: false }
-            }
-        };
+        ifTrue.push({
+            binding,
+            basis: { insn: insnRef, result: !negated },
+            ty: intersect
+        });
+        ifFalse.push({
+            binding,
+            basis: { insn: insnRef, result: negated },
+            ty: diff
+        });
     }
-    return { result, block: nextBlock, narrowing };   
+    return { result, block: nextBlock, ifTrue, ifFalse };
 }
 
 function codeGenCheckingExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:CheckingKeyword checkingKeyword, s:Expr expr, Position pos) returns CodeGenError|ExprEffect {
