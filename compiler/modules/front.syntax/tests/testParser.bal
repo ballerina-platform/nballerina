@@ -44,7 +44,7 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     string[] expectedTreeContent = syntaxNodeToString(expectedTree);
     string errMsg = "actualTree : " + "\n".'join(...actualTreeContent) + "is not the same as expectecdTree : " + "\n".'join(...expectedTreeContent);
     test:assertTrue(validateNormalizedTree(normalizedActualTree, expectedTree), errMsg);
-    test:assertEquals(actualTreeContent, expected);
+    test:assertEquals(actualTreeContent, expected, normalizedActualTree.toString());
 }
 
 function standardTree(string k, string rule, string[] content) returns err:Syntax|SyntaxNode|RootSyntaxNode {
