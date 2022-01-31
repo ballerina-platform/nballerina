@@ -365,6 +365,9 @@ function resolveNumericLiteralExpr(s:ModuleLevelDefn modDefn, s:NumericLiteralEx
             }
             else {
                 decimal value = f;
+                if sign {
+                    value = -value;
+                }
                 return t:decimalConst(value);
             }
         }
