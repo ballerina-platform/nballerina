@@ -226,10 +226,7 @@ function blockToWords(Word[] w, StmtBlock body) {
 }
 
 function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = false) {
-    if td is GroupingTypeDesc {
-        return typeDescToWords(w, td.innerTd, wrap);
-    }
-    else if td is BuiltinTypeDesc {
+    if td is BuiltinTypeDesc {
         if td.builtinTypeName == "null" {
             w.push("()");
         }
@@ -321,22 +318,15 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
     else if td is BinaryTypeDesc {
         // subset 6 does not allow parentheses
         // so we need to take care not to add them unnecessarily
-        TypeDesc rightTd = td.right;
-        if td.op === "|" && rightTd is BuiltinTypeDesc && rightTd.builtinTypeName === "null" {
-            typeDescToWords(w, td.left, wrap);
-            w.push(CLING, "?");
+        boolean noWrap = wrap == false || wrap == td.op;
+        if !noWrap {
+            w.push("(");
         }
-        else {
-            boolean noWrap = wrap == false || wrap == td.op;
-            if !noWrap {
-                w.push("(");
-            }
-            typeDescToWords(w, td.left, td.op);
-            w.push(td.op);
-            typeDescToWords(w, td.right, td.op);
-            if !noWrap {
-                w.push(")");
-            }
+        typeDescToWords(w, td.left, td.op);
+        w.push(td.op);
+        typeDescToWords(w, td.right, td.op);
+        if !noWrap {
+            w.push(")");
         }
     }
     else if td is SingletonTypeDesc {
@@ -348,8 +338,17 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         w.push(CLING, ">");
     }    
     else if td is UnaryTypeDesc {
-        w.push(td.op, CLING);
-        typeDescToWords(w, td.td);
+        if td.op == "(" {
+            return typeDescToWords(w, td.td, wrap);
+        }
+        else if td.op == "!" {
+            w.push(td.op, CLING);
+            typeDescToWords(w, td.td);
+        }
+        else {
+            typeDescToWords(w, td.td, wrap);
+            w.push(CLING, "?");
+        }
     }
     else if td is XmlSequenceTypeDesc {
         w.push("xml", CLING, "<", CLING);
@@ -425,7 +424,7 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
     if expr is GroupingExpr {
         exprToWords(w, expr.innerExpr, wrap);
     }
-    else if expr is ConstValueExpr {
+    else if expr is LiteralExpr {
         valueToWords(w, expr.value);      
     }
     else if expr is IntLiteralExpr {

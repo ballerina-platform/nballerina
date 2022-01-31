@@ -85,6 +85,7 @@ public distinct class Context {
                 return data[0];
             }
         }
+        return ();
     }
 
     // Use to initialize target information to help compiling directly to object file

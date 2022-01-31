@@ -93,10 +93,7 @@ function resolveTypeDefn(ModuleSymbols mod, s:TypeDefn defn, int depth) returns 
 }
 
 function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth, s:TypeDesc td) returns t:SemType|ResolveTypeError {
-    if td is s:GroupingTypeDesc {
-        return resolveTypeDesc(mod, modDefn, depth + 1, td.innerTd);
-    }
-    else if td is s:BuiltinTypeDesc {
+    if td is s:BuiltinTypeDesc {
         match td.builtinTypeName {
             // These are easy
             "any" => { return t:ANY; }
@@ -261,22 +258,14 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     if td is s:SingletonTypeDesc {
-        var value = td.value;
-        if value is string {
-            return t:stringConst(value);
+        return t:singleton(mod.tc, td.value);
+    }
+    if td is s:UnaryTypeDesc && td.op != "!" {
+        if td.op == "?" {
+            t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td.td);
+            return t:union(ty, t:NIL);
         }
-        else if value is int {
-            return t:intConst(value);
-        }
-        else if value is boolean {
-            return t:booleanConst(value);
-        }
-        else if value is decimal {
-            return t:decimalConst(value);
-        }
-        else {
-            return t:floatConst(value);
-        }
+        return resolveTypeDesc(mod, modDefn, depth + 1, td.td);
     }
     if !mod.allowAllTypes {
         return err:unimplemented("unimplemented type descriptor", s:locationInDefn(modDefn, s:range(td)));
@@ -304,7 +293,7 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     // JBUG #33722 work around incorrect type narrowing
     s:TypeDesc td2 = td;
-    if td2 is s:UnaryTypeDesc {
+    if td2 is s:UnaryTypeDesc && td2.op == "!" {
         t:SemType ty = check resolveTypeDesc(mod, modDefn, depth, td2.td);
         return t:complement(ty);
     }
