@@ -65,39 +65,52 @@ function stringSubtypeContains(SubtypeData d, string s) returns boolean {
     return nonChar.values.indexOf(s) != () ? nonChar.allowed : !nonChar.allowed;
 }
 
-function stringSubtypeContainedIn(SubtypeData d, string[] values) returns boolean {
-    if d is boolean {
-        return false;
-    }
-    var { char, nonChar } = <StringSubtype>d;
-    boolean emptyChars = char.values.length() == 0;
-    boolean emptyNonChars = nonChar.values.length() == 0;
+function stringSubtypeFindIn(StringSubtype subtype, string[] sorted) returns [int[], boolean] {
+    int[] indexes = [];
+    var { char, nonChar } = subtype;
+    int stringConsts = 0;
     if char.allowed {
-        foreach string c in char.values {
-            if values.indexOf(c) == () {
-                return false;
-            }
-        }
+        findStringIntersections(sorted, char.values, indexes);
+        stringConsts = char.values.length();
     }
-    else if emptyChars {
-        // all char
-        return false;
+    else if char.values.length() == 0 {
+        return [[], false];
     }
     if nonChar.allowed {
-        foreach string val in nonChar.values {
-            if values.indexOf(val) == () {
-                return false;
+        findStringIntersections(sorted, nonChar.values, indexes);
+        stringConsts += nonChar.values.length();
+    }
+    else if nonChar.values.length() == 0 {
+        return [[], false];
+    }
+    return [indexes, stringConsts == indexes.length()];
+}
+
+function findStringIntersections(string[] values, string[] target, int[] indexes) {
+    int i1 = 0;
+    int i2 = 0;
+    int len1 = values.length();
+    int len2 = target.length();
+    while true {
+        if i1 >= len1 || i2 >= len2 {
+            break;
+        }
+        else {
+            match compareEnumerable(values[i1], target[i2]) {
+                EQ => {
+                    indexes.push(i1);
+                    i1 += 1;
+                    i2 += 1;
+                }
+                LT => {
+                    i1 += 1;
+                }
+                GT => {
+                    i2 += 1;
+                }
             }
         }
     }
-    else if emptyNonChars {
-        // all non-char
-        return false;
-    }
-    if emptyChars && emptyNonChars {
-        return false;
-    }
-    return true;
 }
 
 function stringSubtypeUnion(SubtypeData d1, SubtypeData d2) returns SubtypeData {

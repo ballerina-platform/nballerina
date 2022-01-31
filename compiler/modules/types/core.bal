@@ -975,16 +975,13 @@ public function mappingMemberType(Context cx, SemType t, SemType k = STRING) ret
 }
 
 public function mappingMemberRequired(Context cx, SemType t, SemType k) returns boolean {
-    if k !is ComplexSemType {
-        return false;
-    }
-    if t is UniformTypeBitSet {
+    if t is UniformTypeBitSet || k !is ComplexSemType {
         return false;
     }
     else {
-        StringSubtype key = <StringSubtype>getComplexSubtypeData(k, UT_STRING);
-        return bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), key, false)
-               && bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), key, false);
+        StringSubtype stringSubType = <StringSubtype>getComplexSubtypeData(k, UT_STRING);
+        return bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RW), stringSubType, false)
+               && bddMappingMemberRequired(cx, <Bdd>getComplexSubtypeData(t, UT_MAPPING_RO), stringSubType, false);
     }
 }
 

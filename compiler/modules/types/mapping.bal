@@ -410,12 +410,11 @@ function bddMappingMemberType(Context cx, Bdd b, StringSubtype? key, SemType acc
 function mappingAtomicMemberType(MappingAtomicType atomic, StringSubtype? key) returns SemType {
     if key != () {
         SemType m = NEVER;
-        foreach var i in 0 ..< atomic.names.length() {
-            if stringSubtypeContains(key, atomic.names[i]) {
-                m = union(m, atomic.types[i]);
-            }
+        [int[], boolean] [indexes, foundAllParts] = stringSubtypeFindIn(key, atomic.names);
+        foreach int index in indexes {
+            m = union(m, atomic.types[index]);
         }
-        if !stringSubtypeContainedIn(key, atomic.names) {
+        if !foundAllParts {
             m = union(m, atomic.rest);
         }
         return m;
@@ -433,7 +432,7 @@ function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean re
     }
     else {
         return bddMappingMemberRequired(cx, b.left, k,
-                                        requiredOnPath || stringSubtypeContainedIn(k, cx.mappingAtomType(b.atom).names))
+                                        requiredOnPath || stringSubtypeFindIn(k, cx.mappingAtomType(b.atom).names)[1])
                && bddMappingMemberRequired(cx, b.middle, k, requiredOnPath)
                && bddMappingMemberRequired(cx, b.right, k, requiredOnPath);
     }
