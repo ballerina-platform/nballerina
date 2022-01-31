@@ -259,9 +259,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
     }
     if td is s:SingletonTypeDesc {
         s:SimpleConstExpr valueExpr = td.valueExpr;
-        ()|boolean|int|float|decimal|string value = ();
         if valueExpr is s:LiteralExpr {
-            value = valueExpr.value;
+            var value = valueExpr.value;
             if value is string {
                 return t:stringConst(value);
             }
@@ -387,10 +386,10 @@ function resolveNumericLiteralExpr(s:ModuleLevelDefn modDefn, s:NumericLiteralEx
         }
         else {
             int value;
-            if sign {
+            if !sign {
                 value = n;
             }
-            if n == int:MIN_VALUE {
+            else if n == int:MIN_VALUE {
                 return err:semantic(`-${expr.digits} overflows`, loc = s:locationInDefn(modDefn, expr.startPos));
             }
             else {

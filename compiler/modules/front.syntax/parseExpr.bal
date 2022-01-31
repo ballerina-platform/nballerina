@@ -497,7 +497,7 @@ function parseSimpleConstExpr(Tokenizer tok) returns SimpleConstExpr|err:Syntax 
     if t == "-" {
         Position opPos = tok.currentStartPos();
         check tok.advance();
-        IntLiteralExpr operand = check parseIntLiteralExpr(tok);
+        NumericLiteralExpr operand = check parseNumericLiteralExpr(tok);
         Position endPos = tok.previousEndPos();
         SimpleConstNegateExpr expr = { startPos, endPos, opPos, operand };
         return expr;

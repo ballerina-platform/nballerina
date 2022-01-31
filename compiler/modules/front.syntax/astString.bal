@@ -605,7 +605,17 @@ function simpleConstExprToWords(Word[] w, SimpleConstExpr expr) {
         valueToWords(w, expr.value);
     }
     else if expr is IntLiteralExpr {
-        valueToWords(w, expr.digits);
+        if expr.base == 16 {
+            w.push("0x", CLING);
+        }
+        w.push(expr.digits);
+    }
+    else if expr is FpLiteralExpr {
+        w.push(expr.untypedLiteral);
+    }
+    else if expr is SimpleConstNegateExpr {
+        w.push("-", CLING);
+        simpleConstExprToWords(w, expr.operand);
     }
 }
 

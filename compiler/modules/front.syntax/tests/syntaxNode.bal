@@ -1,3 +1,5 @@
+import wso2/nballerina.comm.err;
+
 type TerminalSyntaxNode TerminalSyntaxAstNode|FixedSyntaxNode|IdentifierSyntaxNode|StringLiteralSyntaxNode;
 type AstSyntaxNode TerminalSyntaxAstNode|NonTerminalSyntaxNode;
 type SyntaxNode NonTerminalSyntaxNode|TerminalSyntaxNode;
@@ -577,12 +579,32 @@ function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns SyntaxNode 
         token = td.builtinTypeName == "null" ? "()" : td.builtinTypeName;
     }
     else {
-        var value = td.valueExpr;
-        if (value is int && value < 0) || (value is float && value < 0.0) {
-            return nonTerminalSyntaxNode(td, { token: "-" }, { literal: (value * -1).toString() });
+        var valueExpr = td.valueExpr;
+        string value;
+        if valueExpr is SimpleConstNegateExpr {
+            var operand = valueExpr.operand;
+            if operand is IntLiteralExpr {
+                value = operand.digits;
+            }
+            else if operand is FpLiteralExpr{
+                value = operand.untypedLiteral;
+            }
+            else {
+                value = operand.value.toString(); 
+            }
+            return nonTerminalSyntaxNode(td, { token: "-" }, { literal: value });
+        }
+        else if valueExpr is LiteralExpr {
+            token = valueExpr.value.toString();
+        }
+        else if valueExpr is IntLiteralExpr {
+            token = valueExpr.digits;
+        }
+        else if valueExpr is FpLiteralExpr {
+            token = valueExpr.untypedLiteral;
         }
         else {
-            token = td.valueExpr.toString();
+            panic err:impossible("VarRefExpr not allowed in SingletonTypeDesc");
         }
     }
     return { token, astNode: td };
