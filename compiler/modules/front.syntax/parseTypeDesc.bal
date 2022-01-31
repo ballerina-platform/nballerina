@@ -201,12 +201,6 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     return { startPos, endPos, valueExpr };
 }
 
-// It would be cleaner to handle this using const folding, but there are obstacles:
-// it treats conversion errors as semantic errors, but at this point we can only return syntax errors;
-// we don't have what we need to create a context.
-// Another approach would be to have a kind of TypeDesc that refers to an NumericLiteralExpr and then convert in resolveTypes.
-// XXX Revisit when floats (and maybe decimals) are fully incorporated in the front-end.
-
 function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
     check tok.expect("<");
     tok.setMode(MODE_TYPE_DESC);
