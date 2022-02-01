@@ -22,16 +22,17 @@ function normalizeSubSyntaxNode(SubSyntaxNode node) returns SubSyntaxNode {
         return normalizeSubSyntaxNode(node.childNodes[1]);
     }
     SubSyntaxNode[] newChildNodes = [];
-    if node.wrap {
+    if (node.outputFlags & WRAP) != 0 {
         newChildNodes.push({ token: "(" });
     }
     foreach SubSyntaxNode childNode in node.childNodes {
         newChildNodes.push(normalizeSubSyntaxNode(childNode));
     }
-    if node.wrap {
+    if (node.outputFlags & WRAP) != 0 {
         newChildNodes.push({ token: ")" });
     }
-    return { astNode: node.astNode, childNodes: newChildNodes, wrap: false };
+    OutputFlag newFlags = (node.outputFlags^WRAP);
+    return { astNode: node.astNode, childNodes: newChildNodes, outputFlags: newFlags };
 }
 
 function isGroupingNode(SubSyntaxNode node) returns boolean {
