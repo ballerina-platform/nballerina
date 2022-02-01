@@ -405,7 +405,7 @@ function syntaxNodeFromUnaryExpr(UnaryExpr expr) returns NonTerminalSyntaxNode {
 }
 
 type TerminalExpr LiteralExpr|NumericLiteralExpr;
-function syntaxNodeFromTerminalExpr(TerminalExpr expr) returns TerminalSyntaxAstNode {
+function syntaxNodeFromTerminalExpr(TerminalExpr expr, SimpleConstNegateExpr? sign = ()) returns AstSyntaxNode {
     string token;
     if expr is LiteralExpr {
         token = expr.value != () ? expr.value.toString() : "()";
@@ -416,6 +416,9 @@ function syntaxNodeFromTerminalExpr(TerminalExpr expr) returns TerminalSyntaxAst
     else {
         FpTypeSuffix? typeSuffix = expr.typeSuffix;
         token = expr.untypedLiteral + (typeSuffix ?: "");
+    }
+    if sign != () {
+        return nonTerminalSyntaxNode(sign, { token: "-" }, { literal: token });
     }
     return { token, astNode: expr };
 }
@@ -577,37 +580,20 @@ function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns SyntaxNode 
     string token;
     if td is BuiltinTypeDesc {
         token = td.builtinTypeName == "null" ? "()" : td.builtinTypeName;
+        return { token, astNode: td };
     }
     else {
         var valueExpr = td.valueExpr;
-        string value;
         if valueExpr is SimpleConstNegateExpr {
-            var operand = valueExpr.operand;
-            if operand is IntLiteralExpr {
-                value = operand.digits;
-            }
-            else if operand is FpLiteralExpr{
-                value = operand.untypedLiteral;
-            }
-            else {
-                value = operand.value.toString(); 
-            }
-            return nonTerminalSyntaxNode(td, { token: "-" }, { literal: value });
+            return syntaxNodeFromTerminalExpr(valueExpr.operand, valueExpr);
         }
-        else if valueExpr is LiteralExpr {
-            token = valueExpr.value.toString();
-        }
-        else if valueExpr is IntLiteralExpr {
-            token = valueExpr.digits;
-        }
-        else if valueExpr is FpLiteralExpr {
-            token = valueExpr.untypedLiteral;
+        else if valueExpr is VarRefExpr {
+            panic err:impossible("unreachable in SingletonTypeDesc");
         }
         else {
-            panic err:impossible("VarRefExpr not allowed in SingletonTypeDesc");
+            return syntaxNodeFromTerminalExpr(valueExpr);
         }
     }
-    return { token, astNode: td };
 }
 
 function syntaxNodeFromFieldDesc(FieldDesc fd) returns SyntaxNode {
