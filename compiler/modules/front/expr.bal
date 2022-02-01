@@ -1193,26 +1193,6 @@ function validArgumentCount(ExprContext cx, bir:FunctionRef func, s:Expr[] suppl
     }
 }
 
-function validArgumentTypes(ExprContext cx, bir:FunctionRef func, bir:Operand[] suppliedArgs, s:MethodCallExpr|s:FunctionCallExpr expr) returns CodeGenError? {
-    foreach int i in 0 ..< suppliedArgs.length() {
-        if operandHasType(cx.mod.tc, suppliedArgs[i], func.signature.paramTypes[i]) {
-            continue;
-        }
-        s:Expr argExpr;
-        if expr is s:FunctionCallExpr {
-            argExpr = expr.args[i];
-        }
-        else if i == 0 {
-            argExpr = expr;
-        }
-        else {
-            argExpr = expr.args[i - 1];
-        }
-        return cx.semanticErr("wrong argument type in call to function", s:range(argExpr));
-    }
-    return ();
-}
-
 function genImportedFunctionRef(ExprContext cx, string prefix, string identifier, Position pos) returns bir:FunctionRef|CodeGenError {
     Import mod = check lookupPrefix(cx.mod, cx.defn, prefix, pos);
     var defn = mod.defns[identifier];
