@@ -1,4 +1,4 @@
-function normalizeTree(RootSyntaxNode|SyntaxNode node) returns RootSyntaxNode|SyntaxNode {
+function normalizeTree(RootSyntaxNode|SubSyntaxNode node) returns RootSyntaxNode|SubSyntaxNode {
     if node is RootSyntaxNode {
         return normalizeRootSyntaxNode(node);
     }
@@ -10,22 +10,22 @@ function normalizeTree(RootSyntaxNode|SyntaxNode node) returns RootSyntaxNode|Sy
 function normalizeRootSyntaxNode(RootSyntaxNode node) returns RootSyntaxNode {
     return {
         part: node.part,
-        childNodes: from SyntaxNode child in node.childNodes select normalizeSyntaxNode(child)
+        childNodes: from SubSyntaxNode child in node.childNodes select normalizeSyntaxNode(child)
     };
 }
 
-function normalizeSyntaxNode(SyntaxNode node) returns SyntaxNode {
+function normalizeSyntaxNode(SubSyntaxNode node) returns SubSyntaxNode {
     if node is NonTerminalSyntaxNode && isGroupingNode(node) {
         return normalizeSyntaxNode(node.childNodes[1]);
     }
     if node !is NonTerminalSyntaxNode {
         return node;
     }
-    SyntaxNode[] newChildNodes = [];
+    SubSyntaxNode[] newChildNodes = [];
     if node.wrap {
         newChildNodes.push({ token: "(" });
     }
-    foreach SyntaxNode childNode in node.childNodes {
+    foreach SubSyntaxNode childNode in node.childNodes {
         newChildNodes.push(normalizeSyntaxNode(childNode));
     }
     if node.wrap {
@@ -34,7 +34,7 @@ function normalizeSyntaxNode(SyntaxNode node) returns SyntaxNode {
     return { astNode: node.astNode, childNodes: newChildNodes, wrap: false };
 }
 
-function isGroupingNode(SyntaxNode node) returns boolean {
+function isGroupingNode(SubSyntaxNode node) returns boolean {
     if node !is AstSyntaxNode {
         return false;
     }

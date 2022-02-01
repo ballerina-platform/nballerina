@@ -11,13 +11,14 @@ final int CASE_START_LENGTH = CASE_START.length();
 const CASE_END = "// @end";
 
 type Kind "V"|"E"|"UV"|"UE";
-type ParserTestCase [Kind, string, string[], string[]];
-type SingleStringParserTestCase [Kind, string, string, string];
+type ProductionRule "mod"|"stmt"|"expr"|"td";
+type ParserTestCase [Kind, ProductionRule, string[], string[]];
+type SingleStringParserTestCase [Kind, ProductionRule, string, string];
 @test:Config {
     dataProvider: readParserTests
 }
-function testParser(Kind k, string rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
-    err:Syntax|SyntaxNode|RootSyntaxNode actualTree = standardTree(k, rule, subject);
+function testParser(Kind k, ProductionRule rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
+    err:Syntax|SyntaxNode actualTree = syntaxNodeFromLines(k, rule, subject);
     if k.includes("F") || k.includes("U") {
         if k.includes("V") {
             test:assertTrue(actualTree is err:Syntax, "test marked as unimplemented/failing but parsed");
@@ -38,8 +39,8 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     if actualTree is err:Syntax {
         panic err:impossible("can't normalize the actual tree");
     }
-    RootSyntaxNode|SyntaxNode normalizedActualTree = normalizeTree(actualTree);
-    RootSyntaxNode|SyntaxNode expectedTree = normalizeTree(check standardTree(k, rule, expected));
+    RootSyntaxNode|SubSyntaxNode normalizedActualTree = normalizeTree(actualTree);
+    RootSyntaxNode|SubSyntaxNode expectedTree = normalizeTree(check syntaxNodeFromLines(k, rule, expected));
     string[] actualTreeContent = syntaxNodeToString(normalizedActualTree);
     string[] expectedTreeContent = syntaxNodeToString(expectedTree);
     string errMsg = "actualTree : " + "\n".'join(...actualTreeContent) + " is not the same as expectecdTree : " + "\n".'join(...expectedTreeContent);
@@ -47,9 +48,9 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     test:assertEquals(actualTreeContent, expected);
 }
 
-function standardTree(string k, string rule, string[] content) returns err:Syntax|SyntaxNode|RootSyntaxNode {
-    SyntaxNode|RootSyntaxNode node;
-    SourceFile file = createSourceFile(content, { filename: k });
+function syntaxNodeFromLines(Kind k, ProductionRule rule, string[] lines) returns err:Syntax|SyntaxNode {
+    SyntaxNode node;
+    SourceFile file = createSourceFile(lines, { filename: k });
     if rule == "mod" {
         node = rootSyntaxNode(check scanAndParseModulePart(file, 0));
     }
@@ -72,7 +73,7 @@ function standardTree(string k, string rule, string[] content) returns err:Synta
     return node;
 }
 
-function validateNormalizedTree(SyntaxNode|RootSyntaxNode normalizedTreeNode, SyntaxNode|RootSyntaxNode expectedTreeNode) returns boolean {
+function validateNormalizedTree(SyntaxNode normalizedTreeNode, SyntaxNode expectedTreeNode) returns boolean {
     if normalizedTreeNode is TerminalSyntaxNode && expectedTreeNode is TerminalSyntaxNode {
         return terminalSyntaxNodeToString(normalizedTreeNode) == terminalSyntaxNodeToString(expectedTreeNode);
     }
@@ -221,7 +222,13 @@ function readParserTests() returns map<ParserTestCase>|error {
             if tests.hasKey(subject) {
                 test:assertFail("duplicate test: " + subject);
             }
-            tests[subject] = [s[0], s[1], subjectLines, expected];
+            string rule = s[1];
+            if rule is ProductionRule {
+                tests[subject] = [s[0], rule, subjectLines, expected];
+            }
+            else {
+                test:assertFail("invalid rule: " + rule);
+            }
         }
     }
 
@@ -243,7 +250,13 @@ function readParserTests() returns map<ParserTestCase>|error {
         }
 
         [Kind, string] baseParts = check splitTestName(base);
-        tests["file:" + base] = [baseParts[0], baseParts[1], src, expected];
+        string rule = baseParts[1];
+        if rule is ProductionRule {
+            tests["file:" + base] = [baseParts[0], rule, src, expected];
+        }
+        else {
+            test:assertFail("invalid rule: " + rule);
+        }
     }
     return tests;
 }
