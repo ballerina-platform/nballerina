@@ -176,6 +176,14 @@ function codeGenExprForString(ExprContext cx, bir:BasicBlock bb, s:Expr expr) re
     return cx.semanticErr("expected string operand", s:range(expr));
 }
 
+function codeGenExprForType(ExprContext cx, bir:BasicBlock bb, s:Expr expr, t:SemType semType) returns CodeGenError|ExprEffect {
+    var { result, block } = check codeGenExpr(cx, bb, semType, expr);
+    if operandHasType(cx.mod.tc, result, semType) {
+        return { result, block };
+    }
+    return cx.semanticErr("wrong type in operand", s:range(expr));
+}
+
 function codeGenExpr(ExprContext cx, bir:BasicBlock bb, t:SemType? expected, s:Expr expr) returns CodeGenError|ExprEffect {
     match expr {
         var { innerExpr } => {
@@ -1126,32 +1134,32 @@ function codeGenFunctionCallExpr(ExprContext cx, bir:BasicBlock bb, s:FunctionCa
     else {
         func = check genImportedFunctionRef(cx, prefix, expr.funcName, expr.qNamePos);
     }
-    check validArgumentCount(cx, func, expr.args.length(), expr.openParenPos);
+    check validArgumentCount(cx, func, expr.args, false, expr.openParenPos);
     t:SemType[] paramTypes = func.signature.paramTypes;
     bir:BasicBlock curBlock = bb;
     bir:Operand[] args = [];
     foreach int i in 0 ..< expr.args.length() {
-        var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, paramTypes[i], expr.args[i]);
+        var { result: arg, block: nextBlock } = check codeGenExprForType(cx, curBlock, expr.args[i], paramTypes[i]);
         curBlock = nextBlock;
         args.push(arg);
     }
-    check validArgumentTypes(cx, func, args, expr);
+    //check validArgumentTypes(cx, func, args, expr);
     return codeGenCall(cx, curBlock, func, args, expr.qNamePos);
 }
 
 function codeGenMethodCallExpr(ExprContext cx, bir:BasicBlock bb, s:MethodCallExpr expr) returns CodeGenError|ExprEffect {
     var { result: target, block: curBlock } = check codeGenExpr(cx, bb, (), expr.target);
     bir:FunctionRef func = check getLangLibFunctionRef(cx, target, expr.methodName, expr.namePos);
-    check validArgumentCount(cx, func, expr.args.length() + 1, expr.opPos);
+    check validArgumentCount(cx, func, expr.args, true, expr.opPos);
 
     t:SemType[] paramTypes = func.signature.paramTypes;
     bir:Operand[] args = [target];
     foreach int i in 0 ..< expr.args.length() {
-        var { result: arg, block: nextBlock } = check codeGenExpr(cx, curBlock, paramTypes[i + 1], expr.args[i]);
+        var { result: arg, block: nextBlock } = check codeGenExprForType(cx, curBlock, expr.args[i], paramTypes[i + 1]);
         curBlock = nextBlock;
         args.push(arg);
     }
-    check validArgumentTypes(cx, func, args, expr);
+    //check validArgumentTypes(cx, func, args, expr);
     return codeGenCall(cx, curBlock, func, args, expr.namePos);
 }
 
@@ -1168,17 +1176,20 @@ function codeGenCall(ExprContext cx, bir:BasicBlock curBlock, bir:FunctionRef fu
     return { result: constifyRegister(reg), block: curBlock };    
 }
 
-function validArgumentCount(ExprContext cx, bir:FunctionRef func, int nSuppliedArgs, Position pos) returns CodeGenError? {
+function validArgumentCount(ExprContext cx, bir:FunctionRef func, s:Expr[] suppliedArgs, boolean isMethod, Position pos) returns CodeGenError? {
+    // TODO fix for unimplemented arg count on io:println
+    int p = isMethod ? 1 : 0; 
     int nExpectedArgs = func.signature.paramTypes.length();
+    int nSuppliedArgs = suppliedArgs.length() + p;
     if nSuppliedArgs == nExpectedArgs {
         return ();
     }
-    string name = symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol);
     if nSuppliedArgs < nExpectedArgs {
-        return cx.semanticErr(`too few arguments for call to function ${name}`, pos);
+        // TODO fix location to ending parenthesis 
+        return cx.semanticErr("too few arguments for call to function", pos);
     }
     else {
-        return cx.semanticErr(`too many arguments for call to function ${name}`, pos);
+        return cx.semanticErr("too many arguments for call to function", s:range(suppliedArgs[nExpectedArgs - p]));
     }
 }
 
@@ -1197,7 +1208,7 @@ function validArgumentTypes(ExprContext cx, bir:FunctionRef func, bir:Operand[] 
         else {
             argExpr = expr.args[i - 1];
         }
-        return cx.semanticErr(`wrong argument type for parameter ${i + 1} in call to function ${symbolToString(cx.mod, cx.defn.part.partIndex, func.symbol)}`, s:range(argExpr));
+        return cx.semanticErr("wrong argument type in call to function", s:range(argExpr));
     }
     return ();
 }
