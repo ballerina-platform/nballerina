@@ -1,5 +1,3 @@
-import wso2/nballerina.comm.err;
-
 type TerminalSyntaxNode TerminalSyntaxAstNode|FixedSyntaxNode|IdentifierSyntaxNode|StringLiteralSyntaxNode;
 type AstSyntaxNode TerminalSyntaxAstNode|NonTerminalSyntaxNode;
 type SyntaxNode NonTerminalSyntaxNode|TerminalSyntaxNode;
@@ -583,12 +581,9 @@ function syntaxNodeFromTerminalTypeDesc(TerminalTypeDesc td) returns SyntaxNode 
         return { token, astNode: td };
     }
     else {
-        var valueExpr = td.valueExpr;
+        ExtendedLiteralExpr valueExpr = td.valueExpr;
         if valueExpr is SimpleConstNegateExpr {
             return syntaxNodeFromTerminalExpr(valueExpr.operand, valueExpr);
-        }
-        else if valueExpr is VarRefExpr {
-            panic err:impossible("unreachable in SingletonTypeDesc");
         }
         else {
             return syntaxNodeFromTerminalExpr(valueExpr);

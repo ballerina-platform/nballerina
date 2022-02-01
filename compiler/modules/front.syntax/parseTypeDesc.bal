@@ -198,7 +198,10 @@ function parsePrimaryTypeDesc(Tokenizer tok) returns TypeDesc|err:Syntax {
     }
     Position endPos = tok.currentEndPos();
     SimpleConstExpr valueExpr = check parseSimpleConstExpr(tok);
-    return { startPos, endPos, valueExpr };
+    if valueExpr is ExtendedLiteralExpr {
+        return { startPos, endPos, valueExpr };
+    }
+    return parseError(tok);
 }
 
 function parseTypeParam(Tokenizer tok) returns TypeDesc|err:Syntax {
