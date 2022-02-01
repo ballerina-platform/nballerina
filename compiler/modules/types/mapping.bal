@@ -410,11 +410,11 @@ function bddMappingMemberType(Context cx, Bdd b, StringSubtype? key, SemType acc
 function mappingAtomicMemberType(MappingAtomicType atomic, StringSubtype? key) returns SemType {
     if key != () {
         SemType m = NEVER;
-        [int[], boolean] [indexes, foundAllParts] = stringSubtypeFindIn(key, atomic.names);
-        foreach int index in indexes {
+        StringSubtypeIntersectionResult intersection = stringSubtypeIntersection(key, atomic.names);
+        foreach int index in intersection.indices {
             m = union(m, atomic.types[index]);
         }
-        if !foundAllParts {
+        if !intersection.covered {
             m = union(m, atomic.rest);
         }
         return m;
@@ -432,7 +432,7 @@ function bddMappingMemberRequired(Context cx, Bdd b, StringSubtype k, boolean re
     }
     else {
         return bddMappingMemberRequired(cx, b.left, k,
-                                        requiredOnPath || stringSubtypeFindIn(k, cx.mappingAtomType(b.atom).names)[1])
+                                        requiredOnPath || stringSubtypeContainedIn(k, cx.mappingAtomType(b.atom).names))
                && bddMappingMemberRequired(cx, b.middle, k, requiredOnPath)
                && bddMappingMemberRequired(cx, b.right, k, requiredOnPath);
     }

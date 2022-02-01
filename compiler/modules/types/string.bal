@@ -17,6 +17,11 @@ public type NonCharStringSubtype readonly & record {|
     string[] values;
 |};
 
+type StringSubtypeIntersectionResult record {|
+    boolean covered;
+    int[] indices;
+|};
+
 public function stringConst(string value) returns ComplexSemType {
     CharStringSubtype char;
     NonCharStringSubtype nonChar;
@@ -65,28 +70,45 @@ function stringSubtypeContains(SubtypeData d, string s) returns boolean {
     return nonChar.values.indexOf(s) != () ? nonChar.allowed : !nonChar.allowed;
 }
 
-function stringSubtypeFindIn(StringSubtype subtype, string[] sorted) returns [int[], boolean] {
-    int[] indexes = [];
+function stringSubtypeContainedIn(StringSubtype subtype, string[] values) returns boolean {
+    return stringSubtypeIntersection(subtype, values).covered;
+}
+
+// `values` represents a subtype of string containing each of the members of the list.
+// `values` must be sorted.
+// returns { covered, indices }
+// Where `covered` is true if the first arg is a subtype of the type represented by the second arg
+// and `indices`` contains the index of each member of values that is a subtype of the first arg
+function stringSubtypeIntersection(StringSubtype subtype, string[] values) returns StringSubtypeIntersectionResult {
+    int[] indices = [];
     var { char, nonChar } = subtype;
     int stringConsts = 0;
     if char.allowed {
-        findStringIntersections(sorted, char.values, indexes);
+        stringListIntersection(values, char.values, indices);
         stringConsts = char.values.length();
     }
     else if char.values.length() == 0 {
-        return [[], false];
+        foreach var i in 0 ..< values.length() {
+            if values[i].length() == 1 {
+                indices.push(i);
+            }
+        }
     }
     if nonChar.allowed {
-        findStringIntersections(sorted, nonChar.values, indexes);
+        stringListIntersection(values, nonChar.values, indices);
         stringConsts += nonChar.values.length();
     }
     else if nonChar.values.length() == 0 {
-        return [[], false];
+        foreach var i in 0 ..< values.length() {
+            if values[i].length() != 1 {
+                indices.push(i);
+            }
+        }
     }
-    return [indexes, stringConsts == indexes.length()];
+    return { covered: stringConsts == indices.length(), indices };
 }
 
-function findStringIntersections(string[] values, string[] target, int[] indexes) {
+function stringListIntersection(string[] values, string[] target, int[] indices) {
     int i1 = 0;
     int i2 = 0;
     int len1 = values.length();
@@ -98,7 +120,7 @@ function findStringIntersections(string[] values, string[] target, int[] indexes
         else {
             match compareEnumerable(values[i1], target[i2]) {
                 EQ => {
-                    indexes.push(i1);
+                    indices.push(i1);
                     i1 += 1;
                     i2 += 1;
                 }
