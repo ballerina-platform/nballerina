@@ -42,9 +42,9 @@ function testParser(Kind k, string rule, string[] subject, string[] expected) re
     RootSyntaxNode|SyntaxNode expectedTree = normalizeTree(check standardTree(k, rule, expected));
     string[] actualTreeContent = syntaxNodeToString(normalizedActualTree);
     string[] expectedTreeContent = syntaxNodeToString(expectedTree);
-    string errMsg = "actualTree : " + "\n".'join(...actualTreeContent) + "is not the same as expectecdTree : " + "\n".'join(...expectedTreeContent);
+    string errMsg = "actualTree : " + "\n".'join(...actualTreeContent) + " is not the same as expectecdTree : " + "\n".'join(...expectedTreeContent);
     test:assertTrue(validateNormalizedTree(normalizedActualTree, expectedTree), errMsg);
-    test:assertEquals(actualTreeContent, expected, normalizedActualTree.toString());
+    test:assertEquals(actualTreeContent, expected);
 }
 
 function standardTree(string k, string rule, string[] content) returns err:Syntax|SyntaxNode|RootSyntaxNode {
@@ -60,10 +60,10 @@ function standardTree(string k, string rule, string[] content) returns err:Synta
             node = syntaxNodeFromStmt(check parseStmt(tok));
         }
         else if rule == "expr" {
-            node = syntaxNodeFromExpr(check parseExpr(tok));
+            node = syntaxNodeFromExpr(check parseExpr(tok), false);
         }
         else {
-            node = syntaxNodeFromTypeDesc(check parseTypeDesc(tok));
+            node = syntaxNodeFromTypeDesc(check parseTypeDesc(tok), false);
         }
         if tok.current() != () {
             return err:syntax("superfluous input at end", d:location(file, tok.currentStartPos()));
