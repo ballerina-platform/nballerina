@@ -258,29 +258,8 @@ function resolveTypeDesc(ModuleSymbols mod, s:ModuleLevelDefn modDefn, int depth
         }
     }
     if td is s:SingletonTypeDesc {
-        s:SimpleConstExpr valueExpr = td.valueExpr;
-        if valueExpr is s:LiteralExpr {
-            var value = valueExpr.value;
-            if value is string {
-                return t:stringConst(value);
-            }
-            else if value is boolean {
-                return t:booleanConst(value);
-            }
-            else {
-                panic err:impossible("unexpected value in LiteralExpr");
-            }
-        }
-        else if valueExpr is s:NumericLiteralExpr {
-            return resolveNumericLiteralExpr(modDefn, valueExpr);
-        }
-        else if valueExpr is s:SimpleConstNegateExpr{
-            var operand = valueExpr.operand;
-            if operand is s:NumericLiteralExpr {
-                return resolveNumericLiteralExpr(modDefn, operand, true);
-            }
-        }
-        panic err:impossible("unexpected value in SimpleConstExpr");
+        s:ResolvedConst resolved =  check resolveConstExpr(mod, modDefn, td.valueExpr, ());
+        return resolved[0];
     }
     if td is s:UnaryTypeDesc && td.op != "!" {
         if td.op == "?" {

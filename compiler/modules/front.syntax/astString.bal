@@ -330,7 +330,7 @@ function typeDescToWords(Word[] w, TypeDesc td, boolean|BinaryTypeOp wrap = fals
         }
     }
     else if td is SingletonTypeDesc {
-        simpleConstExprToWords(w, td.valueExpr);
+        exprToWords(w, td.valueExpr);
     }
     else if td is TableTypeDesc {
         w.push("table", CLING, "<", CLING);
@@ -436,7 +436,12 @@ function exprToWords(Word[] w, Expr expr, boolean wrap = false) {
         }
     }
     else if expr is FpLiteralExpr {
-        w.push(expr.untypedLiteral, CLING, expr.typeSuffix);
+        if expr.typeSuffix != () {
+            w.push(expr.untypedLiteral, CLING, expr.typeSuffix);
+        } 
+        else {
+            w.push(expr.untypedLiteral);
+        }
     }
     else if expr is UnaryExpr {
         if wrap {
@@ -597,25 +602,6 @@ function valueToWords(Word[] w, boolean|int|string|float|decimal|() val) {
     }
     else {
         w.push(val.toString());
-    }
-}
-
-function simpleConstExprToWords(Word[] w, SimpleConstExpr expr) {
-    if expr is LiteralExpr {
-        valueToWords(w, expr.value);
-    }
-    else if expr is IntLiteralExpr {
-        if expr.base == 16 {
-            w.push("0x", CLING);
-        }
-        w.push(expr.digits);
-    }
-    else if expr is FpLiteralExpr {
-        w.push(expr.untypedLiteral);
-    }
-    else if expr is SimpleConstNegateExpr {
-        w.push("-", CLING);
-        simpleConstExprToWords(w, expr.operand);
     }
 }
 
