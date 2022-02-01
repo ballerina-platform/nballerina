@@ -15,11 +15,11 @@ function normalizeRootSyntaxNode(RootSyntaxNode node) returns RootSyntaxNode {
 }
 
 function normalizeSubSyntaxNode(SubSyntaxNode node) returns SubSyntaxNode {
-    if node is NonTerminalSyntaxNode && isGroupingNode(node) {
-        return normalizeSubSyntaxNode(node.childNodes[1]);
-    }
     if node !is NonTerminalSyntaxNode {
         return node;
+    }
+    if isGroupingNode(node) {
+        return normalizeSubSyntaxNode(node.childNodes[1]);
     }
     SubSyntaxNode[] newChildNodes = [];
     if node.wrap {

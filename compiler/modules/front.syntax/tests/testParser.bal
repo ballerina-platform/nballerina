@@ -18,34 +18,34 @@ type SingleStringParserTestCase [Kind, ProductionRule, string, string];
     dataProvider: readParserTests
 }
 function testParser(Kind k, ProductionRule rule, string[] subject, string[] expected) returns err:Syntax|io:Error? {
-    err:Syntax|SyntaxNode actualTree = syntaxNodeFromLines(k, rule, subject);
+    err:Syntax|SyntaxNode actualNode = syntaxNodeFromLines(k, rule, subject);
     if k.includes("F") || k.includes("U") {
         if k.includes("V") {
-            test:assertTrue(actualTree is err:Syntax, "test marked as unimplemented/failing but parsed");
+            test:assertTrue(actualNode is err:Syntax, "test marked as unimplemented/failing but parsed");
             return;
         }
         if k.includes("E") {
-            test:assertTrue(actualTree !is err:Syntax, "test marked as unimplemented/failing but correctly got an error");
+            test:assertTrue(actualNode !is err:Syntax, "test marked as unimplemented/failing but correctly got an error");
             return;
         }
         panic err:impossible("kind must be FE or FV but was '" + k + "'");
     }
     if k.includes("E") {
-        if actualTree !is error {
-            test:assertFail("expected a syntax error but got " + "\n".'join(...syntaxNodeToString(actualTree)));
+        if actualNode !is error {
+            test:assertFail("expected a syntax error but got " + "\n".'join(...syntaxNodeToString(actualNode)));
         }
         return;
     }
-    if actualTree is err:Syntax {
+    if actualNode is err:Syntax {
         panic err:impossible("can't normalize the actual tree");
     }
-    RootSyntaxNode|SubSyntaxNode normalizedActualTree = normalizeSyntaxNode(actualTree);
-    RootSyntaxNode|SubSyntaxNode expectedTree = normalizeSyntaxNode(check syntaxNodeFromLines(k, rule, expected));
-    string[] actualTreeContent = syntaxNodeToString(normalizedActualTree);
-    string[] expectedTreeContent = syntaxNodeToString(expectedTree);
-    string errMsg = "actualTree : " + "\n".'join(...actualTreeContent) + " is not the same as expectecdTree : " + "\n".'join(...expectedTreeContent);
-    test:assertTrue(validateNormalizedSyntaxNode(normalizedActualTree, expectedTree), errMsg);
-    test:assertEquals(actualTreeContent, expected);
+    SyntaxNode normalizedActualNode = normalizeSyntaxNode(actualNode);
+    SyntaxNode expectedNode = normalizeSyntaxNode(check syntaxNodeFromLines(k, rule, expected));
+    string[] actualNodeLines = syntaxNodeToString(normalizedActualNode);
+    string[] expectedNodeLines = syntaxNodeToString(expectedNode);
+    string errMsg = "actual node : " + "\n".'join(...actualNodeLines) + " is not the same as expected node : " + "\n".'join(...expectedNodeLines);
+    test:assertTrue(validateNormalizedSyntaxNode(normalizedActualNode, expectedNode), errMsg);
+    test:assertEquals(actualNodeLines, expected);
 }
 
 function syntaxNodeFromLines(Kind k, ProductionRule rule, string[] lines) returns err:Syntax|SyntaxNode {
@@ -77,8 +77,7 @@ function validateNormalizedSyntaxNode(SyntaxNode normalizedTreeNode, SyntaxNode 
     if normalizedTreeNode is TerminalSyntaxNode && expectedTreeNode is TerminalSyntaxNode {
         return terminalSyntaxNodeToString(normalizedTreeNode) == terminalSyntaxNodeToString(expectedTreeNode);
     }
-    if normalizedTreeNode is TerminalSyntaxNode ||
-       expectedTreeNode is TerminalSyntaxNode ||
+    if normalizedTreeNode is TerminalSyntaxNode || expectedTreeNode is TerminalSyntaxNode ||
        normalizedTreeNode.childNodes.length() != expectedTreeNode.childNodes.length() {
         return false;
     }

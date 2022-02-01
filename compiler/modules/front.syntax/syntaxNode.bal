@@ -272,7 +272,7 @@ function syntaxNodeFromExpr(Expr expr, boolean wrap) returns SubSyntaxNode {
     if expr is GroupingExpr {
         return syntaxNodeFromGroupingExpr(expr, wrap);
     }
-    else if expr is TerminalExpr {
+    else if expr is FixedLiteralExpr {
         return syntaxNodeFromTerminalExpr(expr);
     }
     else if expr is BinaryExpr {
@@ -441,8 +441,8 @@ function syntaxNodeFromUnaryExpr(UnaryExpr expr, boolean wrap) returns NonTermin
                                              syntaxNodeFromExpr(expr.operand, true));
 }
 
-type TerminalExpr LiteralExpr|NumericLiteralExpr;
-function syntaxNodeFromTerminalExpr(TerminalExpr expr, SimpleConstNegateExpr? sign = ()) returns AstSyntaxNode {
+type FixedLiteralExpr LiteralExpr|NumericLiteralExpr;
+function syntaxNodeFromTerminalExpr(FixedLiteralExpr expr) returns TerminalSyntaxAstNode {
     string token;
     if expr is LiteralExpr {
         token = expr.value != () ? expr.value.toString() : "()";
@@ -453,9 +453,6 @@ function syntaxNodeFromTerminalExpr(TerminalExpr expr, SimpleConstNegateExpr? si
     else {
         FpTypeSuffix? typeSuffix = expr.typeSuffix;
         token = expr.untypedLiteral + (typeSuffix ?: "");
-    }
-    if sign != () {
-        return nonTerminalSyntaxNode(sign, { token: "-" }, { literal: token });
     }
     return { token, astNode: expr };
 }
