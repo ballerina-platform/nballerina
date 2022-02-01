@@ -1,22 +1,22 @@
-function normalizeTree(RootSyntaxNode|SubSyntaxNode node) returns RootSyntaxNode|SubSyntaxNode {
+function normalizeSyntaxNode(SyntaxNode node) returns SyntaxNode {
     if node is RootSyntaxNode {
         return normalizeRootSyntaxNode(node);
     }
     else {
-        return normalizeSyntaxNode(node);
+        return normalizeSubSyntaxNode(node);
     }
 }
 
 function normalizeRootSyntaxNode(RootSyntaxNode node) returns RootSyntaxNode {
     return {
         part: node.part,
-        childNodes: from SubSyntaxNode child in node.childNodes select normalizeSyntaxNode(child)
+        childNodes: from SubSyntaxNode child in node.childNodes select normalizeSubSyntaxNode(child)
     };
 }
 
-function normalizeSyntaxNode(SubSyntaxNode node) returns SubSyntaxNode {
+function normalizeSubSyntaxNode(SubSyntaxNode node) returns SubSyntaxNode {
     if node is NonTerminalSyntaxNode && isGroupingNode(node) {
-        return normalizeSyntaxNode(node.childNodes[1]);
+        return normalizeSubSyntaxNode(node.childNodes[1]);
     }
     if node !is NonTerminalSyntaxNode {
         return node;
@@ -26,7 +26,7 @@ function normalizeSyntaxNode(SubSyntaxNode node) returns SubSyntaxNode {
         newChildNodes.push({ token: "(" });
     }
     foreach SubSyntaxNode childNode in node.childNodes {
-        newChildNodes.push(normalizeSyntaxNode(childNode));
+        newChildNodes.push(normalizeSubSyntaxNode(childNode));
     }
     if node.wrap {
         newChildNodes.push({ token: ")" });

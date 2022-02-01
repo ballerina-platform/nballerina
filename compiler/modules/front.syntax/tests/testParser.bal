@@ -39,12 +39,12 @@ function testParser(Kind k, ProductionRule rule, string[] subject, string[] expe
     if actualTree is err:Syntax {
         panic err:impossible("can't normalize the actual tree");
     }
-    RootSyntaxNode|SubSyntaxNode normalizedActualTree = normalizeTree(actualTree);
-    RootSyntaxNode|SubSyntaxNode expectedTree = normalizeTree(check syntaxNodeFromLines(k, rule, expected));
+    RootSyntaxNode|SubSyntaxNode normalizedActualTree = normalizeSyntaxNode(actualTree);
+    RootSyntaxNode|SubSyntaxNode expectedTree = normalizeSyntaxNode(check syntaxNodeFromLines(k, rule, expected));
     string[] actualTreeContent = syntaxNodeToString(normalizedActualTree);
     string[] expectedTreeContent = syntaxNodeToString(expectedTree);
     string errMsg = "actualTree : " + "\n".'join(...actualTreeContent) + " is not the same as expectecdTree : " + "\n".'join(...expectedTreeContent);
-    test:assertTrue(validateNormalizedTree(normalizedActualTree, expectedTree), errMsg);
+    test:assertTrue(validateNormalizedSyntaxNode(normalizedActualTree, expectedTree), errMsg);
     test:assertEquals(actualTreeContent, expected);
 }
 
@@ -73,7 +73,7 @@ function syntaxNodeFromLines(Kind k, ProductionRule rule, string[] lines) return
     return node;
 }
 
-function validateNormalizedTree(SyntaxNode normalizedTreeNode, SyntaxNode expectedTreeNode) returns boolean {
+function validateNormalizedSyntaxNode(SyntaxNode normalizedTreeNode, SyntaxNode expectedTreeNode) returns boolean {
     if normalizedTreeNode is TerminalSyntaxNode && expectedTreeNode is TerminalSyntaxNode {
         return terminalSyntaxNodeToString(normalizedTreeNode) == terminalSyntaxNodeToString(expectedTreeNode);
     }
@@ -84,7 +84,7 @@ function validateNormalizedTree(SyntaxNode normalizedTreeNode, SyntaxNode expect
     }
     else {
         foreach int i in 0 ..< normalizedTreeNode.childNodes.length() {
-            if !validateNormalizedTree(normalizedTreeNode.childNodes[i], expectedTreeNode.childNodes[i]) {
+            if !validateNormalizedSyntaxNode(normalizedTreeNode.childNodes[i], expectedTreeNode.childNodes[i]) {
                 return false;
             }
         }
