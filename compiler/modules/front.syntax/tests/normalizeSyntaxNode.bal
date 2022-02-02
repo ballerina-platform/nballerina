@@ -31,7 +31,7 @@ function normalizeSubSyntaxNode(SubSyntaxNode node) returns SubSyntaxNode {
     if (node.outputFlags & WRAP) != 0 {
         newChildNodes.push({ token: ")" });
     }
-    OutputFlag newFlags = (node.outputFlags^WRAP);
+    OutputFlags newFlags = (node.outputFlags^WRAP);
     return { astNode: node.astNode, childNodes: newChildNodes, outputFlags: newFlags };
 }
 

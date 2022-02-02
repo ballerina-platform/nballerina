@@ -12,18 +12,18 @@ const int NEWLINE = NEWLINE_BEFORE|NEWLINE_AFTER;
 const IGNORE_LITERAL_ESCAPE = 0x10;
 const WRAP = 0x20;
 const NONE = 0x0;
-type OutputFlag int;
+type OutputFlags int;
 
 type TerminalSyntaxAstNode record {|
     AstNode astNode;
-    OutputFlag outputFlags = NONE;
+    OutputFlags outputFlags = NONE;
     string token;
 |};
 
 type NonTerminalSyntaxNode record {|
     AstNode astNode;
     SubSyntaxNode[] childNodes;
-    OutputFlag outputFlags = NONE;
+    OutputFlags outputFlags = NONE;
 |};
 
 type RootSyntaxNode record {|
@@ -34,20 +34,20 @@ type RootSyntaxNode record {|
 // represents keywords and fixed tokens
 type FixedSyntaxNode record {|
     FixedToken token;
-    OutputFlag outputFlags = NONE;
+    OutputFlags outputFlags = NONE;
     Position? pos = ();
 |};
 
 type StringLiteralSyntaxNode record {|
     string literal;
-    OutputFlag outputFlags = NONE;
+    OutputFlags outputFlags = NONE;
     Position? pos = ();
 |};
 
 // represents identifiers
 type IdentifierSyntaxNode record {|
     string name;
-    OutputFlag outputFlags = NONE;
+    OutputFlags outputFlags = NONE;
     Position? pos;
 |};
 
