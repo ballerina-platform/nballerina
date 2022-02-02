@@ -370,40 +370,32 @@ function syntaxNodeFromErrorConstructorExpr(ErrorConstructorExpr expr) returns N
 }
 
 function syntaxNodeFromFunctionCallExpr(FunctionCallExpr expr) returns NonTerminalSyntaxNode {
-    SubSyntaxNode[] args = joinSyntaxNodesWithSeperator((from Expr arg in expr.args select syntaxNodeFromExpr(arg, false)), { token: "," });
     string? prefix = expr.prefix;
     return nonTerminalSyntaxNode(expr, false, prefix != () ? [{ name: prefix, pos: expr.qNamePos }, { token: ":", outputFlags: CLING }] : (),
                                               { name: expr.funcName, pos: prefix == () ? expr.qNamePos : () , outputFlags: CLING_NEXT},
                                               { token: "(", pos: expr.openParenPos },
-                                              // JBUG: can't use the query exprssion directly
-                                              args,
+                                              (joinSyntaxNodesWithSeperator((from Expr arg in expr.args select syntaxNodeFromExpr(arg, false)), { token: "," })),
                                               { token: ")" });
 }
 
 function syntaxNodeFromMethodCallExpr(MethodCallExpr expr, boolean wrap) returns NonTerminalSyntaxNode {
-    SubSyntaxNode[] args = joinSyntaxNodesWithSeperator((from Expr arg in expr.args select syntaxNodeFromExpr(arg, false)), { token: "," });
     return nonTerminalSyntaxNode(expr, wrap, syntaxNodeFromExpr(expr.target, true),
                                              { token: ".", pos: expr.opPos },
                                              { name: expr.methodName, pos: expr.namePos, outputFlags: CLING_NEXT },
                                              { token: "(", pos: expr.openParenPos, outputFlags: CLING_PREV },
-                                             // JBUG: can't use the query exprssion directly
-                                             args,
+                                             (joinSyntaxNodesWithSeperator((from Expr arg in expr.args select syntaxNodeFromExpr(arg, false)), { token: "," })),
                                              { token: ")" });
 }
 
 function syntaxNodeFromListConstructorExpr(ListConstructorExpr expr) returns NonTerminalSyntaxNode{
-    SubSyntaxNode[] members = joinSyntaxNodesWithSeperator((from Expr member in expr.members select syntaxNodeFromExpr(member, false)), { token: "," });
     return nonTerminalSyntaxNode(expr, false, { token: "[", pos: expr.startPos },
-                                              // JBUG: can't use the query exprssion directly
-                                              members,
+                                              (joinSyntaxNodesWithSeperator((from Expr member in expr.members select syntaxNodeFromExpr(member, false)), { token: "," })),
                                               { token: "]" });
 }
 
 function syntaxNodeFromMappingConstructorExpr(MappingConstructorExpr expr) returns NonTerminalSyntaxNode{
-    SubSyntaxNode[] fields = joinSyntaxNodesWithSeperator((from Field f in expr.fields select syntaxNodeFromField(f)), { token: ",", outputFlags: NEWLINE_AFTER });
     return nonTerminalSyntaxNode(expr, false, { token: "{", pos: expr.startPos },
-                                              // JBUG: can't use the query exprssion directly
-                                              fields,
+                                              (joinSyntaxNodesWithSeperator((from Field f in expr.fields select syntaxNodeFromField(f)), { token: ",", outputFlags: NEWLINE_AFTER })),
                                               { token: "}" });
 }
 
