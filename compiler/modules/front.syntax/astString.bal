@@ -153,7 +153,7 @@ function stmtToWords(Word[] w, Stmt stmt) {
         if ifFalse is IfElseStmt {
             stmtToWords(w, ifFalse);
         }
-        else if ifFalse is StmtBlock {
+        else {
             blockToWords(w, ifFalse);
         }
     }
