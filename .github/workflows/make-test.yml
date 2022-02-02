@@ -64,7 +64,6 @@ jobs:
             test/out
 
   test-jni:
-    if: ${{ false }}  # disable due to JBUG #34341
     env:
       JBAL_VERSION: '2201.0.0'
     runs-on: ubuntu-latest
@@ -77,7 +76,7 @@ jobs:
       - name: Install jBallerina deb
         if: runner.os == 'Linux'
         run: |
-          sudo dpkg -i $HOME/ballerina-linux-installer-x64-$JBAL_VERSION.deb
+          sudo dpkg -i $HOME/ballerina-$JBAL_VERSION-swan-lake-linux-x64.deb
           echo "/usr/lib/ballerina/bin" >> $GITHUB_PATH
           echo "/usr/lib/ballerina/dependencies/jdk-11.0.8+10-jre/bin/java" >> $GITHUB_PATH
       - name: Cache Gradle
