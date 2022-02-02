@@ -68,6 +68,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - name: Cache jBallerina
+        id: cache-jbal
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/ballerina-${{ env.JBAL_VERSION }}-*.*
+          key: jbal-${{ env.JBAL_VERSION }}-${{ runner.os }}   echo "LLVM_SUFFIX=" >> $GITHUB_ENV
       - name: Download jBallerina deb
         if: steps.cache-jbal.outputs.cache-hit != 'true' && runner.os == 'Linux'
         run: |
